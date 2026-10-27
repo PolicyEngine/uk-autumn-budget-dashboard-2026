@@ -435,6 +435,12 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     setChosenPolicies(selectedPolicies.includes(policyId) ? selectedPolicies.filter((id) => id !== policyId) : [...selectedPolicies, policyId]);
     setSelectionChosen(true);
   };
+  // Select all and Clear: the whole selection in one update (a run of
+  // toggles read the same render's selection, so only the last one stuck)
+  const handlePoliciesSet = (ids) => {
+    setChosenPolicies(ids.filter((id) => catalogue.byId.get(id)?.displayable));
+    setSelectionChosen(true);
+  };
   // The one preset is the default, every displayable measure, so choosing
   // it hands the selection back to the publication
   const handlePresetClick = () => {
@@ -1064,6 +1070,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
               policies={POLICIES}
               selectedPolicies={selectedPolicies}
               onPolicyToggle={handlePolicyToggle}
+              onPoliciesSet={handlePoliciesSet}
               loading={Boolean(unavailable?.loading)}
               noneReason={unavailable?.reason}
               inactiveReason={policiesShown ? undefined : POLICIES_INACTIVE}
