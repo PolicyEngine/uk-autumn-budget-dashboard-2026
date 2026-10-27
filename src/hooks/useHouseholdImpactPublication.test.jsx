@@ -166,7 +166,7 @@ describe("Personal impact's live answers", () => {
     // A headline with no commit (Cloud Run at f3304ff, 27 October): no
     // detail answer could be used under it, so the page does not wait for
     // one (up to a Modal cold start) before asking Cloud Run
-    // #250: the first calculation asks the detail service with its
+    // #253: the first calculation asks the detail service with its
     // headline, before it knows the headline reports no commit; its answers
     // are not used, and later calculations do not ask it early
     it("never uses the detail service under a headline that reports no commit, and stops asking it early", async () => {
@@ -229,7 +229,7 @@ describe("Personal impact's live answers", () => {
       twoServices(calls, fromDetail(), (body) => ({ ...fromMain(body), git_sha: mainBuild }));
       const before = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
       await waitFor(() => expect(before.result.current.detailStatus).toBe("ready"));
-      // Asked early with the first headline (#250), not used under it
+      // Asked early with the first headline (#253), not used under it
       expect(calls.filter((call) => call.startsWith("main:")).sort()).toEqual([
         "main:by_policy",
         "main:headline",

@@ -198,7 +198,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       // time as Cloud Run's headline rather than after it: each run has its
       // own container there, so they take no worker slot from the headline,
       // and the breakdown arrives about when the headline does instead of a
-      // detail's time later (#250: 34 s to 15-20 s on a warm Modal). An
+      // detail's time later (#253: 34 s to 15-20 s on a warm Modal). An
       // early answer is still used only under the headline once it arrives,
       // from its build (acceptFor below); otherwise the part is asked of
       // Cloud Run, as before. Not under a cached headline: the parts are

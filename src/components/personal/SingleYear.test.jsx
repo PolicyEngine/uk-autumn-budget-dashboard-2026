@@ -193,7 +193,7 @@ describe("the household calculation, from the fixture", () => {
   // #170 asked for all three parts at once and raced the headline across
   // both services. Merged with #104, the headline stays Cloud Run's: it is
   // what the detail service's parts are checked against (same build), and
-  // a Modal headline would have nothing to be checked against. #250: the
+  // a Modal headline would have nothing to be checked against. #253: the
   // detail service's parts are asked for with the headline, not after it,
   // and shown only once the headline has arrived and they match its build.
   it("with a detail URL, asks Cloud Run for the headline and the detail service for the sweep and the split by policy at once", async () => {
