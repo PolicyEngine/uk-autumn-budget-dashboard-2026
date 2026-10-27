@@ -1,9 +1,13 @@
 // Prices by category since 2021 (July 2021 base): ONS price indices for a few
 // spending categories, all prices (CPI) and average weekly earnings, each
 // as its change since July 2021. History up to the latest ONS release,
-// drawn beside the OBR's inflation forecast (ForecastSeriesSection). The
-// data are public/data/price_categories.json (tools/fetch-ons-price-
-// categories.mjs); the changes are computed in priceCategories.js.
+// drawn beside the OBR's inflation forecast (ForecastSeriesSection); all
+// prices (CPI) and earnings carry on, lighter and dashed, with that
+// forecast (OBR March 2026, from the outlook file the Pre-measures
+// forecast reads), to the end of its last year. The data are
+// public/data/price_categories.json (tools/fetch-ons-price-categories.mjs)
+// and public/data/living_standards_outlook.json; the changes and the
+// chained forecast are computed in priceCategories.js.
 
 import { useEffect, useState } from "react";
 import LsCard from "./LsCard";
@@ -15,13 +19,17 @@ import { DASH } from "../../utils/livingStandards/baseline";
 import { percentAxis } from "../../utils/livingStandards/forecast";
 import { formatOneDp } from "../../utils/livingStandards/outlook";
 import { buildChartCsv } from "../../utils/chartCsv";
+import { useOutlook } from "./useOutlook";
 import {
   changeRows,
+  forecastKey,
+  forecastRates,
   loadPriceCategories,
   monthLabel,
   monthShort,
   monthYear,
   priceCategoriesSentence,
+  withForecast,
   yearTicks,
 } from "../../utils/livingStandards/priceCategories";
 
@@ -53,6 +61,10 @@ const ORDER = ["cpi", "earnings", "energy", "food", "water", "services", "rents"
 // Drawn at first: the two the sentence names against the two benchmarks;
 // the rest are a chip away, so the lines below 30% do not tangle
 export const DEFAULT_SHOWN = ["cpi", "earnings", "energy", "food"];
+// A forecast line: its outturn line's colour, lighter, in a pattern of its
+// own (CPI's solid line dashed; earnings' long dash dotted)
+const FORECAST_DASH = { cpi: DASH.short, earnings: DASH.dot };
+const FORECAST_OPACITY = 0.7;
 // End labels in a half-width card: short names in a narrow right margin
 const END_LABELS = { width: 84, minWidth: 420 };
 
@@ -98,6 +110,9 @@ export function endsNote(series, latest) {
 
 export default function PriceCategoriesCard({ view = "chart", onViewChange }) {
   const { loading, data, error } = usePriceCategories();
+  // The OBR forecast for CPI and earnings; until it loads (or if it cannot)
+  // the lines stop at the ONS outturn
+  const outlook = useOutlook();
   const narrow = useNarrowViewport();
   const [shown, setShown] = useState(DEFAULT_SHOWN);
   const [hovered, setHovered] = useState(null);
@@ -120,12 +135,47 @@ export default function PriceCategoriesCard({ view = "chart", onViewChange }) {
   const series = ORDER.map((key) => data.series.find((s) => s.key === key)).filter(Boolean);
   // Drawn from the base month on, so every line starts at 0 (the file
   // holds the months before it too)
-  const rows = changeRows(data).filter((r) => r.month >= data.base_month);
+  const outturn = changeRows(data).filter((r) => r.month >= data.base_month);
+  const rates = forecastRates(outlook.data);
+  const rows = rates ? withForecast(outturn, data, rates) : outturn;
+  const forecastKeys = rates ? series.map((s) => s.key).filter((k) => rates[k]) : [];
+  const forecastYears = rates ? Object.values(rates).flat().map((g) => g.year) : [];
+  const forecastEnd = forecastYears.length ? Math.max(...forecastYears) : null;
   const allLines = series.map((s) => ({ key: s.key, endLabel: LINES[s.key].short, ...LINES[s.key] }));
-  const lines = allLines.filter((l) => shown.includes(l.key));
+  // Each shown line with a forecast is followed by its forecast line, which
+  // takes the end label (the outturn line ends inside the forecast)
+  const lines = allLines
+    .filter((l) => shown.includes(l.key))
+    .flatMap((l) =>
+      forecastKeys.includes(l.key)
+        ? [
+            { ...l, endLabel: false },
+            {
+              key: forecastKey(l.key),
+              name: `${l.name}, forecast`,
+              endLabel: l.short ?? l.name,
+              colour: l.colour,
+              width: l.width,
+              dash: FORECAST_DASH[l.key],
+              opacity: FORECAST_OPACITY,
+              forecastOf: l.key,
+            },
+          ]
+        : [l],
+    );
+  const tableLines = allLines.filter((l) => shown.includes(l.key));
+  // The value shown for a line in a month: the ONS figure, else the forecast
+  const valueOf = (row, key) => row[key] ?? (row.forecast?.includes(key) ? row[forecastKey(key)] : null);
+  const isForecast = (row, key) => row[key] == null && Boolean(row.forecast?.includes(key));
+  // Shaded from the last ONS month of the forecast lines (CPI's September)
+  const lastOutturn = forecastKeys.map((k) => series.find((s) => s.key === k).values.at(-1).month).sort().at(-1);
+  const forecastRegion = forecastKeys.length ? { from: lastOutturn, to: rows.at(-1).month, label: "OBR forecast" } : null;
+  const forecastNames = (row) => tableLines.filter((l) => isForecast(row, l.key)).map((l) => l.name).join("; ");
   const baseMonth = monthLabel(data.base_month);
-  const sentence = priceCategoriesSentence(rows, data.base_month);
-  const sourceText = priceSourceText(series);
+  // The sentence is the ONS outturn only, never the forecast
+  const sentence = priceCategoriesSentence(outturn, data.base_month);
+  const preSource = outlook.data?.forecast?.pre_source;
+  const sourceText = `${priceSourceText(series)}${forecastKeys.length ? `; forecast from ${preSource?.release ?? "the OBR"}, chained by PolicyEngine` : ""}`;
   const units = `Change in level since ${baseMonth} (%); monthly`;
   const latest = (s) => monthLabel(s.values[s.values.length - 1].month);
   const sa = series.filter((s) => s.seasonally_adjusted).map((s) => LINES[s.key].name);
@@ -135,29 +185,55 @@ export default function PriceCategoriesCard({ view = "chart", onViewChange }) {
       title: PRICE_CATEGORIES_TITLE,
       units,
       source: sourceText,
-      columns: [{ key: "month", label: "Month" }, ...allLines.map((l) => ({ key: l.key, label: `${l.name} (${series.find((s) => s.key === l.key).cdid})`, decimals: 2 }))],
-      rows,
-      notes: [],
+      columns: [
+        { key: "month", label: "Month" },
+        ...allLines.map((l) => ({ key: l.key, label: `${l.name} (${series.find((s) => s.key === l.key).cdid})`, decimals: 2 })),
+        ...(forecastKeys.length ? [{ key: "forecast", label: "Forecast (OBR, not ONS outturn)" }] : []),
+      ],
+      rows: rows.map((r) => ({
+        ...Object.fromEntries(allLines.map((l) => [l.key, valueOf(r, l.key)])),
+        month: r.month,
+        forecast: allLines.filter((l) => isForecast(r, l.key)).map((l) => l.name).join("; "),
+      })),
+      notes: forecastKeys.length
+        ? [`Rows with a Forecast entry: the named series are the OBR March 2026 forecast chained from the last ONS month, not outturn; other series have no forecast.`]
+        : [],
     });
 
   const common = {
     ...base,
     summary: sentence,
-    about: `Change in each series' level since ${baseMonth}, in percent, from monthly ONS data.`,
+    about: `Change in each series' level since ${baseMonth}, in percent, from monthly ONS data${forecastKeys.length ? `; all prices (CPI) and earnings then follow the OBR March 2026 forecast to ${forecastEnd}` : ""}.`,
     sourceText,
     info: {
-      shows: `How much higher each price index, and average weekly earnings, stood each month than in ${baseMonth}. This is history to the latest ONS release, not the OBR forecast.`,
-      how: [`Each month's level divided by its ${baseMonth} level, minus one; calculated on this page from the levels the ONS publishes.`],
+      shows: forecastKeys.length
+        ? `How much higher each price index, and average weekly earnings, stood each month than in ${baseMonth}, to the latest ONS release; after it (the shaded period), all prices (CPI) and earnings follow the OBR's March 2026 forecast to December ${forecastEnd}, drawn lighter and dashed.`
+        : `How much higher each price index, and average weekly earnings, stood each month than in ${baseMonth}. This is history to the latest ONS release, not the OBR forecast.`,
+      how: [
+        `Each month's level divided by its ${baseMonth} level, minus one; calculated on this page from the levels the ONS publishes.`,
+        forecastKeys.length &&
+          `Forecast: the OBR (March 2026) gives CPI inflation and average earnings growth for each calendar year, as growth in the annual average (${forecastYears.length ? `${Math.min(...forecastYears)} to ${forecastEnd}` : ""}). From the last ONS month, each month's level is the month before's times (1 + g)^(1/12), g that calendar year's growth; months before ${Math.min(...forecastYears)}, for which the forecast here has no rate, use ${Math.min(...forecastYears)}'s. A constant monthly rate gives each year's annual-average growth only approximately. The level is then turned into its change since ${baseMonth} as above.`,
+      ].filter(Boolean),
       definitions: allLines.map((l) => ({ term: l.name, meaning: l.meaning })),
       caveats: [
         endsNote(series, latest),
         sa.length > 0 && `${sa.join(" and ")} ${sa.length > 1 ? "are" : "is"} seasonally adjusted; the price indices are not.`,
-      ],
+        forecastKeys.length > 0 &&
+          "There is no official forecast for the categories (energy, food, water, services, rents, rail fares), so their lines stop at the latest ONS month; only all prices (CPI) and earnings are carried on.",
+        forecastKeys.includes("earnings") &&
+          "The OBR forecasts wages and salaries per employee; the earnings line is ONS average weekly earnings (total pay), so its forecast applies the OBR's growth to a related, not identical, measure.",
+        forecastKeys.length > 0 &&
+          "The forecast is the OBR's March 2026 one, from before the Autumn Budget. Its growth rates are applied from the last ONS month, so the level follows the latest outturn rather than the level the OBR expected for that month.",
+      ].filter(Boolean),
       sources: series.map((s) => ({
         label: `ONS, ${s.title.replace(/ 2015=100$/, "")} (${s.cdid}, ${s.dataset})`,
         href: s.source_url,
         date: ukDay(s.release_date),
-      })),
+      })).concat(
+        forecastKeys.length && preSource
+          ? [{ label: `${preSource.release}: CPI inflation and average earnings growth (calendar years)`, href: preSource.url }]
+          : [],
+      ),
     },
     viewToggle: onViewChange && <ViewToggle value={view} onChange={onViewChange} name={PRICE_CATEGORIES_TITLE} />,
   };
@@ -181,18 +257,19 @@ export default function PriceCategoriesCard({ view = "chart", onViewChange }) {
             <thead>
               <tr>
                 <th>Month</th>
-                {lines.map((l) => (
+                {tableLines.map((l) => (
                   <th key={l.key}>{l.name}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.month}>
+                <tr key={row.month} title={forecastNames(row) ? `Forecast: ${forecastNames(row)}` : undefined}>
                   <td>{monthShort(row.month)}</td>
-                  {lines.map((l) => (
-                    <td key={l.key}>{row[l.key] == null ? "–" : pctText(row[l.key])}</td>
-                  ))}
+                  {tableLines.map((l) => {
+                    const v = valueOf(row, l.key);
+                    return <td key={l.key}>{v == null ? "–" : isForecast(row, l.key) ? `${pctText(v)} forecast` : pctText(v)}</td>;
+                  })}
                 </tr>
               ))}
             </tbody>
@@ -214,7 +291,8 @@ export default function PriceCategoriesCard({ view = "chart", onViewChange }) {
         series={lines}
         xKey="month"
         xFormat={monthShort}
-        xTickValues={yearTicks(rows)}
+        // Every other January on a phone, where nine years' labels collide
+        xTickValues={narrow ? yearTicks(rows).filter((m) => Number(m.slice(0, 4)) % 2 === 0) : yearTicks(rows)}
         xTickFormat={monthYear}
         dots={false}
         yFormat={pctTick}
@@ -223,6 +301,7 @@ export default function PriceCategoriesCard({ view = "chart", onViewChange }) {
         yDomain={axis.domain}
         yTicks={axis.ticks}
         endLabels={END_LABELS}
+        forecastRegion={forecastRegion}
         legend={false}
         focusKey={hovered}
         onLineHover={setHovered}

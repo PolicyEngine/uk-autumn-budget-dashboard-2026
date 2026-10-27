@@ -180,6 +180,9 @@ export function ChartRows({ plotRef, children, legendItems, height, legendNote =
 // Room right of the plot for direct labels, and their least spacing
 const END_LABEL_WIDTH = 150;
 const END_LABEL_GAP = 14;
+// How far (px) left of the latest end a line may stop and still be
+// labelled in the shared column
+const END_LABEL_COLUMN_REACH = 24;
 
 /**
  * Each line's name at its last point, right of the plot, nudged apart so
@@ -191,34 +194,42 @@ function EndLabels({ xAxisMap, yAxisMap, data, series, xKey, focusKey = null }) 
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
   const labels = series
+    .filter((s) => s.endLabel !== false)
     .map((s) => {
       const last = [...data].reverse().find((d) => d[s.key] != null);
       if (!last) return null;
       const x = xAxis.scale(last[xKey]) + (xAxis.scale.bandwidth?.() ?? 0) / 2;
       const y = yAxis.scale(last[s.key]);
-      return { key: s.key, name: s.endLabel ?? s.name, colour: s.colour, x, y, at: y };
+      return { key: s.key, group: s.forecastOf ?? s.key, name: s.endLabel ?? s.name, colour: s.colour, x, y, at: y };
     })
     .filter(Boolean)
     .sort((a, b) => a.y - b.y);
-  // Push each label down clear of the one above, then back up from the
-  // bottom so the stack stays inside the plot
-  for (let i = 1; i < labels.length; i += 1) labels[i].at = Math.max(labels[i].at, labels[i - 1].at + END_LABEL_GAP);
-  const bottom = yAxis.y + yAxis.height;
-  for (let i = labels.length - 1; i >= 0; i -= 1) {
-    const limit = i === labels.length - 1 ? bottom : labels[i + 1].at - END_LABEL_GAP;
-    labels[i].at = Math.min(labels[i].at, limit);
-  }
   // One column of labels, right of the latest end: a line that stops a
-  // month early (earnings) is not labelled over a neighbour's leader
-  const column = Math.max(...labels.map((l) => l.x)) + 14;
+  // month early (earnings) is not labelled over a neighbour's leader. A
+  // line that ends well before it (a series with no forecast, beside
+  // forecast lines) is labelled at its own end, so no leader runs on
+  // across the forecast like a line of its own
+  const latestX = Math.max(...labels.map((l) => l.x));
+  for (const l of labels) l.col = latestX - l.x > END_LABEL_COLUMN_REACH ? l.x + 14 : latestX + 14;
+  // In each column, push each label down clear of the one above, then back
+  // up from the bottom so the stack stays inside the plot
+  const bottom = yAxis.y + yAxis.height;
+  for (const col of new Set(labels.map((l) => l.col))) {
+    const stack = labels.filter((l) => l.col === col);
+    for (let i = 1; i < stack.length; i += 1) stack[i].at = Math.max(stack[i].at, stack[i - 1].at + END_LABEL_GAP);
+    for (let i = stack.length - 1; i >= 0; i -= 1) {
+      const limit = i === stack.length - 1 ? bottom : stack[i + 1].at - END_LABEL_GAP;
+      stack[i].at = Math.min(stack[i].at, limit);
+    }
+  }
   return (
     <g className="ls-end-labels">
       {labels.map((l) => (
-        <g key={l.key} opacity={focusKey && focusKey !== l.key ? 0.25 : 1}>
-          {(Math.abs(l.at - l.y) > 2 || column - l.x > 16) && (
-            <path d={`M${l.x + 5},${l.y} L${column - 2},${l.at}`} stroke={l.colour} strokeWidth={1} fill="none" />
+        <g key={l.key} opacity={focusKey && focusKey !== l.group ? 0.25 : 1}>
+          {(Math.abs(l.at - l.y) > 2 || l.col - l.x > 16) && (
+            <path d={`M${l.x + 5},${l.y} L${l.col - 2},${l.at}`} stroke={l.colour} strokeWidth={1} fill="none" />
           )}
-          <text x={column} y={l.at} dy="0.35em" fontSize={12} fontWeight={600} fill={l.colour}>
+          <text x={l.col} y={l.at} dy="0.35em" fontSize={12} fontWeight={600} fill={l.colour}>
             {l.name}
           </text>
         </g>
@@ -234,7 +245,10 @@ function EndLabels({ xAxisMap, yAxisMap, data, series, xKey, focusKey = null }) 
  *
  * series: [{ key, name, colour, dash?, dashed?, hidden?, width?, endLabel? }].
  * Hidden series are not drawn; width (default 2.5) emphasises a line;
- * endLabel is a shorter name for the label at its end.
+ * endLabel is a shorter name for the label at its end (false: none).
+ * forecastOf names the line a forecast continues: drawn lighter, it takes
+ * that line's focus and hover, and the tooltip leaves it out where the
+ * line itself has a value (the month they join). opacity lightens a line.
  */
 export function LsLineChart({
   data,
@@ -270,10 +284,16 @@ export function LsLineChart({
   // (key|null) => void: hovering a line (a wide invisible band along it)
   // names it, so the card can bring it forward as a chip does
   onLineHover = null,
+  // { from, to, label }: the x values of a forecast period, shaded and
+  // labelled (e.g. "OBR forecast")
+  forecastRegion = null,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
   const visible = series.filter((s) => !s.hidden);
+  // A forecast line's focus is its outturn line's
+  const groupOf = (s) => s.forecastOf ?? s.key;
+  const forecastOf = new Map(visible.filter((s) => s.forecastOf).map((s) => [s.key, s.forecastOf]));
   const labelRoom = { width: END_LABEL_WIDTH, minWidth: 560, ...(typeof endLabels === "object" ? endLabels : {}) };
   const labelled = Boolean(endLabels) && !narrow && width >= labelRoom.minWidth;
   const margin = labelled ? { ...MARGIN, right: labelRoom.width } : MARGIN;
@@ -318,7 +338,9 @@ export function LsLineChart({
             content={(props) => (
               <ChartTooltip
                 {...props}
-                payload={props.payload?.filter((p) => p.type !== "none")}
+                payload={props.payload?.filter(
+                  (p) => p.type !== "none" && !(forecastOf.has(p.dataKey) && p.payload?.[forecastOf.get(p.dataKey)] != null),
+                )}
                 format={tooltipFormat}
                 labelFormat={xFormat}
                 grouped={false}
@@ -336,18 +358,28 @@ export function LsLineChart({
               ifOverflow="extendDomain"
             />
           )}
+          {forecastRegion && data.some((d) => d[xKey] === forecastRegion.from) && (
+            <ReferenceArea
+              x1={forecastRegion.from}
+              x2={forecastRegion.to}
+              fill={CHART_COLOURS.mutedFill}
+              fillOpacity={0.8}
+              stroke="none"
+              label={{ value: forecastRegion.label, position: "insideTopLeft", offset: 6, fill: CHART_COLOURS.obrText, fontSize: 11, fontWeight: 600 }}
+            />
+          )}
           {/* The focused line drawn last, over the others */}
-          {[...visible.filter((s) => s.key !== focusKey), ...visible.filter((s) => s.key === focusKey)].map((s) => (
+          {[...visible.filter((s) => groupOf(s) !== focusKey), ...visible.filter((s) => groupOf(s) === focusKey)].map((s) => (
             <Line
               key={s.key}
               type="monotone"
               dataKey={s.key}
               name={s.name}
               stroke={s.colour}
-              strokeWidth={focusKey === s.key ? (s.width ?? 2.5) + 1 : s.width ?? 2.5}
-              strokeOpacity={focusKey && focusKey !== s.key ? 0.2 : 1}
+              strokeWidth={focusKey === groupOf(s) ? (s.width ?? 2.5) + 1 : s.width ?? 2.5}
+              strokeOpacity={(focusKey && focusKey !== groupOf(s) ? 0.2 : 1) * (s.opacity ?? 1)}
               strokeDasharray={dashOf(s)}
-              dot={dots ? { r: 3, fill: s.colour, stroke: s.colour, strokeWidth: 1, fillOpacity: focusKey && focusKey !== s.key ? 0.2 : 1 } : false}
+              dot={dots ? { r: 3, fill: s.colour, stroke: s.colour, strokeWidth: 1, fillOpacity: focusKey && focusKey !== groupOf(s) ? 0.2 : 1 } : false}
               activeDot={{ r: dots ? 5 : 4 }}
               connectNulls={false}
               isAnimationActive={false}
@@ -367,7 +399,7 @@ export function LsLineChart({
                 legendType="none"
                 connectNulls={false}
                 isAnimationActive={false}
-                onMouseEnter={() => onLineHover(s.key)}
+                onMouseEnter={() => onLineHover(groupOf(s))}
                 onMouseLeave={() => onLineHover(null)}
               />
             ))}

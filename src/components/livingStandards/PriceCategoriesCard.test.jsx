@@ -4,13 +4,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import PriceCategoriesCard, { PRICE_CATEGORIES_TITLE, endsNote, priceSourceText } from "./PriceCategoriesCard";
 import { clearPriceCategoriesCache, monthLabel } from "../../utils/livingStandards/priceCategories";
+import { clearOutlookCache } from "../../utils/livingStandards/outlook";
 
 // The published file: its shape and every series the card names
 const FILE = JSON.parse(readFileSync(join(__dirname, "..", "..", "..", "public", "data", "price_categories.json"), "utf8"));
+const OUTLOOK = JSON.parse(readFileSync(join(__dirname, "..", "..", "..", "public", "data", "living_standards_outlook.json"), "utf8"));
 const KEYS = ["cpi", "energy", "food", "rents", "water", "rail", "services", "earnings"];
 
 beforeEach(() => {
   clearPriceCategoriesCache();
+  clearOutlookCache();
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url) =>
@@ -98,5 +101,33 @@ describe("Prices by spending category card", () => {
     render(<PriceCategoriesCard />);
     expect((await screen.findByRole("alert")).textContent).toMatch(/Could not load the ONS price data/);
     expect(screen.getByRole("heading", { level: 3, name: PRICE_CATEGORIES_TITLE })).toBeTruthy();
+  });
+
+  it("carries CPI and earnings on with the OBR forecast, marked, while the categories stop at the ONS month", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url) =>
+        String(url).endsWith("price_categories.json")
+          ? new Response(JSON.stringify(FILE), { status: 200 })
+          : String(url).endsWith("living_standards_outlook.json")
+            ? new Response(JSON.stringify(OUTLOOK), { status: 200 })
+            : new Response("", { status: 404 }),
+      ),
+    );
+    render(<PriceCategoriesCard view="table" onViewChange={() => {}} />);
+    await screen.findByText(/^Since July 2021/);
+    const last = await screen.findByText("Dec 2030");
+    const cells = [...last.closest("tr").cells].map((c) => c.textContent);
+    // All prices (CPI), Earnings, Energy, Food
+    expect(cells[1]).toMatch(/^\d+\.\d% forecast$/);
+    expect(cells[2]).toMatch(/^\d+\.\d% forecast$/);
+    expect(cells.slice(3)).toEqual(["–", "–"]);
+    // The last ONS CPI month is outturn, unmarked; the sentence is outturn only
+    const sep = [...screen.getByText("Sep 2026").closest("tr").cells].map((c) => c.textContent);
+    expect(sep[1]).toMatch(/^\d+\.\d%$/);
+    expect(sep[2]).toMatch(/forecast$/);
+    fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
+    expect(screen.getByText(/no official forecast for the categories/)).toBeTruthy();
+    expect(screen.getByText(/\(1 \+ g\)\^\(1\/12\)/)).toBeTruthy();
   });
 });
