@@ -32,9 +32,9 @@ Every Modal command starts `uv run --with modal==1.6.2 python -m uk_budget_data.
 | 13:40 | Reconciler | **Documents**: OBR workbooks by hand in a browser | |
 | 13:40–14:10 | Reconciler | **G3** reconcile, exceptions, `publish stage`, `publish approve <id> --by <approver>` | attestations |
 | | two reviewers | Attest any hand-written measure regenerated today (fresh receipt, fresh attestation) | G3 |
-| 14:50 | Integrator | **G4** once every member is staged: `MODAL generate --combined <member ids> --backend modal` (about 7 min), stage; Reconciler approves once every member is approved | |
-| | Integrator | Area run: `UK_BUDGET_DISCLOSURE_AUDIT_DIR=<private dir> MODAL constituencies --backend modal` (14–21 min) | |
-| | Integrator | `publish index`, `publish check`, `uv run python scripts/check_public_data.py`, `bun scripts/check-public-files.mjs`; Reconciler: `publish review-rows` | |
+| 14:50 | Integrator | **G4** once every member is staged: `MODAL generate --combined <member ids> --backend modal` (about 7 min), stage; Reconciler approves once every member is approved. Start it before the area run: the area run's tables make the tree dirty | area run |
+| from G3 approval | Integrator | Area run: `UK_BUDGET_DISCLOSURE_AUDIT_DIR=<private dir> MODAL constituencies --backend modal` (14–21 min), from the same clean commit; approved single measures only, no package | G4 combined run |
+| after the last manifest change | Integrator | `publish index`, `publish check`, `uv run python scripts/check_public_data.py`, `bun scripts/check-public-files.mjs`; Reconciler: `publish review-rows` | |
 | | Integrator | Publish PR, CI, merge; `curl` the live `manifest.json`; household check | |
 | 15:45 | Media first cut | Comparables review first (runbook, "First cut") | |
 

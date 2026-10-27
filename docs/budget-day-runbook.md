@@ -659,7 +659,10 @@ uv run uk-budget-data publish stage public/data/artifacts/combined--<ids>/<diges
 uv run uk-budget-data publish approve combined--<ids> --by "María Juaristi"
 ```
 
-Then run the area run (`uk-budget-data geography`, below), and finish with `publish index`, then `publish check` ("Bind the results by area last").
+**The area run doesn't wait for the combined run.** Start it once G3's approvals are in, alongside the combined run (`constituencies --backend modal` on Modal, `uk-budget-data geography` locally; both below). It needs only the approvals of the measures it covers, since it checks each against its approved receipt. Area tables made then stay bindable after the combined run is staged and approved: `publish index` (`release_index.area_problems`) and the page (`src/utils/publication/area.js`) compare each entry's identity (artifact, receipt, outputs and execution identity), not the manifest's revision.
+  - **Start the combined run first, from the same clean commit.** Both read the working tree when they start, and the area run's tables (`constituency.csv`, `area_provenance.json`) land in `public/data/` outside `artifacts/`, so they make the tree dirty: a Modal `generate --combined` started after they're written refuses until they're committed. Started together, the combined run (about 7 min) finishes well before the area run (14–21 min).
+  - **No package by area from this run.** Before the combined run is approved, the area run's default ids are the approved single measures only. Publishing the package by area would need another area run after the combined approval, and a registered package alias with exactly those members (#235).
+  - **Finish with `publish index`, then `publish check`, after the last manifest change** ("Bind the results by area last"): the index still refuses a manifest whose revision moved after it was built.
 
 - **Combined only.** `--combined` without `--reforms` generates only the combined run. It prints the directory it wrote.
 - **Results by area** (`uk-budget-data geography`): `--manifest` defaults to `public/data/manifest.json`. The command defaults to its approved single-measure ids, in manifest order, followed by approved packages whose exact members are all approved, and refuses explicit ids that are not approved, including held, provisional and not-computable measures. A package needs its own approved combined entry; approving its members alone is not enough. Constituency results default to the package; without an approved package, pass `--seat-reforms`. A missing manifest or one with no approved ids means there is nothing the national page may publish yet.
@@ -776,7 +779,9 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
 - **The cuts:**
   - **Rehearsal cut, Thursday 22:** the first policyengine-uk release with the 21 October merges. Friday's rehearsal uses it if it's adopted by 11:00Z on Friday. Otherwise the rehearsal runs on 6.10.0.
   - **Re-cuts, Saturday 24, Monday 26 and Tuesday 27:** each only if a material fix landed.
-  - **The final cut, Tuesday 27:** its adoption is complete by **06:00Z on Wednesday 28**. That means merged, the household API deployed, the household check passed, a breakdown answered under 200 s, and the revert PR green. Its build start and release time (16:00Z and about 22:00Z for now) are placeholders until Friday; see "The schedule" below.
+  - **The final cut, Tuesday 27:** its adoption is complete by **06:00Z on Wednesday 28**. That means merged, the household API deployed, the household check passed, a breakdown answered under 200 s, and the revert PR green.
+    - **Its regeneration is at 18:00Z on Tuesday 27** (tracker #222; [`budget-day-checklist.md`](budget-day-checklist.md)): the coordinator's full run on Modal, on the final `main` and its final `uv.lock`. Calculation-path PRs are confirmed by 17:30Z, and both Modal images are built before 18:00Z. This replaces the 16:00Z build start and about 22:00Z release that "The schedule" below worked back from: those placeholders are superseded. A release adopted after 18:00Z would need the whole regeneration, and the hand-written measures' attestations, again; none is scheduled.
+    - **The regeneration uses the three parallel shells, as at G2** ("The full run on Modal" below), each from the same clean commit: one shared call with `--reforms <the template and parameter ids>`; each hand-written modifier (`employer_ni_relief_under_25s`, `plan_2_threshold_unfreeze`) in a call of its own; and, only if a flat file needs re-cutting, `--only income_distribution`. Never run `--artifacts` without `--reforms`: it runs every measure, the hand-written ones included, and each extra artifact of a hand-written modifier needs its own two-person attestation. Then the combined run, once its members are written.
 - **Each cut is an adoption,** as in "Adopting a release (each re-cut)" below:
   1. the draft PR, and its CI;
   2. regenerate, stage, reconcile and approve on the branch, and write the review rows (`publish review-rows`, as at G2);
@@ -838,7 +843,7 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
       - **The dispatch:** policyengine.py's consumer dispatch then waited 40 min for a runner. W5 avoids that by dispatching by hand promptly.
     - **A margin of 1 hour.**
     - **So:** the final release must be out by 06:00Z − A − 1 h, and the final build must start by 06:00Z − A − 1 h − C − B.
-    - **Placeholders:** 16:00Z and 22:00Z stand until A, B and C are measured. After the rehearsal the coordinator sets the real times and tells W5 and the hub.
+    - **Placeholders, now superseded:** 16:00Z and 22:00Z stood until A, B and C were measured. The final regeneration is set at 18:00Z on Tuesday 27, on the final `main` (see "The final cut" above). The working below is kept as the record of how the window was derived.
     - **If the computed start falls before 08:00Z on Tuesday,** the final cut is effectively Monday's re-cut, and the coordinator says so.
     - **For scale:**
       - At 21–22 October's queue, A is at least about 7 h 15 min. So with the hour's margin, the release must be out by about 21:45Z, even if regeneration takes under 1 h 45 min.
@@ -934,6 +939,8 @@ uv run --with modal==1.6.2 python -m uk_budget_data.cli generate --artifacts --b
 - the template and `parameter_changes` measures in one `generate --artifacts --backend modal --reforms <ids>`;
 - each hand-written modifier (`employer_ni_relief_under_25s`, `plan_2_threshold_unfreeze`) in a call of its own, started at the same time;
 - any flat file a re-cut needs (`generate --only income_distribution --backend modal`), at the same time too: it doesn't depend on the artifacts.
+
+Never put a hand-written modifier in the shared call, and never run `--artifacts` without `--reforms`: that runs every measure, the hand-written ones included, and each extra artifact of a hand-written modifier needs its own two-person attestation. This holds for Tuesday's 18:00Z regeneration as for G2.
 
 Only the combined run must wait, because its receipt records each member's output digest: `generate --combined <ids> --backend modal` once its members are written (and, at G4, approved).
 
