@@ -372,8 +372,13 @@ describe("ConstituencyMap", () => {
       loss.querySelector(".seat-card-policy-value").style.color,
     );
     expect(gain.querySelector(".seat-card-policy-bar > span").style.width).toBe("100%");
-    // Not published is short, with its reason in a tooltip
-    expect(withheld.querySelector(".seat-card-withheld").getAttribute("title")).toMatch(/confidentiality/);
+    // Not published is short, with its reason in the shared tip (hover,
+    // focus or a tap), not the browser's title box
+    const withheldValue = withheld.querySelector(".seat-card-withheld");
+    expect(withheldValue.getAttribute("title")).toBeNull();
+    fireEvent.focus(withheldValue);
+    expect(document.getElementById(withheldValue.getAttribute("aria-describedby"))).toHaveTextContent(/confidentiality/);
+    fireEvent.blur(withheldValue);
     expect(card.textContent).not.toMatch(/BY POLICY|By provision/);
   });
 

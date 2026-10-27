@@ -31,7 +31,6 @@ import { bootView } from "./utils/bootView";
 import UpdateToast from "./components/publication/UpdateToast";
 import { provisionalLabel } from "./utils/publication/manifest";
 import { DownloadContext, policiesLabel } from "./utils/downloadContext";
-import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
 import { isProgrammaticScroll, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
@@ -357,9 +356,6 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   // and settles without them; the first opens with the first box or tab.
   const [visited, setVisited] = useState([]);
   if (!landing && !visited.includes(activeTab)) setVisited([...visited, activeTab]);
-
-  // Every "i" tooltip stays inside the screen (a phone's edge columns)
-  useEffect(() => installInfoTooltipClamp(), []);
 
   // The server and first hydrated render share the default shell. Read the
   // browser address before paint, and only then allow the URL writer below.

@@ -89,12 +89,14 @@
   z-index: 2;
   width: max-content;
   max-width: 280px;
-  padding: 10px;
-  font-size: 12px;
-  color: var(--c-text);
-  background-color: var(--c-surface);
-  border: 1px solid var(--c-axis);
-  border-radius: 4px;
+  padding: var(--tip-padding);
+  font-size: var(--tip-font-size);
+  line-height: var(--tip-line-height);
+  color: var(--tip-color);
+  background-color: var(--tip-bg);
+  border: var(--tip-border);
+  border-radius: var(--tip-radius);
+  box-shadow: var(--tip-shadow);
   pointer-events: none;
 }
 

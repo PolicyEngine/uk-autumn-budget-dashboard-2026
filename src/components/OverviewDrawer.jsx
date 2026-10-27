@@ -181,13 +181,15 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, pro
           <ul className="overview-built-links" aria-labelledby="overview-built">
             {replicationLinks({ policyengine: process.env.NEXT_PUBLIC_POLICYENGINE_VERSION }).map(({ key, label, title, href, Icon }) => (
               <li key={key}>
-                <a href={href} title={title} target="_blank" rel="noopener noreferrer">
-                  <Icon size={14} strokeWidth={2} aria-hidden="true" />
-                  {/* A row's own start: "Replication code"; a package keeps its name */}
-                  <span>{key === "code" ? "Replication code" : label}</span>
-                  <ArrowUpRight className="overview-built-arrow" size={12} strokeWidth={2} aria-hidden="true" />
-                  <span className="visually-hidden"> (opens in a new tab)</span>
-                </a>
+                <Tip content={title}>
+                  <a href={href} target="_blank" rel="noopener noreferrer">
+                    <Icon size={14} strokeWidth={2} aria-hidden="true" />
+                    {/* A row's own start: "Replication code"; a package keeps its name */}
+                    <span>{key === "code" ? "Replication code" : label}</span>
+                    <ArrowUpRight className="overview-built-arrow" size={12} strokeWidth={2} aria-hidden="true" />
+                    <span className="visually-hidden"> (opens in a new tab)</span>
+                  </a>
+                </Tip>
               </li>
             ))}
           </ul>

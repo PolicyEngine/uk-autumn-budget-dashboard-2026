@@ -387,13 +387,10 @@ function MapKey({ outcome, extent, counts, highlight, onHighlight }) {
           label="How to read the key"
           content={
             <>
-              Colour runs smoothly from amber (a loss) through light grey (no change) to teal (a gain). The
-              scale runs from {low} to {high}, the same for every policy and year; larger changes take the end
-              colour. A
-              constituency whose 90% interval is too wide to place is too uncertain to classify, and mid grey.
-              Dotted: approximate, under 30 effective survey households. Hatched: not published, to protect
-              survey respondents&apos; confidentiality: under 10 survey households, or one or two would make up
-              too much of the figure. Solid: reported.
+              Amber is a loss, light grey no change and teal a gain, on one scale from {low} to {high} for every
+              policy and year. Mid grey is too uncertain to classify, dotted is approximate (under 30 survey
+              households), hatched is not published to protect survey respondents&apos; confidentiality, and
+              solid is reported.
             </>
           }
         />
@@ -487,9 +484,11 @@ function SeatCard({ card }) {
                 </span>
               )}
               {row.value === null ? (
-                <span className="seat-card-policy-value seat-card-withheld" title={row.title}>
-                  {row.text}
-                </span>
+                <Tip content={row.title}>
+                  <span className="seat-card-policy-value seat-card-withheld" tabIndex={0}>
+                    {row.text}
+                  </span>
+                </Tip>
               ) : (
                 <span className="seat-card-policy-value" style={{ color: signColour(row.sign) }}>
                   {row.text}
@@ -498,9 +497,11 @@ function SeatCard({ card }) {
             </div>
           ))}
           {card.unchanged.length > 0 && (
-            <p className="seat-card-unchanged" title={card.unchanged.join(", ")}>
-              {unchangedLine(card.unchanged.length)}
-            </p>
+            <Tip content={card.unchanged.join(", ")}>
+              <p className="seat-card-unchanged" tabIndex={0}>
+                {unchangedLine(card.unchanged.length)}
+              </p>
+            </Tip>
           )}
         </div>
       )}

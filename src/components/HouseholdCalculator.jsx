@@ -168,7 +168,7 @@ const CHOICE_CONFIGS = {
     summary: (value) => `Band ${value}`,
     layout: "segmented",
     options: ["A", "B", "C", "D", "E", "F", "G", "H"].map((band) => ({ value: band, label: band })),
-    hint: "Council Tax is estimated from your band and your region's average Band D for 2026-27 (MHCLG, Welsh and Scottish governments), not your own council's, grown with the OBR's forecast. Band D if you are not sure.",
+    hint: "Estimated from your band and your region's average Band D for 2026-27, not your own council's, grown with the OBR's forecast (Source: MHCLG, Welsh and Scottish governments). Choose Band D if you are not sure.",
   },
   claims_universal_credit: {
     label: "Universal Credit",
@@ -226,7 +226,7 @@ const NUMBER_CONFIGS = {
     step: 100,
     money: true,
     suffix: "a year",
-    hint: "Pension paid by salary sacrifice. Enter your salary above after the sacrifice, as your payslip shows it. Before April 2029 the sacrifice changes no figure here; from then, its National Insurance relief is capped at £2,000 a year.",
+    hint: "Enter your salary above after the sacrifice, as your payslip shows it. From April 2029 its National Insurance relief is capped at £2,000 a year; before then it changes no figure here.",
   },
   petrol_spending_per_year: {
     label: "Petrol",
@@ -235,7 +235,7 @@ const NUMBER_CONFIGS = {
     step: 10,
     money: true,
     suffix: "a year",
-    hint: "Prefilled with the average household's spending (ONS Family Spending, 2024-25).",
+    hint: "Prefilled with the average household's spending (Source: ONS Family Spending, 2024-25).",
   },
   diesel_spending_per_year: {
     label: "Diesel",
@@ -244,7 +244,7 @@ const NUMBER_CONFIGS = {
     step: 10,
     money: true,
     suffix: "a year",
-    hint: "Prefilled with the average household's spending (ONS Family Spending, 2024-25).",
+    hint: "Prefilled with the average household's spending (Source: ONS Family Spending, 2024-25).",
   },
   electricity_spending_per_year: {
     label: "Electricity",
@@ -253,7 +253,7 @@ const NUMBER_CONFIGS = {
     step: 10,
     money: true,
     suffix: "a year",
-    hint: "Including VAT. Prefilled with the average household's spending, £20.00 a week (ONS Family Spending, 2024-25).",
+    hint: "Including VAT. Prefilled with the average household's spending, £20.00 a week (Source: ONS Family Spending, 2024-25).",
   },
   monthly_childcare: {
     label: "Paid childcare",
@@ -305,7 +305,7 @@ const PREFILL_HINTS = {
   partner_state_pension_per_year: (year) =>
     `Prefilled with the full new State Pension for ${fiscalYearTick(year)}; change it if your partner's differs.`,
   monthly_rent: (year, inputs) =>
-    `Prefilled with the average private rent in ${regionName(inputs.region)} (ONS, ${
+    `Prefilled with the average private rent in ${regionName(inputs.region)} (Source: ONS, ${
       inputs.region === "NORTHERN_IRELAND" ? "July" : "September"
     } 2026); change it if yours differs.`,
 };

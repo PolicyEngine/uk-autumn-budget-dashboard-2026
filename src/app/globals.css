@@ -188,6 +188,16 @@ code {
   --shadow-faint: rgba(17, 24, 39, 0.04);
   --shadow-soft: rgba(17, 24, 39, 0.08);
   --shadow-strong: rgba(17, 24, 39, 0.12);
+  /* Every hover or tap box (Tip.css's tips, the chart tooltips, the map's
+     seat card): one card style, white with a soft border and shadow */
+  --tip-bg: var(--c-surface);
+  --tip-border: 1px solid var(--pe-gray-200);
+  --tip-radius: var(--pe-radius-md);
+  --tip-shadow: 0 4px 16px var(--shadow-soft);
+  --tip-padding: 8px 12px;
+  --tip-font-size: 13px;
+  --tip-line-height: 1.45;
+  --tip-color: var(--pe-gray-800);
   /* The focus ring around a field or pill (the gain-text teal at 25%) */
   --focus-ring: color-mix(in srgb, var(--c-gain-text) 25%, transparent);
   /* The magnifier in a search field: a data URI cannot take var(), so the
@@ -1575,7 +1585,7 @@ body {
 
 .note svg {
   flex: 0 0 auto;
-  margin-top: 3px;
+  margin-top: 1px;
   color: var(--pe-gray-400);
 }
 

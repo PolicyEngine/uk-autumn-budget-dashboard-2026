@@ -1739,7 +1739,7 @@
   margin: 0;
 }
 
-.household-field .label-with-info .info-icon-wrapper {
+.household-field .label-with-info .info-tip {
   flex: none;
 }
 
@@ -1904,111 +1904,11 @@
   pointer-events: none;
 }
 
-/* "i" beside a label: its note on hover or focus */
-.info-icon-wrapper {
-  position: relative;
-  display: inline-flex;
-}
-
-.info-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  padding: 0;
-  font-family: Georgia, serif;
-  font-size: 9px;
-  font-style: italic;
-  font-weight: 600;
-  color: var(--pe-gray-500);
-  background: transparent;
-  border: 1px solid var(--pe-gray-300);
-  border-radius: 50%;
-  cursor: help;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-/* A 40px tap target around the small circle on a touch screen */
+/* A 40px tap target for the steppers on a touch screen */
 @media (pointer: coarse) {
-  .info-icon {
-    position: relative;
-  }
-
-  .info-icon::before {
-    content: "";
-    position: absolute;
-    inset: -13px;
-  }
-
   .household-field .stepper-button {
     width: 40px;
   }
-}
-
-.info-icon:hover,
-.info-icon:focus-visible {
-  color: var(--pe-surface);
-  background: var(--pe-teal-500);
-  border-color: var(--pe-teal-500);
-  outline: none;
-}
-
-.info-tooltip {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  z-index: 100;
-  width: 260px;
-  /* Never wider than the screen less a 16px margin each side; shifted
-     inside it by --tip-shift (utils/infoTooltip.js) near an edge */
-  max-width: calc(100vw - 32px);
-  box-sizing: border-box;
-  padding: 12px 14px;
-  font-size: 0.8rem;
-  font-weight: 400;
-  line-height: 1.5;
-  letter-spacing: normal;
-  text-transform: none;
-  color: var(--pe-gray-100);
-  background: var(--pe-gray-800);
-  border-radius: 8px;
-  box-shadow: var(--pe-shadow-lg);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateX(calc(-50% + var(--tip-shift, 0px)));
-  transition: opacity 0.2s ease, visibility 0.2s ease;
-}
-
-/* The arrow stays over the icon when the box is shifted */
-.info-tooltip::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: clamp(12px, calc(50% - var(--tip-shift, 0px)), calc(100% - 12px));
-  border: 6px solid transparent;
-  border-top-color: var(--pe-gray-800);
-  transform: translateX(-50%);
-}
-
-.info-icon-wrapper:hover .info-tooltip,
-.info-icon-wrapper:focus-within .info-tooltip {
-  opacity: 1;
-  visibility: visible;
-}
-
-/* Under the icon where the sticky band would cover it above
-   (utils/infoTooltip.js) */
-.info-icon-wrapper.info-tooltip-below .info-tooltip {
-  top: calc(100% + 8px);
-  bottom: auto;
-}
-
-.info-icon-wrapper.info-tooltip-below .info-tooltip::after {
-  top: auto;
-  bottom: 100%;
-  border-top-color: transparent;
-  border-bottom-color: var(--pe-gray-800);
 }
 
 /* A group row's chevron: turned while open */
@@ -2055,7 +1955,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .household-more-chevron,
-  .info-tooltip,
   .calculate-button,
   .calculate-arrow,
   .household-card,

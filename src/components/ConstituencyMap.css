@@ -388,11 +388,13 @@
    card sits just above it, placed in script so it stays inside the map. */
 .constituency-tooltip {
   position: absolute;
-  background: var(--c-surface);
-  border: 1px solid var(--pe-gray-200);
-  border-radius: var(--pe-radius-md);
+  /* The shared tip card (--tip-* in globals.css), with room for its rows */
+  background: var(--tip-bg);
+  border: var(--tip-border);
+  border-radius: var(--tip-radius);
   padding: 12px 16px;
-  box-shadow: 0 4px 12px var(--shadow-strong);
+  box-shadow: var(--tip-shadow);
+  font-size: var(--tip-font-size);
   pointer-events: auto;
   width: max-content;
   min-width: 220px;

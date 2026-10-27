@@ -251,13 +251,15 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 8px 10px;
-  border: 1px solid var(--pe-gray-200);
-  border-radius: 6px;
-  background: var(--c-surface);
-  box-shadow: 0 4px 12px var(--shadow-soft);
-  font-size: 0.75rem;
-  color: var(--pe-gray-700);
+  /* The shared tip card (--tip-* in globals.css) */
+  padding: var(--tip-padding);
+  border: var(--tip-border);
+  border-radius: var(--tip-radius);
+  background: var(--tip-bg);
+  box-shadow: var(--tip-shadow);
+  font-size: var(--tip-font-size);
+  line-height: var(--tip-line-height);
+  color: var(--tip-color);
   pointer-events: none;
   white-space: nowrap;
 }

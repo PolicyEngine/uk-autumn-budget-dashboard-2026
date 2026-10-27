@@ -25,6 +25,12 @@ describe("Tip", () => {
   it("toggles on a tap, and renders its child alone with no content", () => {
     const { container } = render(<InfoTip content="Absolute poverty: …" label="About children" />);
     const button = screen.getByRole("button", { name: "About children" });
+    // The one info icon: lucide's Info at 16px, never a typed "i"
+    expect(button).toHaveClass("info-tip");
+    const icon = button.querySelector("svg.lucide-info");
+    expect(icon).not.toBeNull();
+    expect(icon.getAttribute("width")).toBe("16");
+    expect(button.textContent).toBe("");
     fireEvent.pointerDown(button, { pointerType: "touch" });
     expect(screen.getByRole("tooltip")).toHaveTextContent("Absolute poverty");
     fireEvent.pointerDown(button, { pointerType: "touch" });
@@ -70,5 +76,42 @@ describe("Tip's layer", () => {
     };
     walk(src);
     expect(tip).toBeGreaterThan(Math.max(...others));
+  });
+});
+
+describe("One tip style", () => {
+  it("draws every hover box (tips, chart tooltips, the map's card) from the shared --tip-* tokens, and the old dark \"i\" tip is gone", async () => {
+    const { readFileSync, readdirSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+    const src = join(fileURLToPath(import.meta.url), "..", "..");
+    const read = (...path) => readFileSync(join(src, ...path), "utf8");
+    const rule = (text, selector) => new RegExp(`(^|\\n)${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\{([^}]*)\\}`).exec(text)?.[2] ?? "";
+    const boxes = [
+      [read("components", "Tip.css"), ".tip"],
+      [read("components", "ChartTooltip.css"), ".chart-tooltip"],
+      [read("components", "HouseholdScatterTemplate.css"), ".household-scatter-tooltip"],
+      [read("components", "publication", "publication.css"), ".publication-tooltip"],
+      [read("components", "youngPeople", "MeasureDumbbell.css"), ".measure-dumbbell-tip"],
+      [read("components", "ConstituencyMap.css"), ".constituency-tooltip"],
+    ];
+    for (const [css, selector] of boxes) {
+      const body = rule(css, selector);
+      for (const token of ["--tip-bg", "--tip-border", "--tip-radius", "--tip-shadow", "--tip-font-size"]) {
+        expect(body, `${selector} uses ${token}`).toContain(`var(${token})`);
+      }
+    }
+    expect(rule(read("components", "Tip.css"), ".tip")).toContain("var(--tip-padding)");
+    expect(rule(read("components", "ChartTooltip.css"), ".chart-tooltip")).toContain("var(--tip-padding)");
+    const css = [];
+    const walk = (dir) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) walk(path);
+        else if (/\.(css|jsx?)$/.test(entry.name) && !entry.name.includes(".test.")) css.push(readFileSync(path, "utf8"));
+      }
+    };
+    walk(src);
+    for (const text of css) expect(text).not.toMatch(/info-icon-wrapper|info-tooltip|className="info-icon"/);
   });
 });

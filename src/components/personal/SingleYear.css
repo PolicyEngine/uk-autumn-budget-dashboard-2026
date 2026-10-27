@@ -516,13 +516,8 @@
   color: var(--pe-gray-800);
 }
 
-.result-foot-item dd .info-icon-wrapper {
+.result-foot-item dd .info-tip {
   margin-left: 6px;
-  vertical-align: middle;
-}
-
-.result-foot-item dd .info-tooltip {
-  text-align: left;
 }
 
 /* A detail card while it is calculated: empty at its final height, with
