@@ -1,9 +1,12 @@
 """Measures the certified data cannot cost: the registry and detection.
 
 pe-uk #2241 makes additional-dwelling and non-residential purchase prices
-inputs, nil unless a dataset imputes them, and the certified dataset has
-neither column. A measure on those rates scores £0 (before #2241, it charges
-a buyer's whole stock), so it must be published as not computable.
+inputs, nil unless a dataset imputes them. A measure on those rates scored
+£0 (before #2241, it charged a buyer's whole stock) until certified data
+carried both, from the a6299504 cut, so it was published as not computable.
+The tests of the machinery here are written around those two limits, and
+register them as stand-ins (``stand_in_data_limits``,
+tests/data_limit_stand_ins.py).
 """
 
 import ast
@@ -28,13 +31,13 @@ from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
 from tests import purchase_helpers, template_measures
+from tests.data_limit_stand_ins import STAND_IN_DATA_LIMITS
 from tests.fixed_shape_measures import (
     raise_additional_dwelling_rates,
     sdlt_from_purchases_read_at_build,
 )
 from uk_budget_data import data_limits
 from uk_budget_data.data_limits import (
-    DATA_LIMITS,
     limits_for_paths,
     limits_for_scenarios,
     limits_touched,
@@ -55,7 +58,9 @@ SURCHARGE_RATE = f"{SURCHARGE}.rate[1].rate"
 RAISED_SURCHARGE = purchase_helpers.RAISED_SURCHARGE
 NON_RESIDENTIAL = "gov.hmrc.stamp_duty.non_residential.purchase"
 INCOME_TAX = "gov.hmrc.income_tax.rates.uk[0].rate"
-BY_KEY = {limit.key: limit for limit in DATA_LIMITS}
+BY_KEY = {limit.key: limit for limit in STAND_IN_DATA_LIMITS}
+
+pytestmark = pytest.mark.usefixtures("stand_in_data_limits")
 
 
 def household(year=2027):
@@ -82,7 +87,7 @@ def test_every_registered_parameter_exists_in_the_installed_engine():
     """A renamed parameter would silently stop being covered."""
     from policyengine_uk.system import system
 
-    for limit in DATA_LIMITS:
+    for limit in data_limits.DATA_LIMITS:
         for prefix in limit.parameters:
             system.parameters.get_child(prefix)
 
@@ -90,7 +95,7 @@ def test_every_registered_parameter_exists_in_the_installed_engine():
 def test_every_input_a_limit_names_is_one_the_engine_has():
     from policyengine_uk.system import system
 
-    for limit in DATA_LIMITS:
+    for limit in data_limits.DATA_LIMITS:
         assert limit.missing_input in system.variables
 
 
@@ -452,7 +457,7 @@ def keys(touched):
 
 # What a read that can't be watched is taken to read: what every limit
 # covers, in the order records list them.
-EVERY_LIMIT = [limit.key for limit in data_limits.DATA_LIMITS]
+EVERY_LIMIT = [limit.key for limit in STAND_IN_DATA_LIMITS]
 
 
 def surcharge_closing_over(rate):
@@ -1659,7 +1664,7 @@ def test_unreadable_state_is_unequal():
 def test_an_unobservable_variable_reads_anything():
     assert all(
         data_limits._reads(limit, {data_limits.ANY_NAME})
-        for limit in DATA_LIMITS
+        for limit in data_limits.DATA_LIMITS
     )
 
 
@@ -2908,10 +2913,10 @@ def test_a_build_and_a_watch_never_overlap():
 def test_a_build_read_is_recorded_only_against_its_own_limit():
     """The receipt check accepts build:<input> only for the limit that
     names the input."""
-    for limit in DATA_LIMITS:
+    for limit in data_limits.DATA_LIMITS:
         good = record(limit, [f"build:{limit.missing_input}"])
         assert data_limits.record_problems([good]) == []
-        other = [x for x in DATA_LIMITS if x is not limit][0]
+        other = [x for x in data_limits.DATA_LIMITS if x is not limit][0]
         bad = record(limit, [f"build:{other.missing_input}"])
         assert data_limits.record_problems([bad])
         assert data_limits.record_problems(

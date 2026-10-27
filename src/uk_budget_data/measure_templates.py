@@ -36,10 +36,10 @@ A parameter the certified data cannot cost (``uk_budget_data.data_limits``,
 such as the SDLT higher rates) still builds, with a ``DataLimitedWarning``:
 the measure is published as not computable, never as a figure. A parameter
 the installed model mis-costs (``uk_budget_data.model_limits``, such as the
-State Pension's full rates before policyengine-uk #2336) builds with a
+Pension Credit minimum guarantee from 2027) builds with a
 ``ModelLimitedWarning``: the measure is held at provisional, never approved.
 So does a runtime helper that changes a variable such a limit covers (the
-VAT base template, before policyengine-uk #2187).
+VAT base template was one, until policyengine-uk #2187).
 """
 
 import math
@@ -657,8 +657,8 @@ def apply_vat_base_change(
         return current + adjustment
 
     _replace_formula(sim, "vat", formula)
-    # Held while the installed model grosses VAT by one factor (the
-    # vat_consumption_coverage limit, until policyengine-uk #2187).
+    # Held while a model limit covers VAT (vat_consumption_coverage did,
+    # until policyengine-uk #2187 grossed it by survey coverage).
     _warn_if_variable_model_limited("vat")
     return sim
 
@@ -949,9 +949,8 @@ _PROPERTY_INDICES = {
 def _code_names(code) -> set:
     """The names compiled code, or code nested in it, reads.
 
-    As in ``model_limits._reads``: a comment, docstring or string literal
-    naming an index is not a read of it, since only names the code looks
-    up are in ``co_names``.
+    A comment, docstring or string literal naming an index is not a read
+    of it, since only names the code looks up are in ``co_names``.
     """
     names = set()
     stack = [code] if isinstance(code, types.CodeType) else []

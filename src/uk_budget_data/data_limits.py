@@ -26,9 +26,11 @@ parameters), and the stored trees by position and effective value, so a
 reordered, replaced, re-typed or added parameter shows, and a redundant
 breakpoint or a label does not.
 
-A limit lifts when certified data carry the input:
-``tests/test_certified_data.py`` fails once they do, so the limit is removed
-in the bundle-adoption PR that brings them.
+A limit lifts when certified data carry the input: the certified tripwire
+in ``tests/test_data_limits.py`` fails once they do, so the limit is removed
+in the bundle-adoption PR that brings them. The two purchase limits, which
+policyengine-uk #2241 made necessary, lifted so at the a6299504 cut; tests
+of the machinery still register them (``tests/data_limit_stand_ins.py``).
 """
 
 import dis
@@ -63,43 +65,12 @@ class DataLimit:
 
 
 DATA_LIMITS = (
-    DataLimit(
-        key="additional_dwelling_purchases",
-        parameters=(
-            # SDLT higher rates for additional dwellings (FA 2003 Sch. 4ZA).
-            "gov.hmrc.stamp_duty.residential.purchase.additional",
-            # LBTT additional dwelling supplement.
-            "gov.revenue_scotland.lbtt.residential.additional_residence_surcharge",
-            # LTT higher residential rates.
-            "gov.wra.land_transaction_tax.residential.higher_rate",
-        ),
-        missing_input="additional_residential_property_purchased",
-        reason=(
-            "The survey data record no purchases of additional dwellings, "
-            "only the property households already own, so the higher rates "
-            "cannot be costed. From policyengine-uk's fix for issue #2238 "
-            "they apply to nothing; before it, to a buyer's whole stock of "
-            "other property. The purchase imputation (policyengine-uk-data "
-            "#573) would lift this."
-        ),
-    ),
-    DataLimit(
-        key="non_residential_purchases",
-        parameters=(
-            "gov.hmrc.stamp_duty.non_residential.purchase",
-            "gov.revenue_scotland.lbtt.non_residential",
-            "gov.wra.land_transaction_tax.non_residential",
-        ),
-        missing_input="non_residential_property_purchased",
-        reason=(
-            "The survey data record no purchases of non-residential property, "
-            "only the property households already own, so the non-residential "
-            "purchase rates cannot be costed. From policyengine-uk's fix for "
-            "issue #2238 they apply to nothing; before it, to a buyer's whole "
-            "stock of non-residential property. The purchase imputation "
-            "(policyengine-uk-data #573) would lift this."
-        ),
-    ),
+    # The certified data carry both purchase inputs from the a6299504 cut
+    # (policyengine-uk 2.151.0; PR 237's Certified data run), so the
+    # additional-dwelling and non-residential purchase limits are lifted:
+    # the higher rates for additional dwellings and the non-residential
+    # purchase rates (SDLT, LBTT and LTT) are computable again. No cut's
+    # record lists either input, so neither needs NO_LONGER_MISSING.
     # The inputs the a133 cut (policyengine-uk 2.147.2) newly leaves at
     # their defaults (NEWLY_MISSING_INPUTS), each keyed on the parameters
     # whose effect runs through it, read from the formulas at 2.147.2 that
@@ -486,23 +457,28 @@ DATA_LIMITS = (
 )
 
 
+def registry_digest(limits: Iterable[DataLimit]) -> str:
+    """A digest of what a registry records: every field of each limit."""
+    return hashlib.sha256(
+        json.dumps(
+            [
+                [
+                    limit.key,
+                    list(limit.parameters),
+                    limit.missing_input,
+                    limit.reason,
+                ]
+                for limit in limits
+            ],
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+
+
 # A digest of the registry, recorded in every receipt: an artifact
 # generated against another registry (a limit added since, say) is
 # refused until it is regenerated, by the gate and by the page.
-REGISTRY_SHA256 = hashlib.sha256(
-    json.dumps(
-        [
-            [
-                limit.key,
-                list(limit.parameters),
-                limit.missing_input,
-                limit.reason,
-            ]
-            for limit in DATA_LIMITS
-        ],
-        separators=(",", ":"),
-    ).encode()
-).hexdigest()
+REGISTRY_SHA256 = registry_digest(DATA_LIMITS)
 
 
 # The model inputs each certified data cut newly leaves at their defaults:

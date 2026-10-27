@@ -35,9 +35,10 @@ NEWER = "microcosm-uk-2024-25-dense-20260301T000000Z-0000000c"
 PKG = "pkg_combined"
 MEASURES = ("alpha", "beta", "zero")
 YEARS = (2026, 2027)
-SURCHARGE_RATE = (
-    "gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"
-)
+# A parameter under a data limit in force (pip_daily_living_points), so a
+# measure on it is not computable. (These tests used the SDLT surcharge
+# until its limit lifted at the a6299504 cut.)
+LIMITED_RATE = "gov.dwp.pip.daily_living.points_thresholds.enhanced"
 MAC_TIME = (
     "        12.50 real        10.00 user         1.00 sys\n"
     "         7516192768  maximum resident set size\n"
@@ -573,7 +574,7 @@ def test_a_refused_measure_writes_no_table_and_names_the_rest(
     world = World(
         monkeypatch,
         tmp_path,
-        changes_of={"alpha": {SURCHARGE_RATE: {"2026": 0.07}}},
+        changes_of={"alpha": {LIMITED_RATE: {"2026": 10}}},
     )
     assert world.run() == 1
     assert world.steps == [*MEASURES, PKG]
@@ -1031,7 +1032,7 @@ def test_a_reform_unlike_its_approved_receipt_is_refused_before_simulating(
     world.reforms["alpha"] = Reform(
         id="alpha",
         name="alpha",
-        parameter_changes={SURCHARGE_RATE: {"2026": 0.07}},
+        parameter_changes={LIMITED_RATE: {"2026": 10}},
     )
     assert world.run() == 1
     assert world.steps == [] and world.simulated == []

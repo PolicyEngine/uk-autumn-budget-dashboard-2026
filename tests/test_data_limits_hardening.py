@@ -12,9 +12,13 @@ from policyengine_uk.model_api import Variable
 from policyengine_uk.system import system
 
 from tests import template_measures
+from tests.data_limit_stand_ins import STAND_IN_DATA_LIMITS
 from tests.test_data_limits import BY_KEY, simulation
 from uk_budget_data import data_limits
 from uk_budget_data.reforms import get_all_reforms
+
+# Written around the purchase limits, registered as stand-ins.
+pytestmark = pytest.mark.usefixtures("stand_in_data_limits")
 
 NONRES = "sdlt_on_non_residential_property_transactions"
 RESIDENTIAL = "sdlt_on_residential_property_transactions"
@@ -333,7 +337,7 @@ def test_computed_values_do_not_become_stored_input_differences():
 
 
 @pytest.mark.parametrize(
-    "limit", data_limits.DATA_LIMITS, ids=lambda limit: limit.key
+    "limit", STAND_IN_DATA_LIMITS, ids=lambda limit: limit.key
 )
 def test_input_paths_belong_only_to_their_own_limit(limit):
     for name in data_limits.limit_variables(limit):

@@ -31,11 +31,8 @@ describe("parseManifest on the fixture", () => {
       "beta",
       "delta",
       "epsilon",
-      "eta",
       "gamma",
-      "iota",
       "theta",
-      "zeta",
     ]);
     expect(Object.keys(manifest.combined)).toEqual(["combined--alpha+beta"]);
   });
@@ -263,7 +260,7 @@ describe("availability", () => {
       status: "not_computable",
       reason: `Not computable on current data: ${entry.reason}`,
     });
-    expect(entry.reason).toMatch(/additional dwellings/);
+    expect(entry.reason).toMatch(/PIP daily living award/);
   });
 
   it("refuses a not-computable entry that names no limit or reason", () => {

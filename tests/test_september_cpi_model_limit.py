@@ -1,18 +1,17 @@
-"""Hold 2027 benefit measures until both parts of pe-uk #2533 land.
+"""A limit that covers parameters only from 2027: 2027 benefit measures
+were held until both parts of policyengine-uk #2533 landed.
 
-The installed September input is forecast-filled during parameter processing,
-so a non-null processed value alone cannot establish that the outturn landed.
+That limit expired at 2.151.0 (PR 238). Its tests of the year filter, and
+of how it overlaps the State Pension and minimum guarantee limits, run on
+its stand-in (tests/model_limit_stand_ins.py), whose fix is a marker a test
+installs; the tests of its check for the fix went with it. The year filter
+is in force for the minimum guarantee's limit (also from 2027).
 """
-
-import copy
-from importlib import import_module
-from types import SimpleNamespace
 
 import pytest
 from policyengine_core.periods import instant
-from policyengine_uk.system import system as installed_system
-from policyengine_uk.tax_benefit_system import statutory_parameters
 
+from tests.model_limit_stand_ins import with_fix
 from tests.test_model_limits import (
     INCOME_TAX,
     fixed,
@@ -20,20 +19,19 @@ from tests.test_model_limits import (
     scenario,
     simulation,
 )
-from uk_budget_data import data_limits
 from uk_budget_data.model_limits import (
     limits_for_scenarios,
     limits_touched,
     record,
 )
 
+pytestmark = pytest.mark.usefixtures("stand_in_model_limits")
+
 STATE_PENSION_LIMIT = limit_by_key("state_pension_add_on_uprating")
 LIMIT = limit_by_key("benefit_uprating_september_cpi")
 PENSION_CREDIT_LIMIT = limit_by_key("pc_minimum_guarantee_uprating")
-BENEFIT_INDEX = "gov.benefit_uprating_cpi"
 SEPTEMBER_INDEX = "gov.economic_assumptions.indices.september_cpi_uprating"
 CPI_INPUT = "gov.economic_assumptions.statutory_uprating_inputs.cpi_september"
-REPRESENTATIVE = "gov.dwp.attendance_allowance.lower"
 PROTECTED_HEALTH = (
     "gov.dwp.universal_credit.rebalancing.protected_health_element"
 )
@@ -47,138 +45,14 @@ PENSION_CREDIT = (
 )
 
 
-def test_the_pinned_prefixes_equal_the_installed_uprating_metadata():
-    """Run under both adopted engines: metadata drift requires a new pin.
-
-    Uprating metadata propagates into nodes and scale brackets, and the
-    processed baseline repeats the names. Keep the topmost distinct names,
-    including the UC standard allowance parent and all four of its amounts.
-
-    On a later engine, don't repin to the metadata alone: amounts that move
-    to indices of their own still built from the lagged benefit index (the
-    UC standard allowance and LCWRA element on policyengine-uk 2.146.5)
-    stay in the limit until #2533's fix (review of #90).
-    """
-    names = {
-        parameter.name
-        for parameter in installed_system.parameters.get_descendants()
-        if parameter.metadata.get("uprating") == BENEFIT_INDEX
-    }
-    prefixes = {
-        name
-        for name in names
-        if not any(
-            other != name and data_limits._under(name, other)
-            for other in names
-        )
-    }
-    assert len(prefixes) == 79
-    assert set(LIMIT.parameters) == prefixes | {
-        PROTECTED_HEALTH,
-        SEPTEMBER_INDEX,
-        TRIPLE_LOCK,
-        TRIPLE_LOCK_INDEX,
-    }
-    assert "gov.dwp.universal_credit.standard_allowance.amount" in prefixes
-    assert PENSION_CREDIT in prefixes
-
-
 def _update(parameters, path, date, value):
     parameters.get_child(path).update(start=instant(date), value=value)
 
 
-def stand_in_fix(*, published=True, september_index=True):
-    """A processed tree with the two independent parts of #2533.
-
-    The raw tree records publication separately from the processed input,
-    which also exists when the engine has only forecast-filled it. The
-    benefit index's metadata and April growth represent the repointed index.
-    """
-    system = copy.copy(installed_system)
-    system.parameters = installed_system.parameters.clone()
-    system._parameters_at_instant_cache = {}
-    system._raw_parameters = statutory_parameters()
-    if published:
-        _update(system._raw_parameters, CPI_INPUT, "2026-09-01", 0.035)
-    _update(system.parameters, CPI_INPUT, "2026-09-01", 0.035)
-    september = system.parameters.get_child(SEPTEMBER_INDEX)
-    _update(
-        system.parameters,
-        SEPTEMBER_INDEX,
-        "2027-01-01",
-        september("2026-04-01") * 1.035,
-    )
-    if september_index:
-        for parameters in (system.parameters, system._raw_parameters):
-            parameters.get_child(BENEFIT_INDEX).metadata[
-                "uprating"
-            ] = SEPTEMBER_INDEX
-        benefit = system.parameters.get_child(BENEFIT_INDEX)
-        _update(
-            system.parameters,
-            BENEFIT_INDEX,
-            "2027-01-01",
-            benefit("2026-04-01") * 1.035,
-        )
-    return SimpleNamespace(tax_benefit_system=system)
-
-
-@pytest.mark.parametrize("published", [False, True])
-@pytest.mark.parametrize("september_index", [False, True])
-def test_the_fix_needs_the_published_input_and_the_repointed_index(
-    published, september_index
-):
-    stand_in = stand_in_fix(
-        published=published, september_index=september_index
-    )
-    assert LIMIT.fixed(stand_in.tax_benefit_system) is (
-        published and september_index
-    )
-
-
-def test_repointed_metadata_without_the_behaviour_does_not_lift_the_limit():
-    stand_in = stand_in_fix()
-    parameters = stand_in.tax_benefit_system.parameters
-    _update(
-        parameters,
-        BENEFIT_INDEX,
-        "2027-01-01",
-        parameters.get_child(BENEFIT_INDEX)("2026-04-01") * 1.023,
-    )
-    assert LIMIT.fixed(stand_in.tax_benefit_system) is False
-
-
-def test_the_installed_check_sees_a_model_with_both_steps(monkeypatch):
-    fixed_system = stand_in_fix().tax_benefit_system
-    monkeypatch.setattr(
-        import_module("policyengine_uk.system"), "system", fixed_system
-    )
-    assert LIMIT.installed_fixed() is True
-
-
-def test_the_installed_model_still_lacks_both_steps():
-    """Adoption tripwire: remove the limit when #2533 enters the pair.
-
-    It fails only when both steps are in the installed model, not when the
-    OBR's CPI forecast is refreshed or one step lands alone.
-    """
-    assert (
-        not LIMIT.installed_fixed()
-    ), f"{LIMIT.fixed_by} is in the installed model: remove {LIMIT.key}"
-
-
-def test_both_fix_checks_agree_with_the_installed_benefit_uprating():
-    """Differential: the checks agree with what the model does.
-
-    The lower Attendance Allowance rate is a representative on the index.
-    Its April 2027 rise equals the September 2026 outturn (3.5%) exactly
-    when the model has both steps of #2533 (review of #85).
-    """
-    parameter = installed_system.parameters.get_child(REPRESENTATIVE)
-    rise = parameter("2027-04-01") / parameter("2026-04-01") - 1
-    at_outturn = rise == pytest.approx(0.035, abs=0.00001)
-    assert at_outturn is LIMIT.fixed(installed_system)
-    assert at_outturn is LIMIT.installed_fixed()
+def with_both_fix_steps():
+    """A model with this limit's fix (its stand-in's marker), not the State
+    Pension limit's."""
+    return simulation(modifier=with_fix(LIMIT.key))
 
 
 def test_a_2027_protected_health_element_measure_records_the_limit():
@@ -208,20 +82,27 @@ def test_a_2027_minimum_guarantee_measure_records_both_its_limits():
 
 
 def test_a_2027_september_cpi_change_records_the_limit():
-    """Without #2336 the State Pension limit holds it as well."""
-    assert limits_touched(
+    """Without #2336 the State Pension limit holds it as well. From
+    policyengine-uk 2.151.0 the benefit uprating index follows the
+    September CPI index (#2557), so the benefit amounts on it move with it
+    and are recorded beside it."""
+    touched = limits_touched(
         simulation(), simulation({SEPTEMBER_INDEX: {"2027": 1.7}})
-    ) == [
-        record(STATE_PENSION_LIMIT, [SEPTEMBER_INDEX]),
-        record(LIMIT, [SEPTEMBER_INDEX]),
+    )
+    assert [item["key"] for item in touched] == [
+        STATE_PENSION_LIMIT.key,
+        LIMIT.key,
     ]
+    assert touched[0] == record(STATE_PENSION_LIMIT, [SEPTEMBER_INDEX])
+    assert {SEPTEMBER_INDEX, PIP} <= set(touched[1]["parameters"])
 
 
 @pytest.mark.parametrize(
     "changes",
     [
         {SEPTEMBER_INDEX: {"2027": 1.7}},
-        {CPI_INPUT: {"2026-09-01.2027-08-31": 0.035}},
+        # The published outturn is 3.5%, so a measure moves it elsewhere.
+        {CPI_INPUT: {"2026-09-01.2027-08-31": 0.05}},
     ],
     ids=["the index", "the September 2026 input"],
 )
@@ -229,10 +110,11 @@ def test_with_2336_but_not_2533_the_add_on_is_held_by_this_limit(changes):
     """A pair with #2336 but without #2557 raises additional State Pension
     by the September CPI index, whose April 2027 step is still a forecast.
     The State Pension limit lifts with #2336; this one holds a measure
-    that moves the index until #2533's fix (coordinator, 22 October)."""
-    assert limits_touched(fixed(), fixed(changes)) == [
-        record(LIMIT, [SEPTEMBER_INDEX])
-    ]
+    that moves the index until #2533's fix (coordinator, 22 October). From
+    2.151.0 the benefit amounts move with the index too."""
+    touched = limits_touched(fixed(), fixed(changes))
+    assert [item["key"] for item in touched] == [LIMIT.key]
+    assert {SEPTEMBER_INDEX, PIP} <= set(touched[0]["parameters"])
 
 
 @pytest.mark.parametrize(
@@ -300,15 +182,15 @@ def test_unknown_scenario_period_syntax_is_held_conservatively():
 
 
 def test_a_benefit_measure_records_nothing_with_both_fix_steps():
-    baseline, reformed = stand_in_fix(), stand_in_fix()
+    baseline, reformed = with_both_fix_steps(), with_both_fix_steps()
     _update(reformed.tax_benefit_system.parameters, PIP, "2027-01-01", 900.0)
     assert limits_touched(baseline, reformed) == []
 
 
 @pytest.mark.parametrize("fixed_baseline", [False, True])
 def test_the_fix_is_needed_on_both_sides(fixed_baseline):
-    baseline = stand_in_fix(published=fixed_baseline)
-    reformed = stand_in_fix(published=not fixed_baseline)
+    baseline = with_both_fix_steps() if fixed_baseline else simulation()
+    reformed = simulation() if fixed_baseline else with_both_fix_steps()
     _update(reformed.tax_benefit_system.parameters, PIP, "2027-01-01", 900.0)
     assert limits_touched(baseline, reformed) == [record(LIMIT, [PIP])]
 
@@ -318,7 +200,3 @@ def test_a_measure_off_the_covered_parameters_records_nothing():
         limits_touched(simulation(), simulation({INCOME_TAX: {"2027": 0.21}}))
         == []
     )
-
-
-def test_a_missing_parameter_tree_cannot_establish_the_fix():
-    assert LIMIT.fixed(object()) is False
