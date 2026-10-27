@@ -1,9 +1,12 @@
 import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
-import App from "./App";
+import { beforeAll, afterEach, expect, it, vi } from "vitest";
+import App, { preloadAllViews } from "./App";
 import { fixtureJson } from "./test/publicationFixture";
+
+// Every view's code is in before a test renders it (App.jsx lazyView)
+beforeAll(preloadAllViews, 60_000);
 
 const outlook = readFileSync("public/data/living_standards_outlook.json", "utf8");
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });

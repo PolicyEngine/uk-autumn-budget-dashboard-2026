@@ -2,8 +2,8 @@
   "schema": "uk-budget-dashboard/policy-parameters/v1",
   "generator": "uk-budget-data policy-table",
   "engine": {
-    "policyengine": "6.10.2",
-    "policyengine_uk": "2.132.6"
+    "policyengine": "6.11.1",
+    "policyengine_uk": "2.151.0"
   },
   "years": [
     2026,
@@ -170,7 +170,7 @@
       ]
     },
     "state_pension_income_tax_protection": {
-      "description": "Candidate measure. From 6 April 2027, people over State Pension age get an income tax allowance equal to the full new State Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 for £1 of income above it, down to the standard personal allowance. Someone whose only income is the full new State Pension pays no income tax.",
+      "description": "Candidate measure. From 6 April 2027, people over State Pension age whose only income is the State Pension (savings interest aside) get an income tax allowance equal to the full new State Pension (rounded up to the pound: £13,037 in 2027-28), rising with it. Someone whose only income is the full new State Pension pays no income tax; £1 of other income takes the allowance away.",
       "display": "path",
       "rows": [
         {
@@ -191,21 +191,21 @@
               "label": "2027-28",
               "year": 2027,
               "before": 12570.0,
-              "after": 13040.0
+              "after": 13037.0
             },
             {
               "key": "2028",
               "label": "2028-29",
               "year": 2028,
               "before": 12570.0,
-              "after": 13370.0
+              "after": 13363.0
             },
             {
               "key": "2029",
               "label": "2029-30",
               "year": 2029,
               "before": 12570.0,
-              "after": 13700.0
+              "after": 13697.0
             },
             {
               "key": "2030",
@@ -219,7 +219,7 @@
               "label": "2031-32",
               "year": 2031,
               "before": 12830.0,
-              "after": 14400.0
+              "after": 14391.0
             }
           ],
           "source": {
@@ -229,10 +229,10 @@
             },
             "after": {
               "kind": "modifier_constant",
-              "where": "budget_measures/state_pension_income_tax_allowance.py state_pension_income_tax_allowance(allowance_2027 to 2031)"
+              "where": "budget_measures/state_pension_only_income_tax_allowance.py state_pension_only_income_tax_allowance(allowance_2027 to 2031)"
             }
           },
-          "note": "With the measure, withdrawn £1 for each £1 of income above it, down to the personal allowance"
+          "note": "With the measure, only for people whose only income is the State Pension (savings interest aside); any other income takes it away"
         }
       ]
     },

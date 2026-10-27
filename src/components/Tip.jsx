@@ -1,5 +1,6 @@
 import { cloneElement, isValidElement, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { stickyInset } from "../utils/tooltipPlacement";
 import "./Tip.css";
 
 const GAP = 8;
@@ -43,9 +44,14 @@ export default function Tip({ content, children }) {
     const a = anchor()?.getBoundingClientRect();
     const t = tipRef.current.getBoundingClientRect();
     if (!a) return;
-    const below = a.top - t.height - GAP < EDGE;
-    const top = below ? a.bottom + GAP : a.top - t.height - GAP;
-    const left = Math.min(Math.max(a.left + a.width / 2 - t.width / 2, EDGE), window.innerWidth - t.width - EDGE);
+    // Above the anchor, centred; below it where the sticky band or the
+    // window's top leaves no room; kept inside the window either way
+    const minTop = stickyInset(anchor()) + EDGE;
+    const below = a.top - t.height - GAP < minTop;
+    const maxTop = window.innerHeight - t.height - EDGE;
+    const top = Math.max(minTop, Math.min(below ? a.bottom + GAP : a.top - t.height - GAP, maxTop));
+    const width = document.documentElement.clientWidth || window.innerWidth;
+    const left = Math.min(Math.max(a.left + a.width / 2 - t.width / 2, EDGE), width - t.width - EDGE);
     setPos({ top, left, below });
   }, [open]);
 

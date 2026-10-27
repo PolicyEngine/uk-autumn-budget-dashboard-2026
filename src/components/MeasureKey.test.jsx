@@ -27,11 +27,11 @@ function Card({ members, label }) {
 }
 
 describe("MeasureKey", () => {
-  it("groups the measures, folds those with no effect, and keeps them listed", () => {
+  it("lists the measures with no group labels, folds those with no effect, and keeps them listed", () => {
     const { container } = render(<MeasureKey members={[FUEL, FREEZE, NI]} netLabel="Net change" />);
-    expect(screen.getByText("Costs revenue")).toBeInTheDocument();
-    // The raise-revenue measure is muted, so its group has no active chip
+    expect(screen.queryByText("Costs revenue")).toBeNull();
     expect(screen.queryByText("Raises revenue")).toBeNull();
+    expect(container.querySelector(".measure-key-heading")).toBeNull();
     const more = screen.getByRole("button", { name: "+2 with no effect" });
     expect(more).toHaveAttribute("aria-expanded", "false");
     const muted = container.querySelector(".measure-key-muted");

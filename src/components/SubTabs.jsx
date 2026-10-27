@@ -217,7 +217,7 @@ export default function SubTabs({ tabs, value, onChange, ariaLabel, idPrefix }) 
               className="sub-tab"
               onClick={() => choose(tab.value)}
             >
-              {tab.icon && <TitleIcon name={tab.icon} bare size={16} className="sub-tab-icon" />}
+              {tab.icon && <TitleIcon name={tab.icon} bare size={18} className="sub-tab-icon" />}
               <span className="sub-tab-label">{tab.label}</span>
             </button>
           );

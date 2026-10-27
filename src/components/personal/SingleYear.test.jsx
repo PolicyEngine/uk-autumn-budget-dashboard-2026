@@ -116,7 +116,7 @@ const HEADLINE = /^Your change$/;
 /** The headline card (there is none before a result). */
 const headlineCard = () => document.querySelector(".result-card");
 /** The headline figure, once it has counted up. */
-const changeValue = () => headlineCard().querySelector(".result-value").textContent;
+const changeValue = () => headlineCard().querySelector(".result-change-value").textContent;
 
 // The waterfall, once the split by policy is in (optionally for one year)
 const splitShown = (year) =>
@@ -296,6 +296,11 @@ describe("the household calculation, from the fixture", () => {
     ]);
     expect(tiles[0]).toHaveTextContent(`In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies`);
     expect(changeValue()).toBe("+£3,765");
+    // All three figures in the tiles' one headline class, the change not
+    // in the map's micro .result-value
+    expect(tiles.map((tile) => tile.querySelectorAll(".forecast-tile-value").length)).toEqual([1, 1, 1]);
+    expect(tiles[0].querySelector(".forecast-tile-value .result-change-value")).toHaveTextContent("+£3,765");
+    expect(card.querySelector(".result-value")).toBeNull();
     // The figure once, for copying and screen readers alike
     expect(card.textContent.match(/£3,765/g)).toHaveLength(1);
     expect(tiles[0].querySelector(".forecast-tile-sub")).toHaveTextContent("a year, after the selected policies");
@@ -368,7 +373,7 @@ describe("the household calculation, from the fixture", () => {
     ]);
     const parse = (text) => Number(text.replace("−", "-").replace(/[£,+]/g, ""));
     const sum = bars
-      .map((bar) => parse(bar.querySelectorAll("text")[1].textContent))
+      .map((bar) => parse(bar.querySelector(".waterfall-value").textContent))
       .reduce((a, b) => a + b, 0);
     expect(sum).toBe(parse(changeValue()));
     expect(sum).toBe(3765);
@@ -683,7 +688,7 @@ describe("switching from one household's card to another", () => {
     fireEvent.click(card("Your household"));
     expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(22);
     expect(headlineCard()).toBeNull();
-    expect(screen.queryByText("+£1,111", { selector: ".result-value" })).toBeNull();
+    expect(screen.queryByText("+£1,111", { selector: ".result-change-value" })).toBeNull();
     // A changed answer and Calculate: the new result
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "41" } });
     fireEvent.click(calculateButton());
@@ -1124,21 +1129,31 @@ describe("the breakdown's one line", () => {
 });
 
 describe("the waterfall's one line", () => {
-  it("says where net income goes and which policy moves it most, gains and losses alike", async () => {
-    const { waterfallSentence } = await import("./NetIncomeWaterfall");
+  it("leads with the change, then the policy that moves it most: gains, losses, mixed, one, none", async () => {
+    const { waterfallSentence, waterfallScaleStart } = await import("./NetIncomeWaterfall");
     const totals = { before: 70050, after: 70159 };
     const step = (name, rounded) => ({ id: name, name, rounded });
     expect(waterfallSentence(totals, [step("Zero VAT on electricity", 56), step("Fuel duty deferral", 53)], "2027-28")).toBe(
-      "Your net income rises from £70,050 to £70,159 in 2027-28; zero VAT on electricity adds the most (+£56).",
+      "Your net income rises in 2027-28, mostly from zero VAT on electricity (+£56).",
+    );
+    expect(waterfallSentence(totals, [step("A", 40), step("B", 35), step("C", 34)], "2027-28")).toBe(
+      "Your net income rises in 2027-28; a adds the most (+£40).",
     );
     expect(waterfallSentence(totals, [step("Zero VAT on electricity", 204), step("Threshold freeze", -95)], "2027-28")).toBe(
-      "Your net income rises from £70,050 to £70,159 in 2027-28; zero VAT on electricity adds the most (+£204) and threshold freeze takes the most (−£95).",
+      "Your net income rises in 2027-28: zero VAT on electricity adds the most (+£204) and threshold freeze takes the most (−£95).",
+    );
+    expect(waterfallSentence({ before: 100, after: 50 }, [step("Fuel duty", 20), step("Threshold freeze", -70)], "2031-32")).toBe(
+      "Your net income falls in 2031-32: threshold freeze takes the most (−£70) and fuel duty adds the most (+£20).",
     );
     expect(waterfallSentence({ before: 100, after: 80 }, [step("Threshold freeze", -20)], "2031-32")).toBe(
-      "Your net income falls from £100 to £80 in 2031-32; threshold freeze takes £20 a year.",
+      "Your net income falls in 2031-32, all from threshold freeze.",
     );
-    expect(waterfallSentence({ before: 100, after: 100 }, [], "2027-28")).toBe("Your net income stays at £100 in 2027-28.");
-    // While the split is calculated, the totals alone
-    expect(waterfallSentence(totals, null, "2027-28")).toBe("Your net income rises from £70,050 to £70,159 in 2027-28.");
+    expect(waterfallSentence({ before: 100, after: 100 }, [], "2027-28")).toBe("No change to your net income in 2027-28.");
+    // No change, before or after amount: the tile and the bars' end labels show them
+    expect(waterfallSentence(totals, [step("Zero VAT on electricity", 56)], "2027-28")).not.toMatch(/109|70,050|70,159/);
+    // While the split is calculated, the change alone
+    expect(waterfallSentence(totals, null, "2027-28")).toBe("Your net income rises in 2027-28.");
+    // The bars start a round £100 below the lowest point
+    expect(waterfallScaleStart({ before: 17947, after: 18007 }, [step("A", 43), step("B", 17)])).toBe(17800);
   });
 });

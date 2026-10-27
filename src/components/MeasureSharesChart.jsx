@@ -4,8 +4,8 @@
 // ▲ better off and ▼ worse off shares in two fixed right-aligned columns.
 // The one chart for better and worse off by row on every card (Young
 // people, Pensioners): rows are measures (each its own run) or, for one
-// run, age groups; `emphasis` marks a focus row (16 to 24) by a bold name,
-// never a background band.
+// run, age groups; `emphasis` marks the chosen row (the age group By age
+// shows) by a bold name on a light band.
 
 import { useRef } from "react";
 import MeasureRowLabel from "./MeasureRowLabel";
@@ -50,7 +50,7 @@ export default function MeasureSharesChart({ rows, groupLabel, yearLabel, emphas
       {rows.map(({ id, name, fullName, row }) => {
         const drawn = visibleSegments(Object.fromEntries(KEYS.map((key) => [key, row[key] ?? 0])), KEYS);
         return (
-          <div className="msc-row" role="row" key={id}>
+          <div className={`msc-row${id === emphasis ? " is-focus" : ""}`} role="row" key={id}>
             <span className={`msc-label${id === emphasis ? " is-focus" : ""}`} role="rowheader" title={fullName ?? name}>
               {byId?.get(id) ? <MeasureRowLabel measure={byId.get(id)} name={name} /> : name}
             </span>
@@ -70,7 +70,7 @@ export default function MeasureSharesChart({ rows, groupLabel, yearLabel, emphas
               <span className="msc-bar">
                 {OUTCOMES.map((o) =>
                   drawn[o.key] > 0 ? (
-                    <span key={o.key} className="msc-seg" style={{ width: `${drawn[o.key]}%`, background: o.color }} />
+                    <span key={o.key} className="msc-seg" style={{ flexBasis: `${drawn[o.key]}%`, background: o.color }} />
                   ) : null,
                 )}
               </span>

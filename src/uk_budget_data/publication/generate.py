@@ -662,8 +662,9 @@ def _refuse_wealth_tax_base(
     subject: str, baseline_scenario, reform_scenario
 ) -> None:
     """Refuse a run whose either side changes one of the engine's
-    wealth-tax scales in its ``parameter_changes``: they tax gross wealth,
-    the wrong base for a wealth tax on net assets (the UK hub's
+    wealth-tax scales in its ``parameter_changes``: for a wealth tax on net
+    assets, one taxes the wrong base and the other one not yet checked
+    against the data (``measure_templates.WEALTH_TAX_SCALES``; the UK hub's
     budget-triage/JUDGED.md, S4). The templates refuse the path; this
     refuses it written as plain ``parameter_changes``."""
     paths = wealth_tax_paths(baseline_scenario, reform_scenario)

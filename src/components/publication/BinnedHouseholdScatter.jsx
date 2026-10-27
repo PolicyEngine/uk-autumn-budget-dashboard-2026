@@ -1,15 +1,5 @@
-import {
-  CartesianGrid,
-  Cell,
-  ReferenceLine,
-  ResponsiveContainer,
-  Scatter,
-  ScatterChart,
-  Tooltip,
-  XAxis,
-  YAxis,
-  ZAxis,
-} from "recharts";
+import { CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, XAxis, YAxis, ZAxis } from "recharts";
+import { Tooltip } from "../ViewportTooltip";
 import { provisionalLabel } from "../../utils/publication/manifest";
 import {
   bandLabel,

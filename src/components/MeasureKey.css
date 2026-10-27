@@ -25,22 +25,13 @@
   max-width: 100%;
 }
 
-/* The groups and their chip lists dissolve, so every chip (and each
-   group's small heading before its chips) flows in one wrapping line */
+/* The groups and their chip lists dissolve, so every chip flows in one
+   wrapping line */
 .measure-key-group,
 .measure-key-scroll > .measure-key-group > .measure-key-chips {
   display: contents;
 }
 
-.measure-key-heading {
-  margin-left: 6px;
-}
-
-.measure-key-heading:first-child {
-  margin-left: 0;
-}
-
-.measure-key-heading,
 .measure-key-title {
   font-size: 12px;
   font-weight: 600;

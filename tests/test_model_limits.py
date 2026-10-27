@@ -1,29 +1,26 @@
 """The model-limit guard: a measure the installed model mis-costs until a
 known fix lands is held at provisional, never approved.
 
-Until policyengine-uk #2336, additional State Pension and protected
-payments rise with the full rates, so changing the full rates or triple
-lock moves them too. Until #2533, CPI-linked benefit levels from 2027
-follow lagged calendar-year CPI rather than the September outturn. Until
-the UK hub's earnings fix, the Pension Credit minimum guarantee does too,
-though the law requires it to rise with earnings. Until #2187, household
-VAT is grossed up to receipts by one factor, so VAT runs high (0.469 /
-0.38, about 23%); that limit covers variables as well as parameters.
+These tests were written around the State Pension add-on's limit, which
+expired with policyengine-uk #2336 at 2.151.0 (PR 238), and run on the
+stand-in registry (tests/model_limit_stand_ins.py): it keeps that limit,
+the September CPI limit (#2533) and the VAT limit (#2187) around the one
+in force, the Pension Credit minimum guarantee's. A stand-in's fix is a
+marker variable a test installs, so the machinery is tested on models with
+and without it; the checks of the installed model for the expired fixes
+went with their limits.
 """
 
 import copy
 import warnings
-from functools import partial
 
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
-from policyengine_core.periods import YEAR
-from policyengine_core.variables import Variable
 from policyengine_uk import Simulation
-from policyengine_uk.entities import Person
 from policyengine_uk.utils.scenario import Scenario
 
+from tests.model_limit_stand_ins import STAND_IN_MODEL_LIMITS, with_fix
 from tests.publication_support import World, make_household_rows, make_tables
 from uk_budget_data import model_limits
 from uk_budget_data.measure_templates import (
@@ -32,7 +29,6 @@ from uk_budget_data.measure_templates import (
     rate_change,
 )
 from uk_budget_data.model_limits import (
-    MODEL_LIMITS,
     limits_for_paths,
     limits_for_scenarios,
     limits_touched,
@@ -48,12 +44,14 @@ from uk_budget_data.publication.generate import generate_artifacts
 from uk_budget_data.publication.publish import PublishError, approve, stage
 from uk_budget_data.publication.receipt import dashboard_problems
 
+pytestmark = pytest.mark.usefixtures("stand_in_model_limits")
+
 
 def limit_by_key(key):
-    """A registered limit by key, not by position, so removing a limit at
-    adoption fails loudly at that limit's own lookups instead of quietly
+    """A stand-in registry's limit by key, not by position, so removing a
+    limit fails loudly at that limit's own lookups instead of quietly
     pointing a test at another limit."""
-    return {limit.key: limit for limit in MODEL_LIMITS}[key]
+    return {limit.key: limit for limit in STAND_IN_MODEL_LIMITS}[key]
 
 
 LIMIT = limit_by_key("state_pension_add_on_uprating")
@@ -85,26 +83,8 @@ def simulation(changes=None, modifier=None):
     return Simulation(situation=household(), scenario=scenario)
 
 
-class additional_state_pension(Variable):
-    """A stand-in for policyengine-uk #2336's variable: it reads September
-    CPI, which is what the guard looks for. Its values are not the law's;
-    only whether the guard sees the fix is tested with it."""
-
-    entity = Person
-    definition_period = YEAR
-    value_type = float
-    label = "Additional State Pension (a stand-in uprated by September CPI)"
-
-    def formula(person, period, parameters):
-        index = parameters(
-            period
-        ).gov.economic_assumptions.indices.september_cpi_uprating
-        return person("age", period) * 0 * index
-
-
-def with_the_fix(sim):
-    """Install the stand-in, as a model with #2336 would have it."""
-    sim.tax_benefit_system.update_variable(additional_state_pension)
+# Install the State Pension stand-in's fix, as a model with #2336 had it.
+with_the_fix = with_fix(LIMIT.key)
 
 
 def fixed(changes=None):
@@ -117,7 +97,7 @@ def fixed(changes=None):
 def test_every_registered_parameter_exists_in_the_installed_engine():
     from policyengine_uk.system import system
 
-    for limit in MODEL_LIMITS:
+    for limit in model_limits.MODEL_LIMITS:
         for prefix in limit.parameters:
             assert system.parameters.get_child(prefix) is not None, prefix
 
@@ -125,37 +105,9 @@ def test_every_registered_parameter_exists_in_the_installed_engine():
 def test_every_registered_variable_exists_in_the_installed_engine():
     from policyengine_uk.system import system
 
-    for limit in MODEL_LIMITS:
+    for limit in model_limits.MODEL_LIMITS:
         for name in limit.variables:
             assert name in system.variables, name
-
-
-def test_the_installed_model_still_lacks_the_fix():
-    """Tripwire: when the installed policyengine-uk has #2336, this fails,
-    and the limit is removed in the bundle-adoption PR that brings it."""
-    assert not LIMIT.installed_fixed(), (
-        "the installed policyengine-uk uprates additional State Pension by "
-        f"September CPI ({LIMIT.fixed_by}): remove {LIMIT.key}"
-    )
-
-
-def test_the_two_checks_for_the_fix_agree_on_the_installed_model():
-    """Differential: the installed source file and the built system's own
-    formula give the same answer."""
-    from policyengine_uk.system import system
-
-    assert LIMIT.fixed(system) == LIMIT.installed_fixed()
-    assert LIMIT.fixed(simulation().tax_benefit_system) is False
-
-
-def test_the_system_check_sees_the_fix_when_the_formula_has_it():
-    assert LIMIT.fixed(fixed().tax_benefit_system) is True
-
-
-def test_a_system_without_the_variable_counts_as_unfixed():
-    """Fail safe: a model that lacks the variable, or whose formula source
-    can't be read, holds the measure rather than approving it."""
-    assert LIMIT.fixed(object()) is False
 
 
 # --- what a measure touches -----------------------------------------------
@@ -305,14 +257,14 @@ def test_no_template_warning_for_a_measure_off_the_state_pension():
 
 
 @pytest.fixture
-def installed_with_the_fix(monkeypatch):
+def installed_with_the_fix(stand_in_model_limits, monkeypatch):
     """The registry as it reads on an installed model that has the fix."""
     monkeypatch.setattr(
         model_limits,
         "MODEL_LIMITS",
         tuple(
             type(limit)(**{**vars(limit), "installed_fixed": lambda: True})
-            for limit in MODEL_LIMITS
+            for limit in model_limits.MODEL_LIMITS
         ),
     )
 
@@ -374,7 +326,7 @@ def record_cases(limit):
     )
 
 
-PATHS = st.sampled_from(MODEL_LIMITS).flatmap(record_cases)
+PATHS = st.sampled_from(STAND_IN_MODEL_LIMITS).flatmap(record_cases)
 
 
 @given(PATHS)
@@ -387,7 +339,7 @@ def test_every_record_the_guard_makes_passes_its_own_check(case):
 def test_records_for_several_limits_keep_registry_order(cases):
     records = [
         record(limit, paths)
-        for limit in MODEL_LIMITS
+        for limit in STAND_IN_MODEL_LIMITS
         for chosen, paths in cases
         if chosen == limit
     ]
@@ -430,7 +382,7 @@ BROKEN = [
 ]
 
 
-@given(st.sampled_from(MODEL_LIMITS), st.sampled_from(BROKEN))
+@given(st.sampled_from(STAND_IN_MODEL_LIMITS), st.sampled_from(BROKEN))
 def test_a_record_the_guard_did_not_make_is_refused(limit, break_it):
     good = record(limit, limit.parameters[:2])
     broken = break_it(copy.deepcopy(good))
@@ -439,7 +391,7 @@ def test_a_record_the_guard_did_not_make_is_refused(limit, break_it):
     assert record_problems([broken]) != []
 
 
-@pytest.mark.parametrize("limit", MODEL_LIMITS)
+@pytest.mark.parametrize("limit", STAND_IN_MODEL_LIMITS)
 def test_a_limit_listed_twice_or_a_non_list_is_refused(limit):
     good = record(limit, [limit.parameters[0]])
     assert record_problems([good, good]) != []
@@ -462,7 +414,7 @@ def world(monkeypatch):
 HELD = record(LIMIT, [NEW_PENSION])
 
 
-@pytest.mark.parametrize("limit", MODEL_LIMITS)
+@pytest.mark.parametrize("limit", STAND_IN_MODEL_LIMITS)
 def test_a_model_limited_measure_stages_provisional_but_is_never_approved(
     world,
     limit,
@@ -489,7 +441,7 @@ def test_the_same_measure_without_the_limit_is_approved(world):
     assert manifest.entries()["alpha"].status == m.APPROVED
 
 
-@pytest.mark.parametrize("limit", MODEL_LIMITS)
+@pytest.mark.parametrize("limit", STAND_IN_MODEL_LIMITS)
 def test_the_refusal_names_the_reason(world, limit):
     manifest = m.Manifest()
     args = dict(data_root=world.data_root, inputs=world.inputs)
@@ -698,136 +650,6 @@ CPI_INDEX = "gov.economic_assumptions.indices.september_cpi_uprating"
 CPI_INPUT = "gov.economic_assumptions.statutory_uprating_inputs.cpi_september"
 
 
-def named_only_formula(person, period, parameters):
-    """Names the index (september_cpi_uprating) but never reads it."""
-    # TODO: uprate by september_cpi_uprating
-    unused = "gov.economic_assumptions.indices.september_cpi_uprating"
-    del unused
-    return person("age", period) * 0
-
-
-def ignoring_formula(person, period, parameters):
-    return person("age", period) * 0
-
-
-def reading_formula(person, period, parameters):
-    index = parameters(
-        period
-    ).gov.economic_assumptions.indices.september_cpi_uprating
-    return person("age", period) * 0 * index
-
-
-def with_formulas(**formulas):
-    """A modifier installing an ``additional_state_pension`` whose own class
-    carries exactly these formulas. (A subclass with no formulas of its own
-    keeps the baseline's: core merges a reform variable's formulas with the
-    baseline's before its first date.)"""
-    variable = type(
-        "additional_state_pension",
-        (Variable,),
-        {
-            "entity": Person,
-            "definition_period": YEAR,
-            "value_type": float,
-            "label": "Additional State Pension (a stand-in)",
-            **formulas,
-        },
-    )
-
-    def modifier(sim):
-        sim.tax_benefit_system.update_variable(variable)
-
-    return modifier
-
-
-def installed_formulas(sim):
-    variable = sim.tax_benefit_system.variables["additional_state_pension"]
-    return {date: f.__name__ for date, f in variable.formulas.items()}
-
-
-def test_naming_the_index_without_reading_it_is_not_the_fix():
-    """Review of #73, finding A: a comment, docstring or string naming the
-    index counted as fixed, so the guard would lift itself."""
-    sim = simulation(modifier=with_formulas(formula=named_only_formula))
-    assert installed_formulas(sim) == {"0001-01-01": "named_only_formula"}
-    assert LIMIT.fixed(sim.tax_benefit_system) is False
-    reading = simulation(modifier=with_formulas(formula=reading_formula))
-    assert LIMIT.fixed(reading.tax_benefit_system) is True
-
-
-def test_every_dated_formula_must_read_the_index():
-    """Fixed only from 2026 is not fixed: the formula before then still
-    rises with the full rates."""
-    sim = simulation(
-        modifier=with_formulas(
-            formula=ignoring_formula, formula_2026=reading_formula
-        )
-    )
-    assert installed_formulas(sim) == {
-        "0001-01-01": "ignoring_formula",
-        "2026-01-01": "reading_formula",
-    }
-    assert LIMIT.fixed(sim.tax_benefit_system) is False
-
-
-def installed_source(monkeypatch, tmp_path, text):
-    """Point the installed-model check at a file holding ``text``."""
-    path = tmp_path / "additional_state_pension.py"
-    path.write_text(text, encoding="utf-8")
-
-    class Root:
-        def joinpath(self, *parts):
-            return path
-
-    monkeypatch.setattr(model_limits, "files", lambda package: Root())
-
-
-def test_the_installed_check_reads_the_formula_not_the_text(
-    monkeypatch, tmp_path
-):
-    installed_source(
-        monkeypatch,
-        tmp_path,
-        "class additional_state_pension:\n"
-        "    def formula(person, period, parameters):\n"
-        "        # september_cpi_uprating\n"
-        "        return 'september_cpi_uprating'\n",
-    )
-    assert LIMIT.installed_fixed() is False
-    installed_source(
-        monkeypatch,
-        tmp_path,
-        "class additional_state_pension:\n"
-        "    def formula(person, period, parameters):\n"
-        "        return parameters(period).gov.economic_assumptions"
-        ".indices.september_cpi_uprating\n",
-    )
-    assert LIMIT.installed_fixed() is True
-    # Every formula of the class must read it, not just one.
-    installed_source(
-        monkeypatch,
-        tmp_path,
-        "class additional_state_pension:\n"
-        "    def formula(person, period, parameters):\n"
-        "        return 0\n"
-        "    def formula_2026(person, period, parameters):\n"
-        "        return parameters(period).gov.economic_assumptions"
-        ".indices.september_cpi_uprating\n",
-    )
-    assert LIMIT.installed_fixed() is False
-
-
-@pytest.mark.parametrize("problem", ["missing", "unparsable"])
-def test_an_unreadable_installed_source_counts_as_unfixed(
-    monkeypatch, tmp_path, problem
-):
-    if problem == "missing":
-        monkeypatch.setattr(model_limits, "_ADD_ON_FILE", "no/such/file.py")
-    else:
-        installed_source(monkeypatch, tmp_path, "class (:\n")
-    assert LIMIT.installed_fixed() is False
-
-
 def raise_the_new_state_pension_by_rebinding(sim):
     """A modifier that rebinds the node formulas read by attribute, leaving
     the stored tree's child as it was (review of #73, finding B)."""
@@ -975,50 +797,6 @@ def test_a_combined_run_with_its_own_model_limit_is_never_approved(world):
 # --- review of #73, round 2 ----------------------------------------------------
 
 
-def pensioner(year, age):
-    return {
-        "people": {
-            "p": {"age": {year: age}, "state_pension_reported": {year: 20_000}}
-        },
-        "benunits": {"b": {"members": ["p"]}},
-        "households": {"h": {"members": ["p"]}},
-    }
-
-
-@pytest.mark.parametrize(
-    "age, pension, rate, raised_to",
-    [(70, "NEW", NEW_PENSION, 260.0), (85, "BASIC", BASIC_PENSION, 200.0)],
-    ids=["new State Pension", "basic State Pension"],
-)
-def test_both_checks_for_the_fix_agree_with_what_the_model_does(
-    age, pension, rate, raised_to
-):
-    """The checks read code; this tripwire reads behaviour. Without #2336
-    the add-on rises with the full rate, so raising the full rate moves it;
-    with #2336 it is uprated by September CPI and shouldn't move. If a
-    release fools the code checks, or #2336 lands in a form that still moves
-    the add-on, this fails, and the limit is revisited in that PR.
-
-    Both pensions are tested: a release that fixes the new State Pension's
-    add-on but not the basic's (review of #73, round 3) passes the code
-    checks, since every formula reads the index, and fails here."""
-    year = 2028
-    baseline = Simulation(situation=pensioner(year, age))
-    raised = Simulation(
-        situation=pensioner(year, age),
-        scenario=Scenario(parameter_changes={rate: {str(year): raised_to}}),
-    )
-    # Each case stays the pension it is named for, so the basic case can't
-    # quietly become a second new State Pension case.
-    assert baseline.calculate("state_pension_type", year)[0] == pension
-    before = baseline.calculate("additional_state_pension", year)[0]
-    after = raised.calculate("additional_state_pension", year)[0]
-    assert before > 0
-    moves = bool(after != before)
-    assert moves is not LIMIT.installed_fixed()
-    assert moves is not LIMIT.fixed(baseline.tax_benefit_system)
-
-
 def test_a_rebound_node_on_the_baseline_side_is_recorded():
     assert limits_touched(
         simulation(modifier=raise_the_new_state_pension_by_rebinding),
@@ -1048,31 +826,6 @@ def test_a_rebound_node_above_the_leaf_is_recorded():
     assert limits_touched(simulation(), reformed) == [
         record(LIMIT, [NEW_PENSION])
     ]
-
-
-def test_a_formula_without_compiled_code_counts_as_unfixed():
-    """A formula the guard can't read (here a partial, which has no
-    ``__code__``) is not proof of the fix, even when it wraps one that
-    reads the index."""
-    sim = simulation(modifier=with_formulas(formula=partial(reading_formula)))
-    variable = sim.tax_benefit_system.variables["additional_state_pension"]
-    [formula] = variable.formulas.values()
-    assert isinstance(formula, partial)
-    assert LIMIT.fixed(sim.tax_benefit_system) is False
-
-
-def test_the_installed_check_ignores_a_bare_name(monkeypatch, tmp_path):
-    """Only reading the index as an attribute counts: a global or local of
-    the same name is not the index."""
-    installed_source(
-        monkeypatch,
-        tmp_path,
-        "september_cpi_uprating = 1\n"
-        "class additional_state_pension:\n"
-        "    def formula(person, period, parameters):\n"
-        "        return person('age', period) * september_cpi_uprating\n",
-    )
-    assert LIMIT.installed_fixed() is False
 
 
 @pytest.mark.parametrize("missing", ["data_limits", "model_limits", "name"])

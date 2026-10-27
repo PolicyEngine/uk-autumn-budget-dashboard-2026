@@ -35,6 +35,9 @@ from uk_budget_data.budget_measures.road_fuel_vat_cut import road_fuel_vat_cut
 from uk_budget_data.budget_measures.state_pension_income_tax_allowance import (
     state_pension_income_tax_allowance,
 )
+from uk_budget_data.budget_measures.state_pension_only_income_tax_allowance import (
+    state_pension_only_income_tax_allowance,
+)
 from uk_budget_data.budget_measures.warm_home_discount_top_up import (
     warm_home_discount_top_up,
 )
@@ -210,19 +213,47 @@ def _create_fuel_duty_rise_deferral() -> Reform:
 # =============================================================================
 
 
-def _create_state_pension_income_tax_protection() -> Reform:
+# The design: "sole_income" follows the reporting of 26 October 2026 (BBC;
+# The Times): an allowance of the full new State Pension for pensioners
+# "wholly reliant on the state pension", about a million people, costing
+# about £200m a year by 2030. "tapered", the design modelled until then,
+# gives the allowance to everyone over State Pension age and withdraws it
+# £1 for £1 of income above it. A large other_income_limit in the
+# sole-income module gives it to every pensioner, untapered.
+STATE_PENSION_PROTECTION_DESIGN = "sole_income"
+STATE_PENSION_PROTECTION_DESIGNS = {
+    "sole_income": (
+        state_pension_only_income_tax_allowance,
+        "Candidate measure. From 6 April 2027, people over State Pension "
+        "age whose only income is the State Pension (savings interest "
+        "aside) get an income tax allowance equal to the full new State "
+        "Pension (rounded up to the pound: £13,037 in 2027-28), rising with "
+        "it. Someone whose only income is the full new State Pension pays "
+        "no income tax; £1 of other income takes the allowance away.",
+    ),
+    "tapered": (
+        state_pension_income_tax_allowance,
+        "Candidate measure. From 6 April 2027, people over State Pension "
+        "age get an income tax allowance equal to the full new State "
+        "Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 "
+        "for £1 of income above it, down to the standard personal "
+        "allowance. Someone whose only income is the full new State "
+        "Pension pays no income tax.",
+    ),
+}
+
+
+def _create_state_pension_income_tax_protection(
+    design: str = None,
+) -> Reform:
+    modifier, description = STATE_PENSION_PROTECTION_DESIGNS[
+        design or STATE_PENSION_PROTECTION_DESIGN
+    ]
     return Reform(
         id=STATE_PENSION_ALLOWANCE_ID,
         name="State Pension income tax protection",
-        description=(
-            "Candidate measure. From 6 April 2027, people over State Pension "
-            "age get an income tax allowance equal to the full new State "
-            "Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 "
-            "for £1 of income above it, down to the standard personal "
-            "allowance. Someone whose only income is the full new State "
-            "Pension pays no income tax."
-        ),
-        simulation_modifier=state_pension_income_tax_allowance,
+        description=description,
+        simulation_modifier=modifier,
         # The allowance moves taxable income, so the capital gains rate.
         parameter_changes=static_capital_gains(),
     )

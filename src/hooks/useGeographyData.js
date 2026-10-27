@@ -4,6 +4,7 @@ import { loadVerifiedFlat, SnapshotChangedError } from "../utils/publication/fla
 import { indexRows } from "../utils/geography/rows";
 import { FILES } from "../utils/geography/columns";
 import { parseGeographyTable } from "../utils/geography/parse";
+import { takeEarlyResponse } from "../utils/publication/early";
 
 /**
  * Results by area, fetched once per file and shared by every component.
@@ -115,7 +116,10 @@ export async function loadBoundaries({
   base = basePath(),
 } = {}) {
   try {
-    const response = await fetchImpl(`${base}/data/${BOUNDARIES_FILE}`);
+    const url = `${base}/data/${BOUNDARIES_FILE}`;
+    // The head script may have requested it already (publication/early.js)
+    const early = fetchImpl === globalThis.fetch ? takeEarlyResponse(url) : null;
+    const response = early ? await early.catch(() => fetchImpl(url)) : await fetchImpl(url);
     if (response.status === 404) return failure("unavailable", null);
     if (!response.ok) {
       return failure("error", `${BOUNDARIES_FILE}: HTTP ${response.status}`);
