@@ -301,7 +301,7 @@ describe("the Pre-measures forecast view", () => {
     for (const card of [incomes, inequality, growth, poverty, who]) {
       expect(optionsSummary(card)).toMatch(/^Options: 2028-29 → 2030-31 · /);
     }
-    expect(optionsSummary(incomes)).toBe("Options: 2028-29 → 2030-31 · Median · Before housing costs · Real · Outturn and projection");
+    expect(optionsSummary(incomes)).toBe("Options: 2028-29 → 2030-31 · Median · Before housing costs · Real · Official and PolicyEngine");
     for (const card of [incomes, inequality, poverty]) {
       // The sentence compares the chosen years
       expect(card).toHaveTextContent(/2028-29/);
@@ -327,7 +327,7 @@ describe("the Pre-measures forecast view", () => {
     // One Options pill: the view first ("Show": Rate or Depth), then the
     // same default as Population impact: absolute, before housing costs, all people
     expect(within(poverty).queryByRole("button", { name: /^Poverty view:/ })).toBeNull();
-    expect(optionsSummary(poverty)).toBe("Options: 2027-28 → 2031-32 · Rate · Absolute · Before housing costs · All people · Outturn and projection");
+    expect(optionsSummary(poverty)).toBe("Options: 2027-28 → 2031-32 · Rate · Absolute · Before housing costs · All people · Official and PolicyEngine");
     // The Options dialog: a radio group per choice, focus inside, Escape closes
     const optionsButton = within(poverty).getByRole("button", { name: /^Options:/ });
     expect(optionsButton).toHaveAttribute("aria-expanded", "false");

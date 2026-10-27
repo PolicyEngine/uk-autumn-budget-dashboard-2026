@@ -1,13 +1,14 @@
 // A level over time (Incomes over time, Inequality over time, Poverty over
-// time): official figures as a solid grey line with dots, the projection
-// dashed teal over a soft "Projection" band from the last official year,
-// both named on the plot (no key). The y axis is fitted to the data
+// time): official figures as a solid grey line with dots, PolicyEngine's
+// microsimulation dashed teal, both named on the plot (no key). No band
+// marks the PolicyEngine years: they are not a forecast, and they overlap
+// the official ones. The y axis is fitted to the data
 // (zoomAxis), with a break mark when it does not start at 0. The years the
 // card's sentence compares are bracketed under the lines, with the
-// projection's value labelled at both ends. Ticks every year on a wide
+// PolicyEngine value labelled at both ends. Ticks every year on a wide
 // plot, every other year on a phone.
 
-import { CartesianGrid, Customized, Line, LineChart, ReferenceArea, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Customized, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { Tooltip } from "../ViewportTooltip";
 import { ChartRows, lineLegendItems } from "./LsCharts";
 import ChartUnitLabel, { UNIT_LABEL_TOP_MARGIN } from "../../utils/ChartUnitLabel";
@@ -23,7 +24,7 @@ const X_AXIS_HEIGHT = 26;
 const TICK_WIDTH = 58;
 const LABEL = { fontSize: 12, fontWeight: 600 };
 
-/** "2029-30 (projection): £42,900", one line per series at the year. */
+/** "2029-30, PolicyEngine: £42,900", one line per series at the year. */
 function OverTimeTooltip({ active, payload, label, format }) {
   if (!active || !payload?.length) return null;
   const rows = payload.filter((p) => p.value != null);
@@ -34,7 +35,7 @@ function OverTimeTooltip({ active, payload, label, format }) {
         <p key={p.dataKey} className="chart-tooltip-row">
           <span className="chart-tooltip-swatch chart-tooltip-swatch-line" style={{ background: p.color }} />
           <span>
-            {fyLabel(label)} ({p.dataKey === "historical" ? "official" : "projection"})
+            {fyLabel(label)}, {p.name}
           </span>
           <span className="chart-tooltip-value">{format(p.value)}</span>
         </p>
@@ -76,7 +77,22 @@ function Annotations({ xAxisMap, yAxisMap, offset, data, showHistorical, showPro
     );
   }
 
-  // The years compared: a bracket under the lines, the projection's value
+  // "PolicyEngine" under the end of its line; where the line ends too close
+  // to the years-compared bracket, above it (over the end value, if any)
+  const model = showProjection ? data.filter((d) => d.projection != null) : [];
+  if (model.length) {
+    const end = model[model.length - 1];
+    const below = y(end.projection) + 20;
+    const endValued = compare && fyStart(compare[1]) === end.year;
+    const labelY = below <= bottom - 32 ? below : y(end.projection) - (endValued ? 28 : 12);
+    parts.push(
+      <text key="model" x={x(end.year)} y={labelY} {...LABEL} fill={CHART_COLOURS.highlight} textAnchor="end">
+        PolicyEngine
+      </text>,
+    );
+  }
+
+  // The years compared: a bracket under the lines, the PolicyEngine value
   // labelled at both ends
   if (compare && showProjection) {
     const [a, b] = compare.map((fy) => data.find((d) => d.year === fyStart(fy)));
@@ -126,8 +142,6 @@ export default function OverTimeChart({
   // Every year where they fit, else every other year back from the last
   const every = !narrow && (!plotWidth || plotWidth / years.length >= TICK_WIDTH);
   const ticks = every ? years : years.filter((_, i) => (years.length - 1 - i) % 2 === 0);
-  const lastOfficial = show.historical && show.projection ? [...data].reverse().find((d) => d.historical != null)?.year : null;
-  const lastYear = years[years.length - 1];
   const visible = series.filter((s) => !s.hidden);
 
   return (
@@ -135,16 +149,6 @@ export default function OverTimeChart({
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={MARGIN}>
           <CartesianGrid {...GRID_PROPS} />
-          {lastOfficial != null && lastOfficial < lastYear && (
-            <ReferenceArea
-              x1={lastOfficial}
-              x2={lastYear}
-              fill={CHART_COLOURS.mutedFill}
-              fillOpacity={0.6}
-              stroke="none"
-              label={{ value: "Projection", position: "insideTopRight", offset: 8, fill: CHART_COLOURS.gainText, fontSize: 12, fontWeight: 600 }}
-            />
-          )}
           <XAxis
             dataKey="year"
             tick={TICK_STYLE}

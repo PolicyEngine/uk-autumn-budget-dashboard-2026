@@ -4,15 +4,15 @@ import YearRangeFields from "./YearRangeFields";
 
 // The summary words for the Period choice on a card's Options button
 // (ControlBar): "Both" alone would not say both of what
-const PERIOD_SUMMARY = { outturn: "Outturn", both: "Outturn and projection", forecast: "Projection" };
+const PERIOD_SUMMARY = { outturn: "Official figures", both: "Official and PolicyEngine", forecast: "PolicyEngine" };
 
 /**
- * The Period choice (outturn, both, projection) as an Options group.
- * `noOutturnReason`, when set, disables Outturn and says why.
+ * The lines shown (official figures, both, PolicyEngine) as an Options
+ * group. `noOutturnReason`, when set, disables Official figures and says why.
  */
 export function periodOption(value, onChange, noOutturnReason = null) {
   return {
-    label: "Period",
+    label: "Lines",
     value,
     onChange,
     options: VIEW_OPTIONS.map((option) => ({
