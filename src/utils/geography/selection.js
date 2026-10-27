@@ -56,7 +56,7 @@ export function choiceLabel(choice, policies) {
       choice.reform
     );
   }
-  if (choice.kind === "package") return "All measures (the full package)";
+  if (choice.kind === "package") return "All policies (the full package)";
   return "";
 }
 

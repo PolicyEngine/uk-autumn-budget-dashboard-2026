@@ -8,7 +8,37 @@
   min-width: 0;
 }
 
-/* The mark, decoration only */
+/* The mark's link to PolicyEngine's home page: a soft white tint behind
+   it on hover, a white ring on keyboard focus */
+.title-mark-link {
+  display: flex;
+  flex: none;
+  padding: 4px;
+  margin: -4px;
+  border-radius: 8px;
+  transition: background-color var(--motion-fast) ease;
+}
+
+.title-mark-link:hover {
+  background: var(--band-ink-hover);
+}
+
+.title-mark-link:active {
+  background: var(--band-ink-active);
+}
+
+.title-mark-link:focus-visible {
+  outline: 2px solid var(--band-ink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-mark-link {
+    transition: none;
+  }
+}
+
+/* The mark itself */
 .title-mark {
   display: block;
   flex: none;

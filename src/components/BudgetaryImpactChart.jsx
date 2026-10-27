@@ -175,10 +175,10 @@ const CHART_DESCRIPTION =
 // The card's "About this chart"
 const REVENUE_INFO = {
   how: [
-    "Above zero the measures raise money; below zero they cost the government.",
-    "The net line adds up the selected measures' separate figures.",
+    "Above zero the policies raise money; below zero they cost the government.",
+    "The net line adds up the selected policies' separate figures.",
   ],
-  method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the measures" },
+  method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the policies" },
 };
 
 /**
@@ -334,7 +334,7 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [], befor
             <span className="title-text">Revenue impact</span>
           </h3>
           {/* One plain sentence for the selected year; what the chart
-              measures is in More info */}
+              measures is in About this chart */}
           <p className="chart-description">
             {(noRevenue ? null : revenueSentence(data.find((point) => point.year === selectedYear)?.netImpact, fiscalYearTick(selectedYear))) ?? CHART_DESCRIPTION}
             {laterRevenue && <span className="later-years-note"> {laterRevenue}</span>}
@@ -455,7 +455,7 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [], befor
           highlight={highlight}
           onHighlight={setHighlight}
           placement="section"
-          label="Measures"
+          label="Policies"
         />
       </div>
       )}

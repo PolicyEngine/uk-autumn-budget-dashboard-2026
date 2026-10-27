@@ -4,7 +4,7 @@ import { buildChartCsv } from "../../utils/chartCsv";
 import { signedMoney } from "../../utils/singleYear";
 import useElementWidth from "../../hooks/useElementWidth";
 import Disclosure from "../Disclosure";
-import InfoSections, { hasInfo, infoPreview } from "../InfoSections";
+import InfoSections, { hasInfo, infoPreview, nestedItem } from "../InfoSections";
 import { ABOUT_THIS_CHART } from "../ChartMoreInfo";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../FloatingTooltip";
@@ -201,28 +201,24 @@ export default function PolicyBars({ rows, noEffect, noEffectItems = [], underAP
 }
 
 /**
- * A card's "About this chart" that also lists the measures that leave the
- * household (or the group) where it was, as one caveat: each on its own row
- * with its colour and, for an employer cost, why. `info` is the rest of the
- * card's About this chart (InfoSections).
+ * A card's "About this chart" that also lists the policies that leave the
+ * household (or the group) where it was, as one caveat: a lead line over
+ * one policy a bullet, with why where there is a reason (an employer
+ * cost). `info` is the rest of the card's About this chart (InfoSections).
  */
 export function NoEffectList({ items, title, info = {} }) {
-  const list = items.length > 0 && (
-    <div key="no-effect" className="no-effect">
-      <span className="no-effect-title">
-        {title} ({items.length})
-      </span>
-      <ul className="no-effect-list">
-        {items.map((item) => (
-          <li key={item.id} className="no-effect-item" data-policy={item.id}>
-            <span className="no-effect-dot" style={{ background: item.color }} aria-hidden="true" />
-            <span className="no-effect-name">{item.name}</span>
-            {item.reason && <span className="no-effect-reason">{item.reason}</span>}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+  const list =
+    items.length > 0 &&
+    nestedItem(
+      `${title}:`,
+      items.map((item) => (
+        <span key={item.id} className="no-effect-item" data-policy={item.id}>
+          {item.name}
+          {item.reason && <> — {item.reason.charAt(0).toLowerCase() + item.reason.slice(1).replace(/\.$/, "")}</>}
+        </span>
+      )),
+      "no-effect",
+    );
   const full = { ...info, caveats: [...(info.caveats || []), list] };
   if (!hasInfo(full)) return null;
   return (

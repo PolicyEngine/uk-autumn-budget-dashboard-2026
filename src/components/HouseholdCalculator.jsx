@@ -33,6 +33,7 @@ import ConstituencyField from "./personal/ConstituencyField";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
+import { STICKY_GAP, scrollBelowBars, stickyBottom } from "../utils/pageScroll";
 
 
 // The form: one card. The essentials first, as one grid of boxes and
@@ -167,7 +168,7 @@ const CHOICE_CONFIGS = {
     summary: (value) => `Band ${value}`,
     layout: "segmented",
     options: ["A", "B", "C", "D", "E", "F", "G", "H"].map((band) => ({ value: band, label: band })),
-    hint: "Council Tax is estimated from your band and your region's average Band D for 2026-27 (MHCLG, Welsh and Scottish governments), not your own council's, grown with the OBR's forecast. Band D if you are not sure.",
+    hint: "Estimated from your band and your region's average Band D for 2026-27, not your own council's, grown with the OBR's forecast (Source: MHCLG, Welsh and Scottish governments). Choose Band D if you are not sure.",
   },
   claims_universal_credit: {
     label: "Universal Credit",
@@ -225,7 +226,7 @@ const NUMBER_CONFIGS = {
     step: 100,
     money: true,
     suffix: "a year",
-    hint: "Pension paid by salary sacrifice. Enter your salary above after the sacrifice, as your payslip shows it. Before April 2029 the sacrifice changes no figure here; from then, its National Insurance relief is capped at £2,000 a year.",
+    hint: "Enter your salary above after the sacrifice, as your payslip shows it. From April 2029 its National Insurance relief is capped at £2,000 a year; before then it changes no figure here.",
   },
   petrol_spending_per_year: {
     label: "Petrol",
@@ -234,7 +235,7 @@ const NUMBER_CONFIGS = {
     step: 10,
     money: true,
     suffix: "a year",
-    hint: "Prefilled with the average household's spending (ONS Family Spending, 2024-25).",
+    hint: "Prefilled with the average household's spending (Source: ONS Family Spending, 2024-25).",
   },
   diesel_spending_per_year: {
     label: "Diesel",
@@ -243,7 +244,7 @@ const NUMBER_CONFIGS = {
     step: 10,
     money: true,
     suffix: "a year",
-    hint: "Prefilled with the average household's spending (ONS Family Spending, 2024-25).",
+    hint: "Prefilled with the average household's spending (Source: ONS Family Spending, 2024-25).",
   },
   electricity_spending_per_year: {
     label: "Electricity",
@@ -252,7 +253,7 @@ const NUMBER_CONFIGS = {
     step: 10,
     money: true,
     suffix: "a year",
-    hint: "Including VAT. Prefilled with the average household's spending, £20.00 a week (ONS Family Spending, 2024-25).",
+    hint: "Including VAT. Prefilled with the average household's spending, £20.00 a week (Source: ONS Family Spending, 2024-25).",
   },
   monthly_childcare: {
     label: "Paid childcare",
@@ -304,7 +305,7 @@ const PREFILL_HINTS = {
   partner_state_pension_per_year: (year) =>
     `Prefilled with the full new State Pension for ${fiscalYearTick(year)}; change it if your partner's differs.`,
   monthly_rent: (year, inputs) =>
-    `Prefilled with the average private rent in ${regionName(inputs.region)} (ONS, ${
+    `Prefilled with the average private rent in ${regionName(inputs.region)} (Source: ONS, ${
       inputs.region === "NORTHERN_IRELAND" ? "July" : "September"
     } 2026); change it if yours differs.`,
 };
@@ -675,7 +676,7 @@ function HouseholdCalculator({
         const target = panel?.querySelector("form") ?? panel;
         if (!target) return;
         target.querySelector("input, select, textarea")?.focus({ preventScroll: true });
-        target.scrollIntoView?.({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+        scrollBelowBars(target, { behavior: prefersReducedMotion() ? "auto" : "smooth" });
       });
     });
     return () => cancelAnimationFrame(frame);
@@ -696,11 +697,11 @@ function HouseholdCalculator({
       const target = resultsRef.current;
       if (!target) return;
       target.focus({ preventScroll: true });
-      const offset = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+      const offset = stickyBottom() + STICKY_GAP;
       const { top } = target.getBoundingClientRect();
       if (top >= offset - 1 && top <= window.innerHeight / 3) return;
       const behavior = prefersReducedMotion() ? "auto" : "smooth";
-      target.scrollIntoView?.({ behavior, block: "start" });
+      scrollBelowBars(target, { behavior });
       const page = document.documentElement;
       let height = page.scrollHeight;
       const until = performance.now() + 1500;
@@ -708,8 +709,8 @@ function HouseholdCalculator({
         if (!target.isConnected || performance.now() > until) return;
         if (page.scrollHeight !== height) {
           height = page.scrollHeight;
-          if (Math.abs(target.getBoundingClientRect().top - offset) > 1) {
-            target.scrollIntoView?.({ behavior, block: "start" });
+          if (Math.abs(target.getBoundingClientRect().top - (stickyBottom() + STICKY_GAP)) > 1) {
+            scrollBelowBars(target, { behavior });
           }
         }
         frame = requestAnimationFrame(follow);
@@ -735,7 +736,7 @@ function HouseholdCalculator({
       if (!lost || lost === document.body || lost.disabled) target.focus({ preventScroll: true });
       const { top } = target.getBoundingClientRect();
       if (top > window.innerHeight * 0.6) {
-        target.scrollIntoView?.({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+        scrollBelowBars(target, { behavior: prefersReducedMotion() ? "auto" : "smooth" });
       }
     });
   };
@@ -928,11 +929,19 @@ function HouseholdCalculator({
     const labelId = `household-section-${index}`;
     return (
       <section key={section.title} className="household-group household-more" aria-labelledby={labelId}>
+        {/* The form's own header in small: a tinted icon, the title with an
+            "Optional" tag, and one muted line under it */}
         <div className="household-more-head">
-          <h3 className="household-group-label" id={labelId}>
-            {section.title}
-          </h3>
-          <p className="household-more-note">Optional: each starts at a typical value.</p>
+          <TitleIcon name={section.icon} size={14} className="title-icon household-more-icon" />
+          <div className="household-more-text">
+            <div className="household-more-title">
+              <h3 className="household-more-heading" id={labelId}>
+                {section.title}
+              </h3>
+              <span className="household-more-tag">Optional</span>
+            </div>
+            <p className="household-more-note">Each starts at a typical value for a household like yours.</p>
+          </div>
         </div>
         <div className="household-details">
           {section.groups.map((group) => {
@@ -1001,7 +1010,7 @@ function HouseholdCalculator({
         label: "You",
         note:
           placed.notModelled.length > 0
-            ? `Your change leaves out ${placed.notModelled.length === 1 ? "one measure" : `${placed.notModelled.length} measures`} not modelled for one household; the dots include ${placed.notModelled.length === 1 ? "it" : "them"}.`
+            ? `Your change leaves out ${placed.notModelled.length === 1 ? "one policy" : `${placed.notModelled.length} policies`} not modelled for one household; the dots include ${placed.notModelled.length === 1 ? "it" : "them"}.`
             : null,
       }
     : null;
@@ -1083,7 +1092,7 @@ function HouseholdCalculator({
           {selectionUnavailable ? (
             <UnavailableNotice reason="Household impact is unavailable for this selection">
               <p>These measures cannot be calculated for one household: {unavailableNames.join(", ")}.</p>
-              <p>Select measures that can all be calculated to see your household&apos;s results.</p>
+              <p>Select policies that can all be calculated to see your household&apos;s results.</p>
             </UnavailableNotice>
           ) : (
             <SingleYearHeadline

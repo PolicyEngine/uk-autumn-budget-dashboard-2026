@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CalendarCheck, CalendarX, ChartColumn, Clock, ExternalLink, Flag, FlaskConical } from "lucide-react";
-import { categoryIcon } from "./MeasureRowLabel";
+import "./MeasureRowLabel.css";
+import { measureCategoryOf } from "../utils/measureCategory";
 import { withPolicyDetails } from "../utils/policyDetails";
 import { parameterTableFor } from "../utils/policyParameters";
 import PolicyChange, { usePolicyParameters } from "./PolicyChange";
@@ -9,7 +10,7 @@ import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
 import { MODELLING_LIMITS, measureModellingFacts, sentences } from "../utils/measureModelling";
 
 /** The one name of every Policies card's disclosure. */
-export const HOW_IT_IS_MODELLED = "How it is modelled";
+export const HOW_IT_IS_MODELLED = "About this result";
 
 // A details sentence that states a limitation: one of the published
 // limitations' patterns, or the words the details use for them
@@ -17,7 +18,7 @@ const LIMIT_WORDS = /\bapproximate\b|\bnot modelled\b|\bleaves? out\b|\bnot (?:i
 const isLimit = (sentence) => LIMIT_WORDS.test(sentence) || MODELLING_LIMITS.some(({ pattern }) => pattern.test(sentence));
 
 /**
- * A measure's "How it is modelled", in About this chart's sections: its
+ * A measure's "About this result" (how it is modelled), in About this chart's sections: its
  * modelling details and fact labels as How it's calculated, and as Caveats
  * every stated limitation the card does not already show and any modelling
  * note. A limitation is said once: in the details' own words where they
@@ -236,6 +237,9 @@ function PolicyTimeline({ policy, highlight }) {
  */
 function PolicyCard({ policy, onShowEffect, parameters }) {
   const temporary = Boolean(policy.inForce?.to);
+  // Derived from the publication for any measure (utils/measureCategory.js),
+  // in the same tinted tile as every per-measure row
+  const category = measureCategoryOf(policy);
   // The years a hovered step of "What changes" covers, marked on the timeline
   const [highlight, setHighlight] = useState(null);
   // What the published wording says about how it is modelled
@@ -249,15 +253,15 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
       style={{ "--policy-accent": policy.color }}
     >
       <div className="policy-card-head">
-        {/* No icon per measure: a map by id would be a measure list of the
-            page's own (#104) */}
         <div className="policy-card-titles">
-          {(policy.type || temporary) && (
+          {(category || temporary) && (
             <div className="policy-card-topline">
-              {policy.type && (
+              {category && (
                 <p className="policy-card-type">
-                  <TitleIcon name={categoryIcon(policy.type)} bare size={14} className="policy-card-icon-inline" />
-                  {policy.type}
+                  <span className="mrl-icon" aria-hidden="true" style={{ "--mrl-colour": policy.color }}>
+                    <TitleIcon name={category.icon} bare size={13} />
+                  </span>
+                  {category.label}
                 </p>
               )}
               <span className="policy-card-tags">

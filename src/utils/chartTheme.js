@@ -52,6 +52,7 @@ export const CHART_COLOURS = {
   reference: "#6B7280",
   highlight: "#285E61",
   highlightBand: "#EAF5F4",
+  tenthBand: "#DDE6F3",
   hover: "#EEF6F6",
   obr: "#9CA3AF",
   obrText: "#6B7280",

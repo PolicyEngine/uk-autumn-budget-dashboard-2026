@@ -17,7 +17,7 @@ import "./ConstituencyField.css";
  * @param {string|null} props.value - The picked constituency's name, or null
  * @param {string} props.regionLabel - The region in use, as shown ("North West")
  * @param {(seat: {name: string, region: string}) => void} props.onChange
- * @param {string} [props.hint] - A note behind the "i" by the label
+ * @param {string} [props.hint] - A note behind the info icon by the label
  */
 export default function ConstituencyField({ id, label, value, regionLabel, onChange, hint }) {
   const uid = useId();

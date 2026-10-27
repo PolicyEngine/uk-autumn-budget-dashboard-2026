@@ -134,11 +134,15 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
   }, [rawData, selectedPolicies, selectedYear, POLICIES, hasUnavailableSelection, catalogue]);
 
   // "Later years differ": the first later year whose lowest- or
-  // highest-income tenth moves the other way (plainSentences.js)
-  const laterNote = useMemo(() => {
+  // highest-income tenth moves the other way (plainSentences.js), as the
+  // decile sentence's last clause, or alone when there is no sentence
+  const { laterNote, laterNoteAlone } = useMemo(() => {
     const ends = { low: data[0]?.netChange, high: data[data.length - 1]?.netChange };
     const later = laterDecileEnds(rawData, { valueKey: "value", ends: ["1st", "10th"], selectedPolicies, catalogue, selectedYear });
-    return laterDecileNote(ends, later, "relative");
+    return {
+      laterNote: laterDecileNote(ends, later, "relative"),
+      laterNoteAlone: laterDecileNote(ends, later, "relative", { standalone: true }),
+    };
   }, [data, rawData, selectedPolicies, catalogue, selectedYear]);
 
   // Every selected measure is in the legend in every year (so the legend,
@@ -280,10 +284,14 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
               <NoBreakYear text={chartTitle} />
             </span>
           </h3>
-          {/* One plain sentence; what the chart measures is in More info */}
+          {/* One plain sentence; what the chart measures is in About this chart */}
           <p className="chart-description">
-            {(nothingChanges ? null : decileSentence(data, "relative")) ?? CHART_DESCRIPTION}
-            {laterNote && <span className="later-years-note"> {laterNote}</span>}
+            {(nothingChanges ? null : decileSentence(data, "relative", laterNote)) ?? (
+              <>
+                {CHART_DESCRIPTION}
+                {laterNoteAlone && <span className="later-years-note"> {laterNoteAlone}</span>}
+              </>
+            )}
           </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={chartTitle} />
@@ -292,7 +300,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
 
       <div ref={chartRef} className="chart-plot">
         {published && hasIncompleteResults && (
-          <UnavailableNotice reason="Some selected measures have no published results for this chart. The net change is unavailable." />
+          <UnavailableNotice reason="Some selected policies have no published results for this chart. The net change is unavailable." />
         )}
         {nothingChanges ? (
           // Only measures that change no household's income this year (an

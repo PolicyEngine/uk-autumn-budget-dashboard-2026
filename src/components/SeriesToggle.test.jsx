@@ -41,6 +41,14 @@ describe("SeriesToggle", () => {
     expect(chip("Gamma")).toHaveAttribute("aria-disabled", "true");
   });
 
+  it("shows a chip that is on by its fill and border only, never a tick", () => {
+    render(<Harness />);
+    const on = screen.getByRole("button", { name: "Alpha" });
+    expect(on).toHaveClass("is-on");
+    expect(on.querySelector(".series-toggle-check")).toBeNull();
+    expect(on.querySelectorAll("path")).toHaveLength(0);
+  });
+
   it("highlights a line on hover, only while it is shown", () => {
     const onHover = vi.fn();
     render(<Harness onHover={onHover} />);
