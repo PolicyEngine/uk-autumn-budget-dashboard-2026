@@ -24,6 +24,7 @@ import { parameterTableFor } from "./policyParameters";
 import { policyDetailsFor, shortNameOf } from "./policyDetails";
 import { measureCategoryOf } from "./measureCategory";
 import { consistentRound } from "./householdImpactApi";
+import { employeeNi, incomeTax } from "./incomeTaxBands";
 
 // A table row's change is a measure's when they agree to within the API's
 // penny rounding (singleYear.js pinnedRound's tolerance)
@@ -133,7 +134,7 @@ const vatIn = (amount, rate) => (amount * rate) / (1 + rate);
  * effect. Parts are kept only when they add up to the measure's effect
  * (within £1 before rounding); a step the page cannot check is left out.
  */
-function householdSteps({ params, kinds, household, salaryUsed, rows: allRows, effectRaw, othersMoving }) {
+function householdSteps({ params, kinds, household, salaryUsed, rows: allRows, effectRaw, othersMoving, law }) {
   const h = household ?? {};
   const rows = allRows.filter((item) => !item.isGroup);
   const income = allRows.find((item) => item.isGroup && item.id === "income");
@@ -209,20 +210,34 @@ function householdSteps({ params, kinds, household, salaryUsed, rows: allRows, e
     }
   }
 
+  // Income tax and National Insurance band by band, for a measure that
+  // changes them, when the bands give the API's own figures before the
+  // measures (taxBandSteps)
+  if (!parts && law && TAX_KINDS.some((kind) => has(kind)) && !h.has_partner) {
+    const banded = taxBandSteps({ params, has, rows, law, effectRaw, othersTouchIncome });
+    if (banded) {
+      steps.push(...banded.steps);
+      parts = banded.parts;
+    }
+  }
+
   // Employer NI: employers' total cost of employing you is held fixed, so
   // what they save on National Insurance is paid to you as higher pay. Only
   // with one earner, and only when 15% of pay above each threshold keeps
   // the API's pay at one total cost
   const employer = param("employerNi");
-  if (employer && !parts && !(h.has_partner && Number(h.partner_employment_income) > 0)) {
+  if (employer && !(h.has_partner && Number(h.partner_employment_income) > 0)) {
     const pay = row("employment_income");
     if (pay && moves(pay)) {
       const ni = (amount, threshold) => EMPLOYER_NI_RATE * Math.max(0, amount - threshold);
       const before = ni(pay.before, employer.before);
       const after = ni(pay.after, employer.after);
       if (Math.abs(pay.before + before - (pay.after + after)) < MATCH_POUNDS) {
-        steps.push(stepRow("employer_cost", "Your employer's cost of employing you", pay.before + before, pay.after + after));
-        steps.push(stepRow("employer_ni", "Your employer's National Insurance (15% above the threshold)", before, after));
+        steps.unshift(
+          stepRow("employer_cost", "Your employer's cost of employing you", pay.before + before, pay.after + after),
+          stepRow("employer_ni", "Your employer's National Insurance (15% above the threshold)", before, after),
+        );
+        if (parts) return { steps, parts };
         const others = rows.filter(
           (item) => moves(item) && !item.parent && item.id !== "employment_income" && !SPENDING_ROWS.has(item.id),
         );
@@ -244,7 +259,8 @@ function householdSteps({ params, kinds, household, salaryUsed, rows: allRows, e
   const total = income?.shown?.before;
   const allowance = param("incomeTaxThreshold", (item) => /personal allowance/i.test(item.label));
   const higher = param("incomeTaxThreshold", (item) => /higher rate threshold/i.test(item.label));
-  if ((allowance || higher) && typeof total === "number" && total > 0 && total < 100000) {
+  const banded = steps.some((step) => step.kind === "heading");
+  if (!banded && (allowance || higher) && typeof total === "number" && total > 0 && total < 100000) {
     steps.push(inputRow("total_income", "Your income before tax", total));
     if (allowance && total > Math.min(allowance.before, allowance.after)) {
       steps.push(stepRow("above_allowance", "Income above the personal allowance", Math.max(0, total - allowance.before), Math.max(0, total - allowance.after)));
@@ -257,7 +273,7 @@ function householdSteps({ params, kinds, household, salaryUsed, rows: allRows, e
   // Over State Pension age: total income (the State Pension and all other
   // income) against the allowance
   const pensionAllowance = param("pensionAgeAllowance");
-  if (pensionAllowance) {
+  if (pensionAllowance && !banded) {
     const statePension = row("state_pension");
     const all = (total ?? 0) + (statePension?.shown?.before ?? 0);
     if (all > 0) {
@@ -273,7 +289,9 @@ function householdSteps({ params, kinds, household, salaryUsed, rows: allRows, e
       ["savings", "savings_interest_income", "savings_income_tax", "Your savings interest"],
       ["property", "property_income", "property_income_tax", "Your property income"],
     ].filter(([word, incomeId]) => params.some((item) => item.label.toLowerCase().startsWith(word)) && row(incomeId)?.shown?.before > 0);
-    for (const [, incomeId, , label] of types) steps.push(inputRow(incomeId, label, row(incomeId).shown.before));
+    if (!steps.some((step) => step.kind === "heading")) {
+      for (const [, incomeId, , label] of types) steps.push(inputRow(incomeId, label, row(incomeId).shown.before));
+    }
     const taxes = types.map(([, , taxId]) => row(taxId)).filter((item) => item && moves(item));
     const sum = taxes.reduce((acc, item) => acc + item.change, 0);
     if (taxes.length && Math.abs(sum - effectRaw) < MATCH_POUNDS) {
@@ -372,6 +390,7 @@ export function policyTabs({ bars, groups, policies, parameters, year, household
     const interaction = bars.all.find((item) => item.id === "interaction");
     if (interaction) othersMoving.push({ kinds: [], change: interaction.change });
     const { steps, parts } = householdSteps({
+      law: lawFor(parameters, params, year),
       params,
       kinds,
       household,
@@ -386,7 +405,7 @@ export function policyTabs({ bars, groups, policies, parameters, year, household
       label: shortNameOf(measure),
       name: bar.name,
       parameters: shownParameters(params, rows),
-      household: [...steps, ...reconcileParts(parts, bar.change, bar.rounded)],
+      household: withPartsHeading(steps, reconcileParts(parts, bar.change, bar.rounded)),
       // The bars' whole pounds (policyRows), the Summary's split by policy
       effect: bar.rounded,
       how: howItWorks(measure),
@@ -420,4 +439,160 @@ export function howItWorks(measure) {
   if (!text || /not yet been published/i.test(text)) return null;
   const sentence = /^(.+?[.!?])(\s|$)/.exec(text);
   return sentence ? sentence[1] : text;
+}
+
+// --- Income tax and National Insurance, band by band ------------------------
+
+const TAX_KINDS = ["employerNi", "incomeTaxThreshold", "pensionAgeAllowance", "unearned"];
+const UNEARNED_KEYS = {
+  dividend: "dividends",
+  savings: "savings",
+  property: "property",
+};
+const BAND_OF = { ordinary: "basic", basic: "basic", upper: "higher", higher: "higher", additional: "additional" };
+
+/**
+ * Current law for `year`, and this measure's law: the thresholds and
+ * rates from policy_parameters.json (any measure's "before" is current
+ * law; this measure's "after" is its own). Null without a personal
+ * allowance and basic rate band in the file.
+ */
+function lawFor(document, params, year) {
+  const all = Object.values(document?.measures ?? {}).flatMap((entry) =>
+    (entry.rows ?? []).map((row) => ({ label: row.label, point: (row.points ?? []).find((p) => p.key === String(year)) })),
+  );
+  const current = (test) => all.find((item) => item.point && test(item.label))?.point.before;
+  const pa = current((label) => /^personal allowance$/i.test(label));
+  const band = current((label) => /^basic rate band$/i.test(label));
+  if (typeof pa !== "number" || typeof band !== "number") return null;
+  const rates = { property: {}, savings: {}, dividends: {} };
+  for (const item of all) {
+    const match = /^(dividend|savings|property) (ordinary|basic|upper|higher|additional) rate$/i.exec(item.label);
+    if (match && item.point) rates[UNEARNED_KEYS[match[1].toLowerCase()]][BAND_OF[match[2].toLowerCase()]] = item.point.before;
+  }
+  const before = { personalAllowance: pa, basicRateBand: band, rates };
+  // This measure's own values
+  const after = { personalAllowance: pa, basicRateBand: band, rates: structuredClone(rates) };
+  for (const row of params) {
+    if (/^personal allowance$/i.test(row.label) || parameterKind(row) === "pensionAgeAllowance") after.personalAllowance = row.after;
+    if (/^basic rate band$/i.test(row.label)) after.basicRateBand = row.after;
+    const match = /^(dividend|savings|property) (ordinary|basic|upper|higher|additional) rate$/i.exec(row.label);
+    if (match) after.rates[UNEARNED_KEYS[match[1].toLowerCase()]][BAND_OF[match[2].toLowerCase()]] = row.after;
+  }
+  // The higher rate threshold, where the file gives it and no band
+  const higher = params.find((row) => /^higher rate threshold$/i.test(row.label));
+  if (higher && !params.some((row) => /^basic rate band$/i.test(row.label))) {
+    after.basicRateBand = higher.after - after.personalAllowance;
+  }
+  const complete = (set) =>
+    ["property", "savings", "dividends"].every((kind) => ["basic", "higher", "additional"].every((band) => typeof set[kind][band] === "number"));
+  return { before, after, unearnedRates: complete(rates) && complete(after.rates) };
+}
+
+const KIND_WORDS = { earned: "Earnings and pensions", property: "Property income", savings: "Savings interest", dividends: "Dividends" };
+const BAND_WORDS = {
+  basic: "basic rate",
+  higher: "higher rate",
+  additional: "additional rate",
+  starting: "starting rate for savings",
+  allowance: null,
+};
+const percent = (rate) => `${Number((rate * 100).toFixed(2))}%`;
+const rateText = (before, after) =>
+  before === undefined ? percent(after) : after === undefined || Math.abs(before - after) < 1e-9 ? percent(before) : `${percent(before)} → ${percent(after)}`;
+
+/**
+ * The band-by-band steps and the tax parts, or null when the bands do not
+ * give the API's income tax and National Insurance before the measures to
+ * within £1, or the parts do not add up to the measure's effect.
+ */
+function taxBandSteps({ has, rows, law, effectRaw, othersTouchIncome }) {
+  const row = (id) => rows.find((item) => item.id === id);
+  const value = (id, side) => Math.abs(row(id)?.[side] ?? 0);
+  const income = (side) => ({
+    earned: value("employment_income", side) + value("private_pension_income", side) + value("state_pension", side),
+    property: value("property_income", side),
+    savings: value("savings_interest_income", side),
+    dividends: value("dividend_income", side),
+  });
+  const before = income("before");
+  // Only the employer NI threshold changes your pay; the rest change the law
+  const after = has("employerNi") ? income("after") : before;
+  if (!law.unearnedRates && (before.property || before.savings || before.dividends)) return null;
+  const lawAfter = has("employerNi") ? law.before : law.after;
+  const taxBefore = incomeTax(before, law.before);
+  const taxAfter = incomeTax(after, lawAfter);
+  if (Math.abs(taxBefore.total - value("income_tax", "before")) >= MATCH_POUNDS) return null;
+  const pay = (side) => value("employment_income", side);
+  const niLaw = (set) => ({ primaryThreshold: set.personalAllowance, upperEarningsLimit: set.personalAllowance + set.basicRateBand });
+  const niBefore = employeeNi(pay("before"), niLaw(law.before));
+  const niAfter = employeeNi(has("employerNi") ? pay("after") : pay("before"), niLaw(lawAfter));
+  // National Insurance only where it moves, and only when the bands give the API's
+  const niChecks =
+    Math.abs(niBefore.total - niAfter.total) >= SAME_CHANGE &&
+    Math.abs(niBefore.total - value("national_insurance", "before")) < MATCH_POUNDS;
+
+  const steps = [];
+  // Your income of each kind (pay after, too, under the employer NI threshold)
+  for (const kind of ["earned", "property", "savings", "dividends"]) {
+    if (!before[kind] && !after[kind]) continue;
+    const label = `Your ${KIND_WORDS[kind].charAt(0).toLowerCase()}${KIND_WORDS[kind].slice(1)}`;
+    steps.push(before[kind] === after[kind] ? inputRow(`income_${kind}`, label, before[kind]) : stepRow(`income_${kind}`, label, before[kind], after[kind]));
+  }
+  steps.push({ kind: "heading", id: "tax_heading", label: "Income tax, band by band" });
+  steps.push(stepRow("personal_allowance_used", "Your personal allowance (after any taper)", taxBefore.allowance, taxAfter.allowance));
+  const keys = [];
+  for (const slice of [...taxBefore.slices, ...taxAfter.slices]) {
+    const key = `${slice.kind}:${slice.band}`;
+    if (!keys.includes(key)) keys.push(key);
+  }
+  for (const key of keys) {
+    const [kind, band] = key.split(":");
+    const pick = (result) => result.slices.find((slice) => `${slice.kind}:${slice.band}` === key);
+    const b = pick(taxBefore);
+    const a = pick(taxAfter);
+    const words = BAND_WORDS[band];
+    const zero = band === "allowance" || band === "starting";
+    const label = zero
+      ? `${KIND_WORDS[kind]} in the ${words ?? (kind === "dividends" ? "dividend allowance" : "personal savings allowance")} (0%)`
+      : `${KIND_WORDS[kind]} at the ${words} (${rateText(b?.rate, a?.rate)})`;
+    steps.push(stepRow(`band_${key}`, label, b?.amount ?? 0, a?.amount ?? 0));
+    if (!zero) {
+      steps.push({ ...stepRow(`tax_${key}`, `Tax at ${rateText(b?.rate, a?.rate)}`, b?.tax ?? 0, a?.tax ?? 0), depth: 2 });
+    }
+  }
+  if (niChecks) {
+    steps.push({ kind: "heading", id: "ni_heading", label: "National Insurance, band by band" });
+    steps.push(stepRow("ni_main", `Earnings between the thresholds (${percent(0.08)})`, niBefore.main, niAfter.main));
+    if (niBefore.upper > 0 || niAfter.upper > 0) {
+      steps.push(stepRow("ni_upper", `Earnings above the upper earnings limit (${percent(0.02)})`, niBefore.upper, niAfter.upper));
+    }
+  }
+
+  const parts = [];
+  if (has("employerNi") && row("employment_income")) {
+    parts.push(fromSummary(row("employment_income"), "Your pay: the saving passed to you"));
+  }
+  parts.push(worked("income_tax_total", "Income tax", -taxBefore.total, -taxAfter.total, taxBefore.total - taxAfter.total));
+  if (niChecks) {
+    parts.push(worked("national_insurance_total", "National Insurance", -niBefore.total, -niAfter.total, niBefore.total - niAfter.total));
+  }
+  const sum = (list) => list.reduce((acc, part) => acc + part.raw, 0);
+  if (Math.abs(sum(parts) - effectRaw) < MATCH_POUNDS) return { steps, parts };
+  // The rest from the Summary rows the measure moves besides these, where
+  // no other measure can move them (benefits, Council Tax Reduction)
+  if (!othersTouchIncome) {
+    const done = new Set(["employment_income", "income_tax", "national_insurance"]);
+    const others = rows.filter((item) => moves(item) && !item.parent && !done.has(item.id) && !SPENDING_ROWS.has(item.id));
+    const all = [...parts, ...others.map((item) => fromSummary(item))];
+    if (others.length && Math.abs(sum(all) - effectRaw) < MATCH_POUNDS) return { steps, parts: all };
+  }
+  return null;
+}
+
+// After band-by-band headings, the parts of the effect under their own
+// heading, so they do not read as another band
+function withPartsHeading(steps, parts) {
+  if (!parts.length || !steps.some((step) => step.kind === "heading")) return [...steps, ...parts];
+  return [...steps, { kind: "heading", id: "parts_heading", label: "What it does to your net income" }, ...parts];
 }

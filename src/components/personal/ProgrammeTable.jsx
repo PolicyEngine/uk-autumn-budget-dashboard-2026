@@ -118,6 +118,7 @@ export default function ProgrammeTable({
   totals,
   bars = [],
   split = null,
+  splitStatus = null,
   policies = [],
   household = null,
   salaryUsed = null,
@@ -141,6 +142,15 @@ export default function ProgrammeTable({
     salaryUsed,
   });
   const [tab, setTab] = useState("summary");
+  // The tab row whenever the page asks for the split by policy: until it is
+  // in (or if it fails), Summary alone with a quiet note why
+  const showTabs = policyTabList.length > 0 || splitStatus !== null || noEffect.length > 0;
+  const pendingNote =
+    split || !splitStatus || splitStatus === "ready"
+      ? null
+      : splitStatus === "error"
+        ? "The breakdown by policy is unavailable"
+        : "Breakdown by policy loading…";
   const activePolicy = policyTabList.find((item) => item.id === tab) ?? null;
   // Open at first: each group shows its taxes or benefits
   const [open, setOpen] = useState(
@@ -275,17 +285,23 @@ export default function ProgrammeTable({
             <TitleIcon name="layers" />
             <span className="title-text">{title}</span>
           </h3>
-          {!policyTabList.length && <p className="chart-description">{sentence}</p>}
+          {!showTabs && <p className="chart-description">{sentence}</p>}
         </div>
         <ChartDownloadMenu formats={formats} chartTitle={policyTitle} ariaLabel={`Download table: ${policyTitle}`} />
       </div>
-      {policyTabList.length > 0 && (
-        <BreakdownTabs tabs={policyTabList} value={activePolicy ? activePolicy.id : "summary"} onChange={setTab} noEffect={noEffect} />
+      {showTabs && (
+        <BreakdownTabs
+          tabs={policyTabList}
+          value={activePolicy ? activePolicy.id : "summary"}
+          onChange={setTab}
+          noEffect={noEffect}
+          note={pendingNote}
+        />
       )}
       {/* Each tab's one line: the Summary's sentence, or the policy's
           one-line summary (policyDetails.js; none for a measure it does
           not describe) */}
-      {policyTabList.length > 0 && !activePolicy && <p className="chart-description breakdown-tab-line">{sentence}</p>}
+      {showTabs && !activePolicy && <p className="chart-description breakdown-tab-line">{sentence}</p>}
       {activePolicy?.how && (
         <p className="chart-description breakdown-tab-line">
           <span className="breakdown-how">How it works:</span> {activePolicy.how}
@@ -313,7 +329,7 @@ export default function ProgrammeTable({
       ) : (
       <div
         className="programme-table-wrap"
-        {...(policyTabList.length
+        {...(showTabs
           ? { role: "tabpanel", id: "breakdown-panel-summary", "aria-labelledby": "breakdown-tab-summary" }
           : {})}
       >
@@ -387,6 +403,10 @@ export function policyCsvRows(tab) {
     });
   }
   for (const row of tab.household) {
+    if (row.kind === "heading") {
+      rows.push({ section: "For your household", item: row.label, before: "", after: "", change: "" });
+      continue;
+    }
     const cells = householdCells(row);
     rows.push({ section: "For your household", item: row.label, before: cells.before, after: cells.after, change: cells.change });
   }
@@ -477,9 +497,19 @@ function PolicyTable({ tab, wide, setTable, title }) {
         })}
         {tab.household.length > 0 && sectionRow("For your household", wide)}
         {tab.household.map((row) => {
+          // A heading inside the section: its name alone
+          if (row.kind === "heading") {
+            return (
+              <tr key={`h-${row.id}`} className="programme-row depth-1 is-subheading">
+                <th scope="rowgroup" colSpan={wide ? 4 : 2}>
+                  {leaf(row.label)}
+                </th>
+              </tr>
+            );
+          }
           const cells = householdCells(row);
           return (
-            <tr key={`h-${row.id}`} className="programme-row depth-1">
+            <tr key={`h-${row.id}`} className={`programme-row depth-${row.depth ?? 1}`}>
               <th scope="row">{leaf(row.label)}</th>
               {wide && <td className={`num${cells.before === "—" ? " is-none" : ""}`}>{cells.before}</td>}
               {wide && <td className={`num${cells.after === "—" ? " is-none" : ""}`}>{cells.after}</td>}
@@ -506,7 +536,7 @@ function PolicyTable({ tab, wide, setTable, title }) {
  * and show it; only the chosen tab is in the Tab order. On a phone the row
  * scrolls sideways.
  */
-function BreakdownTabs({ tabs, value, onChange, noEffect }) {
+function BreakdownTabs({ tabs, value, onChange, noEffect, note = null }) {
   const refs = useRef({});
   const all = [{ id: "summary", label: "Summary" }, ...tabs];
   const onKeyDown = (event) => {
@@ -549,6 +579,11 @@ function BreakdownTabs({ tabs, value, onChange, noEffect }) {
           );
         })}
       </div>
+      {note && (
+        <span className="breakdown-no-effect" role="status">
+          {note}
+        </span>
+      )}
       {noEffect.length > 0 && (
         <Tip content={`No effect for your household: ${noEffect.map((item) => item.name).join("; ")}`}>
           <span className="breakdown-no-effect" tabIndex={0}>

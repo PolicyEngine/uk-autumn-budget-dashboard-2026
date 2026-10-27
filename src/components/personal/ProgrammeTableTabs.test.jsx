@@ -121,4 +121,18 @@ describe("the household table's policy tabs", () => {
       { section: "Effect on your net income", item: "Effect on your net income", before: "", after: "", change: "+£79" },
     ]);
   });
+
+  it("keeps the tab row while the split by policy loads, and says so quietly when it fails", () => {
+    const { rerender } = render(
+      <ProgrammeTable programmes={programmes} totals={totals} splitStatus="loading" policies={policies} year={2027} yearLabel="2027-28" parameterTables={parameterTables} />,
+    );
+    expect(within(screen.getByRole("tablist")).getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Summary"]);
+    expect(screen.getByRole("status")).toHaveTextContent("Breakdown by policy loading…");
+    // The Summary table is there meanwhile
+    expect(screen.getByRole("rowheader", { name: "Net income" })).toBeInTheDocument();
+    rerender(
+      <ProgrammeTable programmes={programmes} totals={totals} splitStatus="error" policies={policies} year={2027} yearLabel="2027-28" parameterTables={parameterTables} />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("The breakdown by policy is unavailable");
+  });
 });

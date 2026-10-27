@@ -1467,3 +1467,10 @@
   color: var(--pe-gray-400);
   font-weight: 400;
 }
+
+/* A heading inside a policy tab's section ("Income tax, band by band") */
+.programme-table .is-subheading > th {
+  padding-top: 12px;
+  font-weight: 600;
+  color: var(--pe-gray-700);
+}

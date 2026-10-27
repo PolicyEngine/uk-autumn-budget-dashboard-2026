@@ -259,28 +259,79 @@ describe("policy tabs on the household API's answers", () => {
     }
   });
 
-  it("walks a part-time worker through the employer NI threshold: cost held, pay up, tax and NI on it", () => {
+  it("walks a part-time worker through the employer NI threshold, then the higher pay through the bands", () => {
     const tab = tabOf(liveTabs("pt-2027").tabs, "employer_nics_secondary_threshold_raise");
     const rows = byId(tab);
     expect(tab.parameters[0]).toMatchObject({ before: 5000, after: 9100 });
     expect(Math.round(rows.employer_cost.before)).toBe(Math.round(rows.employer_cost.after));
     expect(Math.round(rows.employer_ni.before)).toBe(1247);
     expect(Math.round(rows.employer_ni.after)).toBe(712);
+    // The higher pay through the bands: the API's tax and NI, before and after
+    expect(rows.personal_allowance_used).toMatchObject({ before: 12570, after: 12570 });
+    expect(Math.round(rows["band_earned:basic"].after - rows["band_earned:basic"].before)).toBe(535);
+    expect(rows["tax_earned:basic"].before).toBeCloseTo(148.4, 1);
+    expect(rows["tax_earned:basic"].after).toBeCloseTo(255.36, 1);
     expect(parts(tab).map((row) => [row.id, row.change])).toEqual([
       ["employment_income", 535],
-      ["income_tax", -107],
-      ["national_insurance", -43],
+      ["income_tax_total", -107],
+      ["national_insurance_total", -43],
     ]);
+    expect(rows.income_tax_total).toMatchObject({ before: -148, after: -255 });
     expect(tab.effect).toBe(385);
     expect(tab.how).toMatch(/^From 6 April 2027 the threshold above which employers pay/);
   });
 
-  it("gives the employer NI tab the total taken back when another measure moves the same taxes", () => {
+  it("gives the employer NI tab its own tax on the higher pay when the freeze moves the same taxes", () => {
+    // 2031-32: the API's tax after is both measures'; the bands give this one's
     const tab = tabOf(liveTabs("pt-2031").tabs, "employer_nics_secondary_threshold_raise");
-    expect(parts(tab).map((row) => row.id)).toEqual(["employment_income", "taken_back"]);
+    expect(parts(tab).map((row) => row.id)).toEqual(["employment_income", "income_tax_total", "national_insurance_total"]);
     // Universal Credit falls with the higher pay too
     const uc = tabOf(liveTabs("uc-2027").tabs, "employer_nics_secondary_threshold_raise");
-    expect(parts(uc).map((row) => row.id)).toEqual(["employment_income", "income_tax", "national_insurance", "universal_credit"]);
+    expect(parts(uc).map((row) => row.id)).toEqual(["employment_income", "income_tax_total", "national_insurance_total", "universal_credit"]);
+    // With the freeze moving Universal Credit too, only the total taken back
+    const both = tabOf(liveTabs("uc-2031").tabs, "employer_nics_secondary_threshold_raise");
+    expect(parts(both).map((row) => row.id)).toEqual(["employment_income", "taken_back"]);
+  });
+
+  it("shows the landlord's income of each kind, each band and its rate before and after", () => {
+    const tab = tabOf(liveTabs("land-2027").tabs, "unearned_income_rates_up");
+    const rows = byId(tab);
+    expect(tab.household.filter((row) => row.kind === "input").map((row) => [row.id, Math.round(row.before)])).toEqual([
+      ["income_earned", 51200],
+      ["income_property", 9000],
+      ["income_savings", 2000],
+      ["income_dividends", 3000],
+    ]);
+    expect(rows["band_property:higher"]).toMatchObject({ label: "Property income at the higher rate (42% → 44%)", before: 9000, after: 9000 });
+    expect(rows["band_savings:allowance"]).toMatchObject({ label: "Savings interest in the personal savings allowance (0%)", before: 500 });
+    expect(rows["band_dividends:allowance"]).toMatchObject({ before: 500 });
+    expect(rows["tax_dividends:higher"].before).toBeCloseTo(893.75, 2);
+    expect(rows["tax_dividends:higher"].after).toBeCloseTo(943.75, 2);
+    expect(parts(tab).map((row) => [row.id, row.before, row.after, row.change])).toEqual([["income_tax_total", -13216, -13476, -260]]);
+  });
+
+  it("shows a pensioner's allowance rising above their total income of £12,800, and the Council Tax Reduction it costs", () => {
+    const tab = tabOf(liveTabs("pens-2027").tabs, "state_pension_income_tax_protection");
+    const rows = byId(tab);
+    expect(rows.income_earned).toMatchObject({ before: 12800 });
+    expect(rows.personal_allowance_used).toMatchObject({ before: 12570, after: 13037 });
+    expect(rows["band_earned:basic"]).toMatchObject({ before: 230, after: 0 });
+    expect(parts(tab).map((row) => [row.id, row.change])).toEqual([
+      ["income_tax_total", 46],
+      ["council_tax_reduction", -9],
+    ]);
+  });
+
+  it("shows each band the freeze moves, income tax and National Insurance, adding up to its effect", () => {
+    const tab = tabOf(liveTabs("land-2031").tabs, "threshold_freeze_2031_32");
+    const rows = byId(tab);
+    expect(rows.personal_allowance_used).toMatchObject({ before: 12830, after: 12570 });
+    expect(rows.ni_upper.after - rows.ni_upper.before).toBeCloseTo(1060, 6);
+    expect(parts(tab).map((row) => [row.id, row.change])).toEqual([
+      ["income_tax_total", -264],
+      ["national_insurance_total", 43],
+    ]);
+    expect(tab.effect).toBe(-221);
   });
 
   it("splits the fuel duty saving into duty and the VAT on it", () => {
@@ -299,34 +350,4 @@ describe("policy tabs on the household API's answers", () => {
     expect(parts(tab)).toEqual([expect.objectContaining({ id: "electricity_vat", before: -48, after: 0, change: 48 })]);
   });
 
-  it("shows the landlord's unearned income and the tax on each", () => {
-    const tab = tabOf(liveTabs("land-2027").tabs, "unearned_income_rates_up");
-    expect(tab.household.filter((row) => row.kind === "input").map((row) => [row.id, row.before])).toEqual([
-      ["dividend_income", 3000],
-      ["savings_interest_income", 2000],
-      ["property_income", 9000],
-    ]);
-    expect(parts(tab).map((row) => [row.id, row.change])).toEqual([
-      ["dividend_income_tax", -50],
-      ["savings_income_tax", -30],
-      ["property_income_tax", -180],
-    ]);
-  });
-
-  it("shows a pensioner's total income, the tax lifted and the Council Tax Reduction it costs", () => {
-    const tab = tabOf(liveTabs("pens-2027").tabs, "state_pension_income_tax_protection");
-    expect(byId(tab).total_income).toMatchObject({ before: 12800 });
-    expect(parts(tab).map((row) => [row.id, row.change])).toEqual([
-      ["income_tax", 46],
-      ["council_tax_reduction", -9],
-    ]);
-  });
-
-  it("shows income above the thresholds the freeze holds, and no parts it cannot split", () => {
-    const tab = tabOf(liveTabs("land-2031").tabs, "threshold_freeze_2031_32");
-    const rows = byId(tab);
-    expect(rows.above_allowance.after - rows.above_allowance.before).toBe(260);
-    expect(rows.above_higher.after - rows.above_higher.before).toBe(1060);
-    expect(parts(tab)).toEqual([]);
-  });
 });

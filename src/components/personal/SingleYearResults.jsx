@@ -666,6 +666,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
             totals={totals}
             bars={bars?.all}
             split={bars}
+            splitStatus={bars ? "ready" : detailFailed ? "error" : "loading"}
             policies={policies}
             household={household}
             salaryUsed={data.salaryUsed}
