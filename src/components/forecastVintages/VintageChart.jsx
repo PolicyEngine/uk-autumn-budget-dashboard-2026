@@ -75,8 +75,10 @@ const PLOT_HEIGHT = {
 };
 // The brush's labels: Recharts draws the start label ending 5px left of
 // the left-hand handle and the end label from 5px right of the right-hand
-// one (Brush's renderText), each handle TRAVELLER_WIDTH wide, in the
-// labels' --fs-micro text (0.75rem, ForecastVintages.css)
+// one (Brush's renderText), each handle TRAVELLER_WIDTH wide. Their size
+// is in pixels, as the axes' ticks are (TICK_STYLE), so a browser set to
+// larger text draws them no wider than their room: the chart gives it to
+// ForecastVintages.css as --fv-brush-text
 export const BRUSH_TEXT_SIZE = 12;
 export const BRUSH_TEXT_GAP = 5;
 export const TRAVELLER_WIDTH = 8;
@@ -643,7 +645,10 @@ export default function VintageChart({ view, showPast, range, onRange, chartKey 
 
   return (
     <>
-      <div className="chart-plot ls-plot-fill fv-plot" style={{ minHeight: CHART_HEIGHT[narrow ? "narrow" : "wide"] }}>
+      <div
+        className="chart-plot ls-plot-fill fv-plot"
+        style={{ minHeight: CHART_HEIGHT[narrow ? "narrow" : "wide"], "--fv-brush-text": `${BRUSH_TEXT_SIZE}px` }}
+      >
         <div className="ls-plot-canvas" ref={canvasRef}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart key={chartKey} data={view.rows} margin={MARGIN}>

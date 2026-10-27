@@ -554,7 +554,7 @@ describe("the unit label's room", () => {
 });
 
 describe("the brush's room", () => {
-  // Found by the browser sweep for review round 23: the start label ran
+  // Found by the browser sweep after review round 22: the start label ran
   // off the chart's left with the whole history on a narrow y axis, at
   // every width, and the end label off its right on a 320px phone
   it("is where Recharts draws the brush's labels, wherever its handles are", () => {
@@ -597,6 +597,25 @@ describe("the brush's room", () => {
     expect(layout.brush.x).toBe(MARGIN.left + layout.yWidth);
     expect(layout.brush.width).toBeLessThan(layout.plotWidth);
     expect(brushBox(view, { canvasWidth: 0, yWidth: 52, plotWidth: -80 })).toBeNull();
+  });
+
+  // Review round 23: the labels were set in 0.75rem, so with the browser's
+  // text at 24px they were 18px, wider than the room made for 12px
+  it("sets its labels in the pixels its room is measured in, whatever the page's text size", () => {
+    const css = readFileSync("src/components/forecastVintages/ForecastVintages.css", "utf8").replace(
+      /\/\*[\s\S]*?\*\//g,
+      "",
+    );
+    const rules = [...css.matchAll(/([^{}]*recharts-brush[^{}]*)\{([^}]*)\}/g)];
+    expect(rules.map(([, selector]) => selector.trim())).toEqual([".fv-plot .recharts-brush-texts"]);
+    expect([...rules[0][2].matchAll(/font(?:-size)?:\s*([^;]+);/g)].map(([, value]) => value)).toEqual([
+      "var(--fv-brush-text)",
+    ]);
+    const view = buildView(DATA, variable("receipts"), { unit: "level" });
+    const { container } = render(
+      <VintageChart view={view} showPast range={[0, view.rows.length - 1]} onRange={() => {}} chartKey="receipts" />,
+    );
+    expect(container.querySelector(".fv-plot").style.getPropertyValue("--fv-brush-text")).toBe(`${BRUSH_TEXT_SIZE}px`);
   });
 });
 

@@ -49,10 +49,11 @@
   overflow: visible;
 }
 
-/* The brush under the x axis: the dashboard's teal handles. Its labels'
-   size is VintageChart's BRUSH_TEXT_SIZE. */
+/* The brush under the x axis: the dashboard's teal handles. Its labels are
+   set in VintageChart's BRUSH_TEXT_SIZE, in pixels, the size their room is
+   measured in. */
 .fv-plot .recharts-brush-texts {
-  font-size: var(--fs-micro);
+  font-size: var(--fv-brush-text);
   fill: var(--c-tick);
 }
 
