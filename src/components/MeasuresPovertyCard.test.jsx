@@ -201,7 +201,7 @@ describe("a measure whose artifact predates the poverty and inequality measures"
   const nameOf = (r) => r.querySelector(".mrl-name")?.textContent ?? r.textContent;
   const about = (millions) => {
     const n = Math.abs((Number(published2027(OLDER).poverty_change_pp) / 100) * millions * 1e6);
-    return n < 1000 ? "fewer than 1,000" : `about ${roundPeople(n)}`;
+    return n < 1000 ? "under 1,000" : `about ${roundPeople(n)}`;
   };
 
   const renderCard = async (rows, selected) => {

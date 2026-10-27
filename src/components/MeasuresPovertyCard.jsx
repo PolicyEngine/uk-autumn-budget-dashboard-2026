@@ -200,7 +200,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   // A plain sentence: no "≈" and no "pp" (the values are in the rows)
   const about = (step) => {
     const n = Math.abs(step.x);
-    return n < 1000 ? "fewer than 1,000" : `about ${roundPeople(n)}`;
+    return n < 1000 ? "under 1,000" : `about ${roundPeople(n)}`;
   };
   // The measure as a sentence's subject: its own sentence form where the
   // catalogue publishes one ("Unfreezing the Plan 2 threshold"), otherwise
