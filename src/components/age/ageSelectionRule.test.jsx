@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import AgeSection from "../AgeSection";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
-import { COMBINATION_NOT_PUBLISHED, PACKAGE_NET_ONLY, singleAgeSelection } from "../../utils/ageImpact";
+import { COMBINATION_NOT_PUBLISHED, PACKAGE_NET_ONLY, PACKAGE_PARTS_CAVEAT, singleAgeSelection } from "../../utils/ageImpact";
 import { singleAgeBars } from "../youngPeople/youngPeopleData";
 import { ALPHA, BETA, COMBINED, YEAR, measureCatalogueFixture } from "../../test/measureCatalogueFixture";
 
@@ -99,6 +99,9 @@ function expectNoHalfDrawn(container) {
   }
 }
 
+/** By age's "Average change by age" card. */
+const meanCard = (container) => container.querySelector(".young-people-mean");
+
 describe("By age's selection rule with a single that withholds its age bands", () => {
   it("reads the published package's own rows: every band drawn, no withheld note", async () => {
     const { container } = await renderAge(withheldFixture(), [ALPHA, BETA]);
@@ -110,7 +113,19 @@ describe("By age's selection rule with a single that withholds its age bands", (
     const bands = chartRows(container).find((rows) => rows.some((point) => point.band === "16-24"));
     expect(bands.map((point) => point.netChange)).toEqual(BANDS.map(() => 50));
     expect(bands.every((point) => point[`measure:${ALPHA}`] === null)).toBe(true);
-    expect(screen.getAllByText(PACKAGE_NET_ONLY).length).toBeGreaterThan(0);
+    // Average change by age: no note on the card, a one-line subtitle, the
+    // reason in About this chart's caveats, and no By policy option
+    const card = meanCard(container);
+    expect(within(card).queryByText(PACKAGE_NET_ONLY)).toBeNull();
+    expect(within(card).getByText("Average change per person, £ a year, with all the selected policies.")).toBeInTheDocument();
+    expect(card.querySelector(".chart-footer .note, .chart-footer [class*='note']")).toBeNull();
+    fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
+    expect(await within(card).findByText(PACKAGE_PARTS_CAVEAT)).toBeInTheDocument();
+    const pill = within(card).queryByRole("button", { name: /^Options:/ });
+    if (pill) {
+      fireEvent.click(pill);
+      expect(within(card).queryByRole("radio", { name: "By policy" })).toBeNull();
+    }
     // Change by year: every group drawn in the published year
     const trend = chartRows(container).find((rows) => rows.some((point) => point.year === YEAR && "all" in point));
     const year = trend.find((point) => point.year === YEAR);
@@ -154,5 +169,28 @@ describe("By age's selection rule with a single that withholds its age bands", (
     expect(combination.every((point) => point.netChange === null && point.combinationUnavailable)).toBe(true);
     const alone = singleAgeSelection(singleAgeBars(rows, policies, ["b"], YEAR, 10, 12), { rows, policies, selected: ["b"], year: YEAR });
     expect(alone.map((point) => point.netChange)).toEqual([5, null, null]);
+  });
+});
+
+describe("Average change by age with a package whose every member has rows by age", () => {
+  it("shows the package's own bars, with each policy's part offered as By policy", async () => {
+    const { container } = await renderAge(measureCatalogueFixture({ held: false }), [ALPHA, BETA]);
+    const card = meanCard(container);
+    const bandRows = () => chartRows(card).find((rows) => rows.some((point) => point.band === "16-24"));
+    // By default: the package's own net, no policy parts
+    expect(bandRows().map((point) => point.netChange)).toEqual(BANDS.map(() => 50));
+    expect(bandRows().every((point) => point[`measure:${ALPHA}`] === null)).toBe(true);
+    expect(within(card).getByText("Average change per person, £ a year, with all the selected policies.")).toBeInTheDocument();
+    expect(within(card).queryByText(PACKAGE_NET_ONLY)).toBeNull();
+    // By policy: each policy's own rows stacked under the package's net
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(card).getByRole("radio", { name: "By policy" }));
+    expect(bandRows().map((point) => point[`measure:${ALPHA}`])).toEqual(BANDS.map(() => 100));
+    expect(bandRows().map((point) => point[`measure:${BETA}`])).toEqual(BANDS.map(() => -50));
+    expect(bandRows().map((point) => point.netChange)).toEqual(BANDS.map(() => 50));
+    expect(within(card).getByRole("button", { name: /^Options:.*By policy/ })).toBeInTheDocument();
+    // No caveat: nothing is withheld
+    fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
+    expect(within(card).queryByText(PACKAGE_PARTS_CAVEAT)).toBeNull();
   });
 });

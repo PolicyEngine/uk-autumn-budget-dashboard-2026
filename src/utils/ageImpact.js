@@ -64,6 +64,10 @@ export function packageRunFor(rows, packageRun, year) {
 /** The notice for several policies whose results by age are not published together. */
 export const COMBINATION_NOT_PUBLISHED = "Results by age for this combination of policies are not published yet.";
 
+/** About this chart's caveat when a package's chart shows no policy parts. */
+export const PACKAGE_PARTS_CAVEAT =
+  "Each policy's part is not shown, as a selected policy has too few survey records by age: the bars are the whole package's own result.";
+
 /** Why a package's chart has its net but no policy parts. */
 export const PACKAGE_NET_ONLY =
   "The net change is the whole package's own result. Each policy's part is not shown, as a selected policy has too few survey records by age.";

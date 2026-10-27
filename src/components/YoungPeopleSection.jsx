@@ -38,7 +38,7 @@ import {
   YOUNG_BAND,
   isPublished,
   COMBINATION_NOT_PUBLISHED,
-  PACKAGE_NET_ONLY,
+  PACKAGE_PARTS_CAVEAT,
   meanChangeByBand,
   singleAgeSelection,
   sharesByGroup,
@@ -300,7 +300,26 @@ function SingleAgeTooltip({ active, payload, yearLabel }) {
   );
 }
 
-const PACKAGE_DESCRIPTION = "Average change per person, £ a year, by age group: the whole package's own result.";
+const PACKAGE_DESCRIPTION = "Average change per person, £ a year, with all the selected policies.";
+
+/**
+ * A published package's two views: its own bars (the default), or each
+ * policy's part stacked under its net, offered only when every member has
+ * rows by age (never derived by subtraction, which would disclose a
+ * withheld policy's rows).
+ */
+export const PACKAGE_VIEWS = [
+  { value: "package", label: "Whole package" },
+  { value: "policy", label: "By policy" },
+];
+
+/** A point with no policy parts: the package's own net only. */
+function packageOnly(point, policies) {
+  const next = { ...point };
+  for (const policy of policies) next[policy.seriesKey ?? `measure:${policy.id}`] = null;
+  if (next.parts) next.parts = [];
+  return next;
+}
 
 export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, bandsOnly = false, extraOptions = [], title: titleBase = "Average change by age", keyInLegend = false }) {
   const catalogue = useMeasureCatalogue();
@@ -312,6 +331,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
   const chartRef = useRef(null);
   // By age shows single years of age in a card of their own (SingleAgeCard)
   const [chosenView, setView] = useState("band");
+  const [packageView, setPackageView] = useState("package");
   const view = bandsOnly ? "band" : chosenView;
   const single = view === "single";
   const yearLabel = fiscalYearTick(selectedYear);
@@ -319,7 +339,12 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
   // The selection rule: the published package of exactly the selection
   // reads its own rows; other combinations draw whole or not at all
   const packageRun = selectionPackageKey(catalogue.manifest, selectedPolicies);
-  const data = meanChangeByBand(rows, policies, selectedPolicies, selectedYear, packageRun);
+  const bandData = meanChangeByBand(rows, policies, selectedPolicies, selectedYear, packageRun);
+  const fromPackage = bandData.some((point) => point.fromPackage);
+  // Each policy's part can be offered only when every member has rows by age
+  const partsAvailable = fromPackage && bandData.every((point) => point.partsShown);
+  const byPolicy = partsAvailable && packageView === "policy";
+  const data = fromPackage && !byPolicy ? bandData.map((point) => packageOnly(point, policies)) : bandData;
   const singleData = singleAgeSelection(singleAgeBars(rows, policies, selectedPolicies, selectedYear), {
     rows,
     policies,
@@ -330,7 +355,11 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
   const shownData = single ? singleData : data;
   const combinationUnavailable = shownData.some((point) => point.combinationUnavailable);
   // The package's net with no policy parts: a selected policy withholds its rows by age
-  const netOnly = shownData.some((point) => point.fromPackage && !point.partsShown);
+  const netOnly = single
+    ? shownData.some((point) => point.fromPackage && !point.partsShown)
+    : fromPackage && !byPolicy;
+  // A selected policy withholds its rows by age: no policy parts to offer
+  const partsWithheld = shownData.some((point) => point.fromPackage && !point.partsShown);
   // The single-year axis fits the year shown's stacks, gains above zero and
   // losses below, with a little headroom (never mirrored)
   const stackEnds = singleData
@@ -363,11 +392,12 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
     const points = meanChangeByBand(rows, policies, selectedPolicies, selectedYear, selectionPackageKey(catalogue.manifest, selectedPolicies));
     const keyOf = (id) => catalogue.byId.get(id)?.seriesKey;
     // No parts drawn, no policy key: the net is the package's own run
-    if (points.some((point) => (point.fromPackage && !point.partsShown) || point.combinationUnavailable)) return [];
+    const partsDrawn = (point) => point.partsShown && (single || packageView === "policy");
+    if (points.some((point) => (point.fromPackage && !partsDrawn(point)) || point.combinationUnavailable)) return [];
     return legendMembership(catalogue, selectedPolicies, (id) =>
       points.some((point) => Math.abs(point[keyOf(id)] ?? 0) > 0),
     );
-  }, [rows, policies, selectedPolicies, selectedYear, catalogue]);
+  }, [rows, policies, selectedPolicies, selectedYear, catalogue, single, packageView]);
   const activeNames = drawnNames(members);
   const netLabel = activeNames.length > 1 ? "Net change" : undefined;
   const key = useMeasureKey(members, netLabel);
@@ -458,10 +488,17 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
       </div>
       <div className="chart-controls young-people-controls">
         {/* By age's choices (the age group, the view) first */}
-        {(!bandsOnly || extraOptions.length > 0) && (
+        {(!bandsOnly || extraOptions.length > 0 || partsAvailable) && (
           <ControlBar
             name={title}
-            options={[...extraOptions, ...(bandsOnly ? [] : [{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }])]}
+            options={[
+              ...extraOptions,
+              ...(bandsOnly ? [] : [{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]),
+              // Offered only when every selected policy has rows by age (else hidden)
+              ...(partsAvailable && !single
+                ? [{ label: "Policies", value: packageView, onChange: setPackageView, options: PACKAGE_VIEWS, omitAtDefault: "package" }]
+                : []),
+            ]}
           />
         )}
       </div>
@@ -637,12 +674,12 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
       {published && (
         <div className="chart-footer">
           {notShown && !combinationUnavailable && <Note>Not shown, as too few survey records: {notShown}.</Note>}
-          {netOnly && <Note>{PACKAGE_NET_ONLY}</Note>}
           <ChartMoreInfo
             members={members}
             year={selectedYear}
             info={{
               caveats: [
+                partsWithheld && PACKAGE_PARTS_CAVEAT,
                 single &&
                   "Single years of age rest on fewer households: a few large changes, such as capital gains, can move one age's average.",
               ],
