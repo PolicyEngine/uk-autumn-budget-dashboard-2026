@@ -1198,6 +1198,16 @@
   margin-top: 12px;
 }
 
+/* Beyond a phone: out by the cells' 12px each side, so the names start
+   under the sentence and the figures end under the download button */
+@media (min-width: 641px) {
+  .programme-table-wrap {
+    width: calc(100% + 24px);
+    margin-left: -12px;
+    margin-right: -12px;
+  }
+}
+
 .programme-table {
   width: 100%;
   border-collapse: collapse;
