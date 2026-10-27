@@ -94,6 +94,9 @@ describe("ConstituencyMap on Budget day", () => {
         await screen.findByText("Results by constituency are not yet published."),
       ).toBeInTheDocument();
       expect(screen.queryByText(/could not be (read|loaded)/)).toBeNull();
+      // The notice alone: no empty table, count or "no match" line behind it
+      expect(screen.queryByRole("table")).toBeNull();
+      expect(screen.queryByText(/0 of 0|No constituency or region matches/)).toBeNull();
     } finally {
       window.history.replaceState({}, "", "/");
     }

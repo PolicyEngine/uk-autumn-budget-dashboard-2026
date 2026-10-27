@@ -1139,16 +1139,14 @@ export default function ConstituencyMap({
           </MapTemplate>
         )}
 
-        {!onMap && view.kind !== "loading" && (
+        {/* Before results are in, the Table view is the notice alone: no
+            empty table, count or "no match" line behind it */}
+        {!onMap && view.kind === "rows" && (
           <div className="rankings-panel">
-            <ConstituencyTable
-              entries={view.kind === "rows" ? rankingEntriesForView : []}
-              metric={metric}
-              query={searchQuery}
-            />
-            {notice && <div className="map-template-overlay">{notice}</div>}
+            <ConstituencyTable entries={rankingEntriesForView} metric={metric} query={searchQuery} />
           </div>
         )}
+        {!onMap && view.kind === "notice" && <div className="rankings-panel rankings-panel-notice">{notice}</div>}
 
         {/* Kept mounted in the Table view, so the map keeps its zoom */}
         {view.kind === "rows" && (

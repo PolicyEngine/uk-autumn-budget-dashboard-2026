@@ -697,7 +697,20 @@
   align-self: flex-start;
 }
 
-/* The Table view, with the notice over it before results are published */
+/* The Table view; before results are published, the notice alone */
 .rankings-panel {
   position: relative;
+}
+
+.rankings-panel-notice {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0;
+}
+
+.rankings-panel-notice .publication-unavailable {
+  width: min(100%, 360px);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-left: 3px solid var(--pe-gray-400);
 }

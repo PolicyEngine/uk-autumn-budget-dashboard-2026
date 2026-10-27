@@ -25,6 +25,8 @@ describe("SeriesToggle", () => {
     const chip = (name) => screen.getByRole("button", { name });
     // A first-visit hint, gone after the first click
     expect(screen.getByText("Click to show or hide")).toBeInTheDocument();
+    // On a touch screen the CSS shows "Tap" in its place
+    expect(screen.getByText("Tap to show or hide")).toHaveClass("series-toggle-hint-tap");
     expect(chip("Alpha")).toHaveAttribute("aria-pressed", "true");
     expect(chip("Gamma")).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(chip("Gamma"));

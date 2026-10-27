@@ -95,6 +95,22 @@
   box-shadow: 0 8px 24px var(--shadow-strong);
 }
 
+/* Kept in the window on a tablet or desktop (dialogPlacement in
+   ControlBar.jsx): above the pill when there is more room there, and
+   scrolling inside when taller than the room, as the phone sheet does */
+@media (min-width: 641px) {
+  .control-bar-dialog.is-above {
+    top: auto;
+    bottom: calc(100% + 8px);
+    transform-origin: bottom center;
+  }
+
+  .control-bar-dialog.is-scrolling {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 .control-bar-backdrop {
   display: none;
 }
