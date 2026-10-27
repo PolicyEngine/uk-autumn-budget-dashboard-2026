@@ -803,6 +803,16 @@ describe("while a new answer loads", () => {
     };
   }
 
+  it("moves keyboard focus from Calculate, disabled while it runs, to the results", async () => {
+    serveSlowly().slowDown();
+    renderTab();
+    openForm();
+    calculateButton().focus();
+    fireEvent.click(calculateButton());
+    expect(calculateButton()).toBeDisabled();
+    await waitFor(() => expect(screen.getByRole("region", { name: "Results" })).toHaveFocus());
+  });
+
   it("shows only the processing panel while it calculates again, never the earlier result", async () => {
     const server = serveSlowly();
     const { rerender, container } = renderTab();

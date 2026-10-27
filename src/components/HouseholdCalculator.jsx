@@ -594,6 +594,10 @@ function HouseholdCalculator({
     requestAnimationFrame(() => {
       const target = resultsRef.current;
       if (!target) return;
+      // Calculate is disabled while it runs, which drops keyboard focus
+      // to the page's start: focus goes to the results instead (WCAG 2.4.3)
+      const lost = document.activeElement;
+      if (!lost || lost === document.body || lost.disabled) target.focus({ preventScroll: true });
       const { top } = target.getBoundingClientRect();
       if (top > window.innerHeight * 0.6) {
         target.scrollIntoView?.({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
