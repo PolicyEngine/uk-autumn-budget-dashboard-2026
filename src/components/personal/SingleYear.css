@@ -555,19 +555,18 @@
   padding: 16px 28px 24px;
 }
 
-.result-value {
-  font-size: 2.5rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-  color: var(--pe-gray-700);
+/* The change in the Your change tile: the tiles' headline size and
+   place (from .forecast-tile-value), only its colour its own. Its own
+   class name: ConstituencyMap.css's global .result-value is micro text */
+.result-change-value {
+  font: inherit;
 }
 
-.result-card.is-gain .result-value {
+.result-card.is-gain .result-change-value {
   color: var(--c-gain-text);
 }
 
-.result-card.is-loss .result-value {
+.result-card.is-loss .result-change-value {
   color: var(--c-loss-text);
 }
 
@@ -967,9 +966,6 @@
     padding-right: 16px;
   }
 
-  .result-value {
-    font-size: 2rem;
-  }
 
 }
 
@@ -1103,7 +1099,6 @@
 
 .result-card .result-card-body {
   grid-template-columns: minmax(0, 1fr);
-  padding-top: 12px;
 }
 
 .result-policies-link {
@@ -1124,9 +1119,45 @@
 
 }
 
-/* The waterfall's own title and line, as on every card */
+/* The waterfall's panel: the tiles' tint, border, radius and padding,
+   the card's width; the gap above it the tiles' own gap */
+.result-card .result-card-body {
+  padding-top: 12px;
+}
+
+.result-card .net-income-waterfall {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 12px;
+  background: var(--pe-teal-50);
+}
+
+@media (max-width: 900px) {
+  .result-card .result-card-body {
+    padding-top: 8px;
+  }
+}
+
+/* Its title as the tiles' (icon chip and name), the line under it */
 .waterfall-header {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
+}
+
+.waterfall-title {
+  margin: 0;
+}
+
+.waterfall-title .forecast-tile-icon svg {
+  display: block;
+}
+
+.waterfall-sentence {
+  margin: 6px 0 0;
+  max-width: 72ch;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--pe-gray-600);
 }
 
 /* The waterfall: one row each at one pitch (name | bar | amount), the
@@ -1226,6 +1257,10 @@
   transform: skewX(-22deg);
 }
 
+.result-card .net-income-waterfall .waterfall-break {
+  border-color: var(--pe-teal-50);
+}
+
 .waterfall-link {
   position: absolute;
   top: calc(50% + var(--wf-bar) / 2);
@@ -1254,15 +1289,27 @@
   height: 18px;
 }
 
-.waterfall-axis-tick {
+/* The axis line along the track's foot, from the left edge; the tick
+   and its label hang from the corner, under the vertical axis */
+.waterfall-axis-line {
   grid-column: 2;
-  justify-self: start;
+  align-self: start;
   position: relative;
+  height: 100%;
+  border-top: 1px solid var(--c-axis, var(--pe-gray-400));
+}
+
+.waterfall-axis-tick {
+  position: absolute;
+  top: 0;
+  left: 0;
   transform: translateX(-50%);
-  padding-top: 4px;
+  padding-top: 5px;
+  line-height: 1;
   font-size: var(--fs-micro);
   color: var(--pe-gray-500);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .waterfall-axis-tick::before {

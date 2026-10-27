@@ -108,7 +108,7 @@ describe("the page's figures are the household API's own (real answers, 2027-28)
       });
       // The headline figure is the API's net income change, in whole pounds
       await waitFor(() =>
-        expect(card.querySelector(".result-value").textContent).toBe(
+        expect(card.querySelector(".result-change-value").textContent).toBe(
           change === 0 ? "No change" : `${change > 0 ? "+" : "−"}${pounds(change)}`,
         ),
       );

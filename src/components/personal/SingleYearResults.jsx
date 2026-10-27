@@ -422,7 +422,7 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
       <ResultTiles
         totals={totals}
         changeValue={
-          <span className="result-value" aria-busy={counting || undefined}>
+          <span className="result-change-value" aria-busy={counting || undefined}>
             {signedPounds(counting ? shown : totals.change)}
           </span>
         }

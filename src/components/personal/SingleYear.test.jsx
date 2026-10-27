@@ -116,7 +116,7 @@ const HEADLINE = /^Your change$/;
 /** The headline card (there is none before a result). */
 const headlineCard = () => document.querySelector(".result-card");
 /** The headline figure, once it has counted up. */
-const changeValue = () => headlineCard().querySelector(".result-value").textContent;
+const changeValue = () => headlineCard().querySelector(".result-change-value").textContent;
 
 // The waterfall, once the split by policy is in (optionally for one year)
 const splitShown = (year) =>
@@ -296,6 +296,11 @@ describe("the household calculation, from the fixture", () => {
     ]);
     expect(tiles[0]).toHaveTextContent(`In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies`);
     expect(changeValue()).toBe("+£3,765");
+    // All three figures in the tiles' one headline class, the change not
+    // in the map's micro .result-value
+    expect(tiles.map((tile) => tile.querySelectorAll(".forecast-tile-value").length)).toEqual([1, 1, 1]);
+    expect(tiles[0].querySelector(".forecast-tile-value .result-change-value")).toHaveTextContent("+£3,765");
+    expect(card.querySelector(".result-value")).toBeNull();
     // The figure once, for copying and screen readers alike
     expect(card.textContent.match(/£3,765/g)).toHaveLength(1);
     expect(tiles[0].querySelector(".forecast-tile-sub")).toHaveTextContent("a year, after the selected policies");
@@ -683,7 +688,7 @@ describe("switching from one household's card to another", () => {
     fireEvent.click(card("Your household"));
     expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(22);
     expect(headlineCard()).toBeNull();
-    expect(screen.queryByText("+£1,111", { selector: ".result-value" })).toBeNull();
+    expect(screen.queryByText("+£1,111", { selector: ".result-change-value" })).toBeNull();
     // A changed answer and Calculate: the new result
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "41" } });
     fireEvent.click(calculateButton());

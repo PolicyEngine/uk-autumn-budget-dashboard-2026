@@ -99,14 +99,14 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
 
   return (
     <div className="net-income-waterfall" id="change-by-policy" data-split={pending ? (splitFailed ? "unavailable" : "pending") : "ready"} data-year={yearLabel}>
-      <div className="chart-header waterfall-header">
-        <div>
-          <h3>
-            <TitleIcon name="bars" />
-            <span className="title-text">How each policy changes your income</span>
-          </h3>
-          <p className="chart-description">{waterfallSentence(totals, steps, yearLabel)}</p>
-        </div>
+      {/* A panel like the tiles above: their title style, the line as
+          its subtitle, then the chart */}
+      <div className="waterfall-header">
+        <h3 className="forecast-tile-head waterfall-title">
+          <TitleIcon name="bars" className="forecast-tile-icon" />
+          <span className="forecast-tile-name">How each policy changes your income</span>
+        </h3>
+        <p className="waterfall-sentence">{waterfallSentence(totals, steps, yearLabel)}</p>
       </div>
       <div ref={wrapperRef} className="waterfall-chart" style={{ position: "relative" }}>
         <ol
@@ -159,9 +159,11 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
             );
           })}
         </ol>
-        {/* The axis's one tick: where the bars start */}
+        {/* The axis's one tick: where the bars start, on the axis line */}
         <div className="waterfall-axis" aria-hidden="true">
-          <span className="waterfall-axis-tick">{money(start)}</span>
+          <span className="waterfall-axis-line">
+            <span className="waterfall-axis-tick">{money(start)}</span>
+          </span>
         </div>
         <FloatingTooltip tip={tip} />
       </div>
