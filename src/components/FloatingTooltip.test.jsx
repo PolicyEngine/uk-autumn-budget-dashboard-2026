@@ -5,7 +5,6 @@ import { CHART_COLOURS, POLICY_RAMPS } from "../utils/chartTheme";
 import OBRDumbbellChart from "./OBRDumbbellChart";
 import PolicyBars from "./personal/PolicyBars";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
-import { seatTooltipRows } from "./ConstituencyMap";
 
 // comparisonRows() output for two years
 const rowsFor = {
@@ -52,27 +51,6 @@ describe("tooltips on hand-drawn charts", () => {
     expect(tip).toHaveTextContent(/Change in net income.*£250 a year/);
     fireEvent.mouseLeave(bar);
     expect(screen.queryByRole("tooltip")).toBeNull();
-  });
-
-  it("a hovered seat shows its figure and 90% interval, or its notes", () => {
-    const rows = seatTooltipRows({
-      title: "Bath",
-      lines: [
-        { kind: "value", text: "+£120", direction: "gain" },
-        { kind: "label", text: "Average change in net income" },
-        { kind: "interval", text: "90% interval: £80 to £160" },
-        { kind: "detail", text: "Reported" },
-      ],
-    });
-    expect(rows.map((row) => [row.name, row.text])).toEqual([
-      ["Average change in net income", "+£120"],
-      ["90% interval", "£80 to £160"],
-    ]);
-    const withheld = seatTooltipRows({
-      title: "Bath",
-      lines: [{ kind: "note", text: "Withheld: too few survey households." }],
-    });
-    expect(withheld[0].name).toBe("Withheld: too few survey households.");
   });
 
   it("is never shown under an old key", () => {

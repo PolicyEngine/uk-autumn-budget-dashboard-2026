@@ -142,6 +142,16 @@ describe("ConstituencyMap", () => {
     expect(fill("Z14000008")).toBe(scaleColour("0.0004", 0.01));
   });
 
+  it("a hovered seat shows its average and relative change in a floating card", async () => {
+    const { container } = await renderMap();
+    fireEvent.mouseOver(seat(container, "Z14000001"), { clientX: 40, clientY: 40 });
+    const tip = await screen.findByRole("tooltip");
+    expect(within(tip).getByText("Northfield East")).toBeInTheDocument();
+    expect(tip).toHaveTextContent("+£310");
+    expect(tip).toHaveTextContent("+1.12%");
+    fireEvent.mouseOut(seat(container, "Z14000001"));
+  });
+
   it("draws a seat with no row as no data, never as a value", async () => {
     const { container } = await renderMap();
     const missing = seat(container, "Z14000006");
