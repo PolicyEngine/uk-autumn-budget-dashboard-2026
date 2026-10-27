@@ -61,9 +61,10 @@ const GROUP_WORDS = [
   { id: "pension", noun: "pension contributions", up: "fall", down: "rise", always: false },
 ];
 
-// "Fuel duty" -> "fuel duty"; "VAT" and "Council Tax" keep their capitals
+// "Fuel duty" -> "fuel duty"; "VAT" and "Council Tax" keep their capitals;
+// the "VAT change" row is just "VAT" in a sentence about changes
 const inSentence = (label) => {
-  const text = String(label ?? "");
+  const text = String(label ?? "").replace(/ change$/, "");
   return /[A-Z]/.test(text.slice(1)) ? text : text.charAt(0).toLowerCase() + text.slice(1);
 };
 

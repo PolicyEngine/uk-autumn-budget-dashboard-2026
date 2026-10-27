@@ -1141,7 +1141,7 @@ describe("the breakdown's one line", () => {
         group("benefit", 0),
       ]),
     ).toBe("Taxes fall by £9 a year, mostly fuel duty; market income and benefits are unchanged.");
-    expect(breakdownSentence([group("income", 0), group("tax", -20, [row("VAT", -20), row("Income tax", 0)]), group("benefit", 0)])).toBe(
+    expect(breakdownSentence([group("income", 0), group("tax", -20, [row("VAT change", -20), row("Income tax", 0)]), group("benefit", 0)])).toBe(
       "Taxes rise by £20 a year, all from VAT; market income and benefits are unchanged.",
     );
     // Both, and no row named when none is more than half
