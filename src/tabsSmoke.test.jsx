@@ -53,7 +53,7 @@ const HOUSEHOLD_API = `${API}/api/household-impact`;
 // published them yet: the page shows "not yet published" on a 404.
 // The official costings follow the Budget; until then Public finances shows
 // no comparison at all.
-const NOT_YET_PUBLISHED = new Set(["/data/regional.csv", "/data/constituency.csv", "/data/release-index.json", "/data/official_costings.json"]);
+const NOT_YET_PUBLISHED = new Set(["/data/regional.csv", "/data/constituency.csv", "/data/release-index.json", "/data/official_costings.json", "/data/obr_cpi_policy_effect.json"]);
 
 // Text that means a tab failed instead of showing its content.
 const FAILURE_TEXT = [
