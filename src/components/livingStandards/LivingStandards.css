@@ -627,6 +627,8 @@
 .forecast-tile {
   display: flex;
   flex-direction: column;
+  /* A grid cell that may shrink below its content: long captions wrap */
+  min-width: 0;
   gap: 12px;
   padding: 16px 18px;
   border: 1px solid var(--pe-gray-200);
@@ -674,6 +676,21 @@
   line-height: 1.1;
   color: var(--pe-gray-800);
   font-variant-numeric: tabular-nums;
+}
+
+/* A change in words ("Rises 0.1 points") leads in place of a number */
+.forecast-tile-value.is-text {
+  font-size: 1.5rem;
+}
+
+.poverty-tiles .forecast-tile-sub {
+  white-space: normal;
+}
+
+/* The model's levels, said small under a change-led tile */
+.forecast-tile-meaning.is-small {
+  font-size: 0.75rem;
+  color: var(--pe-gray-500);
 }
 
 .forecast-tile-sub {
@@ -1023,4 +1040,61 @@
   width: 120px;
   height: 10px;
   border-radius: 2px;
+}
+
+/* The growth chart's year panel: every group's value for the hovered
+   year, as one compact list */
+.ls-nowrap {
+  white-space: nowrap;
+}
+
+.ls-year-panel-list {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-micro);
+}
+
+.ls-year-panel-list li {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) 48px 3.6em;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+  padding: 0 2px;
+  font-variant-numeric: tabular-nums;
+  border-radius: 3px;
+}
+
+.ls-year-panel-list li.is-hovered {
+  background: var(--pe-gray-100);
+}
+
+.ls-year-panel-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.ls-year-panel-group {
+  color: var(--pe-gray-600);
+  white-space: nowrap;
+}
+
+/* A small bar from a centre line: right for a gain, left for a loss */
+.ls-year-panel-track {
+  position: relative;
+  height: 6px;
+  background: linear-gradient(var(--pe-gray-300), var(--pe-gray-300)) center / 1px 100% no-repeat;
+}
+
+.ls-year-panel-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 1px;
+}
+
+.ls-year-panel-value {
+  text-align: right;
 }

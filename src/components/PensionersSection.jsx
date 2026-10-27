@@ -355,7 +355,7 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
                 stroke={CHART_COLOURS.highlight}
                 strokeDasharray="4 3"
                 label={{
-                  value: narrow ? `SPA ${from}` : `State Pension age, ${from}`,
+                  value: narrow ? `Pension age ${from}` : `State Pension age, ${from}`,
                   position: "insideTopRight",
                   fill: CHART_COLOURS.highlight,
                   fontSize: TICK_STYLE.fontSize,
@@ -582,7 +582,7 @@ function SharesTooltip({ active, payload, label, yearLabel }) {
  * people under State Pension age and all ages, from one run (a single
  * policy, or all of them).
  */
-function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height, extraOptions = [] }) {
   const chartRef = useRef(null);
   const year = Number(selectedYear);
   const yearLabel = fiscalYearTick(year);
@@ -675,6 +675,7 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
           <ControlBar
             name={title}
             options={[
+              ...extraOptions,
               {
                 label: "Group",
                 value: groupKey,
@@ -687,7 +688,7 @@ function SharesCard({ catalogue, rows, policies, selectedPolicies, selectedYear,
             ]}
           />
         ) : (
-          <ControlBar name={title} options={[{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
+          <ControlBar name={title} options={[...extraOptions, { label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
         )}
       </div>
       <SwapTransition swapKey={view} ref={chartRef} className="chart-plot young-people-plot">
@@ -856,7 +857,7 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
       <section className="report-section young-people-section" aria-label="Who gains and from what">
         <div className="charts-grid">
           <MeasuresCard {...props} height={narrow ? 460 : 400} />
-          <SharesCard {...props} height={narrow ? 260 : 400} />
+          <PensionerSharesCard {...props} height={narrow ? 260 : 400} />
         </div>
       </section>
     </>

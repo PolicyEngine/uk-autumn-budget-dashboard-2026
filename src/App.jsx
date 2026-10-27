@@ -24,19 +24,25 @@ import { PovertyMeasuresRow } from "./components/MeasuresPovertyCard";
 import TwinLink from "./components/TwinLink";
 import GrowthWithMeasuresCard from "./components/livingStandards/GrowthWithMeasuresCard";
 import { GROWTH_CURRENT_LAW_ANCHOR } from "./components/livingStandards/sections/ViewCards";
-import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
-import PensionersSection from "./components/PensionersSection";
+import { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
+import AgeSection from "./components/AgeSection";
 import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
-import HomeButton from "./components/HomeButton";
+import TitleMark, { EdgeAboutTab } from "./components/HomeButton";
+import OverviewDrawer from "./components/OverviewDrawer";
 import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
 import { loadDashboard, loadVerifiedTablesOnce, budgetChartData } from "./utils/loadDashboard";
 import { pruneVerifiedCache } from "./utils/publication/cache";
+import { prefetchGeography } from "./hooks/useGeographyData";
+import { loadOutlook } from "./utils/livingStandards/outlook";
+import { loadPresetChanges } from "./utils/householdPresets";
 import { loadManifest } from "./utils/publication/load";
 import { PublicationCheckContext, serialisedChecks } from "./utils/publication/check";
 import UnavailableNotice, { RemoveUnavailable } from "./components/publication/UnavailableNotice";
-import LoadingSkeleton from "./components/publication/LoadingSkeleton";
+import ViewSkeleton, { BootSkeleton } from "./components/publication/ViewSkeleton";
+import { bootView } from "./utils/bootView";
+import UpdateToast from "./components/publication/UpdateToast";
 import { provisionalLabel } from "./utils/publication/manifest";
 import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import PolicyCards from "./components/PolicyCards";
@@ -44,8 +50,8 @@ import SummaryMetricChart, { SUMMARY_METRICS } from "./components/SummaryMetricC
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 
 // The views, as tabs under the band. `year` and `policies` say which of
-// the band's pills apply to a view; the others keep their place in the band
-// but are hidden. Pre-measures forecast is current law (incomes and poverty
+// the band's pills apply to a view; the others stay in the band, faded and
+// inactive, their reason in their accessible names. Pre-measures forecast is current law (incomes and poverty
 // without the measures) and the OBR forecast behind it, Policies describes every measure and Methodology is text: no
 // pill applies to them. Population impact's sub-tabs (Public finances, All
 // households, Young people, Pensioners, Living standards, Poverty) are in
@@ -62,6 +68,11 @@ export const VIEWS = [
 ];
 
 const VIEW_BY_KEY = Object.fromEntries(VIEWS.map((view) => [view.value, view]));
+
+// The accessible names' reason on a band pill that does not change the
+// view shown (no visible tip)
+export const YEAR_INACTIVE = "The year doesn't change this tab";
+export const POLICIES_INACTIVE = "Policy choices don't change this tab";
 
 // Old ?tab= values still opened by shared links, and the view each is now;
 // the address is rewritten to the new value
@@ -116,6 +127,18 @@ export function opensDeciles({ hash }) {
   return hash === `#${DECILES_ANCHOR}`;
 }
 
+/**
+ * An old link to the Young people or Pensioners sub-tab (?sub=young,
+ * ?sub=pensioners), now By age (?sub=age) with that group chosen (?age=):
+ * the group, or null when the address is not one.
+ */
+export function oldAgeSubGroup({ search }) {
+  const sub = new URLSearchParams(search).get(SUB_TAB_PARAM);
+  if (sub === "young") return "16-24";
+  if (sub === "pensioners") return "pensioners";
+  return null;
+}
+
 /** The view a page address opens: an old Young people link, else ?tab=, else the default. */
 export function viewFromLocation({ search, hash }) {
   if (opensYoungPeople({ search, hash })) return DEFAULT_VIEW;
@@ -131,11 +154,12 @@ export const SHELL_STICKY_NAV_SELECTOR =
   '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';
 
 /** Take the open sub-tab (?sub=) out of the address, or put `sub` there. */
-function dropSubTab(sub) {
+function dropSubTab(sub, extra = {}) {
   const params = new URLSearchParams(window.location.search);
   if (!sub && !params.has(SUB_TAB_PARAM)) return;
   if (sub) params.set(SUB_TAB_PARAM, sub);
   else params.delete(SUB_TAB_PARAM);
+  for (const [key, value] of Object.entries(extra)) params.set(key, value);
   const search = params.toString();
   window.history.replaceState(
     {},
@@ -153,6 +177,14 @@ const NOTHING_PUBLISHED = Object.freeze({
 
 // The views whose figures come from the publication
 const BUDGET_VIEWS = new Set(["dashboard", "household"]);
+
+// The placeholder for a Budget view while its results load: the linked
+// sub-tab's on Population impact (bootView), as the server's HTML drew it
+function loadingView(value) {
+  if (value !== "dashboard") return value;
+  const linked = typeof window === "undefined" ? "dashboard:finances" : bootView(window.location);
+  return linked.startsWith("dashboard:") ? linked : "dashboard:finances";
+}
 
 // The tables no first view waits for, loaded when the page is idle
 const IDLE_TABLES = ["age_impact", "household_scatter_binned"];
@@ -186,10 +218,27 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // verify while the page is idle, so a tab switch need not wait
   useEffect(() => {
     if (!catalogue.manifest || !catalogue.tablesByKey) return undefined;
-    return whenIdle(() => {
-      for (const table of IDLE_TABLES) loadVerifiedTablesOnce(catalogue, table).catch(() => {});
-      pruneVerifiedCache().catch(() => {});
-    });
+    // One step per idle period, the views' own tables first
+    const steps = [
+      ...IDLE_TABLES.map((table) => () => loadVerifiedTablesOnce(catalogue, table).catch(() => {})),
+      () => prefetchGeography(catalogue),
+      () => loadOutlook().catch(() => {}),
+      () => loadPresetChanges().catch(() => {}),
+      () => pruneVerifiedCache().catch(() => {}),
+    ];
+    let cancel;
+    const next = () => {
+      const step = steps.shift();
+      if (!step) return;
+      cancel = whenIdle(() => {
+        Promise.resolve(step()).finally(next);
+      });
+    };
+    next();
+    return () => {
+      steps.length = 0;
+      cancel?.();
+    };
   }, [catalogue]);
   const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
   const [activeTab, setActiveTab] = useState(DEFAULT_VIEW);
@@ -198,6 +247,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // default view (Public finances), which stays mounted behind it, faded
   // and inert. Choosing any view leaves it.
   const [landing, setLanding] = useState(true);
+  // The overview drawer, opened by the "About" tab on the window's edge
+  const [overviewOpen, setOverviewOpen] = useState(false);
+  const aboutTabRef = useRef(null);
+  const closeOverview = useCallback(() => setOverviewOpen(false), []);
   const PRESETS = [{ id: "autumn-budget", name: "All measures" }];
   // Cards fade and rise in as they scroll into view
   const mainRef = useRef(null);
@@ -218,7 +271,11 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // An old link to the Young people view opens its sub-tab; the hash
     // stays, so the page scrolls to the section
     const view = viewFromLocation(window.location);
-    if (opensYoungPeople(window.location)) dropSubTab("young");
+    // (By age, with 16 to 24 chosen; an old Pensioners sub-tab link opens
+    // By age with pensioners chosen)
+    const oldGroup = oldAgeSubGroup(window.location);
+    if (opensYoungPeople(window.location)) dropSubTab("age", { age: "16-24" });
+    else if (oldGroup) dropSubTab("age", { age: oldGroup });
     // A link to the decile pair opens All households, where it now is
     else if (opensDeciles(window.location)) dropSubTab("all");
     // An old Baseline outlook link opens the Pre-measures forecast tab's Living
@@ -303,7 +360,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   useEffect(() => {
     const onHashChange = () => {
       if (window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
-        dropSubTab("young");
+        dropSubTab("age", { age: "16-24" });
         setLanding(false);
         setActiveTab(DEFAULT_VIEW);
       }
@@ -351,7 +408,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // Each view's scroll position when it was left, to return to it
   const tabScroll = useRef({});
   // `sub` opens the new view at one of its sub-tabs (Methodology's links).
-  const handleTabChange = (requested, sub) => {
+  const handleTabChange = (requested, sub, extra) => {
     const tab = viewKey(requested);
     // Leaving the landing page opens the view even when it is the one
     // behind it (a box, or the Population impact tab)
@@ -359,7 +416,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // A sub-tab (?sub=, SubTabs.jsx) belongs to the view that wrote it, so
     // it goes before another view opens and reads the address
     if (changing) {
-      dropSubTab(sub);
+      dropSubTab(sub, extra);
       if (!landing) tabScroll.current[activeTab] = window.scrollY;
     }
     setLanding(false);
@@ -371,20 +428,6 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     }
     // Choosing the open view changes nothing, so there is nothing to keep
     tabScrollPending.current = changing;
-  };
-  // Back to the landing page (the band's home button), in place: the views
-  // stay mounted, the address goes back to the bare one (the selection
-  // and year stay as chosen) and the page to its top
-  const goHome = () => {
-    if (landing) return;
-    tabScroll.current[activeTab] = window.scrollY;
-    dropSubTab(null);
-    if (window.location.hash) {
-      window.history.replaceState({}, "", window.location.pathname + window.location.search);
-    }
-    setLanding(true);
-    setActiveTab(DEFAULT_VIEW);
-    window.scrollTo({ top: 0 });
   };
   // A card's link to Methodology (utils/methodLink): switch to it in place,
   // then bring the term or section into view, opening any folded details
@@ -529,6 +572,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             <div className="charts-grid">
               <GrowthWithMeasuresCard
                 selectedPolicies={selectedPolicies}
+                selectedYear={distributionalYear}
                 twinLink={
                   <TwinLink tab="outlook" sub="living" onShow={handleTabChange} label="Without the measures" anchor={GROWTH_CURRENT_LAW_ANCHOR} />
                 }
@@ -576,20 +620,11 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         </div>
       );
     }
-    if (sub === "young") {
-      // Young people (16 to 24): results by age, #young-people
+    if (sub === "age") {
+      // By age: every age group, pensioners and all ages, one group chosen
+      // (?age=); the Young people and Pensioners sub-tabs were here
       return (
-        <YoungPeopleSection
-          selectedPolicies={selectedPolicies}
-          selectedYear={distributionalYear}
-          policies={POLICIES}
-        />
-      );
-    }
-    if (sub === "pensioners") {
-      // Pensioners (at or over State Pension age): results by age
-      return (
-        <PensionersSection
+        <AgeSection
           selectedPolicies={selectedPolicies}
           selectedYear={distributionalYear}
           policies={POLICIES}
@@ -701,7 +736,6 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     <div
       className="app"
       ref={appRef}
-      data-band={yearShown ? undefined : "compact"}
       data-sub-band={hasSubTabs ? "" : undefined}
       data-tabs-stuck={tabsStuck ? "" : undefined} data-publication={unavailable ? "unavailable" : "verified"}>
       <main className="main-content" ref={mainRef}>
@@ -711,7 +745,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         <div ref={titleSentinelRef} className="title-sentinel" aria-hidden="true" />
         <div className={`title-row ${titleStuck ? "is-stuck" : ""}`}>
           <div className="title-head">
-            <HomeButton current={landing} onHome={goHome} />
+            <TitleMark />
             <h1>UK Autumn Budget 2026</h1>
           </div>
 
@@ -720,38 +754,29 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               the revenue chart highlights it; it lives in the band so it can
               be changed from anywhere. The policy pill
               applies to those views and Household impact. A pill that does
-              not apply keeps its place but is hidden, so the band does not
-              move. */}
-          <div
-            className={`band-year ${yearShown ? "" : "is-hidden"}`}
-            aria-hidden={yearShown ? undefined : "true"}
-            inert={!yearShown}
-          >
+              not apply stays in its place, faded, and does not open; its
+              reason is in its accessible name only. Both are on every view, so the band never moves. */}
+          <div className={`band-year${yearShown ? "" : " is-inactive"}`}>
             <YearSlider
               selectedYear={distributionalYear}
               onYearChange={setDistributionalYear}
+              inactiveReason={yearShown ? undefined : YEAR_INACTIVE}
             />
           </div>
-          <div
-            className={`band-policy ${policiesShown ? "" : "is-hidden"}`}
-            aria-hidden={policiesShown ? undefined : "true"}
-            inert={!policiesShown}
-          >
+          <div className={`band-policy${policiesShown ? "" : " is-inactive"}`}>
             <PolicySelector
               policies={POLICIES}
               selectedPolicies={selectedPolicies}
               onPolicyToggle={handlePolicyToggle}
               loading={Boolean(unavailable?.loading)}
               noneReason={unavailable?.reason}
+              inactiveReason={policiesShown ? undefined : POLICIES_INACTIVE}
             />
           </div>
         </div>
 
-        {updated && (
-          <p className="publication-updated" role="status">
-            Newer results were published while this page was open; it now shows them.
-          </p>
-        )}
+        {/* A newer publication replaced the figures: a passing note, once */}
+        <UpdateToast show={updated} />
         {catalogue.measures.filter((measure) => !measure.availability.available).map((measure) => (
           <UnavailableNotice key={measure.id} reason={`${measure.name}: ${measure.availability.reason}`}>
             <p>{measure.description}</p>
@@ -774,11 +799,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
         {/* A link to a view, before the page's code opens it: the landing
             page is hidden (LandingPage.css), so placeholders show instead */}
-        {landing && (
-          <div className="deep-link-skeleton">
-            <LoadingSkeleton />
-          </div>
-        )}
+        {landing && <BootSkeleton viewTabs={VIEWS} />}
         <div className={`view-stage${landing ? " is-landing" : ""}`}>
         {landing && (
           <LandingPage
@@ -804,7 +825,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         {BUDGET_VIEWS.has(value) && unavailable?.loading ? (
           // Placeholders at once while the verified figures load; the
           // "not published yet" line is only for an empty publication
-          <LoadingSkeleton cards={value === "household" ? 4 : 2} height={value === "household" ? 120 : 260} />
+          <ViewSkeleton view={loadingView(value)} />
         ) : BUDGET_VIEWS.has(value) && viewUnavailable(value) ? (
           <UnavailableNotice reason={viewUnavailable(value).reason}>
             {viewUnavailable(value).detail && <p>{viewUnavailable(value).detail}</p>}
@@ -823,7 +844,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         ) : value === "outlook" ? (
           // Current law needs no publication: its sub-tabs read only the
           // independent outlook, so they show whatever Population impact shows
-          <LivingStandardsTab active={activeTab === value} onShowTab={handleTabChange} />
+          <LivingStandardsTab active={activeTab === value} onShowTab={handleTabChange} selectedYear={distributionalYear} />
         ) : value === "policies" ? (
           // Every published measure's card, whatever the band's selection
           <div className="results-container">
@@ -861,6 +882,22 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         ))}
         </div>
         </div>
+        {/* "About" on the window's edge, on every view but the landing
+            page: it opens the overview drawer */}
+        {!landing && (
+          <>
+            <EdgeAboutTab open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
+            <OverviewDrawer
+              open={overviewOpen}
+              onClose={closeOverview}
+              onOpen={handleTabChange}
+              returnFocus={aboutTabRef}
+              provisional={provisional && (
+                <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
+              )}
+            />
+          </>
+        )}
         <ReplicationLine />
       </main>
     </div>

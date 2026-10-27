@@ -4,7 +4,8 @@ import ForecastFeedMethod from "./methodology/ForecastFeedMethod";
 import FactList from "./methodology/FactList";
 import MethodGlossary from "./methodology/MethodGlossary";
 import { HIGHEST_PERCENTILE, LOWEST_PERCENTILE, ordinal } from "../utils/incomePosition";
-import { HOUSEHOLD_ABOUT_ID, METHOD_ANCHORS } from "./methodology/anchors";
+import { METHOD_ANCHORS } from "./methodology/anchors";
+import { SINGLE_YEAR_METHOD } from "../utils/singleYear";
 import MethodContents, { goToSection } from "./methodology/MethodContents";
 import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
 import { SCATTER_BINS } from "../utils/publication/scatter";
@@ -102,13 +103,16 @@ function MethodSection({ id, title, summary, details, children, detailsLabel = "
 }
 
 /** A link to another view (at one of its sub-tabs), switched to in place. */
-function ViewLink({ tab, sub, hash, onShowTab, children }) {
+function ViewLink({ tab, sub, age, hash, onShowTab, className, children }) {
   return (
     <a
-      href={`?tab=${tab}${sub ? `&sub=${sub}` : ""}${hash ? `#${hash}` : ""}`}
+      className={className}
+      href={`?tab=${tab}${sub ? `&sub=${sub}` : ""}${age ? `&age=${age}` : ""}${hash ? `#${hash}` : ""}`}
       onClick={(event) => {
         event.preventDefault();
-        if (sub) onShowTab(tab, sub);
+        // By age's group (?age=) goes with its sub-tab
+        if (sub && age) onShowTab(tab, sub, { age });
+        else if (sub) onShowTab(tab, sub);
         else onShowTab(tab);
         if (hash) {
           setTimeout(() => {
@@ -170,7 +174,7 @@ function MethodologyTab({ onShowTab }) {
           title="At a glance"
           summary={
             <p>
-              We run <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink> on a
+              We run <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink>{" "}on a
               representative survey of UK households, with and without each measure, and weight
               the difference up to the whole country.
             </p>
@@ -237,22 +241,17 @@ function MethodologyTab({ onShowTab }) {
           id={METHOD_SECTIONS.model}
           title="Model and measures"
           summary={
-            <>
-              <p>
-                <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink> works out each
-                household&apos;s taxes, benefits and <Term id="netIncome">net income</Term> under
-                current law, then again with a measure; the difference between the two runs is the
-                measure&apos;s effect. The estimates are <Term id="static">static</Term>: households
-                do not change their behaviour in response.
-              </p>
-              <p className="method-pointer">
-                What each measure does and how it is modelled is on{" "}
-                <ViewLink tab="policies" onShowTab={onShowTab}>
-                  Policies
-                  <ArrowRight aria-hidden="true" strokeWidth={1.75} />
-                </ViewLink>
-              </p>
-            </>
+            <p>
+              <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink>{" "}works out each
+              household&apos;s taxes, benefits and <Term id="netIncome">net income</Term>{" "}under
+              current law, then again with a measure; the difference is the measure&apos;s effect.
+              Estimates are <Term id="static">static</Term>: households do not change their
+              behaviour. What each measure does and how it is modelled is on{" "}
+              <ViewLink tab="policies" onShowTab={onShowTab} className="method-pointer">
+                Policies
+                <ArrowRight aria-hidden="true" strokeWidth={1.75} />
+              </ViewLink>
+            </p>
           }
           details={
             <>
@@ -262,7 +261,7 @@ function MethodologyTab({ onShowTab }) {
                     "Model",
                     <>
                       PolicyEngine UK (<SourceLink id="policyengine_uk">policyengine-uk</SourceLink>), run
-                      through <SourceLink id="policyengine_py_release">policyengine.py</SourceLink> on
+                      through <SourceLink id="policyengine_py_release">policyengine.py</SourceLink>{" "}on
                       the <SectionLink id={METHOD_SECTIONS.data}>dataset above</SectionLink>.
                     </>,
                   ],
@@ -276,8 +275,8 @@ function MethodologyTab({ onShowTab }) {
                     "Prices",
                     <>
                       <ViewLink tab="dashboard" onShowTab={onShowTab}>Population impact</ViewLink> and{" "}
-                      <ViewLink tab="household" onShowTab={onShowTab}>Household impact</ViewLink> figures
-                      are in <Term id="real">cash terms</Term> for the year shown, not adjusted for
+                      <ViewLink tab="household" onShowTab={onShowTab}>Household impact</ViewLink>{" "}figures
+                      are in <Term id="real">cash terms</Term>{" "}for the year shown, not adjusted for
                       inflation.
                     </>,
                   ],
@@ -314,11 +313,11 @@ function MethodologyTab({ onShowTab }) {
           summary={
             <p>
               The national charts on{" "}
-              <ViewLink tab="dashboard" onShowTab={onShowTab}>Population impact</ViewLink> add up
+              <ViewLink tab="dashboard" onShowTab={onShowTab}>Population impact</ViewLink>{" "}add up
               every household&apos;s change with its weight: the{" "}
-              <ViewLink tab="dashboard" sub="finances" onShowTab={onShowTab}>revenue chart</ViewLink> as
+              <ViewLink tab="dashboard" sub="finances" onShowTab={onShowTab}>revenue chart</ViewLink>{" "}as
               the change in the government&apos;s balance, the{" "}
-              <ViewLink tab="dashboard" sub="all" onShowTab={onShowTab}>decile charts</ViewLink> by
+              <ViewLink tab="dashboard" sub="all" onShowTab={onShowTab}>decile charts</ViewLink>{" "}by
               income group, and the household scatter for the spread behind the averages. Counts
               are rounded and no household is ever shown on its own.
             </p>
@@ -368,7 +367,7 @@ function MethodologyTab({ onShowTab }) {
                       value: "Ten groups of equal numbers of people, by household income.",
                       more: [
                         <>
-                          Ranked by baseline <Term id="equivalised">equivalised</Term> household net
+                          Ranked by baseline <Term id="equivalised">equivalised</Term>{" "}household net
                           income <Term id="housingCosts">before housing costs</Term> (the{" "}
                           <SourceLink id="dwp_hbai">HBAI</SourceLink> measure).
                         </>,
@@ -390,7 +389,7 @@ function MethodologyTab({ onShowTab }) {
                       value: (
                         <>
                           The share of people in households below the{" "}
-                          <Term id="absolutePoverty">absolute poverty</Term> line before housing costs
+                          <Term id="absolutePoverty">absolute poverty</Term>{" "}line before housing costs
                           (60% of the 2024-25 <Term id="median">median</Term>, held in real terms), with
                           and without the policies.
                         </>
@@ -490,8 +489,8 @@ function MethodologyTab({ onShowTab }) {
           summary={
             <p>
               The{" "}
-              <ViewLink tab="dashboard" sub="young" hash="young-people" onShowTab={onShowTab}>
-                Young people results
+              <ViewLink tab="dashboard" sub="age" age="16-24" hash="young-people" onShowTab={onShowTab}>
+                results by age
               </ViewLink>{" "}
               split everyone into the Office for National Statistics&apos; age bands, with 16 to 24
               as young people, and count who is better or worse off in each.
@@ -565,7 +564,7 @@ function MethodologyTab({ onShowTab }) {
                     People at or over <Term id="statePensionAge">State Pension age</Term>: 66 in
                     2026-27 and 67 from 2027-28, as in{" "}
                     <SourceLink id="policyengine_uk">policyengine-uk</SourceLink>. Their results are on{" "}
-                    <ViewLink tab="dashboard" sub="pensioners" onShowTab={onShowTab}>Pensioners</ViewLink>.
+                    <ViewLink tab="dashboard" sub="age" age="pensioners" onShowTab={onShowTab}>By age, with Pensioners chosen</ViewLink>.
                   </>,
                 ],
                 [
@@ -587,21 +586,20 @@ function MethodologyTab({ onShowTab }) {
               <div id={METHOD_SECTIONS.singleYear} className="method-anchor">
                 <h3 className="method-card-title">Household calculation</h3>
                 <p>
-                  The same model and measures, applied to one household&apos;s answers. How it works
-                  is under{" "}
-                  <ViewLink tab="household" hash={HOUSEHOLD_ABOUT_ID} onShowTab={onShowTab}>
-                    &ldquo;About these figures&rdquo;
-                  </ViewLink>
-                  , below the results on the{" "}
+                  The same model and measures, applied to one household&apos;s answers on the{" "}
                   <ViewLink tab="household" onShowTab={onShowTab}>
                     Household impact tab
                   </ViewLink>
-                  .
+                  . How it works is under Technical details, below.
                 </p>
               </div>
             }
             details={
               <>
+                <h3 id={METHOD_ANCHORS.householdCalc} className="method-details-title method-anchor">
+                  How the household calculation works
+                </h3>
+                <FactList items={SINGLE_YEAR_METHOD.map(([term, text]) => [term, text])} />
                 <h3 id={METHOD_ANCHORS.incomePosition} className="method-details-title method-anchor">
                   Your place in the UK
                 </h3>
@@ -680,7 +678,7 @@ function MethodologyTab({ onShowTab }) {
                   Each measure is also simulated on its own. Where several are selected, the
                   revenue, decile and age charts add up their separate effects, so they leave out
                   interactions between measures (<Term id="ownRuns">measures run on their own</Term>);
-                  the <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink> and the
+                  the <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>{" "}and the
                   shares better and worse off come from a run of the whole selection, so they include them, and show
                   nothing for a selection with no such run.
                 </Callout>

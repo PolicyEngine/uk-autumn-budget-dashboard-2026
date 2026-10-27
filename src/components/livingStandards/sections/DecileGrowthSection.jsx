@@ -72,6 +72,33 @@ const DECILE_AHC_ABOUT =
   "Decile 1 after housing costs, the lowest-income tenth, is shown, but read it with care: incomes at the very bottom of the survey are often temporarily low (self-employment losses, students, people living off savings) or under-reported, while housing costs are not, so income after housing costs there is small and its growth swings from year to year.";
 const VIEWS = { period: "Whole period", annual: "Year by year" };
 
+/**
+ * A y axis close to the data: the nice step (2 to 4 ticks a side) whose
+ * end is nearest the largest value, symmetric about 0 when values fall on
+ * both sides (±0.47 → ±0.5 by 0.25s, not ±0.75).
+ */
+export function tightAxis(values) {
+  const vals = values.filter((v) => v != null && Number.isFinite(v));
+  const largest = Math.max(0, ...vals.map(Math.abs)) * 1.02 || 1;
+  const both = vals.some((v) => v > 1e-9) && vals.some((v) => v < -1e-9);
+  const steps = [0.01, 0.02, 0.025, 0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10, 20, 25, 50];
+  let best = null;
+  for (const step of steps) {
+    const count = Math.max(1, Math.ceil(largest / step - 1e-9));
+    if (count < 2 || count > 4) continue;
+    const end = count * step;
+    if (!best || end < best.end - 1e-9) best = { step, end };
+  }
+  if (!best) return divergingAxis(vals, { pad: 0.05 });
+  const { step, end } = best;
+  const negative = vals.some((v) => v < -1e-9);
+  const lo = both || negative ? -end : 0;
+  const hi = both || !negative ? end : 0;
+  const ticks = [];
+  for (let v = lo; v <= hi + step * 1e-6; v += step) ticks.push(Math.round(v * 1e6) / 1e6 || 0);
+  return { domain: [lo, hi], ticks };
+}
+
 /** "−0.9%" or "+0.1%"; an unsigned "0.0" for a change that rounds to zero. */
 const signed = (v, unit) => {
   const r = round1(v);
@@ -140,7 +167,7 @@ export function annualRange(values) {
  * "difference" (the effect itself, in percentage points). The choices are
  * the same pills, kept in the same address parameters.
  */
-export default function useQuintileGrowthView(data, range = null, setRange = null, measures = null) {
+export default function useQuintileGrowthView(data, range = null, setRange = null, measures = null, selectedYear = null) {
   const own = available(data);
   const run = measures && offerFor(measures.rows, measures.reformId);
   const offer = run
@@ -216,19 +243,28 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const legendItems = (annual && groupSeries.length <= 5 ? groupSeries : [groupSeries[0], groupSeries.at(-1)]).map((s) => ({ label: s.name, color: s.colour, type: "rect" }));
   // More than five groups: one light-to-dark key, so every bar is explained
   const ramp = groupSeries.length > 5 ? { colours: groupSeries.map((s) => s.colour), from: "Lowest income", to: "Highest income" } : null;
-  // Year by year: a tooltip for the one bar hovered
-  const describeBar = (key, row) => {
-    const i = Number(key.slice(1)) - 1;
-    const value = row[key];
-    return {
-      label: `${fyLabel(row.year)} · ${groupSpan(i)}`,
-      value: `${diff ? pp(value) : pct(value)}${diff ? "" : ` on ${fyLabel(row.year - 1)}`}`.replace(/^(?=\d)/, value > 0 ? "+" : ""),
-      colour: colourOf(i),
-    };
+
+  // Year by year: on hovering a year, every group's value, compact
+  const shortValue = (v) => {
+    if (v == null || !Number.isFinite(v)) return "–";
+    const text = Math.abs(v).toFixed(diff ? 2 : 1);
+    const sign = Number(text) === 0 ? "" : v > 0 ? "+" : "−";
+    return `${sign}${text}${diff ? "" : "%"}`;
   };
+  const describeYear = (row) => ({
+    year: fyLabel(row.year),
+    title: diff ? "effect on real growth (pp)" : `real change on ${fyLabel(row.year - 1)}`,
+    items: groupSeries.map((s) => ({
+      key: s.key,
+      label: `${ordinal(Number(s.key.slice(1)))} ${g.share}`,
+      value: row[s.key],
+      text: shortValue(row[s.key]),
+      colour: s.colour,
+    })),
+  });
 
   const values = annual ? annualRows.flatMap((r) => groupSeries.map((s) => r[s.key])) : periodRows.map((r) => r.growth);
-  const axis = divergingAxis(values, { pad: 0.1 });
+  const axis = tightAxis(values);
   const lowAnnual = annualYears.map((r) => (diff ? r.difference : r.annual)[skip] * 100);
   const highAnnual = annualYears.map((r) => (diff ? r.difference : r.annual)[n - 1] * 100);
   const income = `real median income growth (${basisShort})${who}`;
@@ -405,15 +441,15 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         yLabel={diff ? "Effect on real growth (pp)" : "Real change on the year before (%)"}
         yDomain={axis.domain}
         yTicks={axis.ticks}
-        // Clear space between years, bars close within a year, and a faint
-        // band behind every other year
+        // Each year's cluster fills most of its band (bars touching); only
+        // the header-selected year is shaded
         barGap={n > 10 ? 0 : 1}
-        maxBarSize={n > 5 ? 14 : 24}
-        barCategoryGap={n > 10 ? "30%" : "35%"}
-        categoryBands
+        maxBarSize={n > 10 ? 18 : n > 5 ? 30 : 44}
+        barCategoryGap={n > 10 ? "12%" : "16%"}
+        selectedX={selectedYear == null ? null : Number(selectedYear)}
         legendNote={legendNote}
         ramp={ramp}
-        describeBar={describeBar}
+        describeYear={describeYear}
       />
     ) : (
       <LsBarChart

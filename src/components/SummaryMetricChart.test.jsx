@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
+import fc from "fast-check";
 import { fireEvent, render as rtlRender, screen, within } from "@testing-library/react";
 import SummaryMetricChart, {
   SUMMARY_METRICS,
+  choiceRows,
+  hasColumn,
   metricByYear,
+  metricValue,
   parsePovertyChoice,
   povertyMetric,
+  tightAxis,
 } from "./SummaryMetricChart";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 
@@ -37,6 +42,17 @@ describe("metricByYear", () => {
 
   it("has nothing without a run", () => {
     expect(metricByYear(ROWS, null, SUMMARY_METRICS.poverty)).toEqual([]);
+  });
+
+  it("reads a row without the metric, or with an empty or null cell, as not published, never 0", () => {
+    const run = "fuel_duty_rise_deferral";
+    const at2027 = (rows) => metricByYear(rows, run, SUMMARY_METRICS.inequality).find((point) => point.year === 2027).value;
+    expect(at2027([{ reform_id: run, year: "2027", poverty_change_pp: "-0.001" }])).toBeNull();
+    expect(at2027([{ reform_id: run, year: "2027", gini_change: "" }])).toBeNull();
+    expect(at2027([{ reform_id: run, year: "2027", gini_change: null }])).toBeNull();
+    expect(at2027([{ reform_id: run, year: "2027", gini_change: "0" }])).toBe(0);
+    expect(metricValue({ x: 0 }, "x")).toBe(0);
+    expect([metricValue(undefined, "x"), metricValue({}, "x"), metricValue({ x: "n/a" }, "x")]).toEqual([null, null, null]);
   });
 });
 
@@ -167,5 +183,39 @@ describe("povertyMetric and parsePovertyChoice", () => {
     expect(povertyMetric(parsePovertyChoice("relative-ahc-children")).key).toBe("child_poverty_rel_ahc_change_pp");
     expect(povertyMetric(parsePovertyChoice("absolute-ahc-all")).key).toBe("poverty_abs_ahc_change_pp");
     expect(parsePovertyChoice("nonsense-ahc")).toEqual({ basis: "absolute", housing: "ahc", group: "all" });
+  });
+});
+
+describe("choiceRows, each measure on its own", () => {
+  it("offers no choice while a measure shown has rows without the measures", () => {
+    // A run written after the poverty and inequality measures carries them
+    // all (all or none per artifact); one written before, the headline only
+    const WIDE = { child_poverty_rel_ahc_change_pp: "-0.001", p90_p10_change: "0.01", top_10_share_change_pp: "0.001" };
+    const IDS = ["a", "b", "c"];
+    fc.assert(
+      fc.property(fc.tuple(...IDS.map(() => fc.constantFrom("wide", "headline", "none"))), fc.subarray(IDS, { minLength: 2 }), (kinds, shown) => {
+        const rows = IDS.flatMap((id, i) =>
+          kinds[i] === "none" ? [] : [{ reform_id: id, year: "2027", poverty_change_pp: "-0.001", ...(kinds[i] === "wide" ? WIDE : {}) }],
+        );
+        const decided = choiceRows(rows, null, shown);
+        const offered = hasColumn(decided, "child_poverty_rel_ahc_change_pp") && hasColumn(decided, "p90_p10_change");
+        // Never offered while a measure shown would read as no effect under
+        // it; offered otherwise wherever a run carries them
+        const lacking = shown.some((id) => kinds[IDS.indexOf(id)] === "headline");
+        expect(offered).toBe(!lacking && kinds.includes("wide"));
+      }),
+      { numRuns: 200 },
+    );
+    // A run shown, or nothing shown, as before
+    const rows = [{ reform_id: "a", year: "2027", p90_p10_change: "0.01" }, { reform_id: "b", year: "2027" }];
+    expect(choiceRows(rows, "b")).toEqual([rows[1]]);
+    expect(choiceRows(rows, null)).toBe(rows);
+  });
+});
+
+describe("tightAxis", () => {
+  it("fits the bars: symmetric with round ticks when they go both ways, from zero when one way", () => {
+    expect(tightAxis([-0.016, -0.007, 0.043])).toEqual({ domain: [-0.05, 0.05], ticks: [-0.05, -0.025, 0, 0.025, 0.05] });
+    expect(tightAxis([-0.007, -0.004]).domain).toEqual([-0.01, 0]);
   });
 });

@@ -25,8 +25,11 @@ const GROUPS = [
  * @param {Object} props
  * @param {boolean} [props.loading] - The publication is still loading
  * @param {string} [props.noneReason] - Why none are published, if none are
+ * @param {string} [props.inactiveReason] - Why the policies do not change the
+ *   view shown: the pill stays in place, faded, does not open; the reason
+ *   is in its accessible name only (no visible tip)
  */
-function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicyToggle, disabledReason, loading = false, noneReason }) {
+function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicyToggle, disabledReason, loading = false, noneReason, inactiveReason }) {
   const { displayable } = useMeasureCatalogue();
   const policies = (providedPolicies ?? displayable).filter(
     (policy) => policy.displayable !== false,
@@ -56,17 +59,30 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
   const none = !loading && policies.length === 0;
   const reason = disabledReason ?? (none ? noneReason ?? "No policies are published yet" : undefined);
   const disabled = loading || Boolean(reason);
+  // A view the policies do not change: the menu closes and does not open
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the pill goes inactive
+    if (inactiveReason) setIsExpanded(false);
+  }, [inactiveReason]);
   const unit = (n) => (n === 1 ? "policy" : "policies");
 
   return (
     <div className="policy-selector" ref={dropdownRef}>
-      <Tip content={reason}>
+      {/* A faded pill has no visible tip: its reason is in its name */}
+      <Tip content={inactiveReason ? undefined : reason}>
       <button
-        className="policy-selector-toggle band-control"
-        onClick={() => setIsExpanded(!isExpanded)}
+        className={`policy-selector-toggle band-control${inactiveReason ? " is-inactive" : ""}`}
+        onClick={() => { if (!inactiveReason) setIsExpanded(!isExpanded); }}
         aria-expanded={isExpanded}
+        aria-disabled={inactiveReason ? "true" : undefined}
         aria-label={
-          loading ? "Select policies: loading" : reason ? `Select policies: ${reason}` : "Select policies"
+          inactiveReason
+            ? `Select policies: ${inactiveReason}`
+            : loading
+            ? "Select policies: loading"
+            : reason
+            ? `Select policies: ${reason}`
+            : "Select policies"
         }
         aria-busy={loading || undefined}
         disabled={disabled}

@@ -114,7 +114,9 @@ describe("Forecast changes with one forecast", () => {
     const chips = within(within(prices).getByRole("group", { name: "Lines: show or hide" })).getAllByRole("button");
     expect(chips.map((c) => c.textContent)).toEqual(["CPI", "CPIH", "CPI after housing costs", "RPI"]);
     expect(chips.every((c) => c.getAttribute("aria-pressed") === "true")).toBe(true);
-    expect(prices.querySelector(".chart-legend")).toBeNull();
+    // The chips are the key, under the plot: no legend repeats the names
+    expect(prices.querySelector(".chart-legend .series-toggle")).not.toBeNull();
+    expect(prices.querySelector(".chart-legend .grouped-legend-groups")).toBeNull();
     expect(prices).not.toHaveTextContent("Budget forecast");
     // A chip hides its line; the last one on stays on
     fireEvent.click(chips[3]);

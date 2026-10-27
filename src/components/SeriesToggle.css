@@ -106,3 +106,29 @@
 .series-toggle-chip:not(.is-on) .series-toggle-swatch rect {
   fill: var(--pe-gray-300);
 }
+
+/* A component with nothing to draw for this household, kept so two keys
+   line up: faint, its swatch grey, not clickable */
+.series-toggle-chip.is-disabled {
+  border-style: dashed;
+  color: var(--pe-gray-400);
+  background: var(--c-surface);
+  opacity: 0.75;
+  cursor: default;
+}
+
+.series-toggle-chip.is-disabled .series-toggle-swatch rect {
+  fill: var(--pe-gray-300);
+}
+
+.series-toggle-chip.is-disabled:hover {
+  border-color: var(--pe-gray-300);
+}
+
+/* "+N with no effect for you": opens the disabled chips in place */
+.series-toggle-chip.series-toggle-more {
+  padding: 0 11px;
+  border-style: dashed;
+  color: var(--pe-gray-600);
+  font-weight: 500;
+}

@@ -43,6 +43,7 @@ import {
   topParts,
 } from "./youngPeopleData";
 import { chartTransition } from "../../utils/chartMotion";
+import { PENSIONERS, groupLabel, groupSeries, groupSubject } from "../../utils/ageGroups";
 import { legendMembership } from "../../utils/legendMembership";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { shortNameOf } from "../../utils/policyDetails";
@@ -59,16 +60,15 @@ export const SERIES = AGE_GROUPS.map((group) => ({
 }));
 
 export const TREND_DESCRIPTION = "Average change per person, £ a year.";
-const CUMULATIVE_DESCRIPTION = "Running total per person from 2026-27, £.";
+const CUMULATIVE_DESCRIPTION = `Running total per person from ${fiscalYearTick(DISPLAY_YEARS[0])}, £.`;
 
-const FOCUS = YOUNG_BAND;
-const FOCUS_LABEL = SERIES.find((series) => series.key === FOCUS).label;
+
 // The focus group in the brand colour, all ages as the reference, the rest
 // as faint context
 const FOCUS_COLOUR = CHART_COLOURS.gain;
 // The other age groups in the focus view: each its own muted colour and
 // dash, so a line matches its chip; faint until hovered
-const CONTEXT_DASH = { "0-15": "2 3", "25-34": undefined, "35-49": "8 3", "50-64": "1 2", "65+": "6 2 1 2" };
+const CONTEXT_DASH = { "0-15": "2 3", "16-24": "3 2", "25-34": undefined, "35-49": "8 3", "50-64": "1 2", "65+": "6 2 1 2" };
 const CONTEXT_OPACITY = 0.45;
 // The invisible stroke over each line that takes the hover, so a thin line
 // is easy to point at
@@ -76,13 +76,13 @@ const HIT_WIDTH = 12;
 const SELECTED_FILL = CHART_COLOURS.highlightBand;
 
 
-const COMPARE_OPTIONS = [
-  { value: "focus", label: `${FOCUS_LABEL} vs all ages`, summary: `${FOCUS_LABEL} vs all` },
+const compareOptions = (label) => [
+  { value: "focus", label: `${label} vs all ages`, summary: `${label} vs all` },
   { value: "groups", label: "All age groups", summary: "All groups" },
 ];
-const VIEW_OPTIONS = [
+const viewOptions = (label) => [
   { value: "lines", label: "Lines", summary: "Lines" },
-  { value: "measures", label: `Measures, ${FOCUS_LABEL}`, summary: "By measure" },
+  { value: "measures", label: `Measures, ${label}`, summary: "By measure" },
 ];
 const YEARS_OPTIONS = [
   { value: "each", label: "Each year", summary: "Each year" },
@@ -329,7 +329,13 @@ export function TrendTooltip({ active, payload, label, focusSeries, allValue, na
  * the biggest steps named on the line, and a breakdown by measure. Straight
  * segments between the annual points: there is nothing between them.
  */
-function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, extraOptions = [] }) {
+  // The focus group (By age's Age group): an age band, or pensioners from
+  // their single years of age, which join the lines as a series of their own
+  const FOCUS = group;
+  const FOCUS_LABEL = groupLabel(group);
+  const SUBJECT = groupSubject(group);
+  const SERIES_LIST = group === PENSIONERS ? [...SERIES, { key: PENSIONERS, label: "Pensioners", short: "Pens." }] : SERIES;
   const chartRef = useRef(null);
   const catalogue = useMeasureCatalogue();
   const [compare, setCompare] = useState("focus");
@@ -337,12 +343,12 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const [years, setYears] = useState("each");
   const [hovered, setHovered] = useState(null);
   // All age groups: which lines are drawn (SeriesToggle), every one at first
-  const [shownGroups, setShownGroups] = useState(() => SERIES.map((series) => series.key));
+  const [shownGroups, setShownGroups] = useState(() => SERIES_LIST.map((series) => series.key));
   const groupsView = compare === "groups" && view === "lines";
   // The focus view: 16 to 24, all ages and the other groups (one chip for
   // all of them), every one at first
   // Every group on at first: 16 to 24 and all ages strong, the others faint
-  const [shownFocus, setShownFocus] = useState(() => SERIES.map((series) => series.key));
+  const [shownFocus, setShownFocus] = useState(() => SERIES_LIST.map((series) => series.key));
   const focusView = compare === "focus" && view === "lines";
   /** Whether a line is drawn in the view shown. */
   const isShown = (key) =>
@@ -354,12 +360,14 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const cumulative = years === "total";
   const byMeasure = view === "measures";
 
-  const raw = useMemo(() => changeByYear(rows, policies, selectedPolicies, DISPLAY_YEARS), [rows, policies, selectedPolicies]);
+  const bands = useMemo(() => changeByYear(rows, policies, selectedPolicies, DISPLAY_YEARS), [rows, policies, selectedPolicies]);
   const focusSeries = useMemo(
-    () => groupMeasureSeries(rows, policies, selectedPolicies, DISPLAY_YEARS, FOCUS),
-    [rows, policies, selectedPolicies],
+    () => groupSeries(rows, policies, selectedPolicies, DISPLAY_YEARS, FOCUS),
+    [rows, policies, selectedPolicies, FOCUS],
   );
-  const groupKeys = SERIES.map((series) => series.key);
+  // Pensioners' line from their own series; the bands from the age rows
+  const raw = group === PENSIONERS ? bands.map((point, i) => ({ ...point, [PENSIONERS]: focusSeries[i]?.net ?? null })) : bands;
+  const groupKeys = SERIES_LIST.map((series) => series.key);
   const lineData = cumulative ? cumulate(raw, groupKeys) : raw;
   const partKeys = [...new Set(focusSeries.flatMap((point) => point.parts.map((part) => part.key)))];
   const barData = useMemo(() => {
@@ -426,11 +434,11 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       if (!shown.length) return null;
       const total = shown.reduce((sum, point) => sum + point.net, 0);
       const span = `${fiscalYearTick(shown[0].year)} to ${fiscalYearTick(shown[shown.length - 1].year)}`;
-      return `${FOCUS_LABEL}-year-olds ${total >= 0 ? "gain" : "lose"} ${about(total)} each in total from ${span}.`;
+      return `${SUBJECT} ${total >= 0 ? "gain" : "lose"} ${about(total)} each in total from ${span}.`;
     }
     if (!selected || selected.net === null) return null;
     const verb = selected.net >= 0 ? "gain" : "lose";
-    let text = `${FOCUS_LABEL}-year-olds ${verb} ${about(selected.net)} a year in ${fiscalYearTick(selected.year)}`;
+    let text = `${SUBJECT} ${verb} ${about(selected.net)} a year in ${fiscalYearTick(selected.year)}`;
     // The biggest step after the selected year
     const later = notes.filter((note) => note.year > selected.year).sort((x, y) => Math.abs(y.step) - Math.abs(x.step))[0];
     if (later) {
@@ -442,20 +450,24 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     return `${text}.`;
   })();
 
+  // A line's colour: the focus in the brand colour; 16 to 24, whose own
+  // colour that is, in a darker teal when another group is the focus
+  const colourOf = (series) =>
+    series.key === FOCUS ? FOCUS_COLOUR : series.key === YOUNG_BAND ? CHART_COLOURS.highlight : series.color;
   // The lines, drawn context first so the focus is on top
   const lines = (() => {
     if (compare === "groups") {
-      return SERIES.map((series) => ({
+      return SERIES_LIST.map((series) => ({
         key: series.key,
         label: series.label,
         short: series.short,
-        colour: series.key === ALL_BAND ? CHART_COLOURS.reference : series.color,
+        colour: series.key === ALL_BAND ? CHART_COLOURS.reference : colourOf(series),
         dash: series.dash,
         width: series.key === FOCUS ? 3 : 1.75,
         strong: series.key === FOCUS,
       }));
     }
-    return SERIES.map((series) => {
+    return SERIES_LIST.map((series) => {
       if (series.key === FOCUS) {
         return { key: series.key, label: series.label, short: series.short, colour: FOCUS_COLOUR, width: 3, strong: true };
       }
@@ -466,7 +478,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         key: series.key,
         label: series.label,
         short: series.short,
-        colour: series.color,
+        colour: colourOf(series),
         dash: CONTEXT_DASH[series.key],
         context: true,
         width: hovered === series.key ? 2.5 : 1.5,
@@ -492,7 +504,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const csvText = () =>
     byMeasure
       ? buildChartCsv({
-          title: `Change in household net income per person aged ${FOCUS_LABEL}, by measure, ${first} to ${last}`,
+          title: `Change in household net income per person, ${FOCUS_LABEL}, by measure, ${first} to ${last}`,
           units: cumulative ? "£ per person, running total from the first year" : "£ per person per year; each measure's own effect",
           columns: [
             { key: "yearLabel", label: "Year" },
@@ -508,7 +520,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             : "£ per person per year; the sum of each selected policy's own effect; each person counts their household's change in net income (not equivalised)",
           columns: [
             { key: "yearLabel", label: "Year" },
-            ...SERIES.map((series) => ({ key: series.key, label: series.label, decimals: 2 })),
+            ...SERIES_LIST.map((series) => ({ key: series.key, label: series.label, decimals: 2 })),
           ],
           rows: lineData.filter((point) => point.published).map((point) => ({ ...point, yearLabel: fiscalYearTick(point.year) })),
           notes: [
@@ -554,8 +566,9 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         <ControlBar
           name={title}
           options={[
-            { label: "Compare", value: compare, onChange: setCompare, options: COMPARE_OPTIONS },
-            { label: "Breakdown", value: view, onChange: setView, options: VIEW_OPTIONS },
+            ...extraOptions,
+            { label: "Compare", value: compare, onChange: setCompare, options: compareOptions(FOCUS_LABEL) },
+            { label: "Breakdown", value: view, onChange: setView, options: viewOptions(FOCUS_LABEL) },
             { label: "Years", value: years, onChange: setYears, options: YEARS_OPTIONS },
           ]}
         />

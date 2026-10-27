@@ -386,7 +386,7 @@ export const AXIS_TITLE_STYLE = {
  * Width kept at the left of a YAxis for its rotated title (ChartUnitLabel),
  * left of the tick labels.
  */
-export const Y_TITLE_GUTTER = 18;
+export const Y_TITLE_GUTTER = 22;
 
 /**
  * Chart margins: the plot spans the card's width. The y-axis title is

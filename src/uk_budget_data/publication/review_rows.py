@@ -136,6 +136,8 @@ TABLE_KINDS = {
     "income_curve.csv": SYNTHETIC_HOUSEHOLD,
     "age_impact.csv": NATIONAL_TABLE,
     "obr_comparison.csv": NATIONAL_TABLE,
+    # UK poverty and inequality changes by measure and year (#196).
+    "poverty_inequality.csv": NATIONAL_TABLE,
 }
 # A receipt holds provenance and digests, and the manifest entries, their
 # statuses and digests, and any household check receipt, which concerns
