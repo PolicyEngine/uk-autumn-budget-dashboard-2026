@@ -23,7 +23,7 @@ import {
   PHONE_QUERY,
   useViewportMatch,
 } from "../../utils/chartTheme";
-import { DISPLAY_YEARS } from "../../utils/displayYears";
+import { useDisplayYears } from "../../utils/displayYears";
 import { ALL_BAND } from "../../utils/ageImpact";
 import { legendMembership } from "../../utils/legendMembership";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
@@ -60,6 +60,7 @@ const LINES = [
  * measure with the net line, highlighted from the section's measure key.
  */
 export default function PensionerTrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+  const shownYears = useDisplayYears();
   const chartRef = useRef(null);
   const catalogue = useMeasureCatalogue();
   // On a phone the step labels do not fit the plot: the sentence names them
@@ -73,12 +74,12 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
   const byMeasure = view === "measures";
 
   const focusSeries = useMemo(
-    () => pensionerMeasureSeries(rows, policies, selectedPolicies, DISPLAY_YEARS),
-    [rows, policies, selectedPolicies],
+    () => pensionerMeasureSeries(rows, policies, selectedPolicies, shownYears),
+    [rows, policies, selectedPolicies, shownYears],
   );
   const allSeries = useMemo(
-    () => groupMeasureSeries(rows, policies, selectedPolicies, DISPLAY_YEARS, ALL_BAND),
-    [rows, policies, selectedPolicies],
+    () => groupMeasureSeries(rows, policies, selectedPolicies, shownYears, ALL_BAND),
+    [rows, policies, selectedPolicies, shownYears],
   );
   const partKeys = [...new Set(focusSeries.flatMap((point) => point.parts.map((part) => part.key)))];
   const raw = focusSeries.map((point, i) => ({ ...point, [FOCUS]: point.net, [ALL_BAND]: allSeries[i]?.net ?? null }));
@@ -121,8 +122,8 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
   const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values));
 
   const unpublished = focusSeries.filter((point) => point.net === null);
-  const first = fiscalYearTick(DISPLAY_YEARS[0]);
-  const last = fiscalYearTick(DISPLAY_YEARS[DISPLAY_YEARS.length - 1]);
+  const first = fiscalYearTick(shownYears[0]);
+  const last = fiscalYearTick(shownYears[shownYears.length - 1]);
   const title = `Change per pensioner by year, ${first} to ${last}`;
   const description = cumulative ? `Running total per pensioner from ${first}, £.` : "Average change per pensioner, £ a year.";
 
@@ -218,7 +219,7 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
           <ComposedChart data={data} margin={margin} stackOffset="sign" barCategoryGap="28%">
             <CartesianGrid {...GRID_PROPS} />
             <Customized
-              component={<YearShading selectedYear={Number(selectedYear)} unpublishedYears={unpublished.map((point) => point.year)} />}
+              component={<YearShading years={shownYears} selectedYear={Number(selectedYear)} unpublishedYears={unpublished.map((point) => point.year)} />}
             />
             <XAxis
               dataKey="year"

@@ -13,7 +13,7 @@ import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
 import { SCATTER_BINS } from "../utils/publication/scatter";
 import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE } from "../utils/ageImpact";
 import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST } from "./youngPeople/youngPeopleData";
-import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
+import { EARLY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { OPEN_VIEW_EVENT } from "../utils/methodLink";
@@ -61,7 +61,7 @@ const SECTION_ICONS = Object.fromEntries(METHOD_CONTENTS.map(({ id, titleIcon })
 const pounds = (value) => `£${Math.round(value).toLocaleString("en-GB")}`;
 const SCATTER_CHANGE_MAX = SCATTER_BINS.change_edges[SCATTER_BINS.change_edges.length - 1];
 const SCATTER_CHANGE_EDGE_LIST = SCATTER_BINS.change_edges.filter((edge) => edge > 0).map(pounds);
-const yearRange = `${fiscalYearTick(FIRST_DISPLAY_YEAR)} to ${fiscalYearTick(LAST_DISPLAY_YEAR)}`;
+const yearRange = `${fiscalYearTick(EARLY_YEAR)} to ${fiscalYearTick(LAST_DISPLAY_YEAR)}`;
 
 /**
  * A section of the view, laid out as the other views' sections are: a

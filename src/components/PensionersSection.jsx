@@ -52,7 +52,7 @@ import {
   noHouseholdChange,
 } from "../utils/chartTheme";
 import { isPublished, singleAgeKey } from "../utils/ageImpact";
-import { DISPLAY_YEARS } from "../utils/displayYears";
+import { useDisplayYears } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
 import { formatShare, shareDecimals, visibleSegments } from "../utils/shareFormat";
 import {
@@ -216,6 +216,7 @@ function AgeTooltip({ active, payload }) {
  * axis for every year, so Play shows the change between years.
  */
 function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+  const shownYears = useDisplayYears();
   const chartRef = useRef(null);
   const year = Number(selectedYear);
   const yearLabel = fiscalYearTick(year);
@@ -228,14 +229,14 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
   // always through £0, so the scale holds still under Play
   const { domain, ticks } = useMemo(() => {
     const values = [0];
-    for (const each of DISPLAY_YEARS) {
+    for (const each of shownYears) {
       for (const point of ageBars(each)) {
         if (point.netChange !== null) values.push(point.netChange);
       }
     }
     return niceRange(Math.min(...values), Math.max(...values), { maxSteps: 5 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, policies, selectedPolicies]);
+  }, [rows, policies, selectedPolicies, shownYears]);
   // The measures with no effect at these ages, for About this chart
   const members = useMemo(
     () =>

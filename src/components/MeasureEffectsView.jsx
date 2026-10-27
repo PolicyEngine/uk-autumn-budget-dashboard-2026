@@ -14,7 +14,7 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import MeasureRowLabel from "./MeasureRowLabel";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { fiscalYearTick, shortFiscalYearTick } from "../utils/chartTheme";
-import { DISPLAY_YEARS } from "../utils/displayYears";
+import { useDisplayYears } from "../utils/displayYears";
 import { noPovertyEffectReason } from "../utils/legendMembership";
 import "./MeasureEffectsView.css";
 
@@ -47,7 +47,9 @@ export function yearsEffects(byMeasure, year) {
   return { rows, none: [] };
 }
 
-export default function MeasureEffectsView({ byMeasure, metric, selectedYear, view, narrow, years = DISPLAY_YEARS }) {
+export default function MeasureEffectsView({ byMeasure, metric, selectedYear, view, narrow, years: yearsProp }) {
+  const shownYears = useDisplayYears();
+  const years = yearsProp ?? shownYears;
   const { byId } = useMeasureCatalogue();
   // A change too small to read at the metric's precision says so, never "0"
   const smallest = 10 ** -metric.decimals;
