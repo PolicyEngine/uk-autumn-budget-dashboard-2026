@@ -118,14 +118,42 @@ def phase_line(key: str, total: float, builds: list, processes: list) -> str:
     )
 
 
+# Per-year units (``flat_units`` with ``by_year``: --only income_distribution
+# or income_growth on Modal) run one container per measure and year, so a
+# published package of seven measures and its combined run over six years
+# is 48 containers. At the artifacts' 16 at once they would run in three
+# waves and save little, so per-year units may run this many at once: two
+# such commands side by side fit in one wave each. The cap changes how many
+# run at once, not how much is simulated.
+YEAR_MAX_CONTAINERS = 64
+# One year in a fresh container is about 3 minutes (builds about 82 s, the
+# year's tables about 82 s, measured 26 October), so a container still
+# running after this has gone wrong: worst case 64 containers x 15 min at
+# about $0.35 a container-hour (2 CPU, 32 GiB) is about $5.60.
+YEAR_TIMEOUT_S = 15 * 60
+
+
+def _per_year(units: Sequence) -> bool:
+    return any(getattr(unit, "years", None) is not None for unit in units)
+
+
 def _modal_remote(units: Sequence) -> Iterable:
-    """Run the units in an ephemeral Modal app, one container each."""
+    """Run the units in an ephemeral Modal app, one container each.
+    Per-year units run under their own cap and timeout
+    (``YEAR_MAX_CONTAINERS``, ``YEAR_TIMEOUT_S``); the image, memory, CPU,
+    secret and no-retries are the same ``Generator``'s."""
     modal = _import_modal()
     from uk_budget_data import modal_generate
 
     try:
         with modal.enable_output(), modal_generate.app.run():
-            generator = modal_generate.Generator()
+            cls = modal_generate.Generator
+            if _per_year(units):
+                cls = cls.with_options(
+                    max_containers=YEAR_MAX_CONTAINERS,
+                    timeout=YEAR_TIMEOUT_S,
+                )
+            generator = cls()
             yield from generator.run.map(units, order_outputs=True)
     except modal.exception.NotFoundError as error:
         raise ModalUnavailable(f"{SECRET_MISSING} ({error})") from error
@@ -283,7 +311,14 @@ class ModalRunner:
                     "--backend modal runs on the bundle's dataset only: a "
                     "local --dataset is not in the container"
                 )
-        self.say(f"Modal: {len(units)} measures, one container each")
+        if _per_year(units):
+            measures = len(dict.fromkeys(_unit_id(unit) for unit in units))
+            self.say(
+                f"Modal: {len(units)} units ({measures} measures, one "
+                "container per measure and year)"
+            )
+        else:
+            self.say(f"Modal: {len(units)} measures, one container each")
         results = []
         for index, outcome in enumerate(self.remote(units)):
             if index >= len(units):
@@ -294,6 +329,13 @@ class ModalRunner:
                 raise ModalUnavailable(
                     f"Modal returned {outcome.reform_id} in place of "
                     f"{_unit_id(units[index])}"
+                )
+            expected = getattr(units[index], "years", None)
+            if getattr(outcome, "years", None) != expected:
+                raise ModalUnavailable(
+                    f"Modal returned {outcome.reform_id} for years "
+                    f"{getattr(outcome, 'years', None)} in place of "
+                    f"{expected}"
                 )
             results.append(outcome)
             on_result(index, outcome)

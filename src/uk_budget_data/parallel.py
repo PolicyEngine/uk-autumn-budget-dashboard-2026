@@ -4,7 +4,10 @@ A *unit* is one measure: its baseline and reformed microsimulations, built
 once and read for every year. A unit is the smallest piece of work whose
 gates hold on their own: the data-limit watch (``data_limits.observing``),
 the model-limit check and the receipt all read one pair of simulations
-across every year, so a measure is never split across processes.
+across every year, so a measure is never split across processes. The one
+exception is income_distribution and income_growth on Modal, whose rows are
+made a year at a time: there each measure's years run as units of their own
+and are merged back (``pipeline.flat_units`` with ``by_year``).
 
 Runners map a picklable function over units and return the results **in
 unit order**, whatever order they finish in, so the files written from them

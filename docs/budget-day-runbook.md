@@ -827,6 +827,17 @@ Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microc
 
   Start them with `python -m`: the `uk-budget-data` script runs the project's own Python, which has no `modal`, so `uv run --with modal==1.6.2 uk-budget-data ...` stops on a fresh clone. To run locally, `uv run python -m uk_budget_data.cli generate --only income_distribution --published-package` (and the same for `income_growth`). If a container fails, rerun the whole command: these two write one file each, from every unit.
 
+  **On Modal these two run one container per measure and year** (`flat_units` with `by_year`): a package of seven measures and its combined run over six years is 48 containers, all at once, and the command prints `Years: one container per measure and year`. Each measure's years are folded back into one result here, and the files are the same bytes as one container per measure: the rows in the same order (measure, then year), the same rounding, and `income_growth_with_measures.csv`'s floor applied across every year after the merge. `income_growth` sends back each year's group medians and makes the rows on your machine, with the same `growth_rows` and the same pinned policyengine-uk prices. Expected: about 3 minutes per container (two builds, about 82 s, and one year's tables, about 82 s, from the 26 October breakdown) in place of 5–6 minutes for six years, so each command takes about half the container time it did; about 3× the container-seconds, roughly $0.70–0.85 per command against $0.23–0.30. Per-year containers may run 64 at once (`YEAR_MAX_CONTAINERS`) with a 15-minute limit each (`YEAR_TIMEOUT_S`, worst case about $5.60); the other Modal runs keep 16 and 45 minutes. Both commands side by side are 96 containers of 32 GB: if the workspace's concurrency limit is lower, Modal queues the rest and the run is slower, not wrong.
+
+  **Fallback:** add `--sequential` to run each measure's years in one container, as before:
+
+  ```bash
+  uv run --with modal==1.6.2 python -m uk_budget_data.cli generate --only income_distribution --published-package --backend modal --sequential
+  uv run --with modal==1.6.2 python -m uk_budget_data.cli generate --only income_growth --published-package --backend modal --sequential
+  ```
+
+  A local run always keeps a measure's years in one unit (six builds per measure would be slower on one machine), so `--sequential` changes nothing there. **Check once before relying on the per-year default:** on a scratch `--output-dir`, run both commands with and without `--sequential` on Modal and `cmp` the three CSVs; they must be identical. The tests show it on the invented dataset (`tests/test_flat_files_by_year.py`), not on Microcosm.
+
   `--published-package` reads `public/data/manifest.json`: the measures with a provisional or approved status, and the displayable combined run of exactly those whose members' outputs are current. It refuses when there is no such run. `--combined <ids>` does the same for a set given by hand. Without either, the files keep the registry's `autumn_budget_2026_combined` (every candidate), which the page never reads. The regenerated files need fresh review rows, and `publish review-rows` does not write them (it rows only the manifest's entries and the manifest; rehearsal of 27 October): the Reconciler updates the three rows in `data_inputs/public_data_review.csv` by hand, for `income_distribution.csv`, `income_mobility.csv` and `income_growth_with_measures.csv`, each with the file's new SHA-256 (`shasum -a 256 <file>`), reviewer, date and a basis naming the package. Until then `check_public_data.py` and `check-public-files.mjs` report each as "changed since its review".
 - **Run measures side by side** with `--jobs N` or `--jobs auto`, on `generate` (flat CSVs, `--only`, `--artifacts` and `--combined`) and on `geography`:
 
@@ -899,7 +910,7 @@ Only the combined run must wait, because its receipt records each member's outpu
 | Nine measures, one call (`--artifacts --backend modal`) | 8:11 for the Modal app, about 8:45 for the command | 293–354 s | $0.36 |
 | One hand-written modifier, its own call | 6:43 for the command | 354 s | $0.04 |
 | Two combined runs (`--combined`, after the measures) | 6:13 for the app, about 7:10 for the command (57 s planning here) | 339–348 s | $0.07 |
-| `--only income_distribution`, ten units | 4:13 | | $0.23 |
+| `--only income_distribution`, ten units (one container per measure; now `--sequential`) | 4:13 | | $0.23 |
 | Area run, six measures then the release (`constituencies --backend modal`) | 13:53 and 14:32 | 3:40–6:32 per measure, 7:32–8:07 release | $0.51 |
 | Area run, ten measures then the release (drill 5) | 21:18 | 3:36–5:22 per measure, 15:25 release | |
 
