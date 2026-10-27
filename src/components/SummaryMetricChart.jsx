@@ -41,7 +41,7 @@ import { DISPLAY_YEARS } from "../utils/displayYears";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { chartMotion } from "../utils/chartMotion";
-import { formatPp, peopleInPovertyText, peopleShort } from "../utils/povertyPeople";
+import { formatPp, peopleInPovertyText, peopleShort, roundPeople } from "../utils/povertyPeople";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import { shortNameOf } from "../utils/policyDetails";
@@ -56,7 +56,8 @@ const VALUE_BAR_SHAPE = barShape(["value"]);
  * run: the policy's own when one is selected, the combined run when all are.
  * A fall in poverty is drawn in the gain colour and a rise in the loss
  * colour; the inequality measures (Gini, top shares, ratios) are drawn in
- * the neutral net colour, since a change in inequality is not a gain or a
+ * the neutral grey (noChange, as the year-by-year cells), not the black of
+ * the net line, since a change in inequality is not a gain or a
  * loss for any one household.
  */
 export const SUMMARY_METRICS = {
@@ -377,8 +378,20 @@ function useMeasureChoice(metric, rows) {
 }
 
 /**
+ * A run's value of a measure in its row, or null where the row does not
+ * carry it: absent (a run written before the poverty and inequality
+ * measures), empty or null is never a change of 0.
+ */
+export function metricValue(row, key) {
+  const raw = row?.[key];
+  const value = raw === undefined || raw === null || raw === "" ? NaN : Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+/**
  * One point per shown year: the metric for the whole selection's run, or
- * null where that run has no row for the year (not yet published).
+ * null where that run has no row for the year, or a row without the metric
+ * (not yet published).
  *
  * @param {Array<Object>} rows - metrics.csv rows (strings, as parsed)
  * @param {string|null} run - The run to read (wholeSelectionRun)
@@ -390,8 +403,8 @@ export function metricByYear(rows, run, metric) {
     const row = (rows ?? []).find(
       (candidate) => candidate.reform_id === run && Number(candidate.year) === year,
     );
-    const raw = row ? Number(row[metric.key]) : NaN;
-    return { year, value: Number.isFinite(raw) ? raw * (metric.scale ?? 1) : null };
+    const value = metricValue(row, metric.key);
+    return { year, value: value === null ? null : value * (metric.scale ?? 1) };
   });
 }
 
@@ -465,7 +478,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
     if (!millions) return null;
     const people = Math.abs((selected.value / 100) * millions * 1e6);
     const who = metric.group === "children" ? "children" : "people";
-    return people < 1000 ? `under 1,000 ${who}` : `about ${(Math.round(people / 1000) * 1000).toLocaleString("en-GB")} ${who}`;
+    return people < 1000 ? `under 1,000 ${who}` : `about ${roundPeople(people)} ${who}`;
   })();
   const height = narrow ? 300 : 340;
 
@@ -630,14 +643,14 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
               <Bar
                 dataKey="value"
                 name={metric.title}
-                fill={metric.choices === "inequality" ? CHART_COLOURS.net : CHART_COLOURS.gain}
+                fill={metric.choices === "inequality" ? CHART_COLOURS.noChange : CHART_COLOURS.gain}
                 shape={VALUE_BAR_SHAPE}
                 {...chartMotion()}
               >
                 {data.map((point) => {
                   const colour =
                     metric.choices === "inequality"
-                      ? CHART_COLOURS.net
+                      ? CHART_COLOURS.noChange
                       : point.value > 0
                         ? CHART_COLOURS.loss
                         : CHART_COLOURS.gain;
