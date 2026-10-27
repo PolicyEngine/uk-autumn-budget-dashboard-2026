@@ -474,6 +474,11 @@ def _create_carers_allowance_earnings_taper() -> Reform:
 # =============================================================================
 
 AUTUMN_BUDGET_2026_COMBINED_ID = "autumn_budget_2026_combined"
+# The seven measures kept for the package (Vahid, 27 October 2026); the
+# Business Asset Disposal Relief cut (``BADR_ID``) and the employer NI
+# relief for under-25s (``EMPLOYER_NI_ID``) are withdrawn, so neither is in
+# the package nor in the registry (``_MEASURE_FACTORIES``): no default
+# command runs or publishes them. Their factories stay below, unregistered.
 # The measures the combined reform brings together, by id. The combined
 # reform is simulated whole, so this list does not change what it does; it
 # names its parts, so results by area can check it as a package of them.
@@ -482,9 +487,7 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
     STATE_PENSION_ALLOWANCE_ID,
     WARM_HOME_DISCOUNT_ID,
     ELECTRICITY_VAT_ID,
-    EMPLOYER_NI_ID,
     THRESHOLD_FREEZE_ID,
-    BADR_ID,
     FUEL_VAT_ID,
     PLAN_2_ID,
 )
@@ -494,9 +497,7 @@ _MEASURE_FACTORIES = (
     _create_state_pension_income_tax_protection,
     _create_warm_home_discount_top_up,
     _create_domestic_electricity_zero_vat,
-    _create_employer_ni_relief_under_25s,
     _create_threshold_freeze_2031_32,
-    _create_badr_lifetime_limit_cut,
     _create_road_fuel_vat_cut,
     _create_plan_2_threshold_unfreeze,
     # An individual candidate only: not in
@@ -522,7 +523,7 @@ def _create_combined_autumn_budget_reform(members: list[Reform]) -> Reform:
         id=AUTUMN_BUDGET_2026_COMBINED_ID,
         name="Autumn Budget 2026 candidates (combined)",
         description=(
-            "All nine candidate measures simulated together: "
+            "All seven candidate measures simulated together: "
             + ", ".join(member.name for member in members)
             + ". Shows the package's impact with interactions."
         ),

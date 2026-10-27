@@ -53,9 +53,7 @@ CANDIDATES = (
     "state_pension_income_tax_protection",
     "warm_home_discount_top_up",
     "domestic_electricity_zero_vat",
-    "employer_ni_relief_under_25s",
     "threshold_freeze_2031_32",
-    "badr_lifetime_limit_cut",
     "road_fuel_vat_cut",
     "plan_2_threshold_unfreeze",
     "carers_allowance_earnings_taper",
@@ -65,6 +63,13 @@ NOT_IN_PACKAGE = ("carers_allowance_earnings_taper",)
 # Registered on 27 October, before its first national generation: its rows
 # are checked once budgetary_impact.csv has them.
 NOT_YET_GENERATED = ("carers_allowance_earnings_taper",)
+# Withdrawn on 27 October 2026 (Vahid): out of the registry and the
+# package, so no default command runs or publishes them. Their factories
+# stay, unregistered, and are still tested here as code.
+WITHDRAWN = {
+    "employer_ni_relief_under_25s": reforms._create_employer_ni_relief_under_25s,
+    "badr_lifetime_limit_cut": reforms._create_badr_lifetime_limit_cut,
+}
 OLD_PLACEHOLDERS = (
     "two_child_limit",
     "fuel_duty_freeze",
@@ -89,7 +94,7 @@ def situation(people: dict, household: dict | None = None) -> dict:
 
 def change(measure_id: str, sit: dict, variable: str, year: int, measure=None):
     """(baseline, reformed) totals of a variable for one household."""
-    measure = measure or get_reform(measure_id)
+    measure = measure or get_reform(measure_id) or WITHDRAWN[measure_id]()
     baseline = Simulation(
         situation=sit, scenario=measure.to_baseline_scenario()
     )
@@ -109,6 +114,29 @@ def test_the_registry_is_the_combined_package_then_the_ten_candidates():
     assert set(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == (
         set(CANDIDATES) - set(NOT_IN_PACKAGE)
     )
+
+
+def test_the_package_is_the_seven_kept_measures():
+    from uk_budget_data.geography import manifest_key
+    from uk_budget_data.publication.combine import combined_key
+
+    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 7
+    # The seven, and the Carer's Allowance taper as an individual candidate
+    assert len(reforms._MEASURE_FACTORIES) == 8
+    key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
+    assert key == "combined--5c77771791661e11"
+    # The area run's package alias stands for that key
+    assert manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
+    description = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID).description
+    assert description.startswith("All seven candidate measures")
+
+
+def test_the_withdrawn_measures_are_not_registered():
+    for withdrawn, factory in WITHDRAWN.items():
+        assert get_reform(withdrawn) is None, withdrawn
+        assert withdrawn not in list_reform_ids()
+        assert withdrawn not in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
+        assert factory().id == withdrawn
 
 
 def test_the_2025_placeholders_are_gone():
@@ -638,7 +666,7 @@ def test_the_employer_ni_description_states_the_apprentice_default():
     input, the description must say the data identify no apprentices."""
     source = inspect.getsource(modifier("employer_ni_relief_ages_21_to_24"))
     assert '"is_apprentice"' in source
-    description = get_reform("employer_ni_relief_under_25s").description
+    description = WITHDRAWN["employer_ni_relief_under_25s"]().description
     assert "identify no apprentices" in description
     assert "cost includes 21 to 24-year-old apprentices" in description
 
@@ -647,7 +675,7 @@ def test_the_badr_description_carries_the_capital_gains_caveat():
     """#127 put the capital gains calibration caveat in the Methodology
     table, which now shows each measure's registry description (#104), so
     the caveat lives here, in the text G3 approves."""
-    description = get_reform("badr_lifetime_limit_cut").description
+    description = WITHDRAWN["badr_lifetime_limit_cut"]().description
     assert "calibrated to 2024-25" in description
     assert "1.5 to 1.7 times too high" in description
 
@@ -884,7 +912,9 @@ def test_the_methodology_note_is_for_a_registered_measure():
     (measure_id,) = re.findall(
         r'export const MODELLING_NOTE = \{\s*id: "([a-z0-9_]+)"', source
     )
-    assert get_reform(measure_id) is not None
+    # Or a withdrawn one: the page shows the note only while its measure
+    # is displayed, so a withdrawn measure's note is never shown.
+    assert get_reform(measure_id) is not None or measure_id in WITHDRAWN
 
 
 # --- Every year the policy differs is covered ---------------------------------
@@ -925,27 +955,10 @@ FIRST_YEARS = {
         {"employment_income": 20_000},
         {"electricity_consumption": 1_050},
     ),
-    "employer_ni_relief_under_25s": (
-        2027,
-        "ni_class_1_employer",
-        {"age": 22, "employment_income": 30_000},
-        {},
-    ),
     "threshold_freeze_2031_32": (
         2031,
         "income_tax",
         {"employment_income": 30_000},
-        {},
-    ),
-    "badr_lifetime_limit_cut": (
-        2027,
-        "capital_gains_tax",
-        {
-            "age": 55,
-            "employment_income": 100_000,
-            "capital_gains": 800_000,
-            "capital_gains_badr": 800_000,
-        },
         {},
     ),
     "road_fuel_vat_cut": (

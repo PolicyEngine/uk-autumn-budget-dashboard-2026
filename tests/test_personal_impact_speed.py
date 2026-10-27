@@ -134,11 +134,11 @@ def test_the_calculator_gives_the_per_year_routes_answers(monkeypatch):
     years = [2025, 2026, 2029]
     # The Warm Home Discount top-up (a modifier) moves this Universal Credit
     # household in 2026; the Plan 2 measure has parameter changes and
-    # modifiers on both sides; the BADR measure is parameters only.
+    # modifiers on both sides; the threshold freeze is parameters only.
     policy_ids = [
         "warm_home_discount_top_up",
         "plan_2_threshold_unfreeze",
-        "badr_lifetime_limit_cut",
+        "threshold_freeze_2031_32",
     ]
     monkeypatch.setattr(personal_impact, "YEARS", years)
     monkeypatch.setattr(personal_impact, "POLICY_IDS", policy_ids)
