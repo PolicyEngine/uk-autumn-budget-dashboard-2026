@@ -16,3 +16,8 @@ export { default as SummaryMetricChart, SUMMARY_METRICS } from "./SummaryMetricC
 export { PovertyMeasuresRow } from "./MeasuresPovertyCard";
 export { default as PersonalImpactTab } from "./PersonalImpactTab";
 export { default as LivingStandardsTab } from "./livingStandards/LivingStandardsTab";
+
+// A string the build keeps in this chunk, so the root layout can find the
+// chunk's files and the document head can request them for a link to a
+// chart view (utils/chartChunk.js)
+export { CHART_VIEWS_MARKER } from "../utils/chartChunk";
