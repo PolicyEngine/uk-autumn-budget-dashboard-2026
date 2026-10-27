@@ -193,8 +193,9 @@ describe("the household calculation, from the fixture", () => {
   // The headline is Modal's only when both services' /api/version report
   // one build commit and the same packages (useHouseholdImpactModalHeadline
   // .test.jsx). Here neither answers /api/version (404), so it is Cloud
-  // Run's, and the parts follow it, checked against its build.
-  it("with a detail URL whose build can't be checked, asks Cloud Run for the headline first, then the detail service for the sweep and the split by policy at once", async () => {
+  // Run's, and the detail service's parts are asked for with it (#249),
+  // shown only once the headline has arrived and they match its build.
+  it("with a detail URL whose build can't be checked, asks Cloud Run for the headline and the detail service for the sweep and the split by policy at once", async () => {
     const DETAIL_API = "https://modal.test/api/household-impact";
     const BUILD = "b".repeat(40);
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL_API);
@@ -218,17 +219,50 @@ describe("the household calculation, from the fixture", () => {
     );
     renderTab();
     toResults();
-    await waitFor(() => expect(asked).toHaveLength(1));
-    expect(asked).toEqual([[HOUSEHOLD_API, []]]);
+    // All three asked while the headline is still out
+    await waitFor(() => expect(asked).toHaveLength(3));
+    expect(asked).toEqual(
+      expect.arrayContaining([
+        [HOUSEHOLD_API, []],
+        [DETAIL_API, ["sweep"]],
+        [DETAIL_API, ["by_policy"]],
+      ]),
+    );
+    // Nothing is shown before the headline
+    expect(screen.queryByText(HEADLINE)).not.toBeInTheDocument();
     release();
     await splitShown();
     expect(await screen.findByRole("heading", { name: /^Household net income, / })).toBeInTheDocument();
     expect(screen.getByText(HEADLINE)).toBeInTheDocument();
+    // The early answers were used: nothing asked again
     expect(asked).toHaveLength(3);
-    expect(asked.slice(1)).toEqual(
+  });
+
+  it("with a detail URL, asks Cloud Run for a part the detail service answered early from another build", async () => {
+    const DETAIL_API = "https://modal.test/api/household-impact";
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL_API);
+    const asked = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        if (url !== HOUSEHOLD_API && url !== DETAIL_API) {
+          return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
+        }
+        const body = JSON.parse(init.body);
+        asked.push([url, body.include]);
+        const build = url === DETAIL_API ? "d".repeat(40) : "c".repeat(40);
+        return json({ ...householdAnswerFor(body), git_sha: build });
+      }),
+    );
+    renderTab();
+    toResults();
+    await splitShown();
+    expect(screen.getByText(HEADLINE)).toBeInTheDocument();
+    expect(asked.filter(([url]) => url === HOUSEHOLD_API)).toEqual(
       expect.arrayContaining([
-        [DETAIL_API, ["sweep"]],
-        [DETAIL_API, ["by_policy"]],
+        [HOUSEHOLD_API, []],
+        [HOUSEHOLD_API, ["sweep"]],
+        [HOUSEHOLD_API, ["by_policy"]],
       ]),
     );
   });
@@ -254,7 +288,8 @@ describe("the household calculation, from the fixture", () => {
     toResults();
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(screen.queryByText(HEADLINE)).not.toBeInTheDocument();
-    expect(asked.filter(([url]) => url === DETAIL_API)).toEqual([]);
+    // Its parts were asked for with the headline, and none is shown
+    expect(screen.queryByRole("heading", { name: /^Household net income, / })).not.toBeInTheDocument();
   });
 
   it("shows the result card and breakdown once only the headline has resolved", async () => {
@@ -348,7 +383,7 @@ describe("the household calculation, from the fixture", () => {
     // Not entered by the reader: marked as assumed, with what it does
     expect(box("Spending a year").querySelector("dt")).toHaveTextContent("Spending a year (assumed, ONS average)");
     expect(tipOf("Spending a year")).toBe(
-      "Fuel and electricity measures scale with what you spend; change these in More details to match your household.",
+      "Fuel and electricity policies scale with what you spend; change these in More details to match your household.",
     );
     // Whose result it is, in one line under the figure
     // No chip row of household facts: the details are in About this result
@@ -371,7 +406,8 @@ describe("the household calculation, from the fixture", () => {
       "salary_sacrifice_cap",
       "fuel_duty_freeze",
     ]);
-    const parse = (text) => Number(text.replace("−", "-").replace(/[£,+]/g, ""));
+    // No change is a muted dash
+    const parse = (text) => (text === "—" ? 0 : Number(text.replace("−", "-").replace(/[£,+]/g, "")));
     const sum = bars
       .map((bar) => parse(bar.querySelector(".waterfall-value").textContent))
       .reduce((a, b) => a + b, 0);
@@ -408,10 +444,9 @@ describe("the household calculation, from the fixture", () => {
     for (const name of ["Before", "After", "Change"]) {
       expect(within(table).getByRole("columnheader", { name })).toBeInTheDocument();
     }
-    // Net income: before and after only; its change is the headline card
+    // Net income: the bold total row, with its change (the rows add up to it)
     const net = within(table).getByRole("row", { name: /Net income/ });
-    expect(net).toHaveTextContent("£65,371£69,136");
-    expect(net).not.toHaveTextContent("£3,765");
+    expect(net).toHaveTextContent("£65,371£69,136+£3,765");
 
     // Each top row shows its taxes or benefits, open at first
     expect(within(table).getByRole("button", { name: /Taxes/ })).toHaveAttribute("aria-expanded", "true");
@@ -423,7 +458,8 @@ describe("the household calculation, from the fixture", () => {
     expect(within(table).getByText("On earnings")).toBeInTheDocument();
 
     // The top rows add up to net income, in every column
-    const parse = (text) => Number(text.replace("−", "-").replace(/[£,+]/g, ""));
+    // No change is a muted dash
+    const parse = (text) => (text === "—" ? 0 : Number(text.replace("−", "-").replace(/[£,+]/g, "")));
     const top = [...table.querySelectorAll(".programme-row.depth-0")].map((row) =>
       [...row.querySelectorAll("td")].map((cell) => parse(cell.textContent)),
     );
@@ -558,9 +594,11 @@ describe("an example card", () => {
   it("closes the form, scrolls its result into view below the bars and moves focus to it", async () => {
     serve((body) => json(householdAnswerFor(body)));
     motion(false);
-    // jsdom has no scrolling
+    // jsdom has no scrolling: the page's scroll (utils/pageScroll) is window.scrollTo
     const scrollIntoView = vi.fn();
-    Element.prototype.scrollIntoView = scrollIntoView;
+    const originalScrollTo = window.scrollTo;
+    window.scrollTo = scrollIntoView;
+    const smooth = () => scrollIntoView.mock.calls.filter(([options]) => options.behavior === "smooth");
     // The result appears below the screen's foot
     const rect = vi
       .spyOn(Element.prototype, "getBoundingClientRect")
@@ -570,22 +608,26 @@ describe("an example card", () => {
     fireEvent.click(householdItem(/(^|: )A pensioner on the State Pension/));
     expect(document.querySelector(".household-form-panel")?.dataset.open).not.toBe("true");
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
-    expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "smooth", block: "start" });
+    expect(scrollIntoView.mock.calls[0][0]).toEqual({ top: 1500 - 16, behavior: "smooth" });
     expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" }));
     // Every card: another one scrolls again
     scrollIntoView.mockClear();
     fireEvent.click(householdItem(/(^|: )A 22-year-old renting/));
-    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
-    expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "smooth", block: "start" });
-    delete Element.prototype.scrollIntoView;
+    // (the first scroll's own settling re-check is instant, so only smooth ones count)
+    await waitFor(() => expect(smooth()).toHaveLength(1));
+    expect(smooth()[0][0]).toEqual({ top: 1500 - 16, behavior: "smooth" });
+    window.scrollTo = originalScrollTo;
     rect.mockRestore();
   });
 
   it("asks the scroll again while the page grows under the result, so it is not cut short", async () => {
     serve((body) => json(householdAnswerFor(body)));
     motion(false);
+    // jsdom has no scrolling: the page's scroll (utils/pageScroll) is window.scrollTo
     const scrollIntoView = vi.fn();
-    Element.prototype.scrollIntoView = scrollIntoView;
+    const originalScrollTo = window.scrollTo;
+    window.scrollTo = scrollIntoView;
+    const smooth = () => scrollIntoView.mock.calls.filter(([options]) => options.behavior === "smooth");
     const rect = vi
       .spyOn(Element.prototype, "getBoundingClientRect")
       .mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
@@ -596,19 +638,22 @@ describe("an example card", () => {
       .mockImplementation(() => height);
     renderTab();
     fireEvent.click(householdItem(/(^|: )A pensioner on the State Pension/));
-    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(smooth()).toHaveLength(1));
     height = 3200;
-    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(2));
-    expect(scrollIntoView.mock.calls[1][0]).toEqual({ behavior: "smooth", block: "start" });
-    delete Element.prototype.scrollIntoView;
+    await waitFor(() => expect(smooth()).toHaveLength(2));
+    expect(smooth()[1][0]).toEqual({ top: 1500 - 16, behavior: "smooth" });
+    window.scrollTo = originalScrollTo;
     rect.mockRestore();
     scrollHeight.mockRestore();
   });
 
   it("does not scroll when the result already starts in the top third of the screen, and is instant with reduced motion", async () => {
     serve((body) => json(householdAnswerFor(body)));
+    // jsdom has no scrolling: the page's scroll (utils/pageScroll) is window.scrollTo
     const scrollIntoView = vi.fn();
-    Element.prototype.scrollIntoView = scrollIntoView;
+    const originalScrollTo = window.scrollTo;
+    window.scrollTo = scrollIntoView;
+    const smooth = () => scrollIntoView.mock.calls.filter(([options]) => options.behavior === "smooth");
     const rect = vi
       .spyOn(Element.prototype, "getBoundingClientRect")
       .mockReturnValue({ top: 140, bottom: 540, height: 400 });
@@ -621,8 +666,8 @@ describe("an example card", () => {
     motion(true);
     fireEvent.click(householdItem(/(^|: )A 22-year-old renting/));
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
-    expect(scrollIntoView.mock.calls[0][0]).toEqual({ behavior: "auto", block: "start" });
-    delete Element.prototype.scrollIntoView;
+    expect(scrollIntoView.mock.calls[0][0]).toEqual({ top: 1500 - 16, behavior: "auto" });
+    window.scrollTo = originalScrollTo;
     rect.mockRestore();
   });
 });
@@ -1117,14 +1162,69 @@ describe("the Across earnings cards together", () => {
 describe("the breakdown's one line", () => {
   it("says which groups the policies change, and which they leave", async () => {
     const { breakdownSentence } = await import("./ProgrammeTable");
-    const group = (id, change) => ({ id, shown: { change } });
-    expect(breakdownSentence([group("income", 0), group("tax", 60), group("benefit", 0)])).toBe(
-      "Your taxes fall by £60 a year with the selected policies; income and benefits are unchanged.",
+    const row = (label, change) => ({ label, shown: { change } });
+    const group = (id, change, rows) => ({ id, shown: { change }, rows });
+    // Taxes only; a household with no benefits still hears benefits are unchanged
+    expect(breakdownSentence([group("income", 0), group("tax", 60)])).toBe(
+      "Taxes fall by £60 a year; market income and benefits are unchanged.",
     );
-    expect(breakdownSentence([group("income", 0), group("tax", -20), group("benefit", 15)])).toBe(
-      "Your taxes rise by £20 a year and benefits rise by £15 a year with the selected policies; income is unchanged.",
+    // The row behind most of the change, by name
+    expect(
+      breakdownSentence([
+        group("income", 0),
+        group("tax", 9, [row("Fuel duty", 8), row("VAT", 1), row("Council Tax", 0)]),
+        group("benefit", 0),
+      ]),
+    ).toBe("Taxes fall by £9 a year, mostly fuel duty; market income and benefits are unchanged.");
+    expect(breakdownSentence([group("income", 0), group("tax", -20, [row("VAT change", -20), row("Income tax", 0)]), group("benefit", 0)])).toBe(
+      "Taxes rise by £20 a year, all from VAT; market income and benefits are unchanged.",
     );
-    expect(breakdownSentence([group("income", 0), group("tax", 0)])).toBe("The selected policies leave your income, taxes and benefits unchanged.");
+    // Both, and no row named when none is more than half
+    expect(
+      breakdownSentence([
+        group("income", 0),
+        group("tax", -20, [row("Income tax", -10), row("National Insurance", -10)]),
+        group("benefit", -15, [row("Universal Credit", -15)]),
+      ]),
+    ).toBe("Taxes rise by £20 a year; benefits fall by £15 a year, all from Universal Credit; market income is unchanged.");
+    expect(breakdownSentence([group("income", 0), group("tax", 0), group("benefit", 30)])).toBe(
+      "Benefits rise by £30 a year; market income and taxes are unchanged.",
+    );
+    expect(breakdownSentence([group("income", 120), group("tax", 0), group("benefit", 0)])).toBe(
+      "Market income rises by £120 a year; taxes and benefits are unchanged.",
+    );
+    expect(breakdownSentence([group("income", 0), group("tax", 0), group("pension", 0)])).toBe("No change to your taxes or benefits.");
+  });
+});
+
+describe("the breakdown's rows", () => {
+  // A pensioner's taxes: Council Tax and the TV licence unchanged, VAT only
+  // as the change the measures make (a £1 cut)
+  const programmes = [
+    { id: "state_pension", group: "benefit", label: "State Pension", before: 12000, after: 12000 },
+    { id: "council_tax", group: "tax", label: "Council Tax", before: 2000, after: 2000 },
+    { id: "tv_licence", group: "tax", label: "TV licence", before: 175, after: 175 },
+    { id: "vat_change", group: "tax", label: "VAT", before: 0, after: -1 },
+  ];
+  const totals = { before: 9825, after: 9826, change: 1 };
+
+  it("shows VAT as a change only, Council Tax as a proper noun, and the unchanged rows", async () => {
+    const { default: ProgrammeTable } = await import("./ProgrammeTable");
+    render(<ProgrammeTable programmes={programmes} totals={totals} yearLabel="2029-30" />);
+    const table = screen.getByRole("table");
+    const vat = within(table).getByRole("row", { name: /VAT change/ });
+    // No before; the cut a positive amount after, as a smaller tax
+    expect(vat).toHaveTextContent("—+£1+£1");
+    expect(within(table).getByRole("row", { name: /Council Tax/ })).toHaveTextContent("−£2,000−£2,000—");
+    expect(within(table).getByRole("row", { name: /TV licence/ })).toHaveTextContent("−£175−£175—");
+    expect(within(table).queryByText("Council tax")).toBeNull();
+    // Taxes still add up to the rows under it
+    expect(within(table).getByRole("row", { name: /^Taxes/ })).toHaveTextContent("−£2,175−£2,174+£1");
+    // Net income's name is in the bold total row
+    expect(within(table).getByRole("rowheader", { name: "Net income" }).closest("tr")).toHaveClass("breakdown-net-row");
+    // About this chart says the VAT row is the change only
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    expect(screen.getByText(/not the VAT you pay/)).toBeInTheDocument();
   });
 });
 
@@ -1134,19 +1234,19 @@ describe("the waterfall's one line", () => {
     const totals = { before: 70050, after: 70159 };
     const step = (name, rounded) => ({ id: name, name, rounded });
     expect(waterfallSentence(totals, [step("Zero VAT on electricity", 56), step("Fuel duty deferral", 53)], "2027-28")).toBe(
-      "Your net income rises in 2027-28, mostly from zero VAT on electricity (+£56).",
+      "Your net income rises in 2027-28, mostly from Zero VAT on electricity (+£56).",
     );
     expect(waterfallSentence(totals, [step("A", 40), step("B", 35), step("C", 34)], "2027-28")).toBe(
-      "Your net income rises in 2027-28; a adds the most (+£40).",
+      "Your net income rises in 2027-28; A adds the most (+£40).",
     );
     expect(waterfallSentence(totals, [step("Zero VAT on electricity", 204), step("Threshold freeze", -95)], "2027-28")).toBe(
-      "Your net income rises in 2027-28: zero VAT on electricity adds the most (+£204) and threshold freeze takes the most (−£95).",
+      "Your net income rises in 2027-28: Zero VAT on electricity adds the most (+£204) and Threshold freeze takes the most (−£95).",
     );
     expect(waterfallSentence({ before: 100, after: 50 }, [step("Fuel duty", 20), step("Threshold freeze", -70)], "2031-32")).toBe(
-      "Your net income falls in 2031-32: threshold freeze takes the most (−£70) and fuel duty adds the most (+£20).",
+      "Your net income falls in 2031-32: Threshold freeze takes the most (−£70) and Fuel duty adds the most (+£20).",
     );
     expect(waterfallSentence({ before: 100, after: 80 }, [step("Threshold freeze", -20)], "2031-32")).toBe(
-      "Your net income falls in 2031-32, all from threshold freeze.",
+      "Your net income falls in 2031-32, all from Threshold freeze.",
     );
     expect(waterfallSentence({ before: 100, after: 100 }, [], "2027-28")).toBe("No change to your net income in 2027-28.");
     // No change, before or after amount: the tile and the bars' end labels show them
@@ -1155,5 +1255,86 @@ describe("the waterfall's one line", () => {
     expect(waterfallSentence(totals, null, "2027-28")).toBe("Your net income rises in 2027-28.");
     // The bars start a round £100 below the lowest point
     expect(waterfallScaleStart({ before: 17947, after: 18007 }, [step("A", 43), step("B", 17)])).toBe(17800);
+  });
+
+  it("never lower-cases a measure's name: State Pension stays a proper noun", async () => {
+    const { waterfallSentence } = await import("./NetIncomeWaterfall");
+    const step = (label, rounded) => ({ id: label, name: label, label, rounded });
+    expect(
+      waterfallSentence({ before: 100, after: 400 }, [step("State Pension protection", 225), step("Fuel duty deferral", 75)], "2029-30"),
+    ).toBe("Your net income rises in 2029-30, mostly from State Pension protection (+£225).");
+  });
+
+  it("shows no sentence over the chart: the largest policy is marked on it, the sentence its text alternative", async () => {
+    const { render } = await import("@testing-library/react");
+    const { default: NetIncomeWaterfall, largestSteps } = await import("./NetIncomeWaterfall");
+    const step = (id, rounded) => ({ id, name: id, label: id, rounded });
+    // One way: one "Largest"; both ways: the largest gain and loss; one
+    // policy, or the one step while splitting: none
+    expect(largestSteps([step("a", 225), step("b", 75)])).toEqual({ a: "Largest" });
+    expect(largestSteps([step("a", -30), step("b", -90)])).toEqual({ b: "Largest" });
+    expect(largestSteps([step("a", 204), step("b", -95), step("c", 10), step("interaction", -300)])).toEqual({
+      a: "Largest gain",
+      b: "Largest loss",
+    });
+    expect(largestSteps([step("a", 56)])).toEqual({});
+    expect(largestSteps(null)).toEqual({});
+
+    const { container, unmount } = render(
+      <NetIncomeWaterfall
+        totals={{ before: 18000, after: 18300, change: 300 }}
+        steps={[step("State Pension protection", 225), step("Fuel duty deferral", 75)]}
+        yearLabel="2029-30"
+      />,
+    );
+    expect(container.querySelector(".waterfall-sentence")).toBeNull();
+    expect(container.querySelector(".waterfall-header").textContent).toBe("How each policy changes your income" + container.querySelector(".visually-hidden").textContent);
+    const chart = container.querySelector("ol.waterfall-rows");
+    const described = document.getElementById(chart.getAttribute("aria-describedby"));
+    expect(described).toHaveClass("visually-hidden");
+    expect(described).toHaveTextContent("Your net income rises in 2029-30, mostly from State Pension protection (+£225).");
+    const largest = [...container.querySelectorAll(".waterfall-row.is-largest")];
+    expect(largest.map((row) => row.dataset.row)).toEqual(["State Pension protection"]);
+    expect(largest[0].querySelector(".waterfall-chip")).toHaveTextContent(/^Largest$/);
+    // The chip adds no number: the row's value is said once
+    expect(largest[0].textContent.match(/£225/g)).toHaveLength(1);
+    unmount();
+
+    // Mixed: both chips
+    const mixed = render(
+      <NetIncomeWaterfall
+        totals={{ before: 18000, after: 18109, change: 109 }}
+        steps={[step("Zero VAT on electricity", 204), step("Threshold freeze", -95)]}
+        yearLabel="2027-28"
+      />,
+    );
+    expect([...mixed.container.querySelectorAll(".waterfall-chip")].map((chip) => chip.textContent)).toEqual([
+      "Largest gain",
+      "Largest loss",
+    ]);
+    mixed.unmount();
+
+    // One policy: no chip, the sentence still the text alternative
+    const one = render(
+      <NetIncomeWaterfall totals={{ before: 100, after: 80, change: -20 }} steps={[step("Threshold freeze", -20)]} yearLabel="2031-32" />,
+    );
+    expect(one.container.querySelector(".waterfall-chip")).toBeNull();
+    expect(one.container.querySelector(".visually-hidden")).toHaveTextContent("all from Threshold freeze.");
+    one.unmount();
+
+    // No change: the note is shown
+    const none = render(<NetIncomeWaterfall totals={{ before: 100, after: 100, change: 0 }} steps={[]} yearLabel="2027-28" />);
+    expect(none.container.querySelector(".waterfall-no-change")).toHaveTextContent("No change to your net income in 2027-28.");
+    expect(none.container.querySelector(".waterfall-chip")).toBeNull();
+    none.unmount();
+  });
+
+  it("gives the result card no coloured left stripe: gain and loss colour only the numbers", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const css = readFileSync(join(process.cwd(), "src", "components", "personal", "SingleYear.css"), "utf8");
+    const cardRules = [...css.matchAll(/\.result-card(?:\.is-(?:gain|loss))?\s*\{([^}]*)\}/g)].map((m) => m[1]);
+    expect(cardRules.length).toBeGreaterThan(0);
+    for (const rule of cardRules) expect(rule).not.toMatch(/border-left/);
   });
 });

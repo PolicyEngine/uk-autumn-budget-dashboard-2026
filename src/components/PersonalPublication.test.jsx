@@ -89,7 +89,7 @@ describe("Household impact's publication gate", () => {
       </MeasureCatalogueProvider>,
     );
     expect(screen.queryByTestId("live-calculator")).not.toBeInTheDocument();
-    expect(screen.getByText("Household impact is unavailable for the selected measures")).toBeInTheDocument();
+    expect(screen.getByText("Household impact is unavailable for the selected policies")).toBeInTheDocument();
     expect(screen.getByText(/do not name one model version/)).toBeInTheDocument();
   });
 
@@ -101,7 +101,7 @@ describe("Household impact's publication gate", () => {
         fc.pre(status !== "approved" || !verified || !supported || !manifest);
         show(catalogue({ status, verified, supported, manifest }));
         expect(screen.queryByTestId("live-calculator")).not.toBeInTheDocument();
-        expect(screen.getByText("Household impact is unavailable for the selected measures")).toBeInTheDocument();
+        expect(screen.getByText("Household impact is unavailable for the selected policies")).toBeInTheDocument();
         expect(document.body).not.toHaveTextContent("£123,456");
         cleanup();
       },

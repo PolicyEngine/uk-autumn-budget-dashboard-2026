@@ -37,7 +37,7 @@
   margin-top: 12px;
 }
 
-/* Compact: a Policies card's "How it is modelled", inline in its footer
+/* Compact: a Policies card's "About this result", inline in its footer
    row; the content opens across the card below the row */
 .disclosure-compact {
   display: contents;

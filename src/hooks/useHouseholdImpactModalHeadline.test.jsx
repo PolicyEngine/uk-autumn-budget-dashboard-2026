@@ -120,7 +120,7 @@ describe("the headline from the detail service (Modal)", () => {
       const hook = renderHook(() => useHouseholdImpact(params));
       await waitFor(() => expect(hook.result.current.detailStatus).not.toBe("loading"));
       expect(hook.result.current.status).toBe("ready");
-      expect(posts(calls)[0]).toBe("main:headline");
+      expect(posts(calls)).toContain("main:headline");
       expect(posts(calls)).not.toContain("detail:headline");
     });
   }
@@ -160,7 +160,7 @@ describe("the headline from the detail service (Modal)", () => {
     const second = renderHook(() => useHouseholdImpact({ ...params, year: 2030 }));
     await waitFor(() => expect(second.result.current.detailStatus).not.toBe("loading"));
     expect(second.result.current.status).toBe("ready");
-    expect(posts(calls)[0]).toBe("main:headline");
+    expect(posts(calls)).toContain("main:headline");
     expect(posts(calls)).not.toContain("detail:headline");
     expect(calls.filter((call) => call.endsWith(":version"))).toEqual([]);
   });

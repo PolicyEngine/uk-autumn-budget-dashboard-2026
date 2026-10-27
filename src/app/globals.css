@@ -127,7 +127,13 @@ code {
   --card-border: var(--pe-gray-200);
   --card-radius: 12px;
   --card-padding: 24px;
-  --title-row-height: 64px;
+  /* The site header's height (58px, @policyengine/ui-kit's
+     --spacing-header), so the two bars match */
+  --title-row-height: 58px;
+  /* The site header's gradient and rule (@policyengine/ui-kit's Header):
+     the title band's, and the overview drawer's top band */
+  --band-gradient: linear-gradient(to right, var(--color-teal-800), var(--color-teal-600));
+  --band-rule: 0.5px solid var(--color-teal-700);
   /* The two tab rows (view tabs and sub-tabs) share one height: each
      row, each tab and the chosen tab's tint. Compact once stuck. */
   --tab-row-height: 48px;
@@ -173,6 +179,11 @@ code {
   --band-ink-border-hover: color-mix(in srgb, var(--band-ink) 80%, transparent);
   --band-ink-hover: color-mix(in srgb, var(--band-ink) 12%, transparent);
   --band-ink-active: color-mix(in srgb, var(--band-ink) 20%, transparent);
+  /* The band's pills sit at the light end of its gradient (teal-600), so
+     they take a dark fill, not a white one: the white value stays above
+     5:1 and the muted label above 4.5:1 in every state */
+  --band-control-fill: color-mix(in srgb, var(--color-teal-900) 35%, transparent);
+  --band-control-fill-active: color-mix(in srgb, var(--color-teal-900) 55%, transparent);
   /* The site footer's gradient, left to right */
   --footer-start: #234e52;
   --footer-end: #2c7a7b;
@@ -181,6 +192,16 @@ code {
   --shadow-faint: rgba(17, 24, 39, 0.04);
   --shadow-soft: rgba(17, 24, 39, 0.08);
   --shadow-strong: rgba(17, 24, 39, 0.12);
+  /* Every hover or tap box (Tip.css's tips, the chart tooltips, the map's
+     seat card): one card style, white with a soft border and shadow */
+  --tip-bg: var(--c-surface);
+  --tip-border: 1px solid var(--pe-gray-200);
+  --tip-radius: var(--pe-radius-md);
+  --tip-shadow: 0 4px 16px var(--shadow-soft);
+  --tip-padding: 8px 12px;
+  --tip-font-size: 13px;
+  --tip-line-height: 1.45;
+  --tip-color: var(--pe-gray-800);
   /* The focus ring around a field or pill (the gain-text teal at 25%) */
   --focus-ring: color-mix(in srgb, var(--c-gain-text) 25%, transparent);
   /* The magnifier in a search field: a data URI cannot take var(), so the
@@ -204,6 +225,7 @@ code {
   --c-reference: #6b7280; /* a reference series, such as "All ages" (dashed) */
   --c-highlight: #285e61; /* the highlighted group, such as the age band */
   --c-highlight-band: #eaf5f4; /* behind a highlighted group */
+  --c-tenth-band: #dde6f3; /* your income tenth behind a teal or grey distribution */
   --c-hover: #eef6f6; /* behind the hovered bar or row */
   --c-obr: #9ca3af; /* the OBR's figure (a ring) */
   --c-obr-text: #6b7280;
@@ -297,12 +319,13 @@ body {
    of the page's flow and hidden above the window by default, so the band
    sits at the very top of the page with the tab rows under it, from the
    first paint. App.jsx shows it (data-site-nav-shown on <html>) when the reader
-   scrolls up, points at the top 8px of the window or tabs into it, keeps
-   it a few seconds and while it is in use, and hides it after a deliberate
-   scroll down or once the pointer or focus has left; it measures the nav into
-   --site-nav-height. --nav-offset is how much of the window's top the nav
-   covers, so the band, the tab rows and --sticky-offset sit under it in
-   either state. --motion-slide is 0 under reduced motion.
+   scrolls up 24px (their own input: never the page moving by itself),
+   points at the top 8px of the window or tabs into it, keeps it 3s and
+   while it is in use, and hides it on any scroll down by the reader or
+   once the pointer or focus has left; it measures the nav into
+   --site-nav-height. Shown, it overlays the top of the band (above it,
+   with a shadow); the band and tab rows never move, so --nav-offset is 0.
+   --motion-slide is 0 under reduced motion.
    Written against @policyengine/ui-kit 0.12.0, whose shell is
    <div class="min-h-screen flex flex-col"> with the nav as its first
    child. If a ui-kit upgrade changes that markup this selector stops
@@ -312,8 +335,11 @@ body {
   --nav-offset: 0px;
 }
 
-:root[data-site-nav-shown] {
-  --nav-offset: var(--site-nav-height, 0px);
+/* The nav overlays the band when shown: it never moves the band or the
+   tab rows, so nothing under them is pushed or covered by the stack
+   (--nav-offset stays 0; App.jsx keeps the nav hidden at the page's top) */
+:root[data-site-nav-shown] .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
+  box-shadow: 0 2px 8px var(--shadow-faint) !important;
 }
 
 .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
@@ -354,12 +380,16 @@ body {
   background: var(--pe-surface);
   border: 1px solid var(--card-border);
   border-radius: var(--card-radius);
+  /* A link's own jump to a card clears the sticky bars; the page's own
+     scrolls measure the bars live (utils/pageScroll) */
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
 }
 
-/* Title band: the full-width teal band under the site nav that the
-   published UK dashboards use (uk-spring-statement-2026,
-   uk-childcare-100k-threshold, uk-living-standards-outlook .title-row):
-   white Inter 700 title on rgba(40, 94, 97, 0.95). It is the page's only
+/* Title band: the full-width teal band under the site nav, in the site
+   header's own look (policyengine.org's, @policyengine/ui-kit's Header):
+   the same 58px on a wide screen, the same teal-800 to teal-600 gradient
+   across the window and the same teal-700 rule, with a white Inter 700
+   title (app-v2's page-title weight and tight tracking). It is the page's only
    sticky element and keeps one height, so nothing below it moves. The
    band bleeds to the window edges while its content stays in the column.
    It looks the same stuck or not: same height, title size and padding, no
@@ -389,8 +419,10 @@ body {
      lines its content up with the page column. */
   margin-inline: calc(50% - 50vw);
   padding-inline: max(40px, calc((100vw - 1120px) / 2));
-  /* Solid, no alpha, no blur */
-  background: var(--band-teal);
+  /* The site header's gradient and rule, from the same tokens */
+  background: var(--band-gradient);
+  border-bottom: var(--band-rule);
+  box-sizing: border-box;
 }
 
 .title-row.is-stuck {
@@ -416,7 +448,7 @@ body {
   font-weight: 700;
   color: var(--band-ink);
   margin: 0;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   line-height: 1.15;
 }
 
@@ -437,7 +469,7 @@ body {
 }
 
 .title-row .band-control.is-inactive:hover {
-  background: var(--band-ink-hover);
+  background: var(--band-control-fill);
   border-color: var(--band-ink-border);
 }
 
@@ -741,7 +773,7 @@ body {
 /* The band's two controls (year, measures; YearSlider.jsx and
    PolicySelector.jsx): the card Options pill's shape (a full pill, a
    1px border, an icon, the value, a chevron) on the teal band, as a
-   translucent white pill with white text. The label and the value share
+   translucent dark pill with a white border and white text. The label and the value share
    one line, the label regular and muted, the value bold. Their lists stay
    white. */
 .title-row .band-control {
@@ -750,7 +782,7 @@ body {
   padding: 0 14px 0 12px;
   gap: 8px;
   color: var(--band-ink);
-  background: var(--band-ink-hover);
+  background: var(--band-control-fill);
   border: 1px solid var(--band-ink-border);
   border-radius: 999px;
 }
@@ -761,14 +793,14 @@ body {
 }
 
 .title-row .band-control:hover:not(:disabled) {
-  background: var(--band-ink-active);
+  background: var(--band-control-fill-active);
   border-color: var(--band-ink-border-hover);
 }
 
 .title-row .band-control:active:not(:disabled),
 .title-row .band-control[aria-expanded="true"],
 .title-row .band-control[aria-pressed="true"] {
-  background: var(--band-ink-active);
+  background: var(--band-control-fill-active);
   border-color: var(--band-ink);
 }
 
@@ -1558,7 +1590,7 @@ body {
 
 .note svg {
   flex: 0 0 auto;
-  margin-top: 3px;
+  margin-top: 1px;
   color: var(--pe-gray-400);
 }
 
@@ -1643,7 +1675,7 @@ body {
      Methodology) has one row: no empty second row. App.jsx sets
      data-band and keeps the reader's place when the height changes. */
   .app[data-band="compact"] {
-    --title-row-height: 60px;
+    --title-row-height: 58px;
   }
 
   .app[data-band="compact"] .title-row {
@@ -1898,6 +1930,11 @@ body {
 .policy-card-details .disclosure-title svg {
   flex: none;
   color: var(--pe-gray-400);
+}
+
+/* The card's category tile takes the measure's colour, as on every row */
+.policy-card-type .mrl-icon svg {
+  color: var(--mrl-colour);
 }
 
 .policy-card-details .disclosure-title {
@@ -2300,9 +2337,9 @@ body {
   display: none;
 }
 
-/* The footer: "How it is modelled" and "See its effect" on one line; the
+/* The footer: "About this result" and "See its effect" on one line; the
    opened text runs the full width of the card beneath them, in full */
-/* The footer, stacked: "How it is modelled" across the card (the same
+/* The footer, stacked: "About this result" across the card (the same
    height on every card, so the rows line up), then the source on the left
    and "See its effect" on the right */
 .policy-card-foot {

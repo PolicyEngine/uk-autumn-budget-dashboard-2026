@@ -73,6 +73,13 @@ function modalHeadlineFailed() {
   sharedBuildCheck = { at: Date.now(), build: Promise.resolve(null) };
 }
 
+// The build commit the last headline fetched this session reported:
+// undefined before the first, null when it reported none. The detail
+// service's parts are asked for early (with the headline) only while it is
+// not null: under a headline that reports no commit, no detail answer can
+// be used, so asking early would only spend its runs.
+let lastHeadlineBuild;
+
 /** Whether the detail service may still be asked this session (for tests). */
 export function detailServiceAsked() {
   return detailServiceUsable;
@@ -83,6 +90,7 @@ export function clearHouseholdImpactCache() {
   cache.clear();
   detailServiceUsable = true;
   sharedBuildCheck = null;
+  lastHeadlineBuild = undefined;
 }
 
 /**
@@ -212,7 +220,9 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       // (an example card's, or this household's from earlier in the session)
       // may come from a deploy that has since been replaced
       const headlineFetched = !first;
-      // The detail service's parts, asked for with its headline (below)
+      // The detail service's parts, asked for early: with its own headline
+      // (below), or with Cloud Run's (#249)
+      const detailUrl = householdDetailApiUrl();
       const early = new Map();
       const earlyController = new AbortController();
       signal.addEventListener("abort", () => earlyController.abort());
@@ -220,6 +230,20 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       // not after its headline failed here (it is down, slow or another
       // build), so they go straight to Cloud Run
       let detailOk = true;
+      const askEarly = () => {
+        for (const include of DETAIL_PARTS) {
+          early.set(
+            include,
+            postHouseholdImpact(
+              { ...body, include },
+              { signal: earlyController.signal, timeoutMs: DETAIL_TIMEOUT_MS, url: detailUrl },
+            ).then(
+              (raw) => ({ raw }),
+              (error) => ({ error }),
+            ),
+          );
+        }
+      };
       if (!first) {
         try {
           if (!(await current()) || signal.aborted) return;
@@ -230,22 +254,10 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
           // versions; on an error, a timeout or anything else, the headline
           // is asked of Cloud Run, as without a detail service, and the
           // parts with it.
-          const detailUrl = householdDetailApiUrl();
           const build = detailUrl && detailServiceUsable ? await modalHeadlineBuild() : null;
           if (signal.aborted) return;
           if (build) {
-            for (const include of DETAIL_PARTS) {
-              early.set(
-                include,
-                postHouseholdImpact(
-                  { ...body, include },
-                  { signal: earlyController.signal, timeoutMs: DETAIL_TIMEOUT_MS, url: detailUrl },
-                ).then(
-                  (raw) => ({ raw }),
-                  (error) => ({ error }),
-                ),
-              );
-            }
+            askEarly();
             try {
               const answer = normaliseHouseholdImpact(
                 await postHouseholdImpact(
@@ -265,6 +277,13 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
               early.clear();
               earlyController.abort();
             }
+          } else if (detailUrl && detailServiceUsable && lastHeadlineBuild !== null) {
+            // No shared build: the headline is Cloud Run's, and the detail
+            // service's parts are asked for with it, not after it (#249).
+            // An early answer is used only under the headline once it
+            // arrives, from its build (acceptFor below). Not after a
+            // headline that reported no commit: none could be used.
+            askEarly();
           }
           if (!first) {
             // After a Modal attempt, a fresh check of the live publication
@@ -274,8 +293,11 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
               { signal },
             );
             first = normaliseHouseholdImpact(raw);
+            lastHeadlineBuild = typeof first.build === "string" ? first.build : null;
           }
         } catch (error) {
+          // No headline: nothing asked early can be shown
+          earlyController.abort();
           if (signal.aborted) return;
           setState({
             key,
@@ -356,16 +378,24 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
         parts.map(async (include) => {
           try {
             const accept = acceptFor(include);
-            // Asked of the detail service with its headline: kept if it
-            // passes the same check a later answer would; otherwise Cloud
-            // Run's, at once
-            const asked = early.has(include) ? await early.get(include) : undefined;
+            // Asked of the detail service early (with its own headline or
+            // Cloud Run's): kept if it passes the same check a later answer
+            // would; otherwise Cloud Run's, at once
+            const asked = askDetail && early.has(include) ? await early.get(include) : undefined;
+            if (!askDetail) earlyController.abort();
             const raw =
-              asked && !asked.error && askDetail && accept(asked.raw)
+              asked && !asked.error && accept(asked.raw)
                 ? asked.raw
                 : await postHouseholdDetail(
                     { ...body, include },
-                    { signal, timeoutMs: DETAIL_TIMEOUT_MS, accept, detail: askDetail && !asked },
+                    {
+                      signal,
+                      timeoutMs: DETAIL_TIMEOUT_MS,
+                      accept,
+                      // Asked early already: an answer that failed or was
+                      // refused there goes to Cloud Run at once
+                      detail: askDetail && !early.has(include),
+                    },
                   );
             if (signal.aborted || refused) return;
             // Refused unless from the headline's own package versions and,

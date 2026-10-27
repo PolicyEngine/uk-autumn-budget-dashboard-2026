@@ -25,11 +25,18 @@ const labels = (container, id) => [...rowEl(container, id).querySelectorAll(".ob
 describe("OBRDumbbellChart", () => {
   it("keeps the rows in the order given", () => {
     const { container } = chart();
-    expect([...container.querySelectorAll(".obr-dumbbell-name")].map((n) => n.textContent)).toEqual([
+    expect([...container.querySelectorAll(".obr-dumbbell-name .mrl-svg-name")].map((n) => n.textContent)).toEqual([
       "Threshold freeze",
       "2 child limit repeal",
       "Salary sacrifice cap",
     ]);
+  });
+
+  it("labels each row with the shared measure label: an icon and a derived category", () => {
+    const { container } = chart();
+    const names = [...container.querySelectorAll(".obr-dumbbell-name")];
+    expect(names.every((name) => name.querySelector("svg path, svg circle, svg rect, svg line, svg polyline"))).toBe(true);
+    expect(names.map((name) => name.querySelector(".mrl-svg-caption")?.textContent)).toEqual(["Other", "Benefits", "National Insurance"]);
   });
 
   it("says 'not in the official costings' for a missing official figure instead of plotting zero", () => {
@@ -99,7 +106,8 @@ describe("OBRDumbbellChart", () => {
     const rings = [...container.querySelectorAll(".obr-dumbbell-dot.obr")].map((ring) => ring.getAttribute("cx"));
     expect(new Set(rings).size).toBe(1);
     expect(rowEl(container, "tiny").querySelector(".obr-dumbbell-missing").textContent).toBe("Official costing £0.0bn: no % to show");
-    expect(rowEl(container, "tiny").querySelector("circle")).toBeNull();
+    // No dot: the only circles left are the label's own (its tile and icon)
+    expect([...rowEl(container, "tiny").querySelectorAll("circle")].filter((circle) => !circle.closest(".mrl-svg")).length).toBe(0);
     expect(container).toHaveTextContent("100%");
   });
 });

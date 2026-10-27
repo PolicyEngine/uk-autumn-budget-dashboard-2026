@@ -26,7 +26,7 @@ const SECTIONS = {
     title: "Living standards under current law",
     icon: "wallet",
     // The forecast it is built on is named in the page intro
-    subtitle: "Current law, before any Budget measure.",
+    subtitle: "Current law, before any Budget policy.",
     // One card a row, so the twentieths chart has room for every year;
     // growth first
     rows: [[GrowthCard], [IncomesOverTimeCard], [InequalityOverTimeCard]],
@@ -34,7 +34,7 @@ const SECTIONS = {
   poverty: {
     title: "Poverty under current law",
     icon: "lifebuoy",
-    subtitle: "Current law, before any Budget measure.",
+    subtitle: "Current law, before any Budget policy.",
     // The age groups at a glance, then one card a row: both open on
     // absolute poverty before housing costs, and the bars need the width
     lead: PovertyTiles,

@@ -8,9 +8,13 @@
 import { readFileSync } from "node:fs";
 import { presetRequests } from "../src/utils/householdPresets.js";
 
-// The measures: --policies a,b,c, else the ones the current file was written for
+// The measures: --policies a,b,c, else the package's: the measures of
+// public/data/policy_parameters.json, which `uk-budget-data policy-table`
+// writes from AUTUMN_BUDGET_2026_COMBINED_COMPONENTS. Not the current
+// presets file's own list, which can name a withdrawn measure the API
+// refuses (BADR and employer NI, 27 October 2026).
 const flag = process.argv.indexOf("--policies");
 const policies = flag > 0
   ? process.argv[flag + 1].split(",")
-  : JSON.parse(readFileSync(new URL("../public/data/household_presets.json", import.meta.url), "utf8")).policies;
+  : Object.keys(JSON.parse(readFileSync(new URL("../public/data/policy_parameters.json", import.meta.url), "utf8")).measures);
 process.stdout.write(`${JSON.stringify(presetRequests(policies), null, 1)}\n`);

@@ -1,3 +1,5 @@
+import { scrollBelowBars } from "../utils/pageScroll";
+
 /**
  * The link from a sub-tab to its twin in the other view: Population
  * impact's Living standards and Poverty (with the selected measures) and
@@ -13,7 +15,7 @@
  * @param {string} [props.anchor] - An element id in the twin to bring into view (one card's twin)
  */
 export default function TwinLink({ tab, sub, onShow, label: text, anchor }) {
-  const label = text ?? (tab === "outlook" ? "See without them" : "See with the measures");
+  const label = text ?? (tab === "outlook" ? "See without them" : "See with the policies");
   return (
     <a
       className="twin-link"
@@ -23,7 +25,7 @@ export default function TwinLink({ tab, sub, onShow, label: text, anchor }) {
         event.preventDefault();
         onShow(tab, sub);
         // The twin card, once the view has switched and laid out
-        if (anchor) setTimeout(() => document.getElementById(anchor)?.scrollIntoView({ block: "start" }), 250);
+        if (anchor) setTimeout(() => scrollBelowBars(document.getElementById(anchor)), 250);
       }}
     >
       {label} →

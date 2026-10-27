@@ -20,13 +20,13 @@ import { defaultRange, rangeYears, useYearRange } from "../../utils/livingStanda
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
-export const WITH_MEASURES_TITLE = "Growth across the distribution, with the selected measures";
+export const WITH_MEASURES_TITLE = "Growth across the distribution, with the selected policies";
 export const WITH_MEASURES_ANCHOR = "growth-with-measures";
 
 // Shows: the measures' effect first (see GrowthWithMeasuresCard)
 const SHOWS = [
   { value: "difference", label: "Difference from current law" },
-  { value: "growth", label: "Growth with measures" },
+  { value: "growth", label: "Growth with policies" },
 ];
 
 // The file is read once per page
@@ -108,7 +108,7 @@ function LoadedCard({ data, rows, run, twinLink, selectedYear }) {
               <p className="ls-card-subtitle">{subtitle}</p>
               <p>
                 {noEffect
-                  ? "The selected measures do not change this income: it is household income as official income statistics (HBAI) count it, which leaves out fuel duty, VAT, employer National Insurance and capital gains, so growth is the same as without them."
+                  ? "The selected policies do not change this income: it is household income as official income statistics (HBAI) count it, which leaves out fuel duty, VAT, employer National Insurance and capital gains, so growth is the same as without them."
                   : missingPackageNote(run, rows) || "There are no results for this selection."}
               </p>
             </div>
@@ -125,7 +125,7 @@ function LoadedCard({ data, rows, run, twinLink, selectedYear }) {
       moreNotes={[twinLink && <span key="twin">{twinLink}</span>]}
       moreCaveats={[packageNote]}
       icon="bars"
-      name="Growth with measures view"
+      name="Growth with policies view"
       value={show}
       onChange={setShow}
       views={SHOWS.map((s) => ({ ...s, view }))}
