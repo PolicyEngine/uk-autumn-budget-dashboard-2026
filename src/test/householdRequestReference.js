@@ -3,8 +3,8 @@
  * moved to policyengine-household-wizard: a verbatim copy of
  * buildHouseholdRequest and its helpers from src/utils/householdImpactApi.js,
  * and of the defaults it read from src/utils/householdDefaults.js, at
- * cc15d50e9c01520e7d77dc5a70b17f3fc258f9b6 (#104; unchanged to 5ee4e23e, main
- * with #104 merged).
+ * cc15d50e9c01520e7d77dc5a70b17f3fc258f9b6 (#104; unchanged to 87a2babc, main
+ * on 27 October, where the golden file was captured).
  * Only the imports are changed. householdRequestIdentity.test.js checks the
  * page's request against it; never edit it to match the page.
  */

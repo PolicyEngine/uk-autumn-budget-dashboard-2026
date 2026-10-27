@@ -6,10 +6,10 @@
  * stale every stored result.
  *
  * Three checks of the same claim:
- * - the golden file: the bytes the old code gave for 1,318 cases (every
+ * - the golden file: the bytes the old code gave for 1,395 cases (every
  *   example and the defaults across the years, measure lists and stages
  *   the page asks with, edge cases of each rule, and 400 seeded random
- *   answers), captured once by running it;
+ *   answers), captured by running it on main;
  * - a property test against a verbatim copy of the old code
  *   (src/test/householdRequestReference.js), for generated answers;
  * - the form's answers and the shared draft carry the same household
@@ -67,8 +67,10 @@ describe("the household request, against the bytes the old code gave", () => {
   });
 
   it("gives every recorded request, byte for byte", () => {
+    // A body for each recorded household: every edge case, and one
+    // request for each example and the defaults
     const names = Object.keys(golden.bodies);
-    expect(names).toHaveLength(31);
+    expect([...names].sort()).toEqual(Object.keys(golden.households).sort());
     for (const name of names) {
       const recorded = golden.bodies[name];
       const { year, policies, include } = JSON.parse(recorded);
