@@ -108,6 +108,20 @@
   font-weight: 400;
 }
 
+/* A policy that moves no one: its label, no bar, and a muted "No change"
+   with why under it */
+.wf-none .wf-main {
+  color: var(--pe-gray-500);
+  font-weight: 500;
+}
+
+.wf-reason {
+  color: var(--pe-gray-500);
+  font-size: var(--fs-micro);
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
 .wf-total > * {
   border-top: 1px solid var(--pe-gray-200);
   min-height: 42px;
@@ -141,11 +155,6 @@
   white-space: nowrap;
   color: var(--pe-gray-500);
   font-size: var(--fs-micro);
-}
-
-/* The measures that move no one, in About this chart */
-.wf-none {
-  margin: 0 0 8px;
 }
 
 @container (max-width: 520px) {
