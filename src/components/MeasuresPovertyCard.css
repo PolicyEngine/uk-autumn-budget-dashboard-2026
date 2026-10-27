@@ -144,11 +144,17 @@
 
 @container (max-width: 520px) {
   .wf {
-    grid-template-columns: minmax(96px, 32%) minmax(0, 1fr) 108px;
+    grid-template-columns: minmax(112px, 36%) minmax(0, 1fr) 108px;
     column-gap: 8px;
   }
 
   .wf-key {
+    display: none;
+  }
+
+  /* The name's room for two lines ("State Pension / protection"), not
+     three: no icon circle (the category stays under the name) */
+  .wf-label .mrl-icon {
     display: none;
   }
 

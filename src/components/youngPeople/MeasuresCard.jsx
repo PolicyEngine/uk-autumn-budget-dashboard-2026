@@ -6,7 +6,7 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import UnpublishedPlot from "../UnpublishedPlot";
 import NoBreakYear from "../NoBreakYear";
 import Note from "../Note";
-import { fiscalYearTick, CHART_COLOURS } from "../../utils/chartTheme";
+import { fiscalYearTick, CHART_COLOURS, noHouseholdChange } from "../../utils/chartTheme";
 import ControlBar from "../ControlBar";
 import { AGE_BANDS, ALL_BAND, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
 import { measureComparison, niceRange, pounds, signedPounds } from "./youngPeopleData";
@@ -226,6 +226,9 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     exportOptions,
     csv: csvText,
     published: published && shown.length > 0,
+    // The dumbbell is drawn in HTML, not as a Recharts SVG, so there is no
+    // chart image to export: the CSV only
+    image: false,
   };
 
   return (
@@ -280,7 +283,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
             <p>{noEffect.length === selectedPolicies.length && selectedPolicies.length > 0
-              ? `None of the selected policies changes household incomes in ${yearLabel}.`
+              ? noHouseholdChange(yearLabel)
               : `Results are unavailable for the selected policies in ${yearLabel}.`}</p>
           </div>
         )}

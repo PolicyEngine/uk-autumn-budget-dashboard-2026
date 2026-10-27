@@ -42,7 +42,8 @@ const examples = cards;
 // A card in the grid, or, once a household is chosen and the cards fold
 // into a strip, its chip
 const exampleItem = (label) => {
-  const name = new RegExp(`^${label}`);
+  // A chip's name starts with its short text and ends with the full one
+  const name = new RegExp(`(^|: )${label}`);
   return within(examples()).queryByRole("button", { name }) ?? within(examples()).getByRole("option", { name });
 };
 /** Whether an example's card (aria-pressed) or chip (aria-selected) is the one chosen. */

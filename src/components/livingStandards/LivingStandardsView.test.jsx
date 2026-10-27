@@ -524,11 +524,11 @@ describe("the Pre-measures forecast view", () => {
     await renderVerified();
     const section = await screen.findByRole("region", { name: "Pre-measures forecast" });
     // The engine's two packages, each linked to its release
-    expect(await within(section).findByRole("link", { name: /^policyengine 6\.11\.1/ })).toHaveAttribute(
+    expect(await within(section).findByRole("link", { name: /^policyengine 6\.11\.1/, hidden: true })).toHaveAttribute(
       "href",
       "https://github.com/PolicyEngine/policyengine.py/releases/tag/6.11.1",
     );
-    expect(within(section).getByRole("link", { name: /^policyengine-uk 2\.151\.0/ })).toHaveAttribute(
+    expect(within(section).getByRole("link", { name: /^policyengine-uk 2\.151\.0/, hidden: true })).toHaveAttribute(
       "href",
       "https://github.com/PolicyEngine/policyengine-uk/releases/tag/2.151.0",
     );
@@ -538,9 +538,10 @@ describe("the Pre-measures forecast view", () => {
     expect(within(section).getByText("2027-28 to 2031-32")).toBeInTheDocument();
     // No UC health element row: from policyengine-uk 2.134.4 the engine has
     // the fix, so the baseline no longer applies it (FIXED_IN)
-    expect(within(section).queryByRole("link", { name: /^policyengine-uk #2428/ })).toBeNull();
+    expect(within(section).queryByRole("link", { name: /^policyengine-uk #2428/, hidden: true })).toBeNull();
     expect(within(section).queryByText(/Patched for 2030-31 and 2031-32/)).toBeNull();
-    expect(within(section).getByRole("heading", { level: 3, name: "What the baseline leaves out" })).toBeInTheDocument();
+    // Each folded in its own topic, closed until asked for
+    expect(within(section).getByRole("button", { name: "What the baseline leaves out" })).toHaveAttribute("aria-expanded", "false");
     expect(document.body.textContent.match(/unvalidated/gi)).toHaveLength(1);
   });
 

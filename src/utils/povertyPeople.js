@@ -28,7 +28,19 @@ export function outlookPopulation(outlook) {
 const thousands = new Intl.NumberFormat("en-GB");
 
 /**
- * "about 5,000 fewer people in poverty" for a change of `pp` percentage
+ * A count of people as every poverty card writes it, so a label and the
+ * bar it sits on agree: two significant figures under 10,000 (to the
+ * nearest 100: 1,430 → "1,400"), the nearest 1,000 above (44,000).
+ * Callers write "under 1,000" below 1,000.
+ */
+export function roundPeople(people) {
+  const n = Math.abs(people);
+  const step = n < 10000 ? 100 : 1000;
+  return thousands.format(Math.round(n / step) * step);
+}
+
+/**
+ * "about 5,300 fewer people in poverty" for a change of `pp` percentage
  * points in a population of `millions`; "under 1,000 more children in
  * poverty" for a small one; null with no population or no change.
  */
@@ -38,7 +50,7 @@ export function peopleInPovertyText(pp, millions, group = "all") {
   const who = group === "children" ? "children" : "people";
   const way = pp < 0 ? "fewer" : "more";
   if (people < 1000) return `under 1,000 ${way} ${who} in poverty`;
-  return `about ${thousands.format(Math.round(people / 1000) * 1000)} ${way} ${who} in poverty`;
+  return `about ${roundPeople(people)} ${way} ${who} in poverty`;
 }
 
 /**
@@ -59,5 +71,5 @@ export function peopleShort(pp, millions, group = "all", { who = true } = {}) {
   const noun = who ? ` ${group === "children" ? "children" : "people"}` : "";
   const way = pp < 0 ? "fewer" : "more";
   if (people < 1000) return `<1,000 ${way}${noun}`;
-  return `≈${thousands.format(Math.round(people / 1000) * 1000)} ${way}${noun}`;
+  return `≈${roundPeople(people)} ${way}${noun}`;
 }

@@ -226,6 +226,12 @@ export function NumberField({
     if (parseFloat(draft) !== shown) setDraft(String(shown));
   }
   const name = inputLabel ?? label;
+  // The message under the box, tied to it (aria-describedby) and the box
+  // marked invalid while the typed value is out of range (WCAG 3.3.1)
+  const invalid = Boolean(outOfRangeMessage) && outOfRange(draft, min, max);
+  const errorShown = Boolean(outOfRangeMessage) && (invalid || clampedFrom !== null);
+  const errorId = `error-${id}`;
+  const describedBy = [hintId, errorShown ? errorId : null].filter(Boolean).join(" ") || undefined;
   return (
     <div className="number-field" data-field={id}>
       <FieldLabel htmlFor={fieldId} label={label} hint={hint} hintId={hintId} hintAs={hintAs} hidden={hideLabel} />
@@ -254,7 +260,8 @@ export function NumberField({
             max={max}
             step={step}
             aria-label={inputLabel}
-            aria-describedby={hintId}
+            aria-describedby={describedBy}
+            aria-invalid={invalid || undefined}
             onChange={(event) => {
               setDraft(event.target.value);
               setClampedFrom(null);
@@ -282,8 +289,8 @@ export function NumberField({
         {suffix && <span className="number-suffix">{suffix}</span>}
       </div>
       <FieldHint hint={hint} hintId={hintId} hintAs={hintAs} />
-      {outOfRangeMessage && (outOfRange(draft, min, max) || clampedFrom !== null) && (
-        <p className="field-error" role="alert">
+      {errorShown && (
+        <p className="field-error" id={errorId} role="alert">
           {outOfRangeMessage}
           {clampedFrom !== null && !outOfRange(draft, min, max)
             ? ` ${clampedFrom.toLocaleString("en-GB")} was changed to ${shown.toLocaleString("en-GB")}.`

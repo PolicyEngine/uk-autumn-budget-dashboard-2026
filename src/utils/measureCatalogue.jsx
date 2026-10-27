@@ -123,6 +123,17 @@ export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetar
   };
 }
 
+/**
+ * Whether any measure the catalogue shows is still provisional in its
+ * manifest: the page then words itself as modelled measures, not the Budget.
+ */
+export function catalogueProvisional(catalogue) {
+  return Boolean(
+    catalogue?.manifest &&
+      catalogue.displayable.some((measure) => catalogue.manifest.measures[measure.id]?.status === "provisional"),
+  );
+}
+
 const CatalogueContext = createContext(buildMeasureCatalogue());
 export function MeasureCatalogueProvider({ catalogue, value, children }) {
   return <CatalogueContext.Provider value={catalogue ?? value}>{children}</CatalogueContext.Provider>;

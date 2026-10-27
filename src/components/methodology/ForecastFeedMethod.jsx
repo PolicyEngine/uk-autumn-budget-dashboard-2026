@@ -1,7 +1,7 @@
-// How the OBR forecast feeds the baseline, in the Methodology view's
-// Living standards section (the Forecast changes sub-tab links here): one
-// line, then the basis, the years, and the policyengine-uk parameter each
-// series sets, read from the outlook (forecast.sections[].series[].parameter).
+// How the OBR forecast feeds the baseline, folded in the Methodology view's
+// Pre-measures forecast section (the Forecast changes sub-tab links here):
+// one line, then the basis, the years, and the policyengine-uk parameter
+// each series sets, read from the outlook (forecast.sections[].series[].parameter).
 
 import { useEffect, useState } from "react";
 import { loadOutlook } from "../../utils/livingStandards/outlook";
@@ -35,8 +35,7 @@ export default function ForecastFeedMethod() {
   }, []);
   const series = (forecast?.sections || []).flatMap((s) => s.series).filter((s) => s.parameter);
   return (
-    <div id={FORECAST_FEED_ANCHOR} className="card method-card">
-      <h3 className="method-card-title">How the forecast feeds the baseline</h3>
+    <>
       <p className="method-lead">
         The baseline grows wages, benefits, prices and rents at the rates of the{" "}
         <SourceLink id="obr_efo_current" />, so the incomes and poverty figures start from that forecast.
@@ -45,14 +44,14 @@ export default function ForecastFeedMethod() {
         <li>Each rate is the growth in a calendar year&apos;s average on the year before.</li>
         <li>
           A financial year takes the growth of the calendar year it starts in. 2031-32 is past the OBR forecast and
-          uses <SourceLink id="policyengine_uk">policyengine-uk</SourceLink>&apos;s long-run assumptions
-          {endNote ? ` (${endNote})` : ""}.
+          uses <SourceLink id="policyengine_uk">policyengine-uk</SourceLink>&apos;s assumptions for that year, on
+          the path to the OBR&apos;s long-run ones{endNote ? ` (${endNote})` : ""}.
         </li>
         <li>Benefit rates in the baseline follow a lagged CPI index built from this forecast.</li>
       </ul>
       {series.length > 0 && (
-        <details className="method-details">
-          <summary>The policyengine-uk parameter each series sets</summary>
+        <>
+          <h3 className="method-details-title">The policyengine-uk parameter each series sets</h3>
           <ul className="method-list forecast-feed-params">
             {series.map((s) => (
               <li key={s.key}>
@@ -67,8 +66,8 @@ export default function ForecastFeedMethod() {
               </li>
             ))}
           </ul>
-        </details>
+        </>
       )}
-    </div>
+    </>
   );
 }

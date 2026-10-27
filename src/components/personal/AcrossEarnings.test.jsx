@@ -63,3 +63,16 @@ describe("tenths in plain words", () => {
     expect(tenthName(10)).toBe("Highest tenth");
   });
 });
+
+describe("one rounding for the change", () => {
+  it("gives the result tile and the example card the same whole pounds, for every example and year", async () => {
+    const { headlineTotals } = await import("./SingleYearResults");
+    const { signedMoney } = await import("./HouseholdCards");
+    // The higher earner, 2027-28: £108.38 is +£108 (not 70,159 − 70,050)
+    expect(headlineTotals({ before: 70050.44, after: 70158.81, change: 108.38 })).toEqual({ before: 70050, after: 70158, change: 108 });
+    for (const entry of file.entries) {
+      const data = normaliseHouseholdImpact(entry.response);
+      expect(signedMoney(headlineTotals(data.net).change), `${entry.preset_id} ${entry.year}`).toBe(signedMoney(data.net.change));
+    }
+  });
+});

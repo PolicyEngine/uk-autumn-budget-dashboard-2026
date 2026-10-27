@@ -5,6 +5,16 @@ import "./Tip.css";
 const GAP = 8;
 const EDGE = 8;
 
+// Whether the last input was a pointer (a tap or a click) rather than a key.
+// A focus that follows a pointer, such as the About drawer moving focus to
+// its close button when a tap opens it, shows no tip: on a phone "Close
+// (Esc)" would sit over the drawer's title. Keyboard focus still shows it.
+let pointerLast = false;
+if (typeof document !== "undefined") {
+  document.addEventListener("pointerdown", () => { pointerLast = true; }, true);
+  document.addEventListener("keydown", () => { pointerLast = false; }, true);
+}
+
 /**
  * A styled tip for a UI explanation, in place of the browser's slow grey
  * `title` box: shown at once on hover (a 100ms fade), on keyboard focus and
@@ -72,7 +82,9 @@ export default function Tip({ content, children }) {
       className="tip-anchor"
       onMouseEnter={show}
       onMouseLeave={hide}
-      onFocus={show}
+      onFocus={() => {
+        if (!pointerLast) show();
+      }}
       onBlur={hide}
       onPointerDown={(event) => {
         if (event.pointerType === "touch") setOpen((value) => !value);

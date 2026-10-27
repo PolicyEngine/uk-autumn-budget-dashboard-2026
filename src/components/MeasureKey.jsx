@@ -152,8 +152,9 @@ export function SectionMeasureKey({ label = "Measures" }) {
 
 function Chip({ member, color, pinned, onHover, onPin }) {
   // The short name once, on the chip; the full name in its tooltip (title)
-  // and, on the button, as its accessible name. No second, hidden copy of
-  // the name, so the page's text reads each measure once.
+  // and, on the button, after the short one: an accessible name starts
+  // with the visible text (WCAG 2.5.3, label in name). No second, hidden
+  // copy of the name, so the page's text reads each measure once.
   const full = member.name;
   const face = (
     <>
@@ -174,7 +175,7 @@ function Chip({ member, color, pinned, onHover, onPin }) {
       <button
         type="button"
         className={`measure-key-chip${pinned ? " is-active" : ""}`}
-        aria-label={full}
+        aria-label={shortNameOf(member) === full ? undefined : `${shortNameOf(member)}: ${full}`}
         aria-pressed={pinned}
         onMouseEnter={() => onHover(keyOf(member))}
         onMouseLeave={() => onHover(null)}

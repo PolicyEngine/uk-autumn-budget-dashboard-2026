@@ -182,7 +182,7 @@ code {
   --c-gain-text: #0f766e; /* a gain written as text */
   --c-loss: #d97706; /* worse off, fall in income */
   --c-loss-text: #b45309; /* a loss written as text */
-  --c-loss-soft: #fdf0e1; /* a loss chip's background */
+  --c-loss-soft: #fef4e8; /* a loss chip's background (loss text on it: 4.6:1, WCAG 1.4.3) */
   --c-loss-border: #fde68a; /* a loss banner's border */
   --c-no-change: #9ca3af; /* unchanged */
   --c-before: #9ca3af; /* before the Budget, pre-Budget, baseline, outturn */
@@ -352,6 +352,24 @@ body {
 
 .title-row.is-stuck {
   box-shadow: 0 1px 0 var(--shadow-soft);
+}
+
+/* Scrolling down, the band hides and the tab rows close up under the top
+   of the window; scrolling up, it slides back in (App.jsx,
+   data-band-hidden; --motion-slide is 0 under reduced motion) */
+.title-row,
+.view-tabs-bar,
+.sub-tabs-band {
+  transition: transform var(--motion-slide) ease;
+}
+
+.app[data-band-hidden] .title-row.is-stuck {
+  transform: translateY(-100%);
+}
+
+.app[data-band-hidden][data-tabs-stuck] .view-tabs-bar,
+.app[data-band-hidden][data-tabs-stuck] .sub-tabs-band {
+  transform: translateY(calc(-1 * var(--title-row-height)));
 }
 
 .title-row h1 {
@@ -675,16 +693,14 @@ body {
   padding: 0;
 }
 
-.method-card a,
-.method-callout a {
+.method-card a {
   color: var(--pe-teal-700);
   text-decoration: underline;
   text-decoration-color: var(--pe-teal-200);
   text-underline-offset: 3px;
 }
 
-.method-card a:hover,
-.method-callout a:hover {
+.method-card a:hover {
   text-decoration-color: currentColor;
 }
 
@@ -1340,8 +1356,10 @@ body {
 }
 
 /* Stacking: the sticky title band (z-index 1100) stays above every chart.
-   Chart tooltips sit just below it (a component stylesheet sets them to
-   9999 globally). */
+   Chart tooltips sit just below it. The page's layers, low to high: the
+   sub-tab band 1085, view tabs 1090, title band 1100, update toast 1200,
+   the phone Options sheet's shade and sheet 1250/1260, the About drawer
+   1300, tips 1400 (Tip.test.jsx checks tips stay on top). */
 .main-content .recharts-tooltip-wrapper {
   z-index: 1000 !important;
 }
@@ -1696,8 +1714,8 @@ body {
 
 
 /* The page fills the window without overshooting it: the shell's main
-   grows to the window, the app grows inside it, and the replication line
-   sits at the bottom of the content column, just above the footer. */
+   grows to the window, and the app grows inside it, just above the
+   footer. */
 .min-h-screen.flex.flex-col > main {
   display: flex;
   flex-direction: column;
@@ -1721,86 +1739,6 @@ body {
   flex-shrink: 0;
 }
 
-/* "Reproduce these results" above the footer: a thin rule across the
-   column, then, centred on one line (wrapping on a phone), a muted label
-   and a chip for each link with its icon. It owns its spacing on every tab
-   and sub-tab (hidden panels stay mounted, so no sibling rule can find the
-   last visible section): 48px above the rule, 24px below the chips. The
-   auto top margin keeps it at the bottom of a short page. */
-.replication-line {
-  margin: auto 0 0;
-  padding: 48px 0 24px;
-  font-size: var(--fs-caption);
-  line-height: 1.6;
-  color: var(--pe-gray-500);
-  text-align: center;
-}
-
-.replication-sentence {
-  margin: 0;
-}
-
-.replication-line::before {
-  content: "";
-  display: block;
-  height: 1px;
-  margin-bottom: 16px;
-  background: var(--card-border);
-}
-
-/* A plain link with its icon, underlined on hover, a small arrow then */
-/* A link inside the sentence: its icon, its words, an arrow on hover */
-.replication-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  vertical-align: bottom;
-  font-weight: 500;
-  color: var(--pe-teal-700);
-  text-decoration: none;
-  white-space: nowrap;
-  border-radius: 4px;
-}
-
-.replication-link-icon {
-  flex: none;
-}
-
-.replication-link:hover .replication-link-label {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-/* The arrow takes no room until shown, so the comma and full stop sit
-   against the link's words */
-.replication-link-arrow {
-  flex: none;
-  width: 0;
-  margin-left: -4px;
-  opacity: 0;
-  transition:
-    opacity 0.15s ease,
-    width 0.15s ease,
-    margin 0.15s ease;
-}
-
-.replication-link:hover .replication-link-arrow,
-.replication-link:focus-visible .replication-link-arrow {
-  width: 12px;
-  margin-left: 0;
-  opacity: 1;
-}
-
-.replication-link:focus-visible {
-  outline: 2px solid var(--pe-teal-600);
-  outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .replication-link-arrow {
-    transition: none;
-  }
-}
 
 /* Compact site footer (see SiteFooter.jsx): one row on desktop, in place of
    the ui-kit shell's taller stacked footer. */
@@ -2203,10 +2141,12 @@ body {
   color: var(--pe-gray-500);
 }
 
+/* The flag's pole on the dashed Budget line, the word to its right (centred
+   on the line, the line ran through "Budget") */
 .ptl-budget-label {
   position: absolute;
   top: 0;
-  transform: translateX(-50%);
+  transform: translateX(-2px);
   white-space: nowrap;
 }
 
@@ -2366,6 +2306,14 @@ body {
 
 .policy-timeline-labels > span {
   text-align: center;
+}
+
+/* A narrow phone: proportional figures, so "26-27" and "27-28" do not touch */
+@media (max-width: 400px) {
+  .policy-timeline-labels {
+    font-variant-numeric: normal;
+    letter-spacing: -0.01em;
+  }
 }
 
 .policy-timeline-label-short {
@@ -2726,7 +2674,9 @@ body {
 .pchg-tile-name {
   font-size: var(--fs-micro);
   font-weight: 500;
-  color: var(--pe-gray-500);
+  /* Grey 600: grey 500 on the tiles' tints is 4.2 to 4.5:1, under the
+     4.5 WCAG 1.4.3 needs; 600 is 6.5:1 or more */
+  color: var(--pe-gray-600);
 }
 
 .pchg-tile-value {
@@ -2793,6 +2743,21 @@ body {
 .pchg-table .pchg-table-after {
   font-weight: 700;
   color: var(--pe-gray-900);
+}
+
+/* A narrow phone: the column heads wrap ("With the / measure") and the cells
+   close up, so the change chips stay inside the card (at 360px the threshold
+   freeze's "−£1,060" ran past its edge) */
+@media (max-width: 400px) {
+  .pchg-table thead th {
+    white-space: normal;
+    vertical-align: bottom;
+  }
+
+  .pchg-table th,
+  .pchg-table td {
+    padding-inline: 2px;
+  }
 }
 
 .pchg-more {
@@ -3174,5 +3139,37 @@ body {
   .reveal {
     opacity: 1 !important;
     transform: none !important;
+  }
+}
+
+/* Touch screens: a 40px-tall tap area round the small controls (the info
+   icon, the measure and line chips, the Options pill, the chart/table
+   switch, Show the dates), drawn by an invisible layer so nothing moves.
+   As the household form's info icons (HouseholdCalculator.css). */
+@media (pointer: coarse) {
+  .info-tip,
+  .measure-key-chip,
+  .measure-key-more,
+  .series-toggle-chip,
+  .control-bar-button,
+  .view-toggle-button,
+  .pchg-more {
+    position: relative;
+  }
+
+  .info-tip::before,
+  .measure-key-chip::before,
+  .measure-key-more::before,
+  .series-toggle-chip::before,
+  .control-bar-button::before,
+  .view-toggle-button::before,
+  .pchg-more::before {
+    content: "";
+    position: absolute;
+    inset: min(0px, calc((100% - 40px) / 2)) 0;
+  }
+
+  .info-tip::before {
+    inset: -10px;
   }
 }

@@ -56,7 +56,7 @@ export const POLICY_DETAILS = [
     ],
     stepsLabel: "5p restored",
     details:
-      "Assumes 3p back on 1 September and 2p on 1 December 2027, then RPI from April 2028 on 57.95p. The April 2027 RPI rise is skipped and never made up, so duty stays about 2p a litre below current law and the measure costs revenue in every later year. Includes the VAT on the lower pump price; fuel spending is held fixed.",
+      "Assumes 3p back on 1 September and 2p on 1 December 2027, then RPI from April 2028 on 57.95p. The April 2027 RPI rise is skipped and never made up, so duty stays about 2p a litre below current law and the measure costs revenue in every later year. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel bought for vans, lorries and business use of cars is not modelled, so the revenue figure covers households' own purchases only.",
     source: {
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
@@ -163,7 +163,7 @@ export const POLICY_DETAILS = [
     type: "Capital gains tax",
     inForce: { from: "2027-04" },
     details:
-      "The £500,000 limit is an assumption made before the Budget. The model applies the limit to each year's gains, as if none had been used before.",
+      "The £500,000 limit is an assumption made before the Budget. The model applies the limit to each year's gains, as if none had been used before. The figure is the extra tax on each year's disposals, most of which is paid in the January after the tax year ends.",
     source: {
       label: "Business Asset Disposal Relief",
       href: "https://www.gov.uk/business-asset-disposal-relief",
@@ -198,7 +198,7 @@ export const POLICY_DETAILS = [
     type: "Student loans",
     inForce: { from: "2027-04" },
     details:
-      "The threshold rises to £30,267 in 2027-28. Repayments are modelled, replacing those reported in the survey.",
+      "The threshold rises to £30,267 in 2027-28. Repayments are modelled, replacing those reported in the survey. The revenue figure is the change in graduates' cash repayments each year, not the effect on public sector borrowing, which treats changes to loan terms differently.",
     source: {
       label: "Repaying your student loan",
       href: "https://www.gov.uk/repaying-your-student-loan/what-you-pay",

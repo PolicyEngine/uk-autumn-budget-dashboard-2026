@@ -22,7 +22,7 @@ import {
   scatterCsv,
   scatterView,
 } from "../utils/householdScatter";
-import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS } from "../utils/chartTheme";
+import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS, noHouseholdChange } from "../utils/chartTheme";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { colourFor } from "./publication/BinnedHouseholdScatter";
@@ -473,6 +473,13 @@ function HouseholdScatter({
         })
       : describe(householdsPerDot(view.basisPoints));
   const key = youShown ? [...KEY, YOU_KEY] : KEY;
+  // Every published cell this year in the zero band (under £1), and the
+  // reader's household unchanged too: the shared note, not a column of
+  // dots at £0. Only for a published result (ready); a notice says why not
+  const nothingChanges =
+    ready &&
+    view.points.every((point) => changeKind(point.changeBand, point.changeBandUpper) === "zero") &&
+    (!youShown || Math.round(youShown.change) === 0);
 
   // A hovered dot's group belongs to the year and selection it was
   // hovered in
@@ -611,6 +618,11 @@ function HouseholdScatter({
           map and colour scale, so the two cards line up and fill alike */}
       <div className="chart-plot household-scatter-template-plot">
         <div className="household-scatter-template-canvas" ref={chartRef}>
+          {nothingChanges ? (
+            <div className="plot-empty household-scatter-no-change" role="status">
+              <p>{noHouseholdChange(yearLabel)}</p>
+            </div>
+          ) : (
           <ResponsiveContainer width="100%" height="100%" minHeight={STACKED_HEIGHT / 2}>
             <ScatterChart margin={{ top: 6, right: narrow ? 22 : 20, left: 0, bottom: 0 }}>
               <CartesianGrid {...GRID} />
@@ -654,8 +666,9 @@ function HouseholdScatter({
               <Customized component={<ChartUnitLabel text={incomeTitle} />} />
             </ScatterChart>
           </ResponsiveContainer>
+          )}
         </div>
-        {ready && (
+        {ready && !nothingChanges && (
           <GroupTooltip
             hover={hover}
             basisLabel={basisLabel}
@@ -674,7 +687,7 @@ function HouseholdScatter({
         )}
       </div>
 
-      {ready && (
+      {ready && !nothingChanges && (
         <ul className="scatter-legend chart-legend" aria-label="Key">
           {key.map((item) => (
             <li key={item.label}>
