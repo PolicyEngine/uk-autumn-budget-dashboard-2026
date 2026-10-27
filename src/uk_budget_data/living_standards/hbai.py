@@ -40,6 +40,10 @@ COLUMNS = {
     "absolute_ahc": 9,
 }
 YEARS = ["2021/22", "2022/23", "2023/24", "2024/25"]
+# pandas reads the .ods through python-calamine, which ships wheels. odfpy is
+# source-only, and the release adoption locks with `uv lock --no-build`
+# (scripts/adopt_release/lock.sh), which refuses any package without a wheel.
+ENGINE = "calamine"
 
 
 def extract_hbai(path: Path) -> dict:
@@ -48,7 +52,7 @@ def extract_hbai(path: Path) -> dict:
     sha = hashlib.sha256(path.read_bytes()).hexdigest()
     out = {m: {} for m in COLUMNS}
     for group, sheet in SHEETS.items():
-        df = pd.read_excel(path, engine="odf", sheet_name=sheet, header=None)
+        df = pd.read_excel(path, engine=ENGINE, sheet_name=sheet, header=None)
         # Header sanity: the measure labels sit in rows 7-8.
         assert "Before housing costs" in str(df.iloc[7, 3]), sheet
         assert "After housing costs" in str(df.iloc[7, 8]), sheet
@@ -76,7 +80,7 @@ def extract_hbai(path: Path) -> dict:
     # the 10th percentile and the quintile 5 median the 90th, so column 15 is
     # HBAI's 90:10 ratio (checked against Chart 1.2 percentile points for
     # 2024/25: P10 366 / P90 1358 BHC, 273 / 1238 AHC).
-    df = pd.read_excel(path, engine="odf", sheet_name="1_2b", header=None)
+    df = pd.read_excel(path, engine=ENGINE, sheet_name="1_2b", header=None)
     assert "Quintile 3 (median)" in str(df.iloc[8, 5])
     assert "Population mean" in str(df.iloc[8, 11])
     assert "Gini" in str(df.iloc[8, 13])

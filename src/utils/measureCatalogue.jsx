@@ -45,6 +45,18 @@ export function isCatalogueRowDisplayable(catalogue, id, year) {
 }
 
 /**
+ * One table's rows from every artifact the catalogue verified when the page
+ * loaded (`tablesByKey`, the receipt route), gated as every other table
+ * is: [] without a published, verified catalogue.
+ */
+export function verifiedTableRows(catalogue, table) {
+  if (!catalogue?.manifest || !catalogue.tablesByKey) return [];
+  return Object.values(catalogue.tablesByKey)
+    .flatMap((tables) => tables?.[table] ?? [])
+    .filter((row) => isCatalogueRowDisplayable(catalogue, row.reform_id, row.year));
+}
+
+/**
  * The one set of package versions the selected measures' verified receipts
  * record, or null when one has none recorded, is not verified, or they
  * disagree. Personal impact asks the household API live, and compares its
@@ -109,6 +121,17 @@ export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetar
     revenueRaisingNames: new Set(displayable.filter((measure) => measure.direction === "revenue").map((measure) => measure.seriesKey)),
     combinedId: combinedIds.length === 1 ? combinedIds[0] : null,
   };
+}
+
+/**
+ * Whether any measure the catalogue shows is still provisional in its
+ * manifest: the page then words itself as modelled measures, not the Budget.
+ */
+export function catalogueProvisional(catalogue) {
+  return Boolean(
+    catalogue?.manifest &&
+      catalogue.displayable.some((measure) => catalogue.manifest.measures[measure.id]?.status === "provisional"),
+  );
 }
 
 const CatalogueContext = createContext(buildMeasureCatalogue());

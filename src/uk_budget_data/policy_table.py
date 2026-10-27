@@ -54,6 +54,7 @@ from uk_budget_data.budget_measures.warm_home_discount_top_up import (
     warm_home_discount_top_up,
 )
 from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
+    WINTER_SHARE,
     zero_vat_on_domestic_electricity,
 )
 from uk_budget_data.budget_years import POLICY_YEARS
@@ -219,15 +220,30 @@ def _modifier_source(modifier: Callable, names: str) -> dict:
 # --- In-force windows of the VAT measures -----------------------------------
 #
 # The VAT modifiers hold one rate change a fiscal year, weighted by the days
-# in force (fiscal years from 1 April, as their comments count them). The
-# dates come from each measure's description; the rate while in force is
-# each year's constant divided by its share of days, and every year must
-# give the same rate, so the dates are checked against the constants.
+# in force (fiscal years from 1 April, as their comments count them), except
+# a year in YEAR_WEIGHTS. The dates come from each measure's description;
+# the rate while in force is each year's constant divided by its weight, and
+# every year must give the same rate, so the dates and weights are checked
+# against the constants.
 
 VAT_WINDOWS = {
     registry.ELECTRICITY_VAT_ID: (date(2026, 10, 1), date(2028, 3, 31)),
     registry.FUEL_VAT_ID: (date(2026, 12, 1), date(2027, 5, 31)),
 }
+
+# A year a modifier weights by something other than its days in force:
+# electricity's 2026-27 carries the October to March share of a year's use
+# (WINTER_SHARE in its module), not 182 of 365 days, as the zero-rated
+# months are the higher-use half of the year.
+YEAR_WEIGHTS = {registry.ELECTRICITY_VAT_ID: {2026: WINTER_SHARE}}
+
+# How a VAT measure's table says its constants are weighted, unless the
+# measure says otherwise (a year in YEAR_WEIGHTS)
+DAYS_DIVIDED = "each divided by its share of the fiscal year's days in force"
+DAYS_NOTE = (
+    "As modelled: the cut weighted by the days it is in force in each "
+    "fiscal year"
+)
 
 
 def _days_in_force(year: int, first: date, last: date) -> tuple[int, int]:
@@ -237,17 +253,24 @@ def _days_in_force(year: int, first: date, last: date) -> tuple[int, int]:
 
 
 def in_force_rate_change(measure_id: str, changes: dict[int, float]) -> float:
-    """The rate change while in force, from the day-weighted constants."""
+    """The rate change while in force, from the weighted constants."""
     first, last = VAT_WINDOWS[measure_id]
+    weights = YEAR_WEIGHTS.get(measure_id, {})
     rates = []
     for year, change in changes.items():
         days, length = _days_in_force(year, first, last)
-        if days:
+        if year in weights:
+            if not days:
+                raise ValueError(
+                    f"{measure_id}: {year} has a weight but is not in force"
+                )
+            rates.append(change / weights[year])
+        elif days:
             rates.append(change * length / days)
     if not rates or max(rates) - min(rates) > 1e-9:
         raise ValueError(
             f"{measure_id}: the in-force dates do not fit the modifier's "
-            f"day-weighted constants ({rates})"
+            f"weighted constants ({rates})"
         )
     return rates[0]
 
@@ -260,6 +283,8 @@ def _vat_rows(
     label: str,
     changes: dict[int, float],
     names: str,
+    divided: str = DAYS_DIVIDED,
+    note: str = DAYS_NOTE,
 ) -> list[dict]:
     first, last = VAT_WINDOWS[measure_id]
     cut = in_force_rate_change(measure_id, changes)
@@ -267,9 +292,8 @@ def _vat_rows(
     derived = {
         "kind": "modifier_constant",
         "where": (
-            f"{_modifier_source(modifier, names)['where']}, each divided by "
-            f"its share of the fiscal year's days in force, {period} (the "
-            "dates in the measure's description)"
+            f"{_modifier_source(modifier, names)['where']}, {divided}, "
+            f"{period} (the dates in the measure's description)"
         ),
     }
     return [
@@ -296,8 +320,7 @@ def _vat_rows(
             ),
             _source(base_source, _modifier_source(modifier, names)),
             primary=False,
-            note="As modelled: the cut weighted by the days it is in force "
-            "in each fiscal year",
+            note=note,
         ),
     ]
 
@@ -490,6 +513,17 @@ def _electricity_vat(reform) -> list[dict]:
         "VAT on domestic electricity in Great Britain",
         changes,
         "rate_change_2026, rate_change_2027",
+        # 2026-27 by its share of a year's use (YEAR_WEIGHTS)
+        divided=(
+            "rate_change_2026 divided by that module's WINTER_SHARE (the "
+            "October to March share of a year's electricity use) and "
+            "rate_change_2027 by its share of the fiscal year's days in force"
+        ),
+        note=(
+            "As modelled: the cut weighted in 2026-27 by the October to "
+            "March share of a year's electricity use, not by its days in "
+            "force"
+        ),
     )
 
 

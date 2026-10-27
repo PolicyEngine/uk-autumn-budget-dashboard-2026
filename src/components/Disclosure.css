@@ -65,3 +65,8 @@
 .disclosure-compact .disclosure-content {
   padding: 10px 0 4px;
 }
+
+/* keepMounted: closed content stays in the page, out of view and out of the Tab order */
+.expander-body[hidden] {
+  display: none;
+}

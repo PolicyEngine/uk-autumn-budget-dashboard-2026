@@ -15,87 +15,26 @@ concurrency:
 
 jobs:
   python-test-parts:
-    name: Python tests (${{ matrix.part }})
+    name: Python tests (shard ${{ matrix.shard }} of ${{ strategy.job-total }})
     runs-on: ubuntu-latest
-    # Five parts on five runners at once. Two parts stopped fitting: on 23
-    # October, after #90 and #96, "the rest" took 29 of its 30 minutes
-    # (1,937 tests, 28:25 of pytest at 4473f83), so the next test added
-    # crossed the limit. The model-limit and template files, about half of
-    # that part's worker-seconds on CI, now run on their own; data limits
-    # took 12 minutes. On 24 October the household route began applying all
-    # ten measures through policyengine-uk Simulation (hh-all-measures), and
-    # "the rest" hit 30 minutes at 54%: the household route files took about
-    # 4,100 worker-seconds of it, so they run as a fourth part. On 26 October
-    # that part's job ran 21 minutes on #104's last commit and 30:31 on its
-    # merge (5ee4e23; 30:01 of pytest), where the limit cancelled it with all
-    # 238 tests passed. On that slower runner its tests took about 7,090
-    # worker-seconds: the three skip-parity sweeps in test_household_impact.py
-    # 486-539 s each, and the nine all-measures parity runs 201-239 s each.
-    # It now runs as two parts of roughly equal work: "household impact"
-    # (test_household_impact.py, about 3,000 worker-seconds there) and
-    # "household routes" (the all-measures parity file and the four route
-    # files, about 4,100). A test file named in no part runs in "the rest",
-    # and tests/test_ci_parts.py checks that the parts partition the suite.
-    # The limit is 45 minutes, not 30: the same 238 tests took 1.45 times as
-    # long on one runner as on another that day, and "the rest" runs 21 to 22
-    # minutes, so about 32 at that spread, which a 30-minute limit would
-    # cancel with every test passing. A part that needs more than about 30
-    # minutes on a normal runner should still be split.
-    timeout-minutes: 45
+    # The suite takes about 16,000 worker-seconds on CI. Five parts made of
+    # hand-picked file lists took 10 to 22 minutes each (#217): "the rest"
+    # alone carried about 5,100 worker-seconds. Now every runner collects
+    # the whole suite and keeps one shard of it, chosen by tests/ci_shards.py
+    # from each test's recorded CI time (tests/ci_durations.json), so the
+    # shards carry about equal work and a new test needs no change here.
+    # Every test runs in exactly one shard; tests/test_ci_parts.py checks
+    # that. When the shards grow, add shards to the list; the run line takes
+    # the count from the matrix (strategy.job-total).
+    # The limit is 20 minutes, twice a normal shard's time: the same tests
+    # took 1.45 times as long on one runner as on another on 26 October,
+    # and a shard that needs more than 10 minutes on a normal runner should
+    # be split again.
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - part: data limits
-            tests: tests/test_data_limits.py tests/test_publication_data_limits.py
-          - part: model limits and templates
-            tests: >-
-              tests/test_vat_model_limit.py
-              tests/test_model_limits.py
-              tests/test_september_cpi_model_limit.py
-              tests/test_pension_credit_model_limit.py
-              tests/test_measure_templates.py
-              tests/test_uc_health_template.py
-              tests/test_measure_template_composition.py
-              tests/test_measure_template_round3.py
-              tests/test_measure_template_receipt.py
-              tests/test_measure_template_age.py
-              tests/test_property_band_index.py
-              tests/test_native_measure_regressions.py
-              tests/test_measure_keys.py
-          - part: household impact
-            tests: >-
-              tests/test_household_impact.py
-          - part: household routes
-            tests: >-
-              tests/test_household_impact_all_measures.py
-              tests/test_household_calculator_route.py
-              tests/test_household_route_parity.py
-              tests/test_household_impact_api.py
-              tests/test_household_route.py
-          - part: the rest
-            tests: >-
-              tests/ --ignore=tests/test_data_limits.py
-              --ignore=tests/test_publication_data_limits.py
-              --ignore=tests/test_vat_model_limit.py
-              --ignore=tests/test_model_limits.py
-              --ignore=tests/test_september_cpi_model_limit.py
-              --ignore=tests/test_pension_credit_model_limit.py
-              --ignore=tests/test_measure_templates.py
-              --ignore=tests/test_uc_health_template.py
-              --ignore=tests/test_measure_template_composition.py
-              --ignore=tests/test_measure_template_round3.py
-              --ignore=tests/test_measure_template_receipt.py
-              --ignore=tests/test_measure_template_age.py
-              --ignore=tests/test_property_band_index.py
-              --ignore=tests/test_native_measure_regressions.py
-              --ignore=tests/test_measure_keys.py
-              --ignore=tests/test_household_impact_all_measures.py
-              --ignore=tests/test_household_impact.py
-              --ignore=tests/test_household_calculator_route.py
-              --ignore=tests/test_household_route_parity.py
-              --ignore=tests/test_household_impact_api.py
-              --ignore=tests/test_household_route.py
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     steps:
       - uses: actions/checkout@v6
 
@@ -121,12 +60,26 @@ jobs:
       # Four workers, one per vCPU on GitHub's public-repository runner.
       # loadgroup keeps each xdist_group on one worker, and without the
       # reorder it hands out work in collection order, where tests/conftest.py
-      # puts the slow units first: the first four start on separate workers, and
-      # the rest follow as each worker's next unit.
+      # puts the heaviest units first: the first four start on separate
+      # workers, and the rest follow as each worker's next unit. The JUnit
+      # report (xunit1 records each test's file) is what
+      # scripts/ci_durations.py reads to refresh tests/ci_durations.json.
       - name: Run tests that need no credentials
         run: >-
-          uv run pytest ${{ matrix.tests }} -m "not certified_data"
+          uv run pytest tests/ -m "not certified_data"
+          --ci-shard ${{ matrix.shard }}/${{ strategy.job-total }}
           -n 4 --dist loadgroup --no-loadscope-reorder --durations=15
+          -o junit_family=xunit1
+          --junitxml=pytest-shard-${{ matrix.shard }}.xml
+
+      - name: Keep the shard's test times
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-shard-${{ matrix.shard }}
+          path: pytest-shard-${{ matrix.shard }}.xml
+          retention-days: 14
+          if-no-files-found: ignore
 
   python-tests:
     name: Python tests

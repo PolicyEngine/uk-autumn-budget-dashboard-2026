@@ -4,6 +4,7 @@ import json
 import re
 import shutil
 import subprocess
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -926,6 +927,23 @@ def test_versions_have_no_leading_zeros_or_other_digits(tmp_path, version):
     code, output, _ = _release_step(tmp_path, version)
     assert code != 0 and output == ""
     assert "not a plain release version" in check(version=version)[0]
+
+
+def test_every_locked_package_ships_a_wheel():
+    """lock.sh resolves with --no-build, which refuses any package that ships
+    no wheel. One in the lock fails every adoption at its first step: the
+    6.11.0 dispatch (25 October) failed on odfpy, which is source-only. A git,
+    URL, path or directory source may need one too (uv builds it unless its
+    metadata is static), so the test treats any entry without wheels as
+    needing a build, except the project's own editable or virtual entry."""
+    lock = tomllib.loads((REPO / "uv.lock").read_text())
+    needs_a_build = [
+        package["name"]
+        for package in lock["package"]
+        if not {"editable", "virtual"} & package.get("source", {}).keys()
+        and not package.get("wheels")
+    ]
+    assert needs_a_build == []
 
 
 # --- lock.sh (review R1: the propose job rebuilds what validate checked) --

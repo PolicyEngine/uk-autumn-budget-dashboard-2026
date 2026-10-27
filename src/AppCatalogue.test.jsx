@@ -48,7 +48,7 @@ describe("the page's verified publication catalogue", () => {
     const rows = JSON.parse(figures.dataset.rows);
     expect(new Set(rows.map((row) => row.reform_id))).toEqual(new Set(["alpha", "beta"]));
     expect(rows.every((row) => row.year === IN_DATA)).toBe(true);
-    fireEvent.click(screen.getByRole("button", { name: "Select policies" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Policies / }));
     const selector = within(container.querySelector(".policy-selector-dropdown"));
     expect(selector.getAllByRole("checkbox")).toHaveLength(2);
     expect(selector.getByText("Alpha")).toBeInTheDocument();

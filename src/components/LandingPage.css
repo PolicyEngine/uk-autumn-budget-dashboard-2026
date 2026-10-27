@@ -1,5 +1,5 @@
 /* The landing page (LandingPage.jsx): one screen. With the site's nav and
-   the title band above and the replication line and site footer below, it
+   the title band above and the site footer below, it
    fills the window (100svh) as a flex column; its own content takes the
    rest and scales with clamp(). Behind it, a silhouette of the Public
    finances view (LandingBackdrop.jsx), faded and blurred. */
@@ -19,16 +19,6 @@ html:has(.view-stage.is-landing) .main-content {
 html:has(.view-stage.is-landing) .main-content {
   width: 100%;
   padding-bottom: 0;
-}
-
-/* The replication line, tighter under the landing page */
-html:has(.view-stage.is-landing) .replication-line {
-  margin: 0;
-  padding: clamp(8px, 1.6svh, 16px) 0 clamp(8px, 1.6svh, 14px);
-}
-
-html:has(.view-stage.is-landing) .replication-line::before {
-  margin-bottom: clamp(8px, 1.4svh, 14px);
 }
 
 .view-stage {

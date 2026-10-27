@@ -211,7 +211,7 @@ describe("ConstituencyMap", () => {
       expect.stringMatching(/^Large gain, 1% or more: /),
     ]);
     expect(key).toHaveTextContent("Too uncertain");
-    expect(key).toHaveTextContent("Shown by pattern:");
+    expect(key).not.toHaveTextContent("Shown by pattern:");
     expect(key).toHaveTextContent("Approximate");
     expect(key).toHaveTextContent("Not published");
     expect(key).toHaveTextContent("No data");
@@ -312,7 +312,8 @@ describe("ConstituencyMap", () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000004"));
     const card = tooltip(container);
-    expect(card).toHaveTextContent("Too close to call: the interval includes zero");
+    expect(card).toHaveTextContent("The interval includes zero");
+    expect(card).not.toHaveTextContent("Too close to call");
     expect(card).toHaveTextContent("Map category: Too uncertain to classify");
   });
 
@@ -375,7 +376,7 @@ describe("ConstituencyMap", () => {
     expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("2030-31");
   });
 
-  it("never sums: several measures but not all show one measure at a time, chosen in a picker", async () => {
+  it("never sums, and offers no measure without constituency results in the Measure picker", async () => {
     render(
       <ConstituencyMap
         selectedPolicies={["fuel_duty_freeze", "two_child_limit"]}
@@ -383,17 +384,14 @@ describe("ConstituencyMap", () => {
         policies={POLICIES}
       />,
     );
-    // No blocking message: the Options pill offers the selected measures,
-    // and the title names the one shown
-    const pill = await screen.findByRole("button", { name: /^Options:/ });
-    expect(screen.queryByText(/shown for one measure at a time/)).toBeNull();
-    fireEvent.click(pill);
-    const measures = within(screen.getByRole("radiogroup", { name: "Measure" })).getAllByRole("radio");
-    expect(measures.length).toBeGreaterThan(0);
-    expect(measures.length).toBeLessThanOrEqual(2);
-    const shown = measures.find((radio) => radio.getAttribute("aria-checked") === "true").textContent;
-    expect(document.querySelector(".map-title-focus")).toHaveTextContent(shown);
-    expect(pill.getAttribute("aria-label")).toContain(shown);
+    // Neither selected measure has constituency results (the fuel duty
+    // freeze is published by region only), so there is no measure to pick
+    // and the card says it shows one measure at a time
+    expect(await screen.findByText(/shown for one measure at a time/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+    expect(screen.queryByRole("radiogroup", { name: "Measure" })).toBeNull();
+    expect(screen.getByRole("radiogroup", { name: "View" })).toBeInTheDocument();
+    expect(document.querySelector(".map-title-focus")).toBeNull();
   });
 
   it("points to the region view for a measure published by region only", async () => {
@@ -553,7 +551,12 @@ describe("ConstituencyMap and the release's area routing", () => {
     ).toBeDisabled();
     const search = screen.queryByLabelText("Search or select a constituency");
     if (search) expect(search).toBeDisabled();
-    expect(container.textContent).not.toMatch(FIGURES);
+    // Each text node apart, so the title's year and the Options pill's
+    // "% of income" are not read as one figure ("2029-30% of income")
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const texts = [];
+    while (walker.nextNode()) texts.push(walker.currentNode.textContent);
+    expect(texts.join(" ")).not.toMatch(FIGURES);
   };
 
   it.each([

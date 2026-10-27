@@ -42,7 +42,7 @@ export const WITHHELD_NOTE = TIER_DESCRIPTIONS.withheld;
 export const DIRECTION_LABELS = Object.freeze({
   gain: "Gain",
   loss: "Loss",
-  too_close_to_call: "Too close to call: the interval includes zero",
+  too_close_to_call: "The interval includes zero",
   no_change: "No change for any surveyed household in this area",
 });
 
@@ -50,7 +50,7 @@ export const DIRECTION_LABELS = Object.freeze({
 export const DIRECTION_SHORT_LABELS = Object.freeze({
   gain: "Gain",
   loss: "Loss",
-  too_close_to_call: "Too close to call",
+  too_close_to_call: "The interval includes zero",
   no_change: "No change",
 });
 

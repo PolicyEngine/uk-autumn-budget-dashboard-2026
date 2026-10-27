@@ -29,7 +29,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1
  * @param {React.ReactNode} [props.provisional] - The provisional notice, when it applies
  * @param {{current: HTMLElement|null}} props.returnFocus - Where focus goes on closing
  */
-export default function OverviewDrawer({ open, onClose, onOpen, provisional, returnFocus }) {
+export default function OverviewDrawer({ open, onClose, onOpen, provisional, provisionalWording = false, returnFocus }) {
   const panelRef = useRef(null);
   const closeRef = useRef(null);
   const wasOpen = useRef(false);
@@ -127,6 +127,7 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, ret
           <LandingBoxes
             list
             labelledBy="overview-goto"
+            provisional={provisionalWording}
             onOpen={(tab, sub) => {
               onOpen(tab, sub);
               onClose();

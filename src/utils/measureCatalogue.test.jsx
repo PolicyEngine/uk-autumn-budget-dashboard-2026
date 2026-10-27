@@ -3,7 +3,7 @@ import fc from "fast-check";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildMeasureCatalogue, NEUTRAL_COLOR, isCatalogueRowDisplayable } from "./measureCatalogue";
+import { buildMeasureCatalogue, catalogueProvisional, NEUTRAL_COLOR, isCatalogueRowDisplayable } from "./measureCatalogue";
 import { hexToOklab, MEASURE_RAMPS, measureRamp } from "./chartTheme";
 import { budgetChartData, parseDashboardCsv } from "./loadDashboard";
 import { ALPHA, BETA, COMBINED, HELD, measureCatalogueFixture } from "../test/measureCatalogueFixture";
@@ -274,4 +274,17 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   }
   walk(root);
   expect(matches).toEqual([]);
+});
+
+describe("catalogueProvisional", () => {
+  const catalogue = (statuses) => ({
+    manifest: { measures: Object.fromEntries(Object.entries(statuses).map(([id, status]) => [id, { status }])) },
+    displayable: Object.keys(statuses).map((id) => ({ id })),
+  });
+
+  it("is true while any shown measure is provisional, and false once all are approved", () => {
+    expect(catalogueProvisional(catalogue({ a: "approved", b: "provisional" }))).toBe(true);
+    expect(catalogueProvisional(catalogue({ a: "approved", b: "approved" }))).toBe(false);
+    expect(catalogueProvisional({ manifest: null, displayable: [] })).toBe(false);
+  });
 });
