@@ -15,7 +15,7 @@
     "composition": null,
     "config_baseline": null,
     "data_limits": [],
-    "data_limits_registry_sha256": "1419b889054ca382645cec3267e9f57b06fd7dc5ddfd9295b39a3c0743a8c734",
+    "data_limits_registry_sha256": "d8c401537b9e7fe01e9b0fe189d1162fd46ea7a7c474c20d0de1adae5df9dd93",
     "dataset_years": [
       2024,
       2025,
@@ -27,37 +27,38 @@
       2031,
       2032
     ],
+    "description": "",
     "digests": {
       "execution_identity_sha256": "0be7dd0e5aab27d501e4eb820714ea4e9dd445059030ce045644247740bf23ae",
-      "outputs_sha256": "82bbe3c3f1c72067ad948217256a7182c41c7c2e4bbaa6aee384099a155856dd",
-      "receipt_sha256": "143c6e22348586ee53701a42cd6143eb38e322c4edf587c12dc89775d7defe4a"
+      "outputs_sha256": "8f5d21927f2c9293120acd7a89b80a20b9df01cc9a9cfdeb45cde2138239054c",
+      "receipt_sha256": "e7e468f691f12d0e0039f9720471db0c8257e67874d62c57a7a059e906e01841"
     },
     "files": {
-      "budgetary_impact.csv": "1c9e24a6d6d7df39c6c14a79ef5692b90dd9045d133bb444deb0ac7b64b1aba9",
-      "distributional_impact.csv": "05c6c59f031f91caa008d27b46184cbf659dae4a82cf11f184ba585277f14ae3",
-      "household_scatter_binned.csv": "e78305db688cebd9329ff2cac9d081ec09648580cefcf518fcc573b521b5aeb2",
-      "income_curve.csv": "98c65fa31ea1801cff78e2d1f42c593f48947d0b02d9b25373ca12b7f94d2aa4",
-      "metrics.csv": "df9861e596036274257e29ee7ef518e7da39a28f64cb7619bc90ce948461cfe3",
-      "winners_losers.csv": "b39ee7c29f16f2792af3586ec3f51b9a4db1470ae90c6deb4feb84c0d4c22ad8"
+      "budgetary_impact.csv": "bffba30939ec96988e2221bd383d58b8cbbdb64d393e858faddec52914f950eb",
+      "distributional_impact.csv": "4f34cc2bfa775aad6eefc6abd2e6d6e2e6cc5c355b64d30c42c24ae39313b3d0",
+      "household_scatter_binned.csv": "401e01c04e1f41b34ecbe0fcab07204f3daa62d1b9c85c030e46410b00667a96",
+      "income_curve.csv": "7f1c002504d1913dc907e7bf2f5bb2d5e9d3796421c5ebdd4160308d031bb1f4",
+      "metrics.csv": "befeaa4af25739e9557d61fca966db6f116a650f35d8c96443ee6ad1520ebcbe",
+      "winners_losers.csv": "376f401df6c398a58ce39f425f2ed589d871795802d840183cdf8bcd6bf516f1"
     },
-    "generated_at": "2026-10-25T20:30:39.695739+00:00",
+    "generated_at": "2026-10-27T00:12:00.085304+00:00",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "theta",
+    "key": "iota",
     "measure_ids": [
-      "theta"
+      "iota"
     ],
     "member_outputs_sha256": null,
     "members": null,
     "model_limits": [
       {
-        "key": "pc_minimum_guarantee_uprating",
+        "key": "vat_consumption_coverage",
         "parameters": [
-          "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE"
+          "variable:vat"
         ],
-        "reason": "The installed model raises the Pension Credit standard minimum guarantee by lagged calendar-year CPI, 2.3% in April 2027, but the law requires at least the growth in earnings, 3.9% in May to July 2026 (Social Security Administration Act 1992 s. 150A(2)). So the guarantee is too low from 2027, and so are the pension-age Housing Benefit allowances and the savings credit threshold, which the same fix covers; a change to the earnings input misses them. policyengine-uk #2557, the fix for #2533, keeps the guarantee on lagged CPI. Until a fix that uprates it by earnings is in the model, measures touching these from 2027 are held at provisional."
+        "reason": "The installed model grosses household VAT up to receipts by a single factor of 0.38 (gov.simulation.microdata_vat_coverage). policyengine-uk #2187 divides instead by survey consumption coverage times the household share of VAT receipts, 0.67 \u00d7 0.7 = 0.469, so this model's VAT is about 23% higher (the UK hub's notice 59 puts it about 24% high on Microcosm), and a measure that moves a VAT rate, the VAT base or the consumption VAT is charged on can be overstated by as much. A measure built with the VAT base template is held too, though the term the template adds is not grossed. #2187 is not in this model. Until a pair with it is adopted, such measures are held at provisional."
       }
     ],
     "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
@@ -65,7 +66,7 @@
       "baseline": [],
       "reform": []
     },
-    "name": "Theta",
+    "name": "Iota",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.2",
@@ -78,7 +79,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "theta baseline"
+      "name": "iota baseline"
     },
     "certificate": {
       "bundle_version": "6.10.2",
@@ -118,13 +119,13 @@
       "name": "policyengine-uk",
       "version": "2.132.6"
     },
-    "outputs_sha256": "82bbe3c3f1c72067ad948217256a7182c41c7c2e4bbaa6aee384099a155856dd",
+    "outputs_sha256": "8f5d21927f2c9293120acd7a89b80a20b9df01cc9a9cfdeb45cde2138239054c",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "content",
       "kind": "reform",
-      "name": "theta",
-      "reform_sha256": "6738ca1fa7b1b8f1768ab0902f8a91c7fd1d20960fc67038749a7cd09acc9aa6",
+      "name": "iota",
+      "reform_sha256": "31e95e90307d202d10b25a4f63e7a0479a29d78eb0cca3408f34990e11a85609",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {

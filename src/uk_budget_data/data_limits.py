@@ -62,19 +62,6 @@ class DataLimit:
     reason: str
 
 
-# The means tests' lists of the capital they count. They name share-like
-# capital, which counts corporate wealth whole unless itemised holdings are
-# given, so the split acts through no parameter but these: a measure that
-# names holdings in them, to count some and not others.
-SHARE_CAPITAL_SOURCES = (
-    "gov.dwp.universal_credit.means_test.capital.sources",
-    "gov.dwp.housing_benefit.means_test.capital.sources",
-    "gov.dwp.pension_credit.income.capital.sources",
-    "gov.dwp.income_support.means_test.capital.sources",
-    "gov.dwp.JSA.income.capital.sources",
-    "gov.dwp.ESA.income.capital.sources",
-)
-
 DATA_LIMITS = (
     DataLimit(
         key="additional_dwelling_purchases",
@@ -113,10 +100,13 @@ DATA_LIMITS = (
             "(policyengine-uk-data #573) would lift this."
         ),
     ),
-    # The 13 inputs the a133 cut (policyengine-uk 2.147.2) newly leaves at
+    # The inputs the a133 cut (policyengine-uk 2.147.2) newly leaves at
     # their defaults (NEWLY_MISSING_INPUTS), each keyed on the parameters
     # whose effect runs through it, read from the formulas at 2.147.2 that
-    # read it (tests/test_data_limits_cuts.py pins those readers).
+    # read it (tests/test_data_limits_cuts.py pins those readers). The
+    # a6299504 cut's data carry four of a133's 13 (NO_LONGER_MISSING), so
+    # their limits are gone; it lists the other nine again, with the same
+    # readers at 2.151.0.
     DataLimit(
         key="pip_daily_living_points",
         parameters=("gov.dwp.pip.daily_living.points_thresholds",),
@@ -237,58 +227,6 @@ DATA_LIMITS = (
         ),
     ),
     DataLimit(
-        key="non_residential_property_secured_debt",
-        parameters=("gov.dwp.universal_credit.means_test.capital",),
-        missing_input="non_residential_property_secured_debt",
-        reason=(
-            "The certified data do not record debt secured on "
-            "non-residential property, so the model's default of none "
-            "counts that property at its market value less sale costs in "
-            "the Universal Credit capital test. A change to Universal "
-            "Credit's capital rules cannot be costed for owners with such "
-            "debt."
-        ),
-    ),
-    DataLimit(
-        key="other_residential_property_secured_debt",
-        parameters=("gov.dwp.universal_credit.means_test.capital",),
-        missing_input="other_residential_property_secured_debt",
-        reason=(
-            "The certified data do not record debt secured on residential "
-            "property other than the home, so the model's default of none "
-            "counts that property at its market value less sale costs in "
-            "the Universal Credit capital test. A change to Universal "
-            "Credit's capital rules cannot be costed for owners with such "
-            "debt."
-        ),
-    ),
-    DataLimit(
-        key="directly_held_shares",
-        parameters=SHARE_CAPITAL_SOURCES,
-        missing_input="directly_held_shares",
-        reason=(
-            "The certified data do not split share-like wealth into directly "
-            "held shares, unit and investment trusts and stocks and shares "
-            "ISAs, so the model's default of none for directly held shares "
-            "leaves the means tests counting only the total, corporate "
-            "wealth. A change to which of those holdings the means tests "
-            "count cannot be costed."
-        ),
-    ),
-    DataLimit(
-        key="unit_and_investment_trusts",
-        parameters=SHARE_CAPITAL_SOURCES,
-        missing_input="unit_and_investment_trusts",
-        reason=(
-            "The certified data do not split share-like wealth into directly "
-            "held shares, unit and investment trusts and stocks and shares "
-            "ISAs, so the model's default of none for unit and investment "
-            "trusts leaves the means tests counting only the total, "
-            "corporate wealth. A change to which of those holdings the "
-            "means tests count cannot be costed."
-        ),
-    ),
-    DataLimit(
         key="early_years_school_start_deferred",
         parameters=(
             "gov.dfe.universal_childcare_entitlement",
@@ -321,6 +259,228 @@ DATA_LIMITS = (
             "That matters only for the annual calculation of directors' "
             "employee National Insurance in 2022-23, outside the Budget's "
             "years, so only a change to that rule is affected."
+        ),
+    ),
+    # The 16 inputs the a6299504 cut (policyengine-uk 2.151.0) adds to that
+    # list, read from the formulas at 2.151.0 that read them. Fifteen are the
+    # bases of the seven gambling duties, each attributed to households and
+    # nil by default, so every duty, and gambling_duty in household and
+    # government tax, is nil for every household: a duty change scores
+    # nothing. Each is keyed on the rate its duty charges on it.
+    DataLimit(
+        key="remote_uk_horseracing_betting",
+        parameters=(
+            "gov.hmrc.gambling_duty.general_betting.rates.fixed_odds",
+        ),
+        missing_input="remote_uk_horseracing_betting_net_losses",
+        reason=(
+            "The certified data do not record the losses on remote fixed-odds "
+            "bets on UK horseracing attributed to households, and with the "
+            "model's default of none no general betting duty is charged on "
+            "them. A change to the fixed-odds rate therefore scores nothing "
+            "on these losses, nor on the others charged at that rate, which "
+            "the data also lack."
+        ),
+    ),
+    DataLimit(
+        key="land_based_fixed_odds_betting",
+        parameters=(
+            "gov.hmrc.gambling_duty.general_betting.rates.fixed_odds",
+        ),
+        missing_input="land_based_fixed_odds_betting_net_losses",
+        reason=(
+            "The certified data do not record the losses on land-based "
+            "fixed-odds bets attributed to households, and with the model's "
+            "default of none no general betting duty is charged on them. A "
+            "change to the fixed-odds rate therefore scores nothing on these "
+            "losses, nor on the others charged at that rate, which the data "
+            "also lack."
+        ),
+    ),
+    DataLimit(
+        key="horse_and_dog_pool_betting",
+        parameters=(
+            "gov.hmrc.gambling_duty.general_betting.rates.fixed_odds",
+        ),
+        missing_input="horse_and_dog_pool_betting_net_losses",
+        reason=(
+            "The certified data do not record the losses on horse and dog "
+            "racing pool bets attributed to households, and with the model's "
+            "default of none no general betting duty is charged on them. The "
+            "model charges them at the fixed-odds rate, so a change to that "
+            "rate scores nothing on these losses, nor on the others charged "
+            "at it, which the data also lack."
+        ),
+    ),
+    DataLimit(
+        key="remote_other_betting",
+        parameters=("gov.hmrc.gambling_duty.general_betting.rates.remote",),
+        missing_input="remote_other_betting_net_losses",
+        reason=(
+            "The certified data do not record the losses on other remote "
+            "fixed-odds bets attributed to households, and with the model's "
+            "default of none no general betting duty is charged on them. A "
+            "change to the remote rate therefore scores nothing."
+        ),
+    ),
+    DataLimit(
+        key="financial_spread_betting",
+        parameters=(
+            "gov.hmrc.gambling_duty.general_betting.rates.financial_spread",
+        ),
+        missing_input="financial_spread_betting_net_losses",
+        reason=(
+            "The certified data do not record the losses on financial spread "
+            "bets attributed to households, and with the model's default of "
+            "none no general betting duty is charged on them. A change to the "
+            "financial spread betting rate therefore scores nothing."
+        ),
+    ),
+    DataLimit(
+        key="other_spread_betting",
+        parameters=(
+            "gov.hmrc.gambling_duty.general_betting.rates.other_spread",
+        ),
+        missing_input="other_spread_betting_net_losses",
+        reason=(
+            "The certified data do not record the losses on other spread bets "
+            "attributed to households, and with the model's default of none "
+            "no general betting duty is charged on them. A change to the "
+            "other spread betting rate therefore scores nothing."
+        ),
+    ),
+    DataLimit(
+        key="betting_exchange_commission",
+        parameters=(
+            "gov.hmrc.gambling_duty.general_betting.rates.exchange_commission",
+        ),
+        missing_input="betting_exchange_commission",
+        reason=(
+            "The certified data do not record the betting exchange commission "
+            "attributed to households, and with the model's default of none "
+            "no general betting duty is charged on it. A change to the "
+            "exchange commission rate therefore scores nothing."
+        ),
+    ),
+    DataLimit(
+        key="machine_games_lower_rate",
+        parameters=("gov.hmrc.gambling_duty.machine_games.rates.lower",),
+        missing_input="machine_games_lower_rate_net_takings",
+        reason=(
+            "The certified data do not record the net takings from lower-rate "
+            "gaming machines attributed to households, and with the model's "
+            "default of none no machine games duty is charged on them. A "
+            "change to the lower rate therefore scores nothing."
+        ),
+    ),
+    DataLimit(
+        key="machine_games_standard_rate",
+        parameters=("gov.hmrc.gambling_duty.machine_games.rates.standard",),
+        missing_input="machine_games_standard_rate_net_takings",
+        reason=(
+            "The certified data do not record the net takings from "
+            "standard-rate gaming machines attributed to households, and with "
+            "the model's default of none no machine games duty is charged on "
+            "them. A change to the standard rate therefore scores nothing."
+        ),
+    ),
+    DataLimit(
+        key="machine_games_higher_rate",
+        parameters=("gov.hmrc.gambling_duty.machine_games.rates.higher",),
+        missing_input="machine_games_higher_rate_net_takings",
+        reason=(
+            "The certified data do not record the net takings from "
+            "higher-rate gaming machines attributed to households, and with "
+            "the model's default of none no machine games duty is charged on "
+            "them. A change to the higher rate therefore scores nothing."
+        ),
+    ),
+    DataLimit(
+        key="remote_gaming",
+        parameters=("gov.hmrc.gambling_duty.remote_gaming",),
+        missing_input="remote_gaming_net_losses",
+        reason=(
+            "The certified data do not record the losses on remote gaming "
+            "attributed to households, and with the model's default of none "
+            "no remote gaming duty is charged. A change to remote gaming duty "
+            "therefore scores nothing."
+        ),
+    ),
+    DataLimit(
+        key="bingo",
+        parameters=("gov.hmrc.gambling_duty.bingo",),
+        missing_input="bingo_net_receipts",
+        reason=(
+            "The certified data do not record the bingo promotion profits "
+            "attributed to households, and with the model's default of none "
+            "no bingo duty is charged. Bingo duty is abolished from 1 April "
+            "2026 (Finance Act 2026 s. 88), and a measure that reinstates or "
+            "changes it would score nothing."
+        ),
+    ),
+    DataLimit(
+        key="pool_betting",
+        parameters=("gov.hmrc.gambling_duty.pool_betting",),
+        missing_input="pool_betting_net_receipts",
+        reason=(
+            "The certified data do not record the net receipts from pool "
+            "betting other than on horse and dog racing attributed to "
+            "households, and with the model's default of none no pool betting "
+            "duty is charged. A change to pool betting duty therefore scores "
+            "nothing."
+        ),
+    ),
+    DataLimit(
+        key="national_lottery",
+        parameters=("gov.hmrc.gambling_duty.lottery",),
+        missing_input="national_lottery_ticket_spending",
+        reason=(
+            "The certified data do not record National Lottery ticket "
+            "spending, and with the model's default of none no lottery duty "
+            "is charged. A change to lottery duty therefore scores nothing."
+        ),
+    ),
+    DataLimit(
+        key="land_based_casino",
+        parameters=(
+            # The only parameter gaming_duty reads: the model charges the
+            # yield at one effective rate.
+            "household.consumption.gambling.casino_effective_rate",
+            # No formula reads the statutory bands, so a change to them
+            # would score nothing even with the data.
+            "gov.hmrc.gambling_duty.gaming",
+        ),
+        missing_input="land_based_casino_net_losses",
+        reason=(
+            "The certified data do not record the land-based casino gaming "
+            "yield attributed to households, and with the model's default of "
+            "none no gaming duty is charged. The model charges that yield at "
+            "one effective rate and reads none of gaming duty's statutory "
+            "bands, so a change to the rate or the bands scores nothing."
+        ),
+    ),
+    # The residential exception changes only the threshold the working-age
+    # tariff income starts from: not eligibility, capital or the upper limit
+    # (the variable's own documentation, and its one reader).
+    DataLimit(
+        key="housing_benefit_residential_capital",
+        parameters=(
+            "gov.dwp.housing_benefit.means_test.capital.working_age."
+            "residential_threshold",
+            "gov.dwp.housing_benefit.means_test.capital.working_age."
+            "tariff_income",
+        ),
+        missing_input="housing_benefit_residential_capital_exception",
+        reason=(
+            "The certified data do not identify Housing Benefit claimants who "
+            "qualify for the working-age residential capital exception (HB "
+            "Regulations 2006 reg. 52, NI reg. 49), and the model's default "
+            "treats no one as qualifying, so everyone's tariff income starts "
+            "from the ordinary threshold. A change to the residential "
+            "threshold therefore moves no one, and a change to the ordinary "
+            "threshold, step or amount cannot be costed for qualifying "
+            "residents. Eligibility and the upper capital limit are not "
+            "affected."
         ),
     ),
 )
@@ -382,6 +542,37 @@ NEWLY_MISSING_INPUTS: dict[str, tuple[str, ...]] = {
         "salary_sacrifice_returned_to_income",
         "unit_and_investment_trusts",
     ),
+    # policyengine-uk 2.151.0 with Microcosm UK 2024-25 national, 25 Oct
+    # 2026: policyengine.py#720's budget-inputs evidence, accepted on the
+    # same condition (policyengine.py#720#issuecomment-6429449326, the UK
+    # hub's list on dashboard #124).
+    "microcosm-uk-2024-25-national-20261025T091414Z-a6299504": (
+        "betting_exchange_commission",
+        "bingo_net_receipts",
+        "defined_benefit_pension_share",
+        "early_years_school_start_deferred",
+        "financial_spread_betting_net_losses",
+        "horse_and_dog_pool_betting_net_losses",
+        "housing_benefit_residential_capital_exception",
+        "is_full_year_category_a_director",
+        "land_based_casino_net_losses",
+        "land_based_fixed_odds_betting_net_losses",
+        "local_bus_uncapped_single_fare",
+        "machine_games_higher_rate_net_takings",
+        "machine_games_lower_rate_net_takings",
+        "machine_games_standard_rate_net_takings",
+        "national_lottery_ticket_spending",
+        "other_spread_betting_net_losses",
+        "pension_annual_allowance_taxable_lump_sum_death_benefits",
+        "pension_contributions_via_salary_sacrifice_pre_2015",
+        "pip_dl_points",
+        "pip_m_points",
+        "pool_betting_net_receipts",
+        "remote_gaming_net_losses",
+        "remote_other_betting_net_losses",
+        "remote_uk_horseracing_betting_net_losses",
+        "salary_sacrifice_returned_to_income",
+    ),
 }
 
 # The cut the dashboard ran when the record began (policyengine 6.10.x,
@@ -391,9 +582,12 @@ RECORD_ROOT = "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71"
 
 # For each recorded cut, the cut its newly missing inputs were listed
 # against. a133's budget-inputs and attribution evidence compare it with
-# the 19 October cut (policyengine.py#715).
+# the 19 October cut (policyengine.py#715), and so does a6299504's
+# budget-inputs evidence (policyengine.py#720): #715 hadn't merged, so a133
+# was not the previous certified pair.
 LISTED_AGAINST: dict[str, str] = {
     "microcosm-uk-2024-25-national-20261023T075039Z-a133f37a": RECORD_ROOT,
+    "microcosm-uk-2024-25-national-20261025T091414Z-a6299504": RECORD_ROOT,
 }
 
 # Inputs a cut listed above that are no longer missing, with why: the
@@ -402,7 +596,16 @@ LISTED_AGAINST: dict[str, str] = {
 # adoption PR), or the installed model no longer has them as inputs. The
 # certified test checks the first; tests/test_data_limits_cuts.py the
 # second.
-NO_LONGER_MISSING: dict[str, str] = {}
+_CARRIED_BY_A6299504 = (
+    "the a6299504 cut's certified data carry it (in_data in "
+    "policyengine.py#720's budget-inputs evidence)"
+)
+NO_LONGER_MISSING: dict[str, str] = {
+    "directly_held_shares": _CARRIED_BY_A6299504,
+    "non_residential_property_secured_debt": _CARRIED_BY_A6299504,
+    "other_residential_property_secured_debt": _CARRIED_BY_A6299504,
+    "unit_and_investment_trusts": _CARRIED_BY_A6299504,
+}
 
 
 def coverage_problems(build_id: str) -> list[str]:

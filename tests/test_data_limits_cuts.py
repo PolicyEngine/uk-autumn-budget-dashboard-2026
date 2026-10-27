@@ -5,19 +5,24 @@ policyengine.py's budget-inputs gate lists, for each cut, the model inputs
 its data lack that its predecessor's had. Its decision on the a133 cut
 (policyengine-uk 2.147.2, policyengine.py#715) accepted 13 on condition
 that the dashboard holds any measure depending on one as a data limit
-(dashboard #124). ``NEWLY_MISSING_INPUTS`` records each adopted cut's list
-and ``coverage_problems`` requires a limit for every input in it, so an
+(dashboard #124), and its decision on the a6299504 cut (policyengine-uk
+2.151.0, policyengine.py#720) 25 on the same condition: nine of a133's
+again and 16 new. The a6299504 data carry a133's other four.
+``NEWLY_MISSING_INPUTS`` records each adopted cut's list and
+``coverage_problems`` requires a limit for every input in it, so an
 adoption that brings a cut without its record, or skips a limit, fails
 here.
 """
 
 import functools
 import sys
+import types
 from unittest import mock
 
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
+from policyengine_core.parameters import Parameter
 from policyengine_core.variables import Variable
 from policyengine_uk import Simulation
 from policyengine_uk.system import system
@@ -37,11 +42,14 @@ from uk_budget_data.data_limits import (
 from uk_budget_data.measure_templates import _call_formula
 
 A133 = "microcosm-uk-2024-25-national-20261023T075039Z-a133f37a"
+A6299504 = "microcosm-uk-2024-25-national-20261025T091414Z-a6299504"
 BY_KEY = {limit.key: limit for limit in DATA_LIMITS}
 BY_INPUT = {limit.missing_input: limit for limit in DATA_LIMITS}
 RECORDED = sorted(
     {name for names in NEWLY_MISSING_INPUTS.values() for name in names}
 )
+# The recorded inputs the installed cut still lacks: each needs its limit.
+STILL_MISSING = [name for name in RECORDED if name not in NO_LONGER_MISSING]
 
 
 def installed_build() -> str:
@@ -69,15 +77,23 @@ def test_the_a133_cut_lists_the_13_inputs_policyengine_py_accepted():
     assert len(set(NEWLY_MISSING_INPUTS[A133])) == 13
 
 
+def test_the_a6299504_cut_lists_the_25_inputs_policyengine_py_accepted():
+    """policyengine.py#720's evidence names 25 against the 19 October cut:
+    23 new in policyengine-uk since 2.132.6 and two that became inputs.
+    Nine are on a133's list, and its data carry a133's other four."""
+    listed = set(NEWLY_MISSING_INPUTS[A6299504])
+    assert len(NEWLY_MISSING_INPUTS[A6299504]) == len(listed) == 25
+    assert len(listed & set(NEWLY_MISSING_INPUTS[A133])) == 9
+    assert set(NEWLY_MISSING_INPUTS[A133]) - listed == set(NO_LONGER_MISSING)
+
+
 @pytest.mark.parametrize("cut", sorted(NEWLY_MISSING_INPUTS))
 def test_a_cut_lists_each_input_once(cut):
     names = NEWLY_MISSING_INPUTS[cut]
     assert len(names) == len(set(names))
 
 
-@pytest.mark.parametrize(
-    "name", [name for name in RECORDED if name not in NO_LONGER_MISSING]
-)
+@pytest.mark.parametrize("name", STILL_MISSING)
 def test_each_recorded_input_is_an_input_of_the_installed_model(name):
     """A stored input with no formula, so a cut that lacks it leaves every
     record at the default."""
@@ -100,7 +116,7 @@ def test_an_input_no_longer_missing_was_listed_and_its_limit_removed():
 
 
 def test_the_released_check_refuses_an_unlisted_or_still_limited_input():
-    """Not vacuous while NO_LONGER_MISSING is empty."""
+    """Not vacuous: NO_LONGER_MISSING's own entries pass it."""
     for released in ({"never_listed": "why"}, {"pip_dl_points": "why"}):
         with mock.patch.object(data_limits, "NO_LONGER_MISSING", released):
             with pytest.raises(AssertionError):
@@ -202,6 +218,26 @@ def test_an_input_carried_again_must_be_set_by_the_data(
 
 # --- what each new limit says -------------------------------------------
 
+# policyengine-uk 2.151.0's gambling duty bases, which the a6299504 cut
+# leaves at their defaults.
+GAMBLING_BASES = (
+    "remote_uk_horseracing_betting_net_losses",
+    "land_based_fixed_odds_betting_net_losses",
+    "horse_and_dog_pool_betting_net_losses",
+    "remote_other_betting_net_losses",
+    "financial_spread_betting_net_losses",
+    "other_spread_betting_net_losses",
+    "betting_exchange_commission",
+    "machine_games_lower_rate_net_takings",
+    "machine_games_standard_rate_net_takings",
+    "machine_games_higher_rate_net_takings",
+    "remote_gaming_net_losses",
+    "bingo_net_receipts",
+    "pool_betting_net_receipts",
+    "national_lottery_ticket_spending",
+    "land_based_casino_net_losses",
+)
+
 # Each input's default in the installed model, and the words its limit's
 # reason uses for it: the reason must state the default (dashboard #124).
 DEFAULTS = {
@@ -225,16 +261,6 @@ DEFAULTS = {
         0,
         "default treats every contribution as money purchase",
     ),
-    "non_residential_property_secured_debt": (
-        0,
-        "the model's default of none",
-    ),
-    "other_residential_property_secured_debt": (
-        0,
-        "the model's default of none",
-    ),
-    "directly_held_shares": (0, "the model's default of none"),
-    "unit_and_investment_trusts": (0, "the model's default of none"),
     "early_years_school_start_deferred": (
         False,
         "the model's default assumes none does",
@@ -243,11 +269,16 @@ DEFAULTS = {
         False,
         "the model's default treats no one as one",
     ),
+    **{name: (0, "the model's default of none") for name in GAMBLING_BASES},
+    "housing_benefit_residential_capital_exception": (
+        False,
+        "the model's default treats no one as qualifying",
+    ),
 }
 
 
-def test_every_input_a133_lists_has_its_default_recorded_here():
-    assert set(DEFAULTS) == set(NEWLY_MISSING_INPUTS[A133])
+def test_every_input_still_missing_has_its_default_recorded_here():
+    assert set(DEFAULTS) == set(STILL_MISSING)
 
 
 @pytest.mark.parametrize("name", sorted(DEFAULTS))
@@ -257,10 +288,11 @@ def test_each_limit_states_the_default_the_model_uses(name):
     assert words in BY_INPUT[name].reason
 
 
-# The model formulas that read each new input at policyengine-uk 2.147.2,
-# read from the source: the limits' parameters come from what these do with
-# it. The watch's own reading of the model (``limit_variables``, which the
-# stored-input comparison uses) must find each of them.
+# The model formulas that read each new input at policyengine-uk 2.147.2
+# (a133) or 2.151.0 (a6299504), read from the source: the limits'
+# parameters come from what these do with it. The watch's own reading of
+# the model (``limit_variables``, which the stored-input comparison uses)
+# must find each of them.
 READERS = {
     "pip_daily_living_points": ("pip_dl_category",),
     "pip_mobility_points": ("pip_m_category",),
@@ -280,15 +312,6 @@ READERS = {
         "defined_benefit_pension_contributions",
         "pension_contributions_for_annual_allowance",
     ),
-    "non_residential_property_secured_debt": (
-        "uc_non_residential_property_capital",
-    ),
-    "other_residential_property_secured_debt": (
-        "uc_other_residential_property_capital",
-    ),
-    # Through a list of names, which compiles to one tuple constant.
-    "directly_held_shares": ("share_like_capital",),
-    "unit_and_investment_trusts": ("share_like_capital",),
     "early_years_school_start_deferred": (
         "early_years_term_share_before_school",
     ),
@@ -296,13 +319,106 @@ READERS = {
         "ni_class_1_employee_primary",
         "ni_class_1_employee_additional",
     ),
+    "remote_uk_horseracing_betting": ("general_betting_duty",),
+    "land_based_fixed_odds_betting": ("general_betting_duty",),
+    "horse_and_dog_pool_betting": ("general_betting_duty",),
+    "remote_other_betting": ("general_betting_duty",),
+    "financial_spread_betting": ("general_betting_duty",),
+    "other_spread_betting": ("general_betting_duty",),
+    "betting_exchange_commission": ("general_betting_duty",),
+    "machine_games_lower_rate": ("machine_games_duty",),
+    "machine_games_standard_rate": ("machine_games_duty",),
+    "machine_games_higher_rate": ("machine_games_duty",),
+    "remote_gaming": ("remote_gaming_duty",),
+    "bingo": ("bingo_duty",),
+    "pool_betting": ("pool_betting_duty",),
+    "national_lottery": ("lottery_duty",),
+    "land_based_casino": ("gaming_duty",),
+    "housing_benefit_residential_capital": ("housing_benefit_tariff_income",),
 }
+
+# The limits the a6299504 cut adds, whose reasons say what the default does
+# through exactly these readers.
+A6299504_KEYS = [
+    limit.key
+    for limit in DATA_LIMITS
+    if limit.missing_input in NEWLY_MISSING_INPUTS[A6299504]
+    and limit.missing_input not in NEWLY_MISSING_INPUTS[A133]
+]
 
 
 def test_every_new_limit_has_its_readers_listed():
-    assert {BY_KEY[key].missing_input for key in READERS} == set(
-        NEWLY_MISSING_INPUTS[A133]
+    assert {BY_KEY[key].missing_input for key in READERS} == set(STILL_MISSING)
+
+
+def test_the_a6299504_cut_adds_16_limits():
+    assert len(A6299504_KEYS) == 16
+
+
+def formula_readers(name) -> set:
+    """The installed model's variables whose formulas, adds or subtracts
+    name ``name``."""
+    found = set()
+    for variable_name, variable in system.variables.items():
+        names = set()
+        for formula in data_limits._formulas(variable):
+            if isinstance(formula, types.FunctionType):
+                names |= data_limits._code_names(formula.__code__)
+        for attribute in ("adds", "subtracts"):
+            values = getattr(variable, attribute, None) or ()
+            names |= {values} if isinstance(values, str) else set(values)
+        if name in names:
+            found.add(variable_name)
+    return found
+
+
+@pytest.mark.parametrize("key", A6299504_KEYS)
+def test_each_a6299504_input_is_read_only_by_its_listed_readers(key):
+    """Another reader would act through other parameters than the limit
+    names, and its reason would need revisiting."""
+    assert formula_readers(BY_KEY[key].missing_input) == set(READERS[key])
+
+
+# Nil even on supplied bases: Finance Act 2026 s. 88 abolishes bingo duty
+# from 1 April 2026, and its limit's reason says so.
+ABOLISHED = {"bingo_duty"}
+
+
+def gambling_household(**bases):
+    """One adult in a household with these gambling bases supplied."""
+    household = {"members": ["p"]}
+    household.update({name: {"2027": value} for name, value in bases.items()})
+    return Simulation(
+        situation={
+            "people": {"p": {"age": {"2027": 40}}},
+            "benunits": {"b": {"members": ["p"]}},
+            "households": {"h": household},
+        }
     )
+
+
+def test_every_gambling_duty_is_nil_by_default_and_reaches_the_tax_totals():
+    """Why a duty change on nil bases is a £0 that could pass for a
+    costing: at the defaults every duty is nil, and supplied bases move
+    gambling_duty, household tax and government tax alike."""
+    duties = {READERS[key][0] for key in A6299504_KEYS} - {
+        "housing_benefit_tariff_income"
+    }
+    assert duties == set(system.variables["gambling_duty"].adds)
+    nil = gambling_household()
+    for duty in sorted(duties | {"gambling_duty"}):
+        assert nil.calculate(duty, 2027)[0] == 0, duty
+    supplied = gambling_household(**{name: 1_000 for name in GAMBLING_BASES})
+    for duty in sorted(duties - ABOLISHED):
+        assert supplied.calculate(duty, 2027)[0] > 0, duty
+    for duty in sorted(ABOLISHED):
+        assert supplied.calculate(duty, 2027)[0] == 0, duty
+    gambling = supplied.calculate("gambling_duty", 2027)[0]
+    for total in ("household_tax", "gov_tax"):
+        moved = (
+            supplied.calculate(total, 2027)[0] - nil.calculate(total, 2027)[0]
+        )
+        assert moved == pytest.approx(gambling), total
 
 
 @pytest.mark.parametrize("key", sorted(READERS))
@@ -330,16 +446,21 @@ PIP_DL = "gov.dwp.pip.daily_living"
 PIP_M = "gov.dwp.pip.mobility"
 ANNUAL_ALLOWANCE = "gov.hmrc.income_tax.allowances.annual_allowance"
 UC_CAPITAL = "gov.dwp.universal_credit.means_test.capital"
+GAMBLING_DUTY = "gov.hmrc.gambling_duty"
+BETTING = f"{GAMBLING_DUTY}.general_betting.rates"
+MACHINE_GAMES = f"{GAMBLING_DUTY}.machine_games.rates"
+HB_WORKING_AGE = "gov.dwp.housing_benefit.means_test.capital.working_age"
 PENSION_LIMITS = [
     "pre_2015_salary_sacrifice",
     "annual_allowance_death_benefits",
     "defined_benefit_pension_share",
 ]
-PROPERTY_DEBT_LIMITS = [
-    "non_residential_property_secured_debt",
-    "other_residential_property_secured_debt",
+FIXED_ODDS_LIMITS = [
+    "remote_uk_horseracing_betting",
+    "land_based_fixed_odds_betting",
+    "horse_and_dog_pool_betting",
 ]
-SHARE_LIMITS = ["directly_held_shares", "unit_and_investment_trusts"]
+HB_LIMIT = ["housing_benefit_residential_capital"]
 
 
 HELD = [
@@ -365,10 +486,11 @@ HELD = [
     # The salary sacrifice cap changes only NICs earnings.
     ("gov.hmrc.national_insurance.salary_sacrifice_pension_cap", []),
     ("gov.hmrc.income_tax.rates.uk[0].rate", []),
-    (f"{UC_CAPITAL}.limit", PROPERTY_DEBT_LIMITS),
-    (f"{UC_CAPITAL}.tariff_income.amount", PROPERTY_DEBT_LIMITS),
-    (f"{UC_CAPITAL}.sources", [*PROPERTY_DEBT_LIMITS, *SHARE_LIMITS]),
-    ("gov.dwp.pension_credit.income.capital.sources", SHARE_LIMITS),
+    # The a6299504 data carry the secured debts and the share holdings.
+    (f"{UC_CAPITAL}.limit", []),
+    (f"{UC_CAPITAL}.tariff_income.amount", []),
+    (f"{UC_CAPITAL}.sources", []),
+    ("gov.dwp.pension_credit.income.capital.sources", []),
     ("gov.dwp.universal_credit.standard_allowance.amount", []),
     (
         "gov.dfe.universal_childcare_entitlement.hours",
@@ -384,6 +506,38 @@ HELD = [
         ["full_year_category_a_director"],
     ),
     ("gov.hmrc.national_insurance.class_1.rates.employee.main", []),
+    (f"{BETTING}.fixed_odds", FIXED_ODDS_LIMITS),
+    (f"{BETTING}.remote", ["remote_other_betting"]),
+    (f"{BETTING}.financial_spread", ["financial_spread_betting"]),
+    (f"{BETTING}.other_spread", ["other_spread_betting"]),
+    (f"{BETTING}.exchange_commission", ["betting_exchange_commission"]),
+    (f"{MACHINE_GAMES}.lower", ["machine_games_lower_rate"]),
+    (f"{MACHINE_GAMES}.standard", ["machine_games_standard_rate"]),
+    (f"{MACHINE_GAMES}.higher", ["machine_games_higher_rate"]),
+    (f"{GAMBLING_DUTY}.remote_gaming.rate", ["remote_gaming"]),
+    (f"{GAMBLING_DUTY}.bingo.rate", ["bingo"]),
+    (f"{GAMBLING_DUTY}.pool_betting.rate", ["pool_betting"]),
+    (f"{GAMBLING_DUTY}.lottery.rate", ["national_lottery"]),
+    (
+        f"{GAMBLING_DUTY}.gaming.normal_six_month_bands[2].threshold",
+        ["land_based_casino"],
+    ),
+    (
+        "household.consumption.gambling.casino_effective_rate",
+        ["land_based_casino"],
+    ),
+    (f"{HB_WORKING_AGE}.residential_threshold", HB_LIMIT),
+    (f"{HB_WORKING_AGE}.tariff_income.threshold", HB_LIMIT),
+    (f"{HB_WORKING_AGE}.tariff_income.step", HB_LIMIT),
+    (f"{HB_WORKING_AGE}.tariff_income.amount", HB_LIMIT),
+    # Neither the upper limit nor pension age's tariff income turns on the
+    # exception.
+    (f"{HB_WORKING_AGE}.limit", []),
+    (
+        "gov.dwp.housing_benefit.means_test.capital.pension_age."
+        "tariff_income.threshold",
+        [],
+    ),
 ]
 
 
@@ -402,10 +556,11 @@ def test_a_change_is_held_by_the_limits_whose_input_it_acts_through(
 def test_the_receipt_accepts_each_limit_an_overlapping_path_falls_under(
     path, held
 ):
-    """The annual allowance, Universal Credit capital and the capital
-    sources fall under several limits, and each records the path: the
-    receipt check took a path to belong to one limit only, so these
-    measures could not be staged at all (review of #132)."""
+    """The annual allowance and general betting duty's fixed-odds rate
+    (on a133, Universal Credit capital and the capital sources too) fall
+    under several limits, and each records the path: the receipt check took
+    a path to belong to one limit only, so these measures could not be
+    staged at all (review of #132)."""
     records = [record(BY_KEY[key], [path]) for key in held]
     assert record_problems(records) == []
 
@@ -414,7 +569,7 @@ def test_the_receipt_accepts_each_limit_an_overlapping_path_falls_under(
     "path, value, held",
     [
         (f"{ANNUAL_ALLOWANCE}.default", 50_000, PENSION_LIMITS),
-        (f"{UC_CAPITAL}.limit", 20_000, PROPERTY_DEBT_LIMITS),
+        (f"{BETTING}.fixed_odds", 0.2, FIXED_ODDS_LIMITS),
     ],
 )
 def test_a_measure_held_by_several_limits_passes_the_receipt_check(
@@ -431,6 +586,19 @@ def test_a_measure_held_by_several_limits_passes_the_receipt_check(
 @pytest.mark.parametrize("path", sorted({path for path, _ in HELD}))
 def test_every_held_path_exists_in_the_installed_engine(path):
     system.parameters.get_child(path.split("[")[0])
+
+
+def test_every_gambling_duty_parameter_is_held():
+    """With every base nil, no gambling duty parameter can score, the
+    gaming duty bands not even with data: each falls under a limit."""
+    node = system.parameters.get_child(GAMBLING_DUTY)
+    paths = [
+        item.name
+        for item in node.get_descendants()
+        if isinstance(item, Parameter)
+    ]
+    assert len(paths) == 22
+    assert [path for path in paths if not limits_for_paths([path])] == []
 
 
 # --- PIP: the case policyengine.py#715 flags ----------------------------
@@ -466,6 +634,19 @@ def test_points_decide_the_category_only_when_supplied():
 
 # --- the build: the model's own construction reads three -----------------
 
+# The share holdings these tests read are a133's: the a6299504 data carry
+# them, so no limit watches them any more. The tests are of the watch, not
+# of which inputs it watches, so they watch the holdings as if limited.
+SHARE_HOLDINGS = {"directly_held_shares", "unit_and_investment_trusts"}
+
+
+@pytest.fixture
+def watched_shares():
+    watched = data_limits._MISSING_INPUTS | SHARE_HOLDINGS
+    with mock.patch.object(data_limits, "_MISSING_INPUTS", watched):
+        yield
+
+
 CONSTRUCTION_READS = {
     "directly_held_shares",
     "salary_sacrifice_returned_to_income",
@@ -493,6 +674,7 @@ def test_the_constructor_left_out_is_policyengine_uks_simulation():
     assert Simulation.__init__.__code__ in data_limits._model_constructors()
 
 
+@pytest.mark.usefixtures("watched_shares")
 def test_the_models_own_construction_reads_three_of_the_inputs():
     """Not vacuous: policyengine-uk 2.147.2 builds every simulation through
     the Universal Credit rebalancing, which calculates the capital tests
@@ -504,6 +686,7 @@ def test_the_models_own_construction_reads_three_of_the_inputs():
         assert CONSTRUCTION_READS < build_reads()
 
 
+@pytest.mark.usefixtures("watched_shares")
 def test_building_a_household_counts_none_of_the_models_own_reads():
     assert build_reads() == frozenset()
     reform = Scenario(
@@ -516,6 +699,7 @@ def test_building_a_household_counts_none_of_the_models_own_reads():
     assert build_reads(reform) == frozenset()
 
 
+@pytest.mark.usefixtures("watched_shares")
 def test_a_modifier_reading_a_new_input_while_built_is_counted():
     """Round 17's case with one of the new inputs: the modifier's own frame
     is a measure's code, so the read counts though the constructor called
@@ -579,6 +763,7 @@ def test_a_modifier_reading_through_the_supplied_input_helpers_is_counted(
     assert read in data_limits._build_reads(sim)
 
 
+@pytest.mark.usefixtures("watched_shares")
 def test_the_models_construction_still_counts_none_of_its_own_fetches():
     """Counting fetched holders too adds none of the construction's own."""
     assert build_reads() == frozenset()
@@ -600,6 +785,7 @@ def modifier_from(filename):
     return namespace["modify"]
 
 
+@pytest.mark.usefixtures("watched_shares")
 @pytest.mark.parametrize(
     "filename",
     [
@@ -623,6 +809,7 @@ def modify(sim):
 """
 
 
+@pytest.mark.usefixtures("watched_shares")
 def test_a_shipped_modifier_building_another_simulation_counts_none():
     """What the construction of a simulation the modifier builds reads is
     still the model's own, as it would be from a measure's file."""
@@ -646,6 +833,7 @@ def test_a_shipped_modifier_building_another_simulation_counts_none():
     assert build_reads(scenario) == frozenset()
 
 
+@pytest.mark.usefixtures("watched_shares")
 def test_a_partial_or_callable_object_as_modifier_counts_too():
     shipped = modifier_from("/x/site-packages/policyengine_uk/s.py")
 
@@ -677,6 +865,7 @@ def modify(sim):
 """
 
 
+@pytest.mark.usefixtures("watched_shares")
 def test_a_shipped_modifier_applied_before_the_data_counts_too():
     """The modifier of the part applied before the data load is the
     scenario's as much as the one after it. It can't read its own
@@ -698,6 +887,7 @@ def test_a_shipped_modifier_applied_before_the_data_counts_too():
     assert "directly_held_shares" in build_reads(scenario)
 
 
+@pytest.mark.usefixtures("watched_shares")
 def test_a_formula_replaced_before_the_data_counts_when_the_build_runs_it():
     """A modifier applied before the data load replaces share-like capital;
     the rebalancing then runs it, and the native formula it wraps reads the
@@ -850,6 +1040,8 @@ def test_the_record_links_each_cut_back_to_the_root():
     for cut in NEWLY_MISSING_INPUTS:
         assert data_limits._chain_problems(cut) == []
     assert data_limits.LISTED_AGAINST[A133] == data_limits.RECORD_ROOT
+    # #720's evidence compares a6299504 with the 19 October cut too.
+    assert data_limits.LISTED_AGAINST[A6299504] == data_limits.RECORD_ROOT
 
 
 def test_an_input_no_longer_missing_needs_no_limit(registry):
@@ -857,14 +1049,22 @@ def test_an_input_no_longer_missing_needs_no_limit(registry):
         assert coverage_problems("cut") == []
 
 
-def test_dropping_any_new_limit_fails_naming_its_input():
+def test_dropping_any_recorded_limit_fails_naming_its_input_and_cuts():
     for limit in DATA_LIMITS:
-        if limit.missing_input not in NEWLY_MISSING_INPUTS[A133]:
+        if limit.missing_input not in STILL_MISSING:
             continue
         rest = tuple(other for other in DATA_LIMITS if other is not limit)
         with mock.patch.object(data_limits, "DATA_LIMITS", rest):
-            problems = coverage_problems(A133)
-        assert [p.split(",")[0] for p in problems] == [limit.missing_input]
+            problems = coverage_problems(A6299504)
+        listing = [
+            cut
+            for cut, names in NEWLY_MISSING_INPUTS.items()
+            if limit.missing_input in names
+        ]
+        assert listing
+        assert sorted(p.split(" newly leaves")[0] for p in problems) == (
+            sorted(f"{limit.missing_input}, which {cut}" for cut in listing)
+        )
 
 
 names = st.sampled_from("abcdef")

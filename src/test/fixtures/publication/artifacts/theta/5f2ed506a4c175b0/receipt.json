@@ -15,7 +15,7 @@
     "composition": null,
     "config_baseline": null,
     "data_limits": [],
-    "data_limits_registry_sha256": "1419b889054ca382645cec3267e9f57b06fd7dc5ddfd9295b39a3c0743a8c734",
+    "data_limits_registry_sha256": "d8c401537b9e7fe01e9b0fe189d1162fd46ea7a7c474c20d0de1adae5df9dd93",
     "dataset_years": [
       2024,
       2025,
@@ -27,37 +27,38 @@
       2031,
       2032
     ],
+    "description": "",
     "digests": {
       "execution_identity_sha256": "0be7dd0e5aab27d501e4eb820714ea4e9dd445059030ce045644247740bf23ae",
-      "outputs_sha256": "5589d397459fe89bf4d04639aa896e0f5788794c47fc3c4cbd3b1eb21a04db23",
-      "receipt_sha256": "ecad16810a660646af784287d9b62519f0323556f59f1293cd35b652add65d51"
+      "outputs_sha256": "82bbe3c3f1c72067ad948217256a7182c41c7c2e4bbaa6aee384099a155856dd",
+      "receipt_sha256": "143c6e22348586ee53701a42cd6143eb38e322c4edf587c12dc89775d7defe4a"
     },
     "files": {
-      "budgetary_impact.csv": "133e061e5262b1a15d66a91fffe038a2773b4a998b7483b2481d55b84750ef9d",
-      "distributional_impact.csv": "bd1ab71bd08975706b669b0b8eaa418857235dd06d676f3d2a9380dadd1526a9",
-      "household_scatter_binned.csv": "c99e50eadbe707b2d30beaf7e698151c6802932c064966d1d6bac0e333810bbb",
-      "income_curve.csv": "b8cb415234b39409d8b5e0b8544676267b57ec581b6f9822ee501e2a6073370a",
-      "metrics.csv": "272dac329abf27c8245eec820d9bbaa66d8ed393ac0869a2aac068119fc94111",
-      "winners_losers.csv": "d6910eecf8dab6bd685bbcb4d5a666fa9fa3d8ddd75ec56dc97a2c4f71101fd8"
+      "budgetary_impact.csv": "1c9e24a6d6d7df39c6c14a79ef5692b90dd9045d133bb444deb0ac7b64b1aba9",
+      "distributional_impact.csv": "05c6c59f031f91caa008d27b46184cbf659dae4a82cf11f184ba585277f14ae3",
+      "household_scatter_binned.csv": "e78305db688cebd9329ff2cac9d081ec09648580cefcf518fcc573b521b5aeb2",
+      "income_curve.csv": "98c65fa31ea1801cff78e2d1f42c593f48947d0b02d9b25373ca12b7f94d2aa4",
+      "metrics.csv": "df9861e596036274257e29ee7ef518e7da39a28f64cb7619bc90ce948461cfe3",
+      "winners_losers.csv": "b39ee7c29f16f2792af3586ec3f51b9a4db1470ae90c6deb4feb84c0d4c22ad8"
     },
-    "generated_at": "2026-10-25T20:30:39.104378+00:00",
+    "generated_at": "2026-10-27T00:12:00.006915+00:00",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "eta",
+    "key": "theta",
     "measure_ids": [
-      "eta"
+      "theta"
     ],
     "member_outputs_sha256": null,
     "members": null,
     "model_limits": [
       {
-        "key": "benefit_uprating_september_cpi",
+        "key": "pc_minimum_guarantee_uprating",
         "parameters": [
-          "gov.hmrc.child_benefit.amount.eldest"
+          "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE"
         ],
-        "reason": "The installed benefit uprating index follows lagged calendar-year CPI: the parameters uprated by it, the UC standard allowance among them, step by 2.3% in April 2027 against September 2026 CPI of 3.5% (ONS D7G7, published 21 October 2026). The UC protected health element's 2027 amount also reads the September 2026 input, which is still a forecast, and so do the triple lock's CPI leg and the September CPI index, by which additional State Pension and new State Pension protected payments rise once policyengine-uk #2336 is in the model. The 2026-27 rates are hard-coded and unaffected. policyengine-uk #2533 must both enter the September outturn and repoint the benefit index to September CPI. Until both steps are in the model, measures touching these benefit levels from 2027 are held at provisional."
+        "reason": "The installed model raises the Pension Credit standard minimum guarantee by lagged calendar-year CPI, 2.3% in April 2027, but the law requires at least the growth in earnings, 3.9% in May to July 2026 (Social Security Administration Act 1992 s. 150A(2)). So the guarantee is too low from 2027, and so are the pension-age Housing Benefit allowances and the savings credit threshold, which the same fix covers; a change to the earnings input misses them. policyengine-uk #2557, the fix for #2533, keeps the guarantee on lagged CPI. Until a fix that uprates it by earnings is in the model, measures touching these from 2027 are held at provisional."
       }
     ],
     "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
@@ -65,7 +66,7 @@
       "baseline": [],
       "reform": []
     },
-    "name": "Eta",
+    "name": "Theta",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.2",
@@ -78,7 +79,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "eta baseline"
+      "name": "theta baseline"
     },
     "certificate": {
       "bundle_version": "6.10.2",
@@ -118,13 +119,13 @@
       "name": "policyengine-uk",
       "version": "2.132.6"
     },
-    "outputs_sha256": "5589d397459fe89bf4d04639aa896e0f5788794c47fc3c4cbd3b1eb21a04db23",
+    "outputs_sha256": "82bbe3c3f1c72067ad948217256a7182c41c7c2e4bbaa6aee384099a155856dd",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "content",
       "kind": "reform",
-      "name": "eta",
-      "reform_sha256": "f98f1a3f7b5e64f25b85eeb84f2f8e2fdfd2ec49e1b0479e0ea0101e6d94c4c5",
+      "name": "theta",
+      "reform_sha256": "6738ca1fa7b1b8f1768ab0902f8a91c7fd1d20960fc67038749a7cd09acc9aa6",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {

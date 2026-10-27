@@ -12,19 +12,10 @@
         "vintage": "v1"
       }
     },
-    "composition": {
-      "baseline_applied_before_data_load": false,
-      "reform_applied_before_data_load": false
-    },
-    "config_baseline": {
-      "binding": "content",
-      "kind": "current_law",
-      "name": "configured baseline",
-      "reform_sha256": null,
-      "representation": null
-    },
+    "composition": null,
+    "config_baseline": null,
     "data_limits": [],
-    "data_limits_registry_sha256": "1419b889054ca382645cec3267e9f57b06fd7dc5ddfd9295b39a3c0743a8c734",
+    "data_limits_registry_sha256": "d8c401537b9e7fe01e9b0fe189d1162fd46ea7a7c474c20d0de1adae5df9dd93",
     "dataset_years": [
       2024,
       2025,
@@ -36,74 +27,46 @@
       2031,
       2032
     ],
+    "description": "",
     "digests": {
       "execution_identity_sha256": "0be7dd0e5aab27d501e4eb820714ea4e9dd445059030ce045644247740bf23ae",
-      "outputs_sha256": "547f2ffc7d8bde18252b4cf59fad6ae17bba2d764345dcf93e2dd573adc63ef8",
-      "receipt_sha256": "1939619dc99b3152954247c390ced9078e69617b4a6a13ed42d43d57c92267cb"
+      "outputs_sha256": "5589d397459fe89bf4d04639aa896e0f5788794c47fc3c4cbd3b1eb21a04db23",
+      "receipt_sha256": "ecad16810a660646af784287d9b62519f0323556f59f1293cd35b652add65d51"
     },
     "files": {
-      "budgetary_impact.csv": "4ebccc35f13f77c2c9a6e7182c1dfea6091b7a3edda990a677a8125243f7f509",
-      "distributional_impact.csv": "2a8c63393c1d822dbcc72cebb2571ae043e7ff075fa75c6dda60eafb0698dfac",
-      "household_scatter_binned.csv": "51cdc8ca9cafd4b67fdcfa366131c23354fe49754cf871504f2e0d88c045bacc",
-      "income_curve.csv": "dda0b77beb1ffad6b69a815ab7fa7de6c8138bc34c46581ef851cb1042f487e0",
-      "metrics.csv": "6bf8fd4ef06c38ff696e240d1b888c1fefcd4edaca3bd837eb1e800dfd0d1e68",
-      "winners_losers.csv": "4e426166df46c20c67fdaccbd316304a9efb5862636a6a41128ac7484241b8f4"
+      "budgetary_impact.csv": "133e061e5262b1a15d66a91fffe038a2773b4a998b7483b2481d55b84750ef9d",
+      "distributional_impact.csv": "bd1ab71bd08975706b669b0b8eaa418857235dd06d676f3d2a9380dadd1526a9",
+      "household_scatter_binned.csv": "c99e50eadbe707b2d30beaf7e698151c6802932c064966d1d6bac0e333810bbb",
+      "income_curve.csv": "b8cb415234b39409d8b5e0b8544676267b57ec581b6f9822ee501e2a6073370a",
+      "metrics.csv": "272dac329abf27c8245eec820d9bbaa66d8ed393ac0869a2aac068119fc94111",
+      "winners_losers.csv": "d6910eecf8dab6bd685bbcb4d5a666fa9fa3d8ddd75ec56dc97a2c4f71101fd8"
     },
-    "generated_at": "2026-10-25T20:30:39.971054+00:00",
+    "generated_at": "2026-10-27T00:11:59.929593+00:00",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "combined--alpha+beta",
+    "key": "eta",
     "measure_ids": [
-      "alpha",
-      "beta"
+      "eta"
     ],
-    "member_outputs_sha256": {
-      "alpha": "debb4171d66468f2407e70f20199e93b2bf53bb9d752dba7c154e1ceb912e2a7",
-      "beta": "2b28cbb3df9dd143b6b25b00b72214923bc6e9f2b9b656147999e556684cf9e1"
-    },
-    "members": [
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [
       {
-        "baseline": {
-          "binding": "content",
-          "kind": "current_law",
-          "name": "alpha baseline"
-        },
-        "baseline_bound": true,
-        "id": "alpha",
-        "reform": {
-          "binding": "content",
-          "kind": "reform",
-          "name": "alpha",
-          "reform_sha256": "30d1752d96dc171b2110dc1bfe897bf064aa21c6adc68cb8af2b350afb70c247",
-          "representation": "policyengine-uk.scenario/v1"
-        }
-      },
-      {
-        "baseline": {
-          "binding": "content",
-          "kind": "current_law",
-          "name": "beta baseline"
-        },
-        "baseline_bound": true,
-        "id": "beta",
-        "reform": {
-          "binding": "content",
-          "kind": "reform",
-          "name": "beta",
-          "reform_sha256": "d91c1ce71511f3c4ca55ff993e3e25a31befafe6556c7297296d0690cf90a0ad",
-          "representation": "policyengine-uk.scenario/v1"
-        }
+        "key": "benefit_uprating_september_cpi",
+        "parameters": [
+          "gov.hmrc.child_benefit.amount.eldest"
+        ],
+        "reason": "The installed benefit uprating index follows lagged calendar-year CPI: the parameters uprated by it, the UC standard allowance among them, step by 2.3% in April 2027 against September 2026 CPI of 3.5% (ONS D7G7, published 21 October 2026). The UC protected health element's 2027 amount also reads the September 2026 input, which is still a forecast, and so do the triple lock's CPI leg and the September CPI index, by which additional State Pension and new State Pension protected payments rise once policyengine-uk #2336 is in the model. The 2026-27 rates are hard-coded and unaffected. policyengine-uk #2533 must both enter the September outturn and repoint the benefit index to September CPI. Until both steps are in the model, measures touching these benefit levels from 2027 are held at provisional."
       }
     ],
-    "model_limits": [],
     "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
     "modifier_templates": {
       "baseline": [],
       "reform": []
     },
-    "name": "Combined--Alpha+Beta",
+    "name": "Eta",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.10.2",
@@ -116,7 +79,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "alpha+beta baseline"
+      "name": "eta baseline"
     },
     "certificate": {
       "bundle_version": "6.10.2",
@@ -156,14 +119,14 @@
       "name": "policyengine-uk",
       "version": "2.132.6"
     },
-    "outputs_sha256": "547f2ffc7d8bde18252b4cf59fad6ae17bba2d764345dcf93e2dd573adc63ef8",
+    "outputs_sha256": "5589d397459fe89bf4d04639aa896e0f5788794c47fc3c4cbd3b1eb21a04db23",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "content",
       "kind": "reform",
-      "name": "alpha+beta",
-      "reform_sha256": "f7cc3805e3c77aef70bc94ca3537b12bbd0999a3b76958d668e75bb932434ed9",
-      "representation": "policyengine-uk.scenario_composition/v1"
+      "name": "eta",
+      "reform_sha256": "f98f1a3f7b5e64f25b85eeb84f2f8e2fdfd2ec49e1b0479e0ea0101e6d94c4c5",
+      "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {
       "platform": "darwin",

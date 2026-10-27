@@ -52,7 +52,13 @@ describe("parseManifest on the fixture", () => {
   });
 
   it("accepts a public description while retaining older manifests", () => {
-    expect(manifest.measures.alpha.description).toBeUndefined();
+    // Built here: the fixture script writes every entry's description, an
+    // empty one included, so a regenerated fixture is never an older
+    // manifest.
+    const older = parseManifest(edited((m) => {
+      delete m.measures.alpha.description;
+    }));
+    expect(older.measures.alpha.description).toBeUndefined();
     const updated = parseManifest(edited((m) => {
       m.measures.alpha.description = "A newly announced measure.";
     }));
