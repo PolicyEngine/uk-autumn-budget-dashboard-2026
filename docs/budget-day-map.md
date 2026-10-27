@@ -37,7 +37,7 @@ flowchart TD
     D2 --> D3{{"Integrator checks the costings and approves"}}
     D1 --> D4{{"Integrator loads the OBR forecast"}}
   end
-  subgraph G4["From 14:50: package and map"]
+  subgraph G4["14:50: package and map"]
     direction LR
     M1[/"Combined run and area run on Modal"/] --> M2["Agents bind the map and write the files"]
     M2 --> M3{{"Integrator signs review rows and merges"}}
