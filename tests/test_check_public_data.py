@@ -3,6 +3,7 @@
 import csv
 import hashlib
 import importlib.util
+import json
 import subprocess
 from datetime import date
 from pathlib import Path
@@ -199,6 +200,31 @@ def test_record_level_identifiers_always_fail(repo, name, text):
     write_review(repo, [entry(repo, name)])
     track(repo)
     assert run(repo).problems == [f"{name}: record-level identifiers"]
+
+
+@pytest.mark.parametrize("in_tables", [True, False])
+def test_a_receipt_with_thin_cells_in_its_tables_always_fails(repo, in_tables):
+    """#208 review, finding 4: an artifact written under
+    UK_BUDGET_THIN_DECILES=warn says so in its receipt, and no review entry
+    lets it be published."""
+    name = "public/data/artifacts/m/0123456789abcdef/receipt.json"
+    floor = {
+        "survey_households": 10,
+        "checked": True,
+        "thin_cells": [
+            {"table": "winners_losers", "year": 2027, "groups": ["1"]}
+        ],
+        "thin_cells_in_tables": in_tables,
+    }
+    write(repo, name, json.dumps({"dashboard": {"disclosure_floor": floor}}))
+    write_review(repo, [entry(repo, name)])
+    track(repo)
+    expected = (
+        [f"{name}: its tables hold cells under the floor of survey households"]
+        if in_tables
+        else []
+    )
+    assert run(repo).problems == expected
 
 
 def test_record_level_identifiers_fail_in_a_pending_file(repo):

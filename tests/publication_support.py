@@ -28,6 +28,7 @@ from uk_budget_data.publication.artifacts import (
     table_files,
     write_artifact,
 )
+from uk_budget_data.publication.disclosure_floor import floor_record
 from uk_budget_data.publication.receipt import (
     artifact_sha256,
     projection_end_year,
@@ -362,6 +363,7 @@ class World:
         with_tables=None,
         modifier_templates=None,
         git_sha=None,
+        before_the_floor=False,
     ):
         """Generate an artifact for ``key`` with the given fiscal impact.
 
@@ -376,6 +378,11 @@ class World:
         one with its tables anyway, as generation did before, to test that
         the gates refuse it. ``git_sha`` is the commit the receipt records
         (and binds code-bound identities to), by default a stand-in.
+
+        An artifact with figures records, as generation does, that the
+        floor of survey households found no thin cell in its tables;
+        ``before_the_floor=True`` records nothing, as for one generated
+        before the floor (#208), which the gate refuses to show.
         """
         revision = self.revision(clean, sha=git_sha or "a" * 40)
         scenario = Scenario(
@@ -456,6 +463,8 @@ class World:
 
         if with_tables is None:
             with_tables = not data_limits
+        if with_tables and not data_limits and not before_the_floor:
+            inputs["disclosure_floor"] = floor_record({})
         tables = tables or make_tables(key, values, name)
         if with_tables and data_limits:
             return self._write_with_tables(tables, key, build)
