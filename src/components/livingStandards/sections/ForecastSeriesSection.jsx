@@ -231,11 +231,9 @@ function cardsFor(section) {
 /**
  * One section per forecast group, under its heading: one card a row, or two
  * side by side. The prices group pairs the inflation measures with the ONS
- * prices by spending category. `afterPrices`, if given, is drawn full
- * width in a row of its own under the prices group (the OBR's estimate of
- * the Budget's effect on CPI inflation).
+ * prices by spending category.
  */
-export default function ForecastSeriesSection({ data, view, onViewChange, afterPrices = null }) {
+export default function ForecastSeriesSection({ data, view, onViewChange }) {
   const forecast = data.forecast;
   return forecast.sections.map((section) => {
     const { group, cards } = cardsFor(section);
@@ -263,11 +261,6 @@ export default function ForecastSeriesSection({ data, view, onViewChange, afterP
           {history && <PriceCategoriesCard view={view} onViewChange={onViewChange} />}
         </div>
       </section>,
-      history && afterPrices && (
-        <section key={`${section.title}-after`} className="report-section ls-section">
-          <div className="charts-grid forecast-single">{afterPrices}</div>
-        </section>
-      ),
     ];
   });
 }

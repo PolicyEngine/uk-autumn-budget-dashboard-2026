@@ -360,9 +360,6 @@ export function LsBarChart({
   yDomain,
   yTicks,
   stacked = false,
-  // "sign" stacks negative parts down from zero and positive parts up
-  // (bars whose parts differ in sign); Recharts' default otherwise
-  stackOffset = undefined,
   signColours = null,
   legendItems,
   baseYear = BASE_YEAR,
@@ -411,7 +408,6 @@ export function LsBarChart({
           margin={MARGIN}
           barCategoryGap={barCategoryGap}
           barGap={barGap}
-          stackOffset={stackOffset}
           onMouseMove={describeYear ? (state) => setActiveIndex(state?.activeTooltipIndex ?? null) : undefined}
           onMouseLeave={describeYear ? () => setActiveIndex(null) : undefined}
         >

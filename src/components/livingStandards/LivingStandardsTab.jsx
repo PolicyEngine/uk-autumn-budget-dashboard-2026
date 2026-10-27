@@ -17,7 +17,6 @@ import SubTabs, { SubTabPanel, useSubTabParam } from "../SubTabs";
 import CurrentLawSection from "./CurrentLawSection";
 import ForecastHeadlineSection from "./sections/ForecastHeadlineSection";
 import ForecastSeriesSection from "./sections/ForecastSeriesSection";
-import ObrCpiEffectCard from "./ObrCpiEffectCard";
 import ViewLink from "../ViewLink";
 import { FORECAST_FEED_ANCHOR } from "../methodology/ForecastFeedMethod";
 import { forecastName } from "../../utils/livingStandards/forecast";
@@ -31,22 +30,14 @@ function ForecastPanel({ forecast, data, onShowTab }) {
   // `obr-forecast` updates an independent baseline JSON. Its Budget-day
   // extract has no receipt or release-index binding yet, so publication of
   // that JSON alone cannot authorise the new forecast figures.
-  // The OBR's estimate of the Budget's effect on CPI inflation: its own
-  // file, drawn only once published, whatever state the forecast is in
-  const cpiEffect = <ObrCpiEffectCard view={forecastView} onViewChange={setForecastView} onShowTab={onShowTab} />;
   if (forecast?.post_published) {
     return (
-      <>
-        <UnavailableNotice reason="Budget-day forecast is unavailable until verified">
-          <p>
-            Incomes and poverty under current law, on the forecast they were built from, remain on this view&apos;s
-            Living standards and Poverty sub-tabs.
-          </p>
-        </UnavailableNotice>
-        <section className="report-section ls-section">
-          <div className="charts-grid forecast-single">{cpiEffect}</div>
-        </section>
-      </>
+      <UnavailableNotice reason="Budget-day forecast is unavailable until verified">
+        <p>
+          Incomes and poverty under current law, on the forecast they were built from, remain on this view&apos;s
+          Living standards and Poverty sub-tabs.
+        </p>
+      </UnavailableNotice>
     );
   }
   return (
@@ -68,7 +59,7 @@ function ForecastPanel({ forecast, data, onShowTab }) {
       <section id="living-forecast" className="report-section">
         <ForecastHeadlineSection data={data} />
       </section>
-      <ForecastSeriesSection data={data} view={forecastView} onViewChange={setForecastView} afterPrices={cpiEffect} />
+      <ForecastSeriesSection data={data} view={forecastView} onViewChange={setForecastView} />
     </>
   );
 }
