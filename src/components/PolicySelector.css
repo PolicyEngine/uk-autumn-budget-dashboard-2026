@@ -83,7 +83,7 @@
   width: 320px;
   max-width: calc(100vw - 32px);
   /* Never taller than the screen below the sticky title row */
-  max-height: min(500px, calc(100dvh - var(--title-row-height, 68px) - 24px));
+  max-height: min(500px, calc(100dvh - var(--nav-offset, 0px) - var(--title-row-height, 68px) - 24px));
   overflow-y: auto;
 }
 

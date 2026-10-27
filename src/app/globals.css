@@ -138,7 +138,7 @@ code {
   --tab-icon-gap: 8px;
   /* Bars: the radius of a bar's outer end (chartTheme BAR_RADIUS) */
   --bar-radius: 5px;
-  --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height));
+  --sticky-offset: calc(var(--nav-offset) + var(--title-row-height) + var(--view-tabs-height));
   /* The landing page (LandingPage.css): how much of the page background
      lies over the Public finances view behind it (more at the top, behind
      the heading and paragraph; less around and below the boxes), its blur,
@@ -283,15 +283,38 @@ body {
   background: var(--page-bg);
 }
 
-/* Only the title row is sticky: the ui-kit site nav (PolicyEngineShell
-   renders it with an inline position:sticky) scrolls away normally.
+/* The two bars: the ui-kit site nav (PolicyEngineShell renders it with an
+   inline position:sticky; top:0) above the title band. Scrolling down, the
+   site nav scrolls away and the band sticks at the top of the window;
+   scrolling up, the site nav slides back in above the band; at the top of
+   the page both sit in their places. App.jsx sets data-site-nav-hidden on
+   <html> and measures the nav into --site-nav-height; --nav-offset is how
+   much of the window's top the nav covers, so the band, the tab rows and
+   --sticky-offset sit under it in either state. The nav moves by its
+   sticky top, not a transform, so near the top of the page it scrolls
+   away with the page. --motion-slide is 0 under reduced motion.
    Written against @policyengine/ui-kit 0.12.0, whose shell is
    <div class="min-h-screen flex flex-col"> with the nav as its first
    child. If a ui-kit upgrade changes that markup this selector stops
    matching: App.jsx warns in the console in development, and
    src/shellStickyNav.test.jsx fails. */
+:root {
+  --nav-offset: var(--site-nav-height, 0px);
+}
+
+:root[data-site-nav-hidden] {
+  --nav-offset: 0px;
+}
+
 .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
-  position: relative !important;
+  /* Above the title band (1100), so its About menu opens over it */
+  z-index: 1110 !important;
+  transition: top var(--motion-slide) var(--ease-out);
+}
+
+:root[data-site-nav-hidden] .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
+  top: calc(-1 * var(--site-nav-height, 58px)) !important;
+  box-shadow: none !important;
 }
 
 .app {
@@ -335,7 +358,7 @@ body {
 
 .title-row {
   position: sticky;
-  top: 0;
+  top: var(--nav-offset);
   /* Above every chart, label, tooltip and card on the page */
   z-index: 1100;
   /* One row on a wide screen: the title, then the year and policy pills
@@ -360,22 +383,12 @@ body {
   box-shadow: 0 1px 0 var(--shadow-soft);
 }
 
-/* Scrolling down, the band hides and the tab rows close up under the top
-   of the window; scrolling up, it slides back in (App.jsx,
-   data-band-hidden; --motion-slide is 0 under reduced motion) */
+/* The band and the tab rows move with the site nav above them (the
+   site-nav rule above) */
 .title-row,
 .view-tabs-bar,
 .sub-tabs-band {
-  transition: transform var(--motion-slide) ease;
-}
-
-.app[data-band-hidden] .title-row.is-stuck {
-  transform: translateY(-100%);
-}
-
-.app[data-band-hidden][data-tabs-stuck] .view-tabs-bar,
-.app[data-band-hidden][data-tabs-stuck] .sub-tabs-band {
-  transform: translateY(calc(-1 * var(--title-row-height)));
+  transition: top var(--motion-slide) var(--ease-out);
 }
 
 .title-row h1 {
@@ -461,7 +474,7 @@ body {
    data-tabs-stuck). */
 .app {
   --sub-band-height: 0px;
-  --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height) + var(--sub-band-height));
+  --sticky-offset: calc(var(--nav-offset) + var(--title-row-height) + var(--view-tabs-height) + var(--sub-band-height));
 }
 
 .app[data-sub-band] {
@@ -488,7 +501,7 @@ body {
 
 .view-tabs-bar {
   position: sticky;
-  top: var(--title-row-height);
+  top: calc(var(--nav-offset) + var(--title-row-height));
   /* Under the band and its pill lists, above the charts */
   z-index: 1090;
   margin-inline: calc(50% - 50vw);

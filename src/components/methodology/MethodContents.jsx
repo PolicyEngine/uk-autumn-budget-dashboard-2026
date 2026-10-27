@@ -47,7 +47,7 @@ function currentSection(sections) {
   const root = document.querySelector(".app") ?? document.documentElement;
   const style = getComputedStyle(root);
   const px = (name) => parseFloat(style.getPropertyValue(name)) || 0;
-  const offset = px("--title-row-height") + px("--view-tabs-height");
+  const offset = px("--nav-offset") + px("--title-row-height") + px("--view-tabs-height");
   const line = offset + CURRENT_LINE_EXTRA;
   let current = sections[0]?.id;
   for (const { id } of sections) {

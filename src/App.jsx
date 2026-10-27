@@ -146,8 +146,8 @@ export function viewFromLocation({ search, hash }) {
 }
 
 
-// The ui-kit shell's sticky site nav, as globals.css selects it to make it
-// scroll away (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
+// The ui-kit shell's sticky site nav, as globals.css selects it to hide it
+// on scroll down (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
 export const SHELL_STICKY_NAV_SELECTOR =
   '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';
 
@@ -352,26 +352,34 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     return () => observer.disconnect();
   }, []);
 
-  // Once scrolled past its place, the title band hides while the reader
-  // scrolls down and slides back in when they scroll up (globals.css,
-  // data-band-hidden); at the top it sits in its place
-  const [bandHidden, setBandHidden] = useState(false);
+  // The site nav above the title band scrolls away while the reader
+  // scrolls down and slides back in when they scroll up; the band stays
+  // stuck under it either way, and at the top both sit in their places
+  // (globals.css: data-site-nav-hidden on <html>, --site-nav-height).
+  // Scrolls under 6px are ignored.
   useEffect(() => {
+    const root = document.documentElement;
+    const nav = document.querySelector(SHELL_STICKY_NAV_SELECTOR);
+    const measure = () => {
+      if (nav) root.style.setProperty("--site-nav-height", `${nav.offsetHeight}px`);
+    };
+    measure();
+    const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    if (nav) resize?.observe(nav);
     let last = window.scrollY;
     let frame = 0;
+    const setHidden = (hidden) => root.toggleAttribute("data-site-nav-hidden", hidden);
     const check = () => {
       frame = 0;
       const y = window.scrollY;
-      const sentinel = titleSentinelRef.current;
-      const past = sentinel ? sentinel.getBoundingClientRect().top < 0 : y > 0;
-      if (!past) {
-        setBandHidden(false);
+      if (y <= 0) {
+        setHidden(false);
         last = y;
       } else if (y > last + 6) {
-        setBandHidden(true);
+        setHidden(true);
         last = y;
       } else if (y < last - 6) {
-        setBandHidden(false);
+        setHidden(false);
         last = y;
       }
     };
@@ -382,17 +390,20 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     return () => {
       window.removeEventListener("scroll", onScroll);
       if (frame) window.cancelAnimationFrame(frame);
+      resize?.disconnect();
+      root.removeAttribute("data-site-nav-hidden");
+      root.style.removeProperty("--site-nav-height");
     };
   }, []);
 
-  // globals.css un-sticks the ui-kit site nav with a selector written
+  // globals.css moves the ui-kit site nav with a selector written
   // against the shell's markup. Say so in development if it stops matching.
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
     if (!document.querySelector(SHELL_STICKY_NAV_SELECTOR)) {
       console.warn(
         "The ui-kit site nav was not found by SHELL_STICKY_NAV_SELECTOR; " +
-          "update it in App.jsx and globals.css so only the title row is sticky.",
+          "update it in App.jsx and globals.css so the site nav hides on scroll down.",
       );
     }
   }, []);
@@ -425,7 +436,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       const sentinel = tabsSentinelRef.current;
       const app = appRef.current;
       if (!sentinel || !app) return;
-      const band = parseFloat(getComputedStyle(app).getPropertyValue("--title-row-height")) || 0;
+      const style = getComputedStyle(app);
+      const band =
+        (parseFloat(style.getPropertyValue("--nav-offset")) || 0) +
+        (parseFloat(style.getPropertyValue("--title-row-height")) || 0);
       setTabsStuck(sentinel.getBoundingClientRect().top < band - 1);
     };
     const onScroll = () => {
@@ -528,8 +542,11 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     tabScrollPending.current = false;
     const sentinel = tabsSentinelRef.current;
     if (!sentinel || !appRef.current) return;
+    // Scrolling back up brings the site nav back, so its height counts
+    const style = getComputedStyle(appRef.current);
     const band =
-      parseFloat(getComputedStyle(appRef.current).getPropertyValue("--title-row-height")) || 0;
+      (parseFloat(style.getPropertyValue("--site-nav-height")) || 0) +
+      (parseFloat(style.getPropertyValue("--title-row-height")) || 0);
     const top = sentinel.getBoundingClientRect().top + window.scrollY - band;
     // A view opened before returns to where it was left, if that was below
     // the tabs; otherwise the tabs come back up under the band
@@ -778,7 +795,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       ref={appRef}
       data-sub-band={hasSubTabs ? "" : undefined}
       data-tabs-stuck={tabsStuck ? "" : undefined}
-      data-band-hidden={bandHidden && titleStuck ? "" : undefined} data-publication={unavailable ? "unavailable" : "verified"}>
+      data-publication={unavailable ? "unavailable" : "verified"}>
       {/* A div, not <main>: the PolicyEngine shell around the page is the
           main landmark, and a second one inside it is a landmark error */}
       <div className="main-content" ref={mainRef}>
