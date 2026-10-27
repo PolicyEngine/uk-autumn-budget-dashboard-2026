@@ -133,3 +133,16 @@
     display: none;
   }
 }
+
+/* Beside a dumbbell (By age's Who is better or worse off): rows a little
+   taller than the 34px floor, near the dumbbell's row pitch, at their own
+   height (never stretched to the neighbour's) */
+@media (min-width: 1025px) {
+  .charts-grid:has(.measure-dumbbell) .msc:has(> .msc-head) {
+    grid-template-rows: auto;
+  }
+
+  .charts-grid:has(.measure-dumbbell) .msc {
+    grid-auto-rows: minmax(44px, auto);
+  }
+}

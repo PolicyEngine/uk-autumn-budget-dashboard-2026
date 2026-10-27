@@ -60,4 +60,13 @@ describe("By age's cards share one age group", async () => {
     for (const pill of pills()) expect(pill.getAttribute("aria-label")).toMatch(/^Options: 50 to 64/);
     expect(new URLSearchParams(window.location.search).get("age")).toBe("50-64");
   });
+
+  it("with All ages against All ages, Effect of each policy's pill reads All ages once", async () => {
+    const { default: AgeSection } = await import("./AgeSection");
+    window.history.replaceState({}, "", "/?sub=age&age=all");
+    render(<AgeSection selectedPolicies={[]} selectedYear={2027} policies={[]} />);
+    const pills = screen.getAllByRole("button", { name: /^Options:/ });
+    // Average change by age, Change by year, Effect of each policy, Better and worse off
+    expect(pills[2].getAttribute("aria-label")).toBe("Options: All ages");
+  });
 });

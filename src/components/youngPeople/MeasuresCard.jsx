@@ -281,6 +281,8 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
                     label: "Compare with",
                     value: compareKey,
                     onChange: setCompareWith,
+                    // All ages against all ages: the pill reads "All ages" once
+                    ...(single ? { omitAtDefault: ALL_BAND } : {}),
                     options: [
                       { value: ALL_BAND, label: "All ages" },
                       ...AGE_BANDS.filter((b) => b.key !== band).map((b) => ({ value: b.key, label: b.label })),
