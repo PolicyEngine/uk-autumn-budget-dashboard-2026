@@ -25,7 +25,7 @@ Every Modal command starts `uv run --with modal==1.6.2 python -m uk_budget_data.
 | 13:15 | Integrator | **G2** generate, three shells at once, each from the same clean commit: | the three shells |
 | | | 1. `MODAL generate --artifacts --backend modal --reforms <template and parameter ids>` (about 8–9 min) | 2, 3 |
 | | | 2. one call per hand-written modifier: `MODAL generate --artifacts --backend modal --reforms <one id>` (about 7 min each) | 1, 3 |
-| | | 3. only if a flat file needs re-cutting: `MODAL generate --backend modal --only income_distribution` (about 4 min) | 1, 2 |
+| | | 3. only if a flat file needs re-cutting: `MODAL generate --backend modal --only income_distribution` (about 4 min). Not the package's files (`--published-package`, #233): they wait for the last manifest change, at G4 | 1, 2 |
 | | Integrator | `publish reconcile`, `publish stage --provisional`, `publish check` for each written directory; household check per measure | |
 | | Reconciler | Move each `reconciliation.json` outside the checkout, then `publish review-rows` (never while a `generate` is running) | |
 | | Integrator | Publish PR, CI, merge | Documents |
@@ -34,7 +34,8 @@ Every Modal command starts `uv run --with modal==1.6.2 python -m uk_budget_data.
 | | two reviewers | Attest any hand-written measure regenerated today (fresh receipt, fresh attestation) | G3 |
 | 14:50 | Integrator | **G4** once every member is staged: `MODAL generate --combined <member ids> --backend modal` (about 7 min), stage; Reconciler approves once every member is approved. Start it before the area run: the area run's tables make the tree dirty | area run |
 | from G3 approval | Integrator | Area run: `UK_BUDGET_DISCLOSURE_AUDIT_DIR=<private dir> MODAL constituencies --backend modal` (14–21 min), from the same clean commit; approved single measures only, no package | G4 combined run |
-| after the last manifest change | Integrator | `publish index`, `publish check`, `uv run python scripts/check_public_data.py`, `bun scripts/check-public-files.mjs`; Reconciler: `publish review-rows` | |
+| after the last manifest change | Integrator | After the last `stage`, `approve` or `withdraw`: `MODAL generate --only income_distribution --published-package --backend modal` and `MODAL generate --only income_growth --published-package --backend modal`, two shells at once (2:46 for both, two measures, rehearsal 27 Oct). Then the Reconciler re-reviews `income_distribution.csv`, `income_mobility.csv` and `income_growth_with_measures.csv` by hand in `data_inputs/public_data_review.csv` (new SHA-256, reviewer, date, basis): `publish review-rows` does not write these three rows | |
+| then | Integrator, Reconciler | In this order: `publish index`, `publish check`; Reconciler: `publish review-rows`; then `git add` the artifacts, `manifest.json`, the regenerated flat files and `public_data_review.csv`, and run `uv run python scripts/check_public_data.py` and `bun scripts/check-public-files.mjs`. Before `review-rows` both checks fail on every new file; before `git add`, `check_public_data.py` reports each one as "reviewed, but not tracked" | |
 | | Integrator | Publish PR, CI, merge; `curl` the live `manifest.json`; household check | |
 | 15:45 | Media first cut | Comparables review first (runbook, "First cut") | |
 

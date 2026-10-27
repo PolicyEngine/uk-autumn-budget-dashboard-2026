@@ -938,7 +938,7 @@ uv run --with modal==1.6.2 python -m uk_budget_data.cli generate --artifacts --b
 **Run the independent commands side by side, each in its own shell.** Each starts its own ephemeral app, so they don't wait for each other:
 - the template and `parameter_changes` measures in one `generate --artifacts --backend modal --reforms <ids>`;
 - each hand-written modifier (`employer_ni_relief_under_25s`, `plan_2_threshold_unfreeze`) in a call of its own, started at the same time;
-- any flat file a re-cut needs (`generate --only income_distribution --backend modal`), at the same time too: it doesn't depend on the artifacts.
+- any flat file a re-cut needs (`generate --only income_distribution --backend modal`), at the same time too: it doesn't depend on the artifacts. The exception is the published package's files (`--only income_distribution --published-package` and `--only income_growth --published-package`, #233): they read the manifest, so they run after its last change, at G4, never beside G2.
 
 Never put a hand-written modifier in the shared call, and never run `--artifacts` without `--reforms`: that runs every measure, the hand-written ones included, and each extra artifact of a hand-written modifier needs its own two-person attestation. This holds for Tuesday's 18:00Z regeneration as for G2.
 
