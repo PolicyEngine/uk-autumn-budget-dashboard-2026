@@ -2,7 +2,7 @@
 
 The household route runs each side as a ``policyengine_uk.Simulation`` with
 the side's ``Scenario`` (parameter changes and simulation modifiers), so all
-nine measures apply to a household, the six with formula modifiers included.
+seven measures apply to a household, the six with formula modifiers included.
 
 - Hand checks: each modifier measure's change is recomputed from the
   parameters and the spending entered.
@@ -302,24 +302,6 @@ def test_no_electricity_spending_no_electricity_vat_change():
         ["domestic_electricity_zero_vat"],
     )
     assert result["net_income"]["change"] == 0
-
-
-# --- employer National Insurance for under-25s -----------------------------------
-
-
-def test_employer_ni_relief_has_no_household_effect():
-    """Employers pay less for a 23-year-old from 2027-28, but wages are
-    fixed: £0, reported as an employer cost, not as not modelled."""
-    result = calculate(
-        Answers(2027, age=23, employment_income=30_000),
-        2027,
-        ["employer_ni_relief_under_25s"],
-    )
-    [measure] = result["by_policy"]["measures"]
-    assert measure["change"] == 0
-    assert measure["note_kind"] == "employer_cost"
-    assert measure["note"].startswith("No household effect (employer cost)")
-    assert result["not_modelled"] == []
 
 
 # --- VAT cut on road fuel ---------------------------------------------------------
