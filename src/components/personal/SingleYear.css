@@ -1345,3 +1345,10 @@
   color: var(--pe-gray-500);
 }
 
+
+/* Across earnings: the boxed Show control (SeriesToggle placement
+   "section") sits as far above the pair as By age's Measures key does
+   above its cards: its own 16px plus the section's 20px gap */
+.across-earnings-show {
+  margin-bottom: 20px;
+}
