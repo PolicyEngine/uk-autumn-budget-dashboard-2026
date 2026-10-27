@@ -29,6 +29,11 @@ The gates, in order:
    whose receipt binds a hand-written modifier on either side is held at
    every figure level until two people attest its exact receipt
    (``attestations``); a release never waives any other check.
+4d. **The floor of survey households** (``disclosure_floor``). A
+   provisional or approved artifact with household tables must have been
+   held to it: its receipt records the check, so one generated before the
+   floor is regenerated first. One whose decile tables still hold a cell
+   under it is never shown.
 5. **Completeness** (approval only). Every supported year is covered and
    every table is complete.
 6. **Reconciliation** (approval only). Every comparable year passes or
@@ -67,7 +72,10 @@ from uk_budget_data.publication.attestations import (
     validate_attestation,
 )
 from uk_budget_data.publication.combine import combined_key
-from uk_budget_data.publication.disclosure_floor import DECILE_TABLES
+from uk_budget_data.publication.disclosure_floor import (
+    DECILE_TABLES,
+    FLOOR_TABLES,
+)
 from uk_budget_data.publication.receipt import (
     artifact_sha256,
     certificate_problems,
@@ -481,7 +489,7 @@ def gate_problems(
             )
 
     if level in (m.PROVISIONAL, m.APPROVED):
-        problems += _floor_problems(dashboard)
+        problems += _floor_problems(dashboard, tables)
         if dashboard.get("publishable") is not True:
             reasons = dashboard.get("reasons") or ["no reason recorded"]
             problems += [f"not publishable: {r}" for r in reasons]
@@ -559,13 +567,22 @@ def gate_problems(
     return problems, info
 
 
-def _floor_problems(dashboard: dict) -> list[str]:
-    """Why an artifact whose decile tables still hold cells under the floor
-    of survey households (written under ``UK_BUDGET_THIN_DECILES=warn``,
-    recorded by ``disclosure_floor.floor_record``) may never be shown. No
-    acknowledgement lifts it: such a cell rests on too few cases to
-    publish."""
-    floor = dashboard.get("disclosure_floor") or {}
+def _floor_problems(dashboard: dict, tables: dict) -> list[str]:
+    """Why an artifact may not be shown for the floor of survey households:
+    its household tables were never held to it (its receipt records no
+    check, as for one generated before the floor), or its decile tables
+    still hold cells under it (written under ``UK_BUDGET_THIN_DECILES=warn``,
+    recorded by ``disclosure_floor.floor_record``). No acknowledgement lifts
+    either: such a cell rests on too few cases to publish."""
+    floor = dashboard.get("disclosure_floor")
+    if floor is None:
+        if tables.keys() & set(FLOOR_TABLES):
+            return [
+                "its receipt records no check of its household tables "
+                "against the floor of survey households, as for an artifact "
+                "generated before the floor: regenerate it"
+            ]
+        return []
     if not floor.get("thin_cells_in_tables"):
         return []
     cells = "; ".join(

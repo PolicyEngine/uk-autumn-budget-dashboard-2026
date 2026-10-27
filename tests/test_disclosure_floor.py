@@ -478,7 +478,11 @@ def test_every_run_carries_the_mode_its_generation_started_with(
     assert run.refuse_thin_deciles is refuses
 
 
-def test_stand_in_simulations_are_not_checked():
+def test_stand_in_simulations_are_recorded_as_not_checked():
+    """#208 review, finding 9: the gate shows no artifact whose receipt
+    records nothing of the floor, so a run whose simulations were not built
+    from a dataset, as a test's stand-ins, records why it was not
+    checked."""
     from uk_budget_data.publication import generate
 
     baseline, reformed, _ = _population({80, 81})
@@ -486,7 +490,42 @@ def test_stand_in_simulations_are_not_checked():
     job = _job()
     assert generate._apply_disclosure_floor(
         "a", job, baseline, reformed, result
-    ) == ([], None)
+    ) == (
+        [],
+        floor.floor_record({}, not_checked_because=generate.NO_DATASET),
+    )
+
+
+def test_an_artifact_made_before_the_floor_is_never_shown():
+    """#208 review, finding 9: an artifact whose receipt records no check
+    against the floor, as one generated before it, still stages, but is
+    never made provisional or approved until it is regenerated."""
+    from tests.publication_support import World
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.publish import (
+        PublishError,
+        approve,
+        stage,
+    )
+
+    world = World()
+    try:
+        values = {2027: -1.0, 2028: -2.0}
+        arguments = dict(data_root=world.data_root, inputs=world.inputs)
+        manifest = m.Manifest()
+        before = world.ready("alpha", values, before_the_floor=True)
+        unchecked = "no check of its household tables against the floor"
+        with pytest.raises(PublishError, match=unchecked):
+            stage(manifest, before.path, provisional=True, **arguments)
+        stage(manifest, before.path, **arguments)
+        with pytest.raises(PublishError, match=unchecked):
+            approve(manifest, "alpha", "Reviewer", **arguments)
+        regenerated = world.ready("alpha", values)
+        stage(manifest, regenerated.path, **arguments)
+        approve(manifest, "alpha", "Reviewer", **arguments)
+        assert manifest.measures["alpha"].status == m.APPROVED
+    finally:
+        world.close()
 
 
 def test_the_record_names_cells_never_figures_and_flags_decile_ones():

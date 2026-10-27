@@ -43,6 +43,9 @@ SURVEY_HOUSEHOLD_FLOOR = SCATTER_MIN_HOUSEHOLDS
 CHANGE_TOLERANCE = 0.01
 DECILE_TABLES = ("distributional_impact", "winners_losers")
 AGE_TABLE = "age_impact"
+# The tables the floor holds: the decile and age tables, and the binned
+# scatter, whose rows name their survey household once it has run.
+FLOOR_TABLES = (*DECILE_TABLES, AGE_TABLE, "household_scatter_binned")
 # Groups no row shows but the rows give back by difference (``age_groups``):
 # a band's people whose age has no row of its own, labelled with the band
 # and this, and anyone in no band.

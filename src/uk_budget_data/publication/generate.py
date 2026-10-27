@@ -545,6 +545,14 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool, list[str]]:
     return reference, bool(limits), warnings
 
 
+# What the receipt records of the floor for a run whose simulations were
+# not built from a dataset (a household situation, or a stand-in in tests).
+NO_DATASET = (
+    "its simulations were not built from a dataset with tables by year, so "
+    "they name no survey households"
+)
+
+
 def _built_from_a_dataset(simulation) -> bool:
     """Whether ``simulation`` was built from a dataset with tables by year,
     as ``geography.dataset_tables`` reads them."""
@@ -581,8 +589,10 @@ def _apply_disclosure_floor(
     ``UK_BUDGET_THIN_DECILES=warn``, ``job.refuse_thin_deciles`` False,
     return a warning naming them), and make the binned scatter count survey
     households rather than records. Only for simulations built from a
-    dataset, whose household and person tables name the survey households
-    (a household situation, or a stand-in in tests, has none).
+    dataset, whose household and person tables name the survey households;
+    any other run (a household situation, or a stand-in in tests) is
+    recorded as not checked (NO_DATASET). The certified-data job's real run
+    checks that a run on a dataset never records that.
 
     A run whose survey households cannot be told apart is refused when its
     data could be certified (:func:`_certifiable`). On any other data, such
@@ -591,9 +601,12 @@ def _apply_disclosure_floor(
     is never approved, so nothing made from it is shown.
 
     Returns the warnings and what the receipt records of the floor
-    (``disclosure_floor.floor_record``), None when it does not apply."""
+    (``disclosure_floor.floor_record``). The gate shows no artifact whose
+    receipt lacks it (#208 review, finding 9)."""
     if not all(_built_from_a_dataset(sim) for sim in (baseline, reformed)):
-        return [], None
+        return [], disclosure_floor.floor_record(
+            {}, not_checked_because=NO_DATASET
+        )
     from uk_budget_data.pipeline import scatter_survey_households
 
     try:
