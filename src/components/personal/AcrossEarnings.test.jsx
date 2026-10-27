@@ -25,7 +25,9 @@ describe("the two Across earnings cards", () => {
     expect(net.querySelector(".series-toggle-chip")).toBeNull();
     expect(rate.querySelector(".series-toggle-chip")).toBeNull();
     const show = container.querySelector(".across-earnings-show");
-    expect(show).toHaveTextContent(/^Show on both charts:/);
+    expect(show).toHaveTextContent(/^Show on both charts/);
+    // Boxed as the section measure key: a titled bar above the pair
+    expect(show.querySelector(".series-toggle-wrap.is-section > .series-toggle-title")).toHaveTextContent("Show on both charts");
     // What applies on either card, once each, then the total
     const chips = shownChips(container);
     expect(chips).toContain("Personal allowance taper");

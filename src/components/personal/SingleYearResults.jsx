@@ -418,7 +418,8 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
       {shared && (
         <div className="across-earnings-show">
           <SeriesToggle
-            lead="Show on both charts:"
+            placement="section"
+            lead="Show on both charts"
             label="Components"
             series={chips}
             shown={chips.filter((chip) => !chip.disabled && !hidden.includes(chip.key)).map((chip) => chip.key)}

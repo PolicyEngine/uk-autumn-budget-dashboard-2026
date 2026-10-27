@@ -50,6 +50,10 @@ function markHintSeen() {
  *   "N more with no effect for you" toggle that opens them in place
  * @param {boolean} [props.expanded] - Whether that chip is open (to share it)
  * @param {(open: boolean) => void} [props.onExpandedChange]
+ * @param {"card"|"section"} [props.placement] - "section" for one control
+ *   above several cards: a bordered, rounded bar like the section measure
+ *   key (MeasureKey's is-section), its lead as a title on the left, a
+ *   divider, then the chips
  * @param {Array<{key: string, label: string, fill: string}>} [props.extras] - Key
  *   items that are not lines (the selected year's shading), after the chips,
  *   as a swatch and a label, not a button
@@ -66,6 +70,7 @@ export default function SeriesToggle({
   collapseDisabled = false,
   expanded: expandedProp,
   onExpandedChange,
+  placement = "card",
 }) {
   // The disabled chips folded into one "N more with no effect for you" toggle
   // (`collapseDisabled`), opened in place; open or not can be shared
@@ -98,11 +103,18 @@ export default function SeriesToggle({
     onChange(series.map((s) => s.key).filter((k) => on.has(k)));
   };
   return (
-    <div className="series-toggle-wrap">
-      <div className="series-toggle" role="group" aria-label={`${label}: show or hide`}>
-        <span className="series-toggle-lead" aria-hidden="true">
+    <div className={`series-toggle-wrap is-${placement}`}>
+      {placement === "section" && (
+        <span className="series-toggle-title" aria-hidden="true">
           {lead}
         </span>
+      )}
+      <div className="series-toggle" role="group" aria-label={`${label}: show or hide`}>
+        {placement !== "section" && (
+          <span className="series-toggle-lead" aria-hidden="true">
+            {lead}
+          </span>
+        )}
         {(collapseDisabled ? series.filter((s) => !isFolded(s) || expanded) : series).map((s) => {
           const active = on.has(s.key);
           const last = active && on.size === 1;
