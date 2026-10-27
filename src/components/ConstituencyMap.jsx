@@ -21,7 +21,8 @@ import {
   exportMapAsSvg,
   MAP_ZOOM_LAYER_CLASS,
 } from "../utils/exportMapAsSvg";
-import { downloadFile } from "../utils/downloadFile";
+import { downloadFile, downloadSvg } from "../utils/downloadFile";
+import { frameCsv, frameFileName, frameSvg } from "../utils/exportFrame";
 import { downloadSvgAsPng } from "../utils/rasteriseSvg";
 import {
   EXPORT_UNITS,
@@ -948,13 +949,35 @@ export default function ConstituencyMap({
     logo: CHART_LOGO,
     tooltip,
   });
-  const handleExportSvg = async () => {
+  // The file's frame (title, Options, source, date) comes from the
+  // download menu; the map names what it shows (a measure, or the package)
+  // in place of the band's selection.
+  const mapFrame = (frame) =>
+    frame && {
+      ...frame,
+      policies: label || frame.policies,
+      subtitle: [label || frame.policies, frame.selection].filter(Boolean).join(" · "),
+    };
+  const framedMap = async (frame) => {
+    const framed = mapFrame(frame);
+    // Framed, the frame draws the title and logo; the builder the map alone
+    const options = framed ? { tooltip } : exportOptions();
+    return framed
+      ? frameSvg(await buildMapSvg(svgNode, options), framed, { logo: CHART_LOGO })
+      : buildMapSvg(svgNode, options);
+  };
+  const handleExportSvg = async (frame) => {
     if (!svgNode) return;
-    await exportMapAsSvg(svgNode, exportName, exportOptions());
+    if (!frame) {
+      await exportMapAsSvg(svgNode, exportName, exportOptions());
+      return;
+    }
+    const built = await framedMap(frame);
+    if (built) downloadSvg(built.svg, frameFileName(frame, exportName));
   };
   // The CSV holds the published strings for every constituency, as the
   // region export does: withheld figures stay blank.
-  const handleExportCsv = () => {
+  const handleExportCsv = (frame) => {
     const text = constituencyCsvText(constituencyTable, {
       reform,
       year: selectedYear,
@@ -965,17 +988,17 @@ export default function ConstituencyMap({
     });
     if (text) {
       downloadFile(
-        text,
-        `constituency-results-${reform}-${selectedYear}.csv`,
+        frameCsv(text, mapFrame(frame)),
+        `${frame ? frameFileName(frame, "constituency-results") : `constituency-results-${reform}-${selectedYear}`}.csv`,
         "text/csv;charset=utf-8",
       );
     }
   };
   const mapDownloads = {
     csv: handleExportCsv,
-    png: async () => {
+    png: async (frame) => {
       if (!svgNode) return;
-      await downloadSvgAsPng(await buildMapSvg(svgNode, exportOptions()), exportName);
+      await downloadSvgAsPng(await framedMap(frame), frameFileName(frame, exportName));
     },
     svg: handleExportSvg,
   };

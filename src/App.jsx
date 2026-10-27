@@ -30,6 +30,7 @@ import ViewSkeleton, { BootSkeleton } from "./components/publication/ViewSkeleto
 import { bootView } from "./utils/bootView";
 import UpdateToast from "./components/publication/UpdateToast";
 import { provisionalLabel } from "./utils/publication/manifest";
+import { DownloadContext, policiesLabel } from "./utils/downloadContext";
 import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
@@ -739,6 +740,17 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // small badge on the landing page, nowhere above the views
   const provisional = catalogueProvisional(catalogue);
 
+  // What a downloaded chart says it shows (ChartDownloadMenu's frame): the
+  // band's policies on the views it drives, the provisional label while
+  // any shown measure is provisional
+  const downloadContext = (value) =>
+    VIEW_BY_KEY[value]?.policies
+      ? {
+          policies: policiesLabel(selectedPolicies, POLICIES),
+          provisional: provisional ? provisionalLabel(catalogue.manifest) : null,
+        }
+      : { policies: value === "outlook" ? "Current law (before the Budget measures)" : null, provisional: null };
+
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
   const showingLine = selectedPolicies.length > 0 &&
@@ -1045,6 +1057,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           className="tab-panel"
           hidden={landing || value !== activeTab}
         >
+        <DownloadContext.Provider value={downloadContext(value)}>
         <Suspense fallback={viewFallback(value)}>
         {BUDGET_VIEWS.has(value) && unavailable?.loading ? (
           // Placeholders at once while the verified figures load; the
@@ -1103,6 +1116,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           </PopulationImpactView>
         )}
         </Suspense>
+        </DownloadContext.Provider>
         </div>
         ))}
         </div>

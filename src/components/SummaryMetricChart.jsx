@@ -555,7 +555,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
             )}
           </p>
         </div>
-        <ChartDownloadMenu download={download} chartTitle={metric.title} />
+        <ChartDownloadMenu download={download} chartTitle={metric.title} period={`${fiscalYearTick(years[0])} to ${fiscalYearTick(years[years.length - 1])}`} />
       </div>
       {/* The measure, as the cards beside it choose theirs: one pill per
           choice ("Inequality measure: Gini ▾") under the description, in

@@ -237,7 +237,12 @@ describe("ConstituencyMap", () => {
     expect(root.querySelector("g.map-legend").getAttribute("transform")).toBe(
       "translate(12, 12)",
     );
-    expect(root.getAttribute("viewBox")).toMatch(/^0 0 800 /);
+    // The file's frame (title, selection, source) is 1200px wide; the map
+    // inside it keeps its own 800px drawing
+    expect(root.getAttribute("viewBox")).toMatch(/^0 0 1200 /);
+    expect(root.querySelector(":scope > svg").getAttribute("viewBox")).toMatch(/^0 0 800 /);
+    expect(root.querySelector(":scope > title").textContent).toBe("Constituency-level impacts, 2029-30");
+    expect(svgText).toContain("Source: PolicyEngine UK, UK Autumn Budget 2026 dashboard");
   });
 
   it("has no footnote under the map; the search box says what to do", async () => {
@@ -503,14 +508,14 @@ describe("ConstituencyMap", () => {
     fireEvent.click(screen.getByRole("button", { name: "CSV Data" }));
     await waitFor(() => expect(downloadFile).toHaveBeenCalledTimes(1));
     const [content, filename, mimeType] = vi.mocked(downloadFile).mock.calls[0];
-    expect(filename).toBe(
-      "constituency-results-autumn_budget_2026_combined-2029.csv",
-    );
+    // Named after the card's title and year
+    expect(filename).toBe("constituency-level-impacts-2029-30.csv");
     expect(mimeType).toBe("text/csv;charset=utf-8");
     const lines = content.slice(1).trim().split("\r\n");
     expect(lines[0]).toMatch(/^# Generated: /);
     expect(lines).toContain("# Reform: autumn_budget_2026_combined");
     expect(lines).toContain("# Year: 2029-30");
+    expect(lines).toContain('"# Chart: Constituency-level impacts, 2029-30"');
     const header = lines.find((line) => !line.startsWith("#") && !line.startsWith('"#'));
     expect(header.split(",")[0]).toBe("area_code");
   });
@@ -522,12 +527,10 @@ describe("ConstituencyMap", () => {
     fireEvent.click(screen.getByRole("button", { name: "SVG Vector image" }));
     await waitFor(() => expect(downloadSvg).toHaveBeenCalledTimes(1));
     const [svgText, filename] = vi.mocked(downloadSvg).mock.calls[0];
-    expect(filename).toBe(
-      "constituency-map-autumn_budget_2026_combined-relative_change-2029",
-    );
+    expect(filename).toBe("constituency-level-impacts-2029-30");
     const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
     const root = doc.documentElement;
-    expect(root.querySelector(":scope > defs > pattern#withheld-hatch")).not.toBeNull();
+    expect(root.querySelector(":scope > svg > defs > pattern#withheld-hatch")).not.toBeNull();
     expect(
       root.querySelector('path[data-code="Z14000003"]').getAttribute("fill"),
     ).toBe("url(#withheld-hatch)");
@@ -537,7 +540,7 @@ describe("ConstituencyMap", () => {
     // The exported file carries the dot textures its approximate seats use.
     expect(
       root.querySelector(
-        `:scope > defs > pattern#${approximatePatternId("small_gain")}`,
+        `:scope > svg > defs > pattern#${approximatePatternId("small_gain")}`,
       ),
     ).not.toBeNull();
     expect(root.querySelector("g.map-zoom-layer").hasAttribute("transform")).toBe(

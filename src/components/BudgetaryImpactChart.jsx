@@ -340,7 +340,7 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [], befor
             {laterRevenue && <span className="later-years-note"> {laterRevenue}</span>}
           </p>
         </div>
-        <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} />
+        <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} period={yearSpan} />
       </div>
 
       <div ref={chartRef}>
