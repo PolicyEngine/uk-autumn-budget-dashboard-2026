@@ -35,6 +35,7 @@ MEASURE_YEARS = {
     "threshold_freeze_2031_32": 2031,
     "road_fuel_vat_cut": 2026,
     "plan_2_threshold_unfreeze": 2027,
+    "carers_allowance_earnings_taper": 2030,
 }
 # Every measure the calculator shows moves some probe household (employer
 # NI, which moved none, is withdrawn).
@@ -71,6 +72,8 @@ EXTRA_PEOPLE = {
         "student_loan_balance": 60_000,
         "student_loan_repayments": 500,
     },
+    # £11,000 / 52 = £211.53 a week, above the £204 earnings limit
+    "carer": {"age": 45, "employment_income": 11_000, "care_hours": 35},
     "founder": {
         "age": 55,
         "employment_income": 100_000,
