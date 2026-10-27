@@ -11,7 +11,10 @@ from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.pipeline import build_microsimulation
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import read_receipt, read_tables
-from uk_budget_data.publication.generate import generate_artifacts
+from uk_budget_data.publication.generate import (
+    NO_DATASET,
+    generate_artifacts,
+)
 from uk_budget_data.publication.publish import PublishError, approve, stage
 from uk_budget_data.publication.receipt import (
     ReceiptInputs,
@@ -104,6 +107,11 @@ def test_generate_reconcile_and_stage_on_a_real_simulation(tmp_path):
     )
     assert document["dashboard"]["publishable"] is False
     assert document["execution_receipt"]["reform"]["binding"] == "content"
+    # The floor saw the dataset. A policyengine change that hid it would
+    # record every real run as not built from one, and the gate takes that
+    # record as a check (#208 review, finding 9).
+    floor = document["dashboard"]["disclosure_floor"]
+    assert floor.get("not_checked_because") != NO_DATASET
 
     inputs = tmp_path / "treasury"
     (inputs / "sources").mkdir(parents=True)
