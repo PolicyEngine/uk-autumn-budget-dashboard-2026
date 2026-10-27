@@ -248,7 +248,8 @@ def validate_layer_table(path: Path, name: str, report: Report) -> None:
 def thin_cells_in_tables(data: bytes) -> bool:
     """Whether an artifact's receipt records cells under the floor of
     survey households still in its tables (``dashboard.disclosure_floor``,
-    from a run written under UK_BUDGET_THIN_DECILES=warn)."""
+    as generation writes such a run unless UK_BUDGET_THIN_DECILES=refuse;
+    the gate never stages it)."""
     try:
         document = json.loads(data)
     except (ValueError, UnicodeError):

@@ -33,7 +33,8 @@ The gates, in order:
    provisional or approved artifact with household tables must have been
    held to it: its receipt records the check, so one generated before the
    floor is regenerated first. One whose decile tables still hold a cell
-   under it is never shown.
+   under it is never staged or shown, so ``publish review-rows`` deletes
+   it before anything is committed.
 5. **Completeness** (approval only). Every supported year is covered and
    every table is complete.
 6. **Reconciliation** (approval only). Every comparable year passes or
@@ -488,8 +489,8 @@ def gate_problems(
                 "release; restage it"
             )
 
+    problems += _floor_problems(dashboard, tables, level)
     if level in (m.PROVISIONAL, m.APPROVED):
-        problems += _floor_problems(dashboard, tables)
         if dashboard.get("publishable") is not True:
             reasons = dashboard.get("reasons") or ["no reason recorded"]
             problems += [f"not publishable: {r}" for r in reasons]
@@ -567,16 +568,21 @@ def gate_problems(
     return problems, info
 
 
-def _floor_problems(dashboard: dict, tables: dict) -> list[str]:
-    """Why an artifact may not be shown for the floor of survey households:
-    its household tables were never held to it (its receipt records no
-    check, as for one generated before the floor), or its decile tables
-    still hold cells under it (written under ``UK_BUDGET_THIN_DECILES=warn``,
-    recorded by ``disclosure_floor.floor_record``). No acknowledgement lifts
-    either: such a cell rests on too few cases to publish."""
+def _floor_problems(dashboard: dict, tables: dict, level: str) -> list[str]:
+    """Why an artifact may not hold ``level`` for the floor of survey
+    households. Its decile tables still hold cells under it (as generation
+    writes a run with one unless ``UK_BUDGET_THIN_DECILES=refuse``, recorded
+    by ``disclosure_floor.floor_record``): no level takes it, not even
+    staged, so ``publish review-rows`` deletes it before anything is
+    committed. Or, to be provisional or approved, its household tables were
+    never held to it: its receipt records no check, as for one generated
+    before the floor. No acknowledgement lifts either: such a cell rests on
+    too few cases to publish."""
     floor = dashboard.get("disclosure_floor")
     if floor is None:
-        if tables.keys() & set(FLOOR_TABLES):
+        if level in (m.PROVISIONAL, m.APPROVED) and (
+            tables.keys() & set(FLOOR_TABLES)
+        ):
             return [
                 "its receipt records no check of its household tables "
                 "against the floor of survey households, as for an artifact "

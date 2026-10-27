@@ -20,8 +20,10 @@ cannot cost (its run records a data limit) is still processed, since the
 limits are observed while it runs, but its artifact is receipt-only: it is
 listed as not computable and binds no figure, so no table is written. A run
 whose decile tables have a cell resting on fewer than the floor of survey
-households (``disclosure_floor``) is refused once its figures are made,
-before anything is written; the age table's thin cells are withheld.
+households (``disclosure_floor``) is written with a warning, and its
+receipt names the cells, so the gate never stages or shows it; under
+``UK_BUDGET_THIN_DECILES=refuse`` it is refused once its figures are made,
+before anything is written. The age table's thin cells are withheld.
 """
 
 import atexit
@@ -337,7 +339,8 @@ class ArtifactRun:
     # Whether a thin decile cell refuses the run, or is written with a
     # warning (``disclosure_floor.refuses_thin_deciles``), as the process
     # that planned the runs reads it: a worker or a Modal container does not
-    # share that process's environment.
+    # share that process's environment. generate_artifacts always sets it; a
+    # run made any other way refuses.
     refuse_thin_deciles: bool = True
 
 
@@ -584,11 +587,11 @@ def _apply_disclosure_floor(
     subject: str, job: ArtifactRun, baseline, reformed, result: ReformResult
 ) -> tuple[list[str], Optional[dict]]:
     """Hold a run's household tables to the floor of survey households
-    (``disclosure_floor``): withhold the age table's thin cells, refuse a run
-    with a thin decile cell (or, when the run was planned under
-    ``UK_BUDGET_THIN_DECILES=warn``, ``job.refuse_thin_deciles`` False,
-    return a warning naming them), and make the binned scatter count survey
-    households rather than records. Only for simulations built from a
+    (``disclosure_floor``): withhold the age table's thin cells, return a
+    warning naming a thin decile cell (or, when the run was planned under
+    ``UK_BUDGET_THIN_DECILES=refuse``, ``job.refuse_thin_deciles`` True,
+    refuse the run), and make the binned scatter count survey households
+    rather than records. Only for simulations built from a
     dataset, whose household and person tables name the survey households;
     any other run (a household situation, or a stand-in in tests) is
     recorded as not checked (NO_DATASET). The certified-data job's real run
@@ -640,7 +643,8 @@ def _apply_disclosure_floor(
                 subject, f"{reason}; a decile table cannot withhold one"
             )
         warnings.append(
-            f"{reason}; recorded in its receipt, so it cannot be shown"
+            f"{reason}; recorded in its receipt, so it can be neither staged "
+            "nor shown, and publish review-rows deletes it: never commit it"
         )
     result.age_impact = disclosure_floor.withhold_thin_age_rows(
         result.age_impact, found

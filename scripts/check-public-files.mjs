@@ -8,7 +8,8 @@
 // must carry the layer's public columns, and a CSV that carries them must be
 // reviewed as one. No public file may carry record-level identifiers, and no
 // artifact whose receipt records cells under the floor of survey households
-// left in its tables (a run written under UK_BUDGET_THIN_DECILES=warn). The
+// left in its tables (as generation writes such a run unless
+// UK_BUDGET_THIN_DECILES=refuse; the gate never stages it). The
 // page's area routing status takes no review entry, and must be one of the
 // few texts uk_budget_data.area_routing writes.
 //

@@ -293,12 +293,12 @@ def test_a_thin_single_age_in_a_band_that_is_not_thin_is_found_alone():
 
 
 def test_warn_mode_writes_a_thin_decile_run_with_a_warning(monkeypatch):
-    """Written as the run says, even where it runs under the default, as a
-    Modal container does (#208 review, finding 3)."""
+    """Written as the run says, even where the process it runs in says
+    "refuse" (#208 review, finding 3: the mode travels with the run)."""
     from uk_budget_data import pipeline
     from uk_budget_data.publication import generate
 
-    monkeypatch.delenv(floor.THIN_DECILES_ENV, raising=False)
+    monkeypatch.setenv(floor.THIN_DECILES_ENV, "refuse")
     baseline, reformed, survey = _population({80, 81})
     baseline.dataset = reformed.dataset = _Dataset()
     monkeypatch.setattr(
@@ -313,6 +313,7 @@ def test_warn_mode_writes_a_thin_decile_run_with_a_warning(monkeypatch):
         "a", job, baseline, reformed, result
     )
     assert "winners_losers 2027 (5, all)" in warning
+    assert "never commit it" in warning
     # "all" is thin in the age table too, so no age row is left.
     assert result.age_impact == []
     # The receipt says which cells are thin and that the deciles' are still
@@ -437,13 +438,15 @@ class _Planned:
 
 
 @pytest.mark.parametrize(
-    "setting, refuses", [(None, True), ("refuse", True), ("warn", False)]
+    "setting, refuses",
+    [(None, False), ("", False), ("warn", False), ("refuse", True)],
 )
 def test_every_run_carries_the_mode_its_generation_started_with(
     monkeypatch, setting, refuses
 ):
     """#208 review, finding 3: the mode was read where each run was made,
-    and a Modal container's environment never says "warn"."""
+    and a Modal container's environment never says "refuse". Warn is the
+    default (finding 11)."""
     from tests.publication_support import World
     from uk_budget_data.models import DataConfig, Reform
     from uk_budget_data.publication import generate
@@ -476,6 +479,12 @@ def test_every_run_carries_the_mode_its_generation_started_with(
         world.close()
     (run,) = runner.runs
     assert run.refuse_thin_deciles is refuses
+
+
+def test_a_mistyped_mode_stops_the_generation(monkeypatch):
+    monkeypatch.setenv(floor.THIN_DECILES_ENV, "Refuse")
+    with pytest.raises(ValueError, match="'warn' \\(the default\\) or"):
+        floor.refuses_thin_deciles()
 
 
 def test_stand_in_simulations_are_recorded_as_not_checked():
@@ -548,22 +557,18 @@ def test_the_record_names_cells_never_figures_and_flags_decile_ones():
     assert withheld["thin_cells_in_tables"] is False
 
 
-def test_a_warned_run_is_recorded_staged_and_never_approved(monkeypatch):
-    """#208 review, finding 4: a run written under "warn" left no trace
-    once written. Its receipt now names the thin cells, it can be staged to
-    be looked at, and the gate refuses to show it; no acknowledgement lifts
-    that."""
+def test_a_warned_run_is_recorded_and_never_staged(monkeypatch):
+    """#208 review, findings 4 and 11: a run written with a thin decile
+    cell names the cells in its receipt, and the gate takes it at no level,
+    not even staged, so publish review-rows deletes it before anything is
+    committed. No acknowledgement lifts that."""
     from tests.publication_support import World
     from tests.test_publication_flow import YEARS, fake_process, reform
     from uk_budget_data.models import DataConfig
     from uk_budget_data.publication import generate
     from uk_budget_data.publication import manifest as m
     from uk_budget_data.publication.artifacts import read_receipt
-    from uk_budget_data.publication.publish import (
-        PublishError,
-        approve,
-        stage,
-    )
+    from uk_budget_data.publication.publish import PublishError, stage
 
     found = {("distributional_impact", 2027): ["5", "all"]}
 
@@ -572,7 +577,7 @@ def test_a_warned_run_is_recorded_staged_and_never_approved(monkeypatch):
         return ["thin"], floor.floor_record(found)
 
     monkeypatch.setattr(generate, "_apply_disclosure_floor", floor_finds)
-    monkeypatch.setenv(floor.THIN_DECILES_ENV, "warn")
+    monkeypatch.delenv(floor.THIN_DECILES_ENV, raising=False)
     world = World()
     try:
         monkeypatch.setattr(
@@ -593,12 +598,18 @@ def test_a_warned_run_is_recorded_staged_and_never_approved(monkeypatch):
         arguments = dict(data_root=world.data_root, inputs=world.inputs)
         world.costing("alpha", values["alpha"])
         world.reconcile(reference)
-        stage(manifest, reference.path, **arguments)
-        with pytest.raises(
-            PublishError,
-            match="fewer than 10 survey households: distributional_impact "
-            "2027",
-        ):
-            approve(manifest, "alpha", "Reviewer", **arguments)
+        for provisional in (False, True):
+            with pytest.raises(
+                PublishError,
+                match="fewer than 10 survey households: "
+                "distributional_impact 2027",
+            ):
+                stage(
+                    manifest,
+                    reference.path,
+                    provisional=provisional,
+                    **arguments,
+                )
+        assert "alpha" not in manifest.measures
     finally:
         world.close()

@@ -16,10 +16,12 @@ whatever would give them back by difference (``withheld_age_labels``): a
 thin single year of age takes the other single ages of its band with it,
 so the bands and "all" stay; a thin band leaves only "all"; a thin "all"
 leaves no row. The decile tables
-must hold every decile, so generation refuses a run with a thin decile cell
-(``generate._apply_disclosure_floor``), or, with THIN_DECILES_ENV set to
-"warn" where the generation starts, writes it and says which cells are
-thin, for a person to decide before it is published.
+must hold every decile, so a run with a thin decile cell is written with a
+warning naming the cells (``generate._apply_disclosure_floor``), and the
+publication gate never stages or shows it, so ``publish review-rows``
+deletes it before anything is committed. With THIN_DECILES_ENV set to
+"refuse" where the generation starts, such a run is refused and nothing is
+written.
 """
 
 import os
@@ -55,12 +57,19 @@ THIN_DECILES_ENV = "UK_BUDGET_THIN_DECILES"
 
 
 def refuses_thin_deciles() -> bool:
-    """Whether a run with a thin decile cell is refused (the default) rather
-    than written with a warning (THIN_DECILES_ENV set to "warn"). Read where
-    the generation starts and carried on each run
-    (``generate.ArtifactRun.refuse_thin_deciles``), never where a run is
-    made."""
-    return os.environ.get(THIN_DECILES_ENV, "refuse") != "warn"
+    """Whether a run with a thin decile cell is refused (THIN_DECILES_ENV
+    set to "refuse") rather than written with a warning (the default, or
+    "warn"; #208 review, finding 11). Read where the generation starts and
+    carried on each run (``generate.ArtifactRun.refuse_thin_deciles``),
+    never where a run is made. Any other setting stops the generation, so a
+    mistyped one never picks a mode."""
+    mode = os.environ.get(THIN_DECILES_ENV) or "warn"
+    if mode not in ("warn", "refuse"):
+        raise ValueError(
+            f"{THIN_DECILES_ENV} is {mode!r}: set it to 'warn' (the "
+            "default) or 'refuse'"
+        )
+    return mode == "refuse"
 
 
 def thin_groups(
@@ -175,9 +184,10 @@ def floor_record(
     """What an artifact's receipt records of the floor
     (``dashboard.disclosure_floor``): the cells found thin, by table, year
     and group label, never a figure, and whether any is still in the tables
-    (a decile table's, written under "warn"), which the publication gate
-    and the public data check refuse. A run on data whose survey households
-    cannot be told apart records that it was not checked, and why."""
+    (a decile table's, unless the run was refused), which the publication
+    gate and the public data check refuse. A run on data whose survey
+    households cannot be told apart records that it was not checked, and
+    why."""
     cells = [
         {"table": table, "year": year, "groups": list(labels)}
         for (table, year), labels in sorted(found.items())
