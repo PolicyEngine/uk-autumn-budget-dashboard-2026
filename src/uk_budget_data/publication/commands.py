@@ -457,13 +457,13 @@ def _rerun_steps(report, combined_sets) -> list[str]:
     ]
     if measures:
         lines.append(
-            "  2. Rerun the failed measures (each hand-written modifier in a "
-            "call of its own), then stage them: --reforms "
+            f"  {len(lines)}. Rerun the failed measures (each hand-written "
+            "modifier in a call of its own), then stage them: --reforms "
             + " ".join(measures)
         )
     for ids in combined:
         lines.append(
-            "  3. Then the combined run, once its members are staged: "
-            "--combined " + " ".join(ids)
+            f"  {len(lines)}. Then the combined run, once its members are "
+            "staged: --combined " + " ".join(ids)
         )
     return lines

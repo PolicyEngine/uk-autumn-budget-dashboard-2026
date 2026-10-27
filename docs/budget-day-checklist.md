@@ -9,7 +9,7 @@ Every Modal command starts `uv run --with modal==1.6.2 python -m uk_budget_data.
 | When | Who | Step |
 |---|---|---|
 | by 17:30 | Integrator | Confirm which calculation-path PRs are in (#222). Nothing under `src/uk_budget_data/`, `tests/`, `scripts/`, `.github/`, `data_inputs/` (except review rows and attestations) or any `.py` merges after this until Budget day is over, except the day's own measures. |
-| before 18:00 | Integrator | Build both Modal images on the final `uv.lock` (about 12 min each if the lock changed, under a minute if not): `uv run --with modal==1.6.2 python scripts/budget_day/modal_smoke.py --root /tmp/modal-smoke badr_lifetime_limit_cut` and `uv run --with modal==1.6.2 python scripts/budget_day/modal_constituencies_smoke.py`. |
+| before 18:00 | Integrator | Build both Modal images on the final `uv.lock` (about 12 min each if the lock changed; 1–3 min if not): `uv run --with modal==1.6.2 python scripts/budget_day/modal_smoke.py --root /tmp/modal-smoke badr_lifetime_limit_cut` and `uv run --with modal==1.6.2 python scripts/budget_day/modal_constituencies_smoke.py`. |
 | 18:00 | Coordinator | Full regeneration on the final `main`, on Modal, as in "The full run on Modal" (the same three parallel shells as G2 below). |
 | after it | two reviewers | Attest the regenerated hand-written receipts (`employer_ni_relief_under_25s`, `plan_2_threshold_unfreeze`): `uv run python scripts/draft_attestation.py public/data/artifacts/<id>/<digest>/`, then two different people fill `checker`, `second`, `released_at` and commit. An attestation from before 18:00 no longer matches. |
 
