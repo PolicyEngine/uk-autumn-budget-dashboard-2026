@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { PlotSkeleton } from "./publication/LoadingSkeleton";
 import SwapTransition from "./SwapTransition";
 import * as d3 from "d3";
@@ -53,7 +53,8 @@ import {
 } from "../utils/geography/classify";
 import { rowsFor } from "../utils/geography/rows";
 import {
-  describeSeat,
+  cardLines,
+  seatCard,
   seatCode,
   seatName,
   seatStates,
@@ -74,47 +75,9 @@ import { fiscalYearLabel } from "../utils/publication/format";
 import "./ConstituencyMap.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { CHART_COLOURS } from "../utils/chartTheme";
-import { FloatingTooltip, TooltipRows } from "./FloatingTooltip";
+import { FloatingTooltip } from "./FloatingTooltip";
 import TitleIcon from "./TitleIcon";
 import Tip, { InfoTip } from "./Tip";
-
-/**
- * A hovered seat's tooltip rows from describeSeat's lines: the figure under
- * its outcome's name and the 90% interval, or for a seat with no figure,
- * its notes.
- */
-export function seatTooltipRows(described) {
-  const value = described.lines.find((line) => line.kind === "value");
-  const name = described.lines.find((line) => line.kind === "label");
-  const interval = described.lines.find((line) => line.kind === "interval");
-  if (!value) {
-    return described.lines.map((line, index) => ({
-      key: `note-${index}`,
-      name: line.text,
-      text: "",
-      color: CHART_COLOURS.noChange,
-    }));
-  }
-  const color =
-    value.direction === "gain"
-      ? CHART_COLOURS.gain
-      : value.direction === "loss"
-        ? CHART_COLOURS.loss
-        : CHART_COLOURS.noChange;
-  return [
-    { key: "value", name: name?.text ?? "Figure", text: value.text, color },
-    ...(interval
-      ? [
-          {
-            key: "interval",
-            name: "90% interval",
-            text: interval.text.replace(/^90% interval: /, ""),
-            color: CHART_COLOURS.reference,
-          },
-        ]
-      : []),
-  ];
-}
 
 const CHART_TITLE = "Constituency-level impacts";
 
@@ -491,34 +454,63 @@ function strokeFor(code, states, selectedCode) {
   return seatStyle(states?.get(code));
 }
 
-function TooltipLines({ lines }) {
-  return lines.map((line, index) => {
-    if (line.kind === "value") {
-      return (
-        <p
-          key={index}
-          className="tooltip-value"
-          style={{ color: DIRECTION_TEXT_COLOURS[line.direction] }}
-        >
-          {line.text}
-        </p>
-      );
-    }
-    const className = {
-      label: "tooltip-label",
-      interval: line.emphasis
-        ? "tooltip-interval tooltip-interval-emphasis"
-        : "tooltip-interval",
-      region: "tooltip-region",
-      note: "tooltip-note",
-    }[line.kind] ?? "tooltip-detail";
-    return (
-      <p key={index} className={className}>
-        {line.text}
-      </p>
-    );
-  });
+/** A figure's text colour: teal for a gain, amber for a loss, else grey. */
+const figureColour = (direction) => DIRECTION_TEXT_COLOURS[direction] ?? CHART_COLOURS.axisTitle;
+
+/**
+ * One seat's card, as on last year's dashboard: the shown measure's average
+ * household impact in £ and as a share of income, each selected measure's
+ * own £ change, and one muted line on how firm the figure is. The hover
+ * card and the pinned card (with its ×) are the same.
+ */
+function SeatCard({ card }) {
+  return (
+    <>
+      {card.average && (
+        <div className="seat-card-figure">
+          <p className="seat-card-value" style={{ color: figureColour(card.average.direction) }}>
+            {card.average.text}
+          </p>
+          <p className="seat-card-label">Average household impact</p>
+        </div>
+      )}
+      {card.relative && (
+        <div className="seat-card-figure">
+          <p
+            className="seat-card-value seat-card-value-secondary"
+            style={{ color: figureColour(card.relative.direction) }}
+          >
+            {card.relative.text}
+          </p>
+          <p className="seat-card-label">Relative change</p>
+        </div>
+      )}
+      {card.byPolicy.length > 0 && (
+        <div className="seat-card-policies">
+          <p className="seat-card-policies-heading">By policy:</p>
+          {card.byPolicy.map((row) => (
+            <div key={row.id} className="seat-card-policy">
+              <span className="seat-card-policy-name">{row.name}</span>
+              <span
+                className={row.value === null ? "seat-card-policy-value seat-card-withheld" : "seat-card-policy-value"}
+                style={row.value === null ? undefined : { color: figureColour(row.direction) }}
+              >
+                {row.text}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      {card.note && (
+        <p className={card.average || card.relative ? "seat-card-note" : "seat-card-status"}>{card.note}</p>
+      )}
+      {card.region && <p className="seat-card-region">{card.region}</p>}
+    </>
+  );
 }
+
+// The pinned card's gap from the seat, which the map centres
+const CARD_GAP = 10;
 
 /**
  * Constituency results as the disclosure layer published them, for one
@@ -887,49 +879,85 @@ export default function ConstituencyMap({
       .slice(0, 5);
   }, [searchQuery, features, states]);
 
-  const selectedFeature = selectedCode ? featuresByCode.get(selectedCode) : null;
-  const tooltip =
-    states && selectedFeature
-      ? describeSeat({
-          feature: selectedFeature,
-          state: states.get(selectedCode),
+  // The selected measures with their short names, in the page's order,
+  // for each card's By policy rows
+  const cardMeasures = useMemo(
+    () =>
+      policies
+        .filter((policy) => selectedPolicies.includes(policy.id))
+        .map((policy) => ({ id: policy.id, name: shortNameOf(policy) })),
+    [policies, selectedPolicies],
+  );
+  const cardFor = (code) =>
+    states && featuresByCode.get(code)
+      ? seatCard({
+          feature: featuresByCode.get(code),
+          state: states.get(code),
+          table: constituencyTable,
           regional: regionalTable,
           reform,
           year: selectedYear,
           outcome,
+          measures: cardMeasures,
         })
       : null;
+  const card = selectedCode ? cardFor(selectedCode) : null;
+  // The selected seat's card as lines, for the exported map
+  const tooltip = card ? cardLines(card) : null;
 
-  // The hovered seat's tooltip, from the current rows (never another
+  // The hovered seat's card, from the current rows (never another
   // year's), unless it is the selected seat, whose card is open
-  const hoverFeature =
+  const hoverCard =
     hoverSeat && hoverSeat.stamp === hoverStamp && hoverSeat.code !== selectedCode
-      ? featuresByCode.get(hoverSeat.code)
+      ? cardFor(hoverSeat.code)
       : null;
-  const hoverDescribed =
-    states && hoverFeature
-      ? describeSeat({
-          feature: hoverFeature,
-          state: states.get(hoverSeat.code),
-          regional: regionalTable,
-          reform,
-          year: selectedYear,
-          outcome,
-        })
-      : null;
-  const hoverTip = hoverDescribed
+  const hoverTip = hoverCard
     ? {
         key: hoverSeat.code,
         x: hoverSeat.x,
         y: hoverSeat.y,
         content: (
-          <TooltipRows
-            label={`${hoverDescribed.title}, ${yearLabel}`}
-            rows={seatTooltipRows(hoverDescribed)}
-          />
+          <div className="chart-tooltip seat-card seat-card-hover">
+            <p className="seat-card-title">{hoverCard.title}</p>
+            <SeatCard card={hoverCard} />
+          </div>
         ),
       }
     : null;
+
+  // The pinned card sits just above the seat the map centres, moved down
+  // and across as needed so it stays inside the map (and so on screen)
+  const cardRef = useRef(null);
+  const closeRef = useRef(null);
+  const [cardPlace, setCardPlace] = useState(null);
+  useLayoutEffect(() => {
+    const node = cardRef.current;
+    const canvas = canvasRef.current;
+    if (!node || !canvas) {
+      setCardPlace(null);
+      return;
+    }
+    const width = node.offsetWidth;
+    const height = node.offsetHeight;
+    const canvasWidth = canvas.clientWidth;
+    const canvasHeight = canvas.clientHeight;
+    const maxX = Math.max(0, canvasWidth - width);
+    const maxY = Math.max(0, canvasHeight - height);
+    const left = Math.min(Math.max(0, canvasWidth / 2 - width / 2), maxX);
+    let top = canvasHeight / 2 - CARD_GAP - height;
+    if (top < 0) top = canvasHeight / 2 + CARD_GAP;
+    setCardPlace({ left, top: Math.min(Math.max(0, top), maxY), maxHeight: canvasHeight });
+  }, [card?.title, card?.byPolicy.length, card?.note, card?.region, selectedCode]);
+
+  // Escape closes the pinned card
+  useEffect(() => {
+    if (!selectedCode) return undefined;
+    const close = (event) => {
+      if (event.key === "Escape") clearSelection();
+    };
+    document.addEventListener("keydown", close);
+    return () => document.removeEventListener("keydown", close);
+  }, [selectedCode, clearSelection]);
 
   const handleZoom = (factor) => {
     const map = mapRef.current;
@@ -1113,6 +1141,8 @@ export default function ConstituencyMap({
                       onClick={() => {
                         setSearchQuery("");
                         selectSeat(result.code);
+                        // From the keyboard, focus moves to the card
+                        requestAnimationFrame(() => closeRef.current?.focus());
                       }}
                       className="search-result-item"
                     >
@@ -1226,13 +1256,23 @@ export default function ConstituencyMap({
                 </div>
               </div>
 
-              {tooltip && (
+              {card && (
                 <div
-                  className="constituency-tooltip"
+                  ref={cardRef}
+                  className="constituency-tooltip seat-card"
+                  role="dialog"
+                  aria-label={`${card.title}, ${yearLabel}`}
                   aria-live="polite"
+                  style={{
+                    left: cardPlace?.left ?? 0,
+                    top: cardPlace?.top ?? 0,
+                    maxHeight: cardPlace?.maxHeight,
+                    visibility: cardPlace ? "visible" : "hidden",
+                  }}
                   onClick={(event) => event.stopPropagation()}
                 >
                   <button
+                    ref={closeRef}
                     type="button"
                     className="tooltip-close"
                     aria-label="Close"
@@ -1240,8 +1280,8 @@ export default function ConstituencyMap({
                   >
                     ×
                   </button>
-                  <h4>{tooltip.title}</h4>
-                  <TooltipLines lines={tooltip.lines} />
+                  <h4>{card.title}</h4>
+                  <SeatCard card={card} />
                 </div>
               )}
               <FloatingTooltip tip={hoverTip} />

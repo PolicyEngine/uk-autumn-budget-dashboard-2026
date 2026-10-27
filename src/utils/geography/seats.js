@@ -10,13 +10,8 @@
  * - `no-data`: no row at all, drawn as such and never given a value.
  */
 
-import { CATEGORY_LABELS, classifyRow } from "./classify";
-import {
-  WITHHELD_NOTE,
-  describeRow,
-  formatFigure,
-  formatInterval,
-} from "./format";
+import { classifyRow } from "./classify";
+import { formatFigure, formatInterval } from "./format";
 import {
   CATEGORY_COLOURS,
   NO_DATA_FILL,
@@ -109,11 +104,6 @@ export function seatStyle(state) {
   }
 }
 
-const OUTCOME_LINE_LABELS = Object.freeze({
-  average_change: "Average change per household, per year",
-  relative_change: "Average change, as a share of household income",
-});
-
 /** One line for a search result: the figure, or why there is none. */
 export function seatSummary(state) {
   if (!state || state.kind === "no-data") return "No data";
@@ -122,56 +112,140 @@ export function seatSummary(state) {
   return state.kind === "approximate" ? `${summary} (approximate)` : summary;
 }
 
+/** The card's line for a seat with no published figure. */
+export const WITHHELD_SEAT_NOTE = "Not published: too few survey households";
+/** A By policy row for a measure withheld in this seat. */
+export const WITHHELD_MEASURE_NOTE = "Not published for this seat";
+
+const SUPPORT_BAND_WORDS = Object.freeze({
+  "<10": "fewer than 10",
+  "10–29": "10–29",
+  "30+": "30 or more",
+});
+
 /**
- * What the page says about one seat, as a title and lines of text. The
- * on-screen tooltip and the exported map's card both show these lines, so
- * the two never differ.
- *
- * A withheld seat says only that it is not published; when its region's
- * figure is published, that figure follows, labelled as the region's.
- *
- * @returns {{title: string, lines: Array<{kind: string, text: string,
- *   direction?: string, emphasis?: boolean}>}}
+ * The card's one muted line on how firm a figure is, or null when there is
+ * nothing to add: an approximate figure gives its survey households and
+ * 90% interval; a reported figure whose interval includes zero gives the
+ * interval.
  */
-export function describeSeat({ feature, state, regional, reform, year, outcome }) {
+export function disclosureNote(row) {
+  if (!row || row.tier === "withheld") return null;
+  const interval = `90% interval ${formatInterval(row.outcome, row.lo, row.hi)}`;
+  if (row.tier === "approximate") {
+    const band = SUPPORT_BAND_WORDS[row.supportBand];
+    return band ? `Estimate from ${band} survey households; ${interval}` : `Approximate estimate; ${interval}`;
+  }
+  if (row.direction === "too_close_to_call") return interval;
+  return null;
+}
+
+function figureOf(row) {
+  if (!row || row.tier === "withheld") return null;
+  return { text: formatFigure(row.outcome, row.value), direction: row.direction };
+}
+
+/**
+ * Everything the card says about one seat: its name, the shown measure's
+ * average change in £ and as a share of income, each selected measure's
+ * own £ change in the seat (when two or more measures have constituency
+ * results), and one muted line on how firm the figure is.
+ *
+ * Every figure is a published row; nothing is summed or derived.
+ *
+ * @param {Object} options
+ * @param {Object} options.feature - The seat's boundary feature.
+ * @param {Object} [options.state] - Its state, from seatStates.
+ * @param {Object} [options.table] - The constituency table.
+ * @param {Object} [options.regional] - The regional table.
+ * @param {string} options.reform - The reform the map shows.
+ * @param {number} options.year
+ * @param {string} options.outcome - The outcome the map shows.
+ * @param {Array<{id: string, name: string}>} [options.measures] - The
+ *   selected measures, in the page's order, for the By policy rows.
+ * @returns {{title: string, kind: string, average: Object|null,
+ *   relative: Object|null, byPolicy: Array, note: string|null,
+ *   region: string|null}}
+ */
+export function seatCard({ feature, state, table, regional, reform, year, outcome, measures = [] }) {
   const title = seatName(feature, state?.row);
+  const empty = { title, average: null, relative: null, byPolicy: [], note: null, region: null };
   if (!state || state.kind === "no-data") {
-    return { title, lines: [{ kind: "note", text: `No data. ${NO_DATA_NOTE}` }] };
+    return { ...empty, kind: "no-data", note: `No data. ${NO_DATA_NOTE}` };
   }
   if (state.kind === "withheld") {
-    const lines = [{ kind: "note", text: WITHHELD_NOTE }];
-    const region = regionForBoundary(feature?.properties);
-    const regionRow = region
-      ? lookupRow(regional, { areaCode: region.code, reform, year, outcome })
+    let region = null;
+    const area = regionForBoundary(feature?.properties);
+    const regionRow = area
+      ? lookupRow(regional, { areaCode: area.code, reform, year, outcome })
       : null;
     if (regionRow && regionRow.tier !== "withheld") {
       const approximate = regionRow.tier === "approximate" ? ", approximate" : "";
-      lines.push({
-        kind: "region",
-        text:
-          `Regional figure for ${region.name}, not an estimate for this ` +
-          `constituency: ${formatFigure(outcome, regionRow.value)} ` +
-          `(${formatInterval(outcome, regionRow.lo, regionRow.hi)}${approximate})`,
-      });
+      region =
+        `Regional figure for ${area.name}, not an estimate for this ` +
+        `constituency: ${formatFigure(outcome, regionRow.value)} ` +
+        `(${formatInterval(outcome, regionRow.lo, regionRow.hi)}${approximate})`;
     }
-    return { title, lines };
+    return { ...empty, kind: "withheld", note: WITHHELD_SEAT_NOTE, region };
   }
-  const { row } = state;
-  const described = describeRow(row);
+  const areaCode = state.row.areaCode ?? seatCode(feature);
+  const rowOf = (id, which) => lookupRow(table, { areaCode, reform: id, year, outcome: which });
+  const averageRow = outcome === "average_change" ? state.row : rowOf(reform, "average_change");
+  const relativeRow = outcome === "relative_change" ? state.row : rowOf(reform, "relative_change");
+  const byPolicy = measures
+    .map((measure) => ({ measure, row: rowOf(measure.id, "average_change") }))
+    .filter(({ row }) => row)
+    .map(({ measure, row }) =>
+      row.tier === "withheld"
+        ? { id: measure.id, name: measure.name, text: WITHHELD_MEASURE_NOTE, direction: null, value: null }
+        : {
+            id: measure.id,
+            name: measure.name,
+            text: formatFigure("average_change", row.value),
+            direction: row.direction,
+            value: Number(row.value),
+          },
+    )
+    .sort((a, b) => {
+      if (a.value === null || b.value === null) return (a.value === null) - (b.value === null);
+      return b.value - a.value;
+    });
   return {
-    title,
-    lines: [
-      { kind: "value", text: described.value, direction: row.direction },
-      { kind: "label", text: OUTCOME_LINE_LABELS[row.outcome] },
-      {
-        kind: "interval",
-        text: `90% interval: ${described.interval}`,
-        emphasis: state.kind === "approximate",
-      },
-      { kind: "detail", text: described.direction },
-      { kind: "detail", text: described.tierDescription },
-      { kind: "detail", text: described.supportBand },
-      { kind: "detail", text: `Map category: ${CATEGORY_LABELS[state.category]}` },
-    ],
+    ...empty,
+    kind: state.kind,
+    average: figureOf(averageRow),
+    relative: figureOf(relativeRow),
+    // One measure's row would only repeat the headline
+    byPolicy: byPolicy.length >= 2 ? byPolicy : [],
+    note: disclosureNote(state.row),
   };
 }
+
+/**
+ * The card as a title and lines of text, for the exported map's card, so
+ * the file says what the page's card says.
+ *
+ * @returns {{title: string, lines: Array<{kind: string, text: string,
+ *   direction?: string}>}}
+ */
+export function cardLines(card) {
+  const lines = [];
+  if (card.average) {
+    lines.push({ kind: "value", text: card.average.text, direction: card.average.direction });
+    lines.push({ kind: "label", text: "Average household impact" });
+  }
+  if (card.relative) {
+    lines.push({ kind: "value", text: card.relative.text, direction: card.relative.direction });
+    lines.push({ kind: "label", text: "Relative change" });
+  }
+  if (card.byPolicy.length) {
+    lines.push({ kind: "detail", text: "By policy:" });
+    card.byPolicy.forEach((row) => lines.push({ kind: "detail", text: `${row.name}: ${row.text}` }));
+  }
+  if (card.note) lines.push({ kind: "note", text: card.note });
+  if (card.region) lines.push({ kind: "region", text: card.region });
+  return { title: card.title, lines };
+}
+
+/** The card for one seat as a title and lines (see seatCard, cardLines). */
+export const describeSeat = (options) => cardLines(seatCard(options));

@@ -279,42 +279,43 @@ describe("ConstituencyMap", () => {
     }
   });
 
-  it("shows a reported seat's rounded value, interval, direction, tier and band", async () => {
+  it("shows a reported seat's £ and % change, with no statistics appendix", async () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000001"));
     const card = tooltip(container);
     expect(within(card).getByRole("heading")).toHaveTextContent("Northfield East");
-    expect(card).toHaveTextContent("+1.12%");
-    expect(card).toHaveTextContent("90% interval: 0.61% to 1.63%");
-    expect(card).toHaveTextContent("Gain");
-    expect(card).toHaveTextContent("Reported");
-    expect(card).toHaveTextContent("30 or more survey households");
-    expect(card).toHaveTextContent("Map category: Large gain");
+    expect(within(card).getByRole("button", { name: "Close" })).toBeInTheDocument();
+    const values = [...card.querySelectorAll(".seat-card-value")].map((node) => node.textContent);
+    expect(values).toEqual(["+£310", "+1.12%"]);
+    expect(card).toHaveTextContent("Average household impact");
+    expect(card).toHaveTextContent("Relative change");
+    expect(card.querySelector(".seat-card-value").style.color).not.toBe("");
+    // A firm figure needs no note
+    expect(card.querySelector(".seat-card-note")).toBeNull();
+    expect(card).not.toHaveTextContent("Map category");
+    expect(card).not.toHaveTextContent("90% interval");
+    // No measure but the package has constituency rows: no By policy rows
+    expect(card).not.toHaveTextContent("By policy");
   });
 
-  it("makes an approximate seat's interval prominent and says why", async () => {
+  it("gives an approximate seat one muted line with its households and interval", async () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000002"));
     const card = tooltip(container);
-    expect(within(card).getByRole("heading")).toHaveTextContent(
-      "Harbour, Mill and Quay",
+    expect(within(card).getByRole("heading")).toHaveTextContent("Harbour, Mill and Quay");
+    expect(card.querySelector(".seat-card-note")).toHaveTextContent(
+      "Estimate from 10–29 survey households; 90% interval 0.12% to 1.24%",
     );
-    expect(card.querySelector(".tooltip-interval-emphasis")).toHaveTextContent(
-      "90% interval: 0.12% to 1.24%",
-    );
-    expect(card).toHaveTextContent(
-      "Approximate: few survey households, so the interval understates the uncertainty",
-    );
-    expect(card).toHaveTextContent("10 to 29 survey households");
+    expect(card).not.toHaveTextContent("Approximate:");
   });
 
-  it("says a too-uncertain seat's call and category in words", async () => {
+  it("gives a seat whose interval includes zero its interval, not a verdict", async () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000004"));
     const card = tooltip(container);
-    expect(card).toHaveTextContent("The interval includes zero");
-    expect(card).not.toHaveTextContent("Too close to call");
-    expect(card).toHaveTextContent("Map category: Too uncertain to classify");
+    expect(card.querySelector(".seat-card-note")).toHaveTextContent("90% interval -0.9% to 1.7%");
+    expect(card).not.toHaveTextContent("The interval includes zero");
+    expect(card).not.toHaveTextContent("Map category");
   });
 
   it("gives a withheld seat no figure, and its region's figure labelled as such", async () => {
@@ -324,9 +325,31 @@ describe("ConstituencyMap", () => {
     expect(within(card).getByRole("heading")).toHaveTextContent("Westmoor");
     const lines = [...card.querySelectorAll("p")].map((line) => line.textContent);
     expect(lines).toEqual([
-      "Not published, to protect survey respondents' confidentiality.",
+      "Not published: too few survey households",
       "Regional figure for London, not an estimate for this constituency: +0.71% (0.52% to 0.94%)",
     ]);
+  });
+
+  it("lists each selected measure's own £ change for the seat, gains first", async () => {
+    const extra = [
+      "constituency,Z14000001,Northfield East,two_child_limit,2029,average_change,420.0,300.0,540.0,gain,reported,,30+,False,direct",
+      "constituency,Z14000001,Northfield East,two_child_limit,2029,relative_change,0.015,0.01,0.02,gain,reported,,30+,False,direct",
+      "constituency,Z14000001,Northfield East,fuel_duty_freeze,2029,average_change,-110.0,-150.0,-70.0,loss,reported,,30+,False,direct",
+      "constituency,Z14000001,Northfield East,fuel_duty_freeze,2029,relative_change,-0.004,-0.005,-0.003,loss,reported,,30+,False,direct",
+      "constituency,Z14000001,Northfield East,rail_fares_freeze,2029,average_change,,,,,withheld,disclosure_control,,False,direct",
+      "constituency,Z14000001,Northfield East,rail_fares_freeze,2029,relative_change,,,,,withheld,disclosure_control,,False,direct",
+    ];
+    const csv = `${geographyFixture("constituency.csv").trimEnd()}\n${extra.join("\n")}\n`;
+    vi.stubGlobal("fetch", geographyFetch({ "/data/constituency.csv": csv }));
+    const { container } = await renderMap();
+    fireEvent.click(seat(container, "Z14000001"));
+    const card = tooltip(container);
+    expect(card).toHaveTextContent("By policy:");
+    const rows = [...card.querySelectorAll(".seat-card-policy")].map((row) => [
+      row.querySelector(".seat-card-policy-value").textContent,
+    ]);
+    expect(rows).toEqual([["+£420"], ["-£110"], ["Not published for this seat"]]);
+    expect(card.textContent).not.toMatch(/BY POLICY|By provision/);
   });
 
   it("finds a constituency by name, with its published figure", async () => {
@@ -358,7 +381,8 @@ describe("ConstituencyMap", () => {
     );
     fireEvent.click(seat(container, "Z14000005"));
     expect(tooltip(container)).toHaveTextContent("-£480");
-    expect(tooltip(container)).toHaveTextContent("90% interval: -£610 to -£350");
+    expect(tooltip(container)).toHaveTextContent("-1.35%");
+    expect(tooltip(container)).not.toHaveTextContent("90% interval");
   });
 
   it("follows the year, keeping hatched seats hatched", async () => {
@@ -517,8 +541,7 @@ describe("ConstituencyMap", () => {
       .map((line) => line.textContent)
       .join(" ");
     expect(card).toBe(
-      "Westmoor Not published, to protect survey respondents' " +
-        "confidentiality. Regional figure for London, not an estimate " +
+      "Westmoor Not published: too few survey households Regional figure for London, not an estimate " +
         "for this constituency: +0.71% (0.52% to 0.94%)",
     );
     expect(svgText).not.toMatch(/NaN|undefined/);
