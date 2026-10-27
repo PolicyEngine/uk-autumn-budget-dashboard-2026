@@ -65,6 +65,8 @@ describe("showing the site nav", () => {
     render(inShell ? (
       <PolicyEngineShell country="uk" showFooter={false}><App /></PolicyEngineShell>
     ) : <App />);
+    // No scroll the page made is left over from another test
+    resetPageScroll();
     const root = document.documentElement;
     // The reader scrolling (a wheel or trackpad, then the scroll), and the
     // page moving by itself (a layout shift, scroll anchoring: no input)
@@ -130,14 +132,14 @@ describe("showing the site nav", () => {
   });
 
   it("does not show for the page's own scroll up (utils/pageScroll), only the reader's", () => {
-    const { scrollTo, shift, shown } = setup();
+    const { scrollTo, shown } = setup();
     scrollTo(1_000);
     act(() => {
       window.scrollTo = () => {};
       scrollPageTo(200);
     });
-    shift(600);
-    shift(200);
+    scrollTo(600);
+    scrollTo(200);
     expect(shown()).toBe(false);
     resetPageScroll();
     scrollTo(100);
@@ -146,7 +148,6 @@ describe("showing the site nav", () => {
 
   it("stays 3s after the scroll up, and any scroll down by the reader hides it at once", () => {
     const { scrollTo, shift, wait, shown } = setup();
-    resetPageScroll();
     scrollTo(400);
     scrollTo(300);
     expect(shown()).toBe(true);
