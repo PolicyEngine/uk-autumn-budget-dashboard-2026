@@ -72,6 +72,10 @@ export const POLICY_DETAILS = [
     inForce: { from: "2027-04" },
     details:
       "Modelled as an allowance equal to the full new State Pension (£13,037 in 2027-28, rising with it) for people over State Pension age whose total income, the State Pension and any other income, savings interest included, is at or below it. £1 of income above it takes the whole allowance away, so a larger State Pension (with increments or additional State Pension) alone can rule someone out. Based on reporting on 26 and 27 October 2026; the mechanism is an assumption made before the Budget.",
+    source: {
+      label: "The new State Pension: what you'll get",
+      href: "https://www.gov.uk/new-state-pension/what-youll-get",
+    },
   },
   {
     id: "warm_home_discount_top_up",
@@ -144,6 +148,10 @@ export const POLICY_DETAILS = [
     inForce: { from: "2031-04" },
     details:
       "The National Insurance primary threshold and upper earnings limit, which the model ties to the personal allowance and higher rate threshold from 2031-32, stay frozen too; the employer threshold is not held.",
+    source: {
+      label: "Finance Act 2026, section 10 (thresholds frozen to 2030-31)",
+      href: "https://www.legislation.gov.uk/ukpga/2026/11/section/10",
+    },
   },
   {
     id: "badr_lifetime_limit_cut",
