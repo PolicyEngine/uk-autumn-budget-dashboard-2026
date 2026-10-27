@@ -9,17 +9,22 @@ import { measureSummary, shortNameOf } from "../utils/policyDetails";
 import Tip, { InfoTip } from "./Tip";
 
 // The menu's order: measures that raise revenue, then those that cost it,
-// then the rest, each in the catalogue's order. One flat list: no group
-// labels or dividers.
+// then the rest, each in the catalogue's order. One flat list, not grouped
+// by category: most categories hold a single measure, so headings would
+// label one row each and double the list's height; each row's category
+// caption already says what grouping would.
 const DIRECTION_ORDER = ["revenue", "cost", "neutral"];
 
 /**
  * The band's policies control: "Policies All 9 policies" or "Policies 3 of
  * 9 policies"; while the publication loads, "Policies" with no count; with
  * none published, "No policies yet", disabled, its reason in a Tip. Its
- * menu is one compact row per policy (checkbox, colour, short name, the
- * one-line summary in a Tip), one flat list in the catalogue's revenue
- * order, with Select all, Clear and Done.
+ * menu is one row per policy (checkbox, icon, short name over its category,
+ * the one-line summary in an info tip at the right), one flat list in the
+ * catalogue's revenue order, a chosen row tinted, with Select all, Clear and
+ * Done in a footer that stays in view. Up and down arrows (Home, End) move
+ * between rows, space ticks, Escape closes. On a phone it is a sheet from
+ * the foot of the screen.
  *
  * @param {Object} props
  * @param {boolean} [props.loading] - The publication is still loading
@@ -41,6 +46,19 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
   const presence = usePresence(isExpanded);
   const dropdownRef = useRef(null);
   const toggleRef = useRef(null);
+  const listRef = useRef(null);
+
+  // Up and down arrows move between the rows' checkboxes (Home and End to
+  // the ends); from the open pill, Down goes to the first row
+  const rowBoxes = () => [...(listRef.current?.querySelectorAll('input[type="checkbox"]') ?? [])];
+  const handleListKeyDown = (event) => {
+    const boxes = rowBoxes();
+    const at = boxes.indexOf(document.activeElement);
+    const to = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: boxes.length - 1 }[event.key];
+    if (to === undefined || boxes.length === 0) return;
+    event.preventDefault();
+    boxes[Math.max(0, Math.min(boxes.length - 1, at < 0 && event.key === "ArrowUp" ? boxes.length - 1 : to))].focus();
+  };
 
   // Close dropdown when clicking outside, or on Escape (focus back on the
   // pill if it was in the menu: WCAG 2.1.2 and 2.4.3)
@@ -107,6 +125,13 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
         ref={toggleRef}
         className={`policy-selector-toggle band-control${inactiveReason ? " is-inactive" : ""}`}
         onClick={() => { if (!inactiveReason) setIsExpanded(!isExpanded); }}
+        onKeyDown={(event) => {
+          if (event.key !== "ArrowDown" || inactiveReason || disabled) return;
+          event.preventDefault();
+          if (!isExpanded) setIsExpanded(true);
+          // The rows render with the menu: focus the first once it is there
+          requestAnimationFrame(() => rowBoxes()[0]?.focus());
+        }}
         aria-expanded={isExpanded}
         aria-disabled={inactiveReason ? "true" : undefined}
         // The name starts with the pill's visible text, "Policies All 7
@@ -153,19 +178,26 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
       </Tip>
 
       {presence.mounted && (
+        // A phone's sheet sits over a scrim; a tap on it closes the sheet
+        <div className={`policy-selector-scrim ${popoverClass(presence.shown)}`} aria-hidden="true" onClick={() => setIsExpanded(false)} />
+      )}
+      {presence.mounted && (
         <div className={`policy-selector-dropdown ${popoverClass(presence.shown)}`} {...leavingProps(presence.shown)}>
-          <div className="policy-list" role="group" aria-label="Policies">
+          {/* The sheet's own title on a phone, where the pill is out of sight */}
+          <div className="policy-selector-sheet-title" aria-hidden="true">Policies</div>
+          <div className="policy-list" role="group" aria-label="Policies" ref={listRef} onKeyDown={handleListKeyDown}>
             {DIRECTION_ORDER.flatMap((direction) =>
               policies.filter((policy) => (DIRECTION_ORDER.includes(policy.direction) ? policy.direction : "neutral") === direction),
             ).map((policy) => {
               const summary = measureSummary(policy);
+              const checked = selectedPolicies.includes(policy.id);
               return (
                 // The info button sits outside the label, so it never ticks the box
-                <div key={policy.id} className="policy-item">
+                <div key={policy.id} className={checked ? "policy-item is-selected" : "policy-item"}>
                   <label className="policy-item-label">
                     <input
                       type="checkbox"
-                      checked={selectedPolicies.includes(policy.id)}
+                      checked={checked}
                       onChange={() => onPolicyToggle(policy.id)}
                     />
                     <MeasureRowLabel tip={false} measure={policy} name={shortNameOf(policy)} nameClassName="policy-selector-name" />

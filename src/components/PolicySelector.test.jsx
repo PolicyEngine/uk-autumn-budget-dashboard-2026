@@ -96,3 +96,33 @@ describe("PolicySelector info tips", () => {
     }
   });
 });
+
+describe("PolicySelector keyboard", () => {
+  it("moves between rows with the arrows, Home and End, and marks a chosen row", () => {
+    render(<Harness initial={[allIds[0]]} />);
+    open();
+    const list = boxes();
+    list[0].focus();
+    fireEvent.keyDown(list[0], { key: "ArrowDown" });
+    expect(list[1]).toHaveFocus();
+    fireEvent.keyDown(list[1], { key: "ArrowUp" });
+    expect(list[0]).toHaveFocus();
+    fireEvent.keyDown(list[0], { key: "End" });
+    expect(list[list.length - 1]).toHaveFocus();
+    fireEvent.keyDown(list[list.length - 1], { key: "ArrowDown" });
+    expect(list[list.length - 1]).toHaveFocus();
+    fireEvent.keyDown(list[list.length - 1], { key: "Home" });
+    expect(list[0]).toHaveFocus();
+    const rows = list.map((box) => box.closest(".policy-item"));
+    expect(rows.filter((row) => row.classList.contains("is-selected"))).toHaveLength(1);
+  });
+
+  it("Escape closes the menu and returns focus to the pill", () => {
+    render(<Harness initial={allIds} />);
+    const pill = open();
+    boxes()[0].focus();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(pill).toHaveAttribute("aria-expanded", "false");
+    expect(pill).toHaveFocus();
+  });
+});

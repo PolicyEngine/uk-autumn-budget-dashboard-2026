@@ -195,6 +195,8 @@ code {
   --shadow-faint: rgba(17, 24, 39, 0.04);
   --shadow-soft: rgba(17, 24, 39, 0.08);
   --shadow-strong: rgba(17, 24, 39, 0.12);
+  /* Behind a phone's sheet (the policies menu) */
+  --scrim: rgba(17, 24, 39, 0.36);
   /* Every hover or tap box (Tip.css's tips, the chart tooltips, the map's
      seat card): one card style, white with a soft border and shadow */
   --tip-bg: var(--c-surface);
