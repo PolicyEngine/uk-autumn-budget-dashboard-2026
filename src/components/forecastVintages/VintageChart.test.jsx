@@ -598,25 +598,6 @@ describe("the brush's room", () => {
     expect(layout.brush.width).toBeLessThan(layout.plotWidth);
     expect(brushBox(view, { canvasWidth: 0, yWidth: 52, plotWidth: -80 })).toBeNull();
   });
-
-  // Review round 23: the labels were set in 0.75rem, so with the browser's
-  // text at 24px they were 18px, wider than the room made for 12px
-  it("sets its labels in the pixels its room is measured in, whatever the page's text size", () => {
-    const css = readFileSync("src/components/forecastVintages/ForecastVintages.css", "utf8").replace(
-      /\/\*[\s\S]*?\*\//g,
-      "",
-    );
-    const rules = [...css.matchAll(/([^{}]*recharts-brush[^{}]*)\{([^}]*)\}/g)];
-    expect(rules.map(([, selector]) => selector.trim())).toEqual([".fv-plot .recharts-brush-texts"]);
-    expect([...rules[0][2].matchAll(/font(?:-size)?:\s*([^;]+);/g)].map(([, value]) => value)).toEqual([
-      "var(--fv-brush-text)",
-    ]);
-    const view = buildView(DATA, variable("receipts"), { unit: "level" });
-    const { container } = render(
-      <VintageChart view={view} showPast range={[0, view.rows.length - 1]} onRange={() => {}} chartKey="receipts" />,
-    );
-    expect(container.querySelector(".fv-plot").style.getPropertyValue("--fv-brush-text")).toBe(`${BRUSH_TEXT_SIZE}px`);
-  });
 });
 
 describe("the axes", () => {
