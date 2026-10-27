@@ -492,9 +492,11 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   // Fitted to the data: from zero when every bar has one sign, fitted to
   // each side when they go both ways, with round ticks (tightAxis)
   const { domain, ticks } = tightAxis(shown.map((point) => point.value));
-  // The fewest decimals at which every tick reads differently (tickDecimals),
-  // each tick with its unit: "−0.02pp … 0pp", "0.1%"
-  const decimals = tickDecimals(ticks, 0, 6);
+  // The fewest decimals at which every tick reads differently
+  // (tickDecimals) and exactly (0.025 steps: three, never "0.13"), each
+  // tick with its unit: "−0.02pp … 0pp", "0.1%"
+  const exact = ticks.length ? [0, 1, 2, 3, 4, 5, 6].find((d) => ticks.every((t) => Math.abs(Number(t.toFixed(d)) - t) < 1e-9)) ?? 6 : 0;
+  const decimals = Math.max(tickDecimals(ticks, 0, 6), exact);
   const tickUnit = isPp(metric) ? "pp" : "%";
   const tick = (value) => {
     const text = Math.abs(value).toFixed(decimals);
