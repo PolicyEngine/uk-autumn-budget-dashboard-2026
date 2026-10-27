@@ -293,7 +293,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
             <p>{noHouseholdChange(formatYearRange(selectedYear))}</p>
           </div>
         ) : published ? (
-          <ResponsiveContainer width="100%" height={plotHeight}>
+          // As tall as the plot rows in a pair (globals.css), else plotHeight
+          <ResponsiveContainer width="100%" height="100%" minHeight={plotHeight}>
             <ComposedChart
               data={data}
               margin={{ ...chartMargin(narrow), bottom: key.shared ? LOGO_ROOM : 0 }}

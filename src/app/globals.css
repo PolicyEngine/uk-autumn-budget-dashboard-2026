@@ -1308,22 +1308,30 @@ body {
     grid-row: 7;
   }
 
-  /* A Recharts plot with no legend of its own (By age's Average change by
-     age, whose key is above the section) beside a card that has one: the
-     plot takes the legend row too and grows to fill it, so no empty band
-     opens between its axis and the logo. Its size is contained, so it
+  /* A Recharts plot with no legend of its own beside a card that has one
+     (By age's Average change by age, whose key is above the section; All
+     households' income decile card beside the scatter): the plot takes the
+     empty legend row too (and the logo row when its logo is in the SVG)
+     and, when its chart is drawn at height="100%", grows to fill them, so
+     no empty band opens under its axis. Its size is contained, so it
      follows the shared rows and never props them open. */
   .charts-grid:has(> div > .chart-legend:not(:empty))
     > div:not(:only-child)
-    > .chart-plot:has(.recharts-responsive-container):has(+ .chart-legend:empty) {
-    grid-row: 4 / span 2;
+    > .chart-plot:has(.recharts-responsive-container):not(:has(~ .chart-legend:not(:empty))) {
+    grid-row: 4 / span 3;
     display: flex;
     flex-direction: column;
   }
 
   .charts-grid:has(> div > .chart-legend:not(:empty))
     > div:not(:only-child)
-    > .chart-plot:has(.recharts-responsive-container):has(+ .chart-legend:empty)
+    > .chart-plot:has(.recharts-responsive-container):not(:has(~ .chart-legend:not(:empty))):has(~ .chart-logo) {
+    grid-row: 4 / span 2;
+  }
+
+  .charts-grid:has(> div > .chart-legend:not(:empty))
+    > div:not(:only-child)
+    > .chart-plot:has(.recharts-responsive-container):not(:has(~ .chart-legend:not(:empty)))
     > .swap-transition-inner {
     flex: 1 1 auto;
     display: flex;
@@ -1332,7 +1340,7 @@ body {
 
   .charts-grid:has(> div > .chart-legend:not(:empty))
     > div:not(:only-child)
-    > .chart-plot:has(+ .chart-legend:empty)
+    > .chart-plot:not(:has(~ .chart-legend:not(:empty)))
     .recharts-responsive-container {
     flex: 1 1 auto;
     height: auto !important;
