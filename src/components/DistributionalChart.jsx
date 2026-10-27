@@ -35,13 +35,17 @@ import {
   axisWidth,
   CHART_COLOURS,
   divergingAxis,
+  tickDecimals,
+  fixedNoNegativeZero,
+  noHouseholdChange,
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
-import { chartMotion, netDot } from "../utils/chartMotion";
+import { chartMotion, netDotTitled } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
-import { decileSentence } from "../utils/plainSentences";
+import { decileSentence, laterDecileNote } from "../utils/plainSentences";
+import { laterDecileEnds } from "../utils/laterYears";
 import {
   decileMembership,
   exportLegendItems,
@@ -94,7 +98,6 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
     (id) => !POLICIES.some((policy) => policy.id === id),
   );
 
-  const formatPercent = (value) => `${value.toFixed(1)}%`;
 
   // Remove "st", "nd", "rd", "th" from decile labels
   const formatDecile = (value) => {
@@ -134,6 +137,14 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
       return dataPoint;
     });
   }, [rawData, selectedPolicies, selectedYear, POLICIES, hasUnavailableSelection, catalogue]);
+
+  // "Later years differ": the first later year whose lowest- or
+  // highest-income tenth moves the other way (plainSentences.js)
+  const laterNote = useMemo(() => {
+    const ends = { low: data[0]?.netChange, high: data[data.length - 1]?.netChange };
+    const later = laterDecileEnds(rawData, { valueKey: "value", ends: ["1st", "10th"], selectedPolicies, catalogue, selectedYear });
+    return laterDecileNote(ends, later, "relative");
+  }, [data, rawData, selectedPolicies, catalogue, selectedYear]);
 
   // Every selected measure is in the legend in every year (so the legend,
   // and the plot's height, hold still on a year change or Play); one with
@@ -196,6 +207,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
   };
 
   const { domain: yAxisDomain, ticks: yAxisTicks } = calculateYAxisDomain();
+  // Enough decimals that no two ticks read alike (0.02% steps need two)
+  const percentDecimals = tickDecimals(yAxisTicks, 1);
+  const formatPercent = (value) => `${fixedNoNegativeZero(value, percentDecimals)}%`;
   const hasIncompleteResults = data.some((point) => point.incomplete);
 
   if (!rawData || rawData.length === 0) {
@@ -236,6 +250,10 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
   const published = (rawData ?? []).some(
     (row) => parseInt(row.year) === selectedYear,
   );
+  // Only measures that change no household's income this year: the plot's
+  // note says so, and the card's sentence does not repeat it as "almost no
+  // change" at both ends
+  const nothingChanges = published && activePolicies.length === 0 && !hasIncompleteResults;
   const exportName = `relative-impact-decile-${selectedYear}`;
   const exportOptions = {
     title: chartTitle,
@@ -253,6 +271,8 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
     exportOptions,
     csv: () => decileCsv(data, selectedMeasures, { kind: "relative", year: selectedYear }),
     published,
+    // No image of an empty plot: the CSV only, when no measure changes a household
+    image: activePolicies.length > 0,
   };
 
   return (
@@ -267,7 +287,8 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
           </h3>
           {/* One plain sentence; what the chart measures is in More info */}
           <p className="chart-description">
-            {decileSentence(data, "relative") ?? CHART_DESCRIPTION}
+            {(nothingChanges ? null : decileSentence(data, "relative")) ?? CHART_DESCRIPTION}
+            {laterNote && <span className="later-years-note"> {laterNote}</span>}
           </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={chartTitle} />
@@ -277,7 +298,15 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
         {published && hasIncompleteResults && (
           <UnavailableNotice reason="Some selected measures have no published results for this chart. The net change is unavailable." />
         )}
-        {published ? (
+        {nothingChanges ? (
+          // Only measures that change no household's income this year (an
+          // employer cost): a note, not an empty plot of zero ticks. A
+          // measure with no published result is not 'no change': the
+          // unavailable notice above says so and the plot keeps its gaps
+          <div className="plot-empty" style={{ minHeight: plotHeight }} role="status">
+            <p>{noHouseholdChange(formatYearRange(selectedYear))}</p>
+          </div>
+        ) : published ? (
           <ResponsiveContainer width="100%" height={plotHeight}>
             <ComposedChart
               data={data}
@@ -376,7 +405,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
               <Scatter
                 dataKey="netChange"
                 opacity={netOpacity(key.highlight)}
-                shape={netDot}
+                shape={netDotTitled((row) => `Decile ${formatDecile(String(row.decile))}: net change ${formatPercent(row.netChange)}`)}
                 legendType="none"
                 tooltipType="none"
                 {...chartMotion()}

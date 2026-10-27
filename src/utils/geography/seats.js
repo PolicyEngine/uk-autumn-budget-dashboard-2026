@@ -60,6 +60,26 @@ export function seatStates(features, table, { reform, year, outcome }) {
   );
 }
 
+/**
+ * Whether no seat shows a published change: at least one seat has a row,
+ * and every row is withheld or "no_change" (all zeros). Seats with no row
+ * are left out, as the map draws them as no data.
+ */
+export function movesNoSeat(states) {
+  let rows = 0;
+  for (const state of states?.values() ?? []) {
+    const row = state?.row;
+    if (!row) continue;
+    rows += 1;
+    if (row.tier !== "withheld" && row.direction !== "no_change") return false;
+  }
+  return rows > 0;
+}
+
+/** The line under the map when no seat shows a published change. */
+export const noSeatMovedNote = ({ yearLabel, several = false }) =>
+  `No constituency shows a change large enough to publish for ${several ? "these policies" : "this policy"} in ${yearLabel}.`;
+
 const PLAIN_STROKE = Object.freeze({ stroke: CHART_COLOURS.surface, strokeWidth: 0.05 });
 
 /**

@@ -27,7 +27,10 @@ import { offerFor, seriesFor, withMeasuresRows } from "../../../utils/livingStan
 import { CSV_SOURCES, PeSource } from "../sources";
 import { METHOD_ANCHORS } from "../../methodology/anchors";
 
-const pctTick = (v) => `${formatOneDp(v).replace(/\.0$/, "")}%`;
+// Axis ticks to the step's own precision: a 0.25 step reads "0.25%", not
+// "0.3%" (tightAxis's steps go down to 0.01)
+const pctTickFormat = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
+export const pctTick = (v) => `${pctTickFormat.format(v)}%`;
 const pct = (v) => `${formatOneDp(v)}%`;
 // The measures' effect on growth, in percentage points (two decimals: it is
 // often a few hundredths)

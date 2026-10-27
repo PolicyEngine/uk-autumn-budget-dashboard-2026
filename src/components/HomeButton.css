@@ -17,36 +17,6 @@
   object-fit: contain;
 }
 
-/* The edge tab's tip, as a mini card */
-.tip:has(> .home-tip) {
-  z-index: 1200;
-  max-width: 260px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px var(--shadow-strong);
-}
-
-.home-tip {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: var(--fs-caption);
-  font-weight: 400;
-  line-height: 1.45;
-  color: var(--pe-gray-700);
-}
-
-.home-tip-title {
-  font-size: var(--fs-small);
-  font-weight: 600;
-  color: var(--pe-gray-900);
-}
-
-.home-tip-hint {
-  color: var(--c-gain-text);
-  font-weight: 500;
-}
-
 @media (max-width: 768px) {
   .title-head {
     gap: 10px;
@@ -58,72 +28,82 @@
   }
 }
 
-/* The "About" rail (EdgeAboutTab): the left margin of the view tabs bar
-   and any sub-tab band, white like them, flush to the window's edge and to
-   the title band above, their full height (EdgeAboutTab sets its top and
-   height from them, stuck or not), with a rule on its right. In it, a
-   small "About" pill with the PolicyEngine mark, centred. Over the bar
-   (1090), under the title band (1100) */
-.edge-about {
-  position: fixed;
-  left: 0;
-  top: var(--title-row-height);
-  z-index: 1095;
-  display: inline-flex;
+/* "About" (EdgeAboutTab), a .view-tab like the rest (globals.css), the
+   row's height, sticky with the bar.
+
+   Where the page's margin has room for it, it sits in the margin, left of
+   the row, and the row is pulled 16px (a tab's padding) into the margin so
+   the first tab's icon, and the first sub-tab's, line up with the page
+   content's left edge: in full from 1392px wide, as its icon alone (the
+   card names it) from 1268px. Narrower, it comes first in the row, with a
+   divider before the first tab, and the tabs start after it. */
+.view-tabs-bar.has-leading {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  width: 76px;
+}
+
+.view-tabs-bar.has-leading > .view-tabs {
+  flex: 1;
+  min-width: 0;
+}
+
+.view-tabs-bar.has-leading .edge-about {
   height: var(--view-tabs-height);
-  padding: 0;
-  color: var(--pe-teal-700);
-  background: var(--c-surface);
-  border: 0;
-  border-right: 1px solid var(--card-border);
-  cursor: pointer;
+  margin-right: 9px;
 }
 
-.edge-about-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px 5px 7px;
-  background: var(--pe-teal-50);
-  border: 1px solid var(--pe-teal-200);
-  border-radius: 999px;
-  transition: background-color var(--landing-motion) ease, border-color var(--landing-motion) ease;
+.view-tabs-bar.has-leading .edge-about::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -5px;
+  width: 1px;
+  height: 22px;
+  background: var(--c-grid);
+  transform: translateY(-50%);
 }
 
-.edge-about:hover .edge-about-pill {
-  background: var(--pe-teal-100);
-  border-color: var(--pe-teal-500);
+@media (min-width: 1268px) {
+  .view-tabs-bar.has-leading > .view-tabs {
+    margin-left: -16px;
+  }
+
+  /* In the margin: its right edge 8px short of the row's start */
+  .view-tabs-bar.has-leading .edge-about {
+    position: absolute;
+    top: 0;
+    right: calc(100% - max(40px, calc((100vw - 1120px) / 2)) + 16px + 8px);
+    margin-right: 0;
+    padding: 0 12px;
+  }
+
+  /* The divider, midway across the 8px to the first tab */
+  .view-tabs-bar.has-leading .edge-about::after {
+    right: -4px;
+  }
+
+  .view-tabs-bar.has-leading .edge-about .view-tab-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
-.edge-about:focus {
-  outline: none;
-}
+@media (min-width: 1392px) {
+  .view-tabs-bar.has-leading .edge-about {
+    padding: 0 16px;
+  }
 
-.edge-about:focus-visible .edge-about-pill {
-  box-shadow: 0 0 0 3px var(--focus-ring);
-  border-color: var(--pe-teal-500);
-}
-
-.edge-about-mark {
-  display: block;
-  width: 15px;
-  height: 15px;
-}
-
-.edge-about-label {
-  font-family: var(--pe-font-family);
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  line-height: 1;
-}
-
-/* The bar and band make room for it where their margin is narrower */
-.app:has(.edge-about) .view-tabs-bar,
-.app:has(.edge-about) .sub-tabs-band {
-  padding-left: max(84px, calc((100vw - 1120px) / 2));
+  .view-tabs-bar.has-leading .edge-about .view-tab-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
 }
 
 /* Hidden while the overview drawer is open: the drawer's own close
@@ -132,50 +112,23 @@
   visibility: hidden;
 }
 
-/* Once a session: two soft pulses of the pill, so it is seen */
-.edge-about.is-cue .edge-about-pill {
+/* Once a session: two soft pulses of tint, so it is seen */
+.edge-about.is-cue {
   animation: edge-about-cue 1.4s ease-in-out 0.8s 2;
 }
 
 @keyframes edge-about-cue {
   0%,
   100% {
-    box-shadow: 0 0 0 0 var(--focus-ring);
+    background: transparent;
   }
   50% {
-    box-shadow: 0 0 0 6px var(--focus-ring);
-  }
-}
-
-/* On a phone: a 32px circle with the mark */
-@media (max-width: 768px) {
-  .edge-about {
-    width: 44px;
-  }
-
-  .edge-about-pill {
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-  }
-
-  .edge-about-label {
-    display: none;
-  }
-
-  .app:has(.edge-about) .view-tabs-bar,
-  .app:has(.edge-about) .sub-tabs-band {
-    padding-left: 48px;
+    background: var(--pe-teal-50);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .edge-about-pill {
-    transition: none;
-  }
-
-  .edge-about.is-cue .edge-about-pill {
+  .edge-about.is-cue {
     animation: none;
   }
 }

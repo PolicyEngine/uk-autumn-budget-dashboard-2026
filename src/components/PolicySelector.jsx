@@ -37,8 +37,10 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
   const [isExpanded, setIsExpanded] = useState(false);
   const presence = usePresence(isExpanded);
   const dropdownRef = useRef(null);
+  const toggleRef = useRef(null);
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside, or on Escape (focus back on the
+  // pill if it was in the menu: WCAG 2.1.2 and 2.4.3)
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -46,12 +48,21 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
       }
     };
 
+    const handleEscape = (event) => {
+      if (event.key !== "Escape") return;
+      const inside = dropdownRef.current?.contains(document.activeElement);
+      setIsExpanded(false);
+      if (inside) toggleRef.current?.focus();
+    };
+
     if (isExpanded) {
       document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleEscape);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, [isExpanded]);
 
@@ -71,18 +82,24 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
       {/* A faded pill has no visible tip: its reason is in its name */}
       <Tip content={inactiveReason ? undefined : reason}>
       <button
+        ref={toggleRef}
         className={`policy-selector-toggle band-control${inactiveReason ? " is-inactive" : ""}`}
         onClick={() => { if (!inactiveReason) setIsExpanded(!isExpanded); }}
         aria-expanded={isExpanded}
         aria-disabled={inactiveReason ? "true" : undefined}
+        // The name starts with the pill's visible text, "Policies All 7
+        // policies" (WCAG 2.5.3, label in name), and says what it chooses
         aria-label={
-          inactiveReason
-            ? `Select policies: ${inactiveReason}`
+          // A faded pill says why first, even while the policies load
+          inactiveReason && (loading || none)
+            ? `Policies: ${inactiveReason}`
             : loading
-            ? "Select policies: loading"
-            : reason
-            ? `Select policies: ${reason}`
-            : "Select policies"
+            ? "Policies: loading"
+            : none
+            ? `No policies yet${reason ? `: ${reason}` : ""}`
+            : `Policies ${selectedCount === policies.length ? "All " : ""}${selectedCount}${selectedCount === policies.length ? "" : ` of ${policies.length}`} ${unit(policies.length)}${
+                inactiveReason ? `: ${inactiveReason}` : reason ? `: ${reason}` : ", choose which to include"
+              }`
         }
         aria-busy={loading || undefined}
         disabled={disabled}
@@ -97,6 +114,7 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
           ) : (
             <>
               <span className="band-control-label">Policies</span>
+              {" "}
               {/* "All 9 policies" or "3 of 9 policies"; on a phone "All 9"
                   or "3 of 9" (the unit is hidden) */}
               <span className="band-control-value">

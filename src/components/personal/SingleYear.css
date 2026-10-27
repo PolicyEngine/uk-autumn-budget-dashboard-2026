@@ -227,7 +227,7 @@
 
 .programme-table .change.is-zero {
   font-weight: 400;
-  color: var(--pe-gray-400);
+  color: var(--pe-gray-500); /* 4.8:1 on white, as WCAG 1.4.3 needs */
 }
 
 .programme-detail td {
@@ -545,57 +545,6 @@
   margin: 0;
 }
 
-.result-card-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-  padding: 20px 28px 0;
-}
-
-.result-card-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  color: var(--pe-gray-500);
-}
-
-.result-card-pills {
-  display: flex;
-  gap: 6px;
-}
-
-.result-pill {
-  display: inline-flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 10px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  color: var(--pe-gray-600);
-  background: var(--pe-gray-50);
-  border: 1px solid var(--card-border);
-  border-radius: 999px;
-}
-
-.result-pill.is-link {
-  color: var(--pe-teal-700);
-  text-decoration: none;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.result-pill.is-link:hover {
-  background: var(--pe-teal-50);
-  border-color: var(--pe-teal-200);
-}
-
-.result-pill.is-link:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-}
-
 .result-card-body {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
@@ -604,32 +553,6 @@
      the left, the bars on the right */
   align-items: start;
   padding: 16px 28px 24px;
-}
-
-.result-card-side {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
-
-/* A very light tint behind the figure only */
-.result-card-hero {
-  padding: 16px 20px;
-  background: var(--pe-gray-50);
-  border-radius: var(--pe-radius-md);
-}
-
-.result-card.is-gain .result-card-hero {
-  background: var(--pe-teal-50);
-}
-
-.result-card.is-loss .result-card-hero {
-  background: var(--c-loss-soft);
-}
-
-.result-figure {
-  line-height: 1.1;
 }
 
 .result-value {
@@ -646,37 +569,6 @@
 
 .result-card.is-loss .result-value {
   color: var(--c-loss-text);
-}
-
-.result-unit {
-  font-size: var(--fs-body-lg);
-  font-weight: 500;
-  color: var(--pe-gray-500);
-}
-
-.result-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  margin-top: 10px !important;
-  padding: 2px 10px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--pe-gray-600);
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: 999px;
-}
-
-.result-chip.is-gain {
-  color: var(--c-gain-text);
-  border-color: var(--pe-teal-200);
-}
-
-.result-chip.is-loss {
-  color: var(--c-loss-text);
-  border-color: var(--c-loss-border);
 }
 
 /* Before and after, on one scale */
@@ -994,11 +886,14 @@
   background: var(--pe-teal-500);
 }
 
-/* New cards and charts fade in rather than pop */
+/* New cards and charts fade in rather than pop. "backwards", not "both":
+   a transform held after the fade makes the card the containing block of
+   its Options sheet (position: fixed), which then sat at the card's foot,
+   partly off the screen, instead of the window's */
 .result-card,
 .single-year-details .report-section > .card,
 .single-year-details .charts-grid > div {
-  animation: single-year-fade-in 0.3s ease-out both;
+  animation: single-year-fade-in 0.3s ease-out backwards;
 }
 
 @keyframes single-year-fade-in {
@@ -1012,7 +907,6 @@
     transform: none;
   }
 }
-
 
 /* No effect: listed in the card's More info row */
 .no-effect-title {
@@ -1068,7 +962,6 @@
 }
 
 @media (max-width: 600px) {
-  .result-card-head,
   .result-card-body {
     padding-left: 16px;
     padding-right: 16px;
@@ -1119,64 +1012,6 @@
 /* Under the waterfall: policies under £1, notes, and those with no effect */
 .result-card-notes {
   padding: 0;
-}
-
-/* Whose result it is, under the figure: small muted chips that wrap
-   whole, then Edit */
-.result-facts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.result-fact {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 9px 2px 7px;
-  font-size: var(--fs-micro);
-  line-height: 1.5;
-  white-space: nowrap;
-  color: var(--pe-gray-600);
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: 999px;
-}
-
-.result-fact svg {
-  flex: none;
-  color: var(--pe-gray-500);
-}
-
-.result-fact:focus-visible {
-  outline: 2px solid var(--pe-teal-600);
-  outline-offset: 2px;
-}
-
-.result-facts-edit {
-  padding: 2px 4px;
-  font: inherit;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  color: var(--c-gain-text);
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-
-.result-facts-edit:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.result-facts-edit:focus-visible {
-  outline: 2px solid var(--pe-teal-600);
-  outline-offset: 2px;
-  border-radius: 4px;
 }
 
 /* "About this result", at the card's foot, in the charts' "About this
@@ -1257,4 +1092,43 @@
     padding-left: 16px;
     padding-right: 16px;
   }
+}
+
+/* The result card, top to bottom: the three tiles, the waterfall the
+   card's width, About this result */
+.result-card .result-tiles {
+  margin: 0;
+  padding: 20px 28px 4px;
+}
+
+.result-card .result-card-body {
+  grid-template-columns: minmax(0, 1fr);
+  padding-top: 12px;
+}
+
+.result-policies-link {
+  color: var(--c-gain-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.result-policies-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 599px) {
+  .result-card .result-tiles {
+    padding: 16px 16px 4px;
+  }
+
+}
+
+/* The waterfall's own title and line, as on every card */
+.waterfall-header {
+  margin: 0 0 8px;
+}
+
+.waterfall-scale-note {
+  margin: 2px 0 0;
 }

@@ -19,7 +19,7 @@ classifiers = [
 ]
 dependencies = [
     "policyengine[uk]>=6.10.2",
-    "pandas>=2.0.0",
+    "pandas>=2.2.0",
     "numpy>=1.24.0",
     "h5py>=3.0.0",
     "microdf-python>=0.3.0",
@@ -30,7 +30,10 @@ dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "httpx>=0.27.0",
-    "odfpy>=1.4.1",
+    "python-calamine>=0.9.0",
+    # openpyxl hardens its XML parsing whenever defusedxml is installed; odfpy
+    # used to bring it in.
+    "defusedxml>=0.7.1",
 ]
 
 [project.optional-dependencies]

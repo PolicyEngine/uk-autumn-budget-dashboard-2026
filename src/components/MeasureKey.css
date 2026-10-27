@@ -42,7 +42,7 @@
 
 .measure-key-heading,
 .measure-key-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--pe-gray-500);
@@ -227,6 +227,9 @@ button.measure-key-chip:focus-visible,
   .measure-key.is-section .measure-key-scroll {
     flex-wrap: nowrap;
     overflow-x: auto;
+    /* The chips' touch areas (globals.css) reach past the strip; they must
+       not make it scroll up and down */
+    overflow-y: hidden;
     padding: 2px 12px 4px 0;
     scrollbar-width: thin;
     -webkit-overflow-scrolling: touch;

@@ -1740,40 +1740,46 @@ def test_provably_unaffected_rules(measure, answers, year, expected):
     )
 
 
+# The households the skip rules treat differently. Each (household, year)
+# is its own test, so CI can run them on separate workers: one test per year
+# ran all three households, 360-390 s each on CI, the suite's longest tests.
+SKIP_PARITY_HOUSEHOLDS = {
+    "default": dict(salary_year=2026),
+    "pensioner_petrol_no_electricity": dict(
+        salary_year=2026,
+        age=70,
+        private_pension_income=12_000,
+        petrol_spending=600,
+        electricity_spending=0,
+    ),
+    "plan_2_with_pensioner_partner_diesel": dict(
+        salary_year=2026,
+        age=24,
+        employment_income=32_000,
+        student_loan_plan="PLAN_2",
+        has_partner=True,
+        partner_age=67,
+        diesel_spending=400,
+    ),
+}
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize("year", [2027, 2029, 2031])
-def test_skips_give_the_same_answer_as_running_every_measure(year):
+@pytest.mark.parametrize("household", list(SKIP_PARITY_HOUSEHOLDS))
+def test_skips_give_the_same_answer_as_running_every_measure(household, year):
     """With the engine: the split by policy with skips is identical to the
     one running every measure, for households the rules treat differently
     (scratchpad verification ran 40 generated households x every year)."""
-    households = [
-        Answers(salary_year=2026),
-        Answers(
-            salary_year=2026,
-            age=70,
-            private_pension_income=12_000,
-            petrol_spending=600,
-            electricity_spending=0,
-        ),
-        Answers(
-            salary_year=2026,
-            age=24,
-            employment_income=32_000,
-            student_loan_plan="PLAN_2",
-            has_partner=True,
-            partner_age=67,
-            diesel_spending=400,
-        ),
-    ]
+    answers = Answers(**SKIP_PARITY_HOUSEHOLDS[household])
     measures = household_impact.measure_ids()
-    for answers in households:
-        household_impact.clear_runs()
-        full = calculate(
-            answers, measures, year, ("by_policy",), skip_unaffected=False
-        )
-        household_impact.clear_runs()
-        fast = calculate(answers, measures, year, ("by_policy",))
-        assert fast == full
+    household_impact.clear_runs()
+    full = calculate(
+        answers, measures, year, ("by_policy",), skip_unaffected=False
+    )
+    household_impact.clear_runs()
+    fast = calculate(answers, measures, year, ("by_policy",))
+    assert fast == full
     household_impact.clear_runs()
 
 
