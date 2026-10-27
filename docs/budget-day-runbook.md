@@ -873,6 +873,16 @@ Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microc
   - **Everything else** (budgetary, distributional, winners and losers, age, scatter): about 5 s per year, mostly `gov_balance` and net income.
   - **Memory:** about 19 GB per measure over two years and 22.5 GB over six as peak footprint (compressed pages included), but about 6.5 GB resident at its peak with another measure running beside it ("Fast full run" below).
 - **One pass writes every flat file.** `generate` now writes `household_scatter_binned.csv` from the same simulations, beside `age_impact.csv` and `income_curve.csv`, so `--only age_impact`, `--only household_scatter` and `income-curve` are needed only to rerun one file.
+- **The package's rows in the three flat files the page reads directly** (`income_distribution.csv` and `income_mobility.csv` for Household impact's "Where you sit", `income_growth_with_measures.csv` for Living standards "with the selected measures") must be the manifest's package, under its combined key (#228). The page reads a package there only under the key of the manifest's combined run of exactly the measures it shows, and says the figures are not available otherwise. So run these two from the same checkout **after the last manifest change** (`stage --provisional`, `approve` or `withdraw`), when the manifest's provisional and approved measures are the set the page should show and their combined run is provisional or approved too. An entry staged without `--provisional` does not count: run before its `approve` and the command either refuses or rebuilds the previous set.
+
+  ```bash
+  uv run --with modal==1.6.2 python -m uk_budget_data.cli generate --only income_distribution --published-package --backend modal
+  uv run --with modal==1.6.2 python -m uk_budget_data.cli generate --only income_growth --published-package --backend modal
+  ```
+
+  Start them with `python -m`: the `uk-budget-data` script runs the project's own Python, which has no `modal`, so `uv run --with modal==1.6.2 uk-budget-data ...` stops on a fresh clone. To run locally, `uv run python -m uk_budget_data.cli generate --only income_distribution --published-package` (and the same for `income_growth`). If a container fails, rerun the whole command: these two write one file each, from every unit.
+
+  `--published-package` reads `public/data/manifest.json`: the measures with a provisional or approved status, and the displayable combined run of exactly those whose members' outputs are current. It refuses when there is no such run. `--combined <ids>` does the same for a set given by hand. Without either, the files keep the registry's `autumn_budget_2026_combined` (every candidate), which the page never reads. The regenerated files need fresh review rows.
 - **Run measures side by side** with `--jobs N` or `--jobs auto`, on `generate` (flat CSVs, `--only`, `--artifacts` and `--combined`) and on `geography`:
 
   ```bash

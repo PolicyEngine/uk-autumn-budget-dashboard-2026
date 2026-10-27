@@ -591,7 +591,7 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
     parent says each measure's lines in measure order."""
     from uk_budget_data.parallel import resolve_reform
 
-    reform = resolve_reform(unit.reform)
+    reform = resolve_reform(unit.reform, unit.config)
     config = unit.config
     dataset_path = unit.dataset_path
     flat = "flat" in unit.tables
@@ -744,11 +744,24 @@ def flat_units(
 ) -> list[FlatOutcome]:
     """Run one unit per measure and say each measure's lines, in measure
     order. Results come back in measure order whatever the runner."""
-    from uk_budget_data.parallel import SerialRunner, portable
+    from uk_budget_data.parallel import (
+        CombinedMeasures,
+        SerialRunner,
+        portable,
+    )
 
     runner = runner or SerialRunner()
     units = [
-        FlatUnit(portable(reform, runner), config, dataset_path, tables)
+        FlatUnit(
+            (
+                reform
+                if isinstance(reform, CombinedMeasures)
+                else portable(reform, runner)
+            ),
+            config,
+            dataset_path,
+            tables,
+        )
         for reform in reforms
     ]
 
@@ -839,10 +852,48 @@ INCOME_DISTRIBUTION_FILE = "income_distribution.csv"
 INCOME_MOBILITY_FILE = "income_mobility.csv"
 
 
+def with_combined_sets(
+    reforms: Optional[list[Reform]],
+    combined_sets: Optional[list[list[Reform]]],
+    runner=None,
+) -> list:
+    """The units' measures: ``reforms``, then one combined run per set in
+    ``combined_sets``, keyed as the publication manifest keys it
+    (``combine.combined_key`` of its members, ``combined--...``).
+
+    The page reads a package's rows in these flat files under the key of
+    the manifest's combined run of exactly the measures it shows, so rows
+    for any other package are never taken for it (#228). With combined
+    sets and no ``reforms``, the measures are the sets' members, and the
+    registry's own package (``autumn_budget_2026_combined``, every
+    candidate) is not run.
+    """
+    from uk_budget_data.parallel import portable_combined
+
+    if not combined_sets:
+        return reforms or get_autumn_budget_2026_reforms()
+    if reforms is None:
+        reforms = list(
+            {
+                member.id: member
+                for members in combined_sets
+                for member in members
+            }.values()
+        )
+    packages = [
+        portable_combined(members, runner) for members in combined_sets
+    ]
+    keys = [package.id for package in packages]
+    if len(set(keys)) != len(keys):
+        raise ValueError(f"a combined set is listed twice: {keys}")
+    return [*reforms, *packages]
+
+
 def generate_income_distribution(
     reforms: Optional[list[Reform]] = None,
     config: Optional[DataConfig] = None,
     runner=None,
+    combined_sets: Optional[list[list[Reform]]] = None,
 ) -> pd.DataFrame:
     """Write only ``income_distribution.csv`` (percentiles of equivalised
     household net income before and after each measure) and
@@ -851,9 +902,10 @@ def generate_income_distribution(
     Builds the same two simulations per reform as the full run, on the same
     baselines, and runs only IncomeDistributionCalculator. ``uk-budget-data
     generate --only income_distribution`` calls it. The full run does not
-    write this file.
+    write this file. ``combined_sets`` adds one combined run per set,
+    under its manifest key (:func:`with_combined_sets`).
     """
-    reforms = reforms or get_autumn_budget_2026_reforms()
+    reforms = with_combined_sets(reforms, combined_sets, runner)
     config = config or DataConfig()
     dataset_path = str(config.dataset_path) if config.dataset_path else None
     outcomes = flat_units(reforms, config, dataset_path, DISTRIBUTION, runner)
@@ -877,6 +929,7 @@ def generate_income_growth(
     reforms: Optional[list[Reform]] = None,
     config: Optional[DataConfig] = None,
     runner=None,
+    combined_sets: Optional[list[list[Reform]]] = None,
 ) -> pd.DataFrame:
     """Write only ``income_growth_with_measures.csv``: real growth of each
     income group's median (HBAI income, as the Living standards outlook's
@@ -888,10 +941,12 @@ def generate_income_growth(
     baselines. ``uk-budget-data generate --only income_growth`` calls it;
     the full run does not write this file. The first configured year is
     read only, as the year before the first year published.
+    ``combined_sets`` adds one combined run per set, under its manifest
+    key (:func:`with_combined_sets`).
     """
     from uk_budget_data.living_standards.measures_growth import COLUMNS
 
-    reforms = reforms or get_autumn_budget_2026_reforms()
+    reforms = with_combined_sets(reforms, combined_sets, runner)
     config = config or DataConfig()
     dataset_path = str(config.dataset_path) if config.dataset_path else None
     outcomes = flat_units(reforms, config, dataset_path, GROWTH, runner)

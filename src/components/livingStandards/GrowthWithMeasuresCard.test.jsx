@@ -4,12 +4,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import GrowthWithMeasuresCard, { WITH_MEASURES_TITLE, clearGrowthWithMeasuresCache } from "./GrowthWithMeasuresCard";
 import { clearOutlookCache } from "../../utils/livingStandards/outlook";
+import { MeasureCatalogueProvider } from "../../utils/measureCatalogue";
+import { NO_PACKAGE_PUBLISHED, PACKAGE_NOT_IN_FILE } from "../../utils/incomePosition";
 
 const PUBLIC = join(__dirname, "..", "..", "..", "public", "data");
 const OUTLOOK = readFileSync(join(PUBLIC, "living_standards_outlook.json"), "utf8");
-const GROWTH = readFileSync(join(PUBLIC, "income_growth_with_measures.csv"), "utf8");
+const FILE = readFileSync(join(PUBLIC, "income_growth_with_measures.csv"), "utf8");
+let GROWTH = FILE;
+
+// The published package as the manifest keys it: two measures and their
+// combined run of exactly those two (#228)
+const PAIR = ["plan_2_threshold_unfreeze", "threshold_freeze_2031_32"];
+const KEY = "combined--plan_2_threshold_unfreeze+threshold_freeze_2031_32";
+const catalogue = {
+  displayable: PAIR.map((id) => ({ id })),
+  combinedId: KEY,
+  manifest: { measures: {}, combined: { [KEY]: { measures: PAIR } } },
+};
+const withCatalogue = ({ children }) => <MeasureCatalogueProvider catalogue={catalogue}>{children}</MeasureCatalogueProvider>;
 
 beforeEach(() => {
+  GROWTH = FILE;
   clearGrowthWithMeasuresCache();
   clearOutlookCache();
   vi.stubGlobal(
@@ -45,10 +60,38 @@ describe("Growth across the distribution, with the selected measures", () => {
     expect(screen.queryByText(/Difference from current law/)).toBeNull();
   });
 
-  it("stands two measures for the package, with a note", async () => {
-    render(<GrowthWithMeasuresCard selectedPolicies={["threshold_freeze_2031_32", "plan_2_threshold_unfreeze"]} twinLink={null} />);
+  it("stands part of the package for the manifest's package, with a note", async () => {
+    // The file's package rows under the manifest's key, as generate
+    // --only income_growth --published-package writes them
+    GROWTH = FILE.replaceAll("autumn_budget_2026_combined,", `${KEY},`);
+    render(<GrowthWithMeasuresCard selectedPolicies={PAIR} twinLink={null} />, { wrapper: ({ children }) => {
+      const partial = { ...catalogue, displayable: [...PAIR, "badr_lifetime_limit_cut"].map((id) => ({ id })) };
+      return <MeasureCatalogueProvider catalogue={partial}>{children}</MeasureCatalogueProvider>;
+    } });
     expect(await screen.findByText(WITH_MEASURES_TITLE)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     expect(screen.getByText(/this is the whole package/)).toBeTruthy();
+  });
+
+  it("shows the manifest's package for the whole selection, with no note", async () => {
+    GROWTH = FILE.replaceAll("autumn_budget_2026_combined,", `${KEY},`);
+    render(<GrowthWithMeasuresCard selectedPolicies={PAIR} twinLink={null} />, { wrapper: withCatalogue });
+    expect(await screen.findByText(WITH_MEASURES_TITLE)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    expect(screen.queryByText(/this is the whole package/)).toBeNull();
+    expect(screen.queryByText(PACKAGE_NOT_IN_FILE)).toBeNull();
+  });
+
+  it("refuses another package's rows: the registry's nine-measure run is not the manifest's package (issue 228)", async () => {
+    // The file as committed: its package rows are autumn_budget_2026_combined
+    render(<GrowthWithMeasuresCard selectedPolicies={PAIR} twinLink={null} />, { wrapper: withCatalogue });
+    expect(await screen.findByText(PACKAGE_NOT_IN_FILE)).toBeTruthy();
+    expect(screen.queryByText(/Difference from current law/)).toBeNull();
+  });
+
+  it("refuses when no package is published at all, saying that rather than blaming the file", async () => {
+    render(<GrowthWithMeasuresCard selectedPolicies={PAIR} twinLink={null} />);
+    expect(await screen.findByText(NO_PACKAGE_PUBLISHED)).toBeTruthy();
+    expect(screen.queryByText(PACKAGE_NOT_IN_FILE)).toBeNull();
   });
 });

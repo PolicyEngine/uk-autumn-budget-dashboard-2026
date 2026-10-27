@@ -484,10 +484,46 @@ def portable(reform, runner=None):
         return RegisteredReform(reform.id)
 
 
-def resolve_reform(reference):
-    """The measure a :func:`portable` reference stands for."""
+@dataclass(frozen=True)
+class CombinedMeasures:
+    """A combined run of several measures, sent as its members: a composed
+    measure's modifiers cannot be pickled, so it is composed again where it
+    runs (``publication.combine.combine_measures``), as a combined
+    artifact's run is. ``id`` is the combined key of its members
+    (``combine.combined_key``), the key the publication manifest gives that
+    combined run, so its rows in a flat file name exactly its members."""
+
+    id: str
+    members: tuple
+
+
+def portable_combined(members, runner=None) -> CombinedMeasures:
+    """A combined run of ``members`` (Reforms) that a worker can rebuild."""
+    from uk_budget_data.publication import combine
+
+    ordered = combine.member_order(list(members))
+    return CombinedMeasures(
+        id=combine.combined_key([member.id for member in ordered]),
+        members=tuple(portable(member, runner) for member in ordered),
+    )
+
+
+def resolve_reform(reference, config=None):
+    """The measure a :func:`portable` reference stands for. A combined run
+    is composed from its members on ``config``'s baseline."""
     if isinstance(reference, RegisteredReform):
         from uk_budget_data.reforms import get_reform
 
         return get_reform(reference.id)
+    if isinstance(reference, CombinedMeasures):
+        from uk_budget_data.models import DataConfig
+        from uk_budget_data.publication import combine
+
+        members = [resolve_reform(member) for member in reference.members]
+        combined = combine.combine_measures(members, config or DataConfig())
+        if combined.id != reference.id:
+            raise ValueError(
+                f"{reference.id}: its members compose to {combined.id}"
+            )
+        return combined
     return reference
