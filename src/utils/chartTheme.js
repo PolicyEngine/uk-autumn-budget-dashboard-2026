@@ -563,3 +563,31 @@ export function fiscalYearTicks(years, plotWidth, { base } = {}) {
   }
   return [...picked].sort((a, b) => a - b).map((i) => list[i]);
 }
+
+/**
+ * The fewest decimal places, from `min` to `max`, at which every tick reads
+ * differently: 1 for ticks 0.1 apart, 2 for ticks 0.02 apart. A small axis
+ * (one measure's change in net income, in %) otherwise repeats labels, such
+ * as "0.0%, 0.0%, 0.1%, 0.1%".
+ */
+export function tickDecimals(ticks, min = 0, max = 3) {
+  for (let decimals = min; decimals < max; decimals += 1) {
+    const shown = new Set(ticks.map((tick) => Number(tick.toFixed(decimals))));
+    if (shown.size === ticks.length) return decimals;
+  }
+  return max;
+}
+
+/** A number to `decimals` places, never "-0.0": a value that rounds to zero has no sign. */
+export function fixedNoNegativeZero(value, decimals) {
+  const text = value.toFixed(decimals);
+  return Number(text) === 0 ? (0).toFixed(decimals) : text;
+}
+
+/**
+ * In place of a plot whose selected policies change no household's income
+ * in the year shown (an employer cost alone): "None of the selected
+ * policies changes household incomes in 2027-28."
+ */
+export const noHouseholdChange = (yearText) =>
+  `None of the selected policies changes household incomes in ${yearText}.`;

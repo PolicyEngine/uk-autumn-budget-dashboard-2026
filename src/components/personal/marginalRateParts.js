@@ -10,9 +10,9 @@ export const RATE_PARTS = [
   { name: "income_tax", label: "Income tax", phrase: "income tax", color: CHART_COLOURS.mtrIncomeTax },
   {
     name: "child_benefit_charge",
-    label: "Child Benefit clawback",
+    label: "High Income Child Benefit Charge",
     color: CHART_COLOURS.mtrChildBenefit,
-    info: "The High Income Child Benefit Charge takes back 1% of Child Benefit for every £200 of income above £60,000, all of it by £80,000.",
+    info: "Takes back 1% of Child Benefit for every £200 of income above £60,000, all of it by £80,000.",
   },
   {
     name: "personal_allowance_taper",

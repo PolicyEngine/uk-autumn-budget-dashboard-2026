@@ -67,7 +67,7 @@ import {
 import { isPublished, singleAgeKey } from "../utils/ageImpact";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
-import { formatShare, visibleSegments } from "../utils/shareFormat";
+import { formatShare, shareDecimals, visibleSegments } from "../utils/shareFormat";
 import {
   legendMembership,
   exportLegendItems,
@@ -459,6 +459,8 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
         notes,
       }),
     published: published && shown.length > 0,
+    // The dumbbell is HTML, not a Recharts SVG: the CSV only
+    image: false,
   };
 
   return (
@@ -518,13 +520,16 @@ function SplitTick({ x, y, payload, data, narrow }) {
   // Two right-aligned columns, ▲ then ▼, ending at the axis's right edge
   // (Recharts puts x 8px into the axis), as the dumbbell's value column
   const end = x - 8 + (narrow ? SPLIT_WIDTH_NARROW : SPLIT_WIDTH);
+  // One precision per column, across every row drawn
+  const better = shareDecimals(data.map((point) => point.real.pct_better_off));
+  const worse = shareDecimals(data.map((point) => point.real.pct_worse_off));
   return (
     <text y={y} dominantBaseline="middle" fontSize={narrow ? 12 : 13} fill={CHART_COLOURS.tick} style={{ fontVariantNumeric: "tabular-nums" }}>
       <tspan x={end - SPLIT_COLUMN} textAnchor="end">
-        <tspan fill={CHART_COLOURS.gain}>▲</tspan> {formatShare(row.real.pct_better_off)}
+        <tspan fill={CHART_COLOURS.gain}>▲</tspan> {formatShare(row.real.pct_better_off, better)}
       </tspan>
       <tspan x={end} textAnchor="end">
-        <tspan fill={CHART_COLOURS.loss}>▼</tspan> {formatShare(row.real.pct_worse_off)}
+        <tspan fill={CHART_COLOURS.loss}>▼</tspan> {formatShare(row.real.pct_worse_off, worse)}
       </tspan>
     </text>
   );
@@ -851,10 +856,10 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
       <SectionHeading
         id="pensioners-who-gains"
         icon="userPlus"
-        title="Who gains and from what"
+        title="Who is better or worse off, and from what"
         subtitle="Which policies drive the change for pensioners, and how many are better or worse off."
       />
-      <section className="report-section young-people-section" aria-label="Who gains and from what">
+      <section className="report-section young-people-section" aria-label="Who is better or worse off, and from what">
         <div className="charts-grid">
           <MeasuresCard {...props} height={narrow ? 460 : 400} />
           <PensionerSharesCard {...props} height={narrow ? 260 : 400} />

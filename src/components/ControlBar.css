@@ -317,3 +317,11 @@
   left: 0;
   right: auto;
 }
+
+/* Why an option is unavailable, under its control */
+.control-bar-note {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--pe-gray-500);
+}

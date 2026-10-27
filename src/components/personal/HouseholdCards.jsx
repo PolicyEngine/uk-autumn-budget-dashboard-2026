@@ -20,7 +20,7 @@ import useDataFile from "../../hooks/useDataFile";
 import { buildHouseholdRequest } from "../../utils/householdImpactApi";
 import { presetInputs } from "../../utils/householdPresets";
 import { DISTRIBUTION_FILE, curveOf, distributionRunOf, householdPosition, ordinal, parseDistribution } from "../../utils/incomePosition";
-import { useMeasureCatalogue } from "../../utils/measureCatalogue";
+import { catalogueProvisional, useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { fiscalYearTick, shortFiscalYearTick } from "../../utils/chartTheme";
 import { SELECTABLE_YEARS, isDisplayYear } from "../../utils/displayYears";
 import { MINUS, money } from "../../utils/singleYear";
@@ -315,23 +315,21 @@ export default function HouseholdCards({
           households" beside it once a household is chosen */}
       <div className="household-cards-head">
         <SectionHeading icon="users" title="Choose a household" subtitle="Enter your own household, or start from an example below." />
-        {/* Open again: back to the strip; folded, the button is at the
-            strip's start, where the eye begins */}
-        {chosen && !folded && (
+        {/* At the end of the heading row, a teal button: plain to see */}
+        {chosen && (
           <button
             type="button"
-            className="household-cards-toggle"
-            aria-expanded
+            className="household-cards-back"
+            aria-expanded={!folded}
             aria-controls="household-cards-grid"
-            onClick={() => setShowAll(false)}
+            onClick={() => setShowAll((open) => !open)}
           >
-            <LayoutGrid size={14} strokeWidth={2} aria-hidden="true" />
-            Show fewer
+            <LayoutGrid size={15} strokeWidth={2} aria-hidden="true" />
+            {folded ? "Show all households" : "Show fewer"}
           </button>
         )}
       </div>
       <HouseholdStrip
-        onShowAll={() => setShowAll(true)}
         examples={examples}
         value={value}
         presets={presets}
@@ -464,6 +462,8 @@ export default function HouseholdCards({
  * a tick, as an example is); pressing it again closes it.
  */
 function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
+  // While the measures are provisional, they are the selected measures, not the Budget
+  const provisional = catalogueProvisional(useMeasureCatalogue());
   const calculated = Number.isFinite(change);
   const action = formOpen ? "Hide your answers" : calculated ? "Change your answers" : "Enter your household";
   return (
@@ -481,7 +481,10 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
         {/* The card's name, for the button's: the title says it on screen */}
         <span className="household-card-name visually-hidden">Your household</span>
         <span className="household-yours-title">Enter your own household</span>
-        <span className="household-yours-lead">See how the Budget changes your income, in about 30 seconds.</span>
+        <span className="household-yours-lead">
+          {provisional ? "See how the selected measures change your income" : "See how the Budget changes your income"}
+          {", in about 30 seconds."}
+        </span>
       </span>
       <span className="household-yours-side">
         {calculated && (
@@ -520,7 +523,7 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
  * reopens the form): the arrow keys (and Home, End) move between chips,
  * Enter or Space chooses one, a click chooses it at once.
  */
-function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, formId, year, shown, onYours, onChoose, onShowAll = null }) {
+function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, formId, year, shown, onYours, onChoose }) {
   const catalogue = useMeasureCatalogue();
   // A chip's accent only while the catalogue publishes its measures (#104)
   const accentOf = (example) => (featuresPublished(example, catalogue) ? catalogue.byId.get(example.measure).color : null);
@@ -567,18 +570,6 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
   return (
     <div className={`household-strip-fold ${shown ? "is-open" : ""}`.trim()} aria-hidden={!shown || undefined} inert={!shown || undefined}>
       <div className="household-strip-fold-inner">
-        {onShowAll && (
-          <button
-            type="button"
-            className="household-cards-back"
-            aria-expanded={false}
-            aria-controls="household-cards-grid"
-            onClick={onShowAll}
-          >
-            <LayoutGrid size={15} strokeWidth={2} aria-hidden="true" />
-            Show all households
-          </button>
-        )}
         <ul className="household-strip" role="listbox" aria-label="Households" aria-orientation="horizontal" onKeyDown={onKeyDown}>
           {items.map((item, index) => {
             const isSelected = index === selected;

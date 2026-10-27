@@ -17,7 +17,6 @@ import useScrollReveal from "./hooks/useScrollReveal";
 import ViewTabs from "./components/ViewTabs";
 import { SUB_TAB_PARAM } from "./components/SubTabs";
 import MethodologyTab from "./components/MethodologyTab";
-import ReplicationLine from "./components/ReplicationLine";
 import SectionHeading from "./components/SectionHeading";
 import LivingStandardsTab from "./components/livingStandards/LivingStandardsTab";
 import { PovertyMeasuresRow } from "./components/MeasuresPovertyCard";
@@ -27,11 +26,11 @@ import { GROWTH_CURRENT_LAW_ANCHOR } from "./components/livingStandards/sections
 import { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import AgeSection from "./components/AgeSection";
 import PopulationImpactView from "./components/PopulationImpactView";
-import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS } from "./utils/displayYears";
+import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS, FIRST_DISPLAY_YEAR, selectableYearOr } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
 import TitleMark, { EdgeAboutTab } from "./components/HomeButton";
 import OverviewDrawer from "./components/OverviewDrawer";
-import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
+import { buildMeasureCatalogue, catalogueProvisional, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
 import { loadDashboard, loadVerifiedTablesOnce, budgetChartData } from "./utils/loadDashboard";
 import { pruneVerifiedCache } from "./utils/publication/cache";
 import { prefetchGeography } from "./hooks/useGeographyData";
@@ -283,6 +282,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     if (oldOutlookBaseline(window.location)) dropSubTab(null);
     setLanding(opensLanding(window.location));
     setActiveTab(view);
+    // A shared link's ?year= opens that year; one not offered (an old
+    // 2026) opens the default
+    const askedYear = new URLSearchParams(window.location.search).get("year");
+    if (askedYear !== null) setDistributionalYear(selectableYearOr(askedYear));
     setLocationReady(true);
   }, []);
 
@@ -303,11 +306,18 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       if (selectionChosen && !landing) params.set("policies", selectedPolicies.join(","));
       else params.delete("policies");
     }
+    // The year chosen in the header, so a shared link opens on it; the
+    // default stays out of the address, as the selection's does
+    if (!landing && distributionalYear !== DEFAULT_DISPLAY_YEAR) params.set("year", String(distributionalYear));
+    else params.delete("year");
     window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`);
-  }, [selectedPolicies, selectionChosen, activeTab, landing, locationReady, unavailable]);
+  }, [selectedPolicies, selectionChosen, activeTab, landing, locationReady, unavailable, distributionalYear]);
 
   const results = useMemo(() => ({
     budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, DISPLAY_YEARS),
+    // The year before the charts start (2026-27), from the same verified
+    // rows: one line under Revenue impact, never a bar
+    budgetBefore: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, [FIRST_DISPLAY_YEAR - 1])[0],
     rawDistributional: published.distributional.filter((row) => selectedPolicies.includes(row.reform_id)),
     rawWinnersLosers: published.winnersLosers.filter((row) => selectedPolicies.includes(row.reform_id)),
     // Every verified run's rows: the summary statistics read one run, not a
@@ -341,6 +351,39 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
+  }, []);
+
+  // Once scrolled past its place, the title band hides while the reader
+  // scrolls down and slides back in when they scroll up (globals.css,
+  // data-band-hidden); at the top it sits in its place
+  const [bandHidden, setBandHidden] = useState(false);
+  useEffect(() => {
+    let last = window.scrollY;
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const y = window.scrollY;
+      const sentinel = titleSentinelRef.current;
+      const past = sentinel ? sentinel.getBoundingClientRect().top < 0 : y > 0;
+      if (!past) {
+        setBandHidden(false);
+        last = y;
+      } else if (y > last + 6) {
+        setBandHidden(true);
+        last = y;
+      } else if (y < last - 6) {
+        setBandHidden(false);
+        last = y;
+      }
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(check);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   // globals.css un-sticks the ui-kit site nav with a selector written
@@ -469,6 +512,16 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   const handleShowEffect = (policyId) => {
     setChosenPolicies([policyId]);
     setSelectionChosen(true);
+    // Open on a year the measure moves revenue in: the threshold freeze
+    // (2031-32 only) opened on 2027-28 showed only empty charts. A measure
+    // with none in the years shown (the Warm Home Discount top-up, winter
+    // 2026-27) keeps the year, and the revenue card says why it is empty
+    const moves = (year) =>
+      published.budgetary.some((row) => row.reform_id === policyId && Number(row.year) === year && Math.abs(Number(row.value)) > 0.0005);
+    if (!moves(distributionalYear)) {
+      const first = DISPLAY_YEARS.find(moves);
+      if (first !== undefined) setDistributionalYear(first);
+    }
     handleTabChange("dashboard");
   };
   useLayoutEffect(() => {
@@ -510,9 +563,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   // A caveat on the results while any shown measure is provisional: one
   // small badge on the landing page, nowhere above the views
-  const provisional =
-    catalogue.manifest &&
-    catalogue.displayable.some((measure) => catalogue.manifest.measures[measure.id].status === "provisional");
+  const provisional = catalogueProvisional(catalogue);
 
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
@@ -641,7 +692,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             subtitle="Net effect of the selected policies on government revenue and spending, by year."
           />
           <section id="revenue" className="report-section hero-chart">
-            <BudgetaryImpactChart data={results.budgetData} selectedYear={distributionalYear} />
+            <BudgetaryImpactChart data={results.budgetData} before={results.budgetBefore} selectedYear={distributionalYear} selectedPolicies={selectedPolicies} />
             {/* OBR comparison: an expandable row at the foot of the card
                 once the OBR has costed the measures */}
             <ObrComparisonFoot
@@ -737,7 +788,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       className="app"
       ref={appRef}
       data-sub-band={hasSubTabs ? "" : undefined}
-      data-tabs-stuck={tabsStuck ? "" : undefined} data-publication={unavailable ? "unavailable" : "verified"}>
+      data-tabs-stuck={tabsStuck ? "" : undefined}
+      data-band-hidden={bandHidden && titleStuck ? "" : undefined} data-publication={unavailable ? "unavailable" : "verified"}>
       <main className="main-content" ref={mainRef}>
         {/* The title row is the page's sticky header: it docks at the top
             once the reader scrolls past it, compact, with the policy
@@ -786,6 +838,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
         <ViewTabs
+          leading={!landing && (
+            // "About": opens the overview drawer (below)
+            <EdgeAboutTab open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
+          )}
           tabs={VIEWS}
           value={landing ? null : activeTab}
           onChange={handleTabChange}
@@ -804,6 +860,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         {landing && (
           <LandingPage
             onOpen={handleTabChange}
+            provisionalWording={provisional}
             provisional={provisional && (
               <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
             )}
@@ -851,7 +908,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             <SectionHeading
               icon="fileText"
               title="Policies"
-              subtitle="What each measure changes, when, and how it is modelled."
+              subtitle={`${provisional ? `${provisionalLabel(catalogue.manifest)}. ` : ""}What each measure changes, when, and how it is modelled.`}
             />
             <section id="policy-details" className="report-section policy-details-content">
               <PolicyCards
@@ -882,23 +939,21 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         ))}
         </div>
         </div>
-        {/* "About" on the window's edge, on every view but the landing
-            page: it opens the overview drawer */}
+        {/* The overview drawer, opened by the "About" pill in the tab row */}
         {!landing && (
           <>
-            <EdgeAboutTab open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
             <OverviewDrawer
               open={overviewOpen}
               onClose={closeOverview}
               onOpen={handleTabChange}
               returnFocus={aboutTabRef}
+              provisionalWording={provisional}
               provisional={provisional && (
                 <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
               )}
             />
           </>
         )}
-        <ReplicationLine />
       </main>
     </div>
   );

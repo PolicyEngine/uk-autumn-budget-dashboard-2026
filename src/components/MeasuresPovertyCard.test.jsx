@@ -7,7 +7,7 @@ import { PovertyMeasuresRow, measurePovertyRows, povertyCardRows, povertyWaterfa
 import { povertyMetric } from "./SummaryMetricChart";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import { FLAT_EXTRA_COLUMNS } from "../utils/publication/csv";
-import { outlookPopulation } from "../utils/povertyPeople";
+import { outlookPopulation, roundPeople } from "../utils/povertyPeople";
 import { POLICY_DETAILS, shortNameOf } from "../utils/policyDetails";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { parseDashboardCsv } from "../utils/loadDashboard";
@@ -129,7 +129,7 @@ describe("the Poverty sub-tab's measures pair", () => {
       expect(within(c).getByRole("button", { name: /^Options:/ })).toHaveAccessibleName("Options: Absolute · Before housing costs · All people");
     }
     // The change in people, from the outlook's population
-    await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/^In 2027-28, the selected measures lift about [\d,]+ people out of absolute poverty \(before housing costs\), less than 0\.1 percentage points\.$/), { timeout: 5000 });
+    await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/^In 2027-28, the selected measures move about [\d,]+ people out of absolute poverty \(before housing costs\), less than 0\.1 percentage points\.$/), { timeout: 5000 });
     // A waterfall in people: short names, the package last; the measures
     // that move no one are in More info, not under the chart
     const rows = within(measures).getAllByRole("rowheader").map((r) => r.querySelector(".mrl-name")?.textContent ?? r.textContent);
@@ -140,7 +140,7 @@ describe("the Poverty sub-tab's measures pair", () => {
     expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^about [\d,]+ fewer people$/);
     // A plain sentence, no "≈" or "pp"
     const headline = measures.querySelector(".chart-description");
-    expect(headline).toHaveTextContent(/^Unfreezing the student loan threshold does most, lifting about [\d,]+ people out of poverty; all the measures together lift about [\d,]+\.$/);
+    expect(headline).toHaveTextContent(/^Unfreezing the student loan threshold has the largest effect, moving about [\d,]+ people out of poverty; all the measures together move about [\d,]+ people out of poverty\.$/);
     expect(headline.textContent).not.toMatch(/≈|pp/);
 
     // Chosen in one card's pill, followed by the other's
@@ -201,7 +201,7 @@ describe("a measure whose artifact predates the poverty and inequality measures"
   const nameOf = (r) => r.querySelector(".mrl-name")?.textContent ?? r.textContent;
   const about = (millions) => {
     const n = Math.abs((Number(published2027(OLDER).poverty_change_pp) / 100) * millions * 1e6);
-    return n < 1000 ? "fewer than 1,000" : `about ${new Intl.NumberFormat("en-GB").format(Math.round(n / 1000) * 1000)}`;
+    return n < 1000 ? "fewer than 1,000" : `about ${roundPeople(n)}`;
   };
 
   const renderCard = async (rows, selected) => {
@@ -259,7 +259,7 @@ describe("a measure whose artifact predates the poverty and inequality measures"
     // not of the children chosen
     const population = outlookPopulation(JSON.parse(readFileSync(join(PUBLIC, "data", "living_standards_outlook.json"), "utf8")));
     expect(about(population(2027, "children"))).not.toBe(about(population(2027, "all")));
-    await waitFor(() => expect(card.querySelector(".chart-description")).toHaveTextContent(`lifting ${about(population(2027, "all"))} people out of poverty`), { timeout: 5000 });
+    await waitFor(() => expect(card.querySelector(".chart-description")).toHaveTextContent(`moving ${about(population(2027, "all"))} people out of poverty`), { timeout: 5000 });
   });
 
   it("still says so of a measure whose run carries the measure as no change, with no note", async () => {

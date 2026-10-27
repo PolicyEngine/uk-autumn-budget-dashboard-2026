@@ -1121,63 +1121,6 @@
   padding: 0;
 }
 
-/* Whose result it is, under the figure: small muted chips that wrap
-   whole, then Edit */
-.result-facts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.result-fact {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 9px 2px 7px;
-  font-size: var(--fs-micro);
-  line-height: 1.5;
-  white-space: nowrap;
-  color: var(--pe-gray-600);
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: 999px;
-}
-
-.result-fact svg {
-  flex: none;
-  color: var(--pe-gray-500);
-}
-
-.result-fact:focus-visible {
-  outline: 2px solid var(--pe-teal-600);
-  outline-offset: 2px;
-}
-
-.result-facts-edit {
-  padding: 2px 4px;
-  font: inherit;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  color: var(--c-gain-text);
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-
-.result-facts-edit:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.result-facts-edit:focus-visible {
-  outline: 2px solid var(--pe-teal-600);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
 
 /* "About this result", at the card's foot, in the charts' "About this
    chart" style: a bullet on assumed spending, then two columns with
@@ -1257,4 +1200,44 @@
     padding-left: 16px;
     padding-right: 16px;
   }
+}
+
+/* The result card, top to bottom: the three tiles, the waterfall the
+   card's width, About this result */
+.result-card .result-tiles {
+  margin: 0;
+  padding: 20px 28px 4px;
+}
+
+.result-card .result-card-body {
+  grid-template-columns: minmax(0, 1fr);
+  padding-top: 12px;
+}
+
+.result-policies-link {
+  color: var(--c-gain-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.result-policies-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 599px) {
+  .result-card .result-tiles {
+    padding: 16px 16px 4px;
+  }
+
+}
+
+/* The waterfall's own title and line, as on every card */
+.waterfall-header {
+  margin: 0 0 8px;
+}
+
+
+.waterfall-scale-note {
+  margin: 2px 0 0;
 }

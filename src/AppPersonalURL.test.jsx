@@ -208,3 +208,22 @@ describe("a later snapshot keeps the reader's selection", () => {
     expect(policies()).toBe("");
   });
 });
+
+describe("the header's year in the address", () => {
+  it("opens a shared link on its ?year= and keeps it there", async () => {
+    // (the default year stays out of the address, so a kept 2030 was read)
+    vi.stubGlobal("fetch", dashboardFixtureFetch());
+    window.history.replaceState({}, "", "/?tab=policies&year=2030");
+    render(<App />);
+    expect(await screen.findByRole("button", { name: /^Year, 2030-31/ })).toBeInTheDocument();
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("year")).toBe("2030"));
+  });
+
+  it("drops a year it does not offer (an old 2026) and opens the default", async () => {
+    vi.stubGlobal("fetch", dashboardFixtureFetch());
+    window.history.replaceState({}, "", "/?tab=policies&year=2026");
+    render(<App />);
+    expect(await screen.findByRole("tab", { name: /Policies/ })).toBeInTheDocument();
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("year")).toBeNull());
+  });
+});

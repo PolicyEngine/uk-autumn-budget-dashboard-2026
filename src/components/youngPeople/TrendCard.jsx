@@ -434,11 +434,16 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       if (!shown.length) return null;
       const total = shown.reduce((sum, point) => sum + point.net, 0);
       const span = `${fiscalYearTick(shown[0].year)} to ${fiscalYearTick(shown[shown.length - 1].year)}`;
+      if (Math.round(Math.abs(total)) === 0) return `${SUBJECT} see almost no change in total from ${span}.`;
       return `${SUBJECT} ${total >= 0 ? "gain" : "lose"} ${about(total)} each in total from ${span}.`;
     }
     if (!selected || selected.net === null) return null;
     const verb = selected.net >= 0 ? "gain" : "lose";
-    let text = `${SUBJECT} ${verb} ${about(selected.net)} a year in ${fiscalYearTick(selected.year)}`;
+    // About £0 is no gain or loss: said as almost no change
+    let text =
+      Math.round(Math.abs(selected.net)) === 0
+        ? `${SUBJECT} see almost no change in ${fiscalYearTick(selected.year)}`
+        : `${SUBJECT} ${verb} ${about(selected.net)} a year in ${fiscalYearTick(selected.year)}`;
     // The biggest step after the selected year
     const later = notes.filter((note) => note.year > selected.year).sort((x, y) => Math.abs(y.step) - Math.abs(x.step))[0];
     if (later) {

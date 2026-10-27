@@ -1,7 +1,10 @@
+import { openDisclosuresAround } from "./Disclosure";
+
 /**
  * A link to another view at one of its sub-tabs, switched to in place
  * (App.jsx handleTabChange), scrolling to `hash` once it is shown. The href
- * is the same address, so it also works opened in a new tab.
+ * is the same address, so it also works opened in a new tab. A target
+ * folded in a closed disclosure is opened first.
  */
 export default function ViewLink({ tab, sub, age, hash, onShowTab, children }) {
   return (
@@ -13,7 +16,12 @@ export default function ViewLink({ tab, sub, age, hash, onShowTab, children }) {
         onShowTab(tab, sub, age ? { age } : undefined);
         if (hash) {
           setTimeout(() => {
-            document.getElementById(hash)?.scrollIntoView?.({ behavior: "smooth" });
+            const target = document.getElementById(hash);
+            if (!target) return;
+            openDisclosuresAround(target);
+            requestAnimationFrame(() =>
+              requestAnimationFrame(() => target.scrollIntoView?.({ behavior: "smooth", block: "start" })),
+            );
           }, 50);
         }
       }}
