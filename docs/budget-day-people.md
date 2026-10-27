@@ -32,21 +32,24 @@ Agents never:
 
 - **The Integrator:**
   - adopts the final cut by 06:00, and runs G0 by 11:30;
-  - from 12:30, confirms the coverage ledger and names the expected-effects reviewer;
-  - merges the measures PR, then deploys the household API;
-  - runs or delegates G2 at 13:15, and signs its review rows;
+  - from 12:30, confirms the coverage ledger, keeping to measures the data can carry and preferring parameter changes, and names the expected-effects reviewer;
+  - settles the package's members from the floor check of the measure that decides it (Vahid, 27 October);
+  - before each generation, deploys the household test app from the generation's commit, then starts G2 from the measures PR's pushed commit without waiting for CI;
+  - merges the measures PR once CI is green, then signs off the production deploy from the same commit;
+  - runs or delegates G2, and signs its review rows;
   - from 13:40 to 14:10, checks the Treasury costings and approves at G3;
   - loads the OBR forecast;
-  - from 14:50, approves the combined run and signs G4's review rows;
+  - approves the combined run once every member is approved, and signs G4's review rows;
   - merges every PR, deploys and rolls back;
   - decides on every correction and withdrawal.
 - **The Coordinator:** runs Tuesday's 18:00 regeneration, and holds the go/no-go at 07:00 on Wednesday.
 - **The second signer and licence holder:**
-  - is the second of the two people on every hand-written modifier's attestation. After tonight's regeneration that means three: Plan 2, the pensioner allowance and the seven-measure package ([#207 comment](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/207#issuecomment-6441807159));
+  - is the second of the two people on every hand-written modifier's attestation. After tonight's regeneration that means each hand-written receipt staged (Plan 2, and the State Pension protection if the floor lets it be staged) and the package that holds one (#222). Parameter changes need no attestation, which is one reason Vahid prefers them on the day;
   - checks the map before a corrected measure's results by area are republished;
   - answers the disclosure questions the UK Data Service licence raises.
 - **Media first cut** (open: who) sends the 15:45 figures and the webinar slides, from approved entries of one manifest revision only, after the comparables review.
 - **Still open:**
+  - who sends the team test link after each load (#247);
   - who checks first on each attestation;
   - who signs a reconciliation exception, since the Roles table bars the Integrator from approving his own;
   - who stands in if someone is missing.
@@ -59,10 +62,11 @@ Agents never:
 - **Check first:**
   - `direction` (`positive` improves the government balance) and the years match the measure's code and the announcement;
   - the note says only what the code changes.
-- **When:** before the merge G2 generates from.
+- **When:** before the push G2 generates from.
   - While any row has no reviewer, every gate-running `publish` command fails for every measure.
+  - A measure with no signed row can't be staged: staging refuses it with "responsiveness is undeclared" (Vahid, 27 October).
   - The file is a calculation path until #174 merges, so a later signature stales the receipts.
-  - The seven candidates' rows are signed already (#213). Only measures added on the day need one.
+  - The pre-Budget candidates' rows are signed already (#213; #261's two new rows too). Only measures added on the day need one.
 
 ### 2. Data-limits check of a hand-written modifier
 - **Who:** the person who reviews that modifier's code.
@@ -77,11 +81,12 @@ Agents never:
   - every measure's class and data-limits line are in the body;
   - nothing is in it but the measures, their tests, expected effects and fixtures.
 
-### 4. Household API deploy (after the measures merge, and after each correction)
-- **Who:** the Integrator.
-- **How:**
-  - the "Deploy the household API" workflow, action `deploy`, on `main` (live 6 to 7 min after dispatch);
-  - then `uv run --with modal==1.6.2 modal deploy src/uk_budget_data/modal_household.py`, from a clean checkout of the same commit.
+### 4. Household calculator deploy (before each generation, and after each correction)
+- **Who:** the Integrator signs off production.
+- **How,** from the generation's commit (Vahid, 27 October):
+  - before the generation, the test app, which the team test link calls: `HOUSEHOLD_MODAL_APP=uk-budget-household-test uv run --with modal==1.6.2 modal deploy src/uk_budget_data/modal_household.py`, from a clean checkout of that commit;
+  - once the measures PR has merged, production. First the "Deploy the household API" workflow, action `deploy`, with `commit` set to that commit's full SHA (it deploys only a commit on `main`; live 6 to 7 min after dispatch). Then `uv run --with modal==1.6.2 modal deploy src/uk_budget_data/modal_household.py`, from a clean checkout of the same commit.
+- **The warm schedule is the deployed app's.** Production keeps 25 October's (12 warm on Wednesday from 12:00 to 22:00) until it is redeployed from a commit with #264. #264's keeps 12 workers and the web endpoint warm from 07:00 to 24:00, Wednesday to Friday (Vahid's decision, #247).
 - **Check after:**
   - both `/api/version` answers name that commit;
   - the household check passes;
@@ -89,7 +94,7 @@ Agents never:
   - `python -m uk_budget_data.page_measures_check` exits 0;
   - one breakdown answers in under 200 s (runbook, "Adopting a release").
 
-  Without the deploy, the page's Household impact refuses the new measures.
+  Without the deploy, the page's Household impact refuses the new measures. Cloud Run on `f3304ff` also sends no breakdown by tax and benefit, so the household charts show only totals until it is redeployed.
 
 ### 5. Treasury costings
 - **Who:** the Integrator checks what agents enter.

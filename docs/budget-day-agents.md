@@ -12,9 +12,20 @@ This page uses roles everywhere else, so a missing person changes only the table
 
 Times are UTC (UK time equals UTC this week). Every step a person must sign is marked **Signature**. An agent never signs.
 
-Written against `main` at `7c9aaa0e` (27 October). `main` runs policyengine 6.11.1 since #237: policyengine-uk 2.151.0 and the certified Microcosm cut a6299504, with #238's limits. It also has #208 (the parameter-pair refusals and the floor of 10 survey households), #244 (the official costings export) and #258 (the seven registered measures). Two open pull requests change a step here, and each step says what changes when one has merged:
+Written against `main` at `7c9aaa0e` (27 October). `main` runs policyengine 6.11.1 since #237: policyengine-uk 2.151.0 and the certified Microcosm cut a6299504, with #238's limits. It also has #208 (the parameter-pair refusals and the floor of 10 survey households), #244 (the official costings export) and #258 (the registered measures). Open pull requests change some steps, and each step says what changes when one has merged:
 - #174 lets Treasury inputs be committed after G2;
-- #249 adds the OBR's effect on CPI.
+- #249 adds the OBR's effect on CPI;
+- #260 adds the team test link's script, and #264 the household calculator's warm schedule from Budget day;
+- #261 changes the candidate set.
+
+**Vahid's decisions of 27 October (evening)** change the steps below. They are in three comments on #251: [decisions](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6448563927), [to repeat on Budget day](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6449275288), and [run order and timings](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6449473328). The test link and the warm schedule are on #247.
+- **Modal doesn't wait for CI.** G2 starts from the measures PR's pushed commit once its targeted tests pass (step 6).
+- **One Modal call per measure, all at once.** The measure that decides the package goes first (G2).
+- **The floor settles the package's members before the package runs** (G2, G4).
+- **Code only what the data can carry,** and nothing current law already has. Parameter changes come first (G1).
+- **No approval before the Treasury figures,** so no area run before G3. The area run needs #174 (G3, G4).
+- **Redeploy the household calculator from the generation's commit before each generation:** the test app, then production with the Integrator's sign-off (step 7).
+- **Preview first, publish second.** The team test link is redeployed after each load (G2, "Disclosure control").
 
 ## Who does what
 
@@ -42,7 +53,7 @@ From the Integrator's table on #247 (27 October, 11:19Z), as the runbook's Roles
    Prepare the command or the row, and hand it to the person.
 3. **Disclosure.** Follow "Disclosure control" below in everything people read.
 4. **Secrets.** Never print or paste a Hugging Face token, a Modal token, a signing key or a noise key. Don't run `env`, `printenv` or `echo` on a secret.
-5. **One release checkout.** Generation, staging, approval and publishing happen in one checkout of `main`. The Integrator runs it, or names the agent who does. Encoding agents work on branches in their own worktrees. Never run two `publish` commands at once in one checkout: each rewrites the manifest.
+5. **One release checkout.** Generation, staging, approval and publishing happen in one checkout. At G2 it is at the measures PR's pushed commit, since Modal doesn't wait for CI. The Integrator runs it, or names the agent who does. Encoding agents work on branches in their own worktrees. Never run two `publish` commands at once in one checkout: each rewrites the manifest.
 6. **Keep the release checkout clean.** Only `public/data/manifest.json` and `public/data/artifacts/` may be modified or untracked in it (`receipt.is_publication_path`). Everything else the day produces lives outside every git repository:
 
    ```sh
@@ -79,12 +90,12 @@ From the Integrator's table on #247 (27 October, 11:19Z), as the runbook's Roles
 
    If something unsafe must go in after G2, every measure with a modifier is regenerated before the next combined or area run, and every hand-written one is attested again.
 8. **Never, from the checklist:**
-   - put a hand-written modifier in a shared `generate` call;
+   - put two measures in one `generate` call. One call per measure, all at once (Vahid, 27 October): the wait is then the slowest measure, not their sum, and a hand-written modifier never shares a process;
    - run `--artifacts` without `--reforms`;
    - run `publish review-rows` while a `generate` is running, or before every artifact you mean to keep is staged or moved to `held/`;
    - interrupt a Modal run that has gone quiet;
    - mix local and Modal artifacts in one release.
-9. **The laptop.** Generation, the combined run, the area run and the package flat files run on Modal. Start no Modal app the plan doesn't name. Keep no containers warm, with one exception: the household app's approved `warm_schedule` keeps 12 warm on Wednesday from 12:00 to 22:00 UK time (runbook). That is expected, so leave it alone. Run only the tests for what you touched. Never run `bun run build` beside a running `next dev`.
+9. **The laptop.** Generation, the combined run, the area run and the package flat files run on Modal. Start no Modal app the plan doesn't name. Keep no containers warm, with one exception: the production household app's approved `warm_schedule`. Production runs the schedule it was last deployed with: 25 October's keeps 12 warm on Wednesday from 12:00 to 22:00 UK time. #264's (Vahid, 27 October) keeps 12 workers and the web endpoint warm from 07:00 to 24:00, Wednesday to Friday, and arrives only with a production Modal redeploy from a commit that has it. Either is expected, so leave it alone. Run only the tests for what you touched. Never run `bun run build` beside a running `next dev`.
 10. **Time log.** A UTC start and end for every step (the last section).
 
 **Modal commands.** The checklist writes `MODAL` for `uv run --with modal==1.6.2 python -m uk_budget_data.cli`. Define it once per shell, so its commands paste as written:
@@ -95,25 +106,23 @@ MODAL() { uv run --with modal==1.6.2 python -m uk_budget_data.cli "$@"; }
 
 Commands without Modal stay `uv run uk-budget-data …`.
 
-**The candidates and the hand-written modifiers** ([#207 comment, 27 October](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/207#issuecomment-6441807159)):
-- **The registered measures are the seven pre-Budget candidates** (#258): `domestic_electricity_zero_vat`, `fuel_duty_rise_deferral`, `plan_2_threshold_unfreeze`, `road_fuel_vat_cut`, `state_pension_income_tax_protection`, `threshold_freeze_2031_32` and `warm_home_discount_top_up`. Their package, `autumn_budget_2026_combined`, is `combined--5c77771791661e11`.
-- **BADR and employer NI were withdrawn on 27 October and are unregistered** (#258). Their code remains, but they can't be generated.
-- **Two hand-written modifiers,** Plan 2 and the pensioner allowance (hand-written in its sole-income design since #182). Each goes in a `generate` call of its own, and needs a two-person attestation for every receipt.
-- **The package needs its own attestation:** it binds hand-written members.
+**The candidates and the hand-written modifiers:**
+- **The pre-Budget set was still being settled on the evening of 27 October.** #258 registered seven, and #261 proposes eight (Vahid, [#251](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6449275288)). #222 records what Tuesday's run staged and what the floor held. On Wednesday morning, read the registered list (`uv run uk-budget-data generate --list-reforms`), the package's members (`AUTUMN_BUDGET_2026_COMBINED_COMPONENTS` in `reforms.py`), and what the manifest holds.
+- **Withdrawn and unregistered:** BADR and employer NI relief for under-25s (#258). #261 also leaves out the road fuel VAT cut, the Carer's Allowance taper and the LHA unfreeze, the last two because their decile cells rest on fewer than 10 survey households (#263).
+- **Two hand-written modifiers,** Plan 2 and the State Pension protection. Each goes in a `generate` call of its own, and needs a two-person attestation for every receipt.
+- **The package needs its own attestation** when it binds a hand-written member.
+- **Check each receipt for templates** (Vahid, #222): `jq '.dashboard.modifier_templates' public/data/artifacts/<id>/<digest>/receipt.json`. A `null` proof means the modifier counts as hand-written, so it needs an attestation (`attestations.requires_attestation`). This matters for template measures whose module changed, as #261 changes the fuel duty one.
 - These rules hold while the data-limit registry isn't empty. On 6.11.1 it lists 25 limits.
 
 ## Before the day: what to check on Wednesday morning
 
 These are Tuesday's steps, for the Integrator and the Coordinator. On Wednesday the agent checks they happened and records what it finds. It doesn't redo them.
-- **Which calculation-path pull requests merged by the 17:30 freeze** (#222), in particular #174 and #249. #237, #208, #244 and #258 merged before it.
+- **Which calculation-path pull requests merged by the 17:30 freeze** (#222), in particular #174 and #249. #237, #208, #244 and #258 merged before it. Vahid asked for #261 and #264 to merge before the regeneration (#222, #247): record whether they did.
 - **Both Modal images built** on the final `uv.lock` before 18:00. Measured at 2:40 for the image (#239), and about 12 min after a lock change (#225).
-- **The 18:00 regeneration** (the Coordinator; #207 comment):
-  - the five template and parameter candidates in one call: `domestic_electricity_zero_vat fuel_duty_rise_deferral road_fuel_vat_cut threshold_freeze_2031_32 warm_home_discount_top_up`;
-  - Plan 2 and the pensioner allowance, one call each;
-  - then the package, `MODAL generate --combined <the seven ids> --backend modal`, key `combined--5c77771791661e11`;
-  - after staging the package, the old six-measure package withdrawn: `uv run uk-budget-data publish withdraw combined--a3e0b4a238c38c09 --reason "superseded by the seven-measure package"`.
-- **Then three fresh attestations signed by the second signer:** Plan 2, the pensioner allowance, and the package (`data_inputs/publication/attestations/combined--5c77771791661e11.json`, which `draft_attestation.py` drafts). An attestation made before 18:00 no longer matches.
-- **The household calculator deployed tonight** (#231): Cloud Run and the production Modal app, from the regeneration's commit, before 08:00.
+- **The 18:00 regeneration** (the Coordinator): #222 records which measures ran, which were staged, which the floor held, and the package's key and members. Record them in the time log.
+- **Then fresh two-person attestations** for each hand-written receipt that was staged, and for the package if it holds one. An attestation made before the regeneration no longer matches.
+- **The household calculator deployed tonight** (#231), from the regeneration's commit, before 08:00: the test app, then Cloud Run and the production Modal app. The production Modal deploy also brings #264's warm schedule, if #264 is in.
+- **The team test link** (#247): its script (#260) works from the local preview checkout, and the Integrator has named who sends the link to the team.
 
 ## Set-up, final cut and go/no-go (by 07:00)
 
@@ -177,11 +186,16 @@ These are Tuesday's steps, for the Integrator and the Coordinator. On Wednesday 
   - the active limits.
 - **Stop if:** any command fails, or the API's versions differ from the installed ones.
 
-## G1 and encoding (12:30 to 13:15)
+## G1 and encoding (12:30 to about 13:10)
 
 **1. Read the speech (from 12:30).** List every measure the Chancellor announces, with what was said, its start date and its years. Use the official text or broadcast, never another organisation's figures. Log the time each measure was heard.
 
-**2. Classify each measure (G1, 12:30 to 12:45).** Agents draft the coverage ledger, and the Integrator confirms which measures are coded. Each measure gets exactly one class and a reason:
+**2. Classify each measure (G1, 12:30 to 12:45).** Agents draft the coverage ledger, and the Integrator confirms which measures are coded. Before a measure is coded, check three things (Vahid, 27 October):
+- **The data carries its inputs.** Check that the dataset has every input its formula reads. Tobacco and alcohol duty read quantities (cigarettes, grams, litres), but Microcosm holds only an aggregate alcohol-and-tobacco spend, so they were dropped. A measure that returns zero everywhere is dropped, not published.
+- **Current law doesn't already have it.** policyengine-uk 2.151.0 already has tobacco RPI+2 from 1 October 2026, so modelling it again would show nothing.
+- **A parameter change comes first.** It needs no attestation, while a hand-written modifier needs two people. When the design is unclear, or there is no clean parametric route (working-age benefits uprated below CPI, on 27 October), leave the measure out rather than write a broad hack.
+
+Each measure gets exactly one class and a reason:
 1. **Parameter-only.** It changes existing parameters in `parameter_changes`, by hand or with `rate_change`, `threshold_change`, `uc_health_element_change`, `allowance_uprating` or `pension_uprating`. Bound by content: no attestation, and no later commit stops it.
 2. **Template modifier.** A module-level modifier that only calls `apply_vat_base_change`, `apply_benefit_receipt_payment`, `apply_age_conditioned_allowance` or `apply_property_band_surcharge`. No attestation. Bound by commit.
 3. **Hand-written modifier.** Any other code.
@@ -191,6 +205,7 @@ These are Tuesday's steps, for the Integrator and the Coordinator. On Wednesday 
 4. **Ledger only.** Announced, but outside what the model covers. No code.
 5. **Not computable.** In scope, but the data or model can't cost it. No code, unless the Integrator wants the gate's not-computable entry. Known cases:
    - a measure on a data-limited parameter (the morning's list; on 6.11.1 that includes every gambling duty);
+   - a measure whose inputs the data doesn't carry, such as tobacco and alcohol duty (no quantities in Microcosm);
    - a wealth tax on the engine's scales (generation refuses it);
    - the "Your First Home" equity loan, and a LISA replacement (no purchase or subscription data);
    - pension tax relief, the annual allowance, its taper or the MPAA: coded, but held for review by default (runbook).
@@ -214,10 +229,11 @@ The runbook's rules for writing a measure apply ("How a measure must be written"
    - A measure that moves capital gains tax holds realisations fixed with `static_capital_gains()`.
    - Copy the nearest existing measure.
 2. **Add its expected effect** to `data_inputs/treasury/expected_effects.csv`: `measure_id,direction,from_year,to_year,reviewer,note`. `positive` improves the government balance. Leave `reviewer` empty.
-   - **Signature: the expected-effects reviewer**, named by the Integrator. The reviewer fills `reviewer` on the measures PR branch, before the Integrator merges it, because G2 generates from the merge.
+   - **Signature: the expected-effects reviewer**, named by the Integrator. The reviewer fills `reviewer` on the measures PR branch before the push G2 generates from.
      - `load_expected` refuses the whole file while any row lacks a reviewer, so every gate-running `publish` command fails for every measure.
+     - A measure with no signed row can't be staged: staging refuses it with "responsiveness is undeclared" (Vahid, 27 October).
      - The file is a calculation path until #174 merges, so a later signature stales the receipts.
-   - The seven candidates' rows are signed already (`juaristi22`, #213). Only measures added on the day need a reviewer.
+   - The pre-Budget candidates' rows are signed already (`juaristi22`, #213; #261's two new rows too). Only measures added on the day need a reviewer.
 3. **Declare the taxes it changes** in `DECLARED` in `tests/test_measure_descriptions.py`. Its name and description name only those, and never say "Candidate measure".
 4. **Add one numerical test** on a made-up household, with the arithmetic done by hand.
 5. **Its household check fixture** goes in this same commit under `data_inputs/household_fixtures/`, or in `~/private/uk-budget-2026/fixtures/`. It is a calculation path either way, so it never goes into the release checkout after G2.
@@ -235,7 +251,7 @@ The runbook's rules for writing a measure apply ("How a measure must be written"
 
    CI runs the rest.
 
-**5. The candidates already published.** Each of the seven pre-Budget candidates is either announced as modelled, or withdrawn in G2's first manifest write. Agents list them; the Integrator decides.
+**5. The candidates already published.** Each pre-Budget candidate in the manifest is either announced as modelled, or withdrawn in G2's first manifest write. Agents list them; the Integrator decides.
 - If announced as modelled, update its name, description and any parameters in the measures PR, and regenerate it at G2.
 - If not, withdraw it: `uv run uk-budget-data publish withdraw <id> --reason "Not in the Autumn Budget 2026"`.
 - BADR and employer NI were never staged, and are unregistered since #258, so neither needs a withdrawal.
@@ -246,42 +262,55 @@ None stays on the page under the statement label.
 - Push and open it in one go: CI starts when the PR opens, not at the push (#246).
 - The body names each measure and its class. No figure from the data.
   - **Signature: the data-limits check.** Each hand-written modifier gets its reviewer's line: "Data-limits check, <name>, <date>: no other simulation or system; no state changed mid-run; no metaclass; changes purchase pricing: no." (runbook).
+- **The package's members go in this PR.** `AUTUMN_BUDGET_2026_COMBINED_COMPONENTS` in `reforms.py` must list exactly the package you mean to publish: the area run finds the package only when the manifest approves a combined run with exactly those members (#222). Changing it is a calculation-path change, so it goes in with the day's measures, settled from the first call's floor check (G2), never after G2's calls.
+- **Modal doesn't wait for CI** (Vahid, 27 October). Once the pushed commit passes the targeted tests (step 4), the test app is redeployed from it (step 7), and G2 starts from it with CI running alongside.
 - **Gate:** the six required checks: Python tests, Python lint, Certified data, Frontend build, Frontend tests and Frontend lint.
 - **Time:** at most 10 min with #219's ten duration-balanced Python shards; 8:48 to the last check on #246.
-- **Merge with a merge commit, never a squash.** The area run needs each receipt's commit to be an ancestor of `main`.
+- **The Integrator merges only once CI is green, with a merge commit, never a squash.** The area run needs each receipt's commit to be an ancestor of `main`. If CI forces a change on a calculation path, rerun the affected measures from the new commit: a receipt binds the commit it was made at.
 
-**7. After the merge: the household API and the examples.** The page sends every displayed measure to the household API, and an API deployed before the measures commit refuses the new ones ("Unknown measures"). Drill 5 hit this (#144).
-1. **Signature: deploy (the Integrator).**
-   - Run the "Deploy the household API" workflow, action `deploy`, from `main`. It is live 6 to 7 min after dispatch (runbook).
-   - Then deploy the Modal household app from a clean checkout of the same commit: `uv run --with modal==1.6.2 modal deploy src/uk_budget_data/modal_household.py`.
-2. After G2's staging, recompute the examples for the measures the page will show. Without `--policies` the script reuses the measures the current file was made for.
+**7. The household calculator, before each generation, and the examples.** The page sends every displayed measure to the household API, and an API deployed before the measures commit refuses the new ones ("Unknown measures"). Drill 5 hit this (#144). Cloud Run on `f3304ff` also sends no breakdown by tax and benefit, so the household charts show only totals until it is redeployed. So the calculator is redeployed from the generation's commit before each generation (Vahid, 27 October):
+1. **Before G2's calls, the test app,** which the team test link calls, from a clean checkout of the pushed commit:
+
+   ```sh
+   HOUSEHOLD_MODAL_APP=uk-budget-household-test uv run --with modal==1.6.2 modal deploy src/uk_budget_data/modal_household.py
+   ```
+
+2. **Signature: deploy to production (the Integrator signs it off).** Cloud Run deploys only a commit on `main`, so production follows the measures PR's merge, from the same commit:
+   - run the "Deploy the household API" workflow, action `deploy`, with `commit` set to the generation's full SHA, which the merge commit keeps on `main`. It is live 6 to 7 min after dispatch (runbook);
+   - then deploy the production Modal app from a clean checkout of that commit: `uv run --with modal==1.6.2 modal deploy src/uk_budget_data/modal_household.py`. With #264 in, this also brings the Budget-day warm schedule.
+3. **The examples, as soon as the final member list is known** (after G2's floor check), alongside the combined run. The script recomputes the eight example households in-process, in two jobs: about 11 min (Vahid, 27 October). Without `--policies` it takes the package's measures from `public/data/policy_parameters.json`.
 
    ```sh
    bun scripts/household-preset-requests.mjs --policies <comma-separated displayable ids> > ~/private/uk-budget-2026/requests.json
    uv run python scripts/precompute_household_presets.py ~/private/uk-budget-2026/requests.json
    ```
 
-   It takes about ten minutes, with no dataset (runbook). It writes `public/data/household_presets.json`, which needs its review row (**Signature: the Integrator**).
-3. Check both before the publication PR merges. It exits 1 on a refused measure or a stale example:
+   - Choose the examples so each one shows a published measure clearly (Vahid). They are defined in `src/utils/householdPresets.js`, a page file, so changing them is safe after G2 (rule 7). The Integrator decides.
+   - It writes `public/data/household_presets.json`, which needs its review row (**Signature: the Integrator**).
+4. Check both before the publication PR merges. It exits 1 on a refused measure or a stale example:
 
    ```sh
    uv run python -m uk_budget_data.page_measures_check --base-url "$HOUSEHOLD_API" --base-url "$HOUSEHOLD_DETAIL_API"
    ```
 
    `HOUSEHOLD_DETAIL_API` is the Modal household app the production build calls. The Integrator confirms its URL.
-4. Then `uv run uk-budget-data publish definitions --api "$HOUSEHOLD_API"` must print `same` for every displayed measure.
+5. Then `uv run uk-budget-data publish definitions --api "$HOUSEHOLD_API"` must print `same` for every displayed measure.
+6. **A cold service answers slowly.** A cold first request to the test app came back empty after about 150 s on 27 October. #265 adds the page's "starting up" message and a retry, and #264 a fast 503 and the schedule (rule 9).
 
-## G2: provisional figures (13:15)
+## G2: provisional figures (from about 13:10)
 
-- **Who:** the Integrator, or the agent he names, in the release checkout at the merged measures commit.
-- **Before:** `git pull --ff-only`, and `git status --porcelain` lists nothing. Record HEAD: every receipt names it.
-- **Three kinds of shell, at once, from the same clean commit:**
-  1. `MODAL generate --artifacts --backend modal --reforms <the parameter-only and template ids>`;
-  2. one shell for each hand-written modifier: `MODAL generate --artifacts --backend modal --reforms <one id>`;
-  3. only if a flat file needs re-cutting: `MODAL generate --backend modal --only income_distribution`. Never the package's files here: they wait for G4.
+- **Who:** the Integrator, or the agent the Integrator names, in the release checkout at the measures PR's pushed commit. G2 doesn't wait for CI or the merge (step 6).
+- **Before:** the checkout is at that commit, and `git status --porcelain` lists nothing. Record HEAD: every receipt names it.
+- **First, the measure that decides the package** (Vahid, 27 October): the hand-written one most likely to be thin. Push it as soon as it is encoded, and run it alone from that commit while the rest are encoded: `MODAL generate --artifacts --backend modal --reforms <id>`.
+  - Read its summary for `<id>: WARNING:` lines before anything that depends on it.
+  - If it is thin, it stays private and out of the package: leave it out of `AUTUMN_BUDGET_2026_COMBINED_COMPONENTS` before the final push (step 6).
+  - If it passes, it runs again with the others from the final commit: a hand-written receipt binds the commit it was made at.
+- **Then one call per measure, all at once, from the final pushed commit** (Vahid, 27 October):
+  1. one shell for each measure: `MODAL generate --artifacts --backend modal --reforms <one id>`;
+  2. only if a flat file needs re-cutting: `MODAL generate --backend modal --only income_distribution`. Never the package's files here: they wait for the last manifest change (G4).
 - **Time:**
-  - on 6.11.1, one container per measure: 5:35 to 10:00, with the Warm Home Discount top-up at 9:43 and Plan 2 at 16:28 (#250);
-  - on 6.10.2, the nine-measure shared call of 26 October took 8:11 for the Modal app, and a hand-written measure alone 6:43 to 6:45 (#225).
+  - on 6.11.1, 7–14 min a measure in Vahid's run of 27 October, so the wait is about the slowest measure, not their sum;
+  - on 6.11.1 earlier, one container per measure: 5:35 to 10:00, with the Warm Home Discount top-up at 9:43 and Plan 2 at 16:28 (#250).
 - **For each directory a command prints:**
 
   ```sh
@@ -301,8 +330,13 @@ None stays on the page under the statement label.
   - Such an artifact can't be staged at any level, so it is never shown. `publish review-rows` deletes it: never commit it by hand.
   - Its figures stay private, its costing included.
   - Leave it out of the combined run, as for a held measure. Wherever the package total appears, say why: too few households in the survey data are affected to publish its effects by income decile.
+  - Settle the package's members from these warnings before the combined run (Vahid, 27 October). Each dropped member means a new package key and a new combined run. A thin measure can't be published by decile until cell suppression exists, which is post-Budget work (#263).
   - To stop such a run instead, writing nothing, set `UK_BUDGET_THIN_DECILES=refuse` in the shell that starts `generate`.
   - The age table withholds rather than refuses: a blank single-age or pensioners chart for one measure and year is the floor at work.
+- **Preview first, publish second** (Vahid, 27 October). Load each run into a local preview checkout straight away, with placeholder attestations kept in that checkout only, to catch problems before the merge. Nothing from a preview is committed or published.
+  - **The team test link** (#247). After each load (the G2 measures, the package, the area run), the person the Integrator names redeploys the preview to `https://ab2026-local-preview.vercel.app/uk/autumn-budget-2026` with `tools/deploy-test-link.sh` (#260), on the Integrator's go. The script refuses unless the preview's manifest has a provisional measure and isn't production's, and it restores the files it edits.
+  - **The link is public, with no login, and its build skips `check-public-files`.** So nothing checks what it shows (see "Disclosure control"). Before each deploy, move out of the preview's `public/data` every artifact that printed the floor's `WARNING:` line, and anything from a private file. No package by area goes on it before the licence holder agrees.
+  - Real publication is still the signed path: the publication PR, then `main`, then the production deploy.
 - **Household check, for each measure,** against the redeployed API:
 
   ```sh
@@ -345,7 +379,9 @@ None stays on the page under the statement label.
 
 ## G3: Treasury costings, reconciliation and approval (13:40 to 14:10)
 
-**1. Where the Treasury inputs live.** This depends on #174.
+**No approval before the Treasury figures** (Vahid, 27 October). `publish approve` refuses while a measure's reconciliation is `awaiting_source`, and the area run takes approved entries only, so it can't start before G3.
+
+**1. Where the Treasury inputs live.** This depends on #174. Vahid's decision is that the area run needs #174 merged first: without it, every G3 Treasury commit makes the combined run and the area run refuse.
 - **#174 merged:** Treasury CSV and YAML files can be committed after G2 without staling anything. Work in `data_inputs/treasury/` and commit as the runbook says. Commit before any generation from that checkout: an uncommitted file still makes the tree dirty.
 - **#174 not merged:** keep the inputs out of the release checkout until G4's combined run and area run have both started.
   - Work on a private copy, and put `--inputs` before the action in every gate-running `publish` command (`reconcile`, `stage`, `approve`, `index`, `check`):
@@ -457,19 +493,21 @@ uv run uk-budget-data publish [--inputs <treasury dir>] reconcile public/data/ar
 - **Hold its pull request until G4's runs have started.** Its calculation-path file would otherwise make them refuse every measure with a modifier. Merging it also replaces the March forecast's lines with an unavailable notice, by design.
 - **`src/utils/sources.js`:** change `obr_efo_current` and `budget_documents` only as the pull request that adds this page settles (#246, findings 2 and 3).
 
-## G4: combined run, results by area, publication (from 14:50)
+## G4: combined run, results by area, publication (as soon as their inputs are ready)
+
+Vahid's run order (27 October): each step starts when the one before it is done, not at a fixed time. The single measures come first. The package starts once they are staged, and its two flat files and the area run follow. From the first call to every result in place took about 35–40 min on 27 October, plus staging and checks. On Budget day the approvals at G3 sit between them.
 
 - **Before:**
   - the release checkout is clean (rule 6), with no uncommitted Treasury file;
-  - every member is staged;
+  - every member is staged, the hand-written ones once attested;
   - HEAD is G2's commit, or descends from it through safe commits only (rule 7).
-- **The combined run first:** `MODAL generate --combined <member ids> --backend modal`.
-  - **Time:** 6:13 for the app, plus about 1 min of planning (#225).
-  - **Members:** leave out any measure that is held, not computable or stopped by the floor, and say so wherever the package total appears.
+- **The combined run, as soon as every member is staged:** `MODAL generate --combined <member ids> --backend modal`.
+  - **Time:** 10–12 min on 6.11.1 (Vahid's run, 27 October).
+  - **Members:** leave out any measure that is held, not computable or stopped by the floor, and say so wherever the package total appears. Settle them before the run starts (G2): each change means a new package key and a new combined run.
   - **Staging:** stage it like a measure. The Integrator approves it once every member is approved (**Signature: the Integrator**). A combined run holding a hand-written modifier needs its own attestation.
 - **The area run, once G3's approvals are in, alongside the combined run and from the same clean commit.** Always name the ids.
-  - Since #234 the command's default adds the package once the manifest approves it, and since #258 that package is the seven.
-  - The runbook publishes it by constituency only if the announced measures are exactly those seven.
+  - Since #234 the command's default adds the package once the manifest approves it. The package is whatever `AUTUMN_BUDGET_2026_COMBINED_COMPONENTS` lists (step 6).
+  - The runbook publishes it by constituency only if the announced measures are exactly those members.
   - Publishing a package by area waits for the licence holder's agreement (open on the PR that adds this page). Until then, name the single measures.
 
   ```sh
@@ -477,10 +515,10 @@ uv run uk-budget-data publish [--inputs <treasury dir>] reconcile public/data/ar
   ```
 
   - Use a new `--run-id` for every run (#250).
-  - **Time on 6.11.1** (#250):
-    - about 55–60 min when the Warm Home Discount top-up and Plan 2 are both approved, as in the seven candidates;
-    - 45–50 with Plan 2 but not the top-up, and 30–35 with neither;
-    - then about 20–25 min to the live map.
+  - **Time on 6.11.1:**
+    - about 14 min in Vahid's run of 27 October: 3.5–5.5 min a measure, each in its own container, plus about 8 min for the release. It cost about $0.5–1;
+    - 49:46 in #250's run of the seven. Its units took 7:40 to 13:16, apart from Plan 2 (29:02) and the Warm Home Discount top-up (38:44). Until a run with those two is timed again, allow up to an hour when either is approved;
+    - then about 20–25 min to the live map (#250).
   - While it runs, leave `constituency.csv` and `area_provenance.json` alone, and start no second area run. A second run refuses the code-bound measures while the first run's files are uncommitted (#250).
 - **#174 not merged: once both runs have started, bring the Treasury inputs in.**
   - Copy the checked files from the private copy into `data_inputs/treasury/`.
@@ -489,12 +527,14 @@ uv run uk-budget-data publish [--inputs <treasury dir>] reconcile public/data/ar
   - The Integrator chooses when approved national figures go out:
     - in G4's publication PR, with the map, as the checklist has it; or
     - first, in their own PR, once the combined run has finished and been staged.
-- **The package's flat files,** after the last `stage`, `approve` or `withdraw`, in two shells at once (2:46 for both, two measures, #239):
+- **The package's flat files,** after the last `stage`, `approve` or `withdraw`, in two shells at once: about 5–10 min each (Vahid, 27 October; 2:46 for both with two measures, #239):
 
   ```sh
   MODAL generate --only income_distribution --published-package --backend modal
   MODAL generate --only income_growth --published-package --backend modal
   ```
+
+- **What waits on the package** (Vahid, 27 October). Until the package and its two flat files are published, the page shows "not published yet" in several places. In the household calculator these are "Your place (percentile)", "Your tenth's average", "Your place in the distribution" and "How your change compares". The growth-across-the-distribution card and the combined constituency map wait too. That is correct behaviour, not a bug.
 
 - **After the area run:**
   1. Fetch its private summary from the Modal Volume into the audit directory, never the checkout: `uvx --from modal==1.6.2 modal volume get uk-budget-2026-constituencies-private geography/<run id>/microcosm-<stamp>/summary.json ~/private/uk-budget-2026/audit/`.
@@ -565,13 +605,13 @@ uv run uk-budget-data publish [--inputs <treasury dir>] reconcile public/data/ar
 **Modal** (#226):
 - **A container fails** (an error, the 45-minute timeout, or out of memory). The command writes every other artifact, prints the `FAILED` lines and the steps to rerun, starts no combined run, and exits 1. Then:
   1. stage what was written;
-  2. rerun only the printed ids, each hand-written one in a call of its own, and stage them;
+  2. rerun only the printed ids, each in a call of its own, and stage them;
   3. run the combined run.
 - **Never rerun the whole set.** A hand-written modifier would get a new artifact, and so need a new attestation.
 - **A refusal is not a failure:** a rerun gives the same answer. Fix the measure or leave it out.
 - **Results arrive in measure order.** A quiet run is a slow container: never Ctrl-C it, or every artifact not yet written is lost.
 - **A `.staging-*` directory** left by a killed run is never staged or committed. `review-rows` deletes it.
-- **Spend:** check `uvx --from modal==1.6.2 modal billing report --for today` before and after. On 6.10.2 a full regeneration cost $1.13 and an area run about $0.5 (#225, #235). On 6.11.1 an area run cost $1.65 (#250).
+- **Spend:** check `uvx --from modal==1.6.2 modal billing report --for today` before and after. On 6.10.2 a full regeneration cost $1.13 and an area run about $0.5 (#225, #235). On 6.11.1 an area run cost $1.65 in #250's run, and about $0.5–1 in Vahid's (27 October).
 - **Stop and tell the Integrator** if Modal is down, a secret is missing, or a run fails twice.
 
 **CI** (about 8–10 min: #219's ten duration-balanced Python shards):
@@ -611,6 +651,7 @@ The figures derive from UK Data Service safeguarded unit records (the Family Res
 - **everything people write.** Quote no figure from a private file, an audit, `summary.json`, or a cell not already published, and no difference of published figures that isolates few households;
 - **the map after a correction, and any package by area.** Never republish a corrected measure's results by area without the licence holder's check. Publish no package by area without the licence holder's agreement;
 - **area-run files, audits and arrays.** They never go into any repository.
+- **the team test link** (#247, #260). It is public, with no login, and its build skips `check-public-files`, so what it shows counts as published. Deploy it only from a `public/data` with no artifact the floor flagged (the script doesn't look), nothing from a private file, and no package by area the licence holder hasn't agreed.
 
 **Agents never sign review rows.** A review row is a person's statement that they read those exact bytes.
 
