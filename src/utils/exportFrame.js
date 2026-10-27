@@ -20,8 +20,9 @@ export const EXPORT_SOURCE = "Source: PolicyEngine UK, UK Autumn Budget 2026 das
 const FONT = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 // The image's width in CSS pixels (2x in the PNG: 2400 pixels)
 export const FRAME_WIDTH = 1200;
-// The plot is never enlarged more than this to fill the width
-const MAX_SCALE = 1.5;
+// The plot is scaled to fill the frame's width, a half-width card's plot
+// as much as a full-width one's, unless that makes it taller than this
+export const MAX_PLOT_HEIGHT = 1000;
 const PAD = 32;
 const TITLE_SIZE = 24;
 const SUBTITLE_SIZE = 15;
@@ -187,6 +188,81 @@ async function logoDataUrl(href) {
 }
 
 /**
+ * How much the plot is scaled: to the frame's inner width, whatever the
+ * card's width on the page, unless that makes it taller than
+ * MAX_PLOT_HEIGHT; the aspect ratio is kept.
+ */
+export function plotScale(built, inner = FRAME_WIDTH - PAD * 2) {
+  if (!(built?.width > 0) || !(built?.height > 0)) return 1;
+  return Math.min(inner / built.width, MAX_PLOT_HEIGHT / built.height);
+}
+
+const toBase64 = (buffer) => {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+};
+
+/**
+ * The page's own Inter faces (the @font-face rules next/font writes, under
+ * its family name, which the plot's inlined styles name first), as CSS
+ * with each file inlined as a data URL, declared under that name and as
+ * "Inter". "" where there is none (tests) or it cannot be read.
+ */
+export async function fontFaceCss(doc = typeof document === "undefined" ? null : document) {
+  if (!doc?.styleSheets) return "";
+  const faces = [];
+  for (const sheet of Array.from(doc.styleSheets)) {
+    let rules;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+    for (const rule of Array.from(rules ?? [])) {
+      if (rule.type !== 5 /* CSSRule.FONT_FACE_RULE */) continue;
+      const family = rule.style.getPropertyValue("font-family").replace(/["']/g, "").trim();
+      if (!/inter/i.test(family) || /fallback/i.test(family)) continue;
+      const url = rule.style.getPropertyValue("src").match(/url\(\s*["']?([^"')]+)["']?\s*\)/)?.[1];
+      if (url) faces.push({ family, url, rule });
+    }
+  }
+  const css = [];
+  for (const { family, url, rule } of faces) {
+    try {
+      const href = new URL(url, rule.parentStyleSheet?.href || doc.baseURI).href;
+      const response = await fetch(href);
+      if (!response.ok) continue;
+      const data = `data:font/woff2;base64,${toBase64(await response.arrayBuffer())}`;
+      const weight = rule.style.getPropertyValue("font-weight") || "100 900";
+      const style = rule.style.getPropertyValue("font-style") || "normal";
+      for (const name of family.toLowerCase() === "inter" ? [family] : [family, "Inter"]) {
+        css.push(
+          `@font-face{font-family:"${name}";src:url(${data}) format("woff2");font-weight:${weight};font-style:${style};}`,
+        );
+      }
+    } catch {
+      // Left to the fallback faces
+    }
+  }
+  return css.join("");
+}
+
+let fontCssPromise;
+/** fontFaceCss, read once a page (and only once it is non-empty). */
+async function embeddedFontCss() {
+  if (!fontCssPromise) {
+    fontCssPromise = fontFaceCss().catch(() => "");
+  }
+  const css = await fontCssPromise;
+  if (!css) fontCssPromise = undefined;
+  return css;
+}
+
+/**
  * Wrap a built export ({svg, width, height}: the plot and its legend, no
  * title or logo) in the frame: header, plot scaled to the frame's width,
  * footer with the logo. Returns the same shape.
@@ -200,7 +276,7 @@ export async function frameSvg(built, frame, { logo } = {}) {
   if (!built || !frame) return built;
   const width = FRAME_WIDTH;
   const inner = width - PAD * 2;
-  const scale = Math.min(MAX_SCALE, inner / built.width);
+  const scale = plotScale(built, inner);
   const plotWidth = built.width * scale;
   const plotHeight = built.height * scale;
   const plotX = PAD + (inner - plotWidth) / 2;
@@ -245,6 +321,10 @@ export async function frameSvg(built, frame, { logo } = {}) {
     );
   }
 
+  // Inter, embedded, so the PNG (drawn from the SVG as an image, which
+  // sees none of the page's fonts) and the SVG away from the page use it
+  const fontCss = await embeddedFontCss();
+
   // The plot: the built SVG as a nested <svg>, scaled by its viewBox
   const plot = built.svg
     .replace(/^\s*<\?xml[^>]*\?>\s*/, "")
@@ -260,6 +340,7 @@ export async function frameSvg(built, frame, { logo } = {}) {
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
     `<title>${escapeXml(frame.title)}</title>` +
     `<desc>${escapeXml([frame.subtitle, frame.footer].filter(Boolean).join(". "))}</desc>` +
+    (fontCss ? `<defs><style>${fontCss}</style></defs>` : "") +
     `<rect x="0" y="0" width="${width}" height="${height}" fill="${CHART_COLOURS.surface}"/>` +
     parts.join("") +
     plot +

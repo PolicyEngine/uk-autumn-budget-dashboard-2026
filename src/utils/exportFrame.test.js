@@ -1,6 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 import { buildChartCsv } from "./chartCsv";
-import { downloadFrame, frameCsv, frameFileName, frameSvg, slugify, titleWithPeriod } from "./exportFrame";
+import {
+  MAX_PLOT_HEIGHT,
+  downloadFrame,
+  fontFaceCss,
+  frameCsv,
+  frameFileName,
+  frameSvg,
+  plotScale,
+  slugify,
+  titleWithPeriod,
+} from "./exportFrame";
+import { buildChartSvg } from "./exportChartAsSvg";
 import { cardSelection, policiesLabel } from "./downloadContext";
 import { chartDownloads } from "./chartDownloads";
 import * as downloadFile from "./downloadFile";
@@ -94,9 +105,61 @@ describe("the framed image", () => {
     expect(new DOMParser().parseFromString(out.svg, "image/svg+xml").querySelector("parsererror")).toBeNull();
   });
 
+  it("fills the width with a half-width card's plot as with a full-width one's", async () => {
+    const frame = downloadFrame({ title: "Impact by income decile, 2027-28", now: NOW });
+    for (const [w, h] of [[548, 460], [1118, 540]]) {
+      const built = { svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"/>`, width: w, height: h };
+      const out = await frameSvg(built, frame, {});
+      const nested = out.svg.match(/<svg[^>]*x="([\d.]+)"[^>]*width="([\d.]+)" height="([\d.]+)" viewBox="0 0 \d+ \d+"/);
+      expect(Number(nested[1])).toBeCloseTo(32);
+      expect(Number(nested[2])).toBeCloseTo(1136);
+      expect(Number(nested[3]) / Number(nested[2])).toBeCloseTo(h / w);
+    }
+  });
+
+  it("keeps the aspect ratio and caps the height of a tall plot", () => {
+    expect(plotScale({ width: 500, height: 410 })).toBeCloseTo(1136 / 500);
+    expect(plotScale({ width: 400, height: 800 }) * 800).toBeCloseTo(MAX_PLOT_HEIGHT);
+  });
+
+  it("embeds the page's Inter faces as data URLs, under next/font's name and as Inter", async () => {
+    const rule = (family, src) => ({
+      type: 5,
+      parentStyleSheet: { href: "http://localhost/_next/static/css/a.css" },
+      style: { getPropertyValue: (name) => ({ "font-family": family, src, "font-weight": "100 900", "font-style": "normal" })[name] ?? "" },
+    });
+    const doc = {
+      baseURI: "http://localhost/",
+      styleSheets: [
+        { cssRules: [rule("'inter'", 'url("../media/inter.woff2") format("woff2")'), rule("'inter Fallback'", 'local("Arial")')] },
+        { get cssRules() { throw new Error("cross-origin"); } },
+      ],
+    };
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer });
+    const css = await fontFaceCss(doc);
+    expect(fetchSpy).toHaveBeenCalledWith("http://localhost/_next/static/media/inter.woff2");
+    expect(css).toContain('font-family:"inter";src:url(data:font/woff2;base64,AQID)');
+    expect(css).not.toMatch(/Fallback/);
+    fetchSpy.mockRestore();
+    expect(await fontFaceCss({ styleSheets: [] })).toBe("");
+  });
+
   it("is left alone without a frame", async () => {
     const built = { svg: "<svg/>", width: 1, height: 1 };
     expect(await frameSvg(built, null)).toBe(built);
+  });
+});
+
+describe("the built plot", () => {
+  it("keeps the tick labels drawn below the on-screen box less the legend space", async () => {
+    document.body.innerHTML = `<div id="c"><div class="recharts-wrapper"><svg width="500" height="410" viewBox="0 0 500 410"><text y="398">10th</text></svg></div></div>`;
+    const svg = document.querySelector("svg");
+    svg.getBoundingClientRect = () => ({ width: 500, height: 410 });
+    svg.getBBox = () => ({ x: 0, y: 2, width: 492, height: 400 });
+    const built = await buildChartSvg({ current: document.getElementById("c") }, {});
+    // The drawing (2 to 402) and 4px under it, not 410 less 60 for a legend
+    expect(built.height).toBe(24 + 406 + 24);
+    expect(built.svg).toMatch(/<rect x="0" y="0" width="500" height="406"/);
   });
 });
 
