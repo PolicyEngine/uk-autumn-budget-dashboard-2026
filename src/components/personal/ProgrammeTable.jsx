@@ -47,6 +47,37 @@ const changeClass = (value) => {
  * @param {string} props.yearLabel - "2029-30"
  * @param {Object} [props.engine] - The API's versions
  */
+// Each group in words: what "up" means for it (taxes are negative amounts,
+// so a rise in the amount is a fall in what you pay)
+const GROUP_WORDS = {
+  income: { noun: "income", up: "rises", down: "falls" },
+  tax: { noun: "taxes", up: "fall", down: "rise" },
+  benefit: { noun: "benefits", up: "rise", down: "fall" },
+  pension: { noun: "pension contributions", up: "fall", down: "rise" },
+};
+
+/**
+ * The card's one line: each group the policies change, by how much a year,
+ * then those they leave alone: "Your taxes fall by £60 a year with the
+ * selected policies; income and benefits are unchanged."
+ */
+export function breakdownSentence(groups) {
+  const moved = [];
+  const still = [];
+  for (const group of groups) {
+    const words = GROUP_WORDS[group.id];
+    if (!words) continue;
+    const change = Math.round(group.shown?.change ?? 0);
+    if (change === 0) still.push(words.noun);
+    else moved.push(`${words.noun} ${change > 0 ? words.up : words.down} by ${money(Math.abs(change))} a year`);
+  }
+  const list = (items) => (items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`);
+  if (!moved.length) return "The selected policies leave your income, taxes and benefits unchanged.";
+  const first = `Your ${list(moved)} with the selected policies`;
+  if (!still.length) return `${first}.`;
+  return `${first}; ${list(still)} ${still.length === 1 && still[0] === "income" ? "is" : "are"} unchanged.`;
+}
+
 export default function ProgrammeTable({ programmes, totals, bars = [], yearLabel, engine = {} }) {
   const narrow = useNarrowViewport();
   const groups = groupTotals(roundProgrammeGroups(programmeGroups(programmes), totals, bars));
@@ -55,7 +86,8 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
     () => new Set(groups.filter((group) => (group.rows ?? []).length > 0).map((group) => group.id)),
   );
   const notes = programmeNotes(groups);
-  const title = `Breakdown of household net income, ${yearLabel}`;
+  const title = `Your income, taxes and benefits, ${yearLabel}`;
+  const sentence = breakdownSentence(groups);
   const toggle = (id) =>
     setOpen((prev) => {
       const next = new Set(prev);
@@ -152,6 +184,8 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
             <TitleIcon name="list" />
             <span className="title-text">{title}</span>
           </h3>
+          {/* One line: which groups the policies change, and by how much */}
+          <p className="chart-description">{sentence}</p>
         </div>
         <ChartDownloadMenu formats={formats} chartTitle={title} ariaLabel={`Download table: ${title}`} />
       </div>

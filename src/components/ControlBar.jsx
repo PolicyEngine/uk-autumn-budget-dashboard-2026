@@ -3,7 +3,6 @@ import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import useSegmentThumb from "../hooks/useSegmentThumb";
 import PillChevron from "./PillChevron";
 import "./ControlBar.css";
-import Tip from "./Tip";
 
 /**
  * A card's controls on one row: at most two primary pills (the view, the
@@ -241,8 +240,8 @@ export function Segmented({ group, inSummary: summarised = true }) {
         {group.options.map((option) => {
           const checked = option.value === group.value;
           return (
-            <Tip key={option.value} content={option.title}>
             <button
+              key={option.value}
               ref={thumbItem(option.value)}
               type="button"
               role="radio"
@@ -263,10 +262,19 @@ export function Segmented({ group, inSummary: summarised = true }) {
             >
               {option.label}
             </button>
-            </Tip>
           );
         })}
       </div>
+      {/* No tips on options inside the popover (they covered its labels):
+          why an option is unavailable is a small line under the control */}
+      {group.options.some((option) => option.disabled && option.title) && (
+        <p className="control-bar-note">
+          {group.options
+            .filter((option) => option.disabled && option.title)
+            .map((option) => `${typeof option.label === "string" ? option.label : option.value}: ${option.title}`)
+            .join(" · ")}
+        </p>
+      )}
     </div>
   );
 }

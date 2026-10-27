@@ -5,7 +5,7 @@ import CombinedStats from "./CombinedStats";
 import FiscalSummary from "./FiscalSummary";
 import UnavailableNotice from "./UnavailableNotice";
 import { parseTable } from "../../utils/publication/csv";
-import { parseManifest } from "../../utils/publication/manifest";
+import { CANDIDATE_PROVISIONAL_LABEL, PROVISIONAL_LABEL, parseManifest } from "../../utils/publication/manifest";
 import { combinedStats, fiscalSeries } from "../../utils/publication/select";
 import {
   BEYOND_DATA,
@@ -259,5 +259,36 @@ describe("BinnedHouseholdScatter", () => {
     expect(
       screen.getByText(/Groups with fewer than 10 surveyed households/),
     ).toBeInTheDocument();
+  });
+});
+
+describe("the provisional label follows the manifest's dates", () => {
+  // The fixture manifest was last written before its own Budget date: its
+  // provisional entries are candidates. Rewritten on Budget day, they are
+  // statement figures.
+  const budgetDay = { ...manifest, updated_at: "2026-10-28T12:30:00+00:00" };
+  const scatter = {
+    status: "available",
+    key: "gamma",
+    provisional: true,
+    points: [{ income: 22500, change: 0, households: 1000, incomeBand: 20000, changeBand: -1, changeBandUpper: 1 }],
+  };
+
+  it.each([
+    ["before the Budget", manifest, CANDIDATE_PROVISIONAL_LABEL],
+    ["from Budget day", budgetDay, PROVISIONAL_LABEL],
+  ])("labels CombinedStats, FiscalSummary and BinnedHouseholdScatter %s", async (_, shown, label) => {
+    const { default: BinnedHouseholdScatter } = await import("./BinnedHouseholdScatter");
+    const stats = combinedStats({ manifest, tablesByKey, selectedIds: ["gamma"], year: IN_DATA });
+    const series = fiscalSeries({ manifest, tablesByKey, selectedIds: ["alpha", "gamma"], years: [IN_DATA] });
+    const views = [
+      render(<CombinedStats stats={stats} measureNames={names} manifest={shown} />),
+      render(<FiscalSummary series={series} ids={["alpha", "gamma"]} measureNames={names} manifest={shown} />),
+      render(<BinnedHouseholdScatter series={scatter} manifest={shown} />),
+    ];
+    for (const view of views) {
+      expect(view.container.querySelector(".publication-provisional")).toHaveTextContent(label);
+      view.unmount();
+    }
   });
 });

@@ -22,7 +22,7 @@ import { METHOD_ANCHORS } from "./methodology/anchors";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import SummaryMetricChart, { SUMMARY_METRICS, hasColumn, metricValue, povertyMetric, usePovertyChoice } from "./SummaryMetricChart";
 import { useOutlook } from "./livingStandards/useOutlook";
-import { formatPp, outlookPopulation } from "../utils/povertyPeople";
+import { formatPp, outlookPopulation, roundPeople } from "../utils/povertyPeople";
 import { CHART_COLOURS, fiscalYearTick } from "../utils/chartTheme";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
@@ -36,7 +36,7 @@ import "./MeasuresPovertyCard.css";
 // Why the measures with no effect move no one: one sentence, true of every
 // such measure, not a reason per measure
 const NO_EFFECT_TEXT =
-  "They change prices, capital gains or employers' costs, which the income poverty is measured on leaves out, or move no one across the line this year.";
+  "They change prices, capital gains or employers' costs, which the income behind the poverty measure leaves out, or move no one across the poverty line this year.";
 
 /**
  * The measures' own changes in the poverty rate (pp) in `year`, for the
@@ -165,7 +165,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     if (!peopleMode) return rateWords(step.pp);
     const n = Math.abs(step.x);
     const way = step.x > 0 ? "fewer" : "more";
-    const count = n < 1000 ? "under 1,000" : `about ${thousands.format(Math.round(n / 1000) * 1000)}`;
+    const count = n < 1000 ? "under 1,000" : `about ${roundPeople(n)}`;
     return `${count} ${way} ${who}`;
   };
   // Thousands with commas ("4,000"); the ticks are spaced so they never meet
@@ -200,7 +200,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   // A plain sentence: no "≈" and no "pp" (the values are in the rows)
   const about = (step) => {
     const n = Math.abs(step.x);
-    return n < 1000 ? "fewer than 1,000" : `about ${thousands.format(Math.round(n / 1000) * 1000)}`;
+    return n < 1000 ? "fewer than 1,000" : `about ${roundPeople(n)}`;
   };
   // The measure as a sentence's subject: its own sentence form where the
   // catalogue publishes one ("Unfreezing the Plan 2 threshold"), otherwise
@@ -210,15 +210,14 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     const sentence = measure?.sentence ?? policyDetailsFor(measure)?.sentence;
     return sentence ? `${sentence[0].toUpperCase()}${sentence.slice(1)}` : `Of the measures, ${step.name}`;
   };
-  const moves = (step) => (step.x > 0 ? `lifting ${about(step)} ${who} out of poverty` : `pushing ${about(step)} ${who} into poverty`);
+  const moves = (step) => (step.x > 0 ? `moving ${about(step)} ${who} out of poverty` : `moving ${about(step)} ${who} into poverty`);
   const summary = top ? (
     peopleMode ? (
       <>
-        {subjectOf(top)} does most, {moves(top)}
+        {subjectOf(top)} has the largest effect, {moves(top)}
         {totalStep ? (
           <>
-            ; all the measures together {totalStep.x > 0 ? "lift" : "push"} {about(totalStep)}
-            {(totalStep.x > 0) !== (top.x > 0) ? (totalStep.x > 0 ? " out of poverty" : " into poverty") : ""}.
+            ; all the measures together move {about(totalStep)} {who} {totalStep.x > 0 ? "out of" : "into"} poverty.
           </>
         ) : (
           "."

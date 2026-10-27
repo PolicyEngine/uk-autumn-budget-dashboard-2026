@@ -33,3 +33,26 @@ describe("Tip", () => {
     expect(container.querySelector(".bare").getAttribute("aria-describedby")).toBeNull();
   });
 });
+
+describe("Tip's layer", () => {
+  it("sits above every layer it can be opened from (the sticky band and its pickers, the drawer)", async () => {
+    const { readFileSync, readdirSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+    const src = join(fileURLToPath(import.meta.url), "..", "..");
+    const zOf = (text, selector) => Number(new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\{[^}]*?z-index: (\\d+)`).exec(text)?.[1]);
+    const tip = zOf(readFileSync(join(src, "components", "Tip.css"), "utf8"), ".tip");
+    const others = [];
+    const walk = (dir) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) walk(path);
+        else if (entry.name.endsWith(".css") && entry.name !== "Tip.css") {
+          for (const [, z] of readFileSync(path, "utf8").matchAll(/z-index: (\d+)/g)) others.push(Number(z));
+        }
+      }
+    };
+    walk(src);
+    expect(tip).toBeGreaterThan(Math.max(...others));
+  });
+});

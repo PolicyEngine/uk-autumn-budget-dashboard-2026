@@ -35,6 +35,13 @@
   height: 400px;
 }
 
+/* No selected measure changes incomes: the note fills the plot's place */
+.household-scatter-no-change {
+  height: 100%;
+  min-height: 200px;
+  box-sizing: border-box;
+}
+
 /* Side by side with the map, the plot takes the map's controls and map
    rows (3 and 4) and fills them, and its key takes the colour scale's
    row (5). Absolutely placed, the drawing adds no height of its own, so the

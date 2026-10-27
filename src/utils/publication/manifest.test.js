@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   attestationProblems,
   CANDIDATE_PROVISIONAL_LABEL,
+  isCandidateManifest,
   isDisplayable,
   isSafeArtifactPath,
   ManifestError,
@@ -296,16 +297,50 @@ describe("availability", () => {
 
   it("labels provisional entries only", () => {
     expect(publicationLabel(manifest.measures.gamma)).toBe(PROVISIONAL_LABEL);
+    expect(publicationLabel(manifest.measures.gamma, raw)).toBe(CANDIDATE_PROVISIONAL_LABEL);
     expect(publicationLabel(manifest.measures.alpha)).toBe("");
+    expect(publicationLabel(manifest.measures.alpha, raw)).toBe("");
   });
 
-  it("calls provisional figures candidates while the basis is pre-Budget", () => {
+  it("calls provisional figures candidates while the manifest predates the Budget", () => {
     expect(raw.basis.forecast.status).toBe("pre_budget");
+    expect(raw.budget.date).toBe("2026-10-28");
+    expect(raw.updated_at.slice(0, 10) < raw.budget.date).toBe(true);
+    expect(isCandidateManifest(raw)).toBe(true);
     expect(provisionalLabel(raw)).toBe(CANDIDATE_PROVISIONAL_LABEL);
+    expect(provisionalLabel(edited((copy) => {
+      copy.updated_at = "2026-10-27T23:59:59+00:00";
+    }))).toBe(CANDIDATE_PROVISIONAL_LABEL);
+  });
+
+  it("calls them statement figures once the manifest is written on or after Budget day, though the basis stays pre-Budget", () => {
+    for (const updated of ["2026-10-28T00:00:01+00:00", "2026-10-28T13:05:00+00:00", "2026-11-02T09:00:00+00:00"]) {
+      const onTheDay = edited((copy) => {
+        copy.updated_at = updated;
+      });
+      expect(onTheDay.basis.forecast.status).toBe("pre_budget");
+      expect(isCandidateManifest(onTheDay)).toBe(false);
+      expect(provisionalLabel(onTheDay)).toBe(PROVISIONAL_LABEL);
+    }
+  });
+
+  it("calls them statement figures once the forecast is rebased", () => {
     expect(provisionalLabel(edited((copy) => {
       copy.basis.forecast.status = "updated";
     }))).toBe(PROVISIONAL_LABEL);
+  });
+
+  it("calls nothing a candidate without both dates", () => {
     expect(provisionalLabel(undefined)).toBe(PROVISIONAL_LABEL);
+    expect(provisionalLabel(edited((copy) => {
+      delete copy.updated_at;
+    }))).toBe(PROVISIONAL_LABEL);
+    expect(provisionalLabel(edited((copy) => {
+      delete copy.budget;
+    }))).toBe(PROVISIONAL_LABEL);
+    expect(provisionalLabel(edited((copy) => {
+      copy.updated_at = "not a date";
+    }))).toBe(PROVISIONAL_LABEL);
   });
 });
 
