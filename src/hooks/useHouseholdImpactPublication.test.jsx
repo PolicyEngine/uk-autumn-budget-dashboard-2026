@@ -601,6 +601,8 @@ describe("Household impact's definitions", () => {
   // Review of 0608183, finding 4: a headline kept from before goes straight
   // to the breakdown, which must be checked as a fresh headline would be
   it("refuses a breakdown from another definition under a headline kept from before", async () => {
+    // The reader's Try again, not the page's own retry of a failed part
+    setHouseholdRetryPolicy({ maxRetries: 0 });
     const requests = [];
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
     vi.stubGlobal("fetch", async (url, init) => {

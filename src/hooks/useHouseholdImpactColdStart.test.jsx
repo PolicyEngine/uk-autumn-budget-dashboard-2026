@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import useHouseholdImpact, { clearHouseholdImpactCache, setHouseholdRetryPolicy } from "./useHouseholdImpact";
 import { EngineMismatchError, isStartingUp } from "../utils/householdImpactApi";
+import { approvedDefinition, reportedDefinitions, route } from "../test/definitionsFixture";
 import { WIZARD_DEFAULTS } from "../components/HouseholdCalculator";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../test/householdFixture";
 
@@ -17,10 +18,19 @@ const ENGINE = {
   "policyengine-uk": HOUSEHOLD_FIXTURE.engine["policyengine-uk"],
   "policyengine-core": HOUSEHOLD_FIXTURE.engine["policyengine-core"],
 };
-const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true, publicationKey: "snapshot-one", expectedEngine: ENGINE };
+// Each request names the measures' approved definitions, and both
+// services report them (PR 136): these tests turn on the start-up alone
+const DEFINITIONS = Object.fromEntries(HOUSEHOLD_FIXTURE.included.map((id) => [id, approvedDefinition()]));
+const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true, publicationKey: "snapshot-one", expectedEngine: ENGINE, expectedDefinitions: DEFINITIONS };
 const partOf = (body) => (body.include.length === 0 ? "headline" : body.include[0]);
-const answer = (body, extra = {}) =>
-  Response.json({ ...structuredClone(householdAnswerFor(body)), engine: HOUSEHOLD_FIXTURE.engine, git_sha: BUILD, ...extra });
+const answer = (body, url, extra = {}) =>
+  Response.json({
+    ...structuredClone(householdAnswerFor(body)),
+    engine: HOUSEHOLD_FIXTURE.engine,
+    git_sha: BUILD,
+    definitions: reportedDefinitions(url),
+    ...extra,
+  });
 
 beforeEach(() => {
   clearHouseholdImpactCache();
@@ -35,7 +45,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-/** One service, answering each request through `respond(body, n)`; n counts headline asks. */
+/** One service, answering each request through `respond(body, n, url)`; n counts headline asks. */
 function oneService(calls, respond) {
   vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", MAIN);
   let headlines = 0;
@@ -43,14 +53,14 @@ function oneService(calls, respond) {
     const body = JSON.parse(init.body);
     calls.push(partOf(body));
     if (partOf(body) === "headline") headlines += 1;
-    return respond(body, headlines);
+    return respond(body, headlines, url);
   });
 }
 
 describe("a cold calculator", () => {
   it("says it is starting up after an empty answer, asks again and shows the result", async () => {
     const calls = [];
-    oneService(calls, (body, n) => (partOf(body) === "headline" && n === 1 ? new Response("", { status: 200 }) : answer(body)));
+    oneService(calls, (body, n, url) => (partOf(body) === "headline" && n === 1 ? new Response("", { status: 200 }) : answer(body, url)));
     const hook = renderHook(() => useHouseholdImpact(params));
     await waitFor(() => expect(hook.result.current.startingUp).toBe(true));
     expect(hook.result.current.status).toBe("loading");
@@ -64,8 +74,8 @@ describe("a cold calculator", () => {
 
   it("asks again after a 504", async () => {
     const calls = [];
-    oneService(calls, (body, n) =>
-      partOf(body) === "headline" && n === 1 ? Response.json({ detail: "Calculation timed out" }, { status: 504 }) : answer(body),
+    oneService(calls, (body, n, url) =>
+      partOf(body) === "headline" && n === 1 ? Response.json({ detail: "Calculation timed out" }, { status: 504 }) : answer(body, url),
     );
     const hook = renderHook(() => useHouseholdImpact(params));
     await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
@@ -88,10 +98,10 @@ describe("a cold calculator", () => {
 
   it("never shows a retried answer from other model versions than the published figures", async () => {
     const calls = [];
-    oneService(calls, (body, n) =>
+    oneService(calls, (body, n, url) =>
       partOf(body) === "headline" && n === 1
         ? new Response("", { status: 502 })
-        : answer(body, { engine: { ...HOUSEHOLD_FIXTURE.engine, "policyengine-uk": "0.0.1" } }),
+        : answer(body, url, { engine: { ...HOUSEHOLD_FIXTURE.engine, "policyengine-uk": "0.0.1" } }),
     );
     const hook = renderHook(() => useHouseholdImpact(params));
     await waitFor(() => expect(hook.result.current.status).toBe("error"));
@@ -115,8 +125,8 @@ describe("a cold detail service (Modal) beside a warm main API", () => {
     const calls = [];
     vi.stubGlobal("fetch", async (url, init) => {
       const body = JSON.parse(init.body);
-      calls.push(`${url === DETAIL ? "detail" : "main"}:${partOf(body)}`);
-      return url === DETAIL ? new Response("", { status: 200 }) : answer(body);
+      calls.push(`${route(url) === DETAIL ? "detail" : "main"}:${partOf(body)}`);
+      return route(url) === DETAIL ? new Response("", { status: 200 }) : answer(body, url);
     });
     const hook = renderHook(() => useHouseholdImpact(params));
     await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
@@ -134,11 +144,11 @@ describe("a cold detail service (Modal) beside a warm main API", () => {
     const asked = {};
     vi.stubGlobal("fetch", async (url, init) => {
       const body = JSON.parse(init.body);
-      const id = `${url === DETAIL ? "detail" : "main"}:${partOf(body)}`;
+      const id = `${route(url) === DETAIL ? "detail" : "main"}:${partOf(body)}`;
       asked[id] = (asked[id] ?? 0) + 1;
-      if (url === DETAIL) return new Response("", { status: 503 });
+      if (route(url) === DETAIL) return new Response("", { status: 503 });
       if (partOf(body) === "sweep" && asked[id] === 1) return new Response("", { status: 503 });
-      return answer(body);
+      return answer(body, url);
     });
     const hook = renderHook(() => useHouseholdImpact(params));
     await waitFor(() => expect(hook.result.current.detailStartingUp).toBe(true));
@@ -154,10 +164,10 @@ describe("a cold detail service (Modal) beside a warm main API", () => {
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL);
     vi.stubGlobal("fetch", async (url, init) => {
       const body = JSON.parse(init.body);
-      if (url === DETAIL) return new Response("", { status: 503 });
+      if (route(url) === DETAIL) return new Response("", { status: 503 });
       // The headline from BUILD; the main API's breakdown, once it answers,
       // from another commit (a deploy mid-way)
-      return partOf(body) === "headline" ? answer(body) : answer(body, { git_sha: "d".repeat(40) });
+      return partOf(body) === "headline" ? answer(body, url) : answer(body, url, { git_sha: "d".repeat(40) });
     });
     const hook = renderHook(() => useHouseholdImpact(params));
     await waitFor(() => expect(hook.result.current.status).toBe("error"));

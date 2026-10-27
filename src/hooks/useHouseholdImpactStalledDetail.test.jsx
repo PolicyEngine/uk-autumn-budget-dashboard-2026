@@ -8,10 +8,13 @@ import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../test/householdFixture"
 // Coordinator, 26 October: the timeout ended when the response arrived, so
 // a detail answer whose body never ended left the breakdown loading; now it
 // times out and the part is asked again of the main API. The detail stage's
-// timeout is cut to 100 ms here, so the case runs in real time.
+// timeout, and the detail service's own (MODAL_TIMEOUT_MS, which bounds its
+// requests since PR 265, the early ones too), are cut to 100 ms here, so the
+// case runs in real time.
 vi.mock("../utils/householdImpactApi", async (importOriginal) => ({
   ...(await importOriginal()),
   DETAIL_TIMEOUT_MS: 100,
+  MODAL_TIMEOUT_MS: 100,
 }));
 
 const MAIN = "https://main.test/api/household-impact";

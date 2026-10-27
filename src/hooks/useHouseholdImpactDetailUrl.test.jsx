@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
-import useHouseholdImpact, { clearHouseholdImpactCache } from "./useHouseholdImpact";
+import useHouseholdImpact, { clearHouseholdImpactCache, setHouseholdRetryPolicy } from "./useHouseholdImpact";
 import { DefinitionMismatchError, HEADLINE_INCLUDE } from "../utils/householdImpactApi";
-import { approvedDefinition, reportedDefinitions } from "../test/definitionsFixture";
+import { approvedDefinition, reportedDefinitions, requestedDefinitions } from "../test/definitionsFixture";
 import { WIZARD_DEFAULTS } from "../components/HouseholdCalculator";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../test/householdFixture";
 
@@ -169,4 +169,22 @@ it("stops the other part's request once a part takes the whole answer away", asy
   expect(hook.result.current.error).toBeInstanceOf(DefinitionMismatchError);
   expect(sweeps.length).toBeGreaterThan(0);
   await waitFor(() => expect(sweeps.every((signal) => signal.aborted)).toBe(true));
+});
+
+// PR 265 asks a headline again while the service looks to be starting up:
+// the retry names the approved commits as the first ask did, and its answer
+// is checked as a first one is
+it("refuses a headline, asked again after a 503, that computes a measure from another definition", async () => {
+  setHouseholdRetryPolicy({ delayMs: 1, maxRetryAfterMs: 1, minAttemptMs: 1 });
+  const calls = [];
+  const named = [];
+  serve(calls, (service, part, url) => {
+    if (part !== "headline") return good(url);
+    named.push(requestedDefinitions(url));
+    return named.length === 1 ? new Response(null, { status: 503 }) : mismatched(url);
+  });
+  await refused(calls);
+  expect(calls.filter((call) => call === "main:headline")).toHaveLength(2);
+  expect(named[0].map(([id]) => id)).toEqual([...HOUSEHOLD_FIXTURE.included].sort());
+  expect(named[1]).toEqual(named[0]);
 });
