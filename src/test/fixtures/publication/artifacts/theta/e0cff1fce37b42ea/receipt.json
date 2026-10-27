@@ -15,7 +15,7 @@
     "composition": null,
     "config_baseline": null,
     "data_limits": [],
-    "data_limits_registry_sha256": "c48a8fe082168969b5c3e6d6689a630c9f47ac64fa9de7efd11a055d2cab1a4b",
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
     "dataset_years": [
       2024,
       2025,
@@ -27,11 +27,10 @@
       2031,
       2032
     ],
-    "description": "",
     "digests": {
-      "execution_identity_sha256": "8a4afa19be7888c7c795810d2c0588bf91dcddadf0a1d22ac720660dd1108ac0",
+      "execution_identity_sha256": "0be7dd0e5aab27d501e4eb820714ea4e9dd445059030ce045644247740bf23ae",
       "outputs_sha256": "82bbe3c3f1c72067ad948217256a7182c41c7c2e4bbaa6aee384099a155856dd",
-      "receipt_sha256": "6843aac96f60e55f00b67a337e1e0d28bedb1ceea431d53384e524208303bb11"
+      "receipt_sha256": "143c6e22348586ee53701a42cd6143eb38e322c4edf587c12dc89775d7defe4a"
     },
     "files": {
       "budgetary_impact.csv": "1c9e24a6d6d7df39c6c14a79ef5692b90dd9045d133bb444deb0ac7b64b1aba9",
@@ -41,7 +40,7 @@
       "metrics.csv": "df9861e596036274257e29ee7ef518e7da39a28f64cb7619bc90ce948461cfe3",
       "winners_losers.csv": "b39ee7c29f16f2792af3586ec3f51b9a4db1470ae90c6deb4feb84c0d4c22ad8"
     },
-    "generated_at": "2026-10-27T02:06:20.366070+00:00",
+    "generated_at": "2026-10-24T13:47:35.056487+00:00",
     "generator_argv": [
       "test"
     ],
@@ -61,7 +60,7 @@
         "reason": "The installed model raises the Pension Credit standard minimum guarantee by lagged calendar-year CPI, 2.3% in April 2027, but the law requires at least the growth in earnings, 3.9% in May to July 2026 (Social Security Administration Act 1992 s. 150A(2)). So the guarantee is too low from 2027, and so are the pension-age Housing Benefit allowances and the savings credit threshold, which the same fix covers; a change to the earnings input misses them. policyengine-uk #2557, the fix for #2533, keeps the guarantee on lagged CPI. Until a fix that uprates it by earnings is in the model, measures touching these from 2027 are held at provisional."
       }
     ],
-    "model_limits_registry_sha256": "9d3479f1f5ac859ab6bd2644aaff443a29c0dad3f2944b1ef98866028f9d4b89",
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
     "modifier_templates": {
       "baseline": [],
       "reform": []
@@ -69,7 +68,7 @@
     "name": "Theta",
     "publishable": true,
     "reasons": [],
-    "receipt_source": "policyengine==6.11.1",
+    "receipt_source": "policyengine==6.10.2",
     "tree_clean": true,
     "unsupported_years": [
       2033
@@ -82,13 +81,13 @@
       "name": "theta baseline"
     },
     "certificate": {
-      "bundle_version": "6.11.1",
-      "certificate_sha256": "d941c04fc26818cdb5b769417d4c6d8ade42c25bb65c9dbfa4882545c81ab411",
+      "bundle_version": "6.10.2",
+      "certificate_sha256": "471c95179d9d3fc56de27b6893390d83f779efbad5e120dbb0a595917649169f",
       "certificate_source": "packaged",
       "certified_by": "policyengine.py bundle certification",
       "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
       "certified_for_core_version": "3.33.3",
-      "certified_for_model_version": "2.151.0",
+      "certified_for_model_version": "2.132.6",
       "compatibility_basis": "built_with_model_package",
       "country_id": "uk"
     },
@@ -99,14 +98,14 @@
     },
     "country_id": "uk",
     "data": {
-      "build_id": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
-      "build_model_version": "2.151.0",
+      "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "build_model_version": "2.132.6",
       "data_package": "microcosm-data",
       "dataset": "microcosm_uk_2024_25",
-      "dataset_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
       "dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
-      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
-      "release_manifest_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
       "release_version": "0.1.0"
     },
     "fiscal_year": {
@@ -117,7 +116,7 @@
     },
     "model": {
       "name": "policyengine-uk",
-      "version": "2.151.0"
+      "version": "2.132.6"
     },
     "outputs_sha256": "82bbe3c3f1c72067ad948217256a7182c41c7c2e4bbaa6aee384099a155856dd",
     "receipt_type": "policyengine.execution_receipt",
@@ -130,7 +129,7 @@
     },
     "runtime": {
       "platform": "darwin",
-      "python_version": "3.13.9"
+      "python_version": "3.13.15"
     },
     "schema_version": 1,
     "supported_years": [
@@ -146,7 +145,7 @@
     ],
     "wrapper": {
       "name": "policyengine",
-      "version": "6.11.1"
+      "version": "6.10.2"
     },
     "years": [
       2032,

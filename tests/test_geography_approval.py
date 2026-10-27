@@ -25,13 +25,6 @@ from uk_budget_data.publication.artifacts import read_receipt
 from uk_budget_data.publication.combine import combined_key
 from uk_budget_data.publication.publish import approve, stage, withdraw
 
-# A data limit in force: the PIP points thresholds (the purchase limits
-# these tests first used lifted at the a6299504 cut).
-PIP_POINTS = next(
-    limit for limit in DATA_LIMITS if limit.key == "pip_daily_living_points"
-)
-PIP_THRESHOLD = "gov.dwp.pip.daily_living.points_thresholds.enhanced"
-
 PACKAGE = "pkg_alpha_beta"
 MEMBERS = ("beta", "alpha")
 STATUSES = (
@@ -74,7 +67,13 @@ def publication():
             update={"status": m.STALE, "reason": "The execution changed"}
         )
 
-        limit = record(PIP_POINTS, [PIP_THRESHOLD])
+        limit = record(
+            DATA_LIMITS[0],
+            [
+                "gov.hmrc.stamp_duty.residential.purchase.additional."
+                "rate[1].rate"
+            ],
+        )
         limited = world.write(
             "not_computable", {2027: 0.0}, rate=0.27, data_limits=[limit]
         )
@@ -83,12 +82,9 @@ def publication():
             next(
                 limit
                 for limit in model_limits.MODEL_LIMITS
-                if limit.key == "pc_minimum_guarantee_uprating"
+                if limit.key == "state_pension_add_on_uprating"
             ),
-            [
-                "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee"
-                ".SINGLE"
-            ],
+            ["gov.dwp.state_pension.new_state_pension.amount"],
         )
         model_limited = world.ready(
             "model_limited",
@@ -133,7 +129,7 @@ def with_status(entry, status):
     fields.update(status=status, approval=None, data_limits=[], reason=None)
     if status == m.NOT_COMPUTABLE:
         fields.update(
-            data_limits=[PIP_POINTS.key],
+            data_limits=[DATA_LIMITS[0].key],
             reason="The certified dataset cannot cost this measure",
         )
     return m.Entry.model_validate(fields)

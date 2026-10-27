@@ -1,12 +1,9 @@
 """Measures the certified data cannot cost: the registry and detection.
 
 pe-uk #2241 makes additional-dwelling and non-residential purchase prices
-inputs, nil unless a dataset imputes them. A measure on those rates scored
-£0 (before #2241, it charged a buyer's whole stock) until certified data
-carried both, from the a6299504 cut, so it was published as not computable.
-The tests of the machinery here are written around those two limits, and
-register them as stand-ins (``stand_in_data_limits``,
-tests/data_limit_stand_ins.py).
+inputs, nil unless a dataset imputes them, and the certified dataset has
+neither column. A measure on those rates scores £0 (before #2241, it charges
+a buyer's whole stock), so it must be published as not computable.
 """
 
 import ast
@@ -31,13 +28,13 @@ from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
 from tests import purchase_helpers, template_measures
-from tests.data_limit_stand_ins import STAND_IN_DATA_LIMITS
 from tests.fixed_shape_measures import (
     raise_additional_dwelling_rates,
     sdlt_from_purchases_read_at_build,
 )
 from uk_budget_data import data_limits
 from uk_budget_data.data_limits import (
+    DATA_LIMITS,
     limits_for_paths,
     limits_for_scenarios,
     limits_touched,
@@ -55,12 +52,9 @@ from uk_budget_data.measure_templates import (
 
 SURCHARGE = "gov.hmrc.stamp_duty.residential.purchase.additional"
 SURCHARGE_RATE = f"{SURCHARGE}.rate[1].rate"
-RAISED_SURCHARGE = purchase_helpers.RAISED_SURCHARGE
 NON_RESIDENTIAL = "gov.hmrc.stamp_duty.non_residential.purchase"
 INCOME_TAX = "gov.hmrc.income_tax.rates.uk[0].rate"
-BY_KEY = {limit.key: limit for limit in STAND_IN_DATA_LIMITS}
-
-pytestmark = pytest.mark.usefixtures("stand_in_data_limits")
+BY_KEY = {limit.key: limit for limit in DATA_LIMITS}
 
 
 def household(year=2027):
@@ -87,7 +81,7 @@ def test_every_registered_parameter_exists_in_the_installed_engine():
     """A renamed parameter would silently stop being covered."""
     from policyengine_uk.system import system
 
-    for limit in data_limits.DATA_LIMITS:
+    for limit in DATA_LIMITS:
         for prefix in limit.parameters:
             system.parameters.get_child(prefix)
 
@@ -95,7 +89,7 @@ def test_every_registered_parameter_exists_in_the_installed_engine():
 def test_every_input_a_limit_names_is_one_the_engine_has():
     from policyengine_uk.system import system
 
-    for limit in data_limits.DATA_LIMITS:
+    for limit in DATA_LIMITS:
         assert limit.missing_input in system.variables
 
 
@@ -167,10 +161,7 @@ def test_paths_fall_under_exactly_their_limits(path, keys):
 
 def test_a_reform_changing_a_limited_rate_touches_its_limit():
     found = limits_for_scenarios(
-        None,
-        Scenario(
-            parameter_changes={SURCHARGE_RATE: {"2027": RAISED_SURCHARGE}}
-        ),
+        None, Scenario(parameter_changes={SURCHARGE_RATE: {"2027": 0.07}})
     )
     assert found == [
         record(BY_KEY["additional_dwelling_purchases"], [SURCHARGE_RATE])
@@ -186,10 +177,7 @@ def test_a_baseline_only_change_touches_its_limit_too():
 
 
 def test_the_same_change_on_both_sides_touches_nothing():
-    same = {
-        SURCHARGE_RATE: {"2027": RAISED_SURCHARGE},
-        INCOME_TAX: {"2027": 0.21},
-    }
+    same = {SURCHARGE_RATE: {"2027": 0.07}, INCOME_TAX: {"2027": 0.21}}
     assert (
         limits_for_scenarios(
             Scenario(parameter_changes=same),
@@ -213,7 +201,7 @@ def test_an_unrelated_measure_touches_nothing():
 
 def test_built_parameter_trees_show_a_parameter_change():
     touched = limits_touched(
-        simulation(), simulation({SURCHARGE_RATE: {"2027": RAISED_SURCHARGE}})
+        simulation(), simulation({SURCHARGE_RATE: {"2027": 0.07}})
     )
     assert [item["key"] for item in touched] == [
         "additional_dwelling_purchases"
@@ -279,7 +267,7 @@ def test_a_change_to_the_cached_views_alone_shows():
     reformed = simulation()
     view = reformed.tax_benefit_system.parameters("2027-01-01")
     view.gov.hmrc.stamp_duty.residential.purchase.additional.rate.rates[1] = (
-        RAISED_SURCHARGE
+        0.07
     )
     touched = limits_touched(simulation(), reformed)
     assert touched == [
@@ -295,7 +283,7 @@ def test_a_parameter_that_changes_between_its_breakpoints_shows():
     class BetweenBreakpoints(Parameter):
         def _get_at_instant(self, instant):
             if "2027-01-01" <= str(instant) < "2028-01-01":
-                return RAISED_SURCHARGE
+                return 0.07
             return super()._get_at_instant(instant)
 
     reformed = simulation()
@@ -312,7 +300,7 @@ def test_detection_fills_no_cache_that_formulas_read():
     calculation filled the caches formulas read. Detection now leaves them
     as it found them, and the figures as they would have been."""
     baseline = simulation()
-    reformed = simulation({SURCHARGE_RATE: {"2027": RAISED_SURCHARGE}})
+    reformed = simulation({SURCHARGE_RATE: {"2027": 0.07}})
     systems = [baseline.tax_benefit_system, reformed.tax_benefit_system]
     before = [
         (
@@ -332,7 +320,7 @@ def test_detection_fills_no_cache_that_formulas_read():
         for system in systems
     ]
     assert after == before
-    fresh = simulation({SURCHARGE_RATE: {"2027": RAISED_SURCHARGE}})
+    fresh = simulation({SURCHARGE_RATE: {"2027": 0.07}})
     assert reformed.calculate("household_net_income", 2027).tolist() == (
         fresh.calculate("household_net_income", 2027).tolist()
     )
@@ -368,7 +356,7 @@ def test_views_are_read_through_the_tree_formulas_call():
     for view in every_view(reformed):
         view.gov.hmrc.stamp_duty.residential.purchase.additional.rate.rates[
             1
-        ] = RAISED_SURCHARGE
+        ] = 0.07
     touched = limits_touched(simulation(), reformed)
     assert [item["key"] for item in touched] == [
         "additional_dwelling_purchases"
@@ -453,11 +441,6 @@ NON_RESIDENTIAL_SDLT = "sdlt_on_non_residential_property_transactions"
 
 def keys(touched):
     return [item["key"] for item in touched]
-
-
-# What a read that can't be watched is taken to read: what every limit
-# covers, in the order records list them.
-EVERY_LIMIT = [limit.key for limit in STAND_IN_DATA_LIMITS]
 
 
 def surcharge_closing_over(rate):
@@ -1664,7 +1647,7 @@ def test_unreadable_state_is_unequal():
 def test_an_unobservable_variable_reads_anything():
     assert all(
         data_limits._reads(limit, {data_limits.ANY_NAME})
-        for limit in data_limits.DATA_LIMITS
+        for limit in DATA_LIMITS
     )
 
 
@@ -2737,8 +2720,8 @@ def test_recorded_limits_that_are_not_the_registrys_are_problems(
 
 def test_a_template_on_a_limited_rate_warns_and_still_builds():
     with pytest.warns(DataLimitedWarning, match="not computable") as caught:
-        built = rate_change(SURCHARGE_RATE, {2027: RAISED_SURCHARGE})
-    assert built == {SURCHARGE_RATE: {"2027": RAISED_SURCHARGE}}
+        built = rate_change(SURCHARGE_RATE, {2027: 0.07})
+    assert built == {SURCHARGE_RATE: {"2027": 0.07}}
     # The warning points at the author's call, not inside the templates.
     assert caught[0].filename == __file__
 
@@ -2913,10 +2896,10 @@ def test_a_build_and_a_watch_never_overlap():
 def test_a_build_read_is_recorded_only_against_its_own_limit():
     """The receipt check accepts build:<input> only for the limit that
     names the input."""
-    for limit in data_limits.DATA_LIMITS:
+    for limit in DATA_LIMITS:
         good = record(limit, [f"build:{limit.missing_input}"])
         assert data_limits.record_problems([good]) == []
-        other = [x for x in data_limits.DATA_LIMITS if x is not limit][0]
+        other = [x for x in DATA_LIMITS if x is not limit][0]
         bad = record(limit, [f"build:{other.missing_input}"])
         assert data_limits.record_problems([bad])
         assert data_limits.record_problems(
@@ -2929,11 +2912,9 @@ def test_a_build_read_is_recorded_only_against_its_own_limit():
 
 @pytest.mark.certified_data
 def test_building_a_certified_simulation_reads_no_limited_input():
-    """The build watch counts every read of a limited input (a holder
-    fetched or its values read) except those policyengine-uk's own
-    construction makes; building a certified simulation, with or without
-    a template, makes none, so the watch flags only what a measure
-    reads."""
+    """The build watch counts every read of a limited input, the model's
+    own included; building a certified simulation, with or without a
+    template, makes none, so the watch flags only what a measure reads."""
     from uk_budget_data.pipeline import build_microsimulation
 
     plain = data_limits.watched_build(build_microsimulation, None)
@@ -2960,17 +2941,12 @@ def test_the_certified_data_still_lack_every_limits_input():
     assert sim.get_holder(
         "other_residential_property_value"
     ).get_known_periods()
-    # Every lifted input at once: an adoption that lifts several would
-    # otherwise take one CI run to find each.
-    lifted = [
-        f"{limit.missing_input} (lift {limit.key})"
-        for limit in data_limits.DATA_LIMITS
-        if sim.get_holder(limit.missing_input).get_known_periods()
-    ]
-    assert lifted == [], (
-        f"the certified data now set {', '.join(lifted)}; if a cut in "
-        "NEWLY_MISSING_INPUTS lists one, say so in NO_LONGER_MISSING"
-    )
+    for limit in data_limits.DATA_LIMITS:
+        holder = sim.get_holder(limit.missing_input)
+        assert holder.get_known_periods() == [], (
+            f"the certified data now set {limit.missing_input}: lift "
+            f"{limit.key}"
+        )
 
 
 # --- the flat pipeline ------------------------------------------------------
@@ -3006,7 +2982,7 @@ def test_the_flat_pipeline_warns_for_a_measure_the_data_cannot_cost(
         Reform(
             id="surcharge",
             name="Surcharge",
-            parameter_changes={SURCHARGE_RATE: {"2027": RAISED_SURCHARGE}},
+            parameter_changes={SURCHARGE_RATE: {"2027": 0.07}},
         ),
         Reform(
             id="structural",
@@ -3395,7 +3371,10 @@ def test_a_value_calculated_before_the_watch_reads_anything():
         match="calculated before it was watched",
     ):
         touched = limits_touched(simulation(), reformed)
-    assert keys(touched) == EVERY_LIMIT
+    assert keys(touched) == [
+        "additional_dwelling_purchases",
+        "non_residential_purchases",
+    ]
 
 
 def test_an_input_set_before_the_watch_is_not_a_calculation():
@@ -3428,7 +3407,10 @@ def test_with_no_tool_id_free_every_changed_variable_reads_anything(
         data_limits.UnwatchedFormulaWarning, match="no sys.monitoring tool"
     ):
         touched = limits_touched(simulation(), reformed)
-    assert keys(touched) == EVERY_LIMIT
+    assert keys(touched) == [
+        "additional_dwelling_purchases",
+        "non_residential_purchases",
+    ]
     assert engine_methods() == before
 
 
@@ -4230,7 +4212,10 @@ def test_an_unchanged_variable_asked_for_after_its_state_is_edited_shows():
                 )
             ),
         )
-    assert keys(touched) == EVERY_LIMIT
+    assert keys(touched) == [
+        "additional_dwelling_purchases",
+        "non_residential_purchases",
+    ]
 
 
 def test_an_unchanged_variable_whose_state_a_run_edited_shows():
@@ -4251,7 +4236,10 @@ def test_an_unchanged_variable_whose_state_a_run_edited_shows():
         match="changed while the simulations ran",
     ):
         touched = limits_touched(baseline, reformed, observed)
-    assert keys(touched) == EVERY_LIMIT
+    assert keys(touched) == [
+        "additional_dwelling_purchases",
+        "non_residential_purchases",
+    ]
 
 
 def priced_by_a_held_branch_parameter(rate, held):
@@ -4456,7 +4444,10 @@ def test_values_a_branch_calculated_before_the_watch_read_anything(by, cloned):
                 )
             ),
         )
-    assert keys(touched) == EVERY_LIMIT
+    assert keys(touched) == [
+        "additional_dwelling_purchases",
+        "non_residential_purchases",
+    ]
 
 
 def test_a_value_kept_only_in_a_fast_cache_counts_as_calculated():

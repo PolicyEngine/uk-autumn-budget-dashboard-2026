@@ -14,16 +14,8 @@
     },
     "composition": null,
     "config_baseline": null,
-    "data_limits": [
-      {
-        "key": "pip_daily_living_points",
-        "parameters": [
-          "gov.dwp.pip.daily_living.points_thresholds.enhanced"
-        ],
-        "reason": "The certified data record each claimant's PIP daily living award, not the assessment points behind it, so the model leaves everyone's points at its default of -1 (not assessed) and keeps the recorded award. A change to the points needed for the standard or enhanced rate therefore moves no one. Changes to the rates themselves are not affected. A measure that changes the recorded awards is held too, as a precaution: in a year with no recorded award the model carries an earlier one forward unless newer points replace it, though its copy of the certified data records an award in every Budget year."
-      }
-    ],
-    "data_limits_registry_sha256": "c48a8fe082168969b5c3e6d6689a630c9f47ac64fa9de7efd11a055d2cab1a4b",
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
     "dataset_years": [
       2024,
       2025,
@@ -35,34 +27,40 @@
       2031,
       2032
     ],
-    "description": "",
     "digests": {
-      "execution_identity_sha256": "8a4afa19be7888c7c795810d2c0588bf91dcddadf0a1d22ac720660dd1108ac0",
-      "outputs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "receipt_sha256": "2cc6f46910f84ceab7fffdfe7d56a0dda00ed069e503b83ad5d251d7dfc90f1d"
+      "execution_identity_sha256": "0be7dd0e5aab27d501e4eb820714ea4e9dd445059030ce045644247740bf23ae",
+      "outputs_sha256": "debb4171d66468f2407e70f20199e93b2bf53bb9d752dba7c154e1ceb912e2a7",
+      "receipt_sha256": "f793ca990f64a17f2171ee108b1411f90cd47a6d65f4693fa64f9ee4557972d5"
     },
-    "files": {},
-    "generated_at": "2026-10-27T02:06:20.318240+00:00",
+    "files": {
+      "budgetary_impact.csv": "b1eda58d7c5800d22e6a2e49574f282bcdf2f0b688d6dbe9cc91cc1dee644f43",
+      "distributional_impact.csv": "81a5bb4dfce3ac4059178729877d944bd51142bd09605f822d63496c22f67fb0",
+      "household_scatter_binned.csv": "6746b03eaa1fb83dc5b07153750b080da2e0eb82cad2b6e841223e4b853f5cdd",
+      "income_curve.csv": "96698f951329048ade19849c04bbba83d2106ab69da451665b4ce20d74eaf962",
+      "metrics.csv": "e6efec18ecc0730939225c5465636e4e44fa09e99520d5817300982d983ea5e3",
+      "winners_losers.csv": "812d47f4fb84077214197dcbb8099dd637daa67dc5278a6ce90fa9de304f6df4"
+    },
+    "generated_at": "2026-10-24T13:47:34.293980+00:00",
     "generator_argv": [
       "test"
     ],
     "git_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "key": "epsilon",
+    "key": "alpha",
     "measure_ids": [
-      "epsilon"
+      "alpha"
     ],
     "member_outputs_sha256": null,
     "members": null,
     "model_limits": [],
-    "model_limits_registry_sha256": "9d3479f1f5ac859ab6bd2644aaff443a29c0dad3f2944b1ef98866028f9d4b89",
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
     "modifier_templates": {
       "baseline": [],
       "reform": []
     },
-    "name": "Epsilon",
+    "name": "Alpha",
     "publishable": true,
     "reasons": [],
-    "receipt_source": "policyengine==6.11.1",
+    "receipt_source": "policyengine==6.10.2",
     "tree_clean": true,
     "unsupported_years": [
       2033
@@ -72,16 +70,16 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "epsilon baseline"
+      "name": "alpha baseline"
     },
     "certificate": {
-      "bundle_version": "6.11.1",
-      "certificate_sha256": "d941c04fc26818cdb5b769417d4c6d8ade42c25bb65c9dbfa4882545c81ab411",
+      "bundle_version": "6.10.2",
+      "certificate_sha256": "471c95179d9d3fc56de27b6893390d83f779efbad5e120dbb0a595917649169f",
       "certificate_source": "packaged",
       "certified_by": "policyengine.py bundle certification",
       "certified_dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
       "certified_for_core_version": "3.33.3",
-      "certified_for_model_version": "2.151.0",
+      "certified_for_model_version": "2.132.6",
       "compatibility_basis": "built_with_model_package",
       "country_id": "uk"
     },
@@ -92,14 +90,14 @@
     },
     "country_id": "uk",
     "data": {
-      "build_id": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
-      "build_model_version": "2.151.0",
+      "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "build_model_version": "2.132.6",
       "data_package": "microcosm-data",
       "dataset": "microcosm_uk_2024_25",
-      "dataset_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
       "dataset_sha256": "43d5681f9abfa4a18436cd2d128b20731b8149409085be351c7a41087301db9d",
-      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
-      "release_manifest_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
       "release_version": "0.1.0"
     },
     "fiscal_year": {
@@ -110,20 +108,20 @@
     },
     "model": {
       "name": "policyengine-uk",
-      "version": "2.151.0"
+      "version": "2.132.6"
     },
-    "outputs_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "outputs_sha256": "debb4171d66468f2407e70f20199e93b2bf53bb9d752dba7c154e1ceb912e2a7",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "content",
       "kind": "reform",
-      "name": "epsilon",
-      "reform_sha256": "6d64fa2298d4c04d10be25e40776ed4c289e668287d5cbce1d820a214f81ad54",
+      "name": "alpha",
+      "reform_sha256": "30d1752d96dc171b2110dc1bfe897bf064aa21c6adc68cb8af2b350afb70c247",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {
       "platform": "darwin",
-      "python_version": "3.13.9"
+      "python_version": "3.13.15"
     },
     "schema_version": 1,
     "supported_years": [
@@ -139,7 +137,7 @@
     ],
     "wrapper": {
       "name": "policyengine",
-      "version": "6.11.1"
+      "version": "6.10.2"
     },
     "years": [
       2032,

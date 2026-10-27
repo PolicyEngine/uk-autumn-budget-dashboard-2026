@@ -42,13 +42,6 @@ SEAT_REGIONS = {S1: R1, S2: R1, S3: R2, S4: R2}
 PKG = "pkg_combined"
 
 
-# The data-limit tests below were written around the purchase limits, which
-# lifted at the a6299504 cut; they run on them as stand-ins
-# (tests/data_limit_stand_ins.py). Their inputs are nil in every household
-# simulation here, so the stand-ins change nothing else.
-pytestmark = pytest.mark.usefixtures("stand_in_data_limits")
-
-
 @pytest.fixture(scope="module")
 def regions():
     return g.load_regions(REGIONS_CSV)
@@ -1984,9 +1977,6 @@ def test_the_front_end_fixture_shows_every_tier():
 SURCHARGE_RATE = (
     "gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"
 )
-# Not 0.07: from policyengine-uk 2.151.0 the band is 7% from April 2025
-# (Finance Act 2025 s. 50), so a change to 0.07 changes nothing.
-SURCHARGE = 0.09
 INCOME_TAX_RATE = "gov.hmrc.income_tax.rates.uk[0].rate"
 
 
@@ -1999,7 +1989,7 @@ def test_a_measure_the_data_cannot_cost_gets_no_table_by_area(
     code, out, _ = run_cli(
         monkeypatch,
         tmp_path,
-        changes_of={"alpha": {SURCHARGE_RATE: {"2026": SURCHARGE}}},
+        changes_of={"alpha": {SURCHARGE_RATE: {"2026": 0.07}}},
     )
     printed = " ".join(capsys.readouterr().out.split())
     assert code == 1
@@ -2017,7 +2007,7 @@ def test_with_no_data_limit_registered_nothing_is_refused(
     code, out, _ = run_cli(
         monkeypatch,
         tmp_path,
-        changes_of={"alpha": {SURCHARGE_RATE: {"2026": SURCHARGE}}},
+        changes_of={"alpha": {SURCHARGE_RATE: {"2026": 0.07}}},
     )
     assert code == 0
     assert out.exists()
@@ -2073,10 +2063,7 @@ def household_situation():
 @pytest.mark.parametrize(
     "changes, limited",
     [
-        (
-            {SURCHARGE_RATE: {"2027": SURCHARGE}},
-            ["additional_dwelling_purchases"],
-        ),
+        ({SURCHARGE_RATE: {"2027": 0.07}}, ["additional_dwelling_purchases"]),
         ({INCOME_TAX_RATE: {"2027": 0.21}}, []),
     ],
 )
@@ -2579,10 +2566,7 @@ def test_a_package_including_a_limited_measure_is_refused(
 ):
     from uk_budget_data.models import Reform
 
-    both = {
-        INCOME_TAX_RATE: {"2027": 0.21},
-        SURCHARGE_RATE: {"2027": SURCHARGE},
-    }
+    both = {INCOME_TAX_RATE: {"2027": 0.21}, SURCHARGE_RATE: {"2027": 0.07}}
     reforms = [
         Reform(id="pkg", name="pkg", parameter_changes=both),
         Reform(
@@ -2593,7 +2577,7 @@ def test_a_package_including_a_limited_measure_is_refused(
         Reform(
             id="b",
             name="b",
-            parameter_changes={SURCHARGE_RATE: {"2027": SURCHARGE}},
+            parameter_changes={SURCHARGE_RATE: {"2027": 0.07}},
         ),
     ]
     code, printed = geography_command(
@@ -2611,13 +2595,16 @@ def test_a_template_measure_is_not_refused_on_real_simulations(
 ):
     """No false refusal: without the run watch, or with its sides swapped,
     a template measure would be refused or the run would stop. The model
-    limits stay active, so the area run's own model-limit check is shown
-    not to refuse them. (Until policyengine-uk #2187, at 2.151.0, a model
-    limit held the VAT base template, and this test set the limits aside
-    for it.)"""
+    limits stay active for the other templates, so the area run's own
+    model-limit check is shown not to refuse them; for the VAT base
+    template they are set aside, since a model limit holds it until
+    policyengine-uk #2187 (tests/test_vat_model_limit.py)."""
     from tests import template_measures
+    from uk_budget_data import model_limits
     from uk_budget_data.models import Reform
 
+    if name == "vat_modifier":
+        monkeypatch.setattr(model_limits, "MODEL_LIMITS", ())
     reform = Reform(
         id="tpl",
         name="tpl",

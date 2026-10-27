@@ -242,12 +242,8 @@ def test_identical_regeneration_voids_the_previous_attestation(world):
 
 def test_release_never_waives_model_limit_or_reconciliation(world):
     limited = model_limits.record(
-        next(
-            limit
-            for limit in model_limits.MODEL_LIMITS
-            if limit.key == "pc_minimum_guarantee_uprating"
-        ),
-        ["gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE"],
+        model_limits.MODEL_LIMITS[0],
+        ["gov.dwp.state_pension.new_state_pension.amount"],
     )
     reference = modifier_artifact(world, model_limits=[limited])
     attest(reference)

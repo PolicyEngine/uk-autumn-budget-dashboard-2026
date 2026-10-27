@@ -8,9 +8,6 @@ policyengine-uk #2557, #2533's fix, deliberately keeps it there. The UK
 hub's earnings fix, stacked on #2557, also covers the pension-age Housing
 Benefit allowances and the savings credit threshold (coordinator, 22
 October).
-
-The limit is in force at policyengine-uk 2.151.0, so these tests run on the
-registry as it is, not the stand-ins (tests/model_limit_stand_ins.py).
 """
 
 import copy
@@ -23,18 +20,16 @@ from policyengine_uk import Simulation
 from policyengine_uk.system import system as installed_system
 from policyengine_uk.tax_benefit_system import statutory_parameters
 
-from tests.test_model_limits import simulation
+from tests.test_model_limits import limit_by_key, simulation
 from uk_budget_data.measure_templates import ModelLimitedWarning, rate_change
 from uk_budget_data.model_limits import (
-    MODEL_LIMITS,
     limits_for_paths,
     limits_touched,
     record,
 )
 
-LIMIT = {limit.key: limit for limit in MODEL_LIMITS}[
-    "pc_minimum_guarantee_uprating"
-]
+BENEFIT_LIMIT = limit_by_key("benefit_uprating_september_cpi")
+LIMIT = limit_by_key("pc_minimum_guarantee_uprating")
 GUARANTEE = "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee"
 SINGLE = f"{GUARANTEE}.SINGLE"
 COUPLE = f"{GUARANTEE}.COUPLE"
@@ -60,10 +55,10 @@ def test_the_limit_is_registered_with_its_key():
 
 
 def test_every_pension_age_housing_benefit_allowance_is_covered():
-    """Adoption tripwire: policyengine-uk after 2.132.6 splits each
-    pension-age allowance in two (``aged`` and ``aged_from_cutoff``; six at
-    2.151.0). When the adopted model has more of them, this fails until
-    each is listed."""
+    """Adoption tripwire: later policyengine-uk releases split each
+    pension-age allowance in two (``aged`` and ``aged_from_cutoff``). When
+    the adopted model has more of them, this fails until each is listed,
+    here and in the September CPI limit's pinned list."""
     allowances = installed_system.parameters.get_child(ALLOWANCES)
     pension_age = {
         f"{ALLOWANCES}.{group}.{name}"
@@ -84,12 +79,6 @@ def test_every_pension_age_housing_benefit_allowance_is_covered():
         (HOUSING_BENEFIT, True),
         ("gov.dwp.housing_benefit.allowances.couple.aged", True),
         ("gov.dwp.housing_benefit.allowances.lone_parent.aged", True),
-        ("gov.dwp.housing_benefit.allowances.single.aged_from_cutoff", True),
-        ("gov.dwp.housing_benefit.allowances.couple.aged_from_cutoff", True),
-        (
-            "gov.dwp.housing_benefit.allowances.lone_parent.aged_from_cutoff",
-            True,
-        ),
         (EARNINGS, True),
         ("gov.dwp.housing_benefit.allowances.single.older", False),
         ("gov.dwp.housing_benefit.allowances.single.younger", False),
@@ -274,11 +263,13 @@ def test_the_fix_check_agrees_with_the_guarantee_pensioners_get(count):
     "path, value", [(COUPLE, 400.0), (HOUSING_BENEFIT, 280.0)]
 )
 def test_a_2027_measure_on_a_covered_amount_records_the_limit(path, value):
-    """Only this limit: the September CPI limit, which covered both too,
-    expired at policyengine-uk 2.151.0."""
+    """Each is on the benefit index too, so both limits are recorded."""
     assert limits_touched(
         simulation(), simulation({path: {"2027": value}})
-    ) == [record(LIMIT, [path])]
+    ) == [
+        record(BENEFIT_LIMIT, [path]),
+        record(LIMIT, [path]),
+    ]
 
 
 def test_a_2027_savings_credit_threshold_measure_records_the_limit():
@@ -293,7 +284,8 @@ def test_a_2027_savings_credit_threshold_measure_records_the_limit():
 )
 def test_a_change_to_the_earnings_input_records_the_limit(key):
     """Without the fix the guarantee ignores earnings, so the change misses
-    it."""
+    it. The triple lock reads the input too, so other limits are recorded
+    beside it."""
     touched = limits_touched(simulation(), simulation({EARNINGS: {key: 0.1}}))
     assert record(LIMIT, [EARNINGS]) in touched
 
@@ -307,7 +299,9 @@ def test_a_measure_confined_to_2026_does_not_record_the_limit():
 
 
 @pytest.mark.parametrize("value", [238.0, 300.0], ids=["freeze", "raise"])
-def test_with_the_fix_a_guarantee_measure_records_nothing(value):
+def test_with_the_fix_a_guarantee_measure_records_only_the_benefit_limit(
+    value,
+):
     """The limit expires on its own once the model has the fix, whatever
     the measure does to the guarantee: the check reads the rule, not the
     measure's amounts."""
@@ -315,7 +309,8 @@ def test_with_the_fix_a_guarantee_measure_records_nothing(value):
     _update(
         reformed.tax_benefit_system.parameters, SINGLE, "2027-04-01", value
     )
-    assert limits_touched(stand_in(), reformed) == []
+    touched = limits_touched(stand_in(), reformed)
+    assert [item["key"] for item in touched] == [BENEFIT_LIMIT.key]
 
 
 def test_a_measure_typing_in_the_guarantee_does_not_count_as_the_fix():

@@ -245,7 +245,12 @@ describe("binding a receipt to its manifest entry", () => {
     );
   });
 
-  it.each([["theta", "pc_minimum_guarantee_uprating"]])(
+  it.each([
+    ["zeta", "state_pension_add_on_uprating"],
+    ["eta", "benefit_uprating_september_cpi"],
+    ["theta", "pc_minimum_guarantee_uprating"],
+    ["iota", "vat_consumption_coverage"],
+  ])(
     "shows %s's model-limited receipt as provisional, never as approved",
     async (key, limit) => {
       // Real receipts for each registered limit bind as provisional;
@@ -264,7 +269,7 @@ describe("binding a receipt to its manifest entry", () => {
     },
   );
 
-  it.each(["theta"])(
+  it.each(["zeta", "eta", "theta", "iota"])(
     "refuses an approved combined run recording %s's model limit",
     async (limitedKey) => {
       // A combined run's own receipt can record a limit no member records

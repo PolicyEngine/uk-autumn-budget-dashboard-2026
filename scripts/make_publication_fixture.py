@@ -84,27 +84,50 @@ try:
     refs["gamma"] = world.write("gamma", values["gamma"], rate=0.25)
     world.reconcile(refs["gamma"])
     stage(manifest, refs["gamma"].path, provisional=True, **args)
-    # A measure the certified data cannot cost (the PIP daily living points
-    # needed for the enhanced rate: the data record awards, not points): its
+    # A measure the certified data cannot cost (the SDLT higher rates): its
     # receipt records the limit, so its artifact is the receipt alone, and
     # staging lists it as not computable, with its reason and no figure.
-    points = record(
-        next(
-            limit
-            for limit in DATA_LIMITS
-            if limit.key == "pip_daily_living_points"
-        ),
-        ["gov.dwp.pip.daily_living.points_thresholds.enhanced"],
+    surcharge = record(
+        DATA_LIMITS[0],
+        ["gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"],
     )
     refs["epsilon"] = world.write(
-        "epsilon", {IN: 0.0, BEYOND: 0.0}, rate=0.26, data_limits=[points]
+        "epsilon", {IN: 0.0, BEYOND: 0.0}, rate=0.26, data_limits=[surcharge]
     )
     stage(manifest, refs["epsilon"].path, **args)
-    # A measure the installed model mis-costs (a 2027 Pension Credit measure,
-    # held until the minimum guarantee follows earnings): its receipt
-    # records the model limit, so it is shown as provisional and can never
-    # be approved. The fixture had one entry for each limit; the other three
-    # expired at policyengine-uk 2.151.0 (PR 238).
+    # A measure the installed model mis-costs (the State Pension's full
+    # rates before policyengine-uk #2336): its receipt records the model
+    # limit, so it is shown as provisional and can never be approved.
+    full_rate = model_limits.record(
+        next(
+            limit for limit in model_limits.MODEL_LIMITS
+            if limit.key == "state_pension_add_on_uprating"
+        ),
+        ["gov.dwp.state_pension.new_state_pension.amount"],
+    )
+    world.expect("zeta", "positive", IN)
+    refs["zeta"] = world.write(
+        "zeta", {IN: 0.9, BEYOND: 1.0}, rate=0.27, model_limits=[full_rate]
+    )
+    world.reconcile(refs["zeta"])
+    stage(manifest, refs["zeta"].path, provisional=True, **args)
+    # A 2027 benefit-level measure held until policyengine-uk #2533: the
+    # browser must honour this limit independently of the State Pension one.
+    september_cpi = model_limits.record(
+        next(
+            limit for limit in model_limits.MODEL_LIMITS
+            if limit.key == "benefit_uprating_september_cpi"
+        ),
+        ["gov.hmrc.child_benefit.amount.eldest"],
+    )
+    world.expect("eta", "positive", IN)
+    refs["eta"] = world.write(
+        "eta", {IN: 1.1, BEYOND: 1.2}, rate=0.28, model_limits=[september_cpi]
+    )
+    world.reconcile(refs["eta"])
+    stage(manifest, refs["eta"].path, provisional=True, **args)
+    # A 2027 Pension Credit measure held until the minimum guarantee follows
+    # earnings: a third limit, honoured like the other two.
     guarantee = model_limits.record(
         next(
             limit for limit in model_limits.MODEL_LIMITS
@@ -118,6 +141,22 @@ try:
     )
     world.reconcile(refs["theta"])
     stage(manifest, refs["theta"].path, provisional=True, **args)
+    # An energy VAT measure built with the VAT base template, held until
+    # policyengine-uk #2187: a fourth limit, recorded by the variable whose
+    # formula the template replaces, honoured like the others.
+    vat = model_limits.record(
+        next(
+            limit for limit in model_limits.MODEL_LIMITS
+            if limit.key == "vat_consumption_coverage"
+        ),
+        [model_limits.variable_path("vat")],
+    )
+    world.expect("iota", "positive", IN)
+    refs["iota"] = world.write(
+        "iota", {IN: 1.5, BEYOND: 1.6}, rate=0.31, model_limits=[vat]
+    )
+    world.reconcile(refs["iota"])
+    stage(manifest, refs["iota"].path, provisional=True, **args)
     records = []
     for member in ("alpha", "beta"):
         receipt = read_receipt(refs[member].path)["execution_receipt"]

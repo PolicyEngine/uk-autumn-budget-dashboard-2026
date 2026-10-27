@@ -1,36 +1,37 @@
-"""A limit that covers variables as well as parameters: VAT measures were
-held until the model grossed VAT up as policyengine-uk #2187 does.
+"""Hold VAT measures until the model grosses VAT up as policyengine-uk #2187
+does.
 
-Before #2187 the model divided household VAT on survey consumption by one
-factor, ``gov.simulation.microdata_vat_coverage`` (0.38), to reach
-receipts; #2187 divides by survey consumption coverage times the household
-share of VAT receipts, 0.67 × 0.7 = 0.469. A measure can move VAT through
-its parameters, through the VAT base template, which replaces the ``vat``
-formula, or through the consumption VAT is charged on, so the limit
-covered variables too, the only one that did.
-
-It expired at policyengine-uk 2.151.0 (PR 238). The machinery that compares
-covered variables (formulas, what decides how they run, stored and
-calculated values) stays for the next such limit, and is tested here on the
-limit's stand-in (tests/model_limit_stand_ins.py), whose fix is a marker a
-test installs. The tests of its check for the fix, and its pins to the
-installed model's VAT build, went with the limit.
+The installed model divides household VAT on survey consumption by one
+factor, ``gov.simulation.microdata_vat_coverage`` (0.38), to reach receipts.
+#2187, in policyengine-uk 2.145.0 and later, divides by survey consumption
+coverage times the household share of VAT receipts, 0.67 × 0.7 = 0.469, so
+without it VAT runs about 23% high (0.469 / 0.38; the UK hub measured about
+24% on Microcosm, relayed by the coordinator on 22 October). A measure can
+move VAT through its parameters, through the VAT base template, which
+replaces the ``vat`` formula, or through the consumption VAT is charged on,
+so the limit covers variables as well as parameters.
 """
 
 import copy
 import datetime
+import math
 import re
 import warnings
+from importlib import import_module
 from types import SimpleNamespace
 
 import numpy
 import pytest
+from policyengine_core.parameters import ParameterNode
+from policyengine_core.periods import YEAR
 from policyengine_core.periods import period as as_period
+from policyengine_core.variables import Variable
 from policyengine_uk import Simulation
+from policyengine_uk.entities import Household
+from policyengine_uk.system import system as installed_system
 from policyengine_uk.utils.scenario import Scenario
 
-from tests import model_limit_stand_ins, template_measures
-from tests.model_limit_stand_ins import with_fix
+from tests import template_measures
 from tests.publication_support import World
 from tests.test_geography import (
     geography_command,
@@ -46,8 +47,8 @@ from tests.test_model_limits import (
     simulation,
     world,  # noqa: F401 - a fixture
 )
+from uk_budget_data import data_limits, model_limits
 from uk_budget_data import geography as g
-from uk_budget_data import model_limits
 from uk_budget_data.cli import parse_args
 from uk_budget_data.data_limits import UnwatchedFormulaWarning
 from uk_budget_data.measure_templates import ModelLimitedWarning, rate_change
@@ -63,8 +64,6 @@ from uk_budget_data.models import Reform
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.publish import approve, stage
 
-pytestmark = pytest.mark.usefixtures("stand_in_model_limits")
-
 LIMIT = limit_by_key("vat_consumption_coverage")
 BENEFIT_LIMIT = limit_by_key("benefit_uprating_september_cpi")
 STANDARD_RATE = "gov.hmrc.vat.standard_rate"
@@ -76,14 +75,25 @@ BUILT_STANDARD_RATE = "baseline." + STANDARD_RATE
 BUILT_COVERAGE = "baseline." + COVERAGE
 CPI_INDEX = "gov.economic_assumptions.indices.obr.consumer_price_index"
 CPI_GROWTH = "gov.economic_assumptions.yoy_growth.obr.consumer_price_index"
-# The deprecated combined factor's declared value is #2187's product,
-# 0.67 × 0.7 = 0.469, from policyengine-uk 2.151.0; a measure that moves it
-# away from that is honoured.
-OTHER_FACTOR = 0.5
+SURVEY_COVERAGE = "gov.simulation.vat.survey_consumption_coverage"
+HOUSEHOLD_SHARE = "gov.simulation.vat.household_share_of_receipts"
+# #2187's factors, and their product, by which it divides household VAT.
+FACTORS = {SURVEY_COVERAGE: 0.67, HOUSEHOLD_SHARE: 0.7}
+FIXED_FACTOR = 0.67 * 0.7
 VAT = variable_path("vat")
 TRANSPORT = "transport_consumption"
 PRIVATE_SCHOOL_VAT_RATE = "gov.contrib.labour.private_school_vat"
 PRIVATE_SCHOOL_FEES = "gov.simulation.private_school_vat.private_school_fees"
+# What the limit covers beside consumption's categories.
+NOT_CATEGORIES = {
+    "vat",
+    "baseline_vat",
+    "vat_change",
+    "full_rate_vat_consumption",
+    "reduced_rate_vat_consumption",
+    "full_rate_vat_expenditure_rate",
+    "consumption",
+}
 
 
 # --- the registry ----------------------------------------------------------
@@ -124,6 +134,48 @@ def test_the_registry_digest_covers_every_field_it_records():
         assert digest(registry) != model_limits.REGISTRY_SHA256, field
 
 
+def test_the_pinned_consumption_categories_are_the_installed_ones():
+    """Adoption tripwire: the categories are pinned for reproducible
+    receipts. If the adopted model's ``consumption`` adds others, this fails
+    until the pin follows."""
+    adds = installed_system.variables["consumption"].adds
+    assert sorted(adds) == sorted(set(LIMIT.variables) - NOT_CATEGORIES)
+    assert NOT_CATEGORIES <= set(LIMIT.variables)
+
+
+def test_what_consumption_rises_by_is_covered():
+    """Consumption's categories rise by an index in years after the
+    data's, so a change to it moves VAT without a VAT parameter or a stored
+    input changing: whatever the installed model uprates them by is
+    covered."""
+    uprating = {
+        installed_system.variables[name].uprating for name in LIMIT.variables
+    } - {None}
+    assert uprating
+    for path in uprating:
+        assert LIMIT in limits_for_paths([path]), path
+
+
+@pytest.mark.parametrize(
+    "variable",
+    [
+        "vat",
+        "baseline_vat",
+        "full_rate_vat_consumption",
+        "reduced_rate_vat_consumption",
+    ],
+)
+def test_every_variable_household_vat_is_built_from_is_covered(variable):
+    """What each formula names, and what the totals add and subtract, that
+    is a variable of the installed model, is covered: a release that builds
+    VAT from another variable fails here until the limit covers it."""
+    found = installed_system.variables[variable]
+    names = set(found.adds or ()) | set(found.subtracts or ())
+    for formula in found.formulas.values():
+        names |= data_limits._code_names(formula.__code__)
+    assert names & set(installed_system.variables) <= set(LIMIT.variables)
+
+
 @pytest.mark.parametrize(
     "path, covered",
     [
@@ -159,6 +211,301 @@ def test_the_limit_covers_vat_parameters_and_variables(path, covered):
     assert (LIMIT in limits_for_paths([path])) is covered
 
 
+# --- the fix -----------------------------------------------------------------
+
+
+def _without_the_fix(tree):
+    """Remove #2187's factors, so a stand-in starts from neither, whichever
+    model is installed."""
+    node = tree.get_child("gov.simulation")
+    if "vat" in node.children:
+        del node.children["vat"]
+        del node.__dict__["vat"]
+
+
+def _add_factors(tree, factors):
+    node = tree.get_child("gov.simulation")
+    node.add_child(
+        "vat",
+        ParameterNode(
+            "gov.simulation.vat",
+            data={
+                path.rsplit(".", 1)[1]: {"values": {"2010-01-01": value}}
+                for path, value in factors.items()
+            },
+        ),
+    )
+
+
+def vat_grossing_factor(simulation):
+    """A stand-in for #2187's helper: the product of its two factors."""
+    return (
+        simulation.vat.survey_consumption_coverage
+        * simulation.vat.household_share_of_receipts
+    )
+
+
+def raw_baseline_vat(household, period, p):
+    """VAT on the household's consumption at the tree's rates."""
+    return (
+        household("full_rate_vat_consumption", period)
+        * p.hmrc.vat.standard_rate
+        + household("reduced_rate_vat_consumption", period)
+        * p.hmrc.vat.reduced_rate
+    )
+
+
+def grossed_by_the_helper(household, period, parameters):
+    p = parameters(period).baseline.gov
+    return raw_baseline_vat(household, period, p) / vat_grossing_factor(
+        p.simulation
+    )
+
+
+def grossed_by_one_factor(household, period, parameters):
+    p = parameters(period).baseline.gov
+    return (
+        raw_baseline_vat(household, period, p)
+        / p.simulation.microdata_vat_coverage
+    )
+
+
+def baseline_vat_grossed(formula):
+    """A stand-in ``baseline_vat`` grossed up by ``formula``: by #2187's
+    helper, which is what the guard looks for, or by the one factor, as a
+    model without #2187 grosses it. Only whether the guard sees the fix is
+    tested with it."""
+    return type(
+        "baseline_vat",
+        (Variable,),
+        {
+            "entity": Household,
+            "definition_period": YEAR,
+            "value_type": float,
+            "label": "baseline VAT (a stand-in)",
+            "formula": formula,
+            "__module__": __name__,
+        },
+    )
+
+
+GROSSED_AS_2187 = baseline_vat_grossed(grossed_by_the_helper)
+GROSSED_BY_ONE_FACTOR = baseline_vat_grossed(grossed_by_one_factor)
+
+
+def stand_in(factors=FACTORS, built=True, changed=True, grossed=True):
+    """A model whose parameter trees carry ``factors``: the tree as built
+    (the ``baseline`` child the check reads), the tree a measure changes,
+    or both; and whose ``baseline_vat`` grosses VAT up by #2187's helper
+    if ``grossed``, or else by the one factor. Its other formulas are the
+    installed ones: only whether the guard sees the fix is tested with
+    it."""
+    system = copy.copy(installed_system)
+    system.parameters = installed_system.parameters.clone()
+    system._parameters_at_instant_cache = {}
+    system.variables = dict(installed_system.variables)
+    stand_in_variable = GROSSED_AS_2187 if grossed else GROSSED_BY_ONE_FACTOR
+    system.variables["baseline_vat"] = stand_in_variable(
+        installed_system.variables["baseline_vat"]
+    )
+    trees = {
+        "built": system.parameters.children["baseline"],
+        "changed": system.parameters,
+    }
+    for name, tree in trees.items():
+        _without_the_fix(tree)
+        if {"built": built, "changed": changed}[name]:
+            _add_factors(tree, factors)
+    return system
+
+
+@pytest.mark.parametrize(
+    "kwargs, fixed",
+    [
+        ({}, True),
+        ({"factors": {SURVEY_COVERAGE: 0.67}}, False),
+        ({"factors": {HOUSEHOLD_SHARE: 0.7}}, False),
+        ({"factors": {}}, False),
+        ({"built": False}, False),
+        ({"changed": False}, True),
+        ({"grossed": False}, False),
+    ],
+    ids=[
+        "both factors",
+        "survey coverage only",
+        "household share only",
+        "neither",
+        "only in the tree a measure changes",
+        "only in the tree as built",
+        "factors no formula reads",
+    ],
+)
+def test_the_fix_is_both_factors_in_the_tree_as_built_and_read(kwargs, fixed):
+    assert LIMIT.fixed(stand_in(**kwargs)) is fixed
+
+
+def add_dead_factors(sim):
+    """#2187's factors in the tree as built, which no formula of a model
+    without #2187 reads."""
+    tree = sim.tax_benefit_system.parameters.children["baseline"]
+    _without_the_fix(tree)
+    _add_factors(tree, FACTORS)
+
+
+def test_the_template_the_old_factor_and_dead_factors_leave_the_check():
+    """The VAT base template replaces ``vat``'s formula, a measure can set
+    the old factor to #2187's product, and a modifier can add #2187's
+    factors to the tree as built: none of them changes the check's answer.
+    A hand-written modifier that also replaces ``baseline_vat`` can (the
+    runbook's VAT section)."""
+    installed = LIMIT.fixed(installed_system)
+    for sim in (
+        simulation(modifier=quietly(template_measures.vat_modifier)),
+        simulation({COVERAGE: {"2026": FIXED_FACTOR}}),
+        simulation(modifier=add_dead_factors),
+    ):
+        assert LIMIT.fixed(sim.tax_benefit_system) is installed
+    fixed_with_the_template = simulation(
+        modifier=with_the_fix(quietly(template_measures.vat_modifier))
+    )
+    assert LIMIT.fixed(fixed_with_the_template.tax_benefit_system) is True
+
+
+def test_factors_added_on_both_sides_do_not_lift_the_limit():
+    """Review of #2187's limit: a modifier on both sides that adds the
+    factors to the tree as built, without changing how VAT is grossed,
+    still has a VAT measure recorded."""
+    assert limits_touched(
+        simulation(modifier=add_dead_factors),
+        simulation({STANDARD_RATE: {"2027": 0.21}}, add_dead_factors),
+    ) == [record(LIMIT, [STANDARD_RATE])]
+
+
+def test_an_unreadable_system_counts_as_unfixed():
+    assert LIMIT.fixed(object()) is False
+    assert LIMIT.fixed(SimpleNamespace(parameters=None)) is False
+
+
+GROSSED = (
+    "    def formula(household, period, parameters):\n"
+    "        p = parameters(period).gov\n"
+    "        return raw_vat / vat_grossing_factor(p.simulation)\n"
+)
+UNGROSSED = (
+    "    def formula(household, period, parameters):\n"
+    "        # vat_grossing_factor(p.simulation), one day\n"
+    "        p = parameters(period).gov\n"
+    "        return raw_vat / p.simulation.microdata_vat_coverage\n"
+)
+NAMED_ONLY = (
+    "    def formula(household, period, parameters):\n"
+    "        name = 'vat_grossing_factor'\n"
+    "        return raw_vat / parameters(period).gov.simulation.coverage\n"
+)
+
+
+def installed_sources(monkeypatch, tmp_path, vat, baseline_vat=GROSSED):
+    """Point the installed-model check at source files with these bodies
+    for ``vat`` and ``baseline_vat``."""
+    sources = {
+        "vat.py": f"class vat:\n{vat}",
+        "baseline_vat.py": f"class baseline_vat:\n{baseline_vat}",
+    }
+    for name, text in sources.items():
+        (tmp_path / name).write_text(text, encoding="utf-8")
+
+    class Root:
+        def joinpath(self, path):
+            return tmp_path / path.rsplit("/", 1)[1]
+
+    monkeypatch.setattr(model_limits, "files", lambda package: Root())
+
+
+@pytest.mark.parametrize(
+    "vat, baseline_vat, factors, fixed",
+    [
+        (GROSSED, GROSSED, FACTORS, True),
+        (UNGROSSED, GROSSED, FACTORS, False),
+        (GROSSED, UNGROSSED, FACTORS, False),
+        (NAMED_ONLY, GROSSED, FACTORS, False),
+        (
+            GROSSED + GROSSED.replace("formula", "formula_2026"),
+            GROSSED,
+            {},
+            False,
+        ),
+        (
+            UNGROSSED + GROSSED.replace("formula", "formula_2026"),
+            GROSSED,
+            FACTORS,
+            False,
+        ),
+        (
+            GROSSED.replace(
+                "vat_grossing_factor(", "utils.vat_grossing_factor("
+            ),
+            GROSSED,
+            FACTORS,
+            True,
+        ),
+        ("    label = 'VAT'\n", GROSSED, FACTORS, False),
+    ],
+    ids=[
+        "both formulas and both factors",
+        "vat ungrossed",
+        "baseline_vat ungrossed",
+        "a string naming the helper",
+        "no factors in the tree",
+        "a later formula only",
+        "the helper as an attribute",
+        "no formula",
+    ],
+)
+def test_the_installed_check_needs_the_factors_and_both_formulas(
+    monkeypatch, tmp_path, vat, baseline_vat, factors, fixed
+):
+    installed_sources(monkeypatch, tmp_path, vat, baseline_vat)
+    monkeypatch.setattr(
+        import_module("policyengine_uk.system"),
+        "system",
+        stand_in(factors=factors),
+    )
+    assert LIMIT.installed_fixed() is fixed
+
+
+@pytest.mark.parametrize("problem", ["missing", "unparsable"])
+def test_an_unreadable_installed_source_counts_as_unfixed(
+    monkeypatch, tmp_path, problem
+):
+    monkeypatch.setattr(
+        import_module("policyengine_uk.system"), "system", stand_in()
+    )
+    if problem == "missing":
+        monkeypatch.setattr(
+            model_limits,
+            "_VAT_FILES",
+            (("vat", "no/such/file.py"), ("baseline_vat", "no/such.py")),
+        )
+    else:
+        installed_sources(monkeypatch, tmp_path, "    def (:\n")
+    assert LIMIT.installed_fixed() is False
+
+
+def test_the_installed_model_still_lacks_the_fix():
+    """Adoption tripwire: remove the limit when a pair with #2187 is
+    adopted (policyengine-uk 2.145.0 or later)."""
+    assert (
+        not LIMIT.installed_fixed()
+    ), f"{LIMIT.fixed_by} is in the installed model: remove {LIMIT.key}"
+
+
+def test_the_two_checks_agree_on_the_installed_model():
+    assert LIMIT.fixed(installed_system) is LIMIT.installed_fixed()
+    assert LIMIT.fixed(simulation().tax_benefit_system) is (
+        LIMIT.installed_fixed()
+    )
+
+
 def shopper(year):
     """One household with known consumption, a third of it full-rated."""
     return {
@@ -176,6 +523,28 @@ def shopper(year):
     }
 
 
+def test_the_checks_agree_with_how_the_model_grosses_vat():
+    """Differential: the checks read the tree and the source; this reads
+    behaviour. VAT divided by what the household's consumption owes at the
+    statutory rates is 1 / 0.469 exactly when the model grosses as #2187
+    does, for VAT and for its baseline."""
+    year = 2027
+    sim = Simulation(situation=shopper(year))
+    rates = sim.tax_benefit_system.parameters(f"{year}-01-01").gov.hmrc.vat
+    raw = (
+        sim.calculate("full_rate_vat_consumption", year)[0]
+        * rates.standard_rate
+        + sim.calculate("reduced_rate_vat_consumption", year)[0]
+        * rates.reduced_rate
+    )
+    assert raw > 0
+    for variable in ("vat", "baseline_vat"):
+        ratio = sim.calculate(variable, year)[0] / raw
+        as_2187 = math.isclose(ratio, 1 / FIXED_FACTOR, rel_tol=1e-6)
+        assert as_2187 is LIMIT.fixed(installed_system), variable
+        assert as_2187 is LIMIT.installed_fixed(), variable
+
+
 # --- what a measure touches -----------------------------------------------
 
 
@@ -190,8 +559,16 @@ def quietly(modifier):
     return run
 
 
-# The stand-in's fix, as a model with #2187 had it.
-install_the_fix = with_fix(LIMIT.key)
+def install_the_fix(sim):
+    """#2187's factors in both trees, and the stand-in ``baseline_vat``
+    grossed by them, as a model with it has them."""
+    for tree in (
+        sim.tax_benefit_system.parameters,
+        sim.tax_benefit_system.parameters.children["baseline"],
+    ):
+        _without_the_fix(tree)
+        _add_factors(tree, FACTORS)
+    sim.tax_benefit_system.update_variable(GROSSED_AS_2187)
 
 
 def with_the_fix(modifier=None):
@@ -266,7 +643,7 @@ MEASURES = {
         [REDUCED_RATE_SHARE],
     ),
     "a new grossing factor": (
-        (None, None, {COVERAGE: {"2027": OTHER_FACTOR}}, None),
+        (None, None, {COVERAGE: {"2027": FIXED_FACTOR}}, None),
         [COVERAGE],
     ),
     "the energy VAT template": ((None, None, None, ENERGY_VAT), [VAT]),
@@ -338,11 +715,11 @@ def test_with_the_fix_a_vat_measure_records_nothing(case):
 
 
 def test_the_fix_on_one_side_only_still_records_it():
-    """Either side's model lacking the fix is enough to hold the measure."""
+    """The two models' ``baseline_vat`` differ too."""
     baseline, _ = measure("a 2027 standard rate rise", fix=True)
     _, reformed = measure("a 2027 standard rate rise")
     assert limits_touched(baseline, reformed) == [
-        record(LIMIT, [STANDARD_RATE])
+        record(LIMIT, [STANDARD_RATE, variable_path("baseline_vat")])
     ]
 
 
@@ -653,15 +1030,8 @@ def test_generation_records_the_limit(world, fields, held):  # noqa: F811
 @pytest.fixture(scope="module")
 def area_manifest(tmp_path_factory):
     """A real manifest: an approved measure, and a VAT measure held at
-    provisional by this limit, as the energy VAT template records it.
-    Built on the stand-in registry, as each test here runs on it."""
+    provisional by this limit, as the energy VAT template records it."""
     instance = World()
-    with pytest.MonkeyPatch.context() as monkeypatch:
-        model_limit_stand_ins.register(monkeypatch)
-        yield from _area_manifest(instance, tmp_path_factory)
-
-
-def _area_manifest(instance, tmp_path_factory):
     try:
         manifest = m.Manifest()
         args = dict(data_root=instance.data_root, inputs=instance.inputs)

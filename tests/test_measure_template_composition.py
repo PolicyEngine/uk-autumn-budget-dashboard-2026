@@ -26,15 +26,6 @@ def energy_cut(sim):
     )
 
 
-# The review household's VAT change under the standard rate rise and the
-# energy cut: £500 more VAT on its recorded consumption, grossed up to
-# receipts by survey coverage times the household share (0.67 × 0.7, from
-# policyengine-uk #2187 at 2.151.0), less the cut's £40 (1,680 × 2.5% /
-# 1.05), which the template doesn't gross. On 2.132.6, grossed by 0.38, it
-# was 1,275.79.
-GROSSED_RISE_LESS_CUT = 1026.10
-
-
 def review_household():
     return {
         "people": {"p": {"age": {2027: 40}}},
@@ -77,7 +68,7 @@ def test_vat_helper_composes_with_scenario_parameter_changes(
     )
     if parameter == "standard_rate":
         assert both.calculate("vat_change", 2027)[0] == pytest.approx(
-            GROSSED_RISE_LESS_CUT, abs=0.01
+            1275.79, abs=0.01
         )
 
 
@@ -123,7 +114,7 @@ def test_vat_helper_measure_and_parameter_measure_pass_consistency():
         situation=review_household(), scenario=combined.to_scenario()
     )
     assert sim.calculate("vat_change", 2027)[0] == pytest.approx(
-        GROSSED_RISE_LESS_CUT, abs=0.01
+        1275.79, abs=0.01
     )
 
 

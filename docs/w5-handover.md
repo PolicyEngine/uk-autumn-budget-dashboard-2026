@@ -57,7 +57,7 @@ The coordinator answered this file's open questions on #88 (12:03Z):
 - **The hub's figures.** The hub posts its re-measured aggregates on GitHub, and the cloud session adds them to the model-gap list.
 
 Other items:
-- **The VAT model limit** (the coordinator on #88, 17:00Z): `vat_consumption_coverage` expired at 6.11.1, whose policyengine-uk 2.151.0 has #2187 (PR 238, with the State Pension and September CPI limits).
+- **The VAT model limit** (the coordinator on #88, 17:00Z): `vat_consumption_coverage`, held until the adopted pair has policyengine-uk #2187. The cloud session owns it.
 - **S4's wealth-tax measure** is in W6's scorecard registry, not this repository.
 
 ## Known follow-ups (not blocking)

@@ -32,8 +32,11 @@ describe("parseManifest on the fixture", () => {
       "beta",
       "delta",
       "epsilon",
+      "eta",
       "gamma",
+      "iota",
       "theta",
+      "zeta",
     ]);
     expect(Object.keys(manifest.combined)).toEqual(["combined--alpha+beta"]);
   });
@@ -50,13 +53,7 @@ describe("parseManifest on the fixture", () => {
   });
 
   it("accepts a public description while retaining older manifests", () => {
-    // Built here: the fixture script writes every entry's description, an
-    // empty one included, so a regenerated fixture is never an older
-    // manifest.
-    const older = parseManifest(edited((m) => {
-      delete m.measures.alpha.description;
-    }));
-    expect(older.measures.alpha.description).toBeUndefined();
+    expect(manifest.measures.alpha.description).toBeUndefined();
     const updated = parseManifest(edited((m) => {
       m.measures.alpha.description = "A newly announced measure.";
     }));
@@ -261,7 +258,7 @@ describe("availability", () => {
       status: "not_computable",
       reason: `Not computable on current data: ${entry.reason}`,
     });
-    expect(entry.reason).toMatch(/PIP daily living award/);
+    expect(entry.reason).toMatch(/additional dwellings/);
   });
 
   it("refuses a not-computable entry that names no limit or reason", () => {

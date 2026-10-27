@@ -80,30 +80,6 @@ def pytest_configure(config):
             importlib.import_module(module)
 
 
-@pytest.fixture
-def stand_in_data_limits(request, monkeypatch):
-    """The two lifted purchase limits registered on top of the registry,
-    for tests of the machinery written around them
-    (tests/data_limit_stand_ins.py). A certified-data test checks the
-    registry itself against the certified data, so it sees it as it is."""
-    if CERTIFIED_DATA in request.keywords:
-        return
-    from tests import data_limit_stand_ins
-
-    data_limit_stand_ins.register(monkeypatch)
-
-
-@pytest.fixture
-def stand_in_model_limits(monkeypatch):
-    """The three expired model limits registered around the registry, for
-    tests of the machinery written around them
-    (tests/model_limit_stand_ins.py). No model has a stand-in's fix unless
-    the test installs it (``with_fix``)."""
-    from tests import model_limit_stand_ins
-
-    model_limit_stand_ins.register(monkeypatch)
-
-
 def _group(item) -> str | None:
     mark = item.get_closest_marker("xdist_group")
     if mark is None:

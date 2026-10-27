@@ -352,37 +352,24 @@ describe("the Pre-measures forecast view", () => {
     // from here
     expect(optionsSummary(who)).toMatch(/· Absolute · Before housing costs$/);
     choose(who, "Poverty line", "Relative");
+    choose(who, "Housing costs", "After housing costs");
     fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
-    const couplesRow = () => within(who).getByRole("rowheader", { name: "Couples with children" }).closest(".ls-bar-row");
-    // Couples with children, relative before housing costs: 14.5% in both
-    // years, said once on the bar
-    let couples = couplesRow();
-    expect(couples).toHaveTextContent("Couples with children14.5%no change");
+    // Couples with children: 19.8% in both years, said once on the bar
+    const couples = within(who).getByRole("rowheader", { name: "Couples with children" }).closest(".ls-bar-row");
+    expect(couples).toHaveTextContent("Couples with children19.8%no change");
     expect(couples.querySelector(".ls-bar-start")).not.toBeNull();
     // Its tooltip, on hover or keyboard focus: both years, the change and
     // the reference group
-    let area = couples.querySelector(".ls-bar-area");
+    const area = couples.querySelector(".ls-bar-area");
     fireEvent.focus(area);
     // Drawn in the window (ViewportTooltip), outside the card
-    let tip = screen.getByRole("tooltip");
-    expect(tip).toHaveTextContent("Couples with children: relative poverty (BHC)");
-    expect(tip).toHaveTextContent("2027-2814.5%");
+    const tip = screen.getByRole("tooltip");
+    expect(tip).toHaveTextContent("Couples with children: relative poverty (AHC)");
+    expect(tip).toHaveTextContent("2027-2819.8%");
     expect(tip).toHaveTextContent("ChangeNo change");
     expect(tip).toHaveTextContent(/All people, \d{4}-\d{2}/);
     fireEvent.blur(area);
     expect(screen.queryByRole("tooltip")).toBeNull();
-    // After housing costs, from here: 20.1% in 2027-28, 20.5% in 2031-32
-    choose(who, "Housing costs", "After housing costs");
-    fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
-    couples = couplesRow();
-    expect(couples).toHaveTextContent("Couples with children20.5%+0.4pp");
-    area = couples.querySelector(".ls-bar-area");
-    fireEvent.focus(area);
-    tip = screen.getByRole("tooltip");
-    expect(tip).toHaveTextContent("Couples with children: relative poverty (AHC)");
-    expect(tip).toHaveTextContent("2027-2820.1%");
-    expect(tip).toHaveTextContent("Change+0.4pp");
-    fireEvent.blur(area);
     expect(within(who).getByText(/^All people/)).toBeInTheDocument();
     for (const option of ["Tenure", "Children by number of children", "Children: lone parent vs couple"]) {
       choose(who, "Breakdown", option);
@@ -528,22 +515,24 @@ describe("the Pre-measures forecast view", () => {
     await renderVerified();
     const section = await screen.findByRole("region", { name: "Pre-measures forecast" });
     // The engine's two packages, each linked to its release
-    expect(await within(section).findByRole("link", { name: /^policyengine 6\.11\.1/, hidden: true })).toHaveAttribute(
+    expect(await within(section).findByRole("link", { name: /^policyengine 6\.10\.2/, hidden: true })).toHaveAttribute(
       "href",
-      "https://github.com/PolicyEngine/policyengine.py/releases/tag/6.11.1",
+      "https://github.com/PolicyEngine/policyengine.py/releases/tag/6.10.2",
     );
-    expect(within(section).getByRole("link", { name: /^policyengine-uk 2\.151\.0/, hidden: true })).toHaveAttribute(
+    expect(within(section).getByRole("link", { name: /^policyengine-uk 2\.132\.6/, hidden: true })).toHaveAttribute(
       "href",
-      "https://github.com/PolicyEngine/policyengine-uk/releases/tag/2.151.0",
+      "https://github.com/PolicyEngine/policyengine-uk/releases/tag/2.132.6",
     );
-    expect(within(section).getByText("Microcosm UK national, 25 Oct 2026 (a6299504)")).toBeInTheDocument();
+    expect(within(section).getByText("Microcosm UK national, 19 Oct 2026 (6cba5d71)")).toBeInTheDocument();
     expect(within(section).getByText("Unvalidated")).toBeInTheDocument();
     expect(within(section).getByText(/2027-28 prices/)).toBeInTheDocument();
     expect(within(section).getByText("2027-28 to 2031-32")).toBeInTheDocument();
-    // No UC health element row: from policyengine-uk 2.134.4 the engine has
-    // the fix, so the baseline no longer applies it (FIXED_IN)
-    expect(within(section).queryByRole("link", { name: /^policyengine-uk #2428/, hidden: true })).toBeNull();
-    expect(within(section).queryByText(/Patched for 2030-31 and 2031-32/)).toBeNull();
+    // The UC health element fix, with its upstream pull request
+    expect(within(section).getByRole("link", { name: /^policyengine-uk #2428/, hidden: true })).toHaveAttribute(
+      "href",
+      "https://github.com/PolicyEngine/policyengine-uk/pull/2428",
+    );
+    expect(within(section).getByText(/Patched for 2030-31 and 2031-32/)).toBeInTheDocument();
     // Each folded in its own topic, closed until asked for
     expect(within(section).getByRole("button", { name: "What the baseline leaves out" })).toHaveAttribute("aria-expanded", "false");
     expect(document.body.textContent.match(/unvalidated/gi)).toHaveLength(1);

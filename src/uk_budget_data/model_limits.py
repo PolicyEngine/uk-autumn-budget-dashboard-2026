@@ -17,9 +17,13 @@ its own: once the model has the fix, nothing is recorded, and its tripwire
 test fails so the limit is removed.
 """
 
+import ast
 import hashlib
 import json
+import math
+import types
 from dataclasses import dataclass
+from importlib.resources import files
 from typing import Callable, Iterable
 
 import numpy
@@ -56,9 +60,142 @@ def variable_path(name: str) -> str:
     return f"{VARIABLE_PATH}{name}"
 
 
-# The benefit uprating index, which the minimum guarantee's check refuses as
-# an earnings rule.
+# policyengine-uk #2336 makes additional_state_pension rise by this index.
+_CPI_ADD_ON = "september_cpi_uprating"
+_ADD_ON_FILE = "variables/gov/dwp/additional_state_pension.py"
+
+
+def _reads(code: types.CodeType, name: str) -> bool:
+    """Whether compiled code, or code nested in it, looks ``name`` up. A
+    comment, docstring or string literal mentioning it does not count: only
+    names the code reads are in ``co_names``."""
+    stack = [code]
+    while stack:
+        current = stack.pop()
+        if name in current.co_names:
+            return True
+        stack.extend(
+            const
+            for const in current.co_consts
+            if isinstance(const, types.CodeType)
+        )
+    return False
+
+
+def _every_formula_reads(system, variable: str, name: str) -> bool:
+    """Whether the system's ``variable`` has formulas, and every one of them
+    looks ``name`` up (:func:`_reads`)."""
+    found = (getattr(system, "variables", None) or {}).get(variable)
+    formulas = list((getattr(found, "formulas", None) or {}).values())
+    codes = [getattr(formula, "__code__", None) for formula in formulas]
+    return bool(codes) and all(
+        isinstance(code, types.CodeType) and _reads(code, name)
+        for code in codes
+    )
+
+
+def _cpi_add_on(system) -> bool:
+    """Whether the system's additional State Pension rises by September CPI
+    (policyengine-uk #2336): every formula it has reads the index."""
+    return _every_formula_reads(
+        system, "additional_state_pension", _CPI_ADD_ON
+    )
+
+
+def _installed_cpi_add_on() -> bool:
+    """The same test on the installed policyengine-uk's source file: every
+    formula of its ``additional_state_pension`` class reads the index as an
+    attribute (parsed, so a comment or string mentioning it doesn't count)."""
+    try:
+        source = (
+            files("policyengine_uk")
+            .joinpath(_ADD_ON_FILE)
+            .read_text(encoding="utf-8")
+        )
+        tree = ast.parse(source)
+    except (OSError, ModuleNotFoundError, SyntaxError, ValueError):
+        return False
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.ClassDef)
+            and node.name == "additional_state_pension"
+        ):
+            formulas = [
+                item
+                for item in node.body
+                if isinstance(item, ast.FunctionDef)
+                and item.name.startswith("formula")
+            ]
+            return bool(formulas) and all(
+                any(
+                    isinstance(read, ast.Attribute)
+                    and read.attr == _CPI_ADD_ON
+                    for read in ast.walk(formula)
+                )
+                for formula in formulas
+            )
+    return False
+
+
+# Both installed models fill unpublished statutory inputs with forecasts.
+# Read the raw input as well as behaviour, or a forecast would count as an
+# outturn. The benefit index is rounded to five decimal places by the engine.
 _BENEFIT_INDEX = "gov.benefit_uprating_cpi"
+_SEPTEMBER_CPI_INPUT = (
+    "gov.economic_assumptions.statutory_uprating_inputs.cpi_september"
+)
+_SEPTEMBER_CPI_INDEX = (
+    "gov.economic_assumptions.indices.september_cpi_uprating"
+)
+
+
+def _benefit_september_cpi(system) -> bool:
+    """Whether both steps of #2533 are present, including actual uprating.
+
+    The raw September 2026 input must be published, and the benefit index
+    must follow September CPI in metadata and in its April 2027 step. A
+    forecast filled into a null input, or repointing metadata without
+    rebuilding the index, is insufficient. A reform to an individual
+    benefit amount does not change whether its model has the fix.
+    """
+    if not hasattr(system, "parameters"):
+        return False
+    try:
+        raw = getattr(system, "_raw_parameters", None)
+        if raw is None:
+            from policyengine_uk.tax_benefit_system import statutory_parameters
+
+            raw = statutory_parameters()
+        published = raw.get_child(_SEPTEMBER_CPI_INPUT)("2026-09-01")
+        if published is None:
+            return False
+        index = system.parameters.get_child(_BENEFIT_INDEX)
+        if index.metadata.get("uprating") != _SEPTEMBER_CPI_INDEX:
+            return False
+        september = system.parameters.get_child(_SEPTEMBER_CPI_INDEX)
+        outturn = system.parameters.get_child(_SEPTEMBER_CPI_INPUT)(
+            "2026-09-01"
+        )
+        growth = index("2027-04-30") / index("2026-04-30")
+        september_growth = september("2027-04-30") / september("2026-04-30")
+        return math.isclose(
+            growth, september_growth, rel_tol=0, abs_tol=1e-5
+        ) and math.isclose(growth, 1 + outturn, rel_tol=0, abs_tol=1e-5)
+    except (
+        AttributeError,
+        KeyError,
+        TypeError,
+        ValueError,
+        ZeroDivisionError,
+    ):
+        return False
+
+
+def _installed_benefit_september_cpi() -> bool:
+    """Read the installed engine with the same behavioural check."""
+    from policyengine_uk.system import system
+
+    return _benefit_september_cpi(system)
 
 
 _MINIMUM_GUARANTEE = (
@@ -148,33 +285,331 @@ def _installed_minimum_guarantee_earnings() -> bool:
 # What the UK hub's earnings fix for the guarantee covers (coordinator, 22
 # October): the guarantee, the pension-age Housing Benefit allowances and
 # the savings credit threshold. policyengine-uk after 2.132.6 splits each
-# pension-age allowance in two (aged, and aged_from_cutoff, six in all; at
-# 2.151.0 aged_from_cutoff equals the guarantee and rises by lagged CPI as
-# it does); test_pension_credit_model_limit.py fails until every one is
-# listed here. The earnings input is covered too: without the fix the
-# guarantee ignores it, so a change to it misses them.
+# pension-age allowance in two (aged, and aged_from_cutoff, six in all);
+# test_pension_credit_model_limit.py fails until every one is listed here.
+# The earnings input is covered too: without the fix the guarantee ignores
+# it, so a change to it misses them, as a change to September CPI misses
+# the State Pension add-on without #2336.
 _PENSION_AGE_EARNINGS_PARAMETERS = (
     _MINIMUM_GUARANTEE,
     "gov.dwp.pension_credit.savings_credit.threshold",
     "gov.dwp.housing_benefit.allowances.couple.aged",
-    "gov.dwp.housing_benefit.allowances.couple.aged_from_cutoff",
     "gov.dwp.housing_benefit.allowances.lone_parent.aged",
-    "gov.dwp.housing_benefit.allowances.lone_parent.aged_from_cutoff",
     "gov.dwp.housing_benefit.allowances.single.aged",
-    "gov.dwp.housing_benefit.allowances.single.aged_from_cutoff",
     _EARNINGS_INPUT,
 )
 
 
-# policyengine-uk 2.151.0 (6.11.1's adoption, PR 238) has the fixes for
-# three limits, so they expired: the State Pension add-on and protected
-# payments rise by September CPI (#2336), benefits rise by the published
-# September outturn (#2533), and household VAT is grossed up by survey
-# coverage and the household share of receipts (#2187). Their checks for
-# the fix went with them; tests/model_limit_stand_ins.py keeps them as
-# stand-ins for the tests of the machinery. The VAT limit was the only one
-# covering variables: the field and its comparison stay for the next.
+# Topmost prefixes whose uprating metadata names gov.benefit_uprating_cpi,
+# including the UC standard allowance's parent (which propagates to all
+# four leaves). Kept static for reproducible receipts; metadata drift in
+# either installed engine fails test_september_cpi_model_limit.py.
+_BENEFIT_CPI_PARAMETERS = (
+    "gov.dfe.childcare_funding_rate",
+    "gov.dwp.JSA.income.amount_18_24",
+    "gov.dwp.JSA.income.amount_over_25",
+    "gov.dwp.JSA.income.couple",
+    "gov.dwp.attendance_allowance.higher",
+    "gov.dwp.attendance_allowance.lower",
+    "gov.dwp.carer_premium.single",
+    "gov.dwp.carers_allowance.rate",
+    "gov.dwp.constant_attendance_allowance.exceptional_rate",
+    "gov.dwp.constant_attendance_allowance.full_day_rate",
+    "gov.dwp.constant_attendance_allowance.intermediate_rate",
+    "gov.dwp.constant_attendance_allowance.part_day_rate",
+    "gov.dwp.disability_premia.disability_couple",
+    "gov.dwp.disability_premia.disability_single",
+    "gov.dwp.disability_premia.enhanced_couple",
+    "gov.dwp.disability_premia.enhanced_single",
+    "gov.dwp.disability_premia.severe_couple",
+    "gov.dwp.disability_premia.severe_single",
+    "gov.dwp.dla.mobility.higher",
+    "gov.dwp.dla.mobility.lower",
+    "gov.dwp.dla.self_care.higher",
+    "gov.dwp.dla.self_care.lower",
+    "gov.dwp.dla.self_care.middle",
+    "gov.dwp.housing_benefit.allowances.couple.aged",
+    "gov.dwp.housing_benefit.allowances.couple.older",
+    "gov.dwp.housing_benefit.allowances.couple.younger",
+    "gov.dwp.housing_benefit.allowances.lone_parent.aged",
+    "gov.dwp.housing_benefit.allowances.lone_parent.older",
+    "gov.dwp.housing_benefit.allowances.lone_parent.younger",
+    "gov.dwp.housing_benefit.allowances.single.aged",
+    "gov.dwp.housing_benefit.allowances.single.older",
+    "gov.dwp.housing_benefit.allowances.single.younger",
+    "gov.dwp.housing_benefit.non_dep_deduction.amount",
+    "gov.dwp.income_support.amounts.amount_16_24",
+    "gov.dwp.income_support.amounts.amount_couples_16_17",
+    "gov.dwp.income_support.amounts.amount_couples_age_gap",
+    "gov.dwp.income_support.amounts.amount_couples_over_18",
+    "gov.dwp.income_support.amounts.amount_lone_16_17",
+    "gov.dwp.income_support.amounts.amount_lone_over_18",
+    "gov.dwp.income_support.amounts.amount_over_25",
+    "gov.dwp.pension_credit.guarantee_credit.carer.addition",
+    "gov.dwp.pension_credit.guarantee_credit.child.addition",
+    "gov.dwp.pension_credit.guarantee_credit.child.disability.addition",
+    "gov.dwp.pension_credit.guarantee_credit.child.disability.severe.addition",
+    "gov.dwp.pension_credit.guarantee_credit.child.first.addition",
+    "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.COUPLE",
+    "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee.SINGLE",
+    "gov.dwp.pension_credit.guarantee_credit.severe_disability.addition",
+    "gov.dwp.pension_credit.savings_credit.threshold",
+    "gov.dwp.pip.daily_living.enhanced",
+    "gov.dwp.pip.daily_living.standard",
+    "gov.dwp.pip.mobility.enhanced",
+    "gov.dwp.pip.mobility.standard",
+    "gov.dwp.sda.maximum",
+    "gov.dwp.tax_credits.child_tax_credit.elements.child_element",
+    "gov.dwp.tax_credits.child_tax_credit.elements.dis_child_element",
+    "gov.dwp.tax_credits.child_tax_credit.elements.severe_dis_child_element",
+    "gov.dwp.tax_credits.means_test.income_threshold",
+    "gov.dwp.tax_credits.means_test.income_threshold_CTC_only",
+    "gov.dwp.tax_credits.working_tax_credit.elements.basic",
+    "gov.dwp.tax_credits.working_tax_credit.elements.couple",
+    "gov.dwp.tax_credits.working_tax_credit.elements.disabled",
+    "gov.dwp.tax_credits.working_tax_credit.elements.lone_parent",
+    "gov.dwp.tax_credits.working_tax_credit.elements.severely_disabled",
+    "gov.dwp.tax_credits.working_tax_credit.elements.worker",
+    "gov.dwp.universal_credit.elements.carer.amount",
+    "gov.dwp.universal_credit.elements.child.amount",
+    "gov.dwp.universal_credit.elements.child.disabled.amount",
+    "gov.dwp.universal_credit.elements.child.first.higher_amount",
+    "gov.dwp.universal_credit.elements.child.severely_disabled.amount",
+    "gov.dwp.universal_credit.elements.childcare.cap",
+    "gov.dwp.universal_credit.elements.disabled.amount",
+    "gov.dwp.universal_credit.elements.housing.non_dep_deduction.amount",
+    "gov.dwp.universal_credit.means_test.work_allowance",
+    "gov.dwp.universal_credit.standard_allowance.amount",
+    "gov.hmrc.child_benefit.amount.additional",
+    "gov.hmrc.child_benefit.amount.eldest",
+    "gov.hmrc.council_tax.high_value_surcharge.amount",
+    "gov.social_security_scotland.carer_support_payment.rate",
+)
+
+# Parameters outside the benefit index whose 2027 amount is still computed
+# from the September 2026 CPI input. The UC protected health element is null
+# from April 2027, so policyengine-uk's uc_reform takes the UC Act 2025 s. 4
+# floor, which reads statutory_uprating_inputs.cpi_september for the
+# previous September (review of #85). The September CPI index is built from
+# the same input, and from policyengine-uk #2336 additional State Pension and
+# new State Pension protected payments rise by it, so a pair with #2336 but
+# without #2533's fix gives them a forecast for their April 2027 rise
+# (coordinator, 22 October). Any route that moves the index (the input, a
+# CPI growth path or its forecast gap) changes its stored values. The
+# triple lock reads the same input for its April 2027 CPI leg, so a
+# measure on its rule, or anything that moves the index it builds, is held
+# too: the State Pension limit no longer holds it once #2336 is in (review
+# of #90). A measure on the full rates alone is not held.
+_SEPTEMBER_INPUT_READERS = (
+    "gov.dwp.universal_credit.rebalancing.protected_health_element",
+    _SEPTEMBER_CPI_INDEX,
+    "gov.dwp.state_pension.triple_lock",
+    "gov.economic_assumptions.indices.triple_lock",
+)
+
+
+# policyengine-uk #2187 grosses household VAT up to receipts by these two
+# factors, in place of microdata_vat_coverage alone, through this helper.
+_VAT_FACTORS = (
+    "gov.simulation.vat.survey_consumption_coverage",
+    "gov.simulation.vat.household_share_of_receipts",
+)
+_VAT_GROSSING = "vat_grossing_factor"
+# The classes that gross VAT up, in the installed source. vat_change is
+# their difference, so both must have the fix.
+_VAT_FILES = (
+    ("vat", "variables/gov/hmrc/vat.py"),
+    ("baseline_vat", "variables/gov/hmrc/baseline_vat.py"),
+)
+
+
+def _vat_grossing_factors(system) -> bool:
+    """Whether the system grosses household VAT up by survey consumption
+    coverage and the household share of receipts (policyengine-uk #2187):
+    both factors are leaves of the tree as the model built it, and every
+    formula of its ``baseline_vat`` looks up the helper that returns their
+    product (or the old factor, if a measure moves it from its default),
+    which the formulas divide by.
+
+    Neither reads anything a parameter change or the VAT base template
+    changes: that template replaces ``vat``'s formula, never
+    ``baseline_vat``'s, and a parameter change can't add the factors to the
+    tree as built. The formula check is behaviour, so factors added to the
+    tree as built, which the model's formulas don't read, don't count
+    either. The payment template, pointed at ``baseline_vat``, replaces
+    its formula with one that reads no grossing factor, so that side
+    counts as unfixed (fails safe); the property-surcharge template
+    refuses it, since ``baseline_vat``'s formula reads neither OBR index.
+    A hand-written modifier can change both things read: replacing
+    ``baseline_vat`` on one side of a model without the fix holds the
+    measure, since the variable then differs between the sides (fails
+    safe); adding the factors to the tree as built and replacing
+    ``baseline_vat`` on both sides with formulas that look up the helper
+    makes an unfixed model count as fixed (fails open). Nothing here
+    guards the second: treat such a modifier as a change to the model.
+    """
+    if not hasattr(system, "parameters"):
+        return False
+    try:
+        tree = _unreformed(system.parameters)
+        factors = all(
+            hasattr(tree.get_child(path), "values_list")
+            for path in _VAT_FACTORS
+        )
+    except (AttributeError, KeyError, TypeError, ValueError):
+        return False
+    return factors and _every_formula_reads(
+        system, "baseline_vat", _VAT_GROSSING
+    )
+
+
+def _calls(function: ast.FunctionDef, name: str) -> bool:
+    """Whether a parsed function calls ``name``, by its own name or as an
+    attribute. A comment, docstring or string naming it doesn't count."""
+    return any(
+        isinstance(node, ast.Call)
+        and (
+            (isinstance(node.func, ast.Name) and node.func.id == name)
+            or (
+                isinstance(node.func, ast.Attribute) and node.func.attr == name
+            )
+        )
+        for node in ast.walk(function)
+    )
+
+
+def _installed_formulas_call(path: str, variable: str, name: str) -> bool:
+    """Whether every formula of the ``variable`` class in the installed
+    policyengine-uk's source file ``path`` calls ``name``."""
+    try:
+        source = (
+            files("policyengine_uk").joinpath(path).read_text(encoding="utf-8")
+        )
+        tree = ast.parse(source)
+    except (OSError, ModuleNotFoundError, SyntaxError, ValueError):
+        return False
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and node.name == variable:
+            formulas = [
+                item
+                for item in node.body
+                if isinstance(item, ast.FunctionDef)
+                and item.name.startswith("formula")
+            ]
+            return bool(formulas) and all(
+                _calls(formula, name) for formula in formulas
+            )
+    return False
+
+
+def _installed_vat_grossing_factors() -> bool:
+    """Read the installed engine with the same check, and its source: every
+    formula of its ``vat`` and ``baseline_vat`` classes calls the helper
+    for the grossing factor #2187 adds (parsed, as for the State Pension
+    add-on)."""
+    from policyengine_uk.system import system
+
+    return _vat_grossing_factors(system) and all(
+        _installed_formulas_call(path, variable, _VAT_GROSSING)
+        for variable, path in _VAT_FILES
+    )
+
+
+# consumption's categories, which it adds (COICOP), as policyengine-uk
+# 2.132.6 lists them. Kept static for reproducible receipts;
+# test_vat_model_limit.py fails if the installed model adds others.
+_CONSUMPTION_CATEGORIES = (
+    "food_and_non_alcoholic_beverages_consumption",
+    "alcohol_and_tobacco_consumption",
+    "clothing_and_footwear_consumption",
+    "housing_water_and_electricity_consumption",
+    "household_furnishings_consumption",
+    "health_consumption",
+    "transport_consumption",
+    "communication_consumption",
+    "recreation_consumption",
+    "education_consumption",
+    "restaurants_and_hotels_consumption",
+    "miscellaneous_consumption",
+)
+
+# consumption's categories rise by this index in years after the data's, so
+# a CPI path moves VAT without changing a VAT parameter. In a household
+# calculation it changes no stored input either; on a dataset the projected
+# inputs follow it, and record too. test_vat_model_limit.py fails if the
+# installed model uprates them by another.
+_CONSUMPTION_UPRATING = (
+    "gov.economic_assumptions.indices.obr.consumer_price_index"
+)
+
+# What household VAT is built from: the two grossed liabilities, their
+# difference, the two consumption bases and what they are built from. A
+# measure on any of them moves VAT without changing a VAT parameter: the VAT
+# base template replaces vat's formula, and a modifier can set consumption.
+_VAT_VARIABLES = (
+    "vat",
+    "baseline_vat",
+    "vat_change",
+    "full_rate_vat_consumption",
+    "reduced_rate_vat_consumption",
+    "full_rate_vat_expenditure_rate",
+    "consumption",
+    *_CONSUMPTION_CATEGORIES,
+)
+
+
 MODEL_LIMITS = (
+    ModelLimit(
+        key="state_pension_add_on_uprating",
+        parameters=(
+            "gov.dwp.state_pension.basic_state_pension.amount",
+            "gov.dwp.state_pension.new_state_pension.amount",
+            "gov.dwp.state_pension.triple_lock",
+            # Without the fix the add-on ignores September CPI, so a change
+            # that moves the index but not the full rates misses it.
+            "gov.economic_assumptions.indices.september_cpi_uprating",
+        ),
+        fixed_by="policyengine-uk #2336",
+        reason=(
+            "The installed model raises additional State Pension and new "
+            "State Pension protected payments with the full rates, not with "
+            "prices, so anything that moves the full rates moves them too, "
+            "and a change to September CPI misses them. They rise by prices: "
+            "the statutory floor, which the Up-rating Orders give as "
+            "September CPI (SI 2026/148 articles 4(3)(a) and 6(3)(b)). So "
+            "this measure is mis-costed: on uk-data 1.58.1, a 10% rise in "
+            "the full rates overstates its net cost by about £0.85bn to "
+            "£1.06bn a year over 2026-27 to 2030-31. policyengine-uk #2336 "
+            "fixes it; it is not in this model. Held at provisional."
+        ),
+        fixed=_cpi_add_on,
+        installed_fixed=_installed_cpi_add_on,
+    ),
+    ModelLimit(
+        key="benefit_uprating_september_cpi",
+        parameters=_BENEFIT_CPI_PARAMETERS + _SEPTEMBER_INPUT_READERS,
+        fixed_by="policyengine-uk #2533",
+        reason=(
+            "The installed benefit uprating index follows lagged calendar-year "
+            "CPI: the parameters uprated by it, the UC standard allowance "
+            "among them, step by 2.3% in April 2027 against September 2026 "
+            "CPI of 3.5% (ONS D7G7, published 21 October 2026). The UC "
+            "protected health element's 2027 amount also reads the "
+            "September 2026 input, which is still a forecast, and so do the "
+            "triple lock's CPI leg and the September CPI index, by which "
+            "additional State Pension and new State Pension protected "
+            "payments rise once policyengine-uk #2336 is in the model. The "
+            "2026-27 rates are hard-coded and unaffected. policyengine-uk "
+            "#2533 must both enter the September outturn and repoint the "
+            "benefit index to September CPI. Until both steps are in the "
+            "model, measures "
+            "touching these benefit levels from 2027 are held at "
+            "provisional."
+        ),
+        fixed=_benefit_september_cpi,
+        installed_fixed=_installed_benefit_september_cpi,
+        from_year=2027,
+    ),
     ModelLimit(
         key="pc_minimum_guarantee_uprating",
         parameters=_PENSION_AGE_EARNINGS_PARAMETERS,
@@ -198,6 +633,36 @@ MODEL_LIMITS = (
         fixed=_minimum_guarantee_earnings,
         installed_fixed=_installed_minimum_guarantee_earnings,
         from_year=2027,
+    ),
+    ModelLimit(
+        key="vat_consumption_coverage",
+        parameters=(
+            "gov.hmrc.vat",
+            "gov.simulation.microdata_vat_coverage",
+            _CONSUMPTION_UPRATING,
+            # baseline_vat reads the engine's copy of the tree as built, and
+            # vat_change subtracts it, so an edit to that copy moves VAT.
+            "baseline.gov.hmrc.vat",
+            "baseline.gov.simulation.microdata_vat_coverage",
+        ),
+        variables=_VAT_VARIABLES,
+        fixed_by="policyengine-uk #2187",
+        reason=(
+            "The installed model grosses household VAT up to receipts by a "
+            "single factor of 0.38 (gov.simulation.microdata_vat_coverage). "
+            "policyengine-uk #2187 divides instead by survey consumption "
+            "coverage times the household share of VAT receipts, 0.67 × 0.7 "
+            "= 0.469, so this model's VAT is about 23% higher (the UK hub's "
+            "notice 59 puts it about 24% high on Microcosm), and a "
+            "measure that moves a VAT rate, the VAT base or the consumption "
+            "VAT is charged on can be overstated by as much. A measure "
+            "built with the VAT base template is held too, though the term "
+            "the template adds is not grossed. #2187 is not in this model. "
+            "Until a pair with it is adopted, such measures are held at "
+            "provisional."
+        ),
+        fixed=_vat_grossing_factors,
+        installed_fixed=_installed_vat_grossing_factors,
     ),
 )
 
