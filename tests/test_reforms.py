@@ -876,7 +876,6 @@ CARD_TEXT_BLOCKS = {
         r"(?s)export const POLICY_DETAILS = \[.*?\n\];"
     ],
     "utils/householdExamples.js": [r"(?m)^\s*(?:measure|measures|tag): .*$"],
-    "utils/youngPersonPresets.js": [r"(?m)^\s*(?:measure|measures|tag): .*$"],
     "components/personal/SingleYearResults.jsx": [
         r"export const SPENDING_MEASURES = \[.*\];"
     ],

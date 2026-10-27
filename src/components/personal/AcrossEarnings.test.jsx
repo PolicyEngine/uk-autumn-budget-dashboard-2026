@@ -7,7 +7,7 @@ import { fireEvent, render, within } from "@testing-library/react";
 import { AcrossEarnings } from "./SingleYearResults";
 import { normaliseHouseholdImpact } from "../../utils/householdImpactApi";
 
-// A real answer with both cards' parts: the higher earner's, 2027-28
+// A real answer with both cards' parts: the middle earner's, 2027-28
 const file = JSON.parse(readFileSync(join(fileURLToPath(import.meta.url), "..", "..", "..", "..", "public", "data", "household_presets.json"), "utf8"));
 const answer = (id, year = 2027) =>
   normaliseHouseholdImpact(file.entries.find((entry) => entry.preset_id === id && entry.year === year).response);
@@ -18,7 +18,7 @@ const shownChips = (container) =>
 
 describe("the two Across earnings cards", () => {
   it("share one Show control above both, which switches a component on both cards", () => {
-    const data = answer("higher-earner");
+    const data = answer("middle-earner");
     const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
     const [net, rate] = cards(container);
     // No Show chips on either card: one control above the pair
@@ -48,7 +48,7 @@ describe("the two Across earnings cards", () => {
   });
 
   it("say so when the answer has no breakdown by tax and benefit, rather than silently drawing one line", () => {
-    const data = answer("higher-earner");
+    const data = answer("middle-earner");
     const bare = { ...data.sweep, netParts: null, parts: null };
     const { container } = render(<AcrossEarnings sweep={bare} salary={data.salaryUsed} yearLabel="2027-28" />);
     expect(container.querySelector(".across-earnings-no-parts")).toHaveTextContent(
