@@ -8,7 +8,7 @@ import LandingPage from "./components/LandingPage";
 import LandingBackdrop from "./components/landing/LandingBackdrop";
 import useScrollReveal from "./hooks/useScrollReveal";
 import ViewTabs from "./components/ViewTabs";
-import { SUB_TAB_PARAM } from "./components/SubTabs";
+import { SUB_TAB_PARAM, subTabId } from "./components/SubTabs";
 import SectionHeading from "./components/SectionHeading";
 import TwinLink from "./components/TwinLink";
 import { GROWTH_CURRENT_LAW_ANCHOR, YOUNG_PEOPLE_ANCHOR } from "./utils/viewAnchors";
@@ -270,9 +270,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       // Every view's code, so a tab switch need not wait for it
       ...Object.keys(VIEW_CODE).map((view) => () => preloadView(view)),
       ...IDLE_TABLES.map((table) => () => loadVerifiedTablesOnce(catalogue, table).catch(() => {})),
-      () => prefetchGeography(catalogue),
       () => loadOutlook().catch(() => {}),
-      () => loadPresetChanges().catch(() => {}),
       () => pruneVerifiedCache().catch(() => {}),
     ];
     let cancel;
@@ -287,6 +285,32 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     return () => {
       steps.length = 0;
       cancel?.();
+    };
+  }, [catalogue]);
+  // The two big files (the map's boundaries and results by area; the
+  // example households' answers) load only for the views that show them:
+  // when one opens (its cards ask), or a little before, as the pointer or
+  // focus reaches its tab, through the same checks
+  useEffect(() => {
+    if (!catalogue.manifest) return undefined;
+    const done = new Set();
+    const onIntent = (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      if (!done.has("map") && target.closest(`#${subTabId("population", "all")}`)) {
+        done.add("map");
+        prefetchGeography(catalogue);
+      }
+      if (!done.has("presets") && target.closest("#tab-household")) {
+        done.add("presets");
+        loadPresetChanges().catch(() => {});
+      }
+    };
+    document.addEventListener("pointerover", onIntent, { passive: true });
+    document.addEventListener("focusin", onIntent);
+    return () => {
+      document.removeEventListener("pointerover", onIntent);
+      document.removeEventListener("focusin", onIntent);
     };
   }, [catalogue]);
   const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
