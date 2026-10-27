@@ -509,6 +509,16 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   const handleShowEffect = (policyId) => {
     setChosenPolicies([policyId]);
     setSelectionChosen(true);
+    // Open on a year the measure moves revenue in: the threshold freeze
+    // (2031-32 only) opened on 2027-28 showed only empty charts. A measure
+    // with none in the years shown (the Warm Home Discount top-up, winter
+    // 2026-27) keeps the year, and the revenue card says why it is empty
+    const moves = (year) =>
+      published.budgetary.some((row) => row.reform_id === policyId && Number(row.year) === year && Math.abs(Number(row.value)) > 0.0005);
+    if (!moves(distributionalYear)) {
+      const first = DISPLAY_YEARS.find(moves);
+      if (first !== undefined) setDistributionalYear(first);
+    }
     handleTabChange("dashboard");
   };
   useLayoutEffect(() => {
