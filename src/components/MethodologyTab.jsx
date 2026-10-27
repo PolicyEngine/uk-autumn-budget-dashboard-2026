@@ -404,7 +404,7 @@ function MethodologyTab({ onShowTab }) {
                         income, which is before indirect taxes, so the VAT and fuel duty measures do
                         not change it.
                       </>,
-                      "People lifted out or pushed in are the change in the rate times that year's population in the current-law projection, to the nearest 1,000.",
+                      "People moved out of or into poverty are the change in the rate times that year's population in the current-law projection, to the nearest 1,000.",
                     ],
                   },
                 ],

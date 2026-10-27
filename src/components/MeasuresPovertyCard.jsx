@@ -34,7 +34,7 @@ import "./MeasuresPovertyCard.css";
 // Why the measures with no effect move no one: one sentence, true of every
 // such measure, not a reason per measure
 const NO_EFFECT_TEXT =
-  "They change prices, capital gains or employers' costs, which the income poverty is measured on leaves out, or move no one across the line this year.";
+  "They change prices, capital gains or employers' costs, which the income behind the poverty measure leaves out, or move no one across the poverty line this year.";
 
 /**
  * The measures' own changes in the poverty rate (pp) in `year`, for the
@@ -180,15 +180,14 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     const sentence = measure?.sentence ?? policyDetailsFor(measure)?.sentence;
     return sentence ? `${sentence[0].toUpperCase()}${sentence.slice(1)}` : `Of the measures, ${step.name}`;
   };
-  const moves = (step) => (step.x > 0 ? `lifting ${about(step)} ${who} out of poverty` : `pushing ${about(step)} ${who} into poverty`);
+  const moves = (step) => (step.x > 0 ? `moving ${about(step)} ${who} out of poverty` : `moving ${about(step)} ${who} into poverty`);
   const summary = top ? (
     peopleMode ? (
       <>
-        {subjectOf(top)} does most, {moves(top)}
+        {subjectOf(top)} has the largest effect, {moves(top)}
         {totalStep ? (
           <>
-            ; all the measures together {totalStep.x > 0 ? "lift" : "push"} {about(totalStep)}
-            {(totalStep.x > 0) !== (top.x > 0) ? (totalStep.x > 0 ? " out of poverty" : " into poverty") : ""}.
+            ; all the measures together move {about(totalStep)} {who} {totalStep.x > 0 ? "out of" : "into"} poverty.
           </>
         ) : (
           "."

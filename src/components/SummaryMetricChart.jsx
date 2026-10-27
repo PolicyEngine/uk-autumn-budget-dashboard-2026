@@ -510,10 +510,10 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                 {Math.round(selected.value * 1e6) === 0 ? (
                   <>do not change {subjectOf(metric)}</>
                 ) : metric.line && selectedCount ? (
-                  // "lift about 5,000 people out of absolute poverty (before
+                  // "move about 5,000 people out of absolute poverty (before
                   // housing costs), less than 0.1 percentage points"
                   <>
-                    {selected.value < 0 ? "lift" : "push"} <strong>{selectedCount}</strong>{" "}
+                    move <strong>{selectedCount}</strong>{" "}
                     {selected.value < 0 ? "out of" : "into"} {metric.line}, {plainAmount(metric, selected.value)}
                   </>
                 ) : (
