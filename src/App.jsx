@@ -26,7 +26,7 @@ import { GROWTH_CURRENT_LAW_ANCHOR } from "./components/livingStandards/sections
 import { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import AgeSection from "./components/AgeSection";
 import PopulationImpactView from "./components/PopulationImpactView";
-import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS, selectableYearOr } from "./utils/displayYears";
+import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS, FIRST_DISPLAY_YEAR, selectableYearOr } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
 import TitleMark, { EdgeAboutTab } from "./components/HomeButton";
 import OverviewDrawer from "./components/OverviewDrawer";
@@ -315,6 +315,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   const results = useMemo(() => ({
     budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, DISPLAY_YEARS),
+    // The year before the charts start (2026-27), from the same verified
+    // rows: one line under Revenue impact, never a bar
+    budgetBefore: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, [FIRST_DISPLAY_YEAR - 1])[0],
     rawDistributional: published.distributional.filter((row) => selectedPolicies.includes(row.reform_id)),
     rawWinnersLosers: published.winnersLosers.filter((row) => selectedPolicies.includes(row.reform_id)),
     // Every verified run's rows: the summary statistics read one run, not a
@@ -689,7 +692,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             subtitle="Net effect of the selected policies on government revenue and spending, by year."
           />
           <section id="revenue" className="report-section hero-chart">
-            <BudgetaryImpactChart data={results.budgetData} selectedYear={distributionalYear} selectedPolicies={selectedPolicies} />
+            <BudgetaryImpactChart data={results.budgetData} before={results.budgetBefore} selectedYear={distributionalYear} selectedPolicies={selectedPolicies} />
             {/* OBR comparison: an expandable row at the foot of the card
                 once the OBR has costed the measures */}
             <ObrComparisonFoot

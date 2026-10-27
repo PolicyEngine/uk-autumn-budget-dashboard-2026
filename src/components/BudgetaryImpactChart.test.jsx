@@ -2,7 +2,7 @@ import { cloneElement } from "react";
 import { describe, it, expect, vi } from "vitest";
 import fc from "fast-check";
 import { fireEvent, render, screen } from "@testing-library/react";
-import BudgetaryImpactChart, { measureOrder } from "./BudgetaryImpactChart";
+import BudgetaryImpactChart, { beforeYearsLine, measureOrder } from "./BudgetaryImpactChart";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { ALPHA, BETA, measureCatalogueFixture, YEAR } from "../test/measureCatalogueFixture";
 
@@ -94,5 +94,44 @@ describe("BudgetaryImpactChart", () => {
     // Clear unpins the rest
     fireEvent.click(screen.getByRole("button", { name: /^Clear the/ }));
     for (const chip of chips) expect(chip).toHaveAttribute("aria-pressed", "false");
+  });
+
+  describe("the year before the chart's first", () => {
+    const whd = { id: "whd", seriesKey: "measure:whd", name: "Warm Home Discount top-up" };
+    const vat = { id: "vat", seriesKey: "measure:vat", name: "Zero VAT on domestic electricity" };
+    const shown = [2027, 2028].map((year) => ({ year, "measure:whd": 0, "measure:vat": -1.38, netImpact: -1.38 }));
+    const before = { year: 2026, "measure:whd": -0.52, "measure:vat": -0.69, netImpact: -1.21, unpublished: false };
+
+    it("gives the selection's effect, naming a measure whose whole effect falls in it", () => {
+      expect(beforeYearsLine(before, shown, [whd, vat])).toBe(
+        "In 2026-27, before the years shown, the selected policies cost £1.2bn, including all of the Warm Home Discount top-up.",
+      );
+      expect(beforeYearsLine({ ...before, "measure:whd": 0, netImpact: -0.69 }, shown, [vat])).toBe(
+        "In 2026-27, before the years shown, the selected policy costs £0.7bn.",
+      );
+    });
+
+    it("names a measure once: not when the card's note already does", () => {
+      expect(beforeYearsLine({ ...before, "measure:vat": 0, netImpact: -0.52 }, shown, [whd], ["whd"])).toBe(
+        "In 2026-27, before the years shown, the selected policy costs £0.5bn.",
+      );
+    });
+
+    it("says nothing when the year is zero or a selected measure has no verified figure", () => {
+      expect(beforeYearsLine({ ...before, "measure:whd": 0, "measure:vat": 0, netImpact: 0 }, shown, [whd, vat])).toBeNull();
+      expect(beforeYearsLine({ year: 2026, netImpact: null, unpublished: true }, shown, [whd])).toBeNull();
+      expect(beforeYearsLine(null, shown, [whd])).toBeNull();
+    });
+
+    it("shows the line under the card from the year's point", () => {
+      const point = { year: YEAR - 1, ...Object.fromEntries(catalogue.displayable.map((measure) => [measure.seriesKey, -1])), netImpact: -catalogue.displayable.length, unpublished: false };
+      const ids = catalogue.displayable.map((measure) => measure.id);
+      const { container } = render(
+        <MeasureCatalogueProvider catalogue={catalogue}>
+          <BudgetaryImpactChart data={mockData} before={point} selectedYear={YEAR} selectedPolicies={ids} />
+        </MeasureCatalogueProvider>,
+      );
+      expect(container.querySelector(".chart-footer .note")).toHaveTextContent(/before the years shown, the selected polic(y|ies) costs? £\d+\.\dbn\./);
+    });
   });
 });
