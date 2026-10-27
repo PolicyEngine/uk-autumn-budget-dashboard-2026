@@ -251,7 +251,7 @@ describe("the About pill in the tab row, and its overview drawer", () => {
     expect(site).toHaveAttribute("href", "https://policyengine.org/uk");
     expect(site).toHaveAttribute("target", "_blank");
     expect(site).toHaveAttribute("rel", "noopener noreferrer");
-    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Close the overview" })).toHaveFocus());
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Close" })).toHaveFocus());
     expect(document.body.style.overflow).toBe("hidden");
     // The view stays where it was
     expect(search().get("tab")).toBe("methodology");
@@ -259,7 +259,7 @@ describe("the About pill in the tab row, and its overview drawer", () => {
 
   it("closes by the close button, Esc or the backdrop, with focus back on the tab", async () => {
     const { container } = await openDrawer();
-    fireEvent.click(within(drawer()).getByRole("button", { name: "Close the overview" }));
+    fireEvent.click(within(drawer()).getByRole("button", { name: "Close" }));
     expect(drawer()).toBeNull();
     expect(edge()).toHaveFocus();
     expect(document.body.style.overflow).toBe("");
@@ -277,7 +277,7 @@ describe("the About pill in the tab row, and its overview drawer", () => {
   it("keeps Tab inside the drawer", async () => {
     await openDrawer();
     const dialog = drawer();
-    const close = within(dialog).getByRole("button", { name: "Close the overview" });
+    const close = within(dialog).getByRole("button", { name: "Close" });
     const links = within(dialog).getAllByRole("link");
     links.at(-1).focus();
     fireEvent.keyDown(links.at(-1), { key: "Tab" });
