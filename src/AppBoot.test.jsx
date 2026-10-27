@@ -6,13 +6,15 @@ import App, { preloadAllViews } from "./App";
 import { loadDashboardParts } from "./utils/loadDashboard";
 import { resetVerifiedCache } from "./utils/publication/cache";
 import { resetParsedTables } from "./utils/publication/load";
-import { BASE_PATH, fixtureFetch, fixtureText } from "./test/publicationFixture";
+import { BASE_PATH, fixtureFetch, fixtureJson, fixtureText } from "./test/publicationFixture";
 
 // The build's verified publication (app/publicationBoot.ts) crosses to the
 // page as plain data: built here from the fixture through the same loader
 beforeAll(preloadAllViews, 60_000);
 
-const ALPHA_BUDGET = "artifacts/alpha/f3b823a98663f150/budgetary_impact.csv";
+// Alpha's budget table, at the path the fixture's manifest names (the
+// generator re-keys it whenever the engine changes)
+const ALPHA_BUDGET = `${fixtureJson("manifest.json").measures.alpha.artifact}/budgetary_impact.csv`;
 
 async function buildBoot() {
   const serve = fixtureFetch();
