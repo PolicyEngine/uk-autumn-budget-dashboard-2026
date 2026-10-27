@@ -9,7 +9,7 @@ describe("plain card sentences", () => {
       "On average the lowest-income tenth gains about £180 a year, and the highest-income tenth loses about £310.",
     );
     expect(decileSentence(rows(0.71, 0.01), "relative")).toBe(
-      "On average the lowest-income tenth gains 0.7% of its net income, and the highest-income tenth sees almost no change.",
+      "Taken together, the lowest-income tenth gains 0.7% of its net income, and the highest-income tenth sees almost no change.",
     );
     expect(decileSentence([], "absolute")).toBeNull();
   });

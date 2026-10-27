@@ -42,6 +42,7 @@ import SelectedYearShade from "./SelectedYearShade";
 import { revenueSentence } from "../utils/plainSentences";
 import { zeroReason } from "../utils/legendMembership";
 import ChartMoreInfo from "./ChartMoreInfo";
+import Note from "./Note";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 
 // Net impact labels, one per year: the signed total in a small white tag
@@ -180,19 +181,49 @@ export function measureOrder(data, catalogue) {
 // Chart metadata for export
 const CHART_TITLE = "Revenue impact";
 const CHART_DESCRIPTION =
-  `Change in government revenue each year, £bn. Above zero raises revenue; below zero costs the Treasury.`;
+  `Change in government revenue each year, £bn. Above zero raises revenue; below zero costs the government.`;
 
 // The card's "About this chart"
 const REVENUE_INFO = {
   how: [
-    "Above zero the measures raise money; below zero they cost the Treasury.",
+    "Above zero the measures raise money; below zero they cost the government.",
     "The net line adds up the selected measures' separate figures.",
-    "The Plan 2 student loan measure is costed as the change in loan repayments.",
   ],
   method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the measures" },
 };
 
-function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [] }) {
+/**
+ * One line for the year before the chart's first (2026-27), when the
+ * selected measures move revenue in it: "In 2026-27, before the years
+ * shown, the selected policies cost £2.0bn, including all of the Warm Home
+ * Discount top-up." The measures whose whole effect falls in that year are
+ * named, except those the empty plot's note already names. Null when the
+ * year's net rounds to nothing or a selected measure has no verified row.
+ *
+ * @param {Object|null} before - That year's point (budgetChartData)
+ * @param {Array<Object>} data - The chart's points
+ * @param {Array<Object>} measures - The selected measures, as the catalogue's
+ * @param {string[]} [named] - Measure ids already named elsewhere on the card
+ */
+export function beforeYearsLine(before, data, measures, named = []) {
+  if (!before || before.unpublished || before.netImpact == null) return null;
+  const net = before.netImpact;
+  if (Math.abs(net) < 0.0005) return null;
+  const amount = Math.abs(net) < 0.05 ? "less than £0.1bn" : `£${Math.abs(net).toFixed(1)}bn`;
+  const one = measures.length === 1;
+  const verb = net < 0 ? (one ? "costs" : "cost") : one ? "raises" : "raise";
+  const only = measures
+    .filter((measure) => !named.includes(measure.id))
+    .filter((measure) => Math.abs(before[measure.seriesKey] ?? 0) >= 0.0005)
+    .filter((measure) => data.every((point) => Math.abs(point[measure.seriesKey] ?? 0) < 0.0005))
+    .map((measure) => measure.name ?? measure.label);
+  const all = only.length
+    ? `, including all of the ${only.length === 1 ? only[0] : `${only.slice(0, -1).join(", ")} and ${only.at(-1)}`}`
+    : "";
+  return `In ${fiscalYearTick(before.year)}, before the years shown, the selected ${one ? "policy" : "policies"} ${verb} ${amount}${all}.`;
+}
+
+function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [], before = null }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
   // The measure highlighted from the key (MeasureKey); the others fade
@@ -241,6 +272,13 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [] }) {
         .map(({ measure, reason }) => `${measure.name ?? measure.label}: ${reason.text}`)
     : [];
   const yearSpan = `${fiscalYearTick(data[0].year)} to ${fiscalYearTick(data[data.length - 1].year)}`;
+  // The year before the chart's first, in one line under the card; a
+  // measure the empty plot's note already names is not named again
+  const selectedMeasures = displayable.filter((measure) => selectedPolicies.includes(measure.id));
+  const outOfYearIds = noRevenue
+    ? selectedMeasures.filter((measure) => zeroReason(measure, selectedYear).kind === "not_in_force").map((measure) => measure.id)
+    : [];
+  const beforeLine = beforeYearsLine(before, data, selectedMeasures, outOfYearIds);
 
   // Y axis: symmetric about zero when the year's stacks go both ways
   // (divergingAxis), with about 5% room past the tallest stack; from zero
@@ -428,6 +466,7 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [] }) {
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
       <div className="chart-footer">
+        {beforeLine && <Note>{beforeLine}</Note>}
         <ChartMoreInfo year={selectedYear} info={REVENUE_INFO} />
       </div>
     </div>

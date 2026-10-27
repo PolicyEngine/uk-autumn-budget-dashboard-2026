@@ -263,12 +263,12 @@ function MethodologyTab({ onShowTab }) {
                     templates.
                   </>,
                 ],
-                ["Baseline", "Current law. The Plan 2 measure's baseline also uses modelled student loan repayments."],
+                ["Baseline", "Current law."],
                 [
                   "Static",
                   <>
-                    Estimates are <Term id="static">static</Term>: fuel and electricity spending are
-                    held fixed, and wages do not respond to employer National Insurance.
+                    Estimates are <Term id="static">static</Term>; each policy's card says what its
+                    estimate holds fixed.
                   </>,
                 ],
                 ["Years", "Fiscal years, April to March: 2027-28 runs from April 2027 to March 2028."],
@@ -404,7 +404,7 @@ function MethodologyTab({ onShowTab }) {
                         income, which is before indirect taxes, so the VAT and fuel duty measures do
                         not change it.
                       </>,
-                      "People lifted out or pushed in are the change in the rate times that year's population in the current-law projection, to the nearest 1,000.",
+                      "People moved out of or into poverty are the change in the rate times that year's population in the current-law projection, to the nearest 1,000.",
                     ],
                   },
                 ],

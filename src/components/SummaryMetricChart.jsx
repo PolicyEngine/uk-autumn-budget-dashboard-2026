@@ -54,8 +54,10 @@ const VALUE_BAR_SHAPE = barShape(["value"]);
  * The summary statistics from metrics.csv that Population impact charts,
  * each by year. Neither adds up across measures, so each is read from one
  * run: the policy's own when one is selected, the combined run when all are.
- * A fall is good for households either way, so it is drawn in the gain
- * colour.
+ * A fall in poverty is drawn in the gain colour and a rise in the loss
+ * colour; the inequality measures (Gini, top shares, ratios) are drawn in
+ * the neutral net colour, since a change in inequality is not a gain or a
+ * loss for any one household.
  */
 export const SUMMARY_METRICS = {
   poverty: {
@@ -449,7 +451,9 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   // As many decimals as the tick step needs (0.05 steps: two)
   const step = ticks.length > 1 ? Math.round(Math.abs(ticks[1] - ticks[0]) * 1e6) / 1e6 : 1;
   const decimals = (String(step).split(".")[1] ?? "").length;
-  const tick = (value) => (value === 0 ? "0" : value.toFixed(decimals));
+  // A percentage axis ("Change in Gini (%)") writes % on every tick but 0
+  const tickUnit = /\(%\)$/.test(metric.unit) ? "%" : "";
+  const tick = (value) => (value === 0 ? "0" : `${value.toFixed(decimals)}${tickUnit}`);
   const selected = data.find((point) => point.year === selectedYear);
   const selectedPeople =
     selected?.value != null && metric.group && population
@@ -510,10 +514,10 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                 {Math.round(selected.value * 1e6) === 0 ? (
                   <>do not change {subjectOf(metric)}</>
                 ) : metric.line && selectedCount ? (
-                  // "lift about 5,000 people out of absolute poverty (before
+                  // "move about 5,000 people out of absolute poverty (before
                   // housing costs), less than 0.1 percentage points"
                   <>
-                    {selected.value < 0 ? "lift" : "push"} <strong>{selectedCount}</strong>{" "}
+                    move <strong>{selectedCount}</strong>{" "}
                     {selected.value < 0 ? "out of" : "into"} {metric.line}, {plainAmount(metric, selected.value)}
                   </>
                 ) : (
@@ -626,12 +630,17 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
               <Bar
                 dataKey="value"
                 name={metric.title}
-                fill={CHART_COLOURS.gain}
+                fill={metric.choices === "inequality" ? CHART_COLOURS.net : CHART_COLOURS.gain}
                 shape={VALUE_BAR_SHAPE}
                 {...chartMotion()}
               >
                 {data.map((point) => {
-                  const colour = point.value > 0 ? CHART_COLOURS.loss : CHART_COLOURS.gain;
+                  const colour =
+                    metric.choices === "inequality"
+                      ? CHART_COLOURS.net
+                      : point.value > 0
+                        ? CHART_COLOURS.loss
+                        : CHART_COLOURS.gain;
                   return (
                     <Cell
                       key={point.year}

@@ -26,11 +26,11 @@ import { GROWTH_CURRENT_LAW_ANCHOR } from "./components/livingStandards/sections
 import { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import AgeSection from "./components/AgeSection";
 import PopulationImpactView from "./components/PopulationImpactView";
-import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS, selectableYearOr } from "./utils/displayYears";
+import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS, FIRST_DISPLAY_YEAR, selectableYearOr } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
 import TitleMark, { EdgeAboutTab } from "./components/HomeButton";
 import OverviewDrawer from "./components/OverviewDrawer";
-import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
+import { buildMeasureCatalogue, catalogueProvisional, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
 import { loadDashboard, loadVerifiedTablesOnce, budgetChartData } from "./utils/loadDashboard";
 import { pruneVerifiedCache } from "./utils/publication/cache";
 import { prefetchGeography } from "./hooks/useGeographyData";
@@ -315,6 +315,9 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   const results = useMemo(() => ({
     budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, DISPLAY_YEARS),
+    // The year before the charts start (2026-27), from the same verified
+    // rows: one line under Revenue impact, never a bar
+    budgetBefore: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, [FIRST_DISPLAY_YEAR - 1])[0],
     rawDistributional: published.distributional.filter((row) => selectedPolicies.includes(row.reform_id)),
     rawWinnersLosers: published.winnersLosers.filter((row) => selectedPolicies.includes(row.reform_id)),
     // Every verified run's rows: the summary statistics read one run, not a
@@ -560,9 +563,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   // A caveat on the results while any shown measure is provisional: one
   // small badge on the landing page, nowhere above the views
-  const provisional =
-    catalogue.manifest &&
-    catalogue.displayable.some((measure) => catalogue.manifest.measures[measure.id].status === "provisional");
+  const provisional = catalogueProvisional(catalogue);
 
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
@@ -691,7 +692,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             subtitle="Net effect of the selected policies on government revenue and spending, by year."
           />
           <section id="revenue" className="report-section hero-chart">
-            <BudgetaryImpactChart data={results.budgetData} selectedYear={distributionalYear} selectedPolicies={selectedPolicies} />
+            <BudgetaryImpactChart data={results.budgetData} before={results.budgetBefore} selectedYear={distributionalYear} selectedPolicies={selectedPolicies} />
             {/* OBR comparison: an expandable row at the foot of the card
                 once the OBR has costed the measures */}
             <ObrComparisonFoot
@@ -859,6 +860,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         {landing && (
           <LandingPage
             onOpen={handleTabChange}
+            provisionalWording={provisional}
             provisional={provisional && (
               <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
             )}
@@ -906,7 +908,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             <SectionHeading
               icon="fileText"
               title="Policies"
-              subtitle="What each measure changes, when, and how it is modelled."
+              subtitle={`${provisional ? `${provisionalLabel(catalogue.manifest)}. ` : ""}What each measure changes, when, and how it is modelled.`}
             />
             <section id="policy-details" className="report-section policy-details-content">
               <PolicyCards
@@ -945,6 +947,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               onClose={closeOverview}
               onOpen={handleTabChange}
               returnFocus={aboutTabRef}
+              provisionalWording={provisional}
               provisional={provisional && (
                 <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
               )}

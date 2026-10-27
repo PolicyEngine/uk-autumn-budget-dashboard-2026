@@ -366,7 +366,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     }
     // Every view opened so far stays mounted; Methodology is never opened
     // The one exception: the provisional label names candidate measures
-    // while the manifest's basis is pre-Budget (Vahid, 26 October)
+    // while the manifest predates the Budget (Vahid, 26 October)
     const text = document.body.textContent.replaceAll(CANDIDATE_PROVISIONAL_LABEL, "");
     expect(text).not.toMatch(/pre-Budget/i);
     expect(text).not.toMatch(/28 October/);

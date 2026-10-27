@@ -116,7 +116,7 @@ export default function usePovertyRateView(data, range = null, setRange = null) 
       ],
       caveats: [
         !visibleEmpty && noOutturn && viewMode === "both" && `No official series for ${groupName} on this measure; projection only.`,
-        "Our 2024-25 incomes sit above official ones, so rates are below official figures: read changes, not levels.",
+        "The model's 2024-25 incomes sit above official ones and its poverty rates below them: read changes, not levels.",
       ],
       sources: [HBAI_SOURCE],
       method: { anchor: METHOD_ANCHORS.lsNotes, label: "Notes on the poverty data" },

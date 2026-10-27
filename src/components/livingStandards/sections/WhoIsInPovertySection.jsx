@@ -46,7 +46,9 @@ const PLURAL = {
   couple_with_children: "Couples with children",
   single_no_children: "Single adults without children",
   couple_no_children: "Couples without children",
-  pensioner: "Pensioner families",
+  // People in the family, not the Pensioners tile's people over State
+  // Pension age: the two rates can differ
+  pensioner: "People in pensioner families",
 };
 
 /** Child breakdowns: row label and the sentence subject for each group. */
