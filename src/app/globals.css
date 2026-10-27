@@ -252,8 +252,8 @@ code {
   --c-age-adults: #026aa2; /* ui-kit blue-700 */
   --c-age-older: #285e61; /* ui-kit teal-700 */
   --c-age-pension: #1d4044; /* ui-kit teal-900 */
-  --c-market-income: #64748b; /* earnings and other income: ui-kit slate gray-500 */
-  --c-pension-contributions: #94a3b8; /* ui-kit gray-400 */
+  --c-market-income: #94a3b8; /* gray-400 */
+  --c-pension-contributions: #cbd5e1; /* gray-300 */
   --c-gain-light: #81e6d9; /* a small gain on the map; a light teal series (ui-kit teal-200) */
   --c-map-gain: #14b8a6; /* the constituency map scale's gain end, as on the 2025 dashboard */
   --c-loss-light: #fbbf24; /* a small loss on the map */
@@ -305,22 +305,23 @@ code {
   --income-ramp-5: #5fb3aa;
   --income-ramp-6: #2a8c84;
   --income-ramp-7: #0f5f59;
-  /* A household's income, stacked: benefits in ui-kit teals, taxes and
-     deductions in ui-kit blues, income and the rest in slate greys. The
-     marginal tax rate card takes the same colour for each programme */
-  --c-mtr-income-tax: #075985; /* blue-800 */
-  --c-mtr-child-benefit: #319795; /* teal-500 */
-  --c-mtr-allowance-taper: #0c4a6e; /* blue-900 */
-  --c-mtr-national-insurance: #0ea5e9; /* blue-500 */
-  --c-mtr-student-loan: #7dd3fc; /* blue-300 */
-  --c-mtr-universal-credit: #285e61; /* teal-700 */
-  --c-mtr-other-benefits: #81e6d9; /* teal-200 */
-  --c-mtr-other: #cbd5e1; /* gray-300 */
-  --c-net-state-pension: #1d4044; /* teal-900 */
-  --c-net-warm-home-discount: #4fd1c5; /* teal-300 */
-  --c-net-council-tax: #0284c7; /* blue-600 */
-  --c-net-fuel-duty: #38bdf8; /* blue-400 */
-  --c-net-vat: #bae6fd; /* blue-200 */
+  /* A household's income, stacked, in the 2025 dashboard's families:
+     benefits (what a household gains) in teals, taxes and deductions (what
+     it pays) in ambers, earnings and the rest in slate greys. The marginal
+     tax rate card takes the same colour for each programme */
+  --c-mtr-income-tax: #b45309; /* amber-700 */
+  --c-mtr-child-benefit: #14b8a6; /* teal-500 */
+  --c-mtr-allowance-taper: #78350f; /* amber-900 */
+  --c-mtr-national-insurance: #d97706; /* amber-600 */
+  --c-mtr-student-loan: #fbbf24; /* amber-400 */
+  --c-mtr-universal-credit: #0d9488; /* teal-600 */
+  --c-mtr-other-benefits: #5eead4; /* teal-300 */
+  --c-mtr-other: #e2e8f0; /* gray-200 */
+  --c-net-state-pension: #0f766e; /* teal-700 */
+  --c-net-warm-home-discount: #2dd4bf; /* teal-400 */
+  --c-net-council-tax: #92400e; /* amber-800 */
+  --c-net-fuel-duty: #f59e0b; /* amber-500 */
+  --c-net-vat: #fde68a; /* amber-200 */
   /* Type scale: section titles, card titles, body, small text, captions
      (sources, notes, axis units) and micro labels */
   --fs-stat: 1.75rem;

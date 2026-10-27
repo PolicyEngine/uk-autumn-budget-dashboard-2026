@@ -57,7 +57,7 @@ One colour template for the dashboard. Every colour has a role, and each role ha
 Single-purpose series, each in one chart; their tokens and JS names follow the same pattern (`--c-age-children` is `CHART_COLOURS.ageChildren`):
 
 - Age bands: `age-children`, `age-young-adults`, `age-adults`, `age-older`, `age-pension` (ui-kit teals and blues: teal 300, blue 500, blue 700, teal 700, teal 900; 16 to 24 is `gain`). Each line is also named, and "All ages" is the dashed reference grey.
-- Household breakdown, stacked (net income and marginal rate cards): earnings `market-income` (slate gray 500), `pension-contributions` (gray 400); benefits in ui-kit teals (`mtr-universal-credit`, `mtr-child-benefit`, `net-state-pension`, `net-warm-home-discount`, `mtr-other-benefits`); taxes and deductions in ui-kit blues (`mtr-income-tax`, `mtr-allowance-taper`, `mtr-national-insurance`, `mtr-student-loan`, `net-council-tax`, `net-fuel-duty`, `net-vat`); the rest `mtr-other` (gray 300). No purples or greens.
+- Household breakdown, stacked (net income and marginal rate cards), in the 2025 dashboard's families: earnings `market-income` (slate gray 400), `pension-contributions` (gray 300); benefits in teals (`net-state-pension` 700, `mtr-universal-credit` 600, `mtr-child-benefit` 500, `net-warm-home-discount` 400, `mtr-other-benefits` 300); taxes and deductions in ambers (`mtr-allowance-taper` 900, `net-council-tax` 800, `mtr-income-tax` 700, `mtr-national-insurance` 600, `net-fuel-duty` 500, `mtr-student-loan` 400, `net-vat` 200); the rest `mtr-other` (gray 200). No purples or greens.
 - Your income tenth behind a distribution: `tenth-band` (ui-kit blue 100).
 - Notices: `notice-bg`, `notice-text`.
 

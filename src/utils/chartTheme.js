@@ -72,29 +72,30 @@ export const CHART_COLOURS = {
   ageAdults: "#026AA2",
   ageOlder: "#285E61",
   agePension: "#1D4044",
-  marketIncome: "#64748B",
-  pensionContributions: "#94A3B8",
+  marketIncome: "#94A3B8",
+  pensionContributions: "#CBD5E1",
   gainLight: "#81E6D9",
   mapGain: "#14B8A6",
   lossLight: "#FBBF24",
   ink: "#1F2937",
   noticeBg: "#FFF7E6",
   noticeText: "#7A5A1F",
-  // A household's income, stacked: benefits in ui-kit teals, taxes and
-  // deductions in ui-kit blues, income and the rest in slate greys
-  mtrIncomeTax: "#075985",
-  mtrChildBenefit: "#319795",
-  mtrAllowanceTaper: "#0C4A6E",
-  mtrNationalInsurance: "#0EA5E9",
-  mtrStudentLoan: "#7DD3FC",
-  mtrUniversalCredit: "#285E61",
-  mtrOtherBenefits: "#81E6D9",
-  mtrOther: "#CBD5E1",
-  netStatePension: "#1D4044",
-  netWarmHomeDiscount: "#4FD1C5",
-  netCouncilTax: "#0284C7",
-  netFuelDuty: "#38BDF8",
-  netVat: "#BAE6FD",
+  // A household's income, stacked: benefits in teals, taxes and
+  // deductions in ambers (the 2025 dashboard's families), earnings and the
+  // rest in slate greys
+  mtrIncomeTax: "#B45309",
+  mtrChildBenefit: "#14B8A6",
+  mtrAllowanceTaper: "#78350F",
+  mtrNationalInsurance: "#D97706",
+  mtrStudentLoan: "#FBBF24",
+  mtrUniversalCredit: "#0D9488",
+  mtrOtherBenefits: "#5EEAD4",
+  mtrOther: "#E2E8F0",
+  netStatePension: "#0F766E",
+  netWarmHomeDiscount: "#2DD4BF",
+  netCouncilTax: "#92400E",
+  netFuelDuty: "#F59E0B",
+  netVat: "#FDE68A",
 };
 
 /**
