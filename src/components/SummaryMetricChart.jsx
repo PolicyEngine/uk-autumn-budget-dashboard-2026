@@ -451,7 +451,9 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   // As many decimals as the tick step needs (0.05 steps: two)
   const step = ticks.length > 1 ? Math.round(Math.abs(ticks[1] - ticks[0]) * 1e6) / 1e6 : 1;
   const decimals = (String(step).split(".")[1] ?? "").length;
-  const tick = (value) => (value === 0 ? "0" : value.toFixed(decimals));
+  // A percentage axis ("Change in Gini (%)") writes % on every tick but 0
+  const tickUnit = /\(%\)$/.test(metric.unit) ? "%" : "";
+  const tick = (value) => (value === 0 ? "0" : `${value.toFixed(decimals)}${tickUnit}`);
   const selected = data.find((point) => point.year === selectedYear);
   const selectedPeople =
     selected?.value != null && metric.group && population
