@@ -13,7 +13,7 @@ import {
   decileOf,
   decilePercents,
   describePosition,
-  distributionRunFor,
+  distributionRunOf,
   householdPosition,
   incomeAt,
   logEdges,
@@ -25,10 +25,11 @@ import {
   positionSummary,
   percentileOn,
   lowerCount,
+  missingPackageNote,
   PLACE_MEANING,
 } from "../../utils/incomePosition";
 import { parseCsv } from "../../utils/publication/csv";
-import { useMeasureCatalogue } from "../../utils/measureCatalogue";
+import { useMeasureCatalogue, verifiedTableRows } from "../../utils/measureCatalogue";
 import useElementWidth from "../../hooks/useElementWidth";
 import useDataFile from "../../hooks/useDataFile";
 import ChartDownloadMenu from "../ChartDownloadMenu";
@@ -658,17 +659,16 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const [compareBy, setCompareBy] = useState("tenths");
   const [unit, setUnit] = useState("pct");
   const distribution = useFile(DISTRIBUTION_FILE, parseDistribution);
-  const winners = useFile("winners_losers.csv", parseRecords);
-  const relative = useFile("distributional_impact.csv", parseRecords);
   const moves = useFile(MOBILITY_FILE, parseRecords);
   // Every measure the catalogue publishes: the package's run is exact only
-  // when all of them are selected, and it was run with exactly those
+  // when all of them are selected, and it was run with exactly those. The
+  // package's rows are read under the manifest's combined key (#228).
   const catalogue = useMeasureCatalogue();
-  const run = distributionRunFor(
-    policies,
-    catalogue.displayable.map((measure) => measure.id),
-    catalogue.combinedId ? (catalogue.manifest?.combined?.[catalogue.combinedId]?.measures ?? null) : null,
-  );
+  const run = distributionRunOf(policies, catalogue);
+  // The tenths' averages from the verified artifacts the decile charts read
+  // (#203, #228), never the root flat files, so the two tabs agree
+  const winnersRows = useMemo(() => verifiedTableRows(catalogue, "winners_losers"), [catalogue]);
+  const relativeRows = useMemo(() => verifiedTableRows(catalogue, "distributional_impact"), [catalogue]);
   // Bars grow from zero each time their view opens
   const grow = useEased(1, { key: compareBy, from: 0 });
   const title = `Where you sit in the UK income distribution, ${yearLabel}`;
@@ -683,13 +683,13 @@ export default function IncomePositionChart({ net, household, year, policies, ye
     () => (curves ? householdPosition({ net, household, before: curves.before, after: curves.after }) : null),
     [curves, net, household],
   );
-  const averages = useMemo(() => (winners.status === "ready" ? decileAverages(winners.rows, policies, year) : null), [winners, policies, year]);
-  const ukAverage = useMemo(() => (winners.status === "ready" ? overallAverage(winners.rows, policies, year) : null), [winners, policies, year]);
+  const averages = useMemo(() => decileAverages(winnersRows, policies, year), [winnersRows, policies, year]);
+  const ukAverage = useMemo(() => overallAverage(winnersRows, policies, year), [winnersRows, policies, year]);
   const mobility = useMemo(
     () => (moves.status === "ready" ? mobilityOf(moves.rows, { reformId: run.reformId, year, unit: "percentile" }) : null),
     [moves, run.reformId, year],
   );
-  const percents = useMemo(() => (relative.status === "ready" ? decilePercents(relative.rows, policies, year) : null), [relative, policies, year]);
+  const percents = useMemo(() => decilePercents(relativeRows, policies, year), [relativeRows, policies, year]);
 
   if (distribution.status === "loading") return <div className="card single-year-card position-card is-loading" aria-busy="true" />;
   if (!curves || !position) {
@@ -699,7 +699,10 @@ export default function IncomePositionChart({ net, household, year, policies, ye
           <TitleIcon name="users" />
           <span className="title-text">{title}</span>
         </h3>
-        <p className="single-year-quiet">The UK income distribution is not available for this year.</p>
+        <p className="single-year-quiet">
+          {(distribution.status === "ready" && missingPackageNote(run, distribution.rows)) ||
+            "The UK income distribution is not available for this year."}
+        </p>
       </div>
     );
   }
@@ -973,10 +976,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
             {(width) => (
               <div ref={compareRef} role="img" aria-label={compareAlt}>
                 {compareBy === "tenths" ? (
-                  winners.status === "loading" || relative.status === "loading" ? (
-                    // Still loading: an empty plot, not "not available"
-                    <div className="position-plot-loading" aria-busy="true" />
-                  ) : percents || averages ? (
+                  percents || averages ? (
                     <GainsView width={width} narrow={narrow} unit={unit} percents={percents} averages={averages} decile={decile} ownPct={ownPct} ownChange={ownChange} grow={grow} />
                   ) : (
                     <p className="single-year-quiet">The changes by tenth are not available for this selection and year.</p>
