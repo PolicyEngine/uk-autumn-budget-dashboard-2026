@@ -198,7 +198,7 @@ export const POLICY_DETAILS = [
     type: "Student loans",
     inForce: { from: "2027-04" },
     details:
-      "The threshold rises to £30,267 in 2027-28. Repayments are modelled, replacing those reported in the survey.",
+      "The threshold rises to £30,267 in 2027-28. Repayments are modelled, replacing those reported in the survey. The revenue figure is the change in graduates' cash repayments each year, not the effect on public sector borrowing, which treats changes to loan terms differently.",
     source: {
       label: "Repaying your student loan",
       href: "https://www.gov.uk/repaying-your-student-loan/what-you-pay",
