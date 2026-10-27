@@ -409,6 +409,7 @@ html[data-boot-view="household"] .boot-variant[data-boot-variant="household"],
 html[data-boot-view="outlook:living"] .boot-variant[data-boot-variant="outlook:living"],
 html[data-boot-view="outlook:poverty"] .boot-variant[data-boot-variant="outlook:poverty"],
 html[data-boot-view="outlook:forecast"] .boot-variant[data-boot-variant="outlook:forecast"],
+html[data-boot-view="outlook:vintages"] .boot-variant[data-boot-variant="outlook:vintages"],
 html[data-boot-view="policies"] .boot-variant[data-boot-variant="policies"],
 html[data-boot-view="methodology"] .boot-variant[data-boot-variant="methodology"] {
   display: block;

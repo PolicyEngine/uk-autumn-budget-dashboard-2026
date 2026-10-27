@@ -27,6 +27,7 @@ export const SKELETON_SUB_TABS = {
     { value: "living", label: "Living standards", icon: "coins" },
     { value: "poverty", label: "Poverty", icon: "percent" },
     { value: "forecast", label: "Forecast changes", icon: "trend" },
+    { value: "vintages", label: "Forecast vintages", icon: "clock" },
   ],
 };
 const SUB_TABS = SKELETON_SUB_TABS;
@@ -61,6 +62,11 @@ const LAYOUTS = {
   ],
   "outlook:forecast": [
     { icon: "trend", title: "Economic forecast", cards: [["lines", "wide"], ["lines"], ["lines"]] },
+  ],
+  // The view's own heading has the forecasts' dates, which a placeholder
+  // leaves out
+  "outlook:vintages": [
+    { title: "OBR forecasts beside the outturn", subtitle: "The OBR's forecasts beside the ONS outturn. These are the OBR's and the ONS's figures, not PolicyEngine's.", cards: [["lines", "wide"]] },
   ],
   policies: [
     { icon: "fileText", title: "Policies", subtitle: "What each measure changes, when, and how it is modelled.", cards: [["text", "wide"], ["text", "wide"], ["text", "wide"]] },
