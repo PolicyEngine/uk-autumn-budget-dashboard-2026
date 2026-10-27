@@ -2,14 +2,15 @@
 
 A one-page map of the day for people: what happens, in what order, and who acts. The steps' detail is in the [checklist](budget-day-checklist.md) and the [runbook](budget-day-runbook.md), the agents' commands are in [`budget-day-agents.md`](budget-day-agents.md), and every signature is in [`budget-day-people.md`](budget-day-people.md). Times are UTC, which is UK time this week.
 
-Shapes in the maps:
-- rectangles: agents' steps;
-- slanted boxes: runs on Modal;
-- hexagons: a person signs, decides or merges.
+Shapes and colours in the maps:
+- white rectangles with a teal border: agents' or automated steps;
+- pale teal slanted boxes: runs on Modal;
+- amber hexagons: a person signs, decides or merges.
 
 ## The day
 
 ```mermaid
+%%{init: {"theme": "base", "themeVariables": {"lineColor": "#6B7280", "clusterBkg": "#F3F4F6", "clusterBorder": "#9CA3AF", "titleColor": "#1F2937", "primaryColor": "#FFFFFF", "primaryTextColor": "#1F2937", "primaryBorderColor": "#319795", "edgeLabelBackground": "#FFFFFF"}}}%%
 flowchart TD
   subgraph TUE["Tuesday evening"]
     direction LR
@@ -47,6 +48,20 @@ flowchart TD
     L1{{"15:45 first cut to media, approved figures only"}} --> L2["PDF report and briefing by 07:00 Thursday"]
   end
   TUE --> AM --> SPEECH --> G2 --> G3 --> G4 --> LATE
+  classDef agent fill:#FFFFFF,stroke:#319795,stroke-width:2px,color:#1F2937
+  classDef modal fill:#EAF5F4,stroke:#0F766E,stroke-width:2px,color:#1F2937
+  classDef person fill:#FDF0E1,stroke:#B45309,stroke-width:2px,color:#1F2937
+  class A2,S1,S2,P2,D1,D2,M2,L2 agent
+  class T1,P1,M1 modal
+  class T2,T3,A1,S3,S4,P3,D3,D4,M3,L1 person
+  style TUE fill:#F3F4F6,stroke:#9CA3AF,color:#1F2937
+  style AM fill:#F3F4F6,stroke:#9CA3AF,color:#1F2937
+  style SPEECH fill:#F3F4F6,stroke:#9CA3AF,color:#1F2937
+  style G2 fill:#F3F4F6,stroke:#9CA3AF,color:#1F2937
+  style G3 fill:#F3F4F6,stroke:#9CA3AF,color:#1F2937
+  style G4 fill:#F3F4F6,stroke:#9CA3AF,color:#1F2937
+  style LATE fill:#F3F4F6,stroke:#9CA3AF,color:#1F2937
+  linkStyle default stroke:#6B7280,stroke-width:2px
 ```
 
 1. **Tuesday evening.**
@@ -82,10 +97,11 @@ flowchart TD
 ## How data reaches the dashboard
 
 ```mermaid
+%%{init: {"theme": "base", "themeVariables": {"lineColor": "#6B7280", "clusterBkg": "#F3F4F6", "clusterBorder": "#9CA3AF", "titleColor": "#1F2937", "primaryColor": "#FFFFFF", "primaryTextColor": "#1F2937", "primaryBorderColor": "#319795", "edgeLabelBackground": "#FFFFFF"}}}%%
 flowchart TD
   subgraph DATA["The data and the model"]
     direction LR
-    B1["Build the Microcosm UK cut"] --> B2[/"Upload the national and local-area files to Hugging Face"/]
+    B1["Build the Microcosm UK cut"] --> B2["Upload the national and local-area files to Hugging Face"]
     B2 --> B3{{"Certify the pair in a policyengine.py PR: UK hub runs the gates, Coordinator accepts, independent review approves"}}
     B3 --> B4["Merge and release policyengine.py"]
   end
@@ -96,6 +112,14 @@ flowchart TD
     B7 --> B8{{"Redeploy the household API and check it"}}
   end
   DATA --> DASH
+  classDef agent fill:#FFFFFF,stroke:#319795,stroke-width:2px,color:#1F2937
+  classDef modal fill:#EAF5F4,stroke:#0F766E,stroke-width:2px,color:#1F2937
+  classDef person fill:#FDF0E1,stroke:#B45309,stroke-width:2px,color:#1F2937
+  class B1,B2,B4,B5,B6 agent
+  class B3,B7,B8 person
+  style DATA fill:#F3F4F6,stroke:#9CA3AF,color:#1F2937
+  style DASH fill:#F3F4F6,stroke:#9CA3AF,color:#1F2937
+  linkStyle default stroke:#6B7280,stroke-width:2px
 ```
 
 1. **Build.** The UK hub builds a Microcosm UK cut from the survey data: a national file, and a local-area file for constituencies.
