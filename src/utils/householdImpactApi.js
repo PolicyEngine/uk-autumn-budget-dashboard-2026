@@ -169,12 +169,13 @@ export class HouseholdApiError extends Error {
  * Whether an error looks like a service still starting up, so asking again
  * shortly may well succeed: a timeout, no connection (a cold service's
  * gateway may answer without CORS headers, which the browser reports as a
- * network failure), an empty or unreadable answer, or a 502, 503 or 504.
+ * network failure), an empty or unreadable answer, a 502, 503 or 504, or
+ * a 429 (Cloud Run when it cannot scale fast enough for a burst).
  * Not an answer the API refused (400, 422), a missing service (404), a
  * 500 the API explained (a calculation error: asking again gets the same),
  * a missing URL, or an answer from another model version.
  */
-const STARTING_STATUSES = new Set([502, 503, 504]);
+const STARTING_STATUSES = new Set([429, 502, 503, 504]);
 export function isStartingUp(error) {
   if (!(error instanceof HouseholdApiError)) return false;
   if (error.kind === "timeout" || error.kind === "network") return true;

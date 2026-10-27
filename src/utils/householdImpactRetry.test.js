@@ -48,13 +48,14 @@ const hang = (init) =>
   });
 
 describe("isStartingUp", () => {
-  it("is true for a timeout, no connection, an empty answer and a 502, 503 or 504", () => {
+  it("is true for a timeout, no connection, an empty answer and a 429, 502, 503 or 504", () => {
     expect(isStartingUp(new HouseholdApiError("timeout", "slow"))).toBe(true);
     expect(isStartingUp(new HouseholdApiError("network", "down"))).toBe(true);
     expect(isStartingUp(new HouseholdApiError("server", "empty", { status: 200, empty: true }))).toBe(true);
     expect(isStartingUp(new HouseholdApiError("server", "bad gateway", { status: 502 }))).toBe(true);
     expect(isStartingUp(new HouseholdApiError("server", "unavailable", { status: 503 }))).toBe(true);
     expect(isStartingUp(new HouseholdApiError("server", "no body", { status: 500, empty: true }))).toBe(true);
+    expect(isStartingUp(new HouseholdApiError("server", "too many", { status: 429 }))).toBe(true);
   });
 
   it("is false for what asking again would not change", () => {
