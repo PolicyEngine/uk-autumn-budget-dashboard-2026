@@ -324,6 +324,12 @@ export function releaseYears(catalogue) {
   return [...years].sort((a, b) => a - b);
 }
 
+/**
+ * The year a past event shows: the one asked for (a link's ?year=), if
+ * among its years, or its first (none while it has none).
+ */
+export const eventYear = (years, asked) => (years.includes(asked) ? asked : years[0]);
+
 /** An event's date, "2025-03-26", as "26 March 2025". */
 export const eventDate = (date) =>
   new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));

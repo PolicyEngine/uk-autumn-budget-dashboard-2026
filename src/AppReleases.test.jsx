@@ -8,7 +8,7 @@ import HistoricalRelease from "./app/budgets/[release]/page";
 import { HISTORICAL_PROVISIONAL_LABEL, SCORECARD_URL } from "./components/historical/PastEvent";
 import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import { coverageOf, releaseFixtureFetch, toCsv } from "./test/historicalFixture";
-import { BASE_PATH, fixtureFetch, fixtureJson, IN_DATA } from "./test/publicationFixture";
+import { BASE_PATH, BEYOND_DATA, fixtureFetch, fixtureJson, IN_DATA } from "./test/publicationFixture";
 import { loadDashboardParts } from "./utils/loadDashboard";
 import { resetVerifiedCache } from "./utils/publication/cache";
 import { resetParsedTables } from "./utils/publication/load";
@@ -54,6 +54,20 @@ vi.mock("./components/WaterfallChart", () => ({
 vi.mock("./components/DecileImpactCard", () => ({
   default: ({ distributional, selectedPolicies, selectedYear }) => <div data-testid="distributional-figures" data-year={selectedYear} data-rows={JSON.stringify(inOrder(distributional))} data-selected={JSON.stringify(selectedPolicies)} />,
 }));
+// The fixture's measures share one year in the data, so a test gives a
+// past event a second year here (`extraYear.value`; none by default),
+// which its figures do not cover: for what the page does with its years
+const extraYear = vi.hoisted(() => ({ value: null }));
+vi.mock("./utils/historical", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    releaseYears: (catalogue) => {
+      const years = actual.releaseYears(catalogue);
+      return extraYear.value !== null && years.length ? [...years, extraYear.value] : years;
+    },
+  };
+});
 vi.mock("./components/ConstituencyMap", () => ({ default: () => <div data-testid="constituency-view" /> }));
 vi.mock("./components/HouseholdScatter", () => ({ default: () => <div data-testid="scatter-view" /> }));
 vi.mock("./components/PersonalImpactTab", () => ({ default: () => <div data-testid="household-view" /> }));
@@ -128,6 +142,7 @@ async function buildBoot() {
 beforeEach(() => { window.history.replaceState({}, "", "/"); });
 afterEach(() => {
   cleanup();
+  extraYear.value = null;
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
   delete window.requestIdleCallback;
@@ -714,6 +729,57 @@ describe("a past event in the dashboard", () => {
     expect((await screen.findByTestId("budget-figures")).dataset.year).toBe(String(IN_DATA));
     // Its first year is its default, which stays out of the address
     await waitFor(() => expect(param("year")).toBeNull());
+  });
+
+  // Every artifact of the event fails until `recover` is called; then the
+  // same manifest's artifacts verify on the next check (on focus), and
+  // the view stays mounted
+  const openFailingPast = async (link) => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    let failing = true;
+    const artifacts = `${dataRoot("", AB2025)}/artifacts/`;
+    const flaky = async (url, init) => (failing && String(url).startsWith(artifacts) ? new Response(null, { status: 503 }) : fetchImpl(url, init));
+    window.history.replaceState({}, "", link);
+    vi.stubGlobal("fetch", flaky);
+    render(<App />);
+    expect(await screen.findByText("No figures for this event are published yet.")).toBeInTheDocument();
+    return async () => {
+      failing = false;
+      await act(async () => { window.dispatchEvent(new Event("focus")); });
+      return screen.findByTestId("budget-figures");
+    };
+  };
+
+  it("keeps a link's ?year= while every artifact fails, then opens its first year for a year the artifacts that verify later do not cover", async () => {
+    const recover = await openFailingPast(`/?${RELEASE_PARAM}=${AB2025.id}&year=${BEYOND_DATA}`);
+    expect(param("year")).toBe(String(BEYOND_DATA));
+    expect((await recover()).dataset.year).toBe(String(IN_DATA));
+    expect(screen.getByTestId("distributional-figures").dataset.year).toBe(String(IN_DATA));
+    // Its first year is its default, which stays out of the address
+    await waitFor(() => expect(param("year")).toBeNull());
+  });
+
+  it("opens a link's ?year= once artifacts that cover it verify on a later check, and keeps it in the address", async () => {
+    extraYear.value = BEYOND_DATA;
+    const recover = await openFailingPast(`/?${RELEASE_PARAM}=${AB2025.id}&year=${BEYOND_DATA}`);
+    expect(param("year")).toBe(String(BEYOND_DATA));
+    expect((await recover()).dataset.year).toBe(String(BEYOND_DATA));
+    expect(screen.getByTestId("distributional-figures").dataset.year).toBe(String(BEYOND_DATA));
+    expect(param("year")).toBe(String(BEYOND_DATA));
+    // And its year pill offers both, the link's chosen
+    fireEvent.click(screen.getByRole("button", { name: /^Year / }));
+    expect(screen.getAllByRole("option")).toHaveLength(2);
+    expect(screen.getByRole("option", { selected: true })).toHaveTextContent(`${BEYOND_DATA}-${String((BEYOND_DATA + 1) % 100).padStart(2, "0")}`);
+  });
+
+  it("opens a link's ?year= that the event covers on a fresh load, and keeps it in the address", async () => {
+    extraYear.value = BEYOND_DATA;
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}&year=${BEYOND_DATA}`);
+    vi.stubGlobal("fetch", fetchImpl);
+    render(<App />);
+    expect((await screen.findByTestId("budget-figures")).dataset.year).toBe(String(BEYOND_DATA));
+    expect(param("year")).toBe(String(BEYOND_DATA));
   });
 
   it("shows a past event a link opens over the build's figures from its own load, and writes none of this Budget's address", async () => {

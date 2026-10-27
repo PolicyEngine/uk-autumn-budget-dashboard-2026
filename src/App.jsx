@@ -35,7 +35,7 @@ import { ScrollText } from "lucide-react";
 import PillSelect from "./components/PillSelect";
 import { HISTORICAL_PROVISIONAL_LABEL, loadHistoricalViews, PastEventBanner } from "./components/historical/PastEvent";
 import { DEFAULT_RELEASE, findRelease, HISTORICAL_RELEASES, newestFirst, publishedHistoricalReleases } from "./utils/publication/release";
-import { releaseYears } from "./utils/historical";
+import { eventYear, releaseYears } from "./utils/historical";
 import { isPastEventAddress, RELEASE_PARAM } from "./components/historical/pastEventPaths";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
@@ -469,7 +469,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     const askedYear = new URLSearchParams(window.location.search).get("year");
     if (askedYear !== null) {
       if (!pastYears) setDistributionalYear(Number(askedYear) === EARLY_YEAR ? EARLY_YEAR : selectableYearOr(askedYear));
-      else if (pastYears.includes(Number(askedYear))) setDistributionalYear(Number(askedYear));
+      else setDistributionalYear(eventYear(pastYears, Number(askedYear)));
     }
     if (fromBuild) {
       const linked = readRequested();
@@ -515,9 +515,16 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   const shownYears = useMemo(() => pastYears ?? yearsForSelection(published.budgetary, selectedPolicies), [pastYears, published, selectedPolicies]);
   // A year no longer shown (2026-27 after its last policy is deselected)
   // falls back to the default, once the published figures are in (set
-  // while rendering, as `visited` is above). A past event's year is one of
-  // its own already (its ?year= read above, and its year pill)
+  // while rendering, as `visited` is above)
   if (!pastYears && published.budgetary?.length && !shownYears.includes(distributionalYear)) setDistributionalYear(DEFAULT_DISPLAY_YEAR);
+  // A past event's year is one of its own (its ?year= read above, and its
+  // year pill). Its years come with its figures: where each artifact failed
+  // at first and verified on a later check under the same manifest, this
+  // view stayed mounted with none, so the link's ?year=, kept in the
+  // address until then, is read against them now, before the address is
+  // written (never on a first render, which has the event's first year or
+  // no years)
+  if (pastYears?.length && !pastYears.includes(distributionalYear)) setDistributionalYear(eventYear(pastYears, Number(new URLSearchParams(window.location.search).get("year"))));
   const results = useMemo(() => ({
     budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, shownYears),
     rawDistributional: published.distributional.filter((row) => selectedPolicies.includes(row.reform_id)),
