@@ -25,8 +25,9 @@ Open pull requests change some steps, and each step says what changes when one h
 - #249 adds the OBR's effect on CPI;
 - #260 adds the team test link's script.
 
-**Vahid's decisions of 27 October (evening)** change the steps below. They are in three comments on #251: [decisions](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6448563927), [to repeat on Budget day](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6449275288), and [run order and timings](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6449473328). The test link and the warm schedule are on #247.
-- **Modal doesn't wait for CI.** G2 starts from the measures PR's pushed commit once its targeted tests pass (step 6).
+**Vahid's decisions of 27 October (evening)** change the steps below. They are in four comments on #251: [decisions](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6448563927), [to repeat on Budget day](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6449275288), [run order and timings](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6449473328), and [the four PRs](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6451621671). The test link and the warm schedule are on #247.
+- **The day goes in four PRs:** the measures (#1, merged at about 14:30 once the documents have landed and CI is green), the Treasury figures (#2, from 13:40), the publication (#3, about 16:00, after `publish approve`) and the map (#4, about 17:30). There is no separate provisional publication ("The four PRs" below).
+- **Preview runs don't wait for CI.** They start from #1's pushed commit once its targeted tests pass. The publishable run comes from #1's merged commit (step 6, G2).
 - **One Modal call per measure, all at once.** The measure that decides the package goes first (G2).
 - **The floor settles the package's members before the package runs** (G2, G4).
 - **Code only what the data can carry,** and nothing current law already has. Parameter changes come first (G1).
@@ -43,8 +44,31 @@ From the Integrator's table on #247 (27 October, 11:19Z), as the runbook's Roles
 - **The Integrator:**
   - checks the Treasury costings, approves, signs the review rows, merges every pull request, deploys, and rolls back;
   - decides when to push, when to open a PR, and when each Modal command runs.
-- **The second signer:** the second of the two people on each hand-written modifier's attestation. Who checks first is open.
+- **The second signer:** the second of the two people on each hand-written modifier's attestation. Who checks first is open. As licence holder, also signs off the map PR (#4) with the Integrator.
 - **The Coordinator:** runs tonight's regeneration, and holds the 07:00 go/no-go.
+
+## The four PRs (Vahid, 27 October, 19:32Z)
+
+The day's dashboard work goes in four PRs, in this order ([#251](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6451621671)). Small hotfix PRs are opened only if something breaks.
+1. **Measures.** The announced measures in `reforms.py` (parametric where possible), their expected-effect rows, and the policy names and summaries.
+   - **Sign-off:** the Integrator reviews; the second signer attests any hand-written modifier. An attestation binds a receipt, so it is signed once #3's generation has written the receipt, and the file goes in #3.
+   - **Merge:** about 14:30, once the documents have landed and CI is green.
+2. **Treasury figures (G3).** The Treasury's costings in `data_inputs/treasury/`, which fill the "Official costings" card.
+   - **Sign-off:** the Integrator.
+   - **Merge:** any time after 13:40. With #174 merged, this doesn't invalidate receipts.
+3. **Publication.** The single measures, the package, the flat files and the example households, generated on Modal from #1's merged commit, plus the review rows.
+   - **Sign-off:** the Integrator (review rows) and the second signer (attestations).
+   - **Merge:** about 16:00, after `publish approve`.
+4. **Map.** Constituency results from the area run, which takes about an hour.
+   - **Sign-off:** the Integrator and the licence holder.
+   - **Merge:** in the evening, about 17:30.
+
+**Ordering rules:**
+- Between the start of generation (#3) and its merge, nothing that touches a calculation path merges, because receipts bind the commit.
+- Text and UI tweaks go into #1 before the cut, or wait until after #3.
+- #207 (the pre-Budget candidates) needs a fresh run from `main`. If the Budget's measures differ, #3 replaces it.
+
+**Needed on `main` before the day:** #174, #260 (part 9 of the page edits), and #207 or its rerun.
 
 ## Rules for every step
 
@@ -60,7 +84,7 @@ From the Integrator's table on #247 (27 October, 11:19Z), as the runbook's Roles
    Prepare the command or the row, and hand it to the person.
 3. **Disclosure.** Follow "Disclosure control" below in everything people read.
 4. **Secrets.** Never print or paste a Hugging Face token, a Modal token, a signing key or a noise key. Don't run `env`, `printenv` or `echo` on a secret.
-5. **One release checkout.** Generation, staging, approval and publishing happen in one checkout. At G2 it is at the measures PR's pushed commit, since Modal doesn't wait for CI. The Integrator runs it, or names the agent who does. Encoding agents work on branches in their own worktrees. Never run two `publish` commands at once in one checkout: each rewrites the manifest.
+5. **One release checkout.** Generation, staging, approval and publishing happen in one checkout, at #1's merged commit. Preview runs from #1's pushed commit go in a separate local preview checkout, and nothing from them is committed. The Integrator runs the release checkout, or names the agent who does. Encoding agents work on branches in their own worktrees. Never run two `publish` commands at once in one checkout: each rewrites the manifest.
 6. **Keep the release checkout clean.** Only `public/data/manifest.json` and `public/data/artifacts/` may be modified or untracked in it (`receipt.is_publication_path`). Everything else the day produces lives outside every git repository:
 
    ```sh
@@ -128,7 +152,8 @@ These are Tuesday's steps, for the Integrator and the Coordinator. On Wednesday 
 - **Both Modal images built** on the final `uv.lock` before 18:00. Measured at 2:40 for the image (#239), and about 12 min after a lock change (#225).
 - **The regeneration** (the Coordinator at 18:00; restarted by the Integrator at about 19:20 on the eight): #222 records which measures ran, which were staged, which the floor held, and the package's key and members (`combined--894152ce8c83f1d8` if all eight stage). Record them in the time log.
 - **Then fresh two-person attestations** for each hand-written receipt that was staged, and for the package if it holds one. An attestation made before the regeneration no longer matches.
-- **The household calculator deployed tonight** (#231), from the regeneration's commit, before 08:00: the test app, then Cloud Run and the production Modal app. From a commit after #264 (19:06Z), the production Modal deploy also brings its warm schedule.
+- **The household calculator deployed tonight** (#231): the Integrator redeploys Cloud Run and the production Modal app from `main` at `9cfbdb4e`, with #264's warm schedule from 07:00 on 28 October (Vahid, [#251](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6451621671)).
+- **What Vahid needs on `main` before the day:** #174, #260, and #207 or its rerun. Record which are in.
 - **The team test link** (#247): its script (#260) works from the local preview checkout, and the Integrator has named who sends the link to the team.
 
 ## Set-up, final cut and go/no-go (by 07:00)
@@ -193,7 +218,7 @@ These are Tuesday's steps, for the Integrator and the Coordinator. On Wednesday 
   - the active limits.
 - **Stop if:** any command fails, or the API's versions differ from the installed ones.
 
-## G1 and encoding (12:30 to about 13:10)
+## G1 and encoding (12:30 to about 14:30)
 
 **1. Read the speech (from 12:30).** List every measure the Chancellor announces, with what was said, its start date and its years. Use the official text or broadcast, never another organisation's figures. Log the time each measure was heard.
 
@@ -223,10 +248,9 @@ The runbook's rules for writing a measure apply ("How a measure must be written"
 - an uprated amount gets an explicit value for every scored year through 2031 (policyengine-uk #2430);
 - dated keys are bare fiscal years: `"2027"` is 2027-28.
 
-**3. A measure that appears only in the documents, after G2** (#247, the Integrator's review, finding 6). Its own encoding is the small part. Its commit is a calculation path, so before the next combined run or area run, every measure with a modifier must be regenerated, and every hand-written one attested again.
-- Classify it at once, but don't commit it until the Integrator chooses:
-  - encode it and regenerate; or
-  - hold it until after G4's area run, then add it as a G5-style correction.
+**3. A measure that appears only in the documents** (#247, the Integrator's review, finding 6). #1 merges only once the documents have landed, at about 14:30, so such a measure goes into #1 like the others if it is ready by then.
+- Once #1 has merged, it waits. Its commit is a calculation path, and nothing on one merges between the start of #3's generation and #3's merge.
+- After that, the Integrator chooses: add it before the map's area run, regenerating every measure with a modifier and attesting every hand-written one again; or hold it until after #4, then add it as a G5-style correction.
 - Log its times.
 
 **4. Encode each coded measure** (on a branch, from G1; runbook "Construction"):
@@ -236,7 +260,7 @@ The runbook's rules for writing a measure apply ("How a measure must be written"
    - A measure that moves capital gains tax holds realisations fixed with `static_capital_gains()`.
    - Copy the nearest existing measure.
 2. **Add its expected effect** to `data_inputs/treasury/expected_effects.csv`: `measure_id,direction,from_year,to_year,reviewer,note`. `positive` improves the government balance. Leave `reviewer` empty.
-   - **Signature: the expected-effects reviewer**, named by the Integrator. The reviewer fills `reviewer` on the measures PR branch before the push G2 generates from.
+   - **Signature: the expected-effects reviewer**, named by the Integrator. The reviewer fills `reviewer` on the measures PR branch before anything is staged, previews included.
      - `load_expected` refuses the whole file while any row lacks a reviewer, so every gate-running `publish` command fails for every measure.
      - A measure with no signed row can't be staged: staging refuses it with "responsiveness is undeclared" (Vahid, 27 October).
      - The file is a calculation path until #174 merges, so a later signature stales the receipts.
@@ -258,34 +282,34 @@ The runbook's rules for writing a measure apply ("How a measure must be written"
 
    CI runs the rest.
 
-**5. The candidates already published.** Each pre-Budget candidate in the manifest is either announced as modelled, or withdrawn in G2's first manifest write. Agents list them; the Integrator decides.
+**5. The candidates already published.** Each pre-Budget candidate in the manifest is either announced as modelled, or withdrawn in the first manifest write of #3's generation. Agents list them; the Integrator decides.
 - If announced as modelled, update its name, description and any parameters in the measures PR, and regenerate it at G2.
 - If not, withdraw it: `uv run uk-budget-data publish withdraw <id> --reason "Not in the Autumn Budget 2026"`.
 - BADR and employer NI were never staged, and are unregistered since #258, so neither needs a withdrawal.
 
 None stays on the page under the statement label.
 
-**6. The measures PR.** The agent prepares it. The Integrator gives the go to push and open it, and merges it.
+**6. #1, the measures PR.** The agent prepares it. The Integrator gives the go to push and open it, and merges it. It holds the measures, their expected-effect rows, and the policy names and summaries ("The four PRs").
 - Push and open it in one go: CI starts when the PR opens, not at the push (#246).
 - The body names each measure and its class. No figure from the data.
   - **Signature: the data-limits check.** Each hand-written modifier gets its reviewer's line: "Data-limits check, <name>, <date>: no other simulation or system; no state changed mid-run; no metaclass; changes purchase pricing: no." (runbook).
-- **The package's members go in this PR.** `AUTUMN_BUDGET_2026_COMBINED_COMPONENTS` in `reforms.py` must list exactly the package you mean to publish: the area run finds the package only when the manifest approves a combined run with exactly those members (#222). Changing it is a calculation-path change, so it goes in with the day's measures, settled from the first call's floor check (G2), never after G2's calls.
-- **Modal doesn't wait for CI** (Vahid, 27 October). Once the pushed commit passes the targeted tests (step 4), the test app is redeployed from it (step 7), and G2 starts from it with CI running alongside.
+- **The package's members go in this PR.** `AUTUMN_BUDGET_2026_COMBINED_COMPONENTS` in `reforms.py` must list exactly the package you mean to publish: the area run finds the package only when the manifest approves a combined run with exactly those members (#222). Changing it is a calculation-path change, so it goes in with the day's measures, settled from the preview floor check (G2), never after #3's generation has started.
+- **Preview runs don't wait for CI** (Vahid, 27 October). Once the pushed commit passes the targeted tests (step 4), the test app is redeployed from it (step 7) and the preview runs start from it (G2), with CI running alongside. The publishable run waits for the merge.
 - **Gate:** the six required checks: Python tests, Python lint, Certified data, Frontend build, Frontend tests and Frontend lint.
 - **Time:** at most 10 min with #219's ten duration-balanced Python shards; 8:48 to the last check on #246.
-- **The Integrator merges only once CI is green, with a merge commit, never a squash.** The area run needs each receipt's commit to be an ancestor of `main`. If CI forces a change on a calculation path, rerun the affected measures from the new commit: a receipt binds the commit it was made at.
+- **The Integrator merges it at about 14:30, once the documents have landed and CI is green, with a merge commit, never a squash.** The area run needs each receipt's commit to be an ancestor of `main`. Text and UI tweaks go in before this cut, or wait until after #3.
 
 **7. The household calculator, before each generation, and the examples.** The page sends every displayed measure to the household API, and an API deployed before the measures commit refuses the new ones ("Unknown measures"). Drill 5 hit this (#144). Cloud Run on `f3304ff` also sends no breakdown by tax and benefit, so the household charts show only totals until it is redeployed. So the calculator is redeployed from the generation's commit before each generation (Vahid, 27 October):
-1. **Before G2's calls, the test app,** which the team test link calls, from a clean checkout of the pushed commit:
+1. **Before each generation, the test app,** which the team test link calls, from a clean checkout of that commit: #1's pushed commit for the preview runs, its merged commit for #3:
 
    ```sh
    HOUSEHOLD_MODAL_APP=uk-budget-household-test uv run --with modal==1.6.2 modal deploy src/uk_budget_data/modal_household.py
    ```
 
-2. **Signature: deploy to production (the Integrator signs it off).** Cloud Run deploys only a commit on `main`, so production follows the measures PR's merge, from the same commit:
-   - run the "Deploy the household API" workflow, action `deploy`, with `commit` set to the generation's full SHA, which the merge commit keeps on `main`. It is live 6 to 7 min after dispatch (runbook);
+2. **Signature: deploy to production (the Integrator signs it off),** from #1's merged commit, after #1 merges and before #3 does:
+   - run the "Deploy the household API" workflow, action `deploy`, with `commit` set to that commit's full SHA (it deploys only a commit on `main`). It is live 6 to 7 min after dispatch (runbook);
    - then deploy the production Modal app from a clean checkout of that commit: `uv run --with modal==1.6.2 modal deploy src/uk_budget_data/modal_household.py`. From any `main` after #264, this also brings the Budget-day warm schedule.
-3. **The examples, as soon as the final member list is known** (after G2's floor check), alongside the combined run. The script recomputes the eight example households in-process, in two jobs: about 11 min (Vahid, 27 October). Without `--policies` it takes the package's measures from `public/data/policy_parameters.json`.
+3. **The examples, as soon as the final member list is known** (after the preview floor check), alongside the combined run, for #3. The script recomputes the eight example households in-process, in two jobs: about 11 min (Vahid, 27 October). Without `--policies` it takes the package's measures from `public/data/policy_parameters.json`.
 
    ```sh
    bun scripts/household-preset-requests.mjs --policies <comma-separated displayable ids> > ~/private/uk-budget-2026/requests.json
@@ -304,15 +328,17 @@ None stays on the page under the statement label.
 5. Then `uv run uk-budget-data publish definitions --api "$HOUSEHOLD_API"` must print `same` for every displayed measure.
 6. **A cold service answers slowly.** A cold first request to the test app came back empty after about 150 s on 27 October. #265 (merged) gives the page a "starting up" message and a retry. #264 (merged) gives the Modal app a fast 503 and the schedule, from its next deploy (rule 9).
 
-## G2: provisional figures (from about 13:10)
+## G2: preview runs, then #3's generation (from about 14:30)
 
-- **Who:** the Integrator, or the agent the Integrator names, in the release checkout at the measures PR's pushed commit. G2 doesn't wait for CI or the merge (step 6).
+- **Who:** the Integrator, or the agent the Integrator names.
+  - **Preview runs** go in a local preview checkout at #1's pushed commit, while CI runs (step 6). Nothing from them is committed or published.
+  - **The publishable run (#3)** goes in the release checkout at #1's merged commit, from about 14:30. From its start until #3 merges, nothing on a calculation path merges.
 - **Before:** the checkout is at that commit, and `git status --porcelain` lists nothing. Record HEAD: every receipt names it.
-- **First, the measure that decides the package** (Vahid, 27 October): the hand-written one most likely to be thin. Push it as soon as it is encoded, and run it alone from that commit while the rest are encoded: `MODAL generate --artifacts --backend modal --reforms <id>`.
+- **First, the measure that decides the package** (Vahid, 27 October): the hand-written one most likely to be thin. Push it as soon as it is encoded, and preview it alone from that commit while the rest are encoded: `MODAL generate --artifacts --backend modal --reforms <id>`.
   - Read its summary for `<id>: WARNING:` lines before anything that depends on it.
-  - If it is thin, it stays private and out of the package: leave it out of `AUTUMN_BUDGET_2026_COMBINED_COMPONENTS` before the final push (step 6).
-  - If it passes, it runs again with the others from the final commit: a hand-written receipt binds the commit it was made at.
-- **Then one call per measure, all at once, from the final pushed commit** (Vahid, 27 October):
+  - If it is thin, it stays private and out of the package: leave it out of `AUTUMN_BUDGET_2026_COMBINED_COMPONENTS` before #1 merges (step 6).
+  - If it passes, it runs again with the others in #3: a hand-written receipt binds the commit it was made at.
+- **Then one call per measure, all at once** (Vahid, 27 October): from the pushed commit for the previews, and from #1's merged commit for #3:
   1. one shell for each measure: `MODAL generate --artifacts --backend modal --reforms <one id>`;
   2. only if a flat file needs re-cutting: `MODAL generate --backend modal --only income_distribution`. Never the package's files here: they wait for the last manifest change (G4).
 - **Time:**
@@ -357,10 +383,7 @@ None stays on the page under the statement label.
   ```
 
   It takes about 2 s (#239). It deletes every unstaged artifact, and lists the files it left without a row.
-- **Then:**
-  1. `uv run python scripts/check_public_data.py` and `bun scripts/check-public-files.mjs`, both at 0 problems;
-  2. `git add` the artifacts, `manifest.json`, `household_presets.json` and `data_inputs/public_data_review.csv`;
-  3. the publication PR, on the Integrator's go. **Signature: merge (the Integrator).**
+- **Then the publication waits for #3.** On the day there is no separate provisional publication: the checks, `git add` and the PR come once the measures are approved (G3) and the package and its files are in (G4), at about 16:00.
 - **Stop if:**
   - a line reads `FAILED`;
   - a refusal can't be explained;
@@ -384,11 +407,11 @@ None stays on the page under the statement label.
 - **Record each file as it lands:** URL, UTC time, size, `shasum -a 256 <file>`, and `file <file>`, which must say "Microsoft Excel 2007+" for a workbook. The OBR can re-upload a file after publication, so the hash at download is the record (#246).
 - **Time:** 2:02 for four workbooks and the PDF (#246).
 
-## G3: Treasury costings, reconciliation and approval (13:40 to 14:10)
+## G3: Treasury costings (#2, from 13:40), reconciliation and approval (during #3)
 
 **No approval before the Treasury figures** (Vahid, 27 October). `publish approve` refuses while a measure's reconciliation is `awaiting_source`, and the area run takes approved entries only, so it can't start before G3.
 
-**1. Where the Treasury inputs live.** This depends on #174. Vahid's decision is that the area run needs #174 merged first: without it, every G3 Treasury commit makes the combined run and the area run refuse.
+**1. Where the Treasury inputs live.** This depends on #174. Vahid's decision is that the area run needs #174 merged first: without it, every G3 Treasury commit makes the combined run and the area run refuse. He lists #174 as needed on `main` before the day; with it, #2 merges any time after 13:40 ("The four PRs").
 - **#174 merged:** Treasury CSV and YAML files can be committed after G2 without staling anything. Work in `data_inputs/treasury/` and commit as the runbook says. Commit before any generation from that checkout: an uncommitted file still makes the tree dirty.
 - **#174 not merged:** keep the inputs out of the release checkout until G4's combined run and area run have both started.
   - Work on a private copy, and put `--inputs` before the action in every gate-running `publish` command (`reconcile`, `stage`, `approve`, `index`, `check`):
@@ -450,7 +473,7 @@ uv run uk-budget-data publish [--inputs <treasury dir>] reconcile public/data/ar
   - a year fails and nobody has accepted an exception;
   - someone asks to approve a measure a model limit holds;
   - the Treasury figure's sign contradicts the expected effect.
-- **Time:** the checklist allows 13:40 to 14:10. It hasn't been timed on real documents.
+- **Time:** between #3's generation (from about 14:30) and #3's merge (about 16:00). It hasn't been timed on real documents.
 
 **4. Attestations.** For every hand-written modifier generated today, and every combined run that holds one:
 - **Drafting:**
@@ -497,12 +520,12 @@ uv run uk-budget-data publish [--inputs <treasury dir>] reconcile public/data/ar
   ```
 
   Four assertions fail until #246's `36e0fef2` is on `main` (#246, finding 1).
-- **Hold its pull request until G4's runs have started.** Its calculation-path file would otherwise make them refuse every measure with a modifier. Merging it also replaces the March forecast's lines with an unavailable notice, by design.
+- **Merge its pull request before #1 merges, or after #3 has merged and the map's area run has started.** Its file is a calculation path: merged in between, it would make the combined and area runs refuse every measure with a modifier, and Vahid's rule keeps calculation paths out from the start of #3's generation to its merge. Merging it also replaces the March forecast's lines with an unavailable notice, by design.
 - **`src/utils/sources.js`:** change `obr_efo_current` and `budget_documents` only as the pull request that adds this page settles (#246, findings 2 and 3).
 
-## G4: combined run, results by area, publication (as soon as their inputs are ready)
+## G4: the package and its files (#3, about 16:00), then the map (#4, about 17:30)
 
-Vahid's run order (27 October): each step starts when the one before it is done, not at a fixed time. The single measures come first. The package starts once they are staged, and its two flat files and the area run follow. From the first call to every result in place took about 35–40 min on 27 October, plus staging and checks. On Budget day the approvals at G3 sit between them.
+Vahid's run order (27 October): each step starts when the one before it is done, not at a fixed time. The single measures come first. The package starts once they are staged, and its two flat files and the area run follow. From the first call to every result in place took about 35–40 min on 27 October, plus staging and checks. On Budget day the approvals at G3 sit between them. In the four-PR plan the package and its files go out with the single measures in #3, and the map follows in #4.
 
 - **Before:**
   - the release checkout is clean (rule 6), with no uncommitted Treasury file;
@@ -512,28 +535,6 @@ Vahid's run order (27 October): each step starts when the one before it is done,
   - **Time:** 10–12 min on 6.11.1 (Vahid's run, 27 October).
   - **Members:** leave out any measure that is held, not computable or stopped by the floor, and say so wherever the package total appears. Settle them before the run starts (G2): each change means a new package key and a new combined run.
   - **Staging:** stage it like a measure. The Integrator approves it once every member is approved (**Signature: the Integrator**). A combined run holding a hand-written modifier needs its own attestation.
-- **The area run, once G3's approvals are in, alongside the combined run and from the same clean commit.** Always name the ids.
-  - Since #234 the command's default adds the package once the manifest approves it. The package is whatever `AUTUMN_BUDGET_2026_COMBINED_COMPONENTS` lists (step 6).
-  - The runbook publishes it by constituency only if the announced measures are exactly those members.
-  - Publishing a package by area waits for the licence holder's agreement (open on the PR that adds this page). Until then, name the single measures.
-
-  ```sh
-  UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/private/uk-budget-2026/audit MODAL constituencies --backend modal --reforms <the approved single measure ids> --run-id constituencies-<the cut's 8 hex digits>-<HHMM>
-  ```
-
-  - Use a new `--run-id` for every run (#250).
-  - **Time on 6.11.1:**
-    - about 14 min in Vahid's run of 27 October: 3.5–5.5 min a measure, each in its own container, plus about 8 min for the release. It cost about $0.5–1;
-    - 49:46 in #250's run of the seven. Its units took 7:40 to 13:16, apart from Plan 2 (29:02) and the Warm Home Discount top-up (38:44). Until a run with those two is timed again, allow up to an hour when either is approved;
-    - then about 20–25 min to the live map (#250).
-  - While it runs, leave `constituency.csv` and `area_provenance.json` alone, and start no second area run. A second run refuses the code-bound measures while the first run's files are uncommitted (#250).
-- **#174 not merged: once both runs have started, bring the Treasury inputs in.**
-  - Copy the checked files from the private copy into `data_inputs/treasury/`.
-  - `uv run uk-budget-data publish check`, with no `--inputs`, must still pass.
-  - From then on, any new combined run or area run refuses the code-bound measures.
-  - The Integrator chooses when approved national figures go out:
-    - in G4's publication PR, with the map, as the checklist has it; or
-    - first, in their own PR, once the combined run has finished and been staged.
 - **The package's flat files,** after the last `stage`, `approve` or `withdraw`, in two shells at once: about 5–10 min each with one container per measure (Vahid, 27 October; 2:46 for both with two measures, #239):
 
   ```sh
@@ -545,7 +546,32 @@ Vahid's run order (27 October): each step starts when the one before it is done,
 
 - **What waits on the package** (Vahid, 27 October). Until the package and its two flat files are published, the page shows "not published yet" in several places. In the household calculator these are "Your place (percentile)", "Your tenth's average", "Your place in the distribution" and "How your change compares". The growth-across-the-distribution card and the combined constituency map wait too. That is correct behaviour, not a bug.
 
-- **After the area run:**
+- **#3, the publication** (about 16:00, after `publish approve`). After the last `stage`, `approve` or `withdraw`, and the flat files:
+  1. `uv run uk-budget-data publish check`. Don't run `publish index` yet: with no area table it refuses ("no flat view file to bind").
+  2. **Signature: review rows (the Integrator).** Run `uv run uk-budget-data publish review-rows --reviewer <GitHub username> --staged-by <who staged>`, never while a `generate` runs. Then add, by hand, the rows for `income_distribution.csv`, `income_mobility.csv` and `income_growth_with_measures.csv` (new SHA-256, reviewer, date, and a basis naming the package), and for `household_presets.json`.
+  3. `git add` the artifacts, `manifest.json`, the three flat files, `household_presets.json`, the attestations, any Treasury inputs not yet committed, and `data_inputs/public_data_review.csv`.
+  4. `uv run python scripts/check_public_data.py` and `bun scripts/check-public-files.mjs`, both at 0 problems, and `page_measures_check` against the deployed household APIs (step 7).
+  5. The PR, on the Integrator's go. The Publication gate isn't a required check, but don't merge if it fails. **Signature: merge (the Integrator).**
+- **#4, the area run, once #3's approvals are in, started after the package's combined run and from the same clean commit.** Always name the ids.
+  - Since #234 the command's default adds the package once the manifest approves it. The package is whatever `AUTUMN_BUDGET_2026_COMBINED_COMPONENTS` lists (step 6).
+  - The runbook publishes it by constituency only if the announced measures are exactly those members.
+  - Publishing a package by area waits for the licence holder's agreement (open on the PR that adds this page). Until then, name the single measures.
+
+  ```sh
+  UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/private/uk-budget-2026/audit MODAL constituencies --backend modal --reforms <the approved single measure ids> --run-id constituencies-<the cut's 8 hex digits>-<HHMM>
+  ```
+
+  - Use a new `--run-id` for every run (#250).
+  - **Time on 6.11.1:** about an hour in Vahid's four-PR plan, which merges the map at about 17:30.
+    - about 14 min in Vahid's rehearsal of 27 October: 3.5–5.5 min a measure, each in its own container, plus about 8 min for the release. It cost about $0.5–1;
+    - 49:46 in #250's run of the seven. Its units took 7:40 to 13:16, apart from Plan 2 (29:02) and the Warm Home Discount top-up (38:44). Until a run with those two is timed again, allow up to an hour when either is approved;
+    - then about 20–25 min to the live map (#250).
+  - While it runs, leave `constituency.csv` and `area_provenance.json` alone, and start no second area run. A second run refuses the code-bound measures while the first run's files are uncommitted (#250).
+- **#174 not merged: #2 waits until the area run has started; then bring the Treasury inputs in.**
+  - Copy the checked files from the private copy into `data_inputs/treasury/`.
+  - `uv run uk-budget-data publish check`, with no `--inputs`, must still pass.
+  - From then on, any new combined run or area run refuses the code-bound measures.
+- **After the area run (#4):**
   1. Fetch its private summary from the Modal Volume into the audit directory, never the checkout: `uvx --from modal==1.6.2 modal volume get uk-budget-2026-constituencies-private geography/<run id>/microcosm-<stamp>/summary.json ~/private/uk-budget-2026/audit/`.
      - **Signature: the Integrator**, who signs the table's review row, reads it and the table. Whether the licence holder reads them first is open.
      - Nobody copies a figure from either anywhere.
@@ -557,18 +583,15 @@ Vahid's run order (27 October): each step starts when the one before it is done,
      ```
 
      `publish index` refuses with no area table ("no flat view file to bind").
-  3. **Signature: review rows (the Integrator).** Run `uv run uk-budget-data publish review-rows --reviewer <his GitHub username> --staged-by <who staged>`. Then add, by hand, the rows for:
-     - `income_distribution.csv`, `income_mobility.csv` and `income_growth_with_measures.csv`: new SHA-256, reviewer, date, and a basis naming the package;
-     - `constituency.csv`: kind `disclosure_table`, the row the area run printed.
+  3. **Signature: review rows (the Integrator).** Run `uv run uk-budget-data publish review-rows --reviewer <GitHub username> --staged-by <who staged>`. Then add, by hand, the row for `constituency.csv`: kind `disclosure_table`, the row the area run printed.
   4. `git add`:
-     - the artifacts, `manifest.json` and `release-index.json`;
+     - `manifest.json` and `release-index.json`;
      - `constituency.csv` and `area_provenance.json`;
-     - the three flat files;
      - any Treasury inputs not yet committed;
      - `data_inputs/public_data_review.csv`.
   5. `uv run python scripts/check_public_data.py` and `bun scripts/check-public-files.mjs`, both at 0 problems.
-  6. The publication PR, on the Integrator's go. The Publication gate isn't a required check, but don't merge if it fails. **Signature: merge (the Integrator).**
-- **Check it is live:**
+  6. #4's PR, on the Integrator's go. **Signature: merge (the Integrator), with the licence holder's sign-off,** at about 17:30.
+- **Check it is live,** after each merge:
 
   ```sh
   curl -s https://uk-autumn-budget-2026.vercel.app/uk/autumn-budget-2026/data/manifest.json | head -5

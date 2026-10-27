@@ -30,24 +30,32 @@ Agents never:
 
 ## Who does what, and when
 
+**The day goes in four PRs** (Vahid, 27 October, [#251](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6451621671)):
+1. **Measures:** the announced measures, their expected-effect rows, and the policy names and summaries. The Integrator reviews; the second signer attests any hand-written modifier, once #3 has written its receipt. Merged at about 14:30, once the documents have landed and CI is green.
+2. **Treasury figures (G3):** the Treasury's costings. The Integrator signs off. Merged any time after 13:40 (with #174 merged, this doesn't invalidate receipts).
+3. **Publication:** the single measures, the package, the flat files and the example households, generated on Modal from #1's merged commit. The Integrator signs the review rows; the second signer signs the attestations. Merged at about 16:00, after `publish approve`.
+4. **Map:** constituency results from the area run (about an hour). The Integrator and the licence holder sign off. Merged at about 17:30.
+
+There is no separate provisional publication. From the start of #3's generation until it merges, nothing on a calculation path merges.
+
 - **The Integrator:**
   - adopts the final cut by 06:00, and runs G0 by 11:30;
   - from 12:30, confirms the coverage ledger, keeping to measures the data can carry and preferring parameter changes, and names the expected-effects reviewer;
   - settles the package's members from the floor check of the measure that decides it (Vahid, 27 October);
-  - before each generation, deploys the household test app from the generation's commit, then starts G2 from the measures PR's pushed commit without waiting for CI;
-  - merges the measures PR once CI is green, then signs off the production deploy from the same commit;
-  - runs or delegates G2, and signs its review rows;
-  - from 13:40 to 14:10, checks the Treasury costings and approves at G3;
+  - before each generation, deploys the household test app from its commit. Preview runs start from #1's pushed commit without waiting for CI;
+  - merges #1 at about 14:30, once the documents have landed and CI is green, then signs off the production deploy from #1's merged commit;
+  - runs or delegates #3's generation, and signs its review rows;
+  - from 13:40, checks the Treasury costings (#2) and signs them off; approves at G3 once #3's artifacts are written;
   - loads the OBR forecast;
   - approves the combined run once every member is approved, and signs G4's review rows;
-  - merges every PR, deploys and rolls back;
+  - merges #3 at about 16:00 and #4 at about 17:30; merges every PR, deploys and rolls back;
   - decides on every correction and withdrawal.
 - **The Coordinator:** runs Tuesday's 18:00 regeneration, and holds the go/no-go at 07:00 on Wednesday.
 - **The second signer and licence holder:**
   - is the second of the two people on every hand-written modifier's attestation. After tonight's regeneration that means each hand-written receipt staged (Plan 2, and the State Pension protection in its total-income design if the floor lets it be staged) and the package that holds one (#222). Parameter changes need no attestation, which is one reason Vahid prefers them on the day;
-  - checks the map before a corrected measure's results by area are republished;
+  - signs off the map PR (#4) with the Integrator, and checks the map before a corrected measure's results by area are republished;
   - answers the disclosure questions the UK Data Service licence raises.
-- **Media first cut** (open: who) sends the 15:45 figures and the webinar slides, from approved entries of one manifest revision only, after the comparables review.
+- **Media first cut** (open: who) sends the 15:45 figures and the webinar slides, from approved entries of one manifest revision only (#3's), after the comparables review.
 - **Still open:**
   - who sends the team test link after each load (#247);
   - who checks first on each attestation;
@@ -62,7 +70,7 @@ Agents never:
 - **Check first:**
   - `direction` (`positive` improves the government balance) and the years match the measure's code and the announcement;
   - the note says only what the code changes.
-- **When:** before the push G2 generates from.
+- **When:** on #1's branch, before anything is staged, previews included.
   - While any row has no reviewer, every gate-running `publish` command fails for every measure.
   - A measure with no signed row can't be staged: staging refuses it with "responsiveness is undeclared" (Vahid, 27 October).
   - The file is a calculation path until #174 merges, so a later signature stales the receipts.
@@ -73,8 +81,8 @@ Agents never:
 - **How:** a line in the measures PR: "Data-limits check, <name>, <date>: no other simulation or system; no state changed mid-run; no metaclass; changes purchase pricing: no." (runbook, "Held by default").
 - **Check first:** the modifier's own code, item by item.
 
-### 3. Measures PR merge
-- **Who:** the Integrator.
+### 3. Measures PR merge (#1)
+- **Who:** the Integrator, at about 14:30, once the documents have landed and CI is green.
 - **How:** a merge commit, never a squash: the area run needs each receipt's commit to be an ancestor of `main`.
 - **Check first:**
   - the six required checks are green;
@@ -159,8 +167,8 @@ Agents never:
 
   Copy no figure from any of them anywhere.
 
-### 10. Publication PR merge
-- **Who:** the Integrator.
+### 10. Publication PR merges (#3 and #4)
+- **Who:** the Integrator: #3 at about 16:00, after `publish approve`; #4, the map, at about 17:30, with the licence holder's sign-off.
 - **Check first:**
   - the required checks and the Publication gate are green;
   - `page_measures_check` passed against the deployed API;
@@ -184,7 +192,7 @@ Agents never:
 ### 14. The first cut (15:45)
 - **Who:** Media first cut (open).
 - **Check first:**
-  - approved entries of one manifest revision only;
+  - approved entries of one manifest revision only: #3's;
   - a comparables review dated within 7 days;
   - any unexplained gap of more than 25% pulled or explained (runbook, "First cut").
 
