@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import MeasureRowLabel from "./MeasureRowLabel";
 import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import "./PolicySelector.css";
 import { ListChecks } from "lucide-react";
@@ -167,8 +168,7 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
                       checked={selectedPolicies.includes(policy.id)}
                       onChange={() => onPolicyToggle(policy.id)}
                     />
-                    <span className="policy-swatch" style={{ background: policy.color }} aria-hidden="true" />
-                    <span className="policy-selector-name">{shortNameOf(policy)}</span>
+                    <MeasureRowLabel compact tip={false} measure={policy} name={shortNameOf(policy)} nameClassName="policy-selector-name" />
                   </label>
                   {summary && <InfoTip content={summary} label={`About ${shortNameOf(policy)}`} />}
                 </div>
