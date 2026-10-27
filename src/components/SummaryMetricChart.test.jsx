@@ -214,8 +214,8 @@ describe("choiceRows, each measure on its own", () => {
 });
 
 describe("tightAxis", () => {
-  it("fits the bars: symmetric with round ticks when they go both ways, from zero when one way", () => {
-    expect(tightAxis([-0.016, -0.007, 0.043])).toEqual({ domain: [-0.05, 0.05], ticks: [-0.05, -0.025, 0, 0.025, 0.05] });
+  it("fits the bars: to each side with round ticks when they go both ways, from zero when one way", () => {
+    expect(tightAxis([-0.016, -0.007, 0.043])).toEqual({ domain: [-0.02, 0.05], ticks: [-0.02, -0.01, 0, 0.01, 0.02, 0.03, 0.04, 0.05] });
     expect(tightAxis([-0.007, -0.004]).domain).toEqual([-0.01, 0]);
   });
 });

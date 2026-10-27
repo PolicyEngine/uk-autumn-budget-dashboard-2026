@@ -1,16 +1,6 @@
 import { useRef, useState } from "react";
-import {
-  ComposedChart,
-  Bar,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-  Customized,
-} from "recharts";
+import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, Customized } from "recharts";
+import { Tooltip } from "./ViewportTooltip";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { revenueCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
@@ -42,7 +32,6 @@ import SelectedYearShade from "./SelectedYearShade";
 import { laterRevenueNote, revenueSentence } from "../utils/plainSentences";
 import { zeroReason } from "../utils/legendMembership";
 import ChartMoreInfo from "./ChartMoreInfo";
-import Note from "./Note";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 
 // Net impact labels, one per year: the signed total in a small white tag
@@ -272,8 +261,8 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [], befor
         .map(({ measure, reason }) => `${measure.name ?? measure.label}: ${reason.text}`)
     : [];
   const yearSpan = `${fiscalYearTick(data[0].year)} to ${fiscalYearTick(data[data.length - 1].year)}`;
-  // The year before the chart's first, in one line under the card; a
-  // measure the empty plot's note already names is not named again
+  // The year before the chart's first, as the first item of "About this
+  // chart"; a measure the empty plot's note already names is not named again
   const selectedMeasures = displayable.filter((measure) => selectedPolicies.includes(measure.id));
   const outOfYearIds = noRevenue
     ? selectedMeasures.filter((measure) => zeroReason(measure, selectedYear).kind === "not_in_force").map((measure) => measure.id)
@@ -351,7 +340,7 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [], befor
             {laterRevenue && <span className="later-years-note"> {laterRevenue}</span>}
           </p>
         </div>
-        <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} />
+        <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} period={yearSpan} />
       </div>
 
       <div ref={chartRef}>
@@ -475,8 +464,10 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [], befor
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
       <div className="chart-footer">
-        {beforeLine && <Note>{beforeLine}</Note>}
-        <ChartMoreInfo year={selectedYear} info={REVENUE_INFO} />
+        <ChartMoreInfo
+          year={selectedYear}
+          info={beforeLine ? { lead: { title: "Before the years shown", body: beforeLine }, ...REVENUE_INFO } : REVENUE_INFO}
+        />
       </div>
     </div>
   );

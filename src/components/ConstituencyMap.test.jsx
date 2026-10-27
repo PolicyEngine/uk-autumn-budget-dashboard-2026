@@ -13,12 +13,14 @@ import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { exportMapAsSvg } from "../utils/exportMapAsSvg";
 import { resetGeographyCache } from "../hooks/useGeographyData";
 import {
-  CATEGORY_COLOURS,
   NO_DATA_FILL,
+  UNCERTAIN_FILL,
   WITHHELD_FILL,
-  approximateFill,
+  approximateColourFill,
+  approximateColourPatternId,
   approximatePatternId,
 } from "../utils/geography/palette";
+import { SCALE_COLOURS, scaleColour } from "../utils/geography/scale";
 import {
   AREA_ROUTING_URL,
   areaRouting,
@@ -116,28 +118,38 @@ describe("ConstituencyMap", () => {
     expect(withheld.style.fill).toBe("");
   });
 
-  it("colours seats by category, and dots an approximate seat's colour", async () => {
+  it("colours seats on the 2025 dashboard's continuous scale, and dots an approximate seat's colour", async () => {
     const { container } = await renderMap();
     const fill = (code) => seat(container, code).getAttribute("fill");
     const opacity = (code) => seat(container, code).getAttribute("fill-opacity");
-    expect(fill("Z14000001")).toBe(CATEGORY_COLOURS.large_gain);
+    // +1.12% is past the scale's +1% end: clamped to its teal
+    expect(fill("Z14000001")).toBe(SCALE_COLOURS.gain.toLowerCase());
     expect(opacity("Z14000001")).toBe("1");
-    // Status is a texture over the category's own colour, not a lighter
+    // Status is a texture over the seat's own colour, not a lighter
     // colour that could be read as a smaller change.
-    expect(fill("Z14000002")).toBe(approximateFill("small_gain"));
+    const approximate = scaleColour("0.0068", 0.01);
+    expect(fill("Z14000002")).toBe(approximateColourFill(approximate));
     expect(opacity("Z14000002")).toBe("1");
     const dots = container.querySelector(
-      `svg > defs > pattern#${approximatePatternId("small_gain")}`,
+      `svg > defs > pattern#${approximateColourPatternId(approximate)}`,
     );
-    expect(dots.querySelector("rect").getAttribute("fill")).toBe(
-      CATEGORY_COLOURS.small_gain,
-    );
+    expect(dots.querySelector("rect").getAttribute("fill")).toBe(approximate);
     expect(dots.querySelector("circle")).not.toBeNull();
     expect(dots.id).not.toMatch(/[\d:]/);
-    expect(fill("Z14000004")).toBe(CATEGORY_COLOURS.too_uncertain);
-    expect(fill("Z14000005")).toBe(CATEGORY_COLOURS.large_loss);
-    expect(fill("Z14000007")).toBe(CATEGORY_COLOURS.little_change);
-    expect(fill("Z14000008")).toBe(CATEGORY_COLOURS.little_change);
+    expect(fill("Z14000004")).toBe(UNCERTAIN_FILL);
+    expect(fill("Z14000005")).toBe(SCALE_COLOURS.loss.toLowerCase());
+    expect(fill("Z14000007")).toBe(SCALE_COLOURS.neutral);
+    expect(fill("Z14000008")).toBe(scaleColour("0.0004", 0.01));
+  });
+
+  it("a hovered seat shows its average and relative change in a floating card", async () => {
+    const { container } = await renderMap();
+    fireEvent.mouseOver(seat(container, "Z14000001"), { clientX: 40, clientY: 40 });
+    const tip = await screen.findByRole("tooltip");
+    expect(within(tip).getByText("Northfield East")).toBeInTheDocument();
+    expect(tip).toHaveTextContent("+£310");
+    expect(tip).toHaveTextContent("+1.12%");
+    fireEvent.mouseOut(seat(container, "Z14000001"));
   });
 
   it("draws a seat with no row as no data, never as a value", async () => {
@@ -154,20 +166,16 @@ describe("ConstituencyMap", () => {
     expect(card.textContent).not.toMatch(/%|£/);
   });
 
-  it("draws the legend inside the SVG, with categories and tiers", async () => {
+  it("draws the legend inside the SVG, with the scale and the statuses", async () => {
     const { container } = await renderMap();
     const legend = container.querySelector("svg > g.map-legend");
     expect(legend).not.toBeNull();
     const text = legend.textContent;
     for (const entry of [
-      "Large gain: 1% or more",
-      "Small gain: 0.1% to 1%",
-      "Little change: under 0.1% either way",
-      "Small loss: 0.1% to 1%",
-      "Large loss: 1% or more",
+      "\u22121%",
+      "0%",
+      "+1%",
       "Too uncertain to classify",
-      "Status, shown by texture",
-      "Reported: solid",
       "Approximate: dotted, few survey households",
       "Not published: hatched, confidentiality",
       "No data: blank",
@@ -178,8 +186,9 @@ describe("ConstituencyMap", () => {
     // Status swatches carry texture over a gain and a loss colour, so none
     // reads as a size of change.
     expect(
-      legend.querySelectorAll(`rect[fill="${approximateFill("large_gain")}"]`),
+      legend.querySelectorAll(`rect[fill="url(#${approximatePatternId("large_gain")})"]`),
     ).toHaveLength(1);
+    expect(legend.querySelector('rect[fill="url(#map-legend-gradient)"]')).not.toBeNull();
     // No explanation of deliberate noise, and no red dot on any seat: the
     // only circles are the dots inside the approximate textures.
     expect(text).not.toMatch(/noise/i);
@@ -189,7 +198,7 @@ describe("ConstituencyMap", () => {
     showChangeAs("£ per household");
     await waitFor(() =>
       expect(container.querySelector("svg > g.map-legend").textContent).toContain(
-        "Large gain: £100 or more",
+        "+£100",
       ),
     );
   });
@@ -197,19 +206,17 @@ describe("ConstituencyMap", () => {
   it("puts the key under the map, never over it, and keeps the legend for the file", async () => {
     const { container } = await renderMap();
     const map = container.querySelector('svg[role="img"]');
-    // On screen the key is HTML, outside the map's SVG: a ramp from loss
-    // to gain, too uncertain, and the three status textures
+    // On screen the key is HTML, outside the map's SVG: a gradient from
+    // loss to gain labelled at its ends and 0, then chips for too
+    // uncertain and the three status textures
     const key = screen.getByRole("group", { name: "Key" });
     expect(map.contains(key)).toBe(false);
     expect(key).toHaveTextContent("Change in household net income, % of income");
-    const entries = [...key.querySelectorAll("button[data-key]")].map((button) => button.getAttribute("aria-label"));
-    expect(entries.slice(0, 5)).toEqual([
-      expect.stringMatching(/^Large loss, 1% or more: \d+ seats?$/),
-      expect.stringMatching(/^Small loss, 0.1% to 1%: /),
-      expect.stringMatching(/^Little change, under 0.1% either way: /),
-      expect.stringMatching(/^Small gain, 0.1% to 1%: /),
-      expect.stringMatching(/^Large gain, 1% or more: /),
-    ]);
+    expect(key.querySelector(".map-key-labels").textContent).toBe("\u22121%0%+1%");
+    expect(key).not.toHaveTextContent("Loss");
+    expect(key).not.toHaveTextContent("Gain");
+    expect(key).not.toHaveTextContent("0.1%");
+    expect(key.querySelectorAll("button[data-key]")).toHaveLength(4);
     expect(key).toHaveTextContent("Too uncertain");
     expect(key).not.toHaveTextContent("Shown by pattern:");
     expect(key).toHaveTextContent("Approximate");
@@ -230,7 +237,12 @@ describe("ConstituencyMap", () => {
     expect(root.querySelector("g.map-legend").getAttribute("transform")).toBe(
       "translate(12, 12)",
     );
-    expect(root.getAttribute("viewBox")).toMatch(/^0 0 800 /);
+    // The file's frame (title, selection, source) is 1200px wide; the map
+    // inside it keeps its own 800px drawing
+    expect(root.getAttribute("viewBox")).toMatch(/^0 0 1200 /);
+    expect(root.querySelector(":scope > svg").getAttribute("viewBox")).toMatch(/^0 0 800 /);
+    expect(root.querySelector(":scope > title").textContent).toBe("Constituency-level impacts, 2029-30");
+    expect(svgText).toContain("Source: PolicyEngine UK, UK Autumn Budget 2026 dashboard");
   });
 
   it("has no footnote under the map; the search box says what to do", async () => {
@@ -279,42 +291,43 @@ describe("ConstituencyMap", () => {
     }
   });
 
-  it("shows a reported seat's rounded value, interval, direction, tier and band", async () => {
+  it("shows a reported seat's £ and % change, with no statistics appendix", async () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000001"));
     const card = tooltip(container);
     expect(within(card).getByRole("heading")).toHaveTextContent("Northfield East");
-    expect(card).toHaveTextContent("+1.12%");
-    expect(card).toHaveTextContent("90% interval: 0.61% to 1.63%");
-    expect(card).toHaveTextContent("Gain");
-    expect(card).toHaveTextContent("Reported");
-    expect(card).toHaveTextContent("30 or more survey households");
-    expect(card).toHaveTextContent("Map category: Large gain");
+    expect(within(card).getByRole("button", { name: "Close" })).toBeInTheDocument();
+    const values = [...card.querySelectorAll(".seat-card-value")].map((node) => node.textContent);
+    expect(values).toEqual(["+£310", "+1.12%"]);
+    expect(card).toHaveTextContent("Average household impact");
+    expect(card).toHaveTextContent("Relative change");
+    expect(card.querySelector(".seat-card-value").style.color).not.toBe("");
+    // A firm figure needs no note
+    expect(card.querySelector(".seat-card-note")).toBeNull();
+    expect(card).not.toHaveTextContent("Map category");
+    expect(card).not.toHaveTextContent("90% interval");
+    // No measure but the package has constituency rows: no By policy rows
+    expect(card).not.toHaveTextContent("By policy");
   });
 
-  it("makes an approximate seat's interval prominent and says why", async () => {
+  it("gives an approximate seat one muted line with its households and interval", async () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000002"));
     const card = tooltip(container);
-    expect(within(card).getByRole("heading")).toHaveTextContent(
-      "Harbour, Mill and Quay",
+    expect(within(card).getByRole("heading")).toHaveTextContent("Harbour, Mill and Quay");
+    expect(card.querySelector(".seat-card-note")).toHaveTextContent(
+      "Estimate from 10–29 survey households; 90% interval 0.12% to 1.24%",
     );
-    expect(card.querySelector(".tooltip-interval-emphasis")).toHaveTextContent(
-      "90% interval: 0.12% to 1.24%",
-    );
-    expect(card).toHaveTextContent(
-      "Approximate: few survey households, so the interval understates the uncertainty",
-    );
-    expect(card).toHaveTextContent("10 to 29 survey households");
+    expect(card).not.toHaveTextContent("Approximate:");
   });
 
-  it("says a too-uncertain seat's call and category in words", async () => {
+  it("gives a seat whose interval includes zero its interval, not a verdict", async () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000004"));
     const card = tooltip(container);
-    expect(card).toHaveTextContent("The interval includes zero");
-    expect(card).not.toHaveTextContent("Too close to call");
-    expect(card).toHaveTextContent("Map category: Too uncertain to classify");
+    expect(card.querySelector(".seat-card-note")).toHaveTextContent("90% interval -0.9% to 1.7%");
+    expect(card).not.toHaveTextContent("The interval includes zero");
+    expect(card).not.toHaveTextContent("Map category");
   });
 
   it("gives a withheld seat no figure, and its region's figure labelled as such", async () => {
@@ -324,9 +337,31 @@ describe("ConstituencyMap", () => {
     expect(within(card).getByRole("heading")).toHaveTextContent("Westmoor");
     const lines = [...card.querySelectorAll("p")].map((line) => line.textContent);
     expect(lines).toEqual([
-      "Not published, to protect survey respondents' confidentiality.",
+      "Not published: too few survey households",
       "Regional figure for London, not an estimate for this constituency: +0.71% (0.52% to 0.94%)",
     ]);
+  });
+
+  it("lists each selected measure's own £ change for the seat, gains first", async () => {
+    const extra = [
+      "constituency,Z14000001,Northfield East,two_child_limit,2029,average_change,420.0,300.0,540.0,gain,reported,,30+,False,direct",
+      "constituency,Z14000001,Northfield East,two_child_limit,2029,relative_change,0.015,0.01,0.02,gain,reported,,30+,False,direct",
+      "constituency,Z14000001,Northfield East,fuel_duty_freeze,2029,average_change,-110.0,-150.0,-70.0,loss,reported,,30+,False,direct",
+      "constituency,Z14000001,Northfield East,fuel_duty_freeze,2029,relative_change,-0.004,-0.005,-0.003,loss,reported,,30+,False,direct",
+      "constituency,Z14000001,Northfield East,rail_fares_freeze,2029,average_change,,,,,withheld,disclosure_control,,False,direct",
+      "constituency,Z14000001,Northfield East,rail_fares_freeze,2029,relative_change,,,,,withheld,disclosure_control,,False,direct",
+    ];
+    const csv = `${geographyFixture("constituency.csv").trimEnd()}\n${extra.join("\n")}\n`;
+    vi.stubGlobal("fetch", geographyFetch({ "/data/constituency.csv": csv }));
+    const { container } = await renderMap();
+    fireEvent.click(seat(container, "Z14000001"));
+    const card = tooltip(container);
+    expect(card).toHaveTextContent("By policy:");
+    const rows = [...card.querySelectorAll(".seat-card-policy")].map((row) => [
+      row.querySelector(".seat-card-policy-value").textContent,
+    ]);
+    expect(rows).toEqual([["+£420"], ["-£110"], ["Not published for this seat"]]);
+    expect(card.textContent).not.toMatch(/BY POLICY|By provision/);
   });
 
   it("finds a constituency by name, with its published figure", async () => {
@@ -353,12 +388,13 @@ describe("ConstituencyMap", () => {
     showChangeAs("£ per household");
     await waitFor(() =>
       expect(seat(container, "Z14000002").getAttribute("fill")).toBe(
-        approximateFill("large_gain"),
+        approximateColourFill(scaleColour("150", 100)),
       ),
     );
     fireEvent.click(seat(container, "Z14000005"));
     expect(tooltip(container)).toHaveTextContent("-£480");
-    expect(tooltip(container)).toHaveTextContent("90% interval: -£610 to -£350");
+    expect(tooltip(container)).toHaveTextContent("-1.35%");
+    expect(tooltip(container)).not.toHaveTextContent("90% interval");
   });
 
   it("follows the year, keeping hatched seats hatched", async () => {
@@ -368,7 +404,7 @@ describe("ConstituencyMap", () => {
     );
     await waitFor(() =>
       expect(seat(container, "Z14000001").getAttribute("fill")).toBe(
-        CATEGORY_COLOURS.small_gain,
+        scaleColour("0.0021", 0.01),
       ),
     );
     expect(seat(container, "Z14000002").getAttribute("data-state")).toBe("no-data");
@@ -472,14 +508,14 @@ describe("ConstituencyMap", () => {
     fireEvent.click(screen.getByRole("button", { name: "CSV Data" }));
     await waitFor(() => expect(downloadFile).toHaveBeenCalledTimes(1));
     const [content, filename, mimeType] = vi.mocked(downloadFile).mock.calls[0];
-    expect(filename).toBe(
-      "constituency-results-autumn_budget_2026_combined-2029.csv",
-    );
+    // Named after the card's title and year
+    expect(filename).toBe("constituency-level-impacts-2029-30.csv");
     expect(mimeType).toBe("text/csv;charset=utf-8");
     const lines = content.slice(1).trim().split("\r\n");
     expect(lines[0]).toMatch(/^# Generated: /);
     expect(lines).toContain("# Reform: autumn_budget_2026_combined");
     expect(lines).toContain("# Year: 2029-30");
+    expect(lines).toContain('"# Chart: Constituency-level impacts, 2029-30"');
     const header = lines.find((line) => !line.startsWith("#") && !line.startsWith('"#'));
     expect(header.split(",")[0]).toBe("area_code");
   });
@@ -491,12 +527,10 @@ describe("ConstituencyMap", () => {
     fireEvent.click(screen.getByRole("button", { name: "SVG Vector image" }));
     await waitFor(() => expect(downloadSvg).toHaveBeenCalledTimes(1));
     const [svgText, filename] = vi.mocked(downloadSvg).mock.calls[0];
-    expect(filename).toBe(
-      "constituency-map-autumn_budget_2026_combined-relative_change-2029",
-    );
+    expect(filename).toBe("constituency-level-impacts-2029-30");
     const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
     const root = doc.documentElement;
-    expect(root.querySelector(":scope > defs > pattern#withheld-hatch")).not.toBeNull();
+    expect(root.querySelector(":scope > svg > defs > pattern#withheld-hatch")).not.toBeNull();
     expect(
       root.querySelector('path[data-code="Z14000003"]').getAttribute("fill"),
     ).toBe("url(#withheld-hatch)");
@@ -506,7 +540,7 @@ describe("ConstituencyMap", () => {
     // The exported file carries the dot textures its approximate seats use.
     expect(
       root.querySelector(
-        `:scope > defs > pattern#${approximatePatternId("small_gain")}`,
+        `:scope > svg > defs > pattern#${approximatePatternId("small_gain")}`,
       ),
     ).not.toBeNull();
     expect(root.querySelector("g.map-zoom-layer").hasAttribute("transform")).toBe(
@@ -517,8 +551,7 @@ describe("ConstituencyMap", () => {
       .map((line) => line.textContent)
       .join(" ");
     expect(card).toBe(
-      "Westmoor Not published, to protect survey respondents' " +
-        "confidentiality. Regional figure for London, not an estimate " +
+      "Westmoor Not published: too few survey households Regional figure for London, not an estimate " +
         "for this constituency: +0.71% (0.52% to 0.94%)",
     );
     expect(svgText).not.toMatch(/NaN|undefined/);
@@ -569,7 +602,7 @@ describe("ConstituencyMap and the release's area routing", () => {
     );
     const { container } = await renderMap();
     expect(seat(container, "Z14000001").getAttribute("fill")).toBe(
-      CATEGORY_COLOURS.large_gain,
+      SCALE_COLOURS.gain.toLowerCase(),
     );
     expect(screen.queryByText(NOT_AVAILABLE)).not.toBeInTheDocument();
     expect(screen.getByText(HOW_TO_READ)).toBeInTheDocument();

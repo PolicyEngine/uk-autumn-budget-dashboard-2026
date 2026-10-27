@@ -1,3 +1,5 @@
+import { stickyInset } from "./tooltipPlacement";
+
 /**
  * Keep an "i" tooltip (.info-icon-wrapper > .info-tooltip) inside the
  * viewport. The tooltip is centred over its icon in CSS; an icon near the
@@ -23,6 +25,11 @@ export function clampInfoTooltip(wrapper) {
   const rect = tip.getBoundingClientRect();
   const width = document.documentElement.clientWidth || window.innerWidth;
   tip.style.setProperty("--tip-shift", `${tooltipShift(rect.left, rect.right, width)}px`);
+  // Above its icon by default; below it where the sticky band (or the
+  // window's top) would cover it
+  wrapper.classList.remove("info-tooltip-below");
+  const top = tip.getBoundingClientRect().top;
+  if (top < stickyInset(wrapper) + EDGE / 2) wrapper.classList.add("info-tooltip-below");
 }
 
 /**

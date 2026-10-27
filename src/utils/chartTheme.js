@@ -75,6 +75,7 @@ export const CHART_COLOURS = {
   marketIncome: "#4A7BA7",
   pensionContributions: "#B8875A",
   gainLight: "#81E6D9",
+  mapGain: "#14B8A6",
   lossLight: "#FBBF24",
   ink: "#1F2937",
   noticeBg: "#FFF7E6",
@@ -512,16 +513,46 @@ export function symmetricAxis(values, { pad = 0.05 } = {}) {
   return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
 }
 
+// The largest round step (1, 2, 2.5 or 5 x 10^n) no bigger than `raw`
+function niceStepBelow(raw) {
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  return [10, 5, 2.5, 2, 1].map((m) => m * mag).find((s) => s <= raw * (1 + 1e-9));
+}
+
+/**
+ * An axis fitted to the data on each side of 0, never forced symmetric:
+ * [min(0, data min), max(0, data max)] padded by `pad` of each end, with
+ * ticks at a round step (about four to eight of them, always 0) and each
+ * end rounded out to half that step. Data from −0.46 to +0.13 gives
+ * −0.5 to +0.15 with ticks every 0.1. Returns { domain, ticks }.
+ */
+export function fittedAxis(values, { pad = 0.08 } = {}) {
+  const vals = values.filter((v) => v != null && Number.isFinite(v));
+  const lo = Math.min(0, ...vals) * (1 + pad);
+  const hi = Math.max(0, ...vals) * (1 + pad);
+  if (hi - lo < 1e-12) return zeroBasedAxis(vals);
+  const step = niceStepBelow((hi - lo) / 4);
+  // Ends on half steps where that is itself round (0.05 for 0.1 ticks;
+  // never 1.25 for 2.5 ticks)
+  const mantissa = Math.round(step / 10 ** Math.floor(Math.log10(step)) * 10) / 10;
+  const grain = mantissa === 2.5 ? step : step / 2;
+  const clean = (v) => Math.round(v * 1e9) / 1e9 || 0;
+  const domain = [clean(Math.floor(lo / grain + 1e-9) * grain), clean(Math.ceil(hi / grain - 1e-9) * grain)];
+  const ticks = [];
+  for (let k = Math.ceil(domain[0] / step - 1e-9); k <= Math.floor(domain[1] / step + 1e-9); k += 1) ticks.push(clean(k * step));
+  return { domain, ticks };
+}
+
 /**
  * The y axis of a chart that can diverge from 0 (changes, gains and
- * costs): symmetric about 0 (symmetricAxis) when the values fall on both
- * sides of it, otherwise from 0 (zeroBasedAxis), so a chart whose values
- * are all one sign is not drawn half empty.
+ * costs): fitted to each side (fittedAxis) when the values fall on both
+ * sides of 0, so a small rise beside a large fall is not drawn in a half
+ * empty plot; otherwise from 0 (zeroBasedAxis).
  */
 export function divergingAxis(values, options) {
   const vals = values.filter((v) => v != null && Number.isFinite(v));
   const both = vals.some((v) => v > 1e-9) && vals.some((v) => v < -1e-9);
-  return both ? symmetricAxis(vals, options) : zeroBasedAxis(vals, options);
+  return both ? fittedAxis(vals, options) : zeroBasedAxis(vals, options);
 }
 
 /**

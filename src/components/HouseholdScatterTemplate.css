@@ -59,6 +59,23 @@
     height: auto;
   }
 
+  /* Beside a card with an Options pill (All households' income decile
+     card), the plot keeps to the plot row, so both plots start level. Its
+     drawing adds no height, so it holds the row open itself: the decile
+     chart beside it spans this row, the key's and the logo's, and its
+     logo (in its SVG) ends level with this card's. */
+  .charts-grid:has(> div > .chart-controls) > div.household-scatter-template:not(:only-child) > .chart-plot {
+    grid-row: 4;
+    min-height: 340px;
+  }
+
+  /* About this chart in the footer row, level with its neighbour's */
+  .charts-grid > div.household-scatter-template:not(:only-child) > .chart-more-info {
+    grid-column: 1 / -1;
+    grid-row: 7;
+    align-self: end;
+  }
+
   /* The key takes the row of the map's colour scale, under the plot */
   .charts-grid > div.household-scatter-template:not(:only-child) > .scatter-legend {
     grid-row: 5;

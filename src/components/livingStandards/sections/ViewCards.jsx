@@ -52,7 +52,9 @@ export function InequalityOverTimeCard({ data }) {
 InequalityOverTimeCard.requires = "inequality";
 
 // The id of this card, which its twin with the measures links to
-export const GROWTH_CURRENT_LAW_ANCHOR = "growth-current-law";
+// (utils/viewAnchors)
+import { GROWTH_CURRENT_LAW_ANCHOR } from "../../../utils/viewAnchors";
+export { GROWTH_CURRENT_LAW_ANCHOR };
 
 export function GrowthCard({ data, onShowTab, selectedYear = null }) {
   // One year range for the card (and every card comparing two years)

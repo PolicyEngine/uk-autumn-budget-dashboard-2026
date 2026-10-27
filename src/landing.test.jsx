@@ -1,11 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import App, { DECILES_ANCHOR } from "./App";
+import App, { DECILES_ANCHOR, preloadAllViews } from "./App";
 import { YOUNG_PEOPLE_ANCHOR } from "./components/YoungPeopleSection";
 import { resetPresetResults } from "./utils/householdPresets";
 import { DEEP_LINK_HASHES, DEEP_LINK_SCRIPT, opensLanding } from "./utils/landing";
 import { provisionalLabel } from "./utils/publication/manifest";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture";
+
+// Every view's code is in before a test renders it (App.jsx lazyView)
+beforeAll(preloadAllViews, 60_000);
 
 const INTRO =
   /^Estimates from PolicyEngine UK( \(opens in a new tab\))? of how Autumn Budget 2026 measures affect the public finances and household incomes across the income distribution, regions and age groups, set against the pre-measures forecast\. Costings are our own; the economic forecast is the OBR’s Economic and fiscal outlook, March 2026( \(opens in a new tab\))?\.$/;
@@ -251,7 +254,7 @@ describe("the About pill in the tab row, and its overview drawer", () => {
     expect(site).toHaveAttribute("href", "https://policyengine.org/uk");
     expect(site).toHaveAttribute("target", "_blank");
     expect(site).toHaveAttribute("rel", "noopener noreferrer");
-    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Close the overview" })).toHaveFocus());
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Close" })).toHaveFocus());
     expect(document.body.style.overflow).toBe("hidden");
     // The view stays where it was
     expect(search().get("tab")).toBe("methodology");
@@ -259,7 +262,7 @@ describe("the About pill in the tab row, and its overview drawer", () => {
 
   it("closes by the close button, Esc or the backdrop, with focus back on the tab", async () => {
     const { container } = await openDrawer();
-    fireEvent.click(within(drawer()).getByRole("button", { name: "Close the overview" }));
+    fireEvent.click(within(drawer()).getByRole("button", { name: "Close" }));
     expect(drawer()).toBeNull();
     expect(edge()).toHaveFocus();
     expect(document.body.style.overflow).toBe("");
@@ -277,7 +280,7 @@ describe("the About pill in the tab row, and its overview drawer", () => {
   it("keeps Tab inside the drawer", async () => {
     await openDrawer();
     const dialog = drawer();
-    const close = within(dialog).getByRole("button", { name: "Close the overview" });
+    const close = within(dialog).getByRole("button", { name: "Close" });
     const links = within(dialog).getAllByRole("link");
     links.at(-1).focus();
     fireEvent.keyDown(links.at(-1), { key: "Tab" });

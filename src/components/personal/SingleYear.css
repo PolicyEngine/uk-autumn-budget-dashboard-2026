@@ -555,19 +555,18 @@
   padding: 16px 28px 24px;
 }
 
-.result-value {
-  font-size: 2.5rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-  color: var(--pe-gray-700);
+/* The change in the Your change tile: the tiles' headline size and
+   place (from .forecast-tile-value), only its colour its own. Its own
+   class name: ConstituencyMap.css's global .result-value is micro text */
+.result-change-value {
+  font: inherit;
 }
 
-.result-card.is-gain .result-value {
+.result-card.is-gain .result-change-value {
   color: var(--c-gain-text);
 }
 
-.result-card.is-loss .result-value {
+.result-card.is-loss .result-change-value {
   color: var(--c-loss-text);
 }
 
@@ -967,9 +966,6 @@
     padding-right: 16px;
   }
 
-  .result-value {
-    font-size: 2rem;
-  }
 
 }
 
@@ -1015,8 +1011,8 @@
 }
 
 /* "About this result", at the card's foot, in the charts' "About this
-   chart" style: a bullet on assumed spending, then two columns with
-   matching headings, Based on and No effect on you; stacked on a phone */
+   chart" style: two columns with matching headings, Based on and No
+   effect on you (stacked on a phone), then Notes and Caveats */
 .result-card-about {
   margin: 0 28px 12px;
 }
@@ -1067,10 +1063,6 @@
   margin-right: -4px;
 }
 
-.result-card-about .result-card-notes {
-  margin: 0;
-  padding-left: 16px;
-}
 
 @media (max-width: 599px) {
   .result-card-about {
@@ -1078,9 +1070,6 @@
   }
 }
 
-.result-card-notes .single-year-quiet {
-  margin: 0 0 8px;
-}
 
 .waterfall-pending,
 .waterfall-no-effect {
@@ -1103,7 +1092,6 @@
 
 .result-card .result-card-body {
   grid-template-columns: minmax(0, 1fr);
-  padding-top: 12px;
 }
 
 .result-policies-link {
@@ -1124,11 +1112,231 @@
 
 }
 
-/* The waterfall's own title and line, as on every card */
-.waterfall-header {
-  margin: 0 0 8px;
+/* The waterfall's panel: the tiles' tint, border, radius and padding,
+   the card's width; the gap above it the tiles' own gap */
+.result-card .result-card-body {
+  padding-top: 12px;
 }
 
-.waterfall-scale-note {
-  margin: 2px 0 0;
+.result-card .net-income-waterfall {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 12px;
+  background: var(--pe-teal-50);
+}
+
+@media (max-width: 900px) {
+  .result-card .result-card-body {
+    padding-top: 8px;
+  }
+}
+
+/* Its title as the tiles' (icon chip and name), the line under it */
+.waterfall-header {
+  margin: 0 0 10px;
+}
+
+.waterfall-title {
+  margin: 0;
+}
+
+.waterfall-title .forecast-tile-icon svg {
+  display: block;
+}
+
+.waterfall-sentence {
+  margin: 6px 0 0;
+  max-width: 72ch;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--pe-gray-600);
+}
+
+/* The waterfall: one row each at one pitch (name | bar | amount), the
+   amounts right-aligned in one column. The track's left edge is the axis,
+   its one tick under the rows; the connectors join each bar's end to the
+   next row's start, so the rows sit with no gap */
+.waterfall-rows {
+  --wf-pitch: 34px;
+  --wf-bar: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.waterfall-row,
+.waterfall-axis {
+  display: grid;
+  grid-template-columns: minmax(120px, min(32%, 240px)) minmax(0, 1fr) 76px;
+  column-gap: 12px;
+  align-items: center;
+}
+
+.waterfall-row {
+  height: var(--wf-pitch);
+  border-radius: 4px;
+  outline: none;
+}
+
+.waterfall-row:hover,
+.waterfall-row:focus-visible {
+  background: var(--pe-gray-50);
+}
+
+.waterfall-row:focus-visible {
+  box-shadow: 0 0 0 2px var(--c-gain);
+}
+
+.waterfall-name {
+  padding-left: 4px;
+  font-size: var(--fs-small);
+  line-height: 1.25;
+  color: var(--c-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.waterfall-row.is-total .waterfall-name,
+.waterfall-row.is-total .waterfall-value {
+  font-weight: 600;
+}
+
+.waterfall-track {
+  position: relative;
+  height: 100%;
+  border-left: 1px solid var(--c-axis, var(--pe-gray-400));
+}
+
+.waterfall-bar {
+  position: absolute;
+  top: calc(50% - var(--wf-bar) / 2);
+  height: var(--wf-bar);
+  border-radius: 3px;
+}
+
+.waterfall-row.is-before .waterfall-bar {
+  background: var(--c-before);
+  border-radius: 0 3px 3px 0;
+}
+
+.waterfall-row.is-after .waterfall-bar {
+  background: var(--c-after);
+  border-radius: 0 3px 3px 0;
+}
+
+.waterfall-row.is-gain .waterfall-bar {
+  background: var(--c-gain);
+}
+
+.waterfall-row.is-loss .waterfall-bar {
+  background: var(--c-loss);
+}
+
+.waterfall-row.is-none .waterfall-bar {
+  background: var(--c-before);
+}
+
+/* The axis break: two slanted gaps across the before and after bars */
+.waterfall-break {
+  position: absolute;
+  left: 10px;
+  top: calc(50% - var(--wf-bar) / 2 - 3px);
+  width: 5px;
+  height: calc(var(--wf-bar) + 6px);
+  border-left: 2px solid var(--c-surface);
+  border-right: 2px solid var(--c-surface);
+  transform: skewX(-22deg);
+}
+
+.result-card .net-income-waterfall .waterfall-break {
+  border-color: var(--pe-teal-50);
+}
+
+.waterfall-link {
+  position: absolute;
+  top: calc(50% + var(--wf-bar) / 2);
+  height: calc(var(--wf-pitch) - var(--wf-bar));
+  border-left: 1px dashed var(--pe-gray-400);
+}
+
+.waterfall-value {
+  text-align: right;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text);
+  white-space: nowrap;
+}
+
+.waterfall-row.is-gain .waterfall-value {
+  color: var(--c-gain-text);
+}
+
+.waterfall-row.is-loss .waterfall-value {
+  color: var(--c-loss-text);
+}
+
+/* The tick under the track's left edge: where the bars start */
+.waterfall-axis {
+  height: 18px;
+}
+
+/* The axis line along the track's foot, from the left edge; the tick
+   and its label hang from the corner, under the vertical axis */
+.waterfall-axis-line {
+  grid-column: 2;
+  align-self: start;
+  position: relative;
+  height: 100%;
+  border-top: 1px solid var(--c-axis, var(--pe-gray-400));
+}
+
+.waterfall-axis-tick {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translateX(-50%);
+  padding-top: 5px;
+  line-height: 1;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.waterfall-axis-tick::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 4px;
+  border-left: 1px solid var(--c-axis, var(--pe-gray-400));
+}
+
+@media (max-width: 599px) {
+  .waterfall-rows {
+    --wf-pitch: 40px;
+    --wf-bar: 12px;
+  }
+
+  .waterfall-row,
+  .waterfall-axis {
+    grid-template-columns: minmax(0, 38%) minmax(0, 1fr) 62px;
+    column-gap: 8px;
+  }
+
+  /* Up to two lines on a phone, at the same pitch */
+  .waterfall-name {
+    padding-left: 0;
+    font-size: var(--fs-caption);
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .waterfall-value {
+    font-size: var(--fs-caption);
+  }
 }

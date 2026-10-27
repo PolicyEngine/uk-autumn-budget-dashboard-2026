@@ -140,7 +140,7 @@ describe("the Poverty sub-tab's measures pair", () => {
     expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^about [\d,]+ fewer people$/);
     // A plain sentence, no "≈" or "pp"
     const headline = measures.querySelector(".chart-description");
-    expect(headline).toHaveTextContent(/^Unfreezing the student loan threshold has the largest effect, moving about [\d,]+ people out of poverty; all the measures together move about [\d,]+ people out of poverty\.$/);
+    expect(headline).toHaveTextContent(/^All the measures together move about [\d,]+ people out of poverty; unfreezing the student loan threshold moves the most \(about [\d,]+\)\.$/);
     expect(headline.textContent).not.toMatch(/≈|pp/);
 
     // Chosen in one card's pill, followed by the other's
@@ -259,7 +259,7 @@ describe("a measure whose artifact predates the poverty and inequality measures"
     // not of the children chosen
     const population = outlookPopulation(JSON.parse(readFileSync(join(PUBLIC, "data", "living_standards_outlook.json"), "utf8")));
     expect(about(population(2027, "children"))).not.toBe(about(population(2027, "all")));
-    await waitFor(() => expect(card.querySelector(".chart-description")).toHaveTextContent(`moving ${about(population(2027, "all"))} people out of poverty`), { timeout: 5000 });
+    await waitFor(() => expect(card.querySelector(".chart-description")).toHaveTextContent(`moves ${about(population(2027, "all"))} people out of poverty.`), { timeout: 5000 });
   });
 
   it("still says so of a measure whose run carries the measure as no change, with no note", async () => {
