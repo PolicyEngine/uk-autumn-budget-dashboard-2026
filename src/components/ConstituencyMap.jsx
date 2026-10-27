@@ -70,6 +70,7 @@ import {
   unchangedLine,
 } from "../utils/geography/seats";
 import {
+  COMBINED_CHOICE,
   choiceLabel,
   choiceMeasureNames,
 } from "../utils/geography/selection";
@@ -346,17 +347,44 @@ export function keyCounts(states) {
   return counts;
 }
 
+// Below this window width (a phone) the key sits under the map in rows;
+// wider, it is a column beside the map, so the map takes the card's height
+export const LEGEND_SIDE_MIN_WIDTH = 640;
+
+/** Where the map's key goes at a window width: "side" or "below". */
+export const legendPlacement = (width) =>
+  Number.isFinite(width) && width < LEGEND_SIDE_MIN_WIDTH ? "below" : "side";
+
+/** The key's place for the current window, following resizes. */
+function useLegendPlacement() {
+  const [placement, setPlacement] = useState(() =>
+    typeof window === "undefined" ? "side" : legendPlacement(window.innerWidth),
+  );
+  useEffect(() => {
+    const update = () => setPlacement(legendPlacement(window.innerWidth));
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return placement;
+}
+
+// The scale's gradient in the side key: loss at the foot, gain at the top
+const SCALE_GRADIENT_VERTICAL = SCALE_GRADIENT.replace("to right", "to top");
+
 const seatCount = (n) => `${n.toLocaleString("en-GB")} ${n === 1 ? "seat" : "seats"}`;
 
 /**
- * The map's key, under the map: a smooth gradient from a loss (amber)
- * through no change (light grey) to a gain (teal), labelled at its two
- * ends and 0, and a row of compact chips for too uncertain and the three
- * status textures. Hovering or focusing a chip highlights the seats it
+ * The map's key: a smooth gradient from a loss (amber) through no change
+ * (light grey) to a gain (teal), labelled at its two ends and 0, and
+ * compact chips for too uncertain and the three status textures. Beside
+ * the map (`placement` "side") the gradient stands upright, gain at the
+ * top, with a tick at each label, and the chips are stacked under it; on
+ * a phone ("below") it is the horizontal row under the map. Hovering or focusing a chip highlights the seats it
  * covers (`onHighlight`) and gives their number. The textures are the map
  * SVG's own patterns.
  */
-function MapKey({ outcome, extent, counts, highlight, onHighlight }) {
+function MapKey({ outcome, extent, counts, highlight, onHighlight, placement = "below" }) {
   const [low, zero, high] = scaleLabels(outcome, extent);
   const hovered = highlight ? counts[highlight] : null;
   const entryProps = (key, label) => ({
@@ -380,7 +408,11 @@ function MapKey({ outcome, extent, counts, highlight, onHighlight }) {
     </svg>
   );
   return (
-    <div className={`map-key${highlight ? " is-highlighting" : ""}`} role="group" aria-label="Key">
+    <div
+      className={`map-key map-key-${placement}${highlight ? " is-highlighting" : ""}`}
+      role="group"
+      aria-label="Key"
+    >
       <div className="map-key-head">
         <p className="map-key-title">
           Change in household net income, {OUTCOME_LABELS[outcome]}
@@ -403,7 +435,7 @@ function MapKey({ outcome, extent, counts, highlight, onHighlight }) {
           className="map-key-gradient"
           role="img"
           aria-label={`Colour scale from ${low} (amber) through ${zero} (grey) to ${high} (teal)`}
-          style={{ background: SCALE_GRADIENT }}
+          style={{ background: placement === "side" ? SCALE_GRADIENT_VERTICAL : SCALE_GRADIENT }}
         />
         <div className="map-key-labels" aria-hidden="true">
           <span>{low}</span>
@@ -590,6 +622,10 @@ export default function ConstituencyMap({
     },
     [setPanelParam],
   );
+  // The card's Policy option: null for the default (combined when
+  // published, else the first selected policy with constituency results)
+  const [policyChoice, setPolicyChoice] = useState(null);
+  const legendPlace = useLegendPlacement();
   const [selectedCode, setSelectedCode] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [svgNode, setSvgNode] = useState(null);
@@ -611,7 +647,9 @@ export default function ConstituencyMap({
     boundariesReady,
     routing,
     regionalHasChoice,
-  } = useConstituencyView({ selectedPolicies, policies, selectedYear, outcome });
+    policyOptions,
+    policyValue,
+  } = useConstituencyView({ selectedPolicies, policies, selectedYear, outcome, policyChoice });
   const policyName = (id) => shortNameOf(policies.find((policy) => policy.id === id) ?? { id });
   // On a release that routes no results by area, the card describes the
   // measure only, not how to read a map it does not draw.
@@ -1075,9 +1113,21 @@ export default function ConstituencyMap({
       </UnavailableNotice>
     ) : null;
 
-  // The card's choices, in its one Options pill: how the change is shown,
-  // and the view. The policies shown are the header's selection
+  // The card's choices, in its one Options pill: which published run of
+  // the header's selection (when there is more than one), how the change
+  // is shown, and the view
   const optionGroups = [
+    policyOptions.length > 1 && {
+      label: "Policy",
+      value: policyValue,
+      onChange: setPolicyChoice,
+      stacked: true,
+      options: policyOptions.map((option) =>
+        option.value === COMBINED_CHOICE
+          ? { value: option.value, label: "Selected policies combined", summary: "Combined" }
+          : { value: option.value, label: policyName(option.value) },
+      ),
+    },
     {
       label: "Show the change as",
       value: outcome,
@@ -1208,8 +1258,9 @@ export default function ConstituencyMap({
 
         {/* Kept mounted in the Table view, so the map keeps its zoom */}
         {view.kind === "rows" && (
-          <div className="map-content" hidden={!onMap}>
+          <div className={`map-content is-legend-${legendPlace}`} hidden={!onMap}>
             <MapKey
+              placement={legendPlace}
               outcome={outcome}
               extent={colourExtent(outcome)}
               counts={counts}
