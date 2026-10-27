@@ -2,6 +2,7 @@
    380px wide (the full width on a phone), over a dimmed page */
 .overview {
   --overview-width: min(380px, 100vw);
+  --overview-band-height: var(--title-row-height);
   position: fixed;
   inset: 0;
   z-index: 1300;
@@ -27,7 +28,11 @@
   opacity: 1;
 }
 
-/* The panel: header, a body that fits without scrolling, a footer */
+/* The panel: header, a body that fits without scrolling, a footer. No
+   border: a light edge would show as a white line beside the band; the
+   shadow and the dimmed page mark its edge. Its own background carries the
+   band's gradient behind the header's height, so a classic scrollbar's
+   (transparent) track beside the sticky header shows the band, not white. */
 .overview-panel {
   position: absolute;
   inset: 0 auto 0 0;
@@ -36,8 +41,10 @@
   width: var(--overview-width);
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: var(--c-surface);
-  border-right: 1px solid var(--card-border);
+  scrollbar-color: var(--pe-gray-300) transparent;
+  background:
+    var(--band-gradient) left top / 100vw var(--overview-band-height) no-repeat,
+    var(--c-surface);
   box-shadow: 6px 0 24px var(--shadow-soft);
   transform: translateX(-100%);
   transition: transform var(--motion-slide) ease;
@@ -63,7 +70,7 @@
   grid-template-columns: 40px 1fr 40px;
   align-items: center;
   gap: 8px;
-  height: var(--title-row-height);
+  height: var(--overview-band-height);
   padding: 0 12px;
   background: var(--band-gradient);
   background-size: 100vw 100%;
@@ -139,9 +146,10 @@
   flex-direction: column;
 }
 
-/* A quiet icon button on the band: a 40px square with a 20px white X; the
-   band's soft white tint on hover or keyboard focus, and a white focus
-   ring (the band's mark link's treatment) */
+/* A quiet icon button on the band: a 40px square with a 20px white X, no
+   box at rest; the band's faint white tint on hover (as the band's mark
+   link has). Keyboard focus only (:focus-visible, so a drawer opened by a
+   click shows no ring): a subtle 2px light ring just inside its edge. */
 .overview-close {
   display: inline-flex;
   align-items: center;
@@ -154,12 +162,12 @@
   background: none;
   border: 0;
   border-radius: var(--pe-radius-md);
+  outline: none;
   cursor: pointer;
   transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease;
 }
 
-.overview-close:hover,
-.overview-close:focus-visible:not([data-quiet]) {
+.overview-close:hover {
   background: var(--band-ink-hover);
 }
 
@@ -167,13 +175,9 @@
   background: var(--band-ink-active);
 }
 
-.overview-close:focus {
-  outline: none;
-}
-
-.overview-close:focus-visible:not([data-quiet]) {
-  outline: 2px solid var(--band-ink);
-  outline-offset: 2px;
+.overview-close:focus-visible {
+  outline: 2px solid var(--band-ink-border);
+  outline-offset: -2px;
 }
 
 /* One left edge (20px) for the wordmark's column, the eyebrow, the
@@ -463,13 +467,10 @@
 
 /* On a phone it takes the whole screen */
 @media (max-width: 600px) {
+  /* Nothing beside it: the band takes the site header's height */
   .overview {
     --overview-width: 100vw;
-  }
-
-  /* Nothing beside it: the band takes the site header's height */
-  .overview-header {
-    height: var(--spacing-header, 58px);
+    --overview-band-height: var(--spacing-header, 58px);
   }
 }
 
