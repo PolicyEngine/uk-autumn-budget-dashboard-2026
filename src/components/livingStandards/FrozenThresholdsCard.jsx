@@ -1,6 +1,6 @@
 // Frozen thresholds against pay: the personal allowance, the higher rate
 // threshold and the Plan 2 student loan repayment threshold under current
-// law, against the OBR's average earnings, each indexed to 2026-27 = 100.
+// law, each relative to the OBR's average earnings (2026-27 = 100).
 // Drawn beside "Earnings and other income" (ForecastSeriesSection). The
 // thresholds are the current-law values the Policies tab reads
 // (public/data/policy_parameters.json), earnings the outlook file's OBR
@@ -20,50 +20,48 @@ import { loadPolicyParameters } from "../../utils/policyParameters";
 import { OPEN_VIEW_EVENT } from "../../utils/methodLink";
 import { SOURCES } from "../../utils/sources";
 import { METHOD_ANCHORS } from "../methodology/anchors";
-import { BASE_YEAR, indexAxis, thresholdRows, thresholdsSentence } from "../../utils/livingStandards/frozenThresholds";
+import { BASE_YEAR, relativeAxis, sameThresholds, thresholdRows, thresholdsSentence } from "../../utils/livingStandards/frozenThresholds";
 
 export const FROZEN_THRESHOLDS_TITLE = "Frozen thresholds against pay";
 
-// Each line, in drawing order. The thresholds are solid lines in their own
-// hues; while frozen they lie on one another at 100, so each is drawn a
-// little narrower than the one under it and all three show as nested
-// stripes. Earnings, the comparison, is the dashed neutral reference line.
-const LINES = [
-  {
-    key: "personal_allowance",
-    name: "Personal allowance",
-    short: "Allowance",
-    colour: CHART_COLOURS.gain,
-    width: 11,
-    meaning: "The income on which no income tax is paid.",
-  },
-  {
-    key: "higher_rate",
-    name: "Higher rate threshold",
-    short: "Higher rate",
-    colour: CHART_COLOURS.marketIncome,
-    width: 5,
-    meaning: "The income above which income tax is paid at the higher rate (the personal allowance plus the basic rate band).",
-  },
-  {
-    key: "plan_2",
-    name: "Plan 2 student loan threshold",
-    short: "Plan 2",
-    colour: CHART_COLOURS.ageOlder,
-    width: 2.5,
-    meaning: "The income above which Plan 2 student loan repayments are made (9% of income over it).",
-  },
-  {
-    key: "earnings",
-    name: "Average earnings",
-    short: "Earnings",
-    colour: CHART_COLOURS.reference,
-    dash: DASH.long,
-    meaning: "The OBR's forecast of average earnings (wages and salaries per employee).",
-  },
-];
-// End labels in a half-width card: short names in a narrow right margin
-const END_LABELS = { width: 92, minWidth: 420 };
+// Each threshold relative to average earnings. While the personal
+// allowance and higher rate threshold move together (both frozen) one line
+// draws both (sameThresholds); Plan 2 has its own. Average earnings is the
+// flat dashed reference at 100: keeping pace with pay.
+const PA = {
+  key: "personal_allowance",
+  name: "Personal allowance",
+  short: "Allowance",
+  colour: CHART_COLOURS.gain,
+  meaning: "The income on which no income tax is paid.",
+};
+const HR = {
+  key: "higher_rate",
+  name: "Higher rate threshold",
+  short: "Higher rate",
+  colour: CHART_COLOURS.marketIncome,
+  meaning: "The income above which income tax is paid at the higher rate (the personal allowance plus the basic rate band).",
+};
+const BOTH = { ...PA, name: "Personal allowance and higher rate threshold", short: "Income tax" };
+const PLAN_2 = {
+  key: "plan_2",
+  name: "Plan 2 student loan threshold",
+  short: "Plan 2",
+  colour: CHART_COLOURS.ageOlder,
+  meaning: "The income above which Plan 2 student loan repayments are made (9% of income over it).",
+};
+const PAY = {
+  key: "pay",
+  name: "Keeps pace with pay",
+  short: "Pay",
+  colour: CHART_COLOURS.reference,
+  dash: DASH.long,
+  meaning: "A threshold that rises with the OBR's forecast of average earnings (wages and salaries per employee) stays at 100.",
+};
+/** The lines to draw: one for both income tax thresholds while they are equal, else one each. */
+const linesFor = (rows) => (sameThresholds(rows) ? [BOTH, PLAN_2, PAY] : [PA, HR, PLAN_2, PAY]);
+// End labels in a half-width card: short names and values in a narrow right margin
+const END_LABELS = { width: 112, minWidth: 420 };
 
 const indexText = (v) => (v == null ? "–" : formatOneDp(v));
 const indexTick = (v) => String(v);
@@ -102,10 +100,10 @@ function PoliciesLink() {
 export default function FrozenThresholdsCard({ data, view = "chart", onViewChange }) {
   const { loading, document } = usePolicyParameters();
   const narrow = useNarrowViewport();
-  const [shown, setShown] = useState(() => LINES.map((l) => l.key));
+  const [hidden, setHidden] = useState([]);
   const [hovered, setHovered] = useState(null);
   const base = { id: "forecast-frozen-thresholds", title: FROZEN_THRESHOLDS_TITLE, icon: "briefcase" };
-  const rows = document && thresholdRows(document, data);
+  const rows = document && thresholdRows(document, data)?.map((r) => ({ ...r, pay: 100 }));
 
   if (!rows) {
     // The card holds its place in the pair while the file loads
@@ -124,14 +122,28 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
   const obrName = preSource?.release ?? "OBR, Economic and fiscal outlook (March 2026)";
   const engine = document.engine?.policyengine_uk;
   const sourceText = `${obrName}: average earnings growth; policyengine-uk${engine ? ` ${engine}` : ""} parameters (current law); indexed by PolicyEngine`;
-  const lines = LINES.filter((l) => shown.includes(l.key)).map((l) => ({ ...l, endLabel: l.short }));
+  const lineSet = linesFor(rows);
+  const shown = lineSet.map((l) => l.key).filter((k) => !hidden.includes(k));
+  const setShown = (keys) => setHidden(lineSet.map((l) => l.key).filter((k) => !keys.includes(k)));
+  const last = rows.at(-1);
+  const lines = lineSet.filter((l) => shown.includes(l.key)).map((l) => ({ ...l, endLabel: `${l.short} ${indexText(last[l.key])}` }));
+  // Drawn in reverse: Plan 2 is frozen too until it is uprated, so it lies
+  // under the income tax line until it parts from it (and the tooltip lists
+  // the lines top to bottom, as they end)
+  const drawn = [...lines].reverse();
+  const earningsColumn = { key: "earnings", label: `Average earnings (index, ${fyLabel(BASE_YEAR)} = 100)` };
+  const thresholdLines = lineSet.filter((l) => l.key !== "pay");
 
   const csv = () =>
     buildChartCsv({
       title: FROZEN_THRESHOLDS_TITLE,
-      units: `Index, ${fyLabel(BASE_YEAR)} = 100; fiscal years`,
+      units: `Thresholds: value relative to average earnings, ${fyLabel(BASE_YEAR)} = 100; average earnings: index, ${fyLabel(BASE_YEAR)} = 100; fiscal years`,
       source: sourceText,
-      columns: [{ key: "year", label: "Year" }, ...LINES.map((l) => ({ key: l.key, label: l.name, decimals: 2 }))],
+      columns: [
+        { key: "year", label: "Year" },
+        { ...earningsColumn, decimals: 2 },
+        ...thresholdLines.map((l) => ({ key: l.key, label: `${l.name} (relative to average earnings)`, decimals: 2 })),
+      ],
       rows: rows.map((r) => ({ ...r, year: fyLabel(r.year) })),
       notes: [],
     });
@@ -140,22 +152,25 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
     ...base,
     period,
     summary: thresholdsSentence(rows),
-    about: `Each line indexed to ${fyLabel(BASE_YEAR)} = 100, under current law.`,
+    about: `Each threshold's value relative to average earnings, ${fyLabel(BASE_YEAR)} = 100, under current law.`,
     sourceText,
     info: {
       shows: (
         <>
-          How the personal allowance, the higher rate threshold and the Plan 2 student loan repayment threshold move under
-          current law against average earnings, each as an index with {fyLabel(BASE_YEAR)} = 100. A threshold that stays
-          flat while earnings rise takes a larger share of income into tax or repayments. The pound values are on{" "}
+          The personal allowance, the higher rate threshold and the Plan 2 student loan repayment threshold under current
+          law, each relative to average earnings with {fyLabel(BASE_YEAR)} = 100. A threshold that keeps pace with pay
+          stays at 100; one that falls below it takes a larger share of income into tax or repayments. The pound values
+          are on{" "}
           <PoliciesLink />.
         </>
       ),
       how: [
         "Each threshold's current-law value for a year divided by its 2026-27 value, times 100; the values are policyengine-uk's parameters at 6 April of each year.",
         "Earnings: the OBR gives growth in each calendar year's average. As the baseline does, a fiscal year takes the growth of the calendar year it starts in (2027-28 grows on 2026-27 by 2027's rate), chained from 2026-27 = 100.",
+        "Each threshold's index divided by the earnings index, times 100, is its value relative to average earnings: 100 while it keeps pace with pay, below 100 when it falls behind. A frozen threshold in a year when the earnings index is 110 is at 100 / 110 × 100 = 90.9.",
+        "Where the personal allowance and higher rate threshold have the same value relative to earnings in every year, one line draws both.",
       ],
-      definitions: LINES.map((l) => ({ term: l.name, meaning: l.meaning })),
+      definitions: [PA, HR, PLAN_2, PAY].map((l) => ({ term: l.name, meaning: l.meaning })),
       caveats: [
         `The OBR's March 2026 earnings forecast ends in 2030, so the chart ends in ${fyLabel(end)}; 2031-32, when current law uprates the thresholds again and a candidate measure would freeze them for one more year, is not shown.`,
         "Taking a calendar year's growth for the fiscal year starting in it is an approximation: the fiscal year runs from April to March.",
@@ -176,7 +191,7 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
 
   const chips = (
     <SeriesToggle
-      series={LINES.map((l) => ({ key: l.key, label: l.name, short: l.short, colour: l.colour, dash: l.dash }))}
+      series={lineSet.map((l) => ({ key: l.key, label: l.name, short: l.short, colour: l.colour, dash: l.dash }))}
       shown={shown}
       onChange={setShown}
       onHover={setHovered}
@@ -193,18 +208,24 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
             <thead>
               <tr>
                 <th>Year</th>
-                {lines.map((l) => (
-                  <th key={l.key}>{l.name}</th>
-                ))}
+                <th>Average earnings (index)</th>
+                {thresholdLines
+                  .filter((l) => shown.includes(l.key))
+                  .map((l) => (
+                    <th key={l.key}>{l.name}</th>
+                  ))}
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.year}>
-                  <td>{fyLabel(row.year)}</td>
-                  {lines.map((l) => (
-                    <td key={l.key}>{indexText(row[l.key])}</td>
-                  ))}
+                  <td className="ls-nowrap">{fyLabel(row.year)}</td>
+                  <td>{indexText(row.earnings)}</td>
+                  {thresholdLines
+                    .filter((l) => shown.includes(l.key))
+                    .map((l) => (
+                      <td key={l.key}>{indexText(row[l.key])}</td>
+                    ))}
                 </tr>
               ))}
             </tbody>
@@ -215,16 +236,16 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
     );
   }
 
-  const axis = indexAxis(rows.flatMap((r) => lines.map((l) => r[l.key])).filter((v) => v != null));
+  const axis = relativeAxis(rows.flatMap((r) => lines.map((l) => r[l.key])));
   return (
     <LsCard {...common} download={{ filename: "frozen-thresholds", legendItems: lineLegendItems(lines), csv }}>
       <LsLineChart
         data={rows}
-        series={lines}
+        series={drawn}
         baseYear={BASE_YEAR}
         yFormat={indexTick}
         tooltipFormat={indexText}
-        yLabel={`Index, ${fyLabel(BASE_YEAR)} = 100`}
+        yLabel={`Value relative to average earnings (${fyLabel(BASE_YEAR)} = 100)`}
         yDomain={axis.domain}
         yTicks={axis.ticks}
         endLabels={END_LABELS}

@@ -1,10 +1,12 @@
 // Frozen thresholds against pay: the personal allowance, the higher rate
 // threshold and the Plan 2 student loan repayment threshold under current
-// law, against the OBR's average earnings, each indexed to 2026-27 = 100.
+// law, each relative to the OBR's average earnings (2026-27 = 100): a
+// threshold that keeps pace with pay stays at 100, a frozen one falls.
 // The thresholds are the current-law ("before") values the Policies tab
 // reads (public/data/policy_parameters.json); earnings is the OBR March
 // 2026 growth in the outlook file (public/data/living_standards_outlook.json).
 
+import { fittedAxis } from "../chartTheme";
 import { fyLabel, formatOneDp } from "./outlook";
 
 export const BASE_YEAR = 2026;
@@ -50,8 +52,10 @@ export function earningsIndex(growth) {
 
 /**
  * One row per fiscal year (year: its start), 2026-27 to the last year of
- * the earnings index, each line indexed to 2026-27 = 100; null when the
- * data is missing.
+ * the earnings index: `earnings`, average earnings indexed to 2026-27 =
+ * 100, and each threshold relative to average earnings (its own index
+ * divided by the earnings index, times 100), so a threshold that keeps
+ * pace with pay stays at 100; null when the data is missing.
  */
 export function thresholdRows(document, outlook) {
   const growth = earningsGrowth(outlook);
@@ -63,34 +67,35 @@ export function thresholdRows(document, outlook) {
   return years.map((year) => ({
     year,
     earnings: earnings[year],
-    ...Object.fromEntries(values.map(([key, v]) => [key, v[year] != null ? (100 * v[year]) / v[BASE_YEAR] : null])),
+    ...Object.fromEntries(
+      values.map(([key, v]) => [key, v[year] != null ? (100 * ((100 * v[year]) / v[BASE_YEAR])) / earnings[year] : null]),
+    ),
   }));
 }
 
-const pctHigher = (index) => `${formatOneDp(index - 100)}%`;
-
-/** The card's sentence, from the last row: earnings' rise against the thresholds held at 2026-27's level. */
-export function thresholdsSentence(rows) {
-  const last = rows?.at(-1);
-  if (!last) return null;
-  const frozen = [
-    last.personal_allowance != null && Math.abs(last.personal_allowance - 100) < 1e-9 && "the personal allowance",
-    last.higher_rate != null && Math.abs(last.higher_rate - 100) < 1e-9 && "the higher rate threshold",
-  ].filter(Boolean);
-  const lead = `By ${fyLabel(last.year)} average earnings are ${pctHigher(last.earnings)} higher than in ${fyLabel(BASE_YEAR)}`;
-  if (frozen.length === 2) return `${lead}, while the personal allowance and higher rate threshold are unchanged.`;
-  if (frozen.length === 1) return `${lead}, while ${frozen[0]} is unchanged.`;
-  return `${lead}, against ${pctHigher(last.personal_allowance)} for the personal allowance.`;
+/** Whether the personal allowance and higher rate threshold move together in every year (both frozen), so one line draws both. */
+export function sameThresholds(rows) {
+  return Boolean(rows?.length) && rows.every((r) => r.personal_allowance != null && Math.abs(r.personal_allowance - (r.higher_rate ?? NaN)) < 1e-9);
 }
 
-/** An axis for index values: whole steps of 2 (or 5 over a wider range) around 100. */
-export function indexAxis(values) {
-  const lo = Math.min(100, ...values);
-  const hi = Math.max(100, ...values);
-  const step = hi - lo > 20 ? 5 : 2;
-  const from = Math.floor((lo - 0.5) / step) * step;
-  const to = Math.ceil(hi / step) * step;
-  const ticks = [];
-  for (let v = from; v <= to + 1e-9; v += step) ticks.push(v);
-  return { domain: [from, to], ticks };
+const change = (relative) => `${formatOneDp(Math.abs(relative - 100))}% ${relative < 100 ? "less" : "more"}`;
+
+/** The card's sentence, from the last row: what the income tax thresholds are worth against average earnings. */
+export function thresholdsSentence(rows) {
+  const last = rows?.at(-1);
+  if (last?.personal_allowance == null || last.higher_rate == null) return null;
+  const tail = `relative to average earnings than in ${fyLabel(BASE_YEAR)}.`;
+  if (sameThresholds(rows)) return `By ${fyLabel(last.year)} the personal allowance and higher rate threshold are worth ${change(last.personal_allowance)} ${tail}`;
+  return `By ${fyLabel(last.year)} the personal allowance is worth ${change(last.personal_allowance)} and the higher rate threshold ${change(last.higher_rate)} ${tail}`;
+}
+
+/**
+ * The y axis of values relative to average earnings: fitted to the gaps
+ * from 100 (chartTheme.fittedAxis), with a step of room above 100 so the
+ * reference line is not the plot's top edge.
+ */
+export function relativeAxis(values) {
+  const gaps = values.filter((v) => v != null && Number.isFinite(v)).map((v) => v - 100);
+  const { domain, ticks } = fittedAxis([...gaps, 0.5]);
+  return { domain: domain.map((v) => v + 100), ticks: ticks.map((v) => v + 100) };
 }
