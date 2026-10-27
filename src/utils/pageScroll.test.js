@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  SITE_NAV_SHOW_UP_PX,
   STICKY_GAP,
   clearHeadings,
+  createSiteNavIntent,
   isProgrammaticScroll,
   resetPageScroll,
   scrollBelowBars,
@@ -140,5 +142,75 @@ describe("pageScroll", () => {
     heading(120);
     expect(clearHeadings()).toBe(true);
     expect(scrollTo).toHaveBeenCalledWith({ top: 1000 + 120 - 145 - STICKY_GAP, behavior: "auto" });
+  });
+});
+
+describe("createSiteNavIntent: the reader's own scroll up shows the site nav", () => {
+  const TOP = 58;
+
+  it("shows only after the reader scrolls up SITE_NAV_SHOW_UP_PX in one run", () => {
+    expect(SITE_NAV_SHOW_UP_PX).toBe(24);
+    const nav = createSiteNavIntent({ y: 1000 });
+    expect(nav.input("wheel", "up", 0)).toBe(null);
+    expect(nav.scroll(990, 10, { top: TOP })).toBe(null);
+    expect(nav.scroll(977, 20, { top: TOP })).toBe(null);
+    expect(nav.scroll(976, 30, { top: TOP })).toBe("show");
+  });
+
+  it("hides at once on any scroll down by the reader, and starts the run again", () => {
+    const nav = createSiteNavIntent({ y: 1000 });
+    nav.input("wheel", "up", 0);
+    nav.scroll(980, 10, { top: TOP });
+    expect(nav.input("wheel", "down", 20)).toBe("hide");
+    expect(nav.scroll(981, 30, { top: TOP })).toBe("hide");
+    nav.input("wheel", "up", 40);
+    expect(nav.scroll(961, 50, { top: TOP })).toBe(null);
+    expect(nav.scroll(957, 60, { top: TOP })).toBe("show");
+    // A touch moving the page down hides it too
+    expect(nav.input("touch", "down", 70)).toBe("hide");
+  });
+
+  it("ignores the page moving up with no input: layout shifts and scroll anchoring", () => {
+    const nav = createSiteNavIntent({ y: 120 });
+    nav.input("wheel", "down", 0);
+    // Anchoring moving scrollY up 7px, then 2px, while the reader scrolls down
+    expect(nav.scroll(113, 90, { top: TOP })).toBe(null);
+    expect(nav.scroll(111, 100, { top: TOP })).toBe(null);
+    // Long after any input, a chart above the window shrinking 300px
+    expect(nav.scroll(500, 1000, { top: TOP })).toBe(null);
+    expect(nav.scroll(200, 5000, { top: TOP })).toBe(null);
+  });
+
+  it("ignores scrolls the page made, and resets the run on them", () => {
+    const nav = createSiteNavIntent({ y: 1000 });
+    nav.input("key", "up", 0);
+    expect(nav.scroll(980, 10, { top: TOP })).toBe(null);
+    expect(nav.scroll(600, 20, { top: TOP, programmatic: true })).toBe(null);
+    expect(nav.scroll(590, 30, { top: TOP })).toBe(null);
+    expect(nav.scroll(576, 40, { top: TOP })).toBe("show");
+  });
+
+  it("never shows within the nav's height of the page's top", () => {
+    const nav = createSiteNavIntent({ y: 300 });
+    nav.input("wheel", "up", 0);
+    expect(nav.scroll(200, 10, { top: TOP })).toBe("show");
+    expect(nav.scroll(57, 20, { top: TOP })).toBe("hide");
+    expect(nav.scroll(0, 30, { top: TOP })).toBe("hide");
+  });
+
+  it("counts a scrollbar drag either way while it is held", () => {
+    const nav = createSiteNavIntent({ y: 1000 });
+    nav.input("drag", "hold", 0);
+    expect(nav.scroll(1100, 5000, { top: TOP })).toBe("hide");
+    expect(nav.scroll(1070, 6000, { top: TOP })).toBe("show");
+    nav.input("drag", "release", 7000);
+    expect(nav.scroll(1000, 9000, { top: TOP })).toBe(null);
+  });
+
+  it("lets a touch fling's glide count after the finger lifts", () => {
+    const nav = createSiteNavIntent({ y: 1000 });
+    nav.input("touch", "up", 0);
+    expect(nav.scroll(900, 1000, { top: TOP })).toBe("show");
+    expect(nav.scroll(800, 2000, { top: TOP })).toBe(null);
   });
 });

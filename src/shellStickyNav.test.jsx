@@ -56,7 +56,7 @@ describe("showing the site nav", () => {
   afterEach(() => vi.useRealTimers());
 
   const setup = (inShell = false) => {
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date", "performance"] });
     vi.stubGlobal("fetch", async () => new Promise(() => {}));
     // Runs the frame at once; 0 so the next scroll asks for another
     vi.stubGlobal("requestAnimationFrame", (fn) => { fn(); return 0; });
@@ -66,7 +66,14 @@ describe("showing the site nav", () => {
       <PolicyEngineShell country="uk" showFooter={false}><App /></PolicyEngineShell>
     ) : <App />);
     const root = document.documentElement;
+    // The reader scrolling (a wheel or trackpad, then the scroll), and the
+    // page moving by itself (a layout shift, scroll anchoring: no input)
     const scrollTo = (y) => act(() => {
+      window.dispatchEvent(new WheelEvent("wheel", { deltaY: y - window.scrollY }));
+      window.scrollY = y;
+      window.dispatchEvent(new Event("scroll"));
+    });
+    const shift = (y) => act(() => {
       window.scrollY = y;
       window.dispatchEvent(new Event("scroll"));
     });
@@ -82,10 +89,10 @@ describe("showing the site nav", () => {
         new MouseEvent("mousemove", { clientY: 30, bubbles: true }),
       );
     });
-    return { root, scrollTo, wait, shown, nav, move, moveOver };
+    return { root, scrollTo, shift, wait, shown, nav, move, moveOver };
   };
 
-  it("is hidden on load, shows scrolling up, and ignores scrolls under 6px", () => {
+  it("is hidden on load, and shows only once the reader has scrolled up 24px in one run", () => {
     const { scrollTo, wait, shown } = setup();
     expect(shown()).toBe(false);
     scrollTo(4);
@@ -93,8 +100,13 @@ describe("showing the site nav", () => {
     scrollTo(400);
     expect(shown()).toBe(false);
     scrollTo(396);
+    scrollTo(380);
     expect(shown()).toBe(false);
-    scrollTo(300);
+    // A scroll down starts the run again
+    scrollTo(390);
+    scrollTo(370);
+    expect(shown()).toBe(false);
+    scrollTo(366);
     expect(shown()).toBe(true);
     cleanup();
     expect(shown()).toBe(false);
@@ -118,47 +130,64 @@ describe("showing the site nav", () => {
   });
 
   it("does not show for the page's own scroll up (utils/pageScroll), only the reader's", () => {
-    const { scrollTo, shown } = setup();
+    const { scrollTo, shift, shown } = setup();
     scrollTo(1_000);
     act(() => {
       window.scrollTo = () => {};
       scrollPageTo(200);
     });
-    scrollTo(600);
-    scrollTo(200);
+    shift(600);
+    shift(200);
     expect(shown()).toBe(false);
     resetPageScroll();
     scrollTo(100);
     expect(shown()).toBe(true);
   });
 
-  it("stays 3s whatever the scroll, then hides only on a run down of over 120px", () => {
-    const { scrollTo, wait, shown } = setup();
+  it("stays 3s after the scroll up, and any scroll down by the reader hides it at once", () => {
+    const { scrollTo, shift, wait, shown } = setup();
+    resetPageScroll();
     scrollTo(400);
     scrollTo(300);
     expect(shown()).toBe(true);
-    // A big scroll down inside the 3s waits for the 3s
-    scrollTo(600);
     wait(2_999);
     expect(shown()).toBe(true);
     wait(1);
     expect(shown()).toBe(false);
-    scrollTo(500);
+    scrollTo(200);
     expect(shown()).toBe(true);
-    wait(3_000);
-    // Small scrolls down after the 3s keep it: 60px, then up 4px, then 100px
-    scrollTo(560);
-    expect(shown()).toBe(true);
-    scrollTo(556);
-    scrollTo(656);
-    wait(0);
-    expect(shown()).toBe(true);
-    // ...until the run down passes 120px
-    scrollTo(680);
-    wait(0);
+    // A pixel down, inside the 3s
+    scrollTo(201);
     expect(shown()).toBe(false);
-    scrollTo(0);
+    // Keys count as the reader's scroll too
+    act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "PageUp" })));
+    shift(100);
     expect(shown()).toBe(true);
+    act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" })));
+    expect(shown()).toBe(false);
+  });
+
+  it("never shows when the page moves up by itself while the reader scrolls down", () => {
+    const { scrollTo, shift, wait, shown } = setup();
+    // The tab rows going compact as they stick shrink the page above the
+    // window, and scroll anchoring moves scrollY up a few px each time
+    scrollTo(120);
+    shift(113);
+    shift(111);
+    scrollTo(230);
+    for (let y = 228; y >= 220; y -= 2) shift(y);
+    // A chart loading above the window shrinking a long way
+    wait(1_000);
+    shift(400);
+    shift(150);
+    expect(shown()).toBe(false);
+    // Trackpad jitter: tiny moves up inside a scroll down
+    let y = 400;
+    for (const d of [3, 8, 14, 20, 16, -2, 10, 6, 4, -1, 2, 1, -3, 12]) {
+      y += d;
+      scrollTo(y);
+      expect(shown()).toBe(false);
+    }
   });
 
   it("shows at the top 8px of the window, holds while the pointer is over it, and hides 1.5s after it leaves", () => {

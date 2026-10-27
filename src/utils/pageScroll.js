@@ -218,6 +218,79 @@ export function scrollBelowBars(target, { behavior = "auto", gap = STICKY_GAP, o
   }, 5);
 }
 
+/** How far the reader has to scroll up (px, in one run) for the site nav. */
+export const SITE_NAV_SHOW_UP_PX = 24;
+// How long a reader's input counts as the cause of the scrolls after it
+// (ms): a wheel or key's own scroll (smooth, or a trackpad's momentum,
+// which keeps sending wheel events), and a touch fling's glide
+const INTENT_MS = { wheel: 250, key: 800, touch: 1200 };
+
+/**
+ * Which way the reader is scrolling the page, from their own input, and
+ * whether that should show or hide the site nav. The page also moves by
+ * itself: the tab rows go compact as they stick, charts load and change
+ * height, and the browser's scroll anchoring shifts scrollY to keep the
+ * view in place, by a few px up or down at a time. Those moves come with
+ * no input, so they never show the nav. Only a scroll up made by the
+ * reader (wheel or trackpad, touch, keys, or dragging the scrollbar) of
+ * SITE_NAV_SHOW_UP_PX or more in one run shows it, and any scroll down by
+ * the reader hides it and starts the run again.
+ *
+ * input(kind, way, t): the reader's wheel/key/touch input ("up"/"down"),
+ *   or "drag" (the scrollbar held: either way counts; "release" ends it).
+ * scroll(y, t, { programmatic, top }): a scroll event at scrollY `y`;
+ *   `top` is the nav's height, within which of the page's top it hides.
+ * Each returns "show", "hide" or null (leave it as it is).
+ */
+export function createSiteNavIntent({ showAfter = SITE_NAV_SHOW_UP_PX, y = 0 } = {}) {
+  let prev = y;
+  let run = 0;
+  let way = null;
+  let until = 0;
+  const live = (t) => way !== null && t <= until;
+  return {
+    input(kind, dir, t = now()) {
+      if (kind === "drag") {
+        if (dir === "release") {
+          if (way === "drag") until = t + INTENT_MS.wheel;
+        } else {
+          way = "drag";
+          until = Infinity;
+        }
+        return null;
+      }
+      way = dir;
+      until = t + (INTENT_MS[kind] ?? INTENT_MS.wheel);
+      if (dir === "down") {
+        run = 0;
+        return "hide";
+      }
+      return null;
+    },
+    scroll(at, t = now(), { programmatic = false, top = 0 } = {}) {
+      const delta = at - prev;
+      prev = at;
+      if (at < top) {
+        run = 0;
+        return "hide";
+      }
+      if (programmatic || delta === 0) {
+        if (programmatic) run = 0;
+        return null;
+      }
+      const reader = live(t);
+      if (delta > 0) {
+        run = 0;
+        return reader && way !== "up" ? "hide" : null;
+      }
+      // A move up with no input from the reader (a layout shift) is not theirs
+      if (!reader || way === "down") return null;
+      run -= delta;
+      return run >= showAfter ? "show" : null;
+    },
+  };
+}
+
 /** Test hook: forget a scroll in flight. */
 export function resetPageScroll() {
   pending = null;

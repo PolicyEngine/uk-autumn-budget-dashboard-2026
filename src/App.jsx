@@ -33,7 +33,7 @@ import { provisionalLabel } from "./utils/publication/manifest";
 import { DownloadContext, policiesLabel } from "./utils/downloadContext";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
-import { isProgrammaticScroll, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
+import { createSiteNavIntent, isProgrammaticScroll, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
 
 // Each view's code (the chart library, the map's and the household
 // calculator's) loads when a view first opens, or while the page is idle,
@@ -202,12 +202,10 @@ export function viewFromLocation({ search, hash }) {
 // until the reader scrolls up (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
 export const SHELL_STICKY_NAV_SELECTOR =
   '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';
-// Once shown, the site nav stays at least this long; hides this long after
-// the pointer or focus leaves it; and a run down the page longer than this
-// (px) hides it after the minimum.
+// Once shown, the site nav stays this long (unless the reader scrolls down),
+// and hides this long after the pointer or focus leaves it.
 export const SITE_NAV_MIN_MS = 3000;
 export const SITE_NAV_LEAVE_MS = 1500;
-export const SITE_NAV_SCROLL_HIDE_PX = 120;
 
 /** Take the open sub-tab (?sub=) out of the address, or put `sub` there. */
 function dropSubTab(sub, extra = {}) {
@@ -462,14 +460,17 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
 
   // The site nav is hidden above the window by default, so the title band
   // sits at the top of the page. It slides in above the band when the
-  // reader scrolls up (by 6px or more), points at the top 8px of the
-  // window, or tabs into it (globals.css: data-site-nav-shown on <html>,
-  // --site-nav-height; the slide is instant under reduced motion). Once in,
-  // it stays long enough to be clicked: at least SITE_NAV_MIN_MS whatever
-  // small scrolls happen, never while the pointer or focus is in it or one
-  // of its menus is open, and SITE_NAV_LEAVE_MS after the pointer or focus
-  // leaves. Only a deliberate scroll down (over SITE_NAV_SCROLL_HIDE_PX in
-  // one run) hides it, once the minimum is up.
+  // reader scrolls up (SITE_NAV_SHOW_UP_PX or more in one run, by their own
+  // wheel, trackpad, touch, keys or scrollbar: utils/pageScroll
+  // createSiteNavIntent), points at the top 8px of the window, or tabs into
+  // it (globals.css: data-site-nav-shown on <html>, --site-nav-height; the
+  // slide is instant under reduced motion). The page moving by itself (tab
+  // rows going compact, charts loading, scroll anchoring, the page's own
+  // scrolls) never shows it. Once in, it stays SITE_NAV_MIN_MS, and while
+  // the pointer or focus is in it or one of its menus is open, then hides
+  // SITE_NAV_LEAVE_MS after they leave. Any scroll down by the reader hides
+  // it at once (unless it is in use), and within its own height of the
+  // page's top it is always hidden.
   useEffect(() => {
     const root = document.documentElement;
     const nav = document.querySelector(SHELL_STICKY_NAV_SELECTOR);
@@ -479,13 +480,12 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     measure();
     const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
     if (nav) resize?.observe(nav);
-    let last = window.scrollY;
-    let prev = last;
-    let runFrom = last;
+    const intent = createSiteNavIntent({ y: window.scrollY });
     let frame = 0;
     let shownAt = 0;
     let timer = 0;
     let pointerIn = false;
+    let touchY = null;
     const isShown = () => root.hasAttribute("data-site-nav-shown");
     // The ui-kit menus (About, country) put a full-window overlay with
     // role="presentation" inside the nav while they are open
@@ -498,12 +498,6 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       if (timer) window.clearTimeout(timer);
       timer = 0;
     };
-    const show = () => {
-      clear();
-      shownAt = Date.now();
-      runFrom = window.scrollY;
-      root.setAttribute("data-site-nav-shown", "");
-    };
     const hideAfter = (delay) => {
       if (!isShown()) return;
       clear();
@@ -514,40 +508,64 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
         else root.removeAttribute("data-site-nav-shown");
       }, wait);
     };
+    const show = () => {
+      clear();
+      shownAt = Date.now();
+      root.setAttribute("data-site-nav-shown", "");
+      hideAfter(SITE_NAV_MIN_MS);
+    };
+    const hideNow = () => {
+      if (!isShown() || holds()) return;
+      clear();
+      root.removeAttribute("data-site-nav-shown");
+    };
+    const follow = (what) => {
+      if (what === "show") show();
+      else if (what === "hide") hideNow();
+    };
     const check = () => {
       frame = 0;
       const y = window.scrollY;
-      // runFrom: where the current run down began
       // A scroll the page made (utils/pageScroll) is not the reader's: it
-      // never brings the nav in over what it lined up under the bars
+      // never brings the nav in over what it lined up under the bars.
       // At the page's top the nav is always hidden, so the top looks as it
       // does on load (unless the pointer or focus is in it), whoever scrolled
-      if (y < (nav?.offsetHeight || 0)) {
-        last = prev = runFrom = y;
-        if (isShown() && !holds()) {
-          clear();
-          root.removeAttribute("data-site-nav-shown");
-        }
-        isProgrammaticScroll(y);
-        return;
-      }
-      if (isProgrammaticScroll(y)) {
-        last = prev = runFrom = y;
-        return;
-      }
-      if (y < prev) runFrom = y;
-      prev = y;
-      if (y > last + 6) {
-        last = y;
-        if (isShown() && !holds() && y - runFrom > SITE_NAV_SCROLL_HIDE_PX) hideAfter(0);
-      } else if (y < last - 6) {
-        show();
-        last = y;
-      }
+      const top = nav?.offsetHeight || 0;
+      const programmatic = isProgrammaticScroll(y);
+      follow(intent.scroll(y, performance.now(), { programmatic, top }));
     };
     const onScroll = () => {
       if (!frame) frame = window.requestAnimationFrame(check);
     };
+    // The reader's own scrolling input, and which way it goes
+    const onWheel = (event) => {
+      if (event.ctrlKey || !event.deltaY) return;
+      follow(intent.input("wheel", event.deltaY < 0 ? "up" : "down", performance.now()));
+    };
+    const KEYS_UP = new Set(["ArrowUp", "PageUp", "Home"]);
+    const KEYS_DOWN = new Set(["ArrowDown", "PageDown", "End"]);
+    const onKey = (event) => {
+      // Keys typed into a field, or moving a slider, do not scroll the page
+      if (event.target instanceof Element && event.target.closest("input, textarea, select, [contenteditable]")) return;
+      const up = KEYS_UP.has(event.key) || (event.key === " " && event.shiftKey);
+      const down = KEYS_DOWN.has(event.key) || (event.key === " " && !event.shiftKey);
+      if (up || down) follow(intent.input("key", up ? "up" : "down", performance.now()));
+    };
+    const onTouchStart = (event) => {
+      touchY = event.touches[0]?.clientY ?? null;
+    };
+    // A finger moving down the screen scrolls the page up
+    const onTouchMove = (event) => {
+      const y = event.touches[0]?.clientY;
+      if (y === undefined || touchY === null || y === touchY) return;
+      follow(intent.input("touch", y > touchY ? "up" : "down", performance.now()));
+      touchY = y;
+    };
+    // Held on the window's scrollbar (right of the page's content box)
+    const onPointerDown = (event) => {
+      if (event.clientX >= root.clientWidth) intent.input("drag", "hold", performance.now());
+    };
+    const onPointerUp = () => intent.input("drag", "release", performance.now());
     const onPointer = (event) => {
       const over =
         !!nav &&
@@ -572,11 +590,23 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       }
     };
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("pointerdown", onPointerDown, { passive: true });
+    window.addEventListener("pointerup", onPointerUp, { passive: true });
     window.addEventListener("mousemove", onPointer, { passive: true });
     nav?.addEventListener("focusin", onFocusIn);
     nav?.addEventListener("focusout", onFocusOut);
     return () => {
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("mousemove", onPointer);
       nav?.removeEventListener("focusin", onFocusIn);
       nav?.removeEventListener("focusout", onFocusOut);

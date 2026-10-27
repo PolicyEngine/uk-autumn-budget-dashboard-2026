@@ -315,9 +315,10 @@ body {
    of the page's flow and hidden above the window by default, so the band
    sits at the very top of the page with the tab rows under it, from the
    first paint. App.jsx shows it (data-site-nav-shown on <html>) when the reader
-   scrolls up, points at the top 8px of the window or tabs into it, keeps
-   it a few seconds and while it is in use, and hides it after a deliberate
-   scroll down or once the pointer or focus has left; it measures the nav into
+   scrolls up 24px (their own input: never the page moving by itself),
+   points at the top 8px of the window or tabs into it, keeps it 3s and
+   while it is in use, and hides it on any scroll down by the reader or
+   once the pointer or focus has left; it measures the nav into
    --site-nav-height. Shown, it overlays the top of the band (above it,
    with a shadow); the band and tab rows never move, so --nav-offset is 0.
    --motion-slide is 0 under reduced motion.
