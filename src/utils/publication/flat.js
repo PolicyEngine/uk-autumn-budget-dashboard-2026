@@ -8,9 +8,9 @@ export const RELEASE_INDEX_FILE = "release-index.json";
 export const RELEASE_INDEX_SCHEMA = "uk-budget-release-index/v1";
 // As FLAT_VIEW_FILES in uk_budget_data/publication/release_index.py: the
 // flat files a view may read, results by area only. Every other figure comes
-// from a receipt-verified artifact. The OBR comparison's file is never bound,
-// so that view stays unavailable, even once the OBR's columns are filled; it
-// needs a verified route of its own.
+// from a receipt-verified artifact. obr_comparison.csv is never bound (it
+// holds last year's costings under reused ids): the comparison with the
+// official costings reads official_costings.json (officialCostings.js).
 export const FLAT_VIEW_FILES = Object.freeze(["constituency.csv", "regional.csv"]);
 // As HISTORICAL_FLAT_VIEW_FILES there: a past event's flat views, its
 // coverage, the measures it does not model and its own OBR comparison.

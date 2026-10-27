@@ -662,6 +662,10 @@ class ReceiptInputs:
     # One proof per bound modifier on each side: registered template ids,
     # or None for a hand-written modifier. Required so omission fails shut.
     modifier_templates: dict[str, list] = field(kw_only=True)
+    # What the floor of survey households found
+    # (``disclosure_floor.floor_record``): None where it does not apply
+    # (no tables, or simulations not built from a dataset).
+    disclosure_floor: Optional[dict] = field(default=None, kw_only=True)
 
 
 def build_receipt_document(
@@ -749,6 +753,10 @@ def build_receipt_document(
     }
     if inputs.personal is not None:
         dashboard["personal"] = inputs.personal
+    # Thin cells by table, year and group, never a figure: the gate and the
+    # public data check refuse an artifact whose tables still hold one.
+    if inputs.disclosure_floor is not None:
+        dashboard["disclosure_floor"] = inputs.disclosure_floor
     # A hand-written regeneration must void any prior attestation, even
     # when the figures and code are identical. Other runs keep deduplicating.
     if any(

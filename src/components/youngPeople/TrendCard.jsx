@@ -1,16 +1,6 @@
 import { useMemo, useRef, useState } from "react";
-import {
-  Bar,
-  CartesianGrid,
-  ComposedChart,
-  Customized,
-  Line,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, CartesianGrid, ComposedChart, Customized, Line, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Tooltip } from "../ViewportTooltip";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import ChartDownloadMenu from "../ChartDownloadMenu";
@@ -27,6 +17,8 @@ import {
   shortFiscalYearTick,
   CHART_COLOURS,
   REFERENCE_DASH,
+  PHONE_QUERY,
+  useViewportMatch,
 } from "../../utils/chartTheme";
 import { DISPLAY_YEARS, NOT_YET_PUBLISHED } from "../../utils/displayYears";
 import { X_AXIS_HEIGHT, plotMargin } from "./chartRows";
@@ -212,73 +204,144 @@ export function EndLabels({ xAxisMap, yAxisMap, data, lines, hovered, onHover, n
   );
 }
 
+const STEP_FONT = 12;
+const STEP_BOX_HEIGHT = STEP_FONT + 8;
+
+/** Whether a box overlaps anything drawn: a count of the hits, for choosing the clearer edge. */
+function stepBoxHits(box, { segments, columns, zero }) {
+  const pad = 3;
+  const inside = (px, py) =>
+    px >= box.left - pad && px <= box.left + box.width + pad && py >= box.top - pad && py <= box.top + box.height + pad;
+  let hits = 0;
+  for (const [x1, y1, x2, y2] of segments) {
+    // Sampled every 2px along the segment
+    const steps = Math.max(1, Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 2));
+    for (let i = 0; i <= steps; i += 1) {
+      if (inside(x1 + ((x2 - x1) * i) / steps, y1 + ((y2 - y1) * i) / steps)) {
+        hits += 1;
+        break;
+      }
+    }
+  }
+  for (const column of columns) {
+    if (column.right >= box.left && column.left <= box.left + box.width && column.bottom >= box.top && column.top <= box.top + box.height) hits += 1;
+  }
+  if (Number.isFinite(zero) && zero >= box.top - pad && zero <= box.top + box.height + pad) hits += 1;
+  return hits;
+}
+
 /**
- * The measure behind each big step, in a small white label above or below
- * the focus line's point with a short leader: below a fall, above a rise,
- * moved past the £0 line rather than sitting on it, and flipped to the
- * other side when there is no room.
+ * Where each step's label goes: in a box at the plot's top or bottom edge,
+ * over its year and kept inside the plot (clear of the line names in the
+ * right margin), with a leader down or up to the point. The edge is the
+ * one that crosses fewer of the lines, bars and £0 line (a rise's label at
+ * the top, a fall's at the foot when both are clear); a second label whose
+ * box would meet the first's goes to the other edge. Null when a label
+ * cannot fit across the plot: the card's sentence carries the steps then.
+ *
+ * @param {Object} args
+ * @param {Array<{year: number, step: number, text: string}>} args.notes
+ * @param {{x: number, width: number, scale: Function}} args.xAxis
+ * @param {{y: number, height: number, scale: Function}} args.yAxis
+ * @param {(year: number) => number|null} args.valueAt - The focus line's value
+ * @param {Array<Array<number|null>>} [args.paths] - Each drawn line's values, one per year in `years`
+ * @param {Array<{year: number, high: number, low: number}>} [args.columns] - Each year's stack, by measure
+ * @param {Array<number>} [args.years]
  */
-export function StepLabels({ xAxisMap, yAxisMap, notes, valueAt, narrow }) {
+export function placeStepLabels({ notes, xAxis, yAxis, valueAt, paths = [], columns = [], years = [] }) {
+  const top = yAxis.y + 2;
+  const bottom = yAxis.y + yAxis.height - 2 - STEP_BOX_HEIGHT;
+  const plotLeft = xAxis.x;
+  const plotRight = xAxis.x + xAxis.width;
+  const zero = yAxis.scale(0);
+  const band = xAxis.scale.bandwidth?.() ?? 0;
+  // What is drawn: each line's straight segments and each year's stack
+  const segments = [];
+  for (const values of paths) {
+    for (let i = 1; i < years.length; i += 1) {
+      const [a, b] = [values[i - 1], values[i]];
+      const [xa, xb] = [xOf(xAxis, years[i - 1]), xOf(xAxis, years[i])];
+      if (a === null || a === undefined || b === null || b === undefined || xa === null || xb === null) continue;
+      segments.push([xa, yAxis.scale(a), xb, yAxis.scale(b)]);
+    }
+  }
+  const boxes = columns
+    .map((column) => {
+      const x = xOf(xAxis, column.year);
+      if (x === null) return null;
+      return { left: x - band * 0.36, right: x + band * 0.36, top: yAxis.scale(column.high), bottom: yAxis.scale(column.low) };
+    })
+    .filter(Boolean);
+  const placed = [];
+  for (const note of notes) {
+    const value = valueAt(note.year);
+    const x = xOf(xAxis, note.year);
+    if (value === null || value === undefined || x === null) continue;
+    // An estimate of the text's width, for its box
+    const width = note.text.length * STEP_FONT * 0.56 + 12;
+    if (width > plotRight - plotLeft) return null;
+    const left = Math.min(Math.max(x - width / 2, plotLeft), plotRight - width);
+    const edges = note.step < 0 ? [bottom, top] : [top, bottom];
+    const meets = (boxTop) =>
+      placed.some((other) => other.top === boxTop && other.left < left + width + 6 && left < other.left + other.width + 6);
+    const scored = edges
+      .filter((boxTop) => !meets(boxTop))
+      .map((boxTop) => ({ boxTop, hits: stepBoxHits({ left, top: boxTop, width, height: STEP_BOX_HEIGHT }, { segments, columns: boxes, zero }) }));
+    if (!scored.length) return null;
+    // The first edge unless the other crosses less
+    const best = scored.reduce((winner, each) => (each.hits < winner.hits ? each : winner));
+    const y = yAxis.scale(value);
+    placed.push({ year: note.year, text: note.text, x, y, left, top: best.boxTop, width, height: STEP_BOX_HEIGHT });
+  }
+  return placed;
+}
+
+/**
+ * The measure behind each big step, named in a small white box at the
+ * plot's edge with a short leader to the focus line's point (see
+ * placeStepLabels); nothing when the labels cannot fit.
+ */
+export function StepLabels({ xAxisMap, yAxisMap, notes, valueAt, paths, columns, years }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
-  const fontSize = narrow ? 10.5 : 11.5;
-  const boxHeight = fontSize + 8;
-  const top = yAxis.y + 2;
-  const bottom = yAxis.y + yAxis.height - 2;
-  const zero = yAxis.scale(0);
+  const labels = placeStepLabels({ notes, xAxis, yAxis, valueAt, paths, columns, years });
+  if (!labels?.length) return null;
   return (
     <g className="trend-step-labels" aria-hidden="true">
-      {notes.map((note) => {
-        const value = valueAt(note.year);
-        const x = xOf(xAxis, note.year);
-        if (value === null || x === null) return null;
-        const y = yAxis.scale(value);
-        // An estimate of the text's width, for its box
-        const width = note.text.length * fontSize * 0.56 + 12;
-        const place = (below) => {
-          let boxTop = below ? y + 14 : y - 14 - boxHeight;
-          // Never on the £0 line: past it, in the same direction
-          if (Number.isFinite(zero) && boxTop < zero + 3 && boxTop + boxHeight > zero - 3) {
-            boxTop = below ? zero + 5 : zero - 5 - boxHeight;
-          }
-          return boxTop;
-        };
-        let below = note.step < 0;
-        let boxTop = place(below);
-        if (boxTop < top || boxTop + boxHeight > bottom) {
-          below = !below;
-          boxTop = Math.min(Math.max(place(below), top), bottom - boxHeight);
-        }
-        // Near the right edge the label ends at the point, near the left it starts there
-        const right = x > xAxis.x + xAxis.width * 0.7;
-        const left = x < xAxis.x + xAxis.width * 0.3;
-        // (clear of the line names at the right edge)
-        const boxLeft = right ? x - width - 4 : left ? x - 10 : x - width / 2;
-        const leaderEnd = below ? boxTop : boxTop + boxHeight;
+      {labels.map((label) => {
+        const above = label.top < label.y;
         return (
-          <g key={note.year}>
-            <line x1={x} x2={right ? x - 4 : x} y1={y + (below ? 5 : -5)} y2={leaderEnd} stroke={CHART_COLOURS.tick} strokeWidth={1} />
+          <g key={label.year} data-step-year={label.year}>
+            <line
+              x1={label.x}
+              x2={label.x}
+              y1={label.y + (above ? -6 : 6)}
+              y2={above ? label.top + label.height : label.top}
+              stroke={CHART_COLOURS.tick}
+              strokeWidth={1}
+              strokeDasharray="2 2"
+            />
             <rect
-              x={boxLeft}
-              y={boxTop}
-              width={width}
-              height={boxHeight}
+              x={label.left}
+              y={label.top}
+              width={label.width}
+              height={label.height}
               rx={4}
               fill={CHART_COLOURS.surface}
               stroke={CHART_COLOURS.axis}
               strokeWidth={1}
             />
             <text
-              x={boxLeft + width / 2}
-              y={boxTop + boxHeight / 2}
+              x={label.left + label.width / 2}
+              y={label.top + label.height / 2}
               dy="0.35em"
               textAnchor="middle"
-              fontSize={fontSize}
+              fontSize={STEP_FONT}
               fill={CHART_COLOURS.text}
               fontWeight={500}
             >
-              {note.text}
+              {label.text}
             </text>
           </g>
         );
@@ -323,6 +386,33 @@ export function TrendTooltip({ active, payload, label, focusSeries, allValue, na
   );
 }
 
+/** Each year's stack of measures, its top and foot, for keeping labels off the bars. */
+export function stackColumns(data, partKeys) {
+  return data
+    .filter((point) => point.net !== null && point.net !== undefined)
+    .map((point) => {
+      const values = partKeys.map((each) => point[each]).filter((v) => v !== null && v !== undefined);
+      return {
+        year: point.year,
+        high: values.reduce((sum, v) => sum + Math.max(0, v), 0),
+        low: values.reduce((sum, v) => sum + Math.min(0, v), 0),
+      };
+    });
+}
+
+/**
+ * On a phone, where the plot has no room for the step labels: "The step
+ * in 2027-28 is from zero VAT on electricity." for each step the headline
+ * does not already name, or null.
+ */
+export function stepSentence(notes, headline, nameIn) {
+  const missing = notes.filter((note) => !(headline ?? "").includes(`${fiscalYearTick(note.year)} the ${nameIn(note.measureId)}`));
+  if (!missing.length) return null;
+  const parts = missing.map((note) => `in ${fiscalYearTick(note.year)} from the ${nameIn(note.measureId)}`);
+  const list = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}` : parts[0];
+  return `The ${missing.length > 1 ? "biggest steps come" : "biggest step comes"} ${list}.`;
+}
+
 /**
  * How the change for 16 to 24-year-olds moves year by year, against all
  * ages, with the other age groups as faint context, the measures behind
@@ -338,6 +428,8 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const SERIES_LIST = group === PENSIONERS ? [...SERIES, { key: PENSIONERS, label: "Pensioners", short: "Pens." }] : SERIES;
   const chartRef = useRef(null);
   const catalogue = useMeasureCatalogue();
+  // On a phone the step labels do not fit the plot: the sentence names them
+  const phone = useViewportMatch(PHONE_QUERY);
   const [compare, setCompare] = useState("focus");
   const [view, setView] = useState("lines");
   const [years, setYears] = useState("each");
@@ -434,11 +526,16 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       if (!shown.length) return null;
       const total = shown.reduce((sum, point) => sum + point.net, 0);
       const span = `${fiscalYearTick(shown[0].year)} to ${fiscalYearTick(shown[shown.length - 1].year)}`;
+      if (Math.round(Math.abs(total)) === 0) return `${SUBJECT} see almost no change in total from ${span}.`;
       return `${SUBJECT} ${total >= 0 ? "gain" : "lose"} ${about(total)} each in total from ${span}.`;
     }
     if (!selected || selected.net === null) return null;
     const verb = selected.net >= 0 ? "gain" : "lose";
-    let text = `${SUBJECT} ${verb} ${about(selected.net)} a year in ${fiscalYearTick(selected.year)}`;
+    // About £0 is no gain or loss: said as almost no change
+    let text =
+      Math.round(Math.abs(selected.net)) === 0
+        ? `${SUBJECT} see almost no change in ${fiscalYearTick(selected.year)}`
+        : `${SUBJECT} ${verb} ${about(selected.net)} a year in ${fiscalYearTick(selected.year)}`;
     // The biggest step after the selected year
     const later = notes.filter((note) => note.year > selected.year).sort((x, y) => Math.abs(y.step) - Math.abs(x.step))[0];
     if (later) {
@@ -449,6 +546,8 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     }
     return `${text}.`;
   })();
+  // On a phone, the steps the plot cannot label, unless the headline names them
+  const stepsLine = phone && !cumulative ? stepSentence(notes, headline, (id) => inSentence(nameOf(id))) : null;
 
   // A line's colour: the focus in the brand colour; 16 to 24, whose own
   // colour that is, in a darker teal when another group is the focus
@@ -558,6 +657,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
           </h3>
           <p className="chart-description">
             {headline ? <strong className="trend-headline">{headline}</strong> : null} {description}
+            {stepsLine ? ` ${stepsLine}` : null}
           </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={title} />
@@ -688,8 +788,22 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                 }
               />
             )}
-            {!cumulative && notes.length > 0 && (
-              <Customized component={<StepLabels notes={notes} valueAt={focusAt} narrow={narrow} />} />
+            {!cumulative && !phone && notes.length > 0 && (
+              <Customized
+                component={
+                  <StepLabels
+                    notes={notes}
+                    valueAt={focusAt}
+                    years={data.map((point) => point.year)}
+                    paths={
+                      byMeasure
+                        ? [data.map((point) => point.net ?? null)]
+                        : ordered.filter((line) => isShown(line.key)).map((line) => data.map((point) => point[line.key] ?? null))
+                    }
+                    columns={byMeasure ? stackColumns(data, partKeys) : []}
+                  />
+                }
+              />
             )}
           </ComposedChart>
         </ResponsiveContainer>

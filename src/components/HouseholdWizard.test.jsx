@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import HouseholdCalculator, { FORM_SECTIONS, WIZARD_DEFAULTS, resetSavedWizard } from "./HouseholdCalculator";
 import { DEFAULT_SALARY, DEFAULT_SPENDING, REGIONAL_RENT } from "../utils/householdDefaults";
+import { parseAmount } from "./personal/FormControls";
 
 beforeEach(() => {
   resetSavedWizard();
@@ -11,23 +12,43 @@ beforeEach(() => {
 const field = (id) => document.querySelector(`[data-row="${id}"]`);
 /** The questions shown, in order. */
 const fields = () => [...document.querySelectorAll(".household-field")].map((row) => row.dataset.row);
-const moreToggle = () => screen.getByRole("button", { name: /^More details/ });
-/** Open More details (closed at first). */
+/** More details' groups, each opened by its own row. */
+const DETAIL_GROUPS = ["Other income", "Pension and student loan", "Spending", "Council tax and benefits"];
+/** A More details group's row (its name starts with the title, then what it holds). */
+const groupToggle = (title) => screen.getByRole("button", { name: new RegExp(`^${title}`) });
+/** Open every More details group (closed at first). */
 const openMore = () => {
-  if (moreToggle().getAttribute("aria-expanded") !== "true") fireEvent.click(moreToggle());
+  for (const title of DETAIL_GROUPS) {
+    const toggle = screen.queryByRole("button", { name: new RegExp(`^${title}`) });
+    if (toggle && toggle.getAttribute("aria-expanded") !== "true") fireEvent.click(toggle);
+  }
 };
 const select = (name) => screen.getByRole("combobox", { name });
-/** Choose an option of a select by its text. */
+const radios = (name) => screen.queryByRole("radiogroup", { name });
+/** Choose an option of a select, or of a segmented choice, by its text. */
 const choose = (name, option) => {
+  const group = radios(name);
+  if (group) {
+    fireEvent.click(within(group).getByRole("radio", { name: option }));
+    return;
+  }
   const box = select(name);
   fireEvent.change(box, { target: { value: within(box).getByRole("option", { name: option }).value } });
 };
-/** A select's chosen option, as shown. */
+/** A select's or a segmented choice's chosen option, as shown. */
 const chosen = (name) => {
+  const group = radios(name);
+  if (group) return within(group).getAllByRole("radio").find((radio) => radio.checked)?.closest("label").textContent;
   const box = select(name);
   return box.options[box.selectedIndex].textContent;
 };
-const box = (name) => screen.getByRole("spinbutton", { name });
+/** A number's box: ages are spin buttons, amounts text boxes ("34,200"). */
+const box = (name) => screen.queryByRole("spinbutton", { name }) ?? screen.getByRole("textbox", { name });
+/** The number a box holds. */
+const value = (name) => {
+  const input = box(name);
+  return input.type === "number" ? Number(input.value) : parseAmount(input.value);
+};
 const seatBox = () => screen.getByRole("combobox", { name: "Constituency" });
 /** Pick a constituency by typing its name and choosing it from the list. */
 const pickSeat = (name) => {
@@ -42,7 +63,8 @@ const examples = cards;
 // A card in the grid, or, once a household is chosen and the cards fold
 // into a strip, its chip
 const exampleItem = (label) => {
-  const name = new RegExp(`^${label}`);
+  // A chip's name starts with its short text and ends with the full one
+  const name = new RegExp(`(^|: )${label}`);
   return within(examples()).queryByRole("button", { name }) ?? within(examples()).getByRole("option", { name });
 };
 /** Whether an example's card (aria-pressed) or chip (aria-selected) is the one chosen. */
@@ -75,17 +97,24 @@ describe("the personal impact form", () => {
     expect(screen.queryByRole("region", { name: "Results" })).not.toBeInTheDocument();
     expect(screen.queryByText(/^Choose an example/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Your household" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: "You" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: "Family and home" })).toBeInTheDocument();
-    // More details starts closed, with how many questions it holds
-    const more = screen.getByRole("button", { name: "More details 11 questions" });
-    expect(more).toHaveAttribute("aria-expanded", "false");
-    const essentials = ["current_age", "current_salary", "region", "has_partner", "children_count", "tenure", "monthly_rent"];
+    // No spaced capitals: the essentials in one grid, then More details
+    expect(screen.queryByRole("heading", { level: 3, name: "You" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "More details" })).toBeInTheDocument();
+    // More details: four groups, each closed at first and saying what it holds
+    for (const title of DETAIL_GROUPS) expect(groupToggle(title)).toHaveAttribute("aria-expanded", "false");
+    expect(groupToggle("Other income")).toHaveTextContent("None");
+    expect(groupToggle("Pension and student loan")).toHaveTextContent("No pension income · no student loan");
+    expect(groupToggle("Spending")).toHaveTextContent(
+      `Petrol £${DEFAULT_SPENDING.petrol.toLocaleString("en-GB")} · diesel £${DEFAULT_SPENDING.diesel.toLocaleString("en-GB")} · electricity £${DEFAULT_SPENDING.electricity.toLocaleString("en-GB")} a year (UK average)`,
+    );
+    expect(groupToggle("Council tax and benefits")).toHaveTextContent("Council Tax band D · claims Universal Credit if entitled");
+    const essentials = ["current_age", "current_salary", "region", "has_partner", "children_count", "tenure", "rent_from", "monthly_rent"];
     expect(fields()).toEqual(essentials);
-    fireEvent.click(more);
-    expect(more).toHaveAttribute("aria-expanded", "true");
-    expect(document.getElementById(more.getAttribute("aria-controls"))).toBeVisible();
-    for (const name of ["Other income", "Pension and student loan", "Spending", "Council tax and benefits"]) {
+    openMore();
+    const spending = groupToggle("Spending");
+    expect(spending).toHaveAttribute("aria-expanded", "true");
+    expect(document.getElementById(spending.getAttribute("aria-controls"))).toBeVisible();
+    for (const name of DETAIL_GROUPS) {
       expect(screen.getByRole("group", { name })).toBeInTheDocument();
     }
     expect(fields()).toEqual([
@@ -102,48 +131,91 @@ describe("the personal impact form", () => {
       "council_tax_band",
       "claims_universal_credit",
     ]);
-    expect(FORM_SECTIONS).toHaveLength(3);
-    expect(box("Age")).toHaveValue(30);
+    expect(FORM_SECTIONS).toHaveLength(2);
+    expect(value("Age")).toBe(30);
     expect(seatBox()).toHaveValue("");
     expect(regionShown()).toBe("North West, until you pick a constituency");
     expect(chosen("Partner")).toBe("No");
-    expect(chosen("Housing")).toBe("Rent privately");
-    expect(box("Rent")).toHaveValue(REGIONAL_RENT.NORTH_WEST);
+    expect(chosen("Housing")).toBe("Rent");
+    expect(chosen("Rent from")).toBe("Private landlord");
+    expect(value("Rent")).toBe(REGIONAL_RENT.NORTH_WEST);
     expect(chosen("Council tax band")).toBe("D");
-    fireEvent.click(more);
-    expect(more).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(spending);
+    expect(spending).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("changes an answer in its box, with steppers for amounts", () => {
+  it("counts a group's changed answers, says them while closed, and resets them to typical", () => {
+    renderForm();
+    openMore();
+    fireEvent.change(box("Petrol"), { target: { value: "1,200" } });
+    fireEvent.change(box("Dividends"), { target: { value: "2k" } });
+    fireEvent.click(groupToggle("Spending"));
+    fireEvent.click(groupToggle("Other income"));
+    expect(groupToggle("Spending")).toHaveTextContent(/^Spending\s*Petrol £1,200 · diesel/);
+    expect(groupToggle("Spending")).not.toHaveTextContent("UK average");
+    expect(groupToggle("Spending")).toHaveTextContent("1 changed");
+    expect(groupToggle("Other income")).toHaveTextContent("Dividends £2,000");
+    fireEvent.click(screen.getByRole("button", { name: "Reset Spending to typical" }));
+    expect(groupToggle("Spending")).toHaveTextContent("(UK average)");
+    expect(groupToggle("Spending")).not.toHaveTextContent("changed");
+    expect(screen.queryByRole("button", { name: "Reset Spending to typical" })).toBeNull();
+    // The others keep their answers
+    expect(groupToggle("Other income")).toHaveTextContent("1 changed");
+  });
+
+  it("asks housing as rent, mortgage or own outright, and a renter's landlord beside the rent", () => {
+    renderForm();
+    choose("Rent from", "Council");
+    expect(chosen("Housing")).toBe("Rent");
+    choose("Housing", "Mortgage");
+    expect(field("rent_from")).toBeNull();
+    expect(field("monthly_rent")).toBeNull();
+    // Back to renting: a private landlord, the first choice
+    choose("Housing", "Rent");
+    expect(chosen("Rent from")).toBe("Private landlord");
+    choose("Rent from", "Housing association");
+    choose("Children", "3");
+    expect(chosen("Children")).toBe("3");
+    expect(screen.getByRole("radiogroup", { name: "Partner" })).toHaveAccessibleDescription(/assessed per couple/);
+  });
+
+  it("changes an answer in its box: steppers for ages, plain boxes with separators for amounts", () => {
     renderForm();
     fireEvent.click(screen.getByRole("button", { name: "Age: 1 more" }));
-    expect(box("Age")).toHaveValue(31);
+    expect(value("Age")).toBe(31);
+    expect(screen.queryByRole("button", { name: /^Salary in 2026: £/ })).toBeNull();
     pickSeat("Holborn and St Pancras");
     expect(seatBox()).toHaveValue("Holborn and St Pancras");
     expect(regionShown()).toBe("London");
     // The rent follows the region until it is changed
-    expect(box("Rent")).toHaveValue(REGIONAL_RENT.LONDON);
-    fireEvent.click(screen.getByRole("button", { name: "Rent: £25 more" }));
-    expect(box("Rent")).toHaveValue(REGIONAL_RENT.LONDON + 25 - (REGIONAL_RENT.LONDON % 25));
+    expect(value("Rent")).toBe(REGIONAL_RENT.LONDON);
+    fireEvent.change(box("Rent"), { target: { value: "2,150" } });
+    expect(value("Rent")).toBe(2150);
     fireEvent.click(screen.getByRole("button", { name: "Use the regional average" }));
-    expect(box("Rent")).toHaveValue(REGIONAL_RENT.LONDON);
+    expect(value("Rent")).toBe(REGIONAL_RENT.LONDON);
     fireEvent.change(box("Salary in 2026"), { target: { value: "52000" } });
-    expect(box("Salary in 2026")).toHaveValue(52000);
+    expect(value("Salary in 2026")).toBe(52000);
+    // Shown with its thousands separator out of the box; "45k" is taken
+    expect(box("Salary in 2026")).toHaveValue("52,000");
+    fireEvent.focus(box("Salary in 2026"));
+    fireEvent.change(box("Salary in 2026"), { target: { value: "45k" } });
+    fireEvent.blur(box("Salary in 2026"));
+    expect(box("Salary in 2026")).toHaveValue("45,000");
   });
 
   it("starts every answer at its default, with the sources said", () => {
     renderForm();
-    expect(box("Salary in 2026")).toHaveValue(DEFAULT_SALARY);
+    expect(value("Salary in 2026")).toBe(DEFAULT_SALARY);
     expect(screen.getByText(/UK median salary in April 2026 \(ONS Annual Survey of Hours and Earnings/)).toBeInTheDocument();
-    expect(box("Rent")).toHaveValue(REGIONAL_RENT.NORTH_WEST);
+    expect(value("Rent")).toBe(REGIONAL_RENT.NORTH_WEST);
     expect(screen.getByText(/average private rent in North West \(ONS, September 2026\)/)).toBeInTheDocument();
     // A long note is the box's description, behind an "i" by its label
     expect(box("Rent")).toHaveAccessibleDescription(/average private rent in North West/);
     expect(screen.getByRole("button", { name: "About Rent" })).toBeInTheDocument();
     openMore();
     expect(chosen("Student loan plan")).toBe("No loan");
-    expect(box("Petrol")).toHaveValue(DEFAULT_SPENDING.petrol);
-    expect(box("Diesel")).toHaveValue(DEFAULT_SPENDING.diesel);
+    expect(value("Petrol")).toBe(DEFAULT_SPENDING.petrol);
+    expect(value("Diesel")).toBe(DEFAULT_SPENDING.diesel);
     expect(chosen("Universal Credit")).toBe("Yes");
     // Only the answers the household calculation reads
     for (const id of ["rail_spending_per_year", "student_loan_balance", "retirement_age"]) {
@@ -156,10 +228,11 @@ describe("the personal impact form", () => {
     renderForm();
     choose("Housing", "Own outright");
     expect(field("monthly_rent")).toBeNull();
+    expect(field("rent_from")).toBeNull();
     expect(field("partner_salary")).toBeNull();
     choose("Partner", "Yes");
-    expect(box("Partner's age")).toHaveValue(30);
-    expect(box("Partner's salary in 2026")).toHaveValue(DEFAULT_SALARY);
+    expect(value("Partner's age")).toBe(30);
+    expect(value("Partner's salary in 2026")).toBe(DEFAULT_SALARY);
     openMore();
     expect(field("partner_private_pension_per_year")).not.toBeNull();
   });
@@ -170,7 +243,7 @@ describe("the personal impact form", () => {
     expect(field("monthly_childcare")).toBeNull();
     choose("Children", "2");
     expect(chosen("Children")).toBe("2");
-    expect(box("Child 1's age")).toHaveValue(5);
+    expect(value("Child 1's age")).toBe(5);
     expect(screen.queryByRole("combobox", { name: /Child 1 in full-time education/ })).toBeNull();
     // The age in the chosen year, which the calculation uses as entered
     expect(field("child_0")).toHaveTextContent("Age in 2027-28, from 0 to 19.");
@@ -197,14 +270,14 @@ describe("the personal impact form", () => {
     fireEvent.change(box("Child 1's age"), { target: { value: "21" } });
     expect(screen.getByRole("alert")).toHaveTextContent("Children are 0 to 19.");
     fireEvent.blur(box("Child 1's age"));
-    expect(box("Child 1's age")).toHaveValue(19);
+    expect(value("Child 1's age")).toBe(19);
     expect(screen.getByRole("alert")).toHaveTextContent("21 was changed to 19.");
   });
 
   it("asks private pensions, the partner's only with a partner, and hides the Council Tax band in Northern Ireland", () => {
     renderForm();
     openMore();
-    expect(box("Private or workplace pension")).toHaveValue(0);
+    expect(value("Private or workplace pension")).toBe(0);
     expect(field("partner_private_pension_per_year")).toBeNull();
     expect(field("council_tax_band")).not.toBeNull();
     pickSeat("Belfast South and Mid Down");
@@ -228,10 +301,10 @@ describe("the personal impact form", () => {
     openMore();
     expect(field("state_pension_per_year")).toBeNull();
     fireEvent.change(box("Age"), { target: { value: "72" } });
-    expect(box("Your State Pension")).toHaveValue(13697);
+    expect(value("Your State Pension")).toBe(13697);
     expect(screen.getByText(/Prefilled with the full new State Pension for 2029-30 \(£13,697\)/)).toBeInTheDocument();
     fireEvent.change(box("Your State Pension"), { target: { value: "9000" } });
-    expect(box("Your State Pension")).toHaveValue(9000);
+    expect(value("Your State Pension")).toBe(9000);
   });
 
   it("shows Your household first, then eight example cards, each a name, who they are and its measure", () => {
@@ -305,8 +378,8 @@ describe("the personal impact form", () => {
     expect(isChosen(yoursCard())).toBe(true);
     expect(isChosen(exampleItem("A 22-year-old renting"))).toBe(false);
     expect(screen.getByText("Renter, 22", { selector: ".household-start-from strong" })).toBeInTheDocument();
-    expect(box("Age")).toHaveValue(22);
-    expect(box("Salary in 2026")).toHaveValue(25000);
+    expect(value("Age")).toBe(22);
+    expect(value("Salary in 2026")).toBe(25000);
     fireEvent.change(box("Salary in 2026"), { target: { value: "26000" } });
     expect(isChosen(yoursCard())).toBe(true);
     // Another example: the note goes
@@ -322,7 +395,7 @@ describe("the personal impact form", () => {
     expect(isChosen(yoursCard())).toBe(true);
     expect(isChosen(exampleItem("A pensioner on the State Pension"))).toBe(false);
     expect(screen.getByText(/Starting from:/)).toHaveTextContent("Starting from: Pensioner. Change anything, then Calculate.");
-    expect(box("Age")).toHaveValue(70);
+    expect(value("Age")).toBe(70);
     // Calculate is there, as for your own answers
     expect(screen.getByRole("button", { name: /^Calcul/ })).toBeVisible();
   });
@@ -425,8 +498,9 @@ describe("the personal impact form", () => {
       choose("Children", "2");
       applyExample(label);
       expect(regionShown()).toMatch(/^North West/);
-      expect(chosen("Housing")).toBe("Rent privately");
-      expect(box("Rent")).toHaveValue(expected.rent);
+      expect(chosen("Housing")).toBe("Rent");
+      expect(chosen("Rent from")).toBe("Private landlord");
+      expect(value("Rent")).toBe(expected.rent);
       expect(chosen("Partner")).toBe("No");
       expect(chosen("Children")).toBe("0");
       openMore();
@@ -435,12 +509,13 @@ describe("the personal impact form", () => {
     }
   });
 
-  it("keeps More details open across a remount in the session", () => {
+  it("keeps More details' open groups open across a remount in the session", () => {
     const { unmount } = renderForm();
-    openMore();
+    fireEvent.click(groupToggle("Spending"));
     unmount();
     renderForm();
-    expect(moreToggle()).toHaveAttribute("aria-expanded", "true");
+    expect(groupToggle("Spending")).toHaveAttribute("aria-expanded", "true");
+    expect(groupToggle("Other income")).toHaveAttribute("aria-expanded", "false");
   });
 
   it("shows More details' boxes when opened, focusable, in a container no utility class hides", () => {
@@ -452,13 +527,12 @@ describe("the personal impact form", () => {
       input.focus();
       expect(document.activeElement).toBe(input);
     }
-    const credit = select("Universal Credit");
-    expect(credit).toBeVisible();
+    const credit = within(radios("Universal Credit")).getByRole("radio", { name: "Yes" });
     credit.focus();
     expect(document.activeElement).toBe(credit);
     // Tailwind's "collapse" utility is visibility: collapse: the expander
     // must never carry that class
-    const panel = document.getElementById(moreToggle().getAttribute("aria-controls"));
+    const panel = document.getElementById(groupToggle("Spending").getAttribute("aria-controls"));
     expect(panel).not.toHaveClass("collapse");
     expect(panel.querySelector(".collapse")).toBeNull();
   });

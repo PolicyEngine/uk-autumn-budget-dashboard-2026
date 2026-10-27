@@ -1,22 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import LoadingSkeleton from "./publication/LoadingSkeleton";
 import SwapTransition from "./SwapTransition";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ComposedChart,
-  Customized,
-  Line,
-  ReferenceArea,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  Scatter,
-} from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Customized, Line, ReferenceArea, ReferenceLine, ResponsiveContainer, XAxis, YAxis, Scatter } from "recharts";
+import { Tooltip } from "./ViewportTooltip";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import { loadVerifiedTable, peekVerifiedTables } from "../utils/loadDashboard";
@@ -46,6 +32,7 @@ import {
   CHART_COLOURS,
   divergingAxis,
   HOVER_CURSOR,
+  noHouseholdChange,
 } from "../utils/chartTheme";
 import {
   AGE_BANDS,
@@ -57,7 +44,7 @@ import {
 import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST, fitRange, sharesBySingleAge, singleAgeBars } from "./youngPeople/youngPeopleData";
 import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
 import "./YoungPeopleSection.css";
-import { chartMotion, netDot } from "../utils/chartMotion";
+import { chartMotion, netDotTitled } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { AGE_METHOD } from "./methodology/anchors";
@@ -69,8 +56,9 @@ import {
   drawnNames,
 } from "../utils/legendMembership";
 
-/** The section's anchor: link to it as #young-people. */
-export const YOUNG_PEOPLE_ANCHOR = "young-people";
+/** The section's anchor: link to it as #young-people (utils/viewAnchors). */
+import { YOUNG_PEOPLE_ANCHOR } from "../utils/viewAnchors";
+export { YOUNG_PEOPLE_ANCHOR };
 
 
 // Highlight for the 16 to 24 band, and its legend swatch (the same tint
@@ -429,6 +417,8 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
     exportOptions,
     csv: csvText,
     published,
+    // No image of an empty plot: the CSV only, when no measure changes a household
+    image: activeNames.length > 0,
   };
   const notShown = single
     ? missingAges.length > 0 && `ages ${missingAges.map((p) => p.label).join(", ")}`
@@ -463,8 +453,16 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
         )}
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
+        ) : activeNames.length === 0 && !incomplete ? (
+          // Only measures that change no household's income this year (an
+          // employer cost): a note, not an empty plot of £0 ticks. A
+          // measure with no published result by age is not 'no change'
+          <div className="plot-empty" style={{ minHeight: height }} role="status">
+            <p>{noHouseholdChange(yearLabel)}</p>
+          </div>
         ) : single ? (
-          <ResponsiveContainer width="100%" height={height}>
+          // As tall as the plot row in a pair (globals.css), else `height`
+          <ResponsiveContainer width="100%" height="100%" minHeight={height}>
             <ComposedChart data={singleDrawn} margin={plotMargin(narrow)} barCategoryGap="14%" stackOffset="sign">
               <CartesianGrid {...GRID_PROPS} />
               <ReferenceArea x1="16" x2="24" fill={YOUNG_FILL} ifOverflow="visible" />
@@ -502,7 +500,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
               <Scatter
                 dataKey="netChange"
                 opacity={netOpacity(key.highlight)}
-                shape={netDot}
+                shape={netDotTitled((row) => `${row.label}: net change ${signedPounds(row.netChange)}`)}
                 legendType="none"
                 tooltipType="none"
                 {...chartMotion()}
@@ -511,7 +509,8 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <ResponsiveContainer width="100%" height={height}>
+          // As tall as the plot row in a pair (globals.css), else `height`
+          <ResponsiveContainer width="100%" height="100%" minHeight={height}>
             <ComposedChart data={data} margin={plotMargin(narrow)} stackOffset="sign">
               <CartesianGrid {...GRID_PROPS} />
               {youngLabel && <ReferenceArea x1={youngLabel} x2={youngLabel} fill={YOUNG_FILL} ifOverflow="visible" />}
@@ -580,7 +579,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
               <Scatter
                 dataKey="netChange"
                 opacity={netOpacity(key.highlight)}
-                shape={netDot}
+                shape={netDotTitled((row) => `${row.label}: net change ${signedPounds(row.netChange)}`)}
                 legendType="none"
                 tooltipType="none"
                 {...chartMotion()}
@@ -805,7 +804,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
             rows={shares.groups.filter((group) => !group.suppressed).map((group) => ({ id: group.key, name: group.label, row: group.row }))}
             groupLabel=""
             yearLabel={yearLabel}
-            emphasis={YOUNG_BAND}
+            emphasis={group}
             labelFor={({ name }) => `People aged ${name}, ${yearLabel}`}
           />
         ) : (
@@ -905,10 +904,10 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
           <SectionHeading
             id="young-people-who-gains"
             icon="userPlus"
-            title="Who gains and from what"
+            title="Who is better or worse off, and from what"
             subtitle="Which policies drive the change for young people, and how many people are better or worse off."
           />
-          <section className="report-section young-people-section" aria-label="Who gains and from what">
+          <section className="report-section young-people-section" aria-label="Who is better or worse off, and from what">
             <div className="charts-grid">
               <MeasuresCard {...props} height={narrow ? 460 : 400} />
               <SharesCard {...props} height={narrow ? 340 : 400} />

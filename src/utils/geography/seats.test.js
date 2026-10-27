@@ -5,7 +5,7 @@ import {
   WITHHELD_FILL,
   approximateFill,
 } from "./palette";
-import { describeSeat, seatStates, seatStyle, seatSummary } from "./seats";
+import { describeSeat, movesNoSeat, noSeatMovedNote, seatStates, seatStyle, seatSummary } from "./seats";
 import { geographyFixture } from "../../test/geographyFixture";
 
 const constituency = parseGeographyTable(geographyFixture("constituency.csv"), {
@@ -60,12 +60,7 @@ describe("seat states", () => {
     };
     const withheld = { kind: "withheld", row: null, category: null };
     const { lines } = describeSeat({ feature, state: withheld, regional, ...options });
-    expect(lines).toEqual([
-      {
-        kind: "note",
-        text: "Not published, to protect survey respondents' confidentiality.",
-      },
-    ]);
+    expect(lines).toEqual([{ kind: "note", text: "Not published: too few survey households" }]);
   });
 
   it("label the regional figure as the region's, approximate where it is", () => {
@@ -77,6 +72,39 @@ describe("seat states", () => {
     expect(title).toBe("Valleyside");
     expect(lines[1].text).toBe(
       "Regional figure for Wales, not an estimate for this constituency: +0.42% (0.11% to 0.73%, approximate)",
+    );
+  });
+});
+
+describe("a measure that moves no seat", () => {
+  const seat = (row) => ({ kind: row ? row.tier : "no-data", row });
+  const zero = { tier: "reported", direction: "no_change", value: "0" };
+  const withheld = { tier: "withheld", direction: "", value: "" };
+  const gain = { tier: "reported", direction: "gain", value: "0.4" };
+  const close = { tier: "approximate", direction: "too_close_to_call", value: "0.01" };
+
+  it("is every seat with a row zero or withheld", () => {
+    expect(movesNoSeat(new Map([["a", seat(zero)], ["b", seat(withheld)], ["c", seat(null)]]))).toBe(true);
+    expect(movesNoSeat(new Map([["a", seat(withheld)]]))).toBe(true);
+  });
+
+  it("is not when one seat has a figure, or no seat has a row", () => {
+    expect(movesNoSeat(new Map([["a", seat(zero)], ["b", seat(gain)]]))).toBe(false);
+    expect(movesNoSeat(new Map([["a", seat(withheld)], ["b", seat(close)]]))).toBe(false);
+    expect(movesNoSeat(new Map([["a", seat(null)]]))).toBe(false);
+    expect(movesNoSeat(null)).toBe(false);
+  });
+
+  it("the fixture's package moves seats", () => {
+    expect(movesNoSeat(states)).toBe(false);
+  });
+
+  it("is said in one line, for one policy or several", () => {
+    expect(noSeatMovedNote({ yearLabel: "2029-30" })).toBe(
+      "No constituency shows a change large enough to publish for this policy in 2029-30.",
+    );
+    expect(noSeatMovedNote({ yearLabel: "2029-30", several: true })).toBe(
+      "No constituency shows a change large enough to publish for these policies in 2029-30.",
     );
   });
 });

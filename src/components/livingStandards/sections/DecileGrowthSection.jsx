@@ -7,7 +7,7 @@
 
 import { housingOption, yearsOption } from "../controlOptions";
 import { LsBarChart } from "../LsCharts";
-import { divergingAxis, incomeGroupColours, useNarrowViewport } from "../../../utils/chartTheme";
+import { divergingAxis, fittedAxis, incomeGroupColours, useNarrowViewport } from "../../../utils/chartTheme";
 import {
   changeVerb,
   fyDash,
@@ -27,7 +27,10 @@ import { offerFor, seriesFor, withMeasuresRows } from "../../../utils/livingStan
 import { CSV_SOURCES, PeSource } from "../sources";
 import { METHOD_ANCHORS } from "../../methodology/anchors";
 
-const pctTick = (v) => `${formatOneDp(v).replace(/\.0$/, "")}%`;
+// Axis ticks to the step's own precision: a 0.25 step reads "0.25%", not
+// "0.3%" (tightAxis's steps go down to 0.01)
+const pctTickFormat = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
+export const pctTick = (v) => `${pctTickFormat.format(v)}%`;
 const pct = (v) => `${formatOneDp(v)}%`;
 // The measures' effect on growth, in percentage points (two decimals: it is
 // often a few hundredths)
@@ -74,13 +77,15 @@ const VIEWS = { period: "Whole period", annual: "Year by year" };
 
 /**
  * A y axis close to the data: the nice step (2 to 4 ticks a side) whose
- * end is nearest the largest value, symmetric about 0 when values fall on
- * both sides (±0.47 → ±0.5 by 0.25s, not ±0.75).
+ * end is nearest the largest value, from 0 when the values have one sign;
+ * fitted to each side, never forced symmetric, when they fall on both
+ * (−0.46 to +0.13 → −0.5 to +0.15 by 0.1s; chartTheme.fittedAxis).
  */
 export function tightAxis(values) {
   const vals = values.filter((v) => v != null && Number.isFinite(v));
   const largest = Math.max(0, ...vals.map(Math.abs)) * 1.02 || 1;
   const both = vals.some((v) => v > 1e-9) && vals.some((v) => v < -1e-9);
+  if (both) return fittedAxis(vals);
   const steps = [0.01, 0.02, 0.025, 0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10, 20, 25, 50];
   let best = null;
   for (const step of steps) {

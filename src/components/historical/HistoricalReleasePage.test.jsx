@@ -79,7 +79,7 @@ describe("a past event's page", () => {
   it("offers only the event's own years in its year pill, not this Budget's", async () => {
     render(<HistoricalReleasePage releaseId={RELEASE.id} />);
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: /^Year, / }));
+    fireEvent.click(screen.getByRole("button", { name: /^Year / }));
     const label = `${IN_DATA}-${String((IN_DATA + 1) % 100).padStart(2, "0")}`;
     expect(screen.getAllByRole("option").map((option) => option.textContent.replace("✓", "").trim())).toEqual([label]);
   });
@@ -104,6 +104,19 @@ describe("a past event's page", () => {
     for (const file of Object.keys(FLAT)) expect(fetchImpl.calls).toContain(`${root}${file}`);
   });
 
+  it("says what it is built with, as this Budget's About drawer does, each link in a new tab", async () => {
+    render(<HistoricalReleasePage releaseId={RELEASE.id} />);
+    await ready();
+    const line = document.querySelector(".historical-built-with");
+    expect(line.textContent).toMatch(/^Built with our replication code \(opens in a new tab\)( on policyengine\.py \S+ \(opens in a new tab\))?\.$/);
+    const links = [...line.querySelectorAll("a")];
+    expect(links[0].getAttribute("href")).toBe("https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026");
+    for (const link of links) {
+      expect(link.getAttribute("target")).toBe("_blank");
+      expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    }
+  });
+
   it("shows the coverage with exact shares, and the replay's computed measures", async () => {
     render(<HistoricalReleasePage releaseId={RELEASE.id} />);
     await ready();
@@ -111,7 +124,8 @@ describe("a past event's page", () => {
     const total = MEASURES.length;
     expect(coverage).toHaveTextContent(`Its replay computed ${PAGE_IDS.length} of the ${total}`);
     const partial = within(coverage).getByText("Partly expressible").closest("tr");
-    expect(partial).toHaveTextContent(`${PAGE_IDS.length}75.0%`);
+    // The fixture's measures, a share of every measure of the event
+    expect(partial).toHaveTextContent(`${PAGE_IDS.length}${((100 * PAGE_IDS.length) / total).toFixed(1)}%`);
     expect(within(coverage).getByText(/No executable construction yet/)).toBeInTheDocument();
   });
 

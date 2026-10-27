@@ -20,7 +20,7 @@ import PolicySelector from "../PolicySelector";
 import YearSlider from "../YearSlider";
 import SectionHeading from "../SectionHeading";
 import Disclosure from "../Disclosure";
-import ReplicationLine from "../ReplicationLine";
+import { replicationLinks } from "../ReplicationLine";
 import UnavailableNotice from "../publication/UnavailableNotice";
 import { MeasureCatalogueProvider, useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { budgetChartData, loadDashboard } from "../../utils/loadDashboard";
@@ -385,9 +385,33 @@ function HistoricalDashboard({ release, published, views }) {
           the OBR are on the{" "}
           <a href={SCORECARD_URL} target="_blank" rel="noopener noreferrer">PolicyEngine scorecard</a>.
         </p>
-        <ReplicationLine />
+        <BuiltWith />
       </main>
     </div>
+  );
+}
+
+/**
+ * "Built with our replication code on policyengine.py 6.11.1.": this
+ * Budget's page says it in its About drawer (OverviewDrawer), which a past
+ * event's page does not have. The version is left out when unknown.
+ */
+function BuiltWith() {
+  const links = replicationLinks({ policyengine: process.env.NEXT_PUBLIC_POLICYENGINE_VERSION });
+  return (
+    <p className="historical-scorecard-link historical-built-with">
+      Built with our{" "}
+      {links.map(({ key, label, title, href }, index) => (
+        <span key={key}>
+          {index > 0 && " on "}
+          <a href={href} title={title} target="_blank" rel="noopener noreferrer">
+            {label}
+            <span className="visually-hidden"> (opens in a new tab)</span>
+          </a>
+        </span>
+      ))}
+      .
+    </p>
   );
 }
 

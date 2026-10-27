@@ -304,7 +304,7 @@ function Reveal({ show, hide, children }) {
  * Each fact once: no line repeats what the plot labels, and lines where
  * the measure equals current law are left out.
  */
-export default function PolicyChange({ entry, direction, onHighlight }) {
+export default function PolicyChange({ entry, direction, onHighlight, name }) {
   const id = useId();
   const tone = TONES[direction] ?? "neutral";
   const main = mainRow(entry);
@@ -365,7 +365,9 @@ export default function PolicyChange({ entry, direction, onHighlight }) {
     );
   }
   return (
-    <section className="pchg" aria-labelledby={`${id}-title`}>
+    // Named with its measure: each card's section says "What changes", and
+    // regions on one page need different names (axe landmark-unique)
+    <section className="pchg" aria-labelledby={name ? undefined : `${id}-title`} aria-label={name ? `What changes: ${name}` : undefined}>
       {title}
       {body}
     </section>

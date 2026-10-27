@@ -109,33 +109,50 @@ describe("published measure catalogue in population views", () => {
     expect(catalogue.combinedId).toBeNull();
   });
 
-  it("lists each published measure by its short name, grouped by revenue effect, with no description, and excludes unavailable ones", () => {
+  it("lists each published measure by its short name in one flat list, raises first, with no group labels or description, and excludes unavailable ones", () => {
     const catalogue = catalogueFor(measureCatalogueFixture());
     const toggle = vi.fn();
     render(withCatalogue(catalogue, <PolicySelector selectedPolicies={[ALPHA, BETA]} onPolicyToggle={toggle} />));
-    expect(screen.getByRole("button", { name: "Select policies" })).toHaveTextContent(/Policies\s*All 2 policies/);
-    fireEvent.click(screen.getByRole("button", { name: "Select policies" }));
+    expect(screen.getByRole("button", { name: /^Policies / })).toHaveTextContent(/Policies\s*All 2 policies/);
+    fireEvent.click(screen.getByRole("button", { name: /^Policies / }));
     for (const measure of catalogue.displayable) {
       expect(screen.getByText(measure.label)).toBeInTheDocument();
       expect(screen.queryByText(measure.description)).not.toBeInTheDocument();
     }
-    expect(screen.getByRole("group", { name: "Raises revenue" })).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "Costs revenue" })).toBeInTheDocument();
+    expect(screen.queryByText("Raises revenue")).toBeNull();
+    expect(screen.queryByText("Costs revenue")).toBeNull();
+    expect(document.querySelector(".policy-group")).toBeNull();
+    // Raises revenue first, then costs, in the catalogue's order
+    const order = (measure) => ["revenue", "cost", "neutral"].indexOf(measure.direction);
+    const expected = [...catalogue.displayable].sort((a, b) => order(a) - order(b)).map((m) => m.label);
+    expect([...document.querySelectorAll(".policy-selector-name")].map((node) => node.textContent)).toEqual(expected);
     expect(screen.queryByText(catalogue.byId.get(HELD).name)).not.toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("checkbox")[0]);
     expect(toggle).toHaveBeenCalledWith(catalogue.displayable[0].id);
   });
 
+  it("closes on Escape and puts focus back on the pill when it was in the menu", () => {
+    const catalogue = catalogueFor(measureCatalogueFixture());
+    render(withCatalogue(catalogue, <PolicySelector selectedPolicies={[ALPHA, BETA]} onPolicyToggle={vi.fn()} />));
+    const pill = screen.getByRole("button", { name: /^Policies / });
+    fireEvent.click(pill);
+    expect(pill).toHaveAttribute("aria-expanded", "true");
+    screen.getAllByRole("checkbox")[0].focus();
+    fireEvent.keyDown(document.activeElement, { key: "Escape" });
+    expect(pill).toHaveAttribute("aria-expanded", "false");
+    expect(pill).toHaveFocus();
+  });
+
   it("never shows 0 of 0: while loading, the label alone; with none published, disabled", () => {
     const empty = catalogueFor({ ...measureCatalogueFixture(), manifest: null });
     const { unmount } = render(withCatalogue(empty, <PolicySelector policies={[]} selectedPolicies={[]} onPolicyToggle={vi.fn()} loading />));
-    const loading = screen.getByRole("button", { name: "Select policies: loading" });
+    const loading = screen.getByRole("button", { name: "Policies: loading" });
     expect(loading).toHaveTextContent("Policies");
     expect(loading).not.toHaveTextContent(/0 of 0/);
     expect(loading).toBeDisabled();
     unmount();
     render(withCatalogue(empty, <PolicySelector policies={[]} selectedPolicies={[]} onPolicyToggle={vi.fn()} noneReason="No Budget results are published yet" />));
-    const none = screen.getByRole("button", { name: "Select policies: No Budget results are published yet" });
+    const none = screen.getByRole("button", { name: "No policies yet: No Budget results are published yet" });
     expect(none).toHaveTextContent("No policies yet");
     expect(none).toBeDisabled();
   });
@@ -164,6 +181,25 @@ describe("published measure catalogue in population views", () => {
     const { container } = render(withCatalogue(catalogue, <Chart rawData={fixture[source]} selectedPolicies={[ALPHA]} selectedYear={YEAR} />));
     expect(chartRows(container).every((point) => point[`measure:${ALPHA}`] === null && point.netChange === null)).toBe(true);
     expect(screen.getByRole("status")).toHaveTextContent("The net change is unavailable");
+  });
+
+  it.each([
+    ["relative", DistributionalChart, "distributional", "value", -1, "Later years differ: in 2030-31, both the lowest- and highest-income tenths lose."],
+    ["absolute", WaterfallChart, "winnersLosers", "avg_change", -500, "Later years differ: in 2030-31, both the lowest- and highest-income tenths lose."],
+  ])("points the %s view to a later year in which the ends turn", (_name, Chart, source, key, later, note) => {
+    const fixture = measureCatalogueFixture({ held: false });
+    // The same rows a year on, with the first measure turned to a loss
+    const next = fixture[source].map((row) => ({ ...row, year: YEAR + 1, ...(row.reform_id === ALPHA ? { [key]: later } : {}) }));
+    const { container, unmount } = render(withCatalogue(catalogueFor(fixture),
+      <Chart rawData={[...fixture[source], ...next]} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
+    ));
+    expect(container.querySelector(".later-years-note")).toHaveTextContent(note);
+    unmount();
+    // The same rows in both years: no turn, no pointer
+    const same = render(withCatalogue(catalogueFor(fixture),
+      <Chart rawData={[...fixture[source], ...fixture[source].map((row) => ({ ...row, year: YEAR + 1 }))]} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
+    ));
+    expect(same.container.querySelector(".later-years-note")).toBeNull();
   });
 
   it("shares the catalogue's colours between standalone legends and tooltips", () => {

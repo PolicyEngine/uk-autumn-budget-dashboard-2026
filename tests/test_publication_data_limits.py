@@ -13,12 +13,14 @@ import pytest
 from policyengine_uk import Simulation
 from pydantic import ValidationError
 
+from tests.data_limit_stand_ins import STAND_IN_DATA_LIMITS
 from tests.fixed_shape_measures import (
     raise_additional_dwelling_rates,
     sdlt_from_purchases_read_at_build,
 )
 from tests.publication_support import World, make_household_rows, make_tables
-from uk_budget_data.data_limits import DATA_LIMITS, record
+from tests.purchase_helpers import RAISED_SURCHARGE
+from uk_budget_data.data_limits import record
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication import generate as generate_module
 from uk_budget_data.publication import manifest as m
@@ -51,7 +53,11 @@ SURCHARGE_RATE = (
     "gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"
 )
 NON_RESIDENTIAL_RATE = "gov.hmrc.stamp_duty.non_residential.purchase[1].rate"
-BY_KEY = {limit.key: limit for limit in DATA_LIMITS}
+BY_KEY = {limit.key: limit for limit in STAND_IN_DATA_LIMITS}
+
+# Written around the purchase limits, registered as stand-ins.
+pytestmark = pytest.mark.usefixtures("stand_in_data_limits")
+
 SURCHARGE = record(BY_KEY["additional_dwelling_purchases"], [SURCHARGE_RATE])
 NON_RESIDENTIAL = record(
     BY_KEY["non_residential_purchases"], [NON_RESIDENTIAL_RATE]
@@ -547,7 +553,12 @@ def test_generation_records_a_parameter_change_on_a_limited_rate(world):
     reform = Reform(
         id="surcharge",
         name="Surcharge",
-        parameter_changes={SURCHARGE_RATE: {"2027": 0.07, "2028": 0.07}},
+        parameter_changes={
+            SURCHARGE_RATE: {
+                "2027": RAISED_SURCHARGE,
+                "2028": RAISED_SURCHARGE,
+            }
+        },
     )
     # From the scenarios alone (stand-ins with no parameter tree) ...
     assert generated_limits(
@@ -651,7 +662,12 @@ def test_generation_writes_only_the_receipt_of_a_data_limited_measure(world):
     reform = Reform(
         id="surcharge",
         name="Higher rates surcharge",
-        parameter_changes={SURCHARGE_RATE: {"2027": 0.07, "2028": 0.07}},
+        parameter_changes={
+            SURCHARGE_RATE: {
+                "2027": RAISED_SURCHARGE,
+                "2028": RAISED_SURCHARGE,
+            }
+        },
     )
     report = generate_artifacts(
         [reform],
@@ -683,7 +699,7 @@ def test_a_combined_run_with_a_data_limited_member_is_written_receipt_only(
         Reform(
             id="alpha",
             name="Alpha",
-            parameter_changes={SURCHARGE_RATE: {"2027": 0.07}},
+            parameter_changes={SURCHARGE_RATE: {"2027": RAISED_SURCHARGE}},
         ),
         Reform(
             id="beta",

@@ -12,10 +12,6 @@
  * the baseline curve and its position after off the reform curve, since
  * everyone else's income changes too.
  */
-// The whole package's run in the pipeline's own CSVs (reforms.py's
-// AUTUMN_BUDGET_2026_COMBINED_ID); policyConfig.js, which held it, is gone
-// on #104
-export const COMBINED_REFORM_ID = "autumn_budget_2026_combined";
 import { parseCsv } from "./publication/csv";
 
 export const DISTRIBUTION_FILE = "income_distribution.csv";
@@ -74,18 +70,65 @@ const sameSet = (a, b) => a.length === b.length && a.every((id) => b.includes(id
 
 /**
  * Which published run stands for the selection: one measure is its own
- * run; two or more are the whole package's run, which is exact (`exact`)
- * only when every published measure is selected and the package was run
- * with exactly those (`packageIds`, the catalogue's package members, or
- * null when it publishes none), since runs for part of the package are not
- * published. After a measure is withdrawn the package's run still holds it,
- * so it is never exact then (#104 review).
+ * run; two or more are the published package's run, which is exact
+ * (`exact`) only when every published measure is selected and the package
+ * was run with exactly those (`packageIds`, the catalogue's package
+ * members, or null when it publishes none), since runs for part of the
+ * package are not published. After a measure is withdrawn the package's
+ * run still holds it, so it is never exact then (#104 review).
+ *
+ * The package's rows are read under `combinedId`, the manifest's key for
+ * the combined run of exactly the published measures (`combined--...`,
+ * the catalogue's combinedId), never under a fixed id: the flat files'
+ * rows for any other package, such as the registry's nine-measure
+ * `autumn_budget_2026_combined`, are not taken for it (#228). With no
+ * published package `reformId` is null and there is nothing to read.
  */
-export function distributionRunFor(selected, allIds, packageIds = null) {
+export function distributionRunFor(selected, allIds, packageIds = null, combinedId = null) {
   const ids = [...new Set(selected ?? [])];
-  if (ids.length === 1) return { reformId: ids[0], exact: true };
-  const exact = Boolean(packageIds) && allIds.length > 0 && sameSet(ids, allIds) && sameSet(packageIds, allIds);
-  return { reformId: COMBINED_REFORM_ID, exact };
+  if (ids.length === 1) return { reformId: ids[0], exact: true, package: false };
+  const reformId = combinedId || null;
+  const exact = Boolean(reformId) && Boolean(packageIds) && allIds.length > 0 && sameSet(ids, allIds) && sameSet(packageIds, allIds);
+  return { reformId, exact, package: true };
+}
+
+/** distributionRunFor for a measure catalogue (utils/measureCatalogue.jsx). */
+export function distributionRunOf(selected, catalogue) {
+  const combinedId = catalogue?.combinedId ?? null;
+  return distributionRunFor(
+    selected,
+    (catalogue?.displayable ?? []).map((measure) => measure.id),
+    combinedId ? (catalogue.manifest?.combined?.[combinedId]?.measures ?? null) : null,
+    combinedId,
+  );
+}
+
+/** Whether a flat file's rows (each with `reformId` or `reform_id`) hold a run. */
+export function hasRun(rows, reformId) {
+  return Boolean(reformId) && Array.isArray(rows) && rows.some((row) => (row.reformId ?? row.reform_id) === reformId);
+}
+
+/**
+ * Why a run's rows are missing, said on the card: for the package, that the
+ * file holds another package's rows (it was not regenerated for the
+ * measures published), so its figures are not shown.
+ */
+export const PACKAGE_NOT_IN_FILE =
+  "Results for the selected policies together are not available yet: this file holds a different set of policies, so it is not used.";
+
+/** The same, when the manifest publishes no combined run of the measures at all. */
+export const NO_PACKAGE_PUBLISHED =
+  "Results for the selected policies together are not available yet: no combined run of them has been published.";
+
+/**
+ * The note a card shows in place of the package's figures, or null: the
+ * package's run is wanted (two or more measures) and the file has no rows
+ * for it, either because none is published (`reformId` null) or because the
+ * file holds another package.
+ */
+export function missingPackageNote(run, rows) {
+  if (!run?.package || hasRun(rows, run.reformId)) return null;
+  return run.reformId ? PACKAGE_NOT_IN_FILE : NO_PACKAGE_PUBLISHED;
 }
 
 /** One curve, sorted by percentile: [{ percentile, income }]. */

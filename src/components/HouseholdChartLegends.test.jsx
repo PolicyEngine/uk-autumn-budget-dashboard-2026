@@ -121,6 +121,14 @@ describe.each([
     expect(legendLabels(container).sort()).toEqual(ALL.map(nameOf).sort());
   });
 
+  it("says so in place of an empty plot when no selected measure changes a household", () => {
+    render(<Chart rawData={rows} selectedPolicies={[EMPLOYER_NI]} selectedYear={2027} />);
+    expect(screen.getByRole("status")).toHaveTextContent("None of the selected policies changes household incomes in 2027-28.");
+    expect(document.querySelector(".recharts-wrapper")).toBeNull();
+    // Said once: the card's sentence does not add "almost no change" at both ends
+    expect(document.querySelector(".chart-description").textContent).not.toMatch(/almost no change/);
+  });
+
   it("greys out the employer NI relief and says why under the chart", () => {
     const { container } = render(<Chart rawData={rows} selectedPolicies={ALL} selectedYear={2027} />);
     const item = keyChips(container).find((node) => node.title === "Employer NI relief for under-25s");
@@ -220,12 +228,13 @@ describe("ChartMoreInfo", () => {
   it("on a past event's card, keeps every part but its links to Methodology", () => {
     const own = render(<ChartMoreInfo info={FULL_INFO} />);
     fireEvent.click(screen.getByRole("button", { name: ABOUT_THIS_CHART }));
-    expect([...own.container.querySelectorAll("a.method-link")].map((link) => link.textContent.trim())).toEqual([GLOSSARY.netIncome.term, "How we group households →"]);
+    expect([...own.container.querySelectorAll("a.method-link")].map((link) => link.textContent.trim())).toEqual(["How we group households", GLOSSARY.netIncome.term]);
     own.unmount();
     const { container } = render(<ChartMoreInfo info={FULL_INFO} pastEvent />);
     fireEvent.click(screen.getByRole("button", { name: ABOUT_THIS_CHART }));
     expect(container.querySelector("a.method-link")).toBeNull();
-    expect(container.textContent).not.toMatch(/In Methodology|How we group households/);
+    expect(container.textContent).not.toMatch(/[Ii]n Methodology|How we group households/);
+    expect(container.querySelector(".info-method")).toBeNull();
     for (const text of ["What the card shows.", "One step.", "A card's own term", "Its meaning here.", "One caveat.", "One source"]) {
       expect(container.textContent).toContain(text);
     }

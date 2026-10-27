@@ -19,7 +19,7 @@ export function svgToPngBlob(svg, width, height, scale = 2) {
       new Blob([svg], { type: "image/svg+xml;charset=utf-8" }),
     );
     const image = new Image();
-    image.onload = () => {
+    const draw = () => {
       const canvas = document.createElement("canvas");
       canvas.width = Math.round(width * scale);
       canvas.height = Math.round(height * scale);
@@ -32,6 +32,11 @@ export function svgToPngBlob(svg, width, height, scale = 2) {
         (blob) => (blob ? resolve(blob) : reject(new Error("PNG encoding failed"))),
         "image/png",
       );
+    };
+    // Drawn once decoded, its embedded font (Inter) with it
+    image.onload = () => {
+      const decoded = typeof image.decode === "function" ? image.decode().catch(() => {}) : Promise.resolve();
+      decoded.then(draw);
     };
     image.onerror = () => {
       URL.revokeObjectURL(url);

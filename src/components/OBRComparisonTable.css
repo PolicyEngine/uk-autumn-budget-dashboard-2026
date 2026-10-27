@@ -95,75 +95,21 @@
   color: var(--pe-gray-500);
 }
 
-/* Difference highlighting */
-.value-cell.diff-small {
-  /* Small difference - subtle green tint */
+/* The difference column: neutral, like the values */
+.value-cell.difference {
+  color: var(--pe-gray-700);
+  padding-left: 22px;
 }
 
-.value-cell.diff-medium {
-  /* Medium difference - yellow tint */
-  position: relative;
-}
-
-.value-cell.diff-medium::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 6px;
-  height: 6px;
-  background: var(--c-diff-medium);
-  border-radius: 50%;
-}
-
-.value-cell.diff-large {
-  /* Large difference - red tint */
-  position: relative;
-}
-
-.value-cell.diff-large::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 6px;
-  height: 6px;
-  background: var(--c-diff-large);
-  border-radius: 50%;
-}
-
-.comparison-legend {
-  display: flex;
-  gap: 24px;
-  margin-bottom: 16px;
+.comparison-table-note {
+  margin: 8px 0 0;
   font-size: var(--fs-caption);
   color: var(--pe-gray-500);
 }
 
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--fs-caption);
-  color: var(--pe-gray-500);
-}
-
-.legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.legend-dot.diff-small {
-  background: var(--c-diff-small);
-}
-
-.legend-dot.diff-medium {
-  background: var(--c-diff-medium);
-}
-
-.legend-dot.diff-large {
-  background: var(--c-diff-large);
+/* The card's plot area when the year is past the official costings */
+.obr-not-covered {
+  margin: 0 0 20px;
 }
 
 /* Responsive adjustments */
@@ -175,11 +121,6 @@
   .comparison-table th,
   .comparison-table td {
     padding: 8px 6px;
-  }
-
-  .comparison-legend {
-    flex-wrap: wrap;
-    gap: 12px;
   }
 
   /* Policy names wrap and stay in view while the years scroll sideways */
@@ -198,18 +139,6 @@
 /* The PE header opens its row, so the first-column rule must not left-align it */
 .comparison-table th.source-header {
   text-align: right;
-}
-
-/* The difference key, one inline line */
-.comparison-legend {
-  display: block;
-  margin: 0 0 8px;
-  text-align: center;
-}
-
-.comparison-legend .legend-item {
-  display: inline-flex;
-  margin-right: 10px;
 }
 
 /* The table sits behind a toggle under the dumbbell chart */
@@ -231,8 +160,7 @@
 
 /* .obr-view-switch and .obr-view-option live in ViewSwitch.css */
 
-.comparison-table-wrapper[hidden],
-.comparison-legend[hidden] {
+.comparison-table-wrapper[hidden] {
   display: none;
 }
 

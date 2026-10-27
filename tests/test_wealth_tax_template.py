@@ -38,11 +38,17 @@ BASIC_RATE = "gov.hmrc.income_tax.rates.uk[0].rate"
 PENSION = "gov.dwp.state_pension.new_state_pension.amount"
 # What each scale's refusal says its base is.
 BASES = {
-    WEALTH_TAX: ["wealth_tax applies to total_wealth: gross wealth"],
+    WEALTH_TAX: [
+        "wealth_tax applies to net_wealth: total_wealth less mortgage, "
+        "consumer and student loan debt",
+        "no check yet shows the certified data carry the first two",
+    ],
     NPR_WEALTH_TAX: [
         "non_primary_residence_wealth_tax applies to total_wealth less "
         "main_residence_value: gross wealth",
         "less the main home's full value rather than its equity",
+        "private pension",
+        "no debts netted",
     ],
 }
 HOUSEHOLD = {
@@ -76,8 +82,6 @@ def test_annual_builders_refuse_every_path_under_a_wealth_tax_scale(
     assert message.startswith(f"{path} is under {scale}, which the engine's")
     for words in BASES[scale]:
         assert words in message
-    assert "private pension" in message
-    assert "no debts netted" in message
     assert "net assets would be scored on the wrong base" in message
     assert "budget-triage/JUDGED.md, S4" in message
 
@@ -99,15 +103,30 @@ def test_a_similarly_named_unknown_path_is_not_mistaken_for_wealth_tax(scale):
 
 def test_the_refused_scales_are_the_engines_wealth_taxes():
     """Tripwire: the installed engine's wealth-tax variables are the two
-    whose scales are refused, and each formula reads total_wealth. A new
-    wealth tax, or one moved to a net base, fails here until the refusal
-    is updated."""
+    whose scales are refused, each reading the base its refusal names
+    (wealth_tax net_wealth from policyengine-uk 2.151.0, total_wealth
+    before). A new wealth tax, or one moved to another base, fails here
+    until the refusal is updated."""
     assert set(WEALTH_TAX_SCALES) == set(SCALES)
     names = {name for name in system.variables if "wealth_tax" in name}
     assert names == {"wealth_tax", "non_primary_residence_wealth_tax"}
-    for name in names:
+    bases = {
+        "wealth_tax": "net_wealth",
+        "non_primary_residence_wealth_tax": "total_wealth",
+    }
+    for name, base in bases.items():
         formula = system.variables[name].get_formula("2027")
-        assert "total_wealth" in formula.__code__.co_consts
+        assert base in formula.__code__.co_consts
+        assert (
+            base
+            in WEALTH_TAX_SCALES[
+                WEALTH_TAX if name == "wealth_tax" else NPR_WEALTH_TAX
+            ]
+        )
+    # What net_wealth nets, as the wealth_tax refusal says
+    net = system.variables["net_wealth"].get_formula("2027").__code__
+    for name in ("total_wealth", "mortgage_debt", "consumer_debt"):
+        assert name in net.co_consts
 
 
 def test_the_installed_leaves_refused_are_exactly_those_under_the_scales():

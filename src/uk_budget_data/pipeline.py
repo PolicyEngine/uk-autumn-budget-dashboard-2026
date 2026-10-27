@@ -37,6 +37,10 @@ from uk_budget_data.measure_templates import (
     wealth_tax_refusal,
 )
 from uk_budget_data.models import DataConfig, Reform, ReformResult
+from uk_budget_data.parameter_companions import (
+    built_companion_gaps,
+    companion_gaps,
+)
 from uk_budget_data.private_outputs import private_directory, save_private_csv
 from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 from uk_budget_data.scored_years import missing_scored_years
@@ -591,7 +595,7 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
     parent says each measure's lines in measure order."""
     from uk_budget_data.parallel import resolve_reform
 
-    reform = resolve_reform(unit.reform)
+    reform = resolve_reform(unit.reform, unit.config)
     config = unit.config
     dataset_path = unit.dataset_path
     flat = "flat" in unit.tables
@@ -608,10 +612,12 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
         )
 
     wealth_tax = None
+    companions = []
     if flat:
-        # Generation refuses a measure that changes a wealth-tax scale or
-        # leaves out a scored year of an uprated amount; this flat path has
-        # no gate, so it says so loudly, in the same order, and runs it.
+        # Generation refuses a measure that changes a wealth-tax scale,
+        # leaves out a scored year of an uprated amount or changes a
+        # parameter without its companion; this flat path has no gate, so it
+        # says so loudly, in the same order, and runs it.
         wealth_tax = wealth_tax_paths(baseline_scenario, reform_scenario)
         if wealth_tax:
             warn(wealth_tax_refusal(*wealth_tax))
@@ -622,6 +628,9 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
             system,
         ):
             warn(gap.reason)
+        companions = companion_gaps(baseline_scenario, reform_scenario)
+        for gap in companions:
+            warn(gap.reason)
 
     # Built under data_limits.building, so a modifier that reads a limited
     # input while its simulation is built counts.
@@ -631,18 +640,24 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
     reformed = data_limits.watched_build(
         build_microsimulation, dataset_path, reform_scenario
     )
-    # A modifier that edits a wealth-tax scale, which the built simulations
-    # show and generation refuses.
-    if (
-        flat
-        and not wealth_tax
-        and all(
-            hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)
-        )
+    # A modifier that edits a wealth-tax scale, or a parameter without its
+    # companion, which the built simulations show and generation refuses.
+    if flat and all(
+        hasattr(sim, "tax_benefit_system") for sim in (baseline, reformed)
     ):
-        built = wealth_tax_paths_differing(baseline, reformed)
-        if built:
-            warn(wealth_tax_refusal(*built))
+        if not wealth_tax:
+            built = wealth_tax_paths_differing(baseline, reformed)
+            if built:
+                warn(wealth_tax_refusal(*built))
+        if not companions:
+            for gap in built_companion_gaps(
+                baseline,
+                reformed,
+                config.years,
+                baseline_scenario,
+                reform_scenario,
+            ):
+                warn(gap.reason)
     survey = None
     if unit.tables & {"household_scatter", "income_distribution"}:
         survey = scatter_survey_households(baseline, dataset_path)
@@ -744,11 +759,24 @@ def flat_units(
 ) -> list[FlatOutcome]:
     """Run one unit per measure and say each measure's lines, in measure
     order. Results come back in measure order whatever the runner."""
-    from uk_budget_data.parallel import SerialRunner, portable
+    from uk_budget_data.parallel import (
+        CombinedMeasures,
+        SerialRunner,
+        portable,
+    )
 
     runner = runner or SerialRunner()
     units = [
-        FlatUnit(portable(reform, runner), config, dataset_path, tables)
+        FlatUnit(
+            (
+                reform
+                if isinstance(reform, CombinedMeasures)
+                else portable(reform, runner)
+            ),
+            config,
+            dataset_path,
+            tables,
+        )
         for reform in reforms
     ]
 
@@ -839,10 +867,48 @@ INCOME_DISTRIBUTION_FILE = "income_distribution.csv"
 INCOME_MOBILITY_FILE = "income_mobility.csv"
 
 
+def with_combined_sets(
+    reforms: Optional[list[Reform]],
+    combined_sets: Optional[list[list[Reform]]],
+    runner=None,
+) -> list:
+    """The units' measures: ``reforms``, then one combined run per set in
+    ``combined_sets``, keyed as the publication manifest keys it
+    (``combine.combined_key`` of its members, ``combined--...``).
+
+    The page reads a package's rows in these flat files under the key of
+    the manifest's combined run of exactly the measures it shows, so rows
+    for any other package are never taken for it (#228). With combined
+    sets and no ``reforms``, the measures are the sets' members, and the
+    registry's own package (``autumn_budget_2026_combined``, every
+    candidate) is not run.
+    """
+    from uk_budget_data.parallel import portable_combined
+
+    if not combined_sets:
+        return reforms or get_autumn_budget_2026_reforms()
+    if reforms is None:
+        reforms = list(
+            {
+                member.id: member
+                for members in combined_sets
+                for member in members
+            }.values()
+        )
+    packages = [
+        portable_combined(members, runner) for members in combined_sets
+    ]
+    keys = [package.id for package in packages]
+    if len(set(keys)) != len(keys):
+        raise ValueError(f"a combined set is listed twice: {keys}")
+    return [*reforms, *packages]
+
+
 def generate_income_distribution(
     reforms: Optional[list[Reform]] = None,
     config: Optional[DataConfig] = None,
     runner=None,
+    combined_sets: Optional[list[list[Reform]]] = None,
 ) -> pd.DataFrame:
     """Write only ``income_distribution.csv`` (percentiles of equivalised
     household net income before and after each measure) and
@@ -851,9 +917,10 @@ def generate_income_distribution(
     Builds the same two simulations per reform as the full run, on the same
     baselines, and runs only IncomeDistributionCalculator. ``uk-budget-data
     generate --only income_distribution`` calls it. The full run does not
-    write this file.
+    write this file. ``combined_sets`` adds one combined run per set,
+    under its manifest key (:func:`with_combined_sets`).
     """
-    reforms = reforms or get_autumn_budget_2026_reforms()
+    reforms = with_combined_sets(reforms, combined_sets, runner)
     config = config or DataConfig()
     dataset_path = str(config.dataset_path) if config.dataset_path else None
     outcomes = flat_units(reforms, config, dataset_path, DISTRIBUTION, runner)
@@ -877,6 +944,7 @@ def generate_income_growth(
     reforms: Optional[list[Reform]] = None,
     config: Optional[DataConfig] = None,
     runner=None,
+    combined_sets: Optional[list[list[Reform]]] = None,
 ) -> pd.DataFrame:
     """Write only ``income_growth_with_measures.csv``: real growth of each
     income group's median (HBAI income, as the Living standards outlook's
@@ -888,10 +956,12 @@ def generate_income_growth(
     baselines. ``uk-budget-data generate --only income_growth`` calls it;
     the full run does not write this file. The first configured year is
     read only, as the year before the first year published.
+    ``combined_sets`` adds one combined run per set, under its manifest
+    key (:func:`with_combined_sets`).
     """
     from uk_budget_data.living_standards.measures_growth import COLUMNS
 
-    reforms = reforms or get_autumn_budget_2026_reforms()
+    reforms = with_combined_sets(reforms, combined_sets, runner)
     config = config or DataConfig()
     dataset_path = str(config.dataset_path) if config.dataset_path else None
     outcomes = flat_units(reforms, config, dataset_path, GROWTH, runner)
@@ -912,19 +982,31 @@ def scatter_survey_households(simulation, dataset_path: Optional[str]):
 
     In the engine's household order. Microcosm builds several records from
     one survey household, so the scatter's floor counts these ids, as the
-    results by area do (``geography.survey_household_ids``). The bundle's
-    own dataset is a Microcosm export when its data package is Microcosm's;
-    a local file is one when its H5 carries the export marker.
+    results by area do (``geography.survey_household_ids``). A dataset the
+    bundle resolves, its default (None) or one given by name, is a
+    Microcosm export when its data package is Microcosm's; a local file is
+    one when its H5 carries the export marker.
     """
-    from policyengine.provenance.manifest import get_release_manifest
+    from policyengine.provenance.manifest import (
+        dataset_logical_name,
+        get_release_manifest,
+    )
 
     from uk_budget_data import geography
 
     tables = geography.dataset_tables(simulation)
-    if dataset_path is None:
-        microcosm = (
-            get_release_manifest("uk").data_package.name == "microcosm-data"
+    if dataset_path is None or not Path(dataset_path).is_file():
+        manifest = get_release_manifest("uk")
+        name = (
+            manifest.default_dataset
+            if dataset_path is None
+            else dataset_logical_name(dataset_path)
         )
+        # The bundle's own datasets name no package of their own.
+        package = getattr(
+            manifest.datasets.get(name), "data_package_name", None
+        )
+        microcosm = (package or manifest.data_package.name) == "microcosm-data"
     else:
         microcosm = geography.is_microcosm_export(dataset_path)
     return geography.survey_household_ids(

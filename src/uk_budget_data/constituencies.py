@@ -413,15 +413,16 @@ class RunPlan:
 
 
 def default_reforms(manifest: Path) -> list[str]:
-    """Every package's measures, then each package the manifest approves."""
-    measures = [
-        member for members in geography.PACKAGES.values() for member in members
-    ]
-    return list(dict.fromkeys(measures)) + [
-        package
-        for package in geography.PACKAGES
-        if _approves(manifest, package)
-    ]
+    """The manifest's approved measures, in its order, then each package
+    whose combined run it approves with exactly that package's members
+    (``geography.approved_reforms``'s defaults, as ``geography`` takes them).
+
+    The defaults follow the manifest, not ``geography.PACKAGES``: on Budget
+    day the approved measures are the announced ones, not the candidates a
+    package lists, and asking for an unapproved candidate refused the whole
+    run.
+    """
+    return geography.approved_reforms(_parsed_manifest(manifest))
 
 
 def _parsed_manifest(path: Path) -> publication_manifest.Manifest:
@@ -431,16 +432,6 @@ def _parsed_manifest(path: Path) -> publication_manifest.Manifest:
             "national page may publish yet."
         )
     return publication_manifest.parse_manifest(path.read_bytes(), str(path))
-
-
-def _approves(manifest: Path, reform_id: str) -> bool:
-    if not manifest.is_file():
-        return False
-    try:
-        geography.approved_reforms(_parsed_manifest(manifest), [reform_id])
-    except ValueError:
-        return False
-    return True
 
 
 def _in_repository(path: Path) -> bool:

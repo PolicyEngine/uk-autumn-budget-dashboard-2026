@@ -33,7 +33,7 @@ The list on `main` today:
 | Id | Measure |
 |---|---|
 | `fuel_duty_rise_deferral` | Fuel duty rises deferred: 52.95p held through winter 2026-27, the 5p restored in 2027-28 |
-| `state_pension_income_tax_protection` | State Pension income tax protection: an allowance of the full new State Pension over State Pension age, from April 2027 |
+| `state_pension_income_tax_protection` | State Pension income tax protection: an allowance of the full new State Pension for people over State Pension age whose only income is the State Pension, from April 2027 |
 | `warm_home_discount_top_up` | Warm Home Discount top-up: £150 to £250 for winter 2026-27 |
 | `domestic_electricity_zero_vat` | Zero VAT on domestic electricity, October 2026 to March 2028 |
 | `employer_ni_relief_under_25s` | Employer NI relief for employees aged 21 to 24 (extending the under-21 relief): none up to the upper earnings limit, from April 2027 |
@@ -150,7 +150,7 @@ The full sequence, roles and timings are in the [runbook](docs/budget-day-runboo
 ### Running it
 
 - **Locally.** `uv run uk-budget-data generate --artifacts …` runs one measure at a time. A receipted measure peaks at about 14–17 GB, so run in parallel (`--jobs`, in #112) only with more than about 40 GB free. Results by area need up to about 64 GB (#115, #138).
-- **On Modal.** The flat CSVs: `uv run --with modal==1.6.2 uk-budget-data generate --backend modal`, and on a pull request that changes a measure, the "Results on Modal" workflow, which uploads them for review and never commits or signs. Receipted artifacts in #139. Results by constituency: `uk-budget-data constituencies` (runbook, "Results by constituency on the local-area cut"). All read the certified data with the `policyengine` workspace's existing `pe-uk-private-hf-read-token` secret. One container per measure. Cost guards: no warm containers, a timeout on every function, no retries, a cap on parallel containers, and the app stopped after each run; check spend with `modal billing report --for today`. The decision and its reasons are on [#119](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/119).
+- **On Modal.** The flat CSVs: `uv run --with modal==1.6.2 python -m uk_budget_data.cli generate --backend modal`, and on a pull request that changes a measure, the "Results on Modal" workflow, which uploads them for review and never commits or signs. Receipted artifacts in #139. Results by constituency: `uk-budget-data constituencies` (runbook, "Results by constituency on the local-area cut"). All read the certified data with the `policyengine` workspace's existing `pe-uk-private-hf-read-token` secret. One container per measure. Cost guards: no warm containers, a timeout on every function, no retries, a cap on parallel containers, and the app stopped after each run; check spend with `modal billing report --for today`. The decision and its reasons are on [#119](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/119).
 - **Household API.** Deployed by the "Deploy the household API" workflow (below). Budget-week capacity (8 vCPU, 8 GiB, eight workers, one instance kept warm) is in #141; set it back after the Budget.
 
 ## Review and sign-off

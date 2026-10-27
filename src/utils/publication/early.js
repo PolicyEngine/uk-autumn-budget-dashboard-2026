@@ -18,6 +18,10 @@ const AGE_VIEWS = ["age", "young", "pensioners"];
 // A link to Household impact: its example households' precomputed answers
 // (householdPresets.js), an unverified file it reads as before
 export const PRESETS_URL_FILE = "household_presets.json";
+// A link to All households: the map's boundaries (useGeographyData.js
+// BOUNDARIES_FILE), unverified, read as before. The biggest file a view
+// waits for, so it should not wait for the page's code too.
+export const BOUNDARIES_URL_FILE = "uk_constituencies_2024.topo.json";
 
 const GLOBAL = "__ab26EarlyManifest";
 const RECEIPTS = "__ab26EarlyReceipts";
@@ -51,6 +55,7 @@ export function earlyManifestScript(basePath) {
     `p.catch(function(){});window.${GLOBAL}={url:${url},response:p};` +
     `var r=window.${RECEIPTS}={},q=new URLSearchParams(location.search);` +
     `if(q.get("tab")==="household"){var h=${data}+${JSON.stringify(PRESETS_URL_FILE)};r[h]=fetch(h);r[h].catch(function(){});}` +
+    `if((!q.get("tab")||q.get("tab")==="dashboard")&&q.get("sub")==="all"){var g=${data}+${JSON.stringify(BOUNDARIES_URL_FILE)};r[g]=fetch(g);r[g].catch(function(){});}` +
     `p.then(function(x){return x.ok?x.clone().json():null}).then(function(m){` +
     `if(!m)return;var ok=${JSON.stringify(DISPLAYABLE)},re=${EARLY_ARTIFACT.toString()},want=${JSON.stringify(EARLY_FILES)};` +
     `if(${JSON.stringify(AGE_VIEWS)}.indexOf(q.get("sub"))>=0)want=want.concat([${JSON.stringify(AGE_FILE)}]);` +

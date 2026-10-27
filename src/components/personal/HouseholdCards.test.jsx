@@ -95,6 +95,22 @@ describe("where an example sits", () => {
     expect(examplePercentile(example, point, { year: 2027, policies: ["beta"], rows, catalogue: null })).toBeNull();
     expect(examplePercentile(example, { change: 1 }, { year: 2027, policies: ["alpha"], rows, catalogue: null })).toBeNull();
   });
+
+  it("reads several measures from the manifest's package only, never another package's rows (issue 228)", async () => {
+    const { examplePercentile } = await import("./HouseholdCards");
+    const example = HOUSEHOLD_EXAMPLES[0];
+    const KEY = "combined--alpha+beta";
+    const curve = (reformId) =>
+      ["baseline", "reform"].flatMap((side) =>
+        Array.from({ length: 99 }, (_, i) => ({ reformId, year: 2027, side, percentile: i + 1, income: (i + 1) * 1000 })),
+      );
+    const catalogue = { displayable: [{ id: "alpha" }, { id: "beta" }], combinedId: KEY, manifest: { combined: { [KEY]: { measures: ["alpha", "beta"] } } } };
+    const point = { change: 100, before: 18000, after: 18100 };
+    const args = (rows) => ({ year: 2027, policies: ["alpha", "beta"], rows, catalogue });
+    // The registry's own package id is another package: no position
+    expect(examplePercentile(example, point, args(curve("autumn_budget_2026_combined")))).toBeNull();
+    expect(examplePercentile(example, point, args(curve(KEY)))).toBe(27);
+  });
 });
 
 describe("what the figures are with", () => {
@@ -111,5 +127,34 @@ describe("what the figures are with", () => {
     expect(document.getElementById(figure.getAttribute("aria-describedby"))).toHaveTextContent(
       "Change in net income in 2027-28 with the measures the calculator supports",
     );
+  });
+});
+
+// A chosen card, Your household or a chip shows it by its fill and border
+// and aria-pressed / aria-selected only: never a tick badge.
+describe("the chosen household", () => {
+  const ticks = () => document.querySelectorAll(".lucide-check, .household-card-check");
+  const first = HOUSEHOLD_EXAMPLES[0];
+
+  it.each([
+    ["an example card", { value: first.id, yoursSelected: false }],
+    ["Your household", { value: null, yoursSelected: true }],
+  ])("shows no tick on %s, folded or not", (_, props) => {
+    for (const chosen of [false, true]) {
+      const { unmount } = render(
+        <HouseholdCards examples={HOUSEHOLD_EXAMPLES} formOpen={false} formId="f" onYours={() => {}} onChoose={() => {}} presets={null} yoursChange={null} year={2029} chosen={chosen} {...props} />,
+      );
+      expect(ticks()).toHaveLength(0);
+      unmount();
+    }
+  });
+
+  it("is still pressed for assistive tech", () => {
+    render(
+      <HouseholdCards examples={HOUSEHOLD_EXAMPLES} value={first.id} formOpen={false} formId="f" onYours={() => {}} onChoose={() => {}} presets={null} yoursChange={null} year={2029} />,
+    );
+    const card = screen.getByRole("button", { name: new RegExp(`^${first.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`) });
+    expect(card).toHaveAttribute("aria-pressed", "true");
+    expect(card.closest(".household-card")).toHaveClass("is-selected");
   });
 });

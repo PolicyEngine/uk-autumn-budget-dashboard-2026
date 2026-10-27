@@ -134,3 +134,9 @@ describe("a past event's pages", () => {
     expect(takeEarlyManifest(manifestUrl(BASE_PATH))).not.toBeNull();
   });
 });
+
+it("requests the map's boundaries under the name the map reads", async () => {
+  const { BOUNDARIES_FILE } = await import("../../hooks/useGeographyData");
+  const { BOUNDARIES_URL_FILE } = await import("./early");
+  expect(BOUNDARIES_URL_FILE).toBe(BOUNDARIES_FILE);
+});
