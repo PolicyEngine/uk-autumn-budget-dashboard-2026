@@ -58,6 +58,12 @@ describe("fitTicks", () => {
     }
   });
 
+  it("on an axis either side of 0, keeps both ends and 0, a tick touching an end giving way", () => {
+    const ticks = [-250, 0, 250, 500, 750];
+    expect(fitTicks(ticks, [-250, 750], 270, money)).toEqual(ticks);
+    expect(fitTicks(ticks, [-250, 750], 152, money)).toEqual([-250, 0, 750]);
+  });
+
   it("passes every tick through until the plot is measured", () => {
     expect(fitTicks(TICKS, DOMAIN, 0, money)).toEqual(TICKS);
   });

@@ -611,7 +611,9 @@ const isRound = (value) => {
  * another by `minGap` px, otherwise every second, fifth … (a round step,
  * 0 always kept), so "−£200 £0 £200 £400 £600 £800" in a narrow plot
  * becomes "−£200 £0 £400 £800". An end of the domain off the coarser step
- * keeps its label only where it, too, clears its neighbour. Labels are
+ * keeps its label only where it, too, clears its neighbour; on an axis
+ * either side of 0, both ends and 0 are always labelled where the three
+ * fit, a tick of the step that would touch an end giving way. Labels are
  * centred on their tick, or, with `inside`, the first starts at its tick
  * and the last ends at its tick. `keep` (0 unless given, as 100 on a % of
  * the official costing axis) is always labelled where it is a tick.
@@ -649,12 +651,30 @@ export function fitTicks(ticks, domain, plotWidth, format, { minGap = 12, fontSi
     }
     return labelled;
   };
-  for (let m = 1; m < ticks.length; m += 1) {
-    if (!isRound(m)) continue;
-    const kept = ticks.filter((tick) => {
+  const multiples = (m) =>
+    ticks.filter((tick) => {
       const k = (tick - anchor) / (step * m);
       return Math.abs(k - Math.round(k)) < 1e-6;
     });
+  // An axis either side of 0: both ends and 0 always labelled where the
+  // three fit, so the reader sees how far each side runs; a tick of the
+  // step that would touch an end gives way to it
+  const first = ticks[0];
+  const last = ticks[ticks.length - 1];
+  const fixed = [...new Set([first, anchor, last])].sort((a, b) => a - b);
+  if (first < 0 && last > 0 && fits(fixed)) {
+    for (let m = 1; m < ticks.length; m += 1) {
+      if (!isRound(m)) continue;
+      const near = (tick, end) => Math.abs(tick - end) < step * m - 1e-9;
+      const kept = multiples(m).filter((tick) => fixed.includes(tick) || ![first, last].some((end) => near(tick, end)) || fits([...fixed, tick].sort((a, b) => a - b)));
+      const labelled = [...new Set([...fixed, ...kept])].sort((a, b) => a - b);
+      if (fits(labelled)) return labelled;
+    }
+    return fixed;
+  }
+  for (let m = 1; m < ticks.length; m += 1) {
+    if (!isRound(m)) continue;
+    const kept = multiples(m);
     if (fits(kept)) return withEnds(kept);
   }
   // No round step fits: the kept tick, and an end if it clears it

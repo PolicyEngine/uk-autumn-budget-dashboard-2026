@@ -115,8 +115,21 @@ export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, year
             </span>
             <span className="measure-dumbbell-values" role="cell">
               <strong className="row-band-value">{money(row.group)}</strong>
-              <span className={`measure-dumbbell-gap ${tone}`}>
-                {close ? `≈ ${compareName.toLowerCase()}` : `${gap > 0 ? "▲" : "▼"} ${signed(gap)} vs ${compareName.toLowerCase()}`}
+              {/* In a narrow plot's card the chip is "▲ +£18" or "≈ same"
+                  (MeasureDumbbell.css), so the plot keeps its room; the
+                  row's name and tooltip still say what it is compared with */}
+              <span className={`measure-dumbbell-gap ${tone}`} title={close ? `About the same as ${compareName.toLowerCase()}` : `${signed(gap)} vs ${compareName.toLowerCase()}`}>
+                {close ? (
+                  <>
+                    ≈ <span className="measure-dumbbell-gap-vs">{compareName.toLowerCase()}</span>
+                    <span className="measure-dumbbell-gap-short">same</span>
+                  </>
+                ) : (
+                  <>
+                    {`${gap > 0 ? "▲" : "▼"} ${signed(gap)}`}
+                    <span className="measure-dumbbell-gap-vs"> vs {compareName.toLowerCase()}</span>
+                  </>
+                )}
               </span>
             </span>
             {active === row.id && (

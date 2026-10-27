@@ -2,11 +2,14 @@
    (the chosen group) on one £ axis, the group's value and gap at the right.
    One type scale with its pair (Better and worse off): row labels and
    values at the caption size, the gap line and axis ticks at 12px, as
-   every Recharts axis (TICK_STYLE). The value column is as wide as the
-   pair's split column (112px), so both cards' numbers end on one edge. */
+   every Recharts axis (TICK_STYLE). In a narrow card (half a pair) the
+   name wraps in about a quarter of the width and the value column holds
+   the value over a short chip ("▲ +£18"), so the plot has room for its
+   ticks (over 260px at 1280); the numbers still end on the card's right
+   edge, level with the pair's. */
 .measure-dumbbell {
-  --md-label: 200px;
-  --md-values: 112px;
+  --md-label: clamp(120px, 27%, 200px);
+  --md-values: 72px;
   --md-gap: 12px;
   --md-cols: var(--md-label) minmax(0, 1fr) var(--md-values);
   position: relative;
@@ -171,6 +174,33 @@
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
+  }
+}
+
+/* The chip's "vs all ages" (or "≈ all ages"): in a wide card and on a
+   phone, where the value column has room; "▲ +£18" or "≈ same" in a
+   narrow card */
+.measure-dumbbell-gap-vs {
+  display: none;
+}
+
+@container (min-width: 600px) {
+  .measure-dumbbell-gap-vs {
+    display: inline;
+  }
+
+  .measure-dumbbell-gap-short {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .measure-dumbbell-gap-vs {
+    display: inline;
+  }
+
+  .measure-dumbbell-gap-short {
+    display: none;
   }
 }
 
