@@ -134,7 +134,7 @@ code {
      between items, the padding inside each (chosen or not) and the gap
      from icon to label */
   --tab-gap: 8px;
-  --tab-pad-x: 16px;
+  --tab-pad-x: 12px;
   --tab-icon-gap: 8px;
   /* Bars: the radius of a bar's outer end (chartTheme BAR_RADIUS) */
   --bar-radius: 5px;
@@ -503,7 +503,7 @@ body {
 .view-tabs {
   position: relative;
   display: flex;
-  gap: var(--tab-gap);
+  gap: var(--tab-gap, 8px);
   height: var(--view-tabs-height);
   transition: height 180ms ease-out;
   /* A narrow screen scrolls the row, never the page */
@@ -541,9 +541,9 @@ body {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: var(--tab-icon-gap);
+  gap: var(--tab-icon-gap, 8px);
   height: 100%;
-  padding: 0 var(--tab-pad-x);
+  padding: 0 var(--tab-pad-x, 12px);
   font-family: inherit;
   font-size: 1rem;
   /* One weight for every tab, so choosing one never moves the others */

@@ -34,7 +34,7 @@
   display: flex;
   width: fit-content;
   max-width: calc(100% - var(--view-tab-x, 0px));
-  gap: var(--tab-gap);
+  gap: var(--tab-gap, 8px);
   margin: 0 0 0 var(--view-tab-x, 0px);
   padding: 0;
   /* A narrow screen scrolls the row, never the page */
@@ -95,10 +95,10 @@
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: var(--tab-icon-gap);
+  gap: var(--tab-icon-gap, 8px);
   min-width: 0;
   min-height: 44px;
-  padding: 0 var(--tab-pad-x);
+  padding: 0 var(--tab-pad-x, 12px);
   font-family: inherit;
   font-size: 0.9375rem;
   font-weight: 500;
