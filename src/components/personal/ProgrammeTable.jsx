@@ -162,8 +162,12 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
               </span>
             )}
           </th>
-          {wide && <td className="num">{money(row.shown.before)}</td>}
-          {wide && <td className="num">{money(row.shown.after)}</td>}
+          {/* A change-only row (VAT change) has no before; its after is
+              the change, signed as the other taxes */}
+          {wide && (
+            <td className={`num${row.changeOnly ? " is-none" : ""}`}>{row.changeOnly ? "—" : money(row.shown.before)}</td>
+          )}
+          {wide && <td className="num">{row.changeOnly ? changeText(row.shown.after) : money(row.shown.after)}</td>}
           <td className={`num change ${changeClass(row.shown.change)}`}>{changeText(row.shown.change)}</td>
         </tr>
         {isOpen && parts?.map((part) => renderRow(part, depth + 1, `${key}/${part.id}`))}

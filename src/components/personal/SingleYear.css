@@ -1146,8 +1146,8 @@
 }
 
 /* ---------- Your income, taxes and benefits: the table ---------- */
-/* Compact: the figures sit close to the names (a fixed width for each
-   figure column, the whole table at most 720px), tabular and right
+/* The card's full width: a flexible name column, then three equal
+   fixed figure columns at its right edge, tabular and right
    aligned. Groups are semibold on a light tint; their programmes and
    parts indent by one step each, every name after a chevron or its
    space. No change is a muted dash; net income is the bold total. */
@@ -1170,7 +1170,6 @@
 
 .programme-table {
   width: 100%;
-  max-width: 720px;
   border-collapse: collapse;
   font-size: var(--fs-small);
   font-variant-numeric: tabular-nums;
@@ -1290,9 +1289,15 @@
   color: var(--pe-gray-400);
 }
 
-/* Net income: the bold total, under a rule */
-.breakdown-net-row > th,
-.breakdown-net-row > td {
+/* A change-only row's before: a muted dash */
+.programme-table td.is-none {
+  color: var(--pe-gray-400);
+}
+
+/* Net income: the bold total, under a rule (its name as bold as its
+   figures, over tbody th's regular weight) */
+.programme-table .breakdown-net-row > th,
+.programme-table .breakdown-net-row > td {
   padding-top: 10px;
   padding-bottom: 10px;
   font-weight: 700;

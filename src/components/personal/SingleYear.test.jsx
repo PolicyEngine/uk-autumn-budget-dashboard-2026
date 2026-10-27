@@ -1138,6 +1138,37 @@ describe("the breakdown's one line", () => {
   });
 });
 
+describe("the breakdown's rows", () => {
+  // A pensioner's taxes: Council Tax and the TV licence unchanged, VAT only
+  // as the change the measures make (a £1 cut)
+  const programmes = [
+    { id: "state_pension", group: "benefit", label: "State Pension", before: 12000, after: 12000 },
+    { id: "council_tax", group: "tax", label: "Council Tax", before: 2000, after: 2000 },
+    { id: "tv_licence", group: "tax", label: "TV licence", before: 175, after: 175 },
+    { id: "vat_change", group: "tax", label: "VAT", before: 0, after: -1 },
+  ];
+  const totals = { before: 9825, after: 9826, change: 1 };
+
+  it("shows VAT as a change only, Council Tax as a proper noun, and the unchanged rows", async () => {
+    const { default: ProgrammeTable } = await import("./ProgrammeTable");
+    render(<ProgrammeTable programmes={programmes} totals={totals} yearLabel="2029-30" />);
+    const table = screen.getByRole("table");
+    const vat = within(table).getByRole("row", { name: /VAT change/ });
+    // No before; the cut a positive amount after, as a smaller tax
+    expect(vat).toHaveTextContent("—+£1+£1");
+    expect(within(table).getByRole("row", { name: /Council Tax/ })).toHaveTextContent("−£2,000−£2,000—");
+    expect(within(table).getByRole("row", { name: /TV licence/ })).toHaveTextContent("−£175−£175—");
+    expect(within(table).queryByText("Council tax")).toBeNull();
+    // Taxes still add up to the rows under it
+    expect(within(table).getByRole("row", { name: /^Taxes/ })).toHaveTextContent("−£2,175−£2,174+£1");
+    // Net income's name is in the bold total row
+    expect(within(table).getByRole("rowheader", { name: "Net income" }).closest("tr")).toHaveClass("breakdown-net-row");
+    // About this chart says the VAT row is the change only
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    expect(screen.getByText(/not the VAT you pay/)).toBeInTheDocument();
+  });
+});
+
 describe("the waterfall's one line", () => {
   it("leads with the change, then the policy that moves it most: gains, losses, mixed, one, none", async () => {
     const { waterfallSentence, waterfallScaleStart } = await import("./NetIncomeWaterfall");
