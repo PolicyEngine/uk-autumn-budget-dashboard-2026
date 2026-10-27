@@ -32,16 +32,18 @@ The list on `main` today:
 
 | Id | Measure |
 |---|---|
-| `fuel_duty_rise_deferral` | Fuel duty rises deferred: 52.95p held through winter 2026-27, the 5p restored in 2027-28 |
-| `state_pension_income_tax_protection` | State Pension income tax protection: an allowance of the full new State Pension for people over State Pension age whose only income is the State Pension, from April 2027 |
+| `fuel_duty_rise_deferral` | Fuel duty rises deferred: no January 2027 rise, 52.95p frozen through 2027-28, RPI from April 2028 |
+| `state_pension_income_tax_protection` | State Pension income tax protection: an allowance of the full new State Pension for people over State Pension age whose total income is at or below it, from April 2027 (hand-written) |
 | `warm_home_discount_top_up` | Warm Home Discount top-up: £150 to £250 for winter 2026-27 |
 | `domestic_electricity_zero_vat` | Zero VAT on domestic electricity, October 2026 to March 2028 |
 | `threshold_freeze_2031_32` | Threshold freeze to 2031-32: personal allowance and basic rate band frozen one more year |
-| `road_fuel_vat_cut` | VAT on petrol and diesel at 15%, December 2026 to May 2027 |
-| `plan_2_threshold_unfreeze` | Plan 2 student loan threshold uprated by RPI from April 2027 |
+| `plan_2_threshold_unfreeze` | Plan 2 student loan threshold uprated by RPI from April 2027 (hand-written) |
 | `carers_allowance_earnings_taper` | Carer's Allowance withdrawn £1 for £1 above the £204 weekly earnings limit, from 2030-31 (hand-written) |
+| `lha_unfreeze_2027` | Local Housing Allowance re-set to the 30th percentile of rents each April from 2027 |
+| `employer_nics_secondary_threshold_raise` | Employer NI secondary threshold back to £9,100 from April 2027 |
+| `unearned_income_rates_up` | Dividend, savings and property income tax rates up 2 points from April 2027 |
 
-These eight are the combined package (`autumn_budget_2026_combined`, key `combined--9f29f8fddfb61a5c`; the seven kept measures were `combined--5c77771791661e11` before the Carer's Allowance taper was added on 27 October 2026). Business Asset Disposal Relief restricted and employer NI relief for under-25s were withdrawn on 27 October 2026 and are not registered.
+These ten are the combined package (`autumn_budget_2026_combined`, key `combined--ab77fb6718bca371`), chosen on the evening of 27 October 2026. Withdrawn and not registered: Business Asset Disposal Relief restricted and employer NI relief for under-25s (27 October), and the road fuel VAT cut (that evening).
 
 List them from the command line with `uv run uk-budget-data generate --list-reforms`.
 
