@@ -648,12 +648,8 @@ export function SingleYearDetails({ result, year, policies, household = null, se
         />
       )}
 
-      <SectionHeading
-        icon="layers"
-        id="your-income-taxes-and-benefits"
-        title={`Your income, taxes and benefits, ${yearLabel}`}
-        subtitle="Market income, taxes and benefits before and after the selected policies, by tax and benefit."
-      />
+      {/* No section heading: the card's own title names the table and its
+          year (one home for it) */}
       <section className="report-section" id="household-breakdown">
         {data.programmes ? (
           <ProgrammeTable

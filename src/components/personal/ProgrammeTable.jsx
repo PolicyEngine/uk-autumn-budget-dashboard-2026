@@ -10,6 +10,7 @@ import {
   signedMoney,
 } from "../../utils/singleYear";
 import { ChevronRight } from "lucide-react";
+import TitleIcon from "../TitleIcon";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartMoreInfo from "../ChartMoreInfo";
 import { HOUSEHOLD_ABOUT_ID, METHOD_ANCHORS } from "../methodology/anchors";
@@ -51,34 +52,58 @@ const changeClass = (value) => {
  * @param {Object} [props.engine] - The API's versions
  */
 // Each group in words: what "up" means for it (taxes are negative amounts,
-// so a rise in the amount is a fall in what you pay)
-const GROUP_WORDS = {
-  income: { noun: "income", up: "rises", down: "falls" },
-  tax: { noun: "taxes", up: "fall", down: "rise" },
-  benefit: { noun: "benefits", up: "rise", down: "fall" },
-  pension: { noun: "pension contributions", up: "fall", down: "rise" },
+// so a rise in the amount is a fall in what you pay). Market income, taxes
+// and benefits are always named; pension contributions only when they move.
+const GROUP_WORDS = [
+  { id: "income", noun: "market income", up: "rises", down: "falls", always: true },
+  { id: "tax", noun: "taxes", up: "fall", down: "rise", always: true },
+  { id: "benefit", noun: "benefits", up: "rise", down: "fall", always: true },
+  { id: "pension", noun: "pension contributions", up: "fall", down: "rise", always: false },
+];
+
+// "Fuel duty" -> "fuel duty"; "VAT" and "Council Tax" keep their capitals
+const inSentence = (label) => {
+  const text = String(label ?? "");
+  return /[A-Z]/.test(text.slice(1)) ? text : text.charAt(0).toLowerCase() + text.slice(1);
+};
+
+// The row behind most of a group's change: "from fuel duty" when it is the
+// only row that moves, "mostly fuel duty" when it is more than half
+const mainRow = (group, change) => {
+  const moving = (group.rows ?? []).filter((row) => Math.round(row.shown?.change ?? 0) !== 0);
+  if (!moving.length) return "";
+  if (moving.length === 1) return `, all from ${inSentence(moving[0].label)}`;
+  const top = moving.reduce((a, b) => (Math.abs(b.shown.change) > Math.abs(a.shown.change) ? b : a));
+  const share = Math.round(top.shown.change) / change;
+  return share > 0.5 ? `, mostly ${inSentence(top.label)}` : "";
 };
 
 /**
- * The card's one line: each group the policies change, by how much a year,
- * then those they leave alone: "Your taxes fall by £60 a year with the
- * selected policies; income and benefits are unchanged."
+ * The card's one line, under its title: each group the policies change, by
+ * how much a year and which row is most of it, then those they leave
+ * alone: "Taxes fall by £9 a year, mostly fuel duty; market income and
+ * benefits are unchanged." The net change is the result card's.
  */
 export function breakdownSentence(groups) {
+  const byId = new Map(groups.map((group) => [group.id, group]));
   const moved = [];
   const still = [];
-  for (const group of groups) {
-    const words = GROUP_WORDS[group.id];
-    if (!words) continue;
-    const change = Math.round(group.shown?.change ?? 0);
-    if (change === 0) still.push(words.noun);
-    else moved.push(`${words.noun} ${change > 0 ? words.up : words.down} by ${money(Math.abs(change))} a year`);
+  for (const words of GROUP_WORDS) {
+    const group = byId.get(words.id);
+    if (!group && !words.always) continue;
+    const change = Math.round(group?.shown?.change ?? 0);
+    if (change === 0) {
+      if (words.always) still.push(words.noun);
+    } else {
+      moved.push(`${words.noun} ${change > 0 ? words.up : words.down} by ${money(Math.abs(change))} a year${mainRow(group, change)}`);
+    }
   }
+  if (!moved.length) return "No change to your taxes or benefits.";
   const list = (items) => (items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`);
-  if (!moved.length) return "The selected policies leave your income, taxes and benefits unchanged.";
-  const first = `Your ${list(moved)} with the selected policies`;
-  if (!still.length) return `${first}.`;
-  return `${first}; ${list(still)} ${still.length === 1 && still[0] === "income" ? "is" : "are"} unchanged.`;
+  const parts = [...moved];
+  if (still.length) parts.push(`${list(still)} ${still.length === 1 && still[0] === "market income" ? "is" : "are"} unchanged`);
+  const text = parts.join("; ");
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}.`;
 }
 
 export default function ProgrammeTable({ programmes, totals, bars = [], yearLabel, engine = {} }) {
@@ -176,13 +201,17 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
   };
 
   return (
-    // The section heading above names the table and its year; the card
-    // has the one sentence, the download and the table
+    // Headed as every other card: icon, title with its year and the
+    // download, then one sentence on what the policies change
     <div className="card single-year-card breakdown-card">
-      <div className="chart-header breakdown-header">
-        {/* One line beside the download: which groups the policies
-            change, and by how much */}
-        <p className="chart-description">{sentence}</p>
+      <div className="chart-header">
+        <div>
+          <h3>
+            <TitleIcon name="layers" />
+            <span className="title-text">{title}</span>
+          </h3>
+          <p className="chart-description">{sentence}</p>
+        </div>
         <ChartDownloadMenu formats={formats} chartTitle={title} ariaLabel={`Download table: ${title}`} />
       </div>
       {narrow && (

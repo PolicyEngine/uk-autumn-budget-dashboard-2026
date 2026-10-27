@@ -1181,17 +1181,6 @@
    aligned. Groups are semibold on a light tint; their programmes and
    parts indent by one step each, every name after a chevron or its
    space. No change is a muted dash; net income is the bold total. */
-.breakdown-header {
-  align-items: flex-start;
-}
-
-.main-content .breakdown-header .chart-description {
-  grid-column: 1;
-  grid-row: 1;
-  margin: 0;
-  align-self: center;
-}
-
 .programme-table-wrap {
   width: 100%;
   overflow-x: auto;
