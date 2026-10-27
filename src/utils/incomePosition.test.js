@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import {
-  COMBINED_REFORM_ID,
   curveOf,
   describePosition,
   distributionRunFor,
+  distributionRunOf,
+  hasRun,
   equivalenceFactor,
   householdPosition,
   ordinal,
@@ -106,31 +107,60 @@ describe("householdPosition", () => {
 
 describe("distributionRunFor", () => {
   const all = ["a", "b", "c"];
+  const KEY = "combined--a+b+c";
   it("uses a single measure's own run", () => {
-    expect(distributionRunFor(["b"], all, all)).toEqual({ reformId: "b", exact: true });
+    expect(distributionRunFor(["b"], all, all, KEY)).toEqual({ reformId: "b", exact: true, package: false });
   });
-  it("uses the package's run for every measure, exactly", () => {
-    expect(distributionRunFor(["c", "a", "b"], all, ["b", "c", "a"])).toEqual({ reformId: COMBINED_REFORM_ID, exact: true });
+  it("uses the package's run for every measure, exactly, under the manifest's combined key", () => {
+    expect(distributionRunFor(["c", "a", "b"], all, ["b", "c", "a"], KEY)).toEqual({ reformId: KEY, exact: true, package: true });
   });
   it("maps part of the package to the package's run, flagged", () => {
-    expect(distributionRunFor(["a", "b"], all, all)).toEqual({ reformId: COMBINED_REFORM_ID, exact: false });
+    expect(distributionRunFor(["a", "b"], all, all, KEY)).toEqual({ reformId: KEY, exact: false, package: true });
   });
   it("never calls the package's run exact after a withdrawal: it still holds the withdrawn measure", () => {
     // "d" withdrawn: three published, the package run with all four
-    expect(distributionRunFor(["a", "b", "c"], all, ["a", "b", "c", "d"])).toEqual({ reformId: COMBINED_REFORM_ID, exact: false });
-    // or no verified package at all
-    expect(distributionRunFor(["a", "b", "c"], all, null)).toEqual({ reformId: COMBINED_REFORM_ID, exact: false });
+    expect(distributionRunFor(["a", "b", "c"], all, ["a", "b", "c", "d"], KEY)).toEqual({ reformId: KEY, exact: false, package: true });
+  });
+  it("has no run to read without a published package, and never falls back to the registry's package (issue 228)", () => {
+    expect(distributionRunFor(["a", "b", "c"], all, null, null)).toEqual({ reformId: null, exact: false, package: true });
+    expect(distributionRunFor(["a", "b", "c"], all, all)).toEqual({ reformId: null, exact: false, package: true });
   });
   it("is exact for two or more measures only when the selection, the published set and the package's members are one set", () => {
     const id = fc.constantFrom("a", "b", "c", "d", "e");
     fc.assert(
       fc.property(fc.uniqueArray(id), fc.uniqueArray(id), fc.option(fc.uniqueArray(id), { nil: null }), (selected, published, members) => {
         fc.pre(selected.length > 1);
-        const { exact } = distributionRunFor(selected, published, members);
+        const { exact, reformId } = distributionRunFor(selected, published, members, KEY);
         const same = (x, y) => x.length === y.length && x.every((v) => y.includes(v));
+        expect(reformId).toBe(KEY);
         expect(exact).toBe(published.length > 0 && members !== null && same(selected, published) && same(members, published));
       }),
     );
+  });
+});
+
+describe("distributionRunOf", () => {
+  const SEVEN = ["a", "b", "c", "d", "e", "f", "g"];
+  const KEY = "combined--352e45790725cc85";
+  const catalogue = {
+    displayable: SEVEN.map((id) => ({ id })),
+    combinedId: KEY,
+    manifest: { combined: { [KEY]: { measures: SEVEN } } },
+  };
+  it("reads the catalogue's package key and members", () => {
+    expect(distributionRunOf(SEVEN, catalogue)).toEqual({ reformId: KEY, exact: true, package: true });
+    expect(distributionRunOf(["a", "b"], catalogue)).toEqual({ reformId: KEY, exact: false, package: true });
+  });
+  it("finds no package in a catalogue without one", () => {
+    expect(distributionRunOf(SEVEN, { ...catalogue, combinedId: null })).toEqual({ reformId: null, exact: false, package: true });
+    expect(distributionRunOf(SEVEN, undefined)).toEqual({ reformId: null, exact: false, package: true });
+  });
+  it("finds the package in a file only under its own key: the registry's nine-measure rows are another package", () => {
+    const rows = [{ reformId: "autumn_budget_2026_combined" }, { reform_id: "a" }];
+    expect(hasRun(rows, KEY)).toBe(false);
+    expect(hasRun(rows, "a")).toBe(true);
+    expect(hasRun([...rows, { reformId: KEY }], KEY)).toBe(true);
+    expect(hasRun(rows, null)).toBe(false);
   });
 });
 

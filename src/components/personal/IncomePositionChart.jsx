@@ -13,7 +13,8 @@ import {
   decileOf,
   decilePercents,
   describePosition,
-  distributionRunFor,
+  distributionRunOf,
+  hasRun,
   householdPosition,
   incomeAt,
   logEdges,
@@ -25,6 +26,7 @@ import {
   positionSummary,
   percentileOn,
   lowerCount,
+  PACKAGE_NOT_IN_FILE,
   PLACE_MEANING,
 } from "../../utils/incomePosition";
 import { parseCsv } from "../../utils/publication/csv";
@@ -660,13 +662,10 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const distribution = useFile(DISTRIBUTION_FILE, parseDistribution);
   const moves = useFile(MOBILITY_FILE, parseRecords);
   // Every measure the catalogue publishes: the package's run is exact only
-  // when all of them are selected, and it was run with exactly those
+  // when all of them are selected, and it was run with exactly those. The
+  // package's rows are read under the manifest's combined key (#228).
   const catalogue = useMeasureCatalogue();
-  const run = distributionRunFor(
-    policies,
-    catalogue.displayable.map((measure) => measure.id),
-    catalogue.combinedId ? (catalogue.manifest?.combined?.[catalogue.combinedId]?.measures ?? null) : null,
-  );
+  const run = distributionRunOf(policies, catalogue);
   // The tenths' averages from the verified artifacts the decile charts read
   // (#203, #228), never the root flat files, so the two tabs agree
   const winnersRows = useMemo(() => verifiedTableRows(catalogue, "winners_losers"), [catalogue]);
@@ -701,7 +700,11 @@ export default function IncomePositionChart({ net, household, year, policies, ye
           <TitleIcon name="users" />
           <span className="title-text">{title}</span>
         </h3>
-        <p className="single-year-quiet">The UK income distribution is not available for this year.</p>
+        <p className="single-year-quiet">
+          {distribution.status === "ready" && run.package && !hasRun(distribution.rows, run.reformId)
+            ? PACKAGE_NOT_IN_FILE
+            : "The UK income distribution is not available for this year."}
+        </p>
       </div>
     );
   }
