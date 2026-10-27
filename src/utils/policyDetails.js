@@ -219,14 +219,12 @@ export function policyDetailsFor(measure) {
   return entry && entry.writtenFor === measure.description ? entry.fields : null;
 }
 
-const SUMMARY_MAX = 160;
-
 /**
- * A catalogue measure's one-line summary, for its info tip: its entry's
- * summary while the publication describes it exactly as when the entry was
- * written; else the first sentence of the published description, without
- * its "Candidate measure." label, cut to about 160 characters on a word
- * boundary. Null only when the publication carries no description.
+ * A catalogue measure's summary, for its info tip: its entry's summary while
+ * the publication describes it exactly as when the entry was written; else
+ * the whole first sentence of the published description, without its
+ * "Candidate measure." label, never cut short. Null only when the
+ * publication carries no description.
  */
 export function measureSummary(measure) {
   const summary = policyDetailsFor(measure)?.summary;
@@ -236,11 +234,7 @@ export function measureSummary(measure) {
     .replace(/\s+/g, " ")
     .trim();
   if (!text) return null;
-  const sentence = /^(.+?[.!?])(\s|$)/.exec(text)?.[1] ?? text;
-  if (sentence.length <= SUMMARY_MAX) return sentence;
-  const cut = sentence.slice(0, SUMMARY_MAX + 1);
-  const space = cut.lastIndexOf(" ");
-  return `${(space > 0 ? cut.slice(0, space) : sentence.slice(0, SUMMARY_MAX)).replace(/[\s,;:(–-]+$/, "")}…`;
+  return /^(.+?[.!?])(\s|$)/.exec(text)?.[1] ?? text;
 }
 
 /** A catalogue measure with its card details, where there are any. */

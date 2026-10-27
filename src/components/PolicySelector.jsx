@@ -202,7 +202,7 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
                     />
                     <MeasureRowLabel tip={false} measure={policy} name={shortNameOf(policy)} nameClassName="policy-selector-name" />
                   </label>
-                  {summary && <InfoTip content={summary} label={`About ${shortNameOf(policy)}`} />}
+                  {summary && <InfoTip wide content={summary} label={`About ${shortNameOf(policy)}`} />}
                 </div>
               );
             })}

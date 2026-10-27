@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import PolicySelector from "./PolicySelector";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { measureCatalogueFixture } from "../test/measureCatalogueFixture";
-import { shortNameOf } from "../utils/policyDetails";
+import { measureSummary, shortNameOf } from "../utils/policyDetails";
 
 afterEach(cleanup);
 
@@ -93,6 +93,19 @@ describe("PolicySelector info tips", () => {
     expect(boxes()).toHaveLength(catalogue.displayable.length);
     for (const measure of catalogue.displayable) {
       expect(screen.getByRole("button", { name: `About ${shortNameOf(measure)}` })).toBeTruthy();
+    }
+  });
+
+  it("shows each summary whole in a wide tip, with no ellipsis", () => {
+    render(<Harness initial={allIds} />);
+    open();
+    for (const measure of catalogue.displayable) {
+      fireEvent.mouseEnter(screen.getByRole("button", { name: `About ${shortNameOf(measure)}` }));
+      const tip = screen.getByRole("tooltip");
+      expect(tip.textContent).toBe(measureSummary(measure));
+      expect(tip.textContent).not.toMatch(/…$/);
+      expect(tip).toHaveClass("is-wide");
+      fireEvent.mouseLeave(screen.getByRole("button", { name: `About ${shortNameOf(measure)}` }));
     }
   });
 });

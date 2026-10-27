@@ -62,18 +62,17 @@ it("gives every measure with a description a summary: its entry's while it holds
       if (details?.summary) expect(summary).toBe(details.summary);
       else if (measure.description.trim().replace(/^Candidate measure\.\s*/i, "").trim()) {
         expect(summary).toBeTruthy();
-        expect(summary.length).toBeLessThanOrEqual(161);
+        expect(summary).not.toMatch(/…$/);
       } else expect(summary).toBeNull();
     }),
   );
 });
 
-it("falls back to the first published sentence, without its Candidate measure label, cut on a word", () => {
+it("falls back to the whole first published sentence, without its Candidate measure label, never cut short", () => {
   expect(measureSummary({ id: "x", description: "Candidate measure. Rates rise by 2p. Then more." })).toBe("Rates rise by 2p.");
-  const long = `Candidate measure. ${"word ".repeat(60)}end.`;
-  const cut = measureSummary({ id: "x", description: long });
-  expect(cut.length).toBeLessThanOrEqual(161);
-  expect(cut).toMatch(/^word( word)*…$/);
+  const sentence = `${"word ".repeat(60)}end.`;
+  expect(measureSummary({ id: "x", description: `Candidate measure. ${sentence} Next sentence.` })).toBe(sentence);
+  expect(measureSummary({ id: "x", description: "Rates rise by 2.5% from April" })).toBe("Rates rise by 2.5% from April");
   expect(measureSummary({ id: "x", description: "" })).toBeNull();
 });
 
