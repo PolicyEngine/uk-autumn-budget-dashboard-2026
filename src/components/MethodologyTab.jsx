@@ -192,7 +192,7 @@ function MethodologyTab({ onShowTab }) {
             </>
           }
         >
-          <Topic title="The dataset" preview="Dataset · Survey · Weights · Projection · Small groups">
+          <Topic title="The dataset" preview="Dataset · Pipeline · Survey · Weights · Projection · Small groups">
             <FactList
               items={[
                 [
@@ -205,10 +205,42 @@ function MethodologyTab({ onShowTab }) {
                   </>,
                 ],
                 [
+                  "Pipeline",
+                  {
+                    value: (
+                      <>
+                        Built with <SourceLink id="microcosm_site">Microcosm</SourceLink>: a sequence of
+                        stages adds to each Family Resources Survey household what the survey does not
+                        record; calibration then sets each record&apos;s weight.
+                      </>
+                    ),
+                    more: [
+                      "The stages draw on other surveys and on administrative statistics for high incomes, wealth, spending, travel, benefit take-up, capital gains, pension salary sacrifice and student loans.",
+                      "The same stages feed two files, certified together: the national file, and a local-area file for constituencies and local authorities.",
+                      "Both files are built from survey microdata licensed through the UK Data Service, so they are not public downloads.",
+                    ],
+                  },
+                ],
+                [
                   "Survey",
                   "A survey household can appear as several records, each linked to the household it was made from.",
                 ],
-                ["Weights", "Calibrated; the release pins the calibration with the data."],
+                [
+                  "Weights",
+                  {
+                    value: (
+                      <>
+                        Calibrated to published totals for the UK, its nations and the English regions (
+                        <SourceLink id="uk_calibration_targets">calibration targets</SourceLink>); the release
+                        pins the calibration with the data.
+                      </>
+                    ),
+                    more: [
+                      "The totals include HMRC income and tax statistics, DWP benefit caseloads, OBR forecasts and ONS population estimates.",
+                      "The local-area file is calibrated to constituency and local-authority totals as well.",
+                    ],
+                  },
+                ],
                 [
                   "Projection",
                   <>
@@ -231,6 +263,10 @@ function MethodologyTab({ onShowTab }) {
                 ],
               ]}
             />
+            <p className="method-more">
+              <SourceLink id="uk_data_pipeline">Read how Microcosm UK is built today, stage by stage</SourceLink>.
+              The page describes the current pipeline, which may be newer than this dashboard&apos;s data.
+            </p>
           </Topic>
         </MethodSection>
 
