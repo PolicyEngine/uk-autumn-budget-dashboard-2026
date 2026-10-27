@@ -15,6 +15,7 @@ import { earliestForecast, forecastVintagesProblem, resetForecastVintages } from
 import { periodIndex, toSeries } from "../../utils/forecastVintages/transforms";
 import { GROWTH_AXIS, buildView, pointsIn } from "../../utils/forecastVintages/view";
 import { BRUSH_TEXT_SIZE, textWidth } from "./VintageChart";
+import { DownloadContext } from "../../utils/downloadContext";
 
 // jsdom lays nothing out, so ResponsiveContainer would draw nothing: give
 // the chart a fixed size
@@ -27,6 +28,13 @@ vi.mock("recharts", async () => {
     ),
   };
 });
+
+// The files the Download menu would save, instead of saving them
+const saved = vi.hoisted(() => []);
+vi.mock("../../utils/downloadFile", async (importOriginal) => ({
+  ...(await importOriginal()),
+  downloadFile: (content, filename) => saved.push({ content, filename }),
+}));
 
 const TEXT = readFileSync("public/data/obr_forecast_vintages.json", "utf8");
 const DATA = JSON.parse(TEXT);
@@ -299,6 +307,8 @@ describe("the page's text", () => {
     expect(screen.getByText("Source: ONS (outturn), OBR (forecast)")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     expect(await screen.findByText(/^Outturn: ONS CRXX/)).toBeInTheDocument();
+    // Under the "Source" heading, without a second "Source:"
+    expect(screen.getByText(/^ONS \(outturn\), OBR \(forecast\)\. Each file/)).toBeInTheDocument();
     expect(screen.getByText(/^Forecasts: OBR, Economic and fiscal outlook/)).toBeInTheDocument();
     expect(screen.getByText(/starts from the latest outturn it reaches, Q2 2026/)).toBeInTheDocument();
     // The March 2026 forecast is re-anchored, so the launch periods are the
@@ -592,6 +602,26 @@ describe("the CSV download", () => {
       }
     }
     expect(figures).toBeGreaterThan(10000);
+  });
+});
+
+describe("a file downloaded from the outlook tab", () => {
+  it("names no policies: the figures are the OBR's and the ONS's, not current law's", async () => {
+    saved.length = 0;
+    vi.stubGlobal("fetch", respond(TEXT));
+    // As App provides it on the outlook tab
+    const { container } = render(
+      <DownloadContext.Provider value={{ policies: "Current law (before the Budget policies)", provisional: "Provisional" }}>
+        <ForecastVintagesView />
+      </DownloadContext.Provider>,
+    );
+    await screen.findByRole("heading", { name: "OBR forecasts beside the outturn" });
+    fireEvent.click(screen.getAllByRole("button", { name: /^Download chart/ })[0]);
+    fireEvent.click(container.querySelector('.chart-download-item[data-format="csv"]'));
+    await vi.waitFor(() => expect(saved).toHaveLength(1));
+    const { content } = saved[0];
+    expect(content).toMatch(new RegExp(`# ${RHDI.label}: OBR forecasts and ONS outturn`));
+    expect(content).not.toMatch(/Current law|# Policies:|Provisional/);
   });
 });
 

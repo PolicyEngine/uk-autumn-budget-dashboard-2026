@@ -27,6 +27,7 @@ import LsCard from "../livingStandards/LsCard";
 import { dropVariableParam, useVariableParam } from "./useVariableParam";
 import VintageChart, { legendItems } from "./VintageChart";
 import { buildChartCsv } from "../../utils/chartCsv";
+import { DownloadContext } from "../../utils/downloadContext";
 import { NEWEST_SHOWN, earliestForecast, loadForecastVintages, vintageLabel } from "../../utils/forecastVintages/load";
 import { OUTTURN_KEY, UNIT_ORDER, brushRange, buildView, checkSentence, pointsIn, unitAxis } from "../../utils/forecastVintages/view";
 import "../livingStandards/LivingStandards.css";
@@ -291,7 +292,7 @@ function VintageCard({ data, variable, variableOptions, onVariable }) {
       controls={controls}
       about={about}
       notes={notes}
-      source={`Source: ${SOURCE_LINE}. Each file, with its address and SHA-256 checksum, is listed under Sources below.`}
+      source={`${SOURCE_LINE}. Each file, with its address and SHA-256 checksum, is listed under Sources below.`}
       sourceText={SOURCE_LINE}
       download={{ filename: `obr-forecasts-${variable.id}-${unit}`, csv, legendItems: legendItems(view, showPast) }}
     >
@@ -434,6 +435,8 @@ function ForecastsView({ data, active, related }) {
  * @param {{href: string, label: string, onShow?: () => void}} [related] -
  *   The link to the forecast behind the living standards baseline
  */
+const NO_POLICIES = { policies: null, provisional: null };
+
 export default function ForecastVintagesView({ active = true, related }) {
   const [state, setState] = useState({ loading: true, data: null, error: null, newer: false });
 
@@ -477,5 +480,13 @@ export default function ForecastVintagesView({ active = true, related }) {
       </UnavailableNotice>
     );
   }
-  return <ForecastsView data={data} active={active} related={related} />;
+  // The outlook tab's downloads say "Current law (before the Budget
+  // policies)" (App's downloadContext); these are the OBR's and the ONS's
+  // figures, each forecast under the policy of its own time, so theirs
+  // name no policies
+  return (
+    <DownloadContext.Provider value={NO_POLICIES}>
+      <ForecastsView data={data} active={active} related={related} />
+    </DownloadContext.Provider>
+  );
 }
