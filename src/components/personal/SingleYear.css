@@ -1350,5 +1350,7 @@
    "section") sits as far above the pair as By age's Measures key does
    above its cards: its own 16px plus the section's 20px gap */
 .across-earnings-show {
+  /* Its own box, so the bar's 16px does not collapse into this 20px */
+  display: flow-root;
   margin-bottom: 20px;
 }
