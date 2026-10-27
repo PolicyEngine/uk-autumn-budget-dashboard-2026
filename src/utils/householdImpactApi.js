@@ -37,6 +37,33 @@ export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
 export const REQUEST_TIMEOUT_MS = 90_000;
 export const DETAIL_TIMEOUT_MS = 200_000;
 
+/**
+ * The longest the page waits for the detail service (Modal) before asking
+ * Cloud Run instead. Modal ends a web request that has sent nothing for
+ * 150 s, and the page then got an empty answer (27 October 2026, test app
+ * from cold: about 150 s, then nothing). A cold full breakdown there took
+ * 63.5 s (#259), so 100 s leaves room and stops the page well before that.
+ */
+export const MODAL_TIMEOUT_MS = 100_000;
+
+/**
+ * Retrying a service that may be starting up (a cold Modal container, a
+ * Cloud Run instance being replaced): when an answer is empty, a 5xx, a
+ * timeout or never arrives (`isStartingUp`), the request is sent again
+ * after `delayMs` (or the service's own Retry-After, up to
+ * `maxRetryAfterMs`), at most `maxRetries` times, all within `budgetMs`
+ * from the first attempt. A retry is not started with less than
+ * `minAttemptMs` of the budget left. A slow failure (a timeout) leaves room
+ * for one retry; a fast one (a 503 straight away) for up to three.
+ */
+export const RETRY_POLICY = Object.freeze({
+  delayMs: 5_000,
+  maxRetryAfterMs: 20_000,
+  maxRetries: 3,
+  budgetMs: 150_000,
+  minAttemptMs: 10_000,
+});
+
 /** The year the wizard's salary is entered for; the server grows it. */
 export const SALARY_YEAR = 2026;
 
@@ -123,15 +150,68 @@ export class HouseholdApiError extends Error {
   /**
    * @param {"config"|"timeout"|"network"|"invalid"|"server"} kind
    * @param {string} message
-   * @param {{ status?: number, fields?: Array<{field: string, label: string, message: string}> }} [extra]
+   * @param {{ status?: number, fields?: Array<{field: string, label: string, message: string}>, empty?: boolean, retryAfterMs?: number|null }} [extra]
    */
-  constructor(kind, message, { status, fields = [] } = {}) {
+  constructor(kind, message, { status, fields = [], empty = false, retryAfterMs = null } = {}) {
     super(message);
     this.name = "HouseholdApiError";
     this.kind = kind;
     this.status = status;
     this.fields = fields;
+    // The service answered, but with nothing the page can read
+    this.empty = empty;
+    // How long the service asked the page to wait before asking again
+    this.retryAfterMs = retryAfterMs;
   }
+}
+
+/**
+ * Whether an error looks like a service still starting up, so asking again
+ * shortly may well succeed: a timeout, no connection (a cold service's
+ * gateway may answer without CORS headers, which the browser reports as a
+ * network failure), an empty or unreadable answer, or a 502, 503 or 504.
+ * Not an answer the API refused (400, 422), a missing service (404), a
+ * 500 the API explained (a calculation error: asking again gets the same),
+ * a missing URL, or an answer from another model version.
+ */
+const STARTING_STATUSES = new Set([502, 503, 504]);
+export function isStartingUp(error) {
+  if (!(error instanceof HouseholdApiError)) return false;
+  if (error.kind === "timeout" || error.kind === "network") return true;
+  if (error.kind !== "server") return false;
+  return error.empty || error.status === undefined || STARTING_STATUSES.has(error.status);
+}
+
+/**
+ * The wait a service asked for, in ms: its Retry-After header (seconds; a
+ * cross-origin page reads it only when the service exposes it) or the
+ * body's `retry_after_seconds`; null when it asked for none.
+ */
+function retryAfterOf(response, payload) {
+  const header = Number.parseFloat(response.headers?.get?.("retry-after") ?? "");
+  if (Number.isFinite(header) && header >= 0) return header * 1000;
+  const body = payload?.retry_after_seconds;
+  return typeof body === "number" && Number.isFinite(body) && body >= 0 ? body * 1000 : null;
+}
+
+/** Wait `ms`, or reject at once if `signal` aborts. */
+function pause(ms, signal) {
+  return new Promise((resolve, reject) => {
+    const aborted = () => signal.reason ?? new DOMException("The operation was aborted.", "AbortError");
+    if (signal?.aborted) {
+      reject(aborted());
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(aborted());
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 /** The oldest age the form takes for a child (policyengine-uk's
@@ -325,10 +405,12 @@ export async function postHouseholdImpact(
     if (!payload || typeof payload !== "object" || !payload.net_income) {
       throw new HouseholdApiError("server", "The calculation service sent an answer this page cannot read.", {
         status: response.status,
+        empty: true,
       });
     }
     return payload;
   }
+  const retryAfterMs = retryAfterOf(response, payload);
   const detail = payload?.detail;
   if (response.status === 422 && Array.isArray(detail)) {
     const fields = fieldErrors(detail);
@@ -347,11 +429,48 @@ export async function postHouseholdImpact(
   if (response.status === 504 || response.status === 408) {
     throw new HouseholdApiError("timeout", "The calculation took too long.", {
       status: response.status,
+      retryAfterMs,
     });
   }
   throw new HouseholdApiError("server", `The calculation service answered with an error (${response.status}).`, {
     status: response.status,
+    empty: payload === null,
+    retryAfterMs,
   });
+}
+
+/**
+ * postHouseholdImpact, asked again while the service looks to be starting
+ * up (`isStartingUp`, `RETRY_POLICY`). The same URL and body each time, so
+ * an answer is checked exactly as a first answer would be: a retry never
+ * lets in an answer from another model version. Rejects with the last
+ * error once the retries or the time budget are used up, or at once for an
+ * error a retry would not change.
+ *
+ * @param {Object} body
+ * @param {Object} [options] - postHouseholdImpact's options, plus `retry`
+ *   (overrides of RETRY_POLICY) and `onRetry(error, attempt)`, called
+ *   before each wait, so the page can say the service is starting up
+ */
+export async function postHouseholdImpactRetrying(body, { retry = {}, onRetry = null, ...options } = {}) {
+  const policy = { ...RETRY_POLICY, ...retry };
+  const timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
+  const started = Date.now();
+  const left = () => policy.budgetMs - (Date.now() - started);
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await postHouseholdImpact(body, {
+        ...options,
+        timeoutMs: attempt === 0 ? timeoutMs : Math.max(1, Math.min(timeoutMs, left())),
+      });
+    } catch (error) {
+      if (options.signal?.aborted || !isStartingUp(error) || attempt >= policy.maxRetries) throw error;
+      const wait = Math.min(policy.maxRetryAfterMs, Math.max(policy.delayMs, error.retryAfterMs ?? 0));
+      if (left() - wait < policy.minAttemptMs) throw error;
+      onRetry?.(error, attempt + 1);
+      await pause(wait, options.signal);
+    }
+  }
 }
 
 const num = (value) => (typeof value === "number" && Number.isFinite(value) ? value : 0);
@@ -737,26 +856,40 @@ export const askAllAtOnce = () => householdDetailApiUrl() !== null;
 /**
  * A detail part (sweep or split by policy): from the detail URL when the
  * build has one, falling back to the main API if that service cannot be
- * reached, errs, times out, refuses the request (an older build may not know
- * a measure) or answers with something `accept` refuses (not the headline's
- * build). The main API's answer is returned as it is: the caller checks it
- * again.
+ * reached, errs, times out (within MODAL_TIMEOUT_MS), refuses the request
+ * (an older build may not know a measure) or answers with something
+ * `accept` refuses (not the headline's build). The main API's answer is
+ * returned as it is: the caller checks it again.
+ *
+ * The detail URL is not asked twice: a failure there goes to the main API
+ * at once, which is quicker than waiting for a cold service. With `retry`
+ * (RETRY_POLICY's overrides, or `true` for the policy as it is) the main
+ * API is asked again while it looks to be starting up.
  *
  * @param {Object} body
  * @param {Object} [options] - postHouseholdImpact's options, plus
- *   `accept(raw) => boolean` for the detail URL's answer, and `detail:
- *   false` to ask the main API alone (the caller knows the detail URL's
- *   answer could not be accepted, so waiting for it would only add its time)
+ *   `accept(raw) => boolean` for the detail URL's answer, `detail: false`
+ *   to ask the main API alone (the caller knows the detail URL's answer
+ *   could not be accepted, so waiting for it would only add its time), and
+ *   `retry` and `onRetry` as postHouseholdImpactRetrying takes them
  */
-export async function postHouseholdDetail(body, { accept = null, detail = true, ...options } = {}) {
+export async function postHouseholdDetail(body, { accept = null, detail = true, retry = null, onRetry = null, ...options } = {}) {
+  const main = () =>
+    retry
+      ? postHouseholdImpactRetrying(body, { ...options, retry: retry === true ? {} : retry, onRetry })
+      : postHouseholdImpact(body, options);
   const detailUrl = detail ? householdDetailApiUrl() : null;
-  if (!detailUrl) return postHouseholdImpact(body, options);
+  if (!detailUrl) return main();
   try {
-    const raw = await postHouseholdImpact(body, { ...options, url: detailUrl });
+    const raw = await postHouseholdImpact(body, {
+      ...options,
+      timeoutMs: Math.min(options.timeoutMs ?? REQUEST_TIMEOUT_MS, MODAL_TIMEOUT_MS),
+      url: detailUrl,
+    });
     if (!accept || accept(raw)) return raw;
   } catch (error) {
     if (options.signal?.aborted) throw error;
     if (!(error instanceof HouseholdApiError)) throw error;
   }
-  return postHouseholdImpact(body, options);
+  return main();
 }
