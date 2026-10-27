@@ -528,6 +528,7 @@
 }
 
 .seat-card-policy-name {
+  flex: 1 1 auto;
   color: var(--pe-gray-700);
   min-width: 0;
 }
@@ -539,8 +540,12 @@
 }
 
 .seat-card-withheld {
+  flex: 0 1 auto;
+  max-width: 45%;
   font-weight: 400;
   color: var(--pe-gray-500);
+  white-space: normal;
+  text-align: right;
 }
 
 .seat-card-note {
