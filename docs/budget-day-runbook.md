@@ -1,6 +1,6 @@
 # Budget-day runbook (draft)
 
-**Status: draft for Vahid and María, who own this document and the workflow it describes.** It follows the drill 3 structure (G0 to G5). Commands marked with a PR number exist once that PR merges. Times are the drill's, to be replaced by the real release times. The design behind it is in [`budget-day-publication.md`](budget-day-publication.md).
+**Status: draft for Vahid and María, who own this document and the workflow it describes.** It follows the drill 3 structure (G0 to G5). Commands marked with a PR number exist once that PR merges. Times are the drill's, to be replaced by the real release times. The design behind it is in [`budget-day-publication.md`](budget-day-publication.md). Agents work from [`budget-day-agents.md`](budget-day-agents.md), and every signature is listed in [`budget-day-people.md`](budget-day-people.md).
 
 Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
 
@@ -734,7 +734,7 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
   - **Re-cuts, Saturday 24, Monday 26 and Tuesday 27:** each only if a material fix landed.
   - **The final cut, Tuesday 27:** its adoption is complete by **06:00Z on Wednesday 28**. That means merged, the household API deployed, the household check passed, a breakdown answered under 200 s, and the revert PR green.
     - **Its regeneration is at 18:00Z on Tuesday 27** (tracker #222; [`budget-day-checklist.md`](budget-day-checklist.md)): the coordinator's full run on Modal, on the final `main` and its final `uv.lock`. Calculation-path PRs are confirmed by 17:30Z, and both Modal images are built before 18:00Z. This replaces the 16:00Z build start and about 22:00Z release that "The schedule" below worked back from: those placeholders are superseded. A release adopted after 18:00Z would need the whole regeneration, and the hand-written measures' attestations, again; none is scheduled.
-    - **The regeneration uses the three parallel shells, as at G2** ("The full run on Modal" below), each from the same clean commit: one shared call with `--reforms <the template and parameter ids>`; each hand-written modifier (`employer_ni_relief_under_25s`, `plan_2_threshold_unfreeze`) in a call of its own; and, only if a flat file needs re-cutting, `--only income_distribution`. Never run `--artifacts` without `--reforms`: it runs every measure, the hand-written ones included, and each extra artifact of a hand-written modifier needs its own two-person attestation. Then the combined run, once its members are written.
+    - **The regeneration uses the three parallel shells, as at G2** ("The full run on Modal" below), each from the same clean commit: one shared call with `--reforms <the template and parameter ids>`; each hand-written modifier (`employer_ni_relief_under_25s`, `plan_2_threshold_unfreeze`, and `state_pension_income_tax_protection` in its sole-income design since #182) in a call of its own; and, only if a flat file needs re-cutting, `--only income_distribution`. Never run `--artifacts` without `--reforms`: it runs every measure, the hand-written ones included, and each extra artifact of a hand-written modifier needs its own two-person attestation. Then the combined run, once its members are written.
 - **Each cut is an adoption,** as in "Adopting a release (each re-cut)" below:
   1. the draft PR, and its CI;
   2. regenerate, stage, reconcile and approve on the branch, and write the review rows (`publish review-rows`, as at G2);
@@ -911,7 +911,7 @@ uv run --with modal==1.6.2 python -m uk_budget_data.cli generate --artifacts --b
 
 **Run the independent commands side by side, each in its own shell.** Each starts its own ephemeral app, so they don't wait for each other:
 - the template and `parameter_changes` measures in one `generate --artifacts --backend modal --reforms <ids>`;
-- each hand-written modifier (`employer_ni_relief_under_25s`, `plan_2_threshold_unfreeze`) in a call of its own, started at the same time;
+- each hand-written modifier (`employer_ni_relief_under_25s`, `plan_2_threshold_unfreeze`, and `state_pension_income_tax_protection` in its sole-income design since #182) in a call of its own, started at the same time;
 - any flat file a re-cut needs (`generate --only income_distribution --backend modal`), at the same time too: it doesn't depend on the artifacts. The exception is the published package's files (`--only income_distribution --published-package` and `--only income_growth --published-package`, #233): they read the manifest, so they run after its last change, at G4, never beside G2.
 
 Never put a hand-written modifier in the shared call, and never run `--artifacts` without `--reforms`: that runs every measure, the hand-written ones included, and each extra artifact of a hand-written modifier needs its own two-person attestation. This holds for Tuesday's 18:00Z regeneration as for G2.
