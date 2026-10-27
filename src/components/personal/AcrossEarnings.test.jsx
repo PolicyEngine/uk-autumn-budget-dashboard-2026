@@ -42,6 +42,15 @@ describe("the two Across earnings cards", () => {
     // Those that apply on neither fold into one text toggle
     fireEvent.click(within(show).getByRole("button", { name: /^\d+ more with no effect for you$/ }));
     expect(within(show).getByRole("button", { name: /^Hide the \d+ with no effect$/ })).toHaveAttribute("aria-expanded", "true");
+    // Hovering a chip says what it is, and on which chart it has no effect
+    fireEvent.mouseEnter(within(show).getByRole("button", { name: "Council Tax" }));
+    expect(document.querySelector(".tip[role='tooltip']")).toHaveTextContent(
+      /^Council Tax: no effect on your marginal tax rate — shown on Household net income only\. The local tax on your home/,
+    );
+    fireEvent.mouseLeave(within(show).getByRole("button", { name: "Council Tax" }));
+    fireEvent.mouseEnter(within(show).getByRole("button", { name: "National Insurance" }));
+    expect(document.querySelector(".tip[role='tooltip']")).toHaveTextContent("Employee National Insurance on earnings.");
+    fireEvent.mouseLeave(within(show).getByRole("button", { name: "National Insurance" }));
     // One view for both
     chooseOption(rate, "Change");
     expect(optionsLabel(net)).toBe("Change");
