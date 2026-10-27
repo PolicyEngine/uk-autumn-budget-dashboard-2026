@@ -146,9 +146,9 @@ class DataSources:
             Python example:
             ```python
             import pandas as pd
-            # ODS files can be read with pandas if odfpy is installed
-            # pip install odfpy
+            # pandas reads ODS files with python-calamine (engine="calamine")
             df = pd.read_excel('children-in-low-income-families.ods',
+                              engine='calamine',
                               sheet_name='5_Relative_ParlC',
                               skiprows=13)
             # Or use the zipfile/xml approach for more control
