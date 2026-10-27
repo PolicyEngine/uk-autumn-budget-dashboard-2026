@@ -122,21 +122,19 @@ describe("ConstituencyMap on Budget day", () => {
     expect(container.querySelector(".map-title-focus")).not.toHaveTextContent("2 child limit repeal");
   });
 
-  it("shows one policy only when the reader picks it, and offers no policy that moves no seat", async () => {
+  it("has no Policy option of its own: one policy shows when the header selects it alone", async () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({ "/data/constituency.csv": budgetDayTable(), "/data/regional.csv": 404 }),
     );
-    const { container } = render(
+    const { container, rerender } = render(
       <ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />,
     );
     await screen.findByText("Constituency results for this combination of policies are not published yet.");
     fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
-    const picker = screen.getByRole("radiogroup", { name: "Policy" });
-    // The combination is the default; the flat measure is not offered
-    expect(screen.getByRole("radio", { name: "Selected policies combined" })).toBeChecked();
-    expect(picker).not.toHaveTextContent("Rail fares freeze");
-    fireEvent.click(screen.getByRole("radio", { name: "2 child limit repeal" }));
+    expect(screen.queryByRole("radiogroup", { name: "Policy" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "Selected policies combined" })).toBeNull();
+    rerender(<ConstituencyMap selectedPolicies={["two_child_limit"]} selectedYear={2029} policies={POLICIES} />);
     await waitFor(() =>
       expect(container.querySelectorAll("path.constituency-path[data-state]")).toHaveLength(8),
     );

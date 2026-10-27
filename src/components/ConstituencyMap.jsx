@@ -87,9 +87,6 @@ import Tip, { InfoTip } from "./Tip";
 
 const CHART_TITLE = "Constituency impacts";
 
-// The Policy option that shows the whole selection (the default)
-const SELECTION_OPTION = "__selection__";
-
 // The card's three views, and the URL parameter that opens the second or
 // third. The hex map is the default: every constituency the same size, so
 // London's and the cities' small seats read as clearly as rural ones.
@@ -582,16 +579,6 @@ export default function ConstituencyMap({
   showRegionLink = true,
 }) {
   const [outcome, setOutcome] = useState("relative_change");
-  // Several policies selected: the one the reader picked to see on its own,
-  // or null for the selection's combined results (the default). A new
-  // selection goes back to the combination.
-  const [focusId, setFocusId] = useState(null);
-  const selectionStamp = [...new Set(selectedPolicies)].sort().join("|");
-  const [focusStamp, setFocusStamp] = useState(selectionStamp);
-  if (focusStamp !== selectionStamp) {
-    setFocusStamp(selectionStamp);
-    setFocusId(null);
-  }
   const [panel, setPanelParam] = usePanelParam();
   // The map view drawn: the one shown, or in the Table view the last one
   // shown, kept mounted so it keeps its zoom
@@ -624,8 +611,8 @@ export default function ConstituencyMap({
     boundariesReady,
     routing,
     regionalHasChoice,
-  } = useConstituencyView({ selectedPolicies, policies, selectedYear, outcome, focusId });
-  const focusName = (id) => shortNameOf(policies.find((policy) => policy.id === id) ?? { id });
+  } = useConstituencyView({ selectedPolicies, policies, selectedYear, outcome });
+  const policyName = (id) => shortNameOf(policies.find((policy) => policy.id === id) ?? { id });
   // On a release that routes no results by area, the card describes the
   // measure only, not how to read a map it does not draw.
   const notRouted = areaViewsNotAvailable(routing);
@@ -634,7 +621,7 @@ export default function ConstituencyMap({
   // What the title names: the one policy shown, or the selection
   const titleSubject =
     choice.kind === "measure"
-      ? focusName(choice.reform)
+      ? policyName(choice.reform)
       : choice.kind === "package" || choice.kind === "no-package"
         ? "selected policies"
         : null;
@@ -1088,19 +1075,9 @@ export default function ConstituencyMap({
       </UnavailableNotice>
     ) : null;
 
-  // The card's choices, in its one Options pill: the measure shown (when
-  // several selected measures have constituency results), how the change
-  // is shown, and the view
+  // The card's choices, in its one Options pill: how the change is shown,
+  // and the view. The policies shown are the header's selection
   const optionGroups = [
-    choice.focus && {
-      label: "Policy",
-      value: choice.kind === "measure" ? choice.reform : SELECTION_OPTION,
-      onChange: (value) => setFocusId(value === SELECTION_OPTION ? null : value),
-      options: [
-        { value: SELECTION_OPTION, label: "Selected policies combined" },
-        ...choice.focus.options.map((id) => ({ value: id, label: focusName(id) })),
-      ],
-    },
     {
       label: "Show the change as",
       value: outcome,

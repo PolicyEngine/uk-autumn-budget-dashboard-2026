@@ -439,7 +439,7 @@ describe("ConstituencyMap", () => {
     expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("2030-31");
   });
 
-  it("never sums, and offers no measure without constituency results in the Measure picker", async () => {
+  it("never sums, and offers no policy choice of its own", async () => {
     render(
       <ConstituencyMap
         selectedPolicies={["fuel_duty_freeze", "two_child_limit"]}
@@ -447,9 +447,8 @@ describe("ConstituencyMap", () => {
         policies={POLICIES}
       />,
     );
-    // No combined run of these two is published, so the card says so; and
-    // neither selected measure has constituency results (the fuel duty
-    // freeze is published by region only), so there is no policy to pick
+    // No combined run of these two is published, so the card says so; the
+    // policies shown are the header's, so the card offers no Policy option
     expect(
       await screen.findByText("Constituency results for this combination of policies are not published yet."),
     ).toBeInTheDocument();

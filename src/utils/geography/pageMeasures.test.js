@@ -143,11 +143,11 @@ describe("the page's measures in the constituency views", () => {
     );
     // With no package published, every measure selected says the
     // combination is not published: never one measure in its place, nor a
-    // sum. The held measure is not offered in the per-policy option.
+    // sum, and no per-policy option on the card.
     const all = await show(catalogue, IDS);
     expect(all.choice.kind).toBe("no-package");
     expect(all.choice.reform).toBeUndefined();
-    expect(all.choice.focus.options).not.toContain(BETA);
+    expect(all.choice).not.toHaveProperty("focus");
     expect(all.view).toEqual({ kind: "notice", reason: SELECTION_NOT_PUBLISHED, detail: null });
   });
 

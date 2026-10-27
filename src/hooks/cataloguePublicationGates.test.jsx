@@ -3,8 +3,8 @@ import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { useGeographyData, resetGeographyCache } from "./useGeographyData";
 import { useHouseholdScatterData, resetHouseholdScatterCache } from "./useHouseholdScatterData";
-import { chooseReform } from "../utils/geography/selection";
-import { scatterView } from "../utils/householdScatter";
+import { chooseSelectionReform, selectionPackageKey } from "../utils/geography/selection";
+import { SCATTER_SELECTION_NOT_PUBLISHED, scatterView } from "../utils/householdScatter";
 import { ALPHA, BETA, COMBINED, YEAR, bindFlatFiles, measureCatalogueFixture } from "../test/measureCatalogueFixture";
 
 const geography = (level, packageAs = COMBINED, includePackage = true) => [
@@ -72,11 +72,10 @@ describe("catalogue gates on additional population files", () => {
     expect(result.current.scatter.rows).toHaveLength(2);
     expect(new Set(result.current.scatter.rows.map((row) => row.reform_id))).toEqual(new Set([ALPHA, BETA]));
     expect(result.current.scatter.rows.every((row) => row.reform_id !== COMBINED && row.year === YEAR)).toBe(true);
-    expect(chooseReform({ selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], reforms: [ALPHA, BETA], packageId: catalogue.combinedId }).kind).toBe("no-package");
-    // No package: one measure at a time from its own rows, never the held package
-    const shown = scatterView({ data: result.current.scatter, selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], year: YEAR, packageId: catalogue.combinedId });
-    expect(shown.kind).toBe("points");
-    expect([ALPHA, BETA]).toContain(shown.reform);
+    expect(chooseSelectionReform({ selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], reforms: [ALPHA, BETA], packageKey: selectionPackageKey(catalogue.manifest, [ALPHA, BETA]) }).kind).toBe("no-package");
+    // No package: the combination is not published, never one measure in its place
+    const shown = scatterView({ data: result.current.scatter, selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], year: YEAR, packageKey: selectionPackageKey(catalogue.manifest, [ALPHA, BETA]) });
+    expect(shown).toMatchObject({ kind: "notice", reason: SCATTER_SELECTION_NOT_PUBLISHED });
   });
 
   it("keeps approved individual area figures when a withdrawn package has no rows in the verified files", async () => {
@@ -98,8 +97,8 @@ describe("catalogue gates on additional population files", () => {
       expect(table.reforms).toEqual([ALPHA, BETA]);
       expect(table.rows).toHaveLength(2);
       expect(table.rows.every((row) => row.year === YEAR)).toBe(true);
-      expect(chooseReform({ selectedIds: [ALPHA], policyIds: [ALPHA, BETA], reforms: table.reforms, packageId: catalogue.combinedId })).toEqual({ kind: "measure", reform: ALPHA });
-      expect(chooseReform({ selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], reforms: table.reforms, packageId: catalogue.combinedId }).kind).toBe("no-package");
+      expect(chooseSelectionReform({ selectedIds: [ALPHA], policyIds: [ALPHA, BETA], reforms: table.reforms, packageKey: selectionPackageKey(catalogue.manifest, [ALPHA]) })).toEqual({ kind: "measure", reform: ALPHA });
+      expect(chooseSelectionReform({ selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], reforms: table.reforms, packageKey: selectionPackageKey(catalogue.manifest, [ALPHA, BETA]) }).kind).toBe("no-package");
     }
   });
 
@@ -142,8 +141,8 @@ describe("catalogue gates on additional population files", () => {
       const table = result.current[name].table;
       expect(table.reforms).toContain(COMBINED);
       expect(table.reforms).not.toContain(ALIAS);
-      expect(chooseReform({ selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], reforms: table.reforms, packageId: catalogue.combinedId }))
-        .toEqual({ kind: "package", reform: COMBINED });
+      expect(chooseSelectionReform({ selectedIds: [ALPHA, BETA], policyIds: [ALPHA, BETA], reforms: table.reforms, packageKey: selectionPackageKey(catalogue.manifest, [ALPHA, BETA]) }))
+        .toMatchObject({ kind: "package", reform: COMBINED });
     }
   });
 

@@ -212,9 +212,6 @@ function YearSlider({ selectedYear, onYearChange, inactiveReason, years: YEARS =
                 onClick={() => choose(index)}
                 onMouseEnter={() => setActiveIndex(index)}
               >
-                <span className="year-picker-check" aria-hidden="true">
-                  {index === currentIndex ? "✓" : ""}
-                </span>
                 {label(year)}
               </li>
             ))}

@@ -161,13 +161,13 @@ describe("RegionView", () => {
     ]);
   });
 
-  it("never sums: several measures but not all shows no figures", async () => {
+  it("never sums: several policies with no published combined run show the not-published notice", async () => {
     const { container } = renderView({
       selectedPolicies: ["fuel_duty_freeze", "two_child_limit"],
     });
     expect(
       await screen.findByText(
-        "Results by region are shown for one policy at a time, or for all policies together.",
+        "Regional results for this combination of policies are not published yet.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
