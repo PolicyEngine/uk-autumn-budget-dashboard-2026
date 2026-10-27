@@ -252,13 +252,15 @@ describe("the About pill in the tab row, and its overview drawer", () => {
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(edge()).toHaveAttribute("aria-expanded", "true");
     expect(within(dialog).getByText(/^Estimates from/)).toBeInTheDocument();
-    // The header: PolicyEngine's wordmark, centred between an empty cell
-    // and the close button, sticky, with no rule under it; below it,
+    // The header: PolicyEngine's wordmark, a link home, centred between an
+    // empty cell and the close button, sticky; below it,
     // "About this dashboard" as an eyebrow, then the title
     const header = dialog.querySelector(".overview-header");
     const logo = within(header).getByRole("img", { name: "PolicyEngine" });
     expect(logo).toHaveClass("overview-logo");
-    expect([...header.children].map((node) => node.className)).toEqual(["overview-header-spacer", "overview-logo", "tip-anchor"]);
+    expect(logo.closest("a")).toHaveAttribute("href", "https://policyengine.org/uk");
+    expect(logo.closest("a")).not.toHaveAttribute("target");
+    expect([...header.children].map((node) => node.className)).toEqual(["overview-header-spacer", "overview-logo-link", "tip-anchor"]);
     expect(header.lastElementChild.firstElementChild).toHaveClass("overview-close");
     expect(header).not.toHaveClass("is-scrolled");
     expect(header).not.toHaveTextContent("About this dashboard");
@@ -313,12 +315,13 @@ describe("the About pill in the tab row, and its overview drawer", () => {
   it("keeps Tab inside the drawer", async () => {
     await openDrawer();
     const dialog = drawer();
-    const close = within(dialog).getByRole("button", { name: "Close" });
+    // The first stop is the band's wordmark link, then the close button
     const links = within(dialog).getAllByRole("link");
+    expect(links[0]).toHaveClass("overview-logo-link");
     links.at(-1).focus();
     fireEvent.keyDown(links.at(-1), { key: "Tab" });
-    expect(close).toHaveFocus();
-    fireEvent.keyDown(close, { key: "Tab", shiftKey: true });
+    expect(links[0]).toHaveFocus();
+    fireEvent.keyDown(links[0], { key: "Tab", shiftKey: true });
     expect(links.at(-1)).toHaveFocus();
   });
 
