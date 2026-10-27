@@ -1,5 +1,5 @@
 /* Line toggle chips (SeriesToggle.jsx): "Show lines:" then one chip per
-   line. On: tinted in the line's colour, a check, bold-ish text. Off:
+   line. On: tinted in the line's colour (fill and border, never a tick), bold-ish text. Off:
    outlined, muted, the swatch hollow. Clearly buttons, not a legend. */
 .series-toggle-wrap {
   display: flex;
@@ -49,11 +49,6 @@
   background: color-mix(in srgb, var(--chip-colour) 14%, var(--c-surface));
   color: var(--c-text);
   font-weight: 600;
-}
-
-.series-toggle-check {
-  flex: none;
-  color: var(--chip-colour);
 }
 
 /* Off: the swatch hollow and grey */

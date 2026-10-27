@@ -7,7 +7,7 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import { TOOLTIP_PROPS } from "../ChartTooltip";
 import ChartMoreInfo from "../ChartMoreInfo";
 import ControlBar from "../ControlBar";
-import { measureOpacity, useMeasureKey } from "../MeasureKey";
+import { SectionMeasureKey, measureOpacity, useMeasureKey } from "../MeasureKey";
 import Note from "../Note";
 import NoBreakYear from "../NoBreakYear";
 import TitleIcon from "../TitleIcon";
@@ -109,7 +109,7 @@ function AgeTooltip({ active, payload, nameOf, byMeasure }) {
  * section's measure key highlights them). One axis for every year, so Play
  * shows the change between years.
  */
-export default function SingleAgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height, group = PENSIONERS, extraOptions = [], title: titleBase = "Change by single year of age" }) {
+export default function SingleAgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height, group = PENSIONERS, extraOptions = [], title: titleBase = "Change by single year of age", keyInLegend = false }) {
   const chartRef = useRef(null);
   const [show, setShow] = useState("net");
   const byMeasure = show === "measures";
@@ -318,6 +318,8 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
             </span>
           </span>
         )}
+        {/* By age: the section's shared key, in this legend row */}
+        {published && key.shared && keyInLegend && <SectionMeasureKey placement="card" />}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}

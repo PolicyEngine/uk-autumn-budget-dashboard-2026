@@ -30,7 +30,6 @@ import {
   axisWidth,
   fiscalYearTick,
   CHART_COLOURS,
-  divergingAxis,
   HOVER_CURSOR,
   noHouseholdChange,
 } from "../utils/chartTheme";
@@ -202,29 +201,27 @@ function AgeTick({ x, y, payload, narrow, group = YOUNG_BAND }) {
   );
 }
 
-/** A stable axis for the band view, over every year: from the lowest to the
- * highest stack, always including 0, not mirrored about it. */
-function useBandDomain(rows, policies, selectedPolicies) {
-  return useMemo(() => {
-    const years = [...new Set((rows ?? []).map((row) => row.year))];
-    let lo = 0;
-    let hi = 0;
-    for (const year of years) {
-      for (const point of meanChangeByBand(rows, policies, selectedPolicies, year)) {
-        let up = 0;
-        let down = 0;
-        for (const policy of policies) {
-          const value = point[policy.seriesKey ?? `measure:${policy.id}`] ?? 0;
-          if (value > 0) up += value;
-          else down += value;
-        }
-        hi = Math.max(hi, up);
-        lo = Math.min(lo, down);
-      }
+/**
+ * The band view's axis: fitted to the year shown's stacks (gains above
+ * zero, losses below, each policy's part added), always including 0, with
+ * a little headroom (fitRange). Not shared with the Change by year card
+ * beside it: each chart fits its own data.
+ */
+export function bandAxis(data, policies) {
+  let lo = 0;
+  let hi = 0;
+  for (const point of data) {
+    let up = 0;
+    let down = 0;
+    for (const policy of policies) {
+      const value = point[policy.seriesKey ?? `measure:${policy.id}`] ?? 0;
+      if (value > 0) up += value;
+      else down += value;
     }
-    // Symmetric about zero when ages gain and lose (divergingAxis)
-    return divergingAxis([lo, hi]);
-  }, [rows, policies, selectedPolicies]);
+    hi = Math.max(hi, up, point.netChange ?? 0);
+    lo = Math.min(lo, down, point.netChange ?? 0);
+  }
+  return fitRange(lo, hi);
 }
 
 /** The single-year tick: the 16 to 24 band's ends in bold teal. */
@@ -299,7 +296,7 @@ function SingleAgeTooltip({ active, payload, yearLabel }) {
   );
 }
 
-export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, bandsOnly = false, extraOptions = [], title: titleBase = "Average change by age" }) {
+export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, bandsOnly = false, extraOptions = [], title: titleBase = "Average change by age", keyInLegend = false }) {
   const catalogue = useMeasureCatalogue();
   const {
     allPolicyNames: ALL_POLICY_NAMES,
@@ -315,7 +312,6 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
   const published = isPublished(rows, selectedYear);
   const data = meanChangeByBand(rows, policies, selectedPolicies, selectedYear);
   const singleData = singleAgeBars(rows, policies, selectedPolicies, selectedYear);
-  const bandAxis = useBandDomain(rows, policies, selectedPolicies);
   // The single-year axis fits the year shown's stacks, gains above zero and
   // losses below, with a little headroom (never mirrored)
   const stackEnds = singleData
@@ -338,7 +334,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
     }
     return drawn;
   });
-  const { domain, ticks } = single ? singleAxis : bandAxis;
+  const { domain, ticks } = single ? singleAxis : bandAxis(data, policies);
 
   // Every selected measure is in the legend in every year (so the legend,
   // and the plot's height, hold still on a year change or Play); one with
@@ -595,6 +591,9 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
         {published && !key.shared && (
           <MeasureKey members={members} netLabel={netLabel} highlight={key.highlight} onHighlight={key.setHighlight} />
         )}
+        {/* By age: the section's shared key sits here, under this chart, so
+            the legend row matches the Show lines chips beside it */}
+        {published && key.shared && keyInLegend && <SectionMeasureKey placement="card" />}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}

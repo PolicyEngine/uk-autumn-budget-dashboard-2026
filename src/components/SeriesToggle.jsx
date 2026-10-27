@@ -24,7 +24,7 @@ function markHintSeen() {
 /**
  * Line toggle chips for a multi-line chart: "Show lines:" then one chip per
  * line that shows or hides it. A chip that is on is tinted in its line's
- * colour, with a check and its swatch; one that is off is outlined and
+ * colour (fill and border, no tick), with its swatch; one that is off is outlined and
  * muted, its swatch hollow. Several can be on at once; the last one on
  * stays on. Hovering or focusing a chip highlights its line (`onHover`).
  * Until the reader first clicks a chip in the session, a quiet "Click to
@@ -132,10 +132,8 @@ export default function SeriesToggle({
               onFocus={() => onHover?.(active ? s.key : null)}
               onBlur={() => onHover?.(null)}
             >
-              <svg className="series-toggle-check" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
-                {active && <path d="M1.5 5.2 4 7.6 8.6 2.4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
-              </svg>
-{s.shape === "block" ? (
+              {/* Selection shows by fill and border only: never a tick */}
+              {s.shape === "block" ? (
                 // A filled layer (a stacked band): a square swatch
                 <svg className="series-toggle-swatch" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
                   <rect x="1" y="1" width="10" height="10" rx="2" fill={s.colour} />

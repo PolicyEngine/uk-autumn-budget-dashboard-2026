@@ -191,6 +191,16 @@ describe("young people cards", () => {
     expect(headline).not.toHaveTextContent(/gain about £0/);
   });
 
+  it("says the headline as one plain sentence, the units folded in", () => {
+    render(<TrendCard {...props} selectedYear={2028} />);
+    const description = document.querySelector(".young-people-trend .chart-description");
+    expect(description.querySelector("strong")).toBeNull();
+    expect(description).toHaveTextContent(
+      /^16 to 24-year-olds gain about £30 a person in 2028-29( and lose about £230 from 2029-30, when the [\w ]+ applies)?\.$/,
+    );
+    expect(description).not.toHaveTextContent(/£ a year/);
+  });
+
   it("draws every year shown, whatever year is selected", () => {
     render(<TrendCard {...props} selectedYear={2029} />);
     const first = DISPLAY_YEARS[0];

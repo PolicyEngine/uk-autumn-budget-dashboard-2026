@@ -135,8 +135,12 @@ export function useMeasureKey(members, netLabel) {
   return { shared: false, highlight: localHighlight, setHighlight: setLocalHighlight };
 }
 
-/** The key above a section's cards, from what they registered. */
-export function SectionMeasureKey({ label = "Policies" }) {
+/**
+ * The key above a section's cards, from what they registered; or, with
+ * placement "card", the same shared key drawn in one card's legend row
+ * (By age: under Average change by age, level with the chips beside it).
+ */
+export function SectionMeasureKey({ label = "Policies", placement = "section" }) {
   const shared = useContext(KeyContext);
   if (!shared || shared.members.length === 0) return null;
   return (
@@ -145,8 +149,8 @@ export function SectionMeasureKey({ label = "Policies" }) {
       netLabel={shared.netLabel}
       highlight={shared.highlight}
       onHighlight={shared.setHighlight}
-      placement="section"
-      label={label}
+      placement={placement}
+      label={placement === "section" ? label : undefined}
     />
   );
 }

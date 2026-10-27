@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import SectionHeading from "./SectionHeading";
-import { MeasureKeyProvider, SectionMeasureKey } from "./MeasureKey";
+import { MeasureKeyProvider } from "./MeasureKey";
 import TrendCard from "./youngPeople/TrendCard";
 import MeasuresCard from "./youngPeople/MeasuresCard";
 import AgeChangeCard from "./age/AgeChangeCard";
@@ -97,9 +97,10 @@ export default function AgeSection({ selectedPolicies, selectedYear, policies })
           }
         />
         <section className="report-section young-people-section" aria-label="How each age group's income changes">
-          <SectionMeasureKey />
+          {/* The shared key is in Average change by age's legend row
+              (keyInLegend), level with Change by year's line chips */}
           <div className="charts-grid">
-            <AgeChangeCard {...props} height={narrow ? 360 : 400} />
+            <AgeChangeCard {...props} keyInLegend height={narrow ? 360 : 400} />
             <TrendCard key={group} {...props} height={narrow ? 340 : 400} />
           </div>
         </section>
