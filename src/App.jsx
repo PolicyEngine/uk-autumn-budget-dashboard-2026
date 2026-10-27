@@ -18,7 +18,7 @@ import { opensLanding } from "./utils/landing";
 import TitleMark, { EdgeAboutTab } from "./components/HomeButton";
 import OverviewDrawer from "./components/OverviewDrawer";
 import { buildMeasureCatalogue, catalogueProvisional, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
-import { loadDashboard, loadVerifiedTablesOnce, budgetChartData } from "./utils/loadDashboard";
+import { dashboardFromParts, loadDashboard, loadDashboardParts, loadVerifiedTablesOnce, budgetChartData, sameParts } from "./utils/loadDashboard";
 import { pruneVerifiedCache } from "./utils/publication/cache";
 import { prefetchGeography } from "./hooks/useGeographyData";
 import { loadOutlook } from "./utils/livingStandards/outlook";
@@ -256,15 +256,20 @@ function whenIdle(run) {
   return () => clearTimeout(handle);
 }
 
-function Dashboard({ published, unavailable = null, updated = false }) {
+const requestedPolicies = (requested) =>
+  requested === null ? [] : [...new Set(requested.split(",").map((id) => id.trim()).filter(Boolean))];
+
+function Dashboard({ published, unavailable = null, updated = false, fromBuild = false, checkedBy = "page" }) {
   const catalogue = useMeasureCatalogue();
   const POLICIES = catalogue.measures;
   // A link's ?policies= is a chosen selection. Without one the selection is
   // the default, every displayable measure, and follows the publication.
-  const requested = typeof window === "undefined" || !catalogue.manifest ? null : new URLSearchParams(window.location.search).get("policies");
-  const [chosenPolicies, setChosenPolicies] = useState(() =>
-    requested === null ? [] : [...new Set(requested.split(",").map((id) => id.trim()).filter(Boolean))],
-  );
+  // With the build's figures the first render is the server's (hydration),
+  // which knows no address: the link's selection is read before paint, with
+  // the rest of the address, below.
+  const readRequested = () => typeof window === "undefined" || !catalogue.manifest ? null : new URLSearchParams(window.location.search).get("policies");
+  const requested = fromBuild ? null : readRequested();
+  const [chosenPolicies, setChosenPolicies] = useState(() => requestedPolicies(requested));
   const [selectionChosen, setSelectionChosen] = useState(requested !== null);
   // The default is derived, never stored: an artifact that verifies later
   // under the same manifest joins it, as on a fresh load (review of
@@ -378,8 +383,16 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // 2026) opens the default
     const askedYear = new URLSearchParams(window.location.search).get("year");
     if (askedYear !== null) setDistributionalYear(selectableYearOr(askedYear));
+    if (fromBuild) {
+      const linked = readRequested();
+      if (linked !== null) {
+        setChosenPolicies(requestedPolicies(linked));
+        setSelectionChosen(true);
+      }
+    }
     setLocationReady(true);
-  }, []);
+    // Once, on mount: the address as the page opened
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!locationReady) return;
@@ -983,7 +996,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       ref={appRef}
       data-sub-band={hasSubTabs ? "" : undefined}
       data-tabs-stuck={tabsStuck ? "" : undefined}
-      data-publication={unavailable ? "unavailable" : "verified"}>
+      data-publication={unavailable ? "unavailable" : "verified"}
+      data-publication-check={checkedBy}>
       {/* A div, not <main>: the PolicyEngine shell around the page is the
           main landmark, and a second one inside it is a landmark error */}
       <div className="main-content" ref={mainRef}>
@@ -1152,15 +1166,37 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     </div>
   );
 }
+/**
+ * The page's own check of the build's figures (app/publicationBoot.ts):
+ * once the opened view's code is in, so it does not share a slow line with
+ * it, the live manifest and every artifact load through the same checks as
+ * a page without them. Resolves to null when the result is exactly the
+ * build's, otherwise to the page's own parts; rejects when a check fails.
+ */
+async function reverifyBoot(base, boot, signal) {
+  await (opensLanding(window.location) ? Promise.resolve() : preloadView(bootView(window.location)));
+  if (signal.aborted) return null;
+  const parts = await loadDashboardParts(base, { signal });
+  return sameParts(parts, boot) ? null : parts;
+}
+
 // How often an open page checks for a newer publication, besides when it
 // regains focus
 const RECHECK_MS = 5 * 60 * 1000;
 
-function App() {
-  const [published, setPublished] = useState(null);
+/** @param {{ boot?: Object | null }} props */
+function App({ boot = null }) {
+  // The publication the build verified (app/publicationBoot.ts), shown from
+  // the first paint; the page's own check below then confirms it, or
+  // withdraws it. Without one the page loads and checks before it shows.
+  const [fromBuild] = useState(() => (boot ? dashboardFromParts(boot) : null));
+  const [published, setPublished] = useState(fromBuild);
   const [error, setError] = useState(null);
   const [updated, setUpdated] = useState(false);
-  const current = useRef(null);
+  // Who has checked the figures shown: "build" until the page has checked
+  // them itself, then "page" (data-publication-check)
+  const [checkedBy, setCheckedBy] = useState(fromBuild ? "build" : "page");
+  const current = useRef(fromBuild);
   const confirmer = useRef(null);
   // Stable for the page's life: each Household impact request waits on it
   const confirmPublication = useCallback(
@@ -1176,9 +1212,28 @@ function App() {
       setError(null);
     };
     let initialComplete = false;
-    const initial = loadDashboard(base, { signal: controller.signal })
-      .then((result) => { if (!controller.signal.aborted) show(result); })
-      .catch((failure) => { if (!controller.signal.aborted) setError(failure.message); })
+    const initial = (fromBuild
+      ? reverifyBoot(base, boot, controller.signal).then((parts) => {
+        if (controller.signal.aborted) return;
+        // The page's check found exactly the build's figures: they stay
+        if (parts === null) return setCheckedBy("page");
+        // Anything else: the page's own verified figures replace them
+        // (none, if the publication has gone)
+        const result = dashboardFromParts(parts);
+        show(result);
+        setCheckedBy("page");
+        if ((result.catalogue.manifest?.snapshotSha256 ?? null) !== boot.snapshotSha256 && parts.status === "ready") setUpdated(true);
+      })
+      : loadDashboard(base, { signal: controller.signal })
+        .then((result) => { if (!controller.signal.aborted) show(result); }))
+      .catch((failure) => {
+        if (controller.signal.aborted) return;
+        // A check that fails withdraws the build's figures too
+        current.current = null;
+        setPublished(null);
+        setError(failure.message);
+        setCheckedBy("page");
+      })
       .finally(() => { initialComplete = true; });
 
     // An open page follows the publication: a newer manifest replaces the
@@ -1228,7 +1283,8 @@ function App() {
       window.removeEventListener("focus", recheck);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+    // Once, on mount: the build's figures are the first render's
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const unavailable = !published && !error
     ? { reason: "Loading published policies…", loading: true }
     : error
@@ -1242,7 +1298,7 @@ function App() {
   return (
     <PublicationCheckContext.Provider value={confirmPublication}>
       <MeasureCatalogueProvider catalogue={shown.catalogue}>
-        <Dashboard key={snapshot} published={shown} unavailable={unavailable} updated={updated && !unavailable} />
+        <Dashboard key={snapshot} published={shown} unavailable={unavailable} updated={updated && !unavailable} fromBuild={Boolean(boot)} checkedBy={checkedBy} />
       </MeasureCatalogueProvider>
     </PublicationCheckContext.Provider>
   );

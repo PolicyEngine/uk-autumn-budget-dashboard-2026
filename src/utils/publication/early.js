@@ -36,9 +36,15 @@ export function manifestUrl(basePath) {
 
 /**
  * The inline script: one fetch, with the loader's own options (always
- * fresh), whose failure is left for the loader to retry.
+ * fresh), whose failure is left for the loader to retry. With `artifacts`
+ * false (the build verified the publication and the page shows that first,
+ * src/app/publicationBoot.ts), the receipts and first-chart files are not
+ * requested here: the page's own check after paint asks for them, so they
+ * do not share a slow line with the opened view's code. A link to By age
+ * still requests the receipts and the age table, which the build does not
+ * carry.
  */
-export function earlyManifestScript(basePath) {
+export function earlyManifestScript(basePath, { artifacts = true } = {}) {
   const url = JSON.stringify(manifestUrl(basePath));
   const data = JSON.stringify(`${basePath}/data/`);
   // Once the manifest is in, the receipts of the artifacts it shows are
@@ -52,8 +58,9 @@ export function earlyManifestScript(basePath) {
     `if(q.get("tab")==="household"){var h=${data}+${JSON.stringify(PRESETS_URL_FILE)};r[h]=fetch(h);r[h].catch(function(){});}` +
     `if((!q.get("tab")||q.get("tab")==="dashboard")&&q.get("sub")==="all"){var g=${data}+${JSON.stringify(BOUNDARIES_URL_FILE)};r[g]=fetch(g);r[g].catch(function(){});}` +
     `p.then(function(x){return x.ok?x.clone().json():null}).then(function(m){` +
-    `if(!m)return;var ok=${JSON.stringify(DISPLAYABLE)},re=${EARLY_ARTIFACT.toString()},want=${JSON.stringify(EARLY_FILES)};` +
-    `if(${JSON.stringify(AGE_VIEWS)}.indexOf(q.get("sub"))>=0)want=want.concat([${JSON.stringify(AGE_FILE)}]);` +
+    `var age=${JSON.stringify(AGE_VIEWS)}.indexOf(q.get("sub"))>=0;if(!m||!(${artifacts ? "true" : "age"}))return;` +
+    `var ok=${JSON.stringify(DISPLAYABLE)},re=${EARLY_ARTIFACT.toString()},want=${artifacts ? JSON.stringify(EARLY_FILES) : "[]"};` +
+    `if(age)want=want.concat([${JSON.stringify(AGE_FILE)}]);` +
     // The first chart's files the receipt lists, while the page's code is
     // still loading: requested, never read, until the loader has checked
     // the receipt and hashes them against it

@@ -14,6 +14,7 @@ import SiteFooter from '@/components/SiteFooter';
 import { DEEP_LINK_SCRIPT } from '@/utils/landing';
 import { earlyManifestScript } from '@/utils/publication/early';
 import { BOOT_VIEW_SCRIPT } from '@/utils/bootView';
+import { publicationBoot } from './publicationBoot';
 
 const TITLE = 'UK Autumn Budget 2026 dashboard';
 const DESCRIPTION =
@@ -43,11 +44,14 @@ export const viewport: Viewport = {
   initialScale: 1.0,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // With the publication verified by the build (publicationBoot.ts), the
+  // head need not request its receipts and files before the page's code
+  const booted = (await publicationBoot()) !== null;
   return (
     // The inline script marks a link to a view on <html> before hydration
     <html lang="en-GB" className={inter.variable} suppressHydrationWarning>
@@ -60,7 +64,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: BOOT_VIEW_SCRIPT }} />
         {/* The manifest request starts here, not after the page's code has
             loaded (utils/publication/early.js) */}
-        <script dangerouslySetInnerHTML={{ __html: earlyManifestScript(process.env.NEXT_PUBLIC_BASE_PATH || '') }} />
+        <script dangerouslySetInnerHTML={{ __html: earlyManifestScript(process.env.NEXT_PUBLIC_BASE_PATH || '', { artifacts: !booted }) }} />
       </head>
       <body>
         <PolicyEngineShell country="uk" showFooter={false}>

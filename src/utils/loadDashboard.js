@@ -1,6 +1,8 @@
-import { CATALOGUE_TABLES, loadArtifact, loadManifest, loadPublication } from "./publication/load";
+import { loadArtifact } from "./publication/load";
+import { loadDashboardParts } from "./publication/parts";
+
+export { loadDashboardParts, sameParts } from "./publication/parts";
 import { parseCsv } from "./publication/csv";
-import { isDisplayable } from "./publication/manifest";
 import { buildMeasureCatalogue, isCatalogueRowDisplayable } from "./measureCatalogue";
 
 export function parseDashboardCsv(text) {
@@ -10,18 +12,20 @@ export function parseDashboardCsv(text) {
 }
 
 /** Every national figure is read from a receipt-verified artifact snapshot. */
-export async function loadDashboard(basePath = "", { fetchImpl = fetch, signal } = {}) {
-  const manifest = await loadManifest(basePath, { fetchImpl, signal });
+export async function loadDashboard(basePath = "", options = {}) {
+  return dashboardFromParts(await loadDashboardParts(basePath, options));
+}
+
+/** The page's figures from loadDashboardParts' result: no request, no check. */
+export function dashboardFromParts(parts) {
   const data = { budgetary: [], distributional: [], winnersLosers: [], metrics: [] };
-  if (!manifest) return { status: "no-manifest", catalogue: buildMeasureCatalogue(), ...data };
-  // The package is every displayable measure: a held or not-computable
-  // measure is shown as unavailable, so the combined run that describes the
-  // page's figures is the one of the displayable measures.
-  const packageIds = Object.keys(manifest.measures).filter((id) => isDisplayable(manifest.measures[id]));
-  const publication = await loadPublication(basePath, packageIds, { fetchImpl, signal, manifest, tables: CATALOGUE_TABLES });
+  if (parts.status !== "ready") return { status: "no-manifest", catalogue: buildMeasureCatalogue(), ...data };
+  const { manifest, tablesByKey, failures } = parts;
+  // A manifest that crossed from the build lost its non-enumerable digest
+  if (manifest.snapshotSha256 === undefined) Object.defineProperty(manifest, "snapshotSha256", { value: parts.snapshotSha256 });
   const names = { budgetary: "budgetary_impact", distributional: "distributional_impact", winnersLosers: "winners_losers", metrics: "metrics" };
-  for (const [name, table] of Object.entries(names)) data[name] = Object.values(publication.tablesByKey).flatMap((tables) => tables[table] ?? []);
-  const catalogue = buildMeasureCatalogue({ manifest, ...data, tablesByKey: publication.tablesByKey, failures: publication.failures });
+  for (const [name, table] of Object.entries(names)) data[name] = Object.values(tablesByKey).flatMap((tables) => tables[table] ?? []);
+  const catalogue = buildMeasureCatalogue({ manifest, ...data, tablesByKey, failures });
   for (const name of Object.keys(names)) data[name] = data[name].filter((row) => isCatalogueRowDisplayable(catalogue, row.reform_id, row.year));
   return { status: "ready", catalogue, ...data };
 }
