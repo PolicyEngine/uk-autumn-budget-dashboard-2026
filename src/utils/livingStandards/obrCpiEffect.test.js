@@ -86,7 +86,7 @@ describe("parseObrCpiEffect", () => {
 describe("obrCpiEffectTitle", () => {
   it("names an earlier Budget and its EFO", () => {
     expect(obrCpiEffectTitle(parseObrCpiEffect(copy()))).toBe(
-      "Effect of the Budget's measures on CPI inflation, Autumn Budget 2025 (OBR, November 2025)",
+      "Effect of the Budget's policies on CPI inflation, Autumn Budget 2025 (OBR, November 2025)",
     );
   });
 });
@@ -94,25 +94,25 @@ describe("obrCpiEffectTitle", () => {
 describe("obrCpiEffectSentence", () => {
   it("states the Autumn Budget 2025 figures from the rounded data", () => {
     expect(obrCpiEffectSentence(parseObrCpiEffect(copy()).years)).toBe(
-      "The OBR estimates the Budget's measures lower CPI inflation by 0.4 percentage points in 2026-27 and raise it by 0.1 points in each of the next two years.",
+      "The OBR estimates the Budget's policies lower CPI inflation by 0.4 percentage points in 2026-27 and raise it by 0.1 points in each of the next two years.",
     );
   });
 
   it("names separate years, runs and a single effect", () => {
     expect(obrCpiEffectSentence(years([["2026-27", 0.21], ["2027-28", 0], ["2028-29", -0.1]]))).toBe(
-      "The OBR estimates the Budget's measures raise CPI inflation by 0.2 percentage points in 2026-27 and lower it by 0.1 points in 2028-29.",
+      "The OBR estimates the Budget's policies raise CPI inflation by 0.2 percentage points in 2026-27 and lower it by 0.1 points in 2028-29.",
     );
     expect(obrCpiEffectSentence(years([["2026-27", -0.3], ["2027-28", -0.3], ["2028-29", -0.3]]))).toBe(
-      "The OBR estimates the Budget's measures lower CPI inflation by 0.3 percentage points in each year from 2026-27 to 2028-29.",
+      "The OBR estimates the Budget's policies lower CPI inflation by 0.3 percentage points in each year from 2026-27 to 2028-29.",
     );
     expect(obrCpiEffectSentence(years([["2026", 1.04]]))).toBe(
-      "The OBR estimates the Budget's measures raise CPI inflation by 1.0 percentage point in 2026.",
+      "The OBR estimates the Budget's policies raise CPI inflation by 1.0 percentage point in 2026.",
     );
   });
 
   it("says when no year's effect reaches 0.1 points", () => {
     expect(obrCpiEffectSentence(years([["2026-27", 0.04], ["2027-28", -0.02]]))).toBe(
-      "The OBR estimates the Budget's measures change CPI inflation by less than 0.05 percentage points in every year from 2026-27 to 2027-28.",
+      "The OBR estimates the Budget's policies change CPI inflation by less than 0.05 percentage points in every year from 2026-27 to 2027-28.",
     );
   });
 });

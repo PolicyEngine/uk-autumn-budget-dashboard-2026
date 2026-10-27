@@ -1,4 +1,4 @@
-// The OBR's estimate of how a Budget's measures change CPI inflation, year
+// The OBR's estimate of how a Budget's policies change CPI inflation, year
 // by year: public/data/obr_cpi_policy_effect.json, written by hand on
 // Budget day from the Economic and fiscal outlook's chart of the effect of
 // policy measures on CPI inflation (docs/obr-cpi-policy-effect.md). It is
@@ -16,7 +16,7 @@ export const OBR_CPI_EFFECT_FILE = "obr_cpi_policy_effect.json";
 export const OBR_CPI_EFFECT_SCHEMA = "uk-budget-obr-cpi-policy-effect/v1";
 // The Budget this dashboard is for
 export const CURRENT_BUDGET = "Autumn Budget 2026";
-export const OBR_CPI_EFFECT_TITLE = "Effect of the Budget's measures on CPI inflation (OBR)";
+export const OBR_CPI_EFFECT_TITLE = "Effect of the Budget's policies on CPI inflation (OBR)";
 
 const BASES = { fiscal_years: /^\d{4}-\d{2}$/, calendar_years: /^\d{4}$/ };
 // A measure's years must add up to the total to this much (the OBR's own
@@ -95,7 +95,7 @@ export function efoMonth(efo) {
 /** The card's title: plain for this Budget, naming the Budget and EFO for an earlier one. */
 export function obrCpiEffectTitle(effect) {
   if (!effect?.previous) return OBR_CPI_EFFECT_TITLE;
-  return `Effect of the Budget's measures on CPI inflation, ${effect.budget} (OBR, ${efoMonth(effect.efo)})`;
+  return `Effect of the Budget's policies on CPI inflation, ${effect.budget} (OBR, ${efoMonth(effect.efo)})`;
 }
 
 /** "fiscal years" or "calendar years". */
@@ -123,7 +123,7 @@ export function obrCpiEffectSentence(years) {
     else groups.push({ v: r.v, start: i, end: i });
   });
   if (!groups.length) {
-    return `The OBR estimates the Budget's measures change CPI inflation by less than 0.05 percentage points in every year from ${rows[0].year} to ${rows[rows.length - 1].year}.`;
+    return `The OBR estimates the Budget's policies change CPI inflation by less than 0.05 percentage points in every year from ${rows[0].year} to ${rows[rows.length - 1].year}.`;
   }
   const phrases = groups.map((g, i) => {
     const size = Math.abs(g.v);
@@ -136,7 +136,7 @@ export function obrCpiEffectSentence(years) {
     return `${g.v < 0 ? "lower" : "raise"} ${i === 0 ? "CPI inflation" : "it"} by ${formatOneDp(size)} ${unit} ${when}`;
   });
   const list = phrases.length === 1 ? phrases[0] : `${phrases.slice(0, -1).join(", ")} and ${phrases[phrases.length - 1]}`;
-  return `The OBR estimates the Budget's measures ${list}.`;
+  return `The OBR estimates the Budget's policies ${list}.`;
 }
 
 /** Signed points for ticks and sentences' figures: "+0.1", "−0.4", "0.0". */

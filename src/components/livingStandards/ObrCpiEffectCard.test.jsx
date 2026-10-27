@@ -4,7 +4,7 @@ import ObrCpiEffectCard, { HOUSEHOLDS_LINK, obrCpiSourceText } from "./ObrCpiEff
 import { CURRENT_BUDGET, OBR_CPI_EFFECT_TITLE, clearObrCpiEffectCache, parseObrCpiEffect } from "../../utils/livingStandards/obrCpiEffect";
 import { AB2025_CPI_EFFECT } from "../../utils/livingStandards/obrCpiEffect.fixture";
 
-const PREVIEW_TITLE = "Effect of the Budget's measures on CPI inflation, Autumn Budget 2025 (OBR, November 2025)";
+const PREVIEW_TITLE = "Effect of the Budget's policies on CPI inflation, Autumn Budget 2025 (OBR, November 2025)";
 
 function serve(doc) {
   vi.stubGlobal(
@@ -24,7 +24,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("Effect of the Budget's measures on CPI inflation (OBR)", () => {
+describe("Effect of the Budget's policies on CPI inflation (OBR)", () => {
   it("draws the earlier Budget's figures under a title that names them", async () => {
     serve(AB2025_CPI_EFFECT);
     render(<ObrCpiEffectCard />);
@@ -32,7 +32,7 @@ describe("Effect of the Budget's measures on CPI inflation (OBR)", () => {
     const card = heading.closest(".ls-card");
     expect(
       within(card).getByText(
-        "The OBR estimates the Budget's measures lower CPI inflation by 0.4 percentage points in 2026-27 and raise it by 0.1 points in each of the next two years.",
+        "The OBR estimates the Budget's policies lower CPI inflation by 0.4 percentage points in 2026-27 and raise it by 0.1 points in each of the next two years.",
       ),
     ).toBeInTheDocument();
     expect(within(card).getByRole("link", { name: HOUSEHOLDS_LINK })).toHaveAttribute("href", "?tab=dashboard");

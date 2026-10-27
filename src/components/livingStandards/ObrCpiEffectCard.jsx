@@ -1,5 +1,5 @@
-// Effect of the Budget's measures on CPI inflation (OBR): the OBR's own
-// estimate, year by year, of how the Budget's measures change CPI
+// Effect of the Budget's policies on CPI inflation (OBR): the OBR's own
+// estimate, year by year, of how the Budget's policies change CPI
 // inflation, from public/data/obr_cpi_policy_effect.json (obrCpiEffect.js;
 // filled by hand on Budget day, docs/obr-cpi-policy-effect.md). Drawn on
 // Forecast changes under the prices group, full width; not drawn at all
@@ -28,7 +28,7 @@ import {
 } from "../../utils/livingStandards/obrCpiEffect";
 
 export const OBR_CPI_EFFECT_ANCHOR = "obr-cpi-effect";
-export const HOUSEHOLDS_LINK = "See the measures' effect on households →";
+export const HOUSEHOLDS_LINK = "See the policies' effect on households →";
 
 // The total, and each measure in turn; the indirect effect (the output gap) grey
 const TOTAL_COLOUR = CHART_COLOURS.marketIncome;
@@ -44,7 +44,7 @@ const INDIRECT_COLOUR = CHART_COLOURS.noChange;
 
 const SHOWS = [
   { value: "total", label: "Total" },
-  { value: "measures", label: "By measure" },
+  { value: "measures", label: "By policy" },
 ];
 
 /** The file's state, read once per page: null while loading. */
@@ -98,18 +98,18 @@ function LoadedCard({ effect, view, onViewChange, onShowTab }) {
   const rows = effectRows(effect);
   const measures = measureSeries(effect);
   const byMeasure = show === "measures" && hasMeasures;
-  const series = byMeasure ? measures : [{ key: "total", name: "All measures", colour: TOTAL_COLOUR }];
+  const series = byMeasure ? measures : [{ key: "total", name: "All policies", colour: TOTAL_COLOUR }];
   const basis = basisWords(effect.basis);
   const period = `${rows[0].year} to ${rows[rows.length - 1].year}`;
   const sourceText = obrCpiSourceText(effect);
   const sentence = obrCpiEffectSentence(effect.years);
-  const about = `The OBR's estimate of how the Budget's measures change CPI inflation in each year, in percentage points, by ${basis.replace(/s$/, "")}. It is the OBR's figure, not PolicyEngine's: PolicyEngine's estimates of the measures are on Population impact.`;
+  const about = `The OBR's estimate of how the Budget's policies change CPI inflation in each year, in percentage points, by ${basis.replace(/s$/, "")}. It is the OBR's figure, not PolicyEngine's: PolicyEngine's estimates of the policies are on Population impact.`;
   const notes = [
     effect.previous &&
       `These are the figures for ${effect.budget}, shown as an example: on Budget day the card shows this Budget's figures from the OBR's new Economic and fiscal outlook.`,
     hasMeasures &&
       measures.some((m, j) => effect.measures[j].indirect) &&
-      `${effect.measures.filter((m) => m.indirect).map((m) => m.name).join(" and ")}: the indirect effect of the whole package through the economy, not a measure of its own.`,
+      `${effect.measures.filter((m) => m.indirect).map((m) => m.name).join(" and ")}: the indirect effect of the whole package through the economy, not a policy of its own.`,
     ...effect.notes,
   ];
   const csv = () =>
