@@ -13,7 +13,7 @@ import {
   decileOf,
   decilePercents,
   describePosition,
-  distributionRunFor,
+  distributionRunOf,
   householdPosition,
   incomeAt,
   logEdges,
@@ -279,7 +279,7 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
   const tip = cursor === null ? null : spreadTip({ income: incomeOf(cursor), x, youIncome, curve, position, side, anchors, edges, mix });
 
   return (
-    <div className="position-hover" {...hover} aria-label="Hover or use the arrow keys for each income">
+    <div className="position-hover" role="group" {...hover} aria-label="Hover or use the arrow keys for each income">
     <svg className="position-where" width={width} height={height} aria-hidden="true">
       {decile && (
         <rect
@@ -344,7 +344,10 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
   // ticks carry the unit
   const top = 14;
   const plotH = narrow ? 200 : 240;
-  const height = top + plotH + 52;
+  // "Bottom 10%", the axis title and "Top 10%" share a row only where the
+  // plot is wide enough; on a phone the title drops to a row of its own
+  const titleRow = plotW < 320 ? 16 : 0;
+  const height = top + plotH + 52 + titleRow;
   const values = Array.from({ length: 10 }, (_, i) => (unit === "pct" ? percents?.[i + 1] : averages?.[i + 1]) ?? 0);
   const own = unit === "pct" ? ownPct : ownChange;
   const all = [...values, own];
@@ -372,7 +375,7 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
   };
 
   return (
-    <div className="position-hover" {...hover} aria-label="Hover or use the arrow keys for each tenth">
+    <div className="position-hover" role="group" {...hover} aria-label="Hover or use the arrow keys for each tenth">
     <svg className="position-gains" width={width} height={height} aria-hidden="true">
       {gridTicks.map((tick) => (
         <g key={`g-${tick}`}>
@@ -408,7 +411,7 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
       <text x={left} y={top + plotH + 34} fontSize={11} fill={CHART_COLOURS.tick}>
         Bottom 10%
       </text>
-      <text x={left + plotW / 2} y={top + plotH + 34} textAnchor="middle" fontSize={11} fill={CHART_COLOURS.tick}>
+      <text x={left + plotW / 2} y={top + plotH + 34 + titleRow} textAnchor="middle" fontSize={11} fill={CHART_COLOURS.tick}>
         Tenths of people by income
       </text>
       <text x={left + plotW} y={top + plotH + 34} textAnchor="end" fontSize={11} fill={CHART_COLOURS.tick}>
@@ -549,7 +552,7 @@ function RankView({ width, narrow, curves, position, side }) {
   const tip = cursor === null ? null : spreadTip({ income: incomeOf(cursor), x, youIncome, curve, position, side, anchors });
 
   return (
-    <div className="position-hover" {...hover} aria-label="Hover or use the arrow keys for each income">
+    <div className="position-hover" role="group" {...hover} aria-label="Hover or use the arrow keys for each income">
     <svg className="position-rank" width={width} height={height} aria-hidden="true">
       <text x={left} y={12} fontSize={AXIS_TITLE_STYLE.fontSize} fontWeight={AXIS_TITLE_STYLE.fontWeight} fill={AXIS_TITLE_STYLE.fill}>
         {narrow ? "People with less income" : "Share of people with less income, by income adjusted for household size"}
@@ -664,11 +667,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   // Every measure the catalogue publishes: the package's run is exact only
   // when all of them are selected, and it was run with exactly those
   const catalogue = useMeasureCatalogue();
-  const run = distributionRunFor(
-    policies,
-    catalogue.displayable.map((measure) => measure.id),
-    catalogue.combinedId ? (catalogue.manifest?.combined?.[catalogue.combinedId]?.measures ?? null) : null,
-  );
+  const run = distributionRunOf(policies, catalogue);
   // The tenths' averages from the verified artifacts the decile charts read
   // (#203, #228), never the root flat files, so the two tabs agree
   const winnersRows = useMemo(() => verifiedTableRows(catalogue, "winners_losers"), [catalogue]);
@@ -997,14 +996,11 @@ export default function IncomePositionChart({ net, household, year, policies, ye
  */
 export function ResultTiles({ totals, changeValue, changeNote, household, year, policies }) {
   const distribution = useFile(DISTRIBUTION_FILE, parseDistribution);
-  const relative = useFile("distributional_impact.csv", parseRecords);
   const moves = useFile(MOBILITY_FILE, parseRecords);
   const catalogue = useMeasureCatalogue();
-  const run = distributionRunFor(
-    policies,
-    catalogue.displayable.map((measure) => measure.id),
-    catalogue.combinedId ? (catalogue.manifest?.combined?.[catalogue.combinedId]?.measures ?? null) : null,
-  );
+  const run = distributionRunOf(policies, catalogue);
+  // The tenths' % from the verified artifacts, as the card's chart (#228)
+  const relativeRows = useMemo(() => verifiedTableRows(catalogue, "distributional_impact"), [catalogue]);
   const net = useMemo(() => ({ before: totals.before, after: totals.after }), [totals.before, totals.after]);
   const position = useMemo(() => {
     if (distribution.status !== "ready" || !household) return null;
@@ -1012,7 +1008,7 @@ export function ResultTiles({ totals, changeValue, changeNote, household, year, 
     const after = curveOf(distribution.rows, { reformId: run.reformId, year, side: "reform" });
     return before.length > 1 && after.length > 1 ? householdPosition({ net, household, before, after }) : null;
   }, [distribution, run.reformId, year, net, household]);
-  const percents = useMemo(() => (relative.status === "ready" ? decilePercents(relative.rows, policies, year) : null), [relative, policies, year]);
+  const percents = useMemo(() => decilePercents(relativeRows, policies, year), [relativeRows, policies, year]);
   const mobility = useMemo(
     () => (moves.status === "ready" ? mobilityOf(moves.rows, { reformId: run.reformId, year, unit: "percentile" }) : null),
     [moves, run.reformId, year],
@@ -1063,7 +1059,7 @@ export function ResultTiles({ totals, changeValue, changeNote, household, year, 
         value={share === null ? "Not available" : signedPct(share, 2)}
         caption="of your household's net income"
         trend={{ rows: [] }}
-        meaning={tenthAverage !== undefined && tenthAverage !== null ? `Average for your income tenth: ${signedPct(tenthAverage, 2)}` : relative.status === "loading" || loading ? "\u00a0" : "Your tenth's average is not published"}
+        meaning={tenthAverage !== undefined && tenthAverage !== null ? `Average for your income tenth: ${signedPct(tenthAverage, 2)}` : loading ? "\u00a0" : "Your tenth's average is not published"}
         meaningKind="small"
       />
       <HeadlineTile

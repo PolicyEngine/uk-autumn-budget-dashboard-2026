@@ -112,6 +112,13 @@ describe("MethodologyTab", () => {
     expect(screen.queryByRole("button", { name: "Unavailable measures" })).toBeNull();
   });
 
+  it("says under Limitations that fuel duty covers households' own fuel, naming no measure", () => {
+    const { container } = renderTab();
+    const limitations = container.querySelector(`#${METHOD_SECTIONS.limitations}`);
+    const card = within(limitations).getByRole("button", { name: "Business fuel use" }).closest(".method-topic");
+    expect(card).toHaveTextContent("roughly half of fuel duty receipts");
+  });
+
   it("lists the measures the model cannot cost", () => {
     renderTab();
     const card = screen.getByRole("button", { name: "Not modelled" }).closest(".method-topic");

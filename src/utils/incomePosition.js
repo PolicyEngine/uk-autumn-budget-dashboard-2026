@@ -88,6 +88,17 @@ export function distributionRunFor(selected, allIds, packageIds = null) {
   return { reformId: COMBINED_REFORM_ID, exact };
 }
 
+/** distributionRunFor for a measure catalogue (utils/measureCatalogue.jsx). */
+export function distributionRunOf(selected, catalogue) {
+  const combinedId = catalogue?.combinedId ?? null;
+  return distributionRunFor(
+    selected,
+    (catalogue?.displayable ?? []).map((measure) => measure.id),
+    combinedId ? (catalogue.manifest?.combined?.[combinedId]?.measures ?? null) : null,
+    combinedId,
+  );
+}
+
 /** One curve, sorted by percentile: [{ percentile, income }]. */
 export function curveOf(rows, { reformId, year, side }) {
   return rows

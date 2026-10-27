@@ -104,7 +104,7 @@ describe("the view tabs", () => {
         expect(document.querySelector(".tip")).toBeNull();
       }
       if (!expected[view.value][1]) {
-        expect(policy.querySelector(".band-control")).toHaveAttribute("aria-label", `Select policies: ${POLICIES_INACTIVE}`);
+        expect(policy.querySelector(".band-control")).toHaveAttribute("aria-label", expect.stringMatching(new RegExp(`^Policies .*: ${POLICIES_INACTIVE}$`)));
         fireEvent.click(policy.querySelector(".band-control"));
         expect(policy.querySelector(".policy-selector-dropdown")).toBeNull();
         fireEvent.mouseEnter(policy.querySelector(".band-control"));
@@ -192,7 +192,7 @@ describe("the view tabs", () => {
     window.history.replaceState({}, "", "/?tab=policies");
     await renderApp();
     const panel = screen.getByRole("tabpanel", { name: "Policies" });
-    fireEvent.click(within(panel).getByRole("button", { name: /effect of Alpha/ }));
+    fireEvent.click(within(panel).getByRole("button", { name: /effect: Alpha,/ }));
     expect(screen.getByRole("tab", { name: "Population impact" })).toHaveAttribute(
       "aria-selected",
       "true",

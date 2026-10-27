@@ -30,6 +30,8 @@ import {
   shortFiscalYearTick,
   CHART_COLOURS,
   REFERENCE_DASH,
+  PHONE_QUERY,
+  useViewportMatch,
 } from "../../utils/chartTheme";
 import { DISPLAY_YEARS } from "../../utils/displayYears";
 import { ALL_BAND } from "../../utils/ageImpact";
@@ -38,7 +40,7 @@ import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { shortNameOf } from "../../utils/policyDetails";
 import { X_AXIS_HEIGHT, plotMargin } from "../youngPeople/chartRows";
 import { cumulate, groupMeasureSeries, niceRange, signedPounds, stepAnnotations } from "../youngPeople/youngPeopleData";
-import { EndLabels, StepLabels, TrendTooltip, YearShading, about, signed } from "../youngPeople/TrendCard";
+import { EndLabels, StepLabels, TrendTooltip, YearShading, about, signed, stackColumns, stepSentence } from "../youngPeople/TrendCard";
 import SeriesToggle from "../SeriesToggle";
 import { pensionerMeasureSeries } from "./pensionersData";
 
@@ -70,6 +72,8 @@ const LINES = [
 export default function PensionerTrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
   const chartRef = useRef(null);
   const catalogue = useMeasureCatalogue();
+  // On a phone the step labels do not fit the plot: the sentence names them
+  const phone = useViewportMatch(PHONE_QUERY);
   const [view, setView] = useState("lines");
   const [years, setYears] = useState("each");
   const [hovered, setHovered] = useState(null);
@@ -159,6 +163,8 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
     }
     return `${text}.`;
   })();
+  // On a phone, the steps the plot cannot label, unless the headline names them
+  const stepsLine = phone && !cumulative ? stepSentence(notes, headline, (id) => inSentence(nameOf(id))) : null;
 
   const focusAt = (year) => {
     const point = data.find((p) => p.year === year);
@@ -203,6 +209,7 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
           </h3>
           <p className="chart-description">
             {headline ? <strong className="trend-headline">{headline}</strong> : null} {description}
+            {stepsLine ? ` ${stepsLine}` : null}
           </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={title} />
@@ -320,7 +327,19 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
             {!byMeasure && (
               <Customized component={<EndLabels data={data} lines={LINES.filter((line) => shown.includes(line.key))} hovered={hovered} onHover={setHovered} narrow={narrow} />} />
             )}
-            {!cumulative && notes.length > 0 && <Customized component={<StepLabels notes={notes} valueAt={focusAt} narrow={narrow} />} />}
+            {!cumulative && !phone && notes.length > 0 && (
+              <Customized
+                component={
+                  <StepLabels
+                    notes={notes}
+                    valueAt={focusAt}
+                    years={data.map((point) => point.year)}
+                    paths={byMeasure ? [data.map((point) => point.net ?? null)] : shown.map((each) => data.map((point) => point[each] ?? null))}
+                    columns={byMeasure ? stackColumns(data, partKeys) : []}
+                  />
+                }
+              />
+            )}
           </ComposedChart>
         </ResponsiveContainer>
       </div>

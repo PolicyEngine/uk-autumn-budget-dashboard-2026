@@ -12,16 +12,25 @@ import { CHART_LOGO } from "./chartLogo";
 export const NARROW_QUERY = "(max-width: 768px)";
 
 export function useNarrowViewport() {
-  const [narrow, setNarrow] = useState(false);
+  return useViewportMatch(NARROW_QUERY);
+}
+
+// A phone's width: below this a chart drops the labels it cannot fit and
+// says the same in its sentence
+export const PHONE_QUERY = "(max-width: 480px)";
+
+/** Whether the window matches a media query, false before the page is in the browser. */
+export function useViewportMatch(query) {
+  const [matches, setMatches] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return undefined;
-    const media = window.matchMedia(NARROW_QUERY);
-    const update = () => setNarrow(media.matches);
+    const media = window.matchMedia(query);
+    const update = () => setMatches(media.matches);
     update();
     media.addEventListener?.("change", update);
     return () => media.removeEventListener?.("change", update);
-  }, []);
-  return narrow;
+  }, [query]);
+  return matches;
 }
 
 /**
@@ -35,7 +44,7 @@ export const CHART_COLOURS = {
   gainText: "#0F766E",
   loss: "#D97706",
   lossText: "#B45309",
-  lossSoft: "#FDF0E1",
+  lossSoft: "#FEF4E8",
   lossBorder: "#FDE68A",
   noChange: "#9CA3AF",
   before: "#9CA3AF",

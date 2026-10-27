@@ -94,6 +94,9 @@ describe("ConstituencyMap on Budget day", () => {
         await screen.findByText("Results by constituency are not yet published."),
       ).toBeInTheDocument();
       expect(screen.queryByText(/could not be (read|loaded)/)).toBeNull();
+      // The notice alone: no empty table, count or "no match" line behind it
+      expect(screen.queryByRole("table")).toBeNull();
+      expect(screen.queryByText(/0 of 0|No constituency or region matches/)).toBeNull();
     } finally {
       window.history.replaceState({}, "", "/");
     }
@@ -141,6 +144,29 @@ describe("ConstituencyMap on Budget day", () => {
     const categories = [...container.querySelectorAll("path.constituency-path[data-category]")]
       .map((path) => path.getAttribute("data-category"))
       .filter(Boolean);
-    expect(categories.every((category) => category === "no_change")).toBe(true);
+    expect(categories.every((category) => category === "no_change")).toBe(true);    // One line under the map says why every seat is grey or hatched
+    expect(
+      screen.getByText(
+        "No constituency shows a change large enough to publish for this policy in 2029-30.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says nothing of the kind for a measure that moves seats", async () => {
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({ "/data/constituency.csv": budgetDayTable() }),
+    );
+    const { container } = render(
+      <ConstituencyMap
+        selectedPolicies={["two_child_limit"]}
+        selectedYear={2029}
+        policies={POLICIES}
+      />,
+    );
+    await waitFor(() =>
+      expect(container.querySelectorAll("path.constituency-path[data-state]")).toHaveLength(8),
+    );
+    expect(screen.queryByText(/No constituency shows a change/)).toBeNull();
   });
 });

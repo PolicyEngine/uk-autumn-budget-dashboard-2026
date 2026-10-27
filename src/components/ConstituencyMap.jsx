@@ -57,6 +57,8 @@ import {
   seatCode,
   seatName,
   seatStates,
+  movesNoSeat,
+  noSeatMovedNote,
   seatStyle,
   seatSummary,
 } from "../utils/geography/seats";
@@ -853,6 +855,12 @@ export default function ConstituencyMap({
   // (a style on the page only; the exported file never carries it)
   const [keyHighlight, setKeyHighlight] = useState(null);
   const counts = useMemo(() => keyCounts(states), [states]);
+  // Every seat zero or withheld: say so, so the map's grey and hatching
+  // are not left to explain themselves
+  const flatNote = useMemo(
+    () => (movesNoSeat(states) ? noSeatMovedNote({ yearLabel, several: choice.kind === "package" }) : null),
+    [states, yearLabel, choice.kind],
+  );
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -1131,16 +1139,14 @@ export default function ConstituencyMap({
           </MapTemplate>
         )}
 
-        {!onMap && view.kind !== "loading" && (
+        {/* Before results are in, the Table view is the notice alone: no
+            empty table, count or "no match" line behind it */}
+        {!onMap && view.kind === "rows" && (
           <div className="rankings-panel">
-            <ConstituencyTable
-              entries={view.kind === "rows" ? rankingEntriesForView : []}
-              metric={metric}
-              query={searchQuery}
-            />
-            {notice && <div className="map-template-overlay">{notice}</div>}
+            <ConstituencyTable entries={rankingEntriesForView} metric={metric} query={searchQuery} />
           </div>
         )}
+        {!onMap && view.kind === "notice" && <div className="rankings-panel rankings-panel-notice">{notice}</div>}
 
         {/* Kept mounted in the Table view, so the map keeps its zoom */}
         {view.kind === "rows" && (
@@ -1240,6 +1246,7 @@ export default function ConstituencyMap({
               )}
               <FloatingTooltip tip={hoverTip} />
             </div>
+            {flatNote && <p className="map-flat-note">{flatNote}</p>}
           </div>
         )}
       </SwapTransition>

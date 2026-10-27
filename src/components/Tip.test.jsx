@@ -32,6 +32,22 @@ describe("Tip", () => {
     render(<Tip content={null}><span className="bare">x</span></Tip>, { container });
     expect(container.querySelector(".bare").getAttribute("aria-describedby")).toBeNull();
   });
+
+  it("shows no tip for a focus that follows a tap or click (the drawer's close button on a phone), but does after a key", () => {
+    render(
+      <Tip content="Close (Esc)">
+        <button type="button">Close</button>
+      </Tip>,
+    );
+    const button = screen.getByRole("button", { name: "Close" });
+    fireEvent.pointerDown(document.body, { pointerType: "touch" });
+    fireEvent.focus(button);
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    fireEvent.blur(button);
+    fireEvent.keyDown(document, { key: "Tab" });
+    fireEvent.focus(button);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Close (Esc)");
+  });
 });
 
 describe("Tip's layer", () => {

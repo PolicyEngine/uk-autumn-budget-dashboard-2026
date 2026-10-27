@@ -345,10 +345,6 @@
   border-radius: 6px;
 }
 
-.position-plot-loading {
-  min-height: 300px;
-}
-
 /* No forced room: each tile as tall as the tallest one's content (the
    grid stretches them), the footnote at the foot so the three line up */
 .position-tiles .forecast-tile-meaning {

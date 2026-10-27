@@ -569,6 +569,12 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
       activate(items[focus]);
     }
   };
+  const chipName = (item, figure) => {
+    const shown = item.id === null ? "Your household" : item.short ?? item.label;
+    const amount = figure ? `, ${figure}${figure === "No change" ? "" : " a year"}` : item.id === null ? ", enter your own" : "";
+    const full = item.id !== null && item.label && item.label !== shown ? `: ${item.label}` : "";
+    return `${shown}${amount}${full}`;
+  };
   const figureText = (change) =>
     Number.isFinite(change) ? (Math.round(change) === 0 ? "No change" : signedMoney(change)) : null;
   return (
@@ -587,7 +593,9 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
                 role="option"
                 aria-selected={isSelected}
                 aria-controls={item.id === null ? formId : undefined}
-                aria-label={figure ? `${item.label}, ${figure}${figure === "No change" ? "" : " a year"}` : item.label}
+                // The name starts with the chip's visible text (WCAG 2.5.3, label
+                // in name), then the full description where the chip shortens it
+                aria-label={chipName(item, figure)}
                 tabIndex={index === focus ? 0 : -1}
                 className={`household-chip ${item.id === null ? "is-yours" : ""}`.trim()}
                 title={item.label}

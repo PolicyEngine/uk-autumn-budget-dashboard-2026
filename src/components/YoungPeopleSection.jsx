@@ -58,7 +58,7 @@ import {
 import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST, fitRange, sharesBySingleAge, singleAgeBars } from "./youngPeople/youngPeopleData";
 import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
 import "./YoungPeopleSection.css";
-import { chartMotion, netDot } from "../utils/chartMotion";
+import { chartMotion, netDotTitled } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { AGE_METHOD } from "./methodology/anchors";
@@ -512,7 +512,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
               <Scatter
                 dataKey="netChange"
                 opacity={netOpacity(key.highlight)}
-                shape={netDot}
+                shape={netDotTitled((row) => `${row.label}: net change ${signedPounds(row.netChange)}`)}
                 legendType="none"
                 tooltipType="none"
                 {...chartMotion()}
@@ -590,7 +590,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
               <Scatter
                 dataKey="netChange"
                 opacity={netOpacity(key.highlight)}
-                shape={netDot}
+                shape={netDotTitled((row) => `${row.label}: net change ${signedPounds(row.netChange)}`)}
                 legendType="none"
                 tooltipType="none"
                 {...chartMotion()}

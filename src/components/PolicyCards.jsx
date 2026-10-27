@@ -275,7 +275,7 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
               )}
             </span>
           </div>
-          <h4 className="policy-card-name">{policy.label ?? policy.name}</h4>
+          <h3 className="policy-card-name">{policy.label ?? policy.name}</h3>
         </div>
       </div>
 
@@ -284,6 +284,7 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
       <div className="policy-card-spec">
         {parameters && (
           <PolicyChange
+            name={policy.label ?? policy.name}
             entry={parameters}
             direction={policy.direction}
             onHighlight={setHighlight}
@@ -360,7 +361,7 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
               type="button"
               className="policy-card-effect"
               onClick={() => onShowEffect(policy.id)}
-              aria-label={`See the effect of ${policy.label ?? policy.name} on Population impact`}
+              aria-label={`See its effect: ${policy.label ?? policy.name}, on Population impact`}
             >
               <ChartColumn size={16} aria-hidden="true" />
               See its effect

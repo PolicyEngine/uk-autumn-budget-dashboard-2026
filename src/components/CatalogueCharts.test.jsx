@@ -113,8 +113,8 @@ describe("published measure catalogue in population views", () => {
     const catalogue = catalogueFor(measureCatalogueFixture());
     const toggle = vi.fn();
     render(withCatalogue(catalogue, <PolicySelector selectedPolicies={[ALPHA, BETA]} onPolicyToggle={toggle} />));
-    expect(screen.getByRole("button", { name: "Select policies" })).toHaveTextContent(/Policies\s*All 2 policies/);
-    fireEvent.click(screen.getByRole("button", { name: "Select policies" }));
+    expect(screen.getByRole("button", { name: /^Policies / })).toHaveTextContent(/Policies\s*All 2 policies/);
+    fireEvent.click(screen.getByRole("button", { name: /^Policies / }));
     for (const measure of catalogue.displayable) {
       expect(screen.getByText(measure.label)).toBeInTheDocument();
       expect(screen.queryByText(measure.description)).not.toBeInTheDocument();
@@ -126,16 +126,28 @@ describe("published measure catalogue in population views", () => {
     expect(toggle).toHaveBeenCalledWith(catalogue.displayable[0].id);
   });
 
+  it("closes on Escape and puts focus back on the pill when it was in the menu", () => {
+    const catalogue = catalogueFor(measureCatalogueFixture());
+    render(withCatalogue(catalogue, <PolicySelector selectedPolicies={[ALPHA, BETA]} onPolicyToggle={vi.fn()} />));
+    const pill = screen.getByRole("button", { name: /^Policies / });
+    fireEvent.click(pill);
+    expect(pill).toHaveAttribute("aria-expanded", "true");
+    screen.getAllByRole("checkbox")[0].focus();
+    fireEvent.keyDown(document.activeElement, { key: "Escape" });
+    expect(pill).toHaveAttribute("aria-expanded", "false");
+    expect(pill).toHaveFocus();
+  });
+
   it("never shows 0 of 0: while loading, the label alone; with none published, disabled", () => {
     const empty = catalogueFor({ ...measureCatalogueFixture(), manifest: null });
     const { unmount } = render(withCatalogue(empty, <PolicySelector policies={[]} selectedPolicies={[]} onPolicyToggle={vi.fn()} loading />));
-    const loading = screen.getByRole("button", { name: "Select policies: loading" });
+    const loading = screen.getByRole("button", { name: "Policies: loading" });
     expect(loading).toHaveTextContent("Policies");
     expect(loading).not.toHaveTextContent(/0 of 0/);
     expect(loading).toBeDisabled();
     unmount();
     render(withCatalogue(empty, <PolicySelector policies={[]} selectedPolicies={[]} onPolicyToggle={vi.fn()} noneReason="No Budget results are published yet" />));
-    const none = screen.getByRole("button", { name: "Select policies: No Budget results are published yet" });
+    const none = screen.getByRole("button", { name: "No policies yet: No Budget results are published yet" });
     expect(none).toHaveTextContent("No policies yet");
     expect(none).toBeDisabled();
   });
