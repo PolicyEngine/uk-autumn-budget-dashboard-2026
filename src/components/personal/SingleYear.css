@@ -1145,9 +1145,10 @@
   display: block;
 }
 
+/* The line spans the panel's full width; it wraps on phones */
 .waterfall-sentence {
   margin: 6px 0 0;
-  max-width: 72ch;
+  max-width: none;
   font-size: 0.8rem;
   line-height: 1.45;
   color: var(--pe-gray-600);

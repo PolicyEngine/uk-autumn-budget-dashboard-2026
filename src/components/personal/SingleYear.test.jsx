@@ -1156,4 +1156,12 @@ describe("the waterfall's one line", () => {
     // The bars start a round £100 below the lowest point
     expect(waterfallScaleStart({ before: 17947, after: 18007 }, [step("A", 43), step("B", 17)])).toBe(17800);
   });
+
+  it("spans the panel's full width: no max-width cap on the line", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const css = readFileSync(join(process.cwd(), "src", "components", "personal", "SingleYear.css"), "utf8");
+    const rule = css.match(/\.waterfall-sentence\s*\{([^}]*)\}/)[1];
+    expect(rule).not.toMatch(/max-width:\s*\d/);
+  });
 });
