@@ -524,22 +524,23 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       // runFrom: where the current run down began
       // A scroll the page made (utils/pageScroll) is not the reader's: it
       // never brings the nav in over what it lined up under the bars
+      // At the page's top the nav is always hidden, so the top looks as it
+      // does on load (unless the pointer or focus is in it), whoever scrolled
+      if (y < (nav?.offsetHeight || 0)) {
+        last = prev = runFrom = y;
+        if (isShown() && !holds()) {
+          clear();
+          root.removeAttribute("data-site-nav-shown");
+        }
+        isProgrammaticScroll(y);
+        return;
+      }
       if (isProgrammaticScroll(y)) {
         last = prev = runFrom = y;
         return;
       }
       if (y < prev) runFrom = y;
       prev = y;
-      // At the page's top the nav is always hidden, so the top looks as it
-      // does on load (unless the pointer or focus is in it)
-      if (y < (nav?.offsetHeight || 0)) {
-        last = y;
-        if (isShown() && !holds()) {
-          clear();
-          root.removeAttribute("data-site-nav-shown");
-        }
-        return;
-      }
       if (y > last + 6) {
         last = y;
         if (isShown() && !holds() && y - runFrom > SITE_NAV_SCROLL_HIDE_PX) hideAfter(0);

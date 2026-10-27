@@ -93,6 +93,8 @@ export function scrollPageTo(top, behavior = "auto") {
 // The views' section headings: a page-made landing never leaves one under
 // the bars
 const HEADINGS = ".section-heading, .method-section-heading";
+// Within this of the page's top (px), a heading is cleared from the top
+const NEAR_TOP = 80;
 
 /**
  * `top` moved up, if needed, so that at it no shown section heading is
@@ -109,12 +111,17 @@ export function clearOfHeadings(top) {
     const rect = heading.getBoundingClientRect();
     if (rect.height > 0) headings.push([rect.top + y, rect.bottom + y]);
   }
+  const from = top;
   // Moving up can bring an earlier heading under the bars: look again
   for (let round = 0; round < 4; round += 1) {
     const hit = headings.find(([start, end]) => end > top && start < top + bottom + 8);
     if (!hit) break;
     top = hit[0] - bottom - STICKY_GAP;
   }
+  // Near the page's top the tab rows are about to unstick (and grow), so a
+  // place just above where they stick never settles: the top itself, laid
+  // out with every heading clear, is where it goes
+  if (top < from && top < NEAR_TOP) top = 0;
   return top;
 }
 
