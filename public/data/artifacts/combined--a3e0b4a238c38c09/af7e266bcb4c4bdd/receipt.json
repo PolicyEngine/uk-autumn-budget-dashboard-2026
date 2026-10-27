@@ -1,0 +1,328 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "policyengine-uk default economic assumptions",
+        "status": "pre_budget",
+        "vintage": "as shipped in the installed policyengine-uk"
+      },
+      "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+    },
+    "composition": {
+      "baseline_applied_before_data_load": false,
+      "reform_applied_before_data_load": false
+    },
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "61e8e337410f224c1e8603f9261e88b4cf48e878c724593e2b69ad2a49ef4e3e",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "description": "One simulation of: domestic_electricity_zero_vat, fuel_duty_rise_deferral, road_fuel_vat_cut, state_pension_income_tax_protection, threshold_freeze_2031_32, warm_home_discount_top_up",
+    "digests": {
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "outputs_sha256": "bb9dff81646ad7e1751bcf9a2022b9ab2573910001cd44710139802a78294af5",
+      "receipt_sha256": "c50c9847d2eb816293746e952b92cb6fdf29203000b64aa61a1899fd1bea3e0b"
+    },
+    "files": {
+      "age_impact.csv": "23f453207ec60d92054553fdfc3f24c56ceac29bf5bea98d33aaad116e52e64d",
+      "budgetary_impact.csv": "f03202d32affe77e4ecc31b554ed124ccd7371da0211f17fed1f0e87876c59b9",
+      "distributional_impact.csv": "ea0945c72ed11f0a160078ba0fcac01a748fea394712f016db3c0087b6295990",
+      "household_scatter_binned.csv": "d3d7ac950a0d5df35c628500dd3d75a45669b904dc7377be785cbbc9baf041a9",
+      "income_curve.csv": "f27d112f7640e67a5444e337a6bf8885c9ba665b94b80bd932d2d4e7b5ed7de5",
+      "metrics.csv": "8118986196ba6e92da4728c0c3b325539c9327b8c02b7f3312366ca5a7de2096",
+      "poverty_inequality.csv": "425424298cebccd2c785f512951e43a0a3b1aaa1666677be80facef07e50cf77",
+      "winners_losers.csv": "7ebc795d4aee337acda5a1aedb95dccda1b21e660c20b10fa09518a696fb6a28"
+    },
+    "generated_at": "2026-10-27T11:54:55.251848+00:00",
+    "generator_argv": [
+      "/Users/vahid/ab2026-badr-pkg6/src/uk_budget_data/cli.py",
+      "generate",
+      "--artifacts",
+      "--backend",
+      "modal",
+      "--reforms",
+      "domestic_electricity_zero_vat",
+      "fuel_duty_rise_deferral",
+      "road_fuel_vat_cut",
+      "state_pension_income_tax_protection",
+      "threshold_freeze_2031_32",
+      "warm_home_discount_top_up",
+      "--combined",
+      "domestic_electricity_zero_vat",
+      "fuel_duty_rise_deferral",
+      "road_fuel_vat_cut",
+      "state_pension_income_tax_protection",
+      "threshold_freeze_2031_32",
+      "warm_home_discount_top_up"
+    ],
+    "git_sha": "0fc752f31af29bedd0e56243a9efad734fa51be5",
+    "key": "combined--a3e0b4a238c38c09",
+    "measure_ids": [
+      "domestic_electricity_zero_vat",
+      "fuel_duty_rise_deferral",
+      "road_fuel_vat_cut",
+      "state_pension_income_tax_protection",
+      "threshold_freeze_2031_32",
+      "warm_home_discount_top_up"
+    ],
+    "member_outputs_sha256": {
+      "domestic_electricity_zero_vat": "2c2941af64f0bd821aca96e1c444eb648454a8dcac1310cf0737119e025aa5d4",
+      "fuel_duty_rise_deferral": "b9fbf5e7841e73138a85496ece930d9e11b6f98e18e63dcc00627542f5532191",
+      "road_fuel_vat_cut": "c98441009b7d0c5f85f7ac7fbcd6c72d7ae7e9f0f2550a4c7e62426d8137cfb4",
+      "state_pension_income_tax_protection": "9af558b2c418c7787fdedb371a5c6ffb8f196dbef7b30d98a2dc1deecbd44de1",
+      "threshold_freeze_2031_32": "bc0564afe73baf247db506c2b4a2ac60278461273b752b276d33ac33d05351e4",
+      "warm_home_discount_top_up": "0bf76a30f8ae526223fe16f5d036a0ab56f59ecfffd1ccb4ddcc237f98153d33"
+    },
+    "members": [
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "domestic_electricity_zero_vat baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": true,
+        "id": "domestic_electricity_zero_vat",
+        "reform": {
+          "binding": "code_revision",
+          "kind": "reform",
+          "name": "domestic_electricity_zero_vat",
+          "reform_sha256": "932672aaac6c8872ce206f73eff2641887e585b40a39df885e060cd6ca366830",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "fuel_duty_rise_deferral baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "fuel_duty_rise_deferral",
+        "reform": {
+          "binding": "code_revision",
+          "kind": "reform",
+          "name": "fuel_duty_rise_deferral",
+          "reform_sha256": "78d9a530600c4d6b3774ad0d3b47adfd55adf1649d35b05e1e0f16e75c3fa378",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "road_fuel_vat_cut baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "road_fuel_vat_cut",
+        "reform": {
+          "binding": "code_revision",
+          "kind": "reform",
+          "name": "road_fuel_vat_cut",
+          "reform_sha256": "ed1c3bc2327417261ae4d8e9bd31fb07392f441113309cc4c698ee3d5614607d",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "state_pension_income_tax_protection baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "state_pension_income_tax_protection",
+        "reform": {
+          "binding": "code_revision",
+          "kind": "reform",
+          "name": "state_pension_income_tax_protection",
+          "reform_sha256": "bb0c06c74ff64f10568311b0f63c63c238a143bb07c7f2b4d9c837f0bcb9dd3f",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "threshold_freeze_2031_32 baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "threshold_freeze_2031_32",
+        "reform": {
+          "binding": "content",
+          "kind": "reform",
+          "name": "threshold_freeze_2031_32",
+          "reform_sha256": "063198c6a6e3feafc408048ec32bee806d2ab113a01315e43690d6eabad61a21",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "warm_home_discount_top_up baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "warm_home_discount_top_up",
+        "reform": {
+          "binding": "code_revision",
+          "kind": "reform",
+          "name": "warm_home_discount_top_up",
+          "reform_sha256": "510ed1ca39b031b82fa8bb50a3588c57aaa61ca5c22ec58ea386fc220498499b",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      }
+    ],
+    "model_limits": [
+      {
+        "key": "vat_consumption_coverage",
+        "parameters": [
+          "variable:vat",
+          "variable:vat_change"
+        ],
+        "reason": "The installed model grosses household VAT up to receipts by a single factor of 0.38 (gov.simulation.microdata_vat_coverage). policyengine-uk #2187 divides instead by survey consumption coverage times the household share of VAT receipts, 0.67 \u00d7 0.7 = 0.469, so this model's VAT is about 23% higher (the UK hub's notice 59 puts it about 24% high on Microcosm), and a measure that moves a VAT rate, the VAT base or the consumption VAT is charged on can be overstated by as much. A measure built with the VAT base template is held too, though the term the template adds is not grossed. #2187 is not in this model. Until a pair with it is adopted, such measures are held at provisional."
+      }
+    ],
+    "model_limits_registry_sha256": "71d1701fd8edde78d344271733445f61eb74372c500d915b4b2082290e0ca7a9",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": [
+        [
+          "apply_vat_base_change"
+        ],
+        [
+          "apply_vat_base_change"
+        ],
+        [
+          "apply_vat_base_change"
+        ],
+        [
+          "apply_age_conditioned_allowance"
+        ],
+        [
+          "apply_benefit_receipt_payment"
+        ]
+      ]
+    },
+    "name": "Combined: Zero VAT on domestic electricity, Fuel duty rises deferred, VAT cut on road fuel, State Pension income tax protection, Threshold freeze to 2031-32, Warm Home Discount top-up",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.10.2",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "domestic_electricity_zero_vat+fuel_duty_rise_deferral+road_fuel_vat_cut+state_pension_income_tax_protection+threshold_freeze_2031_32+warm_home_discount_top_up baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.10.2",
+      "certificate_sha256": "d7025435ec1b8aa706737be63e57c17983ffd434f0c0ee22451370aca7e7ae4b",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.132.6",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "7c61c3dea07f55a57db469c8f14affcd23fb44d4c4bb7b87eee7c6f9ef7dce4c"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "build_model_version": "2.132.6",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "dataset_sha256": "810ba980005a8b907cb51464279fa5e0125464b7af9a4871b7f6744c30951ece",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261019T083323Z-6cba5d71",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.132.6"
+    },
+    "outputs_sha256": "bb9dff81646ad7e1751bcf9a2022b9ab2573910001cd44710139802a78294af5",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "code_revision",
+      "kind": "reform",
+      "name": "domestic_electricity_zero_vat+fuel_duty_rise_deferral+road_fuel_vat_cut+state_pension_income_tax_protection+threshold_freeze_2031_32+warm_home_discount_top_up",
+      "reform_sha256": "f55a97dc92cd8cdc9c37f9f9e5b9ad371f35c994cdcb498d7af17ad6c0bee8fb",
+      "representation": "policyengine-uk.scenario_composition/v1"
+    },
+    "runtime": {
+      "platform": "linux",
+      "python_version": "3.13.3"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.10.2"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

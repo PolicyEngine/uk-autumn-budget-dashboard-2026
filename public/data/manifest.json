@@ -55,6 +55,42 @@
         2030,
         2031
       ]
+    },
+    "combined--a3e0b4a238c38c09": {
+      "artifact": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd",
+      "artifact_sha256": "af7e266bcb4c4bddaebf5ea4565c72fd4b171e08aa117388a2d24d4080d7ea00",
+      "data_limits": [],
+      "description": "One simulation of: domestic_electricity_zero_vat, fuel_duty_rise_deferral, road_fuel_vat_cut, state_pension_income_tax_protection, threshold_freeze_2031_32, warm_home_discount_top_up",
+      "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
+      "measures": [
+        "domestic_electricity_zero_vat",
+        "fuel_duty_rise_deferral",
+        "road_fuel_vat_cut",
+        "state_pension_income_tax_protection",
+        "threshold_freeze_2031_32",
+        "warm_home_discount_top_up"
+      ],
+      "member_outputs_sha256": {
+        "domestic_electricity_zero_vat": "2c2941af64f0bd821aca96e1c444eb648454a8dcac1310cf0737119e025aa5d4",
+        "fuel_duty_rise_deferral": "b9fbf5e7841e73138a85496ece930d9e11b6f98e18e63dcc00627542f5532191",
+        "road_fuel_vat_cut": "c98441009b7d0c5f85f7ac7fbcd6c72d7ae7e9f0f2550a4c7e62426d8137cfb4",
+        "state_pension_income_tax_protection": "9af558b2c418c7787fdedb371a5c6ffb8f196dbef7b30d98a2dc1deecbd44de1",
+        "threshold_freeze_2031_32": "bc0564afe73baf247db506c2b4a2ac60278461273b752b276d33ac33d05351e4",
+        "warm_home_discount_top_up": "0bf76a30f8ae526223fe16f5d036a0ab56f59ecfffd1ccb4ddcc237f98153d33"
+      },
+      "name": "Combined: Zero VAT on domestic electricity, Fuel duty rises deferred, VAT cut on road fuel, State Pension income tax protection, Threshold freeze to 2031-32, Warm Home Discount top-up",
+      "outputs_sha256": "bb9dff81646ad7e1751bcf9a2022b9ab2573910001cd44710139802a78294af5",
+      "receipt_sha256": "c50c9847d2eb816293746e952b92cb6fdf29203000b64aa61a1899fd1bea3e0b",
+      "status": "provisional",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
     }
   },
   "execution": {
@@ -272,8 +308,8 @@
     }
   },
   "release": "uk-autumn-budget-2026",
-  "revision": 4,
+  "revision": 5,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [],
-  "updated_at": "2026-10-27T11:43:24.842593+00:00"
+  "updated_at": "2026-10-27T11:55:19.996734+00:00"
 }
