@@ -51,14 +51,16 @@ import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 
 // The views, as tabs under the band. `year` and `policies` say which of
 // the band's pills apply to a view; the others stay in the band, faded and
-// inactive, their reason in their accessible names. Pre-measures forecast is current law (incomes and poverty
-// without the measures) and the OBR forecast behind it, Policies describes every measure and Methodology is text: no
+// inactive, their reason in their accessible names. Pre-measures forecast is
+// current law (incomes and poverty without the measures), the OBR forecast
+// behind it and the OBR's past forecasts beside the outturn, Policies
+// describes every measure and Methodology is text: no
 // pill applies to them. Population impact's sub-tabs (Public finances, All
 // households, Young people, Pensioners, Living standards, Poverty) are in
 // PopulationImpactView; the Pre-measures forecast tab's (Living standards,
-// Poverty, Forecast changes, Forecast vintages) in LivingStandardsTab. Living standards and Poverty
-// are twins: with the selected measures on Population impact, without them
-// (current law) on the Pre-measures forecast.
+// Poverty, Forecast changes, Forecast vintages) in LivingStandardsTab.
+// Living standards and Poverty are twins: with the selected measures on
+// Population impact, without them (current law) on the Pre-measures forecast.
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },
   { value: "household", label: "Household impact", year: true, policies: true },

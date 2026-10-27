@@ -67,10 +67,13 @@ function tipOf(button) {
 const gbp = (v) => `£${Math.round(v).toLocaleString("en-GB")}`;
 
 describe("a forecasts file that cannot be shown", () => {
-  it("says it is loading until the file is read", () => {
+  it("says it is loading until the file is read, in grey cards with no figure", () => {
     vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
-    render(<ForecastVintagesView />);
+    const { container } = render(<ForecastVintagesView />);
     expect(screen.getByRole("status")).toHaveTextContent("Loading OBR forecasts…");
+    // As the outlook's other sub-tabs load (useOutlook's OutlookStatus)
+    expect(container.querySelectorAll(".skeleton-card").length).toBeGreaterThan(0);
+    expect(container.textContent).not.toMatch(/\d/);
   });
 
   const withText = () => {
@@ -600,6 +603,47 @@ describe("as another view's sub-tab", () => {
     rerender(<ForecastVintagesView active related={SIBLING} />);
     expect(heading(cpi)).toBeInTheDocument();
     expect(window.location.search).toBe("?tab=outlook&sub=vintages&variable=cpi");
+  });
+
+  // Found by review round 19: with no measures drawn, nothing took the
+  // measure a link asked for out of the address, so it went on to the
+  // holding view's other sub-tabs and to other views
+  const withLater = () => {
+    const data = structuredClone(DATA);
+    const vintages = data.variables[0].level.vintages;
+    vintages.push({ ...vintages[vintages.length - 1], id: "efo_later", label: "Later", year: 2026, month: 10 });
+    return data;
+  };
+  it.each([
+    ["cannot be read", () => respond("", 404)],
+    ["holds a forecast not yet checked", () => respond(withLater())],
+  ])("takes ?variable= out of the address while hidden when its file %s", async (_name, fetcher) => {
+    window.history.replaceState({}, "", "/?tab=outlook&sub=vintages&variable=psnb");
+    vi.stubGlobal("fetch", fetcher());
+    const { rerender } = render(<ForecastVintagesView related={SIBLING} />);
+    expect(await screen.findByText("OBR forecasts are unavailable")).toBeInTheDocument();
+    // Shown, it keeps what the link asked for
+    expect(window.location.search).toBe("?tab=outlook&sub=vintages&variable=psnb");
+    rerender(<ForecastVintagesView active={false} related={SIBLING} />);
+    expect(window.location.search).toBe("?tab=outlook&sub=vintages");
+  });
+
+  it("keeps ?variable= while its file loads, then opens that measure", async () => {
+    window.history.replaceState({}, "", "/?tab=outlook&sub=vintages&variable=psnb");
+    let release;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise((resolve) => {
+      release = () => resolve(new Response(TEXT));
+    })));
+    const { rerender } = render(<ForecastVintagesView related={SIBLING} />);
+    rerender(<ForecastVintagesView active={false} related={SIBLING} />);
+    expect(window.location.search).toBe("?tab=outlook&sub=vintages&variable=psnb");
+    release();
+    // Drawn while hidden: the measure is read, then leaves the address
+    await screen.findByRole("heading", { name: "OBR forecasts beside the outturn" });
+    expect(window.location.search).toBe("?tab=outlook&sub=vintages");
+    rerender(<ForecastVintagesView active related={SIBLING} />);
+    expect(heading(PSNB)).toBeInTheDocument();
+    expect(window.location.search).toBe("?tab=outlook&sub=vintages&variable=psnb");
   });
 
   it("opens the default for a measure it does not have, and writes nothing", async () => {

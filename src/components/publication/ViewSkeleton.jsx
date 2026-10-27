@@ -63,7 +63,7 @@ const LAYOUTS = {
   "outlook:forecast": [
     { icon: "trend", title: "Economic forecast", cards: [["lines", "wide"], ["lines"], ["lines"]] },
   ],
-  // The view's own heading has the forecasts' dates, which a placeholder
+  // The view's own subtitle has the forecasts' dates, which a placeholder
   // leaves out
   "outlook:vintages": [
     { title: "OBR forecasts beside the outturn", subtitle: "The OBR's forecasts beside the ONS outturn. These are the OBR's and the ONS's figures, not PolicyEngine's.", cards: [["lines", "wide"]] },

@@ -36,6 +36,11 @@ from uk_budget_data.forecast_vintages import variables as V
 
 pytestmark = pytest.mark.xdist_group("forecast_vintages")
 
+# No property here is about time, and on a busy host an example that takes
+# under a millisecond has taken 295 ms (review round 19), so none of them
+# has Hypothesis's 200 ms deadline
+NO_DEADLINE = settings(deadline=None)
+
 ROOT = Path(__file__).resolve().parent.parent
 COMMITTED = ROOT / B.OUTPUT_PATH
 REVIEW_CSV = ROOT / "data_inputs" / "public_data_review.csv"
@@ -411,6 +416,7 @@ def test_the_database_reader_needs_an_outturn_row(tmp_path):
         hofd.read_sheet(workbook, "UKGDP")
 
 
+@NO_DEADLINE
 @given(
     st.integers(1990, 2100),
     st.sampled_from(hofd.MONTH_NAMES),
@@ -534,6 +540,7 @@ def test_blank_ons_values_are_missing_not_zero(tmp_path):
     assert series.release_date == "2026-09-29"
 
 
+@NO_DEADLINE
 @given(
     st.dictionaries(st.integers(2000, 2010), st.floats(-1e6, 1e6), min_size=1)
 )
@@ -622,6 +629,7 @@ def test_growth_needs_the_period_before():
     }
 
 
+@NO_DEADLINE
 @given(st.sets(st.integers(1950, 2030), min_size=1, max_size=40))
 def test_growth_is_only_ever_on_the_year_before(years):
     levels = {y: 100.0 + y for y in years}
@@ -751,8 +759,7 @@ def _committed_measures():
     ]
 
 
-# Each example parses the committed document; its time is not what is tested.
-@settings(deadline=None)
+@NO_DEADLINE
 @given(
     st.sampled_from(_committed_measures()),
     st.integers(0, 32),
@@ -1022,6 +1029,7 @@ def test_every_committed_figure_is_written_to_four_decimals(committed):
                     assert value == 0 or abs(value) >= 10**-B.DECIMALS
 
 
+@NO_DEADLINE
 @given(st.dictionaries(st.integers(1900, 2100), st.floats(-1e9, 1e9)))
 def test_the_build_writes_no_figure_finer_than_four_decimals(values):
     # Every series the file holds is written by _ordered (outturn and
@@ -1304,8 +1312,7 @@ def _kind_verdict(data: dict, variable_id: str, name: str) -> bool:
     return True
 
 
-# Each example parses the committed document; its time is not what is tested.
-@settings(deadline=None)
+@NO_DEADLINE
 @given(st.sampled_from(KIND_CASES), st.integers(0, 64), st.data())
 def test_figures_after_the_launch_never_change_the_verdict(case, which, draw):
     # From any shared case, taken or refused: two sets of figures after a
@@ -1332,8 +1339,7 @@ def test_figures_after_the_launch_never_change_the_verdict(case, which, draw):
     assert len(verdicts) == 1
 
 
-# Each example parses the committed document; its time is not what is tested.
-@settings(deadline=None)
+@NO_DEADLINE
 @given(
     st.sampled_from(
         [m for m in _committed_measures() if m[0] in ("cpi", "real_gdp")]
@@ -1359,8 +1365,7 @@ def test_a_figure_past_its_bounds_is_always_refused(target, which, draw):
     assert not _kind_verdict(data, variable_id, name)
 
 
-# Each example parses the committed document; its time is not what is tested.
-@settings(deadline=None)
+@NO_DEADLINE
 @given(
     st.sampled_from(
         [
@@ -1461,6 +1466,7 @@ _LABEL = st.text(
 )
 
 
+@NO_DEADLINE
 @given(
     st.lists(_LABEL, max_size=3),
     st.lists(st.booleans(), min_size=6, max_size=6),
@@ -1483,6 +1489,7 @@ def test_no_spelling_of_an_obr_uk_host_is_ever_requested(labels, upper, dot):
     assert seen == []
 
 
+@NO_DEADLINE
 @given(st.lists(_LABEL, min_size=1, max_size=4))
 def test_only_the_hosts_the_inputs_come_from_are_requested(labels):
     host = ".".join(labels)
@@ -1499,6 +1506,26 @@ def test_only_the_hosts_the_inputs_come_from_are_requested(labels):
             with pytest.raises(fetch.FetchError):
                 fetch._get(http, f"https://{host}/x")
             assert seen == []
+
+
+# Found by review round 22: hosts httpx cannot read raised its InvalidURL,
+# which is not an httpx.HTTPError, and the property above drew them about
+# one run in twenty
+@pytest.mark.parametrize(
+    "url",
+    ["https://0.0.0.00/x", "https://0.0.0.0000/x", "https://1.2.3.04/x"],
+)
+def test_a_url_httpx_cannot_read_is_refused_unrequested(url):
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.host)
+        return httpx.Response(200, content=b"ok")
+
+    with fetch.make_client(httpx.MockTransport(handler)) as http:
+        with pytest.raises(fetch.FetchError, match="Invalid IPv4 address"):
+            fetch._get(http, url)
+    assert seen == []
 
 
 def test_a_redirect_off_the_source_hosts_is_refused():
@@ -1531,6 +1558,7 @@ def test_every_download_is_from_a_source_host():
 # --- Periods and launches ----------------------------------------------------
 
 
+@NO_DEADLINE
 @given(st.integers(1900, 2100), st.integers(1, 4))
 def test_quarter_numbers_round_trip(year, quarter):
     label = periods.quarter_label(year, quarter)
@@ -1539,6 +1567,7 @@ def test_quarter_numbers_round_trip(year, quarter):
     assert periods.sort_key(following) == periods.sort_key(label) + 1
 
 
+@NO_DEADLINE
 @given(st.integers(1900, 2100))
 def test_years_and_fiscal_years_step_by_one(year):
     assert periods.next_period(year) == year + 1
@@ -1549,6 +1578,7 @@ def test_years_and_fiscal_years_step_by_one(year):
     )
 
 
+@NO_DEADLINE
 @given(st.integers(2010, 2030), st.integers(1, 12))
 def test_every_launch_is_complete_before_publication(year, month):
     published_quarter = year * 4 + (month - 1) // 3

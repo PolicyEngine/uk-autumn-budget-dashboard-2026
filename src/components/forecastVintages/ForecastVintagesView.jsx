@@ -22,8 +22,9 @@ import ViewSwitch from "../ViewSwitch";
 import Tip from "../Tip";
 import Disclosure from "../Disclosure";
 import UnavailableNotice from "../publication/UnavailableNotice";
+import LoadingSkeleton from "../publication/LoadingSkeleton";
 import LsCard from "../livingStandards/LsCard";
-import { useVariableParam } from "./useVariableParam";
+import { dropVariableParam, useVariableParam } from "./useVariableParam";
 import VintageChart, { legendItems } from "./VintageChart";
 import { buildChartCsv } from "../../utils/chartCsv";
 import { NEWEST_SHOWN, earliestForecast, loadForecastVintages, vintageLabel } from "../../utils/forecastVintages/load";
@@ -447,12 +448,18 @@ export default function ForecastVintagesView({ active = true, related }) {
   }, []);
 
   const { loading, data, error, newer } = state;
+  // A file read but not shown never mounts ForecastsView, whose
+  // useVariableParam takes ?variable= out of the address while the view is
+  // hidden, so it goes here. While the file loads it stays, for
+  // ForecastsView to read once the measures are drawn.
+  const unshown = !loading && (newer || error || !data);
+  useEffect(() => {
+    if (unshown && !active) dropVariableParam();
+  });
+
   if (loading) {
-    return (
-      <p className="view-status" role="status">
-        Loading OBR forecasts…
-      </p>
-    );
+    // Grey cards, as the outlook's other sub-tabs show while theirs loads
+    return <LoadingSkeleton label="Loading OBR forecasts…" />;
   }
   if (newer) {
     return (

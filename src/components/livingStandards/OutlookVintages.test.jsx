@@ -10,6 +10,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import App from "../../App";
+import { resetForecastVintages } from "../../utils/forecastVintages/load";
 
 const VINTAGES = readFileSync("public/data/obr_forecast_vintages.json", "utf8");
 // The address's parameters, whatever their order
@@ -19,13 +20,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// The vintages file as committed; the outlook and the manifest missing
-function stubFetch() {
+// The vintages file as committed, unless `vintages` says otherwise; the
+// outlook and the manifest missing
+function stubFetch({ vintages = () => new Response(VINTAGES, { status: 200 }) } = {}) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url) => {
       const path = String(url);
-      if (path.endsWith("obr_forecast_vintages.json")) return new Response(VINTAGES, { status: 200 });
+      if (path.endsWith("obr_forecast_vintages.json")) return vintages();
       if (path.endsWith("living_standards_outlook.json")) return new Response("", { status: 404 });
       if (path.endsWith("manifest.json")) return new Response(null, { status: 404 });
       return new Response("reform_id,year,value\n", { status: 200 });
@@ -81,4 +83,22 @@ it("keeps a ?variable= a link brought until Forecast vintages is first opened, w
     await screen.findByRole("heading", { level: 3, name: "Public sector net borrowing" }),
   ).toBeInTheDocument();
   expect(address()).toEqual({ tab: "outlook", sub: "vintages", variable: "psnb" });
+});
+
+// Found by review round 19: the measure a link asked for stayed in the
+// address, on the outlook's other sub-tabs and on other views, when the
+// vintages file could not be read
+it("takes a link's ?variable= out of the address on leaving Forecast vintages whose file cannot be read", async () => {
+  resetForecastVintages();
+  stubFetch({ vintages: () => new Response("", { status: 404 }) });
+  window.history.replaceState({}, "", "/?tab=outlook&sub=vintages&variable=psnb");
+  render(<App />);
+  expect(await screen.findByText("OBR forecasts are unavailable")).toBeInTheDocument();
+  expect(address()).toEqual({ tab: "outlook", sub: "vintages", variable: "psnb" });
+
+  fireEvent.click(screen.getByRole("tab", { name: "Forecast changes" }));
+  expect(address()).toEqual({ tab: "outlook", sub: "forecast" });
+
+  fireEvent.click(screen.getByRole("tab", { name: "Policies" }));
+  expect(address()).toEqual({ tab: "policies" });
 });

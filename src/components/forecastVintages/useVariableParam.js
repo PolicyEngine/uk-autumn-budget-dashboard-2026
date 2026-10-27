@@ -18,12 +18,19 @@ function writeParam(value) {
 }
 
 /**
+ * Take ?variable= out of the address, for a hidden view whose file could
+ * not be shown: useVariableParam is mounted only with the measures drawn.
+ */
+export const dropVariableParam = () => writeParam(null);
+
+/**
  * The measure the forecast vintages view shows, kept in the address as
  * ?variable= while the view is shown, so a link opens it. The first value
  * is the default and is never written; a value the view does not have
  * opens the default. The view is a sub-tab of Pre-measures forecast, so it
  * never touches ?sub=, and once mounted it takes ?variable= out of the
- * address itself while it is hidden (App.jsx drops only ?sub=).
+ * address itself while it is hidden (App.jsx drops only ?sub=); with no
+ * measures to draw, ForecastVintagesView does (dropVariableParam).
  *
  * @param {string[]} values - The measures' ids; the first is the default
  * @param {boolean} [active] - Whether the view is shown (kept mounted while hidden)

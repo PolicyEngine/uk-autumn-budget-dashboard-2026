@@ -74,6 +74,10 @@ def _get(client: httpx.Client, url: str, tries: int = 4) -> bytes:
     for attempt in range(tries):
         try:
             response = client.get(url)
+        except httpx.InvalidURL as error:
+            # A URL httpx cannot read, such as one whose host is an IPv4
+            # address with a leading zero, is not an httpx.HTTPError
+            raise FetchError(f"{url}: {error}") from error
         except httpx.HTTPError as error:
             if attempt == tries - 1:
                 raise FetchError(f"{url}: {error}") from error
