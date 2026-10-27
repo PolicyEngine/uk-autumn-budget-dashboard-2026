@@ -143,7 +143,11 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
     () => [...hiddenParts("net", hiddenKeys), ...(hiddenKeys.includes("total") ? ["total"] : [])],
     [hiddenKeys],
   );
-  const [focus, setFocus] = useState(null);
+  // The chip hovered, shared with the marginal rate card when the two
+  // have one Show control (`sync.focus`)
+  const [ownFocus, setOwnFocus] = useState(null);
+  const focus = sync?.setFocus ? sync.focus : ownFocus;
+  const setFocus = sync?.setFocus ?? setOwnFocus;
   const width = measured > 0 ? measured : narrow ? 358 : 560;
   const title = `Household net income, ${yearLabel}`;
   // The file and image name the view shown
@@ -550,7 +554,16 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
         </div>
       </div>
       <div className="single-year-legend chart-legend">
-        {netParts ? (
+        {netParts && sync?.sharedLegend ? (
+          // The Show control is above the pair; only this card's own key
+          // item (the shaded bands) stays here
+          drops.length > 0 && (
+            <span className="series-toggle-extra">
+              <span className="series-toggle-band" style={{ background: DROP_FILL }} aria-hidden="true" />
+              {DROP_ITEM.label}
+            </span>
+          )
+        ) : netParts ? (
           // The layers and the total as chips: show or hide each, hover to
           // bring one forward
           <SeriesToggle

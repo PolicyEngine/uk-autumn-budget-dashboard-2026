@@ -153,7 +153,10 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
     [hiddenKeys],
   );
   // The component a chip or the pointer is on (its parts come forward)
-  const [focusKey, setFocusKey] = useState(null);
+  const [ownFocusKey, setOwnFocusKey] = useState(null);
+  // Shared with the net income card when the pair has one Show control
+  const focusKey = sync?.setFocus ? sync.focus : ownFocusKey;
+  const setFocusKey = sync?.setFocus ?? setOwnFocusKey;
   const focusParts = focusKey ? (SWEEP_COMPONENTS.find((component) => component.key === focusKey)?.rate ?? [focusKey]) : null;
   const focus = focusParts?.[0] ?? null;
   const setFocus = setFocusKey;
@@ -391,7 +394,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
         </ResponsiveContainer>
       </div>
       <div className="single-year-legend chart-legend">
-        {parts ? (
+        {parts && sync?.sharedLegend ? null : parts ? (
           // The parts and the total as chips, as the net income card's
           <SeriesToggle
             lead="Show:"

@@ -128,115 +128,6 @@
   margin-top: 8px;
 }
 
-/* Taxes and benefits table */
-.programme-table-wrap {
-  width: 100%;
-  overflow-x: auto;
-  margin-top: 8px;
-}
-
-.programme-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--fs-small);
-  font-variant-numeric: tabular-nums;
-}
-
-.programme-table th,
-.programme-table td {
-  padding: 8px 10px;
-  text-align: left;
-  border-bottom: 1px solid var(--pe-gray-100);
-}
-
-.programme-table thead th {
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--pe-gray-600);
-  border-bottom: 1px solid var(--pe-gray-200);
-}
-
-.programme-table .num {
-  text-align: right;
-  white-space: nowrap;
-}
-
-.programme-table tbody th {
-  font-weight: 400;
-  color: var(--pe-gray-800);
-}
-
-.programme-group th {
-  padding-top: 16px;
-  font-size: var(--fs-caption);
-  font-weight: 600 !important;
-  color: var(--pe-gray-600) !important;
-  background: var(--pe-gray-50);
-}
-
-.programme-row.depth-1 th {
-  padding-left: 34px;
-  color: var(--pe-gray-600);
-}
-
-.programme-row.depth-1 td {
-  color: var(--pe-gray-600);
-}
-
-.programme-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.programme-toggle:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-}
-
-.programme-chevron {
-  display: inline-block;
-  width: 12px;
-  font-size: 0.9em;
-  color: var(--pe-gray-600);
-}
-
-.programme-row:not(.depth-1) th > .programme-name {
-  /* Lines up with the toggled rows' names */
-  padding-left: 18px;
-}
-
-.programme-table .change {
-  font-weight: 600;
-}
-
-.programme-table .change.is-gain {
-  color: var(--pe-teal-700);
-}
-
-.programme-table .change.is-loss {
-  color: var(--c-loss-text);
-}
-
-.programme-table .change.is-zero {
-  font-weight: 400;
-  color: var(--pe-gray-500); /* 4.8:1 on white, as WCAG 1.4.3 needs */
-}
-
-.programme-detail td {
-  padding-top: 0;
-  padding-left: 28px;
-  font-size: var(--fs-caption);
-  color: var(--pe-gray-600);
-}
-
 /* Net income and the marginal tax rate across earnings: a pair of cards in
    the dashboard's charts-grid (globals.css), whose shared rows line up the
    titles, descriptions, plots, x-axes and legends; stacked on a phone. The
@@ -357,73 +248,6 @@
   color: var(--pe-gray-600);
 }
 
-.breakdown-table thead th {
-  font-weight: 500;
-  color: var(--pe-gray-500);
-}
-
-.breakdown-table .programme-row.depth-0 th,
-.breakdown-table .programme-row.depth-0 td {
-  padding-top: 10px;
-  padding-bottom: 10px;
-}
-
-.breakdown-table .programme-row.depth-0 th {
-  color: var(--pe-gray-800);
-}
-
-.breakdown-table .programme-row.depth-1 th {
-  padding-left: 34px;
-}
-
-.breakdown-table .programme-row.depth-2 th {
-  padding-left: 52px;
-  color: var(--pe-gray-500);
-}
-
-.breakdown-table .programme-row.depth-2 td {
-  color: var(--pe-gray-500);
-}
-
-.breakdown-table .programme-row:not(.depth-0) td.change {
-  font-weight: 500;
-}
-
-.breakdown-dot {
-  display: inline-block;
-  flex: none;
-  width: 10px;
-  height: 10px;
-  margin-right: 8px;
-  border-radius: 2px;
-  vertical-align: baseline;
-}
-
-.breakdown-table .programme-name {
-  display: inline-flex;
-  align-items: center;
-}
-
-.breakdown-table th > .programme-name {
-  padding-left: 18px;
-}
-
-.breakdown-table .programme-toggle .programme-name {
-  padding-left: 0;
-}
-
-.breakdown-net-row th,
-.breakdown-net-row td {
-  font-weight: 600;
-  color: var(--pe-gray-900);
-  border-top: 1px solid var(--pe-gray-300);
-  border-bottom: none;
-}
-
-.breakdown-net-row th {
-  padding-left: 46px;
-}
-
 /* "About these figures" under the breakdown: the rows' notes, then the
    method, each as term then text */
 .breakdown-about-heading {
@@ -471,11 +295,6 @@
   }
 }
 
-.breakdown-table .programme-chevron {
-  width: 14px;
-  font-size: 1rem;
-  color: var(--pe-gray-700);
-}
 
 /* The breakdown and the split by policy: side by side on a wide screen,
    each column's heading and card on two shared rows, so the headings and
@@ -982,13 +801,6 @@
   }
 }
 
-/* A phone's one-column breakdown: what the net row's figures are */
-.breakdown-net-label {
-  display: block;
-  font-size: var(--fs-caption);
-  font-weight: 500;
-  color: var(--pe-gray-500);
-}
 
 /* Before / After / Change, above the chart */
 .chart-view-switch {
@@ -1331,4 +1143,204 @@
   .waterfall-value {
     font-size: var(--fs-caption);
   }
+}
+
+/* ---------- Your income, taxes and benefits: the table ---------- */
+/* Compact: the figures sit close to the names (a fixed width for each
+   figure column, the whole table at most 720px), tabular and right
+   aligned. Groups are semibold on a light tint; their programmes and
+   parts indent by one step each, every name after a chevron or its
+   space. No change is a muted dash; net income is the bold total. */
+.breakdown-header {
+  align-items: flex-start;
+}
+
+.breakdown-header .chart-description {
+  margin: 0;
+}
+
+.programme-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.programme-table {
+  width: 100%;
+  max-width: 720px;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.programme-table th,
+.programme-table td {
+  padding: 7px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--pe-gray-100);
+}
+
+.programme-table .num {
+  width: 7.5rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.programme-table thead th {
+  padding-top: 0;
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--pe-gray-500);
+  border-bottom: 1px solid var(--pe-gray-200);
+}
+
+.programme-table tbody th {
+  font-weight: 400;
+  color: var(--pe-gray-800);
+}
+
+.programme-table tbody td {
+  color: var(--pe-gray-700);
+}
+
+.programme-table tbody tr:hover > * {
+  background: var(--pe-gray-50);
+}
+
+/* Groups: semibold on a subtle tint */
+.programme-row.is-group > th,
+.programme-row.is-group > td {
+  font-weight: 600;
+  color: var(--pe-gray-900);
+  background: color-mix(in srgb, var(--pe-teal-50) 55%, var(--c-surface));
+}
+
+.programme-table tbody tr.is-group:hover > * {
+  background: var(--pe-teal-50);
+}
+
+/* One indent step per depth */
+.programme-row.depth-1 > th {
+  padding-left: 32px;
+}
+
+.programme-row.depth-2 > th {
+  padding-left: 52px;
+  color: var(--pe-gray-600);
+}
+
+.programme-row.depth-2 > td {
+  color: var(--pe-gray-600);
+}
+
+.programme-toggle,
+.programme-leaf {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.programme-toggle {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.programme-toggle:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.programme-chevron {
+  flex: none;
+  color: var(--pe-gray-500);
+  transition: transform 0.15s ease;
+}
+
+.programme-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+.programme-chevron-space {
+  flex: none;
+  width: 14px;
+}
+
+/* Gains and losses in their colours; no change a muted dash */
+.programme-table td.change.is-gain {
+  color: var(--pe-teal-700);
+  font-weight: 600;
+}
+
+.programme-table td.change.is-loss {
+  color: var(--c-loss-text);
+  font-weight: 600;
+}
+
+.programme-table td.change.is-zero {
+  color: var(--pe-gray-400);
+}
+
+/* Net income: the bold total, under a rule */
+.breakdown-net-row > th,
+.breakdown-net-row > td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-weight: 700;
+  color: var(--pe-gray-900);
+  border-top: 2px solid var(--pe-gray-300);
+  border-bottom: none;
+}
+
+/* A phone: Item | Change, Before and After behind one switch */
+.breakdown-columns-toggle {
+  margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+  .programme-table th,
+  .programme-table td {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .programme-table .num {
+    width: 5.5rem;
+  }
+
+  .programme-row.depth-1 > th {
+    padding-left: 24px;
+  }
+
+  .programme-row.depth-2 > th {
+    padding-left: 40px;
+  }
+}
+
+/* ---------- Page rhythm: one heading per section, 48px between ---------- */
+.single-year-details > .section-heading {
+  margin-top: 48px;
+}
+
+.single-year-details > :first-child,
+.single-year-details > :first-child > .section-heading {
+  margin-top: 0;
+}
+
+.single-year-details > .position-block {
+  gap: 0;
+}
+
+/* The Your place tile when there is no distribution: one muted line */
+.result-tile-missing {
+  color: var(--pe-gray-500);
+}
+
+/* Across earnings: one Show control above the two cards */
+.across-earnings-show {
+  margin: 0 0 16px;
 }

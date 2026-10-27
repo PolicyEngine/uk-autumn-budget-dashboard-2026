@@ -7,13 +7,14 @@ import { CircleSlash, Info, ListChecks, TriangleAlert } from "lucide-react";
 import "../InfoSections.css";
 import useCountUp from "../../hooks/useCountUp";
 import { prefersReducedMotion } from "../../utils/chartMotion";
-import { fiscalYearTick } from "../../utils/chartTheme";
+import { fiscalYearTick, useNarrowViewport } from "../../utils/chartTheme";
 import { MINUS, areaName, money, policyRows, signedPercent, sweepPoints } from "../../utils/singleYear";
 import { STAGE_TIMES } from "../../utils/householdTiming";
 import NetIncomeWaterfall, { waterfallScaleStart } from "./NetIncomeWaterfall";
 import { layerRows, layersInUse } from "./netIncomeParts";
 import { partsInUse } from "./marginalRateParts";
-import { componentsInUse } from "./sweepComponents";
+import { componentsInUse, sharedSweepChips } from "./sweepComponents";
+import SeriesToggle from "../SeriesToggle";
 import ProgrammeTable from "./ProgrammeTable";
 import EarningsChart from "./EarningsChart";
 import IncomePositionChart, { ResultTiles } from "./IncomePositionChart";
@@ -384,17 +385,21 @@ function AboutResult({ items, caution, bars, totals }) {
 }
 
 /**
- * The two "Across earnings" cards, in step: one Before | After | Change
- * choice, one set of components shown (a chip toggled on one is toggled on
- * the other), and the salary hovered on one marked on the other.
+ * The two "Across earnings" cards, in step, side by side (stacked on a
+ * phone): one Before | After | Change choice, one "Show:" control above
+ * both for the components they share (a chip switches a component on
+ * both cards, hovering one brings it forward on both), and the salary
+ * hovered on one marked on the other.
  */
 export function AcrossEarnings({ sweep, salary, yearLabel }) {
+  const narrow = useNarrowViewport();
   const [view, setView] = useState("after");
   const [hidden, setHidden] = useState([]);
   const [hover, setHover] = useState(null);
-  // The "+N with no effect for you" chip, open on both or neither
+  const [focus, setFocus] = useState(null);
+  // "N more with no effect for you", open or not
   const [expanded, setExpanded] = useState(false);
-  // The components that apply on either card: both keys show these alike
+  // The components that apply on either card
   const union = useMemo(() => {
     const points = sweepPoints(sweep);
     const net = sweep.netParts
@@ -403,12 +408,36 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
     const rate = sweep.parts ? new Set(partsInUse([...sweep.parts.before, ...sweep.parts.after]).map((part) => part.name)) : new Set();
     return componentsInUse(net, rate);
   }, [sweep]);
-  const sync = { view, setView, hidden, setHidden, hover, setHover, expanded, setExpanded, union };
+  // One control only when both cards draw their parts; else each its own key
+  const shared = Boolean(sweep.netParts && sweep.parts);
+  const chips = useMemo(() => sharedSweepChips(union), [union]);
+  const sync = { view, setView, hidden, setHidden, hover, setHover, expanded, setExpanded, union, focus, setFocus: shared ? setFocus : undefined, sharedLegend: shared };
   return (
-    <div className="charts-grid single-year-chart-pair">
-      <EarningsChart sweep={sweep} salary={salary} yearLabel={yearLabel} sync={sync} />
-      <MarginalRateChart sweep={sweep} salary={salary} yearLabel={yearLabel} sync={sync} />
-    </div>
+    <>
+      {shared && (
+        <div className="across-earnings-show">
+          <SeriesToggle
+            lead="Show on both charts:"
+            label="Components"
+            series={chips}
+            shown={chips.filter((chip) => !chip.disabled && !hidden.includes(chip.key)).map((chip) => chip.key)}
+            onChange={(next) => {
+              const mine = chips.filter((chip) => !chip.disabled).map((chip) => chip.key);
+              setHidden(mine.filter((key) => !next.includes(key)));
+            }}
+            onHover={setFocus}
+            collapseDisabled
+            expanded={expanded}
+            onExpandedChange={setExpanded}
+            narrow={narrow}
+          />
+        </div>
+      )}
+      <div className="charts-grid single-year-chart-pair">
+        <EarningsChart sweep={sweep} salary={salary} yearLabel={yearLabel} sync={sync} />
+        <MarginalRateChart sweep={sweep} salary={salary} yearLabel={yearLabel} sync={sync} />
+      </div>
+    </>
   );
 }
 
@@ -522,12 +551,13 @@ export function SingleYearHeadline({
       {status === "error" && <SingleYearError error={error} onRetry={retry} />}
       {totals && status !== "error" && (
         <div className="single-year-result">
-          {/* The section's heading above the result card, then the two
-              Where you sit cards below it */}
+          {/* The section's heading above the result card; Where you sit
+              follows it in the details */}
           <SectionHeading
-            icon="pin"
-            title="Your place in the income distribution"
-            subtitle="Where your household's income, adjusted for household size, sits among everyone in the UK, before and after the selected policies."
+            icon="wallet"
+            id="your-result"
+            title={`Your result, ${yearLabel}`}
+            subtitle="How the selected policies change your household's net income, and each policy's part in it."
           />
           <ResultCard
             totals={totals}
@@ -604,23 +634,22 @@ export function SingleYearDetails({ result, year, policies, household = null, se
   return (
     <div className={`single-year-details ${stale ? "is-stale" : ""}`} aria-busy={stale || undefined}>
       {household && (
-        <>
-          <section className="report-section" id="income-position">
-            <IncomePositionChart
-              net={data.net}
-              household={household}
-              year={data.year ?? year}
-              policies={selected ?? []}
-              yearLabel={yearLabel}
-              you={you}
-            />
-          </section>
-        </>
+        // Its own heading, only when the distribution is there: when it is
+        // not, the Your place tile above says so in one line
+        <IncomePositionChart
+          net={data.net}
+          household={household}
+          year={data.year ?? year}
+          policies={selected ?? []}
+          yearLabel={yearLabel}
+          you={you}
+        />
       )}
 
       <SectionHeading
         icon="layers"
-        title="Your income, taxes and benefits"
+        id="your-income-taxes-and-benefits"
+        title={`Your income, taxes and benefits, ${yearLabel}`}
         subtitle="Market income, taxes and benefits before and after the selected policies, by tax and benefit."
       />
       <section className="report-section" id="household-breakdown">

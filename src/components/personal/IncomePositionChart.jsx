@@ -36,6 +36,7 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartMoreInfo from "../ChartMoreInfo";
 import { METHOD_ANCHORS } from "../methodology/anchors";
 import TitleIcon from "../TitleIcon";
+import SectionHeading from "../SectionHeading";
 import ControlBar from "../ControlBar";
 import Tip from "../Tip";
 import HeadlineTile from "../livingStandards/HeadlineTile";
@@ -696,21 +697,9 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   );
   const percents = useMemo(() => decilePercents(relativeRows, policies, year), [relativeRows, policies, year]);
 
-  if (distribution.status === "loading") return <div className="card single-year-card position-card is-loading" aria-busy="true" />;
-  if (!curves || !position) {
-    return (
-      <div className="card single-year-card position-card">
-        <h3>
-          <TitleIcon name="users" />
-          <span className="title-text">{title}</span>
-        </h3>
-        <p className="single-year-quiet">
-          {(distribution.status === "ready" && missingPackageNote(run, distribution.rows)) ||
-            "The UK income distribution is not available for this year."}
-        </p>
-      </div>
-    );
-  }
+  // Nothing while the distribution loads, and nothing when it is not
+  // there: the Your place tile above says so in one line, never an empty card
+  if (!curves || !position) return null;
 
   const netBefore = Number(net?.before);
   const ownChange = Number(net?.after) - netBefore;
@@ -843,7 +832,15 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   });
 
   return (
-    <div className="position-block">
+    <section className="report-section position-block" id="income-position">
+      {/* The section's heading: the Your place tile's percentile is drawn
+          here, on the distribution, and said in words only in the tile */}
+      <SectionHeading
+        icon="pin"
+        id="where-you-sit"
+        title="Where you sit"
+        subtitle="Where your household's income, adjusted for household size, sits among everyone in the UK, and how your change compares, before and after the selected policies."
+      />
 
       <div className="charts-grid position-pair">
         <div className="card single-year-card position-card" data-view={showAs}>
@@ -975,7 +972,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -1054,6 +1051,10 @@ export function ResultTiles({ totals, changeValue, changeNote, household, year, 
     };
   }
   const loading = distribution.status === "loading";
+  // Why there is no place, in one muted line in the tile (no card below)
+  const missing = !loading && !place
+    ? (distribution.status === "ready" && missingPackageNote(run, distribution.rows)) || "The UK income distribution is not available for this year."
+    : null;
 
   return (
     <div className="forecast-tiles position-tiles result-tiles">
@@ -1072,9 +1073,9 @@ export function ResultTiles({ totals, changeValue, changeNote, household, year, 
         name="Your place (percentile)"
         info={place?.tip}
         value={place ? place.value : loading ? "\u00a0" : "—"}
-        caption={place ? place.caption : loading ? "\u00a0" : "Not available for this year"}
+        caption={place ? place.caption : loading ? "\u00a0" : "Not available yet"}
         trend={{ rows: [] }}
-        meaning={place ? place.note : "\u00a0"}
+        meaning={place ? place.note : missing ? <span className="result-tile-missing">{missing}</span> : "\u00a0"}
         meaningKind="small"
       />
     </div>

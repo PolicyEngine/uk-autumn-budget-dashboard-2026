@@ -371,7 +371,8 @@ describe("the household calculation, from the fixture", () => {
       "salary_sacrifice_cap",
       "fuel_duty_freeze",
     ]);
-    const parse = (text) => Number(text.replace("−", "-").replace(/[£,+]/g, ""));
+    // No change is a muted dash
+    const parse = (text) => (text === "—" ? 0 : Number(text.replace("−", "-").replace(/[£,+]/g, "")));
     const sum = bars
       .map((bar) => parse(bar.querySelector(".waterfall-value").textContent))
       .reduce((a, b) => a + b, 0);
@@ -408,10 +409,9 @@ describe("the household calculation, from the fixture", () => {
     for (const name of ["Before", "After", "Change"]) {
       expect(within(table).getByRole("columnheader", { name })).toBeInTheDocument();
     }
-    // Net income: before and after only; its change is the headline card
+    // Net income: the bold total row, with its change (the rows add up to it)
     const net = within(table).getByRole("row", { name: /Net income/ });
-    expect(net).toHaveTextContent("£65,371£69,136");
-    expect(net).not.toHaveTextContent("£3,765");
+    expect(net).toHaveTextContent("£65,371£69,136+£3,765");
 
     // Each top row shows its taxes or benefits, open at first
     expect(within(table).getByRole("button", { name: /Taxes/ })).toHaveAttribute("aria-expanded", "true");
@@ -423,7 +423,8 @@ describe("the household calculation, from the fixture", () => {
     expect(within(table).getByText("On earnings")).toBeInTheDocument();
 
     // The top rows add up to net income, in every column
-    const parse = (text) => Number(text.replace("−", "-").replace(/[£,+]/g, ""));
+    // No change is a muted dash
+    const parse = (text) => (text === "—" ? 0 : Number(text.replace("−", "-").replace(/[£,+]/g, "")));
     const top = [...table.querySelectorAll(".programme-row.depth-0")].map((row) =>
       [...row.querySelectorAll("td")].map((cell) => parse(cell.textContent)),
     );

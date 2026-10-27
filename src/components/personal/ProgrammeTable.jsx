@@ -9,6 +9,7 @@ import {
   roundProgrammeGroups,
   signedMoney,
 } from "../../utils/singleYear";
+import { ChevronRight } from "lucide-react";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartMoreInfo from "../ChartMoreInfo";
 import { HOUSEHOLD_ABOUT_ID, METHOD_ANCHORS } from "../methodology/anchors";
@@ -17,7 +18,9 @@ import { HOUSEHOLD_ABOUT_ID, METHOD_ANCHORS } from "../methodology/anchors";
 // brackets ("(COUNCIL_TAX_BAND_D)")
 const plainNote = (text) => String(text ?? "").replace(/\s*\([A-Z][A-Z0-9_]{3,}\)/g, "");
 import { downloadFile } from "../../utils/downloadFile";
-import TitleIcon from "../TitleIcon";
+
+/** "+£60", "−£12", or a muted "—" for no change. */
+const changeText = (value) => (Math.round(value) === 0 ? "—" : signedMoney(value));
 
 const changeClass = (value) => {
   const rounded = Math.round(value);
@@ -31,9 +34,9 @@ const changeClass = (value) => {
  * personal calculator: Before | After | Change for market income, taxes
  * (as negative amounts), benefits and pension contributions, then net
  * income. Each top row shows its taxes or benefits, open at first.
- * Net income shows its before and after only: its change is the headline
- * card above (each fact once). On a phone the table is Item | Change,
- * and each row opens to its before and after too.
+ * Net income is the total row, with its change (the rows add up to it).
+ * On a phone the table is Item | Change, with one switch to show Before
+ * and After.
  *
  * Whole pounds that agree with the rest of the page (roundProgrammeGroups):
  * the rows add up to net income, each row's after is its before plus its
@@ -130,78 +133,76 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
       ),
   };
 
-  const columns = narrow ? 2 : 4;
+  // On a phone the table is Item | Change; Before and After open together
+  // with one switch above it
+  const [showBoth, setShowBoth] = useState(false);
+  const wide = !narrow || showBoth;
 
-  // One row: a group (depth 0), a programme (1) or a programme's part (2)
-  const renderRow = (row, depth, key, color) => {
-    const hasParts = (row.children ?? row.rows ?? []).length > 0;
-    // On a phone every row opens (to its before and after)
-    const expandable = depth < 2 && (narrow || hasParts);
-    const isOpen = open.has(key);
+  // One row: a group (depth 0, semibold on a tint), a programme (1) or a
+  // programme's part (2). Every row keeps a chevron's width, so names at
+  // one depth start at one indent whether or not they open.
+  const renderRow = (row, depth, key) => {
     const parts = depth === 0 ? row.rows : row.children;
-    const label = (
-      <span className="programme-name">
-        {color && <span className="breakdown-dot" style={{ background: color }} aria-hidden="true" />}
-        {row.label}
-      </span>
-    );
+    const expandable = depth < 2 && (parts ?? []).length > 0;
+    const isOpen = open.has(key);
+    const name = <span className="programme-name">{row.label}</span>;
     return (
       <Fragment key={key}>
-        <tr className={`programme-row depth-${depth}`}>
+        <tr className={`programme-row depth-${depth}${depth === 0 ? " is-group" : ""}`}>
           <th scope="row">
             {expandable ? (
               <button type="button" className="programme-toggle" aria-expanded={isOpen} onClick={() => toggle(key)}>
-                <span className="programme-chevron" aria-hidden="true">
-                  {isOpen ? "▾" : "▸"}
-                </span>
-                {label}
+                <ChevronRight className={`programme-chevron${isOpen ? " is-open" : ""}`} size={14} strokeWidth={2} aria-hidden="true" />
+                {name}
               </button>
             ) : (
-              label
+              <span className="programme-leaf">
+                <span className="programme-chevron-space" aria-hidden="true" />
+                {name}
+              </span>
             )}
           </th>
-          {!narrow && <td className="num">{money(row.shown.before)}</td>}
-          {!narrow && <td className="num">{money(row.shown.after)}</td>}
-          <td className={`num change ${changeClass(row.shown.change)}`}>{signedMoney(row.shown.change)}</td>
+          {wide && <td className="num">{money(row.shown.before)}</td>}
+          {wide && <td className="num">{money(row.shown.after)}</td>}
+          <td className={`num change ${changeClass(row.shown.change)}`}>{changeText(row.shown.change)}</td>
         </tr>
-        {isOpen && narrow && (
-          <tr className={`programme-detail depth-${depth}`}>
-            <td colSpan={columns}>
-              Before {money(row.shown.before)} → after {money(row.shown.after)}
-            </td>
-          </tr>
-        )}
         {isOpen && parts?.map((part) => renderRow(part, depth + 1, `${key}/${part.id}`))}
       </Fragment>
     );
   };
 
   return (
+    // The section heading above names the table and its year; the card
+    // has the one sentence, the download and the table
     <div className="card single-year-card breakdown-card">
-      <div className="chart-header">
-        <div>
-          <h3>
-            <TitleIcon name="list" />
-            <span className="title-text">{title}</span>
-          </h3>
-          {/* One line: which groups the policies change, and by how much */}
-          <p className="chart-description">{sentence}</p>
-        </div>
+      <div className="chart-header breakdown-header">
+        {/* One line: which groups the policies change, and by how much */}
+        <p className="chart-description">{sentence}</p>
         <ChartDownloadMenu formats={formats} chartTitle={title} ariaLabel={`Download table: ${title}`} />
       </div>
+      {narrow && (
+        <button
+          type="button"
+          className="light-pill-button breakdown-columns-toggle"
+          aria-pressed={showBoth}
+          onClick={() => setShowBoth((value) => !value)}
+        >
+          {showBoth ? "Hide before and after" : "Show before and after"}
+        </button>
+      )}
       <div className="programme-table-wrap">
-        <table className="programme-table breakdown-table">
+        <table className={`programme-table breakdown-table${wide ? "" : " is-change-only"}`} aria-label={title}>
           <thead>
             <tr>
               <th scope="col">
                 <span className="visually-hidden">Item</span>
               </th>
-              {!narrow && (
+              {wide && (
                 <th scope="col" className="num">
                   Before
                 </th>
               )}
-              {!narrow && (
+              {wide && (
                 <th scope="col" className="num">
                   After
                 </th>
@@ -212,21 +213,18 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
             </tr>
           </thead>
           <tbody>
-            {groups.map((group) => renderRow(group, 0, group.id, group.color))}
+            {groups.map((group) => renderRow(group, 0, group.id))}
             <tr className="breakdown-net-row">
-              <th scope="row">Net income</th>
-              {!narrow && <td className="num">{money(totals.before)}</td>}
-              {!narrow && <td className="num">{money(totals.after)}</td>}
-              <td className="num">
-                {narrow ? (
-                  <>
-                    <span className="breakdown-net-label">Before → After</span>
-                    {`${money(totals.before)} → ${money(totals.after)}`}
-                  </>
-                ) : (
-                  <span className="visually-hidden">See the headline above.</span>
-                )}
-              </td>
+              <th scope="row">
+                <span className="programme-leaf">
+                  <span className="programme-chevron-space" aria-hidden="true" />
+                  <span className="programme-name">Net income</span>
+                </span>
+              </th>
+              {wide && <td className="num">{money(totals.before)}</td>}
+              {wide && <td className="num">{money(totals.after)}</td>}
+              {/* The table's total: the rows above add up to it */}
+              <td className={`num change ${changeClass(totals.change)}`}>{changeText(totals.change)}</td>
             </tr>
           </tbody>
         </table>

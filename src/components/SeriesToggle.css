@@ -139,10 +139,30 @@
   border-color: var(--pe-gray-300);
 }
 
-/* "+N with no effect for you": opens the disabled chips in place */
+/* "N more with no effect for you": a quiet text toggle (not a chip) that
+   opens the folded chips in place; its chevron turns when open */
 .series-toggle-chip.series-toggle-more {
-  padding: 0 11px;
-  border-style: dashed;
+  gap: 4px;
+  padding: 0 6px;
+  border: none;
+  background: none;
   color: var(--pe-gray-600);
   font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: var(--pe-gray-300);
+  text-underline-offset: 3px;
+}
+
+.series-toggle-chip.series-toggle-more:hover {
+  color: var(--pe-teal-700);
+  background: none;
+}
+
+.series-toggle-more-chevron {
+  flex: none;
+  transition: transform 0.15s ease;
+}
+
+.series-toggle-more[aria-expanded="true"] .series-toggle-more-chevron {
+  transform: rotate(90deg);
 }

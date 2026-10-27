@@ -47,7 +47,7 @@ function markHintSeen() {
  * @param {boolean} [props.narrow] - Short labels (`short`) where given
  * @param {string} [props.lead] - The lead-in before the chips ("Show lines:"; "Show:" for layers)
  * @param {boolean} [props.collapseDisabled] - Fold the disabled chips into one
- *   "+N with no effect for you" chip that opens them in place
+ *   "N more with no effect for you" toggle that opens them in place
  * @param {boolean} [props.expanded] - Whether that chip is open (to share it)
  * @param {(open: boolean) => void} [props.onExpandedChange]
  * @param {Array<{key: string, label: string, fill: string}>} [props.extras] - Key
@@ -67,7 +67,7 @@ export default function SeriesToggle({
   expanded: expandedProp,
   onExpandedChange,
 }) {
-  // The disabled chips folded into one "+N with no effect for you" chip
+  // The disabled chips folded into one "N more with no effect for you" toggle
   // (`collapseDisabled`), opened in place; open or not can be shared
   const [ownExpanded, setOwnExpanded] = useState(false);
   const expanded = expandedProp ?? ownExpanded;
@@ -154,7 +154,10 @@ export default function SeriesToggle({
             aria-expanded={expanded}
             onClick={() => setExpanded(!expanded)}
           >
-            {expanded ? "Show fewer" : `+${foldedCount} with no effect for you`}
+            <svg className="series-toggle-more-chevron" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+              <path d="M3.5 2 6.5 5 3.5 8" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {expanded ? `Hide the ${foldedCount} with no effect` : `${foldedCount} more with no effect for you`}
           </button>
         )}
         {extras.map((item) => (
