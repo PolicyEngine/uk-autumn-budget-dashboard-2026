@@ -204,8 +204,8 @@ export const SHELL_STICKY_NAV_SELECTOR =
   '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';
 // Once shown, the site nav stays this long (unless the reader scrolls down),
 // and hides this long after the pointer or focus leaves it.
-export const SITE_NAV_MIN_MS = 3000;
-export const SITE_NAV_LEAVE_MS = 1500;
+export const SITE_NAV_MIN_MS = 1500;
+export const SITE_NAV_LEAVE_MS = 750;
 
 /** Take the open sub-tab (?sub=) out of the address, or put `sub` there. */
 function dropSubTab(sub, extra = {}) {

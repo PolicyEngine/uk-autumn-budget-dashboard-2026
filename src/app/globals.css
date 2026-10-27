@@ -324,7 +324,7 @@ body {
    sits at the very top of the page with the tab rows under it, from the
    first paint. App.jsx shows it (data-site-nav-shown on <html>) when the reader
    scrolls up 24px (their own input: never the page moving by itself),
-   points at the top 8px of the window or tabs into it, keeps it 3s and
+   points at the top 8px of the window or tabs into it, keeps it 1.5s and
    while it is in use, and hides it on any scroll down by the reader or
    once the pointer or focus has left; it measures the nav into
    --site-nav-height. Shown, it overlays the top of the band (above it,

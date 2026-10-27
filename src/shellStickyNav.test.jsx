@@ -122,7 +122,7 @@ describe("showing the site nav", () => {
     scrollTo(800);
     scrollTo(300);
     expect(shown()).toBe(true);
-    // Back at the top: hidden at once, not after the 3s linger
+    // Back at the top: hidden at once, not after the 1.5s linger
     scrollTo(0);
     expect(shown()).toBe(false);
     scrollTo(57);
@@ -146,18 +146,18 @@ describe("showing the site nav", () => {
     expect(shown()).toBe(true);
   });
 
-  it("stays 3s after the scroll up, and any scroll down by the reader hides it at once", () => {
+  it("stays 1.5s after the scroll up, and any scroll down by the reader hides it at once", () => {
     const { scrollTo, shift, wait, shown } = setup();
     scrollTo(400);
     scrollTo(300);
     expect(shown()).toBe(true);
-    wait(2_999);
+    wait(1_499);
     expect(shown()).toBe(true);
     wait(1);
     expect(shown()).toBe(false);
     scrollTo(200);
     expect(shown()).toBe(true);
-    // A pixel down, inside the 3s
+    // A pixel down, inside the 1.5s
     scrollTo(201);
     expect(shown()).toBe(false);
     // Keys count as the reader's scroll too
@@ -191,7 +191,7 @@ describe("showing the site nav", () => {
     }
   });
 
-  it("shows at the top 8px of the window, holds while the pointer is over it, and hides 1.5s after it leaves", () => {
+  it("shows at the top 8px of the window, holds while the pointer is over it, and hides 0.75s after it leaves", () => {
     const { scrollTo, wait, shown, move, moveOver } = setup(true);
     move(300);
     expect(shown()).toBe(false);
@@ -203,25 +203,25 @@ describe("showing the site nav", () => {
     wait(10_000);
     expect(shown()).toBe(true);
     move(400);
-    wait(1_499);
+    wait(749);
     expect(shown()).toBe(true);
     // Coming back cancels the hide
     moveOver();
     wait(5_000);
     expect(shown()).toBe(true);
     move(400);
-    wait(1_500);
+    wait(750);
     expect(shown()).toBe(false);
-    // Leaving straight after it shows still keeps the 3s
+    // Leaving straight after it shows still keeps the 1.5s
     move(6);
     move(400);
-    wait(2_999);
+    wait(1_499);
     expect(shown()).toBe(true);
     wait(1);
     expect(shown()).toBe(false);
   });
 
-  it("holds while focus is in it, and hides 1.5s after focus leaves", () => {
+  it("holds while focus is in it, and hides 0.75s after focus leaves", () => {
     const { wait, shown, nav } = setup(true);
     const link = nav().querySelector("a, button");
     act(() => link.focus());
@@ -229,7 +229,7 @@ describe("showing the site nav", () => {
     wait(10_000);
     expect(shown()).toBe(true);
     act(() => link.blur());
-    wait(1_499);
+    wait(749);
     expect(shown()).toBe(true);
     wait(1);
     expect(shown()).toBe(false);
@@ -247,7 +247,7 @@ describe("showing the site nav", () => {
     wait(10_000);
     expect(shown()).toBe(true);
     act(() => overlay.remove());
-    wait(1_500);
+    wait(750);
     expect(shown()).toBe(false);
   });
 });
