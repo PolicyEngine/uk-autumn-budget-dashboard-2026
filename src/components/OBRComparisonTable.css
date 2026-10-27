@@ -23,88 +23,87 @@
   margin-bottom: 16px;
 }
 
+/* As the household table (programme-table): sentence-case headers in a
+   muted caption over one rule, figures right aligned in tabular numerals,
+   and every second row on the chart's faint band (.row-band, globals.css) */
 .comparison-table {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
 }
 
 .comparison-table th,
 .comparison-table td {
-  padding: 7px 10px;
-  text-align: right;
+  padding: 7px 12px;
+  text-align: left;
+  vertical-align: middle;
+  line-height: 1.4;
   border: none;
 }
 
-.comparison-table th {
-  background: transparent;
-  font-weight: 600;
-  color: var(--pe-gray-700);
-}
-
-/* The only rule: under the header */
-.comparison-table thead {
-  border-bottom: 1px solid var(--card-border);
-}
-
-/* Space, not rules, between the year pairs */
-.comparison-table .year-header,
-.comparison-table .source-header.pe,
-.comparison-table .value-cell.pe {
-  padding-left: 22px;
-}
-
-.comparison-table th:first-child,
-.comparison-table td:first-child {
-  text-align: left;
-}
-
-.year-header {
-  text-align: center !important;
-  border-bottom: none;
-}
-
-.source-header {
-  font-size: var(--fs-micro);
+.comparison-table thead th {
+  padding-top: 0;
+  font-size: var(--fs-caption);
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.source-header.pe {
-  color: var(--pe-teal-700);
-}
-
-.source-header.obr {
   color: var(--pe-gray-500);
+  vertical-align: bottom;
+  border-bottom: 1px solid var(--pe-gray-200);
+}
+
+.comparison-table .num,
+.comparison-table .value-cell {
+  width: 7.5rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* The band is drawn on the cells, not the row, so its ends round as
+   the chart's do (and a sticky name cell keeps it) */
+.comparison-table tbody tr.row-band {
+  background: none;
+}
+
+.comparison-table tbody tr.is-banded > * {
+  background: var(--c-row-band);
+}
+
+.comparison-table tbody tr:hover > *,
+.comparison-table tbody tr:focus-within > * {
+  background: var(--c-hover);
+}
+
+.comparison-table tbody tr > :first-child {
+  border-radius: var(--row-radius) 0 0 var(--row-radius);
+}
+
+.comparison-table tbody tr > :last-child {
+  border-radius: 0 var(--row-radius) var(--row-radius) 0;
 }
 
 .policy-name-cell {
-  font-weight: 500;
-  color: var(--pe-gray-700);
-  white-space: nowrap;
+  color: var(--pe-gray-800);
 }
 
 .value-cell {
-  font-variant-numeric: tabular-nums;
-  font-size: var(--fs-caption);
-  white-space: nowrap;
-}
-
-.value-cell.obr {
-  color: var(--pe-gray-500);
-}
-
-/* The difference column: neutral, like the values */
-.value-cell.difference {
   color: var(--pe-gray-700);
-  padding-left: 22px;
+}
+
+/* No effect that year (rounds to zero), or no figure (a dash, said why
+   in the note): muted, as the household table's zero change and dash */
+.value-cell.is-zero,
+.value-cell.is-none {
+  color: var(--pe-gray-400);
 }
 
 .comparison-table-note {
   margin: 8px 0 0;
-  font-size: var(--fs-caption);
+  font-size: var(--fs-micro);
   color: var(--pe-gray-500);
+}
+
+.comparison-table-note + .comparison-table-note {
+  margin-top: 2px;
 }
 
 /* The card's plot area when the year is past the official costings */
@@ -112,33 +111,43 @@
   margin: 0 0 20px;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .comparison-table {
-    font-size: var(--fs-micro);
-  }
-
+@media (max-width: 640px) {
   .comparison-table th,
   .comparison-table td {
-    padding: 8px 6px;
+    padding-left: 6px;
+    padding-right: 6px;
   }
 
-  /* Policy names wrap and stay in view while the years scroll sideways */
-  .comparison-table thead tr:first-child th:first-child,
-  .policy-name-cell {
+  .comparison-table .num,
+  .comparison-table .value-cell {
+    width: auto;
+  }
+
+  .comparison-table thead th.num {
+    white-space: normal;
+    min-width: 4.5rem;
+  }
+
+  /* Policy names wrap and stay in view while the figures scroll sideways,
+     on the row's own band */
+  .comparison-table thead th:first-child,
+  .comparison-table .policy-name-cell {
     position: sticky;
     left: 0;
     z-index: 1;
     background: var(--c-surface);
-    white-space: normal;
-    min-width: 128px;
-    max-width: 150px;
+    min-width: 156px;
+    max-width: 176px;
   }
-}
 
-/* The PE header opens its row, so the first-column rule must not left-align it */
-.comparison-table th.source-header {
-  text-align: right;
+  .comparison-table tbody tr.is-banded > .policy-name-cell {
+    background: var(--c-row-band);
+  }
+
+  .comparison-table tbody tr:hover > .policy-name-cell,
+  .comparison-table tbody tr:focus-within > .policy-name-cell {
+    background: var(--c-hover);
+  }
 }
 
 /* The table sits behind a toggle under the dumbbell chart */

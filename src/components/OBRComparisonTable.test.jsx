@@ -180,6 +180,12 @@ describe("the comparison at 2031-32", () => {
     show("Table");
     const cells = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell");
     expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repealBenefits", "−£3.6bn", "—", "—", "—"]);
+    // A dash is muted and the note says why
+    expect(cells.slice(2).every((td) => td.classList.contains("is-none"))).toBe(true);
+    expect([...container.querySelectorAll(".comparison-table-note")].map((p) => p.textContent)).toEqual([
+      "Difference: PolicyEngine minus the official static costing, £bn.",
+      "— where the official costings give no figure on that basis for the policy in 2031-32.",
+    ]);
   });
 });
 
