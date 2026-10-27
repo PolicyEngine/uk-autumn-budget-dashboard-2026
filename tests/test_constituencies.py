@@ -637,6 +637,28 @@ def test_an_unapproved_reform_is_refused_before_anything_runs(world, capsys):
     assert world.hub.downloads == [] and world.steps == []
 
 
+def test_the_default_is_the_manifests_approved_measures_not_the_candidates(
+    monkeypatch, tmp_path
+):
+    """On Budget day the manifest approves the announced measures, not the
+    candidates a package lists: the default takes what it approves."""
+    monkeypatch.setattr(g, "PACKAGES", {PKG: MEASURES})
+    manifest = publication_manifest(
+        tmp_path, ["alpha", "announced"], years=YEARS
+    )
+    assert c.default_reforms(manifest) == ["alpha", "announced"]
+
+
+def test_the_default_adds_a_package_only_with_its_approved_combined_run(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setattr(g, "PACKAGES", {PKG: MEASURES})
+    manifest = publication_manifest(
+        tmp_path, [*MEASURES, PKG], packages={PKG: MEASURES}, years=YEARS
+    )
+    assert c.default_reforms(manifest) == [*MEASURES, PKG]
+
+
 def test_a_scratch_manifest_may_not_write_into_a_repository(world, capsys):
     from uk_budget_data.cli import parse_args
 
