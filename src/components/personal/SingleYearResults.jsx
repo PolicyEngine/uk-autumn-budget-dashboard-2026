@@ -10,7 +10,7 @@ import { prefersReducedMotion } from "../../utils/chartMotion";
 import { fiscalYearTick } from "../../utils/chartTheme";
 import { MINUS, areaName, money, policyRows, signedPercent, sweepPoints } from "../../utils/singleYear";
 import { STAGE_TIMES } from "../../utils/householdTiming";
-import NetIncomeWaterfall from "./NetIncomeWaterfall";
+import NetIncomeWaterfall, { waterfallScaleStart } from "./NetIncomeWaterfall";
 import { layerRows, layersInUse } from "./netIncomeParts";
 import { partsInUse } from "./marginalRateParts";
 import { componentsInUse } from "./sweepComponents";
@@ -283,19 +283,22 @@ const shortReason = (text) => {
  * employer cost's reason in its tip). Any measure's own note, or one under
  * £1 a year, below. Each fact once.
  */
-function AboutResult({ items, caution, bars }) {
+function AboutResult({ items, caution, bars, totals }) {
   const noEffect = bars?.noEffectItems ?? [];
   // Employer costs are said with their chip under "No effect on you"
   const notes = (bars?.notes ?? []).filter((note) => note.kind !== "employer_cost");
   const under = bars?.underAPound ?? [];
+  // The waterfall's bars start above £0 (its axis tick shows where): why
+  const scaleStart = totals ? waterfallScaleStart(totals, bars ? bars.rows : null) : 0;
   const parts = [
     caution && "Caveats",
     items.length > 0 && "Based on",
     noEffect.length > 0 && "No effect on you",
-    (notes.length > 0 || under.length > 0) && "Notes",
+    (notes.length > 0 || under.length > 0 || scaleStart > 0) && "Notes",
   ].filter(Boolean);
   if (!caution && parts.length === 0) return null;
   const extra = [
+    ...(scaleStart > 0 ? [`The bars start at ${money(scaleStart)} so the changes are visible.`] : []),
     ...(under.length > 0 ? [`Less than £1 a year: ${under.join(", ")}.`] : []),
     ...notes.map((note) => (
       <span key={note.id} data-note={note.kind}>
@@ -443,7 +446,7 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
           splitFailed={splitFailed}
         />
       </div>
-      <AboutResult items={items} caution={caution} bars={bars} />
+      <AboutResult items={items} caution={caution} bars={bars} totals={totals} />
     </section>
   );
 }
