@@ -17,9 +17,25 @@ import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measur
 import { parseDashboardCsv } from "../utils/loadDashboard";
 import { ALPHA, BETA, YEAR, measureCatalogueFixture } from "../test/measureCatalogueFixture";
 
-vi.mock("../utils/publication/flat", () => ({
-  loadVerifiedFlatCsv: (name) => fetch(`/data/${name}`).then((response) => response.text()),
-}));
+// The official costings as rows, from a CSV fixture; the loader's own checks
+// are tested in utils/publication/officialCostings.test.js
+vi.mock("../utils/publication/officialCostings", async (importOriginal) => {
+  const actual = await importOriginal();
+  const { parseDashboardCsv: parse } = await import("../utils/loadDashboard");
+  const number = (value) => (value === "" || value == null ? null : Number(value));
+  return {
+    ...actual,
+    loadOfficialCostings: () => fetch("/data/official_costings.csv").then(async (response) => {
+      if (response.status === 404) throw new actual.OfficialCostingsPendingError();
+      return parse(await response.text()).map((row) => ({
+        reform_id: row.reform_id,
+        year: Number(row.year),
+        obr_static: number(row.obr_static_value),
+        obr_behavioural: number(row.obr_post_behavioural_value),
+      }));
+    }),
+  };
+});
 
 vi.mock("../utils/downloadFile", () => ({
   downloadFile: vi.fn(),
@@ -55,7 +71,7 @@ describe("the OBR comparison table", () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({
-        "/data/obr_comparison.csv": OBR_COMPARISON,
+        "/data/official_costings.csv": OBR_COMPARISON,
         "/data/budgetary_impact.csv": BUDGETARY_IMPACT,
       }),
     );
@@ -79,12 +95,12 @@ describe("the OBR comparison table", () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({
-        "/data/obr_comparison.csv": OBR_COMPARISON,
+        "/data/official_costings.csv": OBR_COMPARISON,
         "/data/budgetary_impact.csv": BUDGETARY_IMPACT,
       }),
     );
     render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} />);
-    const basis = await screen.findByRole("button", { name: "OBR basis: Static" });
+    const basis = await screen.findByRole("button", { name: "Official basis: Static" });
     show("Table");
     fireEvent.click(basis);
     fireEvent.click(screen.getByRole("option", { name: /Post-behavioural/ }));
@@ -94,11 +110,11 @@ describe("the OBR comparison table", () => {
     expect(cells[column2030 + 1]).toHaveTextContent("−£3.5bn");
   });
 
-  it("keeps the intro to one short sentence naming this year's OBR costings, from the sources config", async () => {
+  it("keeps the intro to one short sentence naming this year's official costings, from the sources config", async () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({
-        "/data/obr_comparison.csv": OBR_COMPARISON,
+        "/data/official_costings.csv": OBR_COMPARISON,
         "/data/budgetary_impact.csv": BUDGETARY_IMPACT,
       }),
     );
@@ -107,7 +123,7 @@ describe("the OBR comparison table", () => {
     );
     await waitFor(() => expect(container.querySelector(".comparison-description")).not.toBeNull());
     expect(container.querySelector(".comparison-description").textContent.replace(/\s+/g, " ").trim()).toBe(
-      "PolicyEngine's static estimates against the OBR's Autumn Budget 2026 costings, £bn a year; positive values raise revenue.",
+      "PolicyEngine's static estimates beside the official Autumn Budget 2026 costings (HM Treasury, certified by the OBR), £bn a year; positive values raise revenue.",
     );
     expect(container).not.toHaveTextContent("November 2025");
   });
@@ -118,7 +134,7 @@ describe("the OBR comparison's chart and table switch", () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({
-        "/data/obr_comparison.csv": OBR_COMPARISON,
+        "/data/official_costings.csv": OBR_COMPARISON,
         "/data/budgetary_impact.csv": BUDGETARY_IMPACT,
       }),
     );
@@ -137,11 +153,11 @@ describe("the OBR comparison's chart and table switch", () => {
 });
 
 describe("the OBR comparison at 2031-32", () => {
-  it("plots PolicyEngine's 2031-32 figure on the dumbbell, with the OBR not yet published", async () => {
+  it("plots PolicyEngine's 2031-32 figure on the dumbbell, with the official costing not yet published", async () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({
-        "/data/obr_comparison.csv": OBR_COMPARISON,
+        "/data/official_costings.csv": OBR_COMPARISON,
         "/data/budgetary_impact.csv": BUDGETARY_IMPACT,
       }),
     );
@@ -152,7 +168,7 @@ describe("the OBR comparison at 2031-32", () => {
       />,
     );
     await screen.findByRole("heading", {
-      name: /PolicyEngine and OBR estimates, 2031-32/,
+      name: /PolicyEngine and official costings, 2031-32/,
     });
     const row = await waitFor(() => {
       const found = container.querySelector(
@@ -164,7 +180,7 @@ describe("the OBR comparison at 2031-32", () => {
     expect(row.querySelectorAll(".obr-dumbbell-dot.pe")).toHaveLength(1);
     expect(row.querySelectorAll(".obr-dumbbell-dot.obr")).toHaveLength(0);
     expect(row).toHaveTextContent("−£3.6bn");
-    expect(row).toHaveTextContent("OBR not yet published");
+    expect(row).toHaveTextContent("Official costing not yet published");
   });
 
   it("reads 'Not yet published' when no file covers 2031-32, never £0", async () => {
@@ -173,7 +189,7 @@ describe("the OBR comparison at 2031-32", () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({
-        "/data/obr_comparison.csv": OBR_COMPARISON,
+        "/data/official_costings.csv": OBR_COMPARISON,
         "/data/budgetary_impact.csv": BUDGETARY_IMPACT.split("\n")
           .slice(0, 2)
           .join("\n"),
@@ -219,13 +235,13 @@ it("orders OBR rows from the catalogue rather than CSV insertion order", async (
 describe("before the OBR costs the measures", () => {
   it("says the comparison is not available and pairs nothing", async () => {
     const catalogue = buildMeasureCatalogue(measureCatalogueFixture({ held: false }));
-    vi.stubGlobal("fetch", geographyFetch({ "/data/obr_comparison.csv": OBR_COMPARISON }));
+    vi.stubGlobal("fetch", geographyFetch({ "/data/official_costings.csv": OBR_COMPARISON }));
     renderReact(
       <MeasureCatalogueProvider catalogue={catalogue}>
         <OBRComparisonTable selectedPolicies={[ALPHA]} selectedYear={YEAR} />
       </MeasureCatalogueProvider>,
     );
-    expect(await screen.findByText("The OBR has not costed the selected measures.")).toBeInTheDocument();
+    expect(await screen.findByText(OBR_UNAVAILABLE)).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Show as:/ })).not.toBeInTheDocument();
   });
@@ -250,14 +266,27 @@ describe("the OBR comparison foot", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(COSTED)));
     renderBoth([ALPHA]);
     const foot = screen.getByTestId("foot");
-    expect(await within(foot).findByText("Compare with OBR estimates")).toBeInTheDocument();
+    expect(await within(foot).findByText("Compare with the official costings")).toBeInTheDocument();
   });
 
   it("shows nothing while no OBR file can be bound to the approved results", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("not bound"); }));
     renderBoth([ALPHA]);
-    expect(await screen.findByText(/The OBR comparison is unavailable/)).toBeInTheDocument();
+    expect(await screen.findByText(/The comparison with the official costings is unavailable/)).toBeInTheDocument();
     expect(screen.getByTestId("foot")).toBeEmptyDOMElement();
+  });
+
+  it("shows nothing, not even a pending line, until the official costings are published", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 404 })));
+    const { container } = renderReact(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <div data-testid="foot"><ObrComparisonFoot selectedPolicies={[ALPHA]} selectedYear={YEAR} /></div>
+      </MeasureCatalogueProvider>,
+    );
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.getByTestId("foot")).toBeEmptyDOMElement();
+    expect(container.textContent).toBe("");
   });
 
   it("shows nothing when the OBR has costed none of the selected measures", async () => {

@@ -48,7 +48,9 @@ const HOUSEHOLD_API = `${API}/api/household-impact`;
 
 // Results by area come only from the disclosure layer, which has not
 // published them yet: the page shows "not yet published" on a 404.
-const NOT_YET_PUBLISHED = new Set(["/data/regional.csv", "/data/constituency.csv", "/data/release-index.json"]);
+// The official costings follow the Budget; until then Public finances shows
+// no comparison at all.
+const NOT_YET_PUBLISHED = new Set(["/data/regional.csv", "/data/constituency.csv", "/data/release-index.json", "/data/official_costings.json"]);
 
 // Text that means a tab failed instead of showing its content.
 const FAILURE_TEXT = [
@@ -353,7 +355,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
     expect(document.querySelectorAll("#obr-comparison")).toHaveLength(0);
     expect(document.querySelectorAll(".obr-pending")).toHaveLength(0);
-    expect(screen.queryByRole("button", { name: "Compare with OBR estimates" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Compare with the official costings" })).toBeNull();
   });
 
   it("says nothing that stops being true on Budget day, on any view but Methodology", async () => {

@@ -7,22 +7,23 @@ import { DISPLAY_YEARS, DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import OBRDumbbellChart from "./OBRDumbbellChart";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
-import { parseDashboardCsv } from "../utils/loadDashboard";
-import { loadVerifiedFlatCsv } from "../utils/publication/flat";
+import { loadOfficialCostings, OfficialCostingsPendingError } from "../utils/publication/officialCostings";
 import Disclosure from "./Disclosure";
 import SourceLink from "./SourceLink";
 
-/** What the comparison says while the OBR has not costed the selected measures. */
-export const OBR_UNAVAILABLE = "The OBR has not costed the selected measures.";
+/** What the comparison says when the official costings cover none of the selected measures. */
+export const OBR_UNAVAILABLE = "The official costings have no figures for the selected measures.";
 
 /**
- * The OBR's and PolicyEngine's figures by measure and year, for displayable
- * measures only: the OBR's from obr_comparison.csv once it verifies against
- * the approved results, PolicyEngine's from the catalogue's verified
- * budgetary tables. Null while loading. `{ unavailable: true }` when no OBR
- * file can be bound, which is always today: obr_comparison.csv is not among
- * the flat files a view may read (FLAT_VIEW_FILES in
- * utils/publication/flat.js), however its OBR columns are filled.
+ * The official costings' and PolicyEngine's figures by measure and year, for
+ * displayable measures only: the official ones from official_costings.json
+ * (HM Treasury's costings, certified by the OBR, as the reconciliation gate
+ * compares them) once it names this manifest's Budget and only its measures
+ * (utils/publication/officialCostings.js), PolicyEngine's from the
+ * catalogue's verified budgetary tables. Null while loading;
+ * `{ pending: true }` while the file is not published; `{ unavailable: true }`
+ * when it is published but does not check. obr_comparison.csv is never read:
+ * it holds last year's costings under reused ids.
  */
 export function useObrComparisonData(enabled = true) {
   const catalogue = useMeasureCatalogue();
@@ -30,19 +31,12 @@ export function useObrComparisonData(enabled = true) {
   useEffect(() => {
     if (!enabled) return undefined;
     let live = true;
-    loadVerifiedFlatCsv("obr_comparison.csv", catalogue)
-      .then((obrCsvText) => {
+    loadOfficialCostings(catalogue)
+      .then((officialRows) => {
         const obrData = Object.create(null);
         const numeric = (value) => value == null || value === "" || !Number.isFinite(Number(value)) ? null : Number(value);
-        for (const row of parseDashboardCsv(obrCsvText)) {
-          const key = `${row.reform_id}_${row.year}`;
-          obrData[key] = {
-            reform_id: row.reform_id,
-            reform_name: row.reform_name,
-            year: Number(row.year),
-            obr_static: numeric(row.obr_static_value),
-            obr_behavioural: numeric(row.obr_post_behavioural_value),
-          };
+        for (const row of officialRows) {
+          obrData[`${row.reform_id}_${row.year}`] = { ...row, reform_name: catalogue.byId?.get(row.reform_id)?.name ?? row.reform_id };
         }
         for (const row of Object.values(catalogue.tablesByKey ?? {}).flatMap((tables) => tables.budgetary_impact ?? [])) {
           const key = `${row.reform_id}_${row.year}`;
@@ -63,7 +57,9 @@ export function useObrComparisonData(enabled = true) {
           rows: data.filter((row) => isCatalogueRowDisplayable(catalogue, row.reform_id, row.year)),
         });
       })
-      .catch(() => { if (live) setLoaded({ catalogue, unavailable: true }); });
+      .catch((error) => {
+        if (live) setLoaded(error instanceof OfficialCostingsPendingError ? { catalogue, pending: true } : { catalogue, unavailable: true });
+      });
     return () => { live = false; };
   }, [enabled, catalogue]);
   // Nothing loaded for an earlier catalogue is shown
@@ -91,8 +87,10 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   const showTable = view === "table";
 
   if (selectedPolicies.length === 0) return null;
-  // Today no OBR file can be bound, so this is what shows
-  if (comparisonData?.unavailable) return <UnavailableNotice reason="The OBR comparison is unavailable: no OBR costings for this Budget are bound to the approved results." />;
+  // Nothing until the official costings are published (no pending line:
+  // nothing on the page may stop being true on Budget day, c4717870)
+  if (comparisonData?.pending) return null;
+  if (comparisonData?.unavailable) return <UnavailableNotice reason="The comparison with the official costings is unavailable: the costings file does not match these results." />;
   if (!comparisonData) return null;
 
   // Filter to selected policies
@@ -100,9 +98,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
 
   if (filteredData.length === 0) return null;
 
-  // The OBR's costings are joined by measure id. Until it costs these
-  // measures (with the Budget on 28 October), none has an OBR figure, so
-  // nothing is paired: the comparison says when it will be available.
+  // The official costings are joined by manifest measure key; a measure
+  // they do not cost has no official figure, so nothing is paired.
   const hasFigures = hasObrFigures(filteredData, selectedPolicies);
   if (!hasFigures) {
     return (
@@ -173,7 +170,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
       {/* Intro across the full width; the controls sit below it */}
       <div className="obr-intro-row">
         <p className="comparison-description">
-          PolicyEngine's static estimates against{" "}
+          PolicyEngine's static estimates beside{" "}
           <SourceLink source="obr_budget_2026_costings" />, £bn a year; positive values raise revenue.
         </p>
       </div>
@@ -182,8 +179,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
         {hasBothTypes && (
           <PillSelect
             variant="light"
-            name="OBR basis"
-            prefix="OBR basis"
+            name="Official basis"
+            prefix="Official basis"
             value={showBehavioural ? "post" : "static"}
             onChange={(value) => setShowBehavioural(value === "post")}
             options={[
@@ -195,7 +192,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
         {/* Chart or table: the dashboard's icon switch, at the row's right
             (this comparison sits in a card's foot, with no header of its own) */}
         <span className="obr-view-toggle">
-          <ViewToggle value={view} onChange={setView} name="the OBR comparison" />
+          <ViewToggle value={view} onChange={setView} name="the official costings comparison" />
         </span>
       </div>
 
@@ -229,7 +226,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
               {years.map((year) => (
                 <React.Fragment key={year}>
                   <th className="source-header pe">PolicyEngine (static)</th>
-                  <th className="source-header obr">OBR ({showBehavioural ? "post-behavioural" : "static"})</th>
+                  <th className="source-header obr">Official ({showBehavioural ? "post-behavioural" : "static"})</th>
                 </React.Fragment>
               ))}
             </tr>
@@ -263,7 +260,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
       </SwapTransition>
 
       <p className="comparison-legend" hidden={!showTable}>
-        Difference from OBR:{" "}
+        Difference from the official costing:{" "}
         <span className="legend-item">
           <span className="legend-dot diff-small" aria-hidden="true"></span>
           under £0.5bn
@@ -284,18 +281,18 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
 export default OBRComparisonTable;
 
 /**
- * The OBR comparison at the foot of the Public finances card: an expander
- * once the OBR has costed any selected measure, and until then one muted
- * line saying when it will be (an expander that opens to "not yet" reads
- * as broken).
+ * The comparison at the foot of the Public finances card: an expander once
+ * the official costings cover any selected measure, and nothing until then
+ * (no pending line: nothing may stop being true on Budget day, c4717870).
  */
 export function ObrComparisonFoot({ selectedPolicies, selectedYear }) {
   const data = useObrComparisonData();
   if (!data || selectedPolicies.length === 0) return null;
-  // No verified OBR figures for the selection: nothing at all
-  if (data.unavailable || !hasObrFigures(data.rows, selectedPolicies)) return null;
+  // Not published yet, a file that does not check, or no official figure
+  // for the selection: nothing at all
+  if (data.pending || data.unavailable || !hasObrFigures(data.rows, selectedPolicies)) return null;
   return (
-    <Disclosure id="obr-comparison" inCard title="Compare with OBR estimates" contentClassName="obr-content">
+    <Disclosure id="obr-comparison" inCard title="Compare with the official costings" contentClassName="obr-content">
       <OBRComparisonTable selectedPolicies={selectedPolicies} selectedYear={selectedYear} data={data} />
     </Disclosure>
   );
