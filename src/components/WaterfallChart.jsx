@@ -292,7 +292,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       </div>
       {controls && <div className="chart-controls ls-controls">{controls}</div>}
 
-      <div ref={chartRef}>
+      <div ref={chartRef} className="chart-plot">
         {published && hasIncompleteResults && (
           <UnavailableNotice reason="Some selected measures have no published results for this chart. The net change is unavailable." />
         )}
