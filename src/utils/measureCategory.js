@@ -6,9 +6,9 @@
  *
  * Order of evidence: the manifest's (or receipt's) own `category` field,
  * when the publication carries one; else the first category whose words
- * appear in the measure's published name, then in its id, then in its
- * description. Within one text the categories are tried in the order
- * below, so the more specific wins ("VAT cut on road fuel" is VAT, "State
+ * appear in the measure's published name, then in its id, then the one
+ * named first in its description. In a name or id the categories are tried
+ * in the order below, so the more specific wins ("VAT cut on road fuel" is VAT, "State
  * Pension income tax protection" is income tax). A measure that matches
  * none is "Other", with a plain tag icon.
  */
@@ -35,11 +35,24 @@ export const OTHER_CATEGORY = { label: "Other", icon: "tag" };
 
 const normalise = (text) => String(text ?? "").toLowerCase().replace(/[_-]+/g, " ");
 
-/** The category entry whose words appear first in one text, or null. */
-function categoryInText(text) {
+/**
+ * The category entry for one text, or null: in a name or id, the first in
+ * MEASURE_CATEGORIES' order whose words appear; in a description (`earliest`),
+ * the one whose words come first in it, since a description names its own
+ * tax before the others it touches ("The income tax personal allowance …
+ * the National Insurance primary threshold …" is income tax).
+ */
+function categoryInText(text, earliest = false) {
   const words = normalise(text);
   if (!words.trim()) return null;
-  return MEASURE_CATEGORIES.find(({ pattern }) => pattern.test(words)) ?? null;
+  if (!earliest) return MEASURE_CATEGORIES.find(({ pattern }) => pattern.test(words)) ?? null;
+  let best = null;
+  let bestAt = Infinity;
+  for (const category of MEASURE_CATEGORIES) {
+    const at = words.search(category.pattern);
+    if (at >= 0 && at < bestAt) { best = category; bestAt = at; }
+  }
+  return best;
 }
 
 /** The category entry for a category caption (a manifest's own, say). */
@@ -59,10 +72,12 @@ export function measureCategoryOf(measure) {
   if (!measure) return OTHER_CATEGORY;
   const published = typeof measure.category === "string" ? categoryFromLabel(measure.category) : null;
   if (published) return published;
-  for (const text of [measure.name, measure.label, measure.id, measure.description]) {
+  for (const text of [measure.name, measure.label, measure.id]) {
     const found = categoryInText(text);
     if (found) return { label: found.label, icon: found.icon };
   }
+  const found = categoryInText(measure.description, true);
+  if (found) return { label: found.label, icon: found.icon };
   return OTHER_CATEGORY;
 }
 

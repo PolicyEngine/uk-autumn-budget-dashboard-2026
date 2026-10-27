@@ -14,7 +14,7 @@ const CURRENT = [
   ["plan_2_threshold_unfreeze", "Plan 2 student loan threshold unfrozen", "The Plan 2 student loan repayment threshold rises with RPI", "Student loans", "cap"],
   ["road_fuel_vat_cut", "VAT cut on road fuel", "VAT on petrol and diesel falls from 20% to 15%", "VAT", "receipt"],
   ["state_pension_income_tax_protection", "State Pension income tax protection", "people over State Pension age get an income tax allowance", "Income tax", "wallet"],
-  ["threshold_freeze_2031_32", "Threshold freeze to 2031-32", "The income tax personal allowance stays at £12,570", "Income tax", "wallet"],
+  ["threshold_freeze_2031_32", "Threshold freeze to 2031-32", "Candidate measure. The income tax personal allowance stays at £12,570 and the basic rate band at £37,700 (a higher rate threshold of £50,270) for one more year. From 2031-32 policyengine-uk sets the National Insurance primary threshold and upper earnings limit at the personal allowance and higher rate threshold.", "Income tax", "wallet"],
   ["warm_home_discount_top_up", "Warm Home Discount top-up", "£100 more to each household receiving Universal Credit, Pension Credit", "Energy", "flame"],
 ];
 
