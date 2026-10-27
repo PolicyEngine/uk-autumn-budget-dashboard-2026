@@ -530,6 +530,35 @@ describe("Calculate", () => {
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(household).toHaveLength(asked);
   });
+
+  // The partner's age box takes a fraction. Without a partner the request
+  // leaves out the age the box still holds; the old one carried it, and
+  // api.py refused the whole request for it (householdRequestIdentity.test.js)
+  it("sends no partner's age once there is no partner, though the box held one with a fraction", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    renderTab();
+    openForm();
+    const partner = screen.getByRole("combobox", { name: "Partner" });
+    const answer = (option) =>
+      fireEvent.change(partner, { target: { value: within(partner).getByRole("option", { name: option }).value } });
+    answer("Yes");
+    const age = screen.getByRole("spinbutton", { name: "Partner's age" });
+    fireEvent.change(age, { target: { value: "30.5" } });
+    fireEvent.blur(age);
+    expect(age).toHaveValue(30.5);
+    answer("No");
+    expect(screen.queryByRole("spinbutton", { name: "Partner's age" })).toBeNull();
+    fireEvent.click(calculateButton());
+    await splitShown();
+    // The form's own requests: the examples' are asked too, none at the
+    // defaults' age
+    const yours = household.filter((body) => body.household.age === WIZARD_DEFAULTS.current_age);
+    expect(yours.map((body) => body.include)).toEqual([[], ["sweep"], ["by_policy"]]);
+    for (const body of yours) {
+      expect(body.household.has_partner).toBe(false);
+      expect(body.household).not.toHaveProperty("partner_age");
+    }
+  });
 });
 
 describe("an example card", () => {

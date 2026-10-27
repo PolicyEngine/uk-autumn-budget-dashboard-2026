@@ -12,7 +12,7 @@ PolicyEngine's dashboard for the UK Autumn Budget 2026 (Wednesday 28 October 202
 
 ## Tabs
 
-The tab list is `VIEWS` in [`src/App.jsx`](src/App.jsx); the open tab and sub-tab, the selected measures and the household answers are kept in the address (`?tab=`, `?sub=`, `?policies=`, `?personal=`), so a link reopens the same view.
+The tab list is `VIEWS` in [`src/App.jsx`](src/App.jsx); the open tab and sub-tab and the selected measures are kept in the address (`?tab=`, `?sub=`, `?policies=`), so a link reopens the same view. The Household impact answers are kept for the session only, so switching tabs keeps them; a link does not carry them.
 
 | Tab | What it shows |
 |---|---|
