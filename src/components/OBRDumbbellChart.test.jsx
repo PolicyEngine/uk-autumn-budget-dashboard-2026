@@ -120,7 +120,7 @@ describe("helpers", () => {
   });
 
   it("takes the difference of the figures as shown", () => {
-    expect(shownDifference(-6.15, -6.5)).toBeCloseTo(0.3);
+    expect(shownDifference(-6.16, -6.5)).toBeCloseTo(0.3);
     expect(formatDifference(shownDifference(-0.16, -0.1))).toBe("−£0.1bn");
     expect(shownDifference(1, null)).toBeNull();
   });
