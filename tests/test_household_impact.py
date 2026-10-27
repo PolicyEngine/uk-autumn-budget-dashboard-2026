@@ -1292,8 +1292,11 @@ def _rows_add_up(result):
 def test_a_private_pension_is_income_the_qa_pensioner_couple():
     """The QA's pensioner couple (70 and 68, the full new State Pension
     each) with a £10,000 private pension: £10,000 less £2,000 basic-rate
-    tax on top of their £25,907.11, as an independent policyengine-uk run
-    and the public API give: £33,907.11."""
+    tax on top of their £25,907.16, as an independent policyengine-uk
+    2.151.0 run gives: £33,907.16. (policyengine-uk 2.132.6 gave £33,907.11:
+    its expected_sdlt added the property sale rate, 0.045, to every
+    household's stamp duty as pounds. From 2.151.0 it is the household's
+    own stamp duty, nil here.)"""
     answers = household_impact.HouseholdAnswers(
         age=70,
         employment_income=0,
@@ -1308,7 +1311,7 @@ def test_a_private_pension_is_income_the_qa_pensioner_couple():
     result = household_impact.calculate_household_impact(
         answers, household_impact.measure_ids(), 2027, include=()
     )
-    assert result["net_income"]["baseline"] == pytest.approx(33_907.11)
+    assert result["net_income"]["baseline"] == pytest.approx(33_907.16)
     assert _programme(result, "private_pension_income")["baseline"] == 10_000
     assert _programme(result, "other_income")["baseline"] == 0
     _rows_add_up(result)
