@@ -53,28 +53,37 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  height: 56px;
+  height: 68px;
   padding: 0 10px 0 20px;
   border-bottom: 1px solid var(--card-border);
 }
 
-.overview-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+/* PolicyEngine's wordmark, at the header's left */
+.overview-logo {
+  display: block;
+  width: auto;
+  height: 36px;
   min-width: 0;
 }
 
-.overview-mark {
-  display: block;
-  width: 22px;
-  height: 22px;
+/* "About this dashboard": a tinted pill above the title */
+.overview-tag {
+  display: inline-block;
+  align-self: flex-start;
+  margin: 0 0 10px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--pe-teal-800);
+  background: var(--pe-teal-50);
+  box-shadow: inset 0 0 0 1px var(--pe-teal-100);
 }
 
-.overview-title {
-  font-size: var(--fs-body);
-  font-weight: 600;
-  color: var(--pe-gray-900);
+.overview-lead {
+  display: flex;
+  flex-direction: column;
 }
 
 /* A ghost icon button: no ring until focused by the keyboard */
@@ -274,7 +283,11 @@
 /* A short window: everything a little tighter, so it still fits */
 @media (max-height: 760px) {
   .overview-header {
-    height: 48px;
+    height: 56px;
+  }
+
+  .overview-logo {
+    height: 30px;
   }
 
   .overview-intro .landing-heading {
