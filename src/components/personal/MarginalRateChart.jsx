@@ -1,9 +1,11 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
+  Area,
   CartesianGrid,
+  ComposedChart,
   Customized,
   Line,
-  LineChart,
+  ReferenceDot,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -25,17 +27,38 @@ import {
   REFERENCE_DASH,
 } from "../../utils/chartTheme";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
-import { formatPounds, formatPoundsShort, roundTicks } from "../../utils/exampleHouseholds";
-import { marginalRates, rateAt } from "../../utils/singleYear";
+import { formatPounds, formatPoundsShort } from "../../utils/exampleHouseholds";
+import ChartMoreInfo from "../ChartMoreInfo";
+import { METHOD_ANCHORS } from "../methodology/anchors";
+import { keepClause, marginalRates, rateAt } from "../../utils/singleYear";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
+import SeriesToggle from "../SeriesToggle";
 import { AFTER_COLOUR, BEFORE_COLOUR, LEGEND_ITEMS, earningsChartHeight } from "./EarningsChart";
+import { breakdownRows, describeParts, drawnKey, partsInUse } from "./marginalRateParts";
+import { SWEEP_COMPONENTS, hiddenParts, sweepChips } from "./sweepComponents";
 import TitleIcon from "../TitleIcon";
+import ControlBar from "../ControlBar";
+import { CHART_VIEWS } from "./chartViews";
 
-const Y_TICKS = [0, 0.25, 0.5, 0.75, 1];
+const Y_TICKS = [0, 0.2, 0.4, 0.6, 0.8, 1];
 const pct = (value) => `${Math.round(value * 100)}%`;
 const clamp = (value) => Math.min(1, Math.max(0, value));
+// Over the stacked parts the totals are drawn in ink, the before total dashed
+const TOTAL_COLOUR = CHART_COLOURS.ink;
+const CHANGE_COLOUR = CHART_COLOURS.ink;
+const SIDE_NAME = { before: "before", after: "after" };
+const points = (value) => {
+  const rounded = Math.round(value * 100);
+  return `${rounded > 0 ? "+" : rounded < 0 ? "−" : ""}${Math.abs(rounded)}pp`;
+};
+
+/** Symmetric ticks for a change in rate: ±4, 10, 20, 50 or 100 points (whole-point halves). */
+export function changeRateTicks(maxAbs) {
+  const top = [0.04, 0.1, 0.2, 0.5, 1].find((m) => m >= maxAbs) ?? Math.ceil(maxAbs);
+  return [-top, -top / 2, 0, top / 2, top];
+}
 
 /** A dot only where the rate is off the 0–100% scale: ▲ above, ▼ below. */
 function EdgeMarker({ cx, cy, payload, dataKey, stroke }) {
@@ -48,10 +71,46 @@ function EdgeMarker({ cx, cy, payload, dataKey, stroke }) {
   return <path d={d} fill={stroke} />;
 }
 
-/** The shared tooltip with the true rates, not the clipped ones. */
-function RateTooltip({ yearLabel, ...props }) {
+/**
+ * The tooltip, for the view drawn only: in Before or After, that side's
+ * parts in use and its total (the true rate, not the clipped one); in
+ * Change, the change in the total rate.
+ */
+export function RateTooltip({ yearLabel, parts, view, focusPart = null, ...props }) {
   const point = props.payload?.[0]?.payload;
   if (!props.active || !point) return null;
+  const labelFormat = (value) => `Employment income ${formatPounds(value)}, ${yearLabel}`;
+  // On one part: that part alone ("At £40k: Income tax 20%")
+  const one = view !== "change" && focusPart ? (parts ?? []).find((part) => part.name === focusPart) : null;
+  if (one) {
+    return (
+      <ChartTooltip
+        active
+        label={point.income}
+        grouped={false}
+        showZero
+        format={(value) => `${Math.round(value * 100)}%`}
+        labelFormat={(value) => `At ${formatPoundsShort(value)}`}
+        payload={[{ dataKey: one.name, name: one.label, value: point[one.name] ?? 0, color: one.color }]}
+      />
+    );
+  }
+  if (view === "change") {
+    return (
+      <ChartTooltip
+        active
+        label={point.income}
+        grouped={false}
+        showZero
+        format={points}
+        labelFormat={labelFormat}
+        payload={[{ dataKey: "change", name: "Change in marginal rate", value: point.change, color: CHANGE_COLOUR }]}
+      />
+    );
+  }
+  const partRows = (parts ?? [])
+    .filter((part) => Math.abs(point[part.name] ?? 0) >= 0.0005)
+    .map((part) => ({ dataKey: part.name, name: part.label, value: point[part.name], color: part.color }));
   return (
     <ChartTooltip
       active
@@ -59,41 +118,76 @@ function RateTooltip({ yearLabel, ...props }) {
       grouped={false}
       showZero
       format={(value) => `${Math.round(value * 100)}%`}
-      labelFormat={(value) => `Salary ${formatPounds(value)}, ${yearLabel}`}
+      labelFormat={labelFormat}
       payload={[
-        { dataKey: "before", name: "Marginal rate before", value: point.beforeRaw, color: BEFORE_COLOUR },
-        { dataKey: "after", name: "Marginal rate after", value: point.afterRaw, color: AFTER_COLOUR },
+        ...partRows,
+        {
+          dataKey: view,
+          name: `Total rate ${SIDE_NAME[view]}`,
+          value: point[`${view}Raw`],
+          color: parts ? TOTAL_COLOUR : view === "before" ? BEFORE_COLOUR : AFTER_COLOUR,
+        },
       ]}
     />
   );
 }
 
 /**
- * Marginal tax rate across earnings, before and after: of each extra
- * pound of salary, the share lost to taxes and withdrawn benefits, from
- * the same sweep as the net income chart (1 − Δnet / Δsalary). The axis
- * is clipped to 0–100%; a rate past either end is marked at the edge, and
- * the tooltip gives it in full.
+ * Marginal tax rate across earnings: of each extra pound of salary, the
+ * share lost to taxes and withdrawn benefits, from the same sweep as the
+ * net income chart (1 − Δnet / Δsalary). When the API sends the rate's
+ * parts, they are stacked as steps after the policies (income tax, Child
+ * Benefit clawback, personal allowance taper, National Insurance, student
+ * loan, Universal Credit taper and the rest), with the total after solid
+ * and before dashed; else the two totals alone. The axis is clipped to
+ * 0–100%; a total past either end is marked at the edge, and the tooltip
+ * gives it in full.
  */
-export default function MarginalRateChart({ sweep, salary, yearLabel }) {
+export default function MarginalRateChart({ sweep, salary, yearLabel, sync = null }) {
   const narrow = useNarrowViewport();
   const chartRef = useRef(null);
+  // The view and the components switched off are shared with the net
+  // income card beside it (`sync`), else this card's own
+  const [ownView, setOwnView] = useState("after");
+  const view = sync?.view ?? ownView;
+  const setView = sync?.setView ?? setOwnView;
+  const [ownHidden, setOwnHidden] = useState([]);
+  const hiddenKeys = sync?.hidden ?? ownHidden;
+  const setHiddenKeys = sync?.setHidden ?? setOwnHidden;
+  const hidden = useMemo(
+    () => [...hiddenParts("rate", hiddenKeys), ...(hiddenKeys.includes("total") ? ["total"] : [])],
+    [hiddenKeys],
+  );
+  // The component a chip or the pointer is on (its parts come forward)
+  const [focusKey, setFocusKey] = useState(null);
+  const focusParts = focusKey ? (SWEEP_COMPONENTS.find((component) => component.key === focusKey)?.rate ?? [focusKey]) : null;
+  const focus = focusParts?.[0] ?? null;
+  const setFocus = setFocusKey;
+  const isChange = view === "change";
+  const side = isChange ? "after" : view;
   const rates = useMemo(() => marginalRates(sweep), [sweep]);
+  const breakdown = sweep.parts ?? null;
+  // The parts in use on either side, so switching views keeps the colours
+  const parts = useMemo(
+    () => (breakdown && !isChange ? partsInUse([...breakdown.before, ...breakdown.after]) : null),
+    [breakdown, isChange],
+  );
   const data = useMemo(() => {
-    const rows = rates.map((rate) => ({
-      income: rate.income,
-      before: clamp(rate.before),
-      after: clamp(rate.after),
-      beforeRaw: rate.before,
-      afterRaw: rate.after,
-    }));
+    const rows = breakdown
+      ? breakdownRows(rates, breakdown, side)
+      : rates.map((rate) => ({ income: rate.income, to: rate.to, before: rate.before, after: rate.after }));
     // The last step runs to the sweep's end
-    if (rates.length) {
-      const last = rates[rates.length - 1];
-      rows.push({ ...rows[rows.length - 1], income: last.to });
-    }
-    return rows;
-  }, [rates]);
+    if (!breakdown && rows.length) rows.push({ ...rows[rows.length - 1], income: rows[rows.length - 1].to });
+    return rows.map((row) => ({
+      ...row,
+      before: clamp(row.before),
+      after: clamp(row.after),
+      beforeRaw: row.before,
+      afterRaw: row.after,
+      change: row.after - row.before,
+    }));
+  }, [rates, breakdown, side]);
+  const yTicks = isChange ? changeRateTicks(Math.max(0, ...data.map((row) => Math.abs(row.change)))) : Y_TICKS;
   const title = `Marginal tax rate across earnings, ${yearLabel}`;
   const { domain: xDomain, ticks: xTicks } = sweepAxis(sweep.max);
   // The API's own rates at your salary, else the step that holds it
@@ -104,14 +198,53 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
       : salary !== null
         ? rateAt(rates, salary)
         : null;
+  // A State Pension household whose income tax rate rises sharply at the
+  // start of earnings after the policies: an extra allowance withdrawn £1
+  // for £1 (said in plain words in About this chart)
+  const firstNet = sweep.netParts?.after?.[0];
+  const firstRates = breakdown ? { before: breakdown.before[0]?.income_tax ?? 0, after: breakdown.after[0]?.income_tax ?? 0 } : null;
+  const pensionAllowanceTaper =
+    (firstNet?.state_pension ?? 0) > 0 &&
+    ((own && own.afterRate - own.beforeRate >= 0.1) || (firstRates && firstRates.after - firstRates.before >= 0.05));
+  const yourParts = breakdown?.own ? describeParts(breakdown.own.after) : "";
+  const legendItems = isChange
+    ? [{ label: "Change in marginal rate", color: CHANGE_COLOUR, type: "line" }]
+    : parts
+      ? [
+          ...parts.map((part) => ({ label: part.label, color: part.color, info: part.info })),
+          { label: `Total rate ${SIDE_NAME[view]}`, color: TOTAL_COLOUR, type: "line" },
+        ]
+      : [view === "before" ? LEGEND_ITEMS[0] : LEGEND_ITEMS[1]];
+  // The chips: every component both cards share, in one order; those with
+  // nothing here disabled, so the two keys line up
+  const rateChips = sweepChips(
+    "rate",
+    new Set((parts ?? []).map((part) => part.name)),
+    { label: `Total rate ${SIDE_NAME[view]}`, colour: TOTAL_COLOUR },
+    sync?.union ?? null,
+  );
+  const lineStroke = isChange ? CHANGE_COLOUR : parts ? TOTAL_COLOUR : view === "before" ? BEFORE_COLOUR : AFTER_COLOUR;
+  // The rate as money, from the API's own rates only: they are over the
+  // next £200, which the sentence scales (a sweep step is too coarse)
+  const keep = own ? keepClause(own.beforeRate, own.afterRate, { first: salary === 0 }) : null;
 
+  const csvColumns = [
+    { key: "income", label: "Your salary (£)", decimals: 0 },
+    { key: "to", label: "To salary (£)", decimals: 0 },
+    ...(parts ?? []).map((part) => ({ key: part.name, label: `${part.label} after`, decimals: 4 })),
+    { key: "before", label: "Marginal tax rate before", decimals: 4 },
+    { key: "after", label: "Marginal tax rate after", decimals: 4 },
+  ];
+  const csvRows = rates.map((rate, i) => ({ ...rate, ...(breakdown?.after[i] ?? {}) }));
   const download = {
     chartRef,
     name: `marginal-tax-rate-${yearLabel}`,
     exportOptions: {
       title,
-      description: `Share of each extra pound of salary lost to taxes and withdrawn benefits in ${yearLabel}, before and after the selected policies.`,
-      legendItems: LEGEND_ITEMS,
+      description: parts
+        ? `Share of each extra pound of salary lost to taxes and withdrawn benefits in ${yearLabel}, by part after the selected policies, with the total before and after.`
+        : `Share of each extra pound of salary lost to taxes and withdrawn benefits in ${yearLabel}, before and after the selected policies.`,
+      legendItems: legendItems.map(({ info, ...item }) => item),
       logo: CHART_LOGO,
       reservedLegendHeight: 0,
     },
@@ -120,13 +253,8 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
         title,
         units: "Share of an extra £1 of salary; from this salary to the next point",
         source: "PolicyEngine UK household calculation, UK Autumn Budget 2026 dashboard",
-        columns: [
-          { key: "income", label: "Your salary (£)", decimals: 0 },
-          { key: "to", label: "To salary (£)", decimals: 0 },
-          { key: "before", label: "Marginal tax rate before", decimals: 4 },
-          { key: "after", label: "Marginal tax rate after", decimals: 4 },
-        ],
-        rows: rates,
+        columns: csvColumns,
+        rows: csvRows,
       }),
   };
 
@@ -140,16 +268,36 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
           </h3>
           {yours && (
             <p className="chart-description">
-              At {formatPounds(salary)} your marginal tax rate is {pct(yours.before)} before and{" "}
-              {pct(yours.after)} after.
+              {/* One sentence: the rate, its parts, then what it means in
+                  money (Vahid, 26 October) */}
+              {salary === 0
+                ? "With no earnings, your marginal tax rate on your first £200 would be "
+                : `At ${formatPounds(salary)} your marginal tax rate is `}
+              {pct(yours.before) === pct(yours.after)
+                ? pct(yours.after)
+                : `${pct(yours.before)} before and ${pct(yours.after)} after`}
+              {keep ? `, so ${keep}.` : "."}
             </p>
           )}
         </div>
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
-      <div ref={chartRef} className="chart-plot">
+      <div className="chart-view-switch chart-controls">
+        {/* The view in the card's Options pill, as on every other page */}
+        <ControlBar name={title} options={[{ label: "View", value: view, onChange: setView, options: CHART_VIEWS }]} />
+      </div>
+      <div ref={chartRef} className="chart-plot" data-view={view}>
         <ResponsiveContainer width="100%" height={earningsChartHeight(narrow)}>
-          <LineChart data={data} margin={{ top: 12, right: 20, left: 0, bottom: 0 }}>
+          <ComposedChart
+            data={data}
+            margin={{ top: 12, right: 20, left: 0, bottom: 0 }}
+            onMouseMove={(state) => {
+              if (sync && state?.activeLabel !== undefined && state.activeLabel !== null) {
+                sync.setHover({ income: Number(state.activeLabel), card: "rate" });
+              }
+            }}
+            onMouseLeave={() => sync?.setHover(null)}
+          >
             <CartesianGrid {...GRID_PROPS} />
             <XAxis
               dataKey="income"
@@ -163,7 +311,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
               // As the earnings chart beside it: axis line 44 px from the foot
               height={44}
               label={{
-                value: `Your salary in ${yearLabel}`,
+                value: "Employment income",
                 position: "insideBottom",
                 offset: 4,
                 style: AXIS_TITLE_STYLE,
@@ -173,53 +321,131 @@ export default function MarginalRateChart({ sweep, salary, yearLabel }) {
               axisLine={false}
               tickLine={false}
               tick={TICK_STYLE}
-              ticks={Y_TICKS}
-              domain={[0, 1]}
+              ticks={yTicks}
+              domain={[yTicks[0], yTicks[yTicks.length - 1]]}
               allowDataOverflow
-              tickFormatter={pct}
-              width={axisWidth(Y_TICKS, pct)}
+              tickFormatter={isChange ? points : pct}
+              width={axisWidth(yTicks, isChange ? points : pct)}
             />
-            <Tooltip {...TOOLTIP_PROPS} content={<RateTooltip yearLabel={yearLabel} />} />
+            <Tooltip {...TOOLTIP_PROPS} content={<RateTooltip yearLabel={yearLabel} parts={parts} view={view} focusPart={focus} />} />
+            {(parts ?? []).filter((part) => !hidden.includes(part.name)).map((part) => (
+              <Area
+                key={part.name}
+                type="stepAfter"
+                dataKey={drawnKey(part.name)}
+                name={part.label}
+                stackId="parts"
+                fill={part.color}
+                fillOpacity={focusParts ? (focusParts.includes(part.name) ? 0.95 : 0.2) : 0.85}
+                stroke="none"
+                activeDot={false}
+                isAnimationActive={false}
+                onMouseEnter={() => setFocus(part.name)}
+                onMouseLeave={() => setFocus(null)}
+              />
+            ))}
             {salary !== null && (
               <ReferenceLine
                 x={salary}
                 stroke={CHART_COLOURS.text}
                 strokeDasharray={REFERENCE_DASH}
-                label={{ value: "You", position: "insideTopRight", fill: CHART_COLOURS.text, fontSize: 13, fontWeight: 600 }}
+                label={{
+                  value: yours ? `You: ${isChange ? points(yours.after - yours.before) : pct(yours[view])}` : "You",
+                  // Right of the line, as the net income card's "You", clear of
+                  // the y axis's top tick; left of it only near the right edge
+                  position: salary < xDomain[1] * 0.75 ? "insideTopLeft" : "insideTopRight",
+                  fill: CHART_COLOURS.text,
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
               />
             )}
-            <Line
+            {isChange && <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} />}
+            {/* The salary hovered on the net income card beside it */}
+            {sync?.hover && sync.hover.card !== "rate" && (
+              <ReferenceLine x={sync.hover.income} stroke={CHART_COLOURS.noChange} strokeWidth={1} ifOverflow="hidden" />
+            )}
+            {!(parts && hidden.includes("total")) && <Line
               type="stepAfter"
-              dataKey="before"
-              name="Before"
-              stroke={BEFORE_COLOUR}
+              dataKey={isChange ? "change" : view}
+              name={isChange ? "Change" : view === "before" ? "Before" : "After"}
+              stroke={lineStroke}
               strokeWidth={2}
-              strokeDasharray={BEFORE_DASH}
-              dot={<EdgeMarker />}
+              strokeOpacity={focusKey && focusKey !== "total" ? 0.3 : 1}
+              strokeDasharray={view === "before" && !parts ? BEFORE_DASH : undefined}
+              dot={isChange ? false : <EdgeMarker />}
               activeDot={false}
               isAnimationActive={false}
-            />
-            <Line
-              type="stepAfter"
-              dataKey="after"
-              name="After"
-              stroke={AFTER_COLOUR}
-              strokeWidth={2}
-              dot={<EdgeMarker />}
-              activeDot={false}
-              isAnimationActive={false}
-            />
-            <Customized component={<ChartUnitLabel text="Marginal tax rate" />} />
-          </LineChart>
+            />}
+            {salary !== null && yours && !isChange && (
+              <ReferenceDot
+                x={salary}
+                y={clamp(yours[view])}
+                r={5}
+                fill={lineStroke}
+                stroke={CHART_COLOURS.surface}
+                strokeWidth={2}
+                ifOverflow="visible"
+              />
+            )}
+            <Customized component={<ChartUnitLabel text={isChange ? "Change in marginal rate" : "Marginal tax rate"} />} />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
       <div className="single-year-legend chart-legend">
-        <GroupedLegend items={LEGEND_ITEMS} />
+        {parts ? (
+          // The parts and the total as chips, as the net income card's
+          <SeriesToggle
+            lead="Show:"
+            label="Parts"
+            series={rateChips}
+            shown={rateChips.filter((chip) => !chip.disabled && !hiddenKeys.includes(chip.key)).map((chip) => chip.key)}
+            onChange={(next) => {
+              // This card's chips decide only their own keys; the rest stay as the other card left them
+              const mine = rateChips.filter((chip) => !chip.disabled).map((chip) => chip.key);
+              setHiddenKeys([...hiddenKeys.filter((key) => !mine.includes(key)), ...mine.filter((key) => !next.includes(key))]);
+            }}
+            onHover={setFocus}
+            collapseDisabled
+            expanded={sync?.expanded}
+            onExpandedChange={sync?.setExpanded}
+            narrow={narrow}
+          />
+        ) : (
+          <GroupedLegend items={legendItems} />
+        )}
       </div>
       <div className="card-logo chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
+      {/* The same "About this chart" as the net income card beside it */}
+      <div className="chart-footer">
+        <ChartMoreInfo
+          info={{
+            shows: yourParts
+              ? `${salary === 0 ? "With no earnings" : `At ${formatPounds(salary)}`}, your marginal rate is made up of ${yourParts}.`
+              : "Of each extra pound of salary, the share lost to taxes and withdrawn benefits.",
+            how: [
+              "Worked out from the same salary sweep as the net income card: one minus the change in net income over the change in salary, from each salary to the next.",
+              parts
+                ? "Each layer is one tax's or benefit taper's part of the rate; the line is the total rate."
+                : "The line is the total rate.",
+              "The dashed line marks your salary.",
+            ],
+            // Each part's note (the Child Benefit clawback, the personal
+            // allowance taper), in place of the legend's "i"
+            definitions: (parts ?? []).filter((part) => part.info).map((part) => ({ term: part.label, meaning: part.info })),
+            method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
+            caveats: [
+              pensionAllowanceTaper &&
+                "For a pensioner on the State Pension, the selected policies give an extra tax-free allowance that is withdrawn £1 for every £1 of other income. On the first few hundred pounds earned, each pound therefore makes £2 taxable: income tax takes about 40p in the pound instead of 20p, until the extra allowance is used up.",
+              "The axis runs from 0% to 100%; a rate beyond either end is marked at the edge, and the tooltip gives it in full.",
+            ],
+          }}
+        />
+      </div>
     </div>
   );
 }
+

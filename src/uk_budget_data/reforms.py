@@ -8,7 +8,9 @@ which are already in the policyengine-uk 2.132.6 baseline or had lapsed.
 Every measure is compared against current law: the installed
 policyengine-uk (2.132.6, through policyengine 6.10.2), with no baseline
 changes of its own, except the Plan 2 measure, whose baseline also counts
-modelled student loan repayments. A measure changes parameters
+modelled student loan repayments. Every measure that moves capital gains
+tax holds capital gains realisations fixed (``static_capital_gains``), so
+its figure is static. A measure changes parameters
 (``parameter_changes``, bound by content) or applies a modifier from
 ``budget_measures``, each in a module of its own (of fixed shape, which
 receipts can bind; this module fills caches at run time, so no modifier
@@ -57,6 +59,7 @@ PERSONAL_ALLOWANCE = "gov.hmrc.income_tax.allowances.personal_allowance.amount"
 BASIC_RATE_BAND = "gov.hmrc.income_tax.rates.uk[1].threshold"
 BADR_LIFETIME_LIMIT = "gov.hmrc.cgt.badr.lifetime_limit"
 PLAN_2_THRESHOLD = "gov.hmrc.student_loans.thresholds.plan_2"
+CAPITAL_GAINS_RESPONSES = "gov.simulation.capital_gains_responses"
 
 FUEL_DUTY_DEFERRAL_ID = "fuel_duty_rise_deferral"
 STATE_PENSION_ALLOWANCE_ID = "state_pension_income_tax_protection"
@@ -78,6 +81,39 @@ def _years_dict(value, years: list[int] = None) -> dict[str, any]:
 def _years_from(first_year: int, value) -> dict[str, any]:
     """A {year: value} dict for every policy year from ``first_year``."""
     return _years_dict(value, [y for y in POLICY_YEARS if y >= first_year])
+
+
+def static_capital_gains() -> dict[str, dict[str, any]]:
+    """No capital gains realisation response, in every policy year.
+
+    Set by every measure that moves capital gains tax, through its rates,
+    bands, allowances or reliefs, so its figure is static: the Business
+    Asset Disposal Relief limit, the threshold freeze (the basic rate band)
+    and the State Pension allowance (taxable income). This is the static
+    setting policyengine-uk's own parameter descriptions give: both
+    elasticities 0, and gains qualifying for the relief on the main
+    elasticity. 2.132.6 has no response by default, so nothing changes on
+    it; from 2.134.0 the main elasticity defaults to 1, which would turn a
+    static figure into a post-response one.
+
+    The reform side is enough: the engine scales the reformed simulation's
+    gains by its own elasticities, against current law's rates, and current
+    law against itself has no rate change to respond to. It is a shared
+    setting, so members of a combined run may each set it
+    (``combine.SHARED_SETTINGS``).
+    """
+    changes = rate_change(
+        f"{CAPITAL_GAINS_RESPONSES}.elasticity", _years_dict(0)
+    )
+    changes.update(
+        rate_change(
+            f"{CAPITAL_GAINS_RESPONSES}.mtr_elasticity", _years_dict(0)
+        )
+    )
+    changes[f"{CAPITAL_GAINS_RESPONSES}.separate_badr_elasticity"] = (
+        _years_dict(False)
+    )
+    return changes
 
 
 # =============================================================================
@@ -187,6 +223,8 @@ def _create_state_pension_income_tax_protection() -> Reform:
             "Pension pays no income tax."
         ),
         simulation_modifier=state_pension_income_tax_allowance,
+        # The allowance moves taxable income, so the capital gains rate.
+        parameter_changes=static_capital_gains(),
     )
 
 
@@ -226,7 +264,9 @@ def _create_domestic_electricity_zero_vat() -> Reform:
             "of 5% from 1 October 2026 to 31 March 2028: the zero rate to "
             "March 2027, not in the model's baseline, scored with a "
             "candidate one-year extension. Applied to electricity spending "
-            "only, day-weighted in 2026-27."
+            "only, in Great Britain (Northern Ireland keeps the 5%). "
+            "2026-27 carries the October to March share of a year's "
+            "electricity use (about 57%), not a share of its days."
         ),
         simulation_modifier=zero_vat_on_domestic_electricity,
     )
@@ -262,6 +302,8 @@ def _create_employer_ni_relief_under_25s() -> Reform:
 def _create_threshold_freeze_2031_32() -> Reform:
     changes = threshold_change(PERSONAL_ALLOWANCE, {"2031": 12570})
     changes.update(threshold_change(BASIC_RATE_BAND, {"2031": 37700}))
+    # The basic rate band sets which gains pay the lower capital gains rate.
+    changes.update(static_capital_gains())
     return Reform(
         id=THRESHOLD_FREEZE_ID,
         name="Threshold freeze to 2031-32",
@@ -299,9 +341,12 @@ def _create_badr_lifetime_limit_cut() -> Reform:
             "rate, so the relief's base, and the revenue from restricting "
             "it, are likely 1.5 to 1.7 times too high."
         ),
-        parameter_changes=threshold_change(
-            BADR_LIFETIME_LIMIT, _years_from(2027, 500_000)
-        ),
+        parameter_changes={
+            **threshold_change(
+                BADR_LIFETIME_LIMIT, _years_from(2027, 500_000)
+            ),
+            **static_capital_gains(),
+        },
     )
 
 

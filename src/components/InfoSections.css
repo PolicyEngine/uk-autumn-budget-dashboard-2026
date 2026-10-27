@@ -1,0 +1,160 @@
+/* A card's "About this chart" (InfoSections): short sections, each an
+   icon and heading over bullets, in a fixed order. Compact text: 0.9rem,
+   line-height 1.5. */
+.info-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--pe-gray-700);
+  container-type: inline-size;
+}
+
+.info-section {
+  min-width: 0;
+}
+
+.info-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 3px;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--pe-gray-800);
+}
+
+.info-heading svg {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  color: var(--pe-teal-700);
+}
+
+/* The body lines up with the heading's text, past the icon */
+.info-body {
+  min-width: 0;
+  padding-left: 23px;
+}
+
+.info-shows {
+  margin: 0;
+}
+
+.info-list {
+  margin: 0;
+  padding-left: 16px;
+  list-style: disc;
+}
+
+.info-list li + li {
+  margin-top: 3px;
+}
+
+.info-list li::marker {
+  color: var(--pe-gray-400);
+}
+
+/* Caveats: amber-accented */
+.info-section-caveat .info-heading svg {
+  color: var(--c-loss);
+}
+
+.info-caveats {
+  padding: 6px 10px 6px 26px;
+  border-left: 3px solid var(--c-loss);
+  border-radius: 0 6px 6px 0;
+  background: var(--c-notice-bg);
+  color: var(--pe-gray-800);
+}
+
+.info-caveats li::marker {
+  color: var(--c-loss);
+}
+
+/* Definitions: term, then its plain meaning; side by side when there is room */
+.info-terms {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.info-term {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.info-term dt {
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.info-term dd {
+  margin: 0;
+}
+
+@container (min-width: 520px) {
+  .info-term {
+    grid-template-columns: minmax(120px, 0.32fr) minmax(0, 1fr);
+    column-gap: 12px;
+  }
+}
+
+.info-shared {
+  margin: 0;
+}
+
+.info-terms + .info-shared {
+  margin-top: 6px;
+}
+
+.info-shared-label {
+  color: var(--pe-gray-600);
+}
+
+.info-sections a {
+  color: var(--pe-teal-700);
+  text-underline-offset: 2px;
+}
+
+.info-date,
+.info-source-note {
+  color: var(--pe-gray-600);
+}
+
+.info-sources {
+  list-style: none;
+  padding-left: 0;
+}
+
+/* The link to the relevant Methodology section, last */
+.info-method {
+  margin: 0;
+  padding-left: 23px;
+  font-weight: 500;
+}
+
+.info-method a {
+  text-decoration: none;
+}
+
+.info-method a:hover {
+  text-decoration: underline;
+}
+
+/* The measures with no effect, as one caveat: tighter rows, no rules */
+.info-caveats .no-effect-list {
+  padding-top: 2px;
+}
+
+.info-caveats .no-effect-item {
+  padding: 1px 0;
+  border-bottom: none;
+}
+
+.info-caveats .no-effect-title {
+  font-size: inherit;
+  color: inherit;
+}

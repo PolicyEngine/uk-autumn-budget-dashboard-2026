@@ -1,4 +1,4 @@
-import { PROVISIONAL_LABEL } from "../../utils/publication/manifest";
+import { provisionalLabel } from "../../utils/publication/manifest";
 import {
   fiscalYearLabel,
   formatBillions,
@@ -21,17 +21,20 @@ function Cell({ value, reason }) {
  * interaction between them. A figure that is not published shows a dash,
  * with the reason for screen readers and on hover.
  *
+ * The provisional label is the manifest's (provisionalLabel): candidates
+ * before the Budget, statement figures from Budget day.
+ *
  * @param {{series: Array<Object>, ids: Array<string>,
- *   measureNames?: Object<string, string>}} props
+ *   measureNames?: Object<string, string>, manifest?: Object|null}} props
  */
-function FiscalSummary({ series, ids, measureNames = {} }) {
+function FiscalSummary({ series, ids, measureNames = {}, manifest = null }) {
   const name = (id) => measureNames[id] ?? id;
   const several = ids.length > 1;
   const provisional = series.some((row) => row.provisional);
   return (
     <div className="publication-fiscal">
       {provisional && (
-        <p className="publication-provisional">{PROVISIONAL_LABEL}</p>
+        <p className="publication-provisional">{provisionalLabel(manifest)}</p>
       )}
       <table>
         <caption>

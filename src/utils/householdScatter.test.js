@@ -8,6 +8,7 @@ import {
   edgeOf,
   householdsPerDot,
   incomeBandLabel,
+  incomeLikeYours,
   panelDots,
   parseScatterCsv,
   scatterCsv,
@@ -106,8 +107,16 @@ describe("scatterView", () => {
       policyIds: ["a", "b", "c"],
       year: 2029,
     });
-    expect(result.kind).toBe("notice");
-    expect(result.reason).toMatch(/one measure at a time/);
+    // One selected measure at a time, its own cells, never a sum: the
+    // picker offers the selected measures the data carries
+    expect(result.kind).toBe("points");
+    expect(["a", "b"]).toContain(result.reform);
+    expect(result.focus.options.every((id) => ["a", "b"].includes(id))).toBe(true);
+    const own = scatterView({ data: ready, selectedIds: [result.reform], policyIds: ["a", "b", "c"], year: 2029 });
+    expect(result.points).toEqual(own.points);
+    // The reader's choice is kept
+    const chosen = scatterView({ data: ready, selectedIds: ["a", "b"], policyIds: ["a", "b", "c"], year: 2029, focusId: result.focus.options.at(-1) });
+    expect(chosen.reform).toBe(result.focus.options.at(-1));
   });
 
   it("says when nothing is published", () => {
@@ -362,5 +371,51 @@ describe("fitChangeAxis and clampToAxis", () => {
   it("keeps groups with no published cells hidden", () => {
     const empty = { change: 0, hidden: true };
     expect(clampToAxis([empty], [-100, 100])[0]).toBe(empty);
+  });
+});
+
+describe("incomeLikeYours", () => {
+  const cell = (incomeBand, changeBand, changeBandUpper, households) => ({
+    incomeBand,
+    changeBand,
+    changeBandUpper,
+    households,
+  });
+
+  it("takes the two bands nearest the income and the middle 80% of their households", () => {
+    const cells = [
+      cell(10000, 100, 150, 1000), // too far below £18,000
+      cell(15000, 10, 25, 100),
+      cell(15000, 25, 50, 400),
+      cell(20000, 25, 50, 400),
+      cell(20000, 50, 75, 100),
+      cell(30000, -500, -400, 9000), // too far above
+    ];
+    expect(incomeLikeYours(cells, 18000)).toEqual({
+      incomeLow: 15000,
+      incomeHigh: 25000,
+      low: 10,
+      high: 75,
+      share: 0.8,
+    });
+  });
+
+  it("counts the no-change band as £0 and keeps a range that spans zero", () => {
+    const cells = [
+      cell(20000, -50, -25, 300),
+      cell(20000, -1, 1, 400),
+      cell(20000, 1, 10, 300),
+    ];
+    const range = incomeLikeYours(cells, 22000);
+    expect([range.low, range.high]).toEqual([-50, 10]);
+    expect(incomeLikeYours([cell(20000, -1, 1, 10)], 22000)).toMatchObject({ low: 0, high: 0 });
+  });
+
+  it("says nothing beyond the published bands or open-ended changes", () => {
+    const cells = [cell(20000, 10, 25, 100)];
+    expect(incomeLikeYours(cells, 160000)).toBeNull();
+    expect(incomeLikeYours(cells, -100)).toBeNull();
+    expect(incomeLikeYours(cells, 60000)).toBeNull();
+    expect(incomeLikeYours([cell(20000, 5000, 5000, 900), cell(20000, 10, 25, 100)], 22000)).toBeNull();
   });
 });

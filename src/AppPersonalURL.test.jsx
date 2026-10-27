@@ -86,7 +86,7 @@ describe("a later snapshot keeps the reader's selection", () => {
       return fetcher(requested, init);
     });
     await act(async () => { window.dispatchEvent(new Event("focus")); });
-    expect(await screen.findByText(/Newer results were published while this page was open/)).toBeInTheDocument();
+    expect(await screen.findByText(/Updated with the latest published results/)).toBeInTheDocument();
   };
   const householdCalls = (calls) => calls.filter((call) => call.method === "POST" || call.url.includes("/api/household-impact"));
 
@@ -96,10 +96,15 @@ describe("a later snapshot keeps the reader's selection", () => {
     await waitFor(() => expect(document.querySelector(".personal-impact-tab")).not.toBeNull());
     expect(policies()).toBe("alpha,beta");
     expect(screen.queryByText(REASON)).toBeNull();
+    // Before the withdrawal the example cards may ask the household API in
+    // the background (useExampleFigures); once beta is withdrawn nothing more
+    // is asked for the selection
     await publish(await serve({ beta: "withdrawn" }, 1), calls);
     expect(await screen.findByText(REASON)).toBeInTheDocument();
     expect(policies()).toBe("alpha,beta");
-    expect(householdCalls(calls)).toEqual([]);
+    const asked = householdCalls(calls).length;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(householdCalls(calls)).toHaveLength(asked);
   });
 
   it("keeps a selection narrowed by removal when a later snapshot adds nothing", async () => {
@@ -171,11 +176,12 @@ describe("a later snapshot keeps the reader's selection", () => {
 
   it("writes a selection to the address only once the reader chooses one", async () => {
     const calls = [];
-    open("/", await serve(), calls);
+    // A view: the landing page keeps the bare address whatever is chosen
+    open("/?tab=dashboard", await serve(), calls);
     await waitFor(() => expect(selectedCount()).toBeGreaterThan(0));
     const all = selectedCount();
     expect(policies()).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Select policies" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Policies / }));
     fireEvent.click(screen.getAllByRole("checkbox")[0]);
     await waitFor(() => expect(selectedCount()).toBe(all - 1));
     expect(policies().split(",")).toHaveLength(all - 1);
@@ -200,5 +206,24 @@ describe("a later snapshot keeps the reader's selection", () => {
     await publish(await serve({}, 1), calls);
     expect(screen.getByText(/Select policies to analyse their impact/)).toBeInTheDocument();
     expect(policies()).toBe("");
+  });
+});
+
+describe("the header's year in the address", () => {
+  it("opens a shared link on its ?year= and keeps it there", async () => {
+    // (the default year stays out of the address, so a kept 2030 was read)
+    vi.stubGlobal("fetch", dashboardFixtureFetch());
+    window.history.replaceState({}, "", "/?tab=policies&year=2030");
+    render(<App />);
+    expect(await screen.findByRole("button", { name: /^Year 2030-31/ })).toBeInTheDocument();
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("year")).toBe("2030"));
+  });
+
+  it("drops a year it does not offer (an old 2026) and opens the default", async () => {
+    vi.stubGlobal("fetch", dashboardFixtureFetch());
+    window.history.replaceState({}, "", "/?tab=policies&year=2026");
+    render(<App />);
+    expect(await screen.findByRole("tab", { name: /Policies/ })).toBeInTheDocument();
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("year")).toBeNull());
   });
 });

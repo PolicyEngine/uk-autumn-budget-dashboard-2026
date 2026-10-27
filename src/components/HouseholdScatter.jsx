@@ -12,24 +12,30 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import { SCATTER_BINS, changeKind } from "../utils/publication/scatter";
 import { fiscalYearLabel } from "../utils/publication/format";
 import {
+  CHANGE_AXIS_DOMAIN,
   clampToAxis,
   fitChangeAxisAcrossYears,
   householdsPerDot,
   INCOME_AXIS_DOMAIN,
+  incomeLikeYours,
   panelDots,
   scatterCsv,
   scatterView,
 } from "../utils/householdScatter";
-import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS } from "../utils/chartTheme";
+import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS, noHouseholdChange } from "../utils/chartTheme";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { colourFor } from "./publication/BinnedHouseholdScatter";
 import ChartDownloadMenu from "./ChartDownloadMenu";
+import ChartMoreInfo from "./ChartMoreInfo";
+import { METHOD_ANCHORS } from "./methodology/anchors";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import NoBreakYear from "./NoBreakYear";
 import "./HouseholdScatterTemplate.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import TitleIcon from "./TitleIcon";
+import PillSelect from "./PillSelect";
+import { shortNameOf } from "../utils/policyDetails";
 
 // The 2025 dashboard's household scatter (HouseholdChart, Autumn Budget
 // 2025), drawn from the binned cells: same axes, ticks, grid, zero line,
@@ -60,20 +66,51 @@ const AXIS_TITLE = { fontSize: 12, fill: CHART_COLOURS.text };
 const STACKED_HEIGHT = 400;
 
 // The dots' colours, as colourFor draws them; the key under the plot
-// carries them. Groups beyond the axis sit at its edge, coloured alike
+// carries them. Groups beyond the axis sit at its edge, coloured alike.
+// Only gain and loss are keyed (Vahid, 26 October): a group with no
+// change, (−£1, £1), is drawn as an unfilled ring on £0 and its tooltip
+// says "No change".
 const KEY = [
   { label: "Gain", color: CHART_COLOURS.gain },
   { label: "Loss", color: CHART_COLOURS.loss },
-  { label: "Little change", color: CHART_COLOURS.noChange },
 ];
+const isNoChange = (dot) => colourFor(dot) === CHART_COLOURS.noChange;
+// The reader's household, when the chart is shown with one (`you`): a
+// dark ring with a solid centre, drawn over the dots
+const YOU_COLOUR = CHART_COLOURS.net;
+const YOU_RING = 8;
+const YOU_KEY = { label: "You", color: YOU_COLOUR };
 
 const number = (value) =>
   new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 }).format(value);
 const pounds = (value) => `${value < 0 ? "-" : ""}£${number(Math.abs(value))}`;
 const roundedThousands = (value) => number(Math.max(1000, Math.round(value / 1000) * 1000));
 
-const describe = (perDot, basisLabel) =>
-  `Change in net income by ${basisLabel} income. Each dot is about ${roundedThousands(perDot)} households.`;
+// One short line; the income basis and how dots follow across years are in About this chart
+const describe = (perDot) =>
+  `Each dot is about ${roundedThousands(perDot)} households: right of the line they gain, left they lose.`;
+
+/**
+ * The card's "About this chart": how to read a dot and the axes. The
+ * subtitle already gives the households per dot and the side of the line
+ * that gains; how the groups and bands are set is in Methodology.
+ */
+function ScatterMoreInfo({ basisLabel }) {
+  return (
+    <ChartMoreInfo
+      info={{
+        how: [
+          `Each dot is a group in a ${pounds(SCATTER_BINS.income_band_width)} band of ${basisLabel} income before the measures, fixed across years.`,
+          "So a dot moves only sideways when the year changes, and its row stays the same households.",
+          `Change axis: 1st to 99th percentile across years, capped at ±${pounds(CHANGE_AXIS_DOMAIN[1])}; larger changes sit at its edge.`,
+          "No change (under £1 either way) is an unfilled ring on £0.",
+        ],
+        caveats: ["Groups with too few survey households are left out."],
+        method: { anchor: METHOD_ANCHORS.scatter, label: "How the household groups are built" },
+      }}
+    />
+  );
+}
 const DESCRIPTION_LOADING = "Change in net income by baseline income.";
 
 // Dots move between years and selections as the other charts' bars do:
@@ -154,16 +191,139 @@ function DotLayer({ xAxisMap, yAxisMap, width, dots, onHover }) {
             cx={cx}
             cy={cy}
             r={DOT_RADIUS}
-            fill={colourFor(dot)}
+            fill={isNoChange(dot) ? "none" : colourFor(dot)}
             fillOpacity={DOT_OPACITY}
             opacity={DOT_OPACITY * Math.min(1, dot.opacity)}
-            strokeWidth={0}
+            stroke={isNoChange(dot) ? CHART_COLOURS.noChange : undefined}
+            strokeWidth={isNoChange(dot) ? 1 : 0}
             onMouseEnter={() => onHover(dot.hidden ? null : { dot, x: cx, y: cy, width })}
           />
         );
       })}
     </g>
   );
+}
+
+// "£1,240" / "−£1,240" for the You label, "£182k" for an income
+const signed = (value) => `${value < 0 ? "\u2212" : ""}£${number(Math.abs(value))}`;
+const incomeK = (value) => `£${number(Math.round(value / 1000))}k`;
+
+/**
+ * The reader's household on the plot: a dark ring with a solid centre at
+ * (their change, their income), and "You" on a short leader line. Off the
+ * axes, it sits at the edge with an arrow pointing out and its true value
+ * in the label. Drawn in the chart's SVG, so downloads carry it; it takes
+ * no pointer events, so the dots under it keep their tooltips.
+ */
+function YouLayer({ xAxisMap, yAxisMap, you, changeDomain }) {
+  const xAxis = xAxisMap && Object.values(xAxisMap)[0];
+  const yAxis = yAxisMap && Object.values(yAxisMap)[0];
+  if (!xAxis?.scale || !yAxis?.scale || !you) return null;
+  const [low, high] = changeDomain;
+  const [incomeLow, incomeHigh] = INCOME_AXIS_DOMAIN;
+  const xOff = you.change < low ? "left" : you.change > high ? "right" : null;
+  const yOff = you.income < incomeLow ? "down" : you.income > incomeHigh ? "up" : null;
+  // Pinned at an edge, the ring sits just inside it, leaving room for
+  // its arrow within the plot
+  const inset = YOU_RING + 12;
+  let cx = xAxis.scale(Math.min(high, Math.max(low, you.change)));
+  let cy = yAxis.scale(Math.min(incomeHigh, Math.max(incomeLow, you.income)));
+  if (xOff === "left") cx = Math.max(cx, xAxis.x + inset);
+  if (xOff === "right") cx = Math.min(cx, xAxis.x + xAxis.width - inset);
+  if (yOff === "up") cy = Math.max(cy, yAxis.y + inset);
+  if (yOff === "down") cy = Math.min(cy, yAxis.y + yAxis.height - inset);
+  const plotLeft = xAxis.x;
+  const plotRight = xAxis.x + xAxis.width;
+  // The label goes to the side with more room, and below the ring near
+  // the top of the plot
+  const toLeft = cx > (plotLeft + plotRight) / 2;
+  const below = cy - yAxis.y < 34;
+  const dx = toLeft ? -1 : 1;
+  const dy = below ? 1 : -1;
+  const lx = cx + dx * 22;
+  const ly = cy + dy * 22;
+  const parts = [you.label ?? "You"];
+  if (xOff) parts.push(signed(you.change));
+  if (yOff) parts.push(`income ${incomeK(you.income)}`);
+  const text = parts.join(": ").replace(/: (income)/, ", $1");
+  // An arrow just outside the ring, pointing off the axis
+  const arrows = [];
+  if (xOff) arrows.push(xOff === "left" ? [-1, 0] : [1, 0]);
+  if (yOff) arrows.push(yOff === "up" ? [0, -1] : [0, 1]);
+  return (
+    <g className="household-scatter-you" pointerEvents="none" data-you="true">
+      <line
+        x1={cx + dx * (YOU_RING + 1)}
+        y1={cy + dy * (YOU_RING + 1)}
+        x2={lx - dx * 2}
+        y2={ly - dy * 2}
+        stroke={YOU_COLOUR}
+        strokeWidth={1.25}
+      />
+      {arrows.map(([ax, ay]) => {
+        const tipX = cx + ax * (YOU_RING + 9);
+        const tipY = cy + ay * (YOU_RING + 9);
+        const baseX = cx + ax * (YOU_RING + 3);
+        const baseY = cy + ay * (YOU_RING + 3);
+        const px = -ay * 4;
+        const py = ax * 4;
+        return (
+          <polygon
+            key={`${ax}:${ay}`}
+            points={`${tipX},${tipY} ${baseX + px},${baseY + py} ${baseX - px},${baseY - py}`}
+            fill={YOU_COLOUR}
+          />
+        );
+      })}
+      <circle cx={cx} cy={cy} r={YOU_RING + 2} fill="none" stroke={CHART_COLOURS.surface} strokeWidth={2} />
+      <circle cx={cx} cy={cy} r={YOU_RING} fill={CHART_COLOURS.surface} fillOpacity={0.85} stroke={YOU_COLOUR} strokeWidth={2.5} />
+      <circle cx={cx} cy={cy} r={3.5} fill={YOU_COLOUR} />
+      <text
+        x={lx}
+        y={ly}
+        dy={below ? "0.8em" : "0"}
+        textAnchor={toLeft ? "end" : "start"}
+        fontSize={12}
+        fontWeight={700}
+        fill={YOU_COLOUR}
+        stroke={CHART_COLOURS.surface}
+        strokeWidth={3}
+        paintOrder="stroke"
+      >
+        {text}
+      </text>
+    </g>
+  );
+}
+
+/**
+ * The line above the plot when the chart shows the reader's household:
+ * what a dot is, which marker is theirs, and how households with incomes
+ * like theirs changed (from the year's published cells; left out when
+ * they say nothing honest: incomeLikeYours).
+ */
+function youSentence({ perDot, you, points, basisLabel, incomeMatches }) {
+  const parts = [
+    `Each dot is about ${roundedThousands(perDot)} UK households; you are the dark ring.`,
+  ];
+  const like = incomeMatches ? incomeLikeYours(points, you.income) : null;
+  if (like) {
+    const span = `${basisLabel} net income of ${pounds(like.incomeLow)} to ${pounds(like.incomeHigh)}`;
+    const share = `${Math.round(like.share * 10)} in 10 households with ${span}, like yours,`;
+    let change;
+    if (like.low === 0 && like.high === 0) change = "see no change";
+    else if (like.low >= 0) change = `gain between ${pounds(like.low)} and ${pounds(like.high)}`;
+    else if (like.high <= 0) change = `lose between ${pounds(-like.high)} and ${pounds(-like.low)}`;
+    else change = `see a change between ${signed(like.low)} and ${signed(like.high)}`;
+    parts.push(`${share} ${change} a year.`);
+  }
+  if (incomeMatches && you.income >= INCOME_AXIS_DOMAIN[1]) {
+    parts.push(
+      `The chart stops at ${pounds(INCOME_AXIS_DOMAIN[1])} of ${basisLabel} net income, so households like yours are not shown; your ring sits at its top.`,
+    );
+  }
+  if (you.note) parts.push(you.note);
+  return parts.join(" ");
 }
 
 /** The tooltip, in the 2025 chart's style, describing the dot's group. */
@@ -223,11 +383,34 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
  *
  * Cells are published per reform: one measure shows its own, every measure
  * the package's, and any other selection a notice.
+ *
+ * With `you` ({change, income, label?, incomeYear?, note?}), the chart
+ * places the reader's household on it (Household impact): `change` is its
+ * change in net income in `selectedYear`, `income` its baseline household
+ * net income, the y axis's concept, in `incomeYear` (the basis year when
+ * not given). The title is then `title`, and the line under it says what a
+ * dot is and how households with incomes like the reader's changed.
+ *
+ * `embedded` draws it as one view of another card (the Household impact
+ * position card): no title, download menu or logo of its own; the card's
+ * menu takes this chart's download, handed up through `onDownload`.
  */
-function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
+function HouseholdScatter({
+  selectedPolicies,
+  policies,
+  selectedYear = DEFAULT_DISPLAY_YEAR,
+  you = null,
+  title = CHART_TITLE,
+  embedded = false,
+  onDownload = null,
+  // A link on the subtitle line, after the sentence
+  descriptionLink = null,
+}) {
   const narrow = useNarrowViewport();
   const chartRef = useRef(null);
   const [hovered, setHovered] = useState(null);
+  // Several measures and no single published reform: the measure shown
+  const [focusId, setFocusId] = useState(null);
   const data = useHouseholdScatterData();
   const { combinedId } = useMeasureCatalogue();
   const view = useMemo(
@@ -237,11 +420,15 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_D
       policyIds: (policies ?? []).filter((policy) => policy.displayable !== false).map((policy) => policy.id),
       year: selectedYear,
       packageId: combinedId,
+      focusId,
     }),
-    [data, selectedPolicies, policies, selectedYear, combinedId],
+    [data, selectedPolicies, policies, selectedYear, combinedId, focusId],
   );
   const yearLabel = fiscalYearLabel(selectedYear);
-  const chartTitle = `${CHART_TITLE}, ${yearLabel}`;
+  const focus = view.kind === "points" ? view.focus : null;
+  const focusName = (id) => shortNameOf((policies ?? []).find((policy) => policy.id === id) ?? { id });
+  // The title names the one measure shown when several are selected
+  const chartTitle = focus ? `${title}, ${yearLabel}: ${focusName(view.reform)}` : `${title}, ${yearLabel}`;
   const ready = view.kind === "points";
   const basisLabel = ready ? fiscalYearLabel(view.basisYear) : null;
   // The change axis is fitted once per selection, across every year, so
@@ -259,20 +446,53 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_D
     return clampToAxis(placed, changeAxis.domain);
   }, [ready, view, changeAxis]);
   const shown = useTweenedDots(dots);
-  const description = ready
-    ? describe(householdsPerDot(view.basisPoints), basisLabel)
-    : DESCRIPTION_LOADING;
+  // The reader's income is on the y axis's basis only if it is for the
+  // basis year; otherwise the ring is placed by it, and the line says so
+  const incomeMatches = ready && you && (you.incomeYear ?? view.basisYear) === view.basisYear;
+  const youShown =
+    ready && you && Number.isFinite(you.change) && Number.isFinite(you.income) ? you : null;
+  const description = !ready
+    ? DESCRIPTION_LOADING
+    : youShown
+      ? youSentence({
+          perDot: householdsPerDot(view.basisPoints),
+          you: incomeMatches
+            ? youShown
+            : {
+                ...youShown,
+                note: [
+                  `Your ring is placed by your ${fiscalYearLabel(youShown.incomeYear)} net income; the dots by ${basisLabel}'s.`,
+                  youShown.note,
+                ]
+                  .filter(Boolean)
+                  .join(" "),
+              },
+          points: view.points,
+          basisLabel,
+          incomeMatches,
+        })
+      : describe(householdsPerDot(view.basisPoints));
+  const key = youShown ? [...KEY, YOU_KEY] : KEY;
+  // Every published cell this year in the zero band (under £1), and the
+  // reader's household unchanged too: the shared note, not a column of
+  // dots at £0. Only for a published result (ready); a notice says why not
+  const nothingChanges =
+    ready &&
+    view.points.every((point) => changeKind(point.changeBand, point.changeBandUpper) === "zero") &&
+    (!youShown || Math.round(youShown.change) === 0);
 
   // A hovered dot's group belongs to the year and selection it was
   // hovered in
   const hover = hovered && hovered.dots === dots ? hovered : null;
   const onHover = (next) => setHovered(next && { ...next, dots });
 
-  const exportName = `household-income-impacts-${selectedYear}`;
+  const exportName = you
+    ? `your-household-among-uk-households-${selectedYear}`
+    : `household-income-impacts-${selectedYear}`;
   const exportOptions = {
     title: chartTitle,
     description,
-    legendItems: KEY.map((item) => ({ ...item, type: "circle" })),
+    legendItems: key.map((item) => ({ ...item, type: "circle" })),
     logo: CHART_LOGO,
     // No Recharts legend: the whole SVG is the plot, so crop nothing
     reservedLegendHeight: 0,
@@ -286,33 +506,123 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_D
           scatterCsv(view.points, { title: chartTitle, basisYear: view.basisYear }),
       }
     : null;
+  // Embedded, the host card's menu downloads this chart
+  useEffect(() => {
+    if (onDownload) onDownload(download);
+    // The download changes with what it describes, not with every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onDownload, ready, view, description, chartTitle, exportName]);
   const incomeTitle = basisLabel
     ? `Household net income, ${basisLabel} (£k)`
     : "Household net income (£k)";
 
-  return (
-    <div className="household-scatter-template">
-      <div className="chart-header">
-        <div>
-          <h3>
-            <TitleIcon name="dots" />
-            <span className="title-text">
-              <NoBreakYear text={chartTitle} />
-            </span>
-          </h3>
-          <p className="chart-description">{description}</p>
+  // Beside a household's result, a selection the chart is not published
+  // for gets the reason in a line, not an empty plot
+  if ((you || embedded) && view.kind === "notice") {
+    const reason = [view.reason, view.detail].filter(Boolean).join(" ");
+    if (embedded) {
+      return (
+        <div className="household-scatter-template is-embedded household-scatter-you-notice">
+          <p className="chart-description" role="status">
+            {reason}
+          </p>
         </div>
-        <ChartDownloadMenu
-          download={download}
-          chartTitle={chartTitle}
-          disabledReason={ready ? undefined : "Available when results are published"}
-        />
+      );
+    }
+    return (
+      <div className="household-scatter-template household-scatter-you-notice">
+        <div className="chart-header">
+          <div>
+            <h3>
+              <TitleIcon name="dots" />
+              <span className="title-text">
+                <NoBreakYear text={chartTitle} />
+              </span>
+            </h3>
+            <p className="chart-description" role="status">
+              {reason}
+            </p>
+          </div>
+        </div>
       </div>
+    );
+  }
 
+  // On its own, a selection the chart is not published for gets the
+  // reason in a compact panel under the title, not an empty plot
+  if (view.kind === "notice") {
+    return (
+      <div className="household-scatter-template household-scatter-empty-card">
+        <div className="chart-header">
+          <div>
+            <h3>
+              <TitleIcon name="dots" />
+              <span className="title-text">
+                <NoBreakYear text={chartTitle} />
+              </span>
+            </h3>
+            <p className="chart-description">{DESCRIPTION_LOADING}</p>
+          </div>
+        </div>
+        <div className="chart-plot">
+          <div className="plot-empty household-scatter-empty" role="status">
+            <div>
+              <p className="household-scatter-empty-reason">{view.reason}</p>
+              {view.detail && <p className="household-scatter-empty-detail">{view.detail}</p>}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`household-scatter-template${embedded ? " is-embedded" : ""}`}>
+      {embedded ? (
+        <p className="chart-description">{description}</p>
+      ) : (
+        <div className="chart-header">
+          <div>
+            <h3>
+              <TitleIcon name="dots" />
+              <span className="title-text">
+                <NoBreakYear text={chartTitle} />
+              </span>
+            </h3>
+            <p className="chart-description">
+              {description}
+              {descriptionLink && <> {descriptionLink}</>}
+            </p>
+          </div>
+          <ChartDownloadMenu
+            download={download}
+            chartTitle={chartTitle}
+            disabledReason={ready ? undefined : "Available when results are published"}
+          />
+        </div>
+      )}
+
+      {focus && (
+        <div className="chart-controls household-scatter-controls">
+          <PillSelect
+            variant="light"
+            name="Measure shown"
+            prefix="Measure"
+            value={view.reform}
+            onChange={setFocusId}
+            options={focus.options.map((id) => ({ value: id, label: focusName(id) }))}
+          />
+        </div>
+      )}
       {/* The plot takes the rows the map beside it uses for its controls,
           map and colour scale, so the two cards line up and fill alike */}
       <div className="chart-plot household-scatter-template-plot">
         <div className="household-scatter-template-canvas" ref={chartRef}>
+          {nothingChanges ? (
+            <div className="plot-empty household-scatter-no-change" role="status">
+              <p>{noHouseholdChange(yearLabel)}</p>
+            </div>
+          ) : (
           <ResponsiveContainer width="100%" height="100%" minHeight={STACKED_HEIGHT / 2}>
             <ScatterChart margin={{ top: 6, right: narrow ? 22 : 20, left: 0, bottom: 0 }}>
               <CartesianGrid {...GRID} />
@@ -346,42 +656,61 @@ function HouseholdScatter({ selectedPolicies, policies, selectedYear = DEFAULT_D
                 tick={TICK}
                 width={narrow ? 30 + Y_TITLE_GUTTER : 44 + Y_TITLE_GUTTER}
               />
-              <ReferenceLine x={0} stroke={CHART_COLOURS.tick} strokeWidth={2} />
+              <ReferenceLine x={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={2} />
               <Customized component={<DotLayer dots={shown} onHover={onHover} />} />
+              {youShown && (
+                <Customized
+                  component={<YouLayer you={youShown} changeDomain={changeAxis.domain} />}
+                />
+              )}
               <Customized component={<ChartUnitLabel text={incomeTitle} />} />
             </ScatterChart>
           </ResponsiveContainer>
+          )}
         </div>
-        {ready && (
+        {ready && !nothingChanges && (
           <GroupTooltip
             hover={hover}
             basisLabel={basisLabel}
             yearLabel={yearLabel}
           />
         )}
-        {!ready && (
+        {/* While loading, the chart's grey template is the placeholder */}
+        {view.kind === "loading" && (
+          <span className="visually-hidden" role="status">Loading household results…</span>
+        )}
+        {!ready && view.kind !== "loading" && (
           <div className="household-scatter-template-note" role="status">
-            <p>{view.kind === "loading" ? "Loading household results…" : view.reason}</p>
+            <p>{view.reason}</p>
             {view.detail && <p className="household-scatter-template-detail">{view.detail}</p>}
           </div>
         )}
       </div>
 
-      {ready && (
+      {ready && !nothingChanges && (
         <ul className="scatter-legend chart-legend" aria-label="Key">
-          {KEY.map((item) => (
+          {key.map((item) => (
             <li key={item.label}>
-              <span className="scatter-legend-dot" style={{ background: item.color }} aria-hidden="true" />
+              <span
+                className={`scatter-legend-dot${item === YOU_KEY ? " scatter-legend-you" : ""}`}
+                style={item === YOU_KEY ? undefined : { background: item.color }}
+                aria-hidden="true"
+              />
               {item.label}
             </li>
           ))}
         </ul>
       )}
 
-      <div className="chart-logo">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={CHART_LOGO.href} alt="PolicyEngine" />
-      </div>
+      {!embedded && (
+        <div className="chart-logo">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={CHART_LOGO.href} alt="PolicyEngine" />
+        </div>
+      )}
+
+      {/* At the card's foot, under the logo, as on every card */}
+      {ready && !embedded && <ScatterMoreInfo basisLabel={basisLabel} />}
     </div>
   );
 }

@@ -1,41 +1,31 @@
+import { useEffect } from "react";
 import GeographyMethodology from "./GeographyMethodology";
 import LivingStandardsMethod from "./methodology/LivingStandardsMethod";
+import ForecastFeedMethod, { FORECAST_FEED_ANCHOR } from "./methodology/ForecastFeedMethod";
 import FactList from "./methodology/FactList";
-import MethodContents, { goToSection } from "./methodology/MethodContents";
-import { measureModelling, NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
-import { EXAMPLE_HOUSEHOLDS } from "../utils/exampleHouseholds";
+import MethodGlossary from "./methodology/MethodGlossary";
+import SectionHeading from "./SectionHeading";
+import { HIGHEST_PERCENTILE, LOWEST_PERCENTILE, ordinal } from "../utils/incomePosition";
+import { METHOD_ANCHORS } from "./methodology/anchors";
+import { SINGLE_YEAR_METHOD } from "../utils/singleYear";
+import MethodContents, { revealAnchor } from "./methodology/MethodContents";
+import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
 import { SCATTER_BINS } from "../utils/publication/scatter";
 import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE } from "../utils/ageImpact";
 import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST } from "./youngPeople/youngPeopleData";
 import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
-import { BackToTop, Callout, IconChip, SourceLink, Tag } from "./methodology/MethodUi";
-import ExpandableText from "./methodology/ExpandableText";
-import {
-  Briefcase,
-  Calculator,
-  ChevronDown,
-  CircleSlash,
-  ChartColumn,
-  Compass,
-  Database,
-  House,
-  Info,
-  MapPinned,
-  PersonStanding,
-  TrendingUp,
-  TriangleAlert,
-  User,
-  Users,
-  UsersRound,
-} from "lucide-react";
+import { OPEN_VIEW_EVENT } from "../utils/methodLink";
+import { AnchorLink, ExternalLink, ReasonList, SourceLink, Tag, Topic } from "./methodology/MethodUi";
+import { glossaryAnchor } from "./methodology/glossary";
+import { Calculator, ChartColumn, Compass, Database, House, TrendingUp, TriangleAlert } from "lucide-react";
 import "./methodology/Methodology.css";
 
 /**
- * The ids of the Methodology view's sections, for links to them. Other
- * views link with these (the map to `geography`, Household impact to
- * `singleYear`), so a key's id must not change.
+ * The ids of the Methodology view's sections and of the topics other
+ * views link to (the map to `geography`, the age cards to `young`), so a
+ * key's id must not change.
  */
 export const METHOD_SECTIONS = {
   overview: "method-overview",
@@ -50,75 +40,53 @@ export const METHOD_SECTIONS = {
   limitations: "method-limitations",
 };
 
-/** The sections in the contents, in page order (the household calculation's block sits inside Household impact). */
+/**
+ * The sections in the contents, in page order: `icon` for the contents
+ * list, `titleIcon` (TitleIcon) for the section's heading. Figures by area
+ * and results by age are topics of Population impact.
+ */
 export const METHOD_CONTENTS = [
-  { id: METHOD_SECTIONS.overview, title: "At a glance", icon: Compass },
-  { id: METHOD_SECTIONS.data, title: "Data", icon: Database },
-  { id: METHOD_SECTIONS.model, title: "Model and measures", icon: Calculator },
-  { id: METHOD_SECTIONS.population, title: "Population impact", icon: ChartColumn },
-  { id: METHOD_SECTIONS.geography, title: "Figures by area", icon: MapPinned },
-  { id: METHOD_SECTIONS.young, title: "Young people", icon: Users },
-  { id: METHOD_SECTIONS.personal, title: "Household impact", icon: House },
-  { id: METHOD_SECTIONS.living, title: "Living standards", icon: TrendingUp },
-  { id: METHOD_SECTIONS.limitations, title: "Limitations", icon: TriangleAlert },
+  { id: METHOD_SECTIONS.overview, title: "At a glance", icon: Compass, titleIcon: "compass" },
+  { id: METHOD_SECTIONS.data, title: "Data", icon: Database, titleIcon: "database" },
+  { id: METHOD_SECTIONS.model, title: "Model and measures", icon: Calculator, titleIcon: "calculator" },
+  { id: METHOD_SECTIONS.population, title: "Population impact", icon: ChartColumn, titleIcon: "bars" },
+  { id: METHOD_SECTIONS.personal, title: "Household impact", icon: House, titleIcon: "house" },
+  { id: METHOD_SECTIONS.living, title: "Pre-measures forecast", icon: TrendingUp, titleIcon: "trend" },
+  { id: METHOD_SECTIONS.limitations, title: "Limitations", icon: TriangleAlert, titleIcon: "alert" },
 ];
 
-const SECTION_ICONS = Object.fromEntries(METHOD_CONTENTS.map(({ id, icon }) => [id, icon]));
-
-// An icon for each example household, by its id
-const HOUSEHOLD_ICONS = {
-  single_renter: User,
-  couple_three_children: Users,
-  lone_parent: PersonStanding,
-  pensioner_couple: UsersRound,
-  higher_income_saver: Briefcase,
-};
+const SECTION_ICONS = Object.fromEntries(METHOD_CONTENTS.map(({ id, titleIcon }) => [id, titleIcon]));
 
 const pounds = (value) => `£${Math.round(value).toLocaleString("en-GB")}`;
 const SCATTER_CHANGE_MAX = SCATTER_BINS.change_edges[SCATTER_BINS.change_edges.length - 1];
 const SCATTER_CHANGE_EDGE_LIST = SCATTER_BINS.change_edges.filter((edge) => edge > 0).map(pounds);
-const SCATTER_CHANGE_EDGES = SCATTER_CHANGE_EDGE_LIST.join(", ");
 const yearRange = `${fiscalYearTick(FIRST_DISPLAY_YEAR)} to ${fiscalYearTick(LAST_DISPLAY_YEAR)}`;
 
 /**
- * A section of the view: a header (icon and title), a short summary that
- * reads on its own, then the technical details, closed until asked for.
+ * A section of the view, laid out as the other views' sections are: a
+ * heading with its icon and a one-line summary, then its topics, each
+ * folded until asked for.
  */
-function MethodSection({ id, title, summary, details, children, detailsLabel = "Technical details" }) {
+function MethodSection({ id, title, summary, children }) {
   return (
-    <section id={id} className="method-section" aria-labelledby={`${id}-title`}>
-      <div className="section-heading method-section-heading">
-        <IconChip icon={SECTION_ICONS[id]} />
-        <div className="method-section-titles">
-          <h2 id={`${id}-title`} tabIndex={-1}>
-            {title}
-          </h2>
-        </div>
-      </div>
-      {summary && <div className="method-summary">{summary}</div>}
-      {children}
-      {details && (
-        <details className="method-details">
-          <summary>
-            {detailsLabel}
-            <ChevronDown aria-hidden="true" strokeWidth={1.75} />
-          </summary>
-          <div className="method-details-body">{details}</div>
-        </details>
-      )}
-      {id !== METHOD_SECTIONS.overview && <BackToTop targetId={METHOD_SECTIONS.overview} />}
+    <section id={id} className="method-section" aria-label={title}>
+      <SectionHeading id={`${id}-heading`} icon={SECTION_ICONS[id]} title={title} subtitle={summary} />
+      {children && <div className="card method-card method-topics">{children}</div>}
     </section>
   );
 }
 
 /** A link to another view (at one of its sub-tabs), switched to in place. */
-function ViewLink({ tab, sub, hash, onShowTab, children }) {
+function ViewLink({ tab, sub, age, hash, onShowTab, className, children }) {
   return (
     <a
-      href={`?tab=${tab}${sub ? `&sub=${sub}` : ""}${hash ? `#${hash}` : ""}`}
+      className={className}
+      href={`?tab=${tab}${sub ? `&sub=${sub}` : ""}${age ? `&age=${age}` : ""}${hash ? `#${hash}` : ""}`}
       onClick={(event) => {
         event.preventDefault();
-        if (sub) onShowTab(tab, sub);
+        // By age's group (?age=) goes with its sub-tab
+        if (sub && age) onShowTab(tab, sub, { age });
+        else if (sub) onShowTab(tab, sub);
         else onShowTab(tab);
         if (hash) {
           setTimeout(() => {
@@ -132,42 +100,60 @@ function ViewLink({ tab, sub, hash, onShowTab, children }) {
   );
 }
 
-/** A link to another section of this view. */
-function SectionLink({ id, children }) {
-  return (
-    <a
-      href={`#${id}`}
-      onClick={(event) => {
-        event.preventDefault();
-        goToSection(id);
-      }}
-    >
-      {children}
-    </a>
-  );
+/** A shared term, linked to its definition under "Terms used on the charts". */
+const Term = ({ id, children }) => <AnchorLink id={glossaryAnchor(id)}>{children}</AnchorLink>;
+
+/**
+ * Opened at an anchor (a link from another view, an address with a hash,
+ * or a changed hash): open the topic it is folded in and bring it into view. The target
+ * may load after the view (the forecast's notes), so look for up to 3
+ * seconds.
+ */
+function useRevealLinkedAnchor() {
+  useEffect(() => {
+    let timer = 0;
+    const reveal = (id) => {
+      clearTimeout(timer);
+      let tries = 0;
+      const attempt = () => {
+        if (revealAnchor(id, { smooth: false })) return;
+        if ((tries += 1) < 30) timer = setTimeout(attempt, 100);
+      };
+      timer = setTimeout(attempt, 150);
+    };
+    const hash = window.location.hash.slice(1);
+    if (hash) reveal(decodeURIComponent(hash));
+    const onOpenView = (event) => {
+      const { tab, anchor } = event.detail || {};
+      if (tab === "methodology" && anchor) reveal(anchor);
+    };
+    const onHashChange = () => {
+      const id = window.location.hash.slice(1);
+      if (id) reveal(decodeURIComponent(id));
+    };
+    window.addEventListener(OPEN_VIEW_EVENT, onOpenView);
+    window.addEventListener("hashchange", onHashChange);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener(OPEN_VIEW_EVENT, onOpenView);
+      window.removeEventListener("hashchange", onHashChange);
+    };
+  }, []);
 }
 
 /**
  * The Methodology view: how the other views' figures are made, gathered in
- * one place, with a contents list beside it. Each note is said here and
- * nowhere else on the page; the policy descriptions stay with Population
- * impact, and the household calculation with Household impact's "About
- * these figures". Living standards states the engine, data, notes and gaps
- * of that view's projections.
+ * one place, with a contents list beside it. Each section says in one line
+ * what it covers; everything else is in its folded topics, and each note
+ * is said once. The policy descriptions stay on Policies.
  *
  * @param {Object} props
  * @param {(tab: string, sub?: string) => void} props.onShowTab - Switch to another view (at a sub-tab)
  */
 function MethodologyTab({ onShowTab }) {
   const catalogue = useMeasureCatalogue();
-  const MEASURE_MODELLING = measureModelling(catalogue);
   const UNAVAILABLE = unavailableMeasures(catalogue);
-  const POLICY_COLORS = catalogue.policyColors;
-  const policyNotes = (text) => (
-    <ViewLink tab="dashboard" hash="policy-details" onShowTab={onShowTab}>
-      {text}
-    </ViewLink>
-  );
+  useRevealLinkedAnchor();
 
   return (
     <div className="methodology-tab">
@@ -178,37 +164,43 @@ function MethodologyTab({ onShowTab }) {
           id={METHOD_SECTIONS.overview}
           title="At a glance"
           summary={
-            <p>
-              We run PolicyEngine UK on a representative survey of UK households, with and without
-              each measure, and weight the difference up to the whole country.
-            </p>
+            <>
+              We run <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink>{" "}on a
+              representative survey of UK households, with and without each measure, for each
+              fiscal year from {yearRange}, and weight the difference up to the whole country.
+            </>
           }
-        />
+        >
+          <Topic
+            id={METHOD_ANCHORS.glossary}
+            title="Terms used on the charts"
+            preview="Net income, housing costs, deciles, poverty, Gini and other terms, one line each"
+          >
+            <MethodGlossary />
+          </Topic>
+        </MethodSection>
 
         <MethodSection
           id={METHOD_SECTIONS.data}
           title="Data"
           summary={
-            <p>
-              The households come from the{" "}
-              <SourceLink id="frs_2024_25">Family Resources Survey, 2024-25</SourceLink>, built
-              into <SourceLink id="microcosm">Microcosm UK 2024-25</SourceLink>, where each one
-              carries a weight: how many UK households it stands for. Their incomes and prices are
-              projected forward to each year shown with{" "}
-              <SourceLink id="policyengine_uk">policyengine-uk</SourceLink>&apos;s economic
-              assumptions.
-            </p>
+            <>
+              Households from the <SourceLink id="frs_2024_25">Family Resources Survey 2024-25</SourceLink>,
+              built into <SourceLink id="microcosm">Microcosm UK 2024-25</SourceLink>, each weighted
+              to the number of UK households it stands for.
+            </>
           }
-          details={
+        >
+          <Topic title="More info" preview="Dataset · Survey · Weights · Projection · Small groups">
             <FactList
               items={[
                 [
                   "Dataset",
                   <>
                     The national file (<code>microcosm_uk_2024_25</code>), certified and pinned with
-                    the model version in the{" "}
-                    <SourceLink id="policyengine_py_release">policyengine.py release</SourceLink>, so
-                    the two cannot drift apart.
+                    the model version by the policyengine.py release this build uses
+                    (in About this dashboard&apos;s Built with), so the
+                    two cannot drift apart.
                   </>,
                 ],
                 [
@@ -219,8 +211,10 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Projection",
                   <>
-                    Over the forecast period, the <SourceLink id="obr_efo_current" />; after it,
-                    the OBR&apos;s long-run assumptions (
+                    Incomes and prices are projected to each year shown with{" "}
+                    <SourceLink id="policyengine_uk">policyengine-uk</SourceLink>&apos;s economic
+                    assumptions: over the forecast period, the <SourceLink id="obr_efo_current" />;
+                    after it, the OBR&apos;s long-run assumptions (
                     <SourceLink id="obr_fiscal_risks">Fiscal risks and sustainability</SourceLink>).
                   </>,
                 ],
@@ -229,304 +223,283 @@ function MethodologyTab({ onShowTab }) {
                   <>
                     A figure for a small group rests on few survey households, so the page leaves
                     out or marks such figures: see the{" "}
-                    <SectionLink id={METHOD_SECTIONS.population}>household scatter</SectionLink>,{" "}
-                    <SectionLink id={METHOD_SECTIONS.geography}>figures by area</SectionLink> and{" "}
-                    <SectionLink id={METHOD_SECTIONS.young}>young people</SectionLink>.
+                    <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>,{" "}
+                    <AnchorLink id={METHOD_SECTIONS.geography}>figures by area</AnchorLink> and{" "}
+                    <AnchorLink id={METHOD_SECTIONS.young}>results by age</AnchorLink>.
                   </>,
                 ],
               ]}
             />
-          }
-        />
+          </Topic>
+        </MethodSection>
 
         <MethodSection
           id={METHOD_SECTIONS.model}
           title="Model and measures"
           summary={
-            <p>
-              PolicyEngine UK works out each household&apos;s taxes, benefits and net income under
-              current law, then again with a measure; the difference between the two runs is the
-              measure&apos;s effect. The estimates are static: households do not change their
-              behaviour in response. What each measure does is in the{" "}
-              {policyNotes("policy notes on Population impact")}; how the model represents it is
-              below.
-            </p>
-          }
-          details={
             <>
-              <FactList
-                items={[
-                  ["Model", "PolicyEngine UK (policyengine-uk), run through policyengine.py on the dataset above."],
-                  ["Baseline", "The Plan 2 measure's baseline also uses modelled student loan repayments."],
-                  [
-                    "Static",
-                    "Fuel and electricity spending are held fixed, and wages do not respond to employer National Insurance.",
-                  ],
-                  ["Years", "Fiscal years: 2027 means 2027-28."],
-                ]}
-              />
-              <p className="method-more">
-                Measures are written as parameter changes where possible, or built from tested
-                measure templates.
-              </p>
+              <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink>{" "}works out each
+              household&apos;s taxes, benefits and <Term id="netIncome">net income</Term>{" "}under
+              current law, then again with a measure; the difference is the measure&apos;s effect.
+              What each measure does and how it is modelled is on{" "}
+              <ViewLink tab="policies" onShowTab={onShowTab}>
+                Policies
+              </ViewLink>
+              .
             </>
           }
         >
-          <div className="card method-card method-table-card">
-            <h3 className="method-card-title">Published measure descriptions</h3>
-            <table className="method-measures">
-              <thead>
-                <tr>
-                  <th scope="col">Measure</th>
-                  <th scope="col">Published description</th>
-                  <th scope="col">Results from</th>
-                </tr>
-              </thead>
-              <tbody>
-                {MEASURE_MODELLING.map((measure) => (
-                  <tr key={measure.name}>
-                    <th scope="row">
-                      <span
-                        className="method-swatch"
-                        style={{ background: POLICY_COLORS[measure.seriesKey] }}
-                        aria-hidden="true"
-                      />
-                      {measure.name}
-                    </th>
-                    <td>
-                      <ExpandableText text={measure.how} />
-                      {measure.note && (
-                        <p className="method-measure-note">
-                          <span className="method-measure-note-label">Modelling note: </span>
-                          {measure.note}
-                        </p>
-                      )}
-                    </td>
-                    <td className="method-measure-year">
-                      <Tag tone="teal">
-                        <span className="method-cell-label">Results from </span>
-                        {measure.from === null ? "Unavailable" : fiscalYearTick(measure.from)}
-                      </Tag>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="card method-card method-table-card">
-            <h3 className="method-card-title">Unavailable measures</h3>
-            <p className="method-more">
-              These measures have no verified results in the current publication.
-            </p>
-            <table className="method-measures">
-              <thead>
-                <tr>
-                  <th scope="col">Measure</th>
-                  <th scope="col">Why results are unavailable</th>
-                </tr>
-              </thead>
-              <tbody>
-                {UNAVAILABLE.map((measure) => (
-                  <tr key={measure.name}>
-                    <th scope="row">{measure.name}</th>
-                    <td>{measure.why}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="card method-card method-table-card method-muted-card">
-            <h3 className="method-card-title">Not modelled</h3>
-            <table className="method-measures method-measures-muted method-measures-compact">
-              <thead>
-                <tr>
-                  <th scope="col">Measure</th>
-                  <th scope="col">Why the household model cannot cost it</th>
-                </tr>
-              </thead>
-              <tbody>
-                {NOT_MODELLED.map((measure) => (
-                  <tr key={measure.name}>
-                    <th scope="row">
-                      <span className="method-row-name">
-                        <CircleSlash className="method-row-icon" aria-hidden="true" strokeWidth={1.75} />
-                        {measure.name}
-                      </span>
-                    </th>
-                    <td>{measure.why}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Topic title="More info" preview="Model · Baseline · Static · Years · Prices">
+            <FactList
+              items={[
+                [
+                  "Model",
+                  <>
+                    PolicyEngine UK (<SourceLink id="policyengine_uk">policyengine-uk</SourceLink>), run
+                    through <SourceLink id="policyengine_py_release">policyengine.py</SourceLink>{" "}on
+                    the <AnchorLink id={METHOD_SECTIONS.data}>data above</AnchorLink>. Measures are
+                    written as parameter changes where possible, or built from tested measure
+                    templates.
+                  </>,
+                ],
+                ["Baseline", "Current law."],
+                [
+                  "Static",
+                  <>
+                    Estimates are <Term id="static">static</Term>; each policy's card says what its
+                    estimate holds fixed.
+                  </>,
+                ],
+                ["Years", "Fiscal years, April to March: 2027-28 runs from April 2027 to March 2028."],
+                [
+                  "Prices",
+                  <>
+                    <ViewLink tab="dashboard" onShowTab={onShowTab}>Population impact</ViewLink> and{" "}
+                    <ViewLink tab="household" onShowTab={onShowTab}>Household impact</ViewLink>{" "}figures
+                    are in <Term id="real">cash terms</Term>{" "}for the year shown, not adjusted for
+                    inflation.
+                  </>,
+                ],
+              ]}
+            />
+          </Topic>
+          {UNAVAILABLE.length > 0 && (
+            <Topic title="Unavailable measures" preview="Measures with no verified results in the current publication">
+              <ReasonList items={UNAVAILABLE} />
+            </Topic>
+          )}
+          <Topic title="Not modelled" preview="Measures the household model cannot cost, and why">
+            <ReasonList items={NOT_MODELLED} icon />
+          </Topic>
         </MethodSection>
 
         <MethodSection
           id={METHOD_SECTIONS.population}
           title="Population impact"
           summary={
-            <p>
-              The national charts add up every household&apos;s change with its weight: the revenue
-              chart as the change in the government&apos;s balance, the decile charts by income
-              group, and the household scatter and{" "}
-              <ViewLink tab="dashboard" hash="household" onShowTab={onShowTab}>
-                example households
-              </ViewLink>{" "}
-              for the spread behind the averages. Counts are rounded and no household is ever
-              shown on its own.
-            </p>
-          }
-          details={
             <>
-              <h3 className="method-details-title">Public finances</h3>
-              <FactList
-                items={[
-                  [
-                    "Budgetary impact",
-                    {
-                      value: "Taxes collected less benefits and other spending, in £ billion a year.",
-                      more: ["Each measure's figure is net of every tax and spending change it causes."],
-                    },
-                  ],
-                  [
-                    "Exceptions",
-                    {
-                      value: "A measure whose published description says it is costed another way follows that description.",
-                      more: ["For example, from a Treasury cost estimate or from the change in loan repayments."],
-                    },
-                  ],
-                  ["Years", `Fiscal years ${yearRange}.`],
-                  [
-                    "Net impact",
-                    <>
-                      With several measures selected, the net line adds their separate effects (see{" "}
-                      <SectionLink id={METHOD_SECTIONS.limitations}>limitations</SectionLink>).
-                    </>,
-                  ],
-                  [
-                    "OBR comparison",
-                    {
-                      value: "Opens on the OBR's static costing, like ours, where it has one.",
-                      more: ["Choose Post-behavioural to include the OBR's estimate of behavioural responses."],
-                    },
-                  ],
-                ]}
-              />
-              <h3 className="method-details-title">Households by income</h3>
-              <FactList
-                items={[
-                  [
-                    "Income deciles",
-                    {
-                      value: "Ten groups of equal numbers of people, by household income.",
-                      more: [
-                        <>
-                          Ranked by baseline equivalised household net income before housing costs (the{" "}
-                          <SourceLink id="dwp_hbai">HBAI</SourceLink> measure).
-                        </>,
-                        "Negative incomes count as zero for the ranking.",
-                        "Households without a decile are left out.",
-                      ],
-                    },
-                  ],
-                  ["Absolute change", "The average change in household net income per household, in £ a year."],
-                  ["Relative change", "The decile's total change as a percentage of its total baseline net income."],
-                ]}
-              />
-              <h3 className="method-details-title">Household scatter</h3>
-              <FactList
-                items={[
-                  [
-                    "Household scatter bands",
-                    {
-                      value: "Households grouped by income and by change in income.",
-                      more: [
-                        `Income: 2027-28 baseline net income, in ${pounds(SCATTER_BINS.income_band_width)} bands up to ${pounds(SCATTER_BINS.income_max)}, so a group is the same households in every year.`,
-                        <>
-                          Change: band edges either way at
-                          <span className="method-chips" aria-label={`Band edges: ${SCATTER_CHANGE_EDGES}`}>
-                            {SCATTER_CHANGE_EDGE_LIST.map((edge) => (
-                              <Tag key={edge}>{edge}</Tag>
-                            ))}
-                          </span>
-                        </>,
-                        `Changes of ${pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at each end, outside the chart's −£5,000 to £5,000 axis.`,
-                        "About 500 dots, shared out by each income group's households in 2027-28.",
-                        "A group's k-th dot sits at its k-th quantile of change, so it keeps its row between years.",
-                      ],
-                    },
-                  ],
-                  [
-                    "Gain, loss, no change",
-                    {
-                      value: "No change is under £1 either way; a gain is £1 or more up, a loss £1 or more down.",
-                      more: ["Gain bands include their lower edge and loss bands their upper one, so the bands mirror about zero."],
-                    },
-                  ],
-                  [
-                    "Disclosure",
-                    {
-                      value: `Counts are weighted and rounded to the nearest ${SCATTER_BINS.round_to.toLocaleString("en-GB")}.`,
-                      more: ["Groups come from one simulation of the selection and are never added up."],
-                    },
-                  ],
-                  [
-                    "Sign-off",
-                    {
-                      value: "A named reviewer signs off every public data file before it is published.",
-                      more: ["A file awaiting sign-off is marked pending, and a pending file expires after 14 days at most."],
-                    },
-                  ],
-                ]}
-              />
-              <h3 className="method-details-title">Example households</h3>
-              <p className="method-more">
-                Each chart varies one income, from £0 to the top of its axis, for a fixed household.
-              </p>
-              <ul className="method-households">
-                {EXAMPLE_HOUSEHOLDS.map((household) => (
-                  <li key={household.id} className="method-household">
-                    <IconChip icon={HOUSEHOLD_ICONS[household.id] ?? User} size="sm" />
-                    <div>
-                      <h4 className="method-household-name">{household.label}</h4>
-                      <p className="method-household-text">{household.definition}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              The charts on{" "}
+              <ViewLink tab="dashboard" onShowTab={onShowTab}>Population impact</ViewLink>{" "}add up
+              every household&apos;s change with its weight, by income, age and area; no household
+              is ever shown on its own.
             </>
           }
-        />
-
-        <MethodSection
-          id={METHOD_SECTIONS.geography}
-          title="Figures by area"
-          summary={
-            <p>
+        >
+          <Topic
+            id={METHOD_ANCHORS.publicFinances}
+            title="Public finances"
+            preview="Budgetary impact · Exceptions · Net impact · OBR comparison"
+          >
+            <p className="method-more">
+              The{" "}
+              <ViewLink tab="dashboard" sub="finances" onShowTab={onShowTab}>revenue chart</ViewLink>{" "}
+              shows the change in the government&apos;s balance.
+            </p>
+            <FactList
+              items={[
+                [
+                  "Budgetary impact",
+                  {
+                    value: "Taxes collected less benefits and other spending, in £ billion a year.",
+                    more: ["Each measure's figure is net of every tax and spending change it causes."],
+                  },
+                ],
+                [
+                  "Exceptions",
+                  {
+                    value: "A measure whose published description says it is costed another way follows that description.",
+                    more: ["For example, from a Treasury cost estimate or from the change in loan repayments."],
+                  },
+                ],
+                [
+                  "Net impact",
+                  <>
+                    With several measures selected, the net line adds their separate effects (see{" "}
+                    <AnchorLink id={METHOD_SECTIONS.limitations}>limitations</AnchorLink>).
+                  </>,
+                ],
+                [
+                  "OBR comparison",
+                  {
+                    value: "Opens on the OBR's static costing, like ours, where it has one.",
+                    more: ["Choose Post-behavioural to include the OBR's estimate of behavioural responses."],
+                  },
+                ],
+              ]}
+            />
+          </Topic>
+          <Topic
+            id={METHOD_ANCHORS.byIncome}
+            title="Households by income"
+            preview="Income deciles · Absolute change · Relative change"
+          >
+            <p className="method-more">
+              The{" "}
+              <ViewLink tab="dashboard" sub="all" onShowTab={onShowTab}>decile charts</ViewLink>{" "}
+              split the change by income group.
+            </p>
+            <FactList
+              items={[
+                [
+                  "Income deciles",
+                  {
+                    value: "Ten groups of equal numbers of people, by household income.",
+                    more: [
+                      <>
+                        Ranked by baseline <Term id="equivalised">equivalised</Term>{" "}household net
+                        income <Term id="housingCosts">before housing costs</Term> (the{" "}
+                        <SourceLink id="dwp_hbai">HBAI</SourceLink> measure).
+                      </>,
+                      "Negative incomes count as zero for the ranking.",
+                      "Households without a decile are left out.",
+                    ],
+                  },
+                ],
+                ["Absolute change", "The average change in household net income per household, in £ a year."],
+                ["Relative change", "The decile's total change as a percentage of its total baseline net income."],
+              ]}
+            />
+          </Topic>
+          <Topic
+            id={METHOD_ANCHORS.poverty}
+            title="Poverty and inequality"
+            preview="Poverty rate · Inequality · Which run"
+          >
+            <FactList
+              items={[
+                [
+                  "Poverty rate",
+                  {
+                    value: (
+                      <>
+                        The share of people in households in{" "}
+                        <Term id="absolutePoverty">absolute poverty</Term>{" "}before housing costs, with
+                        and without the policies.
+                      </>
+                    ),
+                    more: [
+                      <>
+                        The poverty line is measured on <SourceLink id="dwp_hbai">HBAI</SourceLink>{" "}
+                        income, which is before indirect taxes, so the VAT and fuel duty measures do
+                        not change it.
+                      </>,
+                      "People moved out of or into poverty are the change in the rate times that year's population in the current-law projection, to the nearest 1,000.",
+                    ],
+                  },
+                ],
+                [
+                  "Inequality",
+                  <>
+                    The relative change in the <Term id="gini">Gini coefficient</Term> of{" "}
+                    <Term id="equivalised">equivalised</Term> household net income, people weighted.
+                  </>,
+                ],
+                [
+                  "Which run",
+                  <>
+                    Neither adds up across policies, so each is read from one run: a policy&apos;s{" "}
+                    <Term id="ownRuns">own</Term>, or the combined run when every policy is selected.
+                  </>,
+                ],
+              ]}
+            />
+          </Topic>
+          <Topic
+            id={METHOD_ANCHORS.scatter}
+            title="Household scatter"
+            preview="Bands · Gain, loss, no change · Disclosure · Sign-off"
+          >
+            <p className="method-more">The spread of changes behind the averages, as groups of households.</p>
+            <FactList
+              items={[
+                [
+                  "Household scatter bands",
+                  {
+                    value: "Households grouped by income and by change in income.",
+                    more: [
+                      `Income: 2027-28 baseline net income, in ${pounds(SCATTER_BINS.income_band_width)} bands up to ${pounds(SCATTER_BINS.income_max)}, so a group is the same households in every year.`,
+                      <>
+                        Change: band edges either way at
+                        <span className="method-chips">
+                          {SCATTER_CHANGE_EDGE_LIST.map((edge) => (
+                            <Tag key={edge}>{edge}</Tag>
+                          ))}
+                        </span>
+                      </>,
+                      `Changes of ${pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at each end, outside the chart's −£5,000 to £5,000 axis.`,
+                      "About 500 dots, shared out by each income group's households in 2027-28.",
+                      "A group's k-th dot sits at its k-th quantile of change, so it keeps its row between years.",
+                    ],
+                  },
+                ],
+                [
+                  "Gain, loss, no change",
+                  {
+                    value: "No change is under £1 either way; a gain is £1 or more up, a loss £1 or more down.",
+                    more: ["Gain bands include their lower edge and loss bands their upper one, so the bands mirror about zero."],
+                  },
+                ],
+                [
+                  "Disclosure",
+                  {
+                    value: `Counts are weighted and rounded to the nearest ${SCATTER_BINS.round_to.toLocaleString("en-GB")}.`,
+                    more: ["Groups come from one simulation of the selection and are never added up."],
+                  },
+                ],
+                [
+                  "Sign-off",
+                  {
+                    value: "A named reviewer signs off every public data file before it is published.",
+                    more: ["A file awaiting sign-off is marked pending, and a pending file expires after 14 days at most."],
+                  },
+                ],
+              ]}
+            />
+          </Topic>
+          <Topic
+            id={METHOD_SECTIONS.geography}
+            title="Figures by area"
+            preview="Disclosure checks · 90% intervals · Map colours"
+          >
+            <p className="method-more">
               Regional and constituency figures come from the same survey. Each is published only
               after disclosure checks, with a 90% interval, and the map colours a constituency only
               when its interval is narrow enough to place it.
             </p>
-          }
-          details={<GeographyMethodology />}
-        />
-
-        <MethodSection
-          id={METHOD_SECTIONS.young}
-          title="Young people"
-          summary={
-            <p>
+            <GeographyMethodology />
+          </Topic>
+          <Topic
+            id={METHOD_SECTIONS.young}
+            title="Results by age"
+            preview="Age bands · Change by year · Who counts · Pensioners"
+          >
+            <p className="method-more">
               The{" "}
-              <ViewLink tab="dashboard" sub="young" hash="young-people" onShowTab={onShowTab}>
-                Young people results
+              <ViewLink tab="dashboard" sub="age" age="16-24" hash="young-people" onShowTab={onShowTab}>
+                results by age
               </ViewLink>{" "}
-              split everyone into the Office for National Statistics&apos; age bands, with 16 to 24
-              as young people, and count who is better or worse off in each.
+              count who is better or worse off in each age band and single year of age.
             </p>
-          }
-          details={
             <FactList
               items={[
                 [
@@ -544,9 +517,7 @@ function MethodologyTab({ onShowTab }) {
                     ),
                     more: [
                       <>
-                        <a href={AGE_BAND_SOURCE.url} target="_blank" rel="noopener noreferrer">
-                          ONS A05 SA
-                        </a>{" "}
+                        <ExternalLink href={AGE_BAND_SOURCE.url}>ONS A05 SA</ExternalLink>{" "}
                         splits 16 to 24 into 16 to 17 and 18 to 24.
                       </>,
                       <>
@@ -561,11 +532,41 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 ["Single year of age", `One bar per year of age from ${SINGLE_AGE_FIRST} to ${SINGLE_AGE_LAST}.`],
                 [
+                  "Change by year",
+                  {
+                    lead: "The Young people and Pensioners charts by year:",
+                    points: [
+                      "Each point is a whole fiscal year, the sum of each selected measure's own effect; the curve between points never goes past them.",
+                      "A label names the measure behind each of the largest year-on-year steps.",
+                      "Breakdown by measure stacks each measure's own change, with the net change as the line; the running total adds each year's change from the first year.",
+                      "No share of income is shown: the results by age carry no income to divide by.",
+                    ],
+                  },
+                ],
+                [
                   "Who counts",
                   {
-                    value: "People in households with an income decile.",
-                    more: [`A band or age with fewer than ${MIN_SAMPLE_SIZE} survey records is not shown.`],
+                    value: (
+                      <>
+                        People in households with an{" "}
+                        <AnchorLink id={METHOD_ANCHORS.byIncome}>income decile</AnchorLink>.
+                      </>
+                    ),
+                    more: [
+                      `A band or age with fewer than ${MIN_SAMPLE_SIZE} survey records is not shown.`,
+                      <>
+                        Each person counts their whole household&apos;s change in net income, not
+                        equivalised, and averages are <Term id="perPerson">per person</Term>.
+                      </>,
+                    ],
                   },
+                ],
+                [
+                  "Pensioners",
+                  <>
+                    People at or over <Term id="statePensionAge">State Pension age</Term>, on{" "}
+                    <ViewLink tab="dashboard" sub="age" age="pensioners" onShowTab={onShowTab}>By age, with Pensioners chosen</ViewLink>.
+                  </>,
                 ],
                 [
                   "Better or worse off",
@@ -576,73 +577,133 @@ function MethodologyTab({ onShowTab }) {
                 ],
               ]}
             />
-          }
-        />
-
-          <MethodSection
-            id={METHOD_SECTIONS.personal}
-            title="Household impact"
-            summary={
-              <div id={METHOD_SECTIONS.singleYear} className="method-anchor">
-                <h3 className="method-card-title">Household calculation</h3>
-                <p>
-                  The same model and measures, applied to one household&apos;s answers. How it works
-                  is under &ldquo;About these figures&rdquo;, below the results on the{" "}
-                  <ViewLink tab="personal" onShowTab={onShowTab}>
-                    Household impact tab
-                  </ViewLink>
-                  .
-                </p>
-              </div>
-            }
-          />
-
-          <MethodSection
-            id={METHOD_SECTIONS.living}
-            title="Living standards"
-            summary={
-              <p>
-                The{" "}
-                <ViewLink tab="living" onShowTab={onShowTab}>
-                  Living standards
-                </ViewLink>{" "}
-                view projects incomes and poverty under current law, with no measures applied, on
-                the engine and data below.
-              </p>
-            }
-            details={<LivingStandardsMethod />}
-            detailsLabel="Engine, data and gaps"
-          />
+          </Topic>
+        </MethodSection>
 
         <MethodSection
-            id={METHOD_SECTIONS.limitations}
-            title="Limitations"
-            summary={
-              <p>
-                Most charts add up measures run separately, the economic assumptions follow one OBR
-                forecast, and surveys under-record some incomes. Each is explained below.
-              </p>
-            }
-            details={
-              <div className="method-callouts">
-                <Callout icon={Info} title="Measures added up">
-                  Each measure is also simulated on its own. Where several are selected, the
-                  revenue, decile and age charts add up their separate effects, so they leave out
-                  interactions between measures; the household scatter and the shares better and
-                  worse off come from a run of the whole selection, so they include them, and show
-                  nothing for a selection with no such run.
-                </Callout>
-                <Callout icon={Info} title="Economic assumptions">
-                  The economic assumptions and the weights follow the{" "}
-                  <SourceLink id="obr_efo_current" />. Rebasing them on a new forecast is a separate
-                  step.
-                </Callout>
-                <Callout icon={Info} title="Survey coverage">
-                  The {policyNotes("policy notes")} say where this affects a measure.
-                </Callout>
-              </div>
-            }
-          />
+          id={METHOD_SECTIONS.personal}
+          title="Household impact"
+          summary={
+            <span id={METHOD_SECTIONS.singleYear} className="method-anchor">
+              The same model and measures, applied to one household&apos;s answers on the{" "}
+              <ViewLink tab="household" onShowTab={onShowTab}>
+                Household impact tab
+              </ViewLink>
+              .
+            </span>
+          }
+        >
+          <Topic
+            id={METHOD_ANCHORS.householdCalc}
+            title="How the household calculation works"
+            preview={SINGLE_YEAR_METHOD.map(([term]) => term).join(" · ")}
+          >
+            <FactList items={SINGLE_YEAR_METHOD.map(([term, text]) => [term, text])} />
+          </Topic>
+          <Topic
+            id={METHOD_ANCHORS.incomePosition}
+            title="Your place in the UK"
+            preview="Income · Tenths · Distribution · Who moves · Among all households"
+          >
+            <FactList
+              items={[
+                [
+                  "Income",
+                  "Household net income after taxes (VAT and fuel duty included) and with benefits, divided by your household's size on the HBAI scale. Public spending in kind, such as the NHS and schools, is left out for everyone.",
+                ],
+                [
+                  "Tenths",
+                  "The tenths' average changes are the decile charts' own, ranked by HBAI income without VAT and fuel duty, so a household near a boundary may sit in the next tenth there. The average UK household's change has no published % of net income.",
+                ],
+                [
+                  "Distribution",
+                  `Published from the ${ordinal(LOWEST_PERCENTILE)} to the ${ordinal(HIGHEST_PERCENTILE)} percentile, as averages over bands one percentile wide; the lowest and highest 1% are not drawn.`,
+                ],
+                [
+                  "Who moves",
+                  "Everyone is ranked before and after the selected policies: a person moves up when the whole percentile (or tenth) of their rank is higher after. A share from fewer than 10 survey households is not published.",
+                ],
+                [
+                  "Among all households",
+                  "The Population impact scatter: each household sits by its 2027-28 net income before the policies, not adjusted for household size, in every year, and you by yours. Each dot is a group of households.",
+                ],
+              ]}
+            />
+          </Topic>
+        </MethodSection>
+
+        <MethodSection
+          id={METHOD_SECTIONS.living}
+          title="Pre-measures forecast"
+          summary={
+            <>
+              Incomes and poverty under current law, before any measure, on the{" "}
+              <ViewLink tab="outlook" sub="living" onShowTab={onShowTab}>
+                Living standards
+              </ViewLink>{" "}
+              and{" "}
+              <ViewLink tab="outlook" sub="poverty" onShowTab={onShowTab}>
+                Poverty
+              </ViewLink>{" "}
+              tabs, built on the forecast that{" "}
+              <ViewLink tab="outlook" sub="forecast" onShowTab={onShowTab}>
+                Forecast changes
+              </ViewLink>{" "}
+              shows.
+            </>
+          }
+        >
+          {/* The Forecast changes sub-tab links here */}
+          <Topic
+            id={FORECAST_FEED_ANCHOR}
+            title="How the forecast feeds the baseline"
+            preview="Growth rates · Years past the forecast · Parameters"
+          >
+            <ForecastFeedMethod />
+          </Topic>
+          <LivingStandardsMethod />
+        </MethodSection>
+
+        <MethodSection
+          id={METHOD_SECTIONS.limitations}
+          title="Limitations"
+          summary="Most charts add up measures run separately, the economic assumptions follow one OBR forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
+        >
+          <Topic title="Measures added up" preview="Revenue, decile and age charts · Household scatter · Shares better and worse off">
+            <p className="method-more">
+              Each measure is also simulated on its own. Where several are selected, the revenue,
+              decile and age charts add up their separate effects, so they leave out interactions
+              between measures (<Term id="ownRuns">measures run on their own</Term>); the{" "}
+              <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>{" "}and the
+              shares better and worse off come from a run of the whole selection, so they include
+              them, and show nothing for a selection with no such run.
+            </p>
+          </Topic>
+          <Topic title="Economic assumptions" preview="One OBR forecast behind the assumptions and weights">
+            <p className="method-more">
+              The economic assumptions and the weights follow the{" "}
+              <SourceLink id="obr_efo_current" />. Rebasing them on a new forecast is a separate
+              step.
+            </p>
+          </Topic>
+          <Topic title="Business fuel use" preview="Fuel duty on households' own purchases only">
+            <p className="method-more">
+              Fuel duty is modelled on households' own petrol and diesel purchases. Duty on fuel
+              for vans, lorries and business use of cars, roughly half of fuel duty receipts, is
+              not in the model, so the revenue from a change in fuel duty is lower than a full
+              costing would show.
+            </p>
+          </Topic>
+          <Topic title="Survey coverage" preview="Where under-recorded incomes affect a measure">
+            <p className="method-more">
+              The{" "}
+              <ViewLink tab="policies" onShowTab={onShowTab}>
+                policy notes
+              </ViewLink>{" "}
+              say where this affects a measure.
+            </p>
+          </Topic>
+        </MethodSection>
       </div>
     </div>
   );

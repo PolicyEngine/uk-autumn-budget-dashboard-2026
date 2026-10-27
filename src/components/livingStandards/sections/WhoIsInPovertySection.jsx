@@ -12,21 +12,22 @@ import LsCard from "../LsCard";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../../FloatingTooltip";
 import { CHART_COLOURS } from "../../../utils/chartTheme";
 import { CHART_LOGO } from "../../../utils/chartLogo";
-import PillSelect from "../../PillSelect";
-import YearRangeSelect from "../YearRangeSelect";
-import { useYearRange } from "../../../utils/livingStandards/yearRange";
+import { povertyMeasureOptions } from "../PovertyMeasurePills";
+import ControlBar from "../../ControlBar";
+import { yearsOption } from "../controlOptions";
+import { defaultRange, useYearRange } from "../../../utils/livingStandards/yearRange";
+import { usePovertyMeasure } from "../../../utils/livingStandards/povertyMeasure";
 import { niceAxis } from "../../../utils/livingStandards/baseline";
 import {
   formatPct,
   fyDash,
-  headlineStartYear,
-  headlineYear,
   periodLabel,
   round1,
   signedChange,
 } from "../../../utils/livingStandards/outlook";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, PeSource } from "../sources";
+import { METHOD_ANCHORS } from "../../methodology/anchors";
 
 const MEASURES = {
   relative_ahc: { label: "Relative poverty (AHC)", badge: "Relative (AHC)", noun: "relative poverty rate" },
@@ -45,7 +46,9 @@ const PLURAL = {
   couple_with_children: "Couples with children",
   single_no_children: "Single adults without children",
   couple_no_children: "Couples without children",
-  pensioner: "Pensioner families",
+  // People in the family, not the Pensioners tile's people over State
+  // Pension age: the two rates can differ
+  pensioner: "People in pensioner families",
 };
 
 /** Child breakdowns: row label and the sentence subject for each group. */
@@ -128,14 +131,13 @@ export default function WhoIsInPovertySection({ data }) {
   const pbg = data.poverty_by_group;
   const years = pbg?.years ?? [];
   // The two years compared: chosen by the reader, 2027-28 to 2031-32 at first
-  const [[from, to], setRange] = useYearRange(years, [
-    headlineStartYear(data) || years[0],
-    headlineYear(data) || years[years.length - 1],
-  ]);
+  const [[from, to], setRange] = useYearRange(years, defaultRange(years));
   const breakdowns = breakdownsFor(data, from, to);
   const ids = Object.keys(breakdowns);
   const [breakdownChoice, setBreakdown] = useState(ids.includes("family_type") ? "family_type" : ids[0]);
-  const [measureChoice, setMeasure] = useState("relative_ahc");
+  // One measure for the sub-tab's tiles and both cards (usePovertyMeasure);
+  // a breakdown without it (the child ones) falls back to its first
+  const [measureChoice, setMeasure] = usePovertyMeasure();
   const plotRef = useRef(null);
   // Cleared when the breakdown or measure changes, so it never shows a row
   // that has gone
@@ -163,28 +165,33 @@ export default function WhoIsInPovertySection({ data }) {
 
   const top = rows[0];
   const noun = b.children ? m.noun.replace(/ poverty rate$/, " child poverty rate") : m.noun;
-  const lead = top && (
+  // One plain sentence on the card; the poverty line and family types are
+  // defined in About this chart
+  const change =
+    top?.d == null
+      ? ""
+      : flat(top.d)
+        ? `, the same as in ${fyDash(from)}`
+        : `, ${top.d > 0 ? "up" : "down"} ${Math.abs(round1(top.d)).toFixed(1)} points since ${fyDash(from)}`;
+  const short = top && (
     <>
-      {top.subject} have the highest {noun} ({formatPct(top.z ?? top.a)} in {fyDash(to)})
-      {top.d != null && (
-        <>
-          ,{" "}
-          <strong>
-            {flat(top.d) ? "unchanged" : `${top.d > 0 ? "up" : "down"} ${signedChange(Math.abs(top.d), "pp").slice(1)}`}
-          </strong>{" "}
-          since {fyDash(from)}
-        </>
-      )}
-      .
+      Under current law, {top.subject.toLowerCase()} have the highest {noun}: <strong>{formatPct(top.z ?? top.a)}</strong> in{" "}
+      {fyDash(to)}
+      {change}.
     </>
   );
 
   const groupNotes = b.children
     ? data.child_poverty_by_family?.notes || []
     : (pbg?.notes || []).filter((n) => !/^Region/.test(n));
+  // The poverty line and housing costs of the measure shown
+  const line = measure.startsWith("absolute")
+    ? "a fixed line (60% of the 2024-25 median income) held constant in real terms"
+    : "60% of current median income";
+  const housing = measure.endsWith("ahc") ? "after housing costs" : "before housing costs";
   const about = b.children
-    ? `Share of children in households below the poverty line, after housing costs. Relative: 60% of current median income; absolute: a fixed real-terms line. Families are benefit units; the dashed line is all children.`
-    : `Share of people in households below 60% of current median income, after housing costs. Family type is at benefit-unit level; a pensioner family has someone at or above State Pension age. The dashed line is all people.`;
+    ? `Share of children in households below ${line}, ${housing}. Families are benefit units; the dashed line is all children.`
+    : `Share of people in households below ${line}, ${housing}. A pensioner family is a benefit unit with someone at or above State Pension age. The dashed line is all people.`;
 
   return (
     <LsCard
@@ -192,9 +199,18 @@ export default function WhoIsInPovertySection({ data }) {
       icon="users"
       period={periodLabel(from, to)}
       about={about}
-      summary={lead}
+      summary={short}
       notes={groupNotes}
       source={<PeSource />}
+      info={{
+        how: [
+          `The line is ${line}, ${housing}.`,
+          b.children
+            ? "Families are benefit units; the dashed line is all children."
+            : "Family type is at benefit-unit level; a pensioner family has someone at or above State Pension age.",
+        ],
+        method: { anchor: METHOD_ANCHORS.lsNotes, label: "Notes on the poverty data" },
+      }}
       sourceText={CSV_SOURCES.pe}
       download={{
         filename: `${measure}-by-${breakdown}`,
@@ -216,26 +232,21 @@ export default function WhoIsInPovertySection({ data }) {
           }),
       }}
       controls={
-        <>
-          {years.length > 2 && <YearRangeSelect years={years} from={from} to={to} onChange={setRange} />}
-          <PillSelect
-            variant="light"
-            prefix="Breakdown"
-            name="Breakdown"
-            value={breakdown}
-            onChange={setBreakdown}
-            options={ids.map((id) => ({ value: id, label: breakdowns[id].label, badge: breakdowns[id].badge }))}
-          />
-          <PillSelect
-            variant="light"
-            prefix="Measure"
-            name="Poverty measure"
-            value={measure}
-            onChange={setMeasure}
-            // Only the measures this breakdown has: none shown greyed out
-            options={b.measures.map((id) => ({ value: id, label: MEASURES[id].label, badge: MEASURES[id].badge }))}
-          />
-        </>
+        // The card's one Options pill: the years compared, the breakdown,
+        // then the poverty measure
+        <ControlBar
+          name="Who is in poverty"
+          options={[
+            yearsOption(years, [from, to], setRange),
+            {
+              label: "Breakdown",
+              value: breakdown,
+              onChange: setBreakdown,
+              options: ids.map((id) => ({ value: id, label: breakdowns[id].label, summary: breakdowns[id].badge ?? breakdowns[id].label })),
+            },
+            ...povertyMeasureOptions(measure, b.measures, setMeasure),
+          ]}
+        />
       }
     >
       <div className="chart-plot">

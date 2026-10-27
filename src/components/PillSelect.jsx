@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
+import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import "./PillSelect.css";
 import PillChevron from "./PillChevron";
+import Tip from "./Tip";
 
 /**
  * A pill that opens a short list of options: [badge] label, then a chevron.
@@ -36,6 +38,7 @@ function PillSelect({
   stableWidth = false,
 }) {
   const [open, setOpen] = useState(false);
+  const presence = usePresence(open);
   const current = Math.max(
     0,
     options.findIndex((option) => option.value === value),
@@ -147,11 +150,12 @@ function PillSelect({
         <PillChevron />
       </button>
 
-      {open && (
+      {presence.mounted && (
         <ul
           ref={listRef}
           id={listId}
-          className="pill-select-list"
+          {...leavingProps(presence.shown)}
+          className={`pill-select-list ${popoverClass(presence.shown)}`}
           role="listbox"
           aria-label={name}
           tabIndex={-1}
@@ -165,7 +169,6 @@ function PillSelect({
               role="option"
               aria-selected={index === current}
               aria-disabled={option.disabled ? "true" : undefined}
-              title={option.title}
               className={`pill-select-option ${index === active ? "is-active" : ""} ${
                 option.disabled ? "is-disabled" : ""
               }`}
@@ -175,7 +178,9 @@ function PillSelect({
               <span className="pill-select-check" aria-hidden="true">
                 {index === current ? "✓" : ""}
               </span>
-              {option.label}
+              <Tip content={option.title}>
+                <span>{option.label}</span>
+              </Tip>
             </li>
           ))}
         </ul>

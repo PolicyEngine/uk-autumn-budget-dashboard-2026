@@ -1,0 +1,59 @@
+/* Chart or table: two icon buttons joined, as tall as the Download button
+   beside them */
+.view-toggle {
+  display: inline-flex;
+  height: 40px;
+  border: 1px solid var(--pe-gray-300);
+  border-radius: 6px;
+  background: var(--pe-surface);
+  overflow: hidden;
+}
+
+.view-toggle-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pe-gray-500);
+  cursor: pointer;
+}
+
+.view-toggle-button + .view-toggle-button,
+.tip-anchor + .tip-anchor > .view-toggle-button {
+  border-left: 1px solid var(--pe-gray-200);
+}
+
+.view-toggle-button:hover {
+  color: var(--pe-teal-700);
+}
+
+.view-toggle-button.is-checked {
+  background: var(--pe-teal-50);
+  color: var(--c-gain-text);
+}
+
+.view-toggle-button:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--focus-ring);
+}
+
+/* The header's right-hand actions: the view toggle, then Download, in the
+   header grid's Download cell (its other divs are display: contents) */
+.main-content .chart-header > div.chart-header-actions.chart-header-actions,
+.chart-header-actions {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.charts-grid > div:not(:only-child) .chart-header-actions {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+}

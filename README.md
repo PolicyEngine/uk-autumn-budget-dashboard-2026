@@ -16,9 +16,10 @@ The tab list is `VIEWS` in [`src/App.jsx`](src/App.jsx); the open tab and sub-ta
 
 | Tab | What it shows |
 |---|---|
-| Population impact | Budgetary impact, distributional impact, winners and losers, and results by region and constituency, for each fiscal year from 2026-27 to 2031-32. Sub-tabs: **All households** and **Young people**. |
+| Population impact | The selected measures' effects, for each fiscal year from 2026-27 to 2031-32. Sub-tabs: **All households** (results by constituency, the change by income decile, the household scatter, example households), **Young people** (results by age), **Pensioners** (people at or over State Pension age, from the same results by age), **Living standards** (growth across the distribution, and inequality), **Poverty** (change in the poverty rate) and **Public finances** (revenue impact, and the OBR comparison once published). Living standards and Poverty each link to their twin without the measures on the Pre-measures forecast. |
 | Household impact | One household, one year: net income before and after the selected measures, each measure's own change, and an earnings sweep. Calculated live by the household API (`POST /api/household-impact`). |
-| Living standards | Baseline outlook (income, poverty and inequality projections from 2027-28 to 2031-32, with HBAI outturn and OBR series) and Forecast changes (the OBR forecast the baseline uses, and the Budget forecast once it is loaded with verified provenance). Sub-tabs: **Baseline outlook** and **Forecast changes**. |
+| Pre-measures forecast | The outlook without the Budget's measures, under current law (`?tab=outlook`; old `?tab=living` and `?sub=baseline` links still open it). Sub-tabs: **Living standards** (incomes over time, growth across the distribution, inequality over time; the default), **Poverty** (poverty over time, who is in poverty) and **Forecast changes** (the OBR forecast the baseline uses, and the Budget forecast once it is loaded with verified provenance), as `?sub=poverty` and `?sub=forecast`. Projections run from 2027-28 to 2031-32, with HBAI outturn and OBR series. Living standards and Poverty mirror Population impact's sub-tabs of the same names, which show the selected measures' effect; each links to its twin. |
+| Policies | Every published measure in one place: its published name and description, and, where [`src/utils/policyDetails.js`](src/utils/policyDetails.js) has an entry for its id, when it starts and is in force, its type, and its main modelling assumption and source behind "Details". Population impact links here rather than repeating it. |
 | Methodology | Data, model, measures and limitations. The replication line at the foot of every page names the code and engine version. |
 
 Every chart downloads as CSV, PNG, SVG or plain text.
@@ -45,7 +46,7 @@ List them from the command line with `uv run uk-budget-data generate --list-refo
 
 ## Architecture
 
-- **Web app** (`src/app/`, `src/App.jsx`, `src/components/`): Next.js 16 and React 19, built and run with Bun, served under the base path `/uk/autumn-budget-2026` (`next.config.ts`). Tailwind CSS 4 on `@policyengine/ui-kit`'s theme; charts in Recharts. Population impact and Living standards read precomputed files from `public/data/`; Household impact calls the household API.
+- **Web app** (`src/app/`, `src/App.jsx`, `src/components/`): Next.js 16 and React 19, built and run with Bun, served under the base path `/uk/autumn-budget-2026` (`next.config.ts`). Tailwind CSS 4 on `@policyengine/ui-kit`'s theme; charts in Recharts. Population impact and Pre-measures forecast read precomputed files from `public/data/`; Household impact calls the household API.
 - **Data package** (`src/uk_budget_data/`, CLI `uk-budget-data`): Python 3.13. Runs the measures through [policyengine.py](https://github.com/PolicyEngine/policyengine.py) and writes `public/data/`.
 - **Household API** (`uk-budget-api`, `src/uk_budget_data/api.py`): FastAPI on Cloud Run (`uk-budget-api-2026`, `europe-west1`). Its `POST /api/household-impact` route is documented in [`docs/budget-day-publication.md`](docs/budget-day-publication.md#household-route-post-apihousehold-impact).
 
@@ -117,9 +118,11 @@ The web app's population figures are files in `public/data/`, written by the `uk
 |---|---|
 | `generate` | The national results for every measure and year (`--reforms`, `--years` narrow it; `--artifacts` writes one receipted artifact per measure for the publication manifest) |
 | `geography` | Disclosure-controlled results by region and constituency |
+| `constituencies` | `constituency.csv` from Microcosm's published local-area cut: `geography`'s seats pass with each measure in a fresh process, resumable, with a timing and memory table (`--dry-run` checks the cut and the gates only; see the runbook's "Results by constituency on the local-area cut") |
 | `income-curve` | `income_curve.csv`, the example households' net income across their income grids (no dataset needed) |
-| `living-standards` | `living_standards_outlook.json`, the Living standards tab ([data contract](docs/DATA_CONTRACT.md); inputs and sources in [`data_inputs/living_standards/`](data_inputs/living_standards/README.md)) |
-| `obr-forecast --efo <economy tables .xlsx>` | Loads a new OBR forecast (the EFO detailed forecast tables, economy) into the Living standards Forecast changes series |
+| `living-standards` | `living_standards_outlook.json`, the Pre-measures forecast tab ([data contract](docs/DATA_CONTRACT.md); inputs and sources in [`data_inputs/living_standards/`](data_inputs/living_standards/README.md)) |
+| `obr-forecast --efo <economy tables .xlsx>` | Loads a new OBR forecast (the EFO detailed forecast tables, economy) into the Pre-measures forecast tab's Forecast changes series |
+| `scripts/precompute_household_presets.py` (not the CLI; reads `bun scripts/household-preset-requests.mjs`) | `household_presets.json`, the Household impact examples' answers with every measure selected, 2027-28 to 2031-32, shown at once when an example is chosen (no dataset needed; about ten minutes locally) |
 | `publish …` | Reconciles, stages, approves and checks entries in the publication manifest |
 
 The same pipeline is importable: `from uk_budget_data import generate_all_data, get_reform, DataConfig`. A `Reform` can carry `baseline_parameter_changes` to compare against something other than current law (`src/uk_budget_data/models.py`).
@@ -137,7 +140,7 @@ The full sequence, roles and timings are in the [runbook](docs/budget-day-runboo
 | Attest | Hand-written modifiers (`employer_ni_relief_under_25s`, `plan_2_threshold_unfreeze`) are held until **two different people** sign an attestation for that exact receipt | [How a measure must be written](docs/budget-day-runbook.md#how-a-measure-must-be-written) |
 | Approve | The Reconciler runs `publish approve`, then `publish review-rows` | [G3](docs/budget-day-runbook.md#g3-rebase-and-reconcile-1340-to-1410) |
 | Combined | `generate --combined` over the approved measures, staged and approved | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
-| Results by area | `geography` over the approved ids, locally or on Modal | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
+| Results by area | `geography` over the approved ids locally, or `constituencies --backend modal` for seats on Microcosm's local-area cut; both write `area_provenance.json` for `publish index` | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
 | Publish | `publish index`, `publish check`, then the pull request whose merge deploys | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
 | Sources | Point the page's OBR and Budget-document links at the day's publications (config keys `obr_efo_current` and `budget_documents`, in #128 and #127) | — |
 | Corrections | Withdraw, fix, regenerate | [G5](docs/budget-day-runbook.md#g5-corrections-whenever-one-arrives), [Rollback](docs/budget-day-runbook.md#rollback) |
@@ -147,7 +150,7 @@ The full sequence, roles and timings are in the [runbook](docs/budget-day-runboo
 ### Running it
 
 - **Locally.** `uv run uk-budget-data generate --artifacts …` runs one measure at a time. A receipted measure peaks at about 14–17 GB, so run in parallel (`--jobs`, in #112) only with more than about 40 GB free. Results by area need up to about 64 GB (#115, #138).
-- **On Modal** (in #139 for generation, #142 for results by area; both wait on the `uk-budget-2026-hf-token` secret in the `policyengine` workspace). One container per measure. Cost guards: no warm containers, a timeout on every function, no retries, a cap on parallel containers, and the app stopped after each run; check spend with `modal billing report --for today`. The decision and its reasons are on [#119](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/119).
+- **On Modal.** The flat CSVs: `uv run --with modal==1.6.2 python -m uk_budget_data.cli generate --backend modal`, and on a pull request that changes a measure, the "Results on Modal" workflow, which uploads them for review and never commits or signs. Receipted artifacts in #139. Results by constituency: `uk-budget-data constituencies` (runbook, "Results by constituency on the local-area cut"). All read the certified data with the `policyengine` workspace's existing `pe-uk-private-hf-read-token` secret. One container per measure. Cost guards: no warm containers, a timeout on every function, no retries, a cap on parallel containers, and the app stopped after each run; check spend with `modal billing report --for today`. The decision and its reasons are on [#119](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/issues/119).
 - **Household API.** Deployed by the "Deploy the household API" workflow (below). Budget-week capacity (8 vCPU, 8 GiB, eight workers, one instance kept warm) is in #141; set it back after the Budget.
 
 ## Review and sign-off
@@ -171,8 +174,10 @@ Settings, service limits and fallbacks are under "Production setup" in [`docs/bu
 
 ## Contributing
 
-Follow [`.claude/CLAUDE.md`](.claude/CLAUDE.md) for code and writing conventions: British English, sentence case, and colours from the design tokens. Run `make format` before committing Python and `bun run lint --fix` before committing JavaScript.
+Follow [`.claude/CLAUDE.md`](.claude/CLAUDE.md) for code and writing conventions: British English, sentence case, and colours from the design tokens ([`docs/COLOURS.md`](docs/COLOURS.md), enforced by `src/colourGuard.test.js` and ESLint). Run `make format` before committing Python and `bun run lint --fix` before committing JavaScript.
 
 ## Licence
 
 This project is for policy analysis. Data and analysis powered by PolicyEngine UK.
+
+The constituency hex map's layout (`data_inputs/constituency_hexes.json`) is the Open Innovations HexJSON of the 2024 Westminster constituencies (open-innovations/constituencies, `src/_data/hexjson/uk-constituencies-2024.hexjson`), © Open Innovations, CC BY 4.0. Its drawing follows PolicyEngine's uk-mansion-tax hex map.

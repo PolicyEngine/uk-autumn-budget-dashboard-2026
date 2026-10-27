@@ -1,0 +1,148 @@
+/* Line toggle chips (SeriesToggle.jsx): "Show lines:" then one chip per
+   line. On: tinted in the line's colour, a check, bold-ish text. Off:
+   outlined, muted, the swatch hollow. Clearly buttons, not a legend. */
+.series-toggle-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.series-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  font-size: 12.5px;
+  line-height: 1.3;
+}
+
+.series-toggle-lead {
+  margin-right: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--pe-gray-500);
+  white-space: nowrap;
+}
+
+.series-toggle-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 11px 0 8px;
+  border: 1px solid var(--pe-gray-300);
+  border-radius: 999px;
+  background: var(--c-surface);
+  color: var(--pe-gray-500);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.series-toggle-chip.is-on {
+  border-color: color-mix(in srgb, var(--chip-colour) 55%, var(--c-surface));
+  background: color-mix(in srgb, var(--chip-colour) 14%, var(--c-surface));
+  color: var(--c-text);
+  font-weight: 600;
+}
+
+.series-toggle-check {
+  flex: none;
+  color: var(--chip-colour);
+}
+
+/* Off: the swatch hollow and grey */
+.series-toggle-chip:not(.is-on) .series-toggle-swatch line {
+  stroke: var(--pe-gray-300);
+}
+
+.series-toggle-chip:hover {
+  border-color: var(--pe-gray-500);
+}
+
+.series-toggle-chip.is-on:hover {
+  border-color: var(--chip-colour);
+}
+
+.series-toggle-chip[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+.series-toggle-chip:focus-visible {
+  outline: 2px solid var(--pe-accent);
+  outline-offset: 2px;
+}
+
+.series-toggle-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--pe-gray-500);
+}
+
+.series-toggle-hint-tap {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .series-toggle-hint-click {
+    display: none;
+  }
+
+  .series-toggle-hint-tap {
+    display: inline;
+  }
+}
+
+/* A key item that is not a line (the selected year's shading): a swatch
+   and a label, quiet, not a button */
+.series-toggle-extra {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 4px 0 6px;
+  color: var(--pe-gray-600);
+  white-space: nowrap;
+}
+
+.series-toggle-band {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--pe-gray-200);
+}
+
+.series-toggle-chip:not(.is-on) .series-toggle-swatch rect {
+  fill: var(--pe-gray-300);
+}
+
+/* A component with nothing to draw for this household, kept so two keys
+   line up: faint, its swatch grey, not clickable */
+.series-toggle-chip.is-disabled {
+  border-style: dashed;
+  color: var(--pe-gray-400);
+  background: var(--c-surface);
+  opacity: 0.75;
+  cursor: default;
+}
+
+.series-toggle-chip.is-disabled .series-toggle-swatch rect {
+  fill: var(--pe-gray-300);
+}
+
+.series-toggle-chip.is-disabled:hover {
+  border-color: var(--pe-gray-300);
+}
+
+/* "+N with no effect for you": opens the disabled chips in place */
+.series-toggle-chip.series-toggle-more {
+  padding: 0 11px;
+  border-style: dashed;
+  color: var(--pe-gray-600);
+  font-weight: 500;
+}

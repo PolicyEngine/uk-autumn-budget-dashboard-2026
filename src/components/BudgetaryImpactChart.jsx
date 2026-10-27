@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   ComposedChart,
   Bar,
@@ -7,78 +7,61 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   ReferenceLine,
   Customized,
 } from "recharts";
-import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
+import { CHART_LOGO } from "../utils/chartLogo";
 import { revenueCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
-import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
-import GroupedLegend from "./GroupedLegend";
+import { SegmentTooltip, TOOLTIP_PROPS } from "./ChartTooltip";
+import MeasureKey, { measureOpacity, netOpacity } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import {
+  barShape,
   useNarrowViewport,
   GRID_PROPS,
   TICK_STYLE,
   AXIS_LINE,
   AXIS_TITLE_STYLE,
   chartMargin,
-  legendWrapperStyle,
   fiscalYearTick,
   shortFiscalYearTick,
   axisWidth,
   CHART_COLOURS,
-  HOVER_CURSOR,
+  divergingAxis,
 } from "../utils/chartTheme";
 import {
   NOT_YET_PUBLISHED,
 } from "../utils/displayYears";
-import { CHART_MOTION_MS, chartMotion, prefersReducedMotion } from "../utils/chartMotion";
+import { chartMotion, chartTransition } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
+import SelectedYearShade from "./SelectedYearShade";
+import { laterRevenueNote, revenueSentence } from "../utils/plainSentences";
+import { zeroReason } from "../utils/legendMembership";
+import ChartMoreInfo from "./ChartMoreInfo";
+import Note from "./Note";
+import { METHOD_ANCHORS } from "./methodology/anchors";
 
-// Net impact labels, one per year, as on the 2025 dashboard: the signed
-// total in a small white tag. A tag sits just above the year's stack of
-// gains when the net is positive, and just below its stack of costs when
-// negative, so it never covers a bar or the net line. They are part of the
-// chart's SVG, so the SVG and PNG downloads carry them too.
-const formatNetLabel = (value) =>
-  value < 0 ? `-£${Math.abs(value).toFixed(1)}bn` : `+£${value.toFixed(1)}bn`;
+// Net impact labels, one per year: the signed total in a small white tag
+// beside its dot on the net line, always just above the dot (below it only
+// where the dot is too near the top of the plot), and moved clear of the
+// tag beside it. They are part of the chart's SVG, so the SVG and PNG
+// downloads carry them too.
+// A net that rounds to zero (a year before a measure starts) has no sign
+const formatNetLabel = (value) => {
+  const shown = Math.abs(value).toFixed(1);
+  if (Number(shown) === 0) return `£${shown}bn`;
+  return value < 0 ? `-£${shown}bn` : `+£${shown}bn`;
+};
 
-/**
- * The selected year's shading behind its bars. One rect, moved by a
- * transform, so a year change (or Play) slides it to the new year.
- */
-function YearHighlight({ xAxisMap, yAxisMap, selectedYear }) {
-  const xAxis = xAxisMap && Object.values(xAxisMap)[0];
-  const yAxis = yAxisMap && Object.values(yAxisMap)[0];
-  if (!xAxis?.scale || !yAxis) return null;
-  const start = xAxis.scale(selectedYear);
-  if (start === undefined || Number.isNaN(start)) return null;
-  const width = xAxis.scale.bandwidth ? xAxis.scale.bandwidth() : 0;
-  return (
-    <rect
-      className="revenue-year-highlight"
-      x={0}
-      y={yAxis.y}
-      width={width}
-      height={yAxis.height}
-      fill={CHART_COLOURS.gain}
-      fillOpacity={0.08}
-      style={{
-        transform: `translateX(${start}px)`,
-        transition: prefersReducedMotion()
-          ? undefined
-          : `transform ${CHART_MOTION_MS}ms ease-in-out`,
-      }}
-    />
-  );
-}
 
-function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, policyNames, selectedYear }) {
+// The net line's dot radius (the Line's dot below)
+const DOT_RADIUS = 4;
+
+function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, line, selectedYear }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
@@ -87,19 +70,12 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, policyNames, 
   const crowded = xAxis.width < 460;
   const fontSize = narrow ? 11 : 12;
   const gap = 6;
-  const tagHeight = fontSize + 8;
   const band = xAxis.scale.bandwidth ? xAxis.scale.bandwidth() : 0;
+  // The tags already placed, left to right
+  const placed = [];
   return (
     <g className="net-impact-labels">
       {data.map((point) => {
-        const gains = policyNames.reduce(
-          (sum, name) => sum + Math.max(0, point[name] || 0),
-          0,
-        );
-        const costs = policyNames.reduce(
-          (sum, name) => sum + Math.min(0, point[name] || 0),
-          0,
-        );
         const net = point.netImpact;
         const unpublished = point.unpublished || net === null || net === undefined;
         // Net tags show with two or more measures; a not-yet-published tag
@@ -121,18 +97,39 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, policyNames, 
           xAxis.x + xAxis.width - width / 2,
         );
         // A year not yet published has no bars: its tag sits just above the
-        // zero line. A negative net's tag goes below the year's costs, unless
-        // that would reach the x-axis ticks: then above its gains instead
+        // zero line. Otherwise the tag sits just above the year's net dot,
+        // or just below it where above would leave the plot
         const plotTop = yAxis.y;
         const plotBottom = yAxis.y + yAxis.height;
-        const above = yAxis.scale(Math.max(gains, 0)) - gap - height;
-        let top = unpublished
-          ? yAxis.scale(0) - height - gap
-          : net >= 0
-            ? yAxis.scale(gains) - gap - tagHeight
-            : yAxis.scale(costs) + gap;
-        if (!unpublished && net < 0 && top + height > plotBottom - 2) top = above;
-        top = Math.max(top, plotTop);
+        const anchor = yAxis.scale(unpublished ? 0 : net);
+        const clearance = gap + DOT_RADIUS;
+        let top = anchor - clearance - height;
+        if (top < plotTop) top = anchor + clearance;
+        // With one measure there is no net line: the tag sits past the end
+        // of its bar (below a cost, above a gain), inside it only where the
+        // plot has no room
+        if (!line && !unpublished) {
+          top = net < 0 ? anchor + gap : anchor - gap - height;
+          if (top + height > plotBottom || top < plotTop) {
+            top = net < 0 ? anchor - gap - height : anchor + gap;
+          }
+        }
+        // Clear of the tag before it (on a narrow plot two can meet): the
+        // other side of the dot, or failing that past the other tag
+        const previous = placed[placed.length - 1];
+        const meets = (y) =>
+          previous &&
+          Math.abs(previous.x - x) < (previous.width + width) / 2 + 2 &&
+          y < previous.top + previous.height + 2 &&
+          y + height + 2 > previous.top;
+        if (meets(top)) {
+          const flipped = top < anchor ? anchor + clearance : anchor - clearance - height;
+          top = meets(flipped) || flipped < plotTop || flipped + height > plotBottom
+            ? previous.top + previous.height + 2
+            : flipped;
+        }
+        top = Math.min(Math.max(top, plotTop), plotBottom - height);
+        placed.push({ x, top, width, height });
         return (
           <g key={point.year}>
             <rect
@@ -168,20 +165,78 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, policyNames, 
   );
 }
 
+/**
+ * The measures in the chart's order: the catalogue's (#104), raise revenue,
+ * then cost revenue, each group by size (total absolute £bn over the
+ * published years), largest first, then measures with no published costing.
+ * The stack (largest nearest zero), the legend and the tooltip all take
+ * this order, which is also the order of the measures' shades (largest
+ * darkest), so a stack shades monotonically on every selection.
+ */
+export function measureOrder(data, catalogue) {
+  const order = (key) => catalogue.bySeriesKey.get(key)?.order ?? Number.MAX_SAFE_INTEGER;
+  return [...catalogue.allPolicyNames].sort((a, b) => order(a) - order(b));
+}
+
 // Chart metadata for export
 const CHART_TITLE = "Revenue impact";
 const CHART_DESCRIPTION =
-  `Change in government revenue each year, £bn. Above zero raises revenue; below zero costs the Treasury.`;
+  `Change in government revenue each year, £bn. Above zero raises revenue; below zero costs the government.`;
 
-function BudgetaryImpactChart({ data, selectedYear }) {
+// The card's "About this chart"
+const REVENUE_INFO = {
+  how: [
+    "Above zero the measures raise money; below zero they cost the government.",
+    "The net line adds up the selected measures' separate figures.",
+  ],
+  method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the measures" },
+};
+
+/**
+ * One line for the year before the chart's first (2026-27), when the
+ * selected measures move revenue in it: "In 2026-27, before the years
+ * shown, the selected policies cost £2.0bn, including all of the Warm Home
+ * Discount top-up." The measures whose whole effect falls in that year are
+ * named, except those the empty plot's note already names. Null when the
+ * year's net rounds to nothing or a selected measure has no verified row.
+ *
+ * @param {Object|null} before - That year's point (budgetChartData)
+ * @param {Array<Object>} data - The chart's points
+ * @param {Array<Object>} measures - The selected measures, as the catalogue's
+ * @param {string[]} [named] - Measure ids already named elsewhere on the card
+ */
+export function beforeYearsLine(before, data, measures, named = []) {
+  if (!before || before.unpublished || before.netImpact == null) return null;
+  const net = before.netImpact;
+  if (Math.abs(net) < 0.0005) return null;
+  const amount = Math.abs(net) < 0.05 ? "less than £0.1bn" : `£${Math.abs(net).toFixed(1)}bn`;
+  const one = measures.length === 1;
+  const verb = net < 0 ? (one ? "costs" : "cost") : one ? "raises" : "raise";
+  const only = measures
+    .filter((measure) => !named.includes(measure.id))
+    .filter((measure) => Math.abs(before[measure.seriesKey] ?? 0) >= 0.0005)
+    .filter((measure) => data.every((point) => Math.abs(point[measure.seriesKey] ?? 0) < 0.0005))
+    .map((measure) => measure.name ?? measure.label);
+  const all = only.length
+    ? `, including all of the ${only.length === 1 ? only[0] : `${only.slice(0, -1).join(", ")} and ${only.at(-1)}`}`
+    : "";
+  return `In ${fiscalYearTick(before.year)}, before the years shown, the selected ${one ? "policy" : "policies"} ${verb} ${amount}${all}.`;
+}
+
+function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [], before = null }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
+  // The measure highlighted from the key (MeasureKey); the others fade
+  const [highlight, setHighlight] = useState(null);
+  // The measure whose segment is hovered: the others dim
+  const [hoveredMeasure, setHoveredMeasure] = useState(null);
+  const catalogue = useMeasureCatalogue();
   const {
     displayable,
     allPolicyNames: ALL_POLICY_NAMES,
     policyColors: POLICY_COLORS,
     bySeriesKey,
-  } = useMeasureCatalogue();
+  } = catalogue;
 
   if (!data || data.length === 0) return null;
   if (!displayable.length) return <UnavailableNotice reason="Revenue figures are unavailable until approved results verify." />;
@@ -194,10 +249,40 @@ function BudgetaryImpactChart({ data, selectedYear }) {
     return data.some((d) => Math.abs(d[policyName] || 0) > 0.001);
   };
 
-  const activePolicies = ALL_POLICY_NAMES.filter(hasNonZeroValues);
+  const orderedPolicies = measureOrder(data, catalogue);
+  const activePolicies = orderedPolicies.filter(hasNonZeroValues);
+  // The key's chips: the measures with revenue in some year (a measure with
+  // none has nothing to show here)
+  const keyMembers = activePolicies.map((key) => {
+    const measure = bySeriesKey.get(key);
+    return { id: measure?.id ?? key, key, name: measure?.label ?? key, description: measure?.description, muted: false };
+  });
+  const netLabel = activePolicies.length > 1 ? "Net impact" : undefined;
+  // No selected measure moves revenue in any year shown (the Warm Home
+  // Discount top-up alone, in force only in winter 2026-27): a note with
+  // the reason, not five "£0.0bn" tags on an empty £0-£0.05bn axis
+  const noRevenue = activePolicies.length === 0 && data.every((point) => !point.unpublished && point.netImpact != null);
+  const outOfYears = noRevenue
+    ? orderedPolicies
+        .map((key) => bySeriesKey.get(key))
+        // Unselected measures are zeros in the data too: only the selection's
+        .filter((measure) => measure && selectedPolicies.includes(measure.id))
+        .map((measure) => ({ measure, reason: zeroReason(measure, selectedYear) }))
+        .filter(({ reason }) => reason.kind === "not_in_force")
+        .map(({ measure, reason }) => `${measure.name ?? measure.label}: ${reason.text}`)
+    : [];
+  const yearSpan = `${fiscalYearTick(data[0].year)} to ${fiscalYearTick(data[data.length - 1].year)}`;
+  // The year before the chart's first, in one line under the card; a
+  // measure the empty plot's note already names is not named again
+  const selectedMeasures = displayable.filter((measure) => selectedPolicies.includes(measure.id));
+  const outOfYearIds = noRevenue
+    ? selectedMeasures.filter((measure) => zeroReason(measure, selectedYear).kind === "not_in_force").map((measure) => measure.id)
+    : [];
+  const beforeLine = beforeYearsLine(before, data, selectedMeasures, outOfYearIds);
 
-  // Y-axis domain: at least +/-10bn, widened to the next £5bn so the
-  // tallest stacked bar sits under the top tick rather than above it.
+  // Y axis: symmetric about zero when the year's stacks go both ways
+  // (divergingAxis), with about 5% room past the tallest stack; from zero
+  // when every bar has one sign
   const stackExtent = (sign) =>
     Math.max(
       0,
@@ -208,17 +293,10 @@ function BudgetaryImpactChart({ data, selectedYear }) {
         }, 0),
       ),
     );
-  // Fitted to the data with about 5% padding (the net tags use the top
-  // margin),
-  // on round steps; zero is always in range.
-  const gainsTop = stackExtent(1) * 1.05;
-  const costsBottom = stackExtent(-1) * 1.05;
-  const span = Math.max(gainsTop + costsBottom, 1);
-  const tickStep = span <= 4 ? 1 : span <= 10 ? 2 : span <= 40 ? 5 : 10;
-  const yAxisDomain = [
-    -Math.ceil(costsBottom / tickStep) * tickStep,
-    Math.max(tickStep, Math.ceil(gainsTop / tickStep) * tickStep),
-  ];
+  const { domain: yAxisDomain, ticks: yAxisTicks } = divergingAxis([
+    stackExtent(1),
+    -stackExtent(-1),
+  ]);
 
   // Legend items for export: the measures the chart draws, as on screen
   const legendItems = [
@@ -239,7 +317,17 @@ function BudgetaryImpactChart({ data, selectedYear }) {
     description: CHART_DESCRIPTION,
     legendItems,
     logo: CHART_LOGO,
+    // The key is above the plot, not a Recharts legend: crop nothing
+    reservedLegendHeight: 0,
   };
+  // "Later years differ": the first later year in which the measures turn
+  // from costing revenue to raising it, or back (plainSentences.js)
+  const laterRevenue = laterRevenueNote(
+    data.find((point) => point.year === selectedYear)?.netImpact,
+    data
+      .filter((point) => point.year > selectedYear && !point.unpublished)
+      .map((point) => ({ yearLabel: fiscalYearTick(point.year), net: point.netImpact })),
+  );
   // One menu: the chart's data as CSV, and the chart as PNG or SVG.
   const download = {
     chartRef,
@@ -256,13 +344,26 @@ function BudgetaryImpactChart({ data, selectedYear }) {
             <TitleIcon name="landmark" />
             <span className="title-text">Revenue impact</span>
           </h3>
-          <p className="chart-description">{CHART_DESCRIPTION}</p>
+          {/* One plain sentence for the selected year; what the chart
+              measures is in More info */}
+          <p className="chart-description">
+            {(noRevenue ? null : revenueSentence(data.find((point) => point.year === selectedYear)?.netImpact, fiscalYearTick(selectedYear))) ?? CHART_DESCRIPTION}
+            {laterRevenue && <span className="later-years-note"> {laterRevenue}</span>}
+          </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} />
       </div>
 
       <div ref={chartRef}>
-        <ResponsiveContainer width="100%" height={narrow ? 540 : 400}>
+        {noRevenue ? (
+          <div className="plot-empty" style={{ minHeight: 240 }} role="status">
+            <p>
+              None of the selected policies changes revenue in {yearSpan}.
+              {outOfYears.length > 0 && ` ${outOfYears.join("; ")}.`}
+            </p>
+          </div>
+        ) : (
+        <ResponsiveContainer width="100%" height={narrow ? 520 : 500}>
           <ComposedChart
             data={data}
             margin={chartMargin(narrow, { top: 24 })}
@@ -271,7 +372,7 @@ function BudgetaryImpactChart({ data, selectedYear }) {
             <CartesianGrid {...GRID_PROPS} />
             {/* The year chosen in the title band, shaded behind its bars */}
             {data.some((point) => point.year === selectedYear) && (
-              <Customized component={<YearHighlight selectedYear={selectedYear} />} />
+              <Customized component={<SelectedYearShade value={selectedYear} />} />
             )}
             <XAxis
               dataKey="year"
@@ -283,62 +384,41 @@ function BudgetaryImpactChart({ data, selectedYear }) {
             />
             <YAxis
               domain={yAxisDomain}
-              width={axisWidth(yAxisDomain, formatCurrencyTick)}
+              width={axisWidth(yAxisTicks, formatCurrencyTick)}
               axisLine={false}
               tickLine={false}
               tickFormatter={formatCurrencyTick}
               tick={TICK_STYLE}
               interval={0}
-              ticks={(() => {
-                const [min, max] = yAxisDomain;
-                const interval = tickStep;
-                const ticks = [];
-                for (let i = min; i <= max + 0.001; i += interval) {
-                  ticks.push(Math.round(i));
-                }
-                // Ensure 0 is always included
-                if (!ticks.includes(0)) ticks.push(0);
-                return ticks.sort((a, b) => a - b);
-              })()}
+              ticks={yAxisTicks}
             />
+
+            {/* One segment at a time, beside the cursor; the other measures dim */}
 
             <Tooltip
 
               {...TOOLTIP_PROPS}
 
-              cursor={HOVER_CURSOR}
+              shared={false}
 
-              content={
+              cursor={false}
 
-                <ChartTooltip
+              offset={16}
 
-                  format={(value) => `£${value.toFixed(1)}bn`}
-
-                  labelFormat={fiscalYearTick}
-
-                  netKey="netImpact"
-
-                />
-
-              }
+              content={<SegmentTooltip activeKey={hoveredMeasure} labelOf={(row) => fiscalYearTick(row.year)} format={(value) => `£${value.toFixed(1)}bn`} netKey="netImpact" netLabel="Net impact" />}
 
             />
-            <Legend
-              wrapperStyle={legendWrapperStyle(narrow)}
-              content={
-                <GroupedLegend
-                  names={activePolicies}
-                  netLabel={activePolicies.length > 1 ? "Net impact" : undefined}
-                />
-              }
-            />
-            {ALL_POLICY_NAMES.map((policyName) => (
+            {orderedPolicies.map((policyName) => (
               <Bar
                 key={policyName}
                 dataKey={policyName}
                 fill={POLICY_COLORS[policyName]}
+                fillOpacity={hoveredMeasure ? (hoveredMeasure === policyName ? 1 : 0.3) : measureOpacity(highlight, policyName)}
+                onMouseEnter={() => setHoveredMeasure(policyName)}
+                onMouseLeave={() => setHoveredMeasure(null)}
                 name={bySeriesKey.get(policyName)?.label ?? policyName}
                 stackId="stack"
+                shape={barShape(orderedPolicies)}
                 {...chartMotion()}
                 // Always mounted (a zero series has no height), so a series that
                 // starts in a later year grows in place instead of remounting
@@ -350,9 +430,10 @@ function BudgetaryImpactChart({ data, selectedYear }) {
               strokeLinejoin="round"
               strokeLinecap="round"
               dataKey="netImpact"
+              strokeOpacity={netOpacity(highlight)}
               stroke={CHART_COLOURS.net}
               strokeWidth={1.75}
-              dot={{ fill: CHART_COLOURS.net, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, r: 4 }}
+              dot={{ fill: CHART_COLOURS.net, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, r: DOT_RADIUS }}
               name="netImpact"
               {...chartMotion()}
               hide={activePolicies.length <= 1}
@@ -363,16 +444,39 @@ function BudgetaryImpactChart({ data, selectedYear }) {
                 <NetImpactLabels
                   data={data}
                   narrow={narrow}
-                  policyNames={ALL_POLICY_NAMES}
                   selectedYear={selectedYear}
                   show
+                  line={activePolicies.length > 1}
                 />
               }
             />
             <Customized component={<ChartUnitLabel text="Impact (£bn)" />} />
-            <Customized component={PolicyEngineLogo} />
           </ComposedChart>
         </ResponsiveContainer>
+        )}
+      </div>
+
+      {/* The measures' key under the plot (MeasureKey), unboxed in the card: click
+          chips to highlight several together. The logo below it. */}
+      {!noRevenue && (
+      <div className="revenue-key">
+        <MeasureKey
+          members={keyMembers}
+          netLabel={netLabel}
+          highlight={highlight}
+          onHighlight={setHighlight}
+          placement="section"
+          label="Measures"
+        />
+      </div>
+      )}
+      <div className="chart-logo">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={CHART_LOGO.href} alt="PolicyEngine" />
+      </div>
+      <div className="chart-footer">
+        {beforeLine && <Note>{beforeLine}</Note>}
+        <ChartMoreInfo year={selectedYear} info={REVENUE_INFO} />
       </div>
     </div>
   );

@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import TitleIcon from "./TitleIcon";
+import { useSlidingIndicator } from "./SubTabs";
 
-// Each view's icon, drawn as the chart titles' are
-const TAB_ICONS = {
+// Each view's icon, drawn as the chart titles' are (also by the loading
+// placeholder's copy of this bar, publication/ViewSkeleton.jsx)
+export const TAB_ICONS = {
   dashboard: "users",
   household: "house",
-  living: "trend",
+  outlook: "trend",
+  policies: "list",
   methodology: "book",
 };
 
@@ -18,14 +21,38 @@ const TAB_ICONS = {
  *
  * @param {Object} props
  * @param {Array<{value: string, label: string}>} props.tabs
- * @param {string} props.value - The chosen tab's value
+ * @param {string|null} props.value - The chosen tab's value; null for none
+ *   (the landing page), when the first tab takes the Tab stop
  * @param {(value: string) => void} props.onChange
  * @param {(value: string) => string} props.tabId - The id of a tab's button
  * @param {(value: string) => string} props.panelId - The id of a tab's panel
+ * @param {boolean} [props.hidden] - Out of sight and reach (the landing
+ *   page, whose boxes are the navigation there)
+ * @param {boolean} [props.notch] - The chosen view has sub-tabs: its tab
+ *   opens into their band below (SubTabs), with no rule between
+ * @param {React.ReactNode} [props.leading] - Before the tabs, at the row's
+ *   start, outside its scrolling (App's "About" pill)
  */
-function ViewTabs({ tabs, value, onChange, tabId, panelId }) {
+function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false, hidden: barHidden = false, leading = null }) {
   const refs = useRef({});
   const rowRef = useRef(null);
+  // The chosen tab's tint and underline, sliding from tab to tab
+  const indicator = useSlidingIndicator(rowRef, refs, value);
+  // The chosen tab's left edge in the page column, for the sub-tab band
+  // below to start under it (SubTabs.css, --view-tab-x)
+  useEffect(() => {
+    const row = rowRef.current;
+    const scrollLeft = row?.scrollLeft ?? 0;
+    // The row starts after anything leading it: its distance from the
+    // start of the bar's content
+    const bar = row?.parentElement;
+    const lead = row && bar
+      ? row.getBoundingClientRect().left - bar.getBoundingClientRect().left - (parseFloat(getComputedStyle(bar).paddingLeft) || 0)
+      : 0;
+    // (negative where the row is pulled into the margin to line its first
+    // tab's icon up with the page's content, HomeButton.css)
+    document.documentElement.style.setProperty("--view-tab-x", `${Math.round(lead + Math.max(0, indicator.x - scrollLeft))}px`);
+  }, [indicator.x, leading]);
   // Which ends of a scrolling row have tabs out of sight, to fade them
   const [hidden, setHidden] = useState({ start: false, end: false });
 
@@ -69,7 +96,7 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId }) {
     const last = tabs.length - 1;
     const next = {
       ArrowRight: current === last ? 0 : current + 1,
-      ArrowLeft: current === 0 ? last : current - 1,
+      ArrowLeft: current <= 0 ? last : current - 1,
       Home: 0,
       End: last,
     }[event.key];
@@ -79,7 +106,8 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId }) {
   };
 
   return (
-    <div className="view-tabs-bar">
+    <div className={`view-tabs-bar${notch ? " has-notch" : ""}${leading ? " has-leading" : ""}`} hidden={barHidden}>
+      {leading}
       <div
         ref={rowRef}
         className={`view-tabs${hidden.start ? " fade-start" : ""}${hidden.end ? " fade-end" : ""}`}
@@ -88,8 +116,15 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId }) {
         onKeyDown={onKeyDown}
         onScroll={measure}
       >
-        {tabs.map((tab) => {
+        <span
+          className={`view-tabs-indicator${indicator.ready ? " is-ready" : ""}`}
+          aria-hidden="true"
+          style={{ width: indicator.width, transform: `translateX(${indicator.x}px)` }}
+        />
+        {tabs.map((tab, index) => {
           const selected = tab.value === value;
+          // With none chosen, the first tab is the row's Tab stop
+          const tabStop = selected || (index === 0 && !tabs.some((t) => t.value === value));
           return (
             <button
               key={tab.value}
@@ -102,12 +137,12 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId }) {
               aria-selected={selected}
               // Only the chosen view's panel is rendered
               aria-controls={selected ? panelId(tab.value) : undefined}
-              tabIndex={selected ? 0 : -1}
+              tabIndex={tabStop ? 0 : -1}
               className="view-tab"
               onClick={() => onChange(tab.value)}
             >
               <TitleIcon name={TAB_ICONS[tab.value]} bare size={18} className="view-tab-icon" />
-              {tab.label}
+              <span className="view-tab-label">{tab.label}</span>
             </button>
           );
         })}
