@@ -347,7 +347,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
             const left = Math.min(pos(step.start), pos(step.end));
             const width = Math.max(Math.abs(pos(step.end) - pos(step.start)), 0.6);
             return (
-              <div className={`wf-row wf-${step.kind}`} role="row" key={step.id}>
+              <div className={`wf-row wf-${step.kind} row-band${i % 2 === 0 ? " is-banded" : ""}`} role="row" key={step.id}>
                 <span className="wf-label" role="rowheader">
                   {step.kind === "measure" ? (
                     <MeasureRowLabel measure={catalogue.byId?.get(step.id) ?? { id: step.id, name: step.name, color: step.colour }} name={step.name} colour={step.colour} />
@@ -379,7 +379,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
                   <span className="wf-bar" style={{ left: `${left}%`, width: `${width}%`, background: fillOf(step) }} />
                 </span>
                 <span className="wf-value" role="cell">
-                  <span className="wf-main"><CountUpText text={main(step)} /></span>
+                  <span className="wf-main row-band-value"><CountUpText text={main(step)} /></span>
                 </span>
               </div>
             );

@@ -14,8 +14,14 @@
   font-size: var(--fs-caption);
 }
 
+/* Each row a band across the three columns (a subgrid, so the columns
+   still line up row to row): .row-band in globals.css */
 .wf-row {
-  display: contents;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  margin: 0 -6px;
+  padding: 0 6px;
 }
 
 .wf-row > * {

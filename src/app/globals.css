@@ -152,6 +152,9 @@ code {
   --tab-underline-inset: 8px;
   /* Bars: the radius of a bar's outer end (chartTheme BAR_RADIUS) */
   --bar-radius: 5px;
+  /* A chart row's band (the zebra and hover bands of the per-policy row
+     charts, chartTheme ROW_RADIUS) */
+  --row-radius: 6px;
   --sticky-offset: calc(var(--nav-offset) + var(--title-row-height) + var(--view-tabs-height));
   /* The landing page (LandingPage.css): how much of the page background
      lies over the Public finances view behind it (more at the top, behind
@@ -227,6 +230,7 @@ code {
   --c-highlight-band: #eaf5f4; /* behind a highlighted group */
   --c-tenth-band: #dde6f3; /* your income tenth behind a teal or grey distribution */
   --c-hover: #eef6f6; /* behind the hovered bar or row */
+  --c-row-band: #f9fafb; /* every second row of a chart with one row per policy: --pe-gray-50, fainter than --c-grid and --c-hover */
   --c-obr: #9ca3af; /* the OBR's figure (a ring) */
   --c-obr-text: #6b7280;
   --c-net: #000000; /* the net line and its dots */
@@ -3189,4 +3193,40 @@ body {
   .info-tip::before {
     inset: -10px;
   }
+}
+
+/* The per-policy row charts drawn in HTML (Effect of each policy, Better
+   and worse off, the poverty waterfall, the by-year statistic's bars):
+   every second row on a faint band, and the hovered or focused row on a
+   stronger one with its name and value emphasised, so a row's marks and
+   value read with its name across the empty middle. The SVG row charts
+   (the official costings dumbbell, Change by policy) draw the same bands
+   from CHART_COLOURS.rowBand and .hover. */
+.row-band {
+  border-radius: var(--row-radius);
+}
+
+.row-band.is-banded {
+  background: var(--c-row-band);
+}
+
+.row-band:hover,
+.row-band:focus-within,
+.row-band.is-active {
+  background: var(--c-hover);
+}
+
+/* A heavier name without a heavier font, so it never rewraps */
+.row-band:hover .mrl-name,
+.row-band:focus-within .mrl-name,
+.row-band.is-active .mrl-name {
+  color: var(--pe-gray-900);
+  -webkit-text-stroke: 0.35px currentColor;
+}
+
+.row-band:hover .row-band-value,
+.row-band:focus-within .row-band-value,
+.row-band.is-active .row-band-value {
+  color: var(--pe-gray-900);
+  font-weight: 700;
 }

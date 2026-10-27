@@ -106,11 +106,17 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
         </div>
       ) : (
         <div className="mev-bars" role="table" aria-label={`${metric.title}, each policy on its own, ${fiscalYearTick(selectedYear)}`}>
-          {rows.map((m) => {
+          {rows.map((m, index) => {
             const width = (Math.abs(m.value) / max) * span;
             const left = m.value < 0 ? zero - width : zero;
             return (
-              <div className="mev-row" role="row" key={m.id}>
+              <div
+                className={`mev-row row-band${index % 2 === 0 ? " is-banded" : ""}`}
+                role="row"
+                key={m.id}
+                tabIndex={0}
+                aria-label={`${m.fullName ?? m.name}: ${signed(m.value)}`}
+              >
                 <span className="mev-label" role="rowheader" title={m.fullName ?? m.name}>
                   <MeasureRowLabel measure={byId?.get(m.id) ?? { id: m.id, name: m.fullName ?? m.name, color: m.colour }} name={m.name} colour={m.colour} />
                 </span>
@@ -118,7 +124,7 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
                   <span className="mev-zero" style={{ left: `${zero}%` }} />
                   <span className="mev-bar" style={{ left: `${left}%`, width: `${Math.max(width, 0.6)}%`, background: m.colour }} />
                 </span>
-                <span className="mev-value" role="cell">
+                <span className="mev-value row-band-value" role="cell">
                   {signed(m.value)}
                 </span>
               </div>

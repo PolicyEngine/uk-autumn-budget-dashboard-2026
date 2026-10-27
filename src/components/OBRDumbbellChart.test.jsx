@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
+import { CHART_COLOURS } from "../utils/chartTheme";
 import OBRDumbbellChart, {
   GAP_COLOUR,
   OBR_COLOUR,
@@ -7,6 +8,7 @@ import OBRDumbbellChart, {
   formatBn,
   formatDifference,
   obrValue,
+  rowDecimals,
   pctOfOfficial,
   shownDifference,
 } from "./OBRDumbbellChart";
@@ -86,6 +88,38 @@ describe("OBRDumbbellChart", () => {
     expect(circles.indexOf(obr)).toBeGreaterThan(circles.indexOf(pe));
     expect(labels(container, "rail")).toEqual(["−£0.2bn, same"]);
     expect(row.querySelector(".obr-dumbbell-difference").textContent).toBe("£0.0bn");
+  });
+
+  it("gives a row two decimals where its figures round equal to £0.1bn but its dots are apart", () => {
+    const { container } = chart({ rows: [{ id: "loans", name: "Student loan threshold", pe: -0.53, obr: -0.55, obrStatic: -0.55, obrBehavioural: -0.55 }] });
+    expect(labels(container, "loans").sort()).toEqual(["−£0.53bn", "−£0.55bn"]);
+    expect(rowEl(container, "loans").querySelector(".obr-dumbbell-difference").textContent).toBe("+£0.02bn");
+  });
+
+  it("keeps 'same' where the figures are equal at two decimals too", () => {
+    expect(rowDecimals(-0.531, -0.529)).toBe(1);
+    expect(rowDecimals(-0.53, -0.55)).toBe(2);
+    expect(rowDecimals(-0.5, -0.4)).toBe(1);
+    expect(rowDecimals(0, 0)).toBe(1);
+    const { container } = chart({ rows: [{ id: "near", name: "Near", pe: -0.531, obr: -0.529, obrStatic: -0.529, obrBehavioural: -0.529 }] });
+    expect(labels(container, "near")).toEqual(["−£0.5bn, same"]);
+    expect(rowEl(container, "near").querySelector(".obr-dumbbell-difference").textContent).toBe("£0.0bn");
+  });
+
+  it("bands every second row under the gridlines, and the hovered or focused row more strongly", () => {
+    const { container } = chart();
+    const svg = container.querySelector("svg");
+    const bands = [...svg.querySelectorAll(".obr-dumbbell-band")];
+    expect(bands.map((band) => band.getAttribute("fill"))).toEqual([CHART_COLOURS.rowBand, CHART_COLOURS.rowBand]);
+    // The bands come before every gridline and row, so they are drawn under them
+    const order = [...svg.querySelectorAll("*")];
+    expect(order.indexOf(svg.querySelector(".obr-dumbbell-bands"))).toBeLessThan(order.indexOf(svg.querySelector("line")));
+    const second = rowEl(container, "two_child_limit");
+    fireEvent.focus(second);
+    expect(second.classList.contains("is-active")).toBe(true);
+    expect(svg.querySelector(".obr-dumbbell-band.is-active").getAttribute("fill")).toBe(CHART_COLOURS.hover);
+    fireEvent.blur(second);
+    expect(svg.querySelector(".obr-dumbbell-band.is-active")).toBeNull();
   });
 
   it("labels different estimates separately", () => {

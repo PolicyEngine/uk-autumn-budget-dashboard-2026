@@ -10,7 +10,7 @@ import MeasureRowLabel from "./MeasureRowLabel";
 import NoBreakYear from "./NoBreakYear";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import UnavailableNotice from "./publication/UnavailableNotice";
-import OBRDumbbellChart, { dumbbellLegendItems, formatBn, formatBn as formatFigure, formatDifference, obrValue, shownDifference } from "./OBRDumbbellChart";
+import OBRDumbbellChart, { dumbbellLegendItems, formatBn, formatBn as formatFigure, formatDifference, obrValue, rowDecimals, shownDifference } from "./OBRDumbbellChart";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv, fiscalYear } from "../utils/chartCsv";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
@@ -281,7 +281,9 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
     },
   ].filter(Boolean);
 
-  const cell = (value) => (isValue(value) ? formatBn(value) : "—");
+  // A row's figures at the chart's precision for that row (two decimals
+  // where they round equal to £0.1bn but are apart)
+  const cell = (value, decimals = 1) => (isValue(value) ? formatFigure(value, decimals) : "—");
 
   return (
     <div className="obr-comparison-card">
@@ -333,17 +335,20 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id}>
-                    <td className="policy-name-cell"><MeasureRowLabel measure={row.measure} name={row.name} /></td>
-                    <td className="value-cell pe">{cell(row.pe)}</td>
-                    <td className="value-cell obr">{cell(row.obrStatic)}</td>
-                    <td className="value-cell obr">{cell(row.obrBehavioural)}</td>
-                    <td className="value-cell difference">
-                      {formatDifference(shownDifference(row.pe, row.obr))}
-                    </td>
-                  </tr>
-                ))}
+                {rows.map((row) => {
+                  const decimals = rowDecimals(row.pe, row.obr);
+                  return (
+                    <tr key={row.id}>
+                      <td className="policy-name-cell"><MeasureRowLabel measure={row.measure} name={row.name} /></td>
+                      <td className="value-cell pe">{cell(row.pe, decimals)}</td>
+                      <td className="value-cell obr">{cell(row.obrStatic, decimals)}</td>
+                      <td className="value-cell obr">{cell(row.obrBehavioural, decimals)}</td>
+                      <td className="value-cell difference">
+                        {formatDifference(shownDifference(row.pe, row.obr, decimals), decimals)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             <p className="comparison-table-note">

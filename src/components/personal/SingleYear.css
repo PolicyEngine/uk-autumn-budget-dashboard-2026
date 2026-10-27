@@ -114,6 +114,21 @@
   font-family: inherit;
 }
 
+/* Change by policy: the hovered or focused row's band is stronger (drawn in
+   the chart) and its name is in bold */
+.policy-bar.is-active .policy-bar-name {
+  font-weight: 600;
+}
+
+.policy-bar:focus {
+  outline: none;
+}
+
+.policy-bar:focus-visible .policy-bar-band {
+  stroke: var(--c-gain);
+  stroke-width: 2;
+}
+
 .earnings-plot-inner {
   position: relative;
 }
