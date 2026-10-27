@@ -109,7 +109,9 @@ export default function PriceCategoriesCard({ view = "chart", onViewChange }) {
   }
 
   const series = ORDER.map((key) => data.series.find((s) => s.key === key)).filter(Boolean);
-  const rows = changeRows(data);
+  // Drawn from the base month on, so every line starts at 0 (the file
+  // holds the months before it too)
+  const rows = changeRows(data).filter((r) => r.month >= data.base_month);
   const allLines = series.map((s) => ({ key: s.key, ...LINES[s.key] }));
   const lines = allLines.filter((l) => shown.includes(l.key));
   const baseMonth = monthLabel(data.base_month);
@@ -201,8 +203,8 @@ export default function PriceCategoriesCard({ view = "chart", onViewChange }) {
         series={lines}
         xKey="month"
         xFormat={monthShort}
-        xTickValues={yearTicks(rows)}
-        xTickFormat={monthYear}
+        xTickValues={[rows[0].month, ...yearTicks(rows)]}
+        xTickFormat={(m) => (m.endsWith("-01") ? monthYear(m) : monthShort(m))}
         dots={false}
         yFormat={pctTick}
         tooltipFormat={pctText}
