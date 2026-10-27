@@ -22,10 +22,15 @@ import { buildChartCsv } from "../../../utils/chartCsv";
 import { CSV_SOURCES, ForecastSource, forecastSourceText, forecastSources } from "../sources";
 import { METHOD_ANCHORS } from "../../methodology/anchors";
 import PriceCategoriesCard from "../PriceCategoriesCard";
+import PaySectorsCard from "../PaySectorsCard";
 
-// The prices group's card of ONS history (prices by spending category),
-// drawn beside the inflation forecast
-const PRICES_SECTION = "Inflation and price indices";
+// Each section's card of ONS history, drawn beside its forecast card: prices
+// by spending category beside the inflation measures, pay growth by sector
+// beside earnings and other income
+const HISTORY_CARDS = {
+  "Inflation and price indices": PriceCategoriesCard,
+  "Income and earnings": PaySectorsCard,
+};
 
 // CPI after housing costs and social rent are not OBR series
 const NOT_OBR = {
@@ -231,14 +236,15 @@ function cardsFor(section) {
 /**
  * One section per forecast group, under its heading: one card a row, or two
  * side by side. The prices group pairs the inflation measures with the ONS
- * prices by spending category.
+ * prices by spending category, and the pay group earnings and other income
+ * with the ONS pay growth by sector.
  */
 export default function ForecastSeriesSection({ data, view, onViewChange }) {
   const forecast = data.forecast;
   return forecast.sections.map((section) => {
     const { group, cards } = cardsFor(section);
-    const history = section.title === PRICES_SECTION;
-    const count = cards.length + (history ? 1 : 0);
+    const History = HISTORY_CARDS[section.title];
+    const count = cards.length + (History ? 1 : 0);
     return [
       <SectionHeading
         key={`${section.title}-heading`}
@@ -258,7 +264,7 @@ export default function ForecastSeriesSection({ data, view, onViewChange }) {
               onViewChange={onViewChange}
             />
           ))}
-          {history && <PriceCategoriesCard view={view} onViewChange={onViewChange} />}
+          {History && <History view={view} onViewChange={onViewChange} />}
         </div>
       </section>,
     ];
