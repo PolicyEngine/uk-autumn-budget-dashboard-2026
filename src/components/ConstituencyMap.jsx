@@ -57,6 +57,8 @@ import {
   seatCode,
   seatName,
   seatStates,
+  movesNoSeat,
+  noSeatMovedNote,
   seatStyle,
   seatSummary,
 } from "../utils/geography/seats";
@@ -853,6 +855,12 @@ export default function ConstituencyMap({
   // (a style on the page only; the exported file never carries it)
   const [keyHighlight, setKeyHighlight] = useState(null);
   const counts = useMemo(() => keyCounts(states), [states]);
+  // Every seat zero or withheld: say so, so the map's grey and hatching
+  // are not left to explain themselves
+  const flatNote = useMemo(
+    () => (movesNoSeat(states) ? noSeatMovedNote({ yearLabel, several: choice.kind === "package" }) : null),
+    [states, yearLabel, choice.kind],
+  );
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -1240,6 +1248,7 @@ export default function ConstituencyMap({
               )}
               <FloatingTooltip tip={hoverTip} />
             </div>
+            {flatNote && <p className="map-flat-note">{flatNote}</p>}
           </div>
         )}
       </SwapTransition>
