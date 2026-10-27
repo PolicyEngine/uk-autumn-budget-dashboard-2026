@@ -932,15 +932,17 @@ def test_versions_have_no_leading_zeros_or_other_digits(tmp_path, version):
 def test_every_locked_package_ships_a_wheel():
     """lock.sh resolves with --no-build, which refuses any package that ships
     no wheel. One in the lock fails every adoption at its first step: the
-    6.11.0 dispatch (25 October) failed on odfpy, which is source-only."""
+    6.11.0 dispatch (25 October) failed on odfpy, which is source-only. A git,
+    URL or path source needs a build too, so only the project itself (an
+    editable or virtual entry) may lack wheels."""
     lock = tomllib.loads((REPO / "uv.lock").read_text())
-    source_only = [
+    needs_a_build = [
         package["name"]
         for package in lock["package"]
-        if "registry" in package.get("source", {})
+        if not {"editable", "virtual"} & package.get("source", {}).keys()
         and not package.get("wheels")
     ]
-    assert source_only == []
+    assert needs_a_build == []
 
 
 # --- lock.sh (review R1: the propose job rebuilds what validate checked) --
