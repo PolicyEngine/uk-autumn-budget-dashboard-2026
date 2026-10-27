@@ -9,7 +9,11 @@ import { NO_PACKAGE_PUBLISHED, PACKAGE_NOT_IN_FILE } from "../../utils/incomePos
 
 const PUBLIC = join(__dirname, "..", "..", "..", "public", "data");
 const OUTLOOK = readFileSync(join(PUBLIC, "living_standards_outlook.json"), "utf8");
-const FILE = readFileSync(join(PUBLIC, "income_growth_with_measures.csv"), "utf8");
+// A frozen copy of the candidates' file (four of its runs), not public/data's:
+// Budget day's --published-package run rewrites that file with the announced
+// measures only, which would fail these tests on every publish PR (rehearsal
+// of 27 October)
+const FILE = readFileSync(join(__dirname, "..", "..", "test", "fixtures", "flat", "income_growth_with_measures.csv"), "utf8");
 let GROWTH = FILE;
 
 // The published package as the manifest keys it: two measures and their
