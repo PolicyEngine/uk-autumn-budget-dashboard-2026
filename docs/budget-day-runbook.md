@@ -862,7 +862,7 @@ Max, relayed by the UK hub and the coordinator on 22 October: "i think we should
 - G2's `generate --artifacts --reforms <ids> --jobs 2`;
 - G4's `geography --jobs 2`.
 
-`--artifacts` and `--combined` also run on Modal (#139, ported to `main`): `uv run --with modal==1.6.2 uk-budget-data generate --artifacts --backend modal --reforms <ids>`, one container per measure (32 GB, 2 CPUs, no retries, at most 16 at once, 45 min timeout), with the workspace secret `pe-uk-private-hf-read-token`. The run needs a clean working tree (the receipts name the commit the containers ran) and never sends a dataset file. A receipt binds the execution it ran in, so Modal artifacts carry the container's execution identity: make every artifact of a release in one place, or staging needs `--adopt-execution`, which marks every other entry stale. A hand-written modifier still goes in a `generate` call of its own. `scripts/budget_day/modal_smoke.py` tests the plumbing on an invented dataset, with no secret. The local artifact and area timings below are estimates, not timed runs.
+`--artifacts` and `--combined` also run on Modal (#139, ported to `main`): `uv run --with modal==1.6.2 python -m uk_budget_data.cli generate --artifacts --backend modal --reforms <ids>`, one container per measure (32 GB, 2 CPUs, no retries, at most 16 at once, 45 min timeout), with the workspace secret `pe-uk-private-hf-read-token`. The run needs a clean working tree (the receipts name the commit the containers ran) and never sends a dataset file. A receipt binds the execution it ran in, so Modal artifacts carry the container's execution identity: make every artifact of a release in one place, or staging needs `--adopt-execution`, which marks every other entry stale. A hand-written modifier still goes in a `generate` call of its own. `scripts/budget_day/modal_smoke.py` tests the plumbing on an invented dataset, with no secret. The local artifact and area timings below are estimates, not timed runs.
 
 Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microcosm national dataset). The draft PR "Faster generation" holds the details.
 
@@ -898,7 +898,7 @@ Measured on 24 October on a 64 GB laptop (policyengine 6.10.2, the pinned Microc
 - **`--backend modal`** (flat CSVs and `--only` only, opt-in):
 
   ```bash
-  uv run --with modal==1.6.2 uk-budget-data generate --backend modal
+  uv run --with modal==1.6.2 python -m uk_budget_data.cli generate --backend modal
   ```
 
   - **Secret:** the `policyengine` workspace's existing `pe-uk-private-hf-read-token` (key `HUGGING_FACE_TOKEN`, a read-only token for `populace-uk-private`, created by Anthony; decision on #119). If it is missing, the command stops with "Modal secret missing" and names the owner. The person running the command needs a Modal token for the workspace (`modal token new`).
@@ -950,8 +950,10 @@ On Monday the four national commands took 20:09 end to end because `income_distr
 **The memory snapshot does nothing.** `enable_memory_snapshot=True` is ignored on an ephemeral app (every run logs "Memory snapshots are disabled for ephemeral apps"), so each container imports the engine cold. It costs seconds, not minutes.
 
 **If a container fails** (an error in the run, the 45-minute timeout, out of memory):
-- every other artifact still comes back and is written; the failed ones are printed as they arrive and listed at the end, with the artifacts that were written, and the command exits non-zero (`ModalRunsFailed`). Before #226 one failure stopped the app and every artifact not yet written here was lost;
-- stage the written ones as they are, and rerun only the failed ids. Rerunning the whole set is safe too: at the same commit a template or `parameter_changes` measure comes back "unchanged" (write-once), but a hand-written modifier gets a new directory and needs a fresh two-person attestation, so don't rerun those without need;
+- every other artifact still comes back and is written. The failed one is printed in its place (`<id>: FAILED in its Modal container: <error>`), and the summary lists it apart from the refusals (`FAILED <id>: ...`), with any combined run of the same call as `NOT STARTED` (a combined run binds its members' outputs, so none starts while one is missing). The command then prints what to rerun and exits 1. Before #226 one failure stopped the app and every artifact not yet written here was lost;
+- **results come back in measure order.** A slow or hung container holds back every artifact after it until it finishes or reaches the 45-minute timeout. A pause after `<id>: wrote ...` means a container is still running: don't interrupt it. Ctrl-C loses every artifact not yet written, as before #226;
+- stage the written ones as they are, then rerun only the ids the command prints (`--reforms <failed ids>`, each hand-written modifier in a call of its own), stage them, then the combined run (`--combined <member ids>`). Don't rerun the whole set: at the same commit a template or `parameter_changes` measure comes back "unchanged" (write-once), but a hand-written modifier gets a new directory and needs a fresh two-person attestation;
+- a run killed mid-write (laptop asleep, terminal closed) can leave a `.staging-*` directory under `public/data/artifacts/<id>/`. It can never be staged (`publish stage` needs the directory named by its digest) and doesn't make the tree dirty (paths under `public/data/artifacts/` are the publication's own), and `publish review-rows` deletes it; never commit it;
 - a refusal is not a failure: a measure the gates refuse (a data limit, a scored year left out, from #208 a decile cell under 10 survey households) comes back refused, with its reason, and no rerun changes it;
 - Modal restarts a preempted container with the same input even with `retries=0`; that is safe under write-once, and costs at most one container's time;
 - nothing reaches the manifest until `publish stage`, so a failed or partial run publishes nothing. Never run `publish review-rows` while a `generate` is writing in the same checkout: it deletes unstaged artifact directories.
@@ -1141,7 +1143,7 @@ Uses the workspace's existing Modal secret `pe-uk-private-hf-read-token` (key `H
 
 ```
 UK_BUDGET_DISCLOSURE_AUDIT_DIR=~/ab2026-private-audit \
-  uv run --with modal==1.6.2 uk-budget-data constituencies --backend modal
+  uv run --with modal==1.6.2 python -m uk_budget_data.cli constituencies --backend modal
 ```
 
 - **Containers:** 4 CPU and 64 GiB each (sized from #138's laptop target; lower once a real run has measured the peaks), at most 16 at once, so 15 measures and their package run in one wave, no retries, a 90-minute timeout, no warm containers. The app stops when the command ends. Modal still restarts a container it preempts, with the same input (seen once in drill 5).

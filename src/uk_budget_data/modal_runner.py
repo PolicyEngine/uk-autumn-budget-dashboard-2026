@@ -73,7 +73,9 @@ def _import_modal():
     except ImportError as error:
         raise ModalUnavailable(
             "--backend modal needs the modal package: run the command with "
-            "`uv run --with modal==1.6.2 uk-budget-data ...`"
+            "`uv run --with modal==1.6.2 python -m uk_budget_data.cli ...` "
+            "(the uk-budget-data script runs the project's own Python, "
+            "which has no modal)"
         ) from error
     return modal
 
