@@ -527,6 +527,7 @@ uv run uk-budget-data publish stage --provisional public/data/artifacts/<id>/<di
 uv run uk-budget-data publish check
 ```
 
+- **Local or Modal: the same backend as the release's other artifacts.** The block above is the local form. If Tuesday's regeneration ran on Modal, run the day's `generate` calls there too (`uv run --with modal==1.6.2 python -m uk_budget_data.cli generate --artifacts --backend modal --reforms <ids>`, and `--combined ... --backend modal` and `constituencies --backend modal` at G4), in the parallel shells of [`budget-day-checklist.md`](budget-day-checklist.md). A local artifact staged beside Modal ones needs `--adopt-execution`, which makes every other entry stale.
 - **Once results by area are bound** (after G4's first area run), staging unbinds them, and this `publish check` fails until the index is rebuilt. From then on, run `uv run uk-budget-data publish index` before it, after rerunning the area run if an entry it used has changed (G4).
 - **One artifact per measure.** `generate --artifacts` writes one new directory per measure and never touches another measure's. It prints each directory it wrote; use that path in the commands that follow.
 - **A hand-written modifier is generated alone:** one id per `generate` call, in its own process. Measures in one call share the Python process, so a value a helper module keeps from one measure's build can reach the next measure's without being read under its watch (#51 round 18, family 4; #55). Template and `parameter_changes` measures may share a call.
