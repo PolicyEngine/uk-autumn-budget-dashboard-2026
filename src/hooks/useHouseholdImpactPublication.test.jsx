@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
-import useHouseholdImpact, { clearHouseholdImpactCache, detailServiceAsked, peekHouseholdImpact, seedHouseholdImpactCache } from "./useHouseholdImpact";
+import useHouseholdImpact, { clearHouseholdImpactCache, detailServiceAsked, peekHouseholdImpact, rememberHouseholdHeadline, seedHouseholdImpactCache } from "./useHouseholdImpact";
 import { EngineMismatchError, buildHouseholdRequest, normaliseHouseholdImpact, requestKey } from "../utils/householdImpactApi";
 import { WIZARD_DEFAULTS } from "../components/HouseholdCalculator";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../test/householdFixture";
@@ -205,6 +205,44 @@ describe("Personal impact's live answers", () => {
       await waitFor(() => expect(next.result.current.detailStatus).toBe("ready"));
       expect(calls.filter((call) => call.startsWith("detail:"))).toHaveLength(4);
       expect(calls.filter((call) => call !== "main:headline")).toEqual(calls.filter((call) => call.startsWith("detail:")));
+      expect(detailServiceAsked()).toBe(true);
+    });
+
+    // Both services redeployed from one commit while the tab is open: the
+    // commit appears in the answers only now, and the detail service is
+    // asked from the first headline that reports it
+    it("asks the detail service once the headline starts reporting a commit", async () => {
+      const calls = [];
+      let mainBuild = null;
+      twoServices(calls, fromDetail(), (body) => ({ ...fromMain(body), git_sha: mainBuild }));
+      const before = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
+      await waitFor(() => expect(before.result.current.detailStatus).toBe("ready"));
+      expect(calls.sort()).toEqual(["main:by_policy", "main:headline", "main:sweep"]);
+      expect(detailServiceAsked()).toBe(true);
+      before.unmount();
+      calls.length = 0;
+      mainBuild = BUILD;
+      const after = renderHook(() => useHouseholdImpact({ ...params, year: 2030, expectedEngine: ENGINE }));
+      await waitFor(() => expect(after.result.current.detailStatus).toBe("ready"));
+      expect(calls.sort()).toEqual(["detail:by_policy", "detail:sweep", "main:headline"]);
+      expect(after.result.current.data.byPolicy).not.toBeNull();
+      expect(after.result.current.data.sweep).not.toBeNull();
+    });
+
+    // A headline kept in the cache from before a redeploy (an example card's,
+    // say) is not the main API's current build: a detail answer from the new
+    // build is refused under it, but the session keeps asking the detail
+    // service
+    it("doesn't stop asking the detail service over a headline kept from an earlier deploy", async () => {
+      const calls = [];
+      twoServices(calls, fromDetail());
+      const key = `${params.publicationKey}:${requestKey(buildHouseholdRequest(params.inputs, { year: params.year, policies: params.policies }))}`;
+      const old = normaliseHouseholdImpact({ ...fromMain(buildHouseholdRequest(params.inputs, { year: params.year, policies: params.policies })), git_sha: "d".repeat(40) });
+      rememberHouseholdHeadline(key, { ...old, byPolicy: null, sweep: null });
+      const hook = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
+      await waitFor(() => expect(hook.result.current.status).toBe("error"));
+      expect(calls).not.toContain("main:headline");
+      expect(calls.filter((call) => call.startsWith("detail:")).sort()).toEqual(["detail:by_policy", "detail:sweep"]);
       expect(detailServiceAsked()).toBe(true);
     });
 

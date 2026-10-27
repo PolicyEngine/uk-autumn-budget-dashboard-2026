@@ -181,6 +181,10 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     };
     const timer = setTimeout(async () => {
       let first = cached?.data ?? null;
+      // Whether this request fetched its headline: one kept in the cache
+      // (an example card's, or this household's from earlier in the session)
+      // may come from a deploy that has since been replaced
+      const headlineFetched = !first;
       if (!first) {
         try {
           if (!(await current()) || signal.aborted) return;
@@ -237,14 +241,19 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       );
       // The detail service's answer is used only if it has the part asked
       // for, reports the headline's build commit and matches it; otherwise
-      // the part is asked of the main API. An answer from another build
-      // stops the page asking the detail service for the rest of the session
+      // the part is asked of the main API. An answer from another build than
+      // a headline fetched just now stops the page asking the detail service
+      // for the rest of the session
       const acceptFor = (include) => (raw) => {
         try {
           const detail = normaliseHouseholdImpact(raw);
           const answered = include.every((part) => (part === "sweep" ? detail.sweep : detail.byPolicy) !== null);
           const otherBuild = stageMismatch(first, detail, { sameBuild: true }) !== null;
-          if (otherBuild) detailServiceUsable = false;
+          // Only a headline fetched just now stands for the main API's
+          // current build: under one kept from an earlier deploy, a detail
+          // answer from the new one is refused for this request but says
+          // nothing about the next
+          if (otherBuild && headlineFetched) detailServiceUsable = false;
           return answered && !otherBuild;
         } catch {
           return false;
