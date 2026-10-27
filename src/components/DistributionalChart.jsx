@@ -41,7 +41,8 @@ import { chartMotion, netDot } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
-import { decileSentence } from "../utils/plainSentences";
+import { decileSentence, laterDecileNote } from "../utils/plainSentences";
+import { laterDecileEnds } from "../utils/laterYears";
 import {
   decileMembership,
   exportLegendItems,
@@ -134,6 +135,14 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
       return dataPoint;
     });
   }, [rawData, selectedPolicies, selectedYear, POLICIES, hasUnavailableSelection, catalogue]);
+
+  // "Later years differ": the first later year whose lowest- or
+  // highest-income tenth moves the other way (plainSentences.js)
+  const laterNote = useMemo(() => {
+    const ends = { low: data[0]?.netChange, high: data[data.length - 1]?.netChange };
+    const later = laterDecileEnds(rawData, { valueKey: "value", ends: ["1st", "10th"], selectedPolicies, catalogue, selectedYear });
+    return laterDecileNote(ends, later, "relative");
+  }, [data, rawData, selectedPolicies, catalogue, selectedYear]);
 
   // Every selected measure is in the legend in every year (so the legend,
   // and the plot's height, hold still on a year change or Play); one with
@@ -268,6 +277,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
           {/* One plain sentence; what the chart measures is in More info */}
           <p className="chart-description">
             {decileSentence(data, "relative") ?? CHART_DESCRIPTION}
+            {laterNote && <span className="later-years-note"> {laterNote}</span>}
           </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={chartTitle} />
