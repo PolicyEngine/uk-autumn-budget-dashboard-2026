@@ -222,13 +222,37 @@ describe("constituencyInfo", () => {
     expect(national.how[0]).toMatch(/enhanced Family Resources Survey/);
     const how = local.how.join(" ");
     expect(how).toMatch(/90% interval from 1,000 bootstrap resamples/);
-    expect(how).toMatch(/fewer than 30 effective survey households is approximate/);
-    expect(how).toMatch(/fewer than 10 survey households/);
-    // The breaks are said once, in the key's tip: About this chart points there
-    expect(how).not.toMatch(/either way/);
+    // The breaks and the dotted / hatched rules (30 effective, 10
+    // households) are said once, in the key's tip: About this chart points there
+    expect(how).toMatch(/approximate \(dotted\) or not published \(hatched\)/);
+    expect(how).not.toMatch(/either way|30 effective|10 survey households/);
     expect(how).toMatch(/How to read the key/);
     expect(local.definitions.map((d) => d.term ?? d.ref)).toContain("Hex map");
     // A release that routes nothing by area: what it shows, no method
     expect(constituencyInfo({ ...base, notRouted: true }).how).toBeUndefined();
+  });
+});
+
+describe("InfoSections", () => {
+  it("styles every section alike, bullets only 2+ items, and ends with one More in Methodology line", async () => {
+    const { render } = await import("@testing-library/react");
+    const { default: InfoSections, infoPreview } = await import("./InfoSections");
+    const info = {
+      shows: "One line.",
+      how: ["Step one.", "Step two."],
+      definitions: [{ ref: "netIncome" }, { term: "Hex map", meaning: "One hexagon per seat." }],
+      caveats: ["Only caveat."],
+      method: { anchor: "method-area", label: "How the figures by area are estimated" },
+    };
+    const { container } = render(<InfoSections info={info} />);
+    expect(container.querySelectorAll(".info-section-caveat")).toHaveLength(0);
+    expect(container.querySelector(".info-caveats").tagName).toBe("DIV");
+    expect(container.querySelectorAll("ul.info-list li")).toHaveLength(2);
+    expect(container.querySelector(".info-term")).toHaveTextContent("Hex map — One hexagon per seat.");
+    const last = container.querySelector(".info-sections").lastElementChild;
+    expect(last).toHaveClass("info-method");
+    expect(last).toHaveTextContent(/^More in Methodology: How the figures by area are estimated · Household net income →$/);
+    // Shared terms alone make no Definitions section
+    expect(infoPreview({ ...info, definitions: [{ ref: "netIncome" }] })).toBe("How it's calculated · Caveats");
   });
 });

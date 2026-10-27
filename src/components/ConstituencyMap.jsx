@@ -167,26 +167,20 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
     shows,
     how: [
       releaseKind === "area_coded_national"
-        ? "Households in the national dataset (the enhanced Family Resources Survey) are reweighted to each constituency with constituency weights estimated for 2025; later years keep each household's 2025 split, scaled to that year's weights."
-        : "Each survey household in PolicyEngine's local-area dataset belongs to one constituency; a constituency's figure averages its households, by weight.",
-      "Each figure has a 90% interval from 1,000 bootstrap resamples of survey households, with their weights held fixed.",
-      // How the colour scale is set is said once, in the key's tip
-      "The colour scale's range, and when a constituency is too uncertain to classify, are in the key's \u201cHow to read the key\u201d tip.",
-      "A figure resting on fewer than 30 effective survey households is approximate, and dotted.",
-      "A figure is not published, and hatched, when fewer than 10 survey households lie behind it, or when one or two households would make up too much of it.",
+        ? "Households in the national dataset (the enhanced Family Resources Survey) are reweighted to each constituency with 2025 constituency weights, scaled to each later year."
+        : "Each survey household in PolicyEngine's local-area dataset belongs to one constituency; its figure is their weighted average.",
+      "Each figure has a 90% interval from 1,000 bootstrap resamples of survey households.",
+      // Colour scale, unclassified, dotted and hatched: said once, in the key's tip
+      "The key's \u201cHow to read the key\u201d tip gives the colour scale's range, and when a constituency is unclassified, approximate (dotted) or not published (hatched).",
     ],
     definitions: [
       { ref: "netIncome" },
-      {
-        term: "Hex map",
-        meaning:
-          "Each constituency drawn as one hexagon of the same size, placed roughly where it lies. It shows every seat equally, cities included; sizes and shapes are not geographic.",
-      },
-      { term: "Map", meaning: "Each constituency drawn with its own boundary, so large rural seats take up most of the map." },
+      { term: "Hex map", meaning: "One equal hexagon per seat, placed roughly where it lies; shapes are not geographic." },
+      { term: "Map", meaning: "Each seat's real boundary, so large rural seats dominate." },
     ],
     caveats: [
-      "Holding the survey weights fixed leaves out some of the uncertainty, so the intervals understate it.",
-      "Constituency figures do not add up exactly to the regional ones, and may come from a different dataset.",
+      "Survey weights are held fixed in the resampling, so the intervals understate the uncertainty.",
+      "Constituency figures do not add up exactly to the regional ones, and may use a different dataset.",
     ],
     sources: [
       { label: "2024 Westminster constituency boundaries (650 seats)" },
@@ -395,8 +389,9 @@ function MapKey({ outcome, extent, counts, highlight, onHighlight }) {
               scale runs from {low} to {high}, the same for every measure and year; larger changes take the end
               colour. A
               constituency whose 90% interval is too wide to place is too uncertain to classify, and mid grey.
-              Dotted: approximate, few survey households. Hatched: not published, to protect survey
-              respondents&apos; confidentiality. Solid: reported.
+              Dotted: approximate, under 30 effective survey households. Hatched: not published, to protect
+              survey respondents&apos; confidentiality: under 10 survey households, or one or two would make up
+              too much of the figure. Solid: reported.
             </>
           }
         />
