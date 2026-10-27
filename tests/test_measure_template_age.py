@@ -61,15 +61,20 @@ def test_age_allowance_rounds_after_both_tapers():
 
 @pytest.mark.parametrize(
     "income, gift_aid, expected",
-    # £8,000 of Gift Aid grosses up to £10,000 at the 20% basic rate, so
-    # both pensioners have adjusted net income of £100,000: the age taper
-    # leaves 15,000 - (100,000 - 24,000) x 0.01. The second is above
-    # £100,000 before the gift, so it also tests the £1-for-£1 taper.
-    [(100_000, 0, 14_240), (110_000, 8_000, 14_240)],
+    # £8,000 of Gift Aid grosses up to £10,000 at the 20% basic rate. The
+    # first two pensioners have adjusted net income of £100,000: the age
+    # taper leaves 15,000 - (100,000 - 24,000) x 0.01, and the high-income
+    # taper takes nothing. The third has £110,000: the age taper leaves
+    # 14,140, and the high-income taper (£1 for every £2 above £100,000,
+    # ITA 2007 s. 35) takes 5,000 more. Deducting the gift twice gave it
+    # 14,240.
+    [(100_000, 0, 14_240), (110_000, 8_000, 14_240), (120_000, 8_000, 9_140)],
 )
 def test_age_allowance_deducts_gift_aid_once(income, gift_aid, expected):
     sim = Simulation(situation=_pensioner(income, gift_aid=gift_aid))
-    assert sim.calculate("adjusted_net_income", 2028)[0] == 100_000
+    assert sim.calculate("adjusted_net_income", 2028)[0] == (
+        income - gift_aid * 1.25
+    )
     apply_age_conditioned_allowance(
         sim,
         allowance_by_year={2028: 15_000},
