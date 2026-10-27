@@ -199,7 +199,7 @@ describe("PensionersSection", () => {
       screen.getByRole("row", { name: /State Pension income tax protection: Pensioners £100, all ages £20/ }),
     ).toBeInTheDocument();
     // No pointer to the example card: removed at Vahid's request
-    expect(screen.queryByRole("link", { name: "Household impact" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Household calculator" })).toBeNull();
     // Every card, the dumbbell drawn in HTML too, offers CSV, PNG and SVG
     expect(expectStandardDownloads(document.body)).toBe(4);
   });

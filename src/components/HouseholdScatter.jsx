@@ -398,13 +398,13 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
  * the package's, and any other selection a notice.
  *
  * With `you` ({change, income, label?, incomeYear?, note?}), the chart
- * places the reader's household on it (Household impact): `change` is its
+ * places the reader's household on it (Household calculator): `change` is its
  * change in net income in `selectedYear`, `income` its baseline household
  * net income, the y axis's concept, in `incomeYear` (the basis year when
  * not given). The title is then `title`, and the line under it says what a
  * dot is and how households with incomes like the reader's changed.
  *
- * `embedded` draws it as one view of another card (the Household impact
+ * `embedded` draws it as one view of another card (the Household calculator
  * position card): no title, download menu or logo of its own; the card's
  * menu takes this chart's download, handed up through `onDownload`.
  */

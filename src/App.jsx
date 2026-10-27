@@ -111,7 +111,7 @@ function viewFallback(value) {
 // (current law) on the Pre-measures forecast.
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },
-  { value: "household", label: "Household impact", year: true, policies: true },
+  { value: "household", label: "Household calculator", year: true, policies: true },
   { value: "outlook", label: "Pre-measures forecast", year: false, policies: false },
   { value: "policies", label: "Policies", year: false, policies: false },
   { value: "methodology", label: "Methodology", year: false, policies: false },
@@ -806,7 +806,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   }, [activeTab, landing]);
 
   // An explicit URL selection is never silently narrowed into another
-  // selection. Household impact applies its own year-aware gate; Population
+  // selection. Household calculator applies its own year-aware gate; Population
   // impact with an unavailable member has no complete set of Budget figures.
   // Each opened view stays mounted, so the check is per view, not for the
   // open one only.
@@ -830,7 +830,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   // Both pills show on the landing page: the band stays the same from the
   // start, and they drive the view behind it
   const yearShown = landing || yearPillShown(activeTab);
-  // Household impact's examples are published from 2027-28 only, so its
+  // Household calculator's examples are published from 2027-28 only, so its
   // year pill offers those years and a band year of 2026-27 shows 2027-28
   const householdView = !landing && activeTab === "household";
   const householdYear = SELECTABLE_YEARS.includes(distributionalYear) ? distributionalYear : DEFAULT_DISPLAY_YEAR;
@@ -1052,7 +1052,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
                         handleTabChange("household");
                       }}
                     >
-                      Work it out on Household impact →
+                      Work it out on Household calculator →
                     </a>
                   </>
                 }
@@ -1088,10 +1088,10 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
           </div>
 
           {/* The year applies to every chart on Population impact (both
-              sub-tabs) and to Household impact, and
+              sub-tabs) and to Household calculator, and
               the revenue chart highlights it; it lives in the band so it can
               be changed from anywhere. The policy pill
-              applies to those views and Household impact. A pill that does
+              applies to those views and Household calculator. A pill that does
               not apply stays in its place, faded, and does not open; its
               reason is in its accessible name only. Both are on every view, so the band never moves. */}
           <div className={`band-year${yearShown ? "" : " is-inactive"}`}>
@@ -1277,7 +1277,7 @@ function App({ boot = null }) {
   const [checkedBy, setCheckedBy] = useState(fromBuild ? "build" : "page");
   const current = useRef(fromBuild);
   const confirmer = useRef(null);
-  // Stable for the page's life: each Household impact request waits on it
+  // Stable for the page's life: each Household calculator request waits on it
   const confirmPublication = useCallback(
     (snapshot) => (confirmer.current ? confirmer.current(snapshot) : Promise.resolve(false)),
     [],

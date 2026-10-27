@@ -16,7 +16,7 @@ import { keepSentence } from "../../utils/singleYear";
 
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
 // The receipts' model versions, which the household fixture's answer runs:
-// Household impact shows nothing when the two differ.
+// Household calculator shows nothing when the two differ.
 const { policyengine, "policyengine-uk": uk, "policyengine-core": core } = HOUSEHOLD_FIXTURE.engine;
 const PUBLISHED_ENGINE = { policyengine, "policyengine-uk": uk, "policyengine-core": core };
 const SUPPORTED_POLICY_IDS = POLICIES_FOR_TEST.filter((policy) => HOUSEHOLD_FIXTURE.included.includes(policy.id)).map((policy) => policy.id);
@@ -129,7 +129,7 @@ const splitShown = (year) =>
 // The headline, beside the form
 const results = () => screen.findByRole("region", { name: "Results" });
 
-describe("Household impact's results", () => {
+describe("Household calculator's results", () => {
   it("show the household calculation alone: no sub-tabs (an old ?sub= link is ignored), only the household route", async () => {
     window.history.replaceState({}, "", "/?tab=personal&sub=multi");
     serve((body) => json(householdAnswerFor(body)));
@@ -1051,7 +1051,7 @@ describe("an unavailable household calculation", () => {
     renderTab({ selectedPolicies: ids });
     toResults();
     const panel = await results();
-    expect(await within(panel).findByText("Household impact is unavailable for this selection")).toBeInTheDocument();
+    expect(await within(panel).findByText("Household calculator is unavailable for this selection")).toBeInTheDocument();
     expect(panel).toHaveTextContent(POLICIES_FOR_TEST.find((policy) => policy.id === unmodelledId).name);
     expect(panel).not.toHaveTextContent("A different API label");
     expect(panel).not.toHaveTextContent("£0");

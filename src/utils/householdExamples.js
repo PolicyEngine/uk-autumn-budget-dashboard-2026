@@ -1,6 +1,6 @@
 /**
  * The example households, as cards beside "Your household" on the
- * Household impact view: two young people (youngPersonPresets.js), then
+ * Household calculator view: two young people (youngPersonPresets.js), then
  * other households. Each has a name, a one-line description of who they
  * are, the measure its card features (`measure`, which gives the card its
  * colour, and `tag`, its short name on the card; shown only while the

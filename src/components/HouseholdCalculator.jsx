@@ -446,7 +446,7 @@ export function resetSavedWizard() {
 const FORM_PANEL_ID = "household-form-panel";
 
 /**
- * The Household impact view: one list of questions about a household, each
+ * The Household calculator view: one list of questions about a household, each
  * opening in place, with its net income in the year chosen in the title
  * band before and after the selected policies shown alongside and updated
  * as the answers change, from policyengine.py's household calculation
@@ -1090,7 +1090,7 @@ function HouseholdCalculator({
         {(noneSelected || (submitted !== null && !changed)) && (
         <div className="household-results" role="region" aria-label="Results" ref={resultsRef} tabIndex={-1}>
           {selectionUnavailable ? (
-            <UnavailableNotice reason="Household impact is unavailable for this selection">
+            <UnavailableNotice reason="Household calculator is unavailable for this selection">
               <p>These measures cannot be calculated for one household: {unavailableNames.join(", ")}.</p>
               <p>Select policies that can all be calculated to see your household&apos;s results.</p>
             </UnavailableNotice>

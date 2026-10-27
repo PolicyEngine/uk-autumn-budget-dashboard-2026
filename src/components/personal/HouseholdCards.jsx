@@ -241,7 +241,7 @@ export function YearBars({ series, year }) {
 }
 
 /**
- * The Household impact view's cards: first one wide "Your household"
+ * The Household calculator view's cards: first one wide "Your household"
  * card, which opens the form below the cards; then eight example
  * households under "Example households", all the same size, each of which
  * fills the form and shows its result at once. One section heading over

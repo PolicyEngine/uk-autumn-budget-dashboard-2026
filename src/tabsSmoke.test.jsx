@@ -118,7 +118,7 @@ let consoleErrors;
 const publicationFetch = dashboardFixtureFetch();
 
 // The household API must run the model versions the approved receipts
-// record, or Household impact shows nothing: answer with alpha's.
+// record, or Household calculator shows nothing: answer with alpha's.
 const PUBLISHED_ENGINE = receiptEngine(
   fixtureJson(`${fixtureJson("manifest.json").measures.alpha.artifact}/receipt.json`),
 );
@@ -311,7 +311,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     expect(document.querySelectorAll("#current-law-poverty")).toHaveLength(1);
   }, 15000);
 
-  it("fails the Household impact tab when the API URL is not set", async () => {
+  it("fails the Household calculator tab when the API URL is not set", async () => {
     // The tab's call never leaves the page, and it says so where the
     // results would be: the check above would catch it.
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "");
@@ -345,7 +345,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     render(<App />);
     // The views are rebuilt once the publication verifies
     await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
-    const personal = await screen.findByRole("tabpanel", { name: "Household impact" });
+    const personal = await screen.findByRole("tabpanel", { name: "Household calculator" });
     fireEvent.click(await within(personal).findByRole("button", { name: /^Your household/ }));
     fireEvent.click(await within(personal).findByRole("button", { name: /^Calculate/ }));
     await waitFor(() => expect(held).toHaveLength(1));
@@ -362,8 +362,8 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     await waitFor(() => expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(3));
 
     // Back: the same view, with the finished answer, and nothing asked again
-    fireEvent.click(screen.getByRole("tab", { name: "Household impact" }));
-    expect(screen.getByRole("tabpanel", { name: "Household impact" })).toBe(personal);
+    fireEvent.click(screen.getByRole("tab", { name: "Household calculator" }));
+    expect(screen.getByRole("tabpanel", { name: "Household calculator" })).toBe(personal);
     expect(await within(personal).findByText(/^Your change$/)).toBeInTheDocument();
     await waitFor(() => expect(personal.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull());
     expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(3);
@@ -383,7 +383,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     window.history.replaceState({}, "", "/?sub=finances");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
-    for (const tab of ["All households", "Living standards", "Poverty", "Household impact", "Pre-measures forecast", "Population impact"]) {
+    for (const tab of ["All households", "Living standards", "Poverty", "Household calculator", "Pre-measures forecast", "Population impact"]) {
       fireEvent.click(screen.getByRole("tab", { name: tab }));
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
@@ -409,7 +409,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     window.history.replaceState({}, "", "/?tab=household");
     render(<App />);
     await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
-    const household = await screen.findByRole("tabpanel", { name: "Household impact" });
+    const household = await screen.findByRole("tabpanel", { name: "Household calculator" });
     fireEvent.click(await within(household).findByRole("button", { name: /^Your household/ }));
     fireEvent.click(await within(household).findByRole("button", { name: /^Calculate/ }));
     await waitFor(() => expect(household.querySelector(".processing-panel")).not.toBeNull());

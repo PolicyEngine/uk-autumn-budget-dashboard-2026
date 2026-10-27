@@ -1,5 +1,5 @@
 /**
- * Example young people for the Household impact form ("Start from an
+ * Example young people for the Household calculator form ("Start from an
  * example"). A preset fills the form; every value stays editable.
  *
  * Earnings: ONS, Annual Survey of Hours and Earnings (ASHE) 2025

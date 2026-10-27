@@ -798,7 +798,7 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
  * people at or over State Pension age, from the single years of age in
  * public/data/age_impact.csv (pensioners/pensionersData.js). It follows the
  * page's policy and year pills, and links to the pensioner example
- * household on Household impact.
+ * household on Household calculator.
  *
  * @param {Object} props
  * @param {Array<string>} props.selectedPolicies

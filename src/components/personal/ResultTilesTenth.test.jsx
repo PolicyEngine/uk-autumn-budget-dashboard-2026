@@ -1,4 +1,4 @@
-// Household impact's "Average for your income tenth" reads the verified
+// Household calculator's "Average for your income tenth" reads the verified
 // artifacts' decile rows, as the tenths' chart does, never the root
 // distributional_impact.csv, which holds an older run (#228).
 import { describe, expect, it, vi } from "vitest";

@@ -51,7 +51,7 @@ export const METHOD_CONTENTS = [
   { id: METHOD_SECTIONS.data, title: "Data", icon: Database, titleIcon: "database" },
   { id: METHOD_SECTIONS.model, title: "Model and policies", icon: Calculator, titleIcon: "calculator" },
   { id: METHOD_SECTIONS.population, title: "Population impact", icon: ChartColumn, titleIcon: "bars" },
-  { id: METHOD_SECTIONS.personal, title: "Household impact", icon: House, titleIcon: "house" },
+  { id: METHOD_SECTIONS.personal, title: "Household calculator", icon: House, titleIcon: "house" },
   { id: METHOD_SECTIONS.living, title: "Pre-measures forecast", icon: TrendingUp, titleIcon: "trend" },
   { id: METHOD_SECTIONS.limitations, title: "Limitations", icon: TriangleAlert, titleIcon: "alert" },
 ];
@@ -276,7 +276,7 @@ function MethodologyTab({ onShowTab }) {
                   "Prices",
                   <>
                     <ViewLink tab="dashboard" onShowTab={onShowTab}>Population impact</ViewLink> and{" "}
-                    <ViewLink tab="household" onShowTab={onShowTab}>Household impact</ViewLink>{" "}figures
+                    <ViewLink tab="household" onShowTab={onShowTab}>Household calculator</ViewLink>{" "}figures
                     are in <Term id="real">cash terms</Term>{" "}for the year shown, not adjusted for
                     inflation.
                   </>,
@@ -583,12 +583,12 @@ function MethodologyTab({ onShowTab }) {
 
         <MethodSection
           id={METHOD_SECTIONS.personal}
-          title="Household impact"
+          title="Household calculator"
           summary={
             <span id={METHOD_SECTIONS.singleYear} className="method-anchor">
               The same model and policies, applied to one household&apos;s answers on the{" "}
               <ViewLink tab="household" onShowTab={onShowTab}>
-                Household impact tab
+                Household calculator tab
               </ViewLink>
               .
             </span>

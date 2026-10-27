@@ -84,7 +84,7 @@ describe("the head's early requests", () => {
   });
 });
 
-it("requests the examples' file under the name Household impact reads", async () => {
+it("requests the examples' file under the name Household calculator reads", async () => {
   const { PRESETS_FILE } = await import("../householdPresets");
   const { PRESETS_URL_FILE } = await import("./early");
   expect(PRESETS_URL_FILE).toBe(PRESETS_FILE);

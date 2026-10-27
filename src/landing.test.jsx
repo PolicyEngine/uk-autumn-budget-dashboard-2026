@@ -150,12 +150,12 @@ describe("the landing page", () => {
     expect([search().get("tab"), search().get("sub")]).toEqual(["dashboard", null]);
   });
 
-  it("opens Household impact from the second box", async () => {
+  it("opens Household calculator from the second box", async () => {
     await renderApp();
     fireEvent.click(box("household"));
     expect(landing()).toBeNull();
-    expect(selectedViewTabs().map((tab) => tab.textContent)).toEqual(["Household impact"]);
-    expect(screen.getByRole("tabpanel", { name: "Household impact" })).toBeInTheDocument();
+    expect(selectedViewTabs().map((tab) => tab.textContent)).toEqual(["Household calculator"]);
+    expect(screen.getByRole("tabpanel", { name: "Household calculator" })).toBeInTheDocument();
     expect([search().get("tab"), search().get("sub")]).toEqual(["household", null]);
   });
 
@@ -172,7 +172,7 @@ describe("the landing page", () => {
 
   it.each([
     ["/?tab=dashboard", "Population impact"],
-    ["/?tab=household", "Household impact"],
+    ["/?tab=household", "Household calculator"],
     ["/?tab=policies", "Policies"],
     ["/?sub=all", "Population impact"],
     ["/?policies=alpha", "Population impact"],
@@ -340,7 +340,7 @@ describe("the About pill in the tab row, and its overview drawer", () => {
 
   it.each([
     [/^The Budget and society/, "Population impact", "dashboard"],
-    [/^Your household/, "Household impact", "household"],
+    [/^Your household/, "Household calculator", "household"],
     [/^What's in the Budget/, "Policies", "policies"],
   ])("opens a view from a box and closes: %s", async (name, view, tab) => {
     await openDrawer();
