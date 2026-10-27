@@ -201,7 +201,7 @@ describe("the mark beside the title", () => {
 
 describe("the About pill in the tab row, and its overview drawer", () => {
   const edge = () => screen.queryByRole("button", { name: "About this dashboard" });
-  const drawer = () => screen.queryByRole("dialog", { name: "Autumn Budget 2026: fiscal and distributional analysis" });
+  const drawer = () => screen.queryByRole("dialog", { name: "About this dashboard" });
   const openDrawer = async () => {
     window.history.replaceState({}, "", "/?tab=methodology");
     const rendered = await renderApp();
@@ -242,6 +242,16 @@ describe("the About pill in the tab row, and its overview drawer", () => {
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(edge()).toHaveAttribute("aria-expanded", "true");
     expect(within(dialog).getByText(/^Estimates from/)).toBeInTheDocument();
+    // The header: PolicyEngine's wordmark and the close button only; below
+    // it, "About this dashboard" as a tag, then the title
+    const header = dialog.querySelector(".overview-header");
+    expect(within(header).getByRole("img", { name: "PolicyEngine" })).toHaveClass("overview-logo");
+    expect(header).not.toHaveTextContent("About this dashboard");
+    const tag = within(dialog).getByText("About this dashboard");
+    expect(tag).toHaveClass("overview-tag");
+    expect(header.contains(tag)).toBe(false);
+    const title = within(dialog).getByRole("heading", { level: 2, name: "Autumn Budget 2026: fiscal and distributional analysis" });
+    expect(tag.nextElementSibling.contains(title)).toBe(true);
     // The ways in, as a list of three rows under "Go to"
     const rows = within(within(dialog).getByRole("list", { name: "Go to" })).getAllByRole("link");
     expect(rows.map((row) => row.textContent)).toEqual([

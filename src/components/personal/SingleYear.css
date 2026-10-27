@@ -1155,8 +1155,11 @@
   align-items: flex-start;
 }
 
-.breakdown-header .chart-description {
+.main-content .breakdown-header .chart-description {
+  grid-column: 1;
+  grid-row: 1;
   margin: 0;
+  align-self: center;
 }
 
 .programme-table-wrap {
@@ -1177,6 +1180,8 @@
 .programme-table td {
   padding: 7px 12px;
   text-align: left;
+  vertical-align: middle;
+  line-height: 1.4;
   border-bottom: 1px solid var(--pe-gray-100);
 }
 
@@ -1340,7 +1345,10 @@
   color: var(--pe-gray-500);
 }
 
-/* Across earnings: one Show control above the two cards */
+
+/* Across earnings: the boxed Show control (SeriesToggle placement
+   "section") sits as far above the pair as By age's Measures key does
+   above its cards: its own 16px plus the section's 20px gap */
 .across-earnings-show {
-  margin: 0 0 16px;
+  margin-bottom: 20px;
 }

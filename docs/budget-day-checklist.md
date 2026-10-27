@@ -30,6 +30,7 @@ Every Modal command starts `uv run --with modal==1.6.2 python -m uk_budget_data.
 | | Reconciler | Move each `reconciliation.json` outside the checkout, then `publish review-rows` (never while a `generate` is running) | |
 | | Integrator | Publish PR, CI, merge | Documents |
 | 13:40 | Reconciler | **Documents**: OBR workbooks by hand in a browser | |
+| after Documents | Reconciler | **OBR CPI effect**: `public/data/obr_cpi_policy_effect.json` from the EFO chapter 3 workbook's chart of Budget policies' effect on CPI inflation, plus its review row ([`obr-cpi-policy-effect.md`](obr-cpi-policy-effect.md)) | |
 | 13:40–14:10 | Reconciler | **G3** reconcile, exceptions, `publish stage`, `publish approve <id> --by <approver>` | attestations |
 | | two reviewers | Attest any hand-written measure regenerated today (fresh receipt, fresh attestation) | G3 |
 | 14:50 | Integrator | **G4** once every member is staged: `MODAL generate --combined <member ids> --backend modal` (about 7 min), stage; Reconciler approves once every member is approved. Start it before the area run: the area run's tables make the tree dirty | area run |

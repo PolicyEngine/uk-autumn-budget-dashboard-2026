@@ -58,6 +58,7 @@ import {
 
 /** The section's anchor: link to it as #young-people (utils/viewAnchors). */
 import { YOUNG_PEOPLE_ANCHOR } from "../utils/viewAnchors";
+import { scrollBelowBars } from "../utils/pageScroll";
 export { YOUNG_PEOPLE_ANCHOR };
 
 
@@ -873,7 +874,7 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
     if (status !== "ready" || scrolled.current) return;
     scrolled.current = true;
     if (typeof window !== "undefined" && window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
-      document.getElementById(YOUNG_PEOPLE_ANCHOR)?.scrollIntoView();
+      scrollBelowBars(document.getElementById(YOUNG_PEOPLE_ANCHOR));
     }
   }, [status]);
 

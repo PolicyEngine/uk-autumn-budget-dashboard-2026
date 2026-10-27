@@ -54,6 +54,14 @@ describe("Prices by spending category card", () => {
     }
   });
 
+  it("starts at July 2021, where every line is 0%", async () => {
+    render(<PriceCategoriesCard view="table" onViewChange={() => {}} />);
+    await screen.findByText(/^By /);
+    const first = document.querySelector(".ls-table tbody tr");
+    expect(first.cells[0].textContent).toBe("Jul 2021");
+    expect([...first.cells].slice(1).every((c) => c.textContent === "0.0%")).toBe(true);
+  });
+
   it("About this chart says it is history, not the forecast, and lists each ONS series by CDID", async () => {
     render(<PriceCategoriesCard />);
     await screen.findByText(/^By /);

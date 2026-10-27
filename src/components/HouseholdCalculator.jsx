@@ -33,6 +33,7 @@ import ConstituencyField from "./personal/ConstituencyField";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
+import { STICKY_GAP, scrollBelowBars, stickyBottom } from "../utils/pageScroll";
 
 
 // The form: one card. The essentials first, as one grid of boxes and
@@ -675,7 +676,7 @@ function HouseholdCalculator({
         const target = panel?.querySelector("form") ?? panel;
         if (!target) return;
         target.querySelector("input, select, textarea")?.focus({ preventScroll: true });
-        target.scrollIntoView?.({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+        scrollBelowBars(target, { behavior: prefersReducedMotion() ? "auto" : "smooth" });
       });
     });
     return () => cancelAnimationFrame(frame);
@@ -696,11 +697,11 @@ function HouseholdCalculator({
       const target = resultsRef.current;
       if (!target) return;
       target.focus({ preventScroll: true });
-      const offset = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+      const offset = stickyBottom() + STICKY_GAP;
       const { top } = target.getBoundingClientRect();
       if (top >= offset - 1 && top <= window.innerHeight / 3) return;
       const behavior = prefersReducedMotion() ? "auto" : "smooth";
-      target.scrollIntoView?.({ behavior, block: "start" });
+      scrollBelowBars(target, { behavior });
       const page = document.documentElement;
       let height = page.scrollHeight;
       const until = performance.now() + 1500;
@@ -708,8 +709,8 @@ function HouseholdCalculator({
         if (!target.isConnected || performance.now() > until) return;
         if (page.scrollHeight !== height) {
           height = page.scrollHeight;
-          if (Math.abs(target.getBoundingClientRect().top - offset) > 1) {
-            target.scrollIntoView?.({ behavior, block: "start" });
+          if (Math.abs(target.getBoundingClientRect().top - (stickyBottom() + STICKY_GAP)) > 1) {
+            scrollBelowBars(target, { behavior });
           }
         }
         frame = requestAnimationFrame(follow);
@@ -735,7 +736,7 @@ function HouseholdCalculator({
       if (!lost || lost === document.body || lost.disabled) target.focus({ preventScroll: true });
       const { top } = target.getBoundingClientRect();
       if (top > window.innerHeight * 0.6) {
-        target.scrollIntoView?.({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+        scrollBelowBars(target, { behavior: prefersReducedMotion() ? "auto" : "smooth" });
       }
     });
   };

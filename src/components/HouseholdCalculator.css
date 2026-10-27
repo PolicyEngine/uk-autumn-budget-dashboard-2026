@@ -2081,7 +2081,7 @@
 
 /* Scrolled to on Calculate: clear of the sticky title band and tabs */
 .household-results {
-  scroll-margin-top: calc(var(--sticky-offset, 120px) + 12px);
+  scroll-margin-top: calc(var(--sticky-offset, 120px) + 16px);
 }
 
 /* Section and group labels: a small muted icon before the text */
@@ -2099,7 +2099,7 @@
 
 /* The form, scrolled to from "Your household": clear of the sticky bars */
 .household-form {
-  scroll-margin-top: calc(var(--sticky-offset, 120px) + 12px);
+  scroll-margin-top: calc(var(--sticky-offset, 120px) + 16px);
 }
 
 /* "Show all households" / "Show fewer", at the end of the heading row: a

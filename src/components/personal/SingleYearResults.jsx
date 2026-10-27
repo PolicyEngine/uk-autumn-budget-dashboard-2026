@@ -20,6 +20,7 @@ import EarningsChart from "./EarningsChart";
 import IncomePositionChart, { ResultTiles } from "./IncomePositionChart";
 import MarginalRateChart from "./MarginalRateChart";
 import "./SingleYear.css";
+import { scrollBelowBars } from "../../utils/pageScroll";
 
 /** True once `active` has held for `delay` ms (no flash of a loading line). */
 function useDelayed(active, delay = 300) {
@@ -262,7 +263,7 @@ function scrollToSection(event, id) {
   const target = document.getElementById(id);
   if (!target) return;
   event.preventDefault();
-  target.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+  scrollBelowBars(target, { behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
 
 /**
@@ -417,7 +418,8 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
       {shared && (
         <div className="across-earnings-show">
           <SeriesToggle
-            lead="Show on both charts:"
+            placement="section"
+            lead="Show on both charts"
             label="Components"
             series={chips}
             shown={chips.filter((chip) => !chip.disabled && !hidden.includes(chip.key)).map((chip) => chip.key)}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { OPEN_POPULATION_SUB } from "../utils/populationSub";
 import SubTabs, { SubTabPanel, subTabId, useSubTabParam } from "./SubTabs";
 import { YOUNG_PEOPLE_ANCHOR } from "../utils/viewAnchors";
+import { scrollBelowBars } from "../utils/pageScroll";
 
 /** Population impact's sub-tabs; the first, Public finances, is the default. */
 export const POPULATION_SUB_TABS = [
@@ -30,7 +31,7 @@ function scrollToHashWhenShown(hash) {
     if (window.location.hash !== hash) return;
     const element = document.getElementById(hash.slice(1));
     if (element && element.offsetParent !== null) {
-      element.scrollIntoView?.({ block: "start" });
+      scrollBelowBars(element);
       return;
     }
     if (Date.now() - started < 8000) setTimeout(step, 150);

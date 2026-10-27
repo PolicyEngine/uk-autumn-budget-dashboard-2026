@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { LandingBoxes, LandingIntro } from "./LandingPage";
 import { replicationLinks } from "./ReplicationLine";
 import Tip from "./Tip";
-import mark from "@/assets/policyengine-teal-square.svg";
+import logo from "@/assets/policyengine-teal.svg";
 import "./OverviewDrawer.css";
 
 // A little over --motion-slide (250ms): the slide out has ended
@@ -109,16 +109,14 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, pro
         className="overview-panel"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="overview-heading"
+        aria-labelledby="overview-tag"
         onKeyDown={onKeyDown}
       >
         <header className="overview-header">
-          <span className="overview-brand">
-            {/* PolicyEngine's square mark (@policyengine/ui-kit's teal-square.svg) */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={mark.src ?? mark} alt="" className="overview-mark" />
-            <span className="overview-title">About this dashboard</span>
-          </span>
+          {/* PolicyEngine's wordmark (@policyengine/ui-kit's teal.svg, the
+              teal form of the site's own white wordmark) */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logo.src ?? logo} alt="PolicyEngine" className="overview-logo" />
           <Tip content="Close (Esc)">
             <button
               ref={closeRef}
@@ -134,7 +132,11 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, pro
           </Tip>
         </header>
         <div className="overview-body">
-          <LandingIntro headingId="overview-heading" provisional={provisional} className="overview-intro" />
+          <div className="overview-lead">
+            {/* The dialog's name: a category label above the title */}
+            <p id="overview-tag" className="overview-tag">About this dashboard</p>
+            <LandingIntro headingId="overview-heading" provisional={provisional} className="overview-intro" />
+          </div>
           <nav className="overview-nav" aria-labelledby="overview-goto">
           <p id="overview-goto" className="overview-goto">Go to</p>
           <LandingBoxes

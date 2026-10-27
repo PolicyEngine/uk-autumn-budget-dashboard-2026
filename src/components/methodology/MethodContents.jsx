@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { openDisclosuresAround } from "../Disclosure";
 import { COLLAPSE_MS } from "../../hooks/useCollapse";
+import { scrollBelowBars, stickyBottom } from "../../utils/pageScroll";
 
 // Where a section counts as current: its top has passed this far below the
-// sticky band and tabs (their heights are CSS variables), as the reader
-// scrolls.
+// sticky band and tabs (measured as they are, utils/pageScroll), as the
+// reader scrolls.
 const CURRENT_LINE_EXTRA = 32;
 
 const reducedMotion = () =>
@@ -16,7 +17,7 @@ const reducedMotion = () =>
 export function goToSection(id) {
   const target = document.getElementById(id);
   if (!target) return;
-  target.scrollIntoView?.({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" });
+  scrollBelowBars(target, { behavior: reducedMotion() ? "auto" : "smooth" });
   window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#${id}`);
   const title = target.querySelector("h2");
   if (title) {
@@ -33,22 +34,17 @@ export function revealAnchor(id, { smooth = true } = {}) {
   const target = document.getElementById(id);
   if (!target) return false;
   openDisclosuresAround(target);
-  const scroll = () =>
-    target.scrollIntoView?.({ behavior: smooth && !reducedMotion() ? "smooth" : "auto", block: "start" });
+  const scroll = () => scrollBelowBars(target, { behavior: smooth && !reducedMotion() ? "smooth" : "auto" });
   if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => requestAnimationFrame(scroll));
   else scroll();
   // Once the topic has opened and the page has settled, line it up again
-  setTimeout(() => target.scrollIntoView?.({ behavior: "auto", block: "start" }), COLLAPSE_MS + 120);
+  setTimeout(() => scrollBelowBars(target), COLLAPSE_MS + 120);
   return true;
 }
 
 /** The section whose top has most recently passed the line under the sticky band. */
 function currentSection(sections) {
-  const root = document.querySelector(".app") ?? document.documentElement;
-  const style = getComputedStyle(root);
-  const px = (name) => parseFloat(style.getPropertyValue(name)) || 0;
-  const offset = px("--nav-offset") + px("--title-row-height") + px("--view-tabs-height");
-  const line = offset + CURRENT_LINE_EXTRA;
+  const line = stickyBottom() + CURRENT_LINE_EXTRA;
   let current = sections[0]?.id;
   for (const { id } of sections) {
     const element = document.getElementById(id);

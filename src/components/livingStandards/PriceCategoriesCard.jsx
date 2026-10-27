@@ -109,7 +109,9 @@ export default function PriceCategoriesCard({ view = "chart", onViewChange }) {
   }
 
   const series = ORDER.map((key) => data.series.find((s) => s.key === key)).filter(Boolean);
-  const rows = changeRows(data);
+  // Drawn from the base month on, so every line starts at 0 (the file
+  // holds the months before it too)
+  const rows = changeRows(data).filter((r) => r.month >= data.base_month);
   const allLines = series.map((s) => ({ key: s.key, ...LINES[s.key] }));
   const lines = allLines.filter((l) => shown.includes(l.key));
   const baseMonth = monthLabel(data.base_month);
@@ -193,7 +195,10 @@ export default function PriceCategoriesCard({ view = "chart", onViewChange }) {
     );
   }
 
-  const axis = percentAxis(rows.flatMap((r) => lines.map((l) => r[l.key])).filter((v) => v != null));
+  // The axis from 0 up: a line a fraction of a point below its July 2021
+  // level in the first months would otherwise add a whole step below 0
+  const values = rows.flatMap((r) => lines.map((l) => r[l.key])).filter((v) => v != null);
+  const axis = percentAxis(values.map((v) => (v > -1 ? Math.max(v, 0) : v)));
   return (
     <LsCard {...common} download={{ filename: "price-categories", legendItems: lineLegendItems(lines), csv }}>
       <LsLineChart

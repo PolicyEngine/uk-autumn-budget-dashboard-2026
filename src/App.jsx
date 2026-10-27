@@ -34,6 +34,7 @@ import { DownloadContext, policiesLabel } from "./utils/downloadContext";
 import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
+import { isProgrammaticScroll, scrollBelowBars, scrollPageTo, scrollTopFor } from "./utils/pageScroll";
 
 // Each view's code (the chart library, the map's and the household
 // calculator's) loads when a view first opens, or while the page is idle,
@@ -502,6 +503,12 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       frame = 0;
       const y = window.scrollY;
       // runFrom: where the current run down began
+      // A scroll the page made (utils/pageScroll) is not the reader's: it
+      // never brings the nav in over what it lined up under the bars
+      if (isProgrammaticScroll(y)) {
+        last = prev = runFrom = y;
+        return;
+      }
       if (y < prev) runFrom = y;
       prev = y;
       if (y > last + 6) {
@@ -672,7 +679,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           folded.open = true;
           folded = folded.parentElement?.closest("details");
         }
-        target.scrollIntoView?.({ block: "start" });
+        scrollBelowBars(target);
       };
       setTimeout(find, 100);
     };
@@ -701,17 +708,17 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     tabScrollPending.current = false;
     const sentinel = tabsSentinelRef.current;
     if (!sentinel || !appRef.current) return;
-    // Scrolling back up brings the site nav back, so its height counts
-    const style = getComputedStyle(appRef.current);
-    const band =
-      (parseFloat(style.getPropertyValue("--site-nav-height")) || 0) +
-      (parseFloat(style.getPropertyValue("--title-row-height")) || 0);
-    const top = sentinel.getBoundingClientRect().top + window.scrollY - band;
+    // Where the tabs sit right under the bars above them, measured from
+    // the bars as they are (utils/pageScroll). That scroll is the page's,
+    // so the site nav stays as it is; at the page's top it goes if shown.
+    const top = scrollTopFor(sentinel, { gap: 0, above: sentinel });
     // A view opened before returns to where it was left, if that was below
-    // the tabs; otherwise the tabs come back up under the band
+    // the tabs; otherwise the tabs come back up under the band. (At the
+    // page's top, where a shown nav cannot be cleared, the second branch
+    // takes it away.)
     const saved = tabScroll.current[activeTab];
-    if (saved !== undefined && saved > top) window.scrollTo({ top: saved });
-    else if (window.scrollY > top) window.scrollTo({ top });
+    if (saved !== undefined && saved > Math.max(0, top)) scrollPageTo(saved);
+    else scrollBelowBars(sentinel, { gap: 0, above: true, onlyUp: true });
   }, [activeTab, landing]);
 
   // An explicit URL selection is never silently narrowed into another

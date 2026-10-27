@@ -21,6 +21,7 @@ import { AnchorLink, ExternalLink, ReasonList, SourceLink, Tag, Topic } from "./
 import { glossaryAnchor } from "./methodology/glossary";
 import { Calculator, ChartColumn, Compass, Database, House, TrendingUp, TriangleAlert } from "lucide-react";
 import "./methodology/Methodology.css";
+import { scrollBelowBars, smoothUnlessReduced } from "../utils/pageScroll";
 
 /**
  * The ids of the Methodology view's sections and of the topics other
@@ -90,7 +91,7 @@ function ViewLink({ tab, sub, age, hash, onShowTab, className, children }) {
         else onShowTab(tab);
         if (hash) {
           setTimeout(() => {
-            document.getElementById(hash)?.scrollIntoView?.({ behavior: "smooth" });
+            scrollBelowBars(document.getElementById(hash), { behavior: smoothUnlessReduced() });
           }, 50);
         }
       }}

@@ -176,7 +176,8 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
     // has the one sentence, the download and the table
     <div className="card single-year-card breakdown-card">
       <div className="chart-header breakdown-header">
-        {/* One line: which groups the policies change, and by how much */}
+        {/* One line beside the download: which groups the policies
+            change, and by how much */}
         <p className="chart-description">{sentence}</p>
         <ChartDownloadMenu formats={formats} chartTitle={title} ariaLabel={`Download table: ${title}`} />
       </div>
