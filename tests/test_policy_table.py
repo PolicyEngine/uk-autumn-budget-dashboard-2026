@@ -195,7 +195,7 @@ def test_the_table_covers_the_seven_package_measures_only(document):
     assert list(document["measures"]) == list(
         registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
     )
-    assert len(document["measures"]) == 7
+    assert len(document["measures"]) == 8
     assert registry.BADR_ID not in document["measures"]
     assert registry.EMPLOYER_NI_ID not in document["measures"]
 
@@ -240,6 +240,7 @@ def test_each_measure_gets_the_display_its_shape_calls_for(document):
         "threshold_freeze_2031_32": "table",
         "road_fuel_vat_cut": "switch",
         "plan_2_threshold_unfreeze": "path",
+        "carers_allowance_earnings_taper": "path",
     }
 
 

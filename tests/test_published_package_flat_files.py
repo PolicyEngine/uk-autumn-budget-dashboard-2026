@@ -30,8 +30,10 @@ FIXTURE = (
     Path(__file__).resolve().parents[1]
     / "src/test/fixtures/publication/manifest.json"
 )
-# The seven measures Vahid kept for the package (27 October 2026)
+# The seven measures Vahid kept for the package (27 October 2026), and the
+# Carer's Allowance earnings taper added the same day
 SEVEN = [
+    "carers_allowance_earnings_taper",
     "domestic_electricity_zero_vat",
     "fuel_duty_rise_deferral",
     "plan_2_threshold_unfreeze",
@@ -72,7 +74,7 @@ class CapturingRunner:
 def test_the_seven_compose_to_the_package_key():
     # The key tonight's combined run and the area run use (#222)
     package = portable_combined([get_reform(i) for i in SEVEN])
-    assert package.id == "combined--5c77771791661e11"
+    assert package.id == "combined--9f29f8fddfb61a5c"
     assert package.id == combined_key(SEVEN)
 
 

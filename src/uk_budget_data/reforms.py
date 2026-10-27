@@ -22,6 +22,9 @@ Year Y is fiscal year Y-(Y+1).
 from datetime import date
 from typing import Optional
 
+from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
+    carers_allowance_earnings_taper,
+)
 from uk_budget_data.budget_measures.connect_student_loan_repayments import (
     connect_student_loan_repayments,
 )
@@ -73,6 +76,7 @@ THRESHOLD_FREEZE_ID = "threshold_freeze_2031_32"
 BADR_ID = "badr_lifetime_limit_cut"
 FUEL_VAT_ID = "road_fuel_vat_cut"
 PLAN_2_ID = "plan_2_threshold_unfreeze"
+CARERS_ALLOWANCE_TAPER_ID = "carers_allowance_earnings_taper"
 
 
 def _years_dict(value, years: list[int] = None) -> dict[str, any]:
@@ -444,11 +448,34 @@ def _create_plan_2_threshold_unfreeze() -> Reform:
 
 
 # =============================================================================
+# CARER'S ALLOWANCE EARNINGS TAPER
+# =============================================================================
+
+
+def _create_carers_allowance_earnings_taper() -> Reform:
+    return Reform(
+        id=CARERS_ALLOWANCE_TAPER_ID,
+        name="Carer's Allowance earnings taper",
+        description=(
+            "Candidate measure. From 2030-31 Carer's Allowance no longer "
+            "stops when weekly net earnings pass the £204 earnings limit: "
+            "it is reduced by £1 for each £1 of weekly earnings above the "
+            "limit, to nothing once earnings exceed the limit by the full "
+            "weekly rate. Carers at or below the limit are unchanged. "
+            "Scotland's Carer Support Payment is unchanged. Claims by carers "
+            "the limit kept out follow the data's take-up draw (60%)."
+        ),
+        simulation_modifier=carers_allowance_earnings_taper,
+    )
+
+
+# =============================================================================
 # COMBINED PACKAGE
 # =============================================================================
 
 AUTUMN_BUDGET_2026_COMBINED_ID = "autumn_budget_2026_combined"
-# The seven measures kept for the package (Vahid, 27 October 2026); the
+# The seven measures kept for the package (Vahid, 27 October 2026), and
+# the Carer's Allowance earnings taper added the same day: eight. The
 # Business Asset Disposal Relief cut (``BADR_ID``) and the employer NI
 # relief for under-25s (``EMPLOYER_NI_ID``) are withdrawn, so neither is in
 # the package nor in the registry (``_MEASURE_FACTORIES``): no default
@@ -464,6 +491,8 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
     THRESHOLD_FREEZE_ID,
     FUEL_VAT_ID,
     PLAN_2_ID,
+    # Added 27 October 2026 (Vahid): the package is eight measures.
+    CARERS_ALLOWANCE_TAPER_ID,
 )
 
 _MEASURE_FACTORIES = (
@@ -474,6 +503,7 @@ _MEASURE_FACTORIES = (
     _create_threshold_freeze_2031_32,
     _create_road_fuel_vat_cut,
     _create_plan_2_threshold_unfreeze,
+    _create_carers_allowance_earnings_taper,
 )
 
 
@@ -494,7 +524,7 @@ def _create_combined_autumn_budget_reform(members: list[Reform]) -> Reform:
         id=AUTUMN_BUDGET_2026_COMBINED_ID,
         name="Autumn Budget 2026 candidates (combined)",
         description=(
-            "All seven candidate measures simulated together: "
+            "All eight candidate measures simulated together: "
             + ", ".join(member.name for member in members)
             + ". Shows the package's impact with interactions."
         ),
@@ -517,8 +547,16 @@ def _get_autumn_budget_2026_reforms() -> list[Reform]:
     global _AUTUMN_BUDGET_2026_REFORMS_CACHE
     if _AUTUMN_BUDGET_2026_REFORMS_CACHE is None:
         members = [factory() for factory in _MEASURE_FACTORIES]
+        # The package holds its components only (today every registered
+        # measure; a measure registered outside them is listed, not
+        # combined).
+        package = [
+            member
+            for member in members
+            if member.id in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
+        ]
         _AUTUMN_BUDGET_2026_REFORMS_CACHE = [
-            _create_combined_autumn_budget_reform(members),  # Combined first
+            _create_combined_autumn_budget_reform(package),  # Combined first
             *members,
         ]
     return _AUTUMN_BUDGET_2026_REFORMS_CACHE
@@ -534,7 +572,7 @@ def _get_reform_lookup() -> dict[str, Reform]:
 
 
 def get_autumn_budget_2026_reforms() -> list[Reform]:
-    """The combined package, then the seven candidate measures."""
+    """The combined package, then the eight candidate measures."""
     return _get_autumn_budget_2026_reforms()
 
 

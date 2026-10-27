@@ -39,6 +39,19 @@ REASONS = {
         "2027 instead of the freeze at £29,385). The receipt's outputs "
         "were compared with the published revenue path."
     ),
+    "carers_allowance_earnings_taper": (
+        "Checked budget_measures.carers_allowance_earnings_taper against "
+        "the 27 October 2026 announcement and policyengine-uk's "
+        "carers_allowance_pre_overlap: from 2030-31 a carer outside "
+        "Scotland whose weekly net earnings (carers_allowance_earnings / "
+        "52, pence floored) are above the £204 earnings limit gets 52 x "
+        "max(0, weekly rate - (weekly earnings - limit)) in place of £0, "
+        "subject to the native age, hours and take-up conditions; at or "
+        "below the limit, and before 2030-31, the native amount stands. It "
+        "changes only carers_allowance_pre_overlap and adds no take-up "
+        "draw of its own (the data's microcosm#1319 draw stands). The "
+        "receipt's outputs were compared with the benchmarks in PR #256."
+    ),
 }
 
 # The State Pension allowance is hand-written only in its sole-income

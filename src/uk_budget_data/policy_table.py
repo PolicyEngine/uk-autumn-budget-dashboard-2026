@@ -37,6 +37,9 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from uk_budget_data import reforms as registry
+from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
+    carers_allowance_earnings_taper,
+)
 from uk_budget_data.budget_measures.employer_ni_relief_ages_21_to_24 import (
     employer_ni_relief_ages_21_to_24,
 )
@@ -681,6 +684,45 @@ def _plan_2(reform) -> list[dict]:
     ]
 
 
+def _carers_allowance_taper(reform) -> list[dict]:
+    values = constants(carers_allowance_earnings_taper)
+    start, taper = values["start_year"], values["taper_rate"]
+    if values["earnings_limit"] is not None:
+        raise ValueError("the table reads the engine's earnings limit")
+    limit = "gov.dwp.carers_allowance.earnings_limit"
+    rate = "gov.dwp.carers_allowance.rate"
+    modifier = _modifier_source(
+        carers_allowance_earnings_taper, "start_year, taper_rate"
+    )
+    return [
+        _row(
+            "Weekly earnings at which Carer's Allowance stops",
+            POUNDS,
+            _yearly(
+                lambda y: engine_value(limit, y),
+                lambda y: (
+                    engine_value(limit, y) + engine_value(rate, y) / taper
+                    if y >= start
+                    else engine_value(limit, y)
+                ),
+            ),
+            _source(
+                {
+                    "kind": "engine_parameter",
+                    "where": f"the earnings limit ({limit}); with the "
+                    f"measure, the limit plus the weekly rate ({rate}) "
+                    "divided by the taper rate",
+                },
+                modifier,
+            ),
+            unit_words="£ of net earnings a week",
+            note="Current law stops the allowance at £1 over the earnings "
+            "limit (£204 a week, not uprated in the engine); with the "
+            "measure it falls by £1 for each £1 above the limit",
+        ),
+    ]
+
+
 BUILDERS = {
     registry.FUEL_DUTY_DEFERRAL_ID: _fuel_duty,
     registry.STATE_PENSION_ALLOWANCE_ID: _state_pension_allowance,
@@ -691,6 +733,7 @@ BUILDERS = {
     registry.BADR_ID: _badr,
     registry.FUEL_VAT_ID: _road_fuel_vat,
     registry.PLAN_2_ID: _plan_2,
+    registry.CARERS_ALLOWANCE_TAPER_ID: _carers_allowance_taper,
 }
 
 

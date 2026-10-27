@@ -57,6 +57,7 @@ POLICY_IDS = [
     "threshold_freeze_2031_32",
     "road_fuel_vat_cut",
     "plan_2_threshold_unfreeze",
+    "carers_allowance_earnings_taper",
 ]
 
 

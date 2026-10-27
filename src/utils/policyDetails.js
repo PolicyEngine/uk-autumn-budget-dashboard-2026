@@ -204,6 +204,25 @@ export const POLICY_DETAILS = [
       href: "https://www.gov.uk/repaying-your-student-loan/what-you-pay",
     },
   },
+  {
+    id: "carers_allowance_earnings_taper",
+    shortName: "Carer's Allowance taper",
+    sentence: "tapering Carer's Allowance above the earnings limit",
+    name: "Carer's Allowance earnings taper",
+    description: "Withdraw Carer's Allowance £1 for £1 above the earnings limit",
+    writtenFor: "Candidate measure. From 2030-31 Carer's Allowance no longer stops when weekly net earnings pass the £204 earnings limit: it is reduced by £1 for each £1 of weekly earnings above the limit, to nothing once earnings exceed the limit by the full weekly rate. Carers at or below the limit are unchanged. Scotland's Carer Support Payment is unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%).",
+    summary:
+      "Replaces the Carer's Allowance cliff edge at the £204 weekly earnings limit with a taper of £1 for each £1 earned above it, from 2030-31.",
+    starts: "April 2030",
+    type: "Benefit",
+    inForce: { from: "2030-04" },
+    details:
+      "The start year, the limit (frozen at £204) and the £1-for-£1 rate are assumptions from reports of the announcement before the Budget. Scotland's Carer Support Payment is unchanged. Universal Credit counts Carer's Allowance in full as unearned income, and the allowance is taxable, so a carer on Universal Credit gains nothing and can lose the income tax on it. Carers the limit kept out claim at the data's 60% take-up.",
+    source: {
+      label: "Carer's Allowance",
+      href: "https://www.gov.uk/carers-allowance",
+    },
+  },
 ];
 
 const DETAILS_BY_ID = Object.fromEntries(
