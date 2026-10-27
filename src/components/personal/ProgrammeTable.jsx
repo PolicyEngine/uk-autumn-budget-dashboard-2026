@@ -391,15 +391,19 @@ export function policyCsvRows(tab) {
     rows.push({ section: "For your household", item: row.label, before: cells.before, after: cells.after, change: cells.change });
   }
   rows.push({ section: "Effect on your net income", item: "Effect on your net income", before: "", after: "", change: signedMoney(tab.effect) });
-  return rows.map((row) => ({ ...row, change: row.change === "—" ? "" : row.change, before: row.before === "—" ? "" : row.before }));
+  const blank = (value) => (value === "—" ? "" : value);
+  return rows.map((row) => ({ ...row, before: blank(row.before), after: blank(row.after), change: blank(row.change) }));
 }
 
 /** A household row's three cells as text. */
 function householdCells(row) {
-  if (row.kind === "programme") {
+  if (row.kind === "part") {
+    // A part of the effect: its before and after where it has them (a
+    // change-only row, VAT change, has no before)
+    const none = row.before === null || row.before === undefined;
     return {
-      before: row.changeOnly ? "—" : money(row.before),
-      after: row.changeOnly ? changeText(row.after) : money(row.after),
+      before: none || row.changeOnly ? "—" : money(row.before),
+      after: none ? "—" : row.changeOnly ? changeText(row.after) : money(row.after),
       change: changeText(row.change),
       changeClass: changeClass(row.change),
     };
@@ -478,7 +482,7 @@ function PolicyTable({ tab, wide, setTable, title }) {
             <tr key={`h-${row.id}`} className="programme-row depth-1">
               <th scope="row">{leaf(row.label)}</th>
               {wide && <td className={`num${cells.before === "—" ? " is-none" : ""}`}>{cells.before}</td>}
-              {wide && <td className="num">{cells.after}</td>}
+              {wide && <td className={`num${cells.after === "—" ? " is-none" : ""}`}>{cells.after}</td>}
               <td className={`num change ${cells.changeClass}`}>{cells.change}</td>
             </tr>
           );

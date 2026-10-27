@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { attributedRows, parameterChange, parameterRowsFor, policyTabs } from "./policyBreakdown";
+import { parameterChange, parameterRowsFor, policyTabs } from "./policyBreakdown";
 import { groupTotals, policyRows, programmeGroups, roundProgrammeGroups } from "./singleYear";
+import live from "../test/fixtures/policyTabsAnswers.json";
+import { normaliseHouseholdImpact } from "./householdImpactApi";
 
 // An answer shaped as the household API's (2027-28, Plan 2, petrol and
 // electricity spending entered), after normaliseHouseholdImpact
@@ -182,14 +184,6 @@ describe("parameterRowsFor and parameterChange", () => {
   });
 });
 
-describe("attributedRows", () => {
-  it("never gives a row to a measure when another measure has the same change", () => {
-    const bars = { all: [{ id: "a", change: 10 }, { id: "b", change: 10 }] };
-    const groups = [{ rows: [{ id: "x", change: 10, shown: { change: 10 } }] }];
-    expect(attributedRows(groups, bars, "a")).toEqual([]);
-  });
-});
-
 describe("a measure without parameters", () => {
   it("still shows the spending it works on, from its name, but never for the Winter Fuel Payment", () => {
     const bars = {
@@ -212,5 +206,127 @@ describe("a measure without parameters", () => {
     });
     expect(tabs[0].household.map((row) => row.id)).toEqual(["fuel_spending"]);
     expect(tabs[1].household).toEqual([]);
+  });
+});
+
+// The household API's own answers for the example households (27 October
+// 2026, every measure then published selected) and the published parameters
+
+const livePolicies = Object.entries(live.parameters.measures).map(([id, entry]) => ({
+  id,
+  name: id,
+  description: entry.description,
+}));
+const liveTabs = (key) => {
+  const { household: liveHousehold, answer } = live.answers[key];
+  const data = normaliseHouseholdImpact(answer);
+  const totals = data.net;
+  const split = policyRows(data.byPolicy, totals.change, livePolicies);
+  const shownGroups = groupTotals(roundProgrammeGroups(programmeGroups(data.programmes), totals, split.all));
+  return {
+    split,
+    totals,
+    ...policyTabs({
+      bars: split,
+      groups: shownGroups,
+      policies: livePolicies,
+      parameters: live.parameters,
+      year: data.year,
+      household: liveHousehold,
+      salaryUsed: data.salaryUsed,
+    }),
+  };
+};
+const tabOf = (tabs, id) => tabs.find((tab) => tab.id === id);
+const parts = (tab) => tab.household.filter((row) => row.kind === "part");
+const byId = (tab) => Object.fromEntries(tab.household.map((row) => [row.id, row]));
+
+describe("policy tabs on the household API's answers", () => {
+  it("every tab's parts add up to its effect, and the effects to the Summary's change", () => {
+    for (const key of Object.keys(live.answers)) {
+      const { tabs, split, totals } = liveTabs(key);
+      for (const tab of tabs) {
+        expect(tab.effect, `${key} ${tab.id}`).toBe(split.all.find((bar) => bar.id === tab.id).rounded);
+        if (parts(tab).length) {
+          expect(parts(tab).reduce((sum, row) => sum + row.change, 0), `${key} ${tab.id}`).toBe(tab.effect);
+        }
+        for (const row of parts(tab)) {
+          if (row.before !== null) expect(row.after - row.before, `${key} ${tab.id} ${row.id}`).toBe(row.change);
+        }
+      }
+      const interaction = split.all.find((bar) => bar.id === "interaction")?.rounded ?? 0;
+      expect(tabs.reduce((sum, tab) => sum + tab.effect, 0) + interaction, key).toBe(Math.round(totals.change));
+    }
+  });
+
+  it("walks a part-time worker through the employer NI threshold: cost held, pay up, tax and NI on it", () => {
+    const tab = tabOf(liveTabs("pt-2027").tabs, "employer_nics_secondary_threshold_raise");
+    const rows = byId(tab);
+    expect(tab.parameters[0]).toMatchObject({ before: 5000, after: 9100 });
+    expect(Math.round(rows.employer_cost.before)).toBe(Math.round(rows.employer_cost.after));
+    expect(Math.round(rows.employer_ni.before)).toBe(1247);
+    expect(Math.round(rows.employer_ni.after)).toBe(712);
+    expect(parts(tab).map((row) => [row.id, row.change])).toEqual([
+      ["employment_income", 535],
+      ["income_tax", -107],
+      ["national_insurance", -43],
+    ]);
+    expect(tab.effect).toBe(385);
+    expect(tab.how).toMatch(/^From 6 April 2027 the threshold above which employers pay/);
+  });
+
+  it("gives the employer NI tab the total taken back when another measure moves the same taxes", () => {
+    const tab = tabOf(liveTabs("pt-2031").tabs, "employer_nics_secondary_threshold_raise");
+    expect(parts(tab).map((row) => row.id)).toEqual(["employment_income", "taken_back"]);
+    // Universal Credit falls with the higher pay too
+    const uc = tabOf(liveTabs("uc-2027").tabs, "employer_nics_secondary_threshold_raise");
+    expect(parts(uc).map((row) => row.id)).toEqual(["employment_income", "income_tax", "national_insurance", "universal_credit"]);
+  });
+
+  it("splits the fuel duty saving into duty and the VAT on it", () => {
+    const tab = tabOf(liveTabs("drv-2027").tabs, "fuel_duty_rise_deferral");
+    expect(byId(tab).fuel_spending).toMatchObject({ before: 2600 });
+    expect(tab.parameters.map((row) => row.label)).toEqual(["Fuel duty, averaged over the year"]);
+    expect(parts(tab).map((row) => [row.id, row.change])).toEqual([
+      ["fuel_duty", 111],
+      ["fuel_duty_vat", 22],
+    ]);
+    expect(byId(tab).fuel_duty).toMatchObject({ before: -971, after: -860 });
+  });
+
+  it("works out the VAT inside electricity spending, before and after", () => {
+    const tab = tabOf(liveTabs("drv-2027").tabs, "domestic_electricity_zero_vat");
+    expect(parts(tab)).toEqual([expect.objectContaining({ id: "electricity_vat", before: -48, after: 0, change: 48 })]);
+  });
+
+  it("shows the landlord's unearned income and the tax on each", () => {
+    const tab = tabOf(liveTabs("land-2027").tabs, "unearned_income_rates_up");
+    expect(tab.household.filter((row) => row.kind === "input").map((row) => [row.id, row.before])).toEqual([
+      ["dividend_income", 3000],
+      ["savings_interest_income", 2000],
+      ["property_income", 9000],
+    ]);
+    expect(parts(tab).map((row) => [row.id, row.change])).toEqual([
+      ["dividend_income_tax", -50],
+      ["savings_income_tax", -30],
+      ["property_income_tax", -180],
+    ]);
+  });
+
+  it("shows a pensioner's total income, the tax lifted and the Council Tax Reduction it costs", () => {
+    const tab = tabOf(liveTabs("pens-2027").tabs, "state_pension_income_tax_protection");
+    expect(byId(tab).total_income).toMatchObject({ before: 12800 });
+    expect(parts(tab).map((row) => [row.id, row.change])).toEqual([
+      ["income_tax", 46],
+      ["council_tax_reduction", -9],
+    ]);
+  });
+
+  it("shows income above the thresholds the freeze holds, and no parts it cannot split", () => {
+    const tab = tabOf(liveTabs("land-2031").tabs, "threshold_freeze_2031_32");
+    const rows = byId(tab);
+    expect(rows.above_allowance.after - rows.above_allowance.before).toBe(260);
+    expect(rows.above_higher.after - rows.above_higher.before).toBe(1060);
+    expect(parts(tab)).toEqual([]);
   });
 });
