@@ -1,3 +1,4 @@
+import { isValidElement } from "react";
 import { BookOpen, Calculator, Eye, History, Link2, TriangleAlert } from "lucide-react";
 import { GLOSSARY, glossaryAnchor } from "./methodology/glossary";
 import { MethodLink } from "../utils/methodLink";
@@ -15,11 +16,22 @@ import "./InfoSections.css";
  * @property {Array<{term: string, meaning: import("react").ReactNode} | {ref: keyof typeof GLOSSARY}>} [definitions]
  *   - A term only this card uses, with its meaning; or `{ ref }`, a term the
  *   charts share, defined once in Methodology and linked from here
- * @property {import("react").ReactNode[]} [caveats] - Caveats: one bullet each
+ * @property {Array<import("react").ReactNode | NestedItem>} [caveats] - Caveats: one bullet each
  * @property {Array<{label: string, href?: string, date?: string, note?: string}>} [sources]
  * @property {{anchor: string, label: string}} [method] - The relevant Methodology
  *   section, where the deeper detail lives: the disclosure ends with a link to it
  */
+
+/**
+ * A point with points of its own: a lead line over a sub-list ("No effect
+ * on household incomes in 2029-30:" over one policy each). With one
+ * sub-point it reads as one line, the lead and that point together.
+ *
+ * @typedef {{nested: true, lead: import("react").ReactNode, items: import("react").ReactNode[], className?: string}} NestedItem
+ */
+export const nestedItem = (lead, items, className) => ({ nested: true, lead, items: clean(items), className });
+
+const isNested = (item) => Boolean(item && typeof item === "object" && !isValidElement(item) && item.nested);
 
 const clean = (items) => (items || []).filter((item) => item !== null && item !== undefined && item !== false && item !== "");
 
@@ -70,16 +82,43 @@ function Section({ icon: Icon, title, children }) {
   );
 }
 
-/** Bullets for two or more separate points; one point is a plain sentence. */
+/** A list's bullets, a nested point's sub-points as bullets under its lead. */
+const Bullets = ({ items, className = "" }) => (
+  <ul className={`info-list ${className}`.trim()}>
+    {items.map((item, index) => (
+      <li key={typeof item === "string" ? item : index}>
+        <Point item={item} />
+      </li>
+    ))}
+  </ul>
+);
+
+/** One point: as given, or a nested point's lead over its sub-points (one sub-point: on the lead's line). */
+function Point({ item }) {
+  if (!isNested(item)) return item;
+  if (item.items.length === 1) {
+    return (
+      <span className={item.className}>
+        {item.lead} {item.items[0]}
+      </span>
+    );
+  }
+  return (
+    <div className={item.className}>
+      {item.lead}{" "}
+      <Bullets items={item.items} className="info-sublist" />
+    </div>
+  );
+}
+
+/** Bullets for two or more separate points; one point is a plain sentence (a nested one: its lead over bullets). */
 const Items = ({ items, className = "" }) =>
   items.length > 1 ? (
-    <ul className={`info-list ${className}`.trim()}>
-      {items.map((item, index) => (
-        <li key={typeof item === "string" ? item : index}>{item}</li>
-      ))}
-    </ul>
+    <Bullets items={items} className={className} />
   ) : (
-    <div className={`info-text ${className}`.trim()}>{items[0]}</div>
+    <div className={`info-text ${className}`.trim()}>
+      <Point item={items[0]} />
+    </div>
   );
 
 /**

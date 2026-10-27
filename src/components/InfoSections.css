@@ -57,6 +57,16 @@
   color: var(--pe-gray-400);
 }
 
+/* A point's own points (the policies with no effect): open circles, close under their lead */
+.info-list.info-sublist {
+  margin-top: 2px;
+  list-style: circle;
+}
+
+.info-text > div > .info-list.info-sublist {
+  list-style: disc;
+}
+
 /* Definitions: compact rows, the term in semibold, a dash, then its meaning */
 .info-terms {
   display: flex;
@@ -105,19 +115,4 @@
 
 .info-method a:hover {
   text-decoration: underline;
-}
-
-/* The measures with no effect, as one caveat: tighter rows, no rules */
-.info-caveats .no-effect-list {
-  padding-top: 2px;
-}
-
-.info-caveats .no-effect-item {
-  padding: 1px 0;
-  border-bottom: none;
-}
-
-.info-caveats .no-effect-title {
-  font-size: inherit;
-  color: inherit;
 }

@@ -158,10 +158,17 @@ describe("the Poverty sub-tab's measures pair", () => {
     expect(within(measures).getByText(/need not add up to the package/)).toBeInTheDocument();
     const none = measures.querySelector(".wf-none");
     expect(none).toHaveTextContent(/^No effect on poverty: .*Business sale relief limit halved/);
-    expect(none).toHaveTextContent(/change prices/);
+    // A reason per policy, grouped: prices for the fuel and VAT policies,
+    // capital gains for the business sale relief, each a bullet
+    expect(none).toHaveTextContent(/Business sale relief limit halved — it taxes capital gains/);
+    expect(none).toHaveTextContent(/change prices, which the poverty measure's income leaves out/);
+    expect(none.querySelectorAll(".info-sublist > li").length).toBeGreaterThan(1);
     // The card says each fact once: the people rule is in Methodology
     expect(measures.querySelector(".chart-more-info")).not.toHaveTextContent(/nearest 1,000/);
-    expect(within(measures).getByText(/Employer NI relief for under-25s/)).toBeInTheDocument();
+    // The £0 policies: one bullet each, by short name and why
+    const zero = measures.querySelector(`[data-zero-measure="employer_ni_relief_under_25s"]`);
+    expect(zero).toHaveTextContent(/^Employer National Insurance relief, under-25s — employers pay less National Insurance/);
+    expect(zero.closest("ul").classList.contains("info-sublist")).toBe(true);
   });
 });
 

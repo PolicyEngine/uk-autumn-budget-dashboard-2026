@@ -440,7 +440,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
             method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
             caveats: [
               pensionAllowanceTaper &&
-                "For a pensioner on the State Pension, the selected policies give an extra tax-free allowance that is withdrawn £1 for every £1 of other income. On the first few hundred pounds earned, each pound therefore makes £2 taxable: income tax takes about 40p in the pound instead of 20p, until the extra allowance is used up.",
+                "For a pensioner on the State Pension, the selected policies add a tax-free allowance that is withdrawn £1 for every £1 of other income, so income tax takes about 40p, not 20p, of each of the first few hundred pounds earned.",
               "The axis runs from 0% to 100%; a rate beyond either end is marked at the edge, and the tooltip gives it in full.",
             ],
           }}

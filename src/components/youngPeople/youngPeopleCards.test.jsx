@@ -150,8 +150,8 @@ describe("young people cards", () => {
     const more = screen.getByRole("button", { name: "About this chart" });
     expect(more).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(more);
-    expect(screen.getByText("No effect in 2028-29 (1)")).toBeInTheDocument();
-    expect(screen.getByText("Salary sacrifice cap")).toBeInTheDocument();
+    // One policy: the lead and its name on one line
+    expect(document.querySelector(".no-effect")).toHaveTextContent(/^No effect in 2028-29: Salary sacrifice cap$/);
   });
 
   it("lets the reader choose the age group compared", () => {

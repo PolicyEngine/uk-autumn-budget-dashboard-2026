@@ -59,6 +59,7 @@ import {
   legendMembership,
   exportLegendItems,
   drawnNames,
+  noEffectRow,
 } from "../utils/legendMembership";
 import "./YoungPeopleSection.css";
 import "./PensionersSection.css";
@@ -414,11 +415,11 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
   const title = `Effect of each policy, ${yearLabel}`;
   const description = "Each policy's average change per person: pensioners vs all ages.";
   const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
-  // No reason per measure, as in MeasuresCard: a list of them by id would
-  // be a measure list of the page's own (the catalogue carries none)
+  // As in MeasuresCard: each by its short name, and when it is in force
+  // where that is not this year
   const noEffectItems = noEffect.map((policy) => ({
     ...policy,
-    color: catalogue.byId.get(policy.id)?.color ?? CHART_COLOURS.noChange,
+    ...noEffectRow(catalogue.byId.get(policy.id) ?? policy, year),
   }));
   const download = {
     chartRef,

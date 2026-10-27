@@ -9,7 +9,7 @@
  * same panel covers them.
  */
 import { isCatalogueRowDisplayable } from "./measureCatalogue";
-import { policyDetailsFor } from "./policyDetails";
+import { policyDetailsFor, shortNameOf } from "./policyDetails";
 import { CHART_COLOURS } from "./chartTheme";
 import { DISPLAY_YEARS } from "./displayYears";
 
@@ -108,6 +108,33 @@ export function inForceText(policy) {
   // last part
   const startYear = Number(from.slice(5, 7)) >= 4 ? fromYear : fromYear - 1;
   return years.length === 1 && years[0] === startYear ? `${span} (${fiscalYear(years[0])} only)` : span;
+}
+
+/**
+ * When a measure is in force, short, for a list of the policies with no
+ * effect: "from April 2031", "December 2026 to May 2027", "winter 2026-27".
+ */
+export function inForceShort(policy) {
+  const window = policy?.inForce;
+  if (!window) return null;
+  const { from, to } = window;
+  const fromYear = Number(from.slice(0, 4));
+  if (to && from.slice(5) === "10" && to.slice(5) === "03" && Number(to.slice(0, 4)) === fromYear + 1) {
+    return `winter ${fiscalYear(fromYear)}`;
+  }
+  return to ? `${monthYear(from)} to ${monthYear(to)}` : `from ${monthYear(from)}`;
+}
+
+/**
+ * A policy with no effect in `year`, as a "no effect" list's row: its short
+ * name and, when it is out of force that year, when it is in force.
+ */
+export function noEffectRow(measure, year) {
+  const policy = policyDetailsFor(measure);
+  return {
+    name: shortNameOf(measure),
+    reason: policy && !inForceIn(policy, year) ? inForceShort(policy) : undefined,
+  };
 }
 
 /**

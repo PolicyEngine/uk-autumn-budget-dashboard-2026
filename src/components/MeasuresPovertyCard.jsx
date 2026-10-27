@@ -28,15 +28,53 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { policyDetailsFor, shortNameOf } from "../utils/policyDetails";
-import { legendMembership } from "../utils/legendMembership";
+import { legendMembership, zeroForHouseholds } from "../utils/legendMembership";
+import { nestedItem } from "./InfoSections";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import "./livingStandards/LivingStandards.css";
 import "./MeasuresPovertyCard.css";
 
-// Why the measures with no effect move no one: one sentence, true of every
-// such measure, not a reason per measure
-const NO_EFFECT_TEXT =
-  "They change prices, capital gains or employers' costs, which the income behind the poverty measure leaves out, or move no one across the poverty line this year.";
+// Why a policy with no effect on poverty moves no one, by what it changes:
+// [for one policy, for several]
+const PRICES = "prices, which the poverty measure's income leaves out";
+const NO_EFFECT_REASONS = {
+  prices: ["it changes " + PRICES, "they change " + PRICES],
+  gains: ["it taxes capital gains, which the poverty measure's income leaves out", "they tax capital gains, which the poverty measure's income leaves out"],
+  employer: ["it changes employers' costs, and wages are held fixed", "they change employers' costs, and wages are held fixed"],
+};
+const PRICE_TYPES = new Set(["VAT", "Fuel duty"]);
+
+/**
+ * The policies with no effect on poverty, grouped by why: "Fuel duty
+ * deferral — it changes prices, which the poverty measure's income leaves
+ * out". A policy whose reason is not known moves no one across the line in
+ * `year`. Returns [{names, text}], one per reason.
+ */
+export function noPovertyEffectGroups(zero, catalogue, year) {
+  const groups = new Map();
+  for (const m of zero) {
+    const measure = catalogue.byId?.get(m.id) ?? m;
+    const type = policyDetailsFor(measure)?.type;
+    const key = zeroForHouseholds(measure)
+      ? "employer"
+      : PRICE_TYPES.has(type)
+        ? "prices"
+        : type === "Capital gains tax"
+          ? "gains"
+          : "none";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(m.name);
+  }
+  return [...groups].map(([key, names]) => {
+    const many = names.length > 1;
+    const text =
+      key === "none"
+        ? `${many ? "they move" : "it moves"} no one across the poverty line in ${year}`
+        : NO_EFFECT_REASONS[key][many ? 1 : 0];
+    const list = many ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
+    return { names, text: `${list} — ${text}` };
+  });
+}
 
 /**
  * The measures' own changes in the poverty rate (pp) in `year`, for the
@@ -276,10 +314,11 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
           year={selectedYear}
           info={{
             how: [
-              `Each step is one selected policy modelled on its own, largest first; the package bar is all of them together.`,
+              "Each step is one selected policy modelled on its own, largest first.",
+              "The package bar is all of them together.",
               <>
-                Measures can reach the same households, so their separate effects need not add up to the package&apos;s
-                {interaction ? `: here they miss it by ${main(interaction)}, shown as the interaction step.` : "."}
+                Policies can reach the same households, so their own effects need not add up to the package&apos;s
+                {interaction ? `: the interaction step is the gap (${main(interaction)}).` : "."}
               </>,
             ],
             // The measures that move no one, and why, here rather than under the chart
@@ -289,11 +328,13 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
                   Not every policy shown has the chosen poverty line published, so this shows {HEADLINE.phrase}.
                 </span>
               ),
-              zero.length > 0 && (
-                <span className="wf-none">
-                  <strong>No effect on poverty:</strong> {zero.map((m) => m.name).join(", ")}. {NO_EFFECT_TEXT}
-                </span>
-              ),
+              zero.length > 0 &&
+                nestedItem(
+                  <strong>No effect on poverty:</strong>,
+                  // One reason: one sentence, with its full stop; several: bullets
+                  noPovertyEffectGroups(zero, catalogue, year).map((group, _, all) => (all.length === 1 ? `${group.text}.` : group.text)),
+                  "wf-none",
+                ),
             ],
             method: { anchor: METHOD_ANCHORS.poverty, label: "How we measure poverty" },
           }}

@@ -712,52 +712,6 @@
   }
 }
 
-/* No effect: listed in the card's About this chart row */
-.no-effect-title {
-  margin: 0;
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--pe-gray-600);
-}
-
-.no-effect-list {
-  margin: 0;
-  padding: 8px 0 0;
-  list-style: none;
-}
-
-.no-effect-item {
-  display: grid;
-  grid-template-columns: 10px minmax(0, 1fr);
-  column-gap: 10px;
-  align-items: baseline;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--pe-gray-100);
-}
-
-.no-effect-item:last-child {
-  border-bottom: none;
-}
-
-.no-effect-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  align-self: center;
-}
-
-.no-effect-name {
-  font-size: var(--fs-small);
-  color: var(--pe-gray-800);
-}
-
-.no-effect-reason {
-  grid-column: 2;
-  font-size: var(--fs-caption);
-  line-height: 1.45;
-  color: var(--pe-gray-500);
-}
-
 @media (max-width: 768px) {
   .result-card-body {
     grid-template-columns: minmax(0, 1fr);
