@@ -151,7 +151,12 @@ describe("By age's selection rule with a single that withholds its age bands", (
     expect(screen.queryByText(COMBINATION_NOT_PUBLISHED)).toBeNull();
     const trend = chartRows(container).find((rows) => rows.some((point) => point.year === YEAR && "all" in point));
     expect(trend.find((point) => point.year === YEAR).all).toBe(-50);
-    expect(container.textContent).toMatch(/Not drawn in .*, as a selected policy has too few survey records by age/);
+    // No note under any plot: the reason sits in About this chart's caveats
+    expect(container.querySelector(".chart-footer .note")).toBeNull();
+    const trendCard = container.querySelector(".young-people-trend");
+    expect(trendCard.textContent).not.toMatch(/Not drawn in/);
+    fireEvent.click(within(trendCard).getByRole("button", { name: /About this chart/ }));
+    expect(trendCard.textContent).toMatch(/Not drawn in .*, as a selected policy has too few survey records by age/);
   });
 
   it("applies the same rule to single years of age", () => {

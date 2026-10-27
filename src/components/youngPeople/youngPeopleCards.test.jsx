@@ -268,7 +268,7 @@ describe("young people cards", () => {
     expect(description).not.toHaveTextContent(/£ a year/);
   });
 
-  it("says which years a selected policy's age bands are withheld, under the chart", () => {
+  it("says which years a selected policy's age bands are withheld, in About this chart (no note under the plot)", () => {
     const bands = ["0-15", "16-24", "25-34", "35-49", "50-64", "65+"];
     const rows = [
       ...DISPLAY_YEARS.flatMap((year) => [...bands, "all"].map((band) => row("two_child_limit", year, band, 100))),
@@ -276,7 +276,10 @@ describe("young people cards", () => {
     ];
     // That policy alone: its all ages, and the withheld bands said
     render(<TrendCard {...props} rows={rows} selectedPolicies={["salary_sacrifice_cap"]} selectedYear={2029} />);
-    expect(document.querySelector(".young-people-trend .chart-footer .note")).toHaveTextContent(
+    const card = document.querySelector(".young-people-trend");
+    expect(card.querySelector(".chart-footer .note")).toBeNull();
+    fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
+    expect(card.querySelector(".chart-footer")).toHaveTextContent(
       `Not drawn in ${yearList(DISPLAY_YEARS)}, as a selected policy has too few survey records by age: every age group except all ages.`,
     );
   });

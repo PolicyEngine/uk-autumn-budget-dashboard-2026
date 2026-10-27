@@ -378,13 +378,11 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
       <Logo />
       {published && (
         <div className="chart-footer">
-          {missing.length > 0 && (
-            <Note>Not shown, as too few survey records: ages {missing.map((p) => p.label).join(", ")}.</Note>
-          )}
           <ChartMoreInfo
             members={members}
             year={year}
             info={{
+              caveats: [missing.length > 0 && `Not shown, as too few survey records: ages ${missing.map((p) => p.label).join(", ")}.`],
               how: [
                 `One bar per single year of age, ${PENSIONER_AGE_FIRST} to 90 and over: the sum of each selected policy's own effect.`,
                 "The line averages the five ages centred on each one, as single ages rest on few survey records.",
@@ -488,8 +486,11 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
       {/* Notes and About this chart in the card's footer row, level across a pair */}
       {published && (
         <div className="chart-footer">
-          {notes.length > 0 && <Note>{notes.join(". ")}.</Note>}
-          <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} info={PENSIONER_MEASURES_INFO} />
+          <NoEffectList
+            items={noEffectItems}
+            title={`No effect in ${yearLabel}`}
+            info={{ ...PENSIONER_MEASURES_INFO, caveats: [...(PENSIONER_MEASURES_INFO.caveats || []), ...notes.map((note) => `${note}.`)] }}
+          />
         </div>
       )}
     </div>
@@ -764,9 +765,6 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
       </div>
       <Logo />
       <div className="chart-footer">
-        {published && thin.length > 0 && (
-          <Note>Not shown, as too few survey records: {thin.map((group) => ageLabel(group.label)).join(", ")}.</Note>
-        )}
         {filtered?.hidden > 0 && (
           <Note>
             {filtered.hidden} {filtered.hidden === 1 ? "policy" : "policies"} with no effect hidden
@@ -783,6 +781,7 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
                 ]
               : ["Shares come from one run of the whole selection, so they include how the policies interact."],
             caveats: [
+              published && thin.length > 0 && `Not shown, as too few survey records: ${thin.map((group) => ageLabel(group.label)).join(", ")}.`,
               perMeasure?.missing.length > 0 && `Not shown, too few survey records: ${perMeasure.missing.join(", ")}.`,
             ],
             method: AGE_METHOD,

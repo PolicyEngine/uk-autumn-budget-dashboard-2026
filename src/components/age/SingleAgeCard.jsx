@@ -28,7 +28,7 @@ import {
   barShape,
   fiscalYearTick,
 } from "../../utils/chartTheme";
-import { ALL_BAND, COMBINATION_NOT_PUBLISHED, PACKAGE_NET_ONLY, isPublished, singleAgeKey, singleAgeSelection } from "../../utils/ageImpact";
+import { ALL_BAND, COMBINATION_NOT_PUBLISHED, PACKAGE_PARTS_CAVEAT, isPublished, singleAgeKey, singleAgeSelection } from "../../utils/ageImpact";
 import { selectionPackageKey } from "../../utils/geography/selection";
 import { useDisplayYears } from "../../utils/displayYears";
 import { legendMembership } from "../../utils/legendMembership";
@@ -349,14 +349,14 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
       </div>
       {published && (
         <div className="chart-footer">
-          {netOnly && <Note>{PACKAGE_NET_ONLY}</Note>}
-          {missing.length > 0 && !combinationUnavailable && (
-            <Note>Not shown, as too few survey records: ages {missing.map((p) => p.label).join(", ")}.</Note>
-          )}
           <ChartMoreInfo
             members={members}
             year={year}
             info={{
+              caveats: [
+                netOnly && PACKAGE_PARTS_CAVEAT,
+                missing.length > 0 && !combinationUnavailable && `Not shown, as too few survey records: ages ${missing.map((p) => p.label).join(", ")}.`,
+              ],
               how: [
                 `One bar per single year of age, ${window[0]} to ${window[1] >= 90 ? "90 and over" : window[1]}: the sum of each selected policy's own effect.`,
                 "The line averages the five ages centred on each one, as single ages rest on few survey records.",

@@ -316,8 +316,11 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
       {/* Notes and About this chart in the card's footer row, level across a pair */}
       {published && (
         <div className="chart-footer">
-          {notes.length > 0 && <Note>{notes.join(". ")}.</Note>}
-          <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} info={MEASURES_INFO} />
+          <NoEffectList
+            items={noEffectItems}
+            title={`No effect in ${yearLabel}`}
+            info={{ ...MEASURES_INFO, caveats: [...(MEASURES_INFO.caveats || []), ...notes.map((note) => `${note}.`)] }}
+          />
         </div>
       )}
     </div>

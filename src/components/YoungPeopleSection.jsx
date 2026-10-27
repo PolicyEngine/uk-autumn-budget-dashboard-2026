@@ -673,13 +673,13 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
       </div>
       {published && (
         <div className="chart-footer">
-          {notShown && !combinationUnavailable && <Note>Not shown, as too few survey records: {notShown}.</Note>}
           <ChartMoreInfo
             members={members}
             year={selectedYear}
             info={{
               caveats: [
                 partsWithheld && PACKAGE_PARTS_CAVEAT,
+                notShown && !combinationUnavailable && `Not shown, as too few survey records: ${notShown}.`,
                 single &&
                   "Single years of age rest on fewer households: a few large changes, such as capital gains, can move one age's average.",
               ],
@@ -892,9 +892,6 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
       <div className="chart-footer">
-        {published && thin.length > 0 && (
-          <Note>Not shown, as too few survey records: {thin.map((group) => group.label).join(", ")}.</Note>
-        )}
         {filtered?.hidden > 0 && (
           <Note>
             {filtered.hidden} {filtered.hidden === 1 ? "policy" : "policies"} with no effect hidden
@@ -911,6 +908,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
                 ]
               : ["Shares come from one run of the whole selection, so they include how the policies interact."],
             caveats: [
+              published && thin.length > 0 && `Not shown, as too few survey records: ${thin.map((group) => group.label).join(", ")}.`,
               perMeasure?.missing.length > 0 && `Not shown, too few survey records: ${perMeasure.missing.join(", ")}.`,
             ],
             method: AGE_METHOD,

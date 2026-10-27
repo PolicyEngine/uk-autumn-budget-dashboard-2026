@@ -952,14 +952,14 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       </div>
       {/* The same foot as the card beside it, so the pair ends level */}
       <div className="chart-footer">
-        {missingNote && <Note>{missingNote}</Note>}
         {combinationNote && <Note>{combinationNote}</Note>}
-        {byMeasure && netOnly && <Note>{PACKAGE_NET_ONLY}</Note>}
         <ChartMoreInfo
           members={members}
           year={Number(selectedYear)}
           info={{
             caveats: [
+              missingNote,
+              byMeasure && netOnly && PACKAGE_NET_ONLY,
               unpublished.length > 0 &&
                 `Not yet published: ${unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.`,
             ],
