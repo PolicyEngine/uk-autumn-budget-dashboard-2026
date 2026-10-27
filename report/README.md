@@ -11,6 +11,8 @@ Nothing in the report is typed in by hand: measure names and descriptions come f
 
 ## Build
 
+`--data` must point at a publication: a `public/data` that holds `manifest.json` and `artifacts/` (the Budget-day release branch, or `publish-candidates-pre-budget` for the sample). `main`'s own `public/data` has no manifest yet, so the default fails with a message saying so. Every artifact needs its `receipt.json`, and every table the receipt names must be present and match it; otherwise the build stops.
+
 From the repository root, with Google Chrome installed (or pass `--chrome <executable>`):
 
 ```bash
@@ -27,6 +29,15 @@ uv run --no-project python -I report/build_report.py check build/report/figures.
 ```
 
 recomputes every figure in `figures.json` from the CSVs and prints any that differ. It needs no extra packages.
+
+## Tests
+
+```bash
+uv run --no-project --with matplotlib==3.10.1 --with pytest \
+  python -I -m pytest report/test_build_report.py -q
+```
+
+Small synthetic publications: several measures, one, fifteen, no combined run, a stale member, an unsupported or missing year, approved and provisional mixed, a staged measure, a missing manifest, receipt or table, and `check` catching a changed figure. They build the HTML and `figures.json` only, so they need no Chrome. The repository's own `pytest` run (testpaths `tests/`) does not collect them.
 
 ## Sections
 
