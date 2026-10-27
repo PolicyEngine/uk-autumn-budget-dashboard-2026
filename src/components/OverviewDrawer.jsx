@@ -3,7 +3,8 @@ import { ArrowUpRight, X } from "lucide-react";
 import { LandingBoxes, LandingIntro } from "./LandingPage";
 import { replicationLinks } from "./ReplicationLine";
 import Tip from "./Tip";
-import logo from "@/assets/policyengine-teal.svg";
+import { POLICYENGINE_HOME } from "./HomeButton";
+import logo from "@/assets/policyengine-white.svg";
 import mark from "@/assets/policyengine-teal-square.svg";
 import "./OverviewDrawer.css";
 
@@ -117,14 +118,19 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, pro
         onKeyDown={onKeyDown}
         onScroll={(event) => setScrolled(event.currentTarget.scrollTop > 0)}
       >
-        {/* Sticky: the wordmark centred, the close button at the right (an
-            empty cell at the left keeps the wordmark on the centre line) */}
+        {/* Sticky: a band in the title band's gradient and height, so it
+            lines up with the band beside it; the wordmark centred, the
+            close button at the right (an empty cell at the left keeps the
+            wordmark on the centre line) */}
         <header className={`overview-header${scrolled ? " is-scrolled" : ""}`}>
           <span className="overview-header-spacer" aria-hidden="true" />
-          {/* PolicyEngine's wordmark (@policyengine/ui-kit's teal.svg, the
-              teal form of the site's own white wordmark) */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logo.src ?? logo} alt="PolicyEngine" className="overview-logo" />
+          {/* PolicyEngine's white wordmark, as the site header has it
+              (@policyengine/ui-kit's white.svg, 24px tall), a link to
+              PolicyEngine's home page in the same tab */}
+          <a href={POLICYENGINE_HOME} className="overview-logo-link">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logo.src ?? logo} alt="PolicyEngine" className="overview-logo" />
+          </a>
           <Tip content="Close (Esc)">
             <button
               ref={closeRef}

@@ -130,6 +130,10 @@ code {
   /* The site header's height (58px, @policyengine/ui-kit's
      --spacing-header), so the two bars match */
   --title-row-height: 58px;
+  /* The site header's gradient and rule (@policyengine/ui-kit's Header):
+     the title band's, and the overview drawer's top band */
+  --band-gradient: linear-gradient(to right, var(--color-teal-800), var(--color-teal-600));
+  --band-rule: 0.5px solid var(--color-teal-700);
   /* The two tab rows (view tabs and sub-tabs) share one height: each
      row, each tab and the chosen tab's tint. Compact once stuck. */
   --tab-row-height: 48px;
@@ -416,8 +420,8 @@ body {
   margin-inline: calc(50% - 50vw);
   padding-inline: max(40px, calc((100vw - 1120px) / 2));
   /* The site header's gradient and rule, from the same tokens */
-  background: linear-gradient(to right, var(--color-teal-800), var(--color-teal-600));
-  border-bottom: 0.5px solid var(--color-teal-700);
+  background: var(--band-gradient);
+  border-bottom: var(--band-rule);
   box-sizing: border-box;
 }
 

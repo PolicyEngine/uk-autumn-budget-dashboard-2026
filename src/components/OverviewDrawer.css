@@ -47,8 +47,13 @@
   transform: none;
 }
 
-/* Sticky at the top of the panel; no rule under it: the body is set off by
-   space, and a soft shadow appears only once the body scrolls under it */
+/* Sticky at the top of the panel, flush to its edges: a band in the
+   title band's gradient, rule and height (globals.css, --band-gradient,
+   --band-rule, --title-row-height), so its top and bottom edges line up
+   with the band beside it. The gradient is laid across the window's width,
+   as the title band's is, so the drawer shows the same stretch of it as
+   the band under it (the panel's left edge is the window's). A soft shadow
+   appears once the body scrolls under it. */
 .overview-header {
   position: sticky;
   top: 0;
@@ -58,22 +63,50 @@
   grid-template-columns: 40px 1fr 40px;
   align-items: center;
   gap: 8px;
-  height: 64px;
+  height: var(--title-row-height);
   padding: 0 12px;
-  background: var(--c-surface);
+  background: var(--band-gradient);
+  background-size: 100vw 100%;
+  background-position: left top;
+  border-bottom: var(--band-rule);
+  box-sizing: border-box;
   transition: box-shadow var(--motion-fast) ease;
 }
 
 .overview-header.is-scrolled {
-  box-shadow: 0 6px 12px -8px var(--shadow-soft), 0 1px 0 var(--pe-gray-100);
+  box-shadow: 0 1px 0 var(--shadow-soft);
 }
 
-/* PolicyEngine's wordmark, centred in the header */
+/* PolicyEngine's white wordmark, centred in the band at the site header's
+   size (24px tall); its link a soft white tint on hover, a white ring on
+   keyboard focus, as the band's mark has (.title-mark-link) */
+.overview-logo-link {
+  display: flex;
+  justify-self: center;
+  min-width: 0;
+  max-width: 100%;
+  padding: 4px 6px;
+  border-radius: 8px;
+  transition: background-color var(--motion-fast) ease;
+}
+
+.overview-logo-link:hover {
+  background: var(--band-ink-hover);
+}
+
+.overview-logo-link:active {
+  background: var(--band-ink-active);
+}
+
+.overview-logo-link:focus-visible {
+  outline: 2px solid var(--band-ink);
+  outline-offset: 2px;
+}
+
 .overview-logo {
   display: block;
-  justify-self: center;
   width: auto;
-  height: 30px;
+  height: 24px;
   max-width: 100%;
   min-width: 0;
 }
@@ -106,8 +139,9 @@
   flex-direction: column;
 }
 
-/* A quiet icon button: a 40px square with a 20px X in a muted grey; a
-   light grey fill on hover or keyboard focus, and a teal focus ring */
+/* A quiet icon button on the band: a 40px square with a 20px white X; the
+   band's soft white tint on hover or keyboard focus, and a white focus
+   ring (the band's mark link's treatment) */
 .overview-close {
   display: inline-flex;
   align-items: center;
@@ -116,7 +150,7 @@
   height: 40px;
   flex: none;
   padding: 0;
-  color: var(--pe-gray-500);
+  color: var(--band-ink);
   background: none;
   border: 0;
   border-radius: var(--pe-radius-md);
@@ -126,8 +160,11 @@
 
 .overview-close:hover,
 .overview-close:focus-visible:not([data-quiet]) {
-  color: var(--pe-gray-900);
-  background: var(--pe-gray-100);
+  background: var(--band-ink-hover);
+}
+
+.overview-close:active {
+  background: var(--band-ink-active);
 }
 
 .overview-close:focus {
@@ -135,7 +172,7 @@
 }
 
 .overview-close:focus-visible:not([data-quiet]) {
-  outline: 2px solid var(--focus-ring);
+  outline: 2px solid var(--band-ink);
   outline-offset: 2px;
 }
 
@@ -149,7 +186,7 @@
      groups, so the panel is filled, not left with a gap at the foot */
   justify-content: space-evenly;
   gap: clamp(12px, 2svh, 20px);
-  padding: 4px 20px 12px;
+  padding: 20px 20px 12px;
 }
 
 .overview-nav {
@@ -379,14 +416,6 @@
 
 /* A short window: everything a little tighter, so it still fits */
 @media (max-height: 760px), (max-height: 840px) and (min-width: 601px) {
-  .overview-header {
-    height: 56px;
-  }
-
-  .overview-logo {
-    height: 28px;
-  }
-
   .overview-intro .landing-heading {
     font-size: var(--fs-section);
   }
@@ -437,6 +466,11 @@
   .overview {
     --overview-width: 100vw;
   }
+
+  /* Nothing beside it: the band takes the site header's height */
+  .overview-header {
+    height: var(--spacing-header, 58px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -444,6 +478,7 @@
   .overview-backdrop,
   .overview-panel,
   .overview-header,
+  .overview-logo-link,
   .overview-close,
   .landing-row,
   .overview-external,
