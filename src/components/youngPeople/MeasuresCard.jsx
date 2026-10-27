@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import MeasureRowLabel from "../MeasureRowLabel";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import ChartDownloadMenu from "../ChartDownloadMenu";
@@ -6,16 +7,25 @@ import UnpublishedPlot from "../UnpublishedPlot";
 import NoBreakYear from "../NoBreakYear";
 import Note from "../Note";
 import { fiscalYearTick, CHART_COLOURS } from "../../utils/chartTheme";
-import PillSelect from "../PillSelect";
-import { AGE_BANDS, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
+import ControlBar from "../ControlBar";
+import { AGE_BANDS, ALL_BAND, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
 import { measureComparison, niceRange, pounds, signedPounds } from "./youngPeopleData";
+import { pensionerMeasures } from "../pensioners/pensionersData";
 import { NoEffectList } from "../personal/PolicyBars";
+import { AGE_METHOD } from "../methodology/anchors";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import "./MeasureDumbbell.css";
 import TitleIcon from "../TitleIcon";
 
+
+// The card's About this chart (the measures with no effect join its caveats)
+const MEASURES_INFO = {
+  method: AGE_METHOD,
+};
+
 /** "Aged 16 to 24", "Aged under 16", "Aged 65 and over". */
 export const groupLabel = (band) => {
+  if (band === "pensioners") return "Pensioners";
   const label = AGE_BANDS.find((candidate) => candidate.key === band)?.label ?? band;
   return `Aged ${label.charAt(0).toLowerCase()}${label.slice(1)}`;
 };
@@ -44,7 +54,7 @@ export const DUMBBELL_MAX_STEPS = 4;
  * coloured by which is larger; the group's value and its gap to all ages at
  * the right. Hovering or focusing a row shows both values and the ratio.
  */
-export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, height }) {
+export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, height, compareName = "All ages" }) {
   const { byId } = useMeasureCatalogue();
   const [active, setActive] = useState(null);
   const [lo, hi] = domain;
@@ -82,11 +92,10 @@ export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, hei
             onMouseLeave={() => setActive(null)}
             onFocus={() => setActive(row.id)}
             onBlur={() => setActive(null)}
-            aria-label={`${row.name}: ${groupName} ${signedPounds(row.group)}, all ages ${signedPounds(row.all)} a year`}
+            aria-label={`${row.name}: ${groupName} ${signedPounds(row.group)}, ${compareName.toLowerCase()} ${signedPounds(row.all)} a year`}
           >
             <span className="measure-dumbbell-name" role="rowheader" title={row.name}>
-              <span className="measure-dumbbell-swatch" style={{ background: byId.get(row.id)?.color }} aria-hidden="true" />
-              <span className="measure-dumbbell-label">{row.name}</span>
+              <MeasureRowLabel measure={byId.get(row.id) ?? { id: row.id, name: row.name }} />
             </span>
             <span className="measure-dumbbell-plot" role="cell" aria-hidden="true">
               {ticks.map((tick) => (
@@ -101,7 +110,7 @@ export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, hei
             <span className="measure-dumbbell-values" role="cell">
               <strong>{money(row.group)}</strong>
               <span className={`measure-dumbbell-gap ${tone}`}>
-                {close ? "≈ all ages" : `${gap > 0 ? "▲" : "▼"} ${signed(gap)} vs all ages`}
+                {close ? `≈ ${compareName.toLowerCase()}` : `${gap > 0 ? "▲" : "▼"} ${signed(gap)} vs ${compareName.toLowerCase()}`}
               </span>
             </span>
             {active === row.id && (
@@ -112,7 +121,7 @@ export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, hei
                 <span>
                   {groupName}: {money(row.group)} a year
                 </span>
-                <span>All ages: {money(row.all)} a year</span>
+                <span>{compareName}: {money(row.all)} a year</span>
                 {ratioText && <span>{ratioText}</span>}
               </span>
             )}
@@ -144,7 +153,10 @@ export const measuresDescription = (band) => {
   return `Each policy's average change per person: ${label} vs all ages.`;
 };
 
-const BAND_OPTIONS = AGE_BANDS.map((band) => ({ value: band.key, label: band.label }));
+const BAND_OPTIONS = [
+  ...AGE_BANDS.map((band) => ({ value: band.key, label: band.label })),
+  { value: "pensioners", label: "Pensioners" },
+];
 
 const UNIT = "Average change per person (£ a year)";
 
@@ -153,21 +165,27 @@ const UNIT = "Average change per person (£ a year)";
  * chosen age group (16 to 24 at first) beside its all-ages figure, in the
  * selected year. Every bar is one policy's own run, so nothing is added up.
  */
-function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, extraOptions = [] }) {
   const { byId } = useMeasureCatalogue();
   const chartRef = useRef(null);
-  const [band, setBand] = useState(YOUNG_BAND);
-  const GROUPS = groupsFor(band);
-  const description = measuresDescription(band);
+  // The section's age group (By age), which the card's Compare can override
+  // until the section's group changes again
+  const [band, setBand] = useState(group);
+  useEffect(() => {
+    setBand(group);
+  }, [group]);
+  // What the group is compared with: all ages, or another age band
+  const [compareWith, setCompareWith] = useState(ALL_BAND);
+  const compareKey = compareWith === band ? ALL_BAND : compareWith;
+  const compareName = compareKey === ALL_BAND ? "All ages" : AGE_BANDS.find((b) => b.key === compareKey)?.label ?? compareKey;
+  const GROUPS = groupsFor(band).map((item) => (item.key === "all" ? { ...item, label: compareName } : item));
+  const description = measuresDescription(band).replace(/vs all ages\.$/, `vs ${compareName.toLowerCase()}.`);
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);
-  const { shown, noEffect, suppressed } = measureComparison(
-    rows,
-    policies,
-    selectedPolicies,
-    selectedYear,
-    band,
-  );
+  const { shown, noEffect, suppressed } =
+    band === "pensioners"
+      ? pensionerMeasures(rows, policies, selectedPolicies, selectedYear, compareKey)
+      : measureComparison(rows, policies, selectedPolicies, selectedYear, band, compareKey);
   const values = shown.flatMap((point) => [point.group, point.all]);
   const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values), {
     maxSteps: DUMBBELL_MAX_STEPS,
@@ -182,7 +200,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     legendItems: GROUPS.map((group) => ({ color: group.color, label: group.label, type: "rect" })),
   };
   const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
-  // No effect: in the card's More info row, each with its colour. No reason
+  // No effect: in the card's About this chart, each with its colour. No reason
   // per measure: a list of them by id would be a measure list of the page's
   // own (the catalogue carries none)
   const noEffectItems = noEffect.map((policy) => ({
@@ -197,7 +215,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
       columns: [
         { key: "name", label: "Policy" },
         { key: "group", label: GROUPS[0].label, decimals: 2 },
-        { key: "all", label: "All ages", decimals: 2 },
+        { key: "all", label: compareName, decimals: 2 },
       ],
       rows: published ? shown : [],
       notes,
@@ -225,14 +243,25 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
         <ChartDownloadMenu download={download} chartTitle={title} />
       </div>
       <div className="chart-controls young-people-controls">
-        <PillSelect
-          variant="light"
-          prefix="Compare"
-          name="Age group compared with all ages"
-          value={band}
-          onChange={setBand}
-          options={BAND_OPTIONS}
-          stableWidth
+        <ControlBar
+          name={title}
+          options={
+            extraOptions.length
+              ? // By age: its age group, then what to compare it with
+                [
+                  ...extraOptions,
+                  {
+                    label: "Compare with",
+                    value: compareKey,
+                    onChange: setCompareWith,
+                    options: [
+                      { value: ALL_BAND, label: "All ages" },
+                      ...AGE_BANDS.filter((b) => b.key !== band).map((b) => ({ value: b.key, label: b.label })),
+                    ],
+                  },
+                ]
+              : [{ label: "Compare", value: band, onChange: setBand, options: BAND_OPTIONS }]
+          }
         />
       </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
@@ -244,6 +273,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
             domain={domain}
             ticks={ticks}
             groupName={GROUPS[0].label.replace(/^Aged /, "")}
+            compareName={compareName}
             yearLabel={yearLabel}
             height={height}
           />
@@ -262,7 +292,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
               <i className="dot" /> {GROUPS[0].label.replace(/^Aged /, "")}
             </span>
             <span>
-              <i className="ring" /> All ages
+              <i className="ring" /> {compareName}
             </span>
           </span>
         )}
@@ -271,11 +301,11 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
-      {/* Notes and More info in the card's footer row, level across a pair */}
-      {published && (notes.length > 0 || noEffectItems.length > 0) && (
+      {/* Notes and About this chart in the card's footer row, level across a pair */}
+      {published && (
         <div className="chart-footer">
           {notes.length > 0 && <Note>{notes.join(". ")}.</Note>}
-          {noEffectItems.length > 0 && <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} />}
+          <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} info={MEASURES_INFO} />
         </div>
       )}
     </div>

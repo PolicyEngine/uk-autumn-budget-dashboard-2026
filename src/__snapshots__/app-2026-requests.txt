@@ -1,3 +1,4 @@
+/data/area-routing.json
 /data/artifacts/alpha/f3b823a98663f150/budgetary_impact.csv
 /data/artifacts/alpha/f3b823a98663f150/distributional_impact.csv
 /data/artifacts/alpha/f3b823a98663f150/household_scatter_binned.csv
@@ -40,4 +41,9 @@
 /data/artifacts/zeta/f9e841c8a5d861ae/metrics.csv
 /data/artifacts/zeta/f9e841c8a5d861ae/receipt.json
 /data/artifacts/zeta/f9e841c8a5d861ae/winners_losers.csv
+/data/household_presets.json
+/data/living_standards_outlook.json
 /data/manifest.json
+/data/release-index.json
+/data/release-index.json
+/data/uk_constituencies_2024.topo.json

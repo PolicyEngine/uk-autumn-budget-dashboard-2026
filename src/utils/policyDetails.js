@@ -27,6 +27,11 @@
  *   publication carries verbatim, when the entry was written. After
  *   changing a measure in reforms.py, check its entry still holds, then copy
  *   the new description here (or delete the entry).
+ * - sentence: the measure as the subject of a sentence, a verb phrase
+ *   ("unfreezing the student loan threshold"), for the charts' headlines;
+ * - shortName: a short name for the measure keys' chips, the household
+ *   waterfall and other tight labels (the full published name stays in
+ *   their tooltips and accessible names).
  * Revenue figures stay in the charts and are not repeated here.
  *
  * TRIAL ONLY (review-edits-on-104): this belongs in the published manifest
@@ -35,6 +40,8 @@
 export const POLICY_DETAILS = [
   {
     id: "fuel_duty_rise_deferral",
+    shortName: "Fuel duty deferral",
+    sentence: "deferring the fuel duty rises",
     name: "Fuel duty rises deferred",
     description: "Defer the January and March 2027 fuel duty rises",
     writtenFor: "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
@@ -57,6 +64,8 @@ export const POLICY_DETAILS = [
   },
   {
     id: "state_pension_income_tax_protection",
+    shortName: "State Pension protection",
+    sentence: "keeping income tax off the State Pension",
     name: "State Pension income tax protection",
     description:
       "No income tax for pensioners whose only income is the State Pension",
@@ -71,6 +80,8 @@ export const POLICY_DETAILS = [
   },
   {
     id: "warm_home_discount_top_up",
+    shortName: "Warm Home Discount top-up",
+    sentence: "topping up the Warm Home Discount",
     name: "Warm Home Discount top-up",
     description:
       "Raise the Warm Home Discount from £150 to £250 for one winter",
@@ -91,6 +102,8 @@ export const POLICY_DETAILS = [
   },
   {
     id: "domestic_electricity_zero_vat",
+    shortName: "Zero VAT on electricity",
+    sentence: "taking VAT off household electricity",
     name: "Zero VAT on domestic electricity",
     description: "Zero-rate VAT on domestic electricity to March 2028",
     writtenFor: "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 31 March 2028: the zero rate to March 2027, not in the model's baseline, scored with a candidate one-year extension. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%), day-weighted in 2026-27.",
@@ -109,6 +122,8 @@ export const POLICY_DETAILS = [
   },
   {
     id: "employer_ni_relief_under_25s",
+    shortName: "Employer National Insurance relief, under-25s",
+    sentence: "extending employers' National Insurance relief to under-25s",
     name: "Employer NI relief for under-25s",
     description: "No employer National Insurance for employees under 25",
     writtenFor: "Candidate measure. From 6 April 2027 employers pay no secondary Class 1 National Insurance on earnings up to the upper earnings limit (£50,270) for employees under 25, extending the under-21 relief to ages 21 to 24. Wages are held fixed, so it changes revenue, not household incomes. The data identify no apprentices, so the cost includes 21 to 24-year-old apprentices, whose employers already pay none in law.",
@@ -122,6 +137,8 @@ export const POLICY_DETAILS = [
   },
   {
     id: "threshold_freeze_2031_32",
+    shortName: "Threshold freeze",
+    sentence: "freezing the income tax thresholds for 2031-32",
     name: "Threshold freeze to 2031-32",
     description: "Keep income tax thresholds frozen in 2031-32",
     writtenFor: "Candidate measure. The income tax personal allowance stays at £12,570 and the basic rate band at £37,700 (a higher rate threshold of £50,270) for one more year, 2031-32, instead of rising with inflation to £12,830 and £38,500. From 2031-32 policyengine-uk sets the National Insurance primary threshold and upper earnings limit at the personal allowance and higher rate threshold, so they stay at £12,570 and £50,270 too; the employer secondary threshold is not held.",
@@ -131,10 +148,12 @@ export const POLICY_DETAILS = [
     type: "Income tax",
     inForce: { from: "2031-04" },
     details:
-      "The personal allowance stays at £12,570 and the higher rate threshold at £50,270, instead of rising with inflation to £12,830 and £51,330. The National Insurance primary threshold and upper earnings limit, which the model ties to them from 2031-32, stay at the same levels; the employer threshold is not held.",
+      "The National Insurance primary threshold and upper earnings limit, which the model ties to the personal allowance and higher rate threshold from 2031-32, stay frozen too; the employer threshold is not held.",
   },
   {
     id: "badr_lifetime_limit_cut",
+    shortName: "Business sale relief limit halved",
+    sentence: "halving the business sale relief limit",
     name: "Business Asset Disposal Relief restricted",
     description: "Halve the Business Asset Disposal Relief lifetime limit",
     writtenFor: "Candidate measure. From 6 April 2027 the lifetime limit on gains qualifying for Business Asset Disposal Relief falls from £1 million to £500,000; the relief rate stays at 18%. Gains above the limit pay the main capital gains tax rates. The model applies the limit to each year's gains. Capital gains are imputed and calibrated to 2024-25, when disposals were unusually high ahead of the April 2025 rise in the relief's rate, so the relief's base, and the revenue from restricting it, are likely 1.5 to 1.7 times too high.",
@@ -152,6 +171,8 @@ export const POLICY_DETAILS = [
   },
   {
     id: "road_fuel_vat_cut",
+    shortName: "Road fuel VAT cut",
+    sentence: "cutting VAT on road fuel",
     name: "VAT cut on road fuel",
     description: "Cut VAT on petrol and diesel to 15% for six months",
     writtenFor: "Candidate measure. VAT on petrol and diesel falls from 20% to 15% from 1 December 2026 to 31 May 2027, fully passed through to pump prices; spending on fuel is held fixed. Day-weighted to fiscal years.",
@@ -166,6 +187,8 @@ export const POLICY_DETAILS = [
   },
   {
     id: "plan_2_threshold_unfreeze",
+    shortName: "Student loan threshold unfrozen",
+    sentence: "unfreezing the student loan threshold",
     name: "Plan 2 student loan threshold unfrozen",
     description: "Uprate the Plan 2 repayment threshold with RPI again",
     writtenFor: "Candidate measure. The Plan 2 student loan repayment threshold rises with RPI from April 2027 (to £30,267 in 2027-28), reversing the freeze at £29,385 to April 2030. Repayments are modelled, replacing those reported in the survey, and the revenue figure is the change in modelled repayments.",
@@ -199,4 +222,13 @@ export function policyDetailsFor(measure) {
 /** A catalogue measure with its card details, where there are any. */
 export function withPolicyDetails(measure) {
   return measure ? { ...(policyDetailsFor(measure) ?? {}), ...measure } : measure;
+}
+
+/**
+ * A catalogue measure's short name: its entry's, while the publication
+ * describes it exactly as when the entry was written; else its published
+ * name.
+ */
+export function shortNameOf(measure) {
+  return policyDetailsFor(measure)?.shortName ?? measure?.label ?? measure?.name ?? measure?.id;
 }

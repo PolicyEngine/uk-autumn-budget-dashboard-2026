@@ -1,5 +1,9 @@
 import Disclosure from "./Disclosure";
 import "./ChartMoreInfo.css";
+import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
+
+/** The one name of every chart card's disclosure. */
+export const ABOUT_THIS_CHART = "About this chart";
 import useMeasureRevenue from "../hooks/useMeasureRevenue";
 import { zeroReason } from "../utils/legendMembership";
 import { openPopulationSub, populationSubHref } from "../utils/populationSub";
@@ -35,16 +39,19 @@ function EmployerReason({ id, year, text }) {
 }
 
 /**
- * The selected measures that are £0 for households in the year shown, for a
- * card's "More info": a lead line, then one measure per line with why.
+ * The selected measures that are £0 for households in the year shown, as
+ * one caveat in a card's "About this chart": a lead line, then one measure
+ * per line with why.
  */
 export function ZeroMeasuresDetail({ zero, year, period, pastEvent = false }) {
-  const count = zero.length === 1 ? "1 measure is" : `${zero.length} measures are`;
+  const count = zero.length === 1 ? "1 selected measure is" : `${zero.length} selected measures are`;
   return (
     <div className="zero-measures">
-      <p className="zero-measures-lead">
-        {count} £0 for households {period ?? `in ${fiscalYear(year)}`}:
-      </p>
+      <span className="zero-measures-lead">
+        {count} £0 for households {period ?? `in ${fiscalYear(year)}`}, so the key folds{" "}
+        {zero.length === 1 ? "it" : "them"} under &ldquo;with no effect&rdquo; and the tooltip leaves{" "}
+        {zero.length === 1 ? "it" : "them"} out:
+      </span>
       <ul className="zero-measures-list">
         {zero.map((member) => {
           const reason = zeroReason(member, year, { pastEvent });
@@ -60,35 +67,59 @@ export function ZeroMeasuresDetail({ zero, year, period, pastEvent = false }) {
           );
         })}
       </ul>
-      <p>They are greyed out in the key and left out of the tooltip.</p>
     </div>
   );
 }
 
 /**
- * A chart card's "More info", at the foot of the card: the page's one
- * disclosure (Disclosure, as "About this chart" and the household cards'
- * "More info"), closed by default. It holds the £0 measures (legendMembership)
- * and any other notes on reading the chart (`children`); nothing when it
- * would be empty.
+ * `info` less its links to Methodology: the shared terms, defined there, and
+ * the closing section link. A past event's page (HistoricalReleasePage)
+ * has no Methodology view: a link's address there is that same page, and
+ * nothing on it answers a click (only App listens for OPEN_VIEW_EVENT).
+ */
+export const withoutMethodology = (info) => ({
+  ...info,
+  definitions: (info.definitions || []).filter((definition) => !definition?.ref),
+  method: null,
+});
+
+/**
+ * A chart card's "About this chart", at the foot of the card: the page's
+ * one disclosure (Disclosure), closed by default, with a one-line preview
+ * of what is inside and a caveat count. Its content is `info`, in the fixed
+ * sections of InfoSections; the selected measures that are £0 in the year
+ * shown (legendMembership) join the caveats. Nothing when it would be empty.
  *
  * `period` replaces "in 2027-28" for a chart over several years (its £0
  * measures are £0 in all of them).
  *
- * `pastEvent`: the members are a past fiscal event's, so no £0 measure is
- * given a reason written for this Budget's (zeroReason).
+ * `pastEvent`: the card is a past fiscal event's, so no £0 measure is
+ * given a reason written for this Budget's (zeroReason), and the card links
+ * to no Methodology (withoutMethodology).
  *
- * @param {{members?: Array<{id: string, name: string, muted: boolean}>, year: number, period?: string, pastEvent?: boolean, children?: React.ReactNode}} props
+ * @param {{info?: import("./InfoSections").ChartInfo, members?: Array<{id: string, name: string, muted: boolean}>, year?: number, period?: string, pastEvent?: boolean}} props
  */
-function ChartMoreInfo({ members = [], year, period, pastEvent = false, children }) {
+function ChartMoreInfo({ info = {}, members = [], year, period, pastEvent = false, children }) {
+  // Cards not yet given sections: their notes, as "What it shows"
+  const legacy = (Array.isArray(children) ? children : [children]).filter(Boolean);
   const zero = members.filter((member) => member.muted);
-  const extra = Array.isArray(children) ? children.filter(Boolean) : children;
-  const hasExtra = Array.isArray(extra) ? extra.length > 0 : Boolean(extra);
-  if (!zero.length && !hasExtra) return null;
+  const full = {
+    ...(pastEvent ? withoutMethodology(info) : info),
+    shows: info.shows ?? (legacy.length ? <span className="chart-more-info-legacy">{legacy}</span> : null),
+    caveats: [
+      ...(info.caveats || []),
+      zero.length > 0 && <ZeroMeasuresDetail key="zero" zero={zero} year={year} period={period} pastEvent={pastEvent} />,
+    ],
+  };
+  if (!hasInfo(full)) return null;
   return (
-    <Disclosure inCard title="More info" className="chart-more-info" contentClassName="chart-more-info-content">
-      {zero.length > 0 && <ZeroMeasuresDetail zero={zero} year={year} period={period} pastEvent={pastEvent} />}
-      {extra}
+    <Disclosure
+      inCard
+      title={ABOUT_THIS_CHART}
+      className="chart-more-info"
+      preview={infoPreview(full)}
+    >
+      <InfoSections info={full} />
     </Disclosure>
   );
 }

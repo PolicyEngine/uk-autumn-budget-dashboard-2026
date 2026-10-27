@@ -308,20 +308,37 @@ export function placeLabel(pos) {
 }
 
 /**
+ * How many in every 100 people live in households with a lower income than
+ * this position, as words: "47", or "fewer than 1" / "more than 99" off the
+ * published range. One rounding everywhere (the tiles' percentile too).
+ */
+export function lowerCount(pos) {
+  if (pos.below) return `fewer than ${pos.edge ?? LOWEST_PERCENTILE}`;
+  if (pos.above) return `more than ${pos.edge ?? HIGHEST_PERCENTILE}`;
+  if (pos.percentile === null) return null;
+  return String(Math.round(pos.percentile));
+}
+
+/** What the number measures, said once and the same everywhere. */
+export const PLACE_MEANING = "have a lower household income than you, adjusted for household size";
+
+/**
  * The card's text: a one-sentence headline and three labelled chips (your
  * change, its share of your net income, your place before and after).
- * Each fact once. The headline names the top or bottom tenth as "the top
- * (bottom) N%" and anyone else by how many in every 100 people have a
- * lower income.
+ * Each fact once. The headline says exactly what the number is: how many
+ * in every 100 people in the UK live in households with a lower income,
+ * both adjusted for household size, on `side` ("before" or "after" the
+ * selected policies), naming the side only when the two differ.
  */
-export function positionSummary(position, change, netBefore) {
+export function positionSummary(position, change, netBefore, side = "after") {
+  const shown = side === "before" ? position.before : position.after;
+  const differs = lowerCount(position.before) !== lowerCount(position.after);
+  const count = lowerCount(shown);
+  const capital = count ? count.charAt(0).toUpperCase() + count.slice(1) : null;
+  const headline = count
+    ? `${capital} in 100 people in the UK ${PLACE_MEANING}${differs ? `, ${side === "before" ? "before" : "after"} the selected policies` : ""}.`
+    : "Your place in the UK income distribution is not available.";
   const after = position.after;
-  let headline;
-  if (after.above) headline = `You're in the top ${100 - (after.edge ?? HIGHEST_PERCENTILE)}% of UK incomes.`;
-  else if (after.below) headline = `You're in the bottom ${after.edge ?? LOWEST_PERCENTILE}% of UK incomes.`;
-  else if (after.percentile >= 90) headline = `You're in the top ${Math.max(1, Math.ceil(100 - after.percentile))}% of UK incomes.`;
-  else if (after.percentile < 10) headline = `You're in the bottom ${Math.max(1, Math.ceil(after.percentile))}% of UK incomes.`;
-  else headline = `${Math.round(after.percentile)} in every 100 people in the UK have a lower income than you.`;
   const before = placeLabel(position.before);
   const now = placeLabel(after);
   const moved = before !== now;

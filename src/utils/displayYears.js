@@ -9,8 +9,8 @@
  */
 import budgetYears from "../uk_budget_data/budget_years.json";
 
-/** The first fiscal year shown: 2026 is 2026-27 (the Warm Home Discount top-up's winter). */
-export const FIRST_DISPLAY_YEAR = 2026;
+/** The first fiscal year shown on Population and Household impact: 2027 is 2027-28 (Vahid, 26 October: no chart starts at 2026-27). */
+export const FIRST_DISPLAY_YEAR = 2027;
 
 const CONFIG_YEARS = budgetYears.policy_years.filter(
   (year) => year >= FIRST_DISPLAY_YEAR,
@@ -36,11 +36,10 @@ export const DISPLAY_YEARS = Object.freeze([...CONFIG_YEARS]);
 
 /**
  * The years a reader can choose (the year pill, Play, Household impact):
- * from 2027-28. 2026-27 stays in the charts that draw every year (the
- * revenue bars) but is not offered: its only measure, the Warm Home
- * Discount top-up, shows as "Paid in 2026-27 only".
+ * the years shown, from 2027-28. An old link's ?year=2026 falls back to the
+ * default (selectableYearOr).
  */
-export const FIRST_SELECTABLE_YEAR = 2027;
+export const FIRST_SELECTABLE_YEAR = FIRST_DISPLAY_YEAR;
 
 export const SELECTABLE_YEARS = Object.freeze(
   DISPLAY_YEARS.filter((year) => year >= FIRST_SELECTABLE_YEAR),
@@ -68,3 +67,6 @@ export const displayYearOr = (year, fallback = DEFAULT_DISPLAY_YEAR) =>
 
 /** Keep only the rows (with a `year` field) for years the dashboard shows. */
 export const displayRows = (rows) => rows.filter((row) => isDisplayYear(row.year));
+
+/** A fiscal year's label: 2027 is "2027-28". */
+export const yearLabel = (year) => `${year}-${(Number(year) + 1).toString().slice(-2)}`;

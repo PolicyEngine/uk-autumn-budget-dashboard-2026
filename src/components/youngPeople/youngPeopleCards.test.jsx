@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import fc from "fast-check";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import MeasuresCard from "./MeasuresCard";
 import TrendCard from "./TrendCard";
 import {
@@ -147,7 +147,7 @@ describe("young people cards", () => {
     expect(screen.getAllByRole("row").length).toBeGreaterThan(1);
     expect(screen.getAllByText(/vs all ages|≈ all ages/).length).toBeGreaterThan(0);
     // No effect: in the card's More info row, closed at first
-    const more = screen.getByRole("button", { name: "More info" });
+    const more = screen.getByRole("button", { name: "About this chart" });
     expect(more).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(more);
     expect(screen.getByText("No effect in 2028-29 (1)")).toBeInTheDocument();
@@ -156,15 +156,17 @@ describe("young people cards", () => {
 
   it("lets the reader choose the age group compared", () => {
     render(<MeasuresCard {...props} selectedYear={2028} />);
-    fireEvent.click(screen.getByRole("button", { name: /Age group compared with all ages: 16 to 24/ }));
-    fireEvent.click(screen.getByRole("option", { name: /65 and over/ }));
+    // The age group is the card's one Options pill
+    fireEvent.click(screen.getByRole("button", { name: /^Options: 16 to 24/ }));
+    fireEvent.click(within(screen.getByRole("radiogroup", { name: "Compare" })).getByRole("radio", { name: /65 and over/ }));
     expect(screen.getByText(/65 and over vs all ages/)).toBeInTheDocument();
   });
 
   it("describes missing age-group rows as unavailable", () => {
     render(<MeasuresCard {...props} selectedYear={2028} />);
-    fireEvent.click(screen.getByRole("button", { name: /Age group compared with all ages: 16 to 24/ }));
-    fireEvent.click(screen.getByRole("option", { name: /65 and over/ }));
+    // The age group is the card's one Options pill
+    fireEvent.click(screen.getByRole("button", { name: /^Options: 16 to 24/ }));
+    fireEvent.click(within(screen.getByRole("radiogroup", { name: "Compare" })).getByRole("radio", { name: /65 and over/ }));
     expect(screen.getByText("Results are unavailable for the selected policies in 2028-29.")).toBeInTheDocument();
     expect(screen.queryByText(/None of the selected policies changes/)).not.toBeInTheDocument();
   });
@@ -172,6 +174,14 @@ describe("young people cards", () => {
   it("shows a year with no rows as not yet published", () => {
     render(<MeasuresCard {...props} selectedYear={2031} />);
     expect(screen.getByText("Results for 2031-32 are not yet published.")).toBeInTheDocument();
+  });
+
+  it("takes its focus from By age's group: the compare option and the dumbbell follow it", () => {
+    const { unmount } = render(<TrendCard {...props} selectedYear={2029} group="25-34" />);
+    expect(screen.getByRole("button", { name: /^Options: 25 to 34 vs all/ })).toBeInTheDocument();
+    unmount();
+    render(<MeasuresCard {...props} selectedYear={2028} group="pensioners" />);
+    expect(screen.getByRole("button", { name: /^Options: Pensioners/ })).toBeInTheDocument();
   });
 
   it("draws every year shown, whatever year is selected", () => {
@@ -216,5 +226,30 @@ describe("single-year bars", () => {
     expect(fitRange(-1118, 821).ticks).toContain(0);
     // A maximum on a step still gets room above it
     expect(fitRange(0, 800).domain[1]).toBeGreaterThan(800);
+  });
+});
+
+describe("the change-by-year helpers", () => {
+  const row = (reform_id, year, mean_change) => ({ reform_id, year, age_band: "16-24", mean_change, sample_size: 500, people: 100 });
+  const policies = [
+    { id: "a", seriesKey: "measure:a", name: "A" },
+    { id: "b", seriesKey: "measure:b", name: "B" },
+  ];
+  const rows = [
+    row("a", 2026, 50), row("b", 2026, 10),
+    row("a", 2027, 60), row("b", 2027, 10),
+    row("a", 2028, 60), row("b", 2028, -200),
+  ];
+
+  it("adds each measure's own change for the group, and names the measure behind the big step", async () => {
+    const { groupMeasureSeries, stepAnnotations, topParts, cumulate } = await import("./youngPeopleData");
+    const series = groupMeasureSeries(rows, policies, ["a", "b"], [2026, 2027, 2028, 2029]);
+    expect(series.map((point) => point.net)).toEqual([60, 70, -140, null]);
+    expect(series[2]["measure:b"]).toBe(-200);
+    // 2027-28 to 2028-29 falls by 210, from b alone; the 10 rise is too small to name
+    expect(stepAnnotations(series)).toEqual([{ year: 2028, from: 2027, step: -210, value: -140, measureId: "b" }]);
+    expect(topParts(series[2]).map((part) => part.id)).toEqual(["b", "a"]);
+    // A running total stops at a gap, never reading it as zero
+    expect(cumulate(series, ["net"]).map((point) => point.net)).toEqual([60, 130, -10, null]);
   });
 });

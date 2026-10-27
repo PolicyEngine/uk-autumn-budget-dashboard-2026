@@ -224,7 +224,8 @@
   margin-bottom: 28px;
 }
 
-.obr-controls .obr-view-switch {
+.obr-controls .obr-view-switch,
+.obr-controls .obr-view-toggle {
   margin-left: auto;
 }
 

@@ -2,7 +2,6 @@ import { Fragment, useState } from "react";
 import { buildChartCsv } from "../../utils/chartCsv";
 import { useNarrowViewport } from "../../utils/chartTheme";
 import {
-  SINGLE_YEAR_METHOD,
   groupTotals,
   money,
   programmeGroups,
@@ -11,7 +10,12 @@ import {
   signedMoney,
 } from "../../utils/singleYear";
 import ChartDownloadMenu from "../ChartDownloadMenu";
-import Disclosure from "../Disclosure";
+import ChartMoreInfo from "../ChartMoreInfo";
+import { HOUSEHOLD_ABOUT_ID, METHOD_ANCHORS } from "../methodology/anchors";
+
+// A row's note from the API, without any internal constant's name in
+// brackets ("(COUNCIL_TAX_BAND_D)")
+const plainNote = (text) => String(text ?? "").replace(/\s*\([A-Z][A-Z0-9_]{3,}\)/g, "");
 import { downloadFile } from "../../utils/downloadFile";
 import TitleIcon from "../TitleIcon";
 
@@ -26,7 +30,7 @@ const changeClass = (value) => {
  * Breakdown of household net income, laid out as Spring Statement 2026's
  * personal calculator: Before | After | Change for market income, taxes
  * (as negative amounts), benefits and pension contributions, then net
- * income. Each top row opens to its taxes or benefits, closed at first.
+ * income. Each top row shows its taxes or benefits, open at first.
  * Net income shows its before and after only: its change is the headline
  * card above (each fact once). On a phone the table is Item | Change,
  * and each row opens to its before and after too.
@@ -45,8 +49,11 @@ const changeClass = (value) => {
  */
 export default function ProgrammeTable({ programmes, totals, bars = [], yearLabel, engine = {} }) {
   const narrow = useNarrowViewport();
-  const [open, setOpen] = useState(() => new Set());
   const groups = groupTotals(roundProgrammeGroups(programmeGroups(programmes), totals, bars));
+  // Open at first: each group shows its taxes or benefits
+  const [open, setOpen] = useState(
+    () => new Set(groups.filter((group) => (group.rows ?? []).length > 0).map((group) => group.id)),
+  );
   const notes = programmeNotes(groups);
   const title = `Breakdown of household net income, ${yearLabel}`;
   const toggle = (id) =>
@@ -190,39 +197,20 @@ export default function ProgrammeTable({ programmes, totals, bars = [], yearLabe
           </tbody>
         </table>
       </div>
-      <Disclosure inCard title="About these figures" contentClassName="breakdown-about">
-        {notes.length > 0 && (
-          <>
-            <h4 className="breakdown-about-heading">Rows in the table</h4>
-            <dl className="breakdown-notes">
-              {notes.map((item) => (
-                <div key={item.id}>
-                  <dt>{item.label}</dt>
-                  <dd>{item.note}</dd>
-                </div>
-              ))}
-            </dl>
-            <h4 className="breakdown-about-heading">How it is calculated</h4>
-          </>
-        )}
-        <dl className="breakdown-notes">
-          {SINGLE_YEAR_METHOD.map(([term, text]) => (
-            <div key={term}>
-              <dt>{term}</dt>
-              <dd>{text}</dd>
-            </div>
-          ))}
-          {engine.policyengine && (
-            <div>
-              <dt>Versions</dt>
-              <dd>
-                policyengine {engine.policyengine}
-                {engine["policyengine-uk"] ? `, policyengine-uk ${engine["policyengine-uk"]}` : ""}.
-              </dd>
-            </div>
-          )}
-        </dl>
-      </Disclosure>
+      <div id={HOUSEHOLD_ABOUT_ID} className="chart-footer">
+        <ChartMoreInfo
+          info={{
+            // Only how this table's own rows are estimated; the household
+            // calculation's method is in Methodology
+            how: notes.map((item) => (
+              <span key={item.id}>
+                <strong>{item.label}</strong>: {plainNote(item.note)}
+              </span>
+            )),
+            method: { anchor: METHOD_ANCHORS.householdCalc, label: "How the household calculation works" },
+          }}
+        />
+      </div>
     </div>
   );
 }

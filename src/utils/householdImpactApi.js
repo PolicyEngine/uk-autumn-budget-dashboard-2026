@@ -408,6 +408,19 @@ function rateParts(raw) {
   };
 }
 
+/**
+ * Net income's parts at each sweep point, before and after, in £ with
+ * taxes negative: {names, before: [{part: £}], after: [...]}, or null when
+ * the answer has none (an API from before they were added), so the page
+ * draws net income alone.
+ */
+function netIncomeParts(raw, count) {
+  if (!raw || !Array.isArray(raw.parts) || !Array.isArray(raw.baseline) || !Array.isArray(raw.reform)) return null;
+  if (raw.baseline.length !== count || raw.reform.length !== count) return null;
+  const point = (values) => Object.fromEntries(raw.parts.map((name) => [name, num(values?.[name])]));
+  return { names: raw.parts, before: raw.baseline.map(point), after: raw.reform.map(point) };
+}
+
 function normaliseSweep(raw) {
   if (!raw || !Array.isArray(raw.points) || raw.points.length < 2) return null;
   const points = raw.points.map((point) => ({
@@ -426,6 +439,7 @@ function normaliseSweep(raw) {
       after: num(rate.reform),
     })),
     parts: rateParts(raw.marginal_rate_parts),
+    netParts: netIncomeParts(raw.net_income_parts, points.length),
     own: own
       ? {
           income: num(own.employment_income),

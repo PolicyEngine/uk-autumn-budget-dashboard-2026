@@ -23,7 +23,7 @@
   font-family: inherit;
   font-size: var(--fs-small);
   color: var(--pe-gray-700);
-  background: white;
+  background: var(--c-surface);
   border: 1px solid var(--pe-gray-300);
   border-radius: var(--pe-radius-md);
   cursor: pointer;
@@ -139,7 +139,7 @@
 
 .publication-tooltip {
   padding: 8px 10px;
-  background: white;
+  background: var(--c-surface);
   border: 1px solid var(--c-grid);
   border-radius: 4px;
   font-size: var(--fs-small);
@@ -154,4 +154,331 @@
   font-weight: 400;
   color: var(--c-notice-text);
   font-size: 0.85em;
+}
+
+/* Loading placeholders (ViewSkeleton.jsx, LoadingSkeleton.jsx): each view's
+   cards in their own shape (title, pill, faint axes and marks) under the
+   view's heading, with one shimmer passing over them */
+.skeleton-view {
+  padding: 0 0 24px;
+}
+
+.skeleton-caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-500);
+}
+
+.skeleton-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--c-muted-fill);
+  border-top-color: var(--band-teal);
+  border-radius: 50%;
+  animation: skeleton-spin 0.9s linear infinite;
+}
+
+.skeleton-section + .skeleton-section {
+  margin-top: 32px;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.skeleton-grid.is-examples {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.skeleton-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  padding: 20px 24px 24px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--pe-surface);
+}
+
+.skeleton-card.is-wide {
+  grid-column: 1 / -1;
+}
+
+/* One soft light passing over every card */
+.skeleton-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--pe-surface) 70%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 250% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.skeleton-head,
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.skeleton-line,
+.skeleton-pill,
+.skeleton-dot,
+.skeleton-plot {
+  display: block;
+  border-radius: 6px;
+  background: var(--c-muted-fill);
+}
+
+.skeleton-line {
+  height: 10px;
+}
+
+.skeleton-line.is-title {
+  width: 52%;
+  height: 16px;
+}
+
+.skeleton-line.is-subtitle {
+  width: 70%;
+}
+
+.skeleton-line.is-figure {
+  width: 84px;
+  height: 22px;
+}
+
+.skeleton-pill {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+}
+
+.skeleton-dot {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.skeleton-text {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skeleton-shape {
+  display: block;
+  width: 100%;
+  height: 220px;
+}
+
+.skeleton-card.is-wide .skeleton-shape {
+  height: 300px;
+}
+
+.skeleton-shape.is-spark {
+  width: 80px;
+  height: 34px;
+}
+
+.skeleton-shape .skeleton-grid {
+  stroke: var(--c-grid);
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.skeleton-shape .skeleton-axis {
+  stroke: var(--c-muted-fill);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.skeleton-shape rect,
+.skeleton-shape circle {
+  fill: var(--c-muted-fill);
+}
+
+.skeleton-shape polyline {
+  fill: none;
+  stroke: var(--c-muted-fill);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.skeleton-plot {
+  width: 100%;
+}
+
+.skeleton-plot-block {
+  width: 100%;
+}
+
+/* The view's sub-tab row, drawn before the real one exists */
+.skeleton-sub-tabs .sub-tab[aria-selected="true"] {
+  background: var(--pe-teal-50);
+  box-shadow: inset 0 -2px 0 var(--band-teal);
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@keyframes skeleton-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-card::after,
+  .skeleton-spinner {
+    animation: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .skeleton-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .skeleton-grid.is-examples {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .skeleton-card.is-wide .skeleton-shape {
+    height: 220px;
+  }
+}
+
+/* Before the page's code runs, on a link to a view: the server's landing
+   page is hidden (LandingPage.css), so the view's tab bar shows with the
+   linked view chosen, and that view's placeholder (bootView.js) */
+.boot-skeleton,
+.boot-variant {
+  display: none;
+}
+
+html[data-deep-link] .boot-skeleton {
+  display: block;
+}
+
+/* ...but not for a past event (utils/landing.js): they are this Budget's
+   views' placeholders */
+html[data-past-event] .boot-skeleton {
+  display: none;
+}
+
+/* Its copy of the tab bar, then the panel's own top space, as the view's */
+.boot-skeleton .boot-view-tabs + .skeleton-caption {
+  margin-top: 32px;
+}
+
+.boot-skeleton .boot-view-tabs + .sub-tabs-band {
+  margin-top: 0;
+}
+
+/* The chosen tab, as the real bar's sliding indicator marks it */
+.boot-view-tabs .view-tab[aria-selected="true"] {
+  background: var(--pe-teal-50);
+  box-shadow: inset 0 -3px 0 var(--band-teal);
+}
+
+html[data-boot-view="dashboard:finances"] .boot-variant[data-boot-variant="dashboard:finances"],
+html[data-boot-view="dashboard:all"] .boot-variant[data-boot-variant="dashboard:all"],
+html[data-boot-view="dashboard:age"] .boot-variant[data-boot-variant="dashboard:age"],
+html[data-boot-view="dashboard:living"] .boot-variant[data-boot-variant="dashboard:living"],
+html[data-boot-view="dashboard:poverty"] .boot-variant[data-boot-variant="dashboard:poverty"],
+html[data-boot-view="household"] .boot-variant[data-boot-variant="household"],
+html[data-boot-view="outlook:living"] .boot-variant[data-boot-variant="outlook:living"],
+html[data-boot-view="outlook:poverty"] .boot-variant[data-boot-variant="outlook:poverty"],
+html[data-boot-view="outlook:forecast"] .boot-variant[data-boot-variant="outlook:forecast"],
+html[data-boot-view="policies"] .boot-variant[data-boot-variant="policies"],
+html[data-boot-view="methodology"] .boot-variant[data-boot-variant="methodology"] {
+  display: block;
+}
+
+
+/* UpdateToast.jsx: a note in the bottom corner, fading out on its own */
+.update-toast-region {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1200;
+  pointer-events: none;
+}
+
+.update-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 14px;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-700);
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--pe-radius-md);
+  box-shadow: var(--pe-shadow-md);
+  pointer-events: auto;
+  animation: update-toast-life 4s ease-in-out forwards;
+}
+
+.update-toast-close {
+  display: inline-flex;
+  padding: 4px;
+  color: var(--pe-gray-500);
+  background: none;
+  border: 0;
+  border-radius: var(--pe-radius-sm);
+  cursor: pointer;
+}
+
+.update-toast-close:hover,
+.update-toast-close:focus-visible {
+  color: var(--pe-gray-700);
+}
+
+@keyframes update-toast-life {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  8%,
+  85% {
+    opacity: 1;
+    transform: none;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .update-toast {
+    animation: none;
+  }
 }

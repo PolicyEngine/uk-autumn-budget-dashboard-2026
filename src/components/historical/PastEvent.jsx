@@ -299,7 +299,8 @@ export function PastEventPopulation({ published, views, selectedPolicies, select
   return (
     <>
       {!figuresNotice && note}
-      <SectionHeading title="Coverage" subtitle="How much of the event the scorecard's replay computed, and how much of it has figures here." />
+      {/* A heading's id is its title's slug unless given: "coverage" is the section's */}
+      <SectionHeading id="coverage-heading" title="Coverage" subtitle="How much of the event the scorecard's replay computed, and how much of it has figures here." />
       <section id="coverage" className="report-section">
         {views.coverage.value
           ? <CoveragePanel coverage={views.coverage.value} measures={catalogue.measures} />
@@ -321,6 +322,7 @@ export function PastEventPopulation({ published, views, selectedPolicies, select
             <BudgetaryImpactChart
               data={budgetData}
               selectedYear={selectedYear}
+              pastEvent
             />
             <p className="historical-sum-note">
               The net impact is the sum of the measures, each costed on its
