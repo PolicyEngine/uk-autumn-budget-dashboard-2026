@@ -109,7 +109,7 @@ describe("published measure catalogue in population views", () => {
     expect(catalogue.combinedId).toBeNull();
   });
 
-  it("lists each published measure by its short name, grouped by revenue effect, with no description, and excludes unavailable ones", () => {
+  it("lists each published measure by its short name in one flat list, raises first, with no group labels or description, and excludes unavailable ones", () => {
     const catalogue = catalogueFor(measureCatalogueFixture());
     const toggle = vi.fn();
     render(withCatalogue(catalogue, <PolicySelector selectedPolicies={[ALPHA, BETA]} onPolicyToggle={toggle} />));
@@ -119,8 +119,13 @@ describe("published measure catalogue in population views", () => {
       expect(screen.getByText(measure.label)).toBeInTheDocument();
       expect(screen.queryByText(measure.description)).not.toBeInTheDocument();
     }
-    expect(screen.getByRole("group", { name: "Raises revenue" })).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "Costs revenue" })).toBeInTheDocument();
+    expect(screen.queryByText("Raises revenue")).toBeNull();
+    expect(screen.queryByText("Costs revenue")).toBeNull();
+    expect(document.querySelector(".policy-group")).toBeNull();
+    // Raises revenue first, then costs, in the catalogue's order
+    const order = (measure) => ["revenue", "cost", "neutral"].indexOf(measure.direction);
+    const expected = [...catalogue.displayable].sort((a, b) => order(a) - order(b)).map((m) => m.label);
+    expect([...document.querySelectorAll(".policy-selector-name")].map((node) => node.textContent)).toEqual(expected);
     expect(screen.queryByText(catalogue.byId.get(HELD).name)).not.toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("checkbox")[0]);
     expect(toggle).toHaveBeenCalledWith(catalogue.displayable[0].id);

@@ -91,21 +91,6 @@
   padding: 6px 8px;
 }
 
-/* "Raises revenue", "Costs revenue": small labels over their policies */
-.policy-group + .policy-group {
-  margin-top: 4px;
-  padding-top: 4px;
-  border-top: 1px solid var(--pe-gray-100);
-}
-
-.policy-group-label {
-  margin: 0;
-  padding: 6px 8px 2px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  color: var(--pe-gray-500);
-}
-
 /* One compact row per policy: checkbox, colour, short name, info */
 .policy-item {
   display: flex;

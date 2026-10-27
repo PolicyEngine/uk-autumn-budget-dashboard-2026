@@ -9,8 +9,9 @@ import "./MeasureKey.css";
  * section of charts) colours by, in place of a long legend per card.
  *
  * - Each chip is a measure's colour and short name (its full name in the
- *   tooltip and accessible name), grouped "Raises revenue" then "Costs
- *   revenue", then the net line. The colour, group and order are the
+ *   tooltip and accessible name), in one unlabelled row: measures that
+ *   raise revenue, then those that cost it, then the net line. The colour,
+ *   group and order are the
  *   catalogue's (#104); the short name is policyDetails.js's, while it
  *   describes the published measure, else the published name.
  * - Measures with no effect in the year shown (`muted`, legendMembership)
@@ -233,10 +234,8 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
   const listId = useId();
   const active = members.filter((member) => !member.muted);
   const muted = members.filter((member) => member.muted);
-  const groups = [
-    ["Raises revenue", active.filter(raises)],
-    ["Costs revenue", active.filter((member) => !raises(member))],
-  ].filter(([, items]) => items.length > 0);
+  // One flat row, no group labels: raising measures first, then costing ones
+  const ordered = [...active.filter(raises), ...active.filter((member) => !raises(member))];
   return (
     <div
       className={`measure-key is-${placement}`}
@@ -245,11 +244,10 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
     >
       {label && <span className="measure-key-title">{label}</span>}
       <div className="measure-key-scroll">
-        {groups.map(([heading, items]) => (
-          <div key={heading} className="measure-key-group">
-            <span className="measure-key-heading">{heading}</span>
+        {ordered.length > 0 && (
+          <div className="measure-key-group">
             <ul className="measure-key-chips">
-              {items.map((member) => (
+              {ordered.map((member) => (
                 <Chip
                   key={member.id}
                   member={member}
@@ -261,7 +259,7 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
               ))}
             </ul>
           </div>
-        ))}
+        )}
         {(netLabel || muted.length > 0 || pinnedLive.length > 0) && (
           <div className="measure-key-group measure-key-extra">
             <ul className="measure-key-chips">
