@@ -134,7 +134,6 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
       </>
     ),
     info: {
-      definitionsTitle: "What each measure is",
       definitions: seriesList.filter((s) => MEASURES[s.key]).map((s) => ({ term: seriesName(s), meaning: MEASURES[s.key] })),
       caveats: seriesList.flatMap((s) => [NOT_OBR[s.key], SERIES_NOTES[s.key]]),
       sources: [

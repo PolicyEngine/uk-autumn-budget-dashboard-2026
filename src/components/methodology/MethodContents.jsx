@@ -27,7 +27,7 @@ export function goToSection(id) {
 }
 
 /**
- * Bring an anchor in this view into sight: open the "More info" it is
+ * Bring an anchor in this view into sight: open the topic it is
  * folded in, then, once it is laid out, scroll to it.
  */
 export function revealAnchor(id, { smooth = true } = {}) {

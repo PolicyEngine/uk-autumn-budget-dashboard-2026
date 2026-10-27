@@ -85,7 +85,7 @@ describe("PolicyCards", () => {
     const source = within(card).getByRole("link", { name: /Warm Home Discount/ });
     expect(source).toHaveAttribute("target", "_blank");
     expect(source).toHaveAttribute("rel", "noopener noreferrer");
-    const toggle = within(card).getByRole("button", { name: "How it is modelled" });
+    const toggle = within(card).getByRole("button", { name: "About this result" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
@@ -173,10 +173,10 @@ describe("how it is modelled (measureModelling.js)", () => {
   const caveat = "The base is likely 1.5 to 1.7 times too high.";
   const modelled = (description, id = ALPHA) => ({ ...catalogue.byId.get(ALPHA), id, description: `${description} ${caveat}` });
 
-  // Open a card's "How it is modelled" and return it
+  // Open a card's "About this result" and return it
   const open = () => {
     const details = document.querySelector(".policy-card-details");
-    fireEvent.click(within(details).getByRole("button", { name: "How it is modelled" }));
+    fireEvent.click(within(details).getByRole("button", { name: "About this result" }));
     return details;
   };
 
@@ -193,7 +193,7 @@ describe("how it is modelled (measureModelling.js)", () => {
     const policy = published("badr_lifetime_limit_cut", "Business Asset Disposal Relief restricted", "revenue");
     render(<PolicyCards policies={[policy]} selectedPolicies={[policy.id]} />);
     const details = document.querySelector(".policy-card-details");
-    expect(within(details).getByRole("button", { name: "How it is modelled" })).toHaveAttribute("aria-expanded", "false");
+    expect(within(details).getByRole("button", { name: "About this result" })).toHaveAttribute("aria-expanded", "false");
     expect(details.querySelector(".disclosure-preview")).toHaveTextContent(/Caveats/);
     expect(details.querySelector(".disclosure-chip")).toBeNull();
     cleanup();

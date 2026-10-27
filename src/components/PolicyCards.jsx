@@ -9,7 +9,7 @@ import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
 import { MODELLING_LIMITS, measureModellingFacts, sentences } from "../utils/measureModelling";
 
 /** The one name of every Policies card's disclosure. */
-export const HOW_IT_IS_MODELLED = "How it is modelled";
+export const HOW_IT_IS_MODELLED = "About this result";
 
 // A details sentence that states a limitation: one of the published
 // limitations' patterns, or the words the details use for them
@@ -17,7 +17,7 @@ const LIMIT_WORDS = /\bapproximate\b|\bnot modelled\b|\bleaves? out\b|\bnot (?:i
 const isLimit = (sentence) => LIMIT_WORDS.test(sentence) || MODELLING_LIMITS.some(({ pattern }) => pattern.test(sentence));
 
 /**
- * A measure's "How it is modelled", in About this chart's sections: its
+ * A measure's "About this result" (how it is modelled), in About this chart's sections: its
  * modelling details and fact labels as How it's calculated, and as Caveats
  * every stated limitation the card does not already show and any modelling
  * note. A limitation is said once: in the details' own words where they

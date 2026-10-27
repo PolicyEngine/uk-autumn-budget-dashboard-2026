@@ -2306,9 +2306,9 @@ body {
   display: none;
 }
 
-/* The footer: "How it is modelled" and "See its effect" on one line; the
+/* The footer: "About this result" and "See its effect" on one line; the
    opened text runs the full width of the card beneath them, in full */
-/* The footer, stacked: "How it is modelled" across the card (the same
+/* The footer, stacked: "About this result" across the card (the same
    height on every card, so the rows line up), then the source on the left
    and "See its effect" on the right */
 .policy-card-foot {

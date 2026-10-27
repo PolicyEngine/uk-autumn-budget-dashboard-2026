@@ -235,7 +235,7 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
     return niceRange(Math.min(...values), Math.max(...values), { maxSteps: 5 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, policies, selectedPolicies]);
-  // The measures with no effect at these ages, for More info
+  // The measures with no effect at these ages, for About this chart
   const members = useMemo(
     () =>
       legendMembership(catalogue, selectedPolicies, (id) =>

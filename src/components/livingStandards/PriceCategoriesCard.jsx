@@ -139,7 +139,6 @@ export default function PriceCategoriesCard({ view = "chart", onViewChange }) {
     info: {
       shows: `How much higher each price index, and average weekly earnings, stood each month than in ${baseMonth}. This is history to the latest ONS release, not the OBR forecast.`,
       how: [`Each month's level divided by its ${baseMonth} level, minus one; calculated on this page from the levels the ONS publishes.`],
-      definitionsTitle: "What each line covers",
       definitions: allLines.map((l) => ({ term: l.name, meaning: l.meaning })),
       caveats: [
         endsNote(series, latest),

@@ -17,7 +17,7 @@ import "./MeasureKey.css";
  * - Measures with no effect in the year shown (`muted`, legendMembership)
  *   are folded into one "+N with no effect" chip that opens them; they stay
  *   in the key, so no measure silently disappears. Why each is £0 stays in
- *   the card's More info.
+ *   the card's About this chart.
  * - Clicking a chip pins it: the pinned measures stay full colour in every
  *   chart that reads the same key and the others fade. Clicking more chips
  *   adds them to the set; clicking a pinned chip takes it out, and "Clear"

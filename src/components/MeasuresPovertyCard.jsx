@@ -5,7 +5,7 @@
 // step closes the gap; the package total ends it. People are the change in
 // the rate times the outlook's population that year (povertyPeople.js);
 // without a population the card falls back to percentage points
-// throughout. Measures that move no one are one line in More info, not
+// throughout. Measures that move no one are one line in About this chart, not
 // empty rows. A run that does not carry the chosen measure (one written
 // before the poverty and inequality measures) is never a step of 0: the
 // card then shows the headline measure, and says so.

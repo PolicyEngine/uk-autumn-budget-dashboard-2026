@@ -192,7 +192,7 @@ function MethodologyTab({ onShowTab }) {
             </>
           }
         >
-          <Topic title="More info" preview="Dataset · Survey · Weights · Projection · Small groups">
+          <Topic title="The dataset" preview="Dataset · Survey · Weights · Projection · Small groups">
             <FactList
               items={[
                 [
@@ -250,7 +250,7 @@ function MethodologyTab({ onShowTab }) {
             </>
           }
         >
-          <Topic title="More info" preview="Model · Baseline · Static · Years · Prices">
+          <Topic title="The model" preview="Model · Baseline · Static · Years · Prices">
             <FactList
               items={[
                 [

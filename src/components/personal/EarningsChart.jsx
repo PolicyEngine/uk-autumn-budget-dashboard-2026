@@ -356,7 +356,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             <span className="title-text">{title}</span>
           </h3>
           {/* One plain sentence at your salary; what the chart shows is in
-              More info */}
+              About this chart */}
           <p className="chart-description">{youSentence ?? description}</p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={viewTitle} />

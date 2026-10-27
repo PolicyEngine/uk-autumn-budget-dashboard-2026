@@ -284,7 +284,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
               <NoBreakYear text={chartTitle} />
             </span>
           </h3>
-          {/* One plain sentence; what the chart measures is in More info */}
+          {/* One plain sentence; what the chart measures is in About this chart */}
           <p className="chart-description">
             {(nothingChanges ? null : decileSentence(data, "relative", laterNote)) ?? (
               <>

@@ -169,7 +169,7 @@ export function povertyMetric({ basis, housing, group }) {
     noChange: `The selected policies do not change the ${children ? "child " : ""}poverty rate in any year shown.`,
     // "Change in absolute poverty (before housing costs), pp": the card's short subtitle
     short: `Change in ${basis} ${children ? "child " : ""}poverty (${housing.toUpperCase()}), pp`,
-    // What the long description adds, for More info
+    // What the long description adds, for About this chart
     detail:
       (basis === "relative" ? "The relative line is 60% of median income in the same year, so it moves with the policies' effect on the median. " : "") +
       (children ? "Children are dependent children as DWP counts them: under 16, or 16 to 19 in full-time non-advanced education." : ""),
@@ -511,7 +511,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
             <span className="title-text">{metric.title}</span>
           </h3>
           {/* One short line: the selected year's figure; what the chart
-              measures is in More info */}
+              measures is in About this chart */}
           <p className="chart-description">
             {selected?.value != null ? (
               <>

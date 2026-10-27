@@ -57,20 +57,22 @@
   color: var(--pe-gray-400);
 }
 
-/* Definitions: each term in semibold on its own line, its meaning muted below */
+/* Definitions: compact rows, the term in semibold, a dash, then its meaning */
 .info-terms {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
   margin: 0;
 }
 
 .info-term dt {
+  display: inline;
   font-weight: 600;
   color: var(--pe-gray-800);
 }
 
 .info-term dd {
+  display: inline;
   margin: 0;
   color: var(--pe-gray-600);
 }
@@ -83,11 +85,6 @@
 .info-date,
 .info-source-note {
   color: var(--pe-gray-600);
-}
-
-.info-sources {
-  list-style: none;
-  padding-left: 0;
 }
 
 /* "More in Methodology:" the card's section and its shared terms, last */

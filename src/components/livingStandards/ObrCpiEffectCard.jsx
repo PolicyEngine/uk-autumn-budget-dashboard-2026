@@ -161,6 +161,18 @@ function LoadedCard({ effect, view, onViewChange, onShowTab }) {
         {`: ${[effect.sourceTable, effect.page && `page ${effect.page}`, effect.sourceFile].filter(Boolean).join(", ")}.`}
       </>
     ),
+    // About this chart, in the shared sections
+    info: {
+      shows: about,
+      caveats: notes,
+      sources: [
+        {
+          label: `OBR, ${effect.efo}`,
+          href: effect.efoUrl || undefined,
+          note: [effect.sourceTable, effect.page && `page ${effect.page}`, effect.sourceFile].filter(Boolean).join(", "),
+        },
+      ],
+    },
     controls: hasMeasures && (
       <ControlBar
         name={title}

@@ -1,5 +1,5 @@
 // One short plain sentence per chart card (Vahid, 26 October): the
-// finding with its number; definitions sit in each card's More info.
+// finding with its number; definitions sit in each card's About this chart.
 
 const gbp = (v) => `£${Math.round(Math.abs(v)).toLocaleString("en-GB")}`;
 

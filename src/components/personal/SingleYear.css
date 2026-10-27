@@ -717,7 +717,7 @@
   }
 }
 
-/* No effect: listed in the card's More info row */
+/* No effect: listed in the card's About this chart row */
 .no-effect-title {
   margin: 0;
   font-size: var(--fs-caption);
