@@ -7,7 +7,7 @@ import { fixtureJson } from "../../test/publicationFixture";
 import { mostlyFromSpending } from "./SingleYearResults";
 import { chooseOption, optionsLabel } from "../../test/optionsPills";
 import { WIZARD_DEFAULTS, resetSavedWizard, spendingAssumed } from "../HouseholdCalculator";
-import { clearHouseholdImpactCache } from "../../hooks/useHouseholdImpact";
+import { clearHouseholdImpactCache, setHouseholdRetryPolicy } from "../../hooks/useHouseholdImpact";
 import { clearBasisIncomeCache } from "../../hooks/useBasisIncome";
 import { presetRequests, resetPresetResults } from "../../utils/householdPresets";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
@@ -45,6 +45,9 @@ const json = (value, status = 200) =>
 beforeEach(() => {
   resetSavedWizard();
   clearHouseholdImpactCache();
+  // A service that fails is asked again (starting up): milliseconds apart
+  // here, not the real 5 s
+  setHouseholdRetryPolicy({ delayMs: 1, maxRetryAfterMs: 1, minAttemptMs: 1 });
   clearBasisIncomeCache();
   resetPresetResults();
   window.history.replaceState({}, "", "/?tab=personal");
