@@ -43,8 +43,9 @@
       },
       "name": "Combined: Business Asset Disposal Relief restricted, Zero VAT on domestic electricity, Fuel duty rises deferred, VAT cut on road fuel, State Pension income tax protection, Threshold freeze to 2031-32, Warm Home Discount top-up",
       "outputs_sha256": "5efdf847d8617b4e45b982529cfbb47d7aa17a742de70bbebb1045c8c65c2aa0",
+      "reason": "Its members include badr_lifetime_limit_cut, which is withdrawn; the package of the remaining six replaces it.",
       "receipt_sha256": "a9b8ab00cb7df58f1d288ba1a752f4ac10ba52fee270071a53630a22a4aaaeaf",
-      "status": "provisional",
+      "status": "withdrawn",
       "unsupported_years": [],
       "years": [
         2026,
@@ -108,12 +109,13 @@
       "execution_identity_sha256": "cf42a8764dc06bf295f5be82d0c1ce76ec57d02b1d65fae52b9b18b7df53d713",
       "name": "Business Asset Disposal Relief restricted",
       "outputs_sha256": "5572d10c2a22a06de8d82bc9f4600d7b217caa73d8356c4929bd67a18a97592c",
+      "reason": "Taken out of the candidate set by decision (27 October 2026); not a measure the page shows.",
       "receipt_sha256": "8e7bf278b9f477049405708ecd330f864989e14387e399e8a6896a755e74c1da",
       "reconciliation": {
         "responsiveness_status": "responsive",
         "summary_status": "awaiting_source"
       },
-      "status": "provisional",
+      "status": "withdrawn",
       "unsupported_years": [],
       "years": [
         2026,
@@ -270,8 +272,8 @@
     }
   },
   "release": "uk-autumn-budget-2026",
-  "revision": 2,
+  "revision": 4,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [],
-  "updated_at": "2026-10-26T22:11:34.907945+00:00"
+  "updated_at": "2026-10-27T11:43:24.842593+00:00"
 }
