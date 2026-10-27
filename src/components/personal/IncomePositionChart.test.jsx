@@ -1,7 +1,7 @@
 // "Where you sit" reads the package's UK distribution only under the
 // manifest's combined key, and never fetches the root tenth tables (#228).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { buildMeasureCatalogue } from "../../utils/measureCatalogue";
 import { fixtureJson } from "../../test/publicationFixture";
 import { selectionNotPublished } from "../../utils/geography/selection";
@@ -128,12 +128,43 @@ describe("Where you sit, for the published package (issue 228)", () => {
     await screen.findByText(/Your place in the distribution/);
     const legend = container.querySelector(".position-card .chart-legend");
     expect(legend).toBeTruthy();
-    const labels = [...legend.querySelectorAll(".grouped-legend-label")].map((node) => node.textContent);
+    const labels = [...legend.querySelectorAll(".series-toggle-label")].map((node) => node.textContent);
     expect(labels).toEqual([
-      expect.stringMatching(/^Your income tenth \(.+ tenth\)$/),
+      "Your income tenth",
       "Share of people at each income",
       "You",
       "Median and its half/double",
     ]);
+  });
+
+  it("keys the tenths card too, and each key item is a button that shows or hides its part", async () => {
+    served = { "income_distribution.csv": distribution(KEY), "income_mobility.csv": "" };
+    const { container } = await renderChart();
+    await screen.findByText(/Your place in the distribution/);
+    const [whereKey, gainsKey] = container.querySelectorAll(".position-card .chart-legend");
+    const chips = [...gainsKey.querySelectorAll("button.series-toggle-chip")];
+    expect(chips.map((chip) => chip.textContent)).toEqual(["Your income tenth", "Change for each tenth", "You"]);
+    expect(chips.every((chip) => chip.getAttribute("aria-pressed") === "true")).toBe(true);
+
+    // You off: the marker's label goes; on again: it comes back
+    const gains = () => container.querySelector("svg.position-gains");
+    expect(gains().textContent).toMatch(/You/);
+    fireEvent.click(chips[2]);
+    expect(chips[2].getAttribute("aria-pressed")).toBe("false");
+    expect(gains().textContent).not.toMatch(/You/);
+    fireEvent.click(chips[2]);
+    expect(gains().textContent).toMatch(/You/);
+
+    // The bars off: no bars drawn
+    const bars = () => gains().querySelectorAll("rect[rx]").length;
+    expect(bars()).toBe(10);
+    fireEvent.click(chips[1]);
+    expect(bars()).toBe(0);
+
+    // The curve off on the left card
+    const where = () => container.querySelector("svg.position-where");
+    expect(where().querySelectorAll("path").length).toBe(2);
+    fireEvent.click(whereKey.querySelectorAll("button.series-toggle-chip")[1]);
+    expect(where().querySelectorAll("path").length).toBe(0);
   });
 });

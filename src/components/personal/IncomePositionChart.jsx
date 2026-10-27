@@ -34,7 +34,7 @@ import useElementWidth from "../../hooks/useElementWidth";
 import useDataFile from "../../hooks/useDataFile";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartMoreInfo from "../ChartMoreInfo";
-import GroupedLegend from "../GroupedLegend";
+import SeriesToggle from "../SeriesToggle";
 import { METHOD_ANCHORS } from "../methodology/anchors";
 import TitleIcon from "../TitleIcon";
 import SectionHeading from "../SectionHeading";
@@ -215,6 +215,11 @@ function spreadTip({ income, x, youIncome, curve, position, side, anchors, edges
   return { income, text: `${formatPounds(Math.round(income / 100) * 100)}: ${count} in 100 people live in a household with a lower income (adjusted for size)${near}.` };
 }
 
+/** The Spread view's key items, each shown or hidden by its chip. */
+const WHERE_KEYS = ["tenth", "curve", "you", "median"];
+/** The tenths view's key items, each shown or hidden by its chip. */
+const GAINS_KEYS = ["tenth", "bars", "you"];
+
 /**
  * The dashed lines at half, once and twice the median, labelled in full
  * where a doubling spans room for "Twice the median", else "Half" and
@@ -229,7 +234,8 @@ function medianAnchors(median, x) {
   ];
 }
 
-function WhereView({ width, narrow, curves, position, side, decile }) {
+function WhereView({ width, narrow, curves, position, side, decile, shown = WHERE_KEYS }) {
+  const on = (key) => shown.includes(key);
   const left = narrow ? 34 : 44;
   const right = 14;
   const plotW = Math.max(width - left - right, 80);
@@ -293,7 +299,7 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
   return (
     <div className="position-hover" role="group" {...hover} aria-label="Hover or use the arrow keys for each income">
     <svg className="position-where" width={width} height={height} aria-hidden="true">
-      {decile && (
+      {decile && on("tenth") && (
         <rect
           x={x(bounds[decile - 1])}
           y={top}
@@ -304,7 +310,10 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
       )}
       {anchors.map((a) => (
         <g key={a.label}>
-          <line x1={x(a.value)} x2={x(a.value)} y1={top} y2={top + plotH} stroke={CHART_COLOURS.reference} strokeWidth={1} strokeDasharray={REFERENCE_DASH} opacity={0.7} />
+          {/* Off, the dashed line goes; its £ and name stay as the axis */}
+          {on("median") && (
+            <line x1={x(a.value)} x2={x(a.value)} y1={top} y2={top + plotH} stroke={CHART_COLOURS.reference} strokeWidth={1} strokeDasharray={REFERENCE_DASH} opacity={0.7} />
+          )}
           <text x={x(a.value)} y={top + plotH + 16} textAnchor="middle" {...TICK_STYLE}>
             {formatPoundsShort(Math.round(a.value / 1000) * 1000)}
           </text>
@@ -313,8 +322,12 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
           </text>
         </g>
       ))}
-      <path d={area} fill={colour} fillOpacity={0.22} stroke="none" />
-      <path d={outline} fill="none" stroke={colour} strokeWidth={2.25} strokeDasharray={side === "after" ? undefined : BEFORE_DASH} />
+      {on("curve") && (
+        <>
+          <path d={area} fill={colour} fillOpacity={0.22} stroke="none" />
+          <path d={outline} fill="none" stroke={colour} strokeWidth={2.25} strokeDasharray={side === "after" ? undefined : BEFORE_DASH} />
+        </>
+      )}
       <line x1={left} x2={left + plotW} y1={y(0)} y2={y(0)} stroke={CHART_COLOURS.axis} />
       <text x={left + plotW / 2} y={height - 4} textAnchor="middle" fill={AXIS_TITLE_STYLE.fill} fontSize={AXIS_TITLE_STYLE.fontSize} fontWeight={AXIS_TITLE_STYLE.fontWeight}>
         {narrow
@@ -322,12 +335,19 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
           : `Adjusted income ${side === "after" ? "after" : "before"} the policies (log scale)`}
       </text>
 
-      <line x1={youX} x2={youX} y1={36} y2={y(0)} stroke={TEXT} strokeWidth={1.75} />
-      <circle cx={youX} cy={y(youShare)} r={6} fill={side === "after" ? AFTER : CHART_COLOURS.surface} stroke={side === "after" ? CHART_COLOURS.surface : BEFORE} strokeWidth={2.5} />
-      {/* In the row above the plot, on the side with room, the line its leader */}
-      <Label x={youX + (onRight ? -6 : 6)} y={32} anchor={onRight ? "end" : "start"} size={13}>
-        {`You, ${formatPounds(youIncome)}`}
-      </Label>
+      {on("you") && (
+        <>
+          <line x1={youX} x2={youX} y1={36} y2={y(0)} stroke={TEXT} strokeWidth={1.75} />
+          {/* The dot sits on the curve, so it goes with it */}
+          {on("curve") && (
+            <circle cx={youX} cy={y(youShare)} r={6} fill={side === "after" ? AFTER : CHART_COLOURS.surface} stroke={side === "after" ? CHART_COLOURS.surface : BEFORE} strokeWidth={2.5} />
+          )}
+          {/* In the row above the plot, on the side with room, the line its leader */}
+          <Label x={youX + (onRight ? -6 : 6)} y={32} anchor={onRight ? "end" : "start"} size={13}>
+            {`You, ${formatPounds(youIncome)}`}
+          </Label>
+        </>
+      )}
       {tip && <line className="position-guide" x1={x(tip.income)} x2={x(tip.income)} y1={top} y2={y(0)} />}
     </svg>
     {tip && (
@@ -343,7 +363,8 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
 /* Who gains: the average change in each tenth                         */
 /* ------------------------------------------------------------------ */
 
-function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ownChange, grow }) {
+function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ownChange, grow, shown = GAINS_KEYS }) {
+  const on = (key) => shown.includes(key);
   const left = narrow ? 44 : 56;
   const right = 12;
   const plotW = Math.max(width - left - right, 80);
@@ -401,14 +422,17 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
         const shown = v * grow;
         const y0 = Math.min(y(shown), zeroY);
         const h = Math.max(Math.abs(y(shown) - zeroY), 0.5);
-        const mine = i + 1 === decile;
+        // Your tenth's column and darker bar only while its key item is on
+        const mine = i + 1 === decile && on("tenth");
         const hovered = cursor === i;
         return (
           <g key={i}>
             {mine && <rect x={left + slot * i + 1} y={top} width={slot - 2} height={plotH} fill={CHART_COLOURS.highlightBand} />}
             {hovered && !mine && <rect x={left + slot * i + 1} y={top} width={slot - 2} height={plotH} fill={CHART_COLOURS.hover} />}
             {/* The figures are in the tooltip, on hover, tap or the arrow keys */}
-            <rect x={cx - barW / 2} y={y0} width={barW} height={h} rx={2} fill={v >= 0 ? GAIN : LOSS} fillOpacity={mine || hovered ? 1 : UNSELECTED_OPACITY} />
+            {on("bars") && (
+              <rect x={cx - barW / 2} y={y0} width={barW} height={h} rx={2} fill={v >= 0 ? GAIN : LOSS} fillOpacity={mine || hovered ? 1 : UNSELECTED_OPACITY} />
+            )}
             <text x={cx} y={top + plotH + 16} textAnchor="middle" fontSize={11} fontWeight={mine ? 700 : 400} fill={mine ? CHART_COLOURS.highlight : CHART_COLOURS.tick}>
               {i + 1}
             </text>
@@ -424,7 +448,7 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
       <text x={left + plotW} y={top + plotH + 34} textAnchor="end" fontSize={11} fill={CHART_COLOURS.tick}>
         Top 10%
       </text>
-      {decile && (
+      {decile && on("you") && (
         <g>
           <line
             x1={left + slot * (decile - 1) + 4}
@@ -670,6 +694,9 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const [showAs, setShowAs] = useState("spread");
   const [compareBy, setCompareBy] = useState("tenths");
   const [unit, setUnit] = useState("pct");
+  // Which key items each card draws (its chips under the plot), all at first
+  const [whereShown, setWhereShown] = useState(WHERE_KEYS);
+  const [gainsShown, setGainsShown] = useState(GAINS_KEYS);
   const distribution = useFile(DISTRIBUTION_FILE, parseDistribution);
   const moves = useFile(MOBILITY_FILE, parseRecords);
   // The header's selection: one policy's own run, or the published combined
@@ -832,16 +859,40 @@ export default function IncomePositionChart({ net, household, year, policies, ye
       : compareRows.map((r) => `${r.label}: ${r.gbp !== null ? signedPounds(r.gbp) : "not published"}${r.pct !== null ? ` (${signedPct(r.pct, 2)})` : ""}`).join("; ");
 
   // The Spread view's key: your tenth's band, the curve, you, the dashed
-  // median lines (Rank draws no band and labels its own lines)
-  const whereLegend =
+  // median lines (Rank draws no band and labels its own lines). Each is a
+  // chip (SeriesToggle) that shows or hides it, as the other cards' keys.
+  const whereChips =
     showAs === "rank"
       ? []
       : [
-          ...(decile ? [{ key: "tenth", label: `Your income tenth (${tenthName(decile).toLowerCase()})`, color: CHART_COLOURS.tenthBand, type: "rect" }] : []),
-          { key: "curve", label: "Share of people at each income", color: side === "after" ? AFTER : BEFORE, type: "line", dash: side === "after" ? undefined : BEFORE_DASH },
-          { key: "you", label: "You", color: TEXT, type: "line" },
-          { key: "median", label: "Median and its half/double", color: CHART_COLOURS.reference, type: "line", dash: REFERENCE_DASH },
+          ...(decile ? [{ key: "tenth", label: "Your income tenth", short: "Your tenth", colour: CHART_COLOURS.tenthBand, shape: "block" }] : []),
+          { key: "curve", label: "Share of people at each income", short: "People at each income", colour: side === "after" ? AFTER : BEFORE, dash: side === "after" ? undefined : BEFORE_DASH },
+          { key: "you", label: "You", colour: TEXT },
+          { key: "median", label: "Median and its half/double", short: "Median, half, double", colour: CHART_COLOURS.reference, dash: REFERENCE_DASH },
         ];
+  // The tenths view's key: your tenth (its column and darker bar), the
+  // bars, and your change's marker
+  const gainsChips =
+    compareBy === "tenths" && (percents || averages)
+      ? [
+          ...(decile ? [{ key: "tenth", label: "Your income tenth", short: "Your tenth", colour: CHART_COLOURS.highlight, shape: "block" }] : []),
+          { key: "bars", label: "Change for each tenth", short: "Each tenth", colour: GAIN, shape: "block" },
+          ...(decile ? [{ key: "you", label: "You", colour: TEXT }] : []),
+        ]
+      : [];
+  // An exported image keys only what is drawn, naming the tenth in full
+  const asLegend = (chips, shown) =>
+    chips
+      .filter((chip) => shown.includes(chip.key))
+      .map((chip) => ({
+        key: chip.key,
+        label: chip.key === "tenth" ? `Your income tenth (${tenthName(decile).toLowerCase()})` : chip.label,
+        color: chip.colour,
+        type: chip.shape === "block" ? "rect" : "line",
+        dash: chip.dash,
+      }));
+  const whereLegend = asLegend(whereChips, whereShown);
+  const gainsLegend = asLegend(gainsChips, gainsShown);
 
   const exportOptions = (cardTitle, svgSelector, legendItems = []) => ({
     title: cardTitle,
@@ -904,14 +955,14 @@ export default function IncomePositionChart({ net, household, year, policies, ye
                 {showAs === "rank" ? (
                   <RankView width={width} narrow={narrow} curves={curves} position={position} side={side} />
                 ) : (
-                  <WhereView width={width} narrow={narrow} curves={curves} position={position} side={side} decile={decile} />
+                  <WhereView width={width} narrow={narrow} curves={curves} position={position} side={side} decile={decile} shown={whereShown} />
                 )}
               </div>
             )}
           </Measured>
-          {whereLegend.length > 0 && (
+          {whereChips.length > 0 && (
             <div className="single-year-legend chart-legend">
-              <GroupedLegend items={whereLegend} />
+              <SeriesToggle lead="Show:" label="Key" series={whereChips} shown={whereShown} onChange={setWhereShown} narrow={narrow} />
             </div>
           )}
           <div className="chart-footer">
@@ -950,7 +1001,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               download={{
                 chartRef: compareRef,
                 name: `income-position-${compareBy}-${yearLabel}`,
-                exportOptions: exportOptions(compareTitle, "svg.position-gains"),
+                exportOptions: exportOptions(compareTitle, "svg.position-gains", gainsLegend),
                 csv: compareCsv,
               }}
               chartTitle={compareTitle}
@@ -971,7 +1022,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               <div ref={compareRef} role="img" aria-label={compareAlt}>
                 {compareBy === "tenths" ? (
                   percents || averages ? (
-                    <GainsView width={width} narrow={narrow} unit={unit} percents={percents} averages={averages} decile={decile} ownPct={ownPct} ownChange={ownChange} grow={grow} />
+                    <GainsView width={width} narrow={narrow} unit={unit} percents={percents} averages={averages} decile={decile} ownPct={ownPct} ownChange={ownChange} grow={grow} shown={gainsShown} />
                   ) : (
                     <p className="single-year-quiet">The changes by tenth are not available for this selection and year.</p>
                   )
@@ -981,6 +1032,11 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               </div>
             )}
           </Measured>
+          {gainsChips.length > 0 && (
+            <div className="single-year-legend chart-legend">
+              <SeriesToggle lead="Show:" label="Key" series={gainsChips} shown={gainsShown} onChange={setGainsShown} narrow={narrow} />
+            </div>
+          )}
           <div className="chart-footer">
             <ChartMoreInfo
               year={year}
