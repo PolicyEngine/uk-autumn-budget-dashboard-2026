@@ -66,6 +66,7 @@ export const CHART_COLOURS = {
   text: "#374151",
   surface: "#FFFFFF",
   mutedFill: "#F3F4F6",
+  hatchLine: "#B8BDC5",
   // Age bands, each its own line (ui-kit blues and teals; 16 to 24 is gain)
   ageChildren: "#4FD1C5",
   ageYoungAdults: "#0EA5E9",

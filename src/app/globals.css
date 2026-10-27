@@ -244,6 +244,7 @@ code {
   --c-text: #374151;
   --c-surface: #ffffff;
   --c-muted-fill: #f3f4f6; /* a shaded area with no data */
+  --c-hatch-line: #b8bdc5; /* the map's "Not published" hatch: a faded grey, 1.9:1 on white */
   /* Categorical series, from the @policyengine/ui-kit palette (teals,
      blues, slate): age bands, the household breakdown's income layers.
      Age bands, each its own line: blues and teals, 16 to 24 is --c-gain */

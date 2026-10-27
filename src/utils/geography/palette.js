@@ -66,9 +66,13 @@ export const approximateColourFill = (colour) =>
 /** The hatch pattern's id: no digits or colons, so url() resolves anywhere. */
 export const WITHHELD_PATTERN_ID = "withheld-hatch";
 export const WITHHELD_FILL = `url(#${WITHHELD_PATTERN_ID})`;
+/**
+ * Faded on purpose: thin light-grey lines (1.9:1 on white) on the faintest
+ * grey, so the texture reads as "no figure" without drawing the eye.
+ */
 export const HATCH_COLOURS = Object.freeze({
-  background: CHART_COLOURS.surface,
-  line: CHART_COLOURS.tick,
+  background: CHART_COLOURS.rowBand,
+  line: CHART_COLOURS.hatchLine,
 });
 
 /** An area with no published row: white, outlined. */
