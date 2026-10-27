@@ -98,8 +98,9 @@
   align-items: center;
   gap: var(--tab-icon-gap, 8px);
   min-width: 0;
-  /* The view tabs' height, font and weight (globals.css --tab-*) */
-  height: var(--tab-row-height, 48px);
+  /* The view tabs' height, font and weight (globals.css --tab-*); the
+     fallbacks hold if globals.css arrives late */
+  height: var(--tab-row-height, var(--view-tabs-height, 48px));
   padding: 0 var(--tab-pad-x, 12px);
   font-family: inherit;
   font-size: var(--tab-font-size, 1rem);
@@ -156,6 +157,10 @@
     width: auto;
     max-width: 100%;
     margin-left: 0;
+  }
+
+  .sub-tab {
+    font-size: var(--tab-font-size, 0.9375rem);
   }
 
   /* Stuck on a phone: icons only, the names kept for assistive tech */
