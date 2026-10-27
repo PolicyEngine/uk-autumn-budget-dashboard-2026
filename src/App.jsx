@@ -35,27 +35,29 @@ import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
 
-// Each view's code (and the chart library, the map's and the household
-// calculator's) loads when the view first opens, or while the page is idle,
+// Each view's code (the chart library, the map's and the household
+// calculator's) loads when a view first opens, or while the page is idle,
 // not with the page: the landing page, the band and the placeholders need
-// none of it. A view whose code has loaded renders at once.
-const BudgetaryImpactChart = lazyView(() => import("./components/BudgetaryImpactChart"));
-const ObrComparisonCard = lazyView(() => import("./components/OBRComparisonTable"), (m) => m.ObrComparisonCard);
-const ConstituencyMap = lazyView(() => import("./components/ConstituencyMap"));
-const DecileImpactCard = lazyView(() => import("./components/DecileImpactCard"));
-const HouseholdScatter = lazyView(() => import("./components/HouseholdScatter"));
-const AgeSection = lazyView(() => import("./components/AgeSection"));
-const GrowthWithMeasuresCard = lazyView(() => import("./components/livingStandards/GrowthWithMeasuresCard"));
-const InequalityChart = lazyView(() => import("./components/SummaryMetricChart"), (m) => {
-  const Chart = m.default;
+// none of it. The chart views share one chunk (components/chartViews.js);
+// the text views have their own. A view whose code has loaded renders at once.
+const chartViews = () => import("./components/chartViews");
+const BudgetaryImpactChart = lazyView(chartViews, (m) => m.BudgetaryImpactChart);
+const ObrComparisonCard = lazyView(chartViews, (m) => m.ObrComparisonCard);
+const ConstituencyMap = lazyView(chartViews, (m) => m.ConstituencyMap);
+const DecileImpactCard = lazyView(chartViews, (m) => m.DecileImpactCard);
+const HouseholdScatter = lazyView(chartViews, (m) => m.HouseholdScatter);
+const AgeSection = lazyView(chartViews, (m) => m.AgeSection);
+const GrowthWithMeasuresCard = lazyView(chartViews, (m) => m.GrowthWithMeasuresCard);
+const InequalityChart = lazyView(chartViews, (m) => {
+  const Chart = m.SummaryMetricChart;
   const inequality = m.SUMMARY_METRICS.inequality;
   return function InequalityChart(props) {
     return <Chart metric={inequality} {...props} />;
   };
 });
-const PovertyMeasuresRow = lazyView(() => import("./components/MeasuresPovertyCard"), (m) => m.PovertyMeasuresRow);
-const PersonalImpactTab = lazyView(() => import("./components/PersonalImpactTab"));
-const LivingStandardsTab = lazyView(() => import("./components/livingStandards/LivingStandardsTab"));
+const PovertyMeasuresRow = lazyView(chartViews, (m) => m.PovertyMeasuresRow);
+const PersonalImpactTab = lazyView(chartViews, (m) => m.PersonalImpactTab);
+const LivingStandardsTab = lazyView(chartViews, (m) => m.LivingStandardsTab);
 const PolicyCards = lazyView(() => import("./components/PolicyCards"));
 const MethodologyTab = lazyView(() => import("./components/MethodologyTab"));
 
@@ -77,9 +79,9 @@ export function preloadAllViews() {
   return Promise.all(Object.values(VIEW_CODE).flat().map((view) => view.preload()));
 }
 
-/** Start loading one view's code ("tab" or "tab:sub"); never throws. */
+/** Load one view's code ("tab" or "tab:sub"); resolves when in, never rejects. */
 export function preloadView(view) {
-  preloadViewCode(VIEW_CODE[view] ?? VIEW_CODE[view.split(":")[0]] ?? []);
+  return preloadViewCode(VIEW_CODE[view] ?? VIEW_CODE[view.split(":")[0]] ?? []);
 }
 
 // A link to a view starts that view's code now, beside the page's own,
@@ -293,7 +295,10 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         Promise.resolve(step()).finally(next);
       });
     };
-    next();
+    // Not before the opened view's own code is in: on a slow connection the
+    // prefetches would otherwise share the line with it
+    const opened = opensLanding(window.location) ? Promise.resolve() : preloadView(bootView(window.location));
+    opened.then(next);
     return () => {
       steps.length = 0;
       cancel?.();

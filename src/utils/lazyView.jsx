@@ -45,7 +45,10 @@ export function lazyView(load, pick = (module) => module.default) {
   return LazyView;
 }
 
-/** Start loading these views' code; failures are left for their use. */
+/**
+ * Load these views' code: resolves once every load has settled, never
+ * rejects (a failure is left for the view's own use to retry).
+ */
 export function preloadViewCode(views) {
-  for (const view of views) view.preload().catch(() => {});
+  return Promise.all(views.map((view) => view.preload().catch(() => {}))).then(() => {});
 }
