@@ -2332,11 +2332,73 @@
   background: var(--pe-gray-200);
 }
 
+/* The heading is one button that opens and closes the group's boxes: the
+   number, title and line, the policy icons and a chevron at the right */
+.household-step-heading {
+  margin: 0;
+  font: inherit;
+}
+
 .household-step-head {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  margin-bottom: 14px;
+}
+
+.household-step-toggle {
+  width: calc(100% + 16px);
+  margin: -6px -8px;
+  padding: 6px 8px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: var(--pe-radius-md);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.household-step-toggle:hover {
+  background: var(--pe-gray-50);
+}
+
+.household-step-toggle:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 0;
+}
+
+.household-step-text > span {
+  display: block;
+}
+
+/* Closed: what its answers are, once any differs from where it started */
+.household-step-summary {
+  margin-top: 2px;
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+  color: var(--pe-gray-700);
+  font-variant-numeric: tabular-nums;
+}
+
+.household-step-icons {
+  display: inline-flex;
+  flex: none;
+}
+
+.household-step-chevron {
+  flex: none;
+  margin-top: 4px;
+}
+
+.household-step-toggle[aria-expanded="true"] .household-step-chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .household-step-toggle {
+    transition: none;
+  }
 }
 
 .household-step-number {
@@ -2380,8 +2442,10 @@
   margin-top: 4px;
 }
 
-/* The boxes sit under the heading, clear of the rail */
+/* The boxes sit under the heading, clear of the rail; the gap above them
+   is inside the expander, so a closed group keeps none */
 .household-grid-step {
+  padding-top: 14px;
   padding-left: 36px;
 }
 

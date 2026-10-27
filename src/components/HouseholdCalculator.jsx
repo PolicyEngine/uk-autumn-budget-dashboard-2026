@@ -418,6 +418,108 @@ export function groupSummary(title, { answer, applies, inputs, presetId }) {
 }
 
 /**
+ * A numbered group's line for its closed heading, once any of its answers
+ * differs from where it started: "Petrol £420 · Diesel £230 · Electricity
+ * £910". Amounts above zero, and choices changed; null when none differs.
+ */
+export function stepSummary(fields, { answer, applies, changed, inputs }) {
+  const shown = fields.filter(applies);
+  if (!shown.some(changed)) return null;
+  const parts = [];
+  for (const id of shown) {
+    if (NUMBER_CONFIGS[id]) {
+      if (answer(id) > 0) parts.push(`${NUMBER_CONFIGS[id].label} ${pounds(answer(id))}`);
+    } else if (id === "claims_universal_credit") {
+      if (changed(id)) parts.push(inputs[id] ? "Claims Universal Credit" : "Does not claim Universal Credit");
+    } else if (CHOICE_CONFIGS[id] && changed(id)) {
+      const config = CHOICE_CONFIGS[id];
+      const chosen = config.options.find((option) => option.value === inputs[id]);
+      if (chosen) parts.push(id === "student_loan_plan" ? (chosen.value === "NONE" ? "No student loan" : `${chosen.label} student loan`) : `${config.label} ${chosen.label}`);
+    }
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+/**
+ * One numbered group: its heading (the number, title, one muted line and
+ * the policies it is asked for as tiny icons) is a button that opens and
+ * closes its boxes, with a chevron at the right. Closed, it keeps the
+ * heading and its line, and under them what its answers are once any
+ * differs from where it started.
+ */
+function StepGroup({ group, number, last, open, onToggle, summary, measures, children }) {
+  const collapse = useCollapse(open);
+  const headId = `household-step-${group.key}`;
+  const hintId = `${headId}-hint`;
+  const summaryId = `${headId}-summary`;
+  const panelId = `${headId}-panel`;
+  const showSummary = !open && summary;
+  return (
+    <section
+      className={`household-group household-step ${open ? "is-open" : ""}`.trim()}
+      role="group"
+      aria-labelledby={headId}
+      data-step={group.key}
+      data-last={last || undefined}
+    >
+      <h3 className="household-step-heading">
+        <button
+          type="button"
+          className="household-step-head household-step-toggle"
+          aria-expanded={open}
+          aria-controls={panelId}
+          aria-labelledby={headId}
+          aria-describedby={showSummary ? `${hintId} ${summaryId}` : hintId}
+          onClick={onToggle}
+        >
+          <span className="household-step-number" aria-hidden="true">
+            {number}
+          </span>
+          <span className="household-step-text">
+            <span className="household-step-title" id={headId}>
+              <span className="visually-hidden">{`Step ${number}:`}</span> {group.title}
+            </span>
+            <span className="household-step-hint" id={hintId}>
+              {group.hint}
+            </span>
+            {showSummary && (
+              <span className="household-step-summary" id={summaryId}>
+                {summary}
+              </span>
+            )}
+          </span>
+          {/* A tap on the icons shows their names, and leaves the group as it is */}
+          <span className="household-step-icons" onClick={(event) => event.stopPropagation()}>
+            <PolicyIcons measures={measures} />
+          </span>
+          <svg
+            className="household-more-chevron household-step-chevron"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+      </h3>
+      {collapse.mounted && (
+        <div id={panelId} className={`expander-body household-step-body ${collapse.expanded ? "is-expanded" : ""}`}>
+          <div className="expander-inner">
+            <div className="household-grid household-grid-step">{children}</div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
  * One More details group: a row that opens it, saying what it holds and
  * how many answers differ from the typical ones while closed, with "Reset
  * to typical" beside it once any do.
@@ -501,11 +603,11 @@ function useNarrow(query) {
 }
 
 // The form's last state, kept for the session so switching tabs keeps it
-const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: {}, submitted: null, startFrom: null };
+const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: {}, stepOpen: {}, submitted: null, startFrom: null };
 
 /** Forget the form's saved state (a new session; for tests). */
 export function resetSavedWizard() {
-  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, moreOpen: {}, submitted: null, startFrom: null });
+  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, moreOpen: {}, stepOpen: {}, submitted: null, startFrom: null });
 }
 
 // The form's panel, opened by the "Your household" card
@@ -542,6 +644,9 @@ function HouseholdCalculator({
   // More details' groups open, by title: closed at first; kept between tab
   // switches for the session
   const [moreOpen, setMoreOpen] = useState(() => savedWizard.moreOpen);
+  // The numbered groups opened or closed by hand, by key; a group not in
+  // it is open or closed as stepStartsOpen says. Kept for the session
+  const [stepOpen, setStepOpen] = useState(() => savedWizard.stepOpen);
   // The answers, year and policies last sent with Calculate: nothing is
   // asked before it, and a result stays tied to what it was asked with
   const [submitted, setSubmitted] = useState(() => savedWizard.submitted);
@@ -564,8 +669,9 @@ function HouseholdCalculator({
     savedWizard.startFrom = startFrom;
     savedWizard.formOpen = formOpen;
     savedWizard.moreOpen = moreOpen;
+    savedWizard.stepOpen = stepOpen;
     savedWizard.submitted = submitted;
-  }, [inputs, presetId, startFrom, formOpen, moreOpen, submitted]);
+  }, [inputs, presetId, startFrom, formOpen, moreOpen, stepOpen, submitted]);
 
   // The examples' precomputed answers, loaded once and added to the
   // session cache; `seeded` tells a request already waiting to look again
@@ -1002,35 +1108,28 @@ function HouseholdCalculator({
     const used = new Set(policyAsks.filter((question) => fields.includes(question.id)).flatMap((question) => question.policies));
     return { ...group, fields, policies: householdPolicies.filter((policyId) => used.has(policyId)) };
   }).filter((group) => group.always || group.fields.length > 0);
-  const renderGroup = (group, index) => {
-    const headId = `household-step-${group.key}`;
-    return (
-      <section
-        key={group.key}
-        className="household-group household-step"
-        role="group"
-        aria-labelledby={headId}
-        data-step={group.key}
-        data-last={index === shownGroups.length - 1 || undefined}
-      >
-        <div className="household-step-head">
-          <span className="household-step-number" aria-hidden="true">
-            {index + 1}
-          </span>
-          <div className="household-step-text">
-            <h3 className="household-step-title" id={headId}>
-              <span className="visually-hidden">{`Step ${index + 1}:`}</span> {group.title}
-            </h3>
-            <p className="household-step-hint">{group.hint}</p>
-          </div>
-          <PolicyIcons measures={group.policies.map(measureFor)} />
-        </div>
-        <div className="household-grid household-grid-step">
-          {group.fields.map((id) => renderField(id, { quiet: group.quiet?.includes(id) }))}
-        </div>
-      </section>
-    );
-  };
+  // Whether a numbered group starts open: You and Household always; any
+  // other while a selected policy reads one of its answers, or while one
+  // of its answers differs from where it started. Opened or closed by
+  // hand, it stays so for the session. Closing one only hides its boxes:
+  // the answers stay as they are, and the calculation reads them all
+  const stepStartsOpen = (group) =>
+    Boolean(group.always) || group.policies.length > 0 || group.fields.filter(fieldApplies).some(changedFromTypical);
+  const isStepOpen = (group) => stepOpen[group.key] ?? stepStartsOpen(group);
+  const renderGroup = (group, index) => (
+    <StepGroup
+      key={group.key}
+      group={group}
+      number={index + 1}
+      last={index === shownGroups.length - 1}
+      open={isStepOpen(group)}
+      onToggle={() => setStepOpen((prev) => ({ ...prev, [group.key]: !isStepOpen(group) }))}
+      summary={stepSummary(group.fields, { answer, applies: fieldApplies, changed: changedFromTypical, inputs })}
+      measures={group.policies.map(measureFor)}
+    >
+      {group.fields.map((id) => renderField(id, { quiet: group.quiet?.includes(id) }))}
+    </StepGroup>
+  );
 
   const renderSection = (section, index) => {
     if (!section.collapsible) return shownGroups.map(renderGroup);
