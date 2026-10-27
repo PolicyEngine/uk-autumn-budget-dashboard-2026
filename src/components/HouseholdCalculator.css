@@ -600,7 +600,8 @@
 }
 
 .household-strip-fold-inner {
-  padding: 10px 0 0;
+  padding: 10px 3px 3px;
+  margin: 0 -3px -3px;
 }
 
 .household-cards.is-folded {
@@ -619,7 +620,7 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin: 0;
-  padding: 3px;
+  padding: 0;
   list-style: none;
 }
 
@@ -630,7 +631,9 @@
 }
 
 /* A chip: icon, short name (cut with an ellipsis if long; the full name
-   on hover), its figure at the right */
+   on hover), its figure at the right. The dashboard's selectable-row box
+   (the form's choice tiles, the Calculate button): --pe-radius-md, the card
+   border and the small shadow, 40px high like the button above it */
 .household-chip {
   --card-accent: var(--pe-teal-600);
   --card-ink: color-mix(in oklab, var(--card-accent) 50%, var(--pe-gray-900));
@@ -648,7 +651,7 @@
   color: var(--pe-gray-700);
   background: var(--pe-surface);
   border: 1px solid var(--card-border);
-  border-radius: 999px;
+  border-radius: var(--pe-radius-md);
   box-shadow: var(--pe-shadow-sm);
   cursor: pointer;
   transition:
@@ -729,6 +732,8 @@
 }
 
 .household-chip-figure {
+  justify-self: end;
+  text-align: right;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -2002,14 +2007,16 @@
 }
 
 /* "Show all households" / "Show fewer", at the end of the heading row: a
-   filled teal secondary button, plain to see */
+   filled teal secondary button, plain to see. The chips' box: the same
+   radius, height and small shadow, its right edge the list's */
 .household-cards-back {
   display: inline-flex;
   flex: none;
   align-items: center;
   gap: 7px;
-  margin: 0;
-  padding: 7px 14px 7px 11px;
+  height: 40px;
+  margin: 0 0 0 auto;
+  padding: 0 14px 0 11px;
   font: inherit;
   font-size: var(--fs-caption);
   font-weight: 600;
@@ -2017,6 +2024,7 @@
   background: var(--pe-teal-50);
   border: 1px solid var(--pe-teal-300);
   border-radius: var(--pe-radius-md);
+  box-shadow: var(--pe-shadow-sm);
   cursor: pointer;
   transition:
     background-color 0.15s ease,
@@ -2033,10 +2041,15 @@
   outline-offset: 2px;
 }
 
-/* A phone: the heading keeps its width, the button goes under it */
+/* A phone: the heading keeps its width, the button goes under it, at the
+   list's right edge, as tall as the chips */
 @media (max-width: 599px) {
   .household-cards-head {
     flex-wrap: wrap;
+  }
+
+  .household-cards-back {
+    height: 36px;
   }
 
   .household-cards-head .section-heading {

@@ -507,7 +507,7 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
  * The cards folded: a chip for each card, in the cards' order and grid
  * (Your household the width of the grid, then the eight examples below
  * it), each its icon, a short name and its change, the chosen one in its
- * colour with a tick. One listbox, Your household first (choosing it opens
+ * colour (fill and border). One listbox, Your household first (choosing it opens
  * the form, which it controls; choosing it again while chosen closes or
  * reopens the form): the arrow keys (and Home, End) move between chips,
  * Enter or Space chooses one, a click chooses it at once.
