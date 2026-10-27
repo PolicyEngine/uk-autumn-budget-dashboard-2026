@@ -410,7 +410,7 @@ function MethodologyTab({ onShowTab }) {
                       </>,
                       "Negative incomes count as zero for the ranking.",
                       "Households without a decile are left out.",
-                      "A measure whose change in any decile comes from only one or two survey households is not shown, the UK Data Service's minimum for survey data.",
+                      "A measure whose change in any decile comes from only one or two survey households is not shown: the minimum the UK Data Service requires for survey data it supplies under its End User Licence.",
                     ],
                   },
                 ],
