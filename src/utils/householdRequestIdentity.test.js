@@ -15,12 +15,22 @@
  * - the form's answers and the shared draft carry the same household
  *   (householdDraft.js), checked both ways.
  *
- * The one difference is intended, and only on requests the API refuses:
+ * The one difference is intended, and only on requests the API refused:
  * without a partner, the old request carried whatever partner age the form
- * held, and the API refused the whole request for one it does not take (it
- * reads the age only with a partner). The new request leaves such an age
- * out. The form keeps the partner's age from 18 to 80, so it cannot arise
- * from the form's own boxes.
+ * held, and the API refused the whole request for one it does not take (a
+ * whole number from 16 to 100, though it reads the age only with a
+ * partner). The new request leaves such an age out. The form's box keeps
+ * the age from 18 to 80 but takes a fraction, so the form can give one:
+ * a partner's age of 30.5, then no partner, then Calculate.
+ *
+ * That is for answers of the kinds the form's state holds (numbers or
+ * null, and the form's codes or unknown ones), as the property test
+ * generates them. Two inputs the form never holds differ too, and are
+ * recorded below: a partner age as text without a partner ("30", which
+ * api.py takes as 30), left out like any age without a partner; and a
+ * region named for a property every object has ("__proto__"), whose
+ * prefilled rent the old code read off the prototype. api.py refuses that
+ * region.
  */
 import fc from "fast-check";
 import { createHash } from "node:crypto";
@@ -180,6 +190,43 @@ describe("the household request, against a copy of the old code", () => {
     expect(leftOut).toBeGreaterThan(0);
   });
 
+  it("leaves out a partner's age with a fraction without a partner; with one, validate() refuses it", () => {
+    // The form's box takes 30.5 (SingleYear.test.jsx: the same answers,
+    // through the page's Calculate)
+    const options = { year: 2027, policies: ["a"] };
+    const codes = (inputs) =>
+      validate(draftFromAnswers(inputs), { year: 2027, years: POLICY_YEARS, statePension: statePensionTable }).issues.map(
+        (issue) => issue.code,
+      );
+    const alone = { ...WIZARD_DEFAULTS, has_partner: false, partner_age: 30.5 };
+    expect(reference.buildHouseholdRequest(alone, options).household.partner_age).toBe(30.5);
+    expect(buildHouseholdRequest(alone, options).household).not.toHaveProperty("partner_age");
+    expect(codes(alone)).toEqual([]);
+    // With a partner both send it, and api.py refuses it as before
+    const together = { ...alone, has_partner: true };
+    expect(JSON.stringify(buildHouseholdRequest(together, options))).toBe(
+      JSON.stringify(reference.buildHouseholdRequest(together, options)),
+    );
+    expect(codes(together)).toEqual(["partner.age.notWhole"]);
+  });
+
+  it("differs on two inputs the form never holds", () => {
+    const options = { year: 2027, policies: ["a"] };
+    // A partner age as text, without a partner: the old request carried it
+    // (api.py takes "30" as 30); the new one leaves it out, as it does any
+    // age without a partner that is not a whole number from 16 to 100
+    const text = { ...WIZARD_DEFAULTS, has_partner: false, partner_age: "30" };
+    expect(reference.buildHouseholdRequest(text, options).household.partner_age).toBe("30");
+    expect(buildHouseholdRequest(text, options).household).not.toHaveProperty("partner_age");
+    // A region named for a property every object has, renting at the
+    // prefilled rent: the old code read the rent off the prototype; the new
+    // one gives the UK's average. api.py refuses the region either way
+    const region = { ...WIZARD_DEFAULTS, region: "__proto__", tenure: "RENT_PRIVATELY", monthly_rent: null };
+    expect(reference.buildHouseholdRequest(region, options).household.monthly_rent).toEqual({});
+    expect(buildHouseholdRequest(region, options).household.monthly_rent).toBe(1406);
+    expect(UK_REGIONS.map(({ code }) => code)).not.toContain("__proto__");
+  });
+
   it("is the same text for the examples in every year, stage and measure list", () => {
     for (const example of HOUSEHOLD_EXAMPLES) {
       const inputs = { ...WIZARD_DEFAULTS, ...example.inputs };
@@ -295,7 +342,9 @@ describe("the form's questions and the shared model", () => {
     expect(OLDEST_CHILD_AGE).toBe(limits.childAge.max);
   });
 
-  it("make a household the API accepts from any answers within the boxes", () => {
+  it("make a household the API accepts from any whole-number answers within the boxes", () => {
+    // The boxes take fractions too; validate() refuses a partner's age with
+    // one (above)
     const box = (id) => {
       const { min, max } = NUMBER_CONFIGS[id];
       return fc.integer({ min, max });
