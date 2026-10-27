@@ -1,46 +1,46 @@
 reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value
-two_child_limit,2 child limit repeal,2026,-2.1,-2.3
-two_child_limit,2 child limit repeal,2027,-2.2,-2.5
-two_child_limit,2 child limit repeal,2028,-2.4,-2.7
-two_child_limit,2 child limit repeal,2029,-2.7,-3.0
-two_child_limit,2 child limit repeal,2030,-2.8,-3.1
-fuel_duty_freeze,Fuel duty freeze extension,2026,-2.4,-2.4
-fuel_duty_freeze,Fuel duty freeze extension,2027,-0.9,-0.9
-fuel_duty_freeze,Fuel duty freeze extension,2028,-0.9,-0.9
-fuel_duty_freeze,Fuel duty freeze extension,2029,-0.9,-0.9
-fuel_duty_freeze,Fuel duty freeze extension,2030,-0.8,-0.8
-rail_fares_freeze,Rail fares freeze,2026,-0.1,-0.1
-rail_fares_freeze,Rail fares freeze,2027,-0.2,-0.2
-rail_fares_freeze,Rail fares freeze,2028,-0.2,-0.2
-rail_fares_freeze,Rail fares freeze,2029,-0.2,-0.2
-rail_fares_freeze,Rail fares freeze,2030,-0.2,-0.2
-threshold_freeze_extension,Threshold freeze extension,2026,0.0,0.0
-threshold_freeze_extension,Threshold freeze extension,2027,0.0,0.0
-threshold_freeze_extension,Threshold freeze extension,2028,3.2,3.3
-threshold_freeze_extension,Threshold freeze extension,2029,7.4,7.6
-threshold_freeze_extension,Threshold freeze extension,2030,11.6,12.1
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,0.0,0.3
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,1.5,1.0
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,1.2,1.16
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,1.3,1.325
-dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,1.4,1.4
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,0.0,0.0
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,0.1,0.055
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,0.6,0.5
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,0.6,0.5
-savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,0.6,0.5
-property_tax_increase_2pp,Property income tax increase (+2pp),2026,0.0,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2027,0.0,0.0
-property_tax_increase_2pp,Property income tax increase (+2pp),2028,0.6,0.6
-property_tax_increase_2pp,Property income tax increase (+2pp),2029,0.4,0.4
-property_tax_increase_2pp,Property income tax increase (+2pp),2030,0.5,0.445
-salary_sacrifice_cap,NICs on salary sacrifice (>£2k),2026,0.0,0.0
-salary_sacrifice_cap,NICs on salary sacrifice (>£2k),2027,0.0,0.0
-salary_sacrifice_cap,NICs on salary sacrifice (>£2k),2028,0.0,0.0
-salary_sacrifice_cap,NICs on salary sacrifice (>£2k),2029,4.9,4.7
-salary_sacrifice_cap,NICs on salary sacrifice (>£2k),2030,5.1,2.6
+two_child_limit,2 child limit repeal,2026,-2.1,-2.367
+two_child_limit,2 child limit repeal,2027,-2.2,-2.59
+two_child_limit,2 child limit repeal,2028,-2.4,-2.815
+two_child_limit,2 child limit repeal,2029,-2.7,-3.095
+two_child_limit,2 child limit repeal,2030,-2.8,-3.235
+fuel_duty_freeze,Fuel duty freeze extension,2026,-2.4,-2.369
+fuel_duty_freeze,Fuel duty freeze extension,2027,-0.9,-0.856
+fuel_duty_freeze,Fuel duty freeze extension,2028,-0.9,-0.857
+fuel_duty_freeze,Fuel duty freeze extension,2029,-0.9,-0.85
+fuel_duty_freeze,Fuel duty freeze extension,2030,-0.8,-0.841
+rail_fares_freeze,Rail fares freeze,2026,-0.1,-0.143
+rail_fares_freeze,Rail fares freeze,2027,-0.2,-0.151
+rail_fares_freeze,Rail fares freeze,2028,-0.2,-0.157
+rail_fares_freeze,Rail fares freeze,2029,-0.2,-0.161
+rail_fares_freeze,Rail fares freeze,2030,-0.2,-0.167
+threshold_freeze_extension,Threshold freeze extension,2026,0.0,0
+threshold_freeze_extension,Threshold freeze extension,2027,0.0,-0.024
+threshold_freeze_extension,Threshold freeze extension,2028,3.2,3.364
+threshold_freeze_extension,Threshold freeze extension,2029,7.4,7.782
+threshold_freeze_extension,Threshold freeze extension,2030,11.6,12.435
+dividend_tax_increase_2pp,Dividend tax increase (+2pp),2026,0.0,0.278
+dividend_tax_increase_2pp,Dividend tax increase (+2pp),2027,1.5,0.987
+dividend_tax_increase_2pp,Dividend tax increase (+2pp),2028,1.2,1.162
+dividend_tax_increase_2pp,Dividend tax increase (+2pp),2029,1.3,1.327
+dividend_tax_increase_2pp,Dividend tax increase (+2pp),2030,1.4,1.39
+savings_tax_increase_2pp,Savings income tax increase (+2pp),2026,0.0,0.003
+savings_tax_increase_2pp,Savings income tax increase (+2pp),2027,0.1,0.053
+savings_tax_increase_2pp,Savings income tax increase (+2pp),2028,0.6,0.523
+savings_tax_increase_2pp,Savings income tax increase (+2pp),2029,0.6,0.469
+savings_tax_increase_2pp,Savings income tax increase (+2pp),2030,0.6,0.507
+property_tax_increase_2pp,Property income tax increase (+2pp),2026,0.0,0.001
+property_tax_increase_2pp,Property income tax increase (+2pp),2027,0.0,0.007
+property_tax_increase_2pp,Property income tax increase (+2pp),2028,0.6,0.59
+property_tax_increase_2pp,Property income tax increase (+2pp),2029,0.4,0.434
+property_tax_increase_2pp,Property income tax increase (+2pp),2030,0.5,0.444
+salary_sacrifice_cap,NICs on salary sacrifice (>£2k),2026,0.0,-0.038
+salary_sacrifice_cap,NICs on salary sacrifice (>£2k),2027,0.0,-0.056
+salary_sacrifice_cap,NICs on salary sacrifice (>£2k),2028,0.0,-0.075
+salary_sacrifice_cap,NICs on salary sacrifice (>£2k),2029,4.9,4.846
+salary_sacrifice_cap,NICs on salary sacrifice (>£2k),2030,5.1,2.584
 freeze_student_loan_thresholds,Student loan threshold freeze (HMT),2026,5.915,5.915
-freeze_student_loan_thresholds,Student loan threshold freeze (HMT),2027,0.255,0.255
-freeze_student_loan_thresholds,Student loan threshold freeze (HMT),2028,0.29,0.29
-freeze_student_loan_thresholds,Student loan threshold freeze (HMT),2029,0.355,0.355
-freeze_student_loan_thresholds,Student loan threshold freeze (HMT),2030,0.4,0.4
+freeze_student_loan_thresholds,Student loan threshold freeze (HMT),2027,0.255,0.253
+freeze_student_loan_thresholds,Student loan threshold freeze (HMT),2028,0.29,0.289
+freeze_student_loan_thresholds,Student loan threshold freeze (HMT),2029,0.355,0.357
+freeze_student_loan_thresholds,Student loan threshold freeze (HMT),2030,0.4,0.378
