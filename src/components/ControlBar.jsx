@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import useSegmentThumb from "../hooks/useSegmentThumb";
 import PillChevron from "./PillChevron";
@@ -62,6 +62,40 @@ function chosenText(group) {
 const PickContext = createContext(null);
 const PICK_CLOSE_MS = 150;
 
+// Below this width the dialog is a sheet from the window's foot (ControlBar.css)
+const SHEET_QUERY = "(max-width: 640px)";
+// The gap to the pill (the CSS's 8px) and the room kept clear of the window's edge
+const DIALOG_GAP = 8;
+const DIALOG_MARGIN = 12;
+
+/** The sticky title band and tab rows' height (--sticky-offset), read by a probe in the button's place. */
+function stickyOffset(node) {
+  const probe = document.createElement("div");
+  probe.style.cssText = "position:absolute;visibility:hidden;pointer-events:none;height:var(--sticky-offset, 0px)";
+  node.appendChild(probe);
+  const height = probe.offsetHeight;
+  probe.remove();
+  return height;
+}
+
+/**
+ * Where the open dialog goes on a tablet or desktop, so it stays in the
+ * window: under its pill when it fits; else above the pill (clear of the
+ * sticky band) when there is more room there; scrolling inside whichever
+ * side it takes when it is taller than the room. Null leaves it under the
+ * pill as it is.
+ *
+ * @param {{height: number, pillTop: number, pillBottom: number, windowHeight: number, sticky: number}} room
+ * @returns {{above: boolean, maxHeight: number|null}|null}
+ */
+export function dialogPlacement({ height, pillTop, pillBottom, windowHeight, sticky }) {
+  const below = windowHeight - pillBottom - DIALOG_GAP - DIALOG_MARGIN;
+  if (height <= below) return null;
+  const above = pillTop - DIALOG_GAP - DIALOG_MARGIN - sticky;
+  if (above > below) return { above: true, maxHeight: height <= above ? null : Math.max(above, 160) };
+  return { above: false, maxHeight: Math.max(below, 160) };
+}
+
 function OptionsButton({ groups, name }) {
   const [open, setOpen] = useState(false);
   const presence = usePresence(open);
@@ -71,6 +105,31 @@ function OptionsButton({ groups, name }) {
   const dialogId = useId();
   const titleId = useId();
   const summary = optionsSummary(groups);
+  // On a tablet or desktop: flipped above the pill, or scrolling inside, when
+  // it would run below the window (the growth card's six groups at 768px)
+  const [placement, setPlacement] = useState(null);
+  useLayoutEffect(() => {
+    // Measured each time it opens; kept while it closes, so it leaves from where it was
+    if (!open) return;
+    const dialog = dialogRef.current;
+    const button = buttonRef.current;
+    if (!dialog || !button || typeof window === "undefined") return;
+    if (window.matchMedia?.(SHEET_QUERY).matches) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- measured layout, before paint
+      setPlacement(null);
+      return;
+    }
+    const pill = button.getBoundingClientRect();
+    setPlacement(
+      dialogPlacement({
+        height: dialog.scrollHeight,
+        pillTop: pill.top,
+        pillBottom: pill.bottom,
+        windowHeight: window.innerHeight,
+        sticky: stickyOffset(rootRef.current ?? button),
+      }),
+    );
+  }, [open]);
 
   const close = (returnFocus = true) => {
     setOpen(false);
@@ -158,7 +217,8 @@ function OptionsButton({ groups, name }) {
             ref={dialogRef}
             id={dialogId}
             {...leavingProps(presence.shown)}
-            className={`control-bar-dialog ${popoverClass(presence.shown)}`}
+            className={`control-bar-dialog ${popoverClass(presence.shown)}${placement?.above ? " is-above" : ""}${placement?.maxHeight ? " is-scrolling" : ""}`}
+            style={placement?.maxHeight ? { maxHeight: placement.maxHeight } : undefined}
             role="dialog"
             aria-modal="false"
             aria-labelledby={titleId}
