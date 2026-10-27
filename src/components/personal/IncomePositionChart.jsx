@@ -344,7 +344,10 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
   // ticks carry the unit
   const top = 14;
   const plotH = narrow ? 200 : 240;
-  const height = top + plotH + 52;
+  // "Bottom 10%", the axis title and "Top 10%" share a row only where the
+  // plot is wide enough; on a phone the title drops to a row of its own
+  const titleRow = plotW < 320 ? 16 : 0;
+  const height = top + plotH + 52 + titleRow;
   const values = Array.from({ length: 10 }, (_, i) => (unit === "pct" ? percents?.[i + 1] : averages?.[i + 1]) ?? 0);
   const own = unit === "pct" ? ownPct : ownChange;
   const all = [...values, own];
@@ -408,7 +411,7 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
       <text x={left} y={top + plotH + 34} fontSize={11} fill={CHART_COLOURS.tick}>
         Bottom 10%
       </text>
-      <text x={left + plotW / 2} y={top + plotH + 34} textAnchor="middle" fontSize={11} fill={CHART_COLOURS.tick}>
+      <text x={left + plotW / 2} y={top + plotH + 34 + titleRow} textAnchor="middle" fontSize={11} fill={CHART_COLOURS.tick}>
         Tenths of people by income
       </text>
       <text x={left + plotW} y={top + plotH + 34} textAnchor="end" fontSize={11} fill={CHART_COLOURS.tick}>
