@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CalendarCheck, CalendarX, ChartColumn, Clock, ExternalLink, Flag, FlaskConical } from "lucide-react";
-import { categoryIcon } from "./MeasureRowLabel";
+import "./MeasureRowLabel.css";
+import { measureCategoryOf } from "../utils/measureCategory";
 import { withPolicyDetails } from "../utils/policyDetails";
 import { parameterTableFor } from "../utils/policyParameters";
 import PolicyChange, { usePolicyParameters } from "./PolicyChange";
@@ -236,6 +237,9 @@ function PolicyTimeline({ policy, highlight }) {
  */
 function PolicyCard({ policy, onShowEffect, parameters }) {
   const temporary = Boolean(policy.inForce?.to);
+  // Derived from the publication for any measure (utils/measureCategory.js),
+  // in the same tinted tile as every per-measure row
+  const category = measureCategoryOf(policy);
   // The years a hovered step of "What changes" covers, marked on the timeline
   const [highlight, setHighlight] = useState(null);
   // What the published wording says about how it is modelled
@@ -249,15 +253,15 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
       style={{ "--policy-accent": policy.color }}
     >
       <div className="policy-card-head">
-        {/* No icon per measure: a map by id would be a measure list of the
-            page's own (#104) */}
         <div className="policy-card-titles">
-          {(policy.type || temporary) && (
+          {(category || temporary) && (
             <div className="policy-card-topline">
-              {policy.type && (
+              {category && (
                 <p className="policy-card-type">
-                  <TitleIcon name={categoryIcon(policy.type)} bare size={14} className="policy-card-icon-inline" />
-                  {policy.type}
+                  <span className="mrl-icon" aria-hidden="true" style={{ "--mrl-colour": policy.color }}>
+                    <TitleIcon name={category.icon} bare size={13} />
+                  </span>
+                  {category.label}
                 </p>
               )}
               <span className="policy-card-tags">

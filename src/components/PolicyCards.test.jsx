@@ -80,7 +80,7 @@ describe("PolicyCards", () => {
     expect(within(card).getByRole("heading", { name: "Warm Home Discount top-up" })).toBeTruthy();
     expect(card).toHaveTextContent("StartsWinter 2026-27");
     expect(card).toHaveTextContent("EndsAfter one winter");
-    expect(card.querySelector(".policy-card-topline")).toHaveTextContent("BenefitTemporary");
+    expect(card.querySelector(".policy-card-topline")).toHaveTextContent("EnergyTemporary");
     expect(within(card).getByRole("img", { name: /^In force from October 2026 to March 2027 \(one winter\)\.$/ })).toBeTruthy();
     const source = within(card).getByRole("link", { name: /Warm Home Discount/ });
     expect(source).toHaveAttribute("target", "_blank");
@@ -115,7 +115,8 @@ describe("PolicyCards", () => {
     // No empty blocks: as for a measure with no entry
     expect(card.querySelector(".policy-card-start")).toBeNull();
     expect(card.querySelector(".policy-card-when")).toBeNull();
-    expect(card.querySelector(".policy-card-type")).toBeNull();
+    // The category is derived from the publication, so it stays
+    expect(card.querySelector(".policy-card-type")).toHaveTextContent("Fuel duty");
     expect(card).not.toHaveTextContent("Temporary");
     expect(card.querySelector(".policy-card-details")).toBeNull();
     expect(screen.queryByRole("img", { name: /^In force/ })).toBeNull();
@@ -134,7 +135,9 @@ describe("PolicyCards", () => {
     expect(card).not.toHaveTextContent(detailsById[id].summary);
     expect(card).not.toHaveTextContent("Starts");
     expect(card).not.toHaveTextContent("Ends");
-    for (const slot of [".policy-card-spec", ".policy-card-when", ".policy-card-modelling", ".policy-card-type"]) {
+    // The category is derived from the publication, so it stays
+    expect(card.querySelector(".policy-card-type")).toHaveTextContent("VAT");
+    for (const slot of [".policy-card-spec", ".policy-card-when", ".policy-card-modelling"]) {
       expect(card.querySelector(slot), slot).toBeNull();
     }
     // Every element left in the card has something in it

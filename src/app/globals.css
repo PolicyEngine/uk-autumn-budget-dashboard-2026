@@ -1927,6 +1927,11 @@ body {
   color: var(--pe-gray-400);
 }
 
+/* The card's category tile takes the measure's colour, as on every row */
+.policy-card-type .mrl-icon svg {
+  color: var(--mrl-colour);
+}
+
 .policy-card-details .disclosure-title {
   display: inline-flex;
   align-items: center;

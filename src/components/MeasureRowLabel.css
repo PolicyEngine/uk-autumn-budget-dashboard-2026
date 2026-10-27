@@ -53,3 +53,18 @@
   font-size: var(--fs-micro);
   color: var(--pe-gray-500);
 }
+
+/* Dense lists (keys, tooltips, tables, the map card): a smaller tile, no caption */
+.mrl--compact {
+  gap: 6px;
+}
+
+.mrl--compact .mrl-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.mrl--compact .mrl-name {
+  font-weight: inherit;
+  color: inherit;
+}
