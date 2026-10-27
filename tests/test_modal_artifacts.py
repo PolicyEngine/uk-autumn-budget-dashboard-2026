@@ -153,23 +153,32 @@ def test_one_failed_container_keeps_every_other_artifact(tmp_path):
         yield TimeoutError("Function timed out")
         yield _returned("gamma", FILES)
 
-    reported = []
+    reported = {}
     runner = ModalRunner(say=said.append, remote_artifacts=remote_artifacts)
     with pytest.raises(ModalRunsFailed) as raised:
         runner.map(
-            run_artifact, jobs, on_result=lambda i, r: reported.append(i)
+            run_artifact,
+            jobs,
+            on_result=lambda i, r: reported.setdefault(i, r),
         )
     for key in ("alpha", "gamma"):
         assert (tmp_path / key / "abcd1234abcd1234" / "receipt.json").exists()
     assert not (tmp_path / "beta").exists()
-    assert reported == [0, 2]
+    # Every index is reported, the failed one as an outcome with no
+    # artifact and no refusal, so an in-order report moves past it.
+    assert sorted(reported) == [0, 1, 2]
+    failed = reported[1]
+    assert failed.key == "beta"
+    assert failed.reference is None and failed.refused is None
+    assert failed.progress == [
+        "beta: FAILED in its Modal container: TimeoutError: Function timed out"
+    ]
     assert raised.value.failed == {"beta": "TimeoutError: Function timed out"}
     assert [Path(p).parent.name for p in raised.value.written] == [
         "alpha",
         "gamma",
     ]
     assert "FAILED beta" in str(raised.value)
-    assert any("beta: FAILED" in line for line in said)
 
 
 def test_a_rerun_after_a_failure_leaves_the_written_artifacts_unchanged(
@@ -263,3 +272,46 @@ def test_the_synthetic_dataset_is_the_same_wherever_it_is_built():
     assert len(first.household) == 20
     with pytest.raises(ValueError):
         synthetic_dataset.parse("data.h5")
+
+
+def test_the_command_lists_failures_apart_from_refusals_and_the_rerun(
+    monkeypatch,
+):
+    """generate --artifacts prints a failed container's run apart from a
+    refusal, names the combined runs not started, says what to rerun (only
+    the failed ones) and exits 1."""
+    from types import SimpleNamespace
+
+    from uk_budget_data.models import Reform
+    from uk_budget_data.publication import commands, generate
+    from uk_budget_data.publication.generate import GenerationReport
+
+    alpha, beta = Reform(id="alpha", name="Alpha"), Reform(id="beta", name="B")
+
+    def fake_generate(reforms, config, *, combined_sets, **options):
+        return GenerationReport(
+            refused={"gamma": "a decile cell under 10 households"},
+            failed={"beta": "FunctionTimeoutError: timed out"},
+            not_started={"combined--alpha+beta": ["alpha", "beta"]},
+        )
+
+    monkeypatch.setattr(generate, "generate_artifacts", fake_generate)
+    lines = []
+    code = commands.run_generate_artifacts(
+        SimpleNamespace(combined=[["alpha", "beta"]], artifacts_root=None),
+        None,
+        [alpha, beta],
+        {"alpha": alpha, "beta": beta}.get,
+        out=lines.append,
+    )
+    assert code == 1
+    assert lines[0] == (
+        "0 artifacts written, 1 refused, 1 failed in their Modal containers, "
+        "1 combined runs not started"
+    )
+    assert "REFUSED gamma: a decile cell under 10 households" in lines
+    assert "FAILED beta: FunctionTimeoutError: timed out" in lines
+    assert any(line.startswith("NOT STARTED combined--") for line in lines)
+    assert any(line.endswith("--reforms beta") for line in lines)
+    assert any(line.endswith("--combined alpha beta") for line in lines)
+    assert not any("--reforms alpha" in line for line in lines)

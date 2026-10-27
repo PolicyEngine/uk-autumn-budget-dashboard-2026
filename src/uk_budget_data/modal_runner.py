@@ -25,8 +25,6 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Sequence
 
-from rich.markup import escape
-
 # ``remote(units)`` yields one outcome per unit, in unit order.
 Remote = Callable[[Sequence], Iterable]
 # ``remote_artifacts(jobs, smoke)`` yields ``(outcome, relative path,
@@ -335,13 +333,26 @@ class ModalRunner:
             count += 1
             if isinstance(returned, BaseException):
                 # One container failed (an error in the run, a timeout, out
-                # of memory): say so, keep going, and raise once every other
-                # artifact is written.
+                # of memory): report it in its place, keep going, and raise
+                # once every other artifact is written. It is reported
+                # through on_result, as an outcome with no artifact and no
+                # refusal, so a caller reporting in order (generate's
+                # report_ready) moves past it to the artifacts after it.
+                from uk_budget_data.publication.generate import (
+                    ArtifactOutcome,
+                )
+
                 key = jobs[index].key
                 failed[key] = f"{type(returned).__name__}: {returned}"
-                self.say(
-                    f"{key}: FAILED in its Modal container: "
-                    f"{escape(str(returned))}"
+                on_result(
+                    index,
+                    ArtifactOutcome(
+                        key=key,
+                        progress=[
+                            f"{key}: FAILED in its Modal container: "
+                            f"{failed[key]}"
+                        ],
+                    ),
                 )
                 continue
             outcome, relative, files = returned
