@@ -3,8 +3,10 @@
 One colour template for the dashboard. Every colour has a role, and each role has one colour on every tab.
 
 - **CSS** takes the `--c-*`, `--ramp-*` and `--income-ramp-*` tokens in [`src/app/globals.css`](../src/app/globals.css) (over `@policyengine/ui-kit/theme.css`).
-- **JS and charts** take the mirror in [`src/utils/chartTheme.js`](../src/utils/chartTheme.js) (`CHART_COLOURS`, `POLICY_RAMPS`, `INCOME_RAMP`), because SVG and PNG exports need literal values. `chartTheme.test.js` keeps the two equal.
-- **Measures** take their colour from the measure catalogue ([`src/utils/measureCatalogue.jsx`](../src/utils/measureCatalogue.jsx), #104): within each budgetary direction, the published measures ranked by size (total absolute £bn over the published years, ties by id) take evenly spaced OKLab steps along that direction's ramp, largest darkest (`measureRamp` in `chartTheme.js`: ambers for raising revenue, teals for costing it, grey for no published costing). With more than eight measures in a direction, every second step turns slightly in hue (cost: blue-teal; revenue: brown) so neighbours stay apart. The catalogue is built once from the publication's manifest snapshot, so a measure keeps one colour on every tab and selection of a publication; a measure added in a later revision can re-shade the others in its direction.
+- **JS and charts** take the mirror in [`src/utils/chartTheme.js`](../src/utils/chartTheme.js) (`CHART_COLOURS`, `POLICY_RAMPS`, `MAGNITUDE_RAMPS`, `SERIES_COLOURS`, `INCOME_RAMP`), because SVG and PNG exports need literal values. `chartTheme.test.js` keeps the two equal.
+- **The palette is last year's.** The policy ramps, gain, loss, before, after and the map scale are the 2025 Autumn Budget dashboard's ([PolicyEngine/uk-autumn-budget-dashboard](https://github.com/PolicyEngine/uk-autumn-budget-dashboard), `src/utils/policyConfig.js` `POLICY_COLORS`, and `src/components/ConstituencyMap.jsx` for the map): teals for what households gain, ambers for what they lose, greys for no change and before.
+- **Measures** take their colour from the measure catalogue ([`src/utils/measureCatalogue.jsx`](../src/utils/measureCatalogue.jsx), #104): within each budgetary direction, the published measures ranked by size (total absolute £bn over the published years, ties by id) take that direction's ramp steps in order, largest darkest, as on the 2025 dashboard (`measureRamp` in `chartTheme.js`: ambers 900 to 400 for raising revenue, teals 600 to 300 for costing it, grey for no published costing). With more measures than steps, they take evenly spaced OKLab steps along the ramp; with more than eight, every second step turns slightly in hue so neighbours stay apart. The catalogue is built once from the publication's manifest snapshot, so a measure keeps one colour on every tab and selection of a publication; a measure added in a later revision can re-shade the others in its direction. Its colour is its identity: the stacked charts (Public finances, deciles, By age), the policy keys, cards and chips.
+- **Size by intensity.** A chart with one row or bar per policy (Which policies move poverty, Change in the poverty rate, By age's Effect of each policy, the household's How each policy changes your income) colours each row by direction, teal for a gain (or fewer people in poverty) and amber for a loss, and shades it by size: the rows are ranked by absolute size across both directions, the largest takes its ramp's darkest step and the smallest the lightest (`magnitudeColours` over `MAGNITUDE_RAMPS`). The measure's own colour stays on the dot by its name, and every row prints its signed value, so direction is never colour alone. Inequality rows stay one neutral colour (`--c-highlight`): a change in inequality is no household's gain or loss.
 
 ## Roles
 
@@ -37,11 +39,16 @@ One colour template for the dashboard. Every colour has a role, and each role ha
 | "Your household" tint (behind your group) | `--c-highlight-band` | `CHART_COLOURS.highlightBand` | ![](swatches/EAF5F4.svg) `#EAF5F4` |
 | "Your household" marker | `--c-net` | `YOU_COLOUR` (= `.net`) | ![](swatches/000000.svg) `#000000` |
 | Hover cursor behind a bar or row | `--c-hover` | `HOVER_CURSOR` (= `.hover`) | ![](swatches/EEF6F6.svg) `#EEF6F6` |
-| Measure ramp, raise revenue (largest darkest) | `--ramp-raise-1…3` | `POLICY_RAMPS.raise` | ![](swatches/78350F.svg) ![](swatches/B45309.svg) ![](swatches/F59E0B.svg) `#78350F #B45309 #F59E0B` |
-| Measure ramp, cost revenue (largest darkest) | `--ramp-cost-1…7` | `POLICY_RAMPS.cost` | ![](swatches/0D4359.svg) ![](swatches/016768.svg) ![](swatches/088075.svg) ![](swatches/00997F.svg) ![](swatches/28B084.svg) ![](swatches/4AC685.svg) ![](swatches/75D987.svg) `#0D4359 … #75D987` |
-| Each published measure (rank by size within its direction) | set inline | `measureRamp(direction, n)` over `POLICY_RAMPS`; `MEASURE_RAMPS.neutral` | computed steps of the two ramps above; no costing ![](swatches/9CA3AF.svg) `#9CA3AF` |
+| Measure ramp, raise revenue (largest darkest; 2025 dashboard) | `--ramp-raise-1…6` | `POLICY_RAMPS.raise` | ![](swatches/78350F.svg) ![](swatches/92400E.svg) ![](swatches/B45309.svg) ![](swatches/D97706.svg) ![](swatches/F59E0B.svg) ![](swatches/FBBF24.svg) `#78350F #92400E #B45309 #D97706 #F59E0B #FBBF24` |
+| Measure ramp, cost revenue (largest darkest; 2025 dashboard) | `--ramp-cost-1…4` | `POLICY_RAMPS.cost` | ![](swatches/0D9488.svg) ![](swatches/14B8A6.svg) ![](swatches/2DD4BF.svg) ![](swatches/5EEAD4.svg) `#0D9488 #14B8A6 #2DD4BF #5EEAD4` |
+| Each published measure (rank by size within its direction) | set inline | `measureRamp(direction, n)` over `POLICY_RAMPS`; `MEASURE_RAMPS.neutral` | the ramp steps above in order; no costing ![](swatches/9CA3AF.svg) `#9CA3AF` |
+| Size of a per-policy gain (largest darkest) | `--ramp-gain-1…3` | `MAGNITUDE_RAMPS.gain`, `magnitudeColours` | ![](swatches/0F766E.svg) ![](swatches/0D9488.svg) ![](swatches/14B8A6.svg) `#0F766E #0D9488 #14B8A6` |
+| Size of a per-policy loss (largest darkest) | `--ramp-loss-1…3` | `MAGNITUDE_RAMPS.loss`, `magnitudeColours` | ![](swatches/78350F.svg) ![](swatches/B45309.svg) ![](swatches/D97706.svg) `#78350F #B45309 #D97706` |
+| Map scale: loss → no change → gain (2025 dashboard) | `--c-loss` → `--c-grid` → `--c-map-gain` | `SCALE_COLOURS` (`geography/scale.js`) | ![](swatches/D97706.svg) ![](swatches/E5E7EB.svg) ![](swatches/14B8A6.svg) `#D97706 #E5E7EB #14B8A6` |
+| Lines with no meaning of their own (a forecast's series), in order | `--series-1…5` | `SERIES_COLOURS` | ![](swatches/319795.svg) ![](swatches/026AA2.svg) ![](swatches/0EA5E9.svg) ![](swatches/285E61.svg) ![](swatches/64748B.svg) `#319795 #026AA2 #0EA5E9 #285E61 #64748B` (ui-kit chart colours; each such chart also names its lines and dashes them) |
 | Income groups, low (amber) → high (teal) | `--income-ramp-1…7` | `INCOME_RAMP`, `incomeGroupColours(n)` | ![](swatches/8A3A0C.svg) ![](swatches/B8641C.svg) ![](swatches/E0954A.svg) ![](swatches/9CA3AF.svg) ![](swatches/5FB3AA.svg) ![](swatches/2A8C84.svg) ![](swatches/0F5F59.svg) `#8A3A0C … #9CA3AF … #0F5F59` |
-| Poverty / inequality change | a fall `--c-gain`, a rise `--c-loss` | `.gain` / `.loss`; other years at `UNSELECTED_OPACITY` (0.5) | the selected year full strength, other years the same colour tinted |
+| Poverty change by year | a fall `--c-gain`, a rise `--c-loss` | `.gain` / `.loss`; other years at `UNSELECTED_OPACITY` (0.5) | the selected year full strength, other years the same colour tinted |
+| Inequality change | `--c-highlight` | `INEQUALITY_FILL` (= `.highlight`) | ![](swatches/285E61.svg) `#285E61`, neither gain nor loss |
 
 `--c-hover` and `--c-highlight-band` stay apart on purpose: if they were one colour, the hover cursor would vanish on the highlighted group's bar.
 
@@ -49,10 +56,9 @@ One colour template for the dashboard. Every colour has a role, and each role ha
 
 Single-purpose series, each in one chart; their tokens and JS names follow the same pattern (`--c-age-children` is `CHART_COLOURS.ageChildren`):
 
-- Age bands: `age-children`, `age-young-adults`, `age-adults`, `age-older`, `age-pension` (blues to purple; 16 to 24 is `gain`).
-- Household breakdown: `market-income`, `pension-contributions`.
-- Marginal tax rate parts: `mtr-income-tax`, `mtr-child-benefit`, `mtr-allowance-taper`, `mtr-national-insurance`, `mtr-student-loan`, `mtr-universal-credit`, `mtr-other-benefits`, `mtr-other`.
-- Size of a difference: `diff-small`, `diff-medium`, `diff-large` (green, yellow, red: a traffic light, off the teal/amber palette by design).
+- Age bands: `age-children`, `age-young-adults`, `age-adults`, `age-older`, `age-pension` (ui-kit teals and blues: teal 300, blue 500, blue 700, teal 700, teal 900; 16 to 24 is `gain`). Each line is also named, and "All ages" is the dashed reference grey.
+- Household breakdown, stacked (net income and marginal rate cards): earnings `market-income` (slate gray 500), `pension-contributions` (gray 400); benefits in ui-kit teals (`mtr-universal-credit`, `mtr-child-benefit`, `net-state-pension`, `net-warm-home-discount`, `mtr-other-benefits`); taxes and deductions in ui-kit blues (`mtr-income-tax`, `mtr-allowance-taper`, `mtr-national-insurance`, `mtr-student-loan`, `net-council-tax`, `net-fuel-duty`, `net-vat`); the rest `mtr-other` (gray 300). No purples or greens.
+- Your income tenth behind a distribution: `tenth-band` (ui-kit blue 100).
 - Notices: `notice-bg`, `notice-text`.
 
 ### Interface (CSS only)

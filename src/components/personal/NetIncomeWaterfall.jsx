@@ -1,6 +1,7 @@
 import { money, signedMoney } from "../../utils/singleYear";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../FloatingTooltip";
 import TitleIcon from "../TitleIcon";
+import { magnitudeColours } from "../../utils/chartTheme";
 import { useId, useRef } from "react";
 
 /**
@@ -113,6 +114,12 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
   const hi = Math.max(...rows.map((row) => row.to));
   const pct = (value) => ((value - start) / Math.max(hi - start, 1)) * 100;
   const largest = largestSteps(steps);
+  // Each policy's bar by direction and size, the largest darkest; the
+  // interaction step keeps its plain direction colour
+  const policySteps = rows.filter((row) => !row.total && row.id !== "interaction");
+  const shades = new Map(
+    magnitudeColours(policySteps.map((row) => row.rounded)).map((colour, k) => [policySteps[k].id, colour]),
+  );
   const sentence = waterfallSentence(totals, steps, yearLabel);
   // No change at all: the sentence is the panel's one note, shown
   const noChange = !rows.some((row) => !row.total && Math.round(row.rounded) !== 0);
@@ -142,6 +149,7 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
         >
           {rows.map((row, index) => {
             const value = row.total ? money(row.to) : signedMoney(row.rounded);
+            const shade = shades.get(row.id);
             const tone = row.total ? row.id : row.rounded < 0 ? "loss" : row.rounded > 0 ? "gain" : "none";
             const left = row.total ? 0 : pct(Math.min(row.from, row.to));
             const right = row.total ? pct(row.to) : pct(Math.max(row.from, row.to));
@@ -151,6 +159,7 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
               <li
                 key={row.id}
                 className={`waterfall-row ${row.total ? "is-total" : "is-step"} is-${tone}${chip ? " is-largest" : ""}`}
+                style={shade ? { "--bar": shade } : undefined}
                 data-row={row.id}
                 tabIndex={0}
                 aria-label={`${row.name}: ${value}`}
@@ -163,7 +172,7 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
                         key: row.id,
                         name: row.total ? "Net income" : "Change in net income",
                         text: `${value} a year`,
-                        color: `var(--c-${tone === "none" ? "before" : tone})`,
+                        color: shade ?? `var(--c-${tone === "none" ? "before" : tone})`,
                       },
                     ]}
                   />,

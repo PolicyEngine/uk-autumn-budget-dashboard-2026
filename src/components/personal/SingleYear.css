@@ -1024,12 +1024,14 @@
   border-radius: 0 3px 3px 0;
 }
 
+/* A step's bar: its direction's colour, shaded by size (--bar, from
+   magnitudeColours: the largest step darkest) */
 .waterfall-row.is-gain .waterfall-bar {
-  background: var(--c-gain);
+  background: var(--bar, var(--c-gain));
 }
 
 .waterfall-row.is-loss .waterfall-bar {
-  background: var(--c-loss);
+  background: var(--bar, var(--c-loss));
 }
 
 .waterfall-row.is-none .waterfall-bar {

@@ -12,7 +12,7 @@ import LsCard from "./LsCard";
 import ViewToggle from "../ViewToggle";
 import SeriesToggle from "../SeriesToggle";
 import { LsLineChart, lineLegendItems } from "./LsCharts";
-import { CHART_COLOURS, useNarrowViewport } from "../../utils/chartTheme";
+import { CHART_COLOURS, SERIES_COLOURS, useNarrowViewport } from "../../utils/chartTheme";
 import { DASH } from "../../utils/livingStandards/baseline";
 import { fyLabel, formatOneDp } from "../../utils/livingStandards/outlook";
 import { buildChartCsv } from "../../utils/chartCsv";
@@ -32,14 +32,14 @@ const PA = {
   key: "personal_allowance",
   name: "Personal allowance",
   short: "Allowance",
-  colour: CHART_COLOURS.gain,
+  colour: SERIES_COLOURS[0],
   meaning: "The income on which no income tax is paid.",
 };
 const HR = {
   key: "higher_rate",
   name: "Higher rate threshold",
   short: "Higher rate",
-  colour: CHART_COLOURS.marketIncome,
+  colour: SERIES_COLOURS[2],
   meaning: "The income above which income tax is paid at the higher rate (the personal allowance plus the basic rate band).",
 };
 const BOTH = { ...PA, name: "Personal allowance and higher rate threshold", short: "Income tax" };
@@ -47,7 +47,7 @@ const PLAN_2 = {
   key: "plan_2",
   name: "Plan 2 student loan threshold",
   short: "Plan 2",
-  colour: CHART_COLOURS.ageOlder,
+  colour: SERIES_COLOURS[1],
   meaning: "The income above which Plan 2 student loan repayments are made (9% of income over it).",
 };
 const PAY = {

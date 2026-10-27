@@ -230,7 +230,7 @@ code {
   --c-reference: #6b7280; /* a reference series, such as "All ages" (dashed) */
   --c-highlight: #285e61; /* the highlighted group, such as the age band */
   --c-highlight-band: #eaf5f4; /* behind a highlighted group */
-  --c-tenth-band: #dde6f3; /* your income tenth behind a teal or grey distribution */
+  --c-tenth-band: #e0f2fe; /* your income tenth behind a teal or grey distribution (ui-kit blue-100) */
   --c-hover: #eef6f6; /* behind the hovered bar or row */
   --c-row-band: #f9fafb; /* every second row of a chart with one row per policy: --pe-gray-50, fainter than --c-grid and --c-hover */
   --c-obr: #9ca3af; /* the OBR's figure (a ring) */
@@ -244,40 +244,58 @@ code {
   --c-text: #374151;
   --c-surface: #ffffff;
   --c-muted-fill: #f3f4f6; /* a shaded area with no data */
-  /* How far PolicyEngine is from the OBR */
-  --c-diff-small: #10b981;
-  --c-diff-medium: #fbbf24;
-  --c-diff-large: #ef4444;
-  /* Categorical series: age bands (blues under 50, purples from 50, each
-     darker with age; 16 to 24 is --c-gain), the household breakdown's
-     market income and pension contributions */
-  --c-age-children: #8db8e3;
-  --c-age-young-adults: #5a8fcb;
-  --c-age-adults: #3165a8;
-  --c-age-older: #7c5cb8;
-  --c-age-pension: #2e1f5e;
-  --c-market-income: #4a7ba7;
-  --c-pension-contributions: #b8875a;
-  --c-gain-light: #81e6d9; /* a small gain; a light teal series */
+  /* Categorical series, from the @policyengine/ui-kit palette (teals,
+     blues, slate): age bands, the household breakdown's income layers.
+     Age bands, each its own line: blues and teals, 16 to 24 is --c-gain */
+  --c-age-children: #4fd1c5; /* ui-kit teal-300 */
+  --c-age-young-adults: #0ea5e9; /* ui-kit blue-500 */
+  --c-age-adults: #026aa2; /* ui-kit blue-700 */
+  --c-age-older: #285e61; /* ui-kit teal-700 */
+  --c-age-pension: #1d4044; /* ui-kit teal-900 */
+  --c-market-income: #64748b; /* earnings and other income: ui-kit slate gray-500 */
+  --c-pension-contributions: #94a3b8; /* ui-kit gray-400 */
+  --c-gain-light: #81e6d9; /* a small gain on the map; a light teal series (ui-kit teal-200) */
   --c-map-gain: #14b8a6; /* the constituency map scale's gain end, as on the 2025 dashboard */
-  --c-loss-light: #fbbf24; /* a small loss */
+  --c-loss-light: #fbbf24; /* a small loss on the map */
   --c-ink: #1f2937; /* the map's approximate-figure dots */
   /* Notices: data pending or provisional */
   --c-notice-bg: #fff7e6;
   --c-notice-text: #7a5a1f;
-  /* The measures' colour ramps, darkest to lightest: each group's measures,
-     largest first, take evenly spaced OKLab steps along its ramp
-     (chartTheme.js POLICY_RAMPS, measureRamp) */
+  /* The measures' colour ramps, darkest to lightest, as on the 2025 Autumn
+     Budget dashboard (PolicyEngine/uk-autumn-budget-dashboard,
+     src/utils/policyConfig.js): measures that raise revenue (households
+     lose) in ambers 900 to 400, those that cost revenue (households gain)
+     in teals 600 to 300. Each group's measures, largest first, take the
+     steps in order; more measures than steps take evenly spaced OKLab
+     steps along the ramp (chartTheme.js POLICY_RAMPS, measureRamp) */
   --ramp-raise-1: #78350f;
-  --ramp-raise-2: #b45309;
-  --ramp-raise-3: #f59e0b;
-  --ramp-cost-1: #0d4359;
-  --ramp-cost-2: #016768;
-  --ramp-cost-3: #088075;
-  --ramp-cost-4: #00997f;
-  --ramp-cost-5: #28b084;
-  --ramp-cost-6: #4ac685;
-  --ramp-cost-7: #75d987;
+  --ramp-raise-2: #92400e;
+  --ramp-raise-3: #b45309;
+  --ramp-raise-4: #d97706;
+  --ramp-raise-5: #f59e0b;
+  --ramp-raise-6: #fbbf24;
+  --ramp-cost-1: #0d9488;
+  --ramp-cost-2: #14b8a6;
+  --ramp-cost-3: #2dd4bf;
+  --ramp-cost-4: #5eead4;
+  /* Size by intensity, darkest to lightest (chartTheme.js MAGNITUDE_RAMPS,
+     magnitudeColours): a per-policy row takes its direction's ramp, the
+     largest effect the darkest step and the smallest the lightest. The
+     2025 dashboard's teals and ambers, from their dark ends: gain teal
+     700, 600, 500; loss amber 900, 700, 600 */
+  --ramp-gain-1: #0f766e;
+  --ramp-gain-2: #0d9488;
+  --ramp-gain-3: #14b8a6;
+  --ramp-loss-1: #78350f;
+  --ramp-loss-2: #b45309;
+  --ramp-loss-3: #d97706;
+  /* Categorical lines with no meaning of their own (a forecast's series),
+     in this order: ui-kit chart colours (chartTheme.js SERIES_COLOURS) */
+  --series-1: #319795;
+  --series-2: #026aa2;
+  --series-3: #0ea5e9;
+  --series-4: #285e61;
+  --series-5: #64748b;
   /* Income groups, lowest to highest income: amber through a grey
      midpoint to teal (chartTheme.js INCOME_RAMP) */
   --income-ramp-1: #8a3a0c;
@@ -287,21 +305,22 @@ code {
   --income-ramp-5: #5fb3aa;
   --income-ramp-6: #2a8c84;
   --income-ramp-7: #0f5f59;
-  /* The marginal tax rate's parts, stacked: taxes and benefit withdrawals
-     in teals and greens, the student loan in orange, the rest grey */
-  --c-mtr-income-tax: #5fb3a8;
-  --c-mtr-child-benefit: #4fd1c5;
-  --c-mtr-allowance-taper: #285e61;
-  --c-mtr-national-insurance: #a7e3da;
-  --c-mtr-student-loan: #e8b66a;
-  --c-mtr-universal-credit: #2f855a;
-  --c-mtr-other-benefits: #9ae6b4;
-  --c-mtr-other: #d1d5db;
-  --c-net-state-pension: #22543d;
-  --c-net-warm-home-discount: #68d391;
-  --c-net-council-tax: #8e7cc3;
-  --c-net-fuel-duty: #553c9a;
-  --c-net-vat: #b794f4;
+  /* A household's income, stacked: benefits in ui-kit teals, taxes and
+     deductions in ui-kit blues, income and the rest in slate greys. The
+     marginal tax rate card takes the same colour for each programme */
+  --c-mtr-income-tax: #075985; /* blue-800 */
+  --c-mtr-child-benefit: #319795; /* teal-500 */
+  --c-mtr-allowance-taper: #0c4a6e; /* blue-900 */
+  --c-mtr-national-insurance: #0ea5e9; /* blue-500 */
+  --c-mtr-student-loan: #7dd3fc; /* blue-300 */
+  --c-mtr-universal-credit: #285e61; /* teal-700 */
+  --c-mtr-other-benefits: #81e6d9; /* teal-200 */
+  --c-mtr-other: #cbd5e1; /* gray-300 */
+  --c-net-state-pension: #1d4044; /* teal-900 */
+  --c-net-warm-home-discount: #4fd1c5; /* teal-300 */
+  --c-net-council-tax: #0284c7; /* blue-600 */
+  --c-net-fuel-duty: #38bdf8; /* blue-400 */
+  --c-net-vat: #bae6fd; /* blue-200 */
   /* Type scale: section titles, card titles, body, small text, captions
      (sources, notes, axis units) and micro labels */
   --fs-stat: 1.75rem;

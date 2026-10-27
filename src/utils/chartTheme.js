@@ -52,7 +52,7 @@ export const CHART_COLOURS = {
   reference: "#6B7280",
   highlight: "#285E61",
   highlightBand: "#EAF5F4",
-  tenthBand: "#DDE6F3",
+  tenthBand: "#E0F2FE",
   hover: "#EEF6F6",
   rowBand: "#F9FAFB",
   obr: "#9CA3AF",
@@ -66,37 +66,35 @@ export const CHART_COLOURS = {
   text: "#374151",
   surface: "#FFFFFF",
   mutedFill: "#F3F4F6",
-  diffSmall: "#10B981",
-  diffMedium: "#FBBF24",
-  diffLarge: "#EF4444",
-  ageChildren: "#8DB8E3",
-  ageYoungAdults: "#5A8FCB",
-  ageAdults: "#3165A8",
-  ageOlder: "#7C5CB8",
-  agePension: "#2E1F5E",
-  marketIncome: "#4A7BA7",
-  pensionContributions: "#B8875A",
+  // Age bands, each its own line (ui-kit blues and teals; 16 to 24 is gain)
+  ageChildren: "#4FD1C5",
+  ageYoungAdults: "#0EA5E9",
+  ageAdults: "#026AA2",
+  ageOlder: "#285E61",
+  agePension: "#1D4044",
+  marketIncome: "#64748B",
+  pensionContributions: "#94A3B8",
   gainLight: "#81E6D9",
   mapGain: "#14B8A6",
   lossLight: "#FBBF24",
   ink: "#1F2937",
   noticeBg: "#FFF7E6",
   noticeText: "#7A5A1F",
-  mtrIncomeTax: "#5FB3A8",
-  mtrChildBenefit: "#4FD1C5",
-  mtrAllowanceTaper: "#285E61",
-  mtrNationalInsurance: "#A7E3DA",
-  mtrStudentLoan: "#E8B66A",
-  mtrUniversalCredit: "#2F855A",
-  mtrOtherBenefits: "#9AE6B4",
-  mtrOther: "#D1D5DB",
-  // The net income card's layers the marginal rate card has not: benefits
-  // in greens, the household's other taxes in purples
-  netStatePension: "#22543D",
-  netWarmHomeDiscount: "#68D391",
-  netCouncilTax: "#8E7CC3",
-  netFuelDuty: "#553C9A",
-  netVat: "#B794F4",
+  // A household's income, stacked: benefits in ui-kit teals, taxes and
+  // deductions in ui-kit blues, income and the rest in slate greys
+  mtrIncomeTax: "#075985",
+  mtrChildBenefit: "#319795",
+  mtrAllowanceTaper: "#0C4A6E",
+  mtrNationalInsurance: "#0EA5E9",
+  mtrStudentLoan: "#7DD3FC",
+  mtrUniversalCredit: "#285E61",
+  mtrOtherBenefits: "#81E6D9",
+  mtrOther: "#CBD5E1",
+  netStatePension: "#1D4044",
+  netWarmHomeDiscount: "#4FD1C5",
+  netCouncilTax: "#0284C7",
+  netFuelDuty: "#38BDF8",
+  netVat: "#BAE6FD",
 };
 
 /**
@@ -108,19 +106,46 @@ export const CHART_COLOURS = {
  * equal). The catalogue samples them for any number of measures (measureRamp, below).
  */
 export const POLICY_RAMPS = {
-  // Amber 900, 700, 500
-  raise: ["#78350F", "#B45309", "#F59E0B"],
-  // Teals, dark blue-teal to mint: the hue turns as the steps lighten, so
-  // the dark end stays apart (seven steps do not fit at 3:1 on white; the
-  // lightest is 1.75:1)
-  cost: ["#0D4359", "#016768", "#088075", "#00997F", "#28B084", "#4AC685", "#75D987"],
+  // As on the 2025 Autumn Budget dashboard (PolicyEngine/uk-autumn-budget-
+  // dashboard, src/utils/policyConfig.js, POLICY_COLORS): amber 900 to 400
+  raise: ["#78350F", "#92400E", "#B45309", "#D97706", "#F59E0B", "#FBBF24"],
+  // …and teal 600 to 300 (the lighter steps are under 3:1 on white; every
+  // measure is named in the legend and the tooltip)
+  cost: ["#0D9488", "#14B8A6", "#2DD4BF", "#5EEAD4"],
 };
+
+/**
+ * Size by intensity: one ramp per direction, darkest to lightest, from the
+ * 2025 dashboard's teals and ambers. In a chart with one row or bar per
+ * policy, colour says the direction (a gain, such as fewer people in
+ * poverty, in teal; a loss in amber) and intensity the size: the largest
+ * effect is the darkest step and smaller ones are lighter
+ * (magnitudeColours, below). Every row prints its value, so the lightest
+ * teal (2.5:1 on white) is never the only cue. The JS mirror of the
+ * --ramp-gain-* and --ramp-loss-* tokens in src/app/globals.css.
+ */
+export const MAGNITUDE_RAMPS = Object.freeze({
+  // Teal 700, 600, 500
+  gain: Object.freeze(["#0F766E", "#0D9488", "#14B8A6"]),
+  // Amber 900, 700, 600: the loss family
+  loss: Object.freeze(["#78350F", "#B45309", "#D97706"]),
+});
+
+/**
+ * Lines that are categories with no meaning of their own (a forecast's
+ * series), in this order: the ui-kit chart colours. Each such chart also
+ * names its lines directly and draws them in different dashes, since no
+ * five brand colours stay apart for every reader. The JS mirror of the
+ * --series-* tokens in src/app/globals.css.
+ */
+export const SERIES_COLOURS = Object.freeze(["#319795", "#026AA2", "#0EA5E9", "#285E61", "#64748B"]);
 
 /**
  * How the measure catalogue (measureCatalogue.jsx, #104) colours the
  * published measures: each direction's measures, ranked by budgetary size
- * (largest first), take evenly spaced steps along that direction's ramp
- * above, darkest first, so any number of measures get distinct shades.
+ * (largest first), take that direction's ramp steps in order, darkest
+ * first, as on the 2025 dashboard; with more measures than steps, evenly
+ * spaced steps along the ramp, so any number of measures get distinct shades.
  * Revenue-raising measures take the raise ramp (ambers), those that cost
  * revenue the cost ramp (teals), and a measure with no published costing
  * the no-change grey. With more than `alternateAbove` measures in one
@@ -184,6 +209,9 @@ function oklabToHex([L, a0, b0]) {
 export function measureRamp(direction, n) {
   const ramp = MEASURE_RAMPS[direction];
   if (!ramp?.stops) return Array.from({ length: n }, () => MEASURE_RAMPS.neutral);
+  // No more measures than steps: the steps themselves, darkest first, as
+  // on the 2025 dashboard
+  if (n <= ramp.stops.length) return ramp.stops.slice(0, n).map((stop) => stop.toUpperCase());
   const labs = ramp.stops.map(hexToOklab);
   const lengths = labs.slice(1).map((lab, i) => Math.hypot(...lab.map((v, k) => v - labs[i][k])));
   const total = lengths.reduce((sum, length) => sum + length, 0);
@@ -203,6 +231,54 @@ export function measureRamp(direction, n) {
       [a, b] = [chroma * Math.cos(hue), chroma * Math.sin(hue)];
     }
     return oklabToHex([L, a, b]);
+  });
+}
+
+/**
+ * The colour a fraction `t` of the way along a ramp of hex stops (0 its
+ * first stop, 1 its last), interpolated in OKLab by distance along it.
+ */
+export function rampAt(stops, t) {
+  if (stops.length === 1) return stops[0].toUpperCase();
+  const labs = stops.map(hexToOklab);
+  const lengths = labs.slice(1).map((lab, i) => Math.hypot(...lab.map((v, k) => v - labs[i][k])));
+  const total = lengths.reduce((sum, length) => sum + length, 0);
+  let along = Math.max(0, Math.min(1, t)) * total;
+  let k = 0;
+  while (k < lengths.length - 1 && along > lengths[k]) {
+    along -= lengths[k];
+    k += 1;
+  }
+  const f = lengths[k] ? Math.min(1, along / lengths[k]) : 0;
+  return oklabToHex(labs[k].map((v, j) => v + (labs[k + 1][j] - v) * f));
+}
+
+/**
+ * One colour per value for a chart with one row or bar per policy: the
+ * direction picks the ramp (MAGNITUDE_RAMPS.gain for a value that is
+ * `better`, by default a rise; .loss otherwise) and the size picks the
+ * step. The values are ranked by absolute size across both directions, so
+ * the largest effect is the darkest step of its ramp, the smallest the
+ * lightest, and equal sizes share a step. A zero, missing or non-finite
+ * value takes the no-change grey.
+ *
+ * @param {Array<number|null>} values
+ * @param {{better?: (value: number) => boolean}} [options] - Which side is
+ *   the gain: `(v) => v < 0` for poverty, where a fall is better
+ * @returns {string[]} one colour per value, in the order given
+ */
+export function magnitudeColours(values, { better = (value) => value > 0 } = {}) {
+  const sizes = values.map((value) => {
+    const number = Number(value);
+    return value == null || !Number.isFinite(number) ? 0 : Math.abs(number);
+  });
+  const distinct = [...new Set(sizes.filter((size) => size > 0))].sort((a, b) => b - a);
+  const last = Math.max(distinct.length - 1, 1);
+  return values.map((value, index) => {
+    if (sizes[index] === 0) return CHART_COLOURS.noChange;
+    const t = distinct.length === 1 ? 0 : distinct.indexOf(sizes[index]) / last;
+    const ramp = MAGNITUDE_RAMPS[better(Number(value)) ? "gain" : "loss"];
+    return t === 0 ? ramp[0] : t === 1 ? ramp[ramp.length - 1] : rampAt(ramp, t);
   });
 }
 

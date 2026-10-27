@@ -24,7 +24,7 @@ import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTool
 import SummaryMetricChart, { SUMMARY_METRICS, hasColumn, metricValue, povertyMetric, usePovertyChoice } from "./SummaryMetricChart";
 import { useOutlook } from "./livingStandards/useOutlook";
 import { formatPp, outlookPopulation, roundPeople } from "../utils/povertyPeople";
-import { CHART_COLOURS, fiscalYearTick, fitTicks } from "../utils/chartTheme";
+import { CHART_COLOURS, MAGNITUDE_RAMPS, fiscalYearTick, fitTicks, magnitudeColours } from "../utils/chartTheme";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
@@ -211,19 +211,19 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   // Every round tick has a gridline (0, 2,000, 4,000, 6,000); WfTicks
   // labels those that fit the track
   const ticks = allTicks;
-  // Bars by direction only: fewer in poverty in the gain colour, more in the
-  // loss colour, the total a darker shade of the same; each measure's own
-  // colour is the dot by its name
+  // Bars by direction and size: fewer in poverty in the gain ramp, more in
+  // the loss ramp, the largest step the darkest and smaller ones lighter
+  // (magnitudeColours); the total the darkest step of its direction. Each
+  // measure's own colour is the dot by its name
+  const shades = new Map();
+  const measureShades = magnitudeColours(steps.filter((s) => s.kind === "measure").map((s) => s.x));
+  steps.filter((s) => s.kind === "measure").forEach((s, k) => shades.set(s.id, measureShades[k]));
   const fillOf = (step) =>
     step.kind === "interaction"
       ? CHART_COLOURS.noChange
       : step.kind === "total"
-        ? step.x >= 0
-          ? CHART_COLOURS.gainText
-          : CHART_COLOURS.lossText
-        : step.x >= 0
-          ? CHART_COLOURS.gain
-          : CHART_COLOURS.loss;
+        ? MAGNITUDE_RAMPS[step.x >= 0 ? "gain" : "loss"][0]
+        : shades.get(step.id) ?? CHART_COLOURS.noChange;
   const pos = (v) => (x1 === x0 ? 50 : ((v - x0) / (x1 - x0)) * 100);
 
   // Why a "No change" row moves no one: "changes prices, not incomes"

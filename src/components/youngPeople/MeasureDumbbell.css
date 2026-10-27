@@ -277,10 +277,11 @@
   border-radius: 50%;
 }
 
+/* The dot's key: half gain, half loss, as the dots take either */
 .measure-dumbbell-legend i.dot {
   width: 9px;
   height: 9px;
-  background: var(--c-gain);
+  background: linear-gradient(90deg, var(--c-gain) 50%, var(--c-loss) 50%);
 }
 
 .measure-dumbbell-legend i.ring {

@@ -6,7 +6,7 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import UnpublishedPlot from "../UnpublishedPlot";
 import NoBreakYear from "../NoBreakYear";
 import Note from "../Note";
-import { fiscalYearTick, CHART_COLOURS, fitTicks, noHouseholdChange } from "../../utils/chartTheme";
+import { fiscalYearTick, CHART_COLOURS, fitTicks, magnitudeColours, noHouseholdChange } from "../../utils/chartTheme";
 import useElementWidth from "../../hooks/useElementWidth";
 import ControlBar from "../ControlBar";
 import { AGE_BANDS, ALL_BAND, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
@@ -53,7 +53,7 @@ export const DUMBBELL_MAX_STEPS = 4;
 
 /**
  * Each policy as a row: a hollow ring for all ages and a filled dot for the
- * chosen group on one £ axis (zero line drawn), joined by a thin line
+ * chosen group (teal for a gain, amber for a loss, darker the larger) on one £ axis (zero line drawn), joined by a thin line
  * coloured by which is larger; the group's value and its gap to all ages at
  * the right. Hovering or focusing a row shows both values and the ratio.
  */
@@ -65,6 +65,9 @@ export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, year
   const ticks = fitTicks(allTicks, domain, plotWidth, money);
   const [lo, hi] = domain;
   const pos = (value) => `${((value - lo) / (hi - lo)) * 100}%`;
+  // The group's dot by direction and size: a gain in the teal ramp, a loss
+  // in the amber, the largest darkest (magnitudeColours)
+  const dotColours = magnitudeColours(rows.map((row) => row.group));
   return (
     <div
       className="measure-dumbbell"
@@ -113,7 +116,7 @@ export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, year
                 <span className={`measure-dumbbell-link ${tone}`} style={{ left: pos(left), width: `calc(${pos(right)} - ${pos(left)})` }} />
               )}
               <span className="measure-dumbbell-ring" style={{ left: pos(row.all) }} />
-              <span className="measure-dumbbell-dot" style={{ left: pos(row.group) }} />
+              <span className="measure-dumbbell-dot" style={{ left: pos(row.group), background: dotColours[index] }} />
             </span>
             <span className="measure-dumbbell-values" role="cell">
               <strong className="row-band-value">{money(row.group)}</strong>

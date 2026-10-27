@@ -14,7 +14,7 @@ import { useNarrowViewport } from "../../../utils/chartTheme";
 import SectionHeading from "../../SectionHeading";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
 import { DASH } from "../../../utils/livingStandards/baseline";
-import { CHART_COLOURS } from "../../../utils/chartTheme";
+import { CHART_COLOURS, SERIES_COLOURS } from "../../../utils/chartTheme";
 import { pctLabel, percentAxis, toRows } from "../../../utils/livingStandards/forecast";
 import { FORECAST_GROUPS, SERIES_NAMES, cardSentence, seriesName } from "../../../utils/livingStandards/forecastWords";
 import { formatOneDp } from "../../../utils/livingStandards/outlook";
@@ -56,18 +56,18 @@ const SERIES_NOTES = {
 
 // Each line's colour and pattern: on one chart they differ in both
 const LINE_STYLE = {
-  cpi: { colour: CHART_COLOURS.gain },
-  cpih: { colour: CHART_COLOURS.highlight, dash: DASH.long },
-  cpi_ahc: { colour: CHART_COLOURS.marketIncome, dash: DASH.short },
+  cpi: { colour: SERIES_COLOURS[0] },
+  cpih: { colour: SERIES_COLOURS[3], dash: DASH.long },
+  cpi_ahc: { colour: SERIES_COLOURS[1], dash: DASH.short },
   rpi: { colour: CHART_COLOURS.reference, dash: DASH.dashDot },
-  earnings: { colour: CHART_COLOURS.gain },
-  non_labour_income: { colour: CHART_COLOURS.marketIncome, dash: DASH.long },
-  house_prices: { colour: CHART_COLOURS.highlight },
-  rent: { colour: CHART_COLOURS.gain, dash: DASH.long },
-  social_rent: { colour: CHART_COLOURS.marketIncome, dash: DASH.short },
-  mortgage_interest: { colour: CHART_COLOURS.gain },
+  earnings: { colour: SERIES_COLOURS[0] },
+  non_labour_income: { colour: SERIES_COLOURS[1], dash: DASH.long },
+  house_prices: { colour: SERIES_COLOURS[3] },
+  rent: { colour: SERIES_COLOURS[0], dash: DASH.long },
+  social_rent: { colour: SERIES_COLOURS[1], dash: DASH.short },
+  mortgage_interest: { colour: SERIES_COLOURS[0] },
 };
-const FALLBACK_STYLES = [CHART_COLOURS.gain, CHART_COLOURS.highlight, CHART_COLOURS.marketIncome, CHART_COLOURS.reference];
+const FALLBACK_STYLES = [SERIES_COLOURS[0], SERIES_COLOURS[3], SERIES_COLOURS[1], CHART_COLOURS.reference];
 
 // Chip labels on a phone, for the long names
 const SHORT_NAMES = { cpi_ahc: "CPI after housing", non_labour_income: "Non-labour", social_rent: "Social rent" };
