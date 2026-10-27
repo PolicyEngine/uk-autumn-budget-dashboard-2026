@@ -223,6 +223,23 @@ def test_the_warm_home_discount_top_up_if_received(answers, region, expected):
     assert result["net_income"]["change"] == 0
 
 
+# --- gas spending ------------------------------------------------------------------
+
+
+def test_the_route_passes_gas_spending_to_gas_consumption():
+    """A measure on the VAT of domestic gas reads ``gas_consumption``; the
+    route sets it from the answer, the ONS average unless given (the
+    drill's gas measure gave every household £0 without it: review on
+    #145; a £0 default did the same: #208 review, finding 7)."""
+    assert household_impact.GAS_SPENDING == 733
+    _, _, household = household_impact.household_entities(Answers(2027))
+    assert household["gas_consumption"] == 733
+    _, _, household = household_impact.household_entities(
+        Answers(2027, gas_spending=1_050)
+    )
+    assert household["gas_consumption"] == 1_050
+
+
 # --- zero VAT on domestic electricity --------------------------------------------
 
 
