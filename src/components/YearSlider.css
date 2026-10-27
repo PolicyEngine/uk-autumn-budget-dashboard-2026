@@ -79,11 +79,6 @@
   color: var(--pe-teal-700);
 }
 
-.year-picker-check {
-  width: 14px;
-  color: var(--pe-teal-700);
-}
-
 @media (max-width: 768px) {
   .year-picker-dropdown {
     right: auto;

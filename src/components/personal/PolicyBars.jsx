@@ -8,7 +8,7 @@ import InfoSections, { hasInfo, infoPreview, nestedItem } from "../InfoSections"
 import { ABOUT_THIS_CHART } from "../ChartMoreInfo";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../FloatingTooltip";
-import { BAR_RADIUS, CHART_COLOURS, ROW_RADIUS } from "../../utils/chartTheme";
+import { BAR_RADIUS, CHART_COLOURS, ROW_RADIUS, magnitudeColours } from "../../utils/chartTheme";
 import TitleIcon from "../TitleIcon";
 
 const ZERO_LINE = CHART_COLOURS.text;
@@ -86,6 +86,11 @@ export default function PolicyBars({ rows, noEffect, noEffectItems = [], underAP
   const plotRight = Math.max(width - valueRoom, 80);
 
   const values = rows.map((row) => row.rounded);
+  // Each policy's bar by direction and size, the largest darkest; the
+  // interaction keeps its grey
+  const policyRows = rows.filter((row) => row.id !== "interaction");
+  const shades = new Map(magnitudeColours(policyRows.map((row) => row.rounded)).map((colour, k) => [policyRows[k].id, colour]));
+  const fillOf = (row) => shades.get(row.id) ?? row.color;
   const lo = Math.min(0, ...values);
   const hi = Math.max(0, ...values);
   const span = hi - lo || 1;
@@ -160,7 +165,7 @@ export default function PolicyBars({ rows, noEffect, noEffectItems = [], underAP
                             key: "change",
                             name: "Change in net income",
                             text: `${signedMoney(row.rounded)} a year`,
-                            color: row.color,
+                            color: fillOf(row),
                           },
                         ]}
                       />,
@@ -180,7 +185,7 @@ export default function PolicyBars({ rows, noEffect, noEffectItems = [], underAP
                     <text className="policy-bar-name" x={plotLeft} y={y + 16} fontSize={fontSize} fill={NAME_COLOUR}>
                       {row.name}
                     </text>
-                    <rect x={x0} y={barY} width={w} height={barHeight} rx={Math.min(BAR_RADIUS, barHeight / 2)} fill={row.color} />
+                    <rect x={x0} y={barY} width={w} height={barHeight} rx={Math.min(BAR_RADIUS, barHeight / 2)} fill={fillOf(row)} />
                     <text
                       className="policy-bar-value"
                       x={width - BAND_PAD}

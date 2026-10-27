@@ -104,12 +104,21 @@ describe("where an example sits", () => {
       ["baseline", "reform"].flatMap((side) =>
         Array.from({ length: 99 }, (_, i) => ({ reformId, year: 2027, side, percentile: i + 1, income: (i + 1) * 1000 })),
       );
-    const catalogue = { displayable: [{ id: "alpha" }, { id: "beta" }], combinedId: KEY, manifest: { combined: { [KEY]: { measures: ["alpha", "beta"] } } } };
+    const approved = { status: "approved", outputs_sha256: "a".repeat(64) };
+    const catalogue = {
+      manifest: {
+        measures: { alpha: approved, beta: approved, gamma: approved },
+        combined: { [KEY]: { status: "approved", measures: ["alpha", "beta"], member_outputs_sha256: { alpha: "a".repeat(64), beta: "a".repeat(64) } } },
+      },
+    };
     const point = { change: 100, before: 18000, after: 18100 };
     const args = (rows) => ({ year: 2027, policies: ["alpha", "beta"], rows, catalogue });
     // The registry's own package id is another package: no position
     expect(examplePercentile(example, point, args(curve("autumn_budget_2026_combined")))).toBeNull();
     expect(examplePercentile(example, point, args(curve(KEY)))).toBe(27);
+    // No combined run of exactly these: none, never the pair's or one policy's
+    const rows = [...curve(KEY), ...curve("alpha")];
+    expect(examplePercentile(example, point, { ...args(rows), policies: ["alpha", "gamma"] })).toBeNull();
   });
 });
 

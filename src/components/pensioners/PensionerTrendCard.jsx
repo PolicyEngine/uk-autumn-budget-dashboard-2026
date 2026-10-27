@@ -6,7 +6,7 @@ import { buildChartCsv } from "../../utils/chartCsv";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import { TOOLTIP_PROPS } from "../ChartTooltip";
 import ControlBar from "../ControlBar";
-import { measureOpacity, useMeasureKey, netOpacity } from "../MeasureKey";
+import MeasureKey, { measureOpacity, useMeasureKey, netOpacity } from "../MeasureKey";
 import TitleIcon from "../TitleIcon";
 import ChartMoreInfo from "../ChartMoreInfo";
 import { BY_YEAR_METHOD } from "../methodology/anchors";
@@ -98,7 +98,7 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
     [focusSeries, catalogue, narrow],
   );
 
-  // The measures in the breakdown, for the section's key (MeasureKey)
+  // The measures in the breakdown, for the card's key (MeasureKey)
   const members = useMemo(
     () =>
       legendMembership(catalogue, selectedPolicies, (id) =>
@@ -347,20 +347,27 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
             narrow={narrow}
           />
         )}
+        {/* By policy: the card's own measure key */}
+        {byMeasure && !key.shared && members.length > 0 && (
+          <MeasureKey members={members} netLabel="Net change" highlight={key.highlight} onHighlight={key.setHighlight} />
+        )}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
       <div className="chart-footer">
-        {unpublished.length > 0 && (
-          <Note>Not shown: {unpublished.map((point) => fiscalYearTick(point.year)).join(", ")} (not yet published, or too few survey records).</Note>
-        )}
         <ChartMoreInfo
           members={byMeasure ? members : []}
           year={Number(selectedYear)}
           period={`in every year from ${first} to ${last}`}
-          info={{ method: BY_YEAR_METHOD }}
+          info={{
+            caveats: [
+              unpublished.length > 0 &&
+                `Not shown: ${unpublished.map((point) => fiscalYearTick(point.year)).join(", ")} (not yet published, or too few survey records).`,
+            ],
+            method: BY_YEAR_METHOD,
+          }}
         />
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNarrowViewport, TICK_STYLE, CHART_COLOURS, ROW_RADIUS } from "../utils/chartTheme";
+import { useNarrowViewport, TICK_STYLE, CHART_COLOURS, ROW_RADIUS, approxTextWidth, fitTicks } from "../utils/chartTheme";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import useElementWidth from "../hooks/useElementWidth";
@@ -136,8 +136,7 @@ function niceScale(lo, hi, targetTicks) {
   return { min, max, ticks };
 }
 
-// Text width without a canvas: close enough for 12–13px system sans.
-const approxWidth = (text, fontSize) => String(text).length * fontSize * 0.56;
+const approxWidth = approxTextWidth;
 
 /** The chart's legend entries, for the image downloads too. */
 export function dumbbellLegendItems(obrKind) {
@@ -218,11 +217,19 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
 
   const values = plotted.flatMap((row) => row.extent);
   // £bn: always from zero; %: around 100%, so the gaps are not squeezed
-  const axis = niceScale(
+  const roundAxis = niceScale(
     pct ? Math.min(100, ...values) : Math.min(0, ...values),
     Math.max(pct ? 100 : 0, ...values),
     narrow ? 4 : 6,
   );
+  // Only the ticks whose labels fit the plot (always £0, or 100%)
+  const axis = {
+    ...roundAxis,
+    ticks: fitTicks(roundAxis.ticks, [roundAxis.min, roundAxis.max], plotRight - plotLeft, (tick) => formatTick(tick, scale), {
+      fontSize: narrow ? 11 : TICK_STYLE.fontSize,
+      keep: pct ? 100 : 0,
+    }),
+  };
   const x = (value) => plotLeft + ((value - axis.min) / (axis.max - axis.min || 1)) * (plotRight - plotLeft);
   const dotY = (index) => top + index * rowHeight + (narrow ? 38 : rowHeight / 2);
 

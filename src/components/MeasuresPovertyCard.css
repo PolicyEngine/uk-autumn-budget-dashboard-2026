@@ -173,12 +173,8 @@
     display: none;
   }
 
-  /* A narrow track: the axis's ends only, and the caption across the
-     label column */
-  .wf-tick:not(:first-child):not(:last-child) {
-    display: none;
-  }
-
+  /* The caption across the label column (the ticks that fit the narrow
+     track are chosen in MeasuresPovertyCard, chartTheme.fitTicks) */
   .wf-caption > .wf-label {
     display: none;
   }
@@ -210,10 +206,10 @@
 
 /* The axis's end ticks sit inside the track, so "0" and the last never run
    into each other on a narrow card */
-.wf-axis .wf-tick:first-child {
+.wf-axis .wf-tick.is-start {
   transform: none;
 }
 
-.wf-axis .wf-tick:last-child {
+.wf-axis .wf-tick.is-end {
   transform: translateX(-100%);
 }

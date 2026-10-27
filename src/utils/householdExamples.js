@@ -1,6 +1,6 @@
 /**
  * The example households, as cards beside "Your household" on the
- * Household impact view. Each has a name, a one-line description of who they
+ * Household calculator view. Each has a name, a one-line description of who they
  * are, the measure its card features (`measure`, which gives the card its
  * colour, and `tag`, its short name on the card; shown only while the
  * catalogue publishes that measure, #104) and an icon (named in

@@ -7,7 +7,7 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
-import MeasureKey, { MeasureKeyProvider, SectionMeasureKey, measureOpacity, useMeasureKey } from "./MeasureKey";
+import { measureOpacity } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
@@ -378,13 +378,11 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
       <Logo />
       {published && (
         <div className="chart-footer">
-          {missing.length > 0 && (
-            <Note>Not shown, as too few survey records: ages {missing.map((p) => p.label).join(", ")}.</Note>
-          )}
           <ChartMoreInfo
             members={members}
             year={year}
             info={{
+              caveats: [missing.length > 0 && `Not shown, as too few survey records: ages ${missing.map((p) => p.label).join(", ")}.`],
               how: [
                 `One bar per single year of age, ${PENSIONER_AGE_FIRST} to 90 and over: the sum of each selected policy's own effect.`,
                 "The line averages the five ages centred on each one, as single ages rest on few survey records.",
@@ -488,8 +486,11 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
       {/* Notes and About this chart in the card's footer row, level across a pair */}
       {published && (
         <div className="chart-footer">
-          {notes.length > 0 && <Note>{notes.join(". ")}.</Note>}
-          <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} info={PENSIONER_MEASURES_INFO} />
+          <NoEffectList
+            items={noEffectItems}
+            title={`No effect in ${yearLabel}`}
+            info={{ ...PENSIONER_MEASURES_INFO, caveats: [...(PENSIONER_MEASURES_INFO.caveats || []), ...notes.map((note) => `${note}.`)] }}
+          />
         </div>
       )}
     </div>
@@ -764,9 +765,6 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
       </div>
       <Logo />
       <div className="chart-footer">
-        {published && thin.length > 0 && (
-          <Note>Not shown, as too few survey records: {thin.map((group) => ageLabel(group.label)).join(", ")}.</Note>
-        )}
         {filtered?.hidden > 0 && (
           <Note>
             {filtered.hidden} {filtered.hidden === 1 ? "policy" : "policies"} with no effect hidden
@@ -783,6 +781,7 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
                 ]
               : ["Shares come from one run of the whole selection, so they include how the policies interact."],
             caveats: [
+              published && thin.length > 0 && `Not shown, as too few survey records: ${thin.map((group) => ageLabel(group.label)).join(", ")}.`,
               perMeasure?.missing.length > 0 && `Not shown, too few survey records: ${perMeasure.missing.join(", ")}.`,
             ],
             method: AGE_METHOD,
@@ -798,7 +797,7 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
  * people at or over State Pension age, from the single years of age in
  * public/data/age_impact.csv (pensioners/pensionersData.js). It follows the
  * page's policy and year pills, and links to the pensioner example
- * household on Household impact.
+ * household on Household calculator.
  *
  * @param {Object} props
  * @param {Array<string>} props.selectedPolicies
@@ -830,17 +829,13 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
         title="Change for pensioners"
         subtitle="Pensioners are people at State Pension age or over (67 from 2027-28)."
       />
-      {/* Both cards colour by measure: one key above the pair, not a long
-          legend in each */}
-      <MeasureKeyProvider>
-        <section className="report-section young-people-section" aria-label="Change for pensioners">
-          <SectionMeasureKey />
-          <div className="charts-grid">
-            <PensionerTrendCard {...props} height={narrow ? 340 : 400} />
-            <AgeCard {...props} height={narrow ? 340 : 400} />
-          </div>
-        </section>
-      </MeasureKeyProvider>
+      {/* The trend card draws its own measure key (MeasureKey) */}
+      <section className="report-section young-people-section" aria-label="Change for pensioners">
+        <div className="charts-grid">
+          <PensionerTrendCard {...props} height={narrow ? 340 : 400} />
+          <AgeCard {...props} height={narrow ? 340 : 400} />
+        </div>
+      </section>
       <SectionHeading
         id="pensioners-who-gains"
         icon="userPlus"

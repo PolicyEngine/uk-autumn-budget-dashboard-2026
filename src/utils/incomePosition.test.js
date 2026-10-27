@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import fc from "fast-check";
 import {
   curveOf,
   describePosition,
@@ -7,8 +6,6 @@ import {
   distributionRunOf,
   hasRun,
   missingPackageNote,
-  NO_PACKAGE_PUBLISHED,
-  PACKAGE_NOT_IN_FILE,
   equivalenceFactor,
   householdPosition,
   ordinal,
@@ -109,68 +106,63 @@ describe("householdPosition", () => {
 });
 
 describe("distributionRunFor", () => {
-  const all = ["a", "b", "c"];
-  const KEY = "combined--a+b+c";
-  it("uses a single measure's own run", () => {
-    expect(distributionRunFor(["b"], all, all, KEY)).toEqual({ reformId: "b", exact: true, package: false });
+  const KEY = "combined--a+b";
+  it("uses a single policy's own run", () => {
+    expect(distributionRunFor(["b"], null)).toEqual({ reformId: "b", package: false });
+    expect(distributionRunFor(["b", "b"], KEY)).toEqual({ reformId: "b", package: false });
   });
-  it("uses the package's run for every measure, exactly, under the manifest's combined key", () => {
-    expect(distributionRunFor(["c", "a", "b"], all, ["b", "c", "a"], KEY)).toEqual({ reformId: KEY, exact: true, package: true });
+  it("uses the combined run of exactly the selected policies, under the manifest's key", () => {
+    expect(distributionRunFor(["b", "a"], KEY)).toEqual({ reformId: KEY, package: true });
   });
-  it("maps part of the package to the package's run, flagged", () => {
-    expect(distributionRunFor(["a", "b"], all, all, KEY)).toEqual({ reformId: KEY, exact: false, package: true });
+  it("has no run for several policies with no combined run of them, and never falls back to a package (issue 228)", () => {
+    expect(distributionRunFor(["a", "c"], null)).toEqual({ reformId: null, package: true });
   });
-  it("never calls the package's run exact after a withdrawal: it still holds the withdrawn measure", () => {
-    // "d" withdrawn: three published, the package run with all four
-    expect(distributionRunFor(["a", "b", "c"], all, ["a", "b", "c", "d"], KEY)).toEqual({ reformId: KEY, exact: false, package: true });
-  });
-  it("has no run to read without a published package, and never falls back to the registry's package (issue 228)", () => {
-    expect(distributionRunFor(["a", "b", "c"], all, null, null)).toEqual({ reformId: null, exact: false, package: true });
-    expect(distributionRunFor(["a", "b", "c"], all, all)).toEqual({ reformId: null, exact: false, package: true });
-  });
-  it("is exact for two or more measures only when the selection, the published set and the package's members are one set", () => {
-    const id = fc.constantFrom("a", "b", "c", "d", "e");
-    fc.assert(
-      fc.property(fc.uniqueArray(id), fc.uniqueArray(id), fc.option(fc.uniqueArray(id), { nil: null }), (selected, published, members) => {
-        fc.pre(selected.length > 1);
-        const { exact, reformId } = distributionRunFor(selected, published, members, KEY);
-        const same = (x, y) => x.length === y.length && x.every((v) => y.includes(v));
-        expect(reformId).toBe(KEY);
-        expect(exact).toBe(published.length > 0 && members !== null && same(selected, published) && same(members, published));
-      }),
-    );
+  it("has no run with nothing selected", () => {
+    expect(distributionRunFor([], KEY)).toEqual({ reformId: null, package: false });
   });
 });
 
 describe("distributionRunOf", () => {
-  const SEVEN = ["a", "b", "c", "d", "e", "f", "g"];
-  const KEY = "combined--352e45790725cc85";
+  // Measures a, b and c; a combined run of exactly a and b, and the full package
+  const approved = { status: "approved", outputs_sha256: "a".repeat(64) };
+  const hashes = (ids) => Object.fromEntries(ids.map((id) => [id, "a".repeat(64)]));
+  const AB = "combined--ab";
+  const ABC = "combined--abc";
   const catalogue = {
-    displayable: SEVEN.map((id) => ({ id })),
-    combinedId: KEY,
-    manifest: { combined: { [KEY]: { measures: SEVEN } } },
+    combinedId: ABC,
+    manifest: {
+      measures: { a: approved, b: approved, c: approved },
+      combined: {
+        [AB]: { status: "approved", measures: ["a", "b"], member_outputs_sha256: hashes(["a", "b"]) },
+        [ABC]: { status: "approved", measures: ["a", "b", "c"], member_outputs_sha256: hashes(["a", "b", "c"]) },
+      },
+    },
   };
-  it("reads the catalogue's package key and members", () => {
-    expect(distributionRunOf(SEVEN, catalogue)).toEqual({ reformId: KEY, exact: true, package: true });
-    expect(distributionRunOf(["a", "b"], catalogue)).toEqual({ reformId: KEY, exact: false, package: true });
+  it("one policy: its own run", () => {
+    expect(distributionRunOf(["c"], catalogue)).toEqual({ reformId: "c", package: false });
   });
-  it("finds no package in a catalogue without one", () => {
-    expect(distributionRunOf(SEVEN, { ...catalogue, combinedId: null })).toEqual({ reformId: null, exact: false, package: true });
-    expect(distributionRunOf(SEVEN, undefined)).toEqual({ reformId: null, exact: false, package: true });
+  it("several: the published combined run of exactly them, never the whole package for part of it", () => {
+    expect(distributionRunOf(["b", "a"], catalogue)).toEqual({ reformId: AB, package: true });
+    expect(distributionRunOf(["a", "b", "c"], catalogue)).toEqual({ reformId: ABC, package: true });
+  });
+  it("several with no combined run of exactly them: no run", () => {
+    expect(distributionRunOf(["a", "c"], catalogue)).toEqual({ reformId: null, package: true });
+    expect(distributionRunOf(["a", "b"], undefined)).toEqual({ reformId: null, package: true });
   });
   it("finds the package in a file only under its own key: the registry's nine-measure rows are another package", () => {
     const rows = [{ reformId: "autumn_budget_2026_combined" }, { reform_id: "a" }];
-    expect(hasRun(rows, KEY)).toBe(false);
+    expect(hasRun(rows, AB)).toBe(false);
     expect(hasRun(rows, "a")).toBe(true);
-    expect(hasRun([...rows, { reformId: KEY }], KEY)).toBe(true);
+    expect(hasRun([...rows, { reformId: AB }], AB)).toBe(true);
     expect(hasRun(rows, null)).toBe(false);
   });
-  it("names why the package's rows are missing: another package in the file, or none published", () => {
+  it("gives the shared not-published notice when the selection's combined rows are missing", () => {
     const rows = [{ reformId: "autumn_budget_2026_combined" }, { reform_id: "a" }];
-    expect(missingPackageNote({ reformId: KEY, package: true }, rows)).toBe(PACKAGE_NOT_IN_FILE);
-    expect(missingPackageNote({ reformId: null, package: true }, rows)).toBe(NO_PACKAGE_PUBLISHED);
-    expect(missingPackageNote({ reformId: KEY, package: true }, [...rows, { reformId: KEY }])).toBeNull();
-    expect(missingPackageNote({ reformId: "a", package: false }, rows)).toBeNull();
+    const notice = "Growth results for this combination of policies are not published yet.";
+    expect(missingPackageNote({ reformId: AB, package: true }, rows, "Growth")).toBe(notice);
+    expect(missingPackageNote({ reformId: null, package: true }, rows, "Growth")).toBe(notice);
+    expect(missingPackageNote({ reformId: AB, package: true }, [...rows, { reformId: AB }], "Growth")).toBeNull();
+    expect(missingPackageNote({ reformId: "a", package: false }, rows, "Growth")).toBeNull();
   });
 });
 

@@ -21,7 +21,7 @@ const renderTab = (onShowTab = vi.fn()) => render(<MeasureCatalogueProvider cata
 
 describe("MethodologyTab", () => {
   it("keeps the anchors other views link to", () => {
-    // Other views (e.g. the map and Household impact) link to these
+    // Other views (e.g. the map and Household calculator) link to these
     expect(METHOD_SECTIONS.geography).toBe("method-area");
     expect(METHOD_SECTIONS.singleYear).toBe("method-single-year");
     const { container } = renderTab();
@@ -140,7 +140,7 @@ describe("MethodologyTab", () => {
     renderTab();
     const slot = document.getElementById(METHOD_SECTIONS.singleYear);
     // One line: the tab it is about; the calculation is said once, folded below
-    expect(within(slot).getByRole("link", { name: "Household impact tab" })).toBeInTheDocument();
+    expect(within(slot).getByRole("link", { name: "Household calculator tab" })).toBeInTheDocument();
     expect(slot).not.toHaveTextContent("OBR's average earnings forecast");
     const calc = document.getElementById(METHOD_ANCHORS.householdCalc);
     expect(within(calc).getByRole("button", { name: "How the household calculation works" })).toBeInTheDocument();
@@ -162,10 +162,10 @@ describe("MethodologyTab", () => {
       fireEvent.click(link);
       expect(onShowTab).toHaveBeenLastCalledWith("outlook", sub);
     }
-    // Household impact is the "household" view (it was linked as "personal",
+    // Household calculator is the "household" view (it was linked as "personal",
     // a view that does not exist)
     const household = document.getElementById(METHOD_SECTIONS.singleYear);
-    const tabLink = within(household).getByRole("link", { name: "Household impact tab" });
+    const tabLink = within(household).getByRole("link", { name: "Household calculator tab" });
     expect(tabLink).toHaveAttribute("href", "?tab=household");
     fireEvent.click(tabLink);
     expect(onShowTab).toHaveBeenLastCalledWith("household");

@@ -126,19 +126,32 @@ describe("Average change by age's axis", () => {
 
 describe("results by age", () => {
   it("adds up mean changes across policies, and hides thin bands", () => {
-    const rows = [
-      { reform_id: "two_child_limit", year: 2029, age_band: "16-24", mean_change: 100, sample_size: 5000 },
-      { reform_id: "threshold_freeze_extension", year: 2029, age_band: "16-24", mean_change: -60, sample_size: 5000 },
-      { reform_id: "two_child_limit", year: 2029, age_band: "65+", mean_change: 5, sample_size: MIN_SAMPLE_SIZE - 1 },
-    ];
-    const points = meanChangeByBand(rows, POLICIES, ALL, 2029);
+    // Every band published (£0 outside 16 to 24)
+    const full = ["two_child_limit", "threshold_freeze_extension"].flatMap((id) =>
+      ["0-15", "16-24", "25-34", "35-49", "50-64", "65+"].map((band) => ({
+        reform_id: id,
+        year: 2029,
+        age_band: band,
+        mean_change: band !== "16-24" ? 0 : id === "two_child_limit" ? 100 : -60,
+        sample_size: 5000,
+      })),
+    );
+    const points = meanChangeByBand(full, POLICIES, ALL, 2029);
     const young = points.find((point) => point.band === "16-24");
     expect(young["measure:two_child_limit"]).toBe(100);
     expect(young["measure:threshold_freeze_extension"]).toBe(-60);
     expect(young.netChange).toBe(40);
-    const oldest = points.find((point) => point.band === "65+");
-    expect(oldest.suppressed).toBe(true);
-    expect(oldest.netChange).toBeNull();
+    // One policy with a thin band: that band alone not shown
+    const thin = [
+      ...full.filter((row) => !(row.reform_id === "two_child_limit" && row.age_band === "65+")),
+      { reform_id: "two_child_limit", year: 2029, age_band: "65+", mean_change: 5, sample_size: MIN_SAMPLE_SIZE - 1 },
+    ];
+    const alone = meanChangeByBand(thin, POLICIES, ["two_child_limit"], 2029);
+    expect(alone.find((point) => point.band === "65+")).toMatchObject({ suppressed: true, netChange: null });
+    expect(alone.find((point) => point.band === "16-24").netChange).toBe(100);
+    // Both policies: the thin band makes the combination unpublished, never half drawn
+    const both = meanChangeByBand(thin, POLICIES, ALL, 2029);
+    expect(both.every((point) => point.combinationUnavailable && point.netChange === null)).toBe(true);
   });
 
   it("reads shares from one policy's run or the combined run only", () => {

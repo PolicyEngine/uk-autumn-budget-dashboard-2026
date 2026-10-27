@@ -21,7 +21,7 @@ it.each(["epsilon", "never_published"])("holds the requested household measure %
   });
   window.history.replaceState({}, "", `/?tab=household&policies=${id}`);
   render(<App />);
-  expect(await screen.findByText("Household impact is unavailable for the selected policies")).toBeInTheDocument();
+  expect(await screen.findByText("Household calculator is unavailable for the selected policies")).toBeInTheDocument();
   expect(new URLSearchParams(window.location.search).get("policies")).toBe(id);
   expect(calls.some((call) => call.method === "POST" || call.url.includes("/api/household-impact"))).toBe(false);
   expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
@@ -38,7 +38,7 @@ it("lets the reader remove an unavailable household measure without calling the 
   });
   window.history.replaceState({}, "", "/?tab=household&policies=epsilon");
   render(<App />);
-  const reason = "Household impact is unavailable for the selected policies";
+  const reason = "Household calculator is unavailable for the selected policies";
   const notice = (await screen.findByText(reason)).closest(".publication-unavailable");
   fireEvent.click(within(notice).getByRole("button", { name: /^Remove .* from the selection$/ }));
   await waitFor(() => expect(screen.queryByText(reason)).toBeNull());
@@ -49,9 +49,9 @@ it("lets the reader remove an unavailable household measure without calling the 
 // Review of 428d209, finding 3: a later snapshot remounts the views, and
 // must restore exactly the selection the reader had, an empty one included.
 describe("a later snapshot keeps the reader's selection", () => {
-  const REASON = "Household impact is unavailable for the selected policies";
+  const REASON = "Household calculator is unavailable for the selected policies";
   const policies = () => new URLSearchParams(window.location.search).get("policies");
-  // The fixture's measures cover 2032 and 2033 only, and Household impact
+  // The fixture's measures cover 2032 and 2033 only, and Household calculator
   // needs the title band's year. So alpha's and beta's receipts are also
   // published for it, re-bound through the production digest functions.
   const serve = async (statuses = {}, revision = 0) => {

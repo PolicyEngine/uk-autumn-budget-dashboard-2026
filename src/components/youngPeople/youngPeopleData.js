@@ -66,7 +66,13 @@ export function measureComparison(rows, policies, selected, year, band = YOUNG_B
     if (!selected.includes(policy.id) || policy.displayable === false) continue;
     const group = findRow(rows, policy.id, year, band);
     const all = findRow(rows, policy.id, year, compareBand);
-    if (!group || !all || !Number.isFinite(group.mean_change) || !Number.isFinite(all.mean_change)) continue;
+    // No rows at all this year: nothing to say. All ages but no row for the
+    // group: its bands withheld (too few survey records), said, never dropped
+    if (!group && !all) continue;
+    if (!group || !all || !Number.isFinite(group.mean_change) || !Number.isFinite(all.mean_change)) {
+      if (all && !group) suppressed.push(policy.name);
+      continue;
+    }
     if (group.sample_size < MIN_SAMPLE_SIZE || all.sample_size < MIN_SAMPLE_SIZE) {
       suppressed.push(policy.name);
     } else if (Math.abs(group.mean_change) < NO_EFFECT && Math.abs(all.mean_change) < NO_EFFECT) {
@@ -83,18 +89,42 @@ export function measureComparison(rows, policies, selected, year, band = YOUNG_B
  * One point per year: for every age group (AGE_GROUPS, keyed by its key),
  * the selected policies' mean changes added up. A year with no rows is
  * `published: false` with null values, never zero; a group whose row in
- * the year is too thin is null and listed in `suppressed`.
+ * the year is too thin is null and listed in `suppressed`; a group with no
+ * row for a selected policy in a year it publishes (the generator withholds
+ * a policy's age bands when some are too thin to publish, keeping all ages)
+ * is null and listed in `missing`, so the card can say so. With several
+ * policies and no package, such a year is null in every group and
+ * `combinationUnavailable` (never half drawn).
  *
  * @param {Array<Object>} rows
  * @param {Array<{id: string, name: string}>} policies
  * @param {Array<string>} selected
  * @param {Array<number>} years - Every year shown, in order
+ * @param {string|null} [packageRun] - The published combined run of exactly
+ *   the selection (selectionPackageKey), read instead of summing singles
  */
-export function changeByYear(rows, policies, selected, years) {
+export function changeByYear(rows, policies, selected, years, packageRun = null) {
+  // The selection is a published combined package: its own run's rows,
+  // never the singles summed (a single's withheld bands would blank them)
+  if (packageRun && (rows ?? []).some((row) => row.reform_id === packageRun)) {
+    return years.map((year) => {
+      const point = { year, published: false, suppressed: [], missing: [] };
+      for (const group of AGE_GROUPS) point[group.key] = null;
+      if (!(rows ?? []).some((row) => row.year === Number(year) && row.reform_id === packageRun)) return point;
+      point.published = true;
+      for (const group of AGE_GROUPS) {
+        const row = findRow(rows, packageRun, year, group.key);
+        if (row && row.sample_size < MIN_SAMPLE_SIZE) point.suppressed.push(group.key);
+        else if (!row || !Number.isFinite(row.mean_change)) point.missing.push(group.key);
+        else point[group.key] = row.mean_change;
+      }
+      return point;
+    });
+  }
   const chosen = policies.filter((policy) => selected.includes(policy.id) && policy.displayable !== false);
   const completeSelection = chosen.length > 0 && chosen.length === selected.length;
   return years.map((year) => {
-    const point = { year, published: false, suppressed: [] };
+    const point = { year, published: false, suppressed: [], missing: [] };
     for (const group of AGE_GROUPS) point[group.key] = null;
     if (!completeSelection || chosen.some((policy) => !(rows ?? []).some((row) => row.year === Number(year) && row.reform_id === policy.id))) return point;
     point.published = true;
@@ -109,7 +139,13 @@ export function changeByYear(rows, policies, selected, years) {
         else total += row.mean_change;
       }
       if (thin) point.suppressed.push(group.key);
+      else if (incomplete) point.missing.push(group.key);
       if (!thin && !incomplete) point[group.key] = total;
+    }
+    // Several policies with no package: a year drawn whole or not at all
+    if (new Set(selected).size > 1 && (point.suppressed.length || point.missing.length)) {
+      for (const group of AGE_GROUPS) point[group.key] = null;
+      return { ...point, suppressed: [], missing: [], combinationUnavailable: true };
     }
     return point;
   });
@@ -123,9 +159,11 @@ export function changeByYear(rows, policies, selected, years) {
 export function niceRange(min, max, { maxSteps = 5 } = {}) {
   const low = Math.min(0, min);
   const high = Math.max(0, max);
-  const span = Math.max(high - low, 1);
   const steps = [25, 50, 100, 200, 250, 500, 1000, 2500];
-  const step = steps.find((candidate) => span / candidate <= maxSteps) ?? 5000;
+  // Counted after rounding the ends out, so −100 to 700 is not drawn in
+  // five steps of 200 when four are asked for
+  const step =
+    steps.find((candidate) => Math.ceil(high / candidate - 1e-9) - Math.floor(low / candidate + 1e-9) <= maxSteps) ?? 5000;
   const bottom = Math.floor(low / step) * step;
   const top = Math.ceil(high / step) * step;
   const ticks = [];

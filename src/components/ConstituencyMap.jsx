@@ -70,6 +70,7 @@ import {
   unchangedLine,
 } from "../utils/geography/seats";
 import {
+  COMBINED_CHOICE,
   choiceLabel,
   choiceMeasureNames,
 } from "../utils/geography/selection";
@@ -86,9 +87,6 @@ import TitleIcon from "./TitleIcon";
 import Tip, { InfoTip } from "./Tip";
 
 const CHART_TITLE = "Constituency impacts";
-
-// The Policy option that shows the whole selection (the default)
-const SELECTION_OPTION = "__selection__";
 
 // The card's three views, and the URL parameter that opens the second or
 // third. The hex map is the default: every constituency the same size, so
@@ -349,17 +347,44 @@ export function keyCounts(states) {
   return counts;
 }
 
+// Below this window width (a phone) the key sits under the map in rows;
+// wider, it is a column beside the map, so the map takes the card's height
+export const LEGEND_SIDE_MIN_WIDTH = 640;
+
+/** Where the map's key goes at a window width: "side" or "below". */
+export const legendPlacement = (width) =>
+  Number.isFinite(width) && width < LEGEND_SIDE_MIN_WIDTH ? "below" : "side";
+
+/** The key's place for the current window, following resizes. */
+function useLegendPlacement() {
+  const [placement, setPlacement] = useState(() =>
+    typeof window === "undefined" ? "side" : legendPlacement(window.innerWidth),
+  );
+  useEffect(() => {
+    const update = () => setPlacement(legendPlacement(window.innerWidth));
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return placement;
+}
+
+// The scale's gradient in the side key: loss at the foot, gain at the top
+const SCALE_GRADIENT_VERTICAL = SCALE_GRADIENT.replace("to right", "to top");
+
 const seatCount = (n) => `${n.toLocaleString("en-GB")} ${n === 1 ? "seat" : "seats"}`;
 
 /**
- * The map's key, under the map: a smooth gradient from a loss (amber)
- * through no change (light grey) to a gain (teal), labelled at its two
- * ends and 0, and a row of compact chips for too uncertain and the three
- * status textures. Hovering or focusing a chip highlights the seats it
+ * The map's key: a smooth gradient from a loss (amber) through no change
+ * (light grey) to a gain (teal), labelled at its two ends and 0, and
+ * compact chips for too uncertain and the three status textures. Beside
+ * the map (`placement` "side") the gradient stands upright, gain at the
+ * top, with a tick at each label, and the chips are stacked under it; on
+ * a phone ("below") it is the horizontal row under the map. Hovering or focusing a chip highlights the seats it
  * covers (`onHighlight`) and gives their number. The textures are the map
  * SVG's own patterns.
  */
-function MapKey({ outcome, extent, counts, highlight, onHighlight }) {
+function MapKey({ outcome, extent, counts, highlight, onHighlight, placement = "below" }) {
   const [low, zero, high] = scaleLabels(outcome, extent);
   const hovered = highlight ? counts[highlight] : null;
   const entryProps = (key, label) => ({
@@ -383,7 +408,11 @@ function MapKey({ outcome, extent, counts, highlight, onHighlight }) {
     </svg>
   );
   return (
-    <div className={`map-key${highlight ? " is-highlighting" : ""}`} role="group" aria-label="Key">
+    <div
+      className={`map-key map-key-${placement}${highlight ? " is-highlighting" : ""}`}
+      role="group"
+      aria-label="Key"
+    >
       <div className="map-key-head">
         <p className="map-key-title">
           Change in household net income, {OUTCOME_LABELS[outcome]}
@@ -406,7 +435,7 @@ function MapKey({ outcome, extent, counts, highlight, onHighlight }) {
           className="map-key-gradient"
           role="img"
           aria-label={`Colour scale from ${low} (amber) through ${zero} (grey) to ${high} (teal)`}
-          style={{ background: SCALE_GRADIENT }}
+          style={{ background: placement === "side" ? SCALE_GRADIENT_VERTICAL : SCALE_GRADIENT }}
         />
         <div className="map-key-labels" aria-hidden="true">
           <span>{low}</span>
@@ -582,16 +611,6 @@ export default function ConstituencyMap({
   showRegionLink = true,
 }) {
   const [outcome, setOutcome] = useState("relative_change");
-  // Several policies selected: the one the reader picked to see on its own,
-  // or null for the selection's combined results (the default). A new
-  // selection goes back to the combination.
-  const [focusId, setFocusId] = useState(null);
-  const selectionStamp = [...new Set(selectedPolicies)].sort().join("|");
-  const [focusStamp, setFocusStamp] = useState(selectionStamp);
-  if (focusStamp !== selectionStamp) {
-    setFocusStamp(selectionStamp);
-    setFocusId(null);
-  }
   const [panel, setPanelParam] = usePanelParam();
   // The map view drawn: the one shown, or in the Table view the last one
   // shown, kept mounted so it keeps its zoom
@@ -603,6 +622,10 @@ export default function ConstituencyMap({
     },
     [setPanelParam],
   );
+  // The card's Policy option: null for the default (combined when
+  // published, else the first selected policy with constituency results)
+  const [policyChoice, setPolicyChoice] = useState(null);
+  const legendPlace = useLegendPlacement();
   const [selectedCode, setSelectedCode] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [svgNode, setSvgNode] = useState(null);
@@ -624,8 +647,10 @@ export default function ConstituencyMap({
     boundariesReady,
     routing,
     regionalHasChoice,
-  } = useConstituencyView({ selectedPolicies, policies, selectedYear, outcome, focusId });
-  const focusName = (id) => shortNameOf(policies.find((policy) => policy.id === id) ?? { id });
+    policyOptions,
+    policyValue,
+  } = useConstituencyView({ selectedPolicies, policies, selectedYear, outcome, policyChoice });
+  const policyName = (id) => shortNameOf(policies.find((policy) => policy.id === id) ?? { id });
   // On a release that routes no results by area, the card describes the
   // measure only, not how to read a map it does not draw.
   const notRouted = areaViewsNotAvailable(routing);
@@ -634,7 +659,7 @@ export default function ConstituencyMap({
   // What the title names: the one policy shown, or the selection
   const titleSubject =
     choice.kind === "measure"
-      ? focusName(choice.reform)
+      ? policyName(choice.reform)
       : choice.kind === "package" || choice.kind === "no-package"
         ? "selected policies"
         : null;
@@ -766,7 +791,9 @@ export default function ConstituencyMap({
       .style("cursor", "pointer");
     // The legend is for the exported file, which shows the whole drawing
     // area with the legend in its corner; on screen the key is HTML
-    placeMapLegend(svg.append("g").attr("class", MAP_LEGEND_CLASS), {
+    // (MapKey), so this one is never drawn there, even before the
+    // stylesheet loads (the export takes the attribute off)
+    placeMapLegend(svg.append("g").attr("class", MAP_LEGEND_CLASS).attr("display", "none").attr("aria-hidden", "true"), {
       x: LEGEND_INSET,
       y: LEGEND_INSET,
     });
@@ -1088,18 +1115,20 @@ export default function ConstituencyMap({
       </UnavailableNotice>
     ) : null;
 
-  // The card's choices, in its one Options pill: the measure shown (when
-  // several selected measures have constituency results), how the change
+  // The card's choices, in its one Options pill: which published run of
+  // the header's selection (when there is more than one), how the change
   // is shown, and the view
   const optionGroups = [
-    choice.focus && {
+    policyOptions.length > 1 && {
       label: "Policy",
-      value: choice.kind === "measure" ? choice.reform : SELECTION_OPTION,
-      onChange: (value) => setFocusId(value === SELECTION_OPTION ? null : value),
-      options: [
-        { value: SELECTION_OPTION, label: "Selected policies combined" },
-        ...choice.focus.options.map((id) => ({ value: id, label: focusName(id) })),
-      ],
+      value: policyValue,
+      onChange: setPolicyChoice,
+      stacked: true,
+      options: policyOptions.map((option) =>
+        option.value === COMBINED_CHOICE
+          ? { value: option.value, label: "Selected policies combined", summary: "Combined" }
+          : { value: option.value, label: policyName(option.value) },
+      ),
     },
     {
       label: "Show the change as",
@@ -1231,8 +1260,9 @@ export default function ConstituencyMap({
 
         {/* Kept mounted in the Table view, so the map keeps its zoom */}
         {view.kind === "rows" && (
-          <div className="map-content" hidden={!onMap}>
+          <div className={`map-content is-legend-${legendPlace}`} hidden={!onMap}>
             <MapKey
+              placement={legendPlace}
               outcome={outcome}
               extent={colourExtent(outcome)}
               counts={counts}

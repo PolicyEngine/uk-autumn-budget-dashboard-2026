@@ -318,6 +318,75 @@
   opacity: 0.15;
 }
 
+/* Beside the map (a tablet or wider: map-key-side): the key is a column
+   on the map's right, so the map takes the card's full height. The
+   gradient stands upright, gain at the top, with a tick at each label; the
+   chips are stacked under it. */
+.map-content.is-legend-side {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+}
+
+.map-content.is-legend-side > .map-key {
+  flex: 0 0 180px;
+  width: 180px;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.map-key-side .map-key-head {
+  justify-content: flex-start;
+}
+
+.map-key-side .map-key-title {
+  text-align: left;
+}
+
+.map-key-side .map-key-scale {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  width: auto;
+  height: 132px;
+  /* Room for the top and bottom labels, which centre on the bar's ends */
+  padding-block: 7px;
+}
+
+.map-key-side .map-key-gradient {
+  width: 12px;
+  height: auto;
+}
+
+.map-key-side .map-key-labels {
+  flex-direction: column-reverse;
+  justify-content: space-between;
+  margin: -7px 0;
+  line-height: 14px;
+}
+
+.map-key-side .map-key-labels span,
+.map-key-side .map-key-labels span:first-child,
+.map-key-side .map-key-labels span:last-child {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-align: left;
+}
+
+/* A tick from the bar to each label */
+.map-key-side .map-key-labels span::before {
+  content: "";
+  width: 5px;
+  border-top: 1px solid var(--pe-gray-400);
+}
+
+.map-key-side .map-key-statuses {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .map-key-item,
   .map-canvas svg path.constituency-path {

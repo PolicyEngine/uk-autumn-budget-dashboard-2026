@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import fc from "fast-check";
-import { meanChangeByBand } from "../utils/ageImpact";
+import { AGE_BANDS, COMBINATION_NOT_PUBLISHED, meanChangeByBand } from "../utils/ageImpact";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import BudgetaryImpactChart from "./BudgetaryImpactChart";
 import DistributionalChart from "./DistributionalChart";
@@ -238,7 +238,7 @@ describe("published measure catalogue in population views", () => {
     expect(screen.queryByText(/directly affected:/)).not.toBeInTheDocument();
     const shares = container.querySelector(".young-people-shares");
     expect(shares.querySelector('[data-testid="chart-rows"]')).toBeNull();
-    const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("title"));
+    const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("aria-label"));
     expect(names.length).toBeGreaterThan(0);
     expect(names.every((name) => [catalogue.byId.get(ALPHA), catalogue.byId.get(BETA)].some((m) => [m.label, m.name].includes(name)))).toBe(true);
     // the average change and trend cards still chart (the measures card is a
@@ -254,12 +254,14 @@ describe("published measure catalogue in population views", () => {
     const { container } = render(withCatalogue(catalogue,
       <YoungPeopleSection policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
     ));
-    expect(await screen.findByText(/The net change is unavailable for those age groups/)).toBeInTheDocument();
-    expect(chartRows(container).every((point) => point[`measure:${ALPHA}`] === null && point.netChange === null)).toBe(true);
+    // Two policies, one with no figures this year: not published together,
+    // never half drawn
+    expect((await screen.findAllByText(COMBINATION_NOT_PUBLISHED)).length).toBeGreaterThan(0);
+    expect(chartRows(container).every((point) => point[`measure:${ALPHA}`] == null && point.netChange == null)).toBe(true);
     // The combined run is refused: no package shares, only each measure's own
     expect(screen.getByText(/each selected policy on its own/)).toBeInTheDocument();
     const shares = container.querySelector(".young-people-shares");
-    const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("title"));
+    const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("aria-label"));
     const alpha = catalogue.byId.get(ALPHA);
     // Alpha has no supported figures this year, so it draws no row
     expect(names.some((name) => [alpha.label, alpha.name].includes(name))).toBe(false);
@@ -307,7 +309,8 @@ describe("measure chart keys", () => {
       fc.array(fc.record({ label: fc.string(), value: fc.integer({ min: -100000, max: 100000 }) }), { minLength: 1, maxLength: 15 }),
       (entries) => {
         const policies = entries.map((entry, index) => ({ id: String(index), name: entry.label, seriesKey: `measure:${index}` }));
-        const rows = entries.map((entry, index) => ({ reform_id: String(index), year: YEAR, age_band: "16-24", mean_change: entry.value, sample_size: 5000 }));
+        // Every band published (£0 outside 16 to 24), as a complete publication is
+        const rows = entries.flatMap((entry, index) => AGE_BANDS.map((band) => ({ reform_id: String(index), year: YEAR, age_band: band.key, mean_change: band.key === "16-24" ? entry.value : 0, sample_size: 5000 })));
         const point = meanChangeByBand(rows, policies, policies.map((policy) => policy.id), YEAR).find((candidate) => candidate.band === "16-24");
         expect(point.label).toBe("16 to 24");
         expect(point.incomplete).toBe(false);

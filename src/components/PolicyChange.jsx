@@ -203,16 +203,20 @@ export function tileChange(before, after, unit) {
  * One change, before and after: a label row with the parameter's icon,
  * then a "Current law" tile (muted, struck through) and a "With the
  * measure" tile (the measure's colour, bold), an arrow between, and the
- * change under the second. When it applies is on the card's timeline.
+ * change under the second. When it applies is on the card's timeline; only
+ * where the change varies over the years (`when`, the period of the first
+ * value shown) does the label say which of them the tiles show.
  */
-function BeforeAfter({ row, tone }) {
+function BeforeAfter({ row, point, tone, when }) {
   const { unit } = row;
-  const point = row.points.find(differs);
   return (
     <div className="pchg-ba">
       <p className="pchg-ba-label">
         {createElement(iconFor(row), { size: 16, "aria-hidden": "true" })}
-        {row.label}
+        <span>
+          {row.label}
+          {when && <span className="pchg-ba-when">, {when}</span>}
+        </span>
       </p>
       <div className="pchg-ba-tiles">
         <div className="pchg-tile is-before">
@@ -228,6 +232,14 @@ function BeforeAfter({ row, tone }) {
       </div>
     </div>
   );
+}
+
+/** Whether a row's change differs in size from one period to another. */
+export function variesByPeriod(row) {
+  const pairs = new Set(
+    (row?.points ?? []).filter(differs).map((point) => `${point.before}|${point.after}`),
+  );
+  return pairs.size > 1;
 }
 
 /** Values side by side: only the lines where the measure differs. */
@@ -293,83 +305,84 @@ function Reveal({ show, hide, children }) {
 }
 
 /**
- * A card's "What changes", drawn the way the file's `display` says the
- * measure's data reads best (chosen in policy_table.py from its shape):
- * - "path": a step plot of current law against the measure over the years;
- * - "schedule": the same on the dates the rates change; the dates and the
- *   yearly averages behind buttons, so the plot leads;
- * - "before-after" and "switch": the two values large, and the change (a
- *   switch's window is drawn on the card's timeline);
- * - "table": several parameters changing together, a short table.
- * Each fact once: no line repeats what the plot labels, and lines where
- * the measure equals current law are left out.
+ * A card's "What changes", in one form for every measure (#260): the main
+ * parameter's current law and the policy as two tiles with the change,
+ * then, only where the change varies over the years, the step plot of the
+ * two over April 2026 to March 2032 (on dates the rates change, for a
+ * `schedule`). Everything else sits behind a button: the years or dates as
+ * a table, the yearly averages, or every parameter that changes when there
+ * are several. Each fact once: lines where the measure equals current law
+ * are left out.
  */
 export default function PolicyChange({ entry, direction, onHighlight, name }) {
   const id = useId();
   const tone = TONES[direction] ?? "neutral";
   const main = mainRow(entry);
-  if (!main) return null;
-  const title = (
-    <div className="pchg-head">
-      <p className="pchg-title" id={`${id}-title`}>
-        <ArrowRightLeft size={14} aria-hidden="true" />
-        What changes
-      </p>
-      {(entry.display === "path" || entry.display === "schedule") && <Key />}
-    </div>
+  const first = main?.points?.find(differs);
+  if (!main || !first) return null;
+  const schedule = entry.display === "schedule";
+  const plotted = variesByPeriod(main);
+  const segments = plotted ? segmentsFor(main) : [];
+  // A schedule's or a window's averages over each fiscal year, where the
+  // main row is not already by year
+  const byYear = main.points.every((point) => /^\d{4}-\d{2}$/.test(point.label));
+  const yearly = byYear ? null : entry.rows.find((row) => !row.primary && row.unit === main.unit) ?? null;
+  // Every changing line of every parameter, when the measure moves more than one
+  const lines = entry.rows.filter((row) => row !== yearly).flatMap((row) =>
+    row.points.filter(differs).map((point) => ({ ...point, key: `${row.label}|${point.key}`, label: row.label, unit: row.unit, period: point.label })),
   );
-  let body = null;
-  if (entry.display === "path" || entry.display === "schedule") {
-    const segments = segmentsFor(main);
-    const label = `${plotCaption(main)}. ${segments.map((s) => describeSegment(s, main.unit)).join("; ")}.`;
-    const schedule = entry.display === "schedule";
-    const yearly = schedule ? entry.rows.find((row) => !row.primary && row.unit === main.unit) : null;
-    body = (
-      <>
-        <p className="pchg-caption">{plotCaption(main)}</p>
-        <StepPlot row={main} segments={segments} tone={tone} onHighlight={onHighlight} label={label} />
-        {schedule ? (
-          <div className="pchg-reveals">
-            <Reveal show="Show the dates" hide="Hide the dates">
-              <ChangeTable lines={main.points.filter(differs)} unit={main.unit} tone={tone} first="From" />
-            </Reveal>
-            {yearly && (
-              <Reveal show="Show the yearly averages" hide="Hide the yearly averages">
-                <ChangeTable lines={yearly.points.filter(differs)} unit={yearly.unit} tone={tone} first="Year" caption={yearly.note} />
-              </Reveal>
-            )}
-          </div>
-        ) : (
-          <div className="pchg-reveals">
-            <Reveal show="Show the years" hide="Hide the years">
-              <ChangeTable lines={main.points.filter(differs)} unit={main.unit} tone={tone} first="Year" />
-            </Reveal>
-          </div>
-        )}
-      </>
-    );
-  } else if (entry.display === "before-after" || entry.display === "switch") {
-    body = <BeforeAfter row={main} tone={tone} />;
-  } else if (entry.display === "table") {
-    const lines = entry.rows.flatMap((row) =>
-      row.points.filter(differs).map((point) => ({ ...point, key: `${row.label}|${point.key}`, label: row.label, unit: row.unit, period: point.label })),
-    );
-    const periods = [...new Set(lines.map((line) => line.period))];
-    body = (
-      <ChangeTable
-        lines={periods.length === 1 ? lines : lines.map((line) => ({ ...line, label: `${line.label}, ${line.period}` }))}
-        unit={main.unit}
-        tone={tone}
-        first={periods.length === 1 ? periods[0] : "Parameter"}
-      />
-    );
-  }
+  const others = entry.rows.filter((row) => row !== main && row !== yearly && row.points.some(differs));
+  const periods = [...new Set(lines.map((line) => line.period))];
   return (
     // Named with its measure: each card's section says "What changes", and
     // regions on one page need different names (axe landmark-unique)
     <section className="pchg" aria-labelledby={name ? undefined : `${id}-title`} aria-label={name ? `What changes: ${name}` : undefined}>
-      {title}
-      {body}
+      <div className="pchg-head">
+        <p className="pchg-title" id={`${id}-title`}>
+          <ArrowRightLeft size={14} aria-hidden="true" />
+          What changes
+        </p>
+      </div>
+      <BeforeAfter row={main} point={first} tone={tone} when={plotted ? (schedule ? `from ${first.label}` : first.label) : null} />
+      {plotted && (
+        <>
+          <div className="pchg-head is-plot">
+            <p className="pchg-caption">{plotCaption(main)}</p>
+            <Key />
+          </div>
+          <StepPlot
+            row={main}
+            segments={segments}
+            tone={tone}
+            onHighlight={onHighlight}
+            label={`${plotCaption(main)}. ${segments.map((s) => describeSegment(s, main.unit)).join("; ")}.`}
+          />
+        </>
+      )}
+      {(plotted || yearly?.points.some(differs) || others.length > 0) && (
+        <div className="pchg-reveals">
+          {plotted && (
+            <Reveal show={schedule ? "Show the dates" : "Show the years"} hide={schedule ? "Hide the dates" : "Hide the years"}>
+              <ChangeTable lines={main.points.filter(differs)} unit={main.unit} tone={tone} first={schedule ? "From" : "Year"} />
+            </Reveal>
+          )}
+          {yearly && yearly.points.some(differs) && (
+            <Reveal show="Show the yearly averages" hide="Hide the yearly averages">
+              <ChangeTable lines={yearly.points.filter(differs)} unit={yearly.unit} tone={tone} first="Year" caption={yearly.note} />
+            </Reveal>
+          )}
+          {others.length > 0 && (
+            <Reveal show="Show every change" hide="Hide every change">
+              <ChangeTable
+                lines={periods.length === 1 ? lines : lines.map((line) => ({ ...line, label: `${line.label}, ${line.period}` }))}
+                unit={main.unit}
+                tone={tone}
+                first={periods.length === 1 ? periods[0] : "Parameter"}
+              />
+            </Reveal>
+          )}
+        </div>
+      )}
     </section>
   );
 }

@@ -1,10 +1,12 @@
 // "Where you sit" reads the package's UK distribution only under the
 // manifest's combined key, and never fetches the root tenth tables (#228).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { buildMeasureCatalogue } from "../../utils/measureCatalogue";
 import { fixtureJson } from "../../test/publicationFixture";
-import { PACKAGE_NOT_IN_FILE } from "../../utils/incomePosition";
+import { selectionNotPublished } from "../../utils/geography/selection";
+
+const NOT_PUBLISHED = selectionNotPublished("Income distribution");
 
 const PAIR = ["alpha", "beta"];
 const KEY = "combined--alpha+beta";
@@ -17,6 +19,9 @@ function winners(id, first) {
     { reform_id: id, reform_name: id, year: 2027, decile: "all", avg_change: first },
   ];
 }
+
+const DECILES = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"];
+const relative = (id, value) => DECILES.map((decile) => ({ reform_id: id, reform_name: id, year: 2027, decile, value }));
 
 function catalogue() {
   const entry = manifestFixture.measures.alpha;
@@ -36,9 +41,9 @@ function catalogue() {
       },
     },
     tablesByKey: {
-      alpha: { winners_losers: winners("alpha", 40) },
-      beta: { winners_losers: winners("beta", 33) },
-      [KEY]: { winners_losers: winners(KEY, 1000) },
+      alpha: { winners_losers: winners("alpha", 40), distributional_impact: relative("alpha", 1) },
+      beta: { winners_losers: winners("beta", 33), distributional_impact: relative("beta", 1) },
+      [KEY]: { winners_losers: winners(KEY, 1000), distributional_impact: relative(KEY, 0.5) },
     },
   });
 }
@@ -88,7 +93,7 @@ describe("Where you sit, for the published package (issue 228)", () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(container.querySelector(".card")).toBeNull();
     expect(screen.queryByText("Where you sit")).toBeNull();
-    expect(screen.queryByText(PACKAGE_NOT_IN_FILE)).toBeNull();
+    expect(screen.queryByText(NOT_PUBLISHED)).toBeNull();
   });
 
   it("gives the distribution its own Where you sit heading when it is there", async () => {
@@ -101,24 +106,65 @@ describe("Where you sit, for the published package (issue 228)", () => {
     served = { "income_distribution.csv": distribution(KEY), "income_mobility.csv": "" };
     await renderChart();
     expect(await screen.findByText(/Your place in the distribution/)).toBeTruthy();
-    expect(screen.queryByText(PACKAGE_NOT_IN_FILE)).toBeNull();
+    expect(screen.queryByText(NOT_PUBLISHED)).toBeNull();
     expect(screen.queryByText(/not available for this year/)).toBeNull();
     const fetched = fetch.mock.calls.map(([url]) => String(url).split("/").pop());
     expect(fetched).not.toContain("winners_losers.csv");
     expect(fetched).not.toContain("distributional_impact.csv");
   });
+  it("compares with the combined run's tenths, never the policies' figures added up", async () => {
+    served = { "income_distribution.csv": distribution(KEY), "income_mobility.csv": "" };
+    await renderChart();
+    await screen.findByText(/Your place in the distribution/);
+    const alt = document.querySelector('[role="img"][aria-label^="Average change by tenth"]').getAttribute("aria-label");
+    // The combined run's 0.50% in each tenth; alpha's 1% plus beta's 1% would be 2%
+    expect(alt).toMatch(/1: \+0\.50%/);
+    expect(alt).not.toMatch(/2\.00%/);
+  });
+
   it("keys the Spread view under the plot: your tenth's band, the curve, you and the median lines", async () => {
     served = { "income_distribution.csv": distribution(KEY), "income_mobility.csv": "" };
     const { container } = await renderChart();
     await screen.findByText(/Your place in the distribution/);
     const legend = container.querySelector(".position-card .chart-legend");
     expect(legend).toBeTruthy();
-    const labels = [...legend.querySelectorAll(".grouped-legend-label")].map((node) => node.textContent);
+    const labels = [...legend.querySelectorAll(".series-toggle-label")].map((node) => node.textContent);
     expect(labels).toEqual([
-      expect.stringMatching(/^Your income tenth \(.+ tenth\)$/),
+      "Your income tenth",
       "Share of people at each income",
       "You",
       "Median and its half/double",
     ]);
+  });
+
+  it("keys the tenths card too, and each key item is a button that shows or hides its part", async () => {
+    served = { "income_distribution.csv": distribution(KEY), "income_mobility.csv": "" };
+    const { container } = await renderChart();
+    await screen.findByText(/Your place in the distribution/);
+    const [whereKey, gainsKey] = container.querySelectorAll(".position-card .chart-legend");
+    const chips = [...gainsKey.querySelectorAll("button.series-toggle-chip")];
+    expect(chips.map((chip) => chip.textContent)).toEqual(["Your income tenth", "Change for each tenth", "You"]);
+    expect(chips.every((chip) => chip.getAttribute("aria-pressed") === "true")).toBe(true);
+
+    // You off: the marker's label goes; on again: it comes back
+    const gains = () => container.querySelector("svg.position-gains");
+    expect(gains().textContent).toMatch(/You/);
+    fireEvent.click(chips[2]);
+    expect(chips[2].getAttribute("aria-pressed")).toBe("false");
+    expect(gains().textContent).not.toMatch(/You/);
+    fireEvent.click(chips[2]);
+    expect(gains().textContent).toMatch(/You/);
+
+    // The bars off: no bars drawn
+    const bars = () => gains().querySelectorAll("rect[rx]").length;
+    expect(bars()).toBe(10);
+    fireEvent.click(chips[1]);
+    expect(bars()).toBe(0);
+
+    // The curve off on the left card
+    const where = () => container.querySelector("svg.position-where");
+    expect(where().querySelectorAll("path").length).toBe(2);
+    fireEvent.click(whereKey.querySelectorAll("button.series-toggle-chip")[1]);
+    expect(where().querySelectorAll("path").length).toBe(0);
   });
 });
