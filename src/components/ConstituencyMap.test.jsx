@@ -298,16 +298,19 @@ describe("ConstituencyMap", () => {
     expect(within(card).getByRole("heading")).toHaveTextContent("Northfield East");
     expect(within(card).getByRole("button", { name: "Close" })).toBeInTheDocument();
     const values = [...card.querySelectorAll(".seat-card-value")].map((node) => node.textContent);
-    expect(values).toEqual(["+£310", "+1.12%"]);
-    expect(card).toHaveTextContent("Average household impact");
-    expect(card).toHaveTextContent("Relative change");
+    // The headline on one line, £ and share of income, labelled with
+    // what the map shows (here the package)
+    expect(card.querySelector(".seat-card-headline").textContent).toBe("+£310 · +1.12% of income");
+    expect(values).toEqual(["+£310", "+1.12% of income"]);
+    expect(card.querySelector(".seat-card-label")).toHaveTextContent("All policies");
+    expect(card).not.toHaveTextContent("Relative change");
     expect(card.querySelector(".seat-card-value").style.color).not.toBe("");
     // A firm figure needs no note
     expect(card.querySelector(".seat-card-note")).toBeNull();
     expect(card).not.toHaveTextContent("Map category");
     expect(card).not.toHaveTextContent("90% interval");
     // No measure but the package has constituency rows: no By policy rows
-    expect(card).not.toHaveTextContent("By policy");
+    expect(card.querySelector(".seat-card-policies")).toBeNull();
   });
 
   it("gives an approximate seat one muted line with its households and interval", async () => {
@@ -325,7 +328,7 @@ describe("ConstituencyMap", () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000004"));
     const card = tooltip(container);
-    expect(card.querySelector(".seat-card-note")).toHaveTextContent("90% interval -0.9% to 1.7%");
+    expect(card.querySelector(".seat-card-note")).toHaveTextContent("90% interval −0.9% to 1.7%");
     expect(card).not.toHaveTextContent("The interval includes zero");
     expect(card).not.toHaveTextContent("Map category");
   });
@@ -356,11 +359,21 @@ describe("ConstituencyMap", () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000001"));
     const card = tooltip(container);
-    expect(card).toHaveTextContent("By policy:");
+    // The map shows the package, so its measures follow as "Of which"
+    expect(card.querySelector(".seat-card-label")).toHaveTextContent("All policies");
+    expect(card.querySelector(".seat-card-policies-heading").textContent).toBe("Of which");
     const rows = [...card.querySelectorAll(".seat-card-policy")].map((row) => [
       row.querySelector(".seat-card-policy-value").textContent,
     ]);
-    expect(rows).toEqual([["+£420"], ["-£110"], ["Not published for this seat"]]);
+    expect(rows).toEqual([["+£420"], ["−£110"], ["Not published"]]);
+    // A gain in teal, a loss in amber, each with a bar to scale
+    const [gain, loss, withheld] = card.querySelectorAll(".seat-card-policy");
+    expect(gain.querySelector(".seat-card-policy-value").style.color).not.toBe(
+      loss.querySelector(".seat-card-policy-value").style.color,
+    );
+    expect(gain.querySelector(".seat-card-policy-bar > span").style.width).toBe("100%");
+    // Not published is short, with its reason in a tooltip
+    expect(withheld.querySelector(".seat-card-withheld").getAttribute("title")).toMatch(/confidentiality/);
     expect(card.textContent).not.toMatch(/BY POLICY|By provision/);
   });
 
@@ -392,8 +405,8 @@ describe("ConstituencyMap", () => {
       ),
     );
     fireEvent.click(seat(container, "Z14000005"));
-    expect(tooltip(container)).toHaveTextContent("-£480");
-    expect(tooltip(container)).toHaveTextContent("-1.35%");
+    expect(tooltip(container)).toHaveTextContent("−£480");
+    expect(tooltip(container)).toHaveTextContent("−1.35%");
     expect(tooltip(container)).not.toHaveTextContent("90% interval");
   });
 

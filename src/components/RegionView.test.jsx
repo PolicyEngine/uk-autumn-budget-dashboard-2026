@@ -125,7 +125,7 @@ describe("RegionView", () => {
     const london = within(rowFor("London"));
     expect(london.getByText("+£1,234.5")).toBeInTheDocument();
     expect(london.getByText("£1,100 to £1,369")).toBeInTheDocument();
-    expect(within(rowFor("Yorkshire and The Humber")).getByText("-£50")).toBeInTheDocument();
+    expect(within(rowFor("Yorkshire and The Humber")).getByText("−£50")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Show the change as: £ per household" }),
     ).toBeInTheDocument();

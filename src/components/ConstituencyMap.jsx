@@ -65,6 +65,7 @@ import {
   noSeatMovedNote,
   seatStyle,
   seatSummary,
+  unchangedLine,
 } from "../utils/geography/seats";
 import {
   choiceLabel,
@@ -434,51 +435,71 @@ function strokeFor(code, states, selectedCode) {
   return seatStyle(states?.get(code));
 }
 
-/** A figure's text colour: teal for a gain, amber for a loss, else grey. */
-const figureColour = (direction) => DIRECTION_TEXT_COLOURS[direction] ?? CHART_COLOURS.axisTitle;
+/** A figure's text colour by its sign: teal for a gain, amber for a loss, else grey. */
+const signColour = (sign) => DIRECTION_TEXT_COLOURS[sign] ?? CHART_COLOURS.axisTitle;
 
 /**
- * One seat's card, as on last year's dashboard: the shown measure's average
- * household impact in £ and as a share of income, each selected measure's
- * own £ change, and one muted line on how firm the figure is. The hover
- * card and the pinned card (with its ×) are the same.
+ * One seat's card: the figure for what the map shows (one measure, or the
+ * package), in £ and as a share of income on one line, labelled with what
+ * it is; then the rest of the selection's own £ changes, largest first,
+ * each with a small bar to scale; then one muted line on how firm the
+ * figure is. The hover card and the pinned card (with its ×) are the same.
  */
 function SeatCard({ card }) {
+  const largest = Math.max(0, ...card.byPolicy.map((row) => Math.abs(row.value ?? 0)));
   return (
     <>
-      {card.average && (
+      {(card.average || card.relative) && (
         <div className="seat-card-figure">
-          <p className="seat-card-value" style={{ color: figureColour(card.average.direction) }}>
-            {card.average.text}
+          <p className="seat-card-headline">
+            {card.average && (
+              <span className="seat-card-value" style={{ color: signColour(card.average.sign) }}>
+                {card.average.text}
+              </span>
+            )}
+            {card.average && card.relative && <span className="seat-card-dot" aria-hidden="true"> · </span>}
+            {card.relative && (
+              <span className="seat-card-value seat-card-value-secondary" style={{ color: signColour(card.relative.sign) }}>
+                {card.relative.text}
+                <span className="seat-card-unit"> of income</span>
+              </span>
+            )}
           </p>
-          <p className="seat-card-label">Average household impact</p>
+          <p className="seat-card-label">{card.label ?? "Average household impact"}</p>
         </div>
       )}
-      {card.relative && (
-        <div className="seat-card-figure">
-          <p
-            className="seat-card-value seat-card-value-secondary"
-            style={{ color: figureColour(card.relative.direction) }}
-          >
-            {card.relative.text}
-          </p>
-          <p className="seat-card-label">Relative change</p>
-        </div>
-      )}
-      {card.byPolicy.length > 0 && (
+      {card.policiesHeading && (
         <div className="seat-card-policies">
-          <p className="seat-card-policies-heading">By policy:</p>
+          <p className="seat-card-policies-heading">{card.policiesHeading}</p>
           {card.byPolicy.map((row) => (
             <div key={row.id} className="seat-card-policy">
               <span className="seat-card-policy-name">{row.name}</span>
-              <span
-                className={row.value === null ? "seat-card-policy-value seat-card-withheld" : "seat-card-policy-value"}
-                style={row.value === null ? undefined : { color: figureColour(row.direction) }}
-              >
-                {row.text}
+              <span className="seat-card-policy-bar" aria-hidden="true">
+                {row.value !== null && largest > 0 && (
+                  <span
+                    style={{
+                      width: `${Math.max(4, (Math.abs(row.value) / largest) * 100)}%`,
+                      background: signColour(row.sign),
+                    }}
+                  />
+                )}
               </span>
+              {row.value === null ? (
+                <span className="seat-card-policy-value seat-card-withheld" title={row.title}>
+                  {row.text}
+                </span>
+              ) : (
+                <span className="seat-card-policy-value" style={{ color: signColour(row.sign) }}>
+                  {row.text}
+                </span>
+              )}
             </div>
           ))}
+          {card.unchanged.length > 0 && (
+            <p className="seat-card-unchanged" title={card.unchanged.join(", ")}>
+              {unchangedLine(card.unchanged.length)}
+            </p>
+          )}
         </div>
       )}
       {card.note && (
@@ -868,6 +889,7 @@ export default function ConstituencyMap({
           year: selectedYear,
           outcome,
           measures: cardMeasures,
+          label: choice.kind === "package" ? "All policies" : null,
         })
       : null;
   const card = selectedCode ? cardFor(selectedCode) : null;
@@ -916,7 +938,7 @@ export default function ConstituencyMap({
     let top = canvasHeight / 2 - CARD_GAP - height;
     if (top < 0) top = canvasHeight / 2 + CARD_GAP;
     setCardPlace({ left, top: Math.min(Math.max(0, top), maxY), maxHeight: canvasHeight });
-  }, [card?.title, card?.byPolicy.length, card?.note, card?.region, selectedCode]);
+  }, [card?.title, card?.byPolicy.length, card?.unchanged.length, card?.note, card?.region, selectedCode]);
 
   // Escape closes the pinned card
   useEffect(() => {
