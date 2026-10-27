@@ -13,7 +13,6 @@ SCRIPT = (
     Path(__file__).resolve().parents[1] / "scripts" / "draft_attestation.py"
 )
 HAND_WRITTEN = (
-    reforms.EMPLOYER_NI_ID,
     reforms.PLAN_2_ID,
     reforms.STATE_PENSION_ALLOWANCE_ID,
 )
@@ -29,6 +28,11 @@ def _load_script():
 def test_every_hand_written_measure_has_a_drafted_reason():
     assert reforms.STATE_PENSION_PROTECTION_DESIGN == "sole_income"
     assert set(HAND_WRITTEN) <= set(_load_script().REASONS)
+
+
+def test_a_withdrawn_measure_has_no_drafted_reason():
+    # Employer NI relief is withdrawn (27 October 2026): never drafted
+    assert reforms.EMPLOYER_NI_ID not in _load_script().REASONS
 
 
 def test_the_tapered_design_is_not_drafted_as_hand_written(monkeypatch):
@@ -68,6 +72,22 @@ def test_a_package_reason_names_every_hand_written_member(drafted):
         "",
         "",
     )
+
+
+def test_the_seven_package_reason_names_its_two_hand_written_members(
+    drafted,
+):
+    from uk_budget_data.publication.combine import combined_key
+
+    members = list(reforms.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
+    key = combined_key(members)
+    assert key == "combined--5c77771791661e11"
+    record = drafted(key, members)
+    assert record["measure_id"] == key
+    assert "hand-written plan_2_threshold_unfreeze and " in record["reason"]
+    assert reforms.STATE_PENSION_ALLOWANCE_ID in record["reason"]
+    assert reforms.EMPLOYER_NI_ID not in record["reason"]
+    assert record["checker"] == record["second"] == record["released_at"] == ""
 
 
 def test_the_state_pension_draft_leaves_the_signatures_empty(drafted):
