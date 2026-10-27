@@ -20,7 +20,7 @@ import { METHOD_ANCHORS } from "./methodology/anchors";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import SummaryMetricChart, { SUMMARY_METRICS, hasColumn, povertyMetric, usePovertyChoice } from "./SummaryMetricChart";
 import { useOutlook } from "./livingStandards/useOutlook";
-import { formatPp, outlookPopulation } from "../utils/povertyPeople";
+import { formatPp, outlookPopulation, roundPeople } from "../utils/povertyPeople";
 import { CHART_COLOURS, fiscalYearTick } from "../utils/chartTheme";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
@@ -135,7 +135,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     if (!peopleMode) return rateWords(step.pp);
     const n = Math.abs(step.x);
     const way = step.x > 0 ? "fewer" : "more";
-    const count = n < 1000 ? "under 1,000" : `about ${thousands.format(Math.round(n / 1000) * 1000)}`;
+    const count = n < 1000 ? "under 1,000" : `about ${roundPeople(n)}`;
     return `${count} ${way} ${who}`;
   };
   // Thousands with commas ("4,000"); the ticks are spaced so they never meet
@@ -170,7 +170,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   // A plain sentence: no "≈" and no "pp" (the values are in the rows)
   const about = (step) => {
     const n = Math.abs(step.x);
-    return n < 1000 ? "fewer than 1,000" : `about ${thousands.format(Math.round(n / 1000) * 1000)}`;
+    return n < 1000 ? "fewer than 1,000" : `about ${roundPeople(n)}`;
   };
   // The measure as a sentence's subject: its own sentence form where the
   // catalogue publishes one ("Unfreezing the Plan 2 threshold"), otherwise
