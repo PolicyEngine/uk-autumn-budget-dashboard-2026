@@ -54,21 +54,30 @@ CANDIDATES = (
     "warm_home_discount_top_up",
     "domestic_electricity_zero_vat",
     "threshold_freeze_2031_32",
-    "road_fuel_vat_cut",
     "plan_2_threshold_unfreeze",
     "carers_allowance_earnings_taper",
+    "lha_unfreeze_2027",
+    "employer_nics_secondary_threshold_raise",
+    "unearned_income_rates_up",
 )
 # Individual candidates that are not components of the combined package.
 NOT_IN_PACKAGE = ()
 # Registered on 27 October, before its first national generation: its rows
 # are checked once budgetary_impact.csv has them.
-NOT_YET_GENERATED = ("carers_allowance_earnings_taper",)
+NOT_YET_GENERATED = (
+    "carers_allowance_earnings_taper",
+    "lha_unfreeze_2027",
+    "employer_nics_secondary_threshold_raise",
+    "unearned_income_rates_up",
+)
 # Withdrawn on 27 October 2026 (Vahid): out of the registry and the
 # package, so no default command runs or publishes them. Their factories
 # stay, unregistered, and are still tested here as code.
 WITHDRAWN = {
     "employer_ni_relief_under_25s": reforms._create_employer_ni_relief_under_25s,
     "badr_lifetime_limit_cut": reforms._create_badr_lifetime_limit_cut,
+    # Withdrawn the same evening, when Vahid chose the ten candidates
+    "road_fuel_vat_cut": reforms._create_road_fuel_vat_cut,
 }
 OLD_PLACEHOLDERS = (
     "two_child_limit",
@@ -116,18 +125,18 @@ def test_the_registry_is_the_combined_package_then_the_ten_candidates():
     )
 
 
-def test_the_package_is_the_seven_kept_measures_and_the_carers_taper():
+def test_the_package_is_the_ten_candidates():
     from uk_budget_data.geography import manifest_key
     from uk_budget_data.publication.combine import combined_key
 
-    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 8
-    assert len(reforms._MEASURE_FACTORIES) == 8
+    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 10
+    assert len(reforms._MEASURE_FACTORIES) == 10
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
-    assert key == "combined--9f29f8fddfb61a5c"
+    assert key == "combined--ab77fb6718bca371"
     # The area run's package alias stands for that key
     assert manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     description = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID).description
-    assert description.startswith("All eight candidate measures")
+    assert description.startswith("All ten candidate measures")
 
 
 def test_the_withdrawn_measures_are_not_registered():
@@ -223,33 +232,33 @@ def test_the_fuel_duty_path_by_hand():
     # 2026-27: 52.95p all year
     assert rates["2026"] == 0.5295
     # 2027-28 (6 April 2027 to 5 April 2028, 366 days): 52.95p to
-    # 31 August (148 days), 55.95p to 30 November (91), 57.95p to 31 March
-    # (122), then 57.95p uprated by 2027 RPI, 59.69p, from 1 April (5)
+    # 31 March 2028 (361 days), then 52.95p uprated by 2028 RPI, 61.54p x
+    # 52.95 / 59.75 = 54.54p, from 1 April (5)
     assert rates["2027"] == pytest.approx(
-        (148 * 0.5295 + 91 * 0.5595 + 122 * 0.5795 + 5 * 0.5969) / 366,
-        abs=1e-6,
+        (361 * 0.5295 + 5 * 0.5454) / 366, abs=1e-6
     )
-    # 2028-29: 59.69p to 31 March 2029 (360 days), then 61.35p (5)
+    # 2028-29: 54.54p to 31 March 2029 (360 days), then 63.26p x 52.95 /
+    # 59.75 = 56.06p (5)
     assert rates["2028"] == pytest.approx(
-        (360 * 0.5969 + 5 * 0.6135) / 365, abs=1e-6
+        (360 * 0.5454 + 5 * 0.5606) / 365, abs=1e-6
     )
     assert set(rates) == {str(year) for year in POLICY_YEARS}
 
 
-def test_the_april_2027_rise_is_never_made_up_and_the_card_says_so():
-    """From 2028-29 the measure's rate stays a year's RPI below current
-    law (57.95p against 59.75p, uprated alike), so it costs revenue in
-    every later year; the description says the rise is never made up."""
+def test_the_5p_and_the_april_2027_rise_are_never_made_up():
+    """From 2028-29 the measure's rate stays the 5p and a year's RPI below
+    current law (52.95p against 59.75p, uprated alike), so it costs revenue
+    in every later year; the description says so."""
     rates = fuel_duty_deferral_rates()
     current = fiscal_year_means(FUEL_DUTY_CURRENT_LAW)
     for year in (y for y in POLICY_YEARS if y >= 2028):
         assert rates[str(year)] == pytest.approx(
-            current[str(year)] * 0.5795 / 0.5975, abs=1e-4
+            current[str(year)] * 0.5295 / 0.5975, abs=1e-4
         ), year
         assert rates[str(year)] < current[str(year)], year
     description = get_reform("fuel_duty_rise_deferral").description
-    assert "with no April 2027 RPI rise" in description
-    assert "so that rise is never made up" in description
+    assert "52.95p a litre through 2027-28" in description
+    assert "never made up" in description
 
 
 def test_the_pump_vat_defaults_are_20_percent_of_the_duty_change():
@@ -380,9 +389,10 @@ def test_the_tapered_design_deducts_gift_aid_once():
     assert reformed == pytest.approx(293.39, abs=PENNY)
 
 
-def test_the_sole_income_design_takes_the_allowance_away_for_other_income():
+def test_the_total_income_design_takes_the_allowance_away_above_it():
     """The default design. 2031-32, State Pension £14,390.39 and £1,000
-    private pension: no allowance, so 20% of £2,560.39, £512.08, as now."""
+    private pension, £15,390.39 in all, above the £14,391 allowance: no
+    allowance, so 20% of £2,560.39, £512.08, as now."""
     year = 2031
     sit = situation(
         {
@@ -976,12 +986,6 @@ FIRST_YEARS = {
         {"employment_income": 30_000},
         {},
     ),
-    "road_fuel_vat_cut": (
-        2026,
-        "vat",
-        {"employment_income": 30_000},
-        {"petrol_spending": 1_508.14483},
-    ),
     "plan_2_threshold_unfreeze": (
         2027,
         "student_loan_repayment",
@@ -1000,6 +1004,33 @@ FIRST_YEARS = {
         2030,
         "carers_allowance",
         {"care_hours": 35, "employment_income": 11_000},
+        {},
+    ),
+    # A private renter in the North West on £15,000 of rent: the LHA rate
+    # that caps it is re-set from 2027-28.
+    "lha_unfreeze_2027": (
+        2027,
+        "LHA_cap",
+        {"age": 30, "employment_income": 8_000},
+        {
+            "tenure_type": "RENT_PRIVATELY",
+            "rent": 15_000,
+            "region": "NORTH_WEST",
+        },
+    ),
+    # £30,000 of pay: £4,100 more below the threshold, £615 a year at 15%
+    # before the pay response
+    "employer_nics_secondary_threshold_raise": (
+        2027,
+        "ni_class_1_employer",
+        {"employment_income": 30_000},
+        {},
+    ),
+    # £5,000 of dividends, £4,500 over the allowance: 2 points is £90
+    "unearned_income_rates_up": (
+        2027,
+        "income_tax",
+        {"employment_income": 30_000, "dividend_income": 5_000},
         {},
     ),
 }

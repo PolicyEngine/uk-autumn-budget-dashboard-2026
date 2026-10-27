@@ -19,7 +19,6 @@ import pytest
 from policyengine_uk.system import system
 
 from uk_budget_data import household_impact, personal_impact
-from uk_budget_data.budget_measures.road_fuel_vat_cut import road_fuel_vat_cut
 from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
     WINTER_SHARE,
     zero_vat_on_domestic_electricity,
@@ -150,9 +149,10 @@ def test_state_pension_only_pays_no_income_tax_from_2027():
 
 @pytest.mark.parametrize("other", [260, 400, 2_000])
 def test_any_private_pension_takes_the_allowance_away(other):
-    """The sole-income design: with any private pension the allowance is
-    not given, so the bill is 20% of income above the standard £12,570
-    either way."""
+    """The total-income design: a private pension on top of the full new
+    State Pension puts total income above the allowance, so it is not
+    given, and the bill is 20% of income above the standard £12,570 either
+    way."""
     full = household_impact.full_new_state_pension(2027)
     income = full + other
     result = calculate(
@@ -302,28 +302,6 @@ def test_no_electricity_spending_no_electricity_vat_change():
         ["domestic_electricity_zero_vat"],
     )
     assert result["net_income"]["change"] == 0
-
-
-# --- VAT cut on road fuel ---------------------------------------------------------
-
-
-@pytest.mark.parametrize("year, weight", [(2026, 121 / 365), (2027, 61 / 366)])
-def test_road_fuel_vat_cut_on_the_fuel_entered(year, weight):
-    """20% to 15% from 1 December 2026 to 31 May 2027: the VAT in
-    VAT-inclusive fuel spending falls by spending x 0.05 / 1.2 over the
-    days of the year in the period."""
-    assert road_fuel_vat_cut.__defaults__[0] == pytest.approx(
-        -0.05 * 121 / 365
-    )
-    assert road_fuel_vat_cut.__defaults__[1] == pytest.approx(-0.05 * 61 / 366)
-    petrol, diesel = 1_500, 500
-    result = calculate(
-        Answers(year, petrol_spending=petrol, diesel_spending=diesel),
-        year,
-        ["road_fuel_vat_cut"],
-    )
-    expected = (petrol + diesel) * 0.05 * weight / 1.2
-    assert result["net_income"]["change"] == pytest.approx(expected, abs=0.01)
 
 
 # --- parity with the national route's household simulations ---------------------

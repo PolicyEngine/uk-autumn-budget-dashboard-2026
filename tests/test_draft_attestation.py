@@ -27,7 +27,7 @@ def _load_script():
 
 
 def test_every_hand_written_measure_has_a_drafted_reason():
-    assert reforms.STATE_PENSION_PROTECTION_DESIGN == "sole_income"
+    assert reforms.STATE_PENSION_PROTECTION_DESIGN == "total_income"
     assert set(HAND_WRITTEN) <= set(_load_script().REASONS)
 
 
@@ -75,14 +75,14 @@ def test_a_package_reason_names_every_hand_written_member(drafted):
     )
 
 
-def test_the_eight_package_reason_names_its_three_hand_written_members(
+def test_the_ten_package_reason_names_its_three_hand_written_members(
     drafted,
 ):
     from uk_budget_data.publication.combine import combined_key
 
     members = list(reforms.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
     key = combined_key(members)
-    assert key == "combined--9f29f8fddfb61a5c"
+    assert key == "combined--ab77fb6718bca371"
     record = drafted(key, members)
     assert record["measure_id"] == key
     assert (

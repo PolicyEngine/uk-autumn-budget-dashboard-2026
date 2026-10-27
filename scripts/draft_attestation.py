@@ -54,21 +54,22 @@ REASONS = {
     ),
 }
 
-# The State Pension allowance is hand-written only in its sole-income
-# design; the tapered design is a registered template and is not held.
-if STATE_PENSION_PROTECTION_DESIGN == "sole_income":
+# The State Pension allowance is hand-written in its total-income design
+# (state_pension_only_income_tax_allowance); the tapered design is a
+# registered template and is not held.
+if STATE_PENSION_PROTECTION_DESIGN == "total_income":
     REASONS[STATE_PENSION_ALLOWANCE_ID] = (
         "Checked budget_measures.state_pension_only_income_tax_allowance: "
         "from April 2027 it raises personal_allowance to the full new State "
         "Pension, rounded up to the pound (the engine's weekly rate x 52), "
         "for people over State Pension age who receive a State Pension and "
-        "whose other income (total income less the State Pension and "
-        "savings interest) is at most the module's other_income_limit of "
-        "£0. It keeps the larger of that and the native allowance, keeps "
-        "the native taper above £100,000 of adjusted net income (read "
-        "once, already net of Gift Aid) and changes only "
-        "personal_allowance. The receipt's outputs were compared with "
-        "#182's costing."
+        "whose total income (total_income, savings interest included, with "
+        "no other-income test) is at or below that allowance; above it the "
+        "native allowance stands. It keeps the larger of that and the "
+        "native allowance, keeps the native taper above £100,000 of "
+        "adjusted net income and changes only personal_allowance. The "
+        "receipt's outputs were compared with the hand-computed cases in "
+        "tests/test_state_pension_only_income_tax_allowance.py."
     )
 
 

@@ -211,14 +211,14 @@ def test_a_modifier_that_isnt_module_level_is_refused():
     with pytest.raises(ValueError, match="module-level"):
         household_impact.modifier_name(lambda sim: sim)
     name = household_impact.modifier_name(
-        get_reform("road_fuel_vat_cut").simulation_modifier
+        get_reform("domestic_electricity_zero_vat").simulation_modifier
     )
     assert (
         name
-        == "uk_budget_data.budget_measures.road_fuel_vat_cut:road_fuel_vat_cut"
+        == "uk_budget_data.budget_measures.zero_vat_on_domestic_electricity:zero_vat_on_domestic_electricity"
     )
     assert household_impact.resolve_modifier(name) is (
-        get_reform("road_fuel_vat_cut").simulation_modifier
+        get_reform("domestic_electricity_zero_vat").simulation_modifier
     )
 
 
@@ -240,7 +240,7 @@ def test_a_single_holds_every_other_measure_at_current_law():
     sides = household_impact.measure_sides(
         [
             "threshold_freeze_2031_32",
-            "road_fuel_vat_cut",
+            "domestic_electricity_zero_vat",
             "plan_2_threshold_unfreeze",
         ]
     )
@@ -255,11 +255,11 @@ def test_a_single_holds_every_other_measure_at_current_law():
         "parameter_changes": freeze.parameter_changes,
         "modifiers": [student_loans],
     }
-    assert sides.singles["road_fuel_vat_cut"] == {
+    assert sides.singles["domestic_electricity_zero_vat"] == {
         "parameter_changes": {},
         "modifiers": [
             student_loans,
-            "uk_budget_data.budget_measures.road_fuel_vat_cut:road_fuel_vat_cut",
+            "uk_budget_data.budget_measures.zero_vat_on_domestic_electricity:zero_vat_on_domestic_electricity",
         ],
     }
 
@@ -459,7 +459,7 @@ def test_the_runs_it_asks_for(monkeypatch):
         }
 
     monkeypatch.setattr(household_impact, "run_scenario", run_scenario)
-    measures = ["threshold_freeze_2031_32", "road_fuel_vat_cut"]
+    measures = ["threshold_freeze_2031_32", "domestic_electricity_zero_vat"]
     sides = household_impact.measure_sides(measures)
 
     calculate(Answers(), measures)
@@ -1736,6 +1736,32 @@ def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
             2031,
             True,
         ),
+        ("lha_unfreeze_2027", {"tenure": "RENT_PRIVATELY"}, 2026, True),
+        ("lha_unfreeze_2027", {"tenure": "RENT_PRIVATELY"}, 2027, False),
+        ("lha_unfreeze_2027", {"tenure": "RENT_FROM_COUNCIL"}, 2027, True),
+        ("lha_unfreeze_2027", {}, 2027, True),
+        ("employer_nics_secondary_threshold_raise", {}, 2026, True),
+        ("employer_nics_secondary_threshold_raise", {}, 2027, False),
+        (
+            "employer_nics_secondary_threshold_raise",
+            {"employment_income": 0},
+            2027,
+            True,
+        ),
+        (
+            "employer_nics_secondary_threshold_raise",
+            {
+                "employment_income": 0,
+                "has_partner": True,
+                "partner_employment_income": 20_000,
+            },
+            2027,
+            False,
+        ),
+        ("unearned_income_rates_up", {}, 2027, True),
+        ("unearned_income_rates_up", {"dividend_income": 1_000}, 2026, True),
+        ("unearned_income_rates_up", {"dividend_income": 1_000}, 2027, False),
+        ("unearned_income_rates_up", {"property_income": 500}, 2028, False),
         ("some_future_measure", {}, 2027, False),
     ],
 )

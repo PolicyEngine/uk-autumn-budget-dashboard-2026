@@ -179,7 +179,6 @@ def test_the_registered_package_is_the_generic_combination_of_its_members():
         "zero_vat_on_domestic_electricity",
         "pump_vat_on_fuel_duty_deferral",
         "connect_student_loan_repayments",
-        "road_fuel_vat_cut",
         "state_pension_only_income_tax_allowance",
         "warm_home_discount_top_up",
     ]

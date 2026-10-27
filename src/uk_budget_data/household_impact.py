@@ -1754,6 +1754,13 @@ SKIP_REASONS = {
     "road_fuel_vat_cut": "no petrol or diesel spending, or after 2027-28",
     "domestic_electricity_zero_vat": "no electricity spending, or after 2027-28",
     "carers_allowance_earnings_taper": "no caring hours are asked for",
+    "lha_unfreeze_2027": "not renting privately, or before 2027-28",
+    "employer_nics_secondary_threshold_raise": (
+        "no employment income, or before 2027-28"
+    ),
+    "unearned_income_rates_up": (
+        "no dividend, savings or property income, or before 2027-28"
+    ),
 }
 
 
@@ -1790,6 +1797,22 @@ def provably_unaffected(
         # reported Carer's Allowance, so no one meets its conditions, in
         # any year, under current law or the taper.
         return True
+    if measure_id == "lha_unfreeze_2027":
+        # Local Housing Allowance caps private rents only.
+        return year < 2027 or answers.tenure != "RENT_PRIVATELY"
+    if measure_id == "employer_nics_secondary_threshold_raise":
+        earnings = answers.employment_income + (
+            answers.partner_employment_income if answers.has_partner else 0
+        )
+        return year < 2027 or not earnings
+    if measure_id == "unearned_income_rates_up":
+        # Only the head's dividend, savings and property income is asked.
+        unearned = (
+            answers.dividend_income
+            + answers.savings_interest_income
+            + answers.property_income
+        )
+        return year < 2027 or not unearned
     return False
 
 

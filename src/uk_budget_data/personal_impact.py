@@ -55,9 +55,11 @@ POLICY_IDS = [
     "warm_home_discount_top_up",
     "domestic_electricity_zero_vat",
     "threshold_freeze_2031_32",
-    "road_fuel_vat_cut",
     "plan_2_threshold_unfreeze",
     "carers_allowance_earnings_taper",
+    "lha_unfreeze_2027",
+    "employer_nics_secondary_threshold_raise",
+    "unearned_income_rates_up",
 ]
 
 

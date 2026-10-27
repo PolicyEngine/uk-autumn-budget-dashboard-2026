@@ -66,6 +66,27 @@ BASIC_RATE_BAND = "gov.hmrc.income_tax.rates.uk[1].threshold"
 BADR_LIFETIME_LIMIT = "gov.hmrc.cgt.badr.lifetime_limit"
 PLAN_2_THRESHOLD = "gov.hmrc.student_loans.thresholds.plan_2"
 CAPITAL_GAINS_RESPONSES = "gov.simulation.capital_gains_responses"
+LHA_FREEZE = "gov.dwp.LHA.freeze"
+# The employer (secondary) Class 1 threshold, weekly: £5,000 a year from
+# April 2025 is stored as 5,000 / 52.
+SECONDARY_THRESHOLD = (
+    "gov.hmrc.national_insurance.class_1.employer_scale[1].threshold"
+)
+INCOME_TAX_RATES = "gov.hmrc.income_tax.rates"
+# The dividend schedule's four brackets (the fourth a technical top node
+# repeating the additional rate) and the savings and property rates.
+UNEARNED_INCOME_RATE_PATHS = (
+    f"{INCOME_TAX_RATES}.dividends[0].rate",
+    f"{INCOME_TAX_RATES}.dividends[1].rate",
+    f"{INCOME_TAX_RATES}.dividends[2].rate",
+    f"{INCOME_TAX_RATES}.dividends[3].rate",
+    f"{INCOME_TAX_RATES}.savings.basic",
+    f"{INCOME_TAX_RATES}.savings.higher",
+    f"{INCOME_TAX_RATES}.savings.additional",
+    f"{INCOME_TAX_RATES}.property.basic",
+    f"{INCOME_TAX_RATES}.property.higher",
+    f"{INCOME_TAX_RATES}.property.additional",
+)
 
 FUEL_DUTY_DEFERRAL_ID = "fuel_duty_rise_deferral"
 STATE_PENSION_ALLOWANCE_ID = "state_pension_income_tax_protection"
@@ -76,6 +97,9 @@ THRESHOLD_FREEZE_ID = "threshold_freeze_2031_32"
 BADR_ID = "badr_lifetime_limit_cut"
 FUEL_VAT_ID = "road_fuel_vat_cut"
 PLAN_2_ID = "plan_2_threshold_unfreeze"
+EMPLOYER_NI_THRESHOLD_ID = "employer_nics_secondary_threshold_raise"
+UNEARNED_INCOME_RATES_ID = "unearned_income_rates_up"
+LHA_UNFREEZE_ID = "lha_unfreeze_2027"
 CARERS_ALLOWANCE_TAPER_ID = "carers_allowance_earnings_taper"
 
 
@@ -124,7 +148,7 @@ def static_capital_gains() -> dict[str, dict[str, any]]:
 
 
 # =============================================================================
-# 1. FUEL DUTY: THE JANUARY AND MARCH 2027 RISES DEFERRED
+# 1. FUEL DUTY: FROZEN AT 52.95P THROUGH 2027-28
 # =============================================================================
 
 # Current law in policyengine-uk 2.132.6 (petrol_and_diesel.yaml), by the
@@ -142,22 +166,21 @@ FUEL_DUTY_CURRENT_LAW = (
     ("2031-04-01", 0.6659),
     ("2032-04-01", 0.6812),
 )
-# The research's most likely path: 52.95p held through winter 2026-27 with
-# no April 2027 RPI rise; the 5p restored in 2027-28 in two steps, 3p on
-# 1 September and 2p on 1 December 2027 (Budget 2025's staging, a year
-# on); RPI from April 2028, on 57.95p. So from April 2028 each rate is
-# current law's scaled by 57.95 / 59.75, a year's RPI below it.
-FUEL_DUTY_STAGES = (
-    ("2026-03-23", 0.5295),
-    ("2027-09-01", 0.5595),
-    ("2027-12-01", 0.5795),
-)
+# The candidate (Vahid, 27 October 2026): no 1 January 2027 rise, so the
+# 5p cut continues and 52.95p is frozen through 2027-28 (to 31 March
+# 2028), with neither the March 2027 step nor the April 2027 RPI rise; RPI
+# uprating resumes in April 2028 from 52.95p. So from April 2028 each rate
+# is current law's scaled by 52.95 / 59.75, the 5p and a year's RPI below
+# it.
+FUEL_DUTY_STAGES = (("2026-03-23", 0.5295),)
+FUEL_DUTY_FROZEN = 0.5295
+FUEL_DUTY_CURRENT_LAW_APRIL_2027 = 0.5975
 FUEL_DUTY_RPI_FROM = "2028-04-01"
 
 
 def fuel_duty_deferral_schedule() -> tuple:
     """The candidate's rates by the date each takes effect."""
-    scale = 0.5795 / 0.5975
+    scale = FUEL_DUTY_FROZEN / FUEL_DUTY_CURRENT_LAW_APRIL_2027
     later = tuple(
         (day, round(rate * scale, 4))
         for day, rate in FUEL_DUTY_CURRENT_LAW
@@ -201,10 +224,12 @@ def _create_fuel_duty_rise_deferral() -> Reform:
         name="Fuel duty rises deferred",
         description=(
             "Candidate measure. Fuel duty stays at 52.95p a litre through "
-            "winter 2026-27, with no April 2027 RPI rise; the 5p is restored "
-            "in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI "
-            "uprating resumes in April 2028 from 57.95p, so that rise is never "
-            "made up. Rates are day-weighted to fiscal years. Includes the "
+            "2027-28 (to 31 March 2028): the rise due on 1 January 2027 "
+            "does not happen, so the 5p cut continues, and there is no "
+            "March 2027 step and no April 2027 RPI rise. RPI uprating "
+            "resumes in April 2028 from 52.95p, so the 5p and that year's "
+            "RPI are never made up. Rates are day-weighted to fiscal "
+            "years. Includes the "
             "VAT on the lower pump price."
         ),
         parameter_changes=rate_change(FUEL_DUTY, fuel_duty_deferral_rates()),
@@ -213,27 +238,34 @@ def _create_fuel_duty_rise_deferral() -> Reform:
 
 
 # =============================================================================
-# 2. NO INCOME TAX FOR PENSIONERS WHOSE ONLY INCOME IS THE STATE PENSION
+# 2. NO INCOME TAX FOR PENSIONERS WHOSE TOTAL INCOME IS AT MOST THE FULL
+#    NEW STATE PENSION
 # =============================================================================
 
 
-# The design: "sole_income" follows the reporting of 26 October 2026 (BBC;
-# The Times): an allowance of the full new State Pension for pensioners
-# "wholly reliant on the state pension", about a million people, costing
-# about £200m a year by 2030. "tapered", the design modelled until then,
-# gives the allowance to everyone over State Pension age and withdraws it
-# £1 for £1 of income above it. A large other_income_limit in the
-# sole-income module gives it to every pensioner, untapered.
-STATE_PENSION_PROTECTION_DESIGN = "sole_income"
+# The design: "total_income" follows the reporting of 27 October 2026
+# (Telegraph: "officials have broadened it ... provided their total income
+# stays below the threshold"; GB News): an allowance of the full new State
+# Pension for people over State Pension age whose total income, State
+# Pension included, is at or below it. It broadened the "sole_income"
+# design of 26 October (BBC; The Times), for pensioners "wholly reliant on
+# the state pension", which the same module gives with
+# other_income_limit=0, total_income_at_most_allowance=False and
+# disregard_savings_interest=True. "tapered", the design modelled before
+# that, gives the allowance to everyone over State Pension age and
+# withdraws it £1 for £1 of income above it.
+STATE_PENSION_PROTECTION_DESIGN = "total_income"
 STATE_PENSION_PROTECTION_DESIGNS = {
-    "sole_income": (
+    "total_income": (
         state_pension_only_income_tax_allowance,
         "Candidate measure. From 6 April 2027, people over State Pension "
-        "age whose only income is the State Pension (savings interest "
-        "aside) get an income tax allowance equal to the full new State "
-        "Pension (rounded up to the pound: £13,037 in 2027-28), rising with "
-        "it. Someone whose only income is the full new State Pension pays "
-        "no income tax; £1 of other income takes the allowance away.",
+        "age whose total income (the State Pension, with any increments "
+        "or additional State Pension, plus all other income, savings "
+        "interest included) is at or below the full new State Pension "
+        "(rounded up to the pound: £13,037 in 2027-28, rising with it) get "
+        "an income tax allowance of that amount, so pay no income tax. "
+        "Above it there is no allowance: £1 of income over the threshold "
+        "takes the whole allowance away.",
     ),
     "tapered": (
         state_pension_income_tax_allowance,
@@ -463,9 +495,136 @@ def _create_carers_allowance_earnings_taper() -> Reform:
             "limit, to nothing once earnings exceed the limit by the full "
             "weekly rate. Carers at or below the limit are unchanged. "
             "Scotland's Carer Support Payment is unchanged. Claims by carers "
-            "the limit kept out follow the data's take-up draw (60%)."
+            "the limit kept out follow the data's take-up draw (60%). For "
+            "a carer on Universal Credit the model counts the extra "
+            "allowance in full as unearned income but deducts none of the "
+            "PAYE on it from earnings, as DWP would, so such a carer can "
+            "lose overall."
         ),
         simulation_modifier=carers_allowance_earnings_taper,
+    )
+
+
+# =============================================================================
+# LOCAL HOUSING ALLOWANCE UNFROZEN FROM APRIL 2027
+# =============================================================================
+
+
+def _create_lha_unfreeze_2027() -> Reform:
+    # The freeze is a switch, which the templates' numeric values refuse,
+    # so the change is written directly, as static_capital_gains writes
+    # its switch. Every policy year from 2027: a bounded change would
+    # return to the freeze, holding the rates at their 2027 level.
+    return Reform(
+        id=LHA_UNFREEZE_ID,
+        name="Local Housing Allowance unfrozen",
+        description=(
+            "Candidate measure. From April 2027 Local Housing Allowance "
+            "rates in Great Britain are no longer frozen at their April "
+            "2024 level: each April they are re-set to the 30th percentile "
+            "of local rents, as policyengine-uk determines them from its "
+            "projected rents, with the national maximum and the March 2020 "
+            "minimum. It raises Universal Credit's housing element and "
+            "Housing Benefit for private renters whose rent is above the "
+            "frozen rate. Northern Ireland's rates are unchanged."
+        ),
+        parameter_changes={LHA_FREEZE: _years_from(2027, False)},
+    )
+
+
+# =============================================================================
+# EMPLOYER NI SECONDARY THRESHOLD BACK TO £9,100 FROM APRIL 2027
+# =============================================================================
+
+# Current law: £5,000 a year (stored weekly, £96.15) from April 2025, held
+# to 2030-31 and then raised by CPI each year by the engine. The candidate:
+# £9,100 a year (£175 a week, its 2022-23 to 2024-25 value) from 6 April
+# 2027, and from 2031-32 current law's CPI rise applied to it (the engine
+# indexes the threshold from its own previous amount; every scored year is
+# written, as scored_years asks of a projected threshold).
+SECONDARY_THRESHOLD_RAISED = 9100
+SECONDARY_THRESHOLD_FROM = 2027
+
+
+def secondary_threshold_raised() -> dict[str, float]:
+    """The weekly secondary threshold, every policy year from 2027."""
+    from policyengine_uk.system import system
+
+    node = system.parameters.get_child(SECONDARY_THRESHOLD)
+    weekly = SECONDARY_THRESHOLD_RAISED / 52
+    values = {}
+    for year in POLICY_YEARS:
+        if year < SECONDARY_THRESHOLD_FROM:
+            continue
+        if year > SECONDARY_THRESHOLD_FROM:
+            weekly *= node(f"{year}-04-06") / node(f"{year - 1}-04-06")
+        values[str(year)] = round(weekly, 8)
+    return values
+
+
+def _create_employer_nics_secondary_threshold_raise() -> Reform:
+    return Reform(
+        id=EMPLOYER_NI_THRESHOLD_ID,
+        name="Employer NI threshold raised",
+        description=(
+            "Candidate measure. From 6 April 2027 the threshold above which "
+            "employers pay Class 1 National Insurance goes back from £5,000 "
+            "to £9,100 a year (£175 a week), rising with CPI from 2031-32 "
+            "as current law's does; the 15% rate is unchanged. "
+            "policyengine-uk holds each employer's total cost of employment "
+            "fixed, so the saving is passed to employees as higher pay in "
+            "the same year."
+        ),
+        parameter_changes=threshold_change(
+            SECONDARY_THRESHOLD, secondary_threshold_raised()
+        ),
+    )
+
+
+# =============================================================================
+# DIVIDEND, SAVINGS AND PROPERTY INCOME TAX RATES UP 2 POINTS FROM APRIL 2027
+# =============================================================================
+
+UNEARNED_INCOME_RATE_RISE = 0.02
+UNEARNED_INCOME_RATES_FROM = 2027
+
+
+def unearned_income_rates_up() -> dict[str, dict[str, float]]:
+    """Current law's rate plus 2 points, every policy year from 2027."""
+    from policyengine_uk.system import system
+
+    changes = {}
+    for path in UNEARNED_INCOME_RATE_PATHS:
+        node = system.parameters.get_child(path)
+        changes.update(
+            rate_change(
+                path,
+                {
+                    str(year): round(
+                        node(f"{year}-04-06") + UNEARNED_INCOME_RATE_RISE, 6
+                    )
+                    for year in POLICY_YEARS
+                    if year >= UNEARNED_INCOME_RATES_FROM
+                },
+            )
+        )
+    return changes
+
+
+def _create_unearned_income_rates_up() -> Reform:
+    return Reform(
+        id=UNEARNED_INCOME_RATES_ID,
+        name="Dividend, savings and property income tax up",
+        description=(
+            "Candidate measure. From 6 April 2027 the income tax rates on "
+            "dividends, savings income and property income each rise by 2 "
+            "percentage points on top of current law, which already "
+            "includes Budget 2025's rises: dividends to 12.75%, 37.75% and "
+            "41.35%, and savings and property income to 24%, 44% and 49% "
+            "at the basic, higher and additional rates. Incomes are held "
+            "fixed, with no behavioural response."
+        ),
+        parameter_changes=unearned_income_rates_up(),
     )
 
 
@@ -474,12 +633,18 @@ def _create_carers_allowance_earnings_taper() -> Reform:
 # =============================================================================
 
 AUTUMN_BUDGET_2026_COMBINED_ID = "autumn_budget_2026_combined"
-# The seven measures kept for the package (Vahid, 27 October 2026), and
-# the Carer's Allowance earnings taper added the same day: eight. The
-# Business Asset Disposal Relief cut (``BADR_ID``) and the employer NI
-# relief for under-25s (``EMPLOYER_NI_ID``) are withdrawn, so neither is in
-# the package nor in the registry (``_MEASURE_FACTORIES``): no default
-# command runs or publishes them. Their factories stay below, unregistered.
+# The candidate set Vahid chose on the evening of 27 October 2026 (#222):
+# every registered measure, ten. Withdrawn, so in neither the package nor
+# the registry (``_MEASURE_FACTORIES``), and run or published by no default
+# command: the road fuel VAT cut (``FUEL_VAT_ID``) that evening, and
+# earlier that day the Business Asset Disposal Relief cut (``BADR_ID``) and
+# the employer NI relief for under-25s (``EMPLOYER_NI_ID``). Their
+# factories stay above, unregistered. Considered that evening and left out:
+# tobacco duty at RPI+2% (already in current law: policyengine-uk 2.151.0
+# has the rise from 1 October 2026) and alcohol duty at RPI (the data hold
+# no tobacco or alcohol quantities, so both duties are about zero), and
+# working-age benefits at CPI-1% (no parametric route leaves pensioner
+# benefits alone).
 # The measures the combined reform brings together, by id. The combined
 # reform is simulated whole, so this list does not change what it does; it
 # names its parts, so results by area can check it as a package of them.
@@ -489,10 +654,11 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
     WARM_HOME_DISCOUNT_ID,
     ELECTRICITY_VAT_ID,
     THRESHOLD_FREEZE_ID,
-    FUEL_VAT_ID,
     PLAN_2_ID,
-    # Added 27 October 2026 (Vahid): the package is eight measures.
     CARERS_ALLOWANCE_TAPER_ID,
+    LHA_UNFREEZE_ID,
+    EMPLOYER_NI_THRESHOLD_ID,
+    UNEARNED_INCOME_RATES_ID,
 )
 
 _MEASURE_FACTORIES = (
@@ -501,9 +667,11 @@ _MEASURE_FACTORIES = (
     _create_warm_home_discount_top_up,
     _create_domestic_electricity_zero_vat,
     _create_threshold_freeze_2031_32,
-    _create_road_fuel_vat_cut,
     _create_plan_2_threshold_unfreeze,
     _create_carers_allowance_earnings_taper,
+    _create_lha_unfreeze_2027,
+    _create_employer_nics_secondary_threshold_raise,
+    _create_unearned_income_rates_up,
 )
 
 
@@ -524,7 +692,7 @@ def _create_combined_autumn_budget_reform(members: list[Reform]) -> Reform:
         id=AUTUMN_BUDGET_2026_COMBINED_ID,
         name="Autumn Budget 2026 candidates (combined)",
         description=(
-            "All eight candidate measures simulated together: "
+            "All ten candidate measures simulated together: "
             + ", ".join(member.name for member in members)
             + ". Shows the package's impact with interactions."
         ),
@@ -572,7 +740,7 @@ def _get_reform_lookup() -> dict[str, Reform]:
 
 
 def get_autumn_budget_2026_reforms() -> list[Reform]:
-    """The combined package, then the eight candidate measures."""
+    """The combined package, then the ten candidate measures."""
     return _get_autumn_budget_2026_reforms()
 
 
