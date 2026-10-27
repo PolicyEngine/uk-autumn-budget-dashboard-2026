@@ -1732,7 +1732,9 @@ body {
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding-bottom: 0;
+  /* The gap between the last card and the site footer, on every tab and
+     at every width (the replication line that used to own it is gone) */
+  padding-bottom: var(--pe-space-2xl);
 }
 
 .app > .main-content > * {
