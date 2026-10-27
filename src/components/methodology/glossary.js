@@ -11,7 +11,7 @@ export const GLOSSARY = {
   netIncome: {
     term: "Household net income",
     meaning:
-      "Earnings, pensions, other income and benefits, less direct taxes, council tax, fuel and other duties, student loan repayments and pension contributions; a change in VAT counts too.",
+      "Earnings, pensions, other income and benefits, less direct taxes, Council Tax, fuel and other duties, student loan repayments and pension contributions; a change in VAT counts too.",
   },
   housingCosts: {
     term: "Before and after housing costs (BHC, AHC)",
