@@ -1155,7 +1155,9 @@
   align-items: flex-start;
 }
 
-.breakdown-header .chart-description {
+.main-content .breakdown-header .chart-description {
+  grid-column: 1;
+  grid-row: 1;
   margin: 0;
   align-self: center;
 }
