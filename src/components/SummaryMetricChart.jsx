@@ -56,7 +56,8 @@ const VALUE_BAR_SHAPE = barShape(["value"]);
  * run: the policy's own when one is selected, the combined run when all are.
  * A fall in poverty is drawn in the gain colour and a rise in the loss
  * colour; the inequality measures (Gini, top shares, ratios) are drawn in
- * the neutral net colour, since a change in inequality is not a gain or a
+ * the neutral grey (noChange, as the year-by-year cells), not the black of
+ * the net line, since a change in inequality is not a gain or a
  * loss for any one household.
  */
 export const SUMMARY_METRICS = {
@@ -642,14 +643,14 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
               <Bar
                 dataKey="value"
                 name={metric.title}
-                fill={metric.choices === "inequality" ? CHART_COLOURS.net : CHART_COLOURS.gain}
+                fill={metric.choices === "inequality" ? CHART_COLOURS.noChange : CHART_COLOURS.gain}
                 shape={VALUE_BAR_SHAPE}
                 {...chartMotion()}
               >
                 {data.map((point) => {
                   const colour =
                     metric.choices === "inequality"
-                      ? CHART_COLOURS.net
+                      ? CHART_COLOURS.noChange
                       : point.value > 0
                         ? CHART_COLOURS.loss
                         : CHART_COLOURS.gain;
