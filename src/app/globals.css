@@ -127,7 +127,9 @@ code {
   --card-border: var(--pe-gray-200);
   --card-radius: 12px;
   --card-padding: 24px;
-  --title-row-height: 64px;
+  /* The site header's height (58px, @policyengine/ui-kit's
+     --spacing-header), so the two bars match */
+  --title-row-height: 58px;
   /* The two tab rows (view tabs and sub-tabs) share one height: each
      row, each tab and the chosen tab's tint. Compact once stuck. */
   --tab-row-height: 48px;
@@ -173,6 +175,11 @@ code {
   --band-ink-border-hover: color-mix(in srgb, var(--band-ink) 80%, transparent);
   --band-ink-hover: color-mix(in srgb, var(--band-ink) 12%, transparent);
   --band-ink-active: color-mix(in srgb, var(--band-ink) 20%, transparent);
+  /* The band's pills sit at the light end of its gradient (teal-600), so
+     they take a dark fill, not a white one: the white value stays above
+     5:1 and the muted label above 4.5:1 in every state */
+  --band-control-fill: color-mix(in srgb, var(--color-teal-900) 35%, transparent);
+  --band-control-fill-active: color-mix(in srgb, var(--color-teal-900) 55%, transparent);
   /* The site footer's gradient, left to right */
   --footer-start: #234e52;
   --footer-end: #2c7a7b;
@@ -362,10 +369,11 @@ body {
   scroll-margin-top: calc(var(--sticky-offset) + 16px);
 }
 
-/* Title band: the full-width teal band under the site nav that the
-   published UK dashboards use (uk-spring-statement-2026,
-   uk-childcare-100k-threshold, uk-living-standards-outlook .title-row):
-   white Inter 700 title on rgba(40, 94, 97, 0.95). It is the page's only
+/* Title band: the full-width teal band under the site nav, in the site
+   header's own look (policyengine.org's, @policyengine/ui-kit's Header):
+   the same 58px on a wide screen, the same teal-800 to teal-600 gradient
+   across the window and the same teal-700 rule, with a white Inter 700
+   title (app-v2's page-title weight and tight tracking). It is the page's only
    sticky element and keeps one height, so nothing below it moves. The
    band bleeds to the window edges while its content stays in the column.
    It looks the same stuck or not: same height, title size and padding, no
@@ -395,8 +403,10 @@ body {
      lines its content up with the page column. */
   margin-inline: calc(50% - 50vw);
   padding-inline: max(40px, calc((100vw - 1120px) / 2));
-  /* Solid, no alpha, no blur */
-  background: var(--band-teal);
+  /* The site header's gradient and rule, from the same tokens */
+  background: linear-gradient(to right, var(--color-teal-800), var(--color-teal-600));
+  border-bottom: 0.5px solid var(--color-teal-700);
+  box-sizing: border-box;
 }
 
 .title-row.is-stuck {
@@ -422,7 +432,7 @@ body {
   font-weight: 700;
   color: var(--band-ink);
   margin: 0;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   line-height: 1.15;
 }
 
@@ -443,7 +453,7 @@ body {
 }
 
 .title-row .band-control.is-inactive:hover {
-  background: var(--band-ink-hover);
+  background: var(--band-control-fill);
   border-color: var(--band-ink-border);
 }
 
@@ -747,7 +757,7 @@ body {
 /* The band's two controls (year, measures; YearSlider.jsx and
    PolicySelector.jsx): the card Options pill's shape (a full pill, a
    1px border, an icon, the value, a chevron) on the teal band, as a
-   translucent white pill with white text. The label and the value share
+   translucent dark pill with a white border and white text. The label and the value share
    one line, the label regular and muted, the value bold. Their lists stay
    white. */
 .title-row .band-control {
@@ -756,7 +766,7 @@ body {
   padding: 0 14px 0 12px;
   gap: 8px;
   color: var(--band-ink);
-  background: var(--band-ink-hover);
+  background: var(--band-control-fill);
   border: 1px solid var(--band-ink-border);
   border-radius: 999px;
 }
@@ -767,14 +777,14 @@ body {
 }
 
 .title-row .band-control:hover:not(:disabled) {
-  background: var(--band-ink-active);
+  background: var(--band-control-fill-active);
   border-color: var(--band-ink-border-hover);
 }
 
 .title-row .band-control:active:not(:disabled),
 .title-row .band-control[aria-expanded="true"],
 .title-row .band-control[aria-pressed="true"] {
-  background: var(--band-ink-active);
+  background: var(--band-control-fill-active);
   border-color: var(--band-ink);
 }
 
@@ -1649,7 +1659,7 @@ body {
      Methodology) has one row: no empty second row. App.jsx sets
      data-band and keeps the reader's place when the height changes. */
   .app[data-band="compact"] {
-    --title-row-height: 60px;
+    --title-row-height: 58px;
   }
 
   .app[data-band="compact"] .title-row {

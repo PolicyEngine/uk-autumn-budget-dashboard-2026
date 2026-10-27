@@ -9,8 +9,10 @@ import './globals.css';
 // every token the page uses (it differs only in colours nothing here reads).
 import '@policyengine/ui-kit/legacy/tokens.css';
 import './fonts.css';
+import './siteHeader.css';
 import localFont from 'next/font/local';
 import SiteFooter from '@/components/SiteFooter';
+import { SITE_HEADER_STYLES, SITE_NAV_ITEMS } from '@/utils/siteNav';
 import { DEEP_LINK_SCRIPT } from '@/utils/landing';
 import { earlyManifestScript } from '@/utils/publication/early';
 import { BOOT_VIEW_SCRIPT } from '@/utils/bootView';
@@ -95,7 +97,12 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: chartChunkScript(process.env.NEXT_PUBLIC_BASE_PATH || '', builtChartFiles()) }} />
       </head>
       <body>
-        <PolicyEngineShell country="uk" showFooter={false}>
+        {/* The site header with policyengine.org's own menu and side padding
+            (utils/siteNav.js; siteHeader.css for the rest of its look) */}
+        <PolicyEngineShell
+          country="uk"
+          showFooter={false}
+          headerProps={{ navItems: SITE_NAV_ITEMS, styles: SITE_HEADER_STYLES }}>
           {children}
           <SiteFooter />
         </PolicyEngineShell>

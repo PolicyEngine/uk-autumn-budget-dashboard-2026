@@ -3,13 +3,20 @@ import { PanelLeftOpen } from "lucide-react";
 import mark from "@/assets/policyengine-white-square.svg";
 import "./HomeButton.css";
 
+/** Where the band's mark leads: PolicyEngine's UK home page */
+export const POLICYENGINE_HOME = "https://policyengine.org/uk";
+
 /**
- * PolicyEngine's mark, left of the band's title: decoration only, not a
- * control. The way to the overview is the rail button (EdgeAboutTab) and
- * its drawer, which also leads back to the start.
+ * PolicyEngine's mark, left of the band's title: a link to PolicyEngine's
+ * home page, in the same tab, as the site header's logo is. The way to
+ * the dashboard's overview is the About tab (EdgeAboutTab) and its drawer.
  */
 export default function TitleMark() {
-  return <Mark className="title-mark" hidden />;
+  return (
+    <a href={POLICYENGINE_HOME} className="title-mark-link" aria-label="PolicyEngine home">
+      <Mark className="title-mark" hidden />
+    </a>
+  );
 }
 
 /** PolicyEngine's square mark (@policyengine/ui-kit's white-square.svg). */

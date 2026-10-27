@@ -190,12 +190,22 @@ describe("the landing page", () => {
 });
 
 describe("the mark beside the title", () => {
-  it("is decoration only: no link, no button, hidden from assistive tech", async () => {
+  it("links to PolicyEngine's home page in the same tab, as the site header's logo does", async () => {
     const { container } = await renderApp();
-    const mark = container.querySelector(".title-head img");
-    expect(mark).toHaveAttribute("aria-hidden", "true");
-    expect(mark.closest("a, button")).toBeNull();
+    const home = screen.getByRole("link", { name: "PolicyEngine home" });
+    expect(home).toHaveAttribute("href", "https://policyengine.org/uk");
+    expect(home).not.toHaveAttribute("target");
+    expect(home).toHaveClass("title-mark-link");
+    expect(container.querySelector(".title-head").firstElementChild).toBe(home);
+    // The link carries the name; the image itself stays out of the way
+    expect(home.querySelector("img")).toHaveAttribute("aria-hidden", "true");
     expect(screen.queryByRole("link", { name: "Back to the start" })).toBeNull();
+  });
+
+  it("leaves the dashboard's overview to the About tab", async () => {
+    window.history.replaceState({}, "", "/?tab=methodology");
+    await renderApp();
+    expect(screen.getByRole("button", { name: "About this dashboard" })).toBeInTheDocument();
   });
 });
 
