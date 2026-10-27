@@ -39,7 +39,7 @@ import {
 import { chartMotion, chartTransition } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import SelectedYearShade from "./SelectedYearShade";
-import { revenueSentence } from "../utils/plainSentences";
+import { laterRevenueNote, revenueSentence } from "../utils/plainSentences";
 import { zeroReason } from "../utils/legendMembership";
 import ChartMoreInfo from "./ChartMoreInfo";
 import Note from "./Note";
@@ -320,6 +320,14 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [], befor
     // The key is above the plot, not a Recharts legend: crop nothing
     reservedLegendHeight: 0,
   };
+  // "Later years differ": the first later year in which the measures turn
+  // from costing revenue to raising it, or back (plainSentences.js)
+  const laterRevenue = laterRevenueNote(
+    data.find((point) => point.year === selectedYear)?.netImpact,
+    data
+      .filter((point) => point.year > selectedYear && !point.unpublished)
+      .map((point) => ({ yearLabel: fiscalYearTick(point.year), net: point.netImpact })),
+  );
   // One menu: the chart's data as CSV, and the chart as PNG or SVG.
   const download = {
     chartRef,
@@ -340,6 +348,7 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [], befor
               measures is in More info */}
           <p className="chart-description">
             {(noRevenue ? null : revenueSentence(data.find((point) => point.year === selectedYear)?.netImpact, fiscalYearTick(selectedYear))) ?? CHART_DESCRIPTION}
+            {laterRevenue && <span className="later-years-note"> {laterRevenue}</span>}
           </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={CHART_TITLE} />

@@ -25,6 +25,7 @@ import {
   positionSummary,
   percentileOn,
   lowerCount,
+  missingPackageNote,
   PLACE_MEANING,
 } from "../../utils/incomePosition";
 import { parseCsv } from "../../utils/publication/csv";
@@ -665,7 +666,8 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const distribution = useFile(DISTRIBUTION_FILE, parseDistribution);
   const moves = useFile(MOBILITY_FILE, parseRecords);
   // Every measure the catalogue publishes: the package's run is exact only
-  // when all of them are selected, and it was run with exactly those
+  // when all of them are selected, and it was run with exactly those. The
+  // package's rows are read under the manifest's combined key (#228).
   const catalogue = useMeasureCatalogue();
   const run = distributionRunOf(policies, catalogue);
   // The tenths' averages from the verified artifacts the decile charts read
@@ -702,7 +704,10 @@ export default function IncomePositionChart({ net, household, year, policies, ye
           <TitleIcon name="users" />
           <span className="title-text">{title}</span>
         </h3>
-        <p className="single-year-quiet">The UK income distribution is not available for this year.</p>
+        <p className="single-year-quiet">
+          {(distribution.status === "ready" && missingPackageNote(run, distribution.rows)) ||
+            "The UK income distribution is not available for this year."}
+        </p>
       </div>
     );
   }

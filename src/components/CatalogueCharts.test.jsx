@@ -178,6 +178,25 @@ describe("published measure catalogue in population views", () => {
     expect(screen.getByRole("status")).toHaveTextContent("The net change is unavailable");
   });
 
+  it.each([
+    ["relative", DistributionalChart, "distributional", "value", -1, "Later years differ: in 2030-31, both the lowest- and highest-income tenths lose."],
+    ["absolute", WaterfallChart, "winnersLosers", "avg_change", -500, "Later years differ: in 2030-31, both the lowest- and highest-income tenths lose."],
+  ])("points the %s view to a later year in which the ends turn", (_name, Chart, source, key, later, note) => {
+    const fixture = measureCatalogueFixture({ held: false });
+    // The same rows a year on, with the first measure turned to a loss
+    const next = fixture[source].map((row) => ({ ...row, year: YEAR + 1, ...(row.reform_id === ALPHA ? { [key]: later } : {}) }));
+    const { container, unmount } = render(withCatalogue(catalogueFor(fixture),
+      <Chart rawData={[...fixture[source], ...next]} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
+    ));
+    expect(container.querySelector(".later-years-note")).toHaveTextContent(note);
+    unmount();
+    // The same rows in both years: no turn, no pointer
+    const same = render(withCatalogue(catalogueFor(fixture),
+      <Chart rawData={[...fixture[source], ...fixture[source].map((row) => ({ ...row, year: YEAR + 1 }))]} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
+    ));
+    expect(same.container.querySelector(".later-years-note")).toBeNull();
+  });
+
   it("shares the catalogue's colours between standalone legends and tooltips", () => {
     const catalogue = catalogueFor(measureCatalogueFixture());
     const { container } = render(withCatalogue(catalogue, <>
