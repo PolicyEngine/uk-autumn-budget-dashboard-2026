@@ -256,25 +256,11 @@ describe("RegionView", () => {
     ]);
   });
 
-  it("exports the same rows as text", async () => {
+  it("offers the same downloads as every card: CSV, PNG and SVG", async () => {
     renderView({ selectedPolicies: ["fuel_duty_freeze"] });
     await screen.findByRole("table");
     fireEvent.click(screen.getByRole("button", { name: /^Download chart: Results by region/ }));
-    fireEvent.click(screen.getByRole("button", { name: "TXT Plain text" }));
-    await waitFor(() => expect(downloadFile).toHaveBeenCalled());
-    const [content, filename, mimeType] = vi.mocked(downloadFile).mock.calls[0];
-    expect(filename).toBe("results-by-region-fuel_duty_freeze-2029.txt");
-    expect(mimeType).toBe("text/plain;charset=utf-8");
-    const lines = content.split("\n");
-    expect(lines[0]).toBe("Results by region: UK Autumn Budget 2026 dashboard");
-    expect(lines).toContain("Policy: Fuel duty freeze extension");
-    expect(lines).toContain("Year: 2029-30");
-    expect(lines.find((line) => line.startsWith("area_code"))).toMatch(
-      /^area_code\s+area_name\s+reform\s+year\s+outcome\s+value\s+lo\s+hi\s+direction\s+tier\s+reason\s+support_band$/,
-    );
-    const east = lines.find(
-      (line) => line.startsWith("E12000004") && line.includes("relative_change"),
-    );
-    expect(east).toMatch(/0\.0010\s+0\.0007\s+0\.0013\s+gain\s+reported/);
+    const formats = [...document.querySelectorAll(".chart-download-menu [data-format]")].map((item) => item.dataset.format);
+    expect(formats).toEqual(["csv", "png", "svg"]);
   });
 });

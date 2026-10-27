@@ -21,7 +21,7 @@ import {
   PHONE_QUERY,
   useViewportMatch,
 } from "../../utils/chartTheme";
-import { DISPLAY_YEARS, NOT_YET_PUBLISHED } from "../../utils/displayYears";
+import { DISPLAY_YEARS, NOT_YET_PUBLISHED, useDisplayYears } from "../../utils/displayYears";
 import { X_AXIS_HEIGHT, plotMargin } from "./chartRows";
 import { AGE_GROUPS, ALL_BAND, YOUNG_BAND } from "../../utils/ageImpact";
 import {
@@ -53,7 +53,7 @@ export const SERIES = AGE_GROUPS.map((group) => ({
 }));
 
 export const TREND_DESCRIPTION = "Average change per person, £ a year.";
-const CUMULATIVE_DESCRIPTION = `Running total per person from ${fiscalYearTick(DISPLAY_YEARS[0])}, £.`;
+const cumulativeDescription = (first) => `Running total per person from ${fiscalYearTick(first)}, £.`;
 
 
 // The focus group in the brand colour, all ages as the reference, the rest
@@ -99,11 +99,10 @@ export const about = (value) => {
  * The selected year's shading, and each unpublished year's grey band with
  * "Not yet published" on two lines, under the lines.
  */
-export function YearShading({ xAxisMap, yAxisMap, selectedYear, unpublishedYears }) {
+export function YearShading({ xAxisMap, yAxisMap, selectedYear, unpublishedYears, years = DISPLAY_YEARS }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis) return null;
-  const years = DISPLAY_YEARS;
   const bandwidth = xAxis.scale.bandwidth?.();
   const step = bandwidth
     ? xAxis.scale(years[1]) - xAxis.scale(years[0])
@@ -451,6 +450,7 @@ export function stepSentence(notes, headline, nameIn) {
  * segments between the annual points: there is nothing between them.
  */
 function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, extraOptions = [] }) {
+  const shownYears = useDisplayYears();
   // The focus group (By age's Age group): an age band, or pensioners from
   // their single years of age, which join the lines as a series of their own
   const FOCUS = group;
@@ -483,10 +483,10 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const cumulative = years === "total";
   const byMeasure = view === "measures";
 
-  const bands = useMemo(() => changeByYear(rows, policies, selectedPolicies, DISPLAY_YEARS), [rows, policies, selectedPolicies]);
+  const bands = useMemo(() => changeByYear(rows, policies, selectedPolicies, shownYears), [rows, policies, selectedPolicies, shownYears]);
   const focusSeries = useMemo(
-    () => groupSeries(rows, policies, selectedPolicies, DISPLAY_YEARS, FOCUS),
-    [rows, policies, selectedPolicies, FOCUS],
+    () => groupSeries(rows, policies, selectedPolicies, shownYears, FOCUS),
+    [rows, policies, selectedPolicies, shownYears, FOCUS],
   );
   // Pensioners' line from their own series; the bands from the age rows
   const raw = group === PENSIONERS ? bands.map((point, i) => ({ ...point, [PENSIONERS]: focusSeries[i]?.net ?? null })) : bands;
@@ -544,10 +544,10 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const unpublished = raw.filter((point) => !point.published);
   const suppressed = raw.filter((point) => point.published && point.suppressed.length > 0);
   const labelOf = (each) => SERIES.find((series) => series.key === each)?.label ?? each;
-  const first = fiscalYearTick(DISPLAY_YEARS[0]);
-  const last = fiscalYearTick(DISPLAY_YEARS[DISPLAY_YEARS.length - 1]);
+  const first = fiscalYearTick(shownYears[0]);
+  const last = fiscalYearTick(shownYears[shownYears.length - 1]);
   const title = `Change by year, ${first} to ${last}`;
-  const description = cumulative ? CUMULATIVE_DESCRIPTION : TREND_DESCRIPTION;
+  const description = cumulative ? cumulativeDescription(shownYears[0]) : TREND_DESCRIPTION;
 
   // The headline, one plain sentence with the units folded in: the
   // selected year, then the step after it that changes it most ("16 to
@@ -717,7 +717,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             <CartesianGrid {...GRID_PROPS} />
             <Customized
               component={
-                <YearShading selectedYear={Number(selectedYear)} unpublishedYears={unpublished.map((point) => point.year)} />
+                <YearShading years={shownYears} selectedYear={Number(selectedYear)} unpublishedYears={unpublished.map((point) => point.year)} />
               }
             />
             <XAxis

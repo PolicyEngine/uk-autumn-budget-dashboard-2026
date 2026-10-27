@@ -11,6 +11,7 @@
  */
 
 import { TOO_UNCERTAIN, classifyRow } from "./classify";
+import { absDecimal, compareDecimal } from "./decimal";
 import { formatFigure, formatInterval } from "./format";
 import {
   CATEGORY_COLOURS,
@@ -76,6 +77,60 @@ export function movesNoSeat(states) {
 /** The line under the map when no seat shows a published change. */
 export const noSeatMovedNote = ({ yearLabel, several = false }) =>
   `No constituency shows a change large enough to publish for ${several ? "these policies" : "this policy"} in ${yearLabel}.`;
+
+const OUTCOME_UNIT = { average_change: " a year", relative_change: " of income" };
+const seatsWord = (n) => `${n.toLocaleString("en-GB")} constituenc${n === 1 ? "y" : "ies"}`;
+
+/**
+ * The card's one plain sentence under its title (Vahid, 27 October: "add a
+ * subtitle like other boxes"), from the published rows the map colours, in
+ * the outcome it shows: where households gain or lose on average, and the
+ * range when every seat with a figure moves one way. Seats not published
+ * are counted, never explained (the map key says why). Null with no rows.
+ *
+ * @param {Map<string, {kind: string, row: Object|null}>|null} states - seatStates
+ * @param {{outcome: string, yearLabel: string, several?: boolean}} options
+ */
+export function constituencySentence(states, { outcome, yearLabel, several = false }) {
+  const rows = [...(states?.values() ?? [])].map((state) => state?.row).filter(Boolean);
+  if (rows.length === 0) return null;
+  const published = rows.filter((row) => row.tier !== "withheld");
+  const withheld = rows.length - published.length;
+  if (movesNoSeat(states)) {
+    if (withheld > 0) return noSeatMovedNote({ yearLabel, several });
+    return `${several ? "These policies do" : "This policy does"} not change household incomes in any constituency in ${yearLabel}.`;
+  }
+  // Signed as the seat cards colour them: a negligible figure is no change
+  const gains = published.filter((row) => signOf(row.value, outcome) === "gain");
+  const losses = published.filter((row) => signOf(row.value, outcome) === "loss");
+  const flat = published.length - gains.length - losses.length;
+  const notPublished = withheld > 0 ? `; ${seatsWord(withheld)} ${withheld === 1 ? "is" : "are"} not published` : "";
+  const oneWay = flat === 0 && (gains.length === 0 || losses.length === 0);
+  if (oneWay) {
+    const moving = gains.length > 0 ? gains : losses;
+    const sorted = [...moving].sort((a, b) => compareDecimal(absDecimal(a.value), absDecimal(b.value)));
+    const [least, most] = [sorted[0], sorted[sorted.length - 1]];
+    const size = (row) => formatFigure(outcome, row.value.replace(/^-/, ""), { signed: false });
+    const all = withheld > 0 ? `all ${seatsWord(published.length)} with a published figure` : `all ${seatsWord(published.length)}`;
+    const range =
+      moving.length > 1 && compareDecimal(least.value, most.value) !== 0
+        ? `, from ${size(least)}${OUTCOME_UNIT[outcome]} in ${least.areaName} to ${size(most)} in ${most.areaName}`
+        : `, by ${size(most)}${OUTCOME_UNIT[outcome]}`;
+    return `Households ${gains.length > 0 ? "gain" : "lose"} on average in ${all}${range}.`;
+  }
+  const parts = [
+    gains.length > 0 && ["gain", gains.length],
+    losses.length > 0 && ["lose", losses.length],
+    flat > 0 && ["see no change", flat],
+  ].filter(Boolean);
+  // "gain on average in 600 constituencies and lose in 40": "on average"
+  // and the noun once, on the first count
+  const said = parts.map(([verb, n], i) =>
+    i === 0 ? `${verb} on average in ${seatsWord(n)}` : `${verb} in ${n.toLocaleString("en-GB")}`,
+  );
+  const joined = said.length > 1 ? `${said.slice(0, -1).join(", ")} and ${said[said.length - 1]}` : said[0];
+  return `Households ${joined}${notPublished}.`;
+}
 
 const PLAIN_STROKE = Object.freeze({ stroke: CHART_COLOURS.surface, strokeWidth: 0.05 });
 

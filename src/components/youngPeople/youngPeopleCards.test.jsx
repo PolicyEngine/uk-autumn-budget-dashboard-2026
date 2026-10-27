@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import fc from "fast-check";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import MeasuresCard from "./MeasuresCard";
+import { expectStandardDownloads } from "../../test/downloadMenus";
 import TrendCard from "./TrendCard";
 import {
   SINGLE_AGE_FIRST,
@@ -143,6 +144,8 @@ describe("young people cards", () => {
     render(<MeasuresCard {...props} selectedYear={2028} />);
     expect(screen.getByRole("heading", { level: 3, name: /Effect of each policy, 2028-29/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Download chart: Effect of each policy/ })).toBeInTheDocument();
+    // The dumbbell is HTML, and still offers CSV, PNG and SVG
+    expect(expectStandardDownloads(document.body)).toBe(1);
     // A row per policy: the group's value and its gap to all ages
     expect(screen.getAllByRole("row").length).toBeGreaterThan(1);
     expect(screen.getAllByText(/vs all ages|≈ all ages/).length).toBeGreaterThan(0);

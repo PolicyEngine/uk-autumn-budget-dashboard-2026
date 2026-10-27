@@ -14,6 +14,22 @@
   font-family: inherit;
 }
 
+/* The hovered or focused row: its band is stronger (drawn in the chart)
+   and its name and difference are in bold, so the row reads across */
+.obr-dumbbell-row.is-active .mrl-svg-name,
+.obr-dumbbell-row.is-active .obr-dumbbell-difference {
+  font-weight: 600;
+}
+
+.obr-dumbbell-row:focus {
+  outline: none;
+}
+
+.obr-dumbbell-row:focus-visible .obr-dumbbell-hit {
+  stroke: var(--c-gain);
+  stroke-width: 2;
+}
+
 .obr-dumbbell-empty {
   margin: 0;
   padding: 40px 16px;

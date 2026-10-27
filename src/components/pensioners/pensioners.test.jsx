@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render as renderReact, screen } from "@testing-library/react";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
 import PensionersSection from "../PensionersSection";
+import { expectStandardDownloads } from "../../test/downloadMenus";
 import {
   aggregateFrom,
   pensionerAge,
@@ -199,6 +200,8 @@ describe("PensionersSection", () => {
     ).toBeInTheDocument();
     // No pointer to the example card: removed at Vahid's request
     expect(screen.queryByRole("link", { name: "Household impact" })).toBeNull();
+    // Every card, the dumbbell drawn in HTML too, offers CSV, PNG and SVG
+    expect(expectStandardDownloads(document.body)).toBe(4);
   });
 });
 

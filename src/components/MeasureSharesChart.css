@@ -25,7 +25,7 @@
   align-items: center;
   margin: 0 -6px;
   padding: 0 6px;
-  border-radius: 6px;
+  border-radius: var(--row-radius);
 }
 
 .msc-row > * {
@@ -106,9 +106,10 @@
   margin-right: 3px;
 }
 
-/* The chosen row (the age group By age shows): a light band, name in bold */
+/* The chosen row (the age group By age shows): the highlight band, name
+   in bold (the zebra and hover bands are .row-band, globals.css) */
 .msc-row.is-focus {
-  background: var(--pe-gray-50);
+  background: var(--c-highlight-band);
 }
 
 .msc-label.is-focus {

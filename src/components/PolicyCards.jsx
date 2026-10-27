@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CalendarCheck, CalendarX, ChartColumn, Clock, ExternalLink, Flag, FlaskConical } from "lucide-react";
+import { CalendarCheck, CalendarX, ChartColumn, ExternalLink, Flag, FlaskConical } from "lucide-react";
 import "./MeasureRowLabel.css";
 import { measureCategoryOf } from "../utils/measureCategory";
 import { withPolicyDetails } from "../utils/policyDetails";
@@ -223,8 +223,7 @@ function PolicyTimeline({ policy, highlight }) {
 }
 
 /**
- * One measure's card: the head (type and any "Temporary" badge on one
- * line, then the name), the summary, what changes (the model's parameters,
+ * One measure's card: the head (type on one line, then the name), the summary, what changes (the model's parameters,
  * current law beside the measure), when it is in force (Starts and Ends,
  * then the timeline), and the footer ("How it is modelled", then the
  * source and "See its effect").
@@ -254,24 +253,14 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
     >
       <div className="policy-card-head">
         <div className="policy-card-titles">
-          {(category || temporary) && (
+          {category && (
             <div className="policy-card-topline">
-              {category && (
-                <p className="policy-card-type">
-                  <span className="mrl-icon" aria-hidden="true" style={{ "--mrl-colour": policy.color }}>
-                    <TitleIcon name={category.icon} bare size={13} />
-                  </span>
-                  {category.label}
-                </p>
-              )}
-              <span className="policy-card-tags">
-                {temporary && (
-                  <span className="policy-card-badge">
-                    <Clock size={12} aria-hidden="true" />
-                    Temporary
-                  </span>
-                )}
-              </span>
+              <p className="policy-card-type">
+                <span className="mrl-icon" aria-hidden="true" style={{ "--mrl-colour": policy.color }}>
+                  <TitleIcon name={category.icon} bare size={13} />
+                </span>
+                {category.label}
+              </p>
             </div>
           )}
           <h3 className="policy-card-name">{policy.label ?? policy.name}</h3>

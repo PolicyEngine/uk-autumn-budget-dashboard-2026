@@ -10,7 +10,7 @@ import "./InfoSections.css";
  *
  * @typedef {Object} ChartInfo
  * @property {{title: string, body: import("react").ReactNode}} [lead] - A short
- *   item of its own, first: e.g. "Before the years shown", one sentence
+ *   item of its own, first, one sentence
  * @property {import("react").ReactNode} [shows] - What it shows: one or two sentences
  * @property {import("react").ReactNode[]} [how] - How it's calculated: one bullet per step
  * @property {Array<{term: string, meaning: import("react").ReactNode} | {ref: keyof typeof GLOSSARY}>} [definitions]
