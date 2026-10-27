@@ -987,7 +987,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
             <BudgetaryImpactChart data={results.budgetData} selectedYear={distributionalYear} selectedPolicies={selectedPolicies} />
           </section>
           {/* The official costings beside our estimates: a card of its own,
-              once the official costings cover a selected measure */}
+              which says when it fills in until they are published */}
           <ObrComparisonCard
             selectedPolicies={selectedPolicies}
             selectedYear={distributionalYear}

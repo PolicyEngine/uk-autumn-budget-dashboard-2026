@@ -22,6 +22,16 @@ import { METHOD_ANCHORS } from "./methodology/anchors";
 /** What the comparison says when the official costings cover none of the selected measures. */
 export const OBR_UNAVAILABLE = "The official costings have no figures for the selected policies.";
 
+/**
+ * What the comparison's card says while the official costings are not
+ * published, or the published file does not check against these results
+ * (Vahid, 27 October: the card is always on Public finances).
+ */
+export const OBR_PENDING = "The official costings are published with the Budget documents on 28 October; this comparison fills in once they are.";
+
+/** The card's title without a year, while there are no figures to date. */
+export const OBR_CARD_TITLE = "How our estimates compare with the official costings";
+
 /** Within this many £bn, an estimate counts as close to the official costing in the card's sentence. */
 export const CLOSE_BN = 0.2;
 
@@ -193,8 +203,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   const showTable = view === "table";
 
   if (selectedPolicies.length === 0) return null;
-  // Nothing until the official costings are published (no pending line:
-  // nothing on the page may stop being true on Budget day, c4717870)
+  // Nothing until the official costings are published (the page's card,
+  // ObrComparisonCard, says when they are)
   if (comparisonData?.pending) return null;
   if (comparisonData?.unavailable) return <UnavailableNotice reason="The comparison with the official costings is unavailable: the costings file does not match these results." />;
   if (!comparisonData) return null;
@@ -405,16 +415,44 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
 export default OBRComparisonTable;
 
 /**
- * The comparison's card on Public finances, under Revenue impact, once the
- * official costings cover any selected measure; nothing until then (no
- * pending line: nothing may stop being true on Budget day, c4717870).
+ * The comparison's card before the official costings can be shown: its
+ * header and title, and one calm line. No figures, no options, no download.
+ */
+export function ObrComparisonEmpty() {
+  return (
+    <div className="obr-comparison-card">
+      <div className="chart-header">
+        <div>
+          <h3>
+            <TitleIcon name="scale" />
+            <span className="title-text">{OBR_CARD_TITLE}</span>
+          </h3>
+        </div>
+      </div>
+      <p className="obr-dumbbell-empty obr-pending-costings">{OBR_PENDING}</p>
+    </div>
+  );
+}
+
+/**
+ * The comparison's card on Public finances, under Revenue impact. Until
+ * a verified official costings file for this Budget is published (missing,
+ * or one that does not check), the card says when it fills in; an
+ * unverified or mismatched file is never shown. Once one is, the
+ * comparison, when it costs any selected measure.
  */
 export function ObrComparisonCard({ selectedPolicies, selectedYear }) {
   const data = useObrComparisonData();
   if (!data || selectedPolicies.length === 0) return null;
-  // Not published yet, a file that does not check, or no official figure
-  // for the selection: nothing at all
-  if (data.pending || data.unavailable || !hasObrFigures(data.rows, selectedPolicies)) return null;
+  if (data.pending || data.unavailable) {
+    return (
+      <section id="obr-comparison" className="report-section hero-chart">
+        <ObrComparisonEmpty />
+      </section>
+    );
+  }
+  // A verified file with no official figure for the selection: nothing
+  if (!hasObrFigures(data.rows, selectedPolicies)) return null;
   return (
     <section id="obr-comparison" className="report-section hero-chart">
       <OBRComparisonTable selectedPolicies={selectedPolicies} selectedYear={selectedYear} data={data} />

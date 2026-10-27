@@ -33,6 +33,7 @@ import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import { fixtureJson } from "./test/publicationFixture";
 import { receiptEngine } from "./utils/publication/load";
 import { CANDIDATE_PROVISIONAL_LABEL } from "./utils/publication/manifest";
+import { OBR_CARD_TITLE, OBR_PENDING } from "./components/OBRComparisonTable";
 
 // Every view's code is in before a test renders it (App.jsx lazyView)
 beforeAll(preloadAllViews, 60_000);
@@ -62,7 +63,7 @@ const HOUSEHOLD_API = `${API}/api/household-impact`;
 // Results by area come only from the disclosure layer, which has not
 // published them yet: the page shows "not yet published" on a 404.
 // The official costings follow the Budget; until then Public finances shows
-// no comparison at all.
+// the comparison's card empty, saying when it fills in.
 const NOT_YET_PUBLISHED = new Set([
   "/data/regional.csv",
   "/data/constituency.csv",
@@ -370,12 +371,18 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     expect(held).toHaveLength(0);
   });
 
-  it("shows no OBR comparison, not even a pending line, until the OBR's costings are in", async () => {
+  it("shows the OBR comparison's card empty, with no figures, until the OBR's costings are in", async () => {
     window.history.replaceState({}, "", "/?sub=finances");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
-    expect(document.querySelectorAll("#obr-comparison")).toHaveLength(0);
-    expect(document.querySelectorAll(".obr-pending")).toHaveLength(0);
+    await screen.findByText(OBR_PENDING, {}, { timeout: 5000 });
+    const cards = document.querySelectorAll("#obr-comparison");
+    expect(cards).toHaveLength(1);
+    expect(within(cards[0]).getByRole("heading", { name: OBR_CARD_TITLE })).toBeInTheDocument();
+    expect(within(cards[0]).queryByRole("button")).toBeNull();
+    expect(cards[0].textContent).not.toMatch(/£/);
+    // Below Revenue impact
+    expect(document.querySelector("#revenue").compareDocumentPosition(cards[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Compare with the official costings" })).toBeNull();
   });
 
@@ -390,7 +397,9 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     // Every view opened so far stays mounted; Methodology is never opened
     // The one exception: the provisional label names candidate measures
     // while the manifest predates the Budget (Vahid, 26 October)
-    const text = document.body.textContent.replaceAll(CANDIDATE_PROVISIONAL_LABEL, "");
+    // and the official costings card's empty line, which names their date
+    // until the file is published (Vahid, 27 October)
+    const text = document.body.textContent.replaceAll(CANDIDATE_PROVISIONAL_LABEL, "").replaceAll(OBR_PENDING, "");
     expect(text).not.toMatch(/pre-Budget/i);
     expect(text).not.toMatch(/28 October/);
     expect(text).not.toMatch(/candidate/i);
