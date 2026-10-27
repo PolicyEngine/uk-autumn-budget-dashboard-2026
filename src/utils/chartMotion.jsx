@@ -73,10 +73,12 @@ export function netDotTitled(describe) {
   return function NetDot(props) {
     const dot = netDot(props);
     if (!dot) return null;
+    // No pointer events: the title would also show as the browser's own
+    // tooltip over the chart's; the dots have no tooltip of their own
     return (
       <>
         <title>{describe(props.payload ?? {})}</title>
-        {dot}
+        <g style={{ pointerEvents: "none" }}>{dot}</g>
       </>
     );
   };
