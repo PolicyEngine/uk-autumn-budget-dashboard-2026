@@ -40,7 +40,9 @@ describe("the ui-kit shell's sticky site nav", () => {
     expect(sheet).toMatch(/position: fixed !important;\s*top: 0 !important;/);
     expect(sheet).toContain(`:root:not([data-site-nav-shown]) ${SELECTOR} {\n  transform: translateY(-100%);`);
     expect(sheet).toMatch(/:root \{\s*--nav-offset: 0px;\s*\}/);
-    expect(sheet).toMatch(/:root\[data-site-nav-shown\] \{\s*--nav-offset: var\(--site-nav-height, 0px\);/);
+    // Shown, the nav overlays the band: it never moves the sticky stack
+    expect(sheet).not.toMatch(/:root\[data-site-nav-shown\] \{\s*--nav-offset/);
+    expect(sheet).toMatch(/:root\[data-site-nav-shown\] \.min-h-screen\.flex\.flex-col > div:first-child\[style\*="sticky"\] \{\s*box-shadow/);
     expect(sheet).toMatch(/\.title-row \{\s*position: sticky;\s*top: var\(--nav-offset\);/);
     expect(sheet).toMatch(/\.view-tabs-bar \{\s*position: sticky;\s*top: calc\(var\(--nav-offset\) \+ var\(--title-row-height\)\);/);
     expect(sheet).toContain("--sticky-offset: calc(var(--nav-offset) + var(--title-row-height) + var(--view-tabs-height) + var(--sub-band-height));");
@@ -95,6 +97,21 @@ describe("showing the site nav", () => {
     scrollTo(300);
     expect(shown()).toBe(true);
     cleanup();
+    expect(shown()).toBe(false);
+    wait(10_000);
+    expect(shown()).toBe(false);
+  });
+
+  it("is always hidden within its own height of the page's top, so the top looks as on load", () => {
+    const { scrollTo, wait, shown, nav } = setup(true);
+    Object.defineProperty(nav(), "offsetHeight", { configurable: true, value: 58 });
+    scrollTo(800);
+    scrollTo(300);
+    expect(shown()).toBe(true);
+    // Back at the top: hidden at once, not after the 3s linger
+    scrollTo(0);
+    expect(shown()).toBe(false);
+    scrollTo(57);
     expect(shown()).toBe(false);
     wait(10_000);
     expect(shown()).toBe(false);

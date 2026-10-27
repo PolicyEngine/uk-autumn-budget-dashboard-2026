@@ -34,7 +34,7 @@ import { DownloadContext, policiesLabel } from "./utils/downloadContext";
 import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
-import { isProgrammaticScroll, scrollBelowBars, scrollPageTo, scrollTopFor } from "./utils/pageScroll";
+import { isProgrammaticScroll, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
 
 // Each view's code (the chart library, the map's and the household
 // calculator's) loads when a view first opens, or while the page is idle,
@@ -524,6 +524,16 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       }
       if (y < prev) runFrom = y;
       prev = y;
+      // At the page's top the nav is always hidden, so the top looks as it
+      // does on load (unless the pointer or focus is in it)
+      if (y < (nav?.offsetHeight || 0)) {
+        last = y;
+        if (isShown() && !holds()) {
+          clear();
+          root.removeAttribute("data-site-nav-shown");
+        }
+        return;
+      }
       if (y > last + 6) {
         last = y;
         if (isShown() && !holds() && y - runFrom > SITE_NAV_SCROLL_HIDE_PX) hideAfter(0);
@@ -572,6 +582,30 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       resize?.disconnect();
       root.removeAttribute("data-site-nav-shown");
       root.style.removeProperty("--site-nav-height");
+    };
+  }, []);
+
+  // The first load (?tab=&sub=, a #hash) and back/forward land with the
+  // target, and every section heading, clear of the sticky bars: the
+  // page places itself (utils/pageScroll), not the browser's restore
+  useEffect(() => {
+    if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
+    let timer = 0;
+    const land = () => {
+      window.clearTimeout(timer);
+      // The views load their data after mounting: give them a moment
+      timer = window.setTimeout(() => {
+        const id = decodeURIComponent(window.location.hash.slice(1));
+        const target = id ? document.getElementById(id) : null;
+        if (target) scrollBelowBars(target);
+        else settleHeadings();
+      }, 600);
+    };
+    land();
+    window.addEventListener("popstate", land);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("popstate", land);
     };
   }, []);
 
@@ -730,7 +764,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     // page's top, where a shown nav cannot be cleared, the second branch
     // takes it away.)
     const saved = tabScroll.current[activeTab];
-    if (saved !== undefined && saved > Math.max(0, top)) scrollPageTo(saved);
+    if (saved !== undefined && saved > Math.max(0, top)) landAt(saved);
     else scrollBelowBars(sentinel, { gap: 0, above: true, onlyUp: true });
   }, [activeTab, landing]);
 

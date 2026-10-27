@@ -300,9 +300,9 @@ body {
    scrolls up, points at the top 8px of the window or tabs into it, keeps
    it a few seconds and while it is in use, and hides it after a deliberate
    scroll down or once the pointer or focus has left; it measures the nav into
-   --site-nav-height. --nav-offset is how much of the window's top the nav
-   covers, so the band, the tab rows and --sticky-offset sit under it in
-   either state. --motion-slide is 0 under reduced motion.
+   --site-nav-height. Shown, it overlays the top of the band (above it,
+   with a shadow); the band and tab rows never move, so --nav-offset is 0.
+   --motion-slide is 0 under reduced motion.
    Written against @policyengine/ui-kit 0.12.0, whose shell is
    <div class="min-h-screen flex flex-col"> with the nav as its first
    child. If a ui-kit upgrade changes that markup this selector stops
@@ -312,8 +312,11 @@ body {
   --nav-offset: 0px;
 }
 
-:root[data-site-nav-shown] {
-  --nav-offset: var(--site-nav-height, 0px);
+/* The nav overlays the band when shown: it never moves the band or the
+   tab rows, so nothing under them is pushed or covered by the stack
+   (--nav-offset stays 0; App.jsx keeps the nav hidden at the page's top) */
+:root[data-site-nav-shown] .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
+  box-shadow: 0 2px 8px var(--shadow-faint, rgba(0, 0, 0, 0.12)) !important;
 }
 
 .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {

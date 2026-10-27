@@ -90,6 +90,70 @@ export function scrollPageTo(top, behavior = "auto") {
   return true;
 }
 
+// The views' section headings: a page-made landing never leaves one under
+// the bars
+const HEADINGS = ".section-heading, .method-section-heading";
+
+/**
+ * If a shown section heading is under the sticky bars (or within 8px of
+ * them), scroll up so the first such one sits STICKY_GAP px below them.
+ * For the end of a scroll the page made: a tab, sub-tab or link landing,
+ * a view's restored position, the first load.
+ */
+export function clearHeadings() {
+  if (typeof document === "undefined") return false;
+  const bottom = stickyBottom();
+  for (const heading of document.querySelectorAll(HEADINGS)) {
+    if (!heading.offsetParent || heading.closest("[hidden]")) continue;
+    const rect = heading.getBoundingClientRect();
+    if (rect.height <= 0 || rect.bottom <= 0 || rect.top >= window.innerHeight) continue;
+    if (rect.top < bottom + 8) return scrollPageTo(window.scrollY + rect.top - bottom - STICKY_GAP);
+  }
+  return false;
+}
+
+/**
+ * Once the page has stopped scrolling (or after 1.5s), run `then`; if it
+ * scrolls the page (returns true), wait again, up to `rounds` times.
+ */
+function afterSettle(then, rounds = 3) {
+  if (typeof requestAnimationFrame !== "function") return;
+  let settled = 0;
+  let lastY = -1;
+  let round = 0;
+  let started = now();
+  const settle = () => {
+    const y = window.scrollY;
+    settled = y === lastY ? settled + 1 : 0;
+    lastY = y;
+    if (settled < 2 && now() - started < 1500) {
+      requestAnimationFrame(settle);
+      return;
+    }
+    round += 1;
+    if (then() && round < rounds) {
+      settled = 0;
+      started = now();
+      requestAnimationFrame(settle);
+    }
+  };
+  requestAnimationFrame(settle);
+}
+
+/**
+ * Scroll the page to `top` (a view's remembered place), then make sure no
+ * section heading is left under the bars.
+ */
+export function landAt(top) {
+  scrollPageTo(top);
+  afterSettle(clearHeadings);
+}
+
+/** After a load or history move: no section heading under the bars. */
+export function settleHeadings() {
+  afterSettle(clearHeadings);
+}
+
 /**
  * Scroll so `target` sits `gap` px below the sticky bars, measured now and
  * again once the scroll has settled (the bars change height as they stick).
@@ -110,29 +174,22 @@ export function scrollBelowBars(target, { behavior = "auto", gap = STICKY_GAP, o
     if (onlyUp && top >= window.scrollY) return false;
     return scrollPageTo(top, how);
   };
-  if (!line(behavior)) return;
-  // Line it up again once the scroll has stopped: tab rows going compact,
-  // the nav sliding, and content loading above can all move it
-  let settled = 0;
-  let lastY = -1;
-  let rounds = 0;
-  const started = now();
-  const settle = () => {
-    if (!target.isConnected) return;
-    const y = window.scrollY;
-    settled = y === lastY ? settled + 1 : 0;
-    lastY = y;
-    if (settled < 2 && now() - started < 1500) {
-      requestAnimationFrame(settle);
-      return;
+  if (!line(behavior)) {
+    afterSettle(clearHeadings);
+    return;
+  }
+  // Line it up again once the scroll has stopped (tab rows going compact,
+  // the nav sliding, and content loading above can all move it), then
+  // make sure no section heading is left under the bars
+  let lined = 0;
+  afterSettle(() => {
+    if (!target.isConnected) return false;
+    if (lined < 2 && line("auto")) {
+      lined += 1;
+      return true;
     }
-    rounds += 1;
-    if (line("auto") && rounds < 3) {
-      settled = 0;
-      requestAnimationFrame(settle);
-    }
-  };
-  if (typeof requestAnimationFrame === "function") requestAnimationFrame(settle);
+    return clearHeadings();
+  }, 5);
 }
 
 /** Test hook: forget a scroll in flight. */

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   STICKY_GAP,
+  clearHeadings,
   isProgrammaticScroll,
   resetPageScroll,
   scrollBelowBars,
@@ -120,5 +121,24 @@ describe("pageScroll", () => {
     expect(root.hasAttribute("data-site-nav-shown")).toBe(false);
     expect(scrollTopFor(heading)).toBe(100 - 64 - 16);
     expect(scrollTo).toHaveBeenCalledWith({ top: 20, behavior: "auto" });
+  });
+
+  it("scrolls up so a section heading left under the bars clears them, and leaves clear ones alone", () => {
+    Object.defineProperty(window, "innerHeight", { value: 800, configurable: true });
+    Object.defineProperty(document.documentElement, "scrollHeight", { value: 5000, configurable: true });
+    bar("title-row", 0, 64);
+    bar("view-tabs-bar", 64, 145);
+    const heading = (top) => {
+      const el = at(top);
+      el.className = "section-heading";
+      Object.defineProperty(el, "offsetParent", { value: document.body, configurable: true });
+      return el;
+    };
+    const clear = heading(200);
+    expect(clearHeadings()).toBe(false);
+    clear.remove();
+    heading(120);
+    expect(clearHeadings()).toBe(true);
+    expect(scrollTo).toHaveBeenCalledWith({ top: 1000 + 120 - 145 - STICKY_GAP, behavior: "auto" });
   });
 });
