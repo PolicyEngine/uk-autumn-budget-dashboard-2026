@@ -105,7 +105,6 @@ export function frameCsv(csvText, frame) {
     `# Chart: ${frame.title}`,
     frame.policies && `# Policies: ${frame.policies}`,
     frame.selection && `# Options: ${frame.selection}`,
-    frame.provisional && `# Status: ${frame.provisional}`,
     `# ${frame.footer}`,
   ]
     .filter(Boolean)
