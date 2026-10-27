@@ -15,13 +15,11 @@
   font-size: var(--fs-caption);
 }
 
-/* In a pair of cards, the plot is as tall as its neighbour's Recharts plot
-   (the card's height): the same room above the first row (PLOT_TOP) and
-   an axis as tall as X_AXIS_HEIGHT, the rows sharing the rest evenly, so
-   the axis titles line up and no gap opens above the legend. */
+/* In a pair of cards the dumbbell fills the shared plot row: its rows
+   share the height evenly (as the Better and worse off rows beside it, so
+   the two cards keep one row pitch), the axis stays at the bottom, and no
+   gap opens above the legend. */
 @media (min-width: 1025px) {
-  /* When the neighbour's plot is taller still (a single-age view), the
-     dumbbell grows with the shared row, its axis kept at the bottom */
   .charts-grid:has(> div + div) .chart-plot:has(> .measure-dumbbell) {
     display: flex;
     flex-direction: column;
@@ -30,14 +28,12 @@
   .charts-grid:has(> div + div) .measure-dumbbell {
     flex: 1 1 auto;
     box-sizing: border-box;
-    padding: 16px 0 6px;
+    padding: 0 0 6px;
   }
 
-  /* Rows keep their own 44px height (no stretching into tall gaps); the
-     axis stays at the bottom */
-
-  /* The axis follows the last row, not the card's foot, so no empty band
-     opens between them */
+  .charts-grid:has(> div + div) .measure-dumbbell > .measure-dumbbell-row {
+    flex: 1 1 auto;
+  }
 }
 
 .measure-dumbbell-row {
@@ -159,6 +155,29 @@
 .measure-dumbbell-values strong {
   color: var(--pe-gray-800);
   font-weight: 600;
+}
+
+/* A wide plot (a pair on a large screen, or a card alone): the value and
+   its gap on one line, so each row is one line high */
+.measure-dumbbell {
+  container-type: inline-size;
+}
+
+@container (min-width: 600px) {
+  .measure-dumbbell-row {
+    grid-template-columns: var(--md-label) minmax(0, 1fr) 172px;
+  }
+
+  .measure-dumbbell-unit {
+    padding-right: calc(6px + 172px + var(--md-gap));
+  }
+
+  .measure-dumbbell-values {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
 }
 
 /* The gap to all ages as a compact pill */

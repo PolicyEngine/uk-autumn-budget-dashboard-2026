@@ -815,7 +815,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
             rows={shares.groups.filter((group) => !group.suppressed).map((group) => ({ id: group.key, name: group.label, row: group.row }))}
             groupLabel=""
             yearLabel={yearLabel}
-            emphasis={YOUNG_BAND}
+            emphasis={group}
             labelFor={({ name }) => `People aged ${name}, ${yearLabel}`}
           />
         ) : (

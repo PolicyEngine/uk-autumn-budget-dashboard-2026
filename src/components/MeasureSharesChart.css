@@ -2,26 +2,36 @@
   container-type: inline-size;
 }
 
-/* One row per measure: name | 100% bar | ▲ column | ▼ column. The name
-   wraps to two lines and is never clipped; the two share columns are fixed
-   and right-aligned so they line up row to row. */
+/* One row per measure or age group: name | 100% bar | ▲ column | ▼
+   column, all on one line. The name column is as wide as the longest
+   name up to a third of the plot (age groups take what they need; a
+   measure's name wraps to two lines and is never clipped); the two share
+   columns are fixed and right-aligned, their header right above them. */
 .msc {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(150px, 32%) minmax(0, 1fr) 64px 64px;
+  grid-template-columns: fit-content(32%) minmax(0, 1fr) 56px 56px;
+  grid-auto-rows: minmax(34px, auto);
   column-gap: 12px;
-  row-gap: 4px;
   font-size: var(--fs-caption);
 }
 
+/* Each row a band across the four columns (a subgrid, so the columns
+   still line up row to row), which the chosen row tints */
 .msc-row {
-  display: contents;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  margin: 0 -6px;
+  padding: 0 6px;
+  border-radius: 6px;
 }
 
 .msc-row > * {
   display: flex;
   align-items: center;
-  min-height: 36px;
+  min-width: 0;
 }
 
 .msc-label {
@@ -32,12 +42,10 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   overflow-wrap: anywhere;
-  align-self: center;
-  min-height: 0;
 }
 
 .msc-bar-cell {
-  min-width: 0;
+  align-self: stretch;
 }
 
 .msc-bar-cell:focus-visible {
@@ -45,17 +53,27 @@
   outline-offset: 2px;
 }
 
-/* The page's bar rounding (chartTheme BAR_RADIUS, 5px) at both ends */
+/* A slim bar with the page's bar rounding at both ends. Each segment is
+   as wide as its share, but a non-zero one never under 6px: with almost
+   everyone better off, the few unchanged or worse off still show (the
+   widening comes out of the largest segment; exact shares are in the
+   columns and the tooltip). */
 .msc-bar {
   display: flex;
   width: 100%;
-  height: 22px;
-  border-radius: 5px;
+  height: 14px;
+  border-radius: 4px;
   overflow: hidden;
 }
 
 .msc-seg {
+  flex: 0 1 auto;
+  min-width: 6px;
   height: 100%;
+}
+
+.msc-seg + .msc-seg {
+  box-shadow: inset 1px 0 0 var(--c-surface);
 }
 
 .msc-num {
@@ -65,31 +83,49 @@
   white-space: nowrap;
 }
 
+/* The ▲/▼ header: right-aligned over its column, on the first rows' line */
+.msc-row.msc-head {
+  min-height: 0;
+  align-items: end;
+  padding-bottom: 4px;
+}
+
 .msc-head > * {
-  min-height: 20px;
   color: var(--pe-gray-500);
   font-size: var(--fs-micro);
+  line-height: 1.2;
 }
 
 .msc-up {
   color: var(--c-gain);
+  margin-right: 3px;
 }
 
 .msc-down {
   color: var(--c-loss);
+  margin-right: 3px;
 }
 
-/* A phone or narrow card: the name on its own line above the bar */
-@container (max-width: 520px) {
-  .msc-row > .msc-label {
-    grid-column: 1 / -1;
-    min-height: 0;
-    padding-top: 6px;
-    -webkit-line-clamp: unset;
+/* The chosen row (the age group By age shows): a light band, name in bold */
+.msc-row.is-focus {
+  background: var(--pe-gray-50);
+}
+
+.msc-label.is-focus {
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+/* A phone: the name on its own line above the bar */
+@container (max-width: 400px) {
+  .msc {
+    grid-template-columns: minmax(0, 1fr) 52px 52px;
   }
 
-  .msc {
-    grid-template-columns: minmax(0, 1fr) 56px 56px;
+  .msc-row > .msc-label {
+    grid-column: 1 / -1;
+    padding-top: 6px;
+    -webkit-line-clamp: unset;
   }
 
   .msc-head > .msc-label {
@@ -97,8 +133,25 @@
   }
 }
 
-/* The focus row (16 to 24 on Young people): its name in bold */
-.msc-label.is-focus {
-  font-weight: 600;
-  color: var(--pe-gray-900);
+/* In a pair of cards the rows share the plot's height evenly, so the
+   card's foot lines up with its neighbour's and the row pitch matches
+   the dumbbell beside it */
+@media (min-width: 1025px) {
+  .charts-grid:has(> div + div) .chart-plot:has(.msc) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .charts-grid:has(> div + div) .chart-plot:has(.msc) > .swap-transition-inner,
+  .charts-grid:has(> div + div) .chart-plot .msc-wrap {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .charts-grid:has(> div + div) .msc {
+    flex: 1 1 auto;
+    grid-template-rows: auto;
+    grid-auto-rows: minmax(34px, 1fr);
+  }
 }
