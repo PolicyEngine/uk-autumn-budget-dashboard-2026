@@ -15,6 +15,7 @@ import {
   wrapWords,
 } from "./youngPeopleData";
 import { MIN_SAMPLE_SIZE } from "../../utils/ageImpact";
+import { groupSeries } from "../../utils/ageGroups";
 import { DISPLAY_YEARS } from "../../utils/displayYears";
 
 vi.mock("recharts", async () => {
@@ -145,6 +146,11 @@ describe("young people data", () => {
     expect(missingGroupsNote(fromPackage, (key) => key)).toBeNull();
     // A package run with no rows loaded: the singles are summed as before
     expect(changeByYear(rows, POLICIES, ["two_child_limit", "threshold_freeze_extension"], [2029], pkg)[0].missing).toEqual(bands);
+    // The focus group's series (headline, bars' net) reads the package too
+    const series = groupSeries(packaged, POLICIES, ["two_child_limit", "threshold_freeze_extension"], [2028, 2029], "16-24", pkg);
+    expect(series[0]).toMatchObject({ published: true, net: 55 });
+    expect(series[0].parts.map((part) => part.value)).toEqual([100, -40]);
+    expect(series[1]).toMatchObject({ published: true, net: 45, parts: [] });
   });
 
   it("says a run of years as a range, else lists them", () => {

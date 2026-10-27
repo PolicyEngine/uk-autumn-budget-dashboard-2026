@@ -29,7 +29,7 @@ import {
   changeByYear,
   cumulate,
   groupMeasureSeries,
-  niceRange,
+  fitRange,
   pounds,
   signedPounds,
   stepAnnotations,
@@ -515,8 +515,8 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     [rows, policies, selectedPolicies, shownYears, packageRun],
   );
   const focusSeries = useMemo(
-    () => groupSeries(rows, policies, selectedPolicies, shownYears, FOCUS),
-    [rows, policies, selectedPolicies, shownYears, FOCUS],
+    () => groupSeries(rows, policies, selectedPolicies, shownYears, FOCUS, packageRun),
+    [rows, policies, selectedPolicies, shownYears, FOCUS, packageRun],
   );
   // Pensioners' line from their own series; the bands from the age rows
   const raw = group === PENSIONERS ? bands.map((point, i) => ({ ...point, [PENSIONERS]: focusSeries[i]?.net ?? null })) : bands;
@@ -569,7 +569,8 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         // All age groups: fitted to the lines shown
         .flatMap((point) => groupKeys.filter(isShown).map((each) => point[each]))
         .filter((v) => v !== null && v !== undefined);
-  const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values));
+  // Fitted to what is drawn, a little room either side
+  const { domain, ticks } = fitRange(Math.min(0, ...values), Math.max(0, ...values));
 
   const unpublished = raw.filter((point) => !point.published);
   const suppressed = raw.filter((point) => point.published && point.suppressed.length > 0);
