@@ -100,9 +100,23 @@ describe("the landing page", () => {
     // Once, under the paragraph, in the manifest's own wording
     expect(notes()).toHaveLength(1);
     expect(landing().querySelector(".publication-provisional")).toHaveTextContent(provisionalLabel(manifest));
-    fireEvent.click(box("policies"));
+    // While provisional, the policies box names modelled measures, not the Budget's contents
+    expect(screen.queryByRole("link", { name: BOXES.policies })).toBeNull();
+    fireEvent.click(screen.getByRole("link", { name: /^The measures modelled/ }));
     // Not over any view (the overview drawer has it only while open)
     expect(notes()).toHaveLength(0);
+    // The Policies view's subtitle says the measures are provisional
+    expect(
+      screen.getByText(`${provisionalLabel(manifest)}. What each measure changes, when, and how it is modelled.`),
+    ).toBeInTheDocument();
+  });
+
+  it("names the policies box after the Budget, with no provisional subtitle, once every measure is approved", async () => {
+    const { container } = await renderApp();
+    expect(container.querySelectorAll(".publication-provisional")).toHaveLength(0);
+    expect(screen.queryByRole("link", { name: /^The measures modelled/ })).toBeNull();
+    fireEvent.click(box("policies"));
+    expect(screen.getByText("What each measure changes, when, and how it is modelled.")).toBeInTheDocument();
   });
 
   it("draws a silhouette of Public finances behind it, with no view mounted", async () => {

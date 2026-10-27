@@ -30,7 +30,7 @@ import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS, selectableYearOr } from "./utils/d
 import { opensLanding } from "./utils/landing";
 import TitleMark, { EdgeAboutTab } from "./components/HomeButton";
 import OverviewDrawer from "./components/OverviewDrawer";
-import { buildMeasureCatalogue, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
+import { buildMeasureCatalogue, catalogueProvisional, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
 import { loadDashboard, loadVerifiedTablesOnce, budgetChartData } from "./utils/loadDashboard";
 import { pruneVerifiedCache } from "./utils/publication/cache";
 import { prefetchGeography } from "./hooks/useGeographyData";
@@ -560,9 +560,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   // A caveat on the results while any shown measure is provisional: one
   // small badge on the landing page, nowhere above the views
-  const provisional =
-    catalogue.manifest &&
-    catalogue.displayable.some((measure) => catalogue.manifest.measures[measure.id].status === "provisional");
+  const provisional = catalogueProvisional(catalogue);
 
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
@@ -859,6 +857,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         {landing && (
           <LandingPage
             onOpen={handleTabChange}
+            provisionalWording={provisional}
             provisional={provisional && (
               <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
             )}
@@ -906,7 +905,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             <SectionHeading
               icon="fileText"
               title="Policies"
-              subtitle="What each measure changes, when, and how it is modelled."
+              subtitle={`${provisional ? `${provisionalLabel(catalogue.manifest)}. ` : ""}What each measure changes, when, and how it is modelled.`}
             />
             <section id="policy-details" className="report-section policy-details-content">
               <PolicyCards
@@ -945,6 +944,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               onClose={closeOverview}
               onOpen={handleTabChange}
               returnFocus={aboutTabRef}
+              provisionalWording={provisional}
               provisional={provisional && (
                 <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
               )}
