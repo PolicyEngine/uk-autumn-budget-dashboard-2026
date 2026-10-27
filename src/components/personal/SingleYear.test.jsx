@@ -136,14 +136,16 @@ describe("Household calculator's results", () => {
     renderTab();
     toResults();
     await within(await results()).findByText("+£3,765");
-    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    // No view sub-tabs (the household table's own policy tabs aside)
+    expect(document.querySelector(".sub-tabs")).toBeNull();
+    expect(screen.queryAllByRole("tablist").every((list) => list.classList.contains("breakdown-tabs"))).toBe(true);
     expect(screen.queryByRole("button", { name: /Prices/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/lifetime/i)).not.toBeInTheDocument();
     // Besides the examples' precomputed file, the example households'
     // income charts below the calculator, the published household scatter
     // (the result among all households, loaded on demand through its
-    // artifact's receipt) and the UK files "Where you sit" reads, only the
-    // household route
+    // artifact's receipt), the UK files "Where you sit" reads and the policy
+    // parameters the table's policy tabs read, only the household route
     const urls = fetch.mock.calls
       .map(([url]) => url)
       .filter(
@@ -155,7 +157,8 @@ describe("Household calculator's results", () => {
           !url.endsWith("/income_distribution.csv") &&
           !url.endsWith("/winners_losers.csv") &&
           !url.endsWith("/distributional_impact.csv") &&
-          !url.endsWith("/income_mobility.csv"),
+          !url.endsWith("/income_mobility.csv") &&
+          !url.endsWith("/policy_parameters.json"),
       );
     expect(urls.length).toBeGreaterThan(0);
     expect(urls.every((url) => url === HOUSEHOLD_API)).toBe(true);

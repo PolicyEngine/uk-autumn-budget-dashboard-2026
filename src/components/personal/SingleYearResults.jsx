@@ -665,6 +665,11 @@ export function SingleYearDetails({ result, year, policies, household = null, se
             programmes={data.programmes}
             totals={totals}
             bars={bars?.all}
+            split={bars}
+            policies={policies}
+            household={household}
+            salaryUsed={data.salaryUsed}
+            year={data.year ?? year}
             yearLabel={yearLabel}
             engine={data.engine}
           />

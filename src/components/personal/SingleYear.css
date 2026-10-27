@@ -1357,3 +1357,113 @@
 .across-earnings-no-parts {
   margin: 0 0 16px;
 }
+
+/* ---------- The household table's tabs (ProgrammeTable) ---------- */
+/* Summary, then one tab per policy that changes the household, under the
+   card's title: text tabs with the dashboard's teal underline on the
+   chosen one. On a phone the row scrolls sideways, never the page. */
+.breakdown-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 0;
+  border-bottom: 1px solid var(--pe-gray-200);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.breakdown-tabs-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.breakdown-tabs {
+  display: flex;
+  flex: none;
+  gap: 4px;
+}
+
+.breakdown-tab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 8px;
+  font: inherit;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--c-subtab-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.breakdown-tab:hover {
+  background: var(--pe-gray-50);
+}
+
+.breakdown-tab.is-selected {
+  color: var(--pe-gray-900);
+  border-bottom-color: var(--band-teal);
+}
+
+.breakdown-tab:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: -2px;
+}
+
+/* The badge label in a tab keeps one line and the tab's colour */
+.breakdown-tab .mrl-name {
+  display: inline;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  color: inherit;
+  font-weight: inherit;
+}
+
+.breakdown-no-effect {
+  flex: none;
+  padding-right: 4px;
+  font-size: var(--fs-caption);
+  white-space: nowrap;
+  color: var(--pe-gray-500);
+}
+
+.main-content .report-section .breakdown-card .breakdown-tab-line {
+  margin: 12px 0 0;
+}
+
+.breakdown-how {
+  font-weight: 600;
+  color: var(--pe-gray-700);
+}
+
+/* A policy table's section rows ("What changes"): the Summary's group
+   tint, no figures */
+.programme-table .is-section > th {
+  font-weight: 600;
+}
+
+/* A parameter's or a step's change: plain, neither gain nor loss */
+.programme-table td.change.is-neutral {
+  color: var(--pe-gray-700);
+}
+
+/* The policy's effect on net income: bold on the highlight band */
+.programme-table .breakdown-effect-row > th,
+.programme-table .breakdown-effect-row > td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-weight: 700;
+  color: var(--pe-gray-900);
+  background: var(--c-highlight-band);
+  border-top: 2px solid var(--pe-gray-300);
+  border-bottom: none;
+}
+
+.programme-table .breakdown-effect-row > td.is-none {
+  color: var(--pe-gray-400);
+  font-weight: 400;
+}
