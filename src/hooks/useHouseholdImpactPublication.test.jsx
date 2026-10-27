@@ -166,14 +166,26 @@ describe("Personal impact's live answers", () => {
     // A headline with no commit (Cloud Run at f3304ff, 27 October): no
     // detail answer could be used under it, so the page does not wait for
     // one (up to a Modal cold start) before asking Cloud Run
-    it("never asks the detail service under a headline that reports no commit", async () => {
+    // #250: the first calculation asks the detail service with its
+    // headline, before it knows the headline reports no commit; its answers
+    // are not used, and later calculations do not ask it early
+    it("never uses the detail service under a headline that reports no commit, and stops asking it early", async () => {
       const calls = [];
       twoServices(calls, fromDetail(), (body) => ({ ...fromMain(body), git_sha: null }));
       const hook = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
       await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
-      expect(calls.sort()).toEqual(["main:by_policy", "main:headline", "main:sweep"]);
+      expect(calls.filter((call) => call.startsWith("main:")).sort()).toEqual([
+        "main:by_policy",
+        "main:headline",
+        "main:sweep",
+      ]);
       expect(hook.result.current.data.byPolicy).not.toBeNull();
       expect(hook.result.current.data.sweep).not.toBeNull();
+      hook.unmount();
+      calls.length = 0;
+      const next = renderHook(() => useHouseholdImpact({ ...params, year: 2030, expectedEngine: ENGINE }));
+      await waitFor(() => expect(next.result.current.detailStatus).toBe("ready"));
+      expect(calls.sort()).toEqual(["main:by_policy", "main:headline", "main:sweep"]);
     });
 
     // Cloud Run redeployed, Modal not (or the other way round): the first
@@ -217,7 +229,12 @@ describe("Personal impact's live answers", () => {
       twoServices(calls, fromDetail(), (body) => ({ ...fromMain(body), git_sha: mainBuild }));
       const before = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
       await waitFor(() => expect(before.result.current.detailStatus).toBe("ready"));
-      expect(calls.sort()).toEqual(["main:by_policy", "main:headline", "main:sweep"]);
+      // Asked early with the first headline (#250), not used under it
+      expect(calls.filter((call) => call.startsWith("main:")).sort()).toEqual([
+        "main:by_policy",
+        "main:headline",
+        "main:sweep",
+      ]);
       expect(detailServiceAsked()).toBe(true);
       before.unmount();
       calls.length = 0;

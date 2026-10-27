@@ -193,8 +193,10 @@ describe("the household calculation, from the fixture", () => {
   // #170 asked for all three parts at once and raced the headline across
   // both services. Merged with #104, the headline stays Cloud Run's: it is
   // what the detail service's parts are checked against (same build), and
-  // a Modal headline would have nothing to be checked against.
-  it("with a detail URL, asks Cloud Run for the headline first, then the detail service for the sweep and the split by policy at once", async () => {
+  // a Modal headline would have nothing to be checked against. #250: the
+  // detail service's parts are asked for with the headline, not after it,
+  // and shown only once the headline has arrived and they match its build.
+  it("with a detail URL, asks Cloud Run for the headline and the detail service for the sweep and the split by policy at once", async () => {
     const DETAIL_API = "https://modal.test/api/household-impact";
     const BUILD = "b".repeat(40);
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL_API);
@@ -218,17 +220,50 @@ describe("the household calculation, from the fixture", () => {
     );
     renderTab();
     toResults();
-    await waitFor(() => expect(asked).toHaveLength(1));
-    expect(asked).toEqual([[HOUSEHOLD_API, []]]);
+    // All three asked while the headline is still out
+    await waitFor(() => expect(asked).toHaveLength(3));
+    expect(asked).toEqual(
+      expect.arrayContaining([
+        [HOUSEHOLD_API, []],
+        [DETAIL_API, ["sweep"]],
+        [DETAIL_API, ["by_policy"]],
+      ]),
+    );
+    // Nothing is shown before the headline
+    expect(screen.queryByText(HEADLINE)).not.toBeInTheDocument();
     release();
     await splitShown();
     expect(await screen.findByRole("heading", { name: /^Household net income, / })).toBeInTheDocument();
     expect(screen.getByText(HEADLINE)).toBeInTheDocument();
+    // The early answers were used: nothing asked again
     expect(asked).toHaveLength(3);
-    expect(asked.slice(1)).toEqual(
+  });
+
+  it("with a detail URL, asks Cloud Run for a part the detail service answered early from another build", async () => {
+    const DETAIL_API = "https://modal.test/api/household-impact";
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL_API);
+    const asked = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        if (url !== HOUSEHOLD_API && url !== DETAIL_API) {
+          return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
+        }
+        const body = JSON.parse(init.body);
+        asked.push([url, body.include]);
+        const build = url === DETAIL_API ? "d".repeat(40) : "c".repeat(40);
+        return json({ ...householdAnswerFor(body), git_sha: build });
+      }),
+    );
+    renderTab();
+    toResults();
+    await splitShown();
+    expect(screen.getByText(HEADLINE)).toBeInTheDocument();
+    expect(asked.filter(([url]) => url === HOUSEHOLD_API)).toEqual(
       expect.arrayContaining([
-        [DETAIL_API, ["sweep"]],
-        [DETAIL_API, ["by_policy"]],
+        [HOUSEHOLD_API, []],
+        [HOUSEHOLD_API, ["sweep"]],
+        [HOUSEHOLD_API, ["by_policy"]],
       ]),
     );
   });
@@ -254,7 +289,8 @@ describe("the household calculation, from the fixture", () => {
     toResults();
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(screen.queryByText(HEADLINE)).not.toBeInTheDocument();
-    expect(asked.filter(([url]) => url === DETAIL_API)).toEqual([]);
+    // Its parts were asked for with the headline, and none is shown
+    expect(screen.queryByRole("heading", { name: /^Household net income, / })).not.toBeInTheDocument();
   });
 
   it("shows the result card and breakdown once only the headline has resolved", async () => {
