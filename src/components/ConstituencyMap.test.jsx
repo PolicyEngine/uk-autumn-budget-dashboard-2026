@@ -228,7 +228,7 @@ describe("ConstituencyMap", () => {
     // The SVG's legend, for the exported file, sits in its corner
     const legend = map.querySelector(":scope > g.map-legend");
     expect(legend.getAttribute("transform")).toBe("translate(12, 12)");
-    fireEvent.click(screen.getByRole("button", { name: "Download chart: Constituency-level impacts, 2029-30" }));
+    fireEvent.click(screen.getByRole("button", { name: "Download chart: Constituency impacts, 2029-30" }));
     fireEvent.click(screen.getByRole("button", { name: "SVG Vector image" }));
     await waitFor(() => expect(downloadSvg).toHaveBeenCalledTimes(1));
     const [svgText] = vi.mocked(downloadSvg).mock.calls[0];
@@ -241,7 +241,7 @@ describe("ConstituencyMap", () => {
     // inside it keeps its own 800px drawing
     expect(root.getAttribute("viewBox")).toMatch(/^0 0 1200 /);
     expect(root.querySelector(":scope > svg").getAttribute("viewBox")).toMatch(/^0 0 800 /);
-    expect(root.querySelector(":scope > title").textContent).toBe("Constituency-level impacts, 2029-30");
+    expect(root.querySelector(":scope > title").textContent).toBe("Constituency impacts, 2029-30");
     expect(svgText).toContain("Source: PolicyEngine UK, UK Autumn Budget 2026 dashboard");
   });
 
@@ -438,14 +438,52 @@ describe("ConstituencyMap", () => {
         policies={POLICIES}
       />,
     );
-    // Neither selected measure has constituency results (the fuel duty
-    // freeze is published by region only), so there is no measure to pick
-    // and the card says it shows one measure at a time
-    expect(await screen.findByText(/shown for one policy at a time/)).toBeInTheDocument();
+    // No combined run of these two is published, so the card says so; and
+    // neither selected measure has constituency results (the fuel duty
+    // freeze is published by region only), so there is no policy to pick
+    expect(
+      await screen.findByText("Constituency results for this combination of policies are not published yet."),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
     expect(screen.queryByRole("radiogroup", { name: "Policy" })).toBeNull();
     expect(screen.getByRole("radiogroup", { name: "View" })).toBeInTheDocument();
-    expect(document.querySelector(".map-title-focus")).toBeNull();
+    expect(document.querySelector(".map-title-focus")).toHaveTextContent("selected policies");
+  });
+
+  it("shows the selection's combined run when every policy is selected, titled as the selection", async () => {
+    const { container } = await renderMap();
+    // The fixture's rows are the package's (the manifest's combined entry
+    // of exactly the selected policies), so the seats are drawn from it
+    expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: selected policies$/);
+    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+    expect(screen.queryByRole("radiogroup", { name: "Policy" })).toBeNull();
+  });
+
+  it("follows the selection: one policy, then all of them again", async () => {
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({
+        "/data/constituency.csv": (() => {
+          const [header, ...rows] = geographyFixture("constituency.csv").trim().split("\n");
+          const own = rows.map((row) => row.replace(",autumn_budget_2026_combined,", ",two_child_limit,"));
+          return `${[header, ...rows, ...own].join("\n")}\n`;
+        })(),
+      }),
+    );
+    const { container, rerender } = await renderMap();
+    expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: selected policies$/);
+    rerender(<ConstituencyMap selectedPolicies={["two_child_limit"]} selectedYear={2029} policies={POLICIES} />);
+    await waitFor(() =>
+      expect(container.querySelector(".map-title-focus")).toHaveTextContent("2 child limit repeal"),
+    );
+    expect(container.querySelectorAll("path.constituency-path[data-state]")).toHaveLength(8);
+    // Two of three: no combined run of that pair, so the card says so
+    rerender(<ConstituencyMap selectedPolicies={["two_child_limit", "rail_fares_freeze"]} selectedYear={2029} policies={POLICIES} />);
+    expect(
+      await screen.findByText("Constituency results for this combination of policies are not published yet."),
+    ).toBeInTheDocument();
+    expect(container.querySelector("path.constituency-path[data-state]")).toBeNull();
+    expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: selected policies$/);
   });
 
   it("points to the region view for a measure published by region only", async () => {
@@ -522,18 +560,18 @@ describe("ConstituencyMap", () => {
   it("downloads every constituency's published row as CSV", async () => {
     await renderMap();
     vi.mocked(downloadFile).mockClear();
-    fireEvent.click(screen.getByRole("button", { name: "Download chart: Constituency-level impacts, 2029-30" }));
+    fireEvent.click(screen.getByRole("button", { name: "Download chart: Constituency impacts, 2029-30" }));
     fireEvent.click(screen.getByRole("button", { name: "CSV Data" }));
     await waitFor(() => expect(downloadFile).toHaveBeenCalledTimes(1));
     const [content, filename, mimeType] = vi.mocked(downloadFile).mock.calls[0];
     // Named after the card's title and year
-    expect(filename).toBe("constituency-level-impacts-2029-30.csv");
+    expect(filename).toBe("constituency-impacts-2029-30.csv");
     expect(mimeType).toBe("text/csv;charset=utf-8");
     const lines = content.slice(1).trim().split("\r\n");
     expect(lines[0]).toMatch(/^# Generated: /);
     expect(lines).toContain("# Reform: autumn_budget_2026_combined");
     expect(lines).toContain("# Year: 2029-30");
-    expect(lines).toContain('"# Chart: Constituency-level impacts, 2029-30"');
+    expect(lines).toContain('"# Chart: Constituency impacts, 2029-30"');
     const header = lines.find((line) => !line.startsWith("#") && !line.startsWith('"#'));
     expect(header.split(",")[0]).toBe("area_code");
   });
@@ -541,11 +579,11 @@ describe("ConstituencyMap", () => {
   it("exports the hatch, the legend and the selected seat's card", async () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000003"));
-    fireEvent.click(screen.getByRole("button", { name: "Download chart: Constituency-level impacts, 2029-30" }));
+    fireEvent.click(screen.getByRole("button", { name: "Download chart: Constituency impacts, 2029-30" }));
     fireEvent.click(screen.getByRole("button", { name: "SVG Vector image" }));
     await waitFor(() => expect(downloadSvg).toHaveBeenCalledTimes(1));
     const [svgText, filename] = vi.mocked(downloadSvg).mock.calls[0];
-    expect(filename).toBe("constituency-level-impacts-2029-30");
+    expect(filename).toBe("constituency-impacts-2029-30");
     const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
     const root = doc.documentElement;
     expect(root.querySelector(":scope > svg > defs > pattern#withheld-hatch")).not.toBeNull();

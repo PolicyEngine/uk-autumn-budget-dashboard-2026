@@ -85,7 +85,10 @@ import { FloatingTooltip } from "./FloatingTooltip";
 import TitleIcon from "./TitleIcon";
 import Tip, { InfoTip } from "./Tip";
 
-const CHART_TITLE = "Constituency-level impacts";
+const CHART_TITLE = "Constituency impacts";
+
+// The Policy option that shows the whole selection (the default)
+const SELECTION_OPTION = "__selection__";
 
 // The card's three views, and the URL parameter that opens the second or
 // third. The hex map is the default: every constituency the same size, so
@@ -579,8 +582,16 @@ export default function ConstituencyMap({
   showRegionLink = true,
 }) {
   const [outcome, setOutcome] = useState("relative_change");
-  // A selection with no single reform: the measure shown (Measure picker)
+  // Several policies selected: the one the reader picked to see on its own,
+  // or null for the selection's combined results (the default). A new
+  // selection goes back to the combination.
   const [focusId, setFocusId] = useState(null);
+  const selectionStamp = [...new Set(selectedPolicies)].sort().join("|");
+  const [focusStamp, setFocusStamp] = useState(selectionStamp);
+  if (focusStamp !== selectionStamp) {
+    setFocusStamp(selectionStamp);
+    setFocusId(null);
+  }
   const [panel, setPanelParam] = usePanelParam();
   // The map view drawn: the one shown, or in the Table view the last one
   // shown, kept mounted so it keeps its zoom
@@ -620,6 +631,13 @@ export default function ConstituencyMap({
   const notRouted = areaViewsNotAvailable(routing);
   const reform = view.kind === "rows" ? view.reform : null;
   const label = choiceLabel(choice, policies);
+  // What the title names: the one policy shown, or the selection
+  const titleSubject =
+    choice.kind === "measure"
+      ? focusName(choice.reform)
+      : choice.kind === "package" || choice.kind === "no-package"
+        ? "selected policies"
+        : null;
   const yearLabel = fiscalYearLabel(selectedYear);
   // A hover from another year, measure or outcome is not shown, so the
   // tooltip never shows the figures it had while the year pill plays
@@ -893,7 +911,7 @@ export default function ConstituencyMap({
           year: selectedYear,
           outcome,
           measures: cardMeasures,
-          label: choice.kind === "package" ? "All policies" : null,
+          label: choice.kind === "package" ? (choice.all ? "All policies" : "Selected policies") : null,
         })
       : null;
   const card = selectedCode ? cardFor(selectedCode) : null;
@@ -1064,11 +1082,14 @@ export default function ConstituencyMap({
   // several selected measures have constituency results), how the change
   // is shown, and the view
   const optionGroups = [
-    choice.focus && choice.focus.options.length > 1 && {
+    choice.focus && {
       label: "Policy",
-      value: choice.reform,
-      onChange: setFocusId,
-      options: choice.focus.options.map((id) => ({ value: id, label: focusName(id) })),
+      value: choice.kind === "measure" ? choice.reform : SELECTION_OPTION,
+      onChange: (value) => setFocusId(value === SELECTION_OPTION ? null : value),
+      options: [
+        { value: SELECTION_OPTION, label: "Selected policies combined" },
+        ...choice.focus.options.map((id) => ({ value: id, label: focusName(id) })),
+      ],
     },
     {
       label: "Show the change as",
@@ -1100,7 +1121,7 @@ export default function ConstituencyMap({
               <TitleIcon name="map" />
               <span className="title-text">
                 {CHART_TITLE}, <span className="nowrap">{yearLabel}</span>
-                {choice.focus && <span className="map-title-focus">: {focusName(choice.reform)}</span>}
+                {titleSubject && <span className="map-title-focus">: {titleSubject}</span>}
               </span>
             </h3>
             {/* What the card shows is the section's subtitle, and how to
