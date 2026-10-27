@@ -26,7 +26,7 @@ import {
   tickDecimals,
   noHouseholdChange,
 } from "../utils/chartTheme";
-import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import { DEFAULT_DISPLAY_YEAR, useDisplayYears } from "../utils/displayYears";
 import { chartMotion, netDotTitled } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
@@ -69,6 +69,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
   // The measure whose segment is hovered: the others dim
   const [hoveredMeasure, setHoveredMeasure] = useState(null);
   const catalogue = useMeasureCatalogue();
+  const shownYears = useDisplayYears();
   const {
     displayable: POLICIES,
     allPolicyNames: ALL_POLICY_NAMES,
@@ -120,12 +121,12 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
   // decile sentence's last clause, or alone when there is no sentence
   const { laterNote, laterNoteAlone } = useMemo(() => {
     const ends = { low: data[0]?.netChange, high: data[data.length - 1]?.netChange };
-    const later = laterDecileEnds(rawData, { valueKey: "avg_change", ends: ["1", "10"], selectedPolicies, catalogue, selectedYear });
+    const later = laterDecileEnds(rawData, { valueKey: "avg_change", ends: ["1", "10"], selectedPolicies, catalogue, selectedYear, years: shownYears });
     return {
       laterNote: laterDecileNote(ends, later, "absolute"),
       laterNoteAlone: laterDecileNote(ends, later, "absolute", { standalone: true }),
     };
-  }, [data, rawData, selectedPolicies, catalogue, selectedYear]);
+  }, [data, rawData, selectedPolicies, catalogue, selectedYear, shownYears]);
 
   // Every selected measure is in the legend in every year (so the legend,
   // and the plot's height, hold still on a year change or Play); one with

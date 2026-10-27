@@ -40,7 +40,7 @@ const TERM_ICONS = {
   Years: CalendarDays,
   "Budgetary impact": PoundSterling,
   Exceptions: CircleAlert,
-  "Net impact": Sigma,
+  "Net change": Sigma,
   "OBR comparison": GitCompare,
   "Income deciles": ChartColumnBig,
   "Absolute change": Banknote,

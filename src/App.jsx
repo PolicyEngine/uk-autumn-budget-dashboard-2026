@@ -13,7 +13,7 @@ import SectionHeading from "./components/SectionHeading";
 import TwinLink from "./components/TwinLink";
 import { GROWTH_CURRENT_LAW_ANCHOR, YOUNG_PEOPLE_ANCHOR } from "./utils/viewAnchors";
 import PopulationImpactView from "./components/PopulationImpactView";
-import { DEFAULT_DISPLAY_YEAR, DISPLAY_YEARS, FIRST_DISPLAY_YEAR, selectableYearOr } from "./utils/displayYears";
+import { DEFAULT_DISPLAY_YEAR, DisplayYearsContext, EARLY_YEAR, SELECTABLE_YEARS, selectableYearOr, yearsForSelection } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
 import TitleMark, { EdgeAboutTab } from "./components/HomeButton";
 import OverviewDrawer from "./components/OverviewDrawer";
@@ -373,10 +373,11 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     if (oldOutlookBaseline(window.location)) dropSubTab(null);
     setLanding(opensLanding(window.location));
     setActiveTab(view);
-    // A shared link's ?year= opens that year; one not offered (an old
-    // 2026) opens the default
+    // A shared link's ?year= opens that year; one not offered opens the
+    // default. 2026-27 is kept here and dropped below if the selection has
+    // no effect in it
     const askedYear = new URLSearchParams(window.location.search).get("year");
-    if (askedYear !== null) setDistributionalYear(selectableYearOr(askedYear));
+    if (askedYear !== null) setDistributionalYear(Number(askedYear) === EARLY_YEAR ? EARLY_YEAR : selectableYearOr(askedYear));
     if (fromBuild) {
       const linked = readRequested();
       if (linked !== null) {
@@ -412,17 +413,21 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`);
   }, [selectedPolicies, selectionChosen, activeTab, landing, locationReady, unavailable, distributionalYear]);
 
+  // The years shown: 2026-27 first only while a selected policy has an
+  // effect in it (yearsForSelection)
+  const shownYears = useMemo(() => yearsForSelection(published.budgetary, selectedPolicies), [published, selectedPolicies]);
+  // A year no longer shown (2026-27 after its last policy is deselected)
+  // falls back to the default, once the published figures are in (set
+  // while rendering, as `visited` is above)
+  if (published.budgetary?.length && !shownYears.includes(distributionalYear)) setDistributionalYear(DEFAULT_DISPLAY_YEAR);
   const results = useMemo(() => ({
-    budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, DISPLAY_YEARS),
-    // The year before the charts start (2026-27), from the same verified
-    // rows: one item in Revenue impact's "About this chart", never a bar
-    budgetBefore: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, [FIRST_DISPLAY_YEAR - 1])[0],
+    budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, shownYears),
     rawDistributional: published.distributional.filter((row) => selectedPolicies.includes(row.reform_id)),
     rawWinnersLosers: published.winnersLosers.filter((row) => selectedPolicies.includes(row.reform_id)),
     // Every verified run's rows: the summary statistics read one run, not a
     // sum; an artifact's poverty_inequality table is merged into its rows
     rawMetrics: published.metrics,
-  }), [published, catalogue, selectedPolicies]);
+  }), [published, catalogue, selectedPolicies, shownYears]);
 
   const handlePolicyToggle = (policyId) => {
     if (!catalogue.byId.get(policyId)?.displayable) return;
@@ -772,13 +777,12 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     setChosenPolicies([policyId]);
     setSelectionChosen(true);
     // Open on a year the measure moves revenue in: the threshold freeze
-    // (2031-32 only) opened on 2027-28 showed only empty charts. A measure
-    // with none in the years shown (the Warm Home Discount top-up, winter
-    // 2026-27) keeps the year, and the revenue card says why it is empty
+    // (2031-32 only) opened on 2027-28 showed only empty charts; the Warm
+    // Home Discount top-up opens on 2026-27
     const moves = (year) =>
       published.budgetary.some((row) => row.reform_id === policyId && Number(row.year) === year && Math.abs(Number(row.value)) > 0.0005);
     if (!moves(distributionalYear)) {
-      const first = DISPLAY_YEARS.find(moves);
+      const first = yearsForSelection(published.budgetary, [policyId]).find(moves);
       if (first !== undefined) setDistributionalYear(first);
     }
     handleTabChange("dashboard");
@@ -826,6 +830,10 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   // Both pills show on the landing page: the band stays the same from the
   // start, and they drive the view behind it
   const yearShown = landing || yearPillShown(activeTab);
+  // Household impact's examples are published from 2027-28 only, so its
+  // year pill offers those years and a band year of 2026-27 shows 2027-28
+  const householdView = !landing && activeTab === "household";
+  const householdYear = SELECTABLE_YEARS.includes(distributionalYear) ? distributionalYear : DEFAULT_DISPLAY_YEAR;
   const policiesShown = landing || view.policies;
 
   // A caveat on the results while any shown measure is provisional: one
@@ -976,7 +984,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
             subtitle="Net effect of the selected policies on government revenue and spending, by year."
           />
           <section id="revenue" className="report-section hero-chart">
-            <BudgetaryImpactChart data={results.budgetData} before={results.budgetBefore} selectedYear={distributionalYear} selectedPolicies={selectedPolicies} />
+            <BudgetaryImpactChart data={results.budgetData} selectedYear={distributionalYear} selectedPolicies={selectedPolicies} />
           </section>
           {/* The official costings beside our estimates: a card of its own,
               once the official costings cover a selected measure */}
@@ -1057,7 +1065,8 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   };
 
   return (
-    // A view without the year pill has a one-row band on a phone
+    <DisplayYearsContext.Provider value={shownYears}>
+    {/* A view without the year pill has a one-row band on a phone */}
     <div
       className="app"
       ref={appRef}
@@ -1087,7 +1096,8 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
               reason is in its accessible name only. Both are on every view, so the band never moves. */}
           <div className={`band-year${yearShown ? "" : " is-inactive"}`}>
             <YearSlider
-              selectedYear={distributionalYear}
+              years={householdView ? SELECTABLE_YEARS : shownYears}
+              selectedYear={householdView ? householdYear : distributionalYear}
               onYearChange={setDistributionalYear}
               inactiveReason={yearShown ? undefined : YEAR_INACTIVE}
             />
@@ -1198,7 +1208,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
           <PersonalImpactTab
             selectedPolicies={selectedPolicies}
             policies={POLICIES}
-            year={distributionalYear}
+            year={householdYear}
             onRemoveUnavailable={removeFromSelection}
             active={activeTab === value}
           />
@@ -1232,6 +1242,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
         )}
       </div>
     </div>
+    </DisplayYearsContext.Provider>
   );
 }
 /**

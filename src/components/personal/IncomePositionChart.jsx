@@ -950,7 +950,6 @@ export default function IncomePositionChart({ net, household, year, policies, ye
                 name: `income-position-${compareBy}-${yearLabel}`,
                 exportOptions: exportOptions(compareTitle, "svg.position-gains"),
                 csv: compareCsv,
-                image: compareBy === "tenths",
               }}
               chartTitle={compareTitle}
             />

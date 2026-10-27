@@ -202,7 +202,8 @@ function Chip({ member, color, pinned, onHover, onPin }) {
  * @param {Object} props
  * @param {Array<{id: string, key?: string, name: string, description?: string, muted?: boolean}>} props.members
  *   (legendMembership's)
- * @param {string} [props.netLabel] - The net line's label ("Net change")
+ * @param {string} [props.netLabel] - The net line's label ("Net change" on
+ *   every chart: each plots a change, in income or in the public finances)
  * @param {string|null} [props.highlight]
  * @param {(seriesKey: string|null) => void} [props.onHighlight]
  * @param {"section"|"card"} [props.placement]
@@ -283,36 +284,50 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
                     onBlur={() => setHovered(null)}
                     onClick={() => pin(NET_KEY)}
                   >
-                    <svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true" className="measure-key-net-icon">
-                      <line x1="0" y1="5" x2="18" y2="5" />
-                      <circle cx="9" cy="5" r="3" />
-                    </svg>
+                    {/* The line glyph in a badge-sized slot, so the chip
+                        lines up with the measures' badges */}
+                    <span className="measure-key-badge is-net" aria-hidden="true">
+                      <svg width="16" height="10" viewBox="0 0 16 10" className="measure-key-net-icon">
+                        <line x1="1" y1="5" x2="15" y2="5" />
+                        <circle cx="8" cy="5" r="3" />
+                      </svg>
+                    </span>
                     <span className="measure-key-label">{netLabel}</span>
                   </button>
                 </li>
               )}
               {pinnedLive.length > 0 && (
-                <li className="measure-key-clear-item">
+                <li className="measure-key-chip-item">
                   <button
                     type="button"
-                    className="measure-key-clear"
+                    className="measure-key-chip measure-key-clear"
                     onClick={clear}
                     aria-label={`Clear the ${pinnedLive.length === 1 ? "highlighted policy" : `${pinnedLive.length} highlighted policies`}`}
                   >
-                    Clear
+                    <span className="measure-key-badge" aria-hidden="true">
+                      <svg width="10" height="10" viewBox="0 0 10 10">
+                        <path d="M2.5 2.5 7.5 7.5M7.5 2.5 2.5 7.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      </svg>
+                    </span>
+                    <span className="measure-key-label">Clear</span>
                   </button>
                 </li>
               )}
               {muted.length > 0 && (
-                <li className="measure-key-more-item">
+                <li className="measure-key-chip-item">
                   <button
                     type="button"
-                    className="measure-key-more"
+                    className="measure-key-chip measure-key-more"
                     aria-expanded={open}
                     aria-controls={listId}
                     onClick={() => setOpen((isOpen) => !isOpen)}
                   >
-                    +{muted.length} with no effect
+                    <span className="measure-key-badge" aria-hidden="true">
+                      <svg className="measure-key-more-chevron" width="10" height="10" viewBox="0 0 10 10">
+                        <path d="M3.5 2 6.5 5 3.5 8" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                    <span className="measure-key-label">+{muted.length} with no effect</span>
                   </button>
                 </li>
               )}

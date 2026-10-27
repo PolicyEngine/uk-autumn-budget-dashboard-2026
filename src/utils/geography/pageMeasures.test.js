@@ -29,7 +29,7 @@ import {
   buildMeasureCatalogue,
   MeasureCatalogueProvider,
 } from "../measureCatalogue";
-import { choiceLabel } from "./selection";
+import { SELECTION_NOT_PUBLISHED, choiceLabel } from "./selection";
 
 // TEST DATA ONLY: the area run's name for the package
 const ALIAS = "synthetic_package_alias";
@@ -141,12 +141,14 @@ describe("the page's measures in the constituency views", () => {
     expect((await show(catalogue, [BETA])).view.reason).toBe(
       "Results by constituency are not yet published for this policy.",
     );
-    // With no package published, every measure selected shows one measure
-    // at a time (the Measure picker), never the held one nor a sum
+    // With no package published, every measure selected says the
+    // combination is not published: never one measure in its place, nor a
+    // sum. The held measure is not offered in the per-policy option.
     const all = await show(catalogue, IDS);
+    expect(all.choice.kind).toBe("no-package");
+    expect(all.choice.reform).toBeUndefined();
     expect(all.choice.focus.options).not.toContain(BETA);
-    expect(all.choice.reform).not.toBe(BETA);
-    expect(all.view).toMatchObject({ kind: "rows", reform: all.choice.reform });
+    expect(all.view).toEqual({ kind: "notice", reason: SELECTION_NOT_PUBLISHED, detail: null });
   });
 
   it("reads not yet published while no table is published", async () => {

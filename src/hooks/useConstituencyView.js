@@ -3,8 +3,9 @@ import {
   useConstituencyBoundaries,
   useGeographyData,
 } from "./useGeographyData";
-import { hasReform, rowsFor } from "../utils/geography/rows";
-import { chooseReform, focusChoice } from "../utils/geography/selection";
+import { hasReform } from "../utils/geography/rows";
+import { SELECTION_NOT_PUBLISHED, chooseSelectionReform, selectionFocus } from "../utils/geography/selection";
+import { combinedEntryFor } from "../utils/publication/select";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { viewState } from "../utils/geography/view";
 
@@ -55,33 +56,31 @@ export function useConstituencyView({
     ...(constituency.table?.reforms ?? []),
     ...(regional.table?.reforms ?? []),
   ];
-  const { combinedId } = useMeasureCatalogue();
+  const { manifest } = useMeasureCatalogue();
   const policyIds = policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id);
-  // A selection with no single reform shows one measure at a time: the
-  // reader's, else the one with the largest mean change by constituency
-  const size = (id) => {
-    const values = rowsFor(constituency.table, { reform: id, year: selectedYear, outcome })
-      .map((row) => Math.abs(Number(row.value)))
-      .filter(Number.isFinite);
-    return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
-  };
-  const choice = focusChoice(
-    chooseReform({
+  // The map shows the selection, as every other chart does: one policy's
+  // own run, or the verified combined run of exactly the selected policies
+  // (the manifest's combined entry for the set, as the other charts take
+  // it). With no area rows for that run the card says so; it never shows
+  // another policy in its place. The reader may pick one selected policy
+  // to see on its own (focusId), named in the title.
+  const packageEntry =
+    manifest && new Set(selectedPolicies).size > 1
+      ? combinedEntryFor(manifest, selectedPolicies)
+      : null;
+  const choice = selectionFocus(
+    chooseSelectionReform({
       selectedIds: selectedPolicies,
-      // The package is every measure the page can show, held ones excluded
       policyIds,
       reforms,
-      packageId: combinedId,
+      packageKey: packageEntry && !packageEntry.single ? packageEntry.key : null,
     }),
     {
-      selectedIds: selectedPolicies,
-      policyIds,
-      // The Measure picker offers only measures with a constituency result
-      // to show (constituencyResultReforms), not ones published by region
-      // only or with no change reported in any seat
+      // Offered one at a time: only policies with a constituency result
+      // (constituencyResultReforms), not ones published by region only or
+      // with no change reported in any seat
       reforms: constituencyResultReforms(constituency.table),
       focusId,
-      size,
     },
   );
   let view = viewState({
@@ -95,7 +94,10 @@ export function useConstituencyView({
   // Whether the region view has this measure, so a notice can point to it.
   const regionalHasChoice =
     Boolean(choice.reform) && hasReform(regional.table, choice.reform);
-  if (view.kind === "notice" && view.missingReform && regionalHasChoice) {
+  if (view.kind === "notice" && view.missingReform && choice.kind === "package") {
+    // A combined run published by region only: the selection's notice
+    view = { ...view, reason: SELECTION_NOT_PUBLISHED };
+  } else if (view.kind === "notice" && view.missingReform && regionalHasChoice) {
     view = {
       ...view,
       reason: "Results for this policy are published by region only.",

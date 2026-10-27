@@ -27,3 +27,23 @@ describe("MeasureEffectsView year-by-year table", () => {
     expect(container.querySelector("table.mev-table")).toHaveClass("is-neutral");
   });
 });
+
+describe("MeasureEffectsView this year", () => {
+  const BY = [
+    { id: "a", name: "Moves", colour: CHART_COLOURS.reference, points: [{ year: 2027, value: -0.02 }] },
+    { id: "b", name: "Tiny", colour: CHART_COLOURS.reference, points: [{ year: 2027, value: -0.00001 }] },
+    { id: "c", name: "Nothing", colour: CHART_COLOURS.reference, points: [{ year: 2027, value: 0 }] },
+  ];
+
+  it("gives every selected policy a row: bars for any non-zero change, however small, and No change with why for exactly 0", () => {
+    const { container } = render(<MeasureEffectsView byMeasure={BY} metric={SUMMARY_METRICS.poverty} selectedYear={2027} view="year" years={[2027]} />);
+    const rows = [...container.querySelectorAll(".mev-row")];
+    expect(rows).toHaveLength(3);
+    expect(rows.map((r) => Boolean(r.querySelector(".mev-bar")))).toEqual([true, true, false]);
+    expect(rows[1].querySelector(".mev-value")).toHaveTextContent(/^under /);
+    expect(rows[2]).toHaveTextContent(/No change/);
+    expect(rows[2].querySelector(".mev-reason").textContent).toBe("no one crosses the poverty line");
+    expect(container).not.toHaveTextContent(/hidden/);
+  });
+});
+
