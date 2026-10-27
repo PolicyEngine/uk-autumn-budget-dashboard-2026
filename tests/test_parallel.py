@@ -794,12 +794,14 @@ def test_a_run_whose_measure_changed_since_its_identities_is_refused(
 
 # Disjoint parameters, as members of a combined run must change
 # (combine._merge): each member's own, the first member's own baseline and
-# the configured baseline. None is uprated, so no scored year is refused.
+# the configured baseline. None is uprated, so no scored year is refused,
+# and none is charged with a companion (parameter_companions), so none is
+# refused for leaving one out.
 _MEMBER_PATHS = (
     "gov.hmrc.income_tax.rates.uk[0].rate",
     "gov.hmrc.income_tax.rates.uk[1].rate",
 )
-_OWN_BASELINE_PATH = "gov.hmrc.income_tax.rates.uk[2].rate"
+_OWN_BASELINE_PATH = "gov.hmrc.income_tax.rates.dividends[1].rate"
 _CONFIGURED_BASELINE_PATH = "gov.hmrc.income_tax.rates.dividends[0].rate"
 
 

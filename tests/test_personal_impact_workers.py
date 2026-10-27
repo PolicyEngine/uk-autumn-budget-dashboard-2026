@@ -35,7 +35,7 @@ def test_workers_give_exactly_the_serial_answer(monkeypatch):
         "POLICY_IDS",
         [
             "fuel_duty_rise_deferral",
-            "badr_lifetime_limit_cut",
+            "threshold_freeze_2031_32",
             # A measure whose modifier changes households: it must reach
             # the workers (pickled by reference) and act there.
             "warm_home_discount_top_up",

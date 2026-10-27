@@ -2,7 +2,7 @@
 
 The household route runs each side as a ``policyengine_uk.Simulation`` with
 the side's ``Scenario`` (parameter changes and simulation modifiers), so all
-nine measures apply to a household, the six with formula modifiers included.
+seven measures apply to a household, the six with formula modifiers included.
 
 - Hand checks: each modifier measure's change is recomputed from the
   parameters and the spending entered.
@@ -223,6 +223,23 @@ def test_the_warm_home_discount_top_up_if_received(answers, region, expected):
     assert result["net_income"]["change"] == 0
 
 
+# --- gas spending ------------------------------------------------------------------
+
+
+def test_the_route_passes_gas_spending_to_gas_consumption():
+    """A measure on the VAT of domestic gas reads ``gas_consumption``; the
+    route sets it from the answer, the ONS average unless given (the
+    drill's gas measure gave every household £0 without it: review on
+    #145; a £0 default did the same: #208 review, finding 7)."""
+    assert household_impact.GAS_SPENDING == 733
+    _, _, household = household_impact.household_entities(Answers(2027))
+    assert household["gas_consumption"] == 733
+    _, _, household = household_impact.household_entities(
+        Answers(2027, gas_spending=1_050)
+    )
+    assert household["gas_consumption"] == 1_050
+
+
 # --- zero VAT on domestic electricity --------------------------------------------
 
 
@@ -285,24 +302,6 @@ def test_no_electricity_spending_no_electricity_vat_change():
         ["domestic_electricity_zero_vat"],
     )
     assert result["net_income"]["change"] == 0
-
-
-# --- employer National Insurance for under-25s -----------------------------------
-
-
-def test_employer_ni_relief_has_no_household_effect():
-    """Employers pay less for a 23-year-old from 2027-28, but wages are
-    fixed: £0, reported as an employer cost, not as not modelled."""
-    result = calculate(
-        Answers(2027, age=23, employment_income=30_000),
-        2027,
-        ["employer_ni_relief_under_25s"],
-    )
-    [measure] = result["by_policy"]["measures"]
-    assert measure["change"] == 0
-    assert measure["note_kind"] == "employer_cost"
-    assert measure["note"].startswith("No household effect (employer cost)")
-    assert result["not_modelled"] == []
 
 
 # --- VAT cut on road fuel ---------------------------------------------------------
