@@ -493,6 +493,36 @@ def _parameter_values(path: str, values: dict) -> dict:
     return built
 
 
+def _with_companions(changes: dict) -> dict:
+    """``changes`` with each companion the installed engine holds taking its
+    parameter's values, where the record leaves the companion out.
+
+    A measure that changes the first parameter of a pair the engine charges
+    in step (``parameter_companions.COMPANIONS``) changes the second in that
+    year too, unless it says it means the first alone; generation refuses
+    any other. A replay's record names the parameters its replay changed
+    and never says that. So the Autumn Statement 2023's reset of
+    ``gov.dwp.LHA.freeze`` resets ``gov.dfc.LHA.freeze`` too, as Northern
+    Ireland's matching regulations did (the engine's parameter cites
+    NISR 2024/3 for April 2024). A companion the record sets keeps its own
+    values, and one the engine lacks is left out, as the guard leaves it.
+    """
+    from uk_budget_data.measure_templates import _validate_parameter_path
+    from uk_budget_data.parameter_companions import COMPANIONS, installed
+
+    completed = dict(changes)
+    for path, companion, _ in COMPANIONS:
+        if (
+            path in changes
+            and companion not in changes
+            and installed(companion)
+        ):
+            # The values are the parameter's, already decoded and checked
+            _validate_parameter_path(companion)
+            completed[companion] = dict(changes[path])
+    return completed
+
+
 def reform_for(record: dict) -> Reform:
     """The dashboard measure for an imported record.
 
@@ -530,6 +560,7 @@ def reform_for(record: dict) -> Reform:
                 path: _parameter_values(path, values)
                 for path, values in record["changes"].items()
             }
+        changes = _with_companions(changes)
     description = _description(record)
     if record["construction"] == REVERSAL:
         return Reform(
