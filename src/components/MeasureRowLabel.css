@@ -1,4 +1,4 @@
-/* A measure's row label: tinted icon circle, short name, muted category */
+/* A measure's row label: tinted icon circle, short name (up to two lines), muted category */
 .mrl {
   display: inline-flex;
   align-items: center;
@@ -32,10 +32,16 @@
   border-radius: 3px;
 }
 
+/* The short name wraps to a second line on a narrow card rather than
+   ending in "…" ("State Pension tax protection" at 360px); two lines at
+   most, as a backstop */
 .mrl-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: break-word;
   font-weight: 500;
   color: var(--pe-gray-800);
 }

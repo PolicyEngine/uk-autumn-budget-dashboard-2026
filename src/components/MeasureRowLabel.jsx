@@ -1,7 +1,7 @@
 // A measure's label on every chart with one row per measure: a small icon
 // in a circle tinted with the measure's colour, chosen from the measure's
-// category (its tax or benefit type, never its id), the short name on one
-// line with the category as a muted caption under it, and the full name in
+// category (its tax or benefit type, never its id), the short name (two
+// lines at most on a narrow card) with the category as a muted caption under it, and the full name in
 // a Tip.
 
 import Tip from "./Tip";
