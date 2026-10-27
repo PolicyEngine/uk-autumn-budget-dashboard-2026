@@ -33,7 +33,7 @@ import { provisionalLabel } from "./utils/publication/manifest";
 import { DownloadContext, policiesLabel } from "./utils/downloadContext";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
-import { createSiteNavIntent, isProgrammaticScroll, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
+import { createSiteNavIntent, isProgrammaticScroll, isTouchOnly, pointerWantsSiteNav, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
 
 // Each view's code (the chart library, the map's and the household
 // calculator's) loads when a view first opens, or while the page is idle,
@@ -199,7 +199,7 @@ export function viewFromLocation({ search, hash }) {
 
 
 // The ui-kit shell's sticky site nav, as globals.css selects it to hide it
-// until the reader scrolls up (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
+// until the pointer reaches the window's top (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
 export const SHELL_STICKY_NAV_SELECTOR =
   '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';
 // Once shown, the site nav stays this long (unless the reader scrolls down),
@@ -464,18 +464,18 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   }, []);
 
   // The site nav is hidden above the window by default, so the title band
-  // sits at the top of the page. It slides in above the band when the
-  // reader scrolls up (SITE_NAV_SHOW_UP_PX or more in one run, by their own
-  // wheel, trackpad, touch, keys or scrollbar: utils/pageScroll
-  // createSiteNavIntent), points at the top 8px of the window, or tabs into
-  // it (globals.css: data-site-nav-shown on <html>, --site-nav-height; the
-  // slide is instant under reduced motion). The page moving by itself (tab
-  // rows going compact, charts loading, scroll anchoring, the page's own
-  // scrolls) never shows it. Once in, it stays SITE_NAV_MIN_MS, and while
-  // the pointer or focus is in it or one of its menus is open, then hides
-  // SITE_NAV_LEAVE_MS after they leave. Any scroll down by the reader hides
-  // it at once (unless it is in use), and within its own height of the
-  // page's top it is always hidden.
+  // sits at the top of the page. Scrolling never brings it in: it slides in
+  // above the band when the pointer reaches the top 8px of the window or
+  // leaves the window through its top edge (an exit-intent reveal: utils/
+  // pageScroll pointerWantsSiteNav), or when the reader tabs into it
+  // (globals.css: data-site-nav-shown on <html>, --site-nav-height; the
+  // slide is instant under reduced motion). Once in, it stays
+  // SITE_NAV_MIN_MS, and while the pointer or focus is in it or one of its
+  // menus is open, then hides SITE_NAV_LEAVE_MS after they leave. Any
+  // scroll down by the reader hides it at once (unless it is in use), and
+  // within its own height of the page's top it is hidden. A touch-only
+  // device has no pointer to bring it in with: there it shows only while
+  // the page is at its very top (createSiteNavIntent).
   useEffect(() => {
     const root = document.documentElement;
     const nav = document.querySelector(SHELL_STICKY_NAV_SELECTOR);
@@ -491,12 +491,15 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     let timer = 0;
     let pointerIn = false;
     let touchY = null;
+    // Touch-only, at the page's very top: shown for as long as it stays there
+    let pinned = false;
     const isShown = () => root.hasAttribute("data-site-nav-shown");
     // The ui-kit menus (About, country) put a full-window overlay with
     // role="presentation" inside the nav while they are open
     const holds = () =>
       !!nav &&
       (pointerIn ||
+        pinned ||
         nav.contains(document.activeElement) ||
         !!nav.querySelector('[role="presentation"]'));
     const clear = () => {
@@ -532,12 +535,15 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       frame = 0;
       const y = window.scrollY;
       // A scroll the page made (utils/pageScroll) is not the reader's: it
-      // never brings the nav in over what it lined up under the bars.
-      // At the page's top the nav is always hidden, so the top looks as it
-      // does on load (unless the pointer or focus is in it), whoever scrolled
+      // never hides the nav. Near the page's top the nav is hidden, so the
+      // top looks as it does on load (unless the pointer or focus is in
+      // it), whoever scrolled; on a touch-only device it is in only at the
+      // very top
       const top = nav?.offsetHeight || 0;
       const programmatic = isProgrammaticScroll(y);
-      follow(intent.scroll(y, performance.now(), { programmatic, top }));
+      const touchOnly = isTouchOnly();
+      pinned = touchOnly && y <= 0;
+      follow(intent.scroll(y, performance.now(), { programmatic, top, touchOnly }));
     };
     const onScroll = () => {
       if (!frame) frame = window.requestAnimationFrame(check);
@@ -572,12 +578,14 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     };
     const onPointerUp = () => intent.input("drag", "release", performance.now());
     const onPointer = (event) => {
+      // A tap's emulated mouse events do not count on a touch-only device
+      if (isTouchOnly()) return;
       const over =
         !!nav &&
         isShown() &&
         ((event.target instanceof Node && nav.contains(event.target)) ||
           event.clientY <= nav.offsetHeight);
-      if (event.clientY <= 8) {
+      if (pointerWantsSiteNav(event.clientY)) {
         pointerIn = true;
         show();
       } else if (over) {
@@ -586,6 +594,15 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       } else if (pointerIn) {
         pointerIn = false;
         hideAfter(SITE_NAV_LEAVE_MS);
+      }
+    };
+    // The pointer leaving the window through its top edge (toward the
+    // browser's tabs and address bar)
+    const onPointerOut = (event) => {
+      if (event.relatedTarget || isTouchOnly()) return;
+      if (pointerWantsSiteNav(event.clientY, { left: true })) {
+        pointerIn = true;
+        show();
       }
     };
     const onFocusIn = () => show();
@@ -602,8 +619,11 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
     window.addEventListener("pointerup", onPointerUp, { passive: true });
     window.addEventListener("mousemove", onPointer, { passive: true });
+    document.addEventListener("mouseout", onPointerOut, { passive: true });
     nav?.addEventListener("focusin", onFocusIn);
     nav?.addEventListener("focusout", onFocusOut);
+    // On a touch-only device the nav is in at the page's top from the start
+    check();
     return () => {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("wheel", onWheel);
@@ -613,6 +633,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("mousemove", onPointer);
+      document.removeEventListener("mouseout", onPointerOut);
       nav?.removeEventListener("focusin", onFocusIn);
       nav?.removeEventListener("focusout", onFocusOut);
       if (frame) window.cancelAnimationFrame(frame);

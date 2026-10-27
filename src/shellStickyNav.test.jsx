@@ -53,9 +53,20 @@ describe("the ui-kit shell's sticky site nav", () => {
 });
 
 describe("showing the site nav", () => {
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    delete window.matchMedia;
+  });
 
-  const setup = (inShell = false) => {
+  const setup = (inShell = false, { touchOnly = false } = {}) => {
+    window.matchMedia = (query) => ({
+      matches: touchOnly && query === "(hover: none) and (pointer: coarse)",
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+    });
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date", "performance"] });
     vi.stubGlobal("fetch", async () => new Promise(() => {}));
     // Runs the frame at once; 0 so the next scroll asks for another
@@ -91,104 +102,111 @@ describe("showing the site nav", () => {
         new MouseEvent("mousemove", { clientY: 30, bubbles: true }),
       );
     });
-    return { root, scrollTo, shift, wait, shown, nav, move, moveOver };
+    // The pointer leaving the window (no element to go to) at clientY
+    const leave = (clientY) => act(() => {
+      document.body.dispatchEvent(
+        new MouseEvent("mouseout", { clientY, relatedTarget: null, bubbles: true }),
+      );
+    });
+    const touchScroll = (y) => act(() => {
+      const way = y < window.scrollY ? 1 : -1;
+      window.dispatchEvent(new TouchEvent("touchstart", { touches: [{ clientY: 300 }] }));
+      window.dispatchEvent(new TouchEvent("touchmove", { touches: [{ clientY: 300 + way * 40 }] }));
+      window.scrollY = y;
+      window.dispatchEvent(new Event("scroll"));
+    });
+    return { root, scrollTo, shift, wait, shown, nav, move, moveOver, leave, touchScroll };
   };
 
-  it("is hidden on load, and shows only once the reader has scrolled up 24px in one run", () => {
-    const { scrollTo, wait, shown } = setup();
+  it("is hidden on load, and never shows on a scroll up, by any input", () => {
+    const { scrollTo, shift, wait, shown } = setup(true);
     expect(shown()).toBe(false);
-    scrollTo(4);
+    scrollTo(2_000);
+    scrollTo(1_500);
+    scrollTo(300);
     expect(shown()).toBe(false);
-    scrollTo(400);
+    act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "PageUp" })));
+    shift(100);
     expect(shown()).toBe(false);
-    scrollTo(396);
-    scrollTo(380);
-    expect(shown()).toBe(false);
-    // A scroll down starts the run again
-    scrollTo(390);
-    scrollTo(370);
-    expect(shown()).toBe(false);
-    scrollTo(366);
-    expect(shown()).toBe(true);
-    cleanup();
-    expect(shown()).toBe(false);
+    act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Home" })));
+    shift(0);
     wait(10_000);
     expect(shown()).toBe(false);
   });
 
-  it("is always hidden within its own height of the page's top, so the top looks as on load", () => {
-    const { scrollTo, wait, shown, nav } = setup(true);
+  it("is hidden within its own height of the page's top, so the top looks as on load", () => {
+    const { scrollTo, wait, shown, nav, move } = setup(true);
     Object.defineProperty(nav(), "offsetHeight", { configurable: true, value: 58 });
     scrollTo(800);
-    scrollTo(300);
+    move(4);
+    move(400);
     expect(shown()).toBe(true);
-    // Back at the top: hidden at once, not after the 1.5s linger
-    scrollTo(0);
-    expect(shown()).toBe(false);
+    // Up to the top: hidden at once, not after the 1.5s linger
     scrollTo(57);
     expect(shown()).toBe(false);
     wait(10_000);
     expect(shown()).toBe(false);
   });
 
-  it("does not show for the page's own scroll up (utils/pageScroll), only the reader's", () => {
-    const { scrollTo, shown } = setup();
-    scrollTo(1_000);
-    act(() => {
-      window.scrollTo = () => {};
-      scrollPageTo(200);
-    });
-    scrollTo(600);
-    scrollTo(200);
+  it("any scroll down by the reader hides it at once", () => {
+    const { scrollTo, shift, wait, shown, move } = setup(true);
+    scrollTo(400);
+    move(0);
+    move(400);
+    expect(shown()).toBe(true);
+    // A pixel down, inside the 1.5s
+    scrollTo(401);
     expect(shown()).toBe(false);
-    resetPageScroll();
-    scrollTo(100);
+    move(2);
+    move(400);
+    act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" })));
+    expect(shown()).toBe(false);
+    // The page moving by itself, once the keys' scroll is over, leaves it
+    wait(1_000);
+    move(2);
+    move(400);
+    shift(600);
     expect(shown()).toBe(true);
   });
 
-  it("stays 1.5s after the scroll up, and any scroll down by the reader hides it at once", () => {
-    const { scrollTo, shift, wait, shown } = setup();
-    scrollTo(400);
-    scrollTo(300);
+  it("shows when the pointer leaves the window through its top edge, and hides 0.75s after it comes back below", () => {
+    const { scrollTo, wait, shown, move, leave } = setup(true);
+    scrollTo(1_000);
+    move(300);
+    // Out through the bottom or a side: nothing
+    leave(900);
+    expect(shown()).toBe(false);
+    leave(0);
     expect(shown()).toBe(true);
-    wait(1_499);
+    // Away above the window, it stays
+    wait(10_000);
+    expect(shown()).toBe(true);
+    move(400);
+    wait(749);
     expect(shown()).toBe(true);
     wait(1);
     expect(shown()).toBe(false);
-    scrollTo(200);
-    expect(shown()).toBe(true);
-    // A pixel down, inside the 1.5s
-    scrollTo(201);
-    expect(shown()).toBe(false);
-    // Keys count as the reader's scroll too
-    act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "PageUp" })));
-    shift(100);
-    expect(shown()).toBe(true);
-    act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" })));
-    expect(shown()).toBe(false);
   });
 
-  it("never shows when the page moves up by itself while the reader scrolls down", () => {
-    const { scrollTo, shift, wait, shown } = setup();
-    // The tab rows going compact as they stick shrink the page above the
-    // window, and scroll anchoring moves scrollY up a few px each time
-    scrollTo(120);
-    shift(113);
-    shift(111);
-    scrollTo(230);
-    for (let y = 228; y >= 220; y -= 2) shift(y);
-    // A chart loading above the window shrinking a long way
-    wait(1_000);
-    shift(400);
-    shift(150);
+  it("on a touch-only device, shows only while the page is at its very top", () => {
+    const { wait, shown, move, leave, touchScroll } = setup(true, { touchOnly: true });
+    // On load, at the top
+    expect(shown()).toBe(true);
+    wait(10_000);
+    expect(shown()).toBe(true);
+    touchScroll(300);
     expect(shown()).toBe(false);
-    // Trackpad jitter: tiny moves up inside a scroll down
-    let y = 400;
-    for (const d of [3, 8, 14, 20, 16, -2, 10, 6, 4, -1, 2, 1, -3, 12]) {
-      y += d;
-      scrollTo(y);
-      expect(shown()).toBe(false);
-    }
+    // A scroll up, or a tap's emulated mouse events at the window's top,
+    // do not bring it in
+    touchScroll(20);
+    move(2);
+    leave(0);
+    wait(5_000);
+    expect(shown()).toBe(false);
+    touchScroll(0);
+    expect(shown()).toBe(true);
+    touchScroll(1);
+    expect(shown()).toBe(false);
   });
 
   it("shows at the top 8px of the window, holds while the pointer is over it, and hides 0.75s after it leaves", () => {
@@ -221,7 +239,7 @@ describe("showing the site nav", () => {
     expect(shown()).toBe(false);
   });
 
-  it("holds while focus is in it, and hides 0.75s after focus leaves", () => {
+  it("shows when the reader tabs into it, holds while focus is in it, and hides 0.75s after focus leaves", () => {
     const { wait, shown, nav } = setup(true);
     const link = nav().querySelector("a, button");
     act(() => link.focus());

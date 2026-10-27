@@ -344,11 +344,12 @@ body {
    inline position:sticky; top:0) and the title band. The site nav is out
    of the page's flow and hidden above the window by default, so the band
    sits at the very top of the page with the tab rows under it, from the
-   first paint. App.jsx shows it (data-site-nav-shown on <html>) when the reader
-   scrolls up 24px (their own input: never the page moving by itself),
-   points at the top 8px of the window or tabs into it, keeps it 1.5s and
-   while it is in use, and hides it on any scroll down by the reader or
-   once the pointer or focus has left; it measures the nav into
+   first paint. App.jsx shows it (data-site-nav-shown on <html>) when the pointer
+   reaches the top 8px of the window or leaves it through its top edge,
+   or the reader tabs into it (never on a scroll up; on a touch-only
+   device, only at the page's very top), keeps it 1.5s and while it is in
+   use, and hides it on any scroll down by the reader or once the pointer
+   or focus has left; it measures the nav into
    --site-nav-height. Shown, it overlays the top of the band (above it,
    with a shadow); the band and tab rows never move, so --nav-offset is 0.
    --motion-slide is 0 under reduced motion.
@@ -363,7 +364,8 @@ body {
 
 /* The nav overlays the band when shown: it never moves the band or the
    tab rows, so nothing under them is pushed or covered by the stack
-   (--nav-offset stays 0; App.jsx keeps the nav hidden at the page's top) */
+   (--nav-offset stays 0; App.jsx keeps the nav hidden at the page's top,
+   save on a touch-only device) */
 :root[data-site-nav-shown] .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
   box-shadow: 0 2px 8px var(--shadow-faint) !important;
 }
