@@ -292,36 +292,40 @@ body {
 }
 
 /* The two bars: the ui-kit site nav (PolicyEngineShell renders it with an
-   inline position:sticky; top:0) above the title band. Scrolling down, the
-   site nav scrolls away and the band sticks at the top of the window;
-   scrolling up, the site nav slides back in above the band; at the top of
-   the page both sit in their places. App.jsx sets data-site-nav-hidden on
-   <html> and measures the nav into --site-nav-height; --nav-offset is how
-   much of the window's top the nav covers, so the band, the tab rows and
-   --sticky-offset sit under it in either state. The nav moves by its
-   sticky top, not a transform, so near the top of the page it scrolls
-   away with the page. --motion-slide is 0 under reduced motion.
+   inline position:sticky; top:0) and the title band. The site nav is out
+   of the page's flow and hidden above the window by default, so the band
+   sits at the very top of the page with the tab rows under it, from the
+   first paint. App.jsx shows it (data-site-nav-shown on <html>) when the reader
+   scrolls up, points at the top 8px of the window or tabs into it, and
+   hides it again when they scroll down; it measures the nav into
+   --site-nav-height. --nav-offset is how much of the window's top the nav
+   covers, so the band, the tab rows and --sticky-offset sit under it in
+   either state. --motion-slide is 0 under reduced motion.
    Written against @policyengine/ui-kit 0.12.0, whose shell is
    <div class="min-h-screen flex flex-col"> with the nav as its first
    child. If a ui-kit upgrade changes that markup this selector stops
    matching: App.jsx warns in the console in development, and
    src/shellStickyNav.test.jsx fails. */
 :root {
-  --nav-offset: var(--site-nav-height, 0px);
-}
-
-:root[data-site-nav-hidden] {
   --nav-offset: 0px;
 }
 
-.min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
-  /* Above the title band (1100), so its About menu opens over it */
-  z-index: 1110 !important;
-  transition: top var(--motion-slide) var(--ease-out);
+:root[data-site-nav-shown] {
+  --nav-offset: var(--site-nav-height, 0px);
 }
 
-:root[data-site-nav-hidden] .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
-  top: calc(-1 * var(--site-nav-height, 58px)) !important;
+.min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0;
+  right: 0;
+  /* Above the title band (1100), so its About menu opens over it */
+  z-index: 1110 !important;
+  transition: transform var(--motion-slide) var(--ease-out);
+}
+
+:root:not([data-site-nav-shown]) .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
+  transform: translateY(-100%);
   box-shadow: none !important;
 }
 

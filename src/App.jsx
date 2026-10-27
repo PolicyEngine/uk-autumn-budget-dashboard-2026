@@ -147,7 +147,7 @@ export function viewFromLocation({ search, hash }) {
 
 
 // The ui-kit shell's sticky site nav, as globals.css selects it to hide it
-// on scroll down (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
+// until the reader scrolls up (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
 export const SHELL_STICKY_NAV_SELECTOR =
   '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';
 
@@ -352,11 +352,12 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     return () => observer.disconnect();
   }, []);
 
-  // The site nav above the title band scrolls away while the reader
-  // scrolls down and slides back in when they scroll up; the band stays
-  // stuck under it either way, and at the top both sit in their places
-  // (globals.css: data-site-nav-hidden on <html>, --site-nav-height).
-  // Scrolls under 6px are ignored.
+  // The site nav is hidden above the window by default, so the title band
+  // sits at the top of the page. It slides in above the band when the
+  // reader scrolls up (by 6px or more), points at the top 8px of the
+  // window, or tabs into it, and hides again when they scroll down or the
+  // pointer or focus leaves it (globals.css: data-site-nav-shown on
+  // <html>, --site-nav-height).
   useEffect(() => {
     const root = document.documentElement;
     const nav = document.querySelector(SHELL_STICKY_NAV_SELECTOR);
@@ -368,30 +369,57 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     if (nav) resize?.observe(nav);
     let last = window.scrollY;
     let frame = 0;
-    const setHidden = (hidden) => root.toggleAttribute("data-site-nav-hidden", hidden);
+    let byPointer = false;
+    const setShown = (shown) => {
+      if (!shown) byPointer = false;
+      root.toggleAttribute("data-site-nav-shown", shown);
+    };
+    const holds = () => !!nav && nav.contains(document.activeElement);
     const check = () => {
       frame = 0;
       const y = window.scrollY;
-      if (y <= 0) {
-        setHidden(false);
-        last = y;
-      } else if (y > last + 6) {
-        setHidden(true);
+      if (y > last + 6) {
+        if (!holds()) setShown(false);
         last = y;
       } else if (y < last - 6) {
-        setHidden(false);
+        setShown(true);
         last = y;
       }
     };
     const onScroll = () => {
       if (!frame) frame = window.requestAnimationFrame(check);
     };
+    const onPointer = (event) => {
+      if (event.clientY <= 8) {
+        if (!root.hasAttribute("data-site-nav-shown")) byPointer = true;
+        setShown(true);
+      } else if (
+        byPointer &&
+        !(nav && event.target instanceof Node && nav.contains(event.target)) &&
+        event.clientY > (nav ? nav.offsetHeight : 0) &&
+        !holds()
+      ) {
+        setShown(false);
+      }
+    };
+    const onFocusIn = () => setShown(true);
+    const onFocusOut = (event) => {
+      if (!(nav && event.relatedTarget instanceof Node && nav.contains(event.relatedTarget))) {
+        setShown(false);
+      }
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("mousemove", onPointer, { passive: true });
+    nav?.addEventListener("focusin", onFocusIn);
+    nav?.addEventListener("focusout", onFocusOut);
     return () => {
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("mousemove", onPointer);
+      nav?.removeEventListener("focusin", onFocusIn);
+      nav?.removeEventListener("focusout", onFocusOut);
       if (frame) window.cancelAnimationFrame(frame);
       resize?.disconnect();
-      root.removeAttribute("data-site-nav-hidden");
+      root.removeAttribute("data-site-nav-shown");
       root.style.removeProperty("--site-nav-height");
     };
   }, []);
