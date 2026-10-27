@@ -30,11 +30,11 @@ Agents never:
 
 ## Who does what, and when
 
-**The day goes in four PRs** (Vahid, 27 October, [#251](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6451621671)):
-1. **Measures:** the announced measures, their expected-effect rows, and the policy names and summaries. The Integrator reviews; the second signer attests any hand-written modifier, once #3 has written its receipt. Merged at about 14:30, once the documents have landed and CI is green.
-2. **Treasury figures (G3):** the Treasury's costings. The Integrator signs off. Merged any time after 13:40 (with #174 merged, this doesn't invalidate receipts).
-3. **Publication:** the single measures, the package, the flat files and the example households, generated on Modal from #1's merged commit. The Integrator signs the review rows; the second signer signs the attestations. Merged at about 16:00, after `publish approve`.
-4. **Map:** constituency results from the area run (about an hour). The Integrator and the licence holder sign off. Merged at about 17:30.
+**The day goes in four PRs** (Vahid, 27 October, [#251](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6451621671)). Each holds one kind of change, so the code, the Treasury's figures, the national results and the map are each reviewed, signed and merged without holding up the others.
+1. **Measures, the code:** the announced measures, their expected-effect rows, and the policy names and summaries. The Integrator reviews; the second signer attests any hand-written modifier, once #3 has written its receipt. Merged at about 14:30, once the documents have landed and CI is green.
+2. **Treasury figures (G3), what the results are checked against:** the Treasury's costings. The Integrator signs off. Merged any time after 13:40 (with #174 merged, this doesn't invalidate receipts).
+3. **Publication, the national results:** the single measures, the package, the flat files and the example households, generated on Modal from #1's merged commit. The Integrator signs the review rows; the second signer signs the attestations. Merged at about 16:00, after `publish approve`.
+4. **Map, the results by constituency:** constituency results from the area run (about an hour). The Integrator and the licence holder sign off. Merged at about 17:30.
 
 There is no separate provisional publication. From the start of #3's generation until it merges, nothing on a calculation path merges.
 
@@ -50,7 +50,10 @@ There is no separate provisional publication. From the start of #3's generation 
   - approves the combined run once every member is approved, and signs G4's review rows;
   - merges #3 at about 16:00 and #4 at about 17:30; merges every PR, deploys and rolls back;
   - decides on every correction and withdrawal.
-- **The Coordinator:** runs Tuesday's 18:00 regeneration, and holds the go/no-go at 07:00 on Wednesday.
+- **The Coordinator:**
+  - runs Tuesday's 18:00 regeneration, and holds the go/no-go at 07:00 on Wednesday;
+  - at G0, if a newer build is published with an open policyengine.py PR, runs the UK hub on it and compares it with the current versions (policyengine 6.11.1, with policyengine-uk 2.151.0 and the a6299504 and c9df4b86 cuts);
+  - then decides whether to bump, weighing the data's quality and the new policyengine-uk's runtime against what the build brings: gambling and some other fixes the current one doesn't have (#262 has the bump's checklist).
 - **The second signer and licence holder:**
   - is the second of the two people on every hand-written modifier's attestation. After tonight's regeneration that means each hand-written receipt staged (Plan 2, and the State Pension protection in its total-income design if the floor lets it be staged) and the package that holds one (#222). Parameter changes need no attestation, which is one reason Vahid prefers them on the day;
   - signs off the map PR (#4) with the Integrator, and checks the map before a corrected measure's results by area are republished;

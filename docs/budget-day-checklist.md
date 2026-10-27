@@ -15,14 +15,14 @@ Every Modal command starts `uv run --with modal==1.6.2 python -m uk_budget_data.
 
 ## Wednesday 28 October
 
-**The day goes in four PRs, in this order** (Vahid, 27 October, [#251](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6451621671)). Small hotfix PRs are opened only if something breaks.
+**The day goes in four PRs, in this order** (Vahid, 27 October, [#251](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6451621671)). Small hotfix PRs are opened only if something breaks. Each holds one kind of change, so the code, the Treasury's figures, the national results and the map are each reviewed, signed and merged without holding up the others.
 
 | # | PR | Contents | Sign-off | Merge |
 |---|---|---|---|---|
-| 1 | **Measures** | The announced measures in `reforms.py` (parametric where possible), their expected-effect rows, and the policy names and summaries | Vahid reviews; María attests any hand-written modifier | About 14:30, once the documents have landed and CI is green |
-| 2 | **Treasury figures (G3)** | The Treasury's costings in `data_inputs/treasury/`, which fill the "Official costings" card | Vahid | Any time after 13:40 (with #174 merged, this doesn't invalidate receipts) |
-| 3 | **Publication** | Single measures, package, flat files and example households, generated on Modal from #1's merged commit, plus review rows | Vahid (review rows), María (attestations) | About 16:00, after `publish approve` |
-| 4 | **Map** | Constituency results from the area run (about 1 hour) | Vahid and María | Evening, about 17:30 |
+| 1 | **Measures**: the code | The announced measures in `reforms.py` (parametric where possible), their expected-effect rows, and the policy names and summaries | Vahid reviews; María attests any hand-written modifier | About 14:30, once the documents have landed and CI is green |
+| 2 | **Treasury figures (G3)**: what the results are checked against | The Treasury's costings in `data_inputs/treasury/`, which fill the "Official costings" card | Vahid | Any time after 13:40 (with #174 merged, this doesn't invalidate receipts) |
+| 3 | **Publication**: the national results | Single measures, package, flat files and example households, generated on Modal from #1's merged commit, plus review rows | Vahid (review rows), María (attestations) | About 16:00, after `publish approve` |
+| 4 | **Map**: the results by constituency | Constituency results from the area run (about 1 hour) | Vahid and María | Evening, about 17:30 |
 
 - Between the start of generation (#3) and its merge, nothing that touches a calculation path merges: receipts bind the commit.
 - Text and UI tweaks go into #1 before the cut, or wait until after #3.
@@ -35,6 +35,7 @@ Every Modal command starts `uv run --with modal==1.6.2 python -m uk_budget_data.
 | by 06:00 | Integrator | Final cut adopted (runbook, "Rolling re-cuts") | |
 | 07:00 | Coordinator | Go/no-go | |
 | by 11:30 | Integrator | **G0** start receipt: the block under "G0" in the runbook, then `uv run uk-budget-data publish check` | |
+| at G0 | Coordinator | **A newer build may be on offer.** A new data build will probably be published, with an open policyengine.py PR. Run the UK hub on it and compare it with the current versions: policyengine 6.11.1, with policyengine-uk 2.151.0 and the a6299504 and c9df4b86 cuts. Then decide whether to bump, weighing the data's quality and the new policyengine-uk's runtime against what the build brings: gambling and some other fixes the current one doesn't have. #262 has the bump's checklist | |
 | 12:30–12:45 | Reconciler | **G1** coverage ledger. Code a measure only if the data carries every input its formula reads and current law doesn't already have it; prefer a parameter change, and leave out a measure with no clean parametric route rather than write a broad hack (Vahid, 27 October, [#251](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6449275288)) | encoding starts |
 | from G1 | Integrator | **#1, the measures PR.** Encode each measure (module, `reforms.py`, `expected_effects.csv`, `DECLARED`, one test, and its name and summary), **commit**: a dirty tree refuses the Modal run. Set `AUTUMN_BUDGET_2026_COMBINED_COMPONENTS` to the package's members in the same PR, settled from the preview floor check of the measure that decides the package. The expected-effects `reviewer` is signed on the branch before anything is staged: one empty row stops every `publish` gate, and staging refuses a measure with no signed row ("responsiveness is undeclared"). The pre-Budget candidates' rows are signed already (#213, #261) | |
 | from the push | Integrator | **Preview runs** from #1's pushed commit, as soon as its targeted tests pass, with CI running alongside (Vahid, 27 October). First deploy the household test app from that commit: `HOUSEHOLD_MODAL_APP=uk-budget-household-test uv run --with modal==1.6.2 modal deploy src/uk_budget_data/modal_household.py`. Then one Modal call per measure, the measure that decides the package first (the hand-written one most likely to be thin): `MODAL generate --artifacts --backend modal --reforms <one id>`. Read each summary for `WARNING:` lines: a thin measure stays private and out of the package. Load the runs into a local preview checkout; nothing from them is committed or published | encoding |

@@ -407,6 +407,12 @@ A measure that cannot be bound is refused at generation: the command prints `REF
 
 ## G0: start receipt (by 11:30)
 
+**On 28 October the day goes in four PRs** (Vahid, 27 October, [#251](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6451621671)): the measures (the code), the Treasury figures (what the results are checked against), the publication (the national results) and the map (the results by constituency). Each holds one kind of change, so each is reviewed, signed and merged without holding up the others. What each holds, who signs it off and when it merges are in [`budget-day-checklist.md`](budget-day-checklist.md).
+
+**A newer build may be on offer.** A new data build will probably be published, with an open policyengine.py PR.
+- The Coordinator runs the UK hub on it and compares it with the current versions: policyengine 6.11.1, with policyengine-uk 2.151.0 and the a6299504 and c9df4b86 cuts.
+- The Coordinator then decides whether to bump, weighing the data's quality and the new policyengine-uk's runtime against what the build brings: gambling and some other fixes the current one doesn't have. #262 has the bump's checklist.
+
 ```sh
 git switch main && git pull
 uv sync --locked --extra dev

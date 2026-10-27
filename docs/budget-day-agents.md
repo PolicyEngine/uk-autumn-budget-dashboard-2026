@@ -49,17 +49,17 @@ From the Integrator's table on #247 (27 October, 11:19Z), as the runbook's Roles
 
 ## The four PRs (Vahid, 27 October, 19:32Z)
 
-The day's dashboard work goes in four PRs, in this order ([#251](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6451621671)). Small hotfix PRs are opened only if something breaks.
-1. **Measures.** The announced measures in `reforms.py` (parametric where possible), their expected-effect rows, and the policy names and summaries.
+The day's dashboard work goes in four PRs, in this order ([#251](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6451621671)). Small hotfix PRs are opened only if something breaks. Each holds one kind of change, so the code, the Treasury's figures, the national results and the map are each reviewed, signed and merged without holding up the others.
+1. **Measures: the code.** The announced measures in `reforms.py` (parametric where possible), their expected-effect rows, and the policy names and summaries.
    - **Sign-off:** the Integrator reviews; the second signer attests any hand-written modifier. An attestation binds a receipt, so it is signed once #3's generation has written the receipt, and the file goes in #3.
-   - **Merge:** about 14:30, once the documents have landed and CI is green.
-2. **Treasury figures (G3).** The Treasury's costings in `data_inputs/treasury/`, which fill the "Official costings" card.
+   - **Merge:** about 14:30, once the documents have landed and CI is green, so the code matches what they say. Its merged commit is the one every published figure is generated from.
+2. **Treasury figures (G3): what the results are checked against.** The Treasury's costings in `data_inputs/treasury/`. The reconciliation compares each measure with them, and they fill the "Official costings" card.
    - **Sign-off:** the Integrator.
    - **Merge:** any time after 13:40. With #174 merged, this doesn't invalidate receipts.
-3. **Publication.** The single measures, the package, the flat files and the example households, generated on Modal from #1's merged commit, plus the review rows.
+3. **Publication: the national results.** The single measures, the package, the flat files and the example households, generated on Modal from #1's merged commit, plus the review rows.
    - **Sign-off:** the Integrator (review rows) and the second signer (attestations).
-   - **Merge:** about 16:00, after `publish approve`.
-4. **Map.** Constituency results from the area run, which takes about an hour.
+   - **Merge:** about 16:00, after `publish approve`, so only approved figures go out. It is the day's first publication.
+4. **Map: the results by constituency.** Constituency results from the area run, which takes about an hour, so the map follows the national results instead of holding them up. It carries its own disclosure sign-off.
    - **Sign-off:** the Integrator and the licence holder.
    - **Merge:** in the evening, about 17:30.
 
@@ -193,6 +193,10 @@ These are Tuesday's steps, for the Integrator and the Coordinator. On Wednesday 
 ## G0: start receipt (by 11:30)
 
 - **Who:** the Integrator, or the agent he names.
+- **A newer build may be on offer** (the Coordinator's call). A new data build will probably be published, with an open policyengine.py PR.
+  - The Coordinator runs the UK hub on it and compares it with the current versions: policyengine 6.11.1, with policyengine-uk 2.151.0 and the a6299504 and c9df4b86 cuts.
+  - The Coordinator then decides whether to bump, weighing the data's quality and the new policyengine-uk's runtime against what the build brings: gambling and some other fixes the current one doesn't have. #262 has the bump's checklist.
+  - Agents record which pair is in. They never adopt one themselves.
 - **Commands:** the runbook's G0 block, with the household receipt written outside the checkout:
 
   ```sh
