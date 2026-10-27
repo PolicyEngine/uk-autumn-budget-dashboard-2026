@@ -15,7 +15,7 @@
   ],
   "measures": {
     "fuel_duty_rise_deferral": {
-      "description": "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+      "description": "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p, so that rise is never made up. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
       "display": "schedule",
       "rows": [
         {
