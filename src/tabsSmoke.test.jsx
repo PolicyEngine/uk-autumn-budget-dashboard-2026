@@ -447,9 +447,9 @@ describe("the income decile card", () => {
     // The scatter shares the decile card's row
     const scatter = await within(section).findByRole("heading", { level: 3, name: /^Household income impacts/ }, { timeout: 5000 });
     expect(scatter.closest(".charts-grid")).toBe(title.closest(".charts-grid"));
-    await waitFor(() => expect(panel.querySelectorAll(".measure-key")).toHaveLength(1));
-    const key = panel.querySelector(".measure-key");
-    expect(key.compareDocumentPosition(panel.querySelector("#constituencies")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // No section-level Policies key above the map: each chart draws its own
+    const map = panel.querySelector("#constituencies");
+    for (const key of panel.querySelectorAll(".measure-key")) expect(key.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING).toBeFalsy();
     expect(within(panel).getByRole("heading", { level: 2, name: "By income" })).toBeInTheDocument();
     expect(panel.querySelector("#constituencies").compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // £ by default; % of net income in the Options, kept in the address
