@@ -148,14 +148,14 @@
   /* Spare height is shared above, between and below the intro and the
      groups, so the panel is filled, not left with a gap at the foot */
   justify-content: space-evenly;
-  gap: clamp(16px, 3svh, 28px);
+  gap: clamp(12px, 2svh, 20px);
   padding: 4px 20px 12px;
 }
 
 .overview-nav {
   display: flex;
   flex-direction: column;
-  gap: clamp(14px, 2.5svh, 20px);
+  gap: clamp(12px, 2svh, 16px);
 }
 
 .overview-group {
@@ -165,7 +165,7 @@
 
 /* A group's label: small semibold muted words, sentence case */
 .overview-group-label {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   font-size: var(--fs-small);
   font-weight: 600;
   line-height: 1.4;
@@ -218,8 +218,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 64px;
-  padding: clamp(8px, 2svh - 6px, 12px) 12px;
+  min-height: clamp(52px, 7svh, 60px);
+  padding: 8px 12px;
   color: var(--c-text);
   text-decoration: none;
   transition: background-color var(--motion-fast) ease;
@@ -297,7 +297,7 @@
 /* "More from PolicyEngine": the website, a quieter muted row of its own
    (no border; a grey fill), with the PolicyEngine mark and an arrow out */
 .overview-external {
-  min-height: 56px;
+  min-height: 52px;
   border-radius: 12px;
   background: var(--pe-gray-50);
 }
@@ -323,7 +323,7 @@
 .overview-footer {
   flex: none;
   margin-top: auto;
-  padding: 14px 20px 18px;
+  padding: 12px 20px 16px;
   border-top: 1px solid var(--pe-gray-100);
 }
 
@@ -344,9 +344,9 @@
 .overview-built-links a {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   height: 28px;
-  padding: 0 10px;
+  padding: 0 9px 0 8px;
   font-size: var(--fs-micro);
   font-weight: 500;
   color: var(--pe-gray-700);
@@ -378,7 +378,7 @@
 }
 
 /* A short window: everything a little tighter, so it still fits */
-@media (max-height: 760px) {
+@media (max-height: 760px), (max-height: 840px) and (min-width: 601px) {
   .overview-header {
     height: 56px;
   }
