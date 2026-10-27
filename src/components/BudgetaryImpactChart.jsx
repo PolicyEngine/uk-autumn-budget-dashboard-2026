@@ -34,91 +34,45 @@ import { zeroReason } from "../utils/legendMembership";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 
-// Net change labels, one per year: the signed total in a small white tag
-// beside its dot on the net line, always just above the dot (below it only
-// where the dot is too near the top of the plot), and moved clear of the
-// tag beside it. They are part of the chart's SVG, so the SVG and PNG
+// A year not yet published gets a small grey tag just above the zero line,
+// so its empty band is never read as zero. The years' nets are not printed
+// on the plot: the sentence states the net and the tooltip gives every
+// year's exactly. The tags are part of the chart's SVG, so the SVG and PNG
 // downloads carry them too.
-// A net that rounds to zero (a year before a measure starts) has no sign
-const formatNetLabel = (value) => {
-  const shown = Math.abs(value).toFixed(1);
-  if (Number(shown) === 0) return `£${shown}bn`;
-  return value < 0 ? `-£${shown}bn` : `+£${shown}bn`;
-};
-
 
 // The net line's dot radius (the Line's dot below)
 const DOT_RADIUS = 4;
 
-function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, line, selectedYear }) {
+function UnpublishedLabels({ xAxisMap, yAxisMap, data, narrow }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
-  // On a narrow plot six tags collide: label only the year shown (the
-  // tooltip gives every year's net)
-  const crowded = xAxis.width < 460;
-  const fontSize = narrow ? 11 : 12;
   const gap = 6;
   const band = xAxis.scale.bandwidth ? xAxis.scale.bandwidth() : 0;
-  // The tags already placed, left to right
-  const placed = [];
   return (
     <g className="net-impact-labels">
       {data.map((point) => {
         const net = point.netImpact;
         const unpublished = point.unpublished || net === null || net === undefined;
-        // Net tags show with two or more measures; a not-yet-published tag
-        // always shows, so the empty year is never read as zero.
-        if (!show && !unpublished) return null;
-        if (crowded && !unpublished && point.year !== selectedYear) return null;
-        const text = unpublished ? NOT_YET_PUBLISHED : formatNetLabel(net);
-        // On a phone the not-yet-published tag takes two lines, in smaller
-        // type, so it fits its year's band beside the last bar
-        const twoLine = unpublished && narrow;
-        const lines = twoLine ? ["Not yet", "published"] : [text];
-        const size = twoLine ? 10 : fontSize;
+        if (!unpublished) return null;
+        // On a phone the tag takes two lines, in smaller type, so it fits
+        // its year's band beside the last bar
+        const lines = narrow ? ["Not yet", "published"] : [NOT_YET_PUBLISHED];
+        const size = narrow ? 10 : 12;
         const longest = Math.max(...lines.map((line) => line.length));
-        const width = Math.ceil(longest * size * 0.6) + (twoLine ? 6 : 10);
+        const width = Math.ceil(longest * size * 0.6) + (narrow ? 6 : 10);
         const height = size + 8 + (lines.length - 1) * (size + 2);
         // Kept inside the plot, so a wide tag at either end is not clipped
         const x = Math.min(
           Math.max(xAxis.scale(point.year) + band / 2, xAxis.x + width / 2),
           xAxis.x + xAxis.width - width / 2,
         );
-        // A year not yet published has no bars: its tag sits just above the
-        // zero line. Otherwise the tag sits just above the year's net dot,
-        // or just below it where above would leave the plot
         const plotTop = yAxis.y;
         const plotBottom = yAxis.y + yAxis.height;
-        const anchor = yAxis.scale(unpublished ? 0 : net);
-        const clearance = gap + DOT_RADIUS;
-        let top = anchor - clearance - height;
-        if (top < plotTop) top = anchor + clearance;
-        // With one measure there is no net line: the tag sits past the end
-        // of its bar (below a cost, above a gain), inside it only where the
-        // plot has no room
-        if (!line && !unpublished) {
-          top = net < 0 ? anchor + gap : anchor - gap - height;
-          if (top + height > plotBottom || top < plotTop) {
-            top = net < 0 ? anchor - gap - height : anchor + gap;
-          }
-        }
-        // Clear of the tag before it (on a narrow plot two can meet): the
-        // other side of the dot, or failing that past the other tag
-        const previous = placed[placed.length - 1];
-        const meets = (y) =>
-          previous &&
-          Math.abs(previous.x - x) < (previous.width + width) / 2 + 2 &&
-          y < previous.top + previous.height + 2 &&
-          y + height + 2 > previous.top;
-        if (meets(top)) {
-          const flipped = top < anchor ? anchor + clearance : anchor - clearance - height;
-          top = meets(flipped) || flipped < plotTop || flipped + height > plotBottom
-            ? previous.top + previous.height + 2
-            : flipped;
-        }
+        const anchor = yAxis.scale(0);
+        let top = anchor - gap - DOT_RADIUS - height;
+        if (top < plotTop) top = anchor + gap + DOT_RADIUS;
         top = Math.min(Math.max(top, plotTop), plotBottom - height);
-        placed.push({ x, top, width, height });
         return (
           <g key={point.year}>
             <rect
@@ -128,16 +82,16 @@ function NetImpactLabels({ xAxisMap, yAxisMap, data, narrow, show, line, selecte
               height={height}
               rx={4}
               ry={4}
-              fill={unpublished ? CHART_COLOURS.mutedFill : CHART_COLOURS.surface}
+              fill={CHART_COLOURS.mutedFill}
               stroke={CHART_COLOURS.axis}
               strokeWidth={1}
             />
             <text
               x={x}
               y={top + height / 2 - ((lines.length - 1) * (size + 2)) / 2}
-              fill={unpublished ? CHART_COLOURS.tick : CHART_COLOURS.text}
+              fill={CHART_COLOURS.tick}
               fontSize={size}
-              fontWeight={unpublished ? 500 : 600}
+              fontWeight={500}
               textAnchor="middle"
               dominantBaseline="central"
             >
@@ -392,13 +346,7 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [] }) {
             <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
             <Customized
               component={
-                <NetImpactLabels
-                  data={data}
-                  narrow={narrow}
-                  selectedYear={selectedYear}
-                  show
-                  line={activePolicies.length > 1}
-                />
+                <UnpublishedLabels data={data} narrow={narrow} />
               }
             />
             <Customized component={<ChartUnitLabel text="Impact (£bn)" />} />

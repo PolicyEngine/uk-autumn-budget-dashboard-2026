@@ -141,14 +141,21 @@ describe("the page's measures in the constituency views", () => {
     expect((await show(catalogue, [BETA])).view.reason).toBe(
       "Results by constituency are not yet published for this policy.",
     );
-    // With no package published, every measure selected says the
-    // combination is not published: never one measure in its place, nor a
-    // sum. The held measure is not offered in the per-policy option.
+    // With no package published, the card shows the first selected
+    // measure with its own rows (its Policy option's default), never a sum
+    // and never the left-out measure
     const all = await show(catalogue, IDS);
-    expect(all.choice.kind).toBe("no-package");
-    expect(all.choice.reform).toBeUndefined();
-    expect(all.choice.focus.options).not.toContain(BETA);
-    expect(all.view).toEqual({ kind: "notice", reason: SELECTION_NOT_PUBLISHED, detail: null });
+    const first = IDS.find((id) => id !== BETA);
+    expect(all.choice).toEqual({ kind: "measure", reform: first });
+    expect(all.view).toMatchObject({ kind: "rows", reform: first });
+    expect(all.policyOptions.map((option) => option.value)).toEqual(IDS.filter((id) => id !== BETA));
+    // With no run for any selected measure, the combination's notice
+    cleanup();
+    resetGeographyCache();
+    const none = await show(await publish(layerTable([])), IDS);
+    expect(none.choice.kind).toBe("no-package");
+    expect(none.choice.reform).toBeUndefined();
+    expect(none.view).toEqual({ kind: "notice", reason: SELECTION_NOT_PUBLISHED, detail: null });
   });
 
   it("reads not yet published while no table is published", async () => {

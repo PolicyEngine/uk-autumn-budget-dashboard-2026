@@ -116,7 +116,7 @@ export function rememberHouseholdHeadline(key, data) {
 const DEBOUNCE_MS = 400;
 
 /**
- * The Household impact results for the wizard's answers: the headline and
+ * The Household calculator results for the wizard's answers: the headline and
  * programmes first, then the earnings sweep and the per-policy split, asked
  * for at once and each shown as it arrives.
  *

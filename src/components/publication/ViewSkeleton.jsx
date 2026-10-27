@@ -32,7 +32,7 @@ export const SKELETON_SUB_TABS = {
 const SUB_TABS = SKELETON_SUB_TABS;
 
 // Each view's first section and the shape of its cards: "bars", "lines",
-// "map", "example" (Household impact's example households) or "text"
+// "map", "example" (Household calculator's example households) or "text"
 const LAYOUTS = {
   "dashboard:finances": [
     { icon: "banknote", title: "Public finances", subtitle: "Net effect of the selected policies on government revenue and spending, by year.", cards: [["bars", "wide"], ["bars"], ["bars"]] },

@@ -12,10 +12,15 @@ const CSV = [
   "a,Measure A,2027,25000.0,-1.0,1.0,98000.0,2027",
   "a,Measure A,2028,20000.0,-150.0,-100.0,140000.0,2027",
   "a,Measure A,2028,25000.0,-1.0,1.0,98000.0,2027",
+  "b,Measure B,2028,30000.0,100.0,150.0,50000.0,2027",
+  "c,Measure C,2028,35000.0,100.0,150.0,40000.0,2027",
+  "combined--ab,A and B,2028,40000.0,-150.0,-100.0,60000.0,2027",
 ].join("\n");
 
+// One loaded file, the same object on every render, as the real hook keeps it
+let scatterData = null;
 vi.mock("../hooks/useHouseholdScatterData", () => ({
-  useHouseholdScatterData: () => ({ status: "ready", rows: parseScatterCsv(CSV), error: null }),
+  useHouseholdScatterData: () => (scatterData ??= { status: "ready", rows: parseScatterCsv(CSV), error: null }),
 }));
 // Recharts draws nothing in jsdom: the chart's margin and the parts it
 // draws in its SVG (the y-axis title, the logo) are recorded instead
@@ -41,15 +46,31 @@ vi.mock("recharts", async (importOriginal) => {
     ),
   };
 });
+// Measures a, b and c; a combined run is published for exactly a and b only
+const approved = { status: "approved", outputs_sha256: "a".repeat(64) };
+const MANIFEST = {
+  measures: { a: approved, b: approved, c: approved },
+  combined: {
+    "combined--ab": {
+      status: "approved",
+      measures: ["a", "b"],
+      member_outputs_sha256: { a: "a".repeat(64), b: "a".repeat(64) },
+    },
+  },
+};
 vi.mock("../utils/measureCatalogue", () => ({
-  useMeasureCatalogue: () => ({ combinedId: null, byId: new Map() }),
+  useMeasureCatalogue: () => ({ combinedId: null, byId: new Map(), manifest: MANIFEST }),
 }));
 
 const { default: HouseholdScatter, LOGO_ROOM } = await import("./HouseholdScatter");
 const { chartMargin } = await import("../utils/chartTheme");
 const { CHART_LOGO } = await import("../utils/chartLogo");
 
-const POLICIES = [{ id: "a", name: "Measure A" }];
+const POLICIES = [
+  { id: "a", name: "Measure A" },
+  { id: "b", name: "Measure B" },
+  { id: "c", name: "Measure C" },
+];
 
 describe("HouseholdScatter with no change in household incomes", () => {
   it("shows the shared note, not a column of dots at £0, when every published cell is in the zero band", () => {
@@ -111,5 +132,35 @@ describe("HouseholdScatter beside the income decile card", () => {
     expect(container.querySelector(".chart-logo img")).toBeTruthy();
     expect(screen.getAllByTestId("in-svg").map((node) => node.dataset.part)).not.toContain("PolicyEngineLogo");
     expect(JSON.parse(screen.getByTestId("scatter-chart").dataset.margin).bottom).toBe(0);
+  });
+});
+
+describe("HouseholdScatter shows the header's selection", () => {
+  const titleOf = (container) => container.querySelector("h3").textContent;
+
+  it("one policy: that policy's cells, with no Policy pill of its own", () => {
+    const { container } = render(<HouseholdScatter selectedPolicies={["b"]} policies={POLICIES} selectedYear={2028} />);
+    expect(screen.getByTestId("scatter-chart")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Policy shown/ })).toBeNull();
+    expect(container.querySelector(".pill-select")).toBeNull();
+    expect(titleOf(container)).not.toMatch(/Measure B/);
+  });
+
+  it("several policies: the published combined run of exactly them, with no Policy pill", () => {
+    const { container } = render(<HouseholdScatter selectedPolicies={["b", "a"]} policies={POLICIES} selectedYear={2028} />);
+    expect(screen.getByTestId("scatter-chart")).toBeTruthy();
+    expect(container.querySelector(".pill-select")).toBeNull();
+    // Not one member's run in its place
+    expect(titleOf(container)).not.toMatch(/Measure [AB]/);
+  });
+
+  it("several policies with no published combined run: the not-published notice, never one policy", () => {
+    const { container } = render(<HouseholdScatter selectedPolicies={["a", "c"]} policies={POLICIES} selectedYear={2028} />);
+    expect(
+      screen.getByText("Household results for this combination of policies are not published yet."),
+    ).toBeTruthy();
+    expect(screen.queryByTestId("scatter-chart")).toBeNull();
+    expect(container.querySelector(".pill-select")).toBeNull();
+    expect(titleOf(container)).not.toMatch(/Measure [AC]/);
   });
 });

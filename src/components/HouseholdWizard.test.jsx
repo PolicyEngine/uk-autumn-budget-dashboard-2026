@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import HouseholdCalculator, { FORM_SECTIONS, WIZARD_DEFAULTS, resetSavedWizard } from "./HouseholdCalculator";
 import { DEFAULT_SALARY, DEFAULT_SPENDING, REGIONAL_RENT } from "../utils/householdDefaults";
 import { parseAmount } from "./personal/FormControls";
+import { buildHouseholdRequest } from "../utils/householdImpactApi";
+import { APPROVED_COMMIT, approvedDefinition, requestedDefinitions, route } from "../test/definitionsFixture";
 
 beforeEach(() => {
   resetSavedWizard();
@@ -560,5 +562,167 @@ describe("the personal impact form", () => {
     const panel = document.getElementById(groupToggle("Spending").getAttribute("aria-controls"));
     expect(panel).not.toHaveClass("collapse");
     expect(panel.querySelector(".collapse")).toBeNull();
+  });
+});
+
+describe("the selected policies' questions", () => {
+  // Tonight's eight measures, by id and published name
+  const EIGHT = [
+    { id: "fuel_duty_rise_deferral", name: "Fuel duty rises deferred" },
+    { id: "domestic_electricity_zero_vat", name: "Zero VAT on domestic electricity" },
+    { id: "warm_home_discount_top_up", name: "Warm Home Discount top-up" },
+    { id: "threshold_freeze_2031_32", name: "Threshold freeze to 2031-32" },
+    { id: "plan_2_threshold_unfreeze", name: "Plan 2 student loan threshold unfrozen" },
+    { id: "employer_nics_secondary_threshold_raise", name: "Employer NI threshold raised" },
+    { id: "unearned_income_rates_up", name: "Dividend, savings and property income tax up" },
+    { id: "state_pension_income_tax_protection", name: "State Pension income tax protection" },
+  ];
+  const ALL_EIGHT = EIGHT.map((policy) => policy.id);
+  const STEP_ORDER = ["you", "household", "spending", "savings", "benefits", "pensions"];
+  /** The numbered groups shown, by heading ("Step 1: You"). */
+  const groups = () => [...document.querySelectorAll(".household-step-title")].map((heading) => heading.textContent);
+  /** A numbered group, by its title. */
+  const group = (title) => screen.getByRole("group", { name: new RegExp(`^Step \\d+: ${title}$`) });
+  /** A group's questions, in order. */
+  const asked = (title) => [...group(title).querySelectorAll(".household-field")].map((row) => row.dataset.row);
+  /** The policies a group's heading names (its icons' accessible name). */
+  const usedBy = (title) => within(group(title)).queryByRole("img", { name: /^Used by / })?.getAttribute("aria-label") ?? null;
+  const form = (selected, props = {}) => renderForm(<HouseholdCalculator selectedPolicies={selected} policies={EIGHT} {...props} />);
+
+  it("numbers the groups the selected policies need, after You and Household, each naming its policies by icon", () => {
+    form(ALL_EIGHT);
+    expect(groups()).toEqual([
+      "Step 1: You",
+      "Step 2: Household",
+      "Step 3: Spending",
+      "Step 4: Savings and investments",
+      "Step 5: Benefits and loans",
+    ]);
+    expect(asked("You")).toEqual(["current_age", "current_salary", "region"]);
+    expect(asked("Household")).toEqual(["has_partner", "children_count", "tenure", "rent_from", "monthly_rent"]);
+    expect(asked("Spending")).toEqual(["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"]);
+    expect(asked("Savings and investments")).toEqual(["dividends_per_year", "savings_interest_per_year", "property_income_per_year"]);
+    expect(asked("Benefits and loans")).toEqual(["claims_universal_credit", "student_loan_plan"]);
+    expect(usedBy("You")).toBeNull();
+    expect(usedBy("Spending")).toBe("Used by Fuel duty rises deferred, Zero VAT on domestic electricity");
+    expect(usedBy("Savings and investments")).toBe("Used by Dividend, savings and property income tax up");
+    expect(usedBy("Benefits and loans")).toBe("Used by Warm Home Discount top-up, Plan 2 student loan threshold unfrozen");
+    // No chips between the boxes, no tab stop in a heading, no tick
+    expect(document.querySelector(".policy-badge")).toBeNull();
+    expect(document.querySelector(".household-step-head [tabindex]")).toBeNull();
+    expect(document.querySelector(".household-form")).not.toHaveTextContent("✓");
+    // The group's line says what the spending boxes start at, once
+    expect(group("Spending")).toHaveTextContent("Prefilled with the average household's spending");
+    expect(document.getElementById("hint-petrol_spending_per_year")).toBeNull();
+    // Asked once: More details keeps only the rest, and its rows say only
+    // what they still hold
+    expect(screen.queryByRole("button", { name: /^Other income/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Spending/ })).not.toBeInTheDocument();
+    expect(groupToggle("Pension and student loan")).toHaveTextContent("No pension income");
+    expect(groupToggle("Pension and student loan")).not.toHaveTextContent(/student loan$/);
+    expect(groupToggle("Council tax and benefits")).toHaveTextContent("Council Tax band D");
+    expect(groupToggle("Council tax and benefits")).not.toHaveTextContent("Universal Credit");
+    openMore();
+    for (const id of fields()) expect(document.querySelectorAll(`[data-row="${id}"]`)).toHaveLength(1);
+    // The tab order follows the groups: every box of a group before the next's
+    const order = [...document.querySelectorAll(".household-step input, .household-step select")].map(
+      (input) => input.closest(".household-step").dataset.step,
+    );
+    expect(order).toEqual([...order].sort((a, b) => STEP_ORDER.indexOf(a) - STEP_ORDER.indexOf(b)));
+  });
+
+  it("adds Pensions from State Pension age", () => {
+    form(ALL_EIGHT);
+    fireEvent.change(box("Age"), { target: { value: "70" } });
+    expect(groups().at(-1)).toBe("Step 6: Pensions");
+    expect(asked("Pensions")).toEqual(["state_pension_per_year", "private_pension_per_year"]);
+    expect(usedBy("Pensions")).toBe("Used by State Pension income tax protection");
+    fireEvent.change(box("Age"), { target: { value: "40" } });
+    expect(groups()).not.toContain("Step 6: Pensions");
+  });
+
+  it("follows the selection: one policy, its group alone, numbered next", () => {
+    form(["plan_2_threshold_unfreeze"]);
+    expect(groups()).toEqual(["Step 1: You", "Step 2: Household", "Step 3: Benefits and loans"]);
+    expect(asked("Benefits and loans")).toEqual(["student_loan_plan"]);
+    expect(groupToggle("Spending")).toHaveTextContent(/^Spending/);
+    expect(groupToggle("Council tax and benefits")).toHaveTextContent("Universal Credit");
+    expect(groupToggle("Pension and student loan")).not.toHaveTextContent("student loan ·");
+  });
+
+  it("opens and closes each numbered group from its heading, keeping its answers", () => {
+    form(ALL_EIGHT);
+    const toggle = (title) => within(group(title)).getByRole("button", { name: new RegExp(`^Step \\d+: ${title}$`) });
+    // Open at first: each group's policies read its answers
+    for (const title of ["You", "Household", "Spending", "Savings and investments", "Benefits and loans"]) {
+      expect(toggle(title)).toHaveAttribute("aria-expanded", "true");
+    }
+    fireEvent.change(box("Petrol"), { target: { value: "500" } });
+    fireEvent.click(toggle("Spending"));
+    expect(toggle("Spending")).toHaveAttribute("aria-expanded", "false");
+    // Closed: the heading and its line, and what its answers are
+    expect(group("Spending")).toHaveTextContent("Prefilled with the average household's spending");
+    expect(group("Spending").querySelector(".household-step-summary")).toHaveTextContent(
+      "Petrol £500 · Diesel £340 · Electricity £1,040",
+    );
+    // A group whose answers are all as they started says nothing more
+    fireEvent.click(toggle("Savings and investments"));
+    expect(group("Savings and investments").querySelector(".household-step-summary")).toBeNull();
+    // Opened again by keyboard (a button), the answer is as it was
+    fireEvent.click(toggle("Spending"));
+    expect(toggle("Spending")).toHaveAttribute("aria-expanded", "true");
+    expect(group("Spending").querySelector(".household-step-summary")).toBeNull();
+    expect(box("Petrol")).toHaveValue("500");
+    expect(document.querySelector(".household-form")).not.toHaveTextContent("✓");
+  });
+
+  it("shows only You and Household when no selected policy reads anything more", () => {
+    for (const selected of [[], ["threshold_freeze_2031_32"], ["employer_nics_secondary_threshold_raise", "threshold_freeze_2031_32"], ["unknown_measure"]]) {
+      const { unmount } = form(selected);
+      expect(groups()).toEqual(["Step 1: You", "Step 2: Household"]);
+      for (const title of DETAIL_GROUPS) expect(groupToggle(title)).toBeInTheDocument();
+      unmount();
+      resetSavedWizard();
+    }
+  });
+
+  it("sends the same request for the same answers, wherever they are asked", async () => {
+    const API = "https://api.test/api/household-impact";
+    const bodies = [];
+    const urls = [];
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        // Every request names each measure's approved commit in its query
+        if (route(url) === API) {
+          bodies.push(JSON.parse(init.body));
+          urls.push(url);
+        }
+        return new Response("{}", { status: 404 });
+      }),
+    );
+    // The definitions the measures' receipts approved: without them the
+    // calculator asks nothing (useHouseholdImpact)
+    const expectedDefinitions = Object.fromEntries(ALL_EIGHT.map((id) => [id, approvedDefinition(id)]));
+    try {
+      form(ALL_EIGHT, { year: 2027, expectedDefinitions });
+      fireEvent.change(box("Petrol"), { target: { value: "900" } });
+      fireEvent.blur(box("Petrol"));
+      choose("Student loan plan", "Plan 2");
+      fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
+      // Your household's headline (the example cards ask for theirs too)
+      const yours = () => bodies.find((body) => body.household.petrol_spending === 900 && body.include.length === 0);
+      await waitFor(() => expect(yours()).toBeDefined());
+      const answers = { ...WIZARD_DEFAULTS, petrol_spending_per_year: 900, student_loan_plan: "PLAN_2" };
+      expect(yours()).toEqual(buildHouseholdRequest(answers, { year: 2027, policies: ALL_EIGHT }));
+      expect(yours().household).toMatchObject({ petrol_spending: 900, student_loan_plan: "PLAN_2", diesel_spending: DEFAULT_SPENDING.diesel });
+      expect(requestedDefinitions(urls[bodies.indexOf(yours())]).sort()).toEqual(
+        ALL_EIGHT.map((id) => [id, APPROVED_COMMIT]).sort(),
+      );
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
   });
 });

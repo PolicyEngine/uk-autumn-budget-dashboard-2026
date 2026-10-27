@@ -134,25 +134,15 @@
   }
 }
 
-/* In a pair of cards the rows share the plot's height evenly, so the
-   card's foot lines up with its neighbour's and the row pitch matches
-   the dumbbell beside it */
+/* Beside a dumbbell (By age's Who is better or worse off): rows a little
+   taller than the 34px floor, near the dumbbell's row pitch, at their own
+   height (never stretched to the neighbour's) */
 @media (min-width: 1025px) {
-  .charts-grid:has(> div + div) .chart-plot:has(.msc) {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .charts-grid:has(> div + div) .chart-plot:has(.msc) > .swap-transition-inner,
-  .charts-grid:has(> div + div) .chart-plot .msc-wrap {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .charts-grid:has(> div + div) .msc {
-    flex: 1 1 auto;
+  .charts-grid:has(.measure-dumbbell) .msc:has(> .msc-head) {
     grid-template-rows: auto;
-    grid-auto-rows: minmax(34px, 1fr);
+  }
+
+  .charts-grid:has(.measure-dumbbell) .msc {
+    grid-auto-rows: minmax(44px, auto);
   }
 }

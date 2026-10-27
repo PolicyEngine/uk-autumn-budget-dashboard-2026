@@ -23,7 +23,9 @@ import { REGIONS } from "../utils/geography/regions";
 import {
   choiceLabel,
   choiceMeasureNames,
-  chooseReform,
+  chooseSelectionReform,
+  selectionNotPublished,
+  selectionPackageKey,
 } from "../utils/geography/selection";
 import { REGION_VIEW_ID, viewState } from "../utils/geography/view";
 import { fiscalYearLabel } from "../utils/publication/format";
@@ -86,13 +88,15 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
   const titleId = useId();
   const captionId = useId();
 
-  const { combinedId } = useMeasureCatalogue();
-  const choice = chooseReform({
+  // The header's selection: one policy's own run, or the published
+  // combined run of exactly the selected policies, else a notice
+  const { manifest } = useMeasureCatalogue();
+  const choice = chooseSelectionReform({
     selectedIds: selectedPolicies,
-    // The package is every measure the page can show, held ones excluded
     policyIds: policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id),
     reforms: regional.table?.reforms ?? [],
-    packageId: combinedId,
+    packageKey: selectionPackageKey(manifest, selectedPolicies),
+    reason: selectionNotPublished("Regional"),
   });
   const view = viewState({
     data: regional,

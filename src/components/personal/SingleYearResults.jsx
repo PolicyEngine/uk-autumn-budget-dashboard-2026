@@ -353,7 +353,8 @@ function AboutResult({ items, caution, bars, totals }) {
               </h4>
               <ul className="result-no-effect-chips">
                 {noEffect.map((item) => (
-                  <li key={item.id} className="result-no-effect-chip" title={item.name}>
+                  // The why tip is the chip's one tip: the native title only without it
+                  <li key={item.id} className="result-no-effect-chip" title={item.reason ? undefined : item.name}>
                     {item.label ?? item.name}
                     {item.reason && <InfoTip content={shortReason(item.reason)} label={`Why ${item.name} has no effect`} />}
                   </li>
@@ -414,18 +415,19 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
   const [focus, setFocus] = useState(null);
   // "N more with no effect for you", open or not
   const [expanded, setExpanded] = useState(false);
-  // The components that apply on either card
-  const union = useMemo(() => {
+  // Each card's parts in use (as each chart draws them), and the
+  // components that apply on either card
+  const { netInUse, rateInUse, union } = useMemo(() => {
     const points = sweepPoints(sweep);
     const net = sweep.netParts
       ? new Set(layersInUse([...layerRows(points, sweep.netParts, "before"), ...layerRows(points, sweep.netParts, "after")]).map((layer) => layer.key))
       : new Set();
     const rate = sweep.parts ? new Set(partsInUse([...sweep.parts.before, ...sweep.parts.after]).map((part) => part.name)) : new Set();
-    return componentsInUse(net, rate);
+    return { netInUse: net, rateInUse: rate, union: componentsInUse(net, rate) };
   }, [sweep]);
   // One control only when both cards draw their parts; else each its own key
   const shared = Boolean(sweep.netParts && sweep.parts);
-  const chips = useMemo(() => sharedSweepChips(union), [union]);
+  const chips = useMemo(() => sharedSweepChips(netInUse, rateInUse), [netInUse, rateInUse]);
   const sync = { view, setView, hidden, setHidden, hover, setHover, expanded, setExpanded, union, focus, setFocus: shared ? setFocus : undefined, sharedLegend: shared };
   // An answer without the parts (a calculation server deployed before they
   // were added) draws the totals alone: said here, never silently
@@ -584,7 +586,7 @@ export function SingleYearHeadline({
             icon="wallet"
             id="your-result"
             title={`Your result, ${yearLabel}`}
-            subtitle="How the selected policies change your household's net income, and each policy's part in it."
+            subtitle="How the selected policies change your net income, policy by policy."
           />
           <ResultCard
             totals={totals}
@@ -681,6 +683,12 @@ export function SingleYearDetails({ result, year, policies, household = null, se
             programmes={data.programmes}
             totals={totals}
             bars={bars?.all}
+            split={bars}
+            splitStatus={bars ? "ready" : detailFailed ? "error" : "loading"}
+            policies={policies}
+            household={household}
+            salaryUsed={data.salaryUsed}
+            year={data.year ?? year}
             yearLabel={yearLabel}
             engine={data.engine}
           />
@@ -699,7 +707,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
       <SectionHeading
         icon="briefcase"
         title="Across earnings"
-        subtitle="How your household's net income, its change from the selected policies and its marginal tax rate vary with employment income."
+        subtitle="How your net income, its change and your marginal tax rate vary with earnings."
       />
       <section className="report-section">
         {data.sweep ? (

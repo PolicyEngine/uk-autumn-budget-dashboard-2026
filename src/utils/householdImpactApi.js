@@ -1,5 +1,5 @@
 /**
- * The Household impact view's API: one household, one year, before and after
+ * The Household calculator view's API: one household, one year, before and after
  * the selected policies. Everything that knows the API's shape is in this
  * module (the URL, the request, the errors and the response), so a change
  * to the backend's contract is a change here only.
@@ -147,7 +147,7 @@ export function householdDetailApiUrl() {
   return url ? url.trim() : null;
 }
 
-/** An error the Household impact view can explain: `kind` says which. */
+/** An error the Household calculator view can explain: `kind` says which. */
 export class HouseholdApiError extends Error {
   /**
    * @param {"config"|"timeout"|"network"|"invalid"|"server"} kind
@@ -759,7 +759,7 @@ export function engineDifferences(expected, reported) {
 /**
  * The household API's code does not compute some selected measures from
  * the definitions their published figures were approved on (or could not
- * say). Household impact is then unavailable for them: `refused` names each,
+ * say). Household calculator is then unavailable for them: `refused` names each,
  * with how its definition differs. `unchecked`: the answer reported no
  * definitions at all (a build before #125), so nothing could be checked.
  */

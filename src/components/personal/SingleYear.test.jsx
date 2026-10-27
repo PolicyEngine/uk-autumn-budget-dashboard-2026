@@ -17,7 +17,7 @@ import { keepSentence } from "../../utils/singleYear";
 
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
 // The receipts' model versions, which the household fixture's answer runs:
-// Household impact shows nothing when the two differ.
+// Household calculator shows nothing when the two differ.
 const { policyengine, "policyengine-uk": uk, "policyengine-core": core } = HOUSEHOLD_FIXTURE.engine;
 const PUBLISHED_ENGINE = { policyengine, "policyengine-uk": uk, "policyengine-core": core };
 const SUPPORTED_POLICY_IDS = POLICIES_FOR_TEST.filter((policy) => HOUSEHOLD_FIXTURE.included.includes(policy.id)).map((policy) => policy.id);
@@ -144,21 +144,23 @@ const splitShown = (year) =>
 // The headline, beside the form
 const results = () => screen.findByRole("region", { name: "Results" });
 
-describe("Household impact's results", () => {
+describe("Household calculator's results", () => {
   it("show the household calculation alone: no sub-tabs (an old ?sub= link is ignored), only the household route", async () => {
     window.history.replaceState({}, "", "/?tab=personal&sub=multi");
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     toResults();
     await within(await results()).findByText("+£3,765");
-    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    // No view sub-tabs (the household table's own policy tabs aside)
+    expect(document.querySelector(".sub-tabs")).toBeNull();
+    expect(screen.queryAllByRole("tablist").every((list) => list.classList.contains("breakdown-tabs"))).toBe(true);
     expect(screen.queryByRole("button", { name: /Prices/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/lifetime/i)).not.toBeInTheDocument();
     // Besides the examples' precomputed file, the example households'
     // income charts below the calculator, the published household scatter
     // (the result among all households, loaded on demand through its
-    // artifact's receipt) and the UK files "Where you sit" reads, only the
-    // household route
+    // artifact's receipt), the UK files "Where you sit" reads and the policy
+    // parameters the table's policy tabs read, only the household route
     const urls = fetch.mock.calls
       .map(([url]) => url)
       .filter(
@@ -170,7 +172,8 @@ describe("Household impact's results", () => {
           !url.endsWith("/income_distribution.csv") &&
           !url.endsWith("/winners_losers.csv") &&
           !url.endsWith("/distributional_impact.csv") &&
-          !url.endsWith("/income_mobility.csv"),
+          !url.endsWith("/income_mobility.csv") &&
+          !url.endsWith("/policy_parameters.json"),
       );
     expect(urls.length).toBeGreaterThan(0);
     expect(urls.every((url) => route(url) === HOUSEHOLD_API)).toBe(true);
@@ -326,7 +329,7 @@ describe("the household calculation, from the fixture", () => {
     // The sweep waits in its own card; the waterfall shows one step for
     // every policy until the split arrives
     await waitFor(() => expect(document.querySelectorAll(".waiting-card")).toHaveLength(1));
-    expect(await screen.findAllByText("Usually around 60 seconds")).toHaveLength(1);
+    expect(await screen.findAllByText("Usually 15–30 seconds")).toHaveLength(1);
     expect(document.querySelector('.net-income-waterfall[data-split="pending"]')).not.toBeNull();
     // Changed answers can be sent without waiting for the slower parts
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
@@ -923,7 +926,7 @@ describe("while a new answer loads", () => {
       expect(document.querySelector(".net-income-waterfall")).toBeNull();
     }
     expect(container.querySelector(".processing-panel")).toHaveTextContent("Calculating your household");
-    expect(container.querySelector(".processing-panel")).toHaveTextContent("Usually around 60 seconds");
+    expect(container.querySelector(".processing-panel")).toHaveTextContent("Usually 15–30 seconds");
     await waitFor(() => expect(server.held.length).toBeGreaterThan(0));
     server.releaseAll();
     await waitFor(() => expect(headlineCard()).toHaveTextContent("2030-31"));
@@ -1090,7 +1093,7 @@ describe("an unavailable household calculation", () => {
     renderTab({ selectedPolicies: ids });
     toResults();
     const panel = await results();
-    expect(await within(panel).findByText("Household impact is unavailable for this selection")).toBeInTheDocument();
+    expect(await within(panel).findByText("Household calculator is unavailable for this selection")).toBeInTheDocument();
     expect(panel).toHaveTextContent(POLICIES_FOR_TEST.find((policy) => policy.id === unmodelledId).name);
     expect(panel).not.toHaveTextContent("A different API label");
     expect(panel).not.toHaveTextContent("£0");
@@ -1146,7 +1149,7 @@ describe("a household calculation from other definitions", () => {
     renderTab({ onRemoveUnavailable: remove });
     toResults();
     const region = await results();
-    expect(await within(region).findByText("Household impact is unavailable for the selected measures")).toBeInTheDocument();
+    expect(await within(region).findByText("Household calculator is unavailable for the selected measures")).toBeInTheDocument();
     expect(within(region).getByText(/does not compute these measures from the definitions/)).toBeInTheDocument();
     expect(within(region).getAllByRole("listitem").map((item) => item.textContent)).toEqual([`${changedName}: its reform binding differs`]);
     expect(within(region).queryByText(HEADLINE)).not.toBeInTheDocument();
@@ -1164,7 +1167,7 @@ describe("a household calculation from other definitions", () => {
     renderTab();
     toResults();
     expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
-    expect(screen.queryByText("Household impact is unavailable for the selected measures")).not.toBeInTheDocument();
+    expect(screen.queryByText("Household calculator is unavailable for the selected measures")).not.toBeInTheDocument();
   });
   // Review of 0608183, finding 7: a build that reports no definitions
   // (one before #125) gives nothing to tell the measures apart by
@@ -1181,7 +1184,7 @@ describe("a household calculation from other definitions", () => {
     renderTab({ onRemoveUnavailable: remove });
     toResults();
     const region = await results();
-    expect(await within(region).findByText("Household impact can't be checked right now")).toBeInTheDocument();
+    expect(await within(region).findByText("Household calculator can't be checked right now")).toBeInTheDocument();
     expect(within(region).queryByRole("button", { name: /^Remove / })).not.toBeInTheDocument();
     expect(within(region).queryByText(HEADLINE)).not.toBeInTheDocument();
     expect(region.textContent).not.toMatch(/£\d/);
@@ -1198,8 +1201,8 @@ describe("a household calculation from other definitions", () => {
   // year and policies sent, and gives way once they change, as #128's
   // headline does. It never lists a measure no longer selected, nor refuses
   // one as having no approved definition when it is only no longer selected
-  const NOTICE = "Household impact is unavailable for the selected measures";
-  const UNCHECKED = "Household impact can't be checked right now";
+  const NOTICE = "Household calculator is unavailable for the selected measures";
+  const UNCHECKED = "Household calculator can't be checked right now";
   const SELECT = /Select at least one policy/;
   // An edit after a result or a refusal: the box goes, with nothing in its
   // place until Calculate (#185's cards say what to do), so no refusal
@@ -1368,7 +1371,7 @@ describe("a household calculation from other definitions", () => {
     renderTab({ onRemoveUnavailable: remove });
     toResults();
     const region = await results();
-    expect(await within(region).findByText("Household impact is unavailable for the selected measures")).toBeInTheDocument();
+    expect(await within(region).findByText("Household calculator is unavailable for the selected measures")).toBeInTheDocument();
     expect(within(region).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
       `${changedName}: the running code cannot bind it: not a measure the running code registers`,
     ]);

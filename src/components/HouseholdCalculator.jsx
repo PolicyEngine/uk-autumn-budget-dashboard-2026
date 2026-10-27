@@ -31,33 +31,71 @@ import { DEFAULT_SPENDING, SALARY_SOURCE, WIZARD_DEFAULTS, regionalRent } from "
 export { WIZARD_DEFAULTS };
 import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
 import ConstituencyField from "./personal/ConstituencyField";
+import PolicyIcons from "./personal/PolicyBadge";
+import { policyQuestions } from "../utils/householdPolicyFields";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
 import { STICKY_GAP, scrollBelowBars, stickyBottom } from "../utils/pageScroll";
 
 
-// The form: one card. The essentials first, as one grid of boxes and
-// segmented choices; then More details, four groups that each open on
-// their own and, closed, say what they hold. `children` stands for each
-// child's answers (their age and, from 16, their education); `rent_from`
-// is the landlord, the renting half of the tenure.
+// The form's numbered groups, read top to bottom: You and Household
+// always; each of the others only with the answers in it that a selected
+// policy reads (utils/householdPolicyFields.js), numbered as shown. Each
+// has a short heading and one line under it; `quiet` fields leave their
+// own note to that line. `children` stands for each child's answers
+// (their age and, from 16, their education); `rent_from` is the landlord,
+// the renting half of the tenure.
+export const FORM_GROUPS = [
+  {
+    key: "you",
+    title: "You",
+    hint: "Your age, your pay before tax, and where you live.",
+    always: true,
+    fields: ["current_age", "current_salary", "region"],
+  },
+  {
+    key: "household",
+    title: "Household",
+    hint: "Who lives with you, and your home.",
+    always: true,
+    fields: ["has_partner", "children_count", "tenure", "partner_age", "partner_salary", "rent_from", "monthly_rent", "children"],
+  },
+  {
+    key: "spending",
+    title: "Spending",
+    hint: "Prefilled with the average household's spending (Source: ONS Family Spending, 2024-25).",
+    fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"],
+    quiet: ["petrol_spending_per_year", "diesel_spending_per_year"],
+  },
+  {
+    key: "savings",
+    title: "Savings and investments",
+    hint: "Your own income from them, before tax.",
+    fields: ["dividends_per_year", "savings_interest_per_year", "property_income_per_year"],
+  },
+  {
+    key: "benefits",
+    title: "Benefits and loans",
+    hint: "Yes to Universal Credit counts what your answers entitle you to.",
+    fields: ["claims_universal_credit", "student_loan_plan"],
+    quiet: ["claims_universal_credit"],
+  },
+  {
+    key: "pensions",
+    title: "Pensions",
+    hint: "Paid to you before tax; the State Pension starts at the full new rate.",
+    fields: ["state_pension_per_year", "private_pension_per_year", "partner_state_pension_per_year", "partner_private_pension_per_year"],
+  },
+];
+
+// The form: one card. The numbered groups first (FORM_GROUPS; the
+// essentials are You and Household); then More details, four groups that
+// each open on their own and, closed, say what they hold.
 export const FORM_SECTIONS = [
   {
     title: "About your household",
-    fields: [
-      "current_age",
-      "current_salary",
-      "region",
-      "has_partner",
-      "children_count",
-      "tenure",
-      "partner_age",
-      "partner_salary",
-      "rent_from",
-      "monthly_rent",
-      "children",
-    ],
+    fields: FORM_GROUPS.filter((group) => group.always).flatMap((group) => group.fields),
   },
   {
     title: "More details",
@@ -334,6 +372,8 @@ const sentence = (parts) => {
 /**
  * What a More details group holds, in one line, for its closed row:
  * "Petrol £620 · diesel £340 · electricity £1,040 a year (UK average)".
+ * `applies(id)`: whether the group asks that field (not when it does not
+ * apply, nor when the selected policies' questions ask it up front).
  */
 export function groupSummary(title, { answer, applies, inputs, presetId }) {
   const amounts = (ids) =>
@@ -349,24 +389,135 @@ export function groupSummary(title, { answer, applies, inputs, presetId }) {
       "partner_state_pension_per_year",
       "salary_sacrifice_per_year",
     ]).map((part) => part.replace(/^your state pension/, "State Pension").replace(/state pension/, "State Pension"));
-    if (parts.length === 0) parts.push("no pension income");
-    const plan = CHOICE_CONFIGS.student_loan_plan.options.find((option) => option.value === inputs.student_loan_plan);
-    parts.push(!plan || plan.value === "NONE" ? "no student loan" : `${plan.label} student loan`);
-    return sentence(parts);
+    const pensions = ["private_pension_per_year", "state_pension_per_year"];
+    if (parts.length === 0 && pensions.some((id) => applies(id))) parts.push("no pension income");
+    if (applies("student_loan_plan")) {
+      const plan = CHOICE_CONFIGS.student_loan_plan.options.find((option) => option.value === inputs.student_loan_plan);
+      parts.push(!plan || plan.value === "NONE" ? "no student loan" : `${plan.label} student loan`);
+    }
+    return sentence(parts) || "None";
   }
   if (title === "Spending") {
-    const fuel = ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"].map(
-      (id) => `${NUMBER_CONFIGS[id].label.toLowerCase()} ${pounds(answer(id))}`,
-    );
-    let text = `${sentence(fuel)} a year`;
-    if (spendingAssumed(inputs, presetId) === "average") text += " (UK average)";
-    if (applies("monthly_childcare") && answer("monthly_childcare") > 0) text += ` · childcare ${pounds(answer("monthly_childcare"))} a month`;
-    return text;
+    const fuel = ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"]
+      .filter(applies)
+      .map((id) => `${NUMBER_CONFIGS[id].label.toLowerCase()} ${pounds(answer(id))}`);
+    const parts = [];
+    if (fuel.length > 0) {
+      let text = `${sentence(fuel)} a year`;
+      if (spendingAssumed(inputs, presetId) === "average") text += " (UK average)";
+      parts.push(text);
+    }
+    if (applies("monthly_childcare") && answer("monthly_childcare") > 0) parts.push(`childcare ${pounds(answer("monthly_childcare"))} a month`);
+    return sentence(parts) || "None";
   }
   const parts = [];
   if (applies("council_tax_band")) parts.push(`Council Tax band ${inputs.council_tax_band}`);
-  parts.push(inputs.claims_universal_credit ? "claims Universal Credit if entitled" : "does not claim Universal Credit");
+  if (applies("claims_universal_credit")) {
+    parts.push(inputs.claims_universal_credit ? "claims Universal Credit if entitled" : "does not claim Universal Credit");
+  }
   return sentence(parts);
+}
+
+/**
+ * A numbered group's line for its closed heading, once any of its answers
+ * differs from where it started: "Petrol £420 · Diesel £230 · Electricity
+ * £910". Amounts above zero, and choices changed; null when none differs.
+ */
+export function stepSummary(fields, { answer, applies, changed, inputs }) {
+  const shown = fields.filter(applies);
+  if (!shown.some(changed)) return null;
+  const parts = [];
+  for (const id of shown) {
+    if (NUMBER_CONFIGS[id]) {
+      if (answer(id) > 0) parts.push(`${NUMBER_CONFIGS[id].label} ${pounds(answer(id))}`);
+    } else if (id === "claims_universal_credit") {
+      if (changed(id)) parts.push(inputs[id] ? "Claims Universal Credit" : "Does not claim Universal Credit");
+    } else if (CHOICE_CONFIGS[id] && changed(id)) {
+      const config = CHOICE_CONFIGS[id];
+      const chosen = config.options.find((option) => option.value === inputs[id]);
+      if (chosen) parts.push(id === "student_loan_plan" ? (chosen.value === "NONE" ? "No student loan" : `${chosen.label} student loan`) : `${config.label} ${chosen.label}`);
+    }
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+/**
+ * One numbered group: its heading (the number, title, one muted line and
+ * the policies it is asked for as tiny icons) is a button that opens and
+ * closes its boxes, with a chevron at the right. Closed, it keeps the
+ * heading and its line, and under them what its answers are once any
+ * differs from where it started.
+ */
+function StepGroup({ group, number, last, open, onToggle, summary, measures, children }) {
+  const collapse = useCollapse(open);
+  const headId = `household-step-${group.key}`;
+  const hintId = `${headId}-hint`;
+  const summaryId = `${headId}-summary`;
+  const panelId = `${headId}-panel`;
+  const showSummary = !open && summary;
+  return (
+    <section
+      className={`household-group household-step ${open ? "is-open" : ""}`.trim()}
+      role="group"
+      aria-labelledby={headId}
+      data-step={group.key}
+      data-last={last || undefined}
+    >
+      <h3 className="household-step-heading">
+        <button
+          type="button"
+          className="household-step-head household-step-toggle"
+          aria-expanded={open}
+          aria-controls={panelId}
+          aria-labelledby={headId}
+          aria-describedby={showSummary ? `${hintId} ${summaryId}` : hintId}
+          onClick={onToggle}
+        >
+          <span className="household-step-number" aria-hidden="true">
+            {number}
+          </span>
+          <span className="household-step-text">
+            <span className="household-step-title" id={headId}>
+              <span className="visually-hidden">{`Step ${number}:`}</span> {group.title}
+            </span>
+            <span className="household-step-hint" id={hintId}>
+              {group.hint}
+            </span>
+            {showSummary && (
+              <span className="household-step-summary" id={summaryId}>
+                {summary}
+              </span>
+            )}
+          </span>
+          {/* A tap on the icons shows their names, and leaves the group as it is */}
+          <span className="household-step-icons" onClick={(event) => event.stopPropagation()}>
+            <PolicyIcons measures={measures} />
+          </span>
+          <svg
+            className="household-more-chevron household-step-chevron"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+      </h3>
+      {collapse.mounted && (
+        <div id={panelId} className={`expander-body household-step-body ${collapse.expanded ? "is-expanded" : ""}`}>
+          <div className="expander-inner">
+            <div className="household-grid household-grid-step">{children}</div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
 }
 
 /**
@@ -435,19 +586,36 @@ function DetailsGroup({ id, title, icon, open, onToggle, summary, changed, onRes
   );
 }
 
+// A phone's width, as HouseholdCalculator.css's phone layout
+const PHONE_QUERY = "(max-width: 640px)";
+
+/** Whether the window matches a media query, following it as it changes. */
+function useNarrow(query) {
+  const matches = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(query).matches;
+  const [narrow, setNarrow] = useState(matches);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return undefined;
+    const list = window.matchMedia(query);
+    const onChange = () => setNarrow(list.matches);
+    list.addEventListener?.("change", onChange);
+    return () => list.removeEventListener?.("change", onChange);
+  }, [query]);
+  return narrow;
+}
+
 // The form's last state, kept for the session so switching tabs keeps it
-const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: {}, submitted: null, startFrom: null };
+const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: {}, stepOpen: {}, submitted: null, startFrom: null };
 
 /** Forget the form's saved state (a new session; for tests). */
 export function resetSavedWizard() {
-  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, moreOpen: {}, submitted: null, startFrom: null });
+  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, moreOpen: {}, stepOpen: {}, submitted: null, startFrom: null });
 }
 
 // The form's panel, opened by the "Your household" card
 const FORM_PANEL_ID = "household-form-panel";
 
 /**
- * The Household impact view: one list of questions about a household, each
+ * The Household calculator view: one list of questions about a household, each
  * opening in place, with its net income in the year chosen in the title
  * band before and after the selected policies shown alongside and updated
  * as the answers change, from policyengine.py's household calculation
@@ -482,10 +650,14 @@ function HouseholdCalculator({
   // More details' groups open, by title: closed at first; kept between tab
   // switches for the session
   const [moreOpen, setMoreOpen] = useState(() => savedWizard.moreOpen);
+  // The numbered groups opened or closed by hand, by key; a group not in
+  // it is open or closed as stepStartsOpen says. Kept for the session
+  const [stepOpen, setStepOpen] = useState(() => savedWizard.stepOpen);
   // The answers, year and policies last sent with Calculate: nothing is
   // asked before it, and a result stays tied to what it was asked with
   const [submitted, setSubmitted] = useState(() => savedWizard.submitted);
   const selectionKey = selectedPolicies.join(",");
+  const narrow = useNarrow(PHONE_QUERY);
 
   const handleInputChange = (id, value) => {
     setPresetId(null);
@@ -503,8 +675,9 @@ function HouseholdCalculator({
     savedWizard.startFrom = startFrom;
     savedWizard.formOpen = formOpen;
     savedWizard.moreOpen = moreOpen;
+    savedWizard.stepOpen = stepOpen;
     savedWizard.submitted = submitted;
-  }, [inputs, presetId, startFrom, formOpen, moreOpen, submitted]);
+  }, [inputs, presetId, startFrom, formOpen, moreOpen, stepOpen, submitted]);
 
   // The examples' precomputed answers, loaded once and added to the
   // session cache; `seeded` tells a request already waiting to look again
@@ -777,6 +950,12 @@ function HouseholdCalculator({
 
   // Whether a field applies to the answers so far (rent only when renting)
   const fieldApplies = (id) => !FIELD_APPLIES[id] || FIELD_APPLIES[id](inputs, childrenCount, year);
+  // The answers the selected policies read (utils/householdPolicyFields.js),
+  // asked up front, each with its policies; More details keeps the rest
+  const policyAsks = noneSelected ? [] : policyQuestions(householdPolicies, { inputs, year, applies: fieldApplies });
+  const askedUpFront = new Set(policyAsks.map((question) => question.id));
+  const inDetails = (id) => !askedUpFront.has(id);
+  const appliesInDetails = (id) => inDetails(id) && fieldApplies(id);
 
   // The children's ages, kept as the text the household request reads
   // ("5, 3")
@@ -798,8 +977,9 @@ function HouseholdCalculator({
     }));
   };
 
-  // One question: its box, label above and hint below
-  const renderField = (id) => {
+  // One question: its box, label above and hint below (none when `quiet`:
+  // its group's line says it)
+  const renderField = (id, { quiet = false } = {}) => {
     if (!fieldApplies(id)) return null;
     if (id === "children") return childAges.map(renderChild);
     let field;
@@ -865,7 +1045,7 @@ function HouseholdCalculator({
           label={config.label}
           options={config.options}
           value={inputs[id]}
-          hint={chosen?.hint ?? config.hint}
+          hint={quiet ? undefined : (chosen?.hint ?? config.hint)}
           hintAs={hintPlace(chosen?.hint ?? config.hint, config.hintAs)}
           {...(config.layout === "segmented" ? { layout: "segmented" } : {})}
           onChange={(value) => handleInputChange(id, value)}
@@ -875,7 +1055,7 @@ function HouseholdCalculator({
       const config = NUMBER_CONFIGS[id];
       const prefilled = PREFILLED[id] && (inputs[id] === null || inputs[id] === undefined);
       const value = inputs[id] ?? PREFILLED[id]?.(year, inputs) ?? 0;
-      const hint = PREFILL_HINTS[id] && prefilled ? PREFILL_HINTS[id](year, inputs) : config.hint;
+      const hint = PREFILL_HINTS[id] && prefilled ? PREFILL_HINTS[id](year, inputs) : quiet ? undefined : config.hint;
       field = (
         <div className="number-field-wrap">
           <NumberField
@@ -939,27 +1119,54 @@ function HouseholdCalculator({
   );
 
   const renderGrid = (fields, className = "") => (
-    <div className={`household-grid ${className}`.trim()}>{fields.map(renderField)}</div>
+    <div className={`household-grid ${className}`.trim()}>{fields.map((id) => renderField(id))}</div>
   );
 
   // An answer as the calculation reads it (a prefilled field's prefill)
   const answer = (id) => inputs[id] ?? PREFILLED[id]?.(year, inputs) ?? 0;
   // Whether an answer differs from where it started (WIZARD_DEFAULTS)
   const changedFromTypical = (id) => (PREFILLED[id] ? inputs[id] !== null && inputs[id] !== undefined : inputs[id] !== WIZARD_DEFAULTS[id]);
-  // A group's answers back to where they started
+  // A group's answers back to where they started (those it asks)
   const resetGroup = (group) => {
     setPresetId(null);
-    setInputs((prev) => ({ ...prev, ...Object.fromEntries(group.fields.map((id) => [id, WIZARD_DEFAULTS[id]])) }));
+    const fields = group.fields.filter(inDetails);
+    setInputs((prev) => ({ ...prev, ...Object.fromEntries(fields.map((id) => [id, WIZARD_DEFAULTS[id]])) }));
   };
 
+  // The numbered groups: You and Household always, each other one with
+  // the answers in it the selected policies read, its policies as tiny
+  // icons at the end of its heading
+  const measureFor = (policyId) => policies.find((policy) => policy.id === policyId) ?? { id: policyId, name: policyId };
+  const shownGroups = FORM_GROUPS.map((group) => {
+    const fields = group.always ? group.fields : group.fields.filter((id) => askedUpFront.has(id));
+    const used = new Set(policyAsks.filter((question) => fields.includes(question.id)).flatMap((question) => question.policies));
+    return { ...group, fields, policies: householdPolicies.filter((policyId) => used.has(policyId)) };
+  }).filter((group) => group.always || group.fields.length > 0);
+  // Whether a numbered group starts open: You and Household always; any
+  // other while a selected policy reads one of its answers, or while one
+  // of its answers differs from where it started. Opened or closed by
+  // hand, it stays so for the session. Closing one only hides its boxes:
+  // the answers stay as they are, and the calculation reads them all
+  const stepStartsOpen = (group) =>
+    Boolean(group.always) || group.policies.length > 0 || group.fields.filter(fieldApplies).some(changedFromTypical);
+  const isStepOpen = (group) => stepOpen[group.key] ?? stepStartsOpen(group);
+  const renderGroup = (group, index) => (
+    <StepGroup
+      key={group.key}
+      group={group}
+      number={index + 1}
+      last={index === shownGroups.length - 1}
+      open={isStepOpen(group)}
+      onToggle={() => setStepOpen((prev) => ({ ...prev, [group.key]: !isStepOpen(group) }))}
+      summary={stepSummary(group.fields, { answer, applies: fieldApplies, changed: changedFromTypical, inputs })}
+      measures={group.policies.map(measureFor)}
+    >
+      {group.fields.map((id) => renderField(id, { quiet: group.quiet?.includes(id) }))}
+    </StepGroup>
+  );
+
   const renderSection = (section, index) => {
-    if (!section.collapsible) {
-      return (
-        <section key={section.title} className="household-group household-essentials" aria-label={section.title}>
-          {renderGrid(section.fields, "household-grid-essentials")}
-        </section>
-      );
-    }
+    if (!section.collapsible) return shownGroups.map(renderGroup);
     const labelId = `household-section-${index}`;
     return (
       <section key={section.title} className="household-group household-more" aria-labelledby={labelId}>
@@ -979,7 +1186,7 @@ function HouseholdCalculator({
         </div>
         <div className="household-details">
           {section.groups.map((group) => {
-            const shown = group.fields.filter(fieldApplies);
+            const shown = group.fields.filter(appliesInDetails);
             if (shown.length === 0) return null;
             const slug = group.title.toLowerCase().replace(/[^a-z]+/g, "-");
             return (
@@ -990,11 +1197,11 @@ function HouseholdCalculator({
                 icon={group.icon}
                 open={Boolean(moreOpen[group.title])}
                 onToggle={() => setMoreOpen((prev) => ({ ...prev, [group.title]: !prev[group.title] }))}
-                summary={groupSummary(group.title, { answer, applies: fieldApplies, inputs, presetId })}
+                summary={groupSummary(group.title, { answer, applies: appliesInDetails, inputs, presetId })}
                 changed={shown.filter(changedFromTypical).length}
                 onReset={() => resetGroup(group)}
               >
-                {renderGrid(group.fields, "household-grid-details")}
+                {renderGrid(group.fields.filter(inDetails), "household-grid-details")}
               </DetailsGroup>
             );
           })}
@@ -1051,6 +1258,30 @@ function HouseholdCalculator({
       }
     : null;
 
+  // Calculate: in the form's header, or on a phone at its foot
+  const calculateButton = (
+    <button
+      type="submit"
+      className={`calculate-button ${running ? "is-busy" : ""}`}
+      disabled={running || noneSelected}
+      aria-busy={running || undefined}
+    >
+      {running ? (
+        <>
+          <span className="calculate-spinner" aria-hidden="true" />
+          Calculating…
+        </>
+      ) : (
+        <>
+          Calculate
+          <span className="calculate-arrow" aria-hidden="true">
+            →
+          </span>
+        </>
+      )}
+    </button>
+  );
+
   return (
     <div className="household-calculator">
       <HouseholdCards
@@ -1090,31 +1321,13 @@ function HouseholdCalculator({
               )}
             </div>
             {/* Always there: with an example's answers unedited it
-                calculates them again */}
-            <div className="household-header-actions">
-            <button
-              type="submit"
-              className={`calculate-button ${running ? "is-busy" : ""}`}
-              disabled={running || noneSelected}
-              aria-busy={running || undefined}
-            >
-              {running ? (
-                <>
-                  <span className="calculate-spinner" aria-hidden="true" />
-                  Calculating…
-                </>
-              ) : (
-                <>
-                  Calculate
-                  <span className="calculate-arrow" aria-hidden="true">
-                    →
-                  </span>
-                </>
-              )}
-            </button>
-            </div>
+                calculates them again; on a phone, at the form's foot */}
+            {!narrow && <div className="household-header-actions">{calculateButton}</div>}
           </div>
           {FORM_SECTIONS.map(renderSection)}
+          {/* On a phone, Calculate waits at the screen's foot while the
+              form is in view, after the questions in the tab order */}
+          {narrow && <div className="household-form-footer">{calculateButton}</div>}
         </form>
         </div>
         </div>
@@ -1128,7 +1341,7 @@ function HouseholdCalculator({
           {refusedDefinitions.length > 0 && householdResult.error.unchecked ? (
             // Nothing to tell the measures apart by: removing them all would
             // empty the national figures too, so offer to ask again instead
-            <UnavailableNotice reason="Household impact can't be checked right now">
+            <UnavailableNotice reason="Household calculator can't be checked right now">
               <p>
                 The household calculator isn&apos;t reporting the definitions it computes the measures from, so its
                 answers can&apos;t be checked against the published figures.
@@ -1139,13 +1352,13 @@ function HouseholdCalculator({
             </UnavailableNotice>
           ) : refusedDefinitions.length > 0 ? (
             <UnavailableMeasures
-              reason="Household impact is unavailable for the selected measures"
+              reason="Household calculator is unavailable for the selected measures"
               summary="The household calculator does not compute these measures from the definitions their published figures were approved on:"
               measures={refusedDefinitions}
               onRemove={onRemoveUnavailable}
             />
           ) : selectionUnavailable ? (
-            <UnavailableNotice reason="Household impact is unavailable for this selection">
+            <UnavailableNotice reason="Household calculator is unavailable for this selection">
               <p>These measures cannot be calculated for one household: {unavailableNames.join(", ")}.</p>
               <p>Select policies that can all be calculated to see your household&apos;s results.</p>
             </UnavailableNotice>

@@ -13,6 +13,7 @@ import { SCATTER_BINS, changeKind } from "../utils/publication/scatter";
 import { fiscalYearLabel } from "../utils/publication/format";
 import {
   CHANGE_AXIS_DOMAIN,
+  CHANGE_CAP_QUANTILE,
   clampToAxis,
   fitChangeAxisAcrossYears,
   householdsPerDot,
@@ -25,6 +26,7 @@ import {
 import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS, noHouseholdChange, chartMargin } from "../utils/chartTheme";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
+import { selectionPackageKey } from "../utils/geography/selection";
 import { colourFor } from "./publication/BinnedHouseholdScatter";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartMoreInfo from "./ChartMoreInfo";
@@ -35,8 +37,6 @@ import NoBreakYear from "./NoBreakYear";
 import "./HouseholdScatterTemplate.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import TitleIcon from "./TitleIcon";
-import PillSelect from "./PillSelect";
-import { shortNameOf } from "../utils/policyDetails";
 
 // The 2025 dashboard's household scatter (HouseholdChart, Autumn Budget
 // 2025), drawn from the binned cells: same axes, ticks, grid, zero line,
@@ -123,7 +123,7 @@ function ScatterMoreInfo({ basisLabel }) {
         how: [
           `Each dot is a group in a ${pounds(SCATTER_BINS.income_band_width)} band of ${basisLabel} income before the policies, fixed across years.`,
           "So a dot moves only sideways when the year changes, and its row stays the same households.",
-          `Change axis: 1st to 99th percentile across years, capped at ±${pounds(CHANGE_AXIS_DOMAIN[1])}; larger changes sit at its edge.`,
+          `Change axis: fitted to every year's dots with a little room each side, up to ±${pounds(CHANGE_AXIS_DOMAIN[1])}. Where a few far changes would squash the rest, a side stops at its ${Math.round(CHANGE_CAP_QUANTILE * 100)}th percentile, and the groups beyond are arrows at its edge.`,
           "No change (under £1 either way) is an unfilled ring on £0.",
         ],
         caveats: ["Groups with too few survey households are left out."],
@@ -205,6 +205,24 @@ function DotLayer({ xAxisMap, yAxisMap, width, dots, onHover }) {
         const cy = yAxis.scale(dot.income);
         // Fading out, or (mid-tween) beyond the axis: not drawn
         if (dot.opacity <= 0.01 || cx < left || cx > right) return null;
+        const hover = () => onHover(dot.hidden ? null : { dot, x: cx, y: cy, width });
+        if (dot.clamped) {
+          // Beyond the axis: an arrow on the edge, pointing the way it lies
+          const out = dot.change < 0 ? -1 : 1;
+          const r = DOT_RADIUS * 1.2;
+          return (
+            <path
+              key={dot.key}
+              data-dot={dot.key}
+              data-capped={out < 0 ? "low" : "high"}
+              d={`M${cx + out * r},${cy} L${cx - out * r * 0.6},${cy - r} L${cx - out * r * 0.6},${cy + r} Z`}
+              fill={colourFor(dot)}
+              fillOpacity={DOT_OPACITY}
+              opacity={DOT_OPACITY * Math.min(1, dot.opacity)}
+              onMouseEnter={hover}
+            />
+          );
+        }
         return (
           <circle
             key={dot.key}
@@ -217,7 +235,7 @@ function DotLayer({ xAxisMap, yAxisMap, width, dots, onHover }) {
             opacity={DOT_OPACITY * Math.min(1, dot.opacity)}
             stroke={isNoChange(dot) ? CHART_COLOURS.noChange : undefined}
             strokeWidth={isNoChange(dot) ? 1 : 0}
-            onMouseEnter={() => onHover(dot.hidden ? null : { dot, x: cx, y: cy, width })}
+            onMouseEnter={hover}
           />
         );
       })}
@@ -370,7 +388,9 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
           {pounds(point.incomeBand)}–{pounds(incomeTop)}
         </strong>{" "}
         had <strong style={{ color: colourFor(point) }}>{change}</strong>.
-        {point.clamped ? " Beyond the axis range, so drawn at its edge." : ""}
+        {point.clamped
+          ? " This is beyond the axis, so it is drawn as an arrow at its edge, pointing the way it lies."
+          : ""}
       </p>
     </div>
     </ViewportBox>
@@ -394,17 +414,19 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
  * survey household is shown on its own (#30): a dot's tooltip gives its
  * group.
  *
- * Cells are published per reform: one measure shows its own, every measure
- * the package's, and any other selection a notice.
+ * Cells are published per reform: one policy shows its own, several the
+ * published combined run of exactly those policies, and with no such run
+ * a notice. The policies are the header's selection; the card has no
+ * policy choice of its own.
  *
  * With `you` ({change, income, label?, incomeYear?, note?}), the chart
- * places the reader's household on it (Household impact): `change` is its
+ * places the reader's household on it (Household calculator): `change` is its
  * change in net income in `selectedYear`, `income` its baseline household
  * net income, the y axis's concept, in `incomeYear` (the basis year when
  * not given). The title is then `title`, and the line under it says what a
  * dot is and how households with incomes like the reader's changed.
  *
- * `embedded` draws it as one view of another card (the Household impact
+ * `embedded` draws it as one view of another card (the Household calculator
  * position card): no title, download menu or logo of its own; the card's
  * menu takes this chart's download, handed up through `onDownload`.
  */
@@ -422,26 +444,22 @@ function HouseholdScatter({
   const narrow = useNarrowViewport();
   const chartRef = useRef(null);
   const [hovered, setHovered] = useState(null);
-  // Several measures and no single published reform: the measure shown
-  const [focusId, setFocusId] = useState(null);
   const data = useHouseholdScatterData();
-  const { combinedId } = useMeasureCatalogue();
+  // Several policies: the published combined run of exactly them, if any
+  const { manifest } = useMeasureCatalogue();
+  const packageKey = selectionPackageKey(manifest, selectedPolicies);
   const view = useMemo(
     () => scatterView({
       data,
       selectedIds: selectedPolicies,
       policyIds: (policies ?? []).filter((policy) => policy.displayable !== false).map((policy) => policy.id),
       year: selectedYear,
-      packageId: combinedId,
-      focusId,
+      packageKey,
     }),
-    [data, selectedPolicies, policies, selectedYear, combinedId, focusId],
+    [data, selectedPolicies, policies, selectedYear, packageKey],
   );
   const yearLabel = fiscalYearLabel(selectedYear);
-  const focus = view.kind === "points" ? view.focus : null;
-  const focusName = (id) => shortNameOf((policies ?? []).find((policy) => policy.id === id) ?? { id });
-  // The title names the one measure shown when several are selected
-  const chartTitle = focus ? `${title}, ${yearLabel}: ${focusName(view.reform)}` : `${title}, ${yearLabel}`;
+  const chartTitle = `${title}, ${yearLabel}`;
   const ready = view.kind === "points";
   const basisLabel = ready ? fiscalYearLabel(view.basisYear) : null;
   // The change axis is fitted once per selection, across every year, so
@@ -622,18 +640,6 @@ function HouseholdScatter({
         </div>
       )}
 
-      {focus && (
-        <div className="chart-controls household-scatter-controls">
-          <PillSelect
-            variant="light"
-            name="Policy shown"
-            prefix="Policy"
-            value={view.reform}
-            onChange={setFocusId}
-            options={focus.options.map((id) => ({ value: id, label: focusName(id) }))}
-          />
-        </div>
-      )}
       {/* The plot takes the rows the map beside it uses for its controls,
           map and colour scale, so the two cards line up and fill alike */}
       <div className="chart-plot household-scatter-template-plot">

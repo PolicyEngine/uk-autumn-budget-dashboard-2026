@@ -24,12 +24,14 @@ import {
   TrendingUp,
   UserCheck,
   Users,
+  Workflow,
   Cake,
 } from "lucide-react";
 
 // An icon for each term the Methodology view defines, by its text
 const TERM_ICONS = {
   Dataset: Database,
+  Pipeline: Workflow,
   Survey: ClipboardList,
   Weights: Scale,
   Projection: TrendingUp,

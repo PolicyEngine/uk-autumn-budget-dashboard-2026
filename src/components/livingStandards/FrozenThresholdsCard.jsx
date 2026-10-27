@@ -12,7 +12,7 @@ import LsCard from "./LsCard";
 import ViewToggle from "../ViewToggle";
 import SeriesToggle from "../SeriesToggle";
 import { LsLineChart, lineLegendItems } from "./LsCharts";
-import { CHART_COLOURS, useNarrowViewport } from "../../utils/chartTheme";
+import { CHART_COLOURS, SERIES_COLOURS, useNarrowViewport } from "../../utils/chartTheme";
 import { DASH } from "../../utils/livingStandards/baseline";
 import { fyLabel, formatOneDp } from "../../utils/livingStandards/outlook";
 import { buildChartCsv } from "../../utils/chartCsv";
@@ -32,14 +32,14 @@ const PA = {
   key: "personal_allowance",
   name: "Personal allowance",
   short: "Allowance",
-  colour: CHART_COLOURS.gain,
+  colour: SERIES_COLOURS[0],
   meaning: "The income on which no income tax is paid.",
 };
 const HR = {
   key: "higher_rate",
   name: "Higher rate threshold",
   short: "Higher rate",
-  colour: CHART_COLOURS.marketIncome,
+  colour: SERIES_COLOURS[2],
   meaning: "The income above which income tax is paid at the higher rate (the personal allowance plus the basic rate band).",
 };
 const BOTH = { ...PA, name: "Personal allowance and higher rate threshold", short: "Income tax" };
@@ -47,7 +47,7 @@ const PLAN_2 = {
   key: "plan_2",
   name: "Plan 2 student loan threshold",
   short: "Plan 2",
-  colour: CHART_COLOURS.ageOlder,
+  colour: SERIES_COLOURS[1],
   meaning: "The income above which Plan 2 student loan repayments are made (9% of income over it).",
 };
 const PAY = {
@@ -60,8 +60,9 @@ const PAY = {
 };
 /** The lines to draw: one for both income tax thresholds while they are equal, else one each. */
 const linesFor = (rows) => (sameThresholds(rows) ? [BOTH, PLAN_2, PAY] : [PA, HR, PLAN_2, PAY]);
-// End labels in a half-width card: short names and values in a narrow right margin
-const END_LABELS = { width: 112, minWidth: 420 };
+// End labels in a half-width card: short names (no values: the table and
+// tooltip give them) in a narrow right margin
+const END_LABELS = { width: 96, minWidth: 420 };
 
 const indexText = (v) => (v == null ? "–" : formatOneDp(v));
 const indexTick = (v) => String(v);
@@ -125,8 +126,7 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
   const lineSet = linesFor(rows);
   const shown = lineSet.map((l) => l.key).filter((k) => !hidden.includes(k));
   const setShown = (keys) => setHidden(lineSet.map((l) => l.key).filter((k) => !keys.includes(k)));
-  const last = rows.at(-1);
-  const lines = lineSet.filter((l) => shown.includes(l.key)).map((l) => ({ ...l, endLabel: `${l.short} ${indexText(last[l.key])}` }));
+  const lines = lineSet.filter((l) => shown.includes(l.key)).map((l) => ({ ...l, endLabel: l.short }));
   // Drawn in reverse: Plan 2 is frozen too until it is uprated, so it lies
   // under the income tax line until it parts from it (and the tooltip lists
   // the lines top to bottom, as they end)

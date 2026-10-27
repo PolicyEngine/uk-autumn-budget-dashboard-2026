@@ -1,5 +1,5 @@
 /**
- * What Household impact shows, worked out from the API's answer
+ * What Household calculator shows, worked out from the API's answer
  * (normaliseHouseholdImpact): the per-policy rows, the programme table,
  * the "largest changes" sentence and the marginal tax rates. Pure
  * functions, so the page and its tests read the same numbers.
@@ -521,8 +521,8 @@ export function areaName(brma) {
 
 /**
  * How the single-year calculation works, in one place: the Methodology
- * view's Household impact section shows these, as [term, text]; the
- * Household impact cards link there.
+ * view's Household calculator section shows these, as [term, text]; the
+ * Household calculator cards link there.
  */
 export const SINGLE_YEAR_METHOD = [
   [

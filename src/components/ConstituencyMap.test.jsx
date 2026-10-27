@@ -7,7 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import ConstituencyMap from "./ConstituencyMap";
+import ConstituencyMap, { legendPlacement } from "./ConstituencyMap";
 import { CHART_COLOURS } from "../utils/chartTheme";
 import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { exportMapAsSvg } from "../utils/exportMapAsSvg";
@@ -439,7 +439,7 @@ describe("ConstituencyMap", () => {
     expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("2030-31");
   });
 
-  it("never sums, and offers no measure without constituency results in the Measure picker", async () => {
+  it("never sums, and says so when no selected policy has constituency results", async () => {
     render(
       <ConstituencyMap
         selectedPolicies={["fuel_duty_freeze", "two_child_limit"]}
@@ -447,9 +447,8 @@ describe("ConstituencyMap", () => {
         policies={POLICIES}
       />,
     );
-    // No combined run of these two is published, so the card says so; and
-    // neither selected measure has constituency results (the fuel duty
-    // freeze is published by region only), so there is no policy to pick
+    // No combined run of these two is published and neither has its own
+    // constituency rows, so the card says so, with no Policy option
     expect(
       await screen.findByText("Constituency results for this combination of policies are not published yet."),
     ).toBeInTheDocument();
@@ -486,13 +485,14 @@ describe("ConstituencyMap", () => {
       expect(container.querySelector(".map-title-focus")).toHaveTextContent("2 child limit repeal"),
     );
     expect(container.querySelectorAll("path.constituency-path[data-state]")).toHaveLength(8);
-    // Two of three: no combined run of that pair, so the card says so
+    // Two of three: no combined run of that pair, so the card shows the one
+    // with its own rows (the Policy option's default), named in the title
     rerender(<ConstituencyMap selectedPolicies={["two_child_limit", "rail_fares_freeze"]} selectedYear={2029} policies={POLICIES} />);
-    expect(
-      await screen.findByText("Constituency results for this combination of policies are not published yet."),
-    ).toBeInTheDocument();
-    expect(container.querySelector("path.constituency-path[data-state]")).toBeNull();
-    expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: selected policies$/);
+    await waitFor(() =>
+      expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: 2 child limit repeal$/),
+    );
+    expect(screen.queryByText(/combination of policies are not published/)).toBeNull();
+    expect(container.querySelectorAll("path.constituency-path[data-state]")).toHaveLength(8);
   });
 
   it("points to the region view for a measure published by region only", async () => {
@@ -822,5 +822,76 @@ describe("exportMapAsSvg", () => {
     expect(svgText).toContain(">90% interval: 0.61% to 1.63%<");
     expect(svgText).toContain(">Reported<");
     expect(svgText).not.toContain("translate(10,10)");
+  });
+
+  describe("the Policy option and the key's place", () => {
+    // The fixture's package rows, copied out for two single policies too
+    const withSingles = () => {
+      const [header, ...rows] = geographyFixture("constituency.csv").trim().split("\n");
+      const copy = (id) => rows.map((row) => row.replace(",autumn_budget_2026_combined,", `,${id},`));
+      return `${[header, ...rows, ...copy("two_child_limit"), ...copy("rail_fares_freeze")].join("\n")}\n`;
+    };
+    const setWidth = (width) => {
+      window.innerWidth = width;
+      act(() => {
+        window.dispatchEvent(new Event("resize"));
+      });
+    };
+    const initialWidth = window.innerWidth;
+    afterEach(() => setWidth(initialWidth));
+
+    it("lists the combined run, then each selected policy with its own results, combined by default", async () => {
+      vi.stubGlobal("fetch", geographyFetch({ "/data/constituency.csv": withSingles() }));
+      const { container } = await renderMap();
+      const pill = screen.getByRole("button", { name: /^Options:/ });
+      expect(pill).toHaveTextContent(/^Combined · /);
+      expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: selected policies$/);
+      fireEvent.click(pill);
+      const group = screen.getByRole("radiogroup", { name: "Policy" });
+      expect([...group.querySelectorAll('[role="radio"]')].map((radio) => radio.textContent)).toEqual([
+        "Selected policies combined",
+        "2 child limit repeal",
+        "Rail fares freeze",
+      ]);
+      expect(screen.getByRole("radio", { name: "Selected policies combined" })).toHaveAttribute("aria-checked", "true");
+      // Selected is fill and weight, never a tick
+      expect(group.textContent).not.toMatch(/\u2713|\u2714/);
+      fireEvent.click(screen.getByRole("radio", { name: "2 child limit repeal" }));
+      await waitFor(() =>
+        expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: 2 child limit repeal$/),
+      );
+      expect(screen.getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^2 child limit repeal · /);
+    });
+
+    it("offers only the selected policies, and no Policy group with one run to show", async () => {
+      vi.stubGlobal("fetch", geographyFetch({ "/data/constituency.csv": withSingles() }));
+      const { container } = render(
+        <ConstituencyMap selectedPolicies={["fuel_duty_freeze", "rail_fares_freeze"]} selectedYear={2029} policies={POLICIES} />,
+      );
+      await waitFor(() =>
+        expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: Rail fares freeze$/),
+      );
+      fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+      expect(screen.queryByRole("radiogroup", { name: "Policy" })).toBeNull();
+    });
+
+    it("places the key beside the map from 640px, and under it on a phone", async () => {
+      expect(legendPlacement(1280)).toBe("side");
+      expect(legendPlacement(640)).toBe("side");
+      expect(legendPlacement(639)).toBe("below");
+      expect(legendPlacement(390)).toBe("below");
+      setWidth(1280);
+      const { container } = await renderMap();
+      const content = container.querySelector(".map-content");
+      const key = screen.getByRole("group", { name: "Key" });
+      expect(content).toHaveClass("is-legend-side");
+      expect(key).toHaveClass("map-key-side");
+      // Upright, gain at the top
+      expect(key.querySelector(".map-key-gradient").style.background).toContain("to top");
+      setWidth(390);
+      expect(content).toHaveClass("is-legend-below");
+      expect(key).toHaveClass("map-key-below");
+      expect(key.querySelector(".map-key-gradient").style.background).toContain("to right");
+    });
   });
 });

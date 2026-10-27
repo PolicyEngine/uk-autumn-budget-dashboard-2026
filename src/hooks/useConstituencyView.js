@@ -4,26 +4,9 @@ import {
   useGeographyData,
 } from "./useGeographyData";
 import { hasReform } from "../utils/geography/rows";
-import { SELECTION_NOT_PUBLISHED, chooseSelectionReform, selectionFocus } from "../utils/geography/selection";
-import { combinedEntryFor } from "../utils/publication/select";
+import { SELECTION_NOT_PUBLISHED, chooseAreaPolicy, selectionPackageKey } from "../utils/geography/selection";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { viewState } from "../utils/geography/view";
-
-/**
- * The reforms the constituency table has a result for: at least one seat,
- * in some year, with a reported non-zero change. A reform whose every
- * published figure is zero, and whose others are all withheld, draws a
- * blank map in every year, so it is not offered as a measure to show.
- */
-export function constituencyResultReforms(table) {
-  if (!table) return [];
-  return [...table.byReform.entries()]
-    .filter(([, rows]) =>
-      // A withheld row's value is blank, and Number("") is 0
-      rows.some((row) => row.tier !== "withheld" && Math.abs(Number(row.value)) > 0),
-    )
-    .map(([reform]) => reform);
-}
 
 /**
  * What the constituency views show for a selection, year and outcome: the
@@ -38,14 +21,17 @@ export function constituencyResultReforms(table) {
  *
  * @returns {{view: Object, choice: Object, table: Object|null,
  *   regionalTable: Object|null, boundariesReady: boolean,
- *   features: Array|null, routing: Object, regionalHasChoice: boolean}}
+ *   features: Array|null, routing: Object, regionalHasChoice: boolean,
+ *   policyOptions: Array<{value: string, reform: string}>,
+ *   policyValue: string|null}}
  */
 export function useConstituencyView({
   selectedPolicies = [],
   policies = [],
   selectedYear,
   outcome,
-  focusId = null,
+  // The card's Policy option ("combined" or a policy id); null for the default
+  policyChoice = null,
 }) {
   const constituency = useGeographyData("constituency");
   const regional = useGeographyData("regional");
@@ -58,31 +44,25 @@ export function useConstituencyView({
   ];
   const { manifest } = useMeasureCatalogue();
   const policyIds = policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id);
-  // The map shows the selection, as every other chart does: one policy's
-  // own run, or the verified combined run of exactly the selected policies
-  // (the manifest's combined entry for the set, as the other charts take
-  // it). With no area rows for that run the card says so; it never shows
-  // another policy in its place. The reader may pick one selected policy
-  // to see on its own (focusId), named in the title.
-  const packageEntry =
-    manifest && new Set(selectedPolicies).size > 1
-      ? combinedEntryFor(manifest, selectedPolicies)
-      : null;
-  const choice = selectionFocus(
-    chooseSelectionReform({
-      selectedIds: selectedPolicies,
-      policyIds,
-      reforms,
-      packageKey: packageEntry && !packageEntry.single ? packageEntry.key : null,
-    }),
-    {
-      // Offered one at a time: only policies with a constituency result
-      // (constituencyResultReforms), not ones published by region only or
-      // with no change reported in any seat
-      reforms: constituencyResultReforms(constituency.table),
-      focusId,
-    },
-  );
+  // The map shows a published run for the header's selection: the
+  // verified combined run of exactly the selected policies (the manifest's
+  // combined entry for the set, as the other charts take it), or one
+  // selected policy's own run, as the card's Policy option chooses
+  // (chooseAreaPolicy: combined by default when published, else the first
+  // selected policy with constituency rows). Figures are never summed. With
+  // no such run the card says so.
+  const {
+    choice,
+    options: policyOptions,
+    value: policyValue,
+  } = chooseAreaPolicy({
+    value: policyChoice,
+    selectedIds: selectedPolicies,
+    policyIds,
+    reforms,
+    packageKey: selectionPackageKey(manifest, selectedPolicies),
+    hasArea: (reform) => hasReform(constituency.table, reform),
+  });
   let view = viewState({
     data: constituency,
     choice,
@@ -122,5 +102,7 @@ export function useConstituencyView({
     boundariesReady: boundaries.status === "ready",
     routing,
     regionalHasChoice,
+    policyOptions,
+    policyValue,
   };
 }

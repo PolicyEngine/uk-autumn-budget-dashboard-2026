@@ -34,7 +34,7 @@ function show(value) {
   );
 }
 
-describe("Household impact's publication gate", () => {
+describe("Household calculator's publication gate", () => {
   it("offers to remove only the unavailable selected measures", () => {
     // Review of 62febdd, finding 4: a withdrawn selection had no way out
     const value = buildMeasureCatalogue({
@@ -95,7 +95,7 @@ describe("Household impact's publication gate", () => {
       </MeasureCatalogueProvider>,
     );
     expect(screen.queryByTestId("live-calculator")).not.toBeInTheDocument();
-    expect(screen.getByText("Household impact is unavailable for the selected measures")).toBeInTheDocument();
+    expect(screen.getByText("Household calculator is unavailable for the selected measures")).toBeInTheDocument();
     const listed = screen.getAllByRole("listitem").map((item) => item.textContent);
     expect(listed).toHaveLength(1);
     expect(listed[0]).toMatch(new RegExp(`^${value.byId.get("beta").name}: `));
@@ -127,7 +127,7 @@ describe("Household impact's publication gate", () => {
       </MeasureCatalogueProvider>,
     );
     expect(screen.queryByTestId("live-calculator")).not.toBeInTheDocument();
-    expect(screen.getByText("Household impact is unavailable for the selected policies")).toBeInTheDocument();
+    expect(screen.getByText("Household calculator is unavailable for the selected policies")).toBeInTheDocument();
     expect(screen.getByText(/do not name one model version/)).toBeInTheDocument();
   });
 
@@ -139,7 +139,7 @@ describe("Household impact's publication gate", () => {
         fc.pre(status !== "approved" || !verified || !supported || !manifest);
         show(catalogue({ status, verified, supported, manifest }));
         expect(screen.queryByTestId("live-calculator")).not.toBeInTheDocument();
-        expect(screen.getByText("Household impact is unavailable for the selected policies")).toBeInTheDocument();
+        expect(screen.getByText("Household calculator is unavailable for the selected policies")).toBeInTheDocument();
         expect(document.body).not.toHaveTextContent("£123,456");
         cleanup();
       },

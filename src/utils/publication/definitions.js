@@ -2,7 +2,7 @@
  * Each measure's definition as its publication receipt binds it, and the
  * comparison with the one the household API reports.
  *
- * Household impact asks the household API live. A receipt binds a measure's
+ * Household calculator asks the household API live. A receipt binds a measure's
  * baseline and reform by policyengine.py's reform identities, at the commit
  * it was made at; the API recomputes them at that commit from its own code
  * and reports them beside its answers (`?definition=<id>:<commit>`). The

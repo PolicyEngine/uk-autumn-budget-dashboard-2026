@@ -613,6 +613,7 @@ uv run uk-budget-data publish approve combined--<ids> --by "María Juaristi"
   - **No package by area from this run.** Before the combined run is approved, the area run's default ids are the approved single measures only. Publishing the package by area would need another area run after the combined approval, and a registered package alias with exactly those members (#235).
   - **Finish with `publish index`, then `publish check`, after the last manifest change** ("Bind the results by area last"): the index still refuses a manifest whose revision moved after it was built.
 
+- **After staging the package, confirm its `age_impact.csv` has every band in every year:** each year 2026 to 2031 has `all` and all six bands (`0-15` to `65+`), none withheld. By age reads the package's own rows when every policy is selected (a single may withhold its bands, as the State Pension income tax protection does from 2027-28), so a package missing a band shows that band as not drawn.
 - **Combined only.** `--combined` without `--reforms` generates only the combined run. It prints the directory it wrote.
 - **Results by area** (`uk-budget-data geography`): `--manifest` defaults to `public/data/manifest.json`. The command defaults to its approved single-measure ids, in manifest order, followed by approved packages whose exact members are all approved, and refuses explicit ids that are not approved, including held, provisional and not-computable measures. A package needs its own approved combined entry; approving its members alone is not enough. Constituency results default to the package; without an approved package, pass `--seat-reforms`. A missing manifest or one with no approved ids means there is nothing the national page may publish yet.
   - **What #76 checks:** when a reform touches a data limit in what the area run calculates, the command names it and writes no tables at all.
@@ -1202,6 +1203,18 @@ W5 re-measured on the same file for 2025:
 **Before it goes, the same comparables review as the first cut:** dated within 7 days for each analysis featured, with an unexplained gap of more than 25% pulled or explained.
 
 Exports are built only from approved entries of one manifest revision. A measure held at the first cut joins the briefing once it is approved. Each chart is stamped with the model, the data and the manifest revision (#22, a draft). Use no figure that is not in that revision.
+
+## Team test link
+
+The team's live test link is https://ab2026-local-preview.vercel.app/uk/autumn-budget-2026 (Vercel `ab2026-local-preview`, public, no login). It shows the local checkout's untracked data in `public/data`. Redeploy it after each local load: the G2 measures, the package, then the area run.
+
+```sh
+tools/deploy-test-link.sh [household-api-url]   # default: the Modal test app; or set HOUSEHOLD_API_URL
+```
+
+- It refuses unless `public/data/manifest.json` exists, has at least one provisional measure (so the page shows the "Provisional" banner), and isn't the manifest production serves.
+- It links the checkout, builds with `next build` (skipping `check-public-files`, which correctly refuses unsigned rehearsal data), deploys, and checks the link returns 200. `vercel.json`, `.env.local`, `.gitignore` and `.vercel/` are restored on exit, and nothing is committed.
+- **Rule:** this is a team link, not publication. Real publication is still the signed path: #207, then `main`, then the production Vercel deploy.
 
 ## Rollback
 

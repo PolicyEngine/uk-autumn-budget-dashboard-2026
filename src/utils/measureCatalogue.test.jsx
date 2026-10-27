@@ -245,7 +245,10 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   //   published name is used for any other id;
   // - SPENDING_MEASURES: those whose gain scales with fuel and electricity
   //   spending, for one line of text; one not published has no part, so the
-  //   line can only show less often.
+  //   line can only show less often;
+  // - POLICY_FIELDS: the answers each measure reads, so the household form
+  //   asks them up front; a measure not selected or not published has no
+  //   row in use, so the form only asks fewer questions up front.
   // Before #185: MODELLING_NOTE, whose id test_reforms.py holds to a
   // registered measure, and singleYear.js's labels for the household API's
   // own programme line of the same name as the Warm Home Discount top-up.
@@ -258,6 +261,7 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
     "components/personal/SingleYearResults.jsx": [/export const SPENDING_MEASURES = \[.*\];/],
     "utils/measureModelling.js": [/export const MODELLING_NOTE = \{[\s\S]*?\n\};/],
     "utils/singleYear.js": [/^\s*warm_home_discount_top_up: "[^"]*",$/gm],
+    "utils/householdPolicyFields.js": [/export const POLICY_FIELDS = \{[\s\S]*?\n\};/],
   };
   const uncommented = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   const outsideAllowed = (path, text) => (allowed[relative(root, path)] ?? []).reduce((rest, block) => rest.replace(block, ""), text);

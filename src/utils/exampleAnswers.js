@@ -1,5 +1,5 @@
 /**
- * Every answer the Household impact form sends, at a fixed value, for the
+ * Every answer the Household calculator form sends, at a fixed value, for the
  * example households (householdExamples.js) to
  * start from.
  *

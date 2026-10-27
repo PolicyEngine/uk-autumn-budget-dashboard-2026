@@ -12,7 +12,7 @@ import LsCard from "./LsCard";
 import ViewToggle from "../ViewToggle";
 import SeriesToggle from "../SeriesToggle";
 import { LsLineChart, lineLegendItems } from "./LsCharts";
-import { CHART_COLOURS, fittedAxis, useNarrowViewport } from "../../utils/chartTheme";
+import { SERIES_COLOURS, fittedAxis, useNarrowViewport } from "../../utils/chartTheme";
 import { formatOneDp, fyLabel } from "../../utils/livingStandards/outlook";
 import { buildChartCsv } from "../../utils/chartCsv";
 import { METHOD_ANCHORS } from "../methodology/anchors";
@@ -29,33 +29,33 @@ const LINES = {
     name: "Food, beverages and tobacco",
     short: "Food",
     inSentence: "food, beverages and tobacco",
-    colour: CHART_COLOURS.gain,
+    colour: SERIES_COLOURS[0],
     meaning: "Food, drinks (including alcohol) and tobacco.",
   },
   utilities: {
     name: "Utilities",
     inSentence: "utilities",
-    colour: CHART_COLOURS.loss,
+    colour: SERIES_COLOURS[1],
     meaning: "Household energy bills, mainly gas and electricity.",
   },
   fuels: {
     name: "Fuels",
     inSentence: "fuels",
-    colour: CHART_COLOURS.ageOlder,
+    colour: SERIES_COLOURS[2],
     meaning: "Petrol and diesel for vehicles.",
   },
   other_tradables: {
     name: "Other tradables",
     short: "Tradables",
     inSentence: "other tradables",
-    colour: CHART_COLOURS.ageAdults,
+    colour: SERIES_COLOURS[3],
     meaning: "Other goods that are traded internationally, such as clothing, cars and household goods.",
   },
   other_non_tradables: {
     name: "Other non-tradables",
     short: "Non-tradables",
     inSentence: "other non-tradables",
-    colour: CHART_COLOURS.netStatePension,
+    colour: SERIES_COLOURS[4],
     meaning: "Mostly services, such as rents, eating out, travel and insurance.",
   },
 };

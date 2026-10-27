@@ -6,7 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import OBRComparisonTable, { OBR_UNAVAILABLE, ObrComparisonCard, comparisonSentence } from "./OBRComparisonTable";
+import OBRComparisonTable, { OBR_CARD_TITLE, OBR_PENDING, OBR_UNAVAILABLE, ObrComparisonCard, comparisonSentence } from "./OBRComparisonTable";
 
 // The chart/table choice: two icon buttons (ViewToggle)
 const viewRadio = (label) => screen.getByRole("radio", { name: `Show as ${label.toLowerCase()}` });
@@ -238,24 +238,43 @@ describe("the OBR comparison foot", () => {
     expect(await within(foot).findByRole("heading", { name: /How our estimates compare with the official costings/ })).toBeInTheDocument();
   });
 
-  it("shows nothing while no OBR file can be bound to the approved results", async () => {
+  // The empty card: header and title, the one line, and nothing to act on
+  const expectEmptyCard = (foot) => {
+    expect(within(foot).getByRole("heading", { name: OBR_CARD_TITLE })).toBeInTheDocument();
+    expect(within(foot).getByText(OBR_PENDING)).toBeInTheDocument();
+    expect(within(foot).queryByRole("button")).toBeNull();
+    expect(within(foot).queryByRole("radio")).toBeNull();
+    expect(within(foot).queryByRole("table")).toBeNull();
+    expect(foot.querySelector("svg circle, svg line")).toBeNull();
+    expect(foot.textContent).not.toMatch(/£/);
+  };
+
+  it("offers the comparison, not the empty card, once a verified file is published", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(COSTED)));
+    renderBoth([ALPHA]);
+    const foot = screen.getByTestId("foot");
+    expect(await within(foot).findByRole("radio", { name: "Show as chart" })).toBeInTheDocument();
+    expect(within(foot).queryByText(OBR_PENDING)).toBeNull();
+    expect(within(foot).getByRole("heading", { name: /official costings, \d{4}-\d{2}/ })).toBeInTheDocument();
+  });
+
+  it("shows the empty card, never the file, while no OBR file can be bound to the approved results", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("not bound"); }));
     renderBoth([ALPHA]);
     expect(await screen.findByText(/The comparison with the official costings is unavailable/)).toBeInTheDocument();
-    expect(screen.getByTestId("foot")).toBeEmptyDOMElement();
+    expectEmptyCard(await screen.findByTestId("foot"));
   });
 
-  it("shows nothing, not even a pending line, until the official costings are published", async () => {
+  it("shows the empty card until the official costings are published", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 404 })));
-    const { container } = renderReact(
+    renderReact(
       <MeasureCatalogueProvider catalogue={catalogue}>
         <div data-testid="foot"><ObrComparisonCard selectedPolicies={[ALPHA]} selectedYear={YEAR} /></div>
       </MeasureCatalogueProvider>,
     );
-    await waitFor(() => expect(fetch).toHaveBeenCalled());
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(screen.getByTestId("foot")).toBeEmptyDOMElement();
-    expect(container.textContent).toBe("");
+    const foot = screen.getByTestId("foot");
+    await within(foot).findByText(OBR_PENDING);
+    expectEmptyCard(foot);
   });
 
   it("shows nothing when the OBR has costed none of the selected measures", async () => {

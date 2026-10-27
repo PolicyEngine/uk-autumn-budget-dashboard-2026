@@ -194,6 +194,18 @@
   border-radius: 8px;
 }
 
+/* A longer list (the map's policies): one option per line, left-aligned */
+.control-bar-segments.is-stacked {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.control-bar-segments.is-stacked .control-bar-segment {
+  text-align: left;
+  white-space: normal;
+  padding-block: 4px;
+}
+
 .control-bar-segment {
   flex: 1 1 auto;
   min-height: 28px;

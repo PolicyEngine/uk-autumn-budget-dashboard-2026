@@ -43,7 +43,7 @@ export const areaViewsAvailable = (routing) =>
  * @param {Object} options
  * @param {{status: string, table: Object|null}} options.data - A file's
  *   state, from useGeographyData.
- * @param {Object} options.choice - From chooseReform.
+ * @param {Object} options.choice - From chooseSelectionReform.
  * @param {number} options.year
  * @param {string} options.outcome
  * @param {string} options.place - "by region" or "by constituency".
@@ -93,12 +93,6 @@ export function viewState({ data, choice, year, outcome, place, routing = null }
   }
   if (choice.kind === "none") {
     return notice(`Select a policy to see results ${place}.`);
-  }
-  if (choice.kind === "pick") {
-    return notice(
-      `Results ${place} are shown for one policy at a time, or for all policies together.`,
-      "Select one policy, or all of them. Figures for different policies are published separately and are not added together.",
-    );
   }
   if (choice.kind === "no-package") {
     if (choice.reason) return notice(choice.reason);
