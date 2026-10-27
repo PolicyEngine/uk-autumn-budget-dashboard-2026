@@ -1,4 +1,4 @@
-// Prices by spending category, OBR forecast: loads
+// Prices by spending category: loads
 // public/data/obr_price_categories.json (written by
 // tools/extract-obr-price-categories.mjs from Table 1.19 of the OBR's March
 // 2026 economy detailed forecast tables): year-on-year CPI inflation for the

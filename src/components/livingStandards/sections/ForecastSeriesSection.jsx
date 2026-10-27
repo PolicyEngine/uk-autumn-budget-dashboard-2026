@@ -94,7 +94,11 @@ function cardSourceText(forecast, seriesList) {
   return other.length ? `${obr}; ${other.join(" and ")}: ${CSV_SOURCES.peDerived}` : obr;
 }
 
-function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
+// A forecast card's x axis title and its year basis in "About this chart",
+// where it sits beside the OBR prices by spending category, by financial year
+const CALENDAR_YEAR = { term: "Calendar year", meaning: "January to December, as the OBR publishes these measures; the spending categories beside them are by financial year." };
+
+function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange, yearBasis = false }) {
   const narrow = useNarrowViewport();
   // The lines drawn (chips, at least one on) and the one a chip's hover brings forward
   const [shown, setShown] = useState(() => seriesList.map((s) => s.key));
@@ -140,7 +144,10 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
       </>
     ),
     info: {
-      definitions: seriesList.filter((s) => MEASURES[s.key]).map((s) => ({ term: seriesName(s), meaning: MEASURES[s.key] })),
+      definitions: [
+        ...seriesList.filter((s) => MEASURES[s.key]).map((s) => ({ term: seriesName(s), meaning: MEASURES[s.key] })),
+        yearBasis && CALENDAR_YEAR,
+      ].filter(Boolean),
       caveats: seriesList.flatMap((s) => [NOT_OBR[s.key], SERIES_NOTES[s.key]]),
       sources: [
         ...forecastSources(forecast),
@@ -208,6 +215,7 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
         xFormat={String}
         yFormat={pctTick}
         tooltipFormat={pctText}
+        xLabel={yearBasis ? CALENDAR_YEAR.term : undefined}
         yLabel="Annual growth (%)"
         yDomain={axis.domain}
         yTicks={axis.ticks}
@@ -261,6 +269,7 @@ export default function ForecastSeriesSection({ data, view, onViewChange }) {
               forecast={forecast}
               view={view}
               onViewChange={onViewChange}
+              yearBasis={History === ObrPriceCategoriesCard}
             />
           ))}
           {History && <History data={data} view={view} onViewChange={onViewChange} />}
