@@ -63,6 +63,7 @@ import {
   CHART_COLOURS,
   divergingAxis,
   HOVER_CURSOR,
+  noHouseholdChange,
 } from "../utils/chartTheme";
 import { isPublished, singleAgeKey } from "../utils/ageImpact";
 import { DISPLAY_YEARS } from "../utils/displayYears";
@@ -480,7 +481,7 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
           />
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>None of the selected policies changes household incomes in {yearLabel}.</p>
+            <p>{noHouseholdChange(yearLabel)}</p>
           </div>
         )}
       </div>
