@@ -460,7 +460,8 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
             <p>{noHouseholdChange(yearLabel)}</p>
           </div>
         ) : single ? (
-          <ResponsiveContainer width="100%" height={height}>
+          // As tall as the plot row in a pair (globals.css), else `height`
+          <ResponsiveContainer width="100%" height="100%" minHeight={height}>
             <ComposedChart data={singleDrawn} margin={plotMargin(narrow)} barCategoryGap="14%" stackOffset="sign">
               <CartesianGrid {...GRID_PROPS} />
               <ReferenceArea x1="16" x2="24" fill={YOUNG_FILL} ifOverflow="visible" />
@@ -507,7 +508,8 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <ResponsiveContainer width="100%" height={height}>
+          // As tall as the plot row in a pair (globals.css), else `height`
+          <ResponsiveContainer width="100%" height="100%" minHeight={height}>
             <ComposedChart data={data} margin={plotMargin(narrow)} stackOffset="sign">
               <CartesianGrid {...GRID_PROPS} />
               {youngLabel && <ReferenceArea x1={youngLabel} x2={youngLabel} fill={YOUNG_FILL} ifOverflow="visible" />}

@@ -1311,6 +1311,38 @@ body {
     grid-row: 7;
   }
 
+  /* A Recharts plot with no legend of its own (By age's Average change by
+     age, whose key is above the section) beside a card that has one: the
+     plot takes the legend row too and grows to fill it, so no empty band
+     opens between its axis and the logo. Its size is contained, so it
+     follows the shared rows and never props them open. */
+  .charts-grid:has(> div > .chart-legend:not(:empty))
+    > div:not(:only-child)
+    > .chart-plot:has(.recharts-responsive-container):has(+ .chart-legend:empty) {
+    grid-row: 4 / span 2;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .charts-grid:has(> div > .chart-legend:not(:empty))
+    > div:not(:only-child)
+    > .chart-plot:has(.recharts-responsive-container):has(+ .chart-legend:empty)
+    > .swap-transition-inner {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .charts-grid:has(> div > .chart-legend:not(:empty))
+    > div:not(:only-child)
+    > .chart-plot:has(+ .chart-legend:empty)
+    .recharts-responsive-container {
+    flex: 1 1 auto;
+    height: auto !important;
+    min-height: 300px;
+    contain: size;
+  }
+
   /* A Recharts chart draws its plot, legend and logo in one SVG: it takes
      rows 3 to 6 together (its pair draws the same parts at the same
      sizes, so they still line up). */
