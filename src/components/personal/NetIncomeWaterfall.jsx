@@ -1,16 +1,14 @@
 import { money, signedMoney } from "../../utils/singleYear";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../FloatingTooltip";
 import TitleIcon from "../TitleIcon";
-import { useRef } from "react";
-
-// A name mid-sentence: lower case first, unless it starts with an acronym
-const midSentence = (name) => (/^[A-Z]{2}/.test(name) ? name : name.charAt(0).toLowerCase() + name.slice(1));
+import { useId, useRef } from "react";
 
 /**
- * The card's one line, leading with which way net income moves, then the
- * policy that moves it most. No amounts for the change, before or after:
- * the tile above and the bars' end labels show them (each fact once).
- * "Your net income rises in 2027-28, mostly from zero VAT on electricity (+£43)."
+ * The chart's text alternative (read out, not shown: the tiles above say
+ * the change, the chart's chips the largest policy), leading with which
+ * way net income moves, then the policy that moves it most. Each measure
+ * by its own short name, never lower-cased: "State Pension protection".
+ * "Your net income rises in 2027-28, mostly from Zero VAT on electricity (+£43)."
  *
  * @param {{before: number, after: number}} totals
  * @param {Array<{name: string, label?: string, rounded: number}>|null} steps - null while split
@@ -19,7 +17,7 @@ const midSentence = (name) => (/^[A-Z]{2}/.test(name) ? name : name.charAt(0).to
 export function waterfallSentence(totals, steps, yearLabel) {
   const change = Math.round(totals.after - totals.before);
   const moving = (steps ?? []).filter((step) => step.id !== "interaction" && Math.round(step.rounded) !== 0);
-  const nameOf = (step) => midSentence(step.label ?? step.name);
+  const nameOf = (step) => step.label ?? step.name;
   const gains = moving.filter((step) => step.rounded > 0).sort((a, b) => b.rounded - a.rounded);
   const losses = moving.filter((step) => step.rounded < 0).sort((a, b) => a.rounded - b.rounded);
   const lead =
@@ -38,6 +36,23 @@ export function waterfallSentence(totals, steps, yearLabel) {
   return Math.abs(top.rounded) * 2 >= Math.abs(change)
     ? `${lead}, mostly from ${nameOf(top)} (${signedMoney(top.rounded)}).`
     : `${lead}; ${nameOf(top)} ${top.rounded > 0 ? "adds" : "takes"} the most (${signedMoney(top.rounded)}).`;
+}
+
+/**
+ * The chips on the chart: the largest gain and the largest loss when the
+ * policies pull both ways, else the largest one; none for a single policy
+ * (or the one step for all of them while the split is calculated).
+ *
+ * @param {Array<{id: string, rounded: number}>|null} steps
+ * @returns {Object<string, string>} chip text by row id
+ */
+export function largestSteps(steps) {
+  const moving = (steps ?? []).filter((step) => step.id !== "interaction" && Math.round(step.rounded) !== 0);
+  if (moving.length < 2) return {};
+  const gains = moving.filter((step) => step.rounded > 0).sort((a, b) => b.rounded - a.rounded);
+  const losses = moving.filter((step) => step.rounded < 0).sort((a, b) => a.rounded - b.rounded);
+  if (gains.length && losses.length) return { [gains[0].id]: "Largest gain", [losses[0].id]: "Largest loss" };
+  return { [(gains[0] ?? losses[0]).id]: "Largest" };
 }
 
 /** Each row of the waterfall: where its bar starts and ends. */
@@ -87,6 +102,7 @@ export function waterfallScaleStart(totals, steps) {
  */
 export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFailed = false }) {
   const wrapperRef = useRef(null);
+  const sentenceId = useId();
   const pending = steps === null;
   const rows = waterfallRows(totals, steps);
   const { tip, handlers } = useFloatingTooltip(
@@ -96,21 +112,30 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
   const start = waterfallScaleStart(totals, steps);
   const hi = Math.max(...rows.map((row) => row.to));
   const pct = (value) => ((value - start) / Math.max(hi - start, 1)) * 100;
+  const largest = largestSteps(steps);
+  const sentence = waterfallSentence(totals, steps, yearLabel);
+  // No change at all: the sentence is the panel's one note, shown
+  const noChange = !rows.some((row) => !row.total && Math.round(row.rounded) !== 0);
 
   return (
     <div className="net-income-waterfall" id="change-by-policy" data-split={pending ? (splitFailed ? "unavailable" : "pending") : "ready"} data-year={yearLabel}>
-      {/* A panel like the tiles above: their title style, the line as
-          its subtitle, then the chart */}
+      {/* A panel like the tiles above: their title, then the chart. The
+          tiles say the change; the chart marks its largest policy. The
+          sentence is the chart's text alternative, shown only when
+          nothing changes */}
       <div className="waterfall-header">
         <h3 className="forecast-tile-head waterfall-title">
           <TitleIcon name="bars" className="forecast-tile-icon" />
           <span className="forecast-tile-name">How each policy changes your income</span>
         </h3>
-        <p className="waterfall-sentence">{waterfallSentence(totals, steps, yearLabel)}</p>
+        <p id={sentenceId} className={noChange ? "waterfall-no-change" : "visually-hidden"}>
+          {sentence}
+        </p>
       </div>
       <div ref={wrapperRef} className="waterfall-chart" style={{ position: "relative" }}>
         <ol
           className="waterfall-rows"
+          aria-describedby={sentenceId}
           aria-label={`Net income from before to after the selected policies, ${yearLabel}: ${rows
             .map((row) => `${row.name} ${row.total ? money(row.to) : signedMoney(row.rounded)}`)
             .join("; ")}`}
@@ -121,10 +146,11 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
             const left = row.total ? 0 : pct(Math.min(row.from, row.to));
             const right = row.total ? pct(row.to) : pct(Math.max(row.from, row.to));
             const name = row.label ?? row.name;
+            const chip = largest[row.id];
             return (
               <li
                 key={row.id}
-                className={`waterfall-row ${row.total ? "is-total" : "is-step"} is-${tone}`}
+                className={`waterfall-row ${row.total ? "is-total" : "is-step"} is-${tone}${chip ? " is-largest" : ""}`}
                 data-row={row.id}
                 tabIndex={0}
                 aria-label={`${row.name}: ${value}`}
@@ -151,6 +177,12 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
                   <span className="waterfall-bar" style={{ left: `${left}%`, width: `max(2px, ${right - left}%)` }} />
                   {/* The scale does not start at zero: a break near the bar's left */}
                   {row.total && <span className="waterfall-break" />}
+                  {/* The largest policy's chip, in the empty run left of its bar */}
+                  {chip && (
+                    <span className="waterfall-chip" style={{ right: `calc(${100 - left}% + 6px)` }}>
+                      {chip}
+                    </span>
+                  )}
                   {/* The connector down to the next row's start */}
                   {index < rows.length - 1 && <span className="waterfall-link" style={{ left: `${pct(row.to)}%` }} />}
                 </span>

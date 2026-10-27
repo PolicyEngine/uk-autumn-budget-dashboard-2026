@@ -25,7 +25,7 @@ export const PROVISIONAL_LABEL =
 
 /** The provisional label before the Budget: the entries are candidates. */
 export const CANDIDATE_PROVISIONAL_LABEL =
-  "Provisional: candidate measures modelled before the Budget, not announced policy";
+  "Provisional: candidate policies modelled before the Budget, not announced policy";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}/;
 

@@ -8,6 +8,8 @@ import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import ConstituencyTable from "./ConstituencyTable";
 import { shortNameOf } from "../utils/policyDetails";
+import MeasureRowLabel from "./MeasureRowLabel";
+import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
   buildRankingCsv,
   rankingEntries,
@@ -65,6 +67,7 @@ import {
   noSeatMovedNote,
   seatStyle,
   seatSummary,
+  unchangedLine,
 } from "../utils/geography/seats";
 import {
   choiceLabel,
@@ -133,7 +136,7 @@ function constituencyCsvText(table, { reform, year, yearLabel, packageChoice, la
   const measures = packageChoice ? `${label}: ${names.join("; ")}` : label;
   return buildCsv(rowsFor(table, { reform, year }), [
     ["Generated", formatGenerated(new Date())],
-    [packageChoice ? "Measures" : "Measure", measures],
+    [packageChoice ? "Policies" : "Policy", measures],
     ["Reform", reform],
     ["Year", yearLabel],
     ["Units", EXPORT_UNITS],
@@ -385,15 +388,10 @@ function MapKey({ outcome, extent, counts, highlight, onHighlight }) {
         <InfoTip
           label="How to read the key"
           content={
-            <>
-              Colour runs smoothly from amber (a loss) through light grey (no change) to teal (a gain). The
-              scale runs from {low} to {high}, the same for every measure and year; larger changes take the end
-              colour. A
-              constituency whose 90% interval is too wide to place is too uncertain to classify, and mid grey.
-              Dotted: approximate, under 30 effective survey households. Hatched: not published, to protect
-              survey respondents&apos; confidentiality: under 10 survey households, or one or two would make up
-              too much of the figure. Solid: reported.
-            </>
+            `Amber is a loss, light grey no change and teal a gain, on one scale from ${low} to ${high} for every ` +
+            "policy and year. Mid grey is too uncertain to classify; dotted is approximate (under 30 effective survey " +
+            "households); hatched is not published, to protect survey respondents' confidentiality (under 10 survey " +
+            "households, or one or two would make up too much of the figure); solid is reported."
           }
         />
         <span className="map-key-count" aria-live="polite">
@@ -434,51 +432,78 @@ function strokeFor(code, states, selectedCode) {
   return seatStyle(states?.get(code));
 }
 
-/** A figure's text colour: teal for a gain, amber for a loss, else grey. */
-const figureColour = (direction) => DIRECTION_TEXT_COLOURS[direction] ?? CHART_COLOURS.axisTitle;
+/** A figure's text colour by its sign: teal for a gain, amber for a loss, else grey. */
+const signColour = (sign) => DIRECTION_TEXT_COLOURS[sign] ?? CHART_COLOURS.axisTitle;
 
 /**
- * One seat's card, as on last year's dashboard: the shown measure's average
- * household impact in £ and as a share of income, each selected measure's
- * own £ change, and one muted line on how firm the figure is. The hover
- * card and the pinned card (with its ×) are the same.
+ * One seat's card: the figure for what the map shows (one measure, or the
+ * package), in £ and as a share of income on one line, labelled with what
+ * it is; then the rest of the selection's own £ changes, largest first,
+ * each with a small bar to scale; then one muted line on how firm the
+ * figure is. The hover card and the pinned card (with its ×) are the same.
  */
 function SeatCard({ card }) {
+  const { byId } = useMeasureCatalogue();
+  const largest = Math.max(0, ...card.byPolicy.map((row) => Math.abs(row.value ?? 0)));
   return (
     <>
-      {card.average && (
+      {(card.average || card.relative) && (
         <div className="seat-card-figure">
-          <p className="seat-card-value" style={{ color: figureColour(card.average.direction) }}>
-            {card.average.text}
+          <p className="seat-card-headline">
+            {card.average && (
+              <span className="seat-card-value" style={{ color: signColour(card.average.sign) }}>
+                {card.average.text}
+              </span>
+            )}
+            {card.average && card.relative && <span className="seat-card-dot" aria-hidden="true"> · </span>}
+            {card.relative && (
+              <span className="seat-card-value seat-card-value-secondary" style={{ color: signColour(card.relative.sign) }}>
+                {card.relative.text}
+                <span className="seat-card-unit"> of income</span>
+              </span>
+            )}
           </p>
-          <p className="seat-card-label">Average household impact</p>
+          <p className="seat-card-label">{card.label ?? "Average household impact"}</p>
         </div>
       )}
-      {card.relative && (
-        <div className="seat-card-figure">
-          <p
-            className="seat-card-value seat-card-value-secondary"
-            style={{ color: figureColour(card.relative.direction) }}
-          >
-            {card.relative.text}
-          </p>
-          <p className="seat-card-label">Relative change</p>
-        </div>
-      )}
-      {card.byPolicy.length > 0 && (
+      {card.policiesHeading && (
         <div className="seat-card-policies">
-          <p className="seat-card-policies-heading">By policy:</p>
+          <p className="seat-card-policies-heading">{card.policiesHeading}</p>
           {card.byPolicy.map((row) => (
             <div key={row.id} className="seat-card-policy">
-              <span className="seat-card-policy-name">{row.name}</span>
-              <span
-                className={row.value === null ? "seat-card-policy-value seat-card-withheld" : "seat-card-policy-value"}
-                style={row.value === null ? undefined : { color: figureColour(row.direction) }}
-              >
-                {row.text}
-              </span>
+              <MeasureRowLabel tip={false} measure={byId?.get(row.id) ?? { id: row.id, name: row.name }} name={row.name} nameClassName="seat-card-policy-name" />
+              {row.value !== null && (
+                <span className="seat-card-policy-bar" aria-hidden="true">
+                  {largest > 0 && (
+                    <span
+                      style={{
+                        width: `${Math.max(4, (Math.abs(row.value) / largest) * 100)}%`,
+                        background: signColour(row.sign),
+                      }}
+                    />
+                  )}
+                </span>
+              )}
+              {row.value === null ? (
+                <Tip content={row.title}>
+                  <span className="seat-card-policy-value seat-card-withheld" tabIndex={0}>
+                    {row.text}
+                  </span>
+                </Tip>
+              ) : (
+                <span className="seat-card-policy-value" style={{ color: signColour(row.sign) }}>
+                  {row.text}
+                </span>
+              )}
             </div>
           ))}
+          {card.unchanged.length > 0 && (
+            <Tip content={card.unchanged.join(", ")}>
+              <p className="seat-card-unchanged" tabIndex={0}>
+                {unchangedLine(card.unchanged.length)}
+              </p>
+            </Tip>
+          )}
         </div>
       )}
       {card.note && (
@@ -868,6 +893,7 @@ export default function ConstituencyMap({
           year: selectedYear,
           outcome,
           measures: cardMeasures,
+          label: choice.kind === "package" ? "All policies" : null,
         })
       : null;
   const card = selectedCode ? cardFor(selectedCode) : null;
@@ -916,7 +942,7 @@ export default function ConstituencyMap({
     let top = canvasHeight / 2 - CARD_GAP - height;
     if (top < 0) top = canvasHeight / 2 + CARD_GAP;
     setCardPlace({ left, top: Math.min(Math.max(0, top), maxY), maxHeight: canvasHeight });
-  }, [card?.title, card?.byPolicy.length, card?.note, card?.region, selectedCode]);
+  }, [card?.title, card?.byPolicy.length, card?.unchanged.length, card?.note, card?.region, selectedCode]);
 
   // Escape closes the pinned card
   useEffect(() => {
@@ -1039,7 +1065,7 @@ export default function ConstituencyMap({
   // is shown, and the view
   const optionGroups = [
     choice.focus && choice.focus.options.length > 1 && {
-      label: "Measure",
+      label: "Policy",
       value: choice.reform,
       onChange: setFocusId,
       options: choice.focus.options.map((id) => ({ value: id, label: focusName(id) })),

@@ -1,5 +1,5 @@
 import SourceLink from "./SourceLink";
-import { ArrowUpRight, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import TitleIcon from "./TitleIcon";
 import "./LandingPage.css";
 
@@ -40,7 +40,7 @@ function LandingBox({ tab, sub, icon, title, description, onOpen }) {
 const boxes = (provisional) => [
   ["dashboard", "finances", "users", "The Budget and society", "Costs and who gains or loses"],
   ["household", undefined, "house", "Your household", "See how your income changes"],
-  ["policies", undefined, "list", provisional ? "The measures modelled" : "What's in the Budget", "Every measure, and how we model it"],
+  ["policies", undefined, "list", provisional ? "The policies modelled" : "What's in the Budget", "Every policy, and how we model it"],
 ];
 
 /**
@@ -54,7 +54,7 @@ export function LandingIntro({ headingId, provisional, className = "landing-hero
       <h2 id={headingId} className="landing-heading">Autumn Budget 2026: fiscal and distributional analysis</h2>
       <p className="landing-intro">
         Estimates from <SourceLink source="policyengine_uk_model" />{" "}of how
-        Autumn Budget 2026 measures affect the public finances and household
+        Autumn Budget 2026 policies affect the public finances and household
         incomes across the income distribution, regions and age groups, set
         against the pre-measures forecast. Costings are our own; the economic
         forecast is the OBR&rsquo;s{" "}
@@ -92,7 +92,8 @@ function LandingRow({ tab, sub, icon, title, description, onOpen }) {
 
 /**
  * The three ways in: boxes side by side (the landing page), or a list of
- * rows (`list`, the overview drawer), labelled by `labelledBy`.
+ * rows (`list`, the overview drawer's "In this dashboard" card), labelled
+ * by `labelledBy`.
  */
 export function LandingBoxes({ onOpen, list = false, labelledBy, provisional = false }) {
   const BOXES = boxes(provisional);
@@ -102,18 +103,6 @@ export function LandingBoxes({ onOpen, list = false, labelledBy, provisional = f
         {BOXES.map(([tab, sub, icon, title, description]) => (
           <LandingRow key={tab} tab={tab} sub={sub} icon={icon} title={title} description={description} onOpen={onOpen} />
         ))}
-        {/* The PolicyEngine website, in a new tab */}
-        <li>
-          <a className="landing-row" href="https://policyengine.org/uk" target="_blank" rel="noopener noreferrer">
-            <TitleIcon name="compass" size={18} className="landing-row-icon" />
-            <span className="landing-row-text">
-              <span className="landing-row-title">PolicyEngine</span>
-              <span className="landing-row-description">More research, the model and the API</span>
-            </span>
-            <span className="visually-hidden"> (opens in a new tab)</span>
-            <ArrowUpRight className="landing-row-chevron" size={18} strokeWidth={2} aria-hidden="true" />
-          </a>
-        </li>
       </ul>
     );
   }

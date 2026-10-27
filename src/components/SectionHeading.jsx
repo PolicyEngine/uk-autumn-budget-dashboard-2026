@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import TitleIcon from "./TitleIcon";
 import Tip from "./Tip";
+import { scrollBelowBars, smoothUnlessReduced } from "../utils/pageScroll";
 
 /** "Who gains and from what" -> "who-gains-and-from-what" */
 export const sectionSlug = (text) =>
@@ -31,7 +32,7 @@ function SectionHeading({ title, subtitle, id, icon, className = "" }) {
       const element = ref.current;
       if (!element || element.offsetParent === null) return;
       hashHandled = true;
-      element.scrollIntoView?.({ block: "start" });
+      scrollBelowBars(element);
     });
     return () => window.cancelAnimationFrame(frame);
   }, [anchor]);
@@ -46,7 +47,7 @@ function SectionHeading({ title, subtitle, id, icon, className = "" }) {
     event.preventDefault();
     const url = `${window.location.origin}${window.location.pathname}${window.location.search}#${anchor}`;
     window.history.replaceState(window.history.state, "", url);
-    ref.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    scrollBelowBars(ref.current, { behavior: smoothUnlessReduced() });
     navigator.clipboard?.writeText(url).then(
       () => setCopied(true),
       () => {},

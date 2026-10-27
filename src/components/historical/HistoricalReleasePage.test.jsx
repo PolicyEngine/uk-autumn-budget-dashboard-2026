@@ -68,7 +68,7 @@ describe("a past event's page", () => {
     // The revenue chart, with its one sentence for the year shown (main's
     // description, which replaced its fixed one)
     const yearShown = `${IN_DATA}-${String((IN_DATA + 1) % 100).padStart(2, "0")}`;
-    expect(screen.getByText(new RegExp(`^In ${yearShown}, the selected measures `))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`^In ${yearShown}, the selected policies `))).toBeInTheDocument();
     // A past event awaits no Treasury costing
     expect(screen.getByText(HISTORICAL_PROVISIONAL_LABEL)).toBeInTheDocument();
     expect(screen.queryByText(PROVISIONAL_LABEL)).toBeNull();

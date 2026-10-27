@@ -107,7 +107,7 @@ describe("the page's verified publication catalogue", () => {
     window.history.replaceState({}, "", `/?sub=all&policies=${id}`);
     vi.stubGlobal("fetch", dashboardFixtureFetch());
     render(<App />);
-    expect(await screen.findByText("Some selected measures are unavailable")).toBeInTheDocument();
+    expect(await screen.findByText("Some selected policies are unavailable")).toBeInTheDocument();
     expect(new URLSearchParams(window.location.search).get("policies")).toBe(id);
     expect(screen.queryByTestId("budget-figures")).toBeNull();
     expect(screen.queryByTestId("distributional-figures")).toBeNull();
@@ -150,7 +150,7 @@ describe("an open page follows the publication", () => {
     next.revision += 1;
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(next) } }));
     await act(async () => { window.dispatchEvent(new Event("focus")); });
-    expect(await screen.findByText("Some selected measures are unavailable")).toBeInTheDocument();
+    expect(await screen.findByText("Some selected policies are unavailable")).toBeInTheDocument();
     expect(screen.queryByTestId("distributional-figures")).toBeNull();
     expect(screen.queryByTestId("budget-figures")).toBeNull();
     expect(new Set(new URLSearchParams(window.location.search).get("policies").split(","))).toEqual(new Set(["alpha", "beta"]));
@@ -168,12 +168,12 @@ describe("an open page follows the publication", () => {
     next.revision += 1;
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(next) } }));
     await act(async () => { window.dispatchEvent(new Event("focus")); });
-    const notice = (await screen.findByText("Some selected measures are unavailable")).closest(".publication-unavailable");
+    const notice = (await screen.findByText("Some selected policies are unavailable")).closest(".publication-unavailable");
     fireEvent.click(within(notice).getByRole("button", { name: /^Remove .* from the selection$/ }));
     await screen.findByTestId("distributional-figures");
     expect(rowIds()).toEqual(new Set(["alpha"]));
     expect(new URLSearchParams(window.location.search).get("policies")).toBe("alpha");
-    expect(screen.queryByText("Some selected measures are unavailable")).toBeNull();
+    expect(screen.queryByText("Some selected policies are unavailable")).toBeNull();
   });
 
   it("shows a default selection what is still published after a withdrawal, as a fresh load would", async () => {
@@ -189,7 +189,7 @@ describe("an open page follows the publication", () => {
     await act(async () => { window.dispatchEvent(new Event("focus")); });
     expect(await screen.findByText(/Updated with the latest published results/)).toBeInTheDocument();
     await waitFor(() => expect(rowIds()).toEqual(new Set(["alpha"])));
-    expect(screen.queryByText("Some selected measures are unavailable")).toBeNull();
+    expect(screen.queryByText("Some selected policies are unavailable")).toBeNull();
     expect(screen.queryByText(/Withdrawn/)).toBeNull();
     expect(new URLSearchParams(window.location.search).has("policies")).toBe(false);
   });
@@ -202,7 +202,7 @@ describe("an open page follows the publication", () => {
     await screen.findByTestId("distributional-figures");
     expect(rowIds()).toEqual(new Set(["alpha"]));
     await waitFor(() => expect(new URLSearchParams(window.location.search).get("policies")).toBe("alpha"));
-    expect(screen.queryByText("Some selected measures are unavailable")).toBeNull();
+    expect(screen.queryByText("Some selected policies are unavailable")).toBeNull();
     expect(screen.queryByText(/Withdrawn/)).toBeNull();
     expect(document.querySelector(".publication-unavailable")).toBeNull();
   });
@@ -224,7 +224,7 @@ describe("an open page follows the publication", () => {
     window.history.replaceState({}, "", "/?sub=all&policies=alpha,beta");
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures("stale")) } }));
     render(<App />);
-    const notice = (await screen.findByText("Some selected measures are unavailable")).closest(".publication-unavailable");
+    const notice = (await screen.findByText("Some selected policies are unavailable")).closest(".publication-unavailable");
     expect(notice.closest(".view-stage")).not.toBeNull();
     expect(within(notice).getByText(/\(Stale/)).toBeInTheDocument();
     expect(document.querySelectorAll(".publication-unavailable")).toHaveLength(1);
@@ -318,14 +318,14 @@ describe("an open page follows the publication", () => {
         });
         const tries = () => requested.filter((url) => url.endsWith(`/data/${failing}`)).length;
         render(<App />);
-        expect(await screen.findByText("Some selected measures are unavailable")).toBeInTheDocument();
+        expect(await screen.findByText("Some selected policies are unavailable")).toBeInTheDocument();
         expect(screen.queryByTestId("distributional-figures")).toBeNull();
 
         // A focus tries the failed file again; while it fails, no figure
         const before = tries();
         await act(async () => { window.dispatchEvent(new Event("focus")); });
         await waitFor(() => expect(tries()).toBeGreaterThan(before), { timeout: 10000 });
-        expect(screen.getByText("Some selected measures are unavailable")).toBeInTheDocument();
+        expect(screen.getByText("Some selected policies are unavailable")).toBeInTheDocument();
         expect(screen.queryByTestId("distributional-figures")).toBeNull();
 
         // The file serves its verified bytes again: a later check recovers.

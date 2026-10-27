@@ -5,7 +5,7 @@ import { describeRow, formatFigure, formatInterval } from "./format";
 describe("formatFigure", () => {
   it("shows £ figures with a sign, separators and only published digits", () => {
     expect(formatFigure("average_change", "120.0")).toBe("+£120");
-    expect(formatFigure("average_change", "-1234.5")).toBe("-£1,234.5");
+    expect(formatFigure("average_change", "-1234.5")).toBe("−£1,234.5");
     expect(formatFigure("average_change", "1234567")).toBe("+£1,234,567");
     expect(formatFigure("average_change", "12.5")).toBe("+£12.5");
     expect(formatFigure("average_change", "0")).toBe("£0");
@@ -17,7 +17,7 @@ describe("formatFigure", () => {
     expect(formatFigure("relative_change", "0.0123")).toBe("+1.23%");
     expect(formatFigure("relative_change", "0.01")).toBe("+1%");
     expect(formatFigure("relative_change", "0.0010")).toBe("+0.1%");
-    expect(formatFigure("relative_change", "-0.005")).toBe("-0.5%");
+    expect(formatFigure("relative_change", "-0.005")).toBe("−0.5%");
     expect(formatFigure("relative_change", "0.07")).toBe("+7%");
     expect(formatFigure("relative_change", "5e-05")).toBe("+0.005%");
     expect(formatFigure("relative_change", "0")).toBe("0%");
@@ -25,7 +25,7 @@ describe("formatFigure", () => {
 
   it("drops the plus sign on request, never the minus", () => {
     expect(formatFigure("average_change", "30", { signed: false })).toBe("£30");
-    expect(formatFigure("average_change", "-30", { signed: false })).toBe("-£30");
+    expect(formatFigure("average_change", "-30", { signed: false })).toBe("−£30");
     expect(formatFigure("relative_change", "0.012", { signed: false })).toBe("1.2%");
   });
 
@@ -57,7 +57,7 @@ describe("formatInterval", () => {
   it("joins the bounds with 'to'", () => {
     expect(formatInterval("average_change", "10.0", "30.0")).toBe("£10 to £30");
     expect(formatInterval("average_change", "-200.0", "380.0")).toBe(
-      "-£200 to £380",
+      "−£200 to £380",
     );
     expect(formatInterval("relative_change", "0.005", "0.012")).toBe(
       "0.5% to 1.2%",

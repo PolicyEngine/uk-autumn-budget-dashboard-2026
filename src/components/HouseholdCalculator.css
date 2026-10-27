@@ -600,7 +600,8 @@
 }
 
 .household-strip-fold-inner {
-  padding: 10px 0 0;
+  padding: 10px 3px 3px;
+  margin: 0 -3px -3px;
 }
 
 .household-cards.is-folded {
@@ -619,7 +620,7 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin: 0;
-  padding: 3px;
+  padding: 0;
   list-style: none;
 }
 
@@ -630,7 +631,9 @@
 }
 
 /* A chip: icon, short name (cut with an ellipsis if long; the full name
-   on hover), its figure at the right */
+   on hover), its figure at the right. The dashboard's selectable-row box
+   (the form's choice tiles, the Calculate button): --pe-radius-md, the card
+   border and the small shadow, 40px high like the button above it */
 .household-chip {
   --card-accent: var(--pe-teal-600);
   --card-ink: color-mix(in oklab, var(--card-accent) 50%, var(--pe-gray-900));
@@ -648,7 +651,7 @@
   color: var(--pe-gray-700);
   background: var(--pe-surface);
   border: 1px solid var(--card-border);
-  border-radius: 999px;
+  border-radius: var(--pe-radius-md);
   box-shadow: var(--pe-shadow-sm);
   cursor: pointer;
   transition:
@@ -729,6 +732,8 @@
 }
 
 .household-chip-figure {
+  justify-self: end;
+  text-align: right;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -1739,7 +1744,7 @@
   margin: 0;
 }
 
-.household-field .label-with-info .info-icon-wrapper {
+.household-field .label-with-info .info-tip {
   flex: none;
 }
 
@@ -1904,111 +1909,11 @@
   pointer-events: none;
 }
 
-/* "i" beside a label: its note on hover or focus */
-.info-icon-wrapper {
-  position: relative;
-  display: inline-flex;
-}
-
-.info-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  padding: 0;
-  font-family: Georgia, serif;
-  font-size: 9px;
-  font-style: italic;
-  font-weight: 600;
-  color: var(--pe-gray-500);
-  background: transparent;
-  border: 1px solid var(--pe-gray-300);
-  border-radius: 50%;
-  cursor: help;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-/* A 40px tap target around the small circle on a touch screen */
+/* A 40px tap target for the steppers on a touch screen */
 @media (pointer: coarse) {
-  .info-icon {
-    position: relative;
-  }
-
-  .info-icon::before {
-    content: "";
-    position: absolute;
-    inset: -13px;
-  }
-
   .household-field .stepper-button {
     width: 40px;
   }
-}
-
-.info-icon:hover,
-.info-icon:focus-visible {
-  color: var(--pe-surface);
-  background: var(--pe-teal-500);
-  border-color: var(--pe-teal-500);
-  outline: none;
-}
-
-.info-tooltip {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  z-index: 100;
-  width: 260px;
-  /* Never wider than the screen less a 16px margin each side; shifted
-     inside it by --tip-shift (utils/infoTooltip.js) near an edge */
-  max-width: calc(100vw - 32px);
-  box-sizing: border-box;
-  padding: 12px 14px;
-  font-size: 0.8rem;
-  font-weight: 400;
-  line-height: 1.5;
-  letter-spacing: normal;
-  text-transform: none;
-  color: var(--pe-gray-100);
-  background: var(--pe-gray-800);
-  border-radius: 8px;
-  box-shadow: var(--pe-shadow-lg);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateX(calc(-50% + var(--tip-shift, 0px)));
-  transition: opacity 0.2s ease, visibility 0.2s ease;
-}
-
-/* The arrow stays over the icon when the box is shifted */
-.info-tooltip::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: clamp(12px, calc(50% - var(--tip-shift, 0px)), calc(100% - 12px));
-  border: 6px solid transparent;
-  border-top-color: var(--pe-gray-800);
-  transform: translateX(-50%);
-}
-
-.info-icon-wrapper:hover .info-tooltip,
-.info-icon-wrapper:focus-within .info-tooltip {
-  opacity: 1;
-  visibility: visible;
-}
-
-/* Under the icon where the sticky band would cover it above
-   (utils/infoTooltip.js) */
-.info-icon-wrapper.info-tooltip-below .info-tooltip {
-  top: calc(100% + 8px);
-  bottom: auto;
-}
-
-.info-icon-wrapper.info-tooltip-below .info-tooltip::after {
-  top: auto;
-  bottom: 100%;
-  border-top-color: transparent;
-  border-bottom-color: var(--pe-gray-800);
 }
 
 /* A group row's chevron: turned while open */
@@ -2055,7 +1960,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .household-more-chevron,
-  .info-tooltip,
   .calculate-button,
   .calculate-arrow,
   .household-card,
@@ -2081,7 +1985,7 @@
 
 /* Scrolled to on Calculate: clear of the sticky title band and tabs */
 .household-results {
-  scroll-margin-top: calc(var(--sticky-offset, 120px) + 12px);
+  scroll-margin-top: calc(var(--sticky-offset, 120px) + 16px);
 }
 
 /* Section and group labels: a small muted icon before the text */
@@ -2099,18 +2003,20 @@
 
 /* The form, scrolled to from "Your household": clear of the sticky bars */
 .household-form {
-  scroll-margin-top: calc(var(--sticky-offset, 120px) + 12px);
+  scroll-margin-top: calc(var(--sticky-offset, 120px) + 16px);
 }
 
 /* "Show all households" / "Show fewer", at the end of the heading row: a
-   filled teal secondary button, plain to see */
+   filled teal secondary button, plain to see. The chips' box: the same
+   radius, height and small shadow, its right edge the list's */
 .household-cards-back {
   display: inline-flex;
   flex: none;
   align-items: center;
   gap: 7px;
-  margin: 0;
-  padding: 7px 14px 7px 11px;
+  height: 40px;
+  margin: 0 0 0 auto;
+  padding: 0 14px 0 11px;
   font: inherit;
   font-size: var(--fs-caption);
   font-weight: 600;
@@ -2118,6 +2024,7 @@
   background: var(--pe-teal-50);
   border: 1px solid var(--pe-teal-300);
   border-radius: var(--pe-radius-md);
+  box-shadow: var(--pe-shadow-sm);
   cursor: pointer;
   transition:
     background-color 0.15s ease,
@@ -2134,10 +2041,15 @@
   outline-offset: 2px;
 }
 
-/* A phone: the heading keeps its width, the button goes under it */
+/* A phone: the heading keeps its width, the button goes under it, at the
+   list's right edge, as tall as the chips */
 @media (max-width: 599px) {
   .household-cards-head {
     flex-wrap: wrap;
+  }
+
+  .household-cards-back {
+    height: 36px;
   }
 
   .household-cards-head .section-heading {
@@ -2223,26 +2135,69 @@
   text-overflow: ellipsis;
 }
 
-/* More details: a heading, then a row per group that opens it */
+/* More details: a header as the form's own, in small (a tinted icon, the
+   title with an "Optional" tag, one muted line), then a row per group
+   that opens it. One hairline above the section, from .household-group;
+   the rows are parted by hairlines between them, none above the first.
+   Header icon, row icons and the open groups' boxes share the card's left
+   edge, so the boxes' columns line up with the essentials' above. */
 .household-more {
-  padding: 16px 28px 8px;
+  padding: 22px 28px 10px;
 }
 
 .household-more-head {
   display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.household-more-head .household-more-icon {
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  border-radius: 7px;
+}
+
+.household-more-text {
+  min-width: 0;
+}
+
+.household-more-title {
+  display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
-  margin-bottom: 6px;
+  align-items: center;
+  gap: 4px 8px;
+  min-height: 26px;
+}
+
+.household-more-heading {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--pe-gray-800);
+}
+
+.household-more-tag {
+  padding: 1px 8px;
+  font-size: var(--fs-micro, 0.6875rem);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+  background: var(--pe-gray-50);
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 999px;
 }
 
 .household-more-note {
-  margin: 0;
+  margin: 2px 0 0;
   font-size: var(--fs-caption);
+  line-height: 1.45;
   color: var(--pe-gray-500);
 }
 
-.household-detail {
+.household-detail + .household-detail {
   border-top: 1px solid var(--pe-gray-100);
 }
 
@@ -2263,9 +2218,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
   min-height: 44px;
-  padding: 8px 4px;
+  margin: 0 -8px;
+  width: calc(100% + 16px);
+  padding: 8px;
   font: inherit;
   text-align: left;
   color: var(--pe-gray-800);
@@ -2337,7 +2293,7 @@
 
 @media (max-width: 480px) {
   .household-more {
-    padding: 14px 16px 6px;
+    padding: 18px 16px 6px;
   }
 
   /* On a phone the summary goes under the title */

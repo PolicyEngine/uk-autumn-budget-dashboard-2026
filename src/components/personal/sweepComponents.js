@@ -183,3 +183,29 @@ export function sweepChips(card, inUse, total, union = null) {
 export function hiddenParts(card, hidden) {
   return SWEEP_COMPONENTS.filter((component) => hidden.includes(component.key)).flatMap((component) => component[card] ?? []);
 }
+
+/**
+ * The one "Show:" control above both "Across earnings" cards: a chip for
+ * each component that applies on either card (in the cards' order and
+ * colours), the rest folded into "N more with no effect for you", then the
+ * total (each card's own total line).
+ *
+ * @param {Set<string>} union - Component keys that apply on either card
+ */
+export function sharedSweepChips(union) {
+  return [
+    ...SWEEP_COMPONENTS.map((component) => {
+      const shown = union.has(component.key);
+      return {
+        key: component.key,
+        label: component.label,
+        colour: component.color,
+        shape: "block",
+        disabled: !shown,
+        folded: !shown,
+        tip: !shown ? NO_EFFECT_TIP : null,
+      };
+    }),
+    { key: "total", label: "Total", colour: CHART_COLOURS.text },
+  ];
+}

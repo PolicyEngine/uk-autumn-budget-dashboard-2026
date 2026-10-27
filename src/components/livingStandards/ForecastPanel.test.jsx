@@ -118,9 +118,9 @@ describe("Forecast changes with one forecast", () => {
     expect(prices.querySelector(".chart-legend .series-toggle")).not.toBeNull();
     expect(prices.querySelector(".chart-legend .grouped-legend-groups")).toBeNull();
     expect(prices).not.toHaveTextContent("Budget forecast");
-    // "About this chart" opens on what each measure is
-    expect(prices).toHaveTextContent("What each measure is · Caveats · Sources");
-    expect(card(/^Earnings and other income$/)).not.toHaveTextContent("What each measure is");
+    // "About this chart" opens on what each measure is, under the one Definitions heading
+    expect(prices).toHaveTextContent("Definitions · Caveats · Sources");
+    expect(card(/^Earnings and other income$/)).not.toHaveTextContent("Definitions · Caveats · Sources");
     // A chip hides its line; the last one on stays on
     fireEvent.click(chips[3]);
     expect(chips[3]).toHaveAttribute("aria-pressed", "false");

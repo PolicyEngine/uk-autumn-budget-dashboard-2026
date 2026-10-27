@@ -18,7 +18,7 @@ import { opensLanding } from "./utils/landing";
 import TitleMark, { EdgeAboutTab } from "./components/HomeButton";
 import OverviewDrawer from "./components/OverviewDrawer";
 import { buildMeasureCatalogue, catalogueProvisional, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
-import { loadDashboard, loadVerifiedTablesOnce, budgetChartData } from "./utils/loadDashboard";
+import { dashboardFromParts, loadDashboard, loadDashboardParts, loadVerifiedTablesOnce, budgetChartData, sameParts } from "./utils/loadDashboard";
 import { pruneVerifiedCache } from "./utils/publication/cache";
 import { prefetchGeography } from "./hooks/useGeographyData";
 import { loadOutlook } from "./utils/livingStandards/outlook";
@@ -31,9 +31,9 @@ import { bootView } from "./utils/bootView";
 import UpdateToast from "./components/publication/UpdateToast";
 import { provisionalLabel } from "./utils/publication/manifest";
 import { DownloadContext, policiesLabel } from "./utils/downloadContext";
-import { installInfoTooltipClamp } from "./utils/infoTooltip";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
+import { createSiteNavIntent, isProgrammaticScroll, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
 
 // Each view's code (the chart library, the map's and the household
 // calculator's) loads when a view first opens, or while the page is idle,
@@ -202,12 +202,10 @@ export function viewFromLocation({ search, hash }) {
 // until the reader scrolls up (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
 export const SHELL_STICKY_NAV_SELECTOR =
   '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';
-// Once shown, the site nav stays at least this long; hides this long after
-// the pointer or focus leaves it; and a run down the page longer than this
-// (px) hides it after the minimum.
+// Once shown, the site nav stays this long (unless the reader scrolls down),
+// and hides this long after the pointer or focus leaves it.
 export const SITE_NAV_MIN_MS = 3000;
 export const SITE_NAV_LEAVE_MS = 1500;
-export const SITE_NAV_SCROLL_HIDE_PX = 120;
 
 /** Take the open sub-tab (?sub=) out of the address, or put `sub` there. */
 function dropSubTab(sub, extra = {}) {
@@ -255,15 +253,20 @@ function whenIdle(run) {
   return () => clearTimeout(handle);
 }
 
-function Dashboard({ published, unavailable = null, updated = false }) {
+const requestedPolicies = (requested) =>
+  requested === null ? [] : [...new Set(requested.split(",").map((id) => id.trim()).filter(Boolean))];
+
+function Dashboard({ published, unavailable = null, updated = false, fromBuild = false, checkedBy = "page" }) {
   const catalogue = useMeasureCatalogue();
   const POLICIES = catalogue.measures;
   // A link's ?policies= is a chosen selection. Without one the selection is
   // the default, every displayable measure, and follows the publication.
-  const requested = typeof window === "undefined" || !catalogue.manifest ? null : new URLSearchParams(window.location.search).get("policies");
-  const [chosenPolicies, setChosenPolicies] = useState(() =>
-    requested === null ? [] : [...new Set(requested.split(",").map((id) => id.trim()).filter(Boolean))],
-  );
+  // With the build's figures the first render is the server's (hydration),
+  // which knows no address: the link's selection is read before paint, with
+  // the rest of the address, below.
+  const readRequested = () => typeof window === "undefined" || !catalogue.manifest ? null : new URLSearchParams(window.location.search).get("policies");
+  const requested = fromBuild ? null : readRequested();
+  const [chosenPolicies, setChosenPolicies] = useState(() => requestedPolicies(requested));
   const [selectionChosen, setSelectionChosen] = useState(requested !== null);
   // The default is derived, never stored: an artifact that verifies later
   // under the same manifest joins it, as on a fresh load (review of
@@ -341,7 +344,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   const [overviewOpen, setOverviewOpen] = useState(false);
   const aboutTabRef = useRef(null);
   const closeOverview = useCallback(() => setOverviewOpen(false), []);
-  const PRESETS = [{ id: "autumn-budget", name: "All measures" }];
+  const PRESETS = [{ id: "autumn-budget", name: "All policies" }];
   // Cards fade and rise in as they scroll into view
   const mainRef = useRef(null);
   useScrollReveal(mainRef);
@@ -351,9 +354,6 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // and settles without them; the first opens with the first box or tab.
   const [visited, setVisited] = useState([]);
   if (!landing && !visited.includes(activeTab)) setVisited([...visited, activeTab]);
-
-  // Every "i" tooltip stays inside the screen (a phone's edge columns)
-  useEffect(() => installInfoTooltipClamp(), []);
 
   // The server and first hydrated render share the default shell. Read the
   // browser address before paint, and only then allow the URL writer below.
@@ -377,8 +377,16 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // 2026) opens the default
     const askedYear = new URLSearchParams(window.location.search).get("year");
     if (askedYear !== null) setDistributionalYear(selectableYearOr(askedYear));
+    if (fromBuild) {
+      const linked = readRequested();
+      if (linked !== null) {
+        setChosenPolicies(requestedPolicies(linked));
+        setSelectionChosen(true);
+      }
+    }
     setLocationReady(true);
-  }, []);
+    // Once, on mount: the address as the page opened
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!locationReady) return;
@@ -421,6 +429,12 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     setChosenPolicies(selectedPolicies.includes(policyId) ? selectedPolicies.filter((id) => id !== policyId) : [...selectedPolicies, policyId]);
     setSelectionChosen(true);
   };
+  // Select all and Clear: the whole selection in one update (a run of
+  // toggles read the same render's selection, so only the last one stuck)
+  const handlePoliciesSet = (ids) => {
+    setChosenPolicies(ids.filter((id) => catalogue.byId.get(id)?.displayable));
+    setSelectionChosen(true);
+  };
   // The one preset is the default, every displayable measure, so choosing
   // it hands the selection back to the publication
   const handlePresetClick = () => {
@@ -446,14 +460,17 @@ function Dashboard({ published, unavailable = null, updated = false }) {
 
   // The site nav is hidden above the window by default, so the title band
   // sits at the top of the page. It slides in above the band when the
-  // reader scrolls up (by 6px or more), points at the top 8px of the
-  // window, or tabs into it (globals.css: data-site-nav-shown on <html>,
-  // --site-nav-height; the slide is instant under reduced motion). Once in,
-  // it stays long enough to be clicked: at least SITE_NAV_MIN_MS whatever
-  // small scrolls happen, never while the pointer or focus is in it or one
-  // of its menus is open, and SITE_NAV_LEAVE_MS after the pointer or focus
-  // leaves. Only a deliberate scroll down (over SITE_NAV_SCROLL_HIDE_PX in
-  // one run) hides it, once the minimum is up.
+  // reader scrolls up (SITE_NAV_SHOW_UP_PX or more in one run, by their own
+  // wheel, trackpad, touch, keys or scrollbar: utils/pageScroll
+  // createSiteNavIntent), points at the top 8px of the window, or tabs into
+  // it (globals.css: data-site-nav-shown on <html>, --site-nav-height; the
+  // slide is instant under reduced motion). The page moving by itself (tab
+  // rows going compact, charts loading, scroll anchoring, the page's own
+  // scrolls) never shows it. Once in, it stays SITE_NAV_MIN_MS, and while
+  // the pointer or focus is in it or one of its menus is open, then hides
+  // SITE_NAV_LEAVE_MS after they leave. Any scroll down by the reader hides
+  // it at once (unless it is in use), and within its own height of the
+  // page's top it is always hidden.
   useEffect(() => {
     const root = document.documentElement;
     const nav = document.querySelector(SHELL_STICKY_NAV_SELECTOR);
@@ -463,13 +480,12 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     measure();
     const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
     if (nav) resize?.observe(nav);
-    let last = window.scrollY;
-    let prev = last;
-    let runFrom = last;
+    const intent = createSiteNavIntent({ y: window.scrollY });
     let frame = 0;
     let shownAt = 0;
     let timer = 0;
     let pointerIn = false;
+    let touchY = null;
     const isShown = () => root.hasAttribute("data-site-nav-shown");
     // The ui-kit menus (About, country) put a full-window overlay with
     // role="presentation" inside the nav while they are open
@@ -482,12 +498,6 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       if (timer) window.clearTimeout(timer);
       timer = 0;
     };
-    const show = () => {
-      clear();
-      shownAt = Date.now();
-      runFrom = window.scrollY;
-      root.setAttribute("data-site-nav-shown", "");
-    };
     const hideAfter = (delay) => {
       if (!isShown()) return;
       clear();
@@ -498,23 +508,64 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         else root.removeAttribute("data-site-nav-shown");
       }, wait);
     };
+    const show = () => {
+      clear();
+      shownAt = Date.now();
+      root.setAttribute("data-site-nav-shown", "");
+      hideAfter(SITE_NAV_MIN_MS);
+    };
+    const hideNow = () => {
+      if (!isShown() || holds()) return;
+      clear();
+      root.removeAttribute("data-site-nav-shown");
+    };
+    const follow = (what) => {
+      if (what === "show") show();
+      else if (what === "hide") hideNow();
+    };
     const check = () => {
       frame = 0;
       const y = window.scrollY;
-      // runFrom: where the current run down began
-      if (y < prev) runFrom = y;
-      prev = y;
-      if (y > last + 6) {
-        last = y;
-        if (isShown() && !holds() && y - runFrom > SITE_NAV_SCROLL_HIDE_PX) hideAfter(0);
-      } else if (y < last - 6) {
-        show();
-        last = y;
-      }
+      // A scroll the page made (utils/pageScroll) is not the reader's: it
+      // never brings the nav in over what it lined up under the bars.
+      // At the page's top the nav is always hidden, so the top looks as it
+      // does on load (unless the pointer or focus is in it), whoever scrolled
+      const top = nav?.offsetHeight || 0;
+      const programmatic = isProgrammaticScroll(y);
+      follow(intent.scroll(y, performance.now(), { programmatic, top }));
     };
     const onScroll = () => {
       if (!frame) frame = window.requestAnimationFrame(check);
     };
+    // The reader's own scrolling input, and which way it goes
+    const onWheel = (event) => {
+      if (event.ctrlKey || !event.deltaY) return;
+      follow(intent.input("wheel", event.deltaY < 0 ? "up" : "down", performance.now()));
+    };
+    const KEYS_UP = new Set(["ArrowUp", "PageUp", "Home"]);
+    const KEYS_DOWN = new Set(["ArrowDown", "PageDown", "End"]);
+    const onKey = (event) => {
+      // Keys typed into a field, or moving a slider, do not scroll the page
+      if (event.target instanceof Element && event.target.closest("input, textarea, select, [contenteditable]")) return;
+      const up = KEYS_UP.has(event.key) || (event.key === " " && event.shiftKey);
+      const down = KEYS_DOWN.has(event.key) || (event.key === " " && !event.shiftKey);
+      if (up || down) follow(intent.input("key", up ? "up" : "down", performance.now()));
+    };
+    const onTouchStart = (event) => {
+      touchY = event.touches[0]?.clientY ?? null;
+    };
+    // A finger moving down the screen scrolls the page up
+    const onTouchMove = (event) => {
+      const y = event.touches[0]?.clientY;
+      if (y === undefined || touchY === null || y === touchY) return;
+      follow(intent.input("touch", y > touchY ? "up" : "down", performance.now()));
+      touchY = y;
+    };
+    // Held on the window's scrollbar (right of the page's content box)
+    const onPointerDown = (event) => {
+      if (event.clientX >= root.clientWidth) intent.input("drag", "hold", performance.now());
+    };
+    const onPointerUp = () => intent.input("drag", "release", performance.now());
     const onPointer = (event) => {
       const over =
         !!nav &&
@@ -539,11 +590,23 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       }
     };
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("pointerdown", onPointerDown, { passive: true });
+    window.addEventListener("pointerup", onPointerUp, { passive: true });
     window.addEventListener("mousemove", onPointer, { passive: true });
     nav?.addEventListener("focusin", onFocusIn);
     nav?.addEventListener("focusout", onFocusOut);
     return () => {
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("mousemove", onPointer);
       nav?.removeEventListener("focusin", onFocusIn);
       nav?.removeEventListener("focusout", onFocusOut);
@@ -552,6 +615,30 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       resize?.disconnect();
       root.removeAttribute("data-site-nav-shown");
       root.style.removeProperty("--site-nav-height");
+    };
+  }, []);
+
+  // The first load (?tab=&sub=, a #hash) and back/forward land with the
+  // target, and every section heading, clear of the sticky bars: the
+  // page places itself (utils/pageScroll), not the browser's restore
+  useEffect(() => {
+    if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
+    let timer = 0;
+    const land = () => {
+      window.clearTimeout(timer);
+      // The views load their data after mounting: give them a moment
+      timer = window.setTimeout(() => {
+        const id = decodeURIComponent(window.location.hash.slice(1));
+        const target = id ? document.getElementById(id) : null;
+        if (target) scrollBelowBars(target);
+        else settleHeadings();
+      }, 600);
+    };
+    land();
+    window.addEventListener("popstate", land);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("popstate", land);
     };
   }, []);
 
@@ -672,7 +759,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           folded.open = true;
           folded = folded.parentElement?.closest("details");
         }
-        target.scrollIntoView?.({ block: "start" });
+        scrollBelowBars(target);
       };
       setTimeout(find, 100);
     };
@@ -701,17 +788,17 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     tabScrollPending.current = false;
     const sentinel = tabsSentinelRef.current;
     if (!sentinel || !appRef.current) return;
-    // Scrolling back up brings the site nav back, so its height counts
-    const style = getComputedStyle(appRef.current);
-    const band =
-      (parseFloat(style.getPropertyValue("--site-nav-height")) || 0) +
-      (parseFloat(style.getPropertyValue("--title-row-height")) || 0);
-    const top = sentinel.getBoundingClientRect().top + window.scrollY - band;
+    // Where the tabs sit right under the bars above them, measured from
+    // the bars as they are (utils/pageScroll). That scroll is the page's,
+    // so the site nav stays as it is; at the page's top it goes if shown.
+    const top = scrollTopFor(sentinel, { gap: 0, above: sentinel });
     // A view opened before returns to where it was left, if that was below
-    // the tabs; otherwise the tabs come back up under the band
+    // the tabs; otherwise the tabs come back up under the band. (At the
+    // page's top, where a shown nav cannot be cleared, the second branch
+    // takes it away.)
     const saved = tabScroll.current[activeTab];
-    if (saved !== undefined && saved > top) window.scrollTo({ top: saved });
-    else if (window.scrollY > top) window.scrollTo({ top });
+    if (saved !== undefined && saved > Math.max(0, top)) landAt(saved);
+    else scrollBelowBars(sentinel, { gap: 0, above: true, onlyUp: true });
   }, [activeTab, landing]);
 
   // An explicit URL selection is never silently narrowed into another
@@ -721,7 +808,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // open one only.
   const unavailableIds = selectedPolicies.filter((id) => !catalogue.byId.get(id)?.displayable);
   const selectionUnavailable = unavailableIds.length ? {
-    reason: "Some selected measures are unavailable",
+    reason: "Some selected policies are unavailable",
     // One line inside the view: each selected measure and why it is out
     // (a withdrawn one never reaches here; it drops from the selection)
     detail: unavailableIds.map((id) => {
@@ -754,7 +841,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           policies: policiesLabel(selectedPolicies, POLICIES),
           provisional: provisional ? provisionalLabel(catalogue.manifest) : null,
         }
-      : { policies: value === "outlook" ? "Current law (before the Budget measures)" : null, provisional: null };
+      : { policies: value === "outlook" ? "Current law (before the Budget policies)" : null, provisional: null };
 
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
@@ -811,8 +898,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         <div className="results-container">
           <SectionHeading
             icon="wallet"
-            title="How the measures change incomes"
-            subtitle="With the selected measures: how they change income growth across the income distribution. The change by income decile is on All households."
+            title="How the policies change incomes"
+            subtitle="With the selected policies: how they change income growth across the income distribution. The change by income decile is on All households."
           />
           {/* Growth across the distribution with the measures: the twin of
               the Pre-measures forecast's chart (current law), which links
@@ -823,7 +910,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
                 selectedPolicies={selectedPolicies}
                 selectedYear={distributionalYear}
                 twinLink={
-                  <TwinLink tab="outlook" sub="living" onShow={handleTabChange} label="Without the measures" anchor={GROWTH_CURRENT_LAW_ANCHOR} />
+                  <TwinLink tab="outlook" sub="living" onShow={handleTabChange} label="Without the policies" anchor={GROWTH_CURRENT_LAW_ANCHOR} />
                 }
               />
             </div>
@@ -832,7 +919,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             id="inequality-heading"
             icon="scale"
             title="Inequality"
-            subtitle={<>With the selected measures. {twin("living")}</>}
+            subtitle={<>With the selected policies. {twin("living")}</>}
           />
           <section id="inequality" className="report-section">
             <div className="charts-grid">
@@ -853,8 +940,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         <div className="results-container">
           <SectionHeading
             icon="lifebuoy"
-            title="How the measures change poverty"
-            subtitle={<>With the selected measures. {twin("poverty")}</>}
+            title="How the policies change poverty"
+            subtitle={<>With the selected policies. {twin("poverty")}</>}
           />
           {/* The change by year beside which measures move it */}
           <section id="poverty" className="report-section">
@@ -976,7 +1063,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
       ref={appRef}
       data-sub-band={hasSubTabs ? "" : undefined}
       data-tabs-stuck={tabsStuck ? "" : undefined}
-      data-publication={unavailable ? "unavailable" : "verified"}>
+      data-publication={unavailable ? "unavailable" : "verified"}
+      data-publication-check={checkedBy}>
       {/* A div, not <main>: the PolicyEngine shell around the page is the
           main landmark, and a second one inside it is a landmark error */}
       <div className="main-content" ref={mainRef}>
@@ -1009,6 +1097,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
               policies={POLICIES}
               selectedPolicies={selectedPolicies}
               onPolicyToggle={handlePolicyToggle}
+              onPoliciesSet={handlePoliciesSet}
               loading={Boolean(unavailable?.loading)}
               noneReason={unavailable?.reason}
               inactiveReason={policiesShown ? undefined : POLICIES_INACTIVE}
@@ -1072,7 +1161,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           <UnavailableNotice reason={viewUnavailable(value).reason}>
             {viewUnavailable(value).detail && <p>{viewUnavailable(value).detail}</p>}
             {unavailable ? (
-              unavailable.empty && <p>Figures appear here once the 2026 Budget measures are approved for publication.</p>
+              unavailable.empty && <p>Figures appear here once the 2026 Budget policies are approved for publication.</p>
             ) : (
               <>
                 <p>No figures are shown for a selection while any of it is unavailable.</p>
@@ -1093,7 +1182,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             <SectionHeading
               icon="fileText"
               title="Policies"
-              subtitle={`${provisional ? `${provisionalLabel(catalogue.manifest)}. ` : ""}What each measure changes, when, and how it is modelled.`}
+              subtitle={`${provisional ? `${provisionalLabel(catalogue.manifest)}. ` : ""}What each policy changes, when, and how it is modelled.`}
             />
             <section id="policy-details" className="report-section policy-details-content">
               <PolicyCards
@@ -1145,15 +1234,37 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     </div>
   );
 }
+/**
+ * The page's own check of the build's figures (app/publicationBoot.ts):
+ * once the opened view's code is in, so it does not share a slow line with
+ * it, the live manifest and every artifact load through the same checks as
+ * a page without them. Resolves to null when the result is exactly the
+ * build's, otherwise to the page's own parts; rejects when a check fails.
+ */
+async function reverifyBoot(base, boot, signal) {
+  await (opensLanding(window.location) ? Promise.resolve() : preloadView(bootView(window.location)));
+  if (signal.aborted) return null;
+  const parts = await loadDashboardParts(base, { signal });
+  return sameParts(parts, boot) ? null : parts;
+}
+
 // How often an open page checks for a newer publication, besides when it
 // regains focus
 const RECHECK_MS = 5 * 60 * 1000;
 
-function App() {
-  const [published, setPublished] = useState(null);
+/** @param {{ boot?: Object | null }} props */
+function App({ boot = null }) {
+  // The publication the build verified (app/publicationBoot.ts), shown from
+  // the first paint; the page's own check below then confirms it, or
+  // withdraws it. Without one the page loads and checks before it shows.
+  const [fromBuild] = useState(() => (boot ? dashboardFromParts(boot) : null));
+  const [published, setPublished] = useState(fromBuild);
   const [error, setError] = useState(null);
   const [updated, setUpdated] = useState(false);
-  const current = useRef(null);
+  // Who has checked the figures shown: "build" until the page has checked
+  // them itself, then "page" (data-publication-check)
+  const [checkedBy, setCheckedBy] = useState(fromBuild ? "build" : "page");
+  const current = useRef(fromBuild);
   const confirmer = useRef(null);
   // Stable for the page's life: each Household impact request waits on it
   const confirmPublication = useCallback(
@@ -1169,9 +1280,28 @@ function App() {
       setError(null);
     };
     let initialComplete = false;
-    const initial = loadDashboard(base, { signal: controller.signal })
-      .then((result) => { if (!controller.signal.aborted) show(result); })
-      .catch((failure) => { if (!controller.signal.aborted) setError(failure.message); })
+    const initial = (fromBuild
+      ? reverifyBoot(base, boot, controller.signal).then((parts) => {
+        if (controller.signal.aborted) return;
+        // The page's check found exactly the build's figures: they stay
+        if (parts === null) return setCheckedBy("page");
+        // Anything else: the page's own verified figures replace them
+        // (none, if the publication has gone)
+        const result = dashboardFromParts(parts);
+        show(result);
+        setCheckedBy("page");
+        if ((result.catalogue.manifest?.snapshotSha256 ?? null) !== boot.snapshotSha256 && parts.status === "ready") setUpdated(true);
+      })
+      : loadDashboard(base, { signal: controller.signal })
+        .then((result) => { if (!controller.signal.aborted) show(result); }))
+      .catch((failure) => {
+        if (controller.signal.aborted) return;
+        // A check that fails withdraws the build's figures too
+        current.current = null;
+        setPublished(null);
+        setError(failure.message);
+        setCheckedBy("page");
+      })
       .finally(() => { initialComplete = true; });
 
     // An open page follows the publication: a newer manifest replaces the
@@ -1221,9 +1351,10 @@ function App() {
       window.removeEventListener("focus", recheck);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+    // Once, on mount: the build's figures are the first render's
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const unavailable = !published && !error
-    ? { reason: "Loading published measures…", loading: true }
+    ? { reason: "Loading published policies…", loading: true }
     : error
     ? { reason: "Published results are unavailable", detail: error }
     : published.status === "no-manifest"
@@ -1235,7 +1366,7 @@ function App() {
   return (
     <PublicationCheckContext.Provider value={confirmPublication}>
       <MeasureCatalogueProvider catalogue={shown.catalogue}>
-        <Dashboard key={snapshot} published={shown} unavailable={unavailable} updated={updated && !unavailable} />
+        <Dashboard key={snapshot} published={shown} unavailable={unavailable} updated={updated && !unavailable} fromBuild={Boolean(boot)} checkedBy={checkedBy} />
       </MeasureCatalogueProvider>
     </PublicationCheckContext.Provider>
   );

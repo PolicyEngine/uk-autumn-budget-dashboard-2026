@@ -80,12 +80,12 @@ describe("PolicyCards", () => {
     expect(within(card).getByRole("heading", { name: "Warm Home Discount top-up" })).toBeTruthy();
     expect(card).toHaveTextContent("StartsWinter 2026-27");
     expect(card).toHaveTextContent("EndsAfter one winter");
-    expect(card.querySelector(".policy-card-topline")).toHaveTextContent("BenefitTemporary");
+    expect(card.querySelector(".policy-card-topline")).toHaveTextContent("EnergyTemporary");
     expect(within(card).getByRole("img", { name: /^In force from October 2026 to March 2027 \(one winter\)\.$/ })).toBeTruthy();
     const source = within(card).getByRole("link", { name: /Warm Home Discount/ });
     expect(source).toHaveAttribute("target", "_blank");
     expect(source).toHaveAttribute("rel", "noopener noreferrer");
-    const toggle = within(card).getByRole("button", { name: "How it is modelled" });
+    const toggle = within(card).getByRole("button", { name: "About this result" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
@@ -115,7 +115,8 @@ describe("PolicyCards", () => {
     // No empty blocks: as for a measure with no entry
     expect(card.querySelector(".policy-card-start")).toBeNull();
     expect(card.querySelector(".policy-card-when")).toBeNull();
-    expect(card.querySelector(".policy-card-type")).toBeNull();
+    // The category is derived from the publication, so it stays
+    expect(card.querySelector(".policy-card-type")).toHaveTextContent("Fuel duty");
     expect(card).not.toHaveTextContent("Temporary");
     expect(card.querySelector(".policy-card-details")).toBeNull();
     expect(screen.queryByRole("img", { name: /^In force/ })).toBeNull();
@@ -134,7 +135,9 @@ describe("PolicyCards", () => {
     expect(card).not.toHaveTextContent(detailsById[id].summary);
     expect(card).not.toHaveTextContent("Starts");
     expect(card).not.toHaveTextContent("Ends");
-    for (const slot of [".policy-card-spec", ".policy-card-when", ".policy-card-modelling", ".policy-card-type"]) {
+    // The category is derived from the publication, so it stays
+    expect(card.querySelector(".policy-card-type")).toHaveTextContent("VAT");
+    for (const slot of [".policy-card-spec", ".policy-card-when", ".policy-card-modelling"]) {
       expect(card.querySelector(slot), slot).toBeNull();
     }
     // Every element left in the card has something in it
@@ -173,10 +176,10 @@ describe("how it is modelled (measureModelling.js)", () => {
   const caveat = "The base is likely 1.5 to 1.7 times too high.";
   const modelled = (description, id = ALPHA) => ({ ...catalogue.byId.get(ALPHA), id, description: `${description} ${caveat}` });
 
-  // Open a card's "How it is modelled" and return it
+  // Open a card's "About this result" and return it
   const open = () => {
     const details = document.querySelector(".policy-card-details");
-    fireEvent.click(within(details).getByRole("button", { name: "How it is modelled" }));
+    fireEvent.click(within(details).getByRole("button", { name: "About this result" }));
     return details;
   };
 
@@ -193,7 +196,7 @@ describe("how it is modelled (measureModelling.js)", () => {
     const policy = published("badr_lifetime_limit_cut", "Business Asset Disposal Relief restricted", "revenue");
     render(<PolicyCards policies={[policy]} selectedPolicies={[policy.id]} />);
     const details = document.querySelector(".policy-card-details");
-    expect(within(details).getByRole("button", { name: "How it is modelled" })).toHaveAttribute("aria-expanded", "false");
+    expect(within(details).getByRole("button", { name: "About this result" })).toHaveAttribute("aria-expanded", "false");
     expect(details.querySelector(".disclosure-preview")).toHaveTextContent(/Caveats/);
     expect(details.querySelector(".disclosure-chip")).toBeNull();
     cleanup();
@@ -346,14 +349,14 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     // When it applies is on the timeline, so not in the label
     expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A limit$/);
     expect(block.querySelector(".pchg-tile.is-before")).toHaveTextContent("Current law£1,000");
-    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the measure£500−£500");
+    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy£500−£500");
     cleanup();
     const rate = tables("before-after", [
       { label: "A rate", unit: "percent", unit_words: null, primary: true, source, points: yearly(() => 0.15, (y) => (y >= 2027 ? 0 : 0.15)) },
     ]);
     block = within(card(rate)).getByRole("region", { name: /^What changes/ });
     expect(block.querySelector(".pchg-tile.is-before")).toHaveTextContent("Current law15%");
-    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the measure0%−15 points");
+    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy0%−15 points");
     expect(block.textContent).not.toMatch(/pp\b/);
     expect(block.querySelector("svg.pchg-svg, table")).toBeNull();
   });
@@ -365,7 +368,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     })));
     const table = within(card(three)).getByRole("table");
     expect(within(table).getAllByRole("row").map((row) => row.textContent)).toEqual([
-      "2031-32Current lawWith the measureChange", "A£100£90−£10", "B£200£190−£10", "C£300£290−£10",
+      "2031-32Current lawWith the policyChange", "A£100£90−£10", "B£200£190−£10", "C£300£290−£10",
     ]);
   });
 
@@ -377,7 +380,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     const item = card(window, { ...alpha, inForce: { from: "2026-10", to: "2028-03" } });
     const block = within(item).getByRole("region", { name: /^What changes/ });
     expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A VAT rate$/);
-    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the measure0%−5 points");
+    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy0%−5 points");
     // Each fact once: the timeline says how long, not the rates again
     expect(item.querySelector(".ptl-chip")).toHaveTextContent(/^18 months$/);
   });

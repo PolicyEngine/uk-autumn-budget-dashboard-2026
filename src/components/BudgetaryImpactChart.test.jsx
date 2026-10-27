@@ -165,7 +165,7 @@ describe("BudgetaryImpactChart", () => {
       </MeasureCatalogueProvider>,
     );
     expect(view.container.querySelector(".later-years-note")).toHaveTextContent(
-      `Later years differ: in ${YEAR + 1}-${String(YEAR + 2).slice(-2)}, the selected measures raise revenue.`,
+      `Later years differ: in ${YEAR + 1}-${String(YEAR + 2).slice(-2)}, the selected policies raise revenue.`,
     );
     view.unmount();
     // No turn after the year shown: no pointer
