@@ -11,6 +11,8 @@ const CASES = [
   ["?tab=dashboard&sub=pensioners", "", "dashboard:age"],
   ["?tab=household", "", "household"],
   ["?tab=outlook&sub=forecast", "", "outlook:forecast"],
+  ["?tab=outlook&sub=vintages", "", "outlook:vintages"],
+  ["?tab=outlook&sub=vintages&variable=psnb", "", "outlook:vintages"],
   ["?tab=outlook&sub=nonsense", "", "outlook:living"],
   ["?tab=nonsense", "", "dashboard:finances"],
   ["?policies=alpha", "#young-people", "dashboard:age"],

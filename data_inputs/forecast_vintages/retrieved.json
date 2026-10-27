@@ -1,0 +1,128 @@
+{
+  "hpi": {
+    "retrieved": "2026-10-25T21:49:38+00:00",
+    "sha256": "ce5fe13fff59617c7ac2eed1d23770abe1b2db167329ca391703e50c396c9252",
+    "url": "https://landregistry.data.gov.uk/app/ukhpi/download/new.csv?from=1995-01-01&to=2026-10-25&location=http%3A%2F%2Flandregistry.data.gov.uk%2Fid%2Fregion%2Funited-kingdom&thm%5B%5D=property_type&in%5B%5D=avg"
+  },
+  "ons": {
+    "ABMI": {
+      "dataset": "QNA",
+      "release_date": "2026-09-29",
+      "retrieved": "2026-10-25T21:49:32+00:00",
+      "sha256": "6ce4b868fc86af44653ae0ae864e587d15a849c54f347b22830cddaa92ad7693",
+      "url": "https://www.ons.gov.uk/economy/grossdomesticproductgdp/timeseries/abmi/qna/data"
+    },
+    "ANBT": {
+      "dataset": "PUSF",
+      "release_date": "2026-10-20",
+      "retrieved": "2026-10-25T21:49:35+00:00",
+      "sha256": "116bbfc4788dab0e6966dda25a598892fd8bf3950e416557041707ff6d2ce74d",
+      "url": "https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance/timeseries/anbt/pusf/data"
+    },
+    "BKTL": {
+      "dataset": "UKEA",
+      "release_date": "2026-09-29",
+      "retrieved": "2026-10-25T21:49:32+00:00",
+      "sha256": "b7d3ab8ee33666d5671403301701c1f49f098038df7a5adf0551da1f1746c552",
+      "url": "https://www.ons.gov.uk/economy/grossdomesticproductgdp/timeseries/bktl/ukea/data"
+    },
+    "CHAW": {
+      "dataset": "MM23",
+      "release_date": "2026-10-20",
+      "retrieved": "2026-10-25T21:49:33+00:00",
+      "sha256": "dd9f43a44603be85fcf741016bffcce26505c27f61d2a17aa531caf90dd748fc",
+      "url": "https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/chaw/mm23/data"
+    },
+    "CRXX": {
+      "dataset": "UKEA",
+      "release_date": "2026-09-29",
+      "retrieved": "2026-10-25T21:49:32+00:00",
+      "sha256": "172d03bff5669c51b75881fb2a718bf7d110e302277ea59d95f1324219fd24b5",
+      "url": "https://www.ons.gov.uk/economy/grossdomesticproductgdp/timeseries/crxx/ukea/data"
+    },
+    "D7BT": {
+      "dataset": "MM23",
+      "release_date": "2026-10-20",
+      "retrieved": "2026-10-25T21:49:33+00:00",
+      "sha256": "a0e630b09306a449f79de41ced22bb5640f34c6cab6923900a4fb8b101c69c93",
+      "url": "https://www.ons.gov.uk/economy/inflationandpriceindices/timeseries/d7bt/mm23/data"
+    },
+    "HF6X": {
+      "dataset": "PUSF",
+      "release_date": "2026-10-20",
+      "retrieved": "2026-10-25T21:49:36+00:00",
+      "sha256": "9e36441224589270407925629a6fbf4ec0428f485a8f328983fa255ada23f4e5",
+      "url": "https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance/timeseries/hf6x/pusf/data"
+    },
+    "IL65": {
+      "dataset": "PUSF",
+      "release_date": "2026-10-20",
+      "retrieved": "2026-10-25T21:49:35+00:00",
+      "sha256": "d917f467ca9a13c019201882d9ca1d34ea9ecde5865c300d34bd51872d5ea698",
+      "url": "https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance/timeseries/il65/pusf/data"
+    },
+    "J5II": {
+      "dataset": "PUSF",
+      "release_date": "2026-10-20",
+      "retrieved": "2026-10-25T21:49:34+00:00",
+      "sha256": "7c67f94e7780369ed9dab6342d1b3370f86e5bd2eed8aa5d6f5e94e67067dd3b",
+      "url": "https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance/timeseries/j5ii/pusf/data"
+    },
+    "JW2T": {
+      "dataset": "PUSF",
+      "release_date": "2026-10-20",
+      "retrieved": "2026-10-25T21:49:35+00:00",
+      "sha256": "06a5b3cffbe64223e68182d241c4997cf853751dcc19b17cca891c01cb3ba773",
+      "url": "https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance/timeseries/jw2t/pusf/data"
+    },
+    "JW2Z": {
+      "dataset": "PUSF",
+      "release_date": "2026-10-20",
+      "retrieved": "2026-10-25T21:49:36+00:00",
+      "sha256": "911f63442dec6d6ba07dfe644a39c0267f49295ca3ae28da6403ab1a414c8191",
+      "url": "https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance/timeseries/jw2z/pusf/data"
+    },
+    "KX5Q": {
+      "dataset": "PUSF",
+      "release_date": "2026-10-20",
+      "retrieved": "2026-10-25T21:49:35+00:00",
+      "sha256": "de33c45a81ec1aaecfafa3b64b84708c24fe25340267f02ab22f6c795e9a7f33",
+      "url": "https://www.ons.gov.uk/economy/governmentpublicsectorandtaxes/publicsectorfinance/timeseries/kx5q/pusf/data"
+    },
+    "MGRN": {
+      "dataset": "LMS",
+      "release_date": "2026-10-19",
+      "retrieved": "2026-10-25T21:49:34+00:00",
+      "sha256": "bcb7fa0ef8cefb73eda6256559b76006a7b42d690c16ece9339439e405309810",
+      "url": "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/timeseries/mgrn/lms/data"
+    },
+    "MGRZ": {
+      "dataset": "LMS",
+      "release_date": "2026-10-19",
+      "retrieved": "2026-10-25T21:49:34+00:00",
+      "sha256": "3aa9de3b4b90d0f1a2074038f9b46ef3688c3f1cdf8790c52a4830c5cd7b52e3",
+      "url": "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/timeseries/mgrz/lms/data"
+    },
+    "MGSX": {
+      "dataset": "LMS",
+      "release_date": "2026-10-19",
+      "retrieved": "2026-10-25T21:49:33+00:00",
+      "sha256": "40fc03537a940c9cef14463bc167c6e4d841ad6d9396ea32ca15b0ec229aaa42",
+      "url": "https://www.ons.gov.uk/employmentandlabourmarket/peoplenotinwork/unemployment/timeseries/mgsx/lms/data"
+    },
+    "NRJR": {
+      "dataset": "UKEA",
+      "release_date": "2026-09-29",
+      "retrieved": "2026-10-25T21:49:33+00:00",
+      "sha256": "fd18a539dcfed387ae39845de828716c628bdc4bdd581057e809716682adbaaf",
+      "url": "https://www.ons.gov.uk/economy/grossdomesticproductgdp/timeseries/nrjr/ukea/data"
+    },
+    "ROYJ": {
+      "dataset": "UKEA",
+      "release_date": "2026-09-29",
+      "retrieved": "2026-10-25T21:49:33+00:00",
+      "sha256": "43b94a361f6c7e3304963cf9cd32ff92afaa119c3be3b215b579c4bfb7c514b2",
+      "url": "https://www.ons.gov.uk/economy/grossdomesticproductgdp/timeseries/royj/ukea/data"
+    }
+  }
+}

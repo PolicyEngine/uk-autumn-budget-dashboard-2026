@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import SubTabs, { SubTabPanel, subPanelId, subTabId, useSubTabParam } from "./SubTabs";
@@ -119,6 +120,50 @@ describe("SubTabs", () => {
     scrollTo.mockClear();
     fireEvent.click(tab("Third"));
     expect(scrollTo).not.toHaveBeenCalled();
+    Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
+    title.remove();
+    vi.unstubAllGlobals();
+  });
+
+  it("opens a sub-tab for a link in a panel as choosing it does, and focuses the tab", () => {
+    // The link sits in the panel it leaves, as Forecast vintages' link to
+    // Forecast changes does
+    function LinkHarness() {
+      const [value, setValue] = useSubTabParam(TABS.map((t) => t.value));
+      const bar = useRef(null);
+      return (
+        <>
+          <SubTabs ref={bar} tabs={TABS} value={value} onChange={setValue} ariaLabel="Effects" idPrefix="pi" />
+          <SubTabPanel idPrefix="pi" value={value}>
+            <button type="button" onClick={() => bar.current.show("third")}>
+              To the third
+            </button>
+          </SubTabPanel>
+        </>
+      );
+    }
+    const scrollTo = vi.fn();
+    vi.stubGlobal("scrollTo", scrollTo);
+    render(<LinkHarness />);
+    // The band sticks: its place in the page is the sentinel before it,
+    // lined up under the bars above it, measured live (utils/pageScroll):
+    // scrolled 800px down, with the bar 500px down the page under a 124px
+    // title band, as in the test above
+    const band = screen.getByRole("tablist").closest(".sub-tabs-band");
+    const title = document.createElement("div");
+    title.className = "title-row";
+    document.body.prepend(title);
+    vi.spyOn(title, "getBoundingClientRect").mockReturnValue({ top: 0, bottom: 124, height: 124 });
+    vi.spyOn(band, "getBoundingClientRect").mockReturnValue({ top: 124, bottom: 173, height: 49 });
+    vi.spyOn(band.previousElementSibling, "getBoundingClientRect").mockReturnValue({ top: -300 });
+    Object.defineProperty(window, "scrollY", { value: 800, configurable: true });
+    const link = screen.getByRole("button", { name: "To the third" });
+    link.focus();
+    fireEvent.click(link);
+    expect(tab("Third")).toHaveAttribute("aria-selected", "true");
+    expect(sub()).toBe("third");
+    expect(tab("Third")).toHaveFocus();
+    expect(scrollTo).toHaveBeenCalledWith({ top: 500 - 124, behavior: "auto" });
     Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
     title.remove();
     vi.unstubAllGlobals();

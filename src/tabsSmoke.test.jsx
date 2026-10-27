@@ -103,6 +103,9 @@ const LOADED = {
   outlook: (panel) => within(panel).findAllByRole("heading", { name: "Living standards under current law" }),
   outlookPoverty: (panel) => within(panel).findAllByRole("heading", { name: "Poverty under current law" }),
   outlookForecast: (panel) => within(panel).findAllByRole("heading", { name: /economic forecast$/ }),
+  // Its Forecast vintages sub-tab (?sub=vintages): the chart card shows
+  // once the forecasts file is read.
+  vintages: (panel) => within(panel).findAllByRole("heading", { name: "Real household disposable income per head" }),
   // Every published measure's card, whatever the band's selection
   policies: (panel) => within(panel).findAllByRole("listitem"),
   methodology: (panel) => within(panel).findAllByRole("heading"),
@@ -194,9 +197,10 @@ const CASES = [
   ["Population impact: Public finances", "finances", "/?tab=dashboard", "Public finances"],
   ["Pre-measures forecast: Poverty", "outlookPoverty", "/?tab=outlook&sub=poverty", "Poverty"],
   ["Pre-measures forecast: Forecast changes", "outlookForecast", "/?tab=outlook&sub=forecast", "Forecast changes"],
+  ["Pre-measures forecast: Forecast vintages", "vintages", "/?tab=outlook&sub=vintages", "Forecast vintages"],
 ];
 
-describe("each of the five tabs and Population impact's sub-tabs, on a verified publication and real baseline data", () => {
+describe("each of the five tabs and their sub-tabs, on a verified publication and real baseline data", () => {
   it("covers every tab", () => {
     expect(CASES.map((c) => c[1]).sort()).toEqual(Object.keys(LOADED).sort());
   });
@@ -383,7 +387,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     window.history.replaceState({}, "", "/?sub=finances");
     render(<App />);
     await screen.findByRole("heading", { name: /Revenue impact/ }, { timeout: 5000 });
-    for (const tab of ["All households", "Living standards", "Poverty", "Household impact", "Pre-measures forecast", "Population impact"]) {
+    for (const tab of ["All households", "Living standards", "Poverty", "Household impact", "Pre-measures forecast", "Forecast vintages", "Population impact"]) {
       fireEvent.click(screen.getByRole("tab", { name: tab }));
       await new Promise((resolve) => setTimeout(resolve, 50));
     }

@@ -1,15 +1,17 @@
 // The Pre-measures forecast view (?tab=outlook; ?tab=living before): the
-// outlook without the Budget measures, under current law, in three
+// outlook without the Budget measures, under current law, in four
 // sub-tabs. Living standards and Poverty (CurrentLawSection) mirror
 // Population impact's sub-tabs of the same names; Forecast changes is the OBR
 // economic forecast behind the baseline, as calendar-year growth. Ported
 // from PolicyEngine/uk-living-standards-outlook (branch review-1-fixes,
 // db0c8e4), its Baseline outlook and Forecast changes tabs. It reads
 // public/data/living_standards_outlook.json; the Methodology view states
-// its engine version, status and notes. The old ?sub=baseline link is
-// handled in App.jsx.
+// its engine version, status and notes. The fourth, Forecast vintages
+// (?sub=vintages), is the OBR's forecasts beside the outturn
+// (forecastVintages/ForecastVintagesView): it reads its own file and shows
+// no PolicyEngine figure. The old ?sub=baseline link is handled in App.jsx.
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import SectionHeading from "../SectionHeading";
 import UnavailableNotice from "../publication/UnavailableNotice";
 import SourceLink from "../SourceLink";
@@ -21,6 +23,7 @@ import ViewLink from "../ViewLink";
 import { FORECAST_FEED_ANCHOR } from "../methodology/ForecastFeedMethod";
 import { forecastName } from "../../utils/livingStandards/forecast";
 import { OutlookStatus, useOutlook } from "./useOutlook";
+import ForecastVintagesView from "../forecastVintages/ForecastVintagesView";
 import "./LivingStandards.css";
 
 /** The OBR forecast behind the baseline: headline tiles, then the series. */
@@ -69,6 +72,7 @@ export const OUTLOOK_SUB_TABS = [
   { value: "living", label: "Living standards", icon: "coins" },
   { value: "poverty", label: "Poverty", icon: "percent" },
   { value: "forecast", label: "Forecast changes", icon: "trend" },
+  { value: "vintages", label: "Forecast vintages", icon: "clock" },
 ];
 
 const SUB_TAB_VALUES = OUTLOOK_SUB_TABS.map((tab) => tab.value);
@@ -81,10 +85,12 @@ const ID_PREFIX = "outlook";
  * (incomes, growth across the distribution, inequality) and Poverty are the
  * twins of Population impact's sub-tabs of the same names, which show the
  * selected measures' effect; each links to the other. Forecast changes is the
- * forecast the baseline is built on. The open sub-tab is ?sub=
+ * forecast the baseline is built on, and Forecast vintages the OBR's
+ * forecasts since June 2010 beside the outturn. The open sub-tab is ?sub=
  * (useSubTabParam): Living standards has no parameter, the others are
- * ?sub=poverty and ?sub=forecast. The outlook is read once for every
- * sub-tab (useOutlook).
+ * ?sub=poverty, ?sub=forecast and ?sub=vintages. The outlook is read once
+ * for the first three (useOutlook); Forecast vintages reads its own file,
+ * so it shows whether or not the outlook can be read.
  *
  * @param {Object} props
  * @param {boolean} [props.active] - Whether the view is shown (App keeps it mounted while hidden)
@@ -97,9 +103,12 @@ export default function LivingStandardsTab({ active = true, onShowTab, selectedY
   const [visited, setVisited] = useState([sub]);
   if (!visited.includes(sub)) setVisited([...visited, sub]);
   const { loading, data, error } = outlook;
+  // Forecast vintages' link to Forecast changes opens it through the bar
+  const subTabs = useRef(null);
   return (
     <>
       <SubTabs
+        ref={subTabs}
         tabs={OUTLOOK_SUB_TABS}
         value={sub}
         onChange={setSub}
@@ -109,7 +118,16 @@ export default function LivingStandardsTab({ active = true, onShowTab, selectedY
       {SUB_TAB_VALUES.filter((value) => visited.includes(value)).map((value) => (
         <SubTabPanel key={value} idPrefix={ID_PREFIX} value={value} hidden={value !== sub}>
           <div className="results-container">
-            {value === "forecast" ? (
+            {value === "vintages" ? (
+              <ForecastVintagesView
+                active={active && value === sub}
+                related={{
+                  href: "?tab=outlook&sub=forecast",
+                  label: "Forecast changes",
+                  onShow: () => subTabs.current?.show("forecast"),
+                }}
+              />
+            ) : value === "forecast" ? (
               <>
                 <OutlookStatus loading={loading} error={error} />
                 {data?.forecast && <ForecastPanel forecast={data.forecast} data={data} onShowTab={onShowTab} />}

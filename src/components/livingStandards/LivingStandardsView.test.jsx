@@ -118,9 +118,9 @@ describe("the Pre-measures forecast view", () => {
     expect(tabs[2]).toHaveAttribute("aria-selected", "true");
     const panel = screen.getByRole("tabpanel", { name: "Pre-measures forecast" });
     // Its sub-tabs mirror Population impact's names: Living standards (the
-    // default), Poverty, then Forecast changes
+    // default), Poverty, then Forecast changes; then Forecast vintages
     const subTabs = within(screen.getByRole("tablist", { name: "Pre-measures forecast sections" })).getAllByRole("tab");
-    expect(subTabs.map((t) => t.textContent)).toEqual(["Living standards", "Poverty", "Forecast changes"]);
+    expect(subTabs.map((t) => t.textContent)).toEqual(["Living standards", "Poverty", "Forecast changes", "Forecast vintages"]);
     expect(subTabs[0]).toHaveAttribute("aria-selected", "true");
     expect(await within(panel).findByRole("heading", { level: 2, name: "Living standards under current law" }, { timeout: 5000 })).toBeInTheDocument();
     expect(within(panel).queryByRole("heading", { name: /economic forecast$/ })).toBeNull();
@@ -506,6 +506,39 @@ describe("the Pre-measures forecast view", () => {
     expect(within(panel).queryByRole("heading", { level: 2, name: "Household income" })).toBeNull();
     expect(within(panel).queryByText(/disposable income per person/)).toBeNull();
     expect(screen.queryByText(/^Projections of UK household incomes and poverty/)).toBeNull();
+  });
+
+  it("opens Forecast vintages for ?sub=vintages, keeping it", async () => {
+    window.history.replaceState({}, "", "/?tab=outlook&sub=vintages");
+    await renderVerified();
+    const panel = await screen.findByRole("tabpanel", { name: "Pre-measures forecast" });
+    expect(within(panel).getByRole("tab", { name: "Forecast vintages" })).toHaveAttribute("aria-selected", "true");
+    expect(within(panel).getByRole("tabpanel", { name: "Forecast vintages" })).toBeInTheDocument();
+    // The other sub-tabs' panels are not opened until chosen
+    for (const name of ["Living standards", "Poverty", "Forecast changes"]) {
+      expect(within(panel).queryByRole("tabpanel", { name })).toBeNull();
+    }
+    expect(window.location.search).toBe("?tab=outlook&sub=vintages");
+  });
+
+  it("keeps PolicyEngine's figures off Forecast vintages, with every other sub-tab opened", async () => {
+    window.history.replaceState({}, "", "/?tab=outlook");
+    await renderVerified();
+    const view = await screen.findByRole("tabpanel", { name: "Pre-measures forecast" });
+    await within(view).findByRole("heading", { level: 2, name: "Living standards under current law" }, { timeout: 5000 });
+    for (const name of ["Poverty", "Forecast changes", "Forecast vintages"]) {
+      fireEvent.click(within(view).getByRole("tab", { name }));
+    }
+    expect(window.location.search).toBe("?tab=outlook&sub=vintages");
+    // The current-law projections and the forecast are each in their own
+    // sub-tab's panel, never in Forecast vintages'
+    const vintages = within(view).getByRole("tabpanel", { name: "Forecast vintages" });
+    for (const name of [/under current law$/, /economic forecast$/, /^Incomes over time$/]) {
+      expect(within(vintages).queryAllByRole("heading", { name, hidden: true })).toEqual([]);
+    }
+    // They were drawn, in their own panels, now hidden
+    expect(view.querySelector("#outlook-subpanel-living")).toHaveTextContent("Living standards under current law");
+    expect(view.querySelector("#outlook-subpanel-poverty")).toHaveTextContent("Poverty under current law");
   });
 
   it.each([["/?tab=outlook&sub=nonsense"], ["/?tab=living"], ["/?tab=outlook"]])(

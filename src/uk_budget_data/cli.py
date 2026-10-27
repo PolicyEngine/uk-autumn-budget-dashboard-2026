@@ -11,6 +11,10 @@ from uk_budget_data.constituencies import (
     add_constituencies_parser,
     run_constituencies,
 )
+from uk_budget_data.forecast_vintages.commands import (
+    add_forecast_vintages_parser,
+    run_forecast_vintages,
+)
 from uk_budget_data.geography import add_geography_parser, run_geography
 from uk_budget_data.living_standards.commands import (
     add_living_standards_parsers,
@@ -236,6 +240,7 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
     add_geography_parser(subparsers)
     add_constituencies_parser(subparsers)
     add_living_standards_parsers(subparsers)
+    add_forecast_vintages_parser(subparsers)
 
     return parser.parse_args(args)
 
@@ -630,6 +635,8 @@ def main(args: list[str] = None) -> int:
         return run_living_standards(parsed)
     elif parsed.command == "obr-forecast":
         return run_obr_forecast(parsed)
+    elif parsed.command == "forecast-vintages":
+        return run_forecast_vintages(parsed)
     else:
         # Default to showing help
         console.print("[bold]UK Budget Data CLI[/bold]\n")
@@ -656,6 +663,9 @@ def main(args: list[str] = None) -> int:
             "  living-standards - The Living standards tab's outlook data"
         )
         console.print("  obr-forecast - Load a new OBR forecast into that tab")
+        console.print(
+            "  forecast-vintages - Every OBR forecast beside the outturn"
+        )
         console.print(
             "\nRun 'uk-budget-data <command> --help' for command options."
         )
