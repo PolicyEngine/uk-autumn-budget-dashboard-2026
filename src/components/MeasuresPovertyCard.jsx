@@ -210,19 +210,28 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     const sentence = measure?.sentence ?? policyDetailsFor(measure)?.sentence;
     return sentence ? `${sentence[0].toUpperCase()}${sentence.slice(1)}` : `Of the measures, ${step.name}`;
   };
-  const moves = (step) => (step.x > 0 ? `moving ${about(step)} ${who} out of poverty` : `moving ${about(step)} ${who} into poverty`);
+  const direction = (step) => (step.x > 0 ? "out of" : "into");
+  // Mid-sentence, the measure's own sentence form as it is published
+  // ("unfreezing the student loan threshold"), else its name
+  const inSentence = (step) => {
+    const measure = catalogue.byId?.get(step.id);
+    return measure?.sentence ?? policyDetailsFor(measure)?.sentence ?? step.name;
+  };
+  // Led by the package's total, then the measure that moves the most, its
+  // direction named only when it differs from the total's
   const summary = top ? (
     peopleMode ? (
-      <>
-        {subjectOf(top)} has the largest effect, {moves(top)}
-        {totalStep ? (
-          <>
-            ; all the measures together move {about(totalStep)} {who} {totalStep.x > 0 ? "out of" : "into"} poverty.
-          </>
-        ) : (
-          "."
-        )}
-      </>
+      totalStep ? (
+        <>
+          All the measures together move {about(totalStep)} {who} {direction(totalStep)} poverty; {inSentence(top)} moves the most (
+          {about(top)}
+          {direction(top) === direction(totalStep) ? "" : ` ${who} ${direction(top)} poverty`}).
+        </>
+      ) : (
+        <>
+          {subjectOf(top)} moves {about(top)} {who} {direction(top)} poverty.
+        </>
+      )
     ) : (
       <>
         {top.name} moves the rate most, by {formatPp(top.pp).replace(/^[+−]/, "").replace(/pp$/, " percentage points")}.
