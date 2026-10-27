@@ -2955,13 +2955,17 @@ def test_the_certified_data_still_lack_every_limits_input():
     assert sim.get_holder(
         "other_residential_property_value"
     ).get_known_periods()
-    for limit in data_limits.DATA_LIMITS:
-        holder = sim.get_holder(limit.missing_input)
-        assert holder.get_known_periods() == [], (
-            f"the certified data now set {limit.missing_input}: lift "
-            f"{limit.key}, and if a cut in NEWLY_MISSING_INPUTS lists it, "
-            "say so in NO_LONGER_MISSING"
-        )
+    # Every lifted input at once: an adoption that lifts several would
+    # otherwise take one CI run to find each.
+    lifted = [
+        f"{limit.missing_input} (lift {limit.key})"
+        for limit in data_limits.DATA_LIMITS
+        if sim.get_holder(limit.missing_input).get_known_periods()
+    ]
+    assert lifted == [], (
+        f"the certified data now set {', '.join(lifted)}; if a cut in "
+        "NEWLY_MISSING_INPUTS lists one, say so in NO_LONGER_MISSING"
+    )
 
 
 # --- the flat pipeline ------------------------------------------------------
