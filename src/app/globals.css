@@ -1734,9 +1734,14 @@ body {
   width: 100%;
   /* The gap between the last card and the site footer, on every tab and
      at every width (the replication line that used to own it is gone).
-     48px: the ui-kit's --pe-space-4xl (its --pe-space-2xl, which wins over
-     this file's, is 24px). */
-  padding-bottom: var(--pe-space-4xl, 48px);
+     80px; 64px on a phone (the ui-kit's --pe-space-5xl). */
+  padding-bottom: 80px;
+}
+
+@media (max-width: 600px) {
+  .app > .main-content {
+    padding-bottom: var(--pe-space-5xl, 64px);
+  }
 }
 
 .app > .main-content > * {
