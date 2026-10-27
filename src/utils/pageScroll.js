@@ -95,21 +95,38 @@ export function scrollPageTo(top, behavior = "auto") {
 const HEADINGS = ".section-heading, .method-section-heading";
 
 /**
- * If a shown section heading is under the sticky bars (or within 8px of
- * them), scroll up so the first such one sits STICKY_GAP px below them.
- * For the end of a scroll the page made: a tab, sub-tab or link landing,
- * a view's restored position, the first load.
+ * `top` moved up, if needed, so that at it no shown section heading is
+ * under the sticky bars (or within 8px of them): the first such heading
+ * then sits STICKY_GAP px below them.
  */
-export function clearHeadings() {
-  if (typeof document === "undefined") return false;
+export function clearOfHeadings(top) {
+  if (typeof document === "undefined") return top;
   const bottom = stickyBottom();
+  const y = window.scrollY;
+  const headings = [];
   for (const heading of document.querySelectorAll(HEADINGS)) {
     if (!heading.offsetParent || heading.closest("[hidden]")) continue;
     const rect = heading.getBoundingClientRect();
-    if (rect.height <= 0 || rect.bottom <= 0 || rect.top >= window.innerHeight) continue;
-    if (rect.top < bottom + 8) return scrollPageTo(window.scrollY + rect.top - bottom - STICKY_GAP);
+    if (rect.height > 0) headings.push([rect.top + y, rect.bottom + y]);
   }
-  return false;
+  // Moving up can bring an earlier heading under the bars: look again
+  for (let round = 0; round < 4; round += 1) {
+    const hit = headings.find(([start, end]) => end > top && start < top + bottom + 8);
+    if (!hit) break;
+    top = hit[0] - bottom - STICKY_GAP;
+  }
+  return top;
+}
+
+/**
+ * If a shown section heading is under the sticky bars, scroll up so it
+ * clears them. For the end of a scroll the page made: a view's restored
+ * position, the first load, back/forward.
+ */
+export function clearHeadings() {
+  if (typeof window === "undefined") return false;
+  const top = clearOfHeadings(window.scrollY);
+  return top < window.scrollY - 1 ? scrollPageTo(top) : false;
 }
 
 /**
@@ -171,6 +188,8 @@ export function scrollBelowBars(target, { behavior = "auto", gap = STICKY_GAP, o
       document.documentElement.removeAttribute("data-site-nav-shown");
       top = scrollTopFor(target, options);
     }
+    // Never leaving a section heading under the bars on the way
+    top = clearOfHeadings(top);
     if (onlyUp && top >= window.scrollY) return false;
     return scrollPageTo(top, how);
   };
