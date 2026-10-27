@@ -186,7 +186,7 @@ const END_LABEL_GAP = 14;
  * close lines' labels never overlap (a thin leader joins a moved label to
  * its line). Drawn in the chart's SVG, so the downloads carry it.
  */
-function EndLabels({ xAxisMap, yAxisMap, data, series, xKey }) {
+function EndLabels({ xAxisMap, yAxisMap, data, series, xKey, focusKey = null }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
@@ -196,7 +196,7 @@ function EndLabels({ xAxisMap, yAxisMap, data, series, xKey }) {
       if (!last) return null;
       const x = xAxis.scale(last[xKey]) + (xAxis.scale.bandwidth?.() ?? 0) / 2;
       const y = yAxis.scale(last[s.key]);
-      return { key: s.key, name: s.name, colour: s.colour, x, y, at: y };
+      return { key: s.key, name: s.endLabel ?? s.name, colour: s.colour, x, y, at: y };
     })
     .filter(Boolean)
     .sort((a, b) => a.y - b.y);
@@ -208,14 +208,17 @@ function EndLabels({ xAxisMap, yAxisMap, data, series, xKey }) {
     const limit = i === labels.length - 1 ? bottom : labels[i + 1].at - END_LABEL_GAP;
     labels[i].at = Math.min(labels[i].at, limit);
   }
+  // One column of labels, right of the latest end: a line that stops a
+  // month early (earnings) is not labelled over a neighbour's leader
+  const column = Math.max(...labels.map((l) => l.x)) + 14;
   return (
     <g className="ls-end-labels">
       {labels.map((l) => (
-        <g key={l.key}>
-          {Math.abs(l.at - l.y) > 2 && (
-            <path d={`M${l.x + 5},${l.y} L${l.x + 12},${l.at}`} stroke={l.colour} strokeWidth={1} fill="none" />
+        <g key={l.key} opacity={focusKey && focusKey !== l.key ? 0.25 : 1}>
+          {(Math.abs(l.at - l.y) > 2 || column - l.x > 16) && (
+            <path d={`M${l.x + 5},${l.y} L${column - 2},${l.at}`} stroke={l.colour} strokeWidth={1} fill="none" />
           )}
-          <text x={l.x + 14} y={l.at} dy="0.35em" fontSize={12} fontWeight={600} fill={l.colour}>
+          <text x={column} y={l.at} dy="0.35em" fontSize={12} fontWeight={600} fill={l.colour}>
             {l.name}
           </text>
         </g>
@@ -229,8 +232,9 @@ function EndLabels({ xAxisMap, yAxisMap, data, series, xKey }) {
  * unit above the plot, the shared tooltip, and the shared legend and the
  * logo in the card's rows below the plot.
  *
- * series: [{ key, name, colour, dash?, dashed?, hidden?, width? }]. Hidden
- * series are not drawn; width (default 2.5) emphasises a line.
+ * series: [{ key, name, colour, dash?, dashed?, hidden?, width?, endLabel? }].
+ * Hidden series are not drawn; width (default 2.5) emphasises a line;
+ * endLabel is a shorter name for the label at its end.
  */
 export function LsLineChart({
   data,
@@ -247,7 +251,9 @@ export function LsLineChart({
   // [from, to]: the years a card's sentence compares, shaded on the chart
   highlight = null,
   // Name each line at its end, right of the plot (wide screens only; the
-  // legend names them on a phone)
+  // legend names them on a phone). True, or { width, minWidth }: the room
+  // the labels take and the least chart width that shows them (short
+  // endLabel names fit a half-width card)
   endLabels = false,
   // False where the card's own chips (SeriesToggle) are the key
   legend = true,
@@ -261,12 +267,16 @@ export function LsLineChart({
   xTickFormat = xFormat,
   // A dot at every point; false for long series (monthly data)
   dots = true,
+  // (key|null) => void: hovering a line (a wide invisible band along it)
+  // names it, so the card can bring it forward as a chip does
+  onLineHover = null,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
   const visible = series.filter((s) => !s.hidden);
-  const labelled = endLabels && !narrow && width >= 560;
-  const margin = labelled ? { ...MARGIN, right: END_LABEL_WIDTH } : MARGIN;
+  const labelRoom = { width: END_LABEL_WIDTH, minWidth: 560, ...(typeof endLabels === "object" ? endLabels : {}) };
+  const labelled = Boolean(endLabels) && !narrow && width >= labelRoom.minWidth;
+  const margin = labelled ? { ...MARGIN, right: labelRoom.width } : MARGIN;
   // Rows key years by their start (2028) or as "2028-29"; match either
   const asKey = (fy) => (typeof data[0]?.[xKey] === "number" ? Number(String(fy).slice(0, 4)) : fy);
   const band = highlight ? highlight.map(asKey) : null;
@@ -304,7 +314,17 @@ export function LsLineChart({
           />
           <Tooltip
             {...TOOLTIP_PROPS}
-            content={<ChartTooltip format={tooltipFormat} labelFormat={xFormat} grouped={false} showPlus={showPlus} />}
+            // The lines' hover bands (onLineHover) are not series to list
+            content={(props) => (
+              <ChartTooltip
+                {...props}
+                payload={props.payload?.filter((p) => p.type !== "none")}
+                format={tooltipFormat}
+                labelFormat={xFormat}
+                grouped={false}
+                showPlus={showPlus}
+              />
+            )}
           />
           {shaded && (
             <ReferenceArea
@@ -316,7 +336,8 @@ export function LsLineChart({
               ifOverflow="extendDomain"
             />
           )}
-          {visible.map((s) => (
+          {/* The focused line drawn last, over the others */}
+          {[...visible.filter((s) => s.key !== focusKey), ...visible.filter((s) => s.key === focusKey)].map((s) => (
             <Line
               key={s.key}
               type="monotone"
@@ -332,8 +353,26 @@ export function LsLineChart({
               isAnimationActive={false}
             />
           ))}
+          {onLineHover &&
+            visible.map((s) => (
+              <Line
+                key={`${s.key}-hit`}
+                type="monotone"
+                dataKey={s.key}
+                stroke="transparent"
+                strokeWidth={14}
+                dot={false}
+                activeDot={false}
+                tooltipType="none"
+                legendType="none"
+                connectNulls={false}
+                isAnimationActive={false}
+                onMouseEnter={() => onLineHover(s.key)}
+                onMouseLeave={() => onLineHover(null)}
+              />
+            ))}
           <Customized component={<ChartUnitLabel text={yLabel} horizontal />} />
-          {labelled && <Customized component={<EndLabels data={data} series={visible} xKey={xKey} />} />}
+          {labelled && <Customized component={<EndLabels data={data} series={visible} xKey={xKey} focusKey={focusKey} />} />}
         </LineChart>
       </ResponsiveContainer>
     </ChartRows>

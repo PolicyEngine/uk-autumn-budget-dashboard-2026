@@ -62,6 +62,16 @@ describe("Prices by spending category card", () => {
     expect([...first.cells].slice(1).every((c) => c.textContent === "0.0%")).toBe(true);
   });
 
+  it("starts with the two benchmarks, energy and food on; the other categories a chip away", async () => {
+    render(<PriceCategoriesCard view="table" onViewChange={() => {}} />);
+    await screen.findByText(/^Since /);
+    const heads = () => [...document.querySelectorAll(".ls-table thead th")].map((th) => th.textContent);
+    expect(heads()).toEqual(["Month", "All prices (CPI)", "Earnings", "Energy", "Food"]);
+    expect(screen.getByRole("button", { name: "Water" })).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(screen.getByRole("button", { name: "Water" }));
+    expect(heads()).toContain("Water");
+  });
+
   it("About this chart says it is history, not the forecast, and lists each ONS series by CDID", async () => {
     render(<PriceCategoriesCard />);
     await screen.findByText(/^Since /);

@@ -27,17 +27,20 @@ import {
 
 export const PRICE_CATEGORIES_TITLE = "Prices by category since 2021";
 
-// Each line: its name, chip name on a phone, colour and pattern, and what
-// it covers (About this chart). All prices are drawn dark and thicker;
-// earnings, not a price, dashed.
+// Each line: its name, chip and end-label name where room is short, colour
+// and pattern, and what it covers (About this chart). Styled as the
+// dashboard's other line charts: 2.5px lines, each category a solid line in
+// its own hue from the chart tokens; the two benchmarks keep one treatment
+// of their own: all prices (CPI) the dark reference line, a little thicker,
+// and earnings (not a price) a dashed neutral grey.
 const LINES = {
   energy: { name: "Energy", colour: CHART_COLOURS.loss, meaning: "Electricity, gas and other household fuels (CPI class 04.5)." },
-  water: { name: "Water", colour: CHART_COLOURS.marketIncome, dash: DASH.short, meaning: "Household water supply (CPI class 04.4.1)." },
   food: { name: "Food", colour: CHART_COLOURS.gain, meaning: "Food and non-alcoholic drinks (CPI division 01)." },
-  services: { name: "Services", colour: CHART_COLOURS.highlight, dash: DASH.dashDot, meaning: "All services in the CPI basket, such as rents, travel, eating out and insurance." },
+  water: { name: "Water", colour: CHART_COLOURS.ageAdults, meaning: "Household water supply (CPI class 04.4.1)." },
+  services: { name: "Services", colour: CHART_COLOURS.netStatePension, meaning: "All services in the CPI basket, such as rents, travel, eating out and insurance." },
   rents: { name: "Rents", colour: CHART_COLOURS.ageOlder, meaning: "Rents paid by tenants (CPI class 04.1)." },
-  rail: { name: "Rail fares", short: "Rail", colour: CHART_COLOURS.pensionContributions, dash: DASH.long, meaning: "Passenger transport by railway (CPI class 07.3.1)." },
-  cpi: { name: "All prices (CPI)", short: "CPI", colour: CHART_COLOURS.ink, width: 3.5, meaning: "The whole CPI basket." },
+  rail: { name: "Rail fares", short: "Rail", colour: CHART_COLOURS.diffLarge, meaning: "Passenger transport by railway (CPI class 07.3.1)." },
+  cpi: { name: "All prices (CPI)", short: "CPI", colour: CHART_COLOURS.ink, width: 3, meaning: "The whole CPI basket." },
   earnings: {
     name: "Earnings",
     colour: CHART_COLOURS.reference,
@@ -45,7 +48,13 @@ const LINES = {
     meaning: "Average weekly earnings, whole economy, total pay in pounds (not a price; for comparison).",
   },
 };
-const ORDER = ["energy", "water", "food", "services", "rents", "rail", "cpi", "earnings"];
+// The benchmarks first, then the categories
+const ORDER = ["cpi", "earnings", "energy", "food", "water", "services", "rents", "rail"];
+// Drawn at first: the two the sentence names against the two benchmarks;
+// the rest are a chip away, so the lines below 30% do not tangle
+export const DEFAULT_SHOWN = ["cpi", "earnings", "energy", "food"];
+// End labels in a half-width card: short names in a narrow right margin
+const END_LABELS = { width: 84, minWidth: 420 };
 
 const pctTick = (v) => `${formatOneDp(v).replace(/\.0$/, "")}%`;
 const pctText = (v) => `${formatOneDp(v)}%`;
@@ -90,7 +99,7 @@ export function endsNote(series, latest) {
 export default function PriceCategoriesCard({ view = "chart", onViewChange }) {
   const { loading, data, error } = usePriceCategories();
   const narrow = useNarrowViewport();
-  const [shown, setShown] = useState(ORDER);
+  const [shown, setShown] = useState(DEFAULT_SHOWN);
   const [hovered, setHovered] = useState(null);
 
   const base = { id: "forecast-price-categories", title: PRICE_CATEGORIES_TITLE, icon: "tag" };
@@ -112,7 +121,7 @@ export default function PriceCategoriesCard({ view = "chart", onViewChange }) {
   // Drawn from the base month on, so every line starts at 0 (the file
   // holds the months before it too)
   const rows = changeRows(data).filter((r) => r.month >= data.base_month);
-  const allLines = series.map((s) => ({ key: s.key, ...LINES[s.key] }));
+  const allLines = series.map((s) => ({ key: s.key, endLabel: LINES[s.key].short, ...LINES[s.key] }));
   const lines = allLines.filter((l) => shown.includes(l.key));
   const baseMonth = monthLabel(data.base_month);
   const sentence = priceCategoriesSentence(rows, data.base_month);
@@ -213,9 +222,10 @@ export default function PriceCategoriesCard({ view = "chart", onViewChange }) {
         yLabel={`Change since ${baseMonth} (%)`}
         yDomain={axis.domain}
         yTicks={axis.ticks}
-        endLabels
+        endLabels={END_LABELS}
         legend={false}
         focusKey={hovered}
+        onLineHover={setHovered}
         keyContent={chips}
       />
     </LsCard>
