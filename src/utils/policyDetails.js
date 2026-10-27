@@ -163,7 +163,7 @@ export const POLICY_DETAILS = [
     type: "Capital gains tax",
     inForce: { from: "2027-04" },
     details:
-      "The £500,000 limit is an assumption made before the Budget. The model applies the limit to each year's gains, as if none had been used before.",
+      "The £500,000 limit is an assumption made before the Budget. The model applies the limit to each year's gains, as if none had been used before. The figure is the extra tax on each year's disposals, most of which is paid in the January after the tax year ends.",
     source: {
       label: "Business Asset Disposal Relief",
       href: "https://www.gov.uk/business-asset-disposal-relief",
