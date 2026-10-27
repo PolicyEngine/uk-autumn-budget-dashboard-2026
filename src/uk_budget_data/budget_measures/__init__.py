@@ -34,8 +34,9 @@ Insurance relief for 21 to 24 year olds (no template changes employer NI)
 and the student loan connection (it deletes the survey's reported
 repayments so the model's own are used).
 
-Fiscal years: year Y is Y-(Y+1). The VAT measures weight a part year by
-its days from 1 April, the public finances' year; fuel duty is set as
-parameter values in ``reforms.py``, weighted from 6 April as the engine
-blends that parameter.
+Fiscal years: year Y is Y-(Y+1). The road fuel VAT cut weights a part
+year by its days from 1 April, the public finances' year; the electricity
+zero rate weights 2026-27 by the October to March share of a year's use;
+fuel duty is set as parameter values in ``reforms.py``, weighted from
+6 April as the engine blends that parameter.
 """

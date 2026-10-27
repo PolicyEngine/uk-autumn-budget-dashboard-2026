@@ -918,9 +918,10 @@ def apply_age_conditioned_allowance(
         standard = _call_formula(native, person, period, parameters)
         if period.start.year not in amounts:
             return standard
-        income = person("adjusted_net_income", period) - person(
-            "gift_aid_grossed_up", period
-        )
+        # adjusted_net_income already deducts grossed-up Gift Aid (ITA 2007
+        # s. 58) from policyengine-uk 2.132.6, as the native allowance reads
+        # it; deducting it again overstated the allowance of donors.
+        income = person("adjusted_net_income", period)
         higher = (
             amounts[period.start.year]
             - np.maximum(0, income - threshold) * taper

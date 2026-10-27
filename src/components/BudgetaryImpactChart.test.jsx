@@ -77,4 +77,30 @@ describe("BudgetaryImpactChart", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Clear the/ }));
     for (const chip of chips) expect(chip).toHaveAttribute("aria-pressed", "false");
   });
+
+  it("points to a later year in which the measures turn from costing revenue to raising it", () => {
+    const point = (year, net) => ({
+      year,
+      ...Object.fromEntries(catalogue.displayable.map((measure) => [measure.seriesKey, net / 2])),
+      netImpact: net,
+    });
+    const data = [point(YEAR - 1, -8), point(YEAR, -6), point(YEAR + 1, 3)];
+    const view = render(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <BudgetaryImpactChart data={data} selectedYear={YEAR - 1} />
+      </MeasureCatalogueProvider>,
+    );
+    expect(view.container.querySelector(".later-years-note")).toHaveTextContent(
+      `Later years differ: in ${YEAR + 1}-${String(YEAR + 2).slice(-2)}, the selected measures raise revenue.`,
+    );
+    view.unmount();
+    // No turn after the year shown: no pointer
+    const last = render(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <BudgetaryImpactChart data={data} selectedYear={YEAR + 1} />
+      </MeasureCatalogueProvider>,
+    );
+    expect(last.container.querySelector(".later-years-note")).toBeNull();
+  });
 });
+

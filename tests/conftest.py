@@ -12,16 +12,26 @@ then, since its tests can no longer be told apart.
 Skips are counted from test reports, which reach the main process under
 pytest-xdist too; hooks that take the test item run only on the workers.
 
-Tests marked ``slow`` take minutes each. The Python tests job runs the suite
-on four pytest-xdist workers and these tests are collected first there, so
-the first four slow units start on separate workers and the rest follow as
-each worker's next unit (see ``pytest_collection_modifyitems``).
+CI runs the suite in shards on separate runners (``--ci-shard K/N``): each
+keeps the tests tests/ci_shards.py assigns it by their recorded CI times.
+Within a shard, four pytest-xdist workers take the heaviest tests first, so
+the first four heavy units start on separate workers and the rest follow as
+each worker's next unit (see ``pytest_collection_modifyitems``). Tests
+marked ``slow`` take minutes each and go first even before CI has recorded
+their time.
 """
 
 import importlib
 import os
 
 import pytest
+
+try:
+    from tests import ci_shards
+except ImportError:
+    # tests/test_certified_data.py runs a copy of this file on its own in a
+    # temporary directory, where there are no shards to split.
+    ci_shards = None
 
 CERTIFIED_DATA = "certified_data"
 SLOW = "slow"
@@ -44,6 +54,15 @@ def certified_data_required() -> bool:
 def is_xdist_worker(config) -> bool:
     """Whether this process is a pytest-xdist worker, not the main one."""
     return hasattr(config, "workerinput")
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--ci-shard",
+        default=None,
+        metavar="K/N",
+        help="run only shard K of N (tests/ci_shards.py)",
+    )
 
 
 def pytest_configure(config):
@@ -85,20 +104,57 @@ def stand_in_model_limits(monkeypatch):
     model_limit_stand_ins.register(monkeypatch)
 
 
+def _group(item) -> str | None:
+    mark = item.get_closest_marker("xdist_group")
+    if mark is None:
+        return None
+    return mark.args[0] if mark.args else mark.kwargs.get("name")
+
+
+@pytest.hookimpl(trylast=True)
 def pytest_collection_modifyitems(config, items):
-    """Under pytest-xdist, collect the slow tests first.
+    """Keep this CI shard's tests; under pytest-xdist, heaviest first.
+
+    Last, so ``-m`` has already deselected what this run leaves out and
+    every shard splits the same set of tests.
 
     CI runs ``-n 4 --dist loadgroup --no-loadscope-reorder``, which hands
     out work units (a test, or the tests of one ``xdist_group``) in
     collection order: one to each worker, then a second, then more to a
-    worker only as its own tests finish. With the slow tests first, the
-    first four slow units start on separate workers, the rest follow as each
-    worker's next unit, and light tests queue behind them.
-    In file order, a worker that finished its light tests early could be
-    given two slow units back to back. Serial runs keep file order.
+    worker only as its own tests finish. With the slow tests first, then
+    the rest by recorded time, the first four heavy units start on separate
+    workers, the rest follow as each worker's next unit, and light tests
+    queue behind them. In file order, a worker that finished its light tests
+    early could be given two slow units back to back. Serial runs keep file
+    order.
     """
+    shard_option = config.getoption("--ci-shard")
+    if ci_shards is None:
+        if shard_option:
+            raise pytest.UsageError("--ci-shard needs tests/ci_shards.py")
+        if is_xdist_worker(config):
+            items.sort(key=lambda item: item.get_closest_marker(SLOW) is None)
+        return
+    durations = ci_shards.load_durations()
+    if shard_option:
+        shard, count = ci_shards.parse_shard(shard_option)
+        shards = ci_shards.assign(
+            [(item.nodeid, _group(item)) for item in items],
+            count,
+            durations,
+        )
+        kept = [item for item in items if shards[item.nodeid] == shard]
+        dropped = [item for item in items if shards[item.nodeid] != shard]
+        if dropped:
+            config.hook.pytest_deselected(items=dropped)
+        items[:] = kept
     if is_xdist_worker(config):
-        items.sort(key=lambda item: item.get_closest_marker(SLOW) is None)
+        items.sort(
+            key=lambda item: (
+                item.get_closest_marker(SLOW) is None,
+                -ci_shards.weight(item.nodeid, durations),
+            )
+        )
 
 
 def pytest_runtest_setup(item):
