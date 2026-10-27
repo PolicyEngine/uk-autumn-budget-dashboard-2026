@@ -672,11 +672,14 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const [unit, setUnit] = useState("pct");
   const distribution = useFile(DISTRIBUTION_FILE, parseDistribution);
   const moves = useFile(MOBILITY_FILE, parseRecords);
-  // Every measure the catalogue publishes: the package's run is exact only
-  // when all of them are selected, and it was run with exactly those. The
-  // package's rows are read under the manifest's combined key (#228).
+  // The header's selection: one policy's own run, or the published combined
+  // run of exactly the selected policies (read under the manifest's
+  // combined key, #228), else none. Every figure below is that run's own,
+  // never the whole package for part of it, and never a sum of policies.
   const catalogue = useMeasureCatalogue();
   const run = distributionRunOf(policies, catalogue);
+  const runId = run.reformId;
+  const ids = useMemo(() => (runId ? [runId] : []), [runId]);
   // The tenths' averages from the verified artifacts the decile charts read
   // (#203, #228), never the root flat files, so the two tabs agree
   const winnersRows = useMemo(() => verifiedTableRows(catalogue, "winners_losers"), [catalogue]);
@@ -695,13 +698,13 @@ export default function IncomePositionChart({ net, household, year, policies, ye
     () => (curves ? householdPosition({ net, household, before: curves.before, after: curves.after }) : null),
     [curves, net, household],
   );
-  const averages = useMemo(() => decileAverages(winnersRows, policies, year), [winnersRows, policies, year]);
-  const ukAverage = useMemo(() => overallAverage(winnersRows, policies, year), [winnersRows, policies, year]);
+  const averages = useMemo(() => decileAverages(winnersRows, ids, year), [winnersRows, ids, year]);
+  const ukAverage = useMemo(() => overallAverage(winnersRows, ids, year), [winnersRows, ids, year]);
   const mobility = useMemo(
     () => (moves.status === "ready" ? mobilityOf(moves.rows, { reformId: run.reformId, year, unit: "percentile" }) : null),
     [moves, run.reformId, year],
   );
-  const percents = useMemo(() => decilePercents(relativeRows, policies, year), [relativeRows, policies, year]);
+  const percents = useMemo(() => decilePercents(relativeRows, ids, year), [relativeRows, ids, year]);
 
   // Nothing while the distribution loads, and nothing when it is not
   // there: the Your place tile above says so in one line, never an empty card
@@ -923,7 +926,6 @@ export default function IncomePositionChart({ net, household, year, policies, ye
                 ],
                 caveats: [
                   "Where the changes are small next to incomes, the curves before and after overlap almost exactly.",
-                  !run.exact && "The UK distribution after is the whole package's run; your own income after uses only your selection.",
                 ],
                 method: { anchor: METHOD_ANCHORS.incomePosition, label: "How your place in the UK is worked out" },
               }}
@@ -1023,6 +1025,8 @@ export function ResultTiles({ totals, changeValue, changeNote, household, year, 
   const moves = useFile(MOBILITY_FILE, parseRecords);
   const catalogue = useMeasureCatalogue();
   const run = distributionRunOf(policies, catalogue);
+  const runId = run.reformId;
+  const ids = useMemo(() => (runId ? [runId] : []), [runId]);
   // The tenths' % from the verified artifacts, as the card's chart (#228)
   const relativeRows = useMemo(() => verifiedTableRows(catalogue, "distributional_impact"), [catalogue]);
   const net = useMemo(() => ({ before: totals.before, after: totals.after }), [totals.before, totals.after]);
@@ -1032,7 +1036,7 @@ export function ResultTiles({ totals, changeValue, changeNote, household, year, 
     const after = curveOf(distribution.rows, { reformId: run.reformId, year, side: "reform" });
     return before.length > 1 && after.length > 1 ? householdPosition({ net, household, before, after }) : null;
   }, [distribution, run.reformId, year, net, household]);
-  const percents = useMemo(() => decilePercents(relativeRows, policies, year), [relativeRows, policies, year]);
+  const percents = useMemo(() => decilePercents(relativeRows, ids, year), [relativeRows, ids, year]);
   const mobility = useMemo(
     () => (moves.status === "ready" ? mobilityOf(moves.rows, { reformId: run.reformId, year, unit: "percentile" }) : null),
     [moves, run.reformId, year],
@@ -1075,7 +1079,7 @@ export function ResultTiles({ totals, changeValue, changeNote, household, year, 
   const loading = distribution.status === "loading";
   // Why there is no place, in one muted line in the tile (no card below)
   const missing = !loading && !place
-    ? (distribution.status === "ready" && missingPackageNote(run, distribution.rows)) || "The UK income distribution is not available for this year."
+    ? (distribution.status === "ready" && missingPackageNote(run, distribution.rows, "Income distribution")) || "The UK income distribution is not available for this year."
     : null;
 
   return (
