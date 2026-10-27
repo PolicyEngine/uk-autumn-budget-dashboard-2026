@@ -1175,19 +1175,19 @@ describe("the waterfall's one line", () => {
     const totals = { before: 70050, after: 70159 };
     const step = (name, rounded) => ({ id: name, name, rounded });
     expect(waterfallSentence(totals, [step("Zero VAT on electricity", 56), step("Fuel duty deferral", 53)], "2027-28")).toBe(
-      "Your net income rises in 2027-28, mostly from zero VAT on electricity (+£56).",
+      "Your net income rises in 2027-28, mostly from Zero VAT on electricity (+£56).",
     );
     expect(waterfallSentence(totals, [step("A", 40), step("B", 35), step("C", 34)], "2027-28")).toBe(
-      "Your net income rises in 2027-28; a adds the most (+£40).",
+      "Your net income rises in 2027-28; A adds the most (+£40).",
     );
     expect(waterfallSentence(totals, [step("Zero VAT on electricity", 204), step("Threshold freeze", -95)], "2027-28")).toBe(
-      "Your net income rises in 2027-28: zero VAT on electricity adds the most (+£204) and threshold freeze takes the most (−£95).",
+      "Your net income rises in 2027-28: Zero VAT on electricity adds the most (+£204) and Threshold freeze takes the most (−£95).",
     );
     expect(waterfallSentence({ before: 100, after: 50 }, [step("Fuel duty", 20), step("Threshold freeze", -70)], "2031-32")).toBe(
-      "Your net income falls in 2031-32: threshold freeze takes the most (−£70) and fuel duty adds the most (+£20).",
+      "Your net income falls in 2031-32: Threshold freeze takes the most (−£70) and Fuel duty adds the most (+£20).",
     );
     expect(waterfallSentence({ before: 100, after: 80 }, [step("Threshold freeze", -20)], "2031-32")).toBe(
-      "Your net income falls in 2031-32, all from threshold freeze.",
+      "Your net income falls in 2031-32, all from Threshold freeze.",
     );
     expect(waterfallSentence({ before: 100, after: 100 }, [], "2027-28")).toBe("No change to your net income in 2027-28.");
     // No change, before or after amount: the tile and the bars' end labels show them
@@ -1198,12 +1198,76 @@ describe("the waterfall's one line", () => {
     expect(waterfallScaleStart({ before: 17947, after: 18007 }, [step("A", 43), step("B", 17)])).toBe(17800);
   });
 
-  it("spans the panel's full width: no max-width cap on the line", async () => {
-    const { readFileSync } = await import("node:fs");
-    const { join } = await import("node:path");
-    const css = readFileSync(join(process.cwd(), "src", "components", "personal", "SingleYear.css"), "utf8");
-    const rule = css.match(/\.waterfall-sentence\s*\{([^}]*)\}/)[1];
-    expect(rule).not.toMatch(/max-width:\s*\d/);
+  it("never lower-cases a measure's name: State Pension stays a proper noun", async () => {
+    const { waterfallSentence } = await import("./NetIncomeWaterfall");
+    const step = (label, rounded) => ({ id: label, name: label, label, rounded });
+    expect(
+      waterfallSentence({ before: 100, after: 400 }, [step("State Pension protection", 225), step("Fuel duty deferral", 75)], "2029-30"),
+    ).toBe("Your net income rises in 2029-30, mostly from State Pension protection (+£225).");
+  });
+
+  it("shows no sentence over the chart: the largest policy is marked on it, the sentence its text alternative", async () => {
+    const { render } = await import("@testing-library/react");
+    const { default: NetIncomeWaterfall, largestSteps } = await import("./NetIncomeWaterfall");
+    const step = (id, rounded) => ({ id, name: id, label: id, rounded });
+    // One way: one "Largest"; both ways: the largest gain and loss; one
+    // policy, or the one step while splitting: none
+    expect(largestSteps([step("a", 225), step("b", 75)])).toEqual({ a: "Largest" });
+    expect(largestSteps([step("a", -30), step("b", -90)])).toEqual({ b: "Largest" });
+    expect(largestSteps([step("a", 204), step("b", -95), step("c", 10), step("interaction", -300)])).toEqual({
+      a: "Largest gain",
+      b: "Largest loss",
+    });
+    expect(largestSteps([step("a", 56)])).toEqual({});
+    expect(largestSteps(null)).toEqual({});
+
+    const { container, unmount } = render(
+      <NetIncomeWaterfall
+        totals={{ before: 18000, after: 18300, change: 300 }}
+        steps={[step("State Pension protection", 225), step("Fuel duty deferral", 75)]}
+        yearLabel="2029-30"
+      />,
+    );
+    expect(container.querySelector(".waterfall-sentence")).toBeNull();
+    expect(container.querySelector(".waterfall-header").textContent).toBe("How each policy changes your income" + container.querySelector(".visually-hidden").textContent);
+    const chart = container.querySelector("ol.waterfall-rows");
+    const described = document.getElementById(chart.getAttribute("aria-describedby"));
+    expect(described).toHaveClass("visually-hidden");
+    expect(described).toHaveTextContent("Your net income rises in 2029-30, mostly from State Pension protection (+£225).");
+    const largest = [...container.querySelectorAll(".waterfall-row.is-largest")];
+    expect(largest.map((row) => row.dataset.row)).toEqual(["State Pension protection"]);
+    expect(largest[0].querySelector(".waterfall-chip")).toHaveTextContent(/^Largest$/);
+    // The chip adds no number: the row's value is said once
+    expect(largest[0].textContent.match(/£225/g)).toHaveLength(1);
+    unmount();
+
+    // Mixed: both chips
+    const mixed = render(
+      <NetIncomeWaterfall
+        totals={{ before: 18000, after: 18109, change: 109 }}
+        steps={[step("Zero VAT on electricity", 204), step("Threshold freeze", -95)]}
+        yearLabel="2027-28"
+      />,
+    );
+    expect([...mixed.container.querySelectorAll(".waterfall-chip")].map((chip) => chip.textContent)).toEqual([
+      "Largest gain",
+      "Largest loss",
+    ]);
+    mixed.unmount();
+
+    // One policy: no chip, the sentence still the text alternative
+    const one = render(
+      <NetIncomeWaterfall totals={{ before: 100, after: 80, change: -20 }} steps={[step("Threshold freeze", -20)]} yearLabel="2031-32" />,
+    );
+    expect(one.container.querySelector(".waterfall-chip")).toBeNull();
+    expect(one.container.querySelector(".visually-hidden")).toHaveTextContent("all from Threshold freeze.");
+    one.unmount();
+
+    // No change: the note is shown
+    const none = render(<NetIncomeWaterfall totals={{ before: 100, after: 100, change: 0 }} steps={[]} yearLabel="2027-28" />);
+    expect(none.container.querySelector(".waterfall-no-change")).toHaveTextContent("No change to your net income in 2027-28.");
+    expect(none.container.querySelector(".waterfall-chip")).toBeNull();
+    none.unmount();
   });
 
   it("gives the result card no coloured left stripe: gain and loss colour only the numbers", async () => {

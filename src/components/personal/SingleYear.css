@@ -948,10 +948,9 @@
   display: block;
 }
 
-/* The line spans the panel's full width; it wraps on phones */
-.waterfall-sentence {
+/* Shown only when nothing changes: the panel's one note */
+.waterfall-no-change {
   margin: 6px 0 0;
-  max-width: none;
   font-size: 0.8rem;
   line-height: 1.45;
   color: var(--pe-gray-600);
@@ -1003,8 +1002,39 @@
 }
 
 .waterfall-row.is-total .waterfall-name,
-.waterfall-row.is-total .waterfall-value {
+.waterfall-row.is-total .waterfall-value,
+.waterfall-row.is-largest .waterfall-name,
+.waterfall-row.is-largest .waterfall-value {
   font-weight: 600;
+}
+
+/* The largest policy's chip: in the empty run left of its bar, in the
+   bar's colour */
+.waterfall-chip {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--c-text);
+  background: var(--c-surface);
+  border: 1px solid var(--pe-gray-300);
+}
+
+.waterfall-row.is-gain .waterfall-chip {
+  color: var(--c-gain-text);
+  background: color-mix(in srgb, var(--c-gain) 14%, var(--c-surface));
+  border-color: color-mix(in srgb, var(--c-gain) 45%, var(--c-surface));
+}
+
+.waterfall-row.is-loss .waterfall-chip {
+  color: var(--c-loss-text);
+  background: color-mix(in srgb, var(--c-loss) 14%, var(--c-surface));
+  border-color: color-mix(in srgb, var(--c-loss) 45%, var(--c-surface));
 }
 
 .waterfall-track {
