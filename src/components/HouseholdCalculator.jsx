@@ -929,11 +929,19 @@ function HouseholdCalculator({
     const labelId = `household-section-${index}`;
     return (
       <section key={section.title} className="household-group household-more" aria-labelledby={labelId}>
+        {/* The form's own header in small: a tinted icon, the title with an
+            "Optional" tag, and one muted line under it */}
         <div className="household-more-head">
-          <h3 className="household-group-label" id={labelId}>
-            {section.title}
-          </h3>
-          <p className="household-more-note">Optional: each starts at a typical value.</p>
+          <TitleIcon name={section.icon} size={14} className="title-icon household-more-icon" />
+          <div className="household-more-text">
+            <div className="household-more-title">
+              <h3 className="household-more-heading" id={labelId}>
+                {section.title}
+              </h3>
+              <span className="household-more-tag">Optional</span>
+            </div>
+            <p className="household-more-note">Each starts at a typical value for a household like yours.</p>
+          </div>
         </div>
         <div className="household-details">
           {section.groups.map((group) => {

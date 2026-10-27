@@ -2122,26 +2122,69 @@
   text-overflow: ellipsis;
 }
 
-/* More details: a heading, then a row per group that opens it */
+/* More details: a header as the form's own, in small (a tinted icon, the
+   title with an "Optional" tag, one muted line), then a row per group
+   that opens it. One hairline above the section, from .household-group;
+   the rows are parted by hairlines between them, none above the first.
+   Header icon, row icons and the open groups' boxes share the card's left
+   edge, so the boxes' columns line up with the essentials' above. */
 .household-more {
-  padding: 16px 28px 8px;
+  padding: 22px 28px 10px;
 }
 
 .household-more-head {
   display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.household-more-head .household-more-icon {
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  border-radius: 7px;
+}
+
+.household-more-text {
+  min-width: 0;
+}
+
+.household-more-title {
+  display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
-  margin-bottom: 6px;
+  align-items: center;
+  gap: 4px 8px;
+  min-height: 26px;
+}
+
+.household-more-heading {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--pe-gray-800);
+}
+
+.household-more-tag {
+  padding: 1px 8px;
+  font-size: var(--fs-micro, 0.6875rem);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+  background: var(--pe-gray-50);
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 999px;
 }
 
 .household-more-note {
-  margin: 0;
+  margin: 2px 0 0;
   font-size: var(--fs-caption);
+  line-height: 1.45;
   color: var(--pe-gray-500);
 }
 
-.household-detail {
+.household-detail + .household-detail {
   border-top: 1px solid var(--pe-gray-100);
 }
 
@@ -2162,9 +2205,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
   min-height: 44px;
-  padding: 8px 4px;
+  margin: 0 -8px;
+  width: calc(100% + 16px);
+  padding: 8px;
   font: inherit;
   text-align: left;
   color: var(--pe-gray-800);
@@ -2236,7 +2280,7 @@
 
 @media (max-width: 480px) {
   .household-more {
-    padding: 14px 16px 6px;
+    padding: 18px 16px 6px;
   }
 
   /* On a phone the summary goes under the title */

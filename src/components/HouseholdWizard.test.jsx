@@ -99,7 +99,13 @@ describe("the personal impact form", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Your household" })).toBeInTheDocument();
     // No spaced capitals: the essentials in one grid, then More details
     expect(screen.queryByRole("heading", { level: 3, name: "You" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: "More details" })).toBeInTheDocument();
+    // More details' header: its title alone as the heading, an "Optional"
+    // tag beside it and one line under it, in the section it names
+    const more = screen.getByRole("region", { name: "More details" });
+    expect(within(more).getByRole("heading", { level: 3, name: "More details" })).toBeInTheDocument();
+    expect(within(more).getByText("Optional")).toHaveClass("household-more-tag");
+    expect(within(more).getByText("Each starts at a typical value for a household like yours.")).toBeInTheDocument();
+    expect(screen.queryByText(/^Optional: each starts/)).not.toBeInTheDocument();
     // More details: four groups, each closed at first and saying what it holds
     for (const title of DETAIL_GROUPS) expect(groupToggle(title)).toHaveAttribute("aria-expanded", "false");
     expect(groupToggle("Other income")).toHaveTextContent("None");
