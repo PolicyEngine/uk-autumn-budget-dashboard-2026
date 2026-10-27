@@ -30,7 +30,7 @@ import { DEFAULT_SPENDING, SALARY_SOURCE, WIZARD_DEFAULTS, regionalRent } from "
 export { WIZARD_DEFAULTS };
 import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
 import ConstituencyField from "./personal/ConstituencyField";
-import PolicyBadges from "./personal/PolicyBadge";
+import PolicyIcons from "./personal/PolicyBadge";
 import { policyQuestions } from "../utils/householdPolicyFields";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
@@ -38,27 +38,63 @@ import "./HouseholdCalculator.css";
 import { STICKY_GAP, scrollBelowBars, stickyBottom } from "../utils/pageScroll";
 
 
-// The form: one card. The essentials first, as one grid of boxes and
-// segmented choices; then More details, four groups that each open on
-// their own and, closed, say what they hold. `children` stands for each
-// child's answers (their age and, from 16, their education); `rent_from`
-// is the landlord, the renting half of the tenure.
+// The form's numbered groups, read top to bottom: You and Household
+// always; each of the others only with the answers in it that a selected
+// policy reads (utils/householdPolicyFields.js), numbered as shown. Each
+// has a short heading and one line under it; `quiet` fields leave their
+// own note to that line. `children` stands for each child's answers
+// (their age and, from 16, their education); `rent_from` is the landlord,
+// the renting half of the tenure.
+export const FORM_GROUPS = [
+  {
+    key: "you",
+    title: "You",
+    hint: "Your age, your pay before tax, and where you live.",
+    always: true,
+    fields: ["current_age", "current_salary", "region"],
+  },
+  {
+    key: "household",
+    title: "Household",
+    hint: "Who lives with you, and your home.",
+    always: true,
+    fields: ["has_partner", "children_count", "tenure", "partner_age", "partner_salary", "rent_from", "monthly_rent", "children"],
+  },
+  {
+    key: "spending",
+    title: "Spending",
+    hint: "Prefilled with the average household's spending (Source: ONS Family Spending, 2024-25).",
+    fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"],
+    quiet: ["petrol_spending_per_year", "diesel_spending_per_year"],
+  },
+  {
+    key: "savings",
+    title: "Savings and investments",
+    hint: "Your own income from them, before tax.",
+    fields: ["dividends_per_year", "savings_interest_per_year", "property_income_per_year"],
+  },
+  {
+    key: "benefits",
+    title: "Benefits and loans",
+    hint: "Yes to Universal Credit counts what your answers entitle you to.",
+    fields: ["claims_universal_credit", "student_loan_plan"],
+    quiet: ["claims_universal_credit"],
+  },
+  {
+    key: "pensions",
+    title: "Pensions",
+    hint: "Paid to you before tax; the State Pension starts at the full new rate.",
+    fields: ["state_pension_per_year", "private_pension_per_year", "partner_state_pension_per_year", "partner_private_pension_per_year"],
+  },
+];
+
+// The form: one card. The numbered groups first (FORM_GROUPS; the
+// essentials are You and Household); then More details, four groups that
+// each open on their own and, closed, say what they hold.
 export const FORM_SECTIONS = [
   {
     title: "About your household",
-    fields: [
-      "current_age",
-      "current_salary",
-      "region",
-      "has_partner",
-      "children_count",
-      "tenure",
-      "partner_age",
-      "partner_salary",
-      "rent_from",
-      "monthly_rent",
-      "children",
-    ],
+    fields: FORM_GROUPS.filter((group) => group.always).flatMap((group) => group.fields),
   },
   {
     title: "More details",
@@ -313,20 +349,6 @@ const PREFILL_HINTS = {
 };
 
 /**
- * The selected policies' questions in runs: those next to each other read
- * by the same policies share one row of badges.
- */
-export function policyClusters(questions) {
-  const clusters = [];
-  for (const question of questions) {
-    const last = clusters.at(-1);
-    if (last && last.policies.join(",") === question.policies.join(",")) last.fields.push(question.id);
-    else clusters.push({ policies: question.policies, fields: [question.id] });
-  }
-  return clusters;
-}
-
-/**
  * Whether the spending the fuel and electricity measures act on is assumed:
  * "average" while it is the prefilled average household's (ONS), "example"
  * for an example's own figure, null once the reader has entered their own.
@@ -461,6 +483,23 @@ function DetailsGroup({ id, title, icon, open, onToggle, summary, changed, onRes
   );
 }
 
+// A phone's width, as HouseholdCalculator.css's phone layout
+const PHONE_QUERY = "(max-width: 640px)";
+
+/** Whether the window matches a media query, following it as it changes. */
+function useNarrow(query) {
+  const matches = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(query).matches;
+  const [narrow, setNarrow] = useState(matches);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return undefined;
+    const list = window.matchMedia(query);
+    const onChange = () => setNarrow(list.matches);
+    list.addEventListener?.("change", onChange);
+    return () => list.removeEventListener?.("change", onChange);
+  }, [query]);
+  return narrow;
+}
+
 // The form's last state, kept for the session so switching tabs keeps it
 const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: {}, submitted: null, startFrom: null };
 
@@ -507,6 +546,7 @@ function HouseholdCalculator({
   // asked before it, and a result stays tied to what it was asked with
   const [submitted, setSubmitted] = useState(() => savedWizard.submitted);
   const selectionKey = selectedPolicies.join(",");
+  const narrow = useNarrow(PHONE_QUERY);
 
   const handleInputChange = (id, value) => {
     setPresetId(null);
@@ -797,9 +837,9 @@ function HouseholdCalculator({
     }));
   };
 
-  // One question: its box, label above and hint below; asked for the
-  // selected policies, described by their badges (`badgesId`)
-  const renderField = (id, badgesId = undefined) => {
+  // One question: its box, label above and hint below (none when `quiet`:
+  // its group's line says it)
+  const renderField = (id, { quiet = false } = {}) => {
     if (!fieldApplies(id)) return null;
     if (id === "children") return childAges.map(renderChild);
     let field;
@@ -865,9 +905,8 @@ function HouseholdCalculator({
           label={config.label}
           options={config.options}
           value={inputs[id]}
-          hint={chosen?.hint ?? config.hint}
+          hint={quiet ? undefined : (chosen?.hint ?? config.hint)}
           hintAs={hintPlace(chosen?.hint ?? config.hint, config.hintAs)}
-          describedBy={badgesId}
           {...(config.layout === "segmented" ? { layout: "segmented" } : {})}
           onChange={(value) => handleInputChange(id, value)}
         />
@@ -876,7 +915,7 @@ function HouseholdCalculator({
       const config = NUMBER_CONFIGS[id];
       const prefilled = PREFILLED[id] && (inputs[id] === null || inputs[id] === undefined);
       const value = inputs[id] ?? PREFILLED[id]?.(year, inputs) ?? 0;
-      const hint = PREFILL_HINTS[id] && prefilled ? PREFILL_HINTS[id](year, inputs) : config.hint;
+      const hint = PREFILL_HINTS[id] && prefilled ? PREFILL_HINTS[id](year, inputs) : quiet ? undefined : config.hint;
       field = (
         <div className="number-field-wrap">
           <NumberField
@@ -884,7 +923,6 @@ function HouseholdCalculator({
             {...config}
             hint={hint}
             hintAs={hintPlace(hint)}
-            describedBy={badgesId}
             value={value}
             onChange={(next) => handleInputChange(id, next)}
           />
@@ -955,53 +993,47 @@ function HouseholdCalculator({
     setInputs((prev) => ({ ...prev, ...Object.fromEntries(fields.map((id) => [id, WIZARD_DEFAULTS[id]])) }));
   };
 
-  // The selected policies' own questions, after the essentials; none when
-  // no selected policy reads an answer the essentials leave out
-  const POLICY_QUESTIONS_ID = "household-policy-questions";
-  const renderPolicyQuestions = () =>
-    policyAsks.length === 0 ? null : (
-      <section key="policy-questions" className="household-group household-policy-questions" aria-labelledby={POLICY_QUESTIONS_ID}>
-        <div className="household-more-head">
-          <TitleIcon name="list" size={14} className="title-icon household-more-icon" />
-          <div className="household-more-text">
-            <h3 className="household-more-heading" id={POLICY_QUESTIONS_ID}>
-              Questions that matter for the selected policies
+  // The numbered groups: You and Household always, each other one with
+  // the answers in it the selected policies read, its policies as tiny
+  // icons at the end of its heading
+  const measureFor = (policyId) => policies.find((policy) => policy.id === policyId) ?? { id: policyId, name: policyId };
+  const shownGroups = FORM_GROUPS.map((group) => {
+    const fields = group.always ? group.fields : group.fields.filter((id) => askedUpFront.has(id));
+    const used = new Set(policyAsks.filter((question) => fields.includes(question.id)).flatMap((question) => question.policies));
+    return { ...group, fields, policies: householdPolicies.filter((policyId) => used.has(policyId)) };
+  }).filter((group) => group.always || group.fields.length > 0);
+  const renderGroup = (group, index) => {
+    const headId = `household-step-${group.key}`;
+    return (
+      <section
+        key={group.key}
+        className="household-group household-step"
+        role="group"
+        aria-labelledby={headId}
+        data-step={group.key}
+        data-last={index === shownGroups.length - 1 || undefined}
+      >
+        <div className="household-step-head">
+          <span className="household-step-number" aria-hidden="true">
+            {index + 1}
+          </span>
+          <div className="household-step-text">
+            <h3 className="household-step-title" id={headId}>
+              <span className="visually-hidden">{`Step ${index + 1}:`}</span> {group.title}
             </h3>
-            <p className="household-more-note">Asked here because the policies selected use them.</p>
+            <p className="household-step-hint">{group.hint}</p>
           </div>
+          <PolicyIcons measures={group.policies.map(measureFor)} />
         </div>
-        {/* Questions next to each other that the same policies read share
-            one row of badges: "Fuel duty" over Petrol and Diesel */}
-        <div className="household-grid household-grid-details household-grid-policies">
-          {policyClusters(policyAsks).map((cluster) => {
-            const badgesId = `policies-for-${cluster.fields[0]}`;
-            return (
-              <div
-                key={cluster.fields[0]}
-                className="household-policy-cluster"
-                data-span={Math.min(cluster.fields.length, 3)}
-              >
-                <PolicyBadges
-                  id={badgesId}
-                  label="Used by"
-                  measures={cluster.policies.map((policyId) => policies.find((policy) => policy.id === policyId) ?? { id: policyId, name: policyId })}
-                />
-                <div className="household-policy-cluster-fields">{cluster.fields.map((id) => renderField(id, badgesId))}</div>
-              </div>
-            );
-          })}
+        <div className="household-grid household-grid-step">
+          {group.fields.map((id) => renderField(id, { quiet: group.quiet?.includes(id) }))}
         </div>
       </section>
     );
+  };
 
   const renderSection = (section, index) => {
-    if (!section.collapsible) {
-      return (
-        <section key={section.title} className="household-group household-essentials" aria-label={section.title}>
-          {renderGrid(section.fields, "household-grid-essentials")}
-        </section>
-      );
-    }
+    if (!section.collapsible) return shownGroups.map(renderGroup);
     const labelId = `household-section-${index}`;
     return (
       <section key={section.title} className="household-group household-more" aria-labelledby={labelId}>
@@ -1091,6 +1123,30 @@ function HouseholdCalculator({
       }
     : null;
 
+  // Calculate: in the form's header, or on a phone at its foot
+  const calculateButton = (
+    <button
+      type="submit"
+      className={`calculate-button ${running ? "is-busy" : ""}`}
+      disabled={running || noneSelected}
+      aria-busy={running || undefined}
+    >
+      {running ? (
+        <>
+          <span className="calculate-spinner" aria-hidden="true" />
+          Calculating…
+        </>
+      ) : (
+        <>
+          Calculate
+          <span className="calculate-arrow" aria-hidden="true">
+            →
+          </span>
+        </>
+      )}
+    </button>
+  );
+
   return (
     <div className="household-calculator">
       <HouseholdCards
@@ -1130,31 +1186,13 @@ function HouseholdCalculator({
               )}
             </div>
             {/* Always there: with an example's answers unedited it
-                calculates them again */}
-            <div className="household-header-actions">
-            <button
-              type="submit"
-              className={`calculate-button ${running ? "is-busy" : ""}`}
-              disabled={running || noneSelected}
-              aria-busy={running || undefined}
-            >
-              {running ? (
-                <>
-                  <span className="calculate-spinner" aria-hidden="true" />
-                  Calculating…
-                </>
-              ) : (
-                <>
-                  Calculate
-                  <span className="calculate-arrow" aria-hidden="true">
-                    →
-                  </span>
-                </>
-              )}
-            </button>
-            </div>
+                calculates them again; on a phone, at the form's foot */}
+            {!narrow && <div className="household-header-actions">{calculateButton}</div>}
           </div>
-          {FORM_SECTIONS.map((section, index) => [renderSection(section, index), index === 0 && renderPolicyQuestions()])}
+          {FORM_SECTIONS.map(renderSection)}
+          {/* On a phone, Calculate waits at the screen's foot while the
+              form is in view, after the questions in the tab order */}
+          {narrow && <div className="household-form-footer">{calculateButton}</div>}
         </form>
         </div>
         </div>

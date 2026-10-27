@@ -1,41 +1,26 @@
+import Tip from "../Tip";
 import { MeasureIcon } from "../MeasureRowLabel";
-import { shortNameOf } from "../../utils/policyDetails";
 import "./PolicyBadge.css";
 
-/**
- * A small chip naming a policy: its category icon in its colour and its
- * short name, the full name for screen readers. Not a control (no tab stop,
- * no tooltip) and no tick: it only says which policy something is for.
- */
-export function PolicyBadge({ measure }) {
-  const short = shortNameOf(measure);
-  const full = measure?.label ?? measure?.name ?? short;
-  return (
-    <span className="policy-badge" style={measure?.color ? { "--mrl-colour": measure.color } : undefined}>
-      <MeasureIcon measure={measure} compact />
-      <span className="policy-badge-name" aria-hidden={full !== short || undefined}>
-        {short}
-      </span>
-      {full !== short && <span className="visually-hidden">{full}</span>}
-    </span>
-  );
-}
+/** A measure's full published name (its short name is for tight labels). */
+const fullName = (measure) => measure?.label ?? measure?.name ?? measure?.id;
 
 /**
- * The policies a question is asked for, as a row of badges. `id` lets the
- * question's box name it (aria-describedby).
+ * The policies a group of questions is asked for, as a row of tiny muted
+ * icons (each measure's category icon) at the end of the group's heading,
+ * their names in a tooltip on hover or tap and in the accessible name. Not a
+ * control (no tab stop) and no tick.
  */
-export default function PolicyBadges({ measures, id, label = "For" }) {
+export default function PolicyIcons({ measures }) {
   if (!measures.length) return null;
+  const names = measures.map(fullName);
   return (
-    <span className="policy-badges" id={id}>
-      <span className="visually-hidden">{label}: </span>
-      {measures.map((measure, index) => (
-        <span key={measure.id ?? index} className="policy-badges-item">
-          <PolicyBadge measure={measure} />
-          {index < measures.length - 1 && <span className="visually-hidden">, </span>}
-        </span>
-      ))}
-    </span>
+    <Tip content={names.join(" · ")}>
+      <span className="policy-icons" role="img" aria-label={`Used by ${names.join(", ")}`}>
+        {measures.map((measure, index) => (
+          <MeasureIcon key={measure.id ?? index} measure={measure} compact />
+        ))}
+      </span>
+    </Tip>
   );
 }

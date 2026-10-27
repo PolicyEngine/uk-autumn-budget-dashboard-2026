@@ -1,9 +1,6 @@
 import { useId, useState } from "react";
 import { InfoTip } from "../Tip";
 
-/** Element ids for aria-describedby, the empty ones left out (undefined if none). */
-const joinIds = (...ids) => ids.filter(Boolean).join(" ") || undefined;
-
 /**
  * One choice from a few, as selectable boxes: native radio buttons styled
  * as tiles (or, `layout="segmented"`, one joined row of them), so the group
@@ -24,17 +21,16 @@ const joinIds = (...ids) => ids.filter(Boolean).join(" ") || undefined;
  *   five boxes that share the row; compact: short labels (A to H, 0 to 6);
  *   grid: many boxes that wrap (regions); segmented: one joined row
  */
-export function ChoiceTiles({ id, label, options, value, onChange, hint, hintAs = "below", layout = "wide", hideLabel = false, describedBy }) {
+export function ChoiceTiles({ id, label, options, value, onChange, hint, hintAs = "below", layout = "wide", hideLabel = false }) {
   const uid = useId();
   const labelId = `${uid}-label`;
   const hintId = hint ? `hint-${id}` : undefined;
-  const description = joinIds(hintId, describedBy);
   return (
     <div
       className={`choice-field choice-${layout}`}
       role="radiogroup"
       aria-labelledby={labelId}
-      aria-describedby={description}
+      aria-describedby={hintId}
       data-field={id}
     >
       {hideLabel ? (
@@ -148,7 +144,7 @@ export function FieldHint({ hint, hintId, hintAs }) {
  * @param {string} [props.hint] - A line under the box
  * @param {"below"|"tooltip"} [props.hintAs] - Where the hint goes
  */
-export function SelectField({ id, label, options, value, onChange, hint, hintAs = "below", describedBy }) {
+export function SelectField({ id, label, options, value, onChange, hint, hintAs = "below" }) {
   const fieldId = `field-${id}`;
   const hintId = hint ? `hint-${id}` : undefined;
   const index = options.findIndex((option) => option.value === value);
@@ -159,7 +155,7 @@ export function SelectField({ id, label, options, value, onChange, hint, hintAs 
         <select
           id={fieldId}
           value={String(index)}
-          aria-describedby={joinIds(hintId, describedBy)}
+          aria-describedby={hintId}
           onChange={(event) => onChange(options[Number(event.target.value)].value)}
         >
           {options.map((option, i) => (
@@ -249,7 +245,6 @@ export function NumberField({
   inputLabel,
   outOfRangeMessage,
   hideLabel = false,
-  describedBy: extraDescribedBy,
 }) {
   const hintId = hint ? `hint-${id}` : undefined;
   const fieldId = `field-${id}`;
@@ -281,7 +276,7 @@ export function NumberField({
   const invalid = Boolean(outOfRangeMessage) && outOfRange(parse(draft), min, max);
   const errorShown = Boolean(outOfRangeMessage) && (invalid || clampedFrom !== null);
   const errorId = `error-${id}`;
-  const describedBy = joinIds(hintId, errorShown ? errorId : null, extraDescribedBy);
+  const describedBy = [hintId, errorShown ? errorId : null].filter(Boolean).join(" ") || undefined;
   const typed = parse(draft);
   const boxValue = money && !editing && Number.isFinite(typed) ? formatAmount(typed) : draft;
   const stepButton = (direction) => (

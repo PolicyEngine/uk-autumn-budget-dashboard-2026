@@ -2310,38 +2310,115 @@
   }
 }
 
-/* The selected policies' own questions, after the essentials: More
-   details' small header, then the boxes, each with the policies that use
-   it as badges above its label */
-.household-policy-questions .household-more-head {
+/* The numbered groups, read top to bottom: a number in a small circle,
+   the heading with one muted line under it and the policies it is asked
+   for as tiny icons at its right end; the boxes under the heading, in the
+   grid's three columns. On a wide screen a hairline rail joins the
+   numbers, so it is clear where one is in the form. */
+.household-step {
+  position: relative;
+  padding: 20px 28px 22px;
+}
+
+.household-group.household-step + .household-group.household-step {
+  border-top: 0;
+}
+
+.household-step:not([data-last])::before {
+  content: "";
+  position: absolute;
+  top: 46px;
+  bottom: -18px;
+  left: 39px;
+  width: 1px;
+  background: var(--pe-gray-200);
+}
+
+.household-step-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   margin-bottom: 14px;
 }
 
-/* A run of questions the same policies read: their badges once, above
-   the run's boxes, which keep the grid's columns (a run spans as many
-   columns as it has boxes, up to the row) */
-.household-policy-cluster {
-  grid-column: span var(--span, 1);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.household-step-number {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--pe-teal-800);
+  background: var(--pe-teal-50);
+  border: 1px solid var(--pe-teal-200);
+  border-radius: 50%;
+}
+
+.household-step-text {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
-.household-policy-cluster[data-span="2"] { --span: 2; }
-.household-policy-cluster[data-span="3"] { --span: 3; }
-
-.household-policy-cluster-fields {
-  display: grid;
-  grid-template-columns: repeat(var(--span, 1), minmax(0, 1fr));
-  gap: 14px 20px;
-  align-items: start;
+.household-step-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 24px;
+  letter-spacing: -0.005em;
+  color: var(--pe-gray-800);
 }
 
-@media (max-width: 900px) {
-  .household-policy-cluster[data-span="3"] { --span: 2; }
+.household-step-hint {
+  margin: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+  color: var(--pe-gray-500);
+}
+
+.household-step-head .policy-icons {
+  margin-top: 4px;
+}
+
+/* The boxes sit under the heading, clear of the rail */
+.household-grid-step {
+  padding-left: 36px;
+}
+
+/* On a phone, Calculate waits at the screen's foot while the form is in
+   view (the header keeps none) */
+.household-form-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: var(--pe-surface);
+  border-top: 1px solid var(--pe-gray-200);
+  border-radius: 0 0 var(--card-radius) var(--card-radius);
+  box-shadow: var(--pe-shadow-md);
+}
+
+.household-form-footer .calculate-button {
+  width: 100%;
+  justify-content: center;
 }
 
 @media (max-width: 640px) {
-  .household-policy-cluster[data-span] { --span: 1; }
+  .household-step {
+    padding: 18px 16px 20px;
+  }
+
+  .household-step:not([data-last])::before {
+    display: none;
+  }
+
+  .household-group.household-step + .household-group.household-step {
+    border-top: 1px solid var(--pe-gray-100);
+  }
+
+  .household-grid-step {
+    padding-left: 0;
+  }
 }

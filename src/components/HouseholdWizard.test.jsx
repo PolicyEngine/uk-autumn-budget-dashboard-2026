@@ -578,46 +578,42 @@ describe("the selected policies' questions", () => {
     { id: "state_pension_income_tax_protection", name: "State Pension income tax protection" },
   ];
   const ALL_EIGHT = EIGHT.map((policy) => policy.id);
-  const section = () => screen.queryByRole("region", { name: "Questions that matter for the selected policies" });
-  /** The section's questions, in order. */
-  const asked = () => [...section().querySelectorAll(".household-field")].map((row) => row.dataset.row);
-  /** The policies a question's badges name. */
-  const badges = (id) =>
-    [...field(id).closest(".household-policy-cluster").querySelectorAll(".policy-badge-name")].map((badge) => badge.textContent);
+  const STEP_ORDER = ["you", "household", "spending", "savings", "benefits", "pensions"];
+  /** The numbered groups shown, by heading ("Step 1: You"). */
+  const groups = () => [...document.querySelectorAll(".household-step-title")].map((heading) => heading.textContent);
+  /** A numbered group, by its title. */
+  const group = (title) => screen.getByRole("group", { name: new RegExp(`^Step \\d+: ${title}$`) });
+  /** A group's questions, in order. */
+  const asked = (title) => [...group(title).querySelectorAll(".household-field")].map((row) => row.dataset.row);
+  /** The policies a group's heading names (its icons' accessible name). */
+  const usedBy = (title) => within(group(title)).queryByRole("img", { name: /^Used by / })?.getAttribute("aria-label") ?? null;
   const form = (selected, props = {}) => renderForm(<HouseholdCalculator selectedPolicies={selected} policies={EIGHT} {...props} />);
 
-  it("asks, after the essentials, what the selected policies read, each with its policies as badges", () => {
+  it("numbers the groups the selected policies need, after You and Household, each naming its policies by icon", () => {
     form(ALL_EIGHT);
-    expect(asked()).toEqual([
-      "petrol_spending_per_year",
-      "diesel_spending_per_year",
-      "electricity_spending_per_year",
-      "claims_universal_credit",
-      "student_loan_plan",
-      "dividends_per_year",
-      "savings_interest_per_year",
-      "property_income_per_year",
+    expect(groups()).toEqual([
+      "Step 1: You",
+      "Step 2: Household",
+      "Step 3: Spending",
+      "Step 4: Savings and investments",
+      "Step 5: Benefits and loans",
     ]);
-    expect(badges("petrol_spending_per_year")).toEqual(["Fuel duty rises deferred"]);
-    expect(badges("electricity_spending_per_year")).toEqual(["Zero VAT on domestic electricity"]);
-    expect(badges("claims_universal_credit")).toEqual(["Warm Home Discount top-up"]);
-    expect(badges("student_loan_plan")).toEqual(["Plan 2 student loan threshold unfrozen"]);
-    // The essentials stay first; the section comes before More details
-    const essentials = document.querySelector(".household-essentials");
-    const more = screen.getByRole("region", { name: "More details" });
-    expect(essentials.compareDocumentPosition(section()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(section().compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // The badges describe the box (screen readers hear them with it), and
-    // none is a tab stop or a tick
-    const petrol = box("Petrol");
-    expect(petrol.getAttribute("aria-describedby")).toContain("policies-for-petrol_spending_per_year");
-    // Questions next to each other that the same policies read share one
-    // row of badges, which describes each of their boxes
-    expect(badges("diesel_spending_per_year")).toEqual(["Fuel duty rises deferred"]);
-    expect(box("Diesel").getAttribute("aria-describedby")).toContain("policies-for-petrol_spending_per_year");
-    expect(section().querySelectorAll(".policy-badge")).toHaveLength(5);
-    expect(section().querySelector(".policy-badges [tabindex]")).toBeNull();
-    expect(section()).not.toHaveTextContent("✓");
+    expect(asked("You")).toEqual(["current_age", "current_salary", "region"]);
+    expect(asked("Household")).toEqual(["has_partner", "children_count", "tenure", "rent_from", "monthly_rent"]);
+    expect(asked("Spending")).toEqual(["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"]);
+    expect(asked("Savings and investments")).toEqual(["dividends_per_year", "savings_interest_per_year", "property_income_per_year"]);
+    expect(asked("Benefits and loans")).toEqual(["claims_universal_credit", "student_loan_plan"]);
+    expect(usedBy("You")).toBeNull();
+    expect(usedBy("Spending")).toBe("Used by Fuel duty rises deferred, Zero VAT on domestic electricity");
+    expect(usedBy("Savings and investments")).toBe("Used by Dividend, savings and property income tax up");
+    expect(usedBy("Benefits and loans")).toBe("Used by Warm Home Discount top-up, Plan 2 student loan threshold unfrozen");
+    // No chips between the boxes, no tab stop in a heading, no tick
+    expect(document.querySelector(".policy-badge")).toBeNull();
+    expect(document.querySelector(".household-step-head [tabindex]")).toBeNull();
+    expect(document.querySelector(".household-form")).not.toHaveTextContent("✓");
+    // The group's line says what the spending boxes start at, once
+    expect(group("Spending")).toHaveTextContent("Prefilled with the average household's spending");
+    expect(document.getElementById("hint-petrol_spending_per_year")).toBeNull();
     // Asked once: More details keeps only the rest, and its rows say only
     // what they still hold
     expect(screen.queryByRole("button", { name: /^Other income/ })).not.toBeInTheDocument();
@@ -627,33 +623,37 @@ describe("the selected policies' questions", () => {
     expect(groupToggle("Council tax and benefits")).toHaveTextContent("Council Tax band D");
     expect(groupToggle("Council tax and benefits")).not.toHaveTextContent("Universal Credit");
     openMore();
-    for (const id of asked()) expect(document.querySelectorAll(`[data-row="${id}"]`)).toHaveLength(1);
+    for (const id of fields()) expect(document.querySelectorAll(`[data-row="${id}"]`)).toHaveLength(1);
+    // The tab order follows the groups: every box of a group before the next's
+    const order = [...document.querySelectorAll(".household-step input, .household-step select")].map(
+      (input) => input.closest(".household-step").dataset.step,
+    );
+    expect(order).toEqual([...order].sort((a, b) => STEP_ORDER.indexOf(a) - STEP_ORDER.indexOf(b)));
   });
 
-  it("adds the State Pension and private pension from State Pension age", () => {
+  it("adds Pensions from State Pension age", () => {
     form(ALL_EIGHT);
     fireEvent.change(box("Age"), { target: { value: "70" } });
-    expect(asked()).toEqual(expect.arrayContaining(["state_pension_per_year", "private_pension_per_year"]));
-    expect(badges("state_pension_per_year")).toEqual(["State Pension income tax protection"]);
-    expect(badges("private_pension_per_year")).toEqual(["State Pension income tax protection"]);
-    // Below it, neither
+    expect(groups().at(-1)).toBe("Step 6: Pensions");
+    expect(asked("Pensions")).toEqual(["state_pension_per_year", "private_pension_per_year"]);
+    expect(usedBy("Pensions")).toBe("Used by State Pension income tax protection");
     fireEvent.change(box("Age"), { target: { value: "40" } });
-    expect(asked()).not.toContain("state_pension_per_year");
-    expect(asked()).not.toContain("private_pension_per_year");
+    expect(groups()).not.toContain("Step 6: Pensions");
   });
 
-  it("follows the selection: one policy, its question alone", () => {
+  it("follows the selection: one policy, its group alone, numbered next", () => {
     form(["plan_2_threshold_unfreeze"]);
-    expect(asked()).toEqual(["student_loan_plan"]);
+    expect(groups()).toEqual(["Step 1: You", "Step 2: Household", "Step 3: Benefits and loans"]);
+    expect(asked("Benefits and loans")).toEqual(["student_loan_plan"]);
     expect(groupToggle("Spending")).toHaveTextContent(/^Spending/);
-    expect(groupToggle("Pension and student loan")).toHaveTextContent("No pension income");
+    expect(groupToggle("Council tax and benefits")).toHaveTextContent("Universal Credit");
     expect(groupToggle("Pension and student loan")).not.toHaveTextContent("student loan ·");
   });
 
-  it("is not there when no selected policy reads anything beyond the essentials", () => {
+  it("shows only You and Household when no selected policy reads anything more", () => {
     for (const selected of [[], ["threshold_freeze_2031_32"], ["employer_nics_secondary_threshold_raise", "threshold_freeze_2031_32"], ["unknown_measure"]]) {
       const { unmount } = form(selected);
-      expect(section()).toBeNull();
+      expect(groups()).toEqual(["Step 1: You", "Step 2: Household"]);
       for (const title of DETAIL_GROUPS) expect(groupToggle(title)).toBeInTheDocument();
       unmount();
       resetSavedWizard();
