@@ -1,0 +1,181 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "policyengine-uk default economic assumptions",
+        "status": "pre_budget",
+        "vintage": "as shipped in the installed policyengine-uk"
+      },
+      "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+    },
+    "composition": null,
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "c48a8fe082168969b5c3e6d6689a630c9f47ac64fa9de7efd11a055d2cab1a4b",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "description": "Candidate measure. VAT on petrol and diesel falls from 20% to 15% from 1 December 2026 to 31 May 2027, fully passed through to pump prices; spending on fuel is held fixed. Day-weighted to fiscal years.",
+    "digests": {
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "outputs_sha256": "f2b19935ea892db42644acf9f76fbc15644d5d49605eb060f353f9bebf103681",
+      "receipt_sha256": "d77f5683b645163f39707a3746ab081cb68030991d5641acd92ffb5740d0ee04"
+    },
+    "disclosure_floor": {
+      "checked": true,
+      "survey_households": 10,
+      "thin_cells": [],
+      "thin_cells_in_tables": false
+    },
+    "files": {
+      "age_impact.csv": "109c1eba0926e2c43bb3e22d468b5520333d7a61b6b1959a0bdf72cc5c51c8da",
+      "budgetary_impact.csv": "07c97be5bc6f00297ac376c49fb20768c66d23ca07acfc5bca140c9271a5b675",
+      "distributional_impact.csv": "9946569409090c0c06ee3955e35881079e8e597a6e9ea72b7871ff501feb9a4f",
+      "household_scatter_binned.csv": "fb2f3737e5474cae79d6df0e62edc84de56a14a04a24e854e5c6f08ecb3c7389",
+      "income_curve.csv": "3683cd1bea714e1ff0d225c53f53a15c881b96aff995ee5f002a043603309043",
+      "metrics.csv": "2d7674e0542371a196e76196adbd4c94d38c8ff58b6c52bb59f48c22dd39f95f",
+      "poverty_inequality.csv": "ddbe1f71db4d2e10597cd224ee573de205086841b540fcdc1da1edd964983f0f",
+      "winners_losers.csv": "5592e8256424ce6ecf38157d122ae598bae5b8e157983370457c12b336f23e7b"
+    },
+    "generated_at": "2026-10-27T18:12:58.496773+00:00",
+    "generator_argv": [
+      "/Users/maxghenis/reviews/budget-coordinator/pr207-merge/src/uk_budget_data/cli.py",
+      "generate",
+      "--artifacts",
+      "--backend",
+      "modal",
+      "--reforms",
+      "domestic_electricity_zero_vat",
+      "fuel_duty_rise_deferral",
+      "road_fuel_vat_cut",
+      "threshold_freeze_2031_32",
+      "warm_home_discount_top_up"
+    ],
+    "git_sha": "0bd4b8a34851214fef01eece7a3281f90183ae7d",
+    "key": "road_fuel_vat_cut",
+    "measure_ids": [
+      "road_fuel_vat_cut"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "9d3479f1f5ac859ab6bd2644aaff443a29c0dad3f2944b1ef98866028f9d4b89",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": [
+        [
+          "apply_vat_base_change"
+        ]
+      ]
+    },
+    "name": "VAT cut on road fuel",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.11.1",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "road_fuel_vat_cut baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.11.1",
+      "certificate_sha256": "f2e6fc9faafab32b50c1c76067fb070ae9686b6f375e44417776de16e9c3521f",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.151.0",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "ec8e6c4194b5e1ec0acd64c8718d0eecb6b41648b53f0b453c425b516e5a4489"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "build_model_version": "2.151.0",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.151.0"
+    },
+    "outputs_sha256": "f2b19935ea892db42644acf9f76fbc15644d5d49605eb060f353f9bebf103681",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "code_revision",
+      "kind": "reform",
+      "name": "road_fuel_vat_cut",
+      "reform_sha256": "2b66e5fa25aa0dbbfe086405b0fc899da302d66b5460c52943136f9f8c2b655e",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "linux",
+      "python_version": "3.13.3"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.11.1"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

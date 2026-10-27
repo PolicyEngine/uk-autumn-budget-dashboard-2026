@@ -1,0 +1,7 @@
+reform_id,reform_name,year,poverty_abs_bhc_change_pp,poverty_abs_bhc_change_pct,child_poverty_abs_bhc_change_pp,child_poverty_abs_bhc_change_pct,poverty_abs_ahc_change_pp,poverty_abs_ahc_change_pct,child_poverty_abs_ahc_change_pp,child_poverty_abs_ahc_change_pct,poverty_rel_bhc_change_pp,poverty_rel_bhc_change_pct,child_poverty_rel_bhc_change_pp,child_poverty_rel_bhc_change_pct,poverty_rel_ahc_change_pp,poverty_rel_ahc_change_pct,child_poverty_rel_ahc_change_pp,child_poverty_rel_ahc_change_pct,top_10_share_change_pp,top_1_share_change_pp,p90_p10_change
+domestic_electricity_zero_vat,Zero VAT on domestic electricity,2026,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-0.005388752541918285,-0.0035614760901053755,-0.0005546612202534663
+domestic_electricity_zero_vat,Zero VAT on domestic electricity,2027,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-0.009624949419018147,-0.006379113625576416,-0.0022070028596453592
+domestic_electricity_zero_vat,Zero VAT on domestic electricity,2028,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+domestic_electricity_zero_vat,Zero VAT on domestic electricity,2029,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+domestic_electricity_zero_vat,Zero VAT on domestic electricity,2030,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+domestic_electricity_zero_vat,Zero VAT on domestic electricity,2031,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0

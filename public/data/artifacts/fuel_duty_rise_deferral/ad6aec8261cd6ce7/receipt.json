@@ -1,0 +1,181 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "policyengine-uk default economic assumptions",
+        "status": "pre_budget",
+        "vintage": "as shipped in the installed policyengine-uk"
+      },
+      "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+    },
+    "composition": null,
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "c48a8fe082168969b5c3e6d6689a630c9f47ac64fa9de7efd11a055d2cab1a4b",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "description": "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p, so that rise is never made up. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+    "digests": {
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "outputs_sha256": "42434e17b5d65b5ace9da18bac3c04df05ec62d6859d7dae8e37268034044dbf",
+      "receipt_sha256": "e9d49a63f57f4db2a50e05fd12a3cfa1f9467b5e95ed69e1c2a543a4fc2db991"
+    },
+    "disclosure_floor": {
+      "checked": true,
+      "survey_households": 10,
+      "thin_cells": [],
+      "thin_cells_in_tables": false
+    },
+    "files": {
+      "age_impact.csv": "2d603385bb0fe9b2224e16ad8c193b907685b276f206b0762075f6c3a9172832",
+      "budgetary_impact.csv": "f24fce3137c730cda85668aaf96a5a7c60157f748e4ae1dcb6823ddad0219bca",
+      "distributional_impact.csv": "bdf9451cc126572b96be8b37fc527798520b981711222c2455de5e3d9e8bf1ca",
+      "household_scatter_binned.csv": "0970c68ac6e19c2ccc15b30aabf9e0f5d6d80749cc531c6c0e09c3f5cd340fc5",
+      "income_curve.csv": "6d60e483b97e1c39892ede6d733038bf6da52a83cddf3235a4d5fb32dfa296f2",
+      "metrics.csv": "6325bc47e6a21a6c513315ce3100224da3dd945b0e7d3ca27eb66e06cf27e9df",
+      "poverty_inequality.csv": "8170daf13dea3022b235e0a70a8fea15fc37b69745a2283dec7b583374cb62ee",
+      "winners_losers.csv": "ecc2e3903c488e447d6bdbdb8bb6cec2cae38b8b3b293aeac995edfca60fb2c8"
+    },
+    "generated_at": "2026-10-27T18:11:09.780663+00:00",
+    "generator_argv": [
+      "/Users/maxghenis/reviews/budget-coordinator/pr207-merge/src/uk_budget_data/cli.py",
+      "generate",
+      "--artifacts",
+      "--backend",
+      "modal",
+      "--reforms",
+      "domestic_electricity_zero_vat",
+      "fuel_duty_rise_deferral",
+      "road_fuel_vat_cut",
+      "threshold_freeze_2031_32",
+      "warm_home_discount_top_up"
+    ],
+    "git_sha": "0bd4b8a34851214fef01eece7a3281f90183ae7d",
+    "key": "fuel_duty_rise_deferral",
+    "measure_ids": [
+      "fuel_duty_rise_deferral"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "9d3479f1f5ac859ab6bd2644aaff443a29c0dad3f2944b1ef98866028f9d4b89",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": [
+        [
+          "apply_vat_base_change"
+        ]
+      ]
+    },
+    "name": "Fuel duty rises deferred",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.11.1",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "fuel_duty_rise_deferral baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.11.1",
+      "certificate_sha256": "f2e6fc9faafab32b50c1c76067fb070ae9686b6f375e44417776de16e9c3521f",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.151.0",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "ec8e6c4194b5e1ec0acd64c8718d0eecb6b41648b53f0b453c425b516e5a4489"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "build_model_version": "2.151.0",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.151.0"
+    },
+    "outputs_sha256": "42434e17b5d65b5ace9da18bac3c04df05ec62d6859d7dae8e37268034044dbf",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "code_revision",
+      "kind": "reform",
+      "name": "fuel_duty_rise_deferral",
+      "reform_sha256": "2e6ab3ab2db14c46ef39a55cc88747b4001c6f2067b26d03ebb0294cec30022f",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "linux",
+      "python_version": "3.13.3"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.11.1"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}
