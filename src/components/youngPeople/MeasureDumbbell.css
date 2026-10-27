@@ -17,24 +17,13 @@
   font-size: var(--fs-caption);
 }
 
-/* In a pair of cards the dumbbell fills the shared plot row: its rows
-   share the height evenly (as the Better and worse off rows beside it, so
-   the two cards keep one row pitch), the axis stays at the bottom, and no
-   gap opens above the legend. */
+/* In a pair of cards the dumbbell starts level with its neighbour's plot
+   (the pair's shared plot row) and keeps its rows' own height: neither
+   card stretches its rows to the other's. */
 @media (min-width: 1025px) {
-  .charts-grid:has(> div + div) .chart-plot:has(> .measure-dumbbell) {
-    display: flex;
-    flex-direction: column;
-  }
-
   .charts-grid:has(> div + div) .measure-dumbbell {
-    flex: 1 1 auto;
     box-sizing: border-box;
     padding: 0 0 6px;
-  }
-
-  .charts-grid:has(> div + div) .measure-dumbbell > .measure-dumbbell-row {
-    flex: 1 1 auto;
   }
 }
 
@@ -354,13 +343,58 @@
   }
 }
 
-/* A narrower card (half a pair, under 720px), not a phone: each row is a
-   header line across the card (icon, the full name and its category on
-   one line) over the plot strip, with the value and its gap at the
-   strip's right. The axis lines up with the strip. Who
-   is in poverty keeps its own columns (LivingStandards.css). */
+/* Half a pair (420 to 719px), not a phone: one compact line per policy,
+   the name in about a third of the width (two lines at most; its category
+   is in the row's tooltip), the plot, then the value over its gap. Who is
+   in poverty keeps its own columns (LivingStandards.css). */
 @media (min-width: 601px) {
-  @container (max-width: 719px) {
+  @container (min-width: 420px) and (max-width: 719px) {
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-row,
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-unit {
+      --md-label: 34%;
+      --md-values: 124px;
+    }
+
+    /* (The columns again: --md-cols was resolved on the dumbbell) */
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-row {
+      grid-template-columns: var(--md-label) minmax(0, 1fr) var(--md-values);
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row {
+      min-height: 40px;
+      padding: 4px 10px;
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-axis .measure-dumbbell-row {
+      padding: 0 10px;
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .mrl-caption {
+      display: none;
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .mrl-name {
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-unit {
+      padding-left: calc(10px + var(--md-label) + var(--md-gap));
+      padding-right: calc(10px + var(--md-values) + var(--md-gap));
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-tip {
+      left: calc(10px + var(--md-label));
+    }
+  }
+}
+
+/* A narrow card (under 420px), not a phone: each row is a header line
+   across the card (icon, the full name and its category on one line)
+   over the plot strip, with the value and its gap at the strip's right.
+   The axis lines up with the strip. */
+@media (min-width: 601px) {
+  @container (max-width: 419px) {
     /* (A container query styles what is inside the dumbbell, not the
        dumbbell itself: the column width is set on each row and the unit) */
     .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-row,

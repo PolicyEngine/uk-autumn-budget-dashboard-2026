@@ -133,26 +133,3 @@
     display: none;
   }
 }
-
-/* In a pair of cards the rows share the plot's height evenly, so the
-   card's foot lines up with its neighbour's and the row pitch matches
-   the dumbbell beside it */
-@media (min-width: 1025px) {
-  .charts-grid:has(> div + div) .chart-plot:has(.msc) {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .charts-grid:has(> div + div) .chart-plot:has(.msc) > .swap-transition-inner,
-  .charts-grid:has(> div + div) .chart-plot .msc-wrap {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .charts-grid:has(> div + div) .msc {
-    flex: 1 1 auto;
-    grid-template-rows: auto;
-    grid-auto-rows: minmax(34px, 1fr);
-  }
-}
