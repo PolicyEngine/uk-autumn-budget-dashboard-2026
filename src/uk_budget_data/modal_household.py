@@ -41,9 +41,12 @@ Warm schedule (approved by Vahid, 25 October 2026, about $35-40 in all):
 ``warm_schedule`` runs every 10 minutes and sets how many ``Household``
 containers stay warm from ``WARM_WINDOWS`` (UK time): 2 by default, 12 for
 the Monday 26 October rehearsal (09:00-18:00) and Budget day (Wednesday
-28 October, 08:00 to midnight), 6 on Tuesday 27 and Thursday 29 October
-(08:00-20:00), with the web endpoint kept at 1 only in those windows, and 0 from 4 November 00:00 (the hard stop). To switch it all off
-at once: ``modal app stop uk-budget-household``.
+28 October, 07:00 to midnight), 6 on Tuesday 27 (08:00-20:00) and Thursday
+29 October (07:00-20:00), with the web endpoint kept at 1 only in those
+windows, and 0 from 4 November 00:00 (the hard stop). The schedule is the
+deployed code's: a change here reaches the production app only when it is
+redeployed. To switch it all off at once: ``modal app stop
+uk-budget-household``.
 """
 
 import os
@@ -285,7 +288,13 @@ class Web:
     # https://policyengine--uk-budget-household-web.us-east.modal.run
     @modal.asgi_app(label=f"{APP_NAME}-web")
     def web(self):
-        return self.api
+        # A household request not answered by DEADLINE_SECONDS (100 s) is
+        # answered 503 with Retry-After, before Modal's 150 s web limit
+        # turns it into an empty answer for the page; its runs carry on
+        # and are kept for the retry (household_deadline)
+        from uk_budget_data.household_deadline import StartingUpDeadline
+
+        return StartingUpDeadline(self.api)
 
 
 def warm_schedule():
