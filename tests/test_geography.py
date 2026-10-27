@@ -1984,6 +1984,9 @@ def test_the_front_end_fixture_shows_every_tier():
 SURCHARGE_RATE = (
     "gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"
 )
+# Not 0.07: from policyengine-uk 2.151.0 the band is 7% from April 2025
+# (Finance Act 2025 s. 50), so a change to 0.07 changes nothing.
+SURCHARGE = 0.09
 INCOME_TAX_RATE = "gov.hmrc.income_tax.rates.uk[0].rate"
 
 
@@ -1996,7 +1999,7 @@ def test_a_measure_the_data_cannot_cost_gets_no_table_by_area(
     code, out, _ = run_cli(
         monkeypatch,
         tmp_path,
-        changes_of={"alpha": {SURCHARGE_RATE: {"2026": 0.07}}},
+        changes_of={"alpha": {SURCHARGE_RATE: {"2026": SURCHARGE}}},
     )
     printed = " ".join(capsys.readouterr().out.split())
     assert code == 1
@@ -2014,7 +2017,7 @@ def test_with_no_data_limit_registered_nothing_is_refused(
     code, out, _ = run_cli(
         monkeypatch,
         tmp_path,
-        changes_of={"alpha": {SURCHARGE_RATE: {"2026": 0.07}}},
+        changes_of={"alpha": {SURCHARGE_RATE: {"2026": SURCHARGE}}},
     )
     assert code == 0
     assert out.exists()
@@ -2070,7 +2073,10 @@ def household_situation():
 @pytest.mark.parametrize(
     "changes, limited",
     [
-        ({SURCHARGE_RATE: {"2027": 0.07}}, ["additional_dwelling_purchases"]),
+        (
+            {SURCHARGE_RATE: {"2027": SURCHARGE}},
+            ["additional_dwelling_purchases"],
+        ),
         ({INCOME_TAX_RATE: {"2027": 0.21}}, []),
     ],
 )
@@ -2573,7 +2579,10 @@ def test_a_package_including_a_limited_measure_is_refused(
 ):
     from uk_budget_data.models import Reform
 
-    both = {INCOME_TAX_RATE: {"2027": 0.21}, SURCHARGE_RATE: {"2027": 0.07}}
+    both = {
+        INCOME_TAX_RATE: {"2027": 0.21},
+        SURCHARGE_RATE: {"2027": SURCHARGE},
+    }
     reforms = [
         Reform(id="pkg", name="pkg", parameter_changes=both),
         Reform(
@@ -2584,7 +2593,7 @@ def test_a_package_including_a_limited_measure_is_refused(
         Reform(
             id="b",
             name="b",
-            parameter_changes={SURCHARGE_RATE: {"2027": 0.07}},
+            parameter_changes={SURCHARGE_RATE: {"2027": SURCHARGE}},
         ),
     ]
     code, printed = geography_command(
