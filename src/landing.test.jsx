@@ -86,7 +86,7 @@ describe("the landing page", () => {
     expect(window.location.search).toBe("");
   });
 
-  it("keeps the provisional caveat in one place: a small badge on the landing page, none over the views", async () => {
+  it("keeps the provisional badge on the landing page only, and words the Policies view and box as modelled measures", async () => {
     const original = fixtureJson("manifest.json");
     const manifest = {
       ...original,
