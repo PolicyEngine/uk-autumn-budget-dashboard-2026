@@ -1,0 +1,689 @@
+{
+ "coverage": [
+  [
+   "expressible",
+   "",
+   "0",
+   "0",
+   "0",
+   "0",
+   "0/1",
+   "0/1"
+  ],
+  [
+   "partial",
+   "",
+   "2",
+   "18",
+   "2364990886.3596126",
+   "13030710886.3596126",
+   "7756375527595007500000/44630142277235093006489",
+   "1/16"
+  ],
+  [
+   "not_expressible",
+   "",
+   "17",
+   "156",
+   "13905803182.72034823285452",
+   "22174211058.30566841825452",
+   "79193610922520244350909/267780853663410558038934",
+   "17/32"
+  ],
+  [
+   "out_of_household_scope",
+   "",
+   "13",
+   "324",
+   "-10695514936.054166761393",
+   "39773717081.089675232647",
+   "142048989575320268688025/267780853663410558038934",
+   "13/32"
+  ],
+  [
+   "not_expressible",
+   "construction_pending",
+   "6",
+   "42",
+   "4520009657.404409209",
+   "4857809657.404409217",
+   "20240873572518371737500/312410995940645651045423",
+   "3/16"
+  ],
+  [
+   "not_expressible",
+   "model_or_data_gap",
+   "11",
+   "114",
+   "9385793525.31593902385452",
+   "17316401400.90125920125452",
+   "432910035022531480031363/1874465975643873906272538",
+   "11/32"
+  ],
+  [
+   "computed_by_replay",
+   "",
+   "2",
+   "12",
+   "",
+   "12073710886.3596126",
+   "50307128693165052500000/312410995940645651045423",
+   "1/16"
+  ]
+ ],
+ "event": "spring_statement_2025",
+ "measures": [
+  {
+   "changes": {
+    "gov.dwp.universal_credit.rebalancing.new_claimant_health_element": {
+     "2026": 437.66,
+     "2027": 447.73,
+     "2028": 456.68,
+     "2029": 465.81
+    }
+   },
+   "classification": "partial",
+   "construction": "reversal_on_certified_world",
+   "executor_route": "uc_health_element_refresh",
+   "id": "spring_statement_2025__uc_health_element_freeze_and_new_claimant_cut",
+   "missing_legs": [
+    "The default simulation modifier assigns new-claimant cohorts using seeded synthetic shares (11%, 13%, 16%, 22% in 2026-29), not observed claim-start history or the March2025 OBR forecast cohorts.",
+    "The original existing-claimant rate freeze is not reversed: later legislated combined-award protections remain in the certified world.",
+    "Later legislated protections and rate paths differ from the original March2025 announcement."
+   ],
+   "name": "Universal Credit Health Element: Maintain at 2025-26 rate until 2029-30, reduce rate by 50% for new claimants from April 2026 and maintain until 2029-30",
+   "obr": {
+    "2026": {
+     "obr_gbp": "749310302.5397029",
+     "obr_modelled_heads_gbp": "760288239.1244123"
+    },
+    "2027": {
+     "obr_gbp": "1533455348.488414",
+     "obr_modelled_heads_gbp": "1555705616.0371184"
+    },
+    "2028": {
+     "obr_gbp": "2294443622.9837636",
+     "obr_modelled_heads_gbp": "2328372386.4247274"
+    },
+    "2029": {
+     "obr_gbp": "3007474040.9928946",
+     "obr_modelled_heads_gbp": "3053484644.7733545"
+    }
+   },
+   "replay": {
+    "2024": {
+     "head_effects": {
+      "universal_credit": -0.0
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.dwp.universal_credit.rebalancing.new_claimant_health_element": 217.26
+      },
+      "reform_world": {
+       "gov.dwp.universal_credit.rebalancing.new_claimant_health_element": 217.26
+      }
+     },
+     "measure_total_gbp": 0.0
+    },
+    "2025": {
+     "head_effects": {
+      "universal_credit": -0.0
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.dwp.universal_credit.rebalancing.new_claimant_health_element": 217.26
+      },
+      "reform_world": {
+       "gov.dwp.universal_credit.rebalancing.new_claimant_health_element": 217.26
+      }
+     },
+     "measure_total_gbp": 0.0
+    },
+    "2026": {
+     "head_effects": {
+      "universal_credit": 743178827.6944885
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.dwp.universal_credit.rebalancing.new_claimant_health_element": 437.66
+      },
+      "reform_world": {
+       "gov.dwp.universal_credit.rebalancing.new_claimant_health_element": 217.26
+      }
+     },
+     "measure_total_gbp": 743178827.6944885
+    },
+    "2027": {
+     "head_effects": {
+      "universal_credit": 893600229.4221191
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.dwp.universal_credit.rebalancing.new_claimant_health_element": 447.73
+      },
+      "reform_world": {
+       "gov.dwp.universal_credit.rebalancing.new_claimant_health_element": 217.26
+      }
+     },
+     "measure_total_gbp": 893600229.4221191
+    },
+    "2028": {
+     "head_effects": {
+      "universal_credit": 1053047649.6080627
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.dwp.universal_credit.rebalancing.new_claimant_health_element": 456.68
+      },
+      "reform_world": {
+       "gov.dwp.universal_credit.rebalancing.new_claimant_health_element": 217.26
+      }
+     },
+     "measure_total_gbp": 1053047649.6080627
+    },
+    "2029": {
+     "head_effects": {
+      "universal_credit": 1297158615.1423492
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.dwp.universal_credit.rebalancing.new_claimant_health_element": 465.81
+      },
+      "reform_world": {
+       "gov.dwp.universal_credit.rebalancing.new_claimant_health_element": 217.26
+      }
+     },
+     "measure_total_gbp": 1297158615.1423492
+    }
+   }
+  },
+  {
+   "changes": {
+    "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_OLD": {
+     "2026": 651.97,
+     "2027": 666.96,
+     "2028": 680.3,
+     "2029": 693.91
+    },
+    "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_YOUNG": {
+     "2026": 516.46,
+     "2027": 528.33,
+     "2028": 538.9,
+     "2029": 549.68
+    },
+    "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_OLD": {
+     "2026": 415.35,
+     "2027": 424.9,
+     "2028": 433.39,
+     "2029": 442.06
+    },
+    "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_YOUNG": {
+     "2026": 329.03,
+     "2027": 336.59,
+     "2028": 343.32,
+     "2029": 350.19
+    }
+   },
+   "classification": "partial",
+   "construction": "reversal_on_certified_world",
+   "executor_route": null,
+   "id": "spring_statement_2025__uc_standard_allowance_above_inflation",
+   "missing_legs": [
+    "Existing/new-claimant health-element protections interact with the allowance change; this leg holds the certified health world fixed.",
+    "OBR Welfare outside cap is not separately identified by the annual UC liability; it has no invented mapping.",
+    "policyengine-uk#2239: the certified world omits legislated 2027-29 above-inflation uplifts; standard_allowance_uplift is unused. Later-year effects retain that model limitation."
+   ],
+   "name": "Universal Credit Standard Allowance: Increase above inflation for all claimants from April 2026, reaching CPI +5% from April 2029, with the standard allowance expected to be worth \u00a3106 per week in 2029-30",
+   "obr": {
+    "2026": {
+     "obr_gbp": "-813364500",
+     "obr_modelled_heads_gbp": "-667364500"
+    },
+    "2027": {
+     "obr_gbp": "-1143051000",
+     "obr_modelled_heads_gbp": "-938051000"
+    },
+    "2028": {
+     "obr_gbp": "-1492374000",
+     "obr_modelled_heads_gbp": "-1224374000"
+    },
+    "2029": {
+     "obr_gbp": "-1884070500",
+     "obr_modelled_heads_gbp": "-1546070500"
+    }
+   },
+   "replay": {
+    "2024": {
+     "head_effects": {
+      "universal_credit": -0.0
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_OLD": 617.6,
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_YOUNG": 489.23,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_OLD": 393.45,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_YOUNG": 311.68
+      },
+      "reform_world": {
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_OLD": 617.6,
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_YOUNG": 489.23,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_OLD": 393.45,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_YOUNG": 311.68
+      }
+     },
+     "measure_total_gbp": 0.0
+    },
+    "2025": {
+     "head_effects": {
+      "universal_credit": -0.0
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_OLD": 628.1,
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_YOUNG": 497.55,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_OLD": 400.14,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_YOUNG": 316.98
+      },
+      "reform_world": {
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_OLD": 628.1,
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_YOUNG": 497.55,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_OLD": 400.14,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_YOUNG": 316.98
+      }
+     },
+     "measure_total_gbp": 0.0
+    },
+    "2026": {
+     "head_effects": {
+      "universal_credit": -723462767.5098114
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_OLD": 651.97,
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_YOUNG": 516.46,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_OLD": 415.35,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_YOUNG": 329.03
+      },
+      "reform_world": {
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_OLD": 666.97,
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_YOUNG": 528.34,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_OLD": 424.9,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_YOUNG": 338.58
+      }
+     },
+     "measure_total_gbp": -723462767.5098114
+    },
+    "2027": {
+     "head_effects": {
+      "universal_credit": -732669693.5323181
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_OLD": 666.96,
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_YOUNG": 528.33,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_OLD": 424.9,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_YOUNG": 336.59
+      },
+      "reform_world": {
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_OLD": 682.3088316082925,
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_YOUNG": 540.4906488926418,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_OLD": 434.67175817557535,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_YOUNG": 346.36658951067614
+      }
+     },
+     "measure_total_gbp": -732669693.5323181
+    },
+    "2028": {
+     "head_effects": {
+      "universal_credit": -746613549.421051
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_OLD": 680.3,
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_YOUNG": 538.9,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_OLD": 433.39,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_YOUNG": 343.32
+      },
+      "reform_world": {
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_OLD": 695.9539315406156,
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_YOUNG": 551.299608963175,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_OLD": 443.3645074165368,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_YOUNG": 353.2933747260321
+      }
+     },
+     "measure_total_gbp": -746613549.421051
+    },
+    "2029": {
+     "head_effects": {
+      "universal_credit": -753234184.9562225
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_OLD": 693.91,
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_YOUNG": 549.68,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_OLD": 442.06,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_YOUNG": 350.19
+      },
+      "reform_world": {
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_OLD": 709.8723475869093,
+       "gov.dwp.universal_credit.standard_allowance.amount.COUPLE_YOUNG": 562.3250762763957,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_OLD": 452.2313754586829,
+       "gov.dwp.universal_credit.standard_allowance.amount.SINGLE_YOUNG": 360.3589058667942
+      }
+     },
+     "measure_total_gbp": -753234184.9562225
+    }
+   }
+  }
+ ],
+ "name": "Spring Statement 2025",
+ "not_modelled": [
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "648000000",
+   "reason": "This targeted indirect-tax measure requires product/sector-specific tax-base inputs, rate histories or business/supply-side scope not established by a generic household consumption liability.",
+   "reform_id": "spring_statement_2025__building_safety_levy_implement_a_levy_on_new_residential_development_in_england_with_certain_exemptions_with_r_92185284",
+   "reform_name": "Building Safety Levy: Implement a levy on new residential development in England (with certain exemptions) with revenue to be spent on building safety from 1 October 2026",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "12987720162.0368809",
+   "reason": "PSGI in CDEL and Scottish AME capital/current are public-budget and devolved-government accounts, not household cash entitlements or liabilities. Scope lookup ignores outer label padding while retaining the original PMD label.",
+   "reform_id": "spring_statement_2025__capital_investment_increase_growth_enhancing_investment_including_on_infrastructure_housing_and_defence_innova_54741e20",
+   "reform_name": "Capital Investment: Increase growth-enhancing investment including on infrastructure, housing, and defence innovation",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "745627531.8262649065",
+   "reason": "PSGI in CDEL and Scottish AME capital/current are public-budget and devolved-government accounts, not household cash entitlements or liabilities. Scope lookup ignores outer label padding while retaining the original PMD label.",
+   "reform_id": "spring_statement_2025__construction_skills_supply_the_skilled_workers_to_build_1_5_million_homes_and_deliver_infrastructure_0e2a3e1f",
+   "reform_name": "Construction Skills: Supply the skilled workers to build 1.5 million homes and deliver infrastructure",
+   "rows": 24
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "13088458952.168819685",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_statement_2025__current_spending_reshape_the_state_to_be_more_productive_and_agile_793e29dd",
+   "reform_name": "Current spending: Reshape the state to be more productive and agile",
+   "rows": 30
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "1450172533.2420025831",
+   "reason": "PSGI in CDEL and Scottish AME capital/current are public-budget and devolved-government accounts, not household cash entitlements or liabilities. Scope lookup ignores outer label padding while retaining the original PMD label.",
+   "reform_id": "spring_statement_2025__dwp_spending_invest_to_deliver_welfare_reform_e0663165",
+   "reform_name": "DWP Spending: Invest to deliver welfare reform",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "1901232000",
+   "reason": "PSGI in CDEL and Scottish AME capital/current are public-budget and devolved-government accounts, not household cash entitlements or liabilities. Scope lookup ignores outer label padding while retaining the original PMD label.",
+   "reform_id": "spring_statement_2025__employment_support_invest_in_employment_health_and_skills_support_from_2026_27_322b6804",
+   "reform_name": "Employment Support: Invest in employment, health, and skills support from 2026-27",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "662000000",
+   "reason": "This targeted indirect-tax measure requires product/sector-specific tax-base inputs, rate histories or business/supply-side scope not established by a generic household consumption liability.",
+   "reform_id": "spring_statement_2025__gambling_new_statutory_levy_on_operators_from_april_2025_316458d7",
+   "reform_name": "Gambling: New statutory levy on operators from April 2025",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "597000000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_statement_2025__gambling_use_new_levy_revenue_to_fund_research_prevention_and_treatment_of_gambling_related_harm_bfa676a2",
+   "reform_name": "Gambling: Use new levy revenue to fund research, prevention, and treatment of gambling-related harm",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "173853543.242068729",
+   "reason": "Requires claim history, previous awards, assessment descriptors, administrative process or an announcement-specific caseload response; a current annual liability parameter alone cannot replay it.",
+   "reform_id": "spring_statement_2025__high_income_child_benefit_charge_hicbc_allow_employed_individuals_to_pay_their_hicbc_liability_through_paye_wi_60ee7ab1",
+   "reform_name": "High Income Child Benefit Charge (HICBC): Allow employed individuals to pay their HICBC liability through PAYE without the need to register for Self Assessment from Summer 2025",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "301600000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_statement_2025__hmrc_spending_invest_to_close_the_tax_gap_d1c9ee02",
+   "reform_name": "HMRC Spending: Invest to close the tax gap",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "372349085.379578602",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_statement_2025__late_payment_penalties_increase_late_payment_penalties_for_vat_taxpayers_and_income_tax_self_assessment_taxpay_941acf03",
+   "reform_name": "Late Payment Penalties: Increase late payment penalties for VAT taxpayers and income tax Self Assessment taxpayers as they join Making Tax Digital from April 2025",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "158484277.043997073417",
+   "reason": "Administrative collection, compliance, reporting or debt intervention; liability rules do not identify recovered debts, extra staff productivity or compliance behaviour.",
+   "reform_id": "spring_statement_2025__making_tax_digital_for_income_tax_self_assessment_expand_rollout_to_those_with_incomes_over_20_000_from_6_apri_80300fef",
+   "reform_name": "Making Tax Digital for Income Tax Self Assessment: Expand rollout to those with incomes over \u00a320,000 from 6 April 2028, and further detailed changes",
+   "rows": 30
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "21977200.0470574296",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_statement_2025__obr_allowance_for_shortfall_and_welsh_government_consequentials_b2126c48",
+   "reform_name": "OBR Allowance for shortfall and Welsh Government consequentials",
+   "rows": 18
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "168900000.000000004",
+   "reason": "The relevant liability exists, but this announcement's counterfactual path or targeted eligibility has not been established on the certified population; no guessed parameter or baseline.",
+   "reform_id": "spring_statement_2025__parental_leave_increase_the_small_employer_compensation_rate_to_8_5_from_april_2025_following_national_insuran_051943ec",
+   "reform_name": "Parental leave: Increase the small employer compensation rate to 8.5% from April 2025 following National Insurance changes at Autumn Budget 2024",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "451639500",
+   "reason": "Requires claim history, previous awards, assessment descriptors, administrative process or an announcement-specific caseload response; a current annual liability parameter alone cannot replay it.",
+   "reform_id": "spring_statement_2025__personal_independence_payment_increase_capacity_for_processing_award_reviews_from_april_2026_e69901d5",
+   "reform_name": "Personal Independence Payment: Increase capacity for processing award reviews from April 2026",
+   "rows": 18
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "9842820582.28556387",
+   "reason": "Requires claim history, previous awards, assessment descriptors, administrative process or an announcement-specific caseload response; a current annual liability parameter alone cannot replay it.",
+   "reform_id": "spring_statement_2025__personal_independence_payment_pip_change_the_pip_assessment_so_claimants_must_score_four_points_in_any_one_act_0977d95d",
+   "reform_name": "Personal Independence Payment (PIP): Change the PIP assessment so claimants must score four points in any one activity from 2026-27",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "60227080.258569628",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_statement_2025__reducing_trade_barriers_approve_uk_business_applications_for_removal_of_tariff_duty_on_89_products_for_2_years_51392abe",
+   "reform_name": "Reducing Trade Barriers: Approve UK business applications for removal of tariff duty on 89 products for 2 years from Spring 2025",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "169466057.010291352",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_statement_2025__reducing_trade_barriers_comprehensive_and_progressive_agreement_for_trans_pacific_partnership_cptpp_tariff_lib_ce3c42b4",
+   "reform_name": "Reducing Trade Barriers: Comprehensive and Progressive Agreement for Trans-Pacific Partnership (CPTPP) tariff liberalisation",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "489196340.10411089",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_statement_2025__supplementary_estimates_cdel_supplementary_estimates_plans_for_2024_25_76f913b1",
+   "reform_name": "Supplementary Estimates: CDEL Supplementary Estimates Plans for 2024-25",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "963530614.50445048",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_statement_2025__supplementary_estimates_rdel_supplementary_estimates_plans_for_2024_25_82859e2b",
+   "reform_name": "Supplementary Estimates: RDEL Supplementary Estimates Plans for 2024-25",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "4153000000",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_statement_2025__support_for_local_government_net_impact_of_pre_announced_support_for_local_government_via_capitalisation_direc_9774137f",
+   "reform_name": "Support for Local Government: Net impact of pre-announced support for local government via capitalisation directions, and council tax/fire & police precept flexibilities",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "241166363.29037189801452",
+   "reason": "Administrative collection, compliance, reporting or debt intervention; liability rules do not identify recovered debts, extra staff productivity or compliance behaviour.",
+   "reform_id": "spring_statement_2025__tax_collection_invest_in_500_additional_hmrc_compliance_staff_to_increase_collection_of_tax_due_9e92576e",
+   "reform_name": "Tax Collection: Invest in 500 additional HMRC compliance staff to increase collection of tax due",
+   "rows": 42
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "1488006808.25925073547",
+   "reason": "Administrative collection, compliance, reporting or debt intervention; liability rules do not identify recovered debts, extra staff productivity or compliance behaviour.",
+   "reform_id": "spring_statement_2025__tax_debt_collection_invest_in_600_additional_hmrc_debt_management_staff_to_increase_collection_of_overdue_tax__a02c031a",
+   "reform_name": "Tax Debt Collection: Invest in 600 additional HMRC debt management staff to increase collection of overdue tax debt",
+   "rows": 36
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "1351107137.4333265058",
+   "reason": "Administrative collection, compliance, reporting or debt intervention; liability rules do not identify recovered debts, extra staff productivity or compliance behaviour.",
+   "reform_id": "spring_statement_2025__tax_debt_collection_invest_in_additional_hmrc_debt_management_capacity_to_increase_collection_of_overdue_tax_d_91bab3aa",
+   "reform_name": "Tax Debt Collection: Invest in additional HMRC debt management capacity to increase collection of overdue tax debt",
+   "rows": 36
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "3249999999.99997852",
+   "reason": "PSGI in CDEL and Scottish AME capital/current are public-budget and devolved-government accounts, not household cash entitlements or liabilities. Scope lookup ignores outer label padding while retaining the original PMD label.",
+   "reform_id": "spring_statement_2025__transformation_fund_improve_efficiency_and_productivity_of_public_services_c78d31fc",
+   "reform_name": "Transformation Fund: Improve efficiency and productivity of public services",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "454900000.000000008",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_statement_2025__uk_export_finance_fees_income_from_increasing_lending_capacity_and_providing_guarantees_for_defence_exports_on_5cdc5d1d",
+   "reform_name": "UK Export Finance: Fees/income from increasing lending capacity and providing guarantees for defence exports (only fees & interest impact shown as loans & guarantees do not affect public sector net borrowing)",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "756950500",
+   "reason": "Administrative collection, compliance, reporting or debt intervention; liability rules do not identify recovered debts, extra staff productivity or compliance behaviour.",
+   "reform_id": "spring_statement_2025__welfare_fraud_and_error_increase_preventative_checks_in_universal_credit_from_2025_26_4f92037a",
+   "reform_name": "Welfare Fraud and Error: Increase preventative checks in Universal Credit from 2025-26",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "353705499.99999998",
+   "reason": "Administrative collection, compliance, reporting or debt intervention; liability rules do not identify recovered debts, extra staff productivity or compliance behaviour.",
+   "reform_id": "spring_statement_2025__welfare_fraud_and_error_recruit_over_500_new_counter_fraud_and_error_staff_from_april_2025_ef72d079",
+   "reform_name": "Welfare Fraud and Error: Recruit over 500 new counter fraud and error staff from April 2025",
+   "rows": 18
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "3824754799.907922371",
+   "reason": "Requires claim history, previous awards, assessment descriptors, administrative process or an announcement-specific caseload response; a current annual liability parameter alone cannot replay it.",
+   "reform_id": "spring_statement_2025__work_capability_assessment_do_not_proceed_with_autumn_statement_2023_descriptor_reforms_33dc0b44",
+   "reform_name": "Work Capability Assessment: Do not proceed with Autumn Statement 2023 descriptor reforms",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "706914000",
+   "reason": "Requires claim history, previous awards, assessment descriptors, administrative process or an announcement-specific caseload response; a current annual liability parameter alone cannot replay it.",
+   "reform_id": "spring_statement_2025__work_capability_assessment_restart_reassessments_from_april_2026_351c4d43",
+   "reform_name": "Work Capability Assessment: Restart reassessments from April 2026",
+   "rows": 12
+  }
+ ],
+ "release": "uk-spring-statement-2025",
+ "replay_years": [
+  2024,
+  2025,
+  2026,
+  2027,
+  2028,
+  2029
+ ],
+ "schema": "uk-budget-dashboard/historical-event/v1",
+ "source": {
+  "export_schema": "policyengine-scorecard/uk-event-dashboard-export/v1",
+  "export_sha256": "93d10c52d208f0ed42704d440ca88901b787b6f1e4e577591ba050fc6565d508",
+  "registry_sha256": "d01ce0612f3f24830a8d8ea0abaaa6b2626963316b16750310d303f404fbab5b",
+  "variant": {
+   "comparison_sha256": "542b93d032a1ab2165c5eb1a0997e75fb8c08971c822489cb6897480cf8707ac",
+   "dataset": {
+    "path": "enhanced_frs_2024_25.h5",
+    "repo_id": "policyengine/policyengine-uk-data-private",
+    "revision": "1.58.1",
+    "sha256": "056e80fd8e9151d78f432a25cde863340baee81304c6216a37fb575ce8563784"
+   },
+   "namespace_manifest_sha256": "738aa0e0b8100fbbcaa5dcedd07c7afd5ac7e597ce2a9a38b3fa40b1a3193f72",
+   "packages": {
+    "policyengine": "6.9.0",
+    "policyengine-core": "3.33.0",
+    "policyengine-uk": "2.130.1"
+   },
+   "receipt_sha256": "f37d068c69253a9353c7bf891c8a44897fb4166c9550b14376dbe0fd71e6501b"
+  }
+ },
+ "years": [
+  2026,
+  2027,
+  2028,
+  2029
+ ]
+}

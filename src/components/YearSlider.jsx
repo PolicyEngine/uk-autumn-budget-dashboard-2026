@@ -14,7 +14,7 @@ export const PLAY_STEP_MS = 2250;
  * @param {Object} props
  * @param {number[]} [props.years] - The years a reader can choose (the
  *   selection's, utils/displayYears.js: 2026-27 only when a selected policy
- *   has an effect in it)
+ *   has an effect in it), or a past event's own years
  * @param {string} [props.inactiveReason] - Why the year does not change the
  *   view shown: the pill stays in place, faded, does not open; the reason
  *   is in its accessible name only (no visible tip)

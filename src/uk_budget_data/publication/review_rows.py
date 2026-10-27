@@ -138,6 +138,10 @@ TABLE_KINDS = {
     "obr_comparison.csv": NATIONAL_TABLE,
     # UK poverty and inequality changes by measure and year (#196).
     "poverty_inequality.csv": NATIONAL_TABLE,
+    # A historical release's coverage and not-modelled lists: counts and
+    # OBR totals by class and measure, no survey record
+    "coverage.csv": NATIONAL_TABLE,
+    "not_modelled.csv": NATIONAL_TABLE,
 }
 # A receipt holds provenance and digests, and the manifest entries, their
 # statuses and digests, and any household check receipt, which concerns

@@ -26,6 +26,7 @@ import re
 import tempfile
 from pathlib import Path
 
+from uk_budget_data import releases
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.tables import sha256_bytes
 
@@ -45,6 +46,54 @@ FLAT_VIEW_FILES = ("constituency.csv", "regional.csv")
 AREA_FILES = ("constituency.csv", "regional.csv")
 AREA_PROVENANCE_FILE = "area_provenance.json"
 AREA_PROVENANCE_SCHEMA = "uk-budget-area-provenance/v1"
+# A historical release's flat views (docs/historical-releases.md): its OBR
+# comparison, by measure and year, and two files with no PolicyEngine figure
+# in them, the event's coverage and the measures it does not model. Those two
+# are checked by their exact header instead of by measure and year.
+HISTORICAL_FLAT_VIEW_FILES = (
+    "coverage.csv",
+    "not_modelled.csv",
+    "obr_comparison.csv",
+)
+HISTORICAL_OBR_COMPARISON_HEADER = (
+    "reform_id",
+    "reform_name",
+    "year",
+    "obr_gbp",
+    "obr_modelled_heads_gbp",
+    "replay_policyengine_gbp",
+    "replay_pair",
+)
+METADATA_HEADERS = {
+    "coverage.csv": (
+        "class",
+        "gap_kind",
+        "measures",
+        "rows",
+        "net_gbp",
+        "absolute_gbp",
+        "share_of_absolute",
+        "share_of_measures",
+    ),
+    "not_modelled.csv": (
+        "reform_id",
+        "reform_name",
+        "classification",
+        "gap_kind",
+        "reason",
+        "rows",
+        "obr_absolute_gbp",
+    ),
+}
+
+
+def view_files(release) -> tuple[str, ...]:
+    """The flat files a release's page reads."""
+    return (
+        HISTORICAL_FLAT_VIEW_FILES if release.historical else FLAT_VIEW_FILES
+    )
+
+
 # The column naming each row's measure or combined run, by file
 ID_COLUMNS = ("reform_id", "reform")
 
@@ -160,20 +209,26 @@ def area_provenance_document_problems(document) -> list[str]:
     return []
 
 
-def identity_problems(manifest) -> list[str]:
-    """Publication is for this Budget and this release, explicitly."""
+def identity_problems(manifest, release=None) -> list[str]:
+    """Publication is for this release and its Budget, explicitly.
+
+    ``release`` is the one the manifest's data root serves
+    (releases.release_for_root); by default, this Budget's.
+    """
+    release = release or releases.DEFAULT_RELEASE
     raw = (
         manifest.model_dump(by_alias=True)
         if isinstance(manifest, m.Manifest)
         else manifest
     )
     if not isinstance(raw, dict) or (
-        raw.get("release") != m.CURRENT_RELEASE
-        or raw.get("budget") != m.CURRENT_BUDGET
+        raw.get("release") != release.id or raw.get("budget") != release.budget
     ):
-        return [
-            "manifest is not explicitly for the current 2026 Budget release"
-        ]
+        if release is releases.DEFAULT_RELEASE:
+            return [
+                "manifest is not explicitly for the current 2026 Budget release"
+            ]
+        return [f"manifest is not explicitly for the {release.name} release"]
     return []
 
 
@@ -191,7 +246,7 @@ def manifest_identity_problems(data_root: Path) -> list[str]:
         raw = json.loads(path.read_bytes())
     except (OSError, ValueError):
         return ["manifest cannot be read"]
-    return identity_problems(raw)
+    return identity_problems(raw, releases.release_for_root(data_root))
 
 
 def write_area_provenance(out_dir, provenance: dict, written) -> Path:
@@ -374,7 +429,10 @@ def release_index_problems(data_root: Path, manifest=None) -> list[str]:
             raise ValueError
     except (OSError, ValueError, TypeError):
         return ["release index: manifest or index cannot be read"]
-    problems = [f"release index: {p}" for p in identity_problems(raw)]
+    problems = [
+        f"release index: {p}"
+        for p in identity_problems(raw, releases.release_for_root(data_root))
+    ]
     if raw.get("schema") != m.SCHEMA:
         problems.append("release index: unknown manifest schema")
     if manifest is not None and (
@@ -399,7 +457,16 @@ def release_index_problems(data_root: Path, manifest=None) -> list[str]:
         problems.append("release index: manifest bytes differ")
     provenance_digest = raw.get("flat_provenance_sha256")
     provenance_path = data_root / AREA_PROVENANCE_FILE
-    if (
+    if releases.release_for_root(data_root).historical:
+        # A past event has no results by area, so no provenance to bind
+        if (
+            "flat_provenance_sha256" in raw
+            or "flat_provenance_sha256" in index
+        ):
+            problems.append(
+                "release index: a past event binds no area provenance"
+            )
+    elif (
         not isinstance(provenance_digest, str)
         or not DIGEST.fullmatch(provenance_digest)
         or index.get("flat_provenance_sha256") != provenance_digest
@@ -429,14 +496,15 @@ def release_index_problems(data_root: Path, manifest=None) -> list[str]:
         return problems + ["release index: no flat CSV digests"]
     if files != raw.get("flat_files"):
         problems.append("release index: file map differs from manifest")
-    unread = sorted(set(files) - set(FLAT_VIEW_FILES))
+    allowed = view_files(releases.release_for_root(data_root))
+    unread = sorted(set(files) - set(allowed))
     if unread:
         problems.append(
             "release index: binds files no view reads: " + ", ".join(unread)
         )
     unbound = sorted(
         name
-        for name in FLAT_VIEW_FILES
+        for name in allowed
         if (data_root / name).exists() and name not in files
     )
     if unbound:
@@ -472,11 +540,35 @@ def release_index_problems(data_root: Path, manifest=None) -> list[str]:
         problems.append(
             "release index: aliases differ from the area run's record"
         )
+    # A past event's views have exact headers, checked here as well as when
+    # the index is written, so a file rebound by hand cannot pass the gate
+    release = releases.release_for_root(data_root)
+    if release.historical:
+        views = {
+            name: (data_root / name).read_bytes()
+            for name in sorted(files)
+            if isinstance(name, str)
+            and name in allowed
+            and (data_root / name).is_file()
+            and not (data_root / name).is_symlink()
+        }
+        problems += [
+            f"release index: {problem}"
+            for problem in _flat_problems(
+                model,
+                views,
+                aliases if isinstance(aliases, dict) else {},
+                release,
+            )
+        ]
     return problems
 
 
 def _flat_problems(
-    manifest: m.Manifest, files: dict[str, bytes], aliases: dict[str, str]
+    manifest: m.Manifest,
+    files: dict[str, bytes],
+    aliases: dict[str, str],
+    release=None,
 ) -> list[str]:
     """Refuse a flat view file that carries a held entry's figures.
 
@@ -485,10 +577,26 @@ def _flat_problems(
     means the file was made for another snapshot, or publishes a figure the
     page must not show. Every year must be an integer. Problems name files,
     ids and statuses, never values.
+
+    A historical release's files have exact headers: its OBR comparison
+    the historical one, and its coverage and not-modelled files theirs.
+    Its OBR comparison holds the OBR's and the scorecard replay's figures,
+    never this dashboard's (the page sets its own beside them, from the
+    artifacts of displayable measures only), so a held entry's row is
+    allowed there; its years must still be integers.
     """
     problems = []
     entries = manifest.entries()
+    historical = release is not None and release.historical
     for filename, content in sorted(files.items()):
+        if historical and filename in METADATA_HEADERS:
+            problems += _metadata_problems(filename, content)
+            continue
+        if historical and filename == "obr_comparison.csv":
+            problems += _shape_problems(
+                filename, content, HISTORICAL_OBR_COMPARISON_HEADER
+            ) or _year_problems(filename, content)
+            continue
         try:
             reader = csv.DictReader(
                 io.StringIO(content.decode("utf-8"), newline="")
@@ -556,6 +664,43 @@ def unbind_area_results(
     return manifest
 
 
+def _metadata_problems(filename: str, content: bytes) -> list[str]:
+    """A historical release's coverage or not-modelled file has exactly its
+    header, and every row its fields. It carries no PolicyEngine figure, so
+    no manifest entry's status bears on it."""
+    return _shape_problems(filename, content, METADATA_HEADERS[filename])
+
+
+def _year_problems(filename: str, content: bytes) -> list[str]:
+    """Every row's year is an integer."""
+    try:
+        for row in csv.DictReader(
+            io.StringIO(content.decode("utf-8"), newline="")
+        ):
+            int(row["year"])
+    except (UnicodeError, ValueError, TypeError, KeyError, csv.Error):
+        return [f"{filename}: not a readable CSV with integer years"]
+    return []
+
+
+def _shape_problems(
+    filename: str, content: bytes, header: tuple[str, ...]
+) -> list[str]:
+    """A file has exactly ``header``, and every row its fields (as the
+    page's reader and scripts/check-public-files.mjs require)."""
+    try:
+        rows = list(
+            csv.reader(io.StringIO(content.decode("utf-8"), newline=""))
+        )
+    except (UnicodeError, csv.Error):
+        return [f"{filename}: not a readable CSV"]
+    if not rows or tuple(rows[0]) != header:
+        return [f"{filename}: header is not {', '.join(header)}"]
+    if any(len(row) != len(header) for row in rows[1:]):
+        return [f"{filename}: a row does not have every field"]
+    return []
+
+
 def write_release_index(
     manifest: m.Manifest, *, data_root: Path, inputs: Path
 ) -> m.Manifest:
@@ -567,13 +712,16 @@ def write_release_index(
     """
     from uk_budget_data.publication.publish import PublishError, check
 
-    problems = identity_problems(manifest) + check(
+    problems = identity_problems(
+        manifest, releases.release_for_root(data_root)
+    ) + check(
         manifest, data_root=data_root, inputs=inputs, check_flat_index=False
     )
     if not m.manifest_path(data_root).exists():
         problems.append("save the manifest before indexing it")
+    release = releases.release_for_root(data_root)
     files = {}
-    for name in FLAT_VIEW_FILES:
+    for name in view_files(release):
         path = data_root / name
         if path.is_symlink():
             problems.append(f"{name}: a symbolic link")
@@ -581,10 +729,12 @@ def write_release_index(
             files[name] = path.read_bytes()
     if not files:
         problems.append(
-            "no flat view file to bind (" + ", ".join(FLAT_VIEW_FILES) + ")"
+            "no flat view file to bind ("
+            + ", ".join(view_files(release))
+            + ")"
         )
     found, aliases = area_problems(manifest, files, data_root)
-    problems += found + _flat_problems(manifest, files, aliases)
+    problems += found + _flat_problems(manifest, files, aliases, release)
     if problems:
         raise PublishError("release index", problems)
     working = manifest.model_copy(deep=True)
@@ -592,8 +742,11 @@ def write_release_index(
         name: sha256_bytes(content) for name, content in files.items()
     }
     working.flat_aliases = dict(sorted(aliases.items()))
-    working.flat_provenance_sha256 = sha256_bytes(
-        (data_root / AREA_PROVENANCE_FILE).read_bytes()
+    # A past event has no results by area, so no provenance to bind
+    working.flat_provenance_sha256 = (
+        None
+        if release.historical
+        else sha256_bytes((data_root / AREA_PROVENANCE_FILE).read_bytes())
     )
     working.revision += 1
     working.updated_at = m.now()
@@ -614,8 +767,9 @@ def write_release_index(
         "files": working.flat_files,
         # The ids the bound tables use for manifest keys (a package alias)
         "aliases": working.flat_aliases,
-        "flat_provenance_sha256": working.flat_provenance_sha256,
     }
+    if not release.historical:
+        index["flat_provenance_sha256"] = working.flat_provenance_sha256
     index_bytes = (json.dumps(index, indent=2, sort_keys=True) + "\n").encode()
     staged = []
     try:

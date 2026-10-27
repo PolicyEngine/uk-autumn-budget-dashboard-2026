@@ -1,10 +1,12 @@
 import { cloneElement } from "react";
 import { describe, it, expect, vi } from "vitest";
 import fc from "fast-check";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import BudgetaryImpactChart, { measureOrder } from "./BudgetaryImpactChart";
+import { ABOUT_THIS_CHART } from "./ChartMoreInfo";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { ALPHA, BETA, measureCatalogueFixture, YEAR } from "../test/measureCatalogueFixture";
+import { POLICY_DETAILS } from "../utils/policyDetails";
 
 // Recharts ResponsiveContainer measures the parent in jsdom and refuses
 // to render its children when width / height resolve to zero. Replace it
@@ -153,3 +155,67 @@ describe("BudgetaryImpactChart", () => {
   });
 });
 
+describe("BudgetaryImpactChart's About this chart", () => {
+  const about = (props) => {
+    const view = render(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <BudgetaryImpactChart data={mockData} selectedYear={YEAR} {...props} />
+      </MeasureCatalogueProvider>,
+    );
+    const card = view.container.querySelector(".chart-footer > .chart-more-info");
+    fireEvent.click(within(card).getByRole("button", { name: ABOUT_THIS_CHART }));
+    const result = {
+      how: [...card.querySelectorAll(".info-list li")].map((item) => item.textContent),
+      links: [...card.querySelectorAll("a.method-link")].map((link) => link.getAttribute("href")),
+    };
+    view.unmount();
+    return result;
+  };
+
+  it("on this Budget's page, links to Methodology", () => {
+    expect(about({}).links).toEqual([expect.stringMatching(/^\?tab=methodology#/)]);
+  });
+
+  it("on a past event's page, says the same and links to no Methodology", () => {
+    const own = about({});
+    const past = about({ pastEvent: true });
+    expect(past.links).toEqual([]);
+    expect(past.how).toEqual(own.how);
+    expect(past.how.length).toBeGreaterThan(0);
+  });
+});
+
+describe("BudgetaryImpactChart for a past event", () => {
+  // A measure with this Budget's id and description has this Budget's card
+  // details (policyDetailsFor), the Warm Home Discount top-up's window among
+  // them: a past event's chart never says it
+  const WHD = "warm_home_discount_top_up";
+  const writtenFor = POLICY_DETAILS.find((policy) => policy.id === WHD).writtenFor;
+  const fixture = JSON.stringify(measureCatalogueFixture())
+    .replaceAll(ALPHA, WHD)
+    .replaceAll(JSON.stringify("Published support for mock households.").slice(1, -1), JSON.stringify(writtenFor).slice(1, -1));
+  const whdCatalogue = buildMeasureCatalogue(JSON.parse(fixture));
+  const zero = [2027, 2028].map((year) => ({
+    year,
+    ...Object.fromEntries(whdCatalogue.displayable.map((measure) => [measure.seriesKey, 0])),
+    netImpact: 0,
+  }));
+  const note = (props) => {
+    const view = render(
+      <MeasureCatalogueProvider catalogue={whdCatalogue}>
+        <BudgetaryImpactChart data={zero} selectedYear={2027} selectedPolicies={[WHD]} {...props} />
+      </MeasureCatalogueProvider>,
+    );
+    const text = screen.getByRole("status").textContent;
+    view.unmount();
+    return text;
+  };
+
+  it("gives no measure this Budget's in-force window in the empty plot's note", () => {
+    expect(whdCatalogue.byId.get(WHD)).toBeDefined();
+    expect(note({})).toMatch(/winter 2026-27 only/);
+    const past = note({ pastEvent: true });
+    expect(past).toMatch(/^None of the selected policies changes revenue in 2027-28 to 2028-29\.$/);
+    expect(past).not.toMatch(/winter|in force/);
+  });
+});

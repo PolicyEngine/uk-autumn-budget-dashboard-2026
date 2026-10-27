@@ -3,6 +3,7 @@ import { loadDashboardParts } from "./publication/parts";
 
 export { loadDashboardParts, sameParts } from "./publication/parts";
 import { parseCsv } from "./publication/csv";
+import { releaseFor } from "./publication/release";
 import { buildMeasureCatalogue, isCatalogueRowDisplayable } from "./measureCatalogue";
 
 export function parseDashboardCsv(text) {
@@ -11,7 +12,11 @@ export function parseDashboardCsv(text) {
   return rows.filter((row) => row.some((cell) => cell !== "")).map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index]])));
 }
 
-/** Every national figure is read from a receipt-verified artifact snapshot. */
+/**
+ * Every national figure is read from a receipt-verified artifact snapshot
+ * of one release: this Budget's by default, or a past event's (`release`,
+ * passed on to loadDashboardParts).
+ */
 export async function loadDashboard(basePath = "", options = {}) {
   return dashboardFromParts(await loadDashboardParts(basePath, options));
 }
@@ -78,14 +83,16 @@ export function peekVerifiedTables(catalogue, table) {
   return tableLoads.get(catalogue)?.get(table)?.value;
 }
 
-export async function loadVerifiedTables(catalogue, table, { basePath = process.env.NEXT_PUBLIC_BASE_PATH || "", fetchImpl = fetch, signal } = {}) {
+export async function loadVerifiedTables(catalogue, table, { basePath = process.env.NEXT_PUBLIC_BASE_PATH || "", fetchImpl = fetch, signal, release } = {}) {
   const manifest = catalogue?.manifest;
   if (!manifest || !catalogue.tablesByKey) throw new Error("No Budget results are published yet");
+  // The artifacts sit in the root of the release the catalogue was loaded for
+  release = releaseFor(manifest, release);
   const failures = [];
   const loaded = await Promise.all(Object.keys(catalogue.tablesByKey).map(async (key) => {
     const entry = Object.hasOwn(manifest.measures, key) ? manifest.measures[key] : Object.hasOwn(manifest.combined, key) ? manifest.combined[key] : undefined;
     try {
-      return (await loadArtifact(basePath, key, entry, { fetchImpl, signal, tables: [table] }))[table] ?? [];
+      return (await loadArtifact(basePath, key, entry, { fetchImpl, signal, tables: [table], release }))[table] ?? [];
     } catch (error) {
       if (error?.name === "AbortError") throw error;
       failures.push(key);

@@ -6,21 +6,23 @@
 
 import { CATALOGUE_TABLES, loadManifest, loadPublication } from "./load";
 import { isDisplayable } from "./manifest";
+import { DEFAULT_RELEASE } from "./release";
 
 /**
  * The verified parts loadDashboard builds the page's figures from: the
  * manifest (with its digest), and each artifact's verified tables and the
  * ones that failed. Plain data, so the build can verify a publication
- * once and hand the result to the page (app/publicationBoot.ts).
+ * once and hand the result to the page (app/publicationBoot.ts). One
+ * release's: this Budget's by default, or a past event's, from its own root.
  */
-export async function loadDashboardParts(basePath = "", { fetchImpl = fetch, signal } = {}) {
-  const manifest = await loadManifest(basePath, { fetchImpl, signal });
+export async function loadDashboardParts(basePath = "", { fetchImpl = fetch, signal, release = DEFAULT_RELEASE } = {}) {
+  const manifest = await loadManifest(basePath, { fetchImpl, signal, release });
   if (!manifest) return { status: "no-manifest" };
   // The package is every displayable measure: a held or not-computable
   // measure is shown as unavailable, so the combined run that describes the
   // page's figures is the one of the displayable measures.
   const packageIds = Object.keys(manifest.measures).filter((id) => isDisplayable(manifest.measures[id]));
-  const publication = await loadPublication(basePath, packageIds, { fetchImpl, signal, manifest, tables: CATALOGUE_TABLES });
+  const publication = await loadPublication(basePath, packageIds, { fetchImpl, signal, manifest, release, tables: CATALOGUE_TABLES });
   return { status: "ready", manifest, snapshotSha256: manifest.snapshotSha256, tablesByKey: publication.tablesByKey, failures: publication.failures };
 }
 

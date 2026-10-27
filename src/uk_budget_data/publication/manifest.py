@@ -27,13 +27,19 @@ from pydantic import (
     model_validator,
 )
 
+from uk_budget_data import releases
 from uk_budget_data.publication.attestations import Attestation
 
 SCHEMA = "uk-budget-dashboard/publication-manifest/v1"
 DATA_ROOT = Path("public/data")
 MANIFEST_FILE = "manifest.json"
-CURRENT_RELEASE = "uk-autumn-budget-2026"
-CURRENT_BUDGET = {"id": CURRENT_RELEASE, "date": "2026-10-28"}
+# The default release (uk_budget_data/releases.json): this Budget, served
+# from DATA_ROOT. A historical release is served from its own root.
+CURRENT_RELEASE = releases.DEFAULT_RELEASE.id
+CURRENT_BUDGET = releases.DEFAULT_RELEASE.budget
+# One segment of an artifact path: the alphabet artifacts._KEY names keys
+# and digests with (and utils/publication/manifest.js ARTIFACT_SEGMENT)
+ARTIFACT_SEGMENT = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.+-]*\Z")
 
 STAGED = "staged"
 PROVISIONAL = "provisional"
@@ -182,10 +188,19 @@ class Entry(_Strict):
     @field_validator("artifact")
     @classmethod
     def _artifact_stays_inside_the_data_root(cls, value: str) -> str:
-        parts = Path(value).parts
-        if Path(value).is_absolute() or ".." in parts or not parts:
+        # Each segment in the writer's alphabet (artifacts._KEY), as the page
+        # requires (isSafeArtifactPath): no URL encoding or delimiter, no
+        # "." or "..", so the path the page requests is the path checked
+        if not value or not all(
+            ARTIFACT_SEGMENT.fullmatch(part) for part in value.split("/")
+        ):
             raise ValueError(
                 f"artifact path {value!r} must be relative to the data root"
+            )
+        if releases.enters_releases_dir(value):
+            raise ValueError(
+                f"artifact path {value!r} enters {releases.RELEASES_DIR}/, "
+                "which holds other releases' files"
             )
         return value
 
@@ -270,10 +285,16 @@ def parse_manifest(raw: bytes, where: str = "manifest") -> Manifest:
 
 
 def load_manifest(data_root: Path = DATA_ROOT) -> Manifest:
-    """Read the manifest, or an empty one if none has been written."""
+    """Read the manifest, or an empty one if none has been written.
+
+    An empty manifest carries the identity of the release its root serves
+    (releases.release_for_root), so a historical root's first manifest is
+    never stamped as this Budget's.
+    """
     path = manifest_path(data_root)
     if not path.exists():
-        return Manifest()
+        release = releases.release_for_root(data_root)
+        return Manifest(release=release.id, budget=release.budget)
     return parse_manifest(path.read_bytes(), str(path))
 
 

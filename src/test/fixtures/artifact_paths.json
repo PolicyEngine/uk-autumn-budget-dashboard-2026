@@ -1,0 +1,30 @@
+{
+  "description": "Artifact paths a manifest entry may or may not name, checked alike by the page (utils/publication/manifest.js isSafeArtifactPath) and by Python (publication/manifest.py Entry). Synthetic cases.",
+  "cases": [
+    ["artifacts/alpha/80412ddca4d77bae", true],
+    ["artifacts/combined--alpha+beta/a66fb8138df1f44c", true],
+    ["artifacts/uk-cgt_rates.v2/0123456789abcdef", true],
+    ["a", true],
+    ["", false],
+    ["/a", false],
+    ["a/", false],
+    ["a//b", false],
+    ["./a", false],
+    ["a/./b", false],
+    ["a/../b", false],
+    ["..", false],
+    ["a\\b", false],
+    ["c:/a", false],
+    ["releases/uk-autumn-budget-2024/artifacts/alpha/x", false],
+    ["artifacts/%2e%2e/releases/uk-autumn-budget-2024/artifacts/alpha/x", false],
+    ["artifacts/%2E%2E/x", false],
+    ["artifacts/.%2e/x", false],
+    ["artifacts/a%2fb", false],
+    ["artifacts/%252e%252e/x", false],
+    ["artifacts/a?b", false],
+    ["artifacts/a#b", false],
+    ["artifacts/a b", false],
+    ["artifacts/.hidden", false],
+    ["artifacts/-x", false]
+  ]
+}

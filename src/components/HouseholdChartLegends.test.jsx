@@ -1,12 +1,15 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import fc from "fast-check";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render as renderReact, screen, within } from "@testing-library/react";
 import DistributionalChart from "./DistributionalChart";
 import WaterfallChart from "./WaterfallChart";
-import ChartMoreInfo from "./ChartMoreInfo";
+import ChartMoreInfo, { ABOUT_THIS_CHART, withoutMethodology } from "./ChartMoreInfo";
+import { infoParts } from "./InfoSections";
+import { GLOSSARY } from "./methodology/glossary";
 import { legendMembership, zeroReason, inForceIn, inForceShort, inForceText } from "../utils/legendMembership";
-import { POLICY_DETAILS } from "../utils/policyDetails";
+import { POLICY_DETAILS, shortNameOf } from "../utils/policyDetails";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 
 // The household decile charts must list every selected measure in their
@@ -94,6 +97,15 @@ describe("legendMembership", () => {
     expect(inForceShort(whd)).toBe("winter 2026-27");
   });
 
+  it("gives a past event's £0 measure no reason written for this Budget's measures", () => {
+    // #107: a past event's employer measure (Autumn Budget 2024 raised
+    // employer NI) must not read as this Budget's relief, and this Budget's
+    // dates never say when a past measure is in force
+    for (const id of [EMPLOYER_NI, "warm_home_discount_top_up"]) {
+      expect(zeroReason(catalogue.byId.get(id), 2027, { pastEvent: true })).toEqual({ kind: "none", text: "no change for the households shown" });
+    }
+  });
+
   it("never calls a measure out of force from details written for another description of it", () => {
     // Changed since its entry was written (on Budget day, say): its window
     // may no longer hold, so it is not used
@@ -161,6 +173,40 @@ describe.each([
     expect(moreInfo.querySelector(".disclosure-preview")).toHaveTextContent("How it's calculated · Caveats");
     expect(moreInfo.querySelector(".disclosure-chip")).toBeNull();
   });
+
+  it("on a past event's page, says only that a £0 measure changes no household shown", () => {
+    const { container } = render(<Chart rawData={rows} selectedPolicies={ALL} selectedYear={2027} pastEvent />);
+    const moreInfo = container.querySelector(".chart-footer > .disclosure-in-card.chart-more-info");
+    fireEvent.click(within(moreInfo).getByRole("button", { name: ABOUT_THIS_CHART }));
+    const zero = [...container.querySelectorAll("[data-zero-measure]")];
+    // The same £0 measures as on this Budget's page, each with no reason of its own
+    expect(zero.map((node) => node.dataset.zeroMeasure)).toEqual(expect.arrayContaining([EMPLOYER_NI, "warm_home_discount_top_up"]));
+    // Each named as the past event's catalogue names it (main's line: "name — reason")
+    for (const node of zero) expect(node.textContent).toBe(`${catalogue.byId.get(node.dataset.zeroMeasure).label} — no change for the households shown`);
+    // Not this Budget's short names (policyDetails), which one of them has
+    expect(zero.some((node) => !node.textContent.startsWith(`${shortNameOf(catalogue.byId.get(node.dataset.zeroMeasure))} —`))).toBe(true);
+    expect(moreInfo.textContent).not.toMatch(/[Ee]mployers pay less|held fixed|only|from (January|February|March|April|May|June|July|August|September|October|November|December)/);
+    expect(within(moreInfo).queryByRole("link", { name: "Public finances" })).toBeNull();
+  });
+
+  it("links to Methodology on this Budget's page only: a past event's page has none", () => {
+    const linksIn = (props) => {
+      const view = render(<Chart rawData={rows} selectedPolicies={ALL} selectedYear={2027} {...props} />);
+      const moreInfo = view.container.querySelector(".chart-footer > .disclosure-in-card.chart-more-info");
+      fireEvent.click(within(moreInfo).getByRole("button", { name: ABOUT_THIS_CHART }));
+      const links = [...moreInfo.querySelectorAll("a.method-link")].map((link) => link.getAttribute("href"));
+      // What it says of the chart's calculation is the same on both
+      const how = [...moreInfo.querySelectorAll(".info-section")].find((section) => section.querySelector(".info-heading")?.textContent === "How it's calculated")?.querySelector(".info-body").textContent;
+      view.unmount();
+      return { links, how };
+    };
+    const own = linksIn({});
+    expect(own.links).toEqual([expect.stringMatching(/^\?tab=methodology#/)]);
+    const past = linksIn({ pastEvent: true });
+    expect(past.links).toEqual([]);
+    expect(past.how).toBe(own.how);
+    expect(own.how).toBeTruthy();
+  });
 });
 
 describe("ChartMoreInfo", () => {
@@ -182,6 +228,65 @@ describe("ChartMoreInfo", () => {
   it("renders nothing when every measure has an effect and there is nothing else to say", () => {
     const { container } = render(<ChartMoreInfo members={[members[1]]} year={2028} />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  const FULL_INFO = {
+    shows: "What the card shows.",
+    how: ["One step."],
+    definitions: [{ term: "A card's own term", meaning: "Its meaning here." }, { ref: "netIncome" }],
+    caveats: ["One caveat."],
+    sources: [{ label: "One source" }],
+    method: { anchor: "by-income", label: "How we group households" },
+  };
+
+  it("on a past event's card, keeps every part but its links to Methodology", () => {
+    const own = render(<ChartMoreInfo info={FULL_INFO} />);
+    fireEvent.click(screen.getByRole("button", { name: ABOUT_THIS_CHART }));
+    expect([...own.container.querySelectorAll("a.method-link")].map((link) => link.textContent.trim())).toEqual(["How we group households", GLOSSARY.netIncome.term]);
+    own.unmount();
+    const { container } = render(<ChartMoreInfo info={FULL_INFO} pastEvent />);
+    fireEvent.click(screen.getByRole("button", { name: ABOUT_THIS_CHART }));
+    expect(container.querySelector("a.method-link")).toBeNull();
+    expect(container.textContent).not.toMatch(/[Ii]n Methodology|How we group households/);
+    expect(container.querySelector(".info-method")).toBeNull();
+    for (const text of ["What the card shows.", "One step.", "A card's own term", "Its meaning here.", "One caveat.", "One source"]) {
+      expect(container.textContent).toContain(text);
+    }
+  });
+
+  it("on a past event's card, renders nothing when a Methodology link was all it had", () => {
+    expect(render(<ChartMoreInfo info={{ method: FULL_INFO.method }} />).container).not.toBeEmptyDOMElement();
+    const { container } = render(<ChartMoreInfo info={{ method: FULL_INFO.method, definitions: [{ ref: "netIncome" }] }} pastEvent />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("withoutMethodology drops exactly the shared terms and the section link, for any info", () => {
+    const text = fc.string({ minLength: 1, maxLength: 8 });
+    const definition = fc.oneof(
+      fc.record({ term: text, meaning: text }),
+      fc.record({ ref: fc.constantFrom(...Object.keys(GLOSSARY), "notATerm") }),
+    );
+    const info = fc.record(
+      {
+        shows: text,
+        how: fc.array(text, { maxLength: 3 }),
+        definitions: fc.array(definition, { maxLength: 4 }),
+        caveats: fc.array(text, { maxLength: 3 }),
+        sources: fc.array(fc.record({ label: text }), { maxLength: 2 }),
+        method: fc.record({ anchor: text, label: text }),
+      },
+      { requiredKeys: [] },
+    );
+    fc.assert(
+      fc.property(info, (original) => {
+        const before = structuredClone(original);
+        const past = withoutMethodology(original);
+        expect(original).toEqual(before);
+        expect(infoParts(past)).toEqual({ ...infoParts(original), shared: [], method: null });
+        expect(withoutMethodology(past)).toEqual(past);
+      }),
+      { numRuns: 300 },
+    );
   });
 
   it("holds a card's other notes in the same panel", () => {

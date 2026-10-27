@@ -181,7 +181,10 @@ const REVENUE_INFO = {
   method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the policies" },
 };
 
-function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [] }) {
+// `pastEvent`: the chart is a past fiscal event's (#107), so no measure is
+// given this Budget's in-force dates (zeroReason) and About this chart
+// links to no Methodology (ChartMoreInfo)
+function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [], pastEvent = false }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
   // The measure highlighted from the key (MeasureKey); the others fade
@@ -225,7 +228,7 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [] }) {
         .map((key) => bySeriesKey.get(key))
         // Unselected measures are zeros in the data too: only the selection's
         .filter((measure) => measure && selectedPolicies.includes(measure.id))
-        .map((measure) => ({ measure, reason: zeroReason(measure, selectedYear) }))
+        .map((measure) => ({ measure, reason: zeroReason(measure, selectedYear, { pastEvent }) }))
         .filter(({ reason }) => reason.kind === "not_in_force")
         .map(({ measure, reason }) => `${measure.name ?? measure.label}: ${reason.text}`)
     : [];
@@ -429,6 +432,7 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [] }) {
         <ChartMoreInfo
           year={selectedYear}
           info={REVENUE_INFO}
+          pastEvent={pastEvent}
         />
       </div>
     </div>

@@ -217,14 +217,24 @@ export function attestationProblems(attestation, key) {
   return problems;
 }
 
-/** True for a relative path that stays inside the data directory. */
+// The directory under the default data root holding every historical
+// release's root (uk_budget_data/releases.py RELEASES_DIR).
+export const RELEASES_DIR = "releases";
+
+// A path segment in the alphabet the artifact writer names keys and digests
+// with (uk_budget_data/publication/artifacts.py _KEY). It holds nothing a
+// URL decodes or delimits (%, ?, #, \, :), and it cannot be "." or "..", so
+// the path the browser requests is the path checked here.
+const ARTIFACT_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9_.+-]*$/;
+
+/**
+ * True for a relative path that stays inside the data directory and out of
+ * the reserved releases directory, where other releases' files sit.
+ */
 export function isSafeArtifactPath(path) {
   if (typeof path !== "string" || path === "") return false;
-  if (path.startsWith("/") || path.includes("\\") || path.includes(":")) {
-    return false;
-  }
   const parts = path.split("/");
-  return parts.every((part) => part !== "" && part !== "." && part !== "..");
+  return parts[0] !== RELEASES_DIR && parts.every((part) => ARTIFACT_SEGMENT.test(part));
 }
 
 function entryProblems(key, entry, { combined }) {

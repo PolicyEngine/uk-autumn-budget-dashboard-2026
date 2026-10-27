@@ -10,10 +10,12 @@
 import { cachedFile, cachedReceipt, forgetReceipt, rememberFile, rememberReceipt } from "./cache";
 import { parseTable, tableForFile, TABLES, withPovertyInequality } from "./csv";
 import { receiptProblems, sha256Hex, verifyReceiptFiles } from "./digest";
-import { manifestUrl, takeEarlyManifest, takeEarlyResponse } from "./early";
-import { assertCurrentRelease } from "./release";
+import { takeEarlyManifest, takeEarlyResponse } from "./early";
+import { assertRelease, dataRoot, DEFAULT_RELEASE, releaseFor } from "./release";
 import {
   isDisplayable,
+  isSafeArtifactPath,
+  MANIFEST_FILE,
   parseManifest,
   RECEIPT_FILE,
 } from "./manifest";
@@ -61,25 +63,29 @@ async function fetchOk(fetchImpl, url, init) {
 }
 
 /**
- * Fetch and validate the manifest.
+ * Fetch and validate a release's manifest (this Budget's by default) from
+ * that release's own data root.
  *
  * @returns {Promise<Object|null>} The manifest, or null when none is
  *   published yet (HTTP 404).
  */
 export async function loadManifest(
   basePath,
-  { fetchImpl = fetch, signal } = {},
+  { fetchImpl = fetch, signal, release = DEFAULT_RELEASE } = {},
 ) {
-  const url = manifestUrl(basePath);
-  // The head's script started this request before the page's code loaded
-  // (early.js); only the page's own fetch adopts it, once
+  // For this Budget, the URL early.js's manifestUrl gives (its root is
+  // ${basePath}/data; early.test.js keeps the two in step)
+  const url = `${dataRoot(basePath, release)}/${MANIFEST_FILE}`;
+  // The head's script started this Budget's request before the page's code
+  // loaded (early.js); only the page's own fetch adopts it, once. A past
+  // event's URL is never the one it requested.
   const early = fetchImpl === globalThis.fetch ? takeEarlyManifest(url) : null;
   let response = early ? await early.catch(() => null) : null;
   if (!response) response = await fetchImpl(url, { signal, cache: "no-cache" });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
   const bytes = await response.arrayBuffer();
-  const manifest = assertCurrentRelease(parseManifest(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes))));
+  const manifest = assertRelease(parseManifest(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes))), release);
   Object.defineProperty(manifest, "snapshotSha256", { value: await sha256Hex(bytes) });
   return manifest;
 }
@@ -131,8 +137,9 @@ async function fetchEarly(fetchImpl, url, signal) {
 }
 
 /**
- * Fetch one entry's artifact and return its verified, typed tables, with
- * the package versions its receipt records as `engine`.
+ * Fetch one entry's artifact from its release's data root (this Budget's
+ * by default) and return its verified, typed tables, with the package
+ * versions its receipt records as `engine`.
  *
  * No table is requested until its receipt has passed every check. Bytes
  * already verified on this page or a previous visit are read from the
@@ -144,12 +151,16 @@ export async function loadArtifact(
   basePath,
   key,
   entry,
-  { fetchImpl = fetch, signal, tables = DEFAULT_TABLES } = {},
+  { fetchImpl = fetch, signal, tables = DEFAULT_TABLES, release = DEFAULT_RELEASE } = {},
 ) {
   if (!isDisplayable(entry)) {
     throw new Error(`${key} is ${entry?.status}: its figures are not shown`);
   }
-  const base = `${basePath}/data/${entry.artifact}`;
+  // parseManifest refuses these too; a caller's own entry is checked again
+  if (!isSafeArtifactPath(entry.artifact)) {
+    throw new Error(`${key}: the artifact path leaves its release's data root`);
+  }
+  const base = `${dataRoot(basePath, release)}/${entry.artifact}`;
   const keptReceipt = await cachedReceipt(entry.artifact_sha256, fetchImpl);
   const receiptBytes = keptReceipt ?? await fetchEarly(fetchImpl, `${base}/${RECEIPT_FILE}`, signal);
   let receipt;
@@ -230,7 +241,11 @@ export function unverifiedMembers(memberIds, tablesByKey) {
  */
 export async function loadPublication(basePath, selectedIds, options = {}) {
   const selection = uniqueIds(selectedIds);
-  const manifest = options.manifest ?? await loadManifest(basePath, options);
+  const release = releaseFor(options.manifest, options.release);
+  options = { ...options, release };
+  const manifest = options.manifest
+    ? assertRelease(options.manifest, release)
+    : await loadManifest(basePath, options);
   if (manifest === null) {
     return {
       status: "no-manifest",

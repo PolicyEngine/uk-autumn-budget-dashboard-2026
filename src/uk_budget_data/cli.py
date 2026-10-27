@@ -1,11 +1,13 @@
 """Command-line interface for UK Budget Data generation."""
 
 import argparse
+import json
 from pathlib import Path
 
 from rich.console import Console
 from rich.table import Table
 
+from uk_budget_data import historical_events, releases
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.constituencies import (
     add_constituencies_parser,
@@ -44,6 +46,12 @@ from uk_budget_data.reforms import (
 )
 
 console = Console()
+
+
+class DefaultYears(list):
+    """The policy years, as ``generate --years`` defaults to them: a list
+    like any other, marked so a past event can tell it was not asked
+    for and score its own years instead."""
 
 
 def parse_args(args: list[str] = None) -> argparse.Namespace:
@@ -108,10 +116,11 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
         "--years",
         nargs="+",
         type=int,
-        default=list(POLICY_YEARS),
+        default=DefaultYears(POLICY_YEARS),
         help=(
             "Years to calculate (default: the policy years in "
-            f"budget_years.json, {POLICY_YEARS[0]} to {POLICY_YEARS[-1]})"
+            f"budget_years.json, {POLICY_YEARS[0]} to {POLICY_YEARS[-1]}; "
+            "for a past event, the years its registry scores)"
         ),
     )
 
@@ -184,6 +193,33 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
 
     add_generate_arguments(generate_parser)
     add_jobs_arguments(generate_parser, modal=True)
+
+    import_parser = subparsers.add_parser(
+        "import-replay",
+        help="Import past fiscal events from policyengine-scorecard exports",
+    )
+    import_parser.add_argument(
+        "exports",
+        nargs="+",
+        type=Path,
+        help="Event exports (results/uk/dashboard_export/<variant>/<event>"
+        ".json in policyengine-scorecard)",
+    )
+    import_parser.add_argument(
+        "--events-root",
+        type=Path,
+        default=Path("src/uk_budget_data/events"),
+        help="Where the event registries go (default: "
+        "src/uk_budget_data/events)",
+    )
+    import_parser.add_argument(
+        "--data-root",
+        type=Path,
+        default=None,
+        help="Also write each release's flat view files (coverage, "
+        "not-modelled measures, OBR comparison) into its root under this "
+        "default data root, normally public/data",
+    )
 
     # The example households alone: household simulations, no survey data
     income_curve_parser = subparsers.add_parser(
@@ -333,6 +369,15 @@ def print_reforms_list() -> None:
     )
 
 
+def _generation_release(parsed: argparse.Namespace):
+    """The release a generate run writes: the one whose root holds its
+    artifacts root (this Budget's unless that is a past event's), or a
+    ReleaseError."""
+    if not (parsed.artifacts or parsed.combined):
+        return releases.DEFAULT_RELEASE
+    return releases.release_for_root(Path(parsed.artifacts_root).parent)
+
+
 # The flat files the page reads a package's rows from, by the manifest's
 # combined key (#228): these take --combined and --published-package.
 PACKAGE_FLAT_FILES = ("income_distribution", "income_growth")
@@ -422,6 +467,14 @@ def run_generate(parsed: argparse.Namespace) -> int:
     if parsed.list_reforms:
         print_reforms_list()
         return 0
+
+    try:
+        release = _generation_release(parsed)
+        if release.historical:
+            return run_generate_historical(parsed, release)
+    except (releases.ReleaseError, historical_events.EventImportError) as e:
+        console.print(f"[red]Error: {e}[/red]")
+        return 1
 
     legacy_geography_dir = None
     if parsed.legacy_geography:
@@ -586,6 +639,77 @@ def run_generate(parsed: argparse.Namespace) -> int:
         raise
 
 
+def run_generate_historical(parsed: argparse.Namespace, release) -> int:
+    """Generate a past event's artifacts in its own root, from its own
+    registry only, over the years the registry scores."""
+    document = historical_events.load_event(release.id)
+    if document is None:
+        raise historical_events.EventImportError(
+            f"{release.id}: no event registry is imported (import-replay)"
+        )
+    years = document["years"]
+    asked = None if isinstance(parsed.years, DefaultYears) else parsed.years
+    if asked is not None and not set(asked) <= set(years):
+        raise historical_events.EventImportError(
+            f"{release.id} scores {years}; --years asks for others"
+        )
+    if parsed.only or parsed.legacy_geography:
+        raise historical_events.EventImportError(
+            "a past event is generated only as receipted artifacts"
+        )
+    # A worker process is sent a measure that does not pickle by its id,
+    # looked up in this Budget's registry (parallel.portable), so a past
+    # event's measures run here, one after another, never by that route
+    if parsed.backend != "local" or str(parsed.jobs) != "1":
+        raise historical_events.EventImportError(
+            "a past event's measures run locally, one after another "
+            "(--jobs 1, --backend local)"
+        )
+    lookup = historical_events.release_reform_lookup(release)
+    ids = parsed.reforms or [record["id"] for record in document["measures"]]
+    reforms = [lookup(reform_id) for reform_id in ids]
+    unknown = [i for i, reform in zip(ids, reforms) if reform is None]
+    if unknown:
+        raise historical_events.EventImportError(
+            f"not measures of {release.name}: {', '.join(unknown)}"
+        )
+    config = DataConfig(
+        output_dir=releases.data_root_for(release, Path("public/data")),
+        data_dir=parsed.data_dir,
+        data_inputs_dir=parsed.data_inputs_dir,
+        dataset_path=parsed.dataset,
+        years=list(asked or years),
+    )
+    console.print(f"\n[bold]{release.name}[/bold], on today's model and data")
+    console.print(f"Artifacts: {parsed.artifacts_root}")
+    console.print(f"Years: {config.years}")
+    console.print(f"Measures: {len(reforms)}")
+    standalone = reforms if (parsed.reforms or not parsed.combined) else []
+    return run_generate_artifacts(parsed, config, standalone, lookup)
+
+
+def run_import_replay(parsed: argparse.Namespace) -> int:
+    """Run the import-replay command."""
+    parsed.events_root.mkdir(parents=True, exist_ok=True)
+    for export in parsed.exports:
+        try:
+            registry, written = historical_events.import_file(
+                export, parsed.events_root, parsed.data_root
+            )
+        except (historical_events.EventImportError, OSError) as e:
+            console.print(f"[red]Error: {export}: {e}[/red]")
+            return 1
+        document = json.loads(registry.read_text())
+        console.print(
+            f"{document['release']}: {len(document['measures'])} measures "
+            f"imported over {document['years']}, "
+            f"{len(document['not_modelled'])} not modelled -> {registry}"
+        )
+        for path in written:
+            console.print(f"  {path}")
+    return 0
+
+
 def run_income_curve(parsed: argparse.Namespace) -> int:
     """Run the income-curve command."""
     if parsed.reforms:
@@ -622,6 +746,8 @@ def main(args: list[str] = None) -> int:
         return 0
     elif parsed.command == "publish":
         return run_publish(parsed)
+    elif parsed.command == "import-replay":
+        return run_import_replay(parsed)
     elif parsed.command == "geography":
         return run_geography(parsed)
     elif parsed.command == "constituencies":
@@ -643,6 +769,9 @@ def main(args: list[str] = None) -> int:
         )
         console.print(
             "  publish   - Reconcile, stage, approve and check publications"
+        )
+        console.print(
+            "  import-replay - Import past fiscal events from scorecard exports"
         )
         console.print(
             "  geography - Results by region and constituency, disclosure "

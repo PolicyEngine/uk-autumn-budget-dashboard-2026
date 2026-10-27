@@ -7,6 +7,7 @@
 
 import contract from "./contract.json";
 import { DISPLAYABLE, MANIFEST_FILE, RECEIPT_FILE } from "./manifest";
+import { PAST_EVENTS_PATH } from "../../components/historical/pastEventPaths";
 
 // The files every view's first chart reads (load.js CATALOGUE_TABLES; the
 // script requests each only if the receipt lists it)
@@ -46,17 +47,20 @@ export function manifestUrl(basePath) {
  * requested here: the page's own check after paint asks for them, so they
  * do not share a slow line with the opened view's code. A link to By age
  * still requests the receipts and the age table, which the build does not
- * carry.
+ * carry. On a past event's pages (isPastEventPath), which read only their
+ * own release's files, it requests nothing.
  */
 export function earlyManifestScript(basePath, { artifacts = true } = {}) {
   const url = JSON.stringify(manifestUrl(basePath));
   const data = JSON.stringify(`${basePath}/data/`);
+  const past = JSON.stringify(`${basePath}${PAST_EVENTS_PATH}`);
   // Once the manifest is in, the receipts of the artifacts it shows are
   // requested too (a receipt is always the first file of an artifact read).
   // Nothing here is checked or shown: the loader adopts these responses and
   // checks them as it checks its own (takeEarlyResponse)
   return (
-    `(function(){try{var p=fetch(${url},{cache:"no-cache"});` +
+    `(function(){try{var n=location.pathname;if(n===${past}||n.indexOf(${past}+"/")===0)return;` +
+    `var p=fetch(${url},{cache:"no-cache"});` +
     `p.catch(function(){});window.${GLOBAL}={url:${url},response:p};` +
     `var r=window.${RECEIPTS}={},q=new URLSearchParams(location.search);` +
     `if(q.get("tab")==="household"){var h=${data}+${JSON.stringify(PRESETS_URL_FILE)};r[h]=fetch(h);r[h].catch(function(){});}` +

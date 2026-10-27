@@ -1,0 +1,916 @@
+{
+ "coverage": [
+  [
+   "expressible",
+   "",
+   "0",
+   "0",
+   "0",
+   "0",
+   "0/1",
+   "0/1"
+  ],
+  [
+   "partial",
+   "",
+   "3",
+   "48",
+   "-51929613884.578753403",
+   "58200990442.328215003",
+   "1455024761058205375075000/2797708793462782804281667",
+   "3/49"
+  ],
+  [
+   "not_expressible",
+   "",
+   "26",
+   "276",
+   "9152381577.7088104666672",
+   "28291135439.2031551041672",
+   "707278385980078877604180/2797708793462782804281667",
+   "26/49"
+  ],
+  [
+   "out_of_household_scope",
+   "",
+   "20",
+   "492",
+   "-1254963808.40385210849748",
+   "25416225856.97994206409948",
+   "635405646424498551602487/2797708793462782804281667",
+   "20/49"
+  ],
+  [
+   "not_expressible",
+   "construction_pending",
+   "17",
+   "192",
+   "-4211224310.2972801839828",
+   "14827716429.3533651396172",
+   "370692910733834128490430/2797708793462782804281667",
+   "17/49"
+  ],
+  [
+   "not_expressible",
+   "model_or_data_gap",
+   "9",
+   "84",
+   "13363605888.00609065065",
+   "13463419009.84978996455",
+   "336585475246244749113750/2797708793462782804281667",
+   "9/49"
+  ],
+  [
+   "computed_by_replay",
+   "",
+   "3",
+   "40",
+   "",
+   "58200990442.328215003",
+   "1455024761058205375075000/2797708793462782804281667",
+   "3/49"
+  ]
+ ],
+ "event": "spring_budget_2024",
+ "measures": [
+  {
+   "changes": {
+    "gov.hmrc.national_insurance.class_1.rates.employee.main": {
+     "2024": 0.1,
+     "2025": 0.1,
+     "2026": 0.1,
+     "2027": 0.1,
+     "2028": 0.1
+    }
+   },
+   "classification": "partial",
+   "construction": "reversal_on_certified_world",
+   "executor_route": null,
+   "id": "spring_budget_2024__class_1_employee_nics_main_rate_cut_2pp",
+   "missing_legs": [
+    "Static Universal Credit represents only part of the Welfare inside cap head; behavioural earnings, company-tax and departmental channels are absent."
+   ],
+   "name": "National Insurance contributions (NICs): 2 percentage point cut to the main rate of Class 1 employee NICs from 6 April 2024",
+   "obr": {
+    "2026": {
+     "obr_gbp": "-9489275890.491325405",
+     "obr_modelled_heads_gbp": "-9128580216.06273322"
+    },
+    "2027": {
+     "obr_gbp": "-9705846976.828505705",
+     "obr_modelled_heads_gbp": "-9244014761.69574094"
+    },
+    "2028": {
+     "obr_gbp": "-9987690874.107733969",
+     "obr_modelled_heads_gbp": "-9436366284.4676968"
+    }
+   },
+   "replay": {
+    "2024": {
+     "head_effects": {
+      "income_tax": 0.0,
+      "ni_class_1_employee": -10632796331.321083,
+      "ni_class_1_employer": 0.0,
+      "ni_class_2": 0.0,
+      "ni_class_4": 2440163.8153615,
+      "universal_credit": 241090644.10290527
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.national_insurance.class_1.rates.employee.main": 0.1
+      },
+      "reform_world": {
+       "gov.hmrc.national_insurance.class_1.rates.employee.main": 0.08
+      }
+     },
+     "measure_total_gbp": -10389265523.402817
+    },
+    "2025": {
+     "head_effects": {
+      "income_tax": 0.0,
+      "ni_class_1_employee": -11332885657.203163,
+      "ni_class_1_employer": 0.0,
+      "ni_class_2": 0.0,
+      "ni_class_4": 2928040.045285225,
+      "universal_credit": 266181343.4298706
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.national_insurance.class_1.rates.employee.main": 0.1
+      },
+      "reform_world": {
+       "gov.hmrc.national_insurance.class_1.rates.employee.main": 0.08
+      }
+     },
+     "measure_total_gbp": -11063776273.728008
+    },
+    "2026": {
+     "head_effects": {
+      "income_tax": 0.0,
+      "ni_class_1_employee": -11795774735.615051,
+      "ni_class_1_employer": 0.0,
+      "ni_class_2": 0.0,
+      "ni_class_4": 4083705.6726355553,
+      "universal_credit": 282034438.7785034
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.national_insurance.class_1.rates.employee.main": 0.1
+      },
+      "reform_world": {
+       "gov.hmrc.national_insurance.class_1.rates.employee.main": 0.08
+      }
+     },
+     "measure_total_gbp": -11509656591.163912
+    },
+    "2027": {
+     "head_effects": {
+      "income_tax": 0.0,
+      "ni_class_1_employee": -12132335398.171082,
+      "ni_class_1_employer": 0.0,
+      "ni_class_2": 0.0,
+      "ni_class_4": 5818646.863994598,
+      "universal_credit": 292445236.05249023
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.national_insurance.class_1.rates.employee.main": 0.1
+      },
+      "reform_world": {
+       "gov.hmrc.national_insurance.class_1.rates.employee.main": 0.08
+      }
+     },
+     "measure_total_gbp": -11834071515.254597
+    },
+    "2028": {
+     "head_effects": {
+      "income_tax": 0.0,
+      "ni_class_1_employee": -12449876132.117287,
+      "ni_class_1_employer": 0.0,
+      "ni_class_2": 0.0,
+      "ni_class_4": 7443129.777297974,
+      "universal_credit": 303440070.03996277
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.national_insurance.class_1.rates.employee.main": 0.1
+      },
+      "reform_world": {
+       "gov.hmrc.national_insurance.class_1.rates.employee.main": 0.08
+      }
+     },
+     "measure_total_gbp": -12138992932.300026
+    }
+   }
+  },
+  {
+   "changes": {
+    "gov.hmrc.national_insurance.class_4.rates.main": {
+     "2024": 0.08,
+     "2025": 0.08,
+     "2026": 0.08,
+     "2027": 0.08,
+     "2028": 0.08
+    }
+   },
+   "classification": "partial",
+   "construction": "reversal_on_certified_world",
+   "executor_route": null,
+   "id": "spring_budget_2024__class_4_self_employed_nics_main_rate_cut_2pp",
+   "missing_legs": [
+    "Static Universal Credit represents only part of the Welfare inside cap head; behavioural earnings, company-tax and departmental channels are absent."
+   ],
+   "name": "National Insurance contributions (NICs): 2 percentage point cut to the main rate of Class 4 self-employed NICs from 6 April 2024",
+   "obr": {
+    "2026": {
+     "obr_gbp": "-737103352.0440327415",
+     "obr_modelled_heads_gbp": "-496278754.095035621"
+    },
+    "2027": {
+     "obr_gbp": "-740483245.5576954602",
+     "obr_modelled_heads_gbp": "-431056139.332678215"
+    },
+    "2028": {
+     "obr_gbp": "-761457896.2806884555",
+     "obr_modelled_heads_gbp": "-390707062.56628083"
+    }
+   },
+   "replay": {
+    "2024": {
+     "head_effects": {
+      "income_tax": 0.0,
+      "ni_class_1_employee": 0.0,
+      "ni_class_1_employer": 0.0,
+      "ni_class_2": 0.0,
+      "ni_class_4": -649587042.2363234,
+      "universal_credit": 37366356.46134949
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.national_insurance.class_4.rates.main": 0.08
+      },
+      "reform_world": {
+       "gov.hmrc.national_insurance.class_4.rates.main": 0.06
+      }
+     },
+     "measure_total_gbp": -612220685.7749739
+    },
+    "2025": {
+     "head_effects": {
+      "income_tax": 0.0,
+      "ni_class_1_employee": 0.0,
+      "ni_class_1_employer": 0.0,
+      "ni_class_2": 0.0,
+      "ni_class_4": -661746627.0762091,
+      "universal_credit": 41882343.67687988
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.national_insurance.class_4.rates.main": 0.08
+      },
+      "reform_world": {
+       "gov.hmrc.national_insurance.class_4.rates.main": 0.06
+      }
+     },
+     "measure_total_gbp": -619864283.3993292
+    },
+    "2026": {
+     "head_effects": {
+      "income_tax": 0.0,
+      "ni_class_1_employee": 0.0,
+      "ni_class_1_employer": 0.0,
+      "ni_class_2": 0.0,
+      "ni_class_4": -696073741.2305636,
+      "universal_credit": 44096154.611190796
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.national_insurance.class_4.rates.main": 0.08
+      },
+      "reform_world": {
+       "gov.hmrc.national_insurance.class_4.rates.main": 0.06
+      }
+     },
+     "measure_total_gbp": -651977586.6193728
+    },
+    "2027": {
+     "head_effects": {
+      "income_tax": 0.0,
+      "ni_class_1_employee": 0.0,
+      "ni_class_1_employer": 0.0,
+      "ni_class_2": 0.0,
+      "ni_class_4": -738860279.7822428,
+      "universal_credit": 47827344.751449585
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.national_insurance.class_4.rates.main": 0.08
+      },
+      "reform_world": {
+       "gov.hmrc.national_insurance.class_4.rates.main": 0.06
+      }
+     },
+     "measure_total_gbp": -691032935.0307932
+    },
+    "2028": {
+     "head_effects": {
+      "income_tax": 0.0,
+      "ni_class_1_employee": 0.0,
+      "ni_class_1_employer": 0.0,
+      "ni_class_2": 0.0,
+      "ni_class_4": -782252598.0831976,
+      "universal_credit": 49616282.76098633
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.national_insurance.class_4.rates.main": 0.08
+      },
+      "reform_world": {
+       "gov.hmrc.national_insurance.class_4.rates.main": 0.06
+      }
+     },
+     "measure_total_gbp": -732636315.3222113
+    }
+   }
+  },
+  {
+   "changes": {
+    "gov.hmrc.income_tax.charges.CB_HITC.phase_out_end": {
+     "2024": 60000,
+     "2025": 60000,
+     "2026": 60000,
+     "2027": 60000,
+     "2028": 60000
+    },
+    "gov.hmrc.income_tax.charges.CB_HITC.phase_out_start": {
+     "2024": 50000,
+     "2025": 50000,
+     "2026": 50000,
+     "2027": 50000,
+     "2028": 50000
+    }
+   },
+   "classification": "partial",
+   "construction": "reversal_on_certified_world",
+   "executor_route": null,
+   "id": "spring_budget_2024__hicbc_threshold_and_taper",
+   "missing_legs": [
+    "Child Benefit take-up is fixed; OBR's additional claims response is absent."
+   ],
+   "name": "High Income Child Benefit Charge: increase income threshold to \u00a360,000 and taper range to \u00a360,000 to \u00a380,000 from 6 April 2024",
+   "obr": {
+    "2026": {
+     "obr_gbp": "-641000000",
+     "obr_modelled_heads_gbp": "-641000000"
+    },
+    "2027": {
+     "obr_gbp": "-647000000",
+     "obr_modelled_heads_gbp": "-647000000"
+    },
+    "2028": {
+     "obr_gbp": "-658000000",
+     "obr_modelled_heads_gbp": "-658000000"
+    }
+   },
+   "replay": {
+    "2024": {
+     "head_effects": {
+      "child_benefit": -336165102.39004517,
+      "income_tax": -779631545.703949
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_end": 60000,
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_start": 50000
+      },
+      "reform_world": {
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_end": 80000,
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_start": 60000
+      }
+     },
+     "measure_total_gbp": -1115796648.0939941
+    },
+    "2025": {
+     "head_effects": {
+      "child_benefit": -282526333.77780914,
+      "income_tax": -980457483.7055664
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_end": 60000,
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_start": 50000
+      },
+      "reform_world": {
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_end": 80000,
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_start": 60000
+      }
+     },
+     "measure_total_gbp": -1262983817.4833755
+    },
+    "2026": {
+     "head_effects": {
+      "child_benefit": -307810876.10124016,
+      "income_tax": -1131591240.399292
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_end": 60000,
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_start": 50000
+      },
+      "reform_world": {
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_end": 80000,
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_start": 60000
+      }
+     },
+     "measure_total_gbp": -1439402116.5005322
+    },
+    "2027": {
+     "head_effects": {
+      "child_benefit": -323556121.7815895,
+      "income_tax": -1274651222.2009888
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_end": 60000,
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_start": 50000
+      },
+      "reform_world": {
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_end": 80000,
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_start": 60000
+      }
+     },
+     "measure_total_gbp": -1598207343.9825783
+    },
+    "2028": {
+     "head_effects": {
+      "child_benefit": -363073039.4392204,
+      "income_tax": -1394705720.206482
+     },
+     "intended": {
+      "baseline_world": {
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_end": 60000,
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_start": 50000
+      },
+      "reform_world": {
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_end": 80000,
+       "gov.hmrc.income_tax.charges.CB_HITC.phase_out_start": 60000
+      }
+     },
+     "measure_total_gbp": -1757778759.6457024
+    }
+   }
+  }
+ ],
+ "name": "Spring Budget 2024",
+ "not_modelled": [
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "97203869.12902999",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2024__additional_500m_for_the_final_local_government_settlement_1037e8ec",
+   "reform_name": "Additional \u00a3500m for the final Local Government Settlement",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "474698958.73224628",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2024__additional_nhs_funding_from_reserve_this_is_the_net_impact_1f7b0451",
+   "reform_name": "Additional NHS funding (from reserve - this is the net impact)",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "496000000",
+   "reason": "Targeted transport tax needs vehicle emissions/ownership, company-car benefit attributes or passenger journeys absent from the certified household inputs.",
+   "reform_id": "spring_budget_2024__air_passenger_duty_adjustment_for_non_economy_class_rates_from_1_april_2025_3645023e",
+   "reform_name": "Air Passenger Duty: adjustment for non-economy class rates from 1 April 2025",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "1686582434.54110263",
+   "reason": "This targeted indirect-tax measure requires product/sector-specific tax-base inputs, rate histories or business/supply-side scope not established by a generic household consumption liability.",
+   "reform_id": "spring_budget_2024__alcohol_duty_freeze_rates_until_1_february_2025_25d73049",
+   "reform_name": "Alcohol duty: freeze rates until 1 February 2025",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "7227696.857395281",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2024__assumed_underspending_567f4b3c",
+   "reform_name": "Assumed underspending",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "285322396.45991406",
+   "reason": "Business/sector tax, firm allowance or credit; household income-tax spillovers in the PMD do not make the underlying business measure a household reform.",
+   "reform_id": "spring_budget_2024__audio_visual_expenditure_credit_new_53_rate_of_relief_for_expenditure_on_eligible_uk_independent_film_producti_b9fed076",
+   "reform_name": "Audio-visual Expenditure Credit: new 53% rate of relief for expenditure on eligible UK independent film productions from 1 April 2024",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "390972902.2602329462",
+   "reason": "Business/sector tax, firm allowance or credit; household income-tax spillovers in the PMD do not make the underlying business measure a household reform.",
+   "reform_id": "spring_budget_2024__business_rates_40_relief_for_eligible_film_studios_in_england_for_10_years_from_1_april_2024_18c5cdd9",
+   "reform_name": "Business Rates: 40% relief for eligible film studios in England for 10 years from 1 April 2024",
+   "rows": 36
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "503624568.35539223569",
+   "reason": "Business/sector tax, firm allowance or credit; household income-tax spillovers in the PMD do not make the underlying business measure a household reform.",
+   "reform_id": "spring_budget_2024__business_rates_extend_the_empty_property_relief_reset_period_from_six_weeks_to_three_months_thirteen_weeks_fro_d2c53baa",
+   "reform_name": "Business Rates: extend the Empty Property Relief \u2018reset period\u2019 from six weeks to three months (thirteen weeks) from 1 April 2024",
+   "rows": 42
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "1625779385.02314656914",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2024__capital_gains_tax_cut_higher_rate_for_property_from_28_to_24_from_6_april_2024_a2993386",
+   "reform_name": "Capital Gains Tax: cut higher rate for property from 28% to 24% from 6 April 2024",
+   "rows": 30
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "456197972.25802304",
+   "reason": "Business/sector tax, firm allowance or credit; household income-tax spillovers in the PMD do not make the underlying business measure a household reform.",
+   "reform_id": "spring_budget_2024__carbon_border_adjustment_mechanism_cbam_introduce_from_1_january_2027_46125f17",
+   "reform_name": "Carbon Border Adjustment Mechanism (CBAM): introduce from 1 January 2027",
+   "rows": 18
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "20959338.2817051093",
+   "reason": "Administrative collection, compliance, reporting or debt intervention; liability rules do not identify recovered debts, extra staff productivity or compliance behaviour.",
+   "reform_id": "spring_budget_2024__changes_to_anti_avoidance_legislation_transfer_of_assets_abroad_provisions_toaa_1a588ea7",
+   "reform_name": "Changes to Anti-avoidance Legislation: Transfer of Assets Abroad Provisions (TOAA)",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "658000000",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2024__council_tax_police_precept_5e4513c9",
+   "reform_name": "Council Tax: police precept",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "324000000",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2024__council_tax_referendum_flexibilities_60ac2064",
+   "reform_name": "Council Tax: referendum flexibilities",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "223700000",
+   "reason": "Administrative collection, compliance, reporting or debt intervention; liability rules do not identify recovered debts, extra staff productivity or compliance behaviour.",
+   "reform_id": "spring_budget_2024__crypto_asset_reporting_framework_introducing_from_2026_2a6358b0",
+   "reform_name": "Crypto-Asset Reporting Framework: introducing from 2026",
+   "rows": 18
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "23669772.44213918343",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2024__debt_relief_order_removal_of_the_administration_fee_from_6_april_2024_84a5a2fc",
+   "reform_name": "Debt Relief Order: removal of the administration fee from 6 April 2024",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "123182000",
+   "reason": "This targeted indirect-tax measure requires product/sector-specific tax-base inputs, rate histories or business/supply-side scope not established by a generic household consumption liability.",
+   "reform_id": "spring_budget_2024__economic_crime_anti_money_laundering_levy_increase_the_charge_for_very_large_firms_to_500_000_p_a_from_2024_25_76931556",
+   "reform_name": "Economic Crime (Anti-Money Laundering) Levy: increase the charge for Very Large firms to \u00a3500,000 p.a. from 2024-25",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "1531898956.8003888",
+   "reason": "Business/sector tax, firm allowance or credit; household income-tax spillovers in the PMD do not make the underlying business measure a household reform.",
+   "reform_id": "spring_budget_2024__energy_profits_levy_epl_one_year_extension_from_1_april_2028_71583ad8",
+   "reform_name": "Energy Profits Levy (EPL): one year extension from 1 April 2028",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "168423129.63947006559",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2024__freeports_tax_reliefs_sunset_date_extension_from_5_to_10_years_2bd604f7",
+   "reform_name": "Freeports: tax reliefs sunset date extension from 5 to 10 years",
+   "rows": 60
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "6462456758.35845227",
+   "reason": "Fuel-duty current-law path is collapsed by later freezes. A single-event reversal needs an announcement-consistent counterfactual uprating path, which is not guessed from the later certified path.",
+   "reform_id": "spring_budget_2024__fuel_duty_12_month_extension_to_the_5p_cut_in_rates_and_no_rpi_increase_in_2024_25_57ffd61d",
+   "reform_name": "Fuel Duty: 12 month extension to the 5p cut in rates and no RPI increase in 2024-25",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "610641027.8313404015535",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2024__furnished_holiday_lets_abolish_preferential_tax_regime_from_6_april_2025_7b9f6256",
+   "reform_name": "Furnished Holiday Lets: abolish preferential tax regime from 6 April 2025",
+   "rows": 30
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "4532749475.1647236263",
+   "reason": "Administrative collection, compliance, reporting or debt intervention; liability rules do not identify recovered debts, extra staff productivity or compliance behaviour.",
+   "reform_id": "spring_budget_2024__hmrc_investment_in_debt_management_capacity_99f77d2e",
+   "reform_name": "HMRC:\u00a0investment in debt management capacity",
+   "rows": 42
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "34988403.6912723774",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2024__hmrc_investment_in_digital_services_3a5f982b",
+   "reform_name": "HMRC: investment in digital services",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "510385000.000000042",
+   "reason": "Requires claim history, previous awards, assessment descriptors, administrative process or an announcement-specific caseload response; a current annual liability parameter alone cannot replay it.",
+   "reform_id": "spring_budget_2024__increased_capacity_for_processing_disability_benefits_from_2024_25_7ddb01be",
+   "reform_name": "Increased capacity for processing disability benefits from 2024-25",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "26845398.8669664725",
+   "reason": "No estates, bequests, death events or agricultural/business-property inheritance-tax relief model on the certified household population.",
+   "reform_id": "spring_budget_2024__inheritance_tax_changes_to_grants_on_credit_from_1_april_2024_4c97a773",
+   "reform_name": "Inheritance Tax: changes to grants on credit from 1 April 2024",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "9267101.77748199145",
+   "reason": "No estates, bequests, death events or agricultural/business-property inheritance-tax relief model on the certified household population.",
+   "reform_id": "spring_budget_2024__inheritance_tax_extend_agricultural_property_relief_to_certain_environmental_land_management_agreements_from_6_52e8fd47",
+   "reform_name": "Inheritance Tax: extend agricultural property relief to certain environmental land management agreements from 6 April 2025",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "37224200.4784377515755",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2024__investment_zones_in_england_tax_reliefs_and_business_rates_retention_16868695",
+   "reform_name": "Investment Zones in England: tax reliefs and business rates retention",
+   "rows": 54
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "196787599.53129173",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2024__landfill_tax_rpi_adjustment_to_2025_26_rates_c54976c2",
+   "reform_name": "Landfill tax: RPI adjustment to 2025-26 rates",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "1531467076.8786399251",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2024__multiple_dwellings_relief_abolish_from_1_june_2024_65aecdc4",
+   "reform_name": "Multiple Dwellings Relief: abolish from 1 June 2024",
+   "rows": 30
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "85754580.000000002",
+   "reason": "The relevant liability exists, but this announcement's counterfactual path or targeted eligibility has not been established on the certified population; no guessed parameter or baseline.",
+   "reform_id": "spring_budget_2024__national_insurance_contributions_nics_freeze_class_2_and_3_rates_for_2024_25_fd2a7666",
+   "reform_name": "National Insurance contributions (NICs): freeze Class 2 and 3 rates for 2024-25",
+   "rows": 36
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "367000000",
+   "reason": "Business/sector tax, firm allowance or credit; household income-tax spillovers in the PMD do not make the underlying business measure a household reform.",
+   "reform_id": "spring_budget_2024__orchestra_theatre_and_museums_galleries_tax_relief_permanent_extension_of_40_for_non_touring_productions_and_4_21f9c44f",
+   "reform_name": "Orchestra, theatre and museums/galleries tax relief: permanent extension of 40% for non-touring productions and 45% for touring and orchestral production",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "467174305.080415971",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2024__other_non_scorecard_del_changes_2d0cd888",
+   "reform_name": "Other non-scorecard DEL changes",
+   "rows": 12
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "5826837.81690731004",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2024__penalty_reform_for_income_tax_self_assessment_making_tax_digital_volunteers_33b26602",
+   "reform_name": "Penalty reform for income tax Self Assessment: Making Tax Digital Volunteers",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "2600506888.32538194",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2024__public_sector_productivity_programme_nhs_investment_aa90d115",
+   "reform_name": "Public Sector Productivity Programme: NHS investment",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "13794060.277401193",
+   "reason": "Targeted transport tax needs vehicle emissions/ownership, company-car benefit attributes or passenger journeys absent from the certified household inputs.",
+   "reform_id": "spring_budget_2024__reserved_investor_fund_tax_rules_to_facilitate_the_introduction_of_a_new_investment_fund_vehicle_9679eaf9",
+   "reform_name": "Reserved Investor Fund: tax rules to facilitate the introduction of a new investment fund vehicle",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "17668198.0525609758",
+   "reason": "The announcement needs a targeted tax-base, entitlement, transaction or programme mechanism not established as an executable reform on the certified household population.",
+   "reform_id": "spring_budget_2024__stamp_duty_land_tax_acquisitions_by_registered_social_landlords_public_bodies_from_6_march_2024_8d15e462",
+   "reform_name": "Stamp Duty Land Tax: Acquisitions by Registered Social Landlords & Public Bodies from 6 March 2024",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "96925940.460695509",
+   "reason": "The relevant liability exists, but this announcement's counterfactual path or targeted eligibility has not been established on the certified population; no guessed parameter or baseline.",
+   "reform_id": "spring_budget_2024__starting_rate_for_savings_maintain_at_5_000_for_2024_25_0f5f70e7",
+   "reform_name": "Starting Rate for Savings: maintain at \u00a35,000 for 2024-25",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "26000000",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2024__student_finance_impact_of_ukraine_permission_extension_scheme_from_march_2025_bf3c41a9",
+   "reform_name": "Student finance: impact of Ukraine Permission Extension Scheme from March 2025",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "6907213151.56065222997768",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2024__supplementary_estimates_a315fcd1",
+   "reform_name": "Supplementary estimates",
+   "rows": 24
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "801536862.66519744",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2024__tariff_changes_since_autumn_budget_2023_70d15309",
+   "reform_name": "Tariff changes since Autumn Budget 2023",
+   "rows": 6
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "model_or_data_gap",
+   "obr_absolute_gbp": "9381000000",
+   "reason": "No residence-history, foreign-income regime or repatriation/base-cost history needed by the announcement package.",
+   "reform_id": "spring_budget_2024__taxation_of_non_domiciled_individuals_from_6_april_2025_replace_existing_regime_with_a_new_relief_on_foreign_i_7aa4d4ff",
+   "reform_name": "Taxation of non-domiciled individuals: from 6 April 2025 replace existing regime with a new relief on foreign income and gains available for the first four years of UK tax residency with transitional arrangements",
+   "rows": 30
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "450314328.50506989",
+   "reason": "This targeted indirect-tax measure requires product/sector-specific tax-base inputs, rate histories or business/supply-side scope not established by a generic household consumption liability.",
+   "reform_id": "spring_budget_2024__tobacco_duty_one_off_increase_alongside_the_vaping_products_duty_to_maintain_financial_incentive_to_choose_vap_ada9966e",
+   "reform_name": "Tobacco duty: one-off increase alongside the vaping products duty to maintain financial incentive to choose vaping over smoking, from 1 October 2026",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "4155250654.840866555",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2024__updated_post_spending_review_spending_assumptions_6f061c4f",
+   "reform_name": "Updated post-Spending Review spending assumptions",
+   "rows": 12
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "1149745976.757877922",
+   "reason": "This targeted indirect-tax measure requires product/sector-specific tax-base inputs, rate histories or business/supply-side scope not established by a generic household consumption liability.",
+   "reform_id": "spring_budget_2024__vaping_products_duty_introduce_from_1_october_2026_b3237cbe",
+   "reform_name": "Vaping products duty: introduce from 1 October 2026",
+   "rows": 24
+  },
+  {
+   "classification": "not_expressible",
+   "gap_kind": "construction_pending",
+   "obr_absolute_gbp": "575214932.150916419",
+   "reason": "This targeted indirect-tax measure requires product/sector-specific tax-base inputs, rate histories or business/supply-side scope not established by a generic household consumption liability.",
+   "reform_id": "spring_budget_2024__vat_increase_the_registration_threshold_to_90_000_and_the_deregistration_threshold_to_88_000_from_1_april_2024_4b66fa47",
+   "reform_name": "VAT: increase the registration threshold to \u00a390,000 and the deregistration threshold to \u00a388,000 from 1 April 2024",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "215513689.05165838",
+   "reason": "Business/sector tax, firm allowance or credit; household income-tax spillovers in the PMD do not make the underlying business measure a household reform.",
+   "reform_id": "spring_budget_2024__visual_effects_tax_relief_removal_of_80_cap_on_qualifying_expenditure_and_5_uplift_for_qualifying_costs_from_1_25088222",
+   "reform_name": "Visual effects tax relief: removal of 80% cap on qualifying expenditure and 5% uplift for qualifying costs from 1 April 2025",
+   "rows": 6
+  },
+  {
+   "classification": "out_of_household_scope",
+   "gap_kind": "",
+   "obr_absolute_gbp": "14988178.44337873",
+   "reason": "Business, departmental, local-authority, financing or block-grant accounts; no household tax/benefit counterpart for these source heads.",
+   "reform_id": "spring_budget_2024__welsh_government_funding_523cd290",
+   "reform_name": "Welsh Government funding",
+   "rows": 6
+  }
+ ],
+ "release": "uk-spring-budget-2024",
+ "replay_years": [
+  2024,
+  2025,
+  2026,
+  2027,
+  2028
+ ],
+ "schema": "uk-budget-dashboard/historical-event/v1",
+ "source": {
+  "export_schema": "policyengine-scorecard/uk-event-dashboard-export/v1",
+  "export_sha256": "d877e9c381b32c275fdfdc1efe8869a760a3b10673a235f1c7fbe9926a993ac4",
+  "registry_sha256": "64a3bccfd950e868ffc5d6261bf3903df88a3ebedc9b4444494acc717259817a",
+  "variant": {
+   "comparison_sha256": "12142655269855f058450d7c8f4de10cf31e9ccdfb4a0a2df1739dc74435d6ce",
+   "dataset": {
+    "path": "enhanced_frs_2024_25.h5",
+    "repo_id": "policyengine/policyengine-uk-data-private",
+    "revision": "1.58.1",
+    "sha256": "056e80fd8e9151d78f432a25cde863340baee81304c6216a37fb575ce8563784"
+   },
+   "namespace_manifest_sha256": "738aa0e0b8100fbbcaa5dcedd07c7afd5ac7e597ce2a9a38b3fa40b1a3193f72",
+   "packages": {
+    "policyengine": "6.9.0",
+    "policyengine-core": "3.33.0",
+    "policyengine-uk": "2.130.1"
+   },
+   "receipt_sha256": "f37d068c69253a9353c7bf891c8a44897fb4166c9550b14376dbe0fd71e6501b"
+  }
+ },
+ "years": [
+  2026,
+  2027,
+  2028
+ ]
+}

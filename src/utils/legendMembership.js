@@ -142,8 +142,13 @@ export function noEffectRow(measure, year) {
  * {kind, text}: "employer" (zeroForHouseholds: £0 by construction),
  * "not_in_force" (when it is in force instead) or "none" (in force, but no
  * household shown is changed).
+ *
+ * `pastEvent`: the measure is a past fiscal event's (#107). Both reasons
+ * above are written for this Budget's measures (an employer measure's text
+ * says employers pay less), so a past event's is always "none".
  */
-export function zeroReason(measure, year) {
+export function zeroReason(measure, year, { pastEvent = false } = {}) {
+  if (pastEvent) return { kind: "none", text: "no change for the households shown" };
   const employer = zeroForHouseholds(measure);
   if (employer) return { kind: "employer", text: employer };
   const policy = policyDetailsFor(measure);

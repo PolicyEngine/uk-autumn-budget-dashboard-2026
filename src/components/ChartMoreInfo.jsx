@@ -42,16 +42,18 @@ function EmployerReason({ id, year }) {
  * The selected policies that are £0 for households in the year shown, as
  * one caveat in a card's "About this chart" (nestedItem): a lead line, then
  * one policy a bullet, its short name and why: "Threshold freeze — from
- * April 2031". One policy reads as one line.
+ * April 2031". One policy reads as one line. On a past event's card
+ * (`pastEvent`) a policy is named as its own catalogue names it, and its
+ * reason is never one written for this Budget's (zeroReason).
  */
-export function zeroMeasuresItem({ zero, year, period }) {
+export function zeroMeasuresItem({ zero, year, period, pastEvent = false }) {
   return nestedItem(
     <>No effect on household incomes {period ?? `in ${fiscalYear(year)}`}:</>,
     zero.map((member) => {
-      const reason = zeroReason(member, year);
+      const reason = zeroReason(member, year, { pastEvent });
       return (
         <span key={member.id} data-zero-measure={member.id}>
-          {shortNameOf(member)} —{" "}
+          {pastEvent ? member.name : shortNameOf(member)} —{" "}
           {reason.kind === "employer" ? (
             <EmployerReason id={member.id} year={year} />
           ) : reason.kind === "not_in_force" ? (
@@ -67,6 +69,18 @@ export function zeroMeasuresItem({ zero, year, period }) {
 }
 
 /**
+ * `info` less its links to Methodology: the shared terms, defined there, and
+ * the closing section link. A past event's page (HistoricalReleasePage)
+ * has no Methodology view: a link's address there is that same page, and
+ * nothing on it answers a click (only App listens for OPEN_VIEW_EVENT).
+ */
+export const withoutMethodology = (info) => ({
+  ...info,
+  definitions: (info.definitions || []).filter((definition) => !definition?.ref),
+  method: null,
+});
+
+/**
  * A chart card's "About this chart", at the foot of the card: the page's
  * one disclosure (Disclosure), closed by default, with a one-line preview
  * of what is inside and a caveat count. Its content is `info`, in the fixed
@@ -76,18 +90,22 @@ export function zeroMeasuresItem({ zero, year, period }) {
  * `period` replaces "in 2027-28" for a chart over several years (its £0
  * measures are £0 in all of them).
  *
- * @param {{info?: import("./InfoSections").ChartInfo, members?: Array<{id: string, name: string, muted: boolean}>, year?: number, period?: string}} props
+ * `pastEvent`: the card is a past fiscal event's, so no £0 measure is
+ * given a reason written for this Budget's (zeroReason), and the card links
+ * to no Methodology (withoutMethodology).
+ *
+ * @param {{info?: import("./InfoSections").ChartInfo, members?: Array<{id: string, name: string, muted: boolean}>, year?: number, period?: string, pastEvent?: boolean}} props
  */
-function ChartMoreInfo({ info = {}, members = [], year, period, children }) {
+function ChartMoreInfo({ info = {}, members = [], year, period, pastEvent = false, children }) {
   // Cards not yet given sections: their notes, as "What it shows"
   const legacy = (Array.isArray(children) ? children : [children]).filter(Boolean);
   const zero = members.filter((member) => member.muted);
   const full = {
-    ...info,
+    ...(pastEvent ? withoutMethodology(info) : info),
     shows: info.shows ?? (legacy.length ? <span className="chart-more-info-legacy">{legacy}</span> : null),
     caveats: [
       ...(info.caveats || []),
-      zero.length > 0 && zeroMeasuresItem({ zero, year, period }),
+      zero.length > 0 && zeroMeasuresItem({ zero, year, period, pastEvent }),
     ],
   };
   if (!hasInfo(full)) return null;

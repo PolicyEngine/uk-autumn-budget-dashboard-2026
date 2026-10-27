@@ -35,7 +35,7 @@ from uuid import uuid4
 
 from pydantic import ValidationError
 
-from uk_budget_data import data_limits, model_limits
+from uk_budget_data import data_limits, model_limits, releases
 from uk_budget_data.certified_data import load_bundle_manifest
 from uk_budget_data.publication import template_proof
 
@@ -193,10 +193,22 @@ def porcelain_paths(output: str) -> list[str]:
 
 
 def is_publication_path(path: str) -> bool:
-    """Whether a changed path is one the publication commands write."""
-    return path == MANIFEST_PATH or (
-        path.startswith(ARTIFACTS_PREFIX) and ".." not in path.split("/")
-    )
+    """Whether a changed path is one the publication commands write.
+
+    The same two paths in each registered historical release's root
+    (uk_budget_data/releases.json) count as the default root's do: its
+    manifest and anything under its artifacts directory. Nothing else
+    under ``public/data/releases/`` does.
+    """
+    if ".." in path.split("/"):
+        return False
+    for release in releases.RELEASES.values():
+        prefix = f"{release.data_root}/" if release.data_root else ""
+        manifest = MANIFEST_PATH.replace("data/", f"data/{prefix}", 1)
+        artifacts = ARTIFACTS_PREFIX.replace("data/", f"data/{prefix}", 1)
+        if path == manifest or path.startswith(artifacts):
+            return True
+    return False
 
 
 def is_non_calculation_path(path: str) -> bool:

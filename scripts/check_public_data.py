@@ -265,20 +265,52 @@ def thin_cells_in_tables(data: bytes) -> bool:
     return isinstance(floor, dict) and bool(floor.get("thin_cells_in_tables"))
 
 
-def check(root: Path, today: Optional[date] = None) -> Report:
-    """Run every check on the repository at ``root``."""
-    today = today or datetime.now(timezone.utc).date()
-    report = Report()
+def release_root_problems(default_root: Path) -> list[str]:
+    """Each published release root's manifest and release index.
+
+    A manifest must name the release its root serves (this Budget for
+    public/data); flat view files must be bound to it. Every registered
+    release's root is checked, and nothing else may sit in releases/. A
+    historical release's problems start with its id; this Budget's read as
+    they always have.
+    """
     from uk_budget_data.publication.release_index import (
         manifest_identity_problems,
         release_index_problems,
     )
+    from uk_budget_data.releases import RELEASES, RELEASES_DIR, data_root_for
 
-    # A manifest must name this Budget; flat view files must be bound to it
-    report.problems.extend(
-        manifest_identity_problems(root / "public" / "data")
-    )
-    report.problems.extend(release_index_problems(root / "public" / "data"))
+    problems = []
+    for release in RELEASES.values():
+        data_root = data_root_for(release, default_root)
+        if release.historical and not data_root.exists():
+            continue
+        found = manifest_identity_problems(data_root) + release_index_problems(
+            data_root
+        )
+        problems.extend(
+            f"{release.id}: {problem}" if release.historical else problem
+            for problem in found
+        )
+    releases_dir = default_root / RELEASES_DIR
+    if releases_dir.is_dir():
+        for child in sorted(releases_dir.iterdir()):
+            if (
+                child.name not in RELEASES
+                or not RELEASES[child.name].historical
+            ):
+                problems.append(
+                    f"public/data/{RELEASES_DIR}/{child.name}: not a "
+                    "registered historical release"
+                )
+    return problems
+
+
+def check(root: Path, today: Optional[date] = None) -> Report:
+    """Run every check on the repository at ``root``."""
+    today = today or datetime.now(timezone.utc).date()
+    report = Report()
+    report.problems.extend(release_root_problems(root / "public" / "data"))
     files = tracked_files(root)
     review, problems = read_review(root)
     report.problems.extend(problems)

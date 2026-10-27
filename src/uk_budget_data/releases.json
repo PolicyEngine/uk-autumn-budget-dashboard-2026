@@ -1,0 +1,61 @@
+{
+  "schema": "uk-budget-dashboard/releases/v1",
+  "default": "uk-autumn-budget-2026",
+  "releases": [
+    {
+      "id": "uk-autumn-budget-2026",
+      "kind": "current",
+      "name": "Autumn Budget 2026",
+      "date": "2026-10-28",
+      "data_root": ""
+    },
+    {
+      "id": "uk-autumn-budget-2025",
+      "kind": "historical",
+      "name": "Autumn Budget 2025",
+      "date": "2025-11-26",
+      "data_root": "releases/uk-autumn-budget-2025",
+      "event": "autumn_budget_2025"
+    },
+    {
+      "id": "uk-spring-statement-2025",
+      "kind": "historical",
+      "name": "Spring Statement 2025",
+      "date": "2025-03-26",
+      "data_root": "releases/uk-spring-statement-2025",
+      "event": "spring_statement_2025"
+    },
+    {
+      "id": "uk-autumn-budget-2024",
+      "kind": "historical",
+      "name": "Autumn Budget 2024",
+      "date": "2024-10-30",
+      "data_root": "releases/uk-autumn-budget-2024",
+      "event": "autumn_budget_2024"
+    },
+    {
+      "id": "uk-spring-budget-2024",
+      "kind": "historical",
+      "name": "Spring Budget 2024",
+      "date": "2024-03-06",
+      "data_root": "releases/uk-spring-budget-2024",
+      "event": "spring_budget_2024"
+    },
+    {
+      "id": "uk-autumn-statement-2023",
+      "kind": "historical",
+      "name": "Autumn Statement 2023",
+      "date": "2023-11-22",
+      "data_root": "releases/uk-autumn-statement-2023",
+      "event": "autumn_statement_2023"
+    },
+    {
+      "id": "uk-spring-budget-2023",
+      "kind": "historical",
+      "name": "Spring Budget 2023",
+      "date": "2023-03-15",
+      "data_root": "releases/uk-spring-budget-2023",
+      "event": "spring_budget_2023"
+    }
+  ]
+}

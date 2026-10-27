@@ -9,8 +9,9 @@
  * appear in the measure's published name, then in its id, then the one
  * named first in its description. In a name or id the categories are tried
  * in the order below, so the more specific wins ("VAT cut on road fuel" is VAT, "State
- * Pension income tax protection" is income tax). A measure that matches
- * none is "Other", with a plain tag icon.
+ * Pension income tax protection" is income tax), after the named schemes
+ * whose names hold another category's words (NAMED_SCHEMES). A measure
+ * that matches none is "Other", with a plain tag icon.
  */
 
 // Each category: its caption, its icon (TitleIcon), and its words. Texts
@@ -33,23 +34,45 @@ export const MEASURE_CATEGORIES = [
 
 export const OTHER_CATEGORY = { label: "Other", icon: "tag" };
 
+// Schemes whose names hold another category's words, placed by the scheme
+// before the categories' words are tried (and, in a description, when the
+// scheme is named first): the Winter Fuel Payment is a
+// benefit, not fuel duty or pensions; Stamp Duty Land Tax's "Higher Rate
+// of Additional Dwelling" is property, not income tax; the Local Housing
+// Allowance is a benefit, not property; a freeze of "personal income tax
+// and equivalent national insurance thresholds" is income tax, as this
+// Budget's threshold freeze is. (Names of past events' measures, #107.)
+const NAMED_SCHEMES = [
+  { label: "Benefits", pattern: /winter fuel|local housing allowance|\blha\b/ },
+  { label: "Property", pattern: /stamp duty|\bsdlt\b/ },
+  { label: "Income tax", pattern: /personal income tax/ },
+];
+
 const normalise = (text) => String(text ?? "").toLowerCase().replace(/[_-]+/g, " ");
 
+// A named scheme's words, standing for its category's entry
+const SCHEME_WORDS = NAMED_SCHEMES.map(({ label, pattern }) => ({ pattern, category: MEASURE_CATEGORIES.find((category) => category.label === label) }));
+
 /**
- * The category entry for one text, or null: in a name or id, the first in
- * MEASURE_CATEGORIES' order whose words appear; in a description (`earliest`),
- * the one whose words come first in it, since a description names its own
- * tax before the others it touches ("The income tax personal allowance …
- * the National Insurance primary threshold …" is income tax).
+ * The category entry for one text, or null: in a name or id, a named
+ * scheme's, then the first in MEASURE_CATEGORIES' order whose words appear;
+ * in a description (`earliest`), the one whose words come first in it, since
+ * a description names its own tax before the others it touches ("The income
+ * tax personal allowance … the National Insurance primary threshold …" is
+ * income tax). A scheme named at the same place as a category's word wins.
  */
 function categoryInText(text, earliest = false) {
   const words = normalise(text);
   if (!words.trim()) return null;
-  if (!earliest) return MEASURE_CATEGORIES.find(({ pattern }) => pattern.test(words)) ?? null;
+  if (!earliest) {
+    const scheme = SCHEME_WORDS.find(({ pattern }) => pattern.test(words));
+    if (scheme) return scheme.category;
+    return MEASURE_CATEGORIES.find(({ pattern }) => pattern.test(words)) ?? null;
+  }
   let best = null;
   let bestAt = Infinity;
-  for (const category of MEASURE_CATEGORIES) {
-    const at = words.search(category.pattern);
+  for (const { pattern, category } of [...SCHEME_WORDS, ...MEASURE_CATEGORIES.map((entry) => ({ pattern: entry.pattern, category: entry }))]) {
+    const at = words.search(pattern);
     if (at >= 0 && at < bestAt) { best = category; bestAt = at; }
   }
   return best;

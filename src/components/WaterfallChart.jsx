@@ -62,8 +62,11 @@ const ABSOLUTE_INFO = {
  *   gives the merged card's)
  * @param {React.ReactNode} [props.controls] - Controls under the sentence
  * @param {Object} [props.info] - About this chart, in place of the card's own
+ * @param {boolean} [props.pastEvent] - The chart is a past fiscal event's
+ *   (#107): About this chart gives no £0 measure a reason written for
+ *   this Budget's (zeroReason) and links to no Methodology (ChartMoreInfo)
  */
-function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, title = "Absolute impact by income decile", controls = null, info = ABSOLUTE_INFO }) {
+function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, title = "Absolute impact by income decile", controls = null, pastEvent = false, info = ABSOLUTE_INFO }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
   // The measure whose segment is hovered: the others dim
@@ -419,7 +422,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       </div>
       {published && (
         <div className="chart-footer">
-          <ChartMoreInfo members={members} year={selectedYear} info={info} />
+          <ChartMoreInfo members={members} year={selectedYear} info={info} pastEvent={pastEvent} />
         </div>
       )}
     </div>
