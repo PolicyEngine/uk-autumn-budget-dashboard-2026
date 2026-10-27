@@ -71,15 +71,15 @@
   pointer-events: none;
 }
 
-/* Its underline, as the chosen view tab's, a step thinner */
+/* Its underline, the chosen view tab's */
 .sub-tabs-pill::after {
   content: "";
   position: absolute;
-  left: 10px;
-  right: 10px;
+  left: var(--tab-underline-inset, 8px);
+  right: var(--tab-underline-inset, 8px);
   bottom: 0;
-  height: 2px;
-  border-radius: 2px 2px 0 0;
+  height: var(--tab-underline, 3px);
+  border-radius: 3px 3px 0 0;
   background: var(--band-teal);
 }
 
@@ -98,11 +98,13 @@
   align-items: center;
   gap: var(--tab-icon-gap, 8px);
   min-width: 0;
-  min-height: 44px;
+  /* The view tabs' height, font and weight (globals.css --tab-*) */
+  height: var(--tab-row-height, 48px);
   padding: 0 var(--tab-pad-x, 12px);
   font-family: inherit;
-  font-size: 0.9375rem;
-  font-weight: 500;
+  font-size: var(--tab-font-size, 1rem);
+  /* One weight for every tab, so choosing one never moves the others */
+  font-weight: var(--tab-font-weight, 600);
   line-height: 1.2;
   white-space: nowrap;
   color: var(--c-subtab-muted);
@@ -110,11 +112,7 @@
   border: none;
   border-radius: 0;
   cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, min-height 180ms ease-out;
-}
-
-.app[data-tabs-stuck] .sub-tab {
-  min-height: 38px;
+  transition: color 0.15s ease, background-color 0.15s ease, height 180ms ease-out;
 }
 
 .sub-tab-icon {
@@ -134,7 +132,6 @@
 }
 
 .sub-tab[aria-selected="true"] {
-  font-weight: 600;
   color: var(--band-teal);
 }
 
@@ -159,10 +156,6 @@
     width: auto;
     max-width: 100%;
     margin-left: 0;
-  }
-
-  .sub-tab {
-    font-size: 0.875rem;
   }
 
   /* Stuck on a phone: icons only, the names kept for assistive tech */

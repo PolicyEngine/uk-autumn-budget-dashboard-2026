@@ -128,14 +128,22 @@ code {
   --card-radius: 12px;
   --card-padding: 24px;
   --title-row-height: 64px;
+  /* The two tab rows (view tabs and sub-tabs) share one height: each
+     row, each tab and the chosen tab's tint. Compact once stuck. */
+  --tab-row-height: 48px;
   /* The view tabs under the intro; they stick under the band */
-  --view-tabs-height: 48px;
+  --view-tabs-height: var(--tab-row-height);
   /* The two tab rows' one spacing (view tabs, sub-tabs and About): the gap
      between items, the padding inside each (chosen or not) and the gap
      from icon to label */
   --tab-gap: 8px;
   --tab-pad-x: 12px;
   --tab-icon-gap: 8px;
+  /* Both rows' one font and underline (icons are 18px in both) */
+  --tab-font-size: 1rem;
+  --tab-font-weight: 600;
+  --tab-underline: 3px;
+  --tab-underline-inset: 8px;
   /* Bars: the radius of a bar's outer end (chartTheme BAR_RADIUS) */
   --bar-radius: 5px;
   --sticky-offset: calc(var(--nav-offset) + var(--title-row-height) + var(--view-tabs-height));
@@ -473,21 +481,20 @@ body {
    Once stuck the view tabs and band are compact (App.jsx sets
    data-tabs-stuck). */
 .app {
+  /* Redeclared here so a stuck .app's own --tab-row-height counts */
+  --view-tabs-height: var(--tab-row-height, 48px);
   --sub-band-height: 0px;
   --sticky-offset: calc(var(--nav-offset) + var(--title-row-height) + var(--view-tabs-height) + var(--sub-band-height));
 }
 
 .app[data-sub-band] {
-  --sub-band-height: 45px;
+  /* The sub-tab row and the band's 1px rule */
+  --sub-band-height: calc(var(--tab-row-height, 48px) + 1px);
 }
 
 @media (min-width: 601px) {
   .app[data-tabs-stuck] {
-    --view-tabs-height: 40px;
-  }
-
-  .app[data-tabs-stuck][data-sub-band] {
-    --sub-band-height: 39px;
+    --tab-row-height: 40px;
   }
 
   .app[data-tabs-stuck] .view-tabs-bar {
@@ -517,7 +524,7 @@ body {
   position: relative;
   display: flex;
   gap: var(--tab-gap, 8px);
-  height: var(--view-tabs-height);
+  height: var(--tab-row-height, 48px);
   transition: height 180ms ease-out;
   /* A narrow screen scrolls the row, never the page */
   overflow-x: auto;
@@ -558,9 +565,10 @@ body {
   height: 100%;
   padding: 0 var(--tab-pad-x, 12px);
   font-family: inherit;
-  font-size: 1rem;
+  font-size: var(--tab-font-size, 1rem);
   /* One weight for every tab, so choosing one never moves the others */
-  font-weight: 600;
+  font-weight: var(--tab-font-weight, 600);
+  line-height: 1.2;
   white-space: nowrap;
   color: var(--pe-gray-600);
   background: transparent;
@@ -607,10 +615,10 @@ body {
 .view-tabs-indicator::after {
   content: "";
   position: absolute;
-  left: 8px;
-  right: 8px;
+  left: var(--tab-underline-inset, 8px);
+  right: var(--tab-underline-inset, 8px);
   bottom: 0;
-  height: 3px;
+  height: var(--tab-underline, 3px);
   border-radius: 3px 3px 0 0;
   background: var(--band-teal);
 }
@@ -639,26 +647,15 @@ body {
    sub-tab band under the title row: nothing scrolls away. Stuck, both show
    icons only, the names kept for assistive tech. */
 @media (max-width: 600px) {
-  :root {
-    --view-tabs-height: 48px;
-  }
-
   .app[data-tabs-stuck] {
-    --view-tabs-height: 44px;
-  }
-
-  .app[data-tabs-stuck][data-sub-band] {
-    --sub-band-height: 39px;
+    --tab-row-height: 44px;
   }
 
   :root {
     --tab-gap: 4px;
     --tab-pad-x: 12px;
     --tab-icon-gap: 6px;
-  }
-
-  .view-tab {
-    font-size: 0.9375rem;
+    --tab-font-size: 0.9375rem;
   }
 
   .app[data-tabs-stuck] .view-tab-label {
