@@ -68,7 +68,7 @@ def test_units_are_measure_major_and_year_minor(tmp_path):
     sets = [
         [
             get_reform("threshold_freeze_2031_32"),
-            get_reform("road_fuel_vat_cut"),
+            get_reform("domestic_electricity_zero_vat"),
         ]
     ]
     runner = Recorder(distribution_answer)
@@ -89,7 +89,7 @@ def test_merged_files_are_the_whole_units_bytes(tmp_path):
     sets = [
         [
             get_reform("threshold_freeze_2031_32"),
-            get_reform("road_fuel_vat_cut"),
+            get_reform("domestic_electricity_zero_vat"),
         ]
     ]
     for by_year in (False, True):
@@ -247,7 +247,7 @@ def test_the_cli_splits_by_year_on_modal_unless_sequential(
 
     for name in ("generate_income_distribution", "generate_income_growth"):
         monkeypatch.setattr(cli, name, record(name))
-    ids = ["threshold_freeze_2031_32", "road_fuel_vat_cut"]
+    ids = ["threshold_freeze_2031_32", "domestic_electricity_zero_vat"]
     for only in ("income_distribution", "income_growth"):
         parsed = cli.parse_args(
             [
