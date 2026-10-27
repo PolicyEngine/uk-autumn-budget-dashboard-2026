@@ -141,6 +141,7 @@ const TOUCH =
  * @param {string|null} [props.activeKey] - The hovered series, where the chart passes all of them
  */
 export function SegmentTooltip({ active, payload, labelOf, format, netKey, netLabel = "Net change", activeKey }) {
+  const { bySeriesKey, byId } = useMeasureCatalogue();
   if (!active || !payload?.length) return null;
   // A composed chart passes every series: show the one the pointer is on
   // (activeKey, from the bars' mouse events), nothing between segments
@@ -152,14 +153,25 @@ export function SegmentTooltip({ active, payload, labelOf, format, netKey, netLa
   const value = Number(entry.value);
   const text = (v) => (v < 0 ? `−${format(Math.abs(v))}` : `+${format(Math.abs(v))}`);
   const net = netKey ? Number(row[netKey]) : NaN;
+  const measure = bySeriesKey?.get(String(entry.dataKey)) ?? byId?.get(String(entry.dataKey)) ?? null;
   return (
     <div className="chart-tooltip">
       <p className="chart-tooltip-label">{labelOf(row)}</p>
-      <div className="chart-tooltip-row">
-        <span className="chart-tooltip-swatch" style={{ background: entry.color }} />
-        <span className="chart-tooltip-name">{entry.name}</span>
-        <span className="chart-tooltip-value">{text(value)}</span>
-      </div>
+      {measure ? (
+        // A measure's segment: the shared label (badge, name, category)
+        <div className="chart-tooltip-row has-icon">
+          <span className="chart-tooltip-name">
+            <MeasureRowLabel tip={false} measure={measure} colour={measure.color ?? entry.color} name={entry.name} />
+          </span>
+          <span className="chart-tooltip-value">{text(value)}</span>
+        </div>
+      ) : (
+        <div className="chart-tooltip-row">
+          <span className="chart-tooltip-swatch" style={{ background: entry.color }} />
+          <span className="chart-tooltip-name">{entry.name}</span>
+          <span className="chart-tooltip-value">{text(value)}</span>
+        </div>
+      )}
       {Number.isFinite(net) && (
         <div className="chart-tooltip-row chart-tooltip-net">
           <span className="chart-tooltip-swatch chart-tooltip-swatch-line" />
