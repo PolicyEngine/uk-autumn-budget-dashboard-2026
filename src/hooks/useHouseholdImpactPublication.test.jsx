@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
-import useHouseholdImpact, { clearHouseholdImpactCache, peekHouseholdImpact, seedHouseholdImpactCache } from "./useHouseholdImpact";
+import useHouseholdImpact, { clearHouseholdImpactCache, detailServiceAsked, peekHouseholdImpact, seedHouseholdImpactCache } from "./useHouseholdImpact";
 import { EngineMismatchError, buildHouseholdRequest, normaliseHouseholdImpact, requestKey } from "../utils/householdImpactApi";
 import { WIZARD_DEFAULTS } from "../components/HouseholdCalculator";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../test/householdFixture";
@@ -163,12 +163,60 @@ describe("Personal impact's live answers", () => {
       });
     }
 
-    it("never uses the detail service under a headline that reports no commit", async () => {
+    // A headline with no commit (Cloud Run at f3304ff, 27 October): no
+    // detail answer could be used under it, so the page does not wait for
+    // one (up to a Modal cold start) before asking Cloud Run
+    it("never asks the detail service under a headline that reports no commit", async () => {
       const calls = [];
       twoServices(calls, fromDetail(), (body) => ({ ...fromMain(body), git_sha: null }));
       const hook = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
       await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
+      expect(calls.sort()).toEqual(["main:by_policy", "main:headline", "main:sweep"]);
+      expect(hook.result.current.data.byPolicy).not.toBeNull();
+      expect(hook.result.current.data.sweep).not.toBeNull();
+    });
+
+    // Cloud Run redeployed, Modal not (or the other way round): the first
+    // breakdown finds out, and the rest of the session asks Cloud Run alone
+    it("stops asking the detail service for the session once it answers from another build", async () => {
+      const calls = [];
+      twoServices(calls, fromDetail(() => ({ git_sha: null })));
+      const first = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
+      await waitFor(() => expect(first.result.current.detailStatus).toBe("ready"));
       expect(calls.sort()).toEqual(["detail:by_policy", "detail:sweep", "main:by_policy", "main:headline", "main:sweep"]);
+      expect(detailServiceAsked()).toBe(false);
+      first.unmount();
+      calls.length = 0;
+      const next = renderHook(() => useHouseholdImpact({ ...params, year: 2030, expectedEngine: ENGINE }));
+      await waitFor(() => expect(next.result.current.detailStatus).toBe("ready"));
+      expect(calls.sort()).toEqual(["main:by_policy", "main:headline", "main:sweep"]);
+      // A new session (here, the cache cleared) asks it again
+      clearHouseholdImpactCache();
+      expect(detailServiceAsked()).toBe(true);
+    });
+
+    it("keeps asking the detail service while it answers from the headline's build", async () => {
+      const calls = [];
+      twoServices(calls, fromDetail());
+      const first = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
+      await waitFor(() => expect(first.result.current.detailStatus).toBe("ready"));
+      first.unmount();
+      const next = renderHook(() => useHouseholdImpact({ ...params, year: 2030, expectedEngine: ENGINE }));
+      await waitFor(() => expect(next.result.current.detailStatus).toBe("ready"));
+      expect(calls.filter((call) => call.startsWith("detail:"))).toHaveLength(4);
+      expect(calls.filter((call) => call !== "main:headline")).toEqual(calls.filter((call) => call.startsWith("detail:")));
+      expect(detailServiceAsked()).toBe(true);
+    });
+
+    // A detail service that is down is not another build: it may be back
+    // for the next calculation
+    it("asks the detail service again after it failed, as it is not another build", async () => {
+      const calls = [];
+      twoServices(calls, () => ({ detail: "down" }), fromMain, { statusOf: (answer) => (answer.detail === "down" ? 503 : 200) });
+      const hook = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
+      await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
+      expect(calls.sort()).toEqual(["detail:by_policy", "detail:sweep", "main:by_policy", "main:headline", "main:sweep"]);
+      expect(detailServiceAsked()).toBe(true);
     });
 
     // Review of e78fbf4, finding 2: under a headline with no commit, each
