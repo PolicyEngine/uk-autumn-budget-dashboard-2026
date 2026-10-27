@@ -12,11 +12,18 @@ This page uses roles everywhere else, so a missing person changes only the table
 
 Times are UTC (UK time equals UTC this week). Every step a person must sign is marked **Signature**. An agent never signs.
 
-Written against `main` at `7c9aaa0e` (27 October). `main` runs policyengine 6.11.1 since #237: policyengine-uk 2.151.0 and the certified Microcosm cut a6299504, with #238's limits. It also has #208 (the parameter-pair refusals and the floor of 10 survey households), #244 (the official costings export) and #258 (the registered measures). Open pull requests change some steps, and each step says what changes when one has merged:
+Written against `main` at `9cfbdb4e` (27 October, 19:07Z). `main` runs policyengine 6.11.1 since #237: policyengine-uk 2.151.0 and the certified Microcosm cut a6299504, with #238's limits. It also has:
+- #208: the parameter-pair refusals and the floor of 10 survey households;
+- #244: the official costings export;
+- #258 and #261: the registered candidates, eight since #261;
+- #264: the household calculator's warm schedule from Budget day, and a fast 503;
+- #265: the page's retry when the calculator is cold;
+- #267: the package's two flat files run one Modal container per measure and year.
+
+Open pull requests change some steps, and each step says what changes when one has merged:
 - #174 lets Treasury inputs be committed after G2;
 - #249 adds the OBR's effect on CPI;
-- #260 adds the team test link's script, and #264 the household calculator's warm schedule from Budget day;
-- #261 changes the candidate set.
+- #260 adds the team test link's script.
 
 **Vahid's decisions of 27 October (evening)** change the steps below. They are in three comments on #251: [decisions](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6448563927), [to repeat on Budget day](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6449275288), and [run order and timings](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6449473328). The test link and the warm schedule are on #247.
 - **Modal doesn't wait for CI.** G2 starts from the measures PR's pushed commit once its targeted tests pass (step 6).
@@ -95,7 +102,7 @@ From the Integrator's table on #247 (27 October, 11:19Z), as the runbook's Roles
    - run `publish review-rows` while a `generate` is running, or before every artifact you mean to keep is staged or moved to `held/`;
    - interrupt a Modal run that has gone quiet;
    - mix local and Modal artifacts in one release.
-9. **The laptop.** Generation, the combined run, the area run and the package flat files run on Modal. Start no Modal app the plan doesn't name. Keep no containers warm, with one exception: the production household app's approved `warm_schedule`. Production runs the schedule it was last deployed with: 25 October's keeps 12 warm on Wednesday from 12:00 to 22:00 UK time. #264's (Vahid, 27 October) keeps 12 workers and the web endpoint warm from 07:00 to 24:00, Wednesday to Friday, and arrives only with a production Modal redeploy from a commit that has it. Either is expected, so leave it alone. Run only the tests for what you touched. Never run `bun run build` beside a running `next dev`.
+9. **The laptop.** Generation, the combined run, the area run and the package flat files run on Modal. Start no Modal app the plan doesn't name. Keep no containers warm, with one exception: the production household app's approved `warm_schedule`. Production runs the schedule it was last deployed with: 25 October's keeps 12 warm on Wednesday from 12:00 to 22:00 UK time. #264's (Vahid, 27 October; merged at 19:06Z) keeps 12 workers and the web endpoint warm from 07:00 to 24:00, Wednesday to Friday, and arrives only with a production Modal redeploy from a commit that has it. Either is expected, so leave it alone. Run only the tests for what you touched. Never run `bun run build` beside a running `next dev`.
 10. **Time log.** A UTC start and end for every step (the last section).
 
 **Modal commands.** The checklist writes `MODAL` for `uv run --with modal==1.6.2 python -m uk_budget_data.cli`. Define it once per shell, so its commands paste as written:
@@ -107,8 +114,8 @@ MODAL() { uv run --with modal==1.6.2 python -m uk_budget_data.cli "$@"; }
 Commands without Modal stay `uv run uk-budget-data …`.
 
 **The candidates and the hand-written modifiers:**
-- **The pre-Budget set was still being settled on the evening of 27 October.** #258 registered seven, and #261 proposes eight (Vahid, [#251](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6449275288)). #222 records what Tuesday's run staged and what the floor held. On Wednesday morning, read the registered list (`uv run uk-budget-data generate --list-reforms`), the package's members (`AUTUMN_BUDGET_2026_COMBINED_COMPONENTS` in `reforms.py`), and what the manifest holds.
-- **Withdrawn and unregistered:** BADR and employer NI relief for under-25s (#258). #261 also leaves out the road fuel VAT cut, the Carer's Allowance taper and the LHA unfreeze, the last two because their decile cells rest on fewer than 10 survey households (#263).
+- **The pre-Budget set was settled on the evening of 27 October.** #261 (Vahid, merged at 19:07Z) registers eight, and their package is `combined--894152ce8c83f1d8` ([#251](https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/251#issuecomment-6449275288)). Tuesday's regeneration started at 18:01Z on the seven, before #261 merged. #222 records what it staged and what the floor held. On Wednesday morning, read the registered list (`uv run uk-budget-data generate --list-reforms`), the package's members (`AUTUMN_BUDGET_2026_COMBINED_COMPONENTS` in `reforms.py`), and what the manifest holds.
+- **Withdrawn and unregistered:** BADR and employer NI relief for under-25s (#258). #261 also withdrew the road fuel VAT cut, the Carer's Allowance taper and the LHA unfreeze, the last two because their decile cells rest on fewer than 10 survey households (#263).
 - **Two hand-written modifiers,** Plan 2 and the State Pension protection. Each goes in a `generate` call of its own, and needs a two-person attestation for every receipt.
 - **The package needs its own attestation** when it binds a hand-written member.
 - **Check each receipt for templates** (Vahid, #222): `jq '.dashboard.modifier_templates' public/data/artifacts/<id>/<digest>/receipt.json`. A `null` proof means the modifier counts as hand-written, so it needs an attestation (`attestations.requires_attestation`). This matters for template measures whose module changed, as #261 changes the fuel duty one.
@@ -117,11 +124,11 @@ Commands without Modal stay `uv run uk-budget-data …`.
 ## Before the day: what to check on Wednesday morning
 
 These are Tuesday's steps, for the Integrator and the Coordinator. On Wednesday the agent checks they happened and records what it finds. It doesn't redo them.
-- **Which calculation-path pull requests merged by the 17:30 freeze** (#222), in particular #174 and #249. #237, #208, #244 and #258 merged before it. Vahid asked for #261 and #264 to merge before the regeneration (#222, #247): record whether they did.
+- **Which calculation-path pull requests merged by the 17:30 freeze** (#222), in particular #174 and #249. #237, #208, #244 and #258 merged before it. #261, #264, #265 and #267 merged at 19:06–19:07Z, after the regeneration had started: record which commit it ran on, and whether it was run again on them (#222).
 - **Both Modal images built** on the final `uv.lock` before 18:00. Measured at 2:40 for the image (#239), and about 12 min after a lock change (#225).
 - **The 18:00 regeneration** (the Coordinator): #222 records which measures ran, which were staged, which the floor held, and the package's key and members. Record them in the time log.
 - **Then fresh two-person attestations** for each hand-written receipt that was staged, and for the package if it holds one. An attestation made before the regeneration no longer matches.
-- **The household calculator deployed tonight** (#231), from the regeneration's commit, before 08:00: the test app, then Cloud Run and the production Modal app. The production Modal deploy also brings #264's warm schedule, if #264 is in.
+- **The household calculator deployed tonight** (#231), from the regeneration's commit, before 08:00: the test app, then Cloud Run and the production Modal app. From a commit after #264 (19:06Z), the production Modal deploy also brings its warm schedule.
 - **The team test link** (#247): its script (#260) works from the local preview checkout, and the Integrator has named who sends the link to the team.
 
 ## Set-up, final cut and go/no-go (by 07:00)
@@ -277,7 +284,7 @@ None stays on the page under the statement label.
 
 2. **Signature: deploy to production (the Integrator signs it off).** Cloud Run deploys only a commit on `main`, so production follows the measures PR's merge, from the same commit:
    - run the "Deploy the household API" workflow, action `deploy`, with `commit` set to the generation's full SHA, which the merge commit keeps on `main`. It is live 6 to 7 min after dispatch (runbook);
-   - then deploy the production Modal app from a clean checkout of that commit: `uv run --with modal==1.6.2 modal deploy src/uk_budget_data/modal_household.py`. With #264 in, this also brings the Budget-day warm schedule.
+   - then deploy the production Modal app from a clean checkout of that commit: `uv run --with modal==1.6.2 modal deploy src/uk_budget_data/modal_household.py`. From any `main` after #264, this also brings the Budget-day warm schedule.
 3. **The examples, as soon as the final member list is known** (after G2's floor check), alongside the combined run. The script recomputes the eight example households in-process, in two jobs: about 11 min (Vahid, 27 October). Without `--policies` it takes the package's measures from `public/data/policy_parameters.json`.
 
    ```sh
@@ -295,7 +302,7 @@ None stays on the page under the statement label.
 
    `HOUSEHOLD_DETAIL_API` is the Modal household app the production build calls. The Integrator confirms its URL.
 5. Then `uv run uk-budget-data publish definitions --api "$HOUSEHOLD_API"` must print `same` for every displayed measure.
-6. **A cold service answers slowly.** A cold first request to the test app came back empty after about 150 s on 27 October. #265 adds the page's "starting up" message and a retry, and #264 a fast 503 and the schedule (rule 9).
+6. **A cold service answers slowly.** A cold first request to the test app came back empty after about 150 s on 27 October. #265 (merged) gives the page a "starting up" message and a retry. #264 (merged) gives the Modal app a fast 503 and the schedule, from its next deploy (rule 9).
 
 ## G2: provisional figures (from about 13:10)
 
@@ -527,12 +534,14 @@ Vahid's run order (27 October): each step starts when the one before it is done,
   - The Integrator chooses when approved national figures go out:
     - in G4's publication PR, with the map, as the checklist has it; or
     - first, in their own PR, once the combined run has finished and been staged.
-- **The package's flat files,** after the last `stage`, `approve` or `withdraw`, in two shells at once: about 5–10 min each (Vahid, 27 October; 2:46 for both with two measures, #239):
+- **The package's flat files,** after the last `stage`, `approve` or `withdraw`, in two shells at once: about 5–10 min each with one container per measure (Vahid, 27 October; 2:46 for both with two measures, #239):
 
   ```sh
   MODAL generate --only income_distribution --published-package --backend modal
   MODAL generate --only income_growth --published-package --backend modal
   ```
+
+  - Since #267, each runs one container per measure and year on Modal and writes the same bytes. It hasn't been timed on the package yet. Add `--sequential` for one container per measure, as before (runbook, "The package's rows in the three flat files", which also asks for a one-off `cmp` of the two ways first).
 
 - **What waits on the package** (Vahid, 27 October). Until the package and its two flat files are published, the page shows "not published yet" in several places. In the household calculator these are "Your place (percentile)", "Your tenth's average", "Your place in the distribution" and "How your change compares". The growth-across-the-distribution card and the combined constituency map wait too. That is correct behaviour, not a bug.
 

@@ -10,9 +10,9 @@ Vahid's decisions of 27 October change the middle of the day: generation doesn't
 
 1. **Tuesday evening.**
    - At 17:30 calculation code freezes (#222).
-   - At 18:00 the Coordinator regenerates the pre-Budget candidates on Modal. #222 records what was staged and what the floor held.
+   - At 18:00 the Coordinator regenerates the pre-Budget candidates on Modal. The run started at 18:01 on the seven, before #261 (the eight) merged at 19:07. #222 records what was staged and what the floor held.
    - Two people then attest each hand-written receipt that was staged, and the package that holds one.
-   - Before 08:00 the household calculator is redeployed from the same commit: the test app, then production (6–7 min for Cloud Run, #231). The production Modal redeploy also brings #264's warm schedule, once #264 is in.
+   - Before 08:00 the household calculator is redeployed from the same commit: the test app, then production (6–7 min for Cloud Run, #231). From a commit after #264 (merged 27 Oct), the production Modal redeploy also brings its warm schedule: 07:00 to 24:00 from Wednesday.
 2. **Wednesday morning.**
    - The final cut is confirmed by 06:00, and the Coordinator holds the go/no-go at 07:00. After it, only an emergency revert changes the release.
    - By 11:30 the start receipt records the code, data, versions and limits (G0): about 15 min.
@@ -37,7 +37,7 @@ Vahid's decisions of 27 October change the middle of the day: generation doesn't
    - Once those inputs are in, agents also write the official costings comparison and the OBR's effect on CPI.
 6. **Package and map, as soon as their inputs are ready** (G4).
    - The area run starts once G3's approvals are in: about 14 min in Vahid's run on 27 October, but #250 measured up to an hour with Plan 2 and the Warm Home Discount top-up.
-   - The package runs once every member is staged: 10–12 min on 6.11.1. Its two files follow after the last manifest change: 5–10 min each (Vahid, 27 Oct).
+   - The package runs once every member is staged: 10–12 min on 6.11.1. Its two files follow after the last manifest change: 5–10 min each with one container per measure (Vahid, 27 Oct). #267 now splits them by year as well, which hasn't been timed yet.
    - Then agents bind the map, and the Integrator signs the review rows and merges. The map is live about 20–25 min after the area run ends (#250).
 7. **Afternoon and night.**
    - The first cut goes to media at 15:45: approved figures from one manifest revision only, after a comparables review.

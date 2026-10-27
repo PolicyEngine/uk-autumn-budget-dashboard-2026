@@ -86,7 +86,7 @@ Agents never:
 - **How,** from the generation's commit (Vahid, 27 October):
   - before the generation, the test app, which the team test link calls: `HOUSEHOLD_MODAL_APP=uk-budget-household-test uv run --with modal==1.6.2 modal deploy src/uk_budget_data/modal_household.py`, from a clean checkout of that commit;
   - once the measures PR has merged, production. First the "Deploy the household API" workflow, action `deploy`, with `commit` set to that commit's full SHA (it deploys only a commit on `main`; live 6 to 7 min after dispatch). Then `uv run --with modal==1.6.2 modal deploy src/uk_budget_data/modal_household.py`, from a clean checkout of the same commit.
-- **The warm schedule is the deployed app's.** Production keeps 25 October's (12 warm on Wednesday from 12:00 to 22:00) until it is redeployed from a commit with #264. #264's keeps 12 workers and the web endpoint warm from 07:00 to 24:00, Wednesday to Friday (Vahid's decision, #247).
+- **The warm schedule is the deployed app's.** Production keeps 25 October's (12 warm on Wednesday from 12:00 to 22:00) until it is redeployed from a commit with #264 (merged at 19:06Z). #264's keeps 12 workers and the web endpoint warm from 07:00 to 24:00, Wednesday to Friday (Vahid's decision, #247).
 - **Check after:**
   - both `/api/version` answers name that commit;
   - the household check passes;
