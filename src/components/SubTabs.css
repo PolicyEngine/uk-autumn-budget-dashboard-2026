@@ -34,7 +34,7 @@
   display: flex;
   width: fit-content;
   max-width: calc(100% - var(--view-tab-x, 0px));
-  gap: 4px;
+  gap: var(--tab-gap);
   margin: 0 0 0 var(--view-tab-x, 0px);
   padding: 0;
   /* A narrow screen scrolls the row, never the page */
@@ -95,10 +95,10 @@
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--tab-icon-gap);
   min-width: 0;
   min-height: 44px;
-  padding: 0 16px;
+  padding: 0 var(--tab-pad-x);
   font-family: inherit;
   font-size: 0.9375rem;
   font-weight: 500;
@@ -161,15 +161,10 @@
   }
 
   .sub-tab {
-    padding: 0 14px;
     font-size: 0.875rem;
   }
 
   /* Stuck on a phone: icons only, the names kept for assistive tech */
-  .app[data-tabs-stuck] .sub-tab {
-    padding: 0 12px;
-  }
-
   .app[data-tabs-stuck] .sub-tab-label {
     position: absolute;
     width: 1px;

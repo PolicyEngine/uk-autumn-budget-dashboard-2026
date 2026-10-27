@@ -130,6 +130,12 @@ code {
   --title-row-height: 64px;
   /* The view tabs under the intro; they stick under the band */
   --view-tabs-height: 48px;
+  /* The two tab rows' one spacing (view tabs, sub-tabs and About): the gap
+     between items, the padding inside each (chosen or not) and the gap
+     from icon to label */
+  --tab-gap: 8px;
+  --tab-pad-x: 16px;
+  --tab-icon-gap: 8px;
   /* Bars: the radius of a bar's outer end (chartTheme BAR_RADIUS) */
   --bar-radius: 5px;
   --sticky-offset: calc(var(--title-row-height) + var(--view-tabs-height));
@@ -497,7 +503,7 @@ body {
 .view-tabs {
   position: relative;
   display: flex;
-  gap: 4px;
+  gap: var(--tab-gap);
   height: var(--view-tabs-height);
   transition: height 180ms ease-out;
   /* A narrow screen scrolls the row, never the page */
@@ -535,9 +541,9 @@ body {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--tab-icon-gap);
   height: 100%;
-  padding: 0 16px;
+  padding: 0 var(--tab-pad-x);
   font-family: inherit;
   font-size: 1rem;
   /* One weight for every tab, so choosing one never moves the others */
@@ -632,14 +638,14 @@ body {
     --sub-band-height: 39px;
   }
 
-  .view-tab {
-    gap: 6px;
-    padding: 0 12px;
-    font-size: 0.9375rem;
+  :root {
+    --tab-gap: 4px;
+    --tab-pad-x: 12px;
+    --tab-icon-gap: 6px;
   }
 
-  .app[data-tabs-stuck] .view-tab {
-    padding: 0 14px;
+  .view-tab {
+    font-size: 0.9375rem;
   }
 
   .app[data-tabs-stuck] .view-tab-label {
