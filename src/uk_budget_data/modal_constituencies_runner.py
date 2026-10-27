@@ -52,7 +52,9 @@ def modal_session() -> Iterator[Session]:
     except ImportError as error:
         raise ModalUnavailable(
             "--backend modal needs the modal package: run the command with "
-            "`uv run --with modal==1.6.2 uk-budget-data constituencies ...`"
+            "`uv run --with modal==1.6.2 python -m uk_budget_data.cli "
+            "constituencies ...` (the uk-budget-data script runs the "
+            "project's own Python, which has no modal)"
         ) from error
     from uk_budget_data import modal_constituencies as mc
 

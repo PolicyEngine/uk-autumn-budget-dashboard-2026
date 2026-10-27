@@ -29,8 +29,12 @@ EXPECTED_REFUSAL = "cannot resolve dataset"
 
 
 def generation(root: Path, measures: list[str], years: list[str]) -> float:
+    # The module, run by this interpreter: the console script can start the
+    # project's own .venv Python, which has no modal (26 October).
     command = [
-        "uk-budget-data",
+        sys.executable,
+        "-m",
+        "uk_budget_data.cli",
         "generate",
         "--artifacts",
         "--backend",
