@@ -284,6 +284,7 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
       <div className="policy-card-spec">
         {parameters && (
           <PolicyChange
+            name={policy.label ?? policy.name}
             entry={parameters}
             direction={policy.direction}
             onHighlight={setHighlight}

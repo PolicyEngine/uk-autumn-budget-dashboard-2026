@@ -303,7 +303,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
   };
 
   it("path: a step plot of current law against the measure, labelled once, values hidden for screen readers", () => {
-    const block = within(card(rising)).getByRole("region", { name: "What changes" });
+    const block = within(card(rising)).getByRole("region", { name: /^What changes/ });
     expect(block.querySelector(".pchg-caption")).toHaveTextContent("A threshold, £ a year");
     const plot = within(block).getByRole("img");
     expect(plot.getAttribute("aria-label")).toContain("2029-30: £1,000 → £1,300 (+£300)");
@@ -339,7 +339,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     const amount = tables("before-after", [
       { label: "A limit", unit: "gbp", unit_words: "£", primary: true, source, points: yearly(() => 1000, (y) => (y >= 2027 ? 500 : 1000)) },
     ]);
-    let block = within(card(amount)).getByRole("region", { name: "What changes" });
+    let block = within(card(amount)).getByRole("region", { name: /^What changes/ });
     // When it applies is on the timeline, so not in the label
     expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A limit$/);
     expect(block.querySelector(".pchg-tile.is-before")).toHaveTextContent("Current law£1,000");
@@ -348,7 +348,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     const rate = tables("before-after", [
       { label: "A rate", unit: "percent", unit_words: null, primary: true, source, points: yearly(() => 0.15, (y) => (y >= 2027 ? 0 : 0.15)) },
     ]);
-    block = within(card(rate)).getByRole("region", { name: "What changes" });
+    block = within(card(rate)).getByRole("region", { name: /^What changes/ });
     expect(block.querySelector(".pchg-tile.is-before")).toHaveTextContent("Current law15%");
     expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the measure0%−15 points");
     expect(block.textContent).not.toMatch(/pp\b/);
@@ -372,7 +372,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
         points: [{ key: "2026-10-01/2028-03-31", label: "October 2026 to March 2028", year: 2026, before: 0.05, after: 0 }] },
     ]);
     const item = card(window, { ...alpha, inForce: { from: "2026-10", to: "2028-03" } });
-    const block = within(item).getByRole("region", { name: "What changes" });
+    const block = within(item).getByRole("region", { name: /^What changes/ });
     expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A VAT rate$/);
     expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the measure0%−5 points");
     // Each fact once: the timeline says how long, not the rates again
@@ -419,12 +419,12 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
 
   it("shows nothing for a measure described otherwise than when the file was built, keeping the empty slot", () => {
     const item = card(rising, { ...alpha, description: "Changed on Budget day." });
-    expect(within(item).queryByRole("region", { name: "What changes" })).toBeNull();
+    expect(within(item).queryByRole("region", { name: /^What changes/ })).toBeNull();
     expect(item.querySelector(".policy-card-spec")).toBeEmptyDOMElement();
   });
 
   it("shows nothing without the file", () => {
-    expect(within(card(null)).queryByRole("region", { name: "What changes" })).toBeNull();
+    expect(within(card(null)).queryByRole("region", { name: /^What changes/ })).toBeNull();
   });
 });
 
