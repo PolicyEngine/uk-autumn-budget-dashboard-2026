@@ -101,6 +101,12 @@
   background: color-mix(in srgb, var(--c-loss) var(--mev-strength), transparent);
 }
 
+/* Inequality: size only, no gain or loss colour */
+.mev-table.is-neutral td.is-fall,
+.mev-table.is-neutral td.is-rise {
+  background: color-mix(in srgb, var(--c-no-change) var(--mev-strength), transparent);
+}
+
 .mev-table td.is-none {
   color: var(--pe-gray-400);
 }

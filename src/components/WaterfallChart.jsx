@@ -35,9 +35,11 @@ import {
   axisWidth,
   CHART_COLOURS,
   divergingAxis,
+  tickDecimals,
+  noHouseholdChange,
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
-import { chartMotion, netDot } from "../utils/chartMotion";
+import { chartMotion, netDotTitled } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
@@ -214,11 +216,14 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
     );
   }
 
+  // Whole pounds, unless the ticks are closer than £1 apart
+  const poundDecimals = tickDecimals(yAxisTicks, 0, 2);
   const formatCurrency = (value) => {
     const absVal = Math.abs(value).toLocaleString("en-GB", {
-      maximumFractionDigits: 0,
+      minimumFractionDigits: poundDecimals,
+      maximumFractionDigits: poundDecimals,
     });
-    return value < 0 ? `-£${absVal}` : `£${absVal}`;
+    return value < 0 && Number(absVal.replace(/,/g, "")) !== 0 ? `-£${absVal}` : `£${absVal}`;
   };
 
 
@@ -235,6 +240,10 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
   const published = (rawData ?? []).some(
     (row) => parseInt(row.year) === selectedYear,
   );
+  // Only measures that change no household's income this year: the plot's
+  // note says so, and the card's sentence does not repeat it as "almost no
+  // change" at both ends
+  const nothingChanges = published && activePolicies.length === 0 && !hasIncompleteResults;
   const exportName = `absolute-impact-decile-${selectedYear}`;
   const exportOptions = {
     title: chartTitle,
@@ -252,6 +261,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
     exportOptions,
     csv: () => decileCsv(data, selectedMeasures, { kind: "absolute", year: selectedYear }),
     published,
+    // No image of an empty plot: the CSV only, when no measure changes a household
+    image: activePolicies.length > 0,
   };
 
   return (
@@ -266,7 +277,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
           </h3>
           {/* One plain sentence; what the chart measures is in More info */}
           <p className="chart-description">
-            {decileSentence(data, "absolute") ?? CHART_DESCRIPTION}
+            {(nothingChanges ? null : decileSentence(data, "absolute")) ?? CHART_DESCRIPTION}
             {laterNote && <span className="later-years-note"> {laterNote}</span>}
           </p>
         </div>
@@ -277,7 +288,15 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
         {published && hasIncompleteResults && (
           <UnavailableNotice reason="Some selected measures have no published results for this chart. The net change is unavailable." />
         )}
-        {published ? (
+        {nothingChanges ? (
+          // Only measures that change no household's income this year (an
+          // employer cost): a note, not an empty plot of zero ticks. A
+          // measure with no published result is not 'no change': the
+          // unavailable notice above says so and the plot keeps its gaps
+          <div className="plot-empty" style={{ minHeight: plotHeight }} role="status">
+            <p>{noHouseholdChange(formatYearRange(selectedYear))}</p>
+          </div>
+        ) : published ? (
           <ResponsiveContainer width="100%" height={plotHeight}>
             <ComposedChart
               data={data}
@@ -375,7 +394,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
               <Scatter
                 dataKey="netChange"
                 opacity={netOpacity(key.highlight)}
-                shape={netDot}
+                shape={netDotTitled((row) => `Decile ${String(row.decile).replace(/st|nd|rd|th/g, "")}: net change ${formatCurrency(row.netChange)}`)}
                 legendType="none"
                 tooltipType="none"
                 {...chartMotion()}

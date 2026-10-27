@@ -89,7 +89,7 @@ describe("Where you sit, for the published package (issue 228)", () => {
   it("reads the package's curves under the manifest's key, and never fetches the root tenth tables", async () => {
     served = { "income_distribution.csv": distribution(KEY), "income_mobility.csv": "" };
     await renderChart();
-    expect(await screen.findByText("Your place (percentile)")).toBeTruthy();
+    expect(await screen.findByText(/Your place in the distribution/)).toBeTruthy();
     expect(screen.queryByText(PACKAGE_NOT_IN_FILE)).toBeNull();
     expect(screen.queryByText(/not available for this year/)).toBeNull();
     const fetched = fetch.mock.calls.map(([url]) => String(url).split("/").pop());
