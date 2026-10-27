@@ -229,8 +229,8 @@ function EndLabels({ xAxisMap, yAxisMap, data, series, xKey }) {
  * unit above the plot, the shared tooltip, and the shared legend and the
  * logo in the card's rows below the plot.
  *
- * series: [{ key, name, colour, dash?, dashed?, hidden? }]. Hidden series
- * are not drawn.
+ * series: [{ key, name, colour, dash?, dashed?, hidden?, width? }]. Hidden
+ * series are not drawn; width (default 2.5) emphasises a line.
  */
 export function LsLineChart({
   data,
@@ -255,6 +255,12 @@ export function LsLineChart({
   focusKey = null,
   // The card's line chips (SeriesToggle), drawn under the plot as its key
   keyContent = null,
+  // The x values to label, in place of every one (e.g. each January of a
+  // monthly series); labelled with xTickFormat, the tooltip with xFormat
+  xTickValues = null,
+  xTickFormat = xFormat,
+  // A dot at every point; false for long series (monthly data)
+  dots = true,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
@@ -266,7 +272,9 @@ export function LsLineChart({
   const band = highlight ? highlight.map(asKey) : null;
   const shaded = band && data.some((d) => d[xKey] === band[0]) && data.some((d) => d[xKey] === band[1]);
   const yWidth = tickWidth(yTicks, yFormat);
-  const xTicks = xTicksFor({ width, data, xKey, yAxisWidth: yWidth, fiscal: xFormat === fyLabel, xFormat, base: baseYear });
+  const xTicks = xTickValues
+    ? { ticks: xTickValues, tickFormatter: xTickFormat, interval: 0 }
+    : xTicksFor({ width, data, xKey, yAxisWidth: yWidth, fiscal: xFormat === fyLabel, xFormat, base: baseYear });
 
   return (
     <ChartRows plotRef={ref} legendItems={lineLegendItems(visible)} height={plotHeight(narrow)} legend={legend} keyContent={keyContent}>
@@ -315,11 +323,11 @@ export function LsLineChart({
               dataKey={s.key}
               name={s.name}
               stroke={s.colour}
-              strokeWidth={focusKey === s.key ? 3.5 : 2.5}
+              strokeWidth={focusKey === s.key ? (s.width ?? 2.5) + 1 : s.width ?? 2.5}
               strokeOpacity={focusKey && focusKey !== s.key ? 0.2 : 1}
               strokeDasharray={dashOf(s)}
-              dot={{ r: 3, fill: s.colour, stroke: s.colour, strokeWidth: 1, fillOpacity: focusKey && focusKey !== s.key ? 0.2 : 1 }}
-              activeDot={{ r: 5 }}
+              dot={dots ? { r: 3, fill: s.colour, stroke: s.colour, strokeWidth: 1, fillOpacity: focusKey && focusKey !== s.key ? 0.2 : 1 } : false}
+              activeDot={{ r: dots ? 5 : 4 }}
               connectNulls={false}
               isAnimationActive={false}
             />

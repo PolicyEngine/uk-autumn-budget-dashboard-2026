@@ -21,6 +21,11 @@ import { formatOneDp } from "../../../utils/livingStandards/outlook";
 import { buildChartCsv } from "../../../utils/chartCsv";
 import { CSV_SOURCES, ForecastSource, forecastSourceText, forecastSources } from "../sources";
 import { METHOD_ANCHORS } from "../../methodology/anchors";
+import PriceCategoriesCard from "../PriceCategoriesCard";
+
+// The prices group's card of ONS history (prices by spending category),
+// drawn beside the inflation forecast
+const PRICES_SECTION = "Inflation and price indices";
 
 // CPI after housing costs and social rent are not OBR series
 const NOT_OBR = {
@@ -224,11 +229,17 @@ function cardsFor(section) {
   return { group, cards };
 }
 
-/** One section per forecast group, under its heading: one card a row, or two side by side. */
+/**
+ * One section per forecast group, under its heading: one card a row, or two
+ * side by side. The prices group pairs the inflation measures with the ONS
+ * prices by spending category.
+ */
 export default function ForecastSeriesSection({ data, view, onViewChange }) {
   const forecast = data.forecast;
   return forecast.sections.map((section) => {
     const { group, cards } = cardsFor(section);
+    const history = section.title === PRICES_SECTION;
+    const count = cards.length + (history ? 1 : 0);
     return [
       <SectionHeading
         key={`${section.title}-heading`}
@@ -237,7 +248,7 @@ export default function ForecastSeriesSection({ data, view, onViewChange }) {
         subtitle={group?.subtitle}
       />,
       <section key={section.title} className="report-section ls-section">
-        <div className={cards.length > 1 ? "charts-grid" : "charts-grid forecast-single"}>
+        <div className={count > 1 ? "charts-grid" : "charts-grid forecast-single"}>
           {cards.map(({ card, seriesList }) => (
             <ForecastGroupCard
               key={card.id}
@@ -248,6 +259,7 @@ export default function ForecastSeriesSection({ data, view, onViewChange }) {
               onViewChange={onViewChange}
             />
           ))}
+          {history && <PriceCategoriesCard view={view} onViewChange={onViewChange} />}
         </div>
       </section>,
     ];
