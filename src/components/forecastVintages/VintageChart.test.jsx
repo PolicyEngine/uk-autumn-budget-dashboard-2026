@@ -8,11 +8,15 @@ import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import fc from "fast-check";
-import { Customized, Line, LineChart, XAxis, YAxis } from "recharts";
+import { Brush, Customized, Line, LineChart, XAxis, YAxis } from "recharts";
 import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import VintageChart, {
+  BRUSH_TEXT_GAP,
+  BRUSH_TEXT_SIZE,
   MARGIN,
+  TRAVELLER_WIDTH,
   boxesMeet,
+  brushBox,
   chartLayout,
   labelBoxes,
   labelGeometry,
@@ -56,6 +60,22 @@ const spacingProblems = (ticks, rows, plotWidth, label, edge) => {
   });
   return found;
 };
+
+// The brush's two labels where Recharts draws them for handles at rows
+// `lo` and `hi` (Brush's renderText): handle i at x + i (width - handle) /
+// (n - 1), the start label ending BRUSH_TEXT_GAP left of its handle and
+// the end label starting BRUSH_TEXT_GAP right of its handle's right side
+function brushLabels(view, brush, lo, hi) {
+  const at = (i) => brush.x + (i * (brush.width - TRAVELLER_WIDTH)) / (view.rows.length - 1);
+  const start = view.label(view.rows[lo].x);
+  const end = view.label(view.rows[hi].x);
+  const startRight = at(lo) - BRUSH_TEXT_GAP;
+  const endLeft = at(hi) + TRAVELLER_WIDTH + BRUSH_TEXT_GAP;
+  return [
+    { text: start, left: startRight - textWidth(start, BRUSH_TEXT_SIZE), right: startRight },
+    { text: end, left: endLeft, right: endLeft + textWidth(end, BRUSH_TEXT_SIZE) },
+  ];
+}
 
 // Where the chart draws each labelled point's dot, from its layout
 function dotsOf(layout, rows) {
@@ -272,6 +292,14 @@ describe("the chart's layout", () => {
           const unitLabel = unitLabelBox(view.axisLabel, layout.yWidth);
           for (const l of layout.labels) if (l.boxes.text.some((t) => boxesMeet(t, unitLabel))) problems.push(`${where}: ${l.role} on the unit label`);
           for (const l of layout.labels) if (l.conflicts > 1) problems.push(`${where}: ${l.role} has ${l.conflicts} conflicts`);
+          // The brush under the plot, and its labels on the chart (found by
+          // the browser sweep for review round 23)
+          const { brush } = layout;
+          const plotLeft = MARGIN.left + layout.yWidth;
+          if (brush.x < plotLeft || brush.x + brush.width > plotLeft + layout.plotWidth) problems.push(`${where}: brush not under the plot`);
+          for (const t of brushLabels(view, brush, lo, hi)) {
+            if (t.left < 0 || t.right > canvas.canvasWidth) problems.push(`${where}: brush label ${t.text} off the chart`);
+          }
           for (const l of layout.labels) {
             for (const t of l.boxes.text) {
               const b = layout.bounds;
@@ -522,6 +550,53 @@ describe("the unit label's room", () => {
     expect(box.bottom).toBeLessThanOrEqual(baseline + 4);
     // And inside the chart, under its top
     expect(box.top).toBeGreaterThanOrEqual(-MARGIN.top);
+  });
+});
+
+describe("the brush's room", () => {
+  // Found by the browser sweep for review round 23: the start label ran
+  // off the chart's left with the whole history on a narrow y axis, at
+  // every width, and the end label off its right on a 320px phone
+  it("is where Recharts draws the brush's labels, wherever its handles are", () => {
+    const view = buildView(DATA, variable("receipts"), { unit: "index" });
+    const layout = chartLayout(view, view.rows, { canvasWidth: 254, narrow: true });
+    const n = view.rows.length;
+    for (const [lo, hi] of [[0, n - 1], [Math.floor(n / 3), Math.floor(n / 2)]]) {
+      cleanup();
+      const { container } = render(
+        <LineChart width={254} height={340} margin={MARGIN} data={view.rows}>
+          <XAxis dataKey="x" />
+          <YAxis width={layout.yWidth} />
+          <Line dataKey={OUTTURN_KEY} />
+          <Brush
+            dataKey="x"
+            x={layout.brush.x}
+            width={layout.brush.width}
+            startIndex={lo}
+            endIndex={hi}
+            travellerWidth={TRAVELLER_WIDTH}
+            alwaysShowText
+            tickFormatter={(x) => view.label(x)}
+          />
+        </LineChart>,
+      );
+      const [start, end] = container.querySelectorAll(".recharts-brush-texts text");
+      const [startModel, endModel] = brushLabels(view, layout.brush, lo, hi);
+      expect([start.textContent, start.getAttribute("text-anchor")]).toEqual([startModel.text, "end"]);
+      expect(Number(start.getAttribute("x"))).toBeCloseTo(startModel.right);
+      expect([end.textContent, end.getAttribute("text-anchor")]).toEqual([endModel.text, "start"]);
+      expect(Number(end.getAttribute("x"))).toBeCloseTo(endModel.left);
+      expect(startModel.left).toBeGreaterThanOrEqual(0);
+      expect(endModel.right).toBeLessThanOrEqual(254);
+    }
+  });
+
+  it("starts at the plot's left where its start label fits there, and is none until the canvas is measured", () => {
+    const view = buildView(DATA, variable("real_gdp"), { unit: "level" });
+    const layout = chartLayout(view, view.rows, { canvasWidth: 926 });
+    expect(layout.brush.x).toBe(MARGIN.left + layout.yWidth);
+    expect(layout.brush.width).toBeLessThan(layout.plotWidth);
+    expect(brushBox(view, { canvasWidth: 0, yWidth: 52, plotWidth: -80 })).toBeNull();
   });
 });
 

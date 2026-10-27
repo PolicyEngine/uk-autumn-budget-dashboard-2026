@@ -14,6 +14,7 @@ import ForecastVintagesView, { cardNotes, csvFigure, drawnNote, pointsSentence, 
 import { earliestForecast, forecastVintagesProblem, resetForecastVintages } from "../../utils/forecastVintages/load";
 import { periodIndex, toSeries } from "../../utils/forecastVintages/transforms";
 import { GROWTH_AXIS, buildView, pointsIn } from "../../utils/forecastVintages/view";
+import { BRUSH_TEXT_SIZE, textWidth } from "./VintageChart";
 
 // jsdom lays nothing out, so ResponsiveContainer would draw nothing: give
 // the chart a fixed size
@@ -108,6 +109,34 @@ describe("a forecasts file that cannot be shown", () => {
 });
 
 describe("the chart", () => {
+  // Found by the browser sweep for review round 23: with the whole history
+  // on a narrow y axis, the brush's start label ran off the chart's left
+  it("draws the brush where both its labels stay on the chart", async () => {
+    const measure = HTMLElement.prototype.getBoundingClientRect;
+    const spy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      if (!this.classList.contains("ls-plot-canvas")) return measure.call(this);
+      return { x: 0, y: 0, left: 0, top: 0, right: 900, bottom: 440, width: 900, height: 440 };
+    });
+    try {
+      window.history.replaceState({}, "", "/?tab=outlook&sub=vintages&variable=receipts");
+      const { container } = await renderView();
+      fireEvent.click(within(screen.getByRole("group", { name: "Unit" })).getByRole("button", { name: "Index" }));
+      fireEvent.click(option("Full history"));
+      const width = Number(container.querySelector(".fv-plot .recharts-surface").getAttribute("width"));
+      expect(width).toBe(900);
+      const [start, end] = [...container.querySelectorAll(".recharts-brush-texts text")].map((t) => ({
+        x: Number(t.getAttribute("x")),
+        anchor: t.getAttribute("text-anchor"),
+        width: textWidth(t.textContent, BRUSH_TEXT_SIZE),
+      }));
+      expect([start.anchor, end.anchor]).toEqual(["end", "start"]);
+      expect(start.x - start.width).toBeGreaterThanOrEqual(0);
+      expect(end.x + end.width).toBeLessThanOrEqual(width);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("opens on real household disposable income per head, in £ a year", async () => {
     await renderView();
     expect(screen.getByRole("heading", { level: 3, name: RHDI.label })).toBeInTheDocument();

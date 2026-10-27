@@ -73,9 +73,13 @@ const PLOT_HEIGHT = {
   wide: CHART_HEIGHT.wide - MARGIN.top - X_AXIS_HEIGHT - BRUSH_HEIGHT,
   narrow: CHART_HEIGHT.narrow - MARGIN.top - X_AXIS_HEIGHT - BRUSH_HEIGHT,
 };
-// Room right of the brush for its end label ("Q1 2031"), which Recharts
-// draws beyond the right-hand handle
-const BRUSH_END_LABEL = 52;
+// The brush's labels: Recharts draws the start label ending 5px left of
+// the left-hand handle and the end label from 5px right of the right-hand
+// one (Brush's renderText), each handle TRAVELLER_WIDTH wide, in the
+// labels' --fs-micro text (0.75rem, ForecastVintages.css)
+export const BRUSH_TEXT_SIZE = 12;
+export const BRUSH_TEXT_GAP = 5;
+export const TRAVELLER_WIDTH = 8;
 // Earlier forecasts listed by name in the tooltip, newest first
 const TOOLTIP_FORECASTS = 6;
 
@@ -267,6 +271,21 @@ export function unitLabelBox(text, yWidth) {
     top: -ABOVE_PLOT - 0.8 * UNIT_SIZE,
     bottom: -ABOVE_PLOT + 3,
   };
+}
+
+/**
+ * Where the brush goes, in pixels from the canvas's left: under the plot,
+ * but in from either side of the canvas by the room the widest of the
+ * view's period labels takes, so its labels stay on the chart wherever its
+ * handles are. Null until the canvas is measured.
+ */
+export function brushBox(view, { canvasWidth, yWidth, plotWidth }) {
+  const widest = Math.max(...view.rows.map((row) => textWidth(view.label(row.x), BRUSH_TEXT_SIZE)));
+  const room = BRUSH_TEXT_GAP + widest;
+  const plotLeft = MARGIN.left + yWidth;
+  const x = Math.max(plotLeft, room);
+  const width = Math.min(plotLeft + plotWidth - x, canvasWidth - room - x);
+  return width > 2 * TRAVELLER_WIDTH ? { x, width } : null;
 }
 
 /** Whether two boxes overlap, or come within `gap` of each other. */
@@ -466,6 +485,7 @@ export function chartLayout(view, rows, { canvasWidth, narrow = false }) {
       plotWidth,
       plotHeight,
       bounds,
+      brush: brushBox(view, { canvasWidth, yWidth, plotWidth }),
       labels,
       overflow: labelOverflow(labels, bounds),
       room,
@@ -608,10 +628,9 @@ export default function VintageChart({ view, showPast, range, onRange, chartKey 
       </div>
     );
   }
-  const { axis, yWidth, plotWidth, labels } = layout;
+  const { axis, yWidth, plotWidth, labels, brush } = layout;
   const decimals = stepDecimals(axis.step);
   const tickFormat = (v) => view.format(v, decimals);
-  const brushWidth = plotWidth > 3 * BRUSH_END_LABEL ? plotWidth - BRUSH_END_LABEL : undefined;
   // Quarterly ticks name the year only: each sits at its first quarter
   const tickLabel = (x) => (view.frequency === "quarterly" ? String(Math.floor(x / 4)) : view.label(x));
   const ticks = xTicks(shownRows, view.frequency, {
@@ -724,10 +743,11 @@ export default function VintageChart({ view, showPast, range, onRange, chartKey 
               <Brush
                 dataKey="x"
                 height={BRUSH_HEIGHT}
-                width={brushWidth}
+                x={brush?.x}
+                width={brush?.width}
                 startIndex={lo}
                 endIndex={hi}
-                travellerWidth={8}
+                travellerWidth={TRAVELLER_WIDTH}
                 alwaysShowText
                 stroke={CHART_COLOURS.highlight}
                 fill={CHART_COLOURS.surface}

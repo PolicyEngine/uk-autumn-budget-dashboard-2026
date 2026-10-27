@@ -41,7 +41,16 @@
   font-size: var(--fs-micro);
 }
 
-/* The brush under the x axis: the dashboard's teal handles */
+/* The unit label starts at the chart's left edge, and on a narrow phone a
+   long one can end a pixel or two past its right: it runs into the card's
+   padding rather than being cut. Every other label is laid out inside the
+   chart (VintageChart's chartLayout and brushBox). */
+.fv-plot .recharts-surface {
+  overflow: visible;
+}
+
+/* The brush under the x axis: the dashboard's teal handles. Its labels'
+   size is VintageChart's BRUSH_TEXT_SIZE. */
 .fv-plot .recharts-brush-texts {
   font-size: var(--fs-micro);
   fill: var(--c-tick);
