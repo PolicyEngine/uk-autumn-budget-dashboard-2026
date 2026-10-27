@@ -52,7 +52,7 @@ const POINT_LABEL = {
 const LABEL_LIFT = 34;
 const MAX_LEVEL = 40;
 // The caption's size, and the space kept between two labels' text
-const CAPTION_SIZE = 11;
+export const CAPTION_SIZE = 11;
 const LABEL_GAP = { x: 6, y: 2 };
 // A labelled dot's radius, its outline included
 const DOT_REACH = 6;

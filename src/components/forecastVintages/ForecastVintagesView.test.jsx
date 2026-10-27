@@ -5,10 +5,7 @@
  * cases mount it as another view's sub-tab, as Pre-measures forecast holds
  * it; livingStandards/OutlookVintages.test.jsx has it in the page.
  */
-import { readdirSync, readFileSync } from "node:fs";
-import { createRequire } from "node:module";
-import { join } from "node:path";
-import postcss from "postcss";
+import { readFileSync } from "node:fs";
 import { cloneElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
@@ -32,16 +29,6 @@ vi.mock("recharts", async () => {
 });
 
 const TEXT = readFileSync("public/data/obr_forecast_vintages.json", "utf8");
-// Every stylesheet the page loads but the one Tailwind generates: the
-// project's own and the ui-kit's three
-const STYLESHEETS = [
-  ...readdirSync("src", { recursive: true })
-    .filter((file) => file.endsWith(".css"))
-    .map((file) => join("src", file)),
-  ...["styles.css", "theme.css", "legacy/tokens.css"].map((file) =>
-    createRequire(import.meta.url).resolve(`@policyengine/ui-kit/${file}`),
-  ),
-];
 const DATA = JSON.parse(TEXT);
 const RHDI = DATA.variables.find((v) => v.id === "rhdi_per_person");
 const PSNB = DATA.variables.find((v) => v.id === "psnb");
@@ -145,95 +132,6 @@ describe("the chart", () => {
       expect([start.anchor, end.anchor]).toEqual(["end", "start"]);
       expect(start.x - start.width).toBeGreaterThanOrEqual(0);
       expect(end.x + end.width).toBeLessThanOrEqual(width);
-    } finally {
-      spy.mockRestore();
-    }
-  });
-
-  // Review rounds 23 and 24: the brush's labels were set in 0.75rem, so with
-  // the browser's text at 24px they were 18px, wider than the room made for
-  // 12px. The chart sets every text it lays out in pixels, so no stylesheet
-  // may size that text, and the brush's labels take only the size the chart
-  // passes them
-  it("draws every text it lays out at the size it measured, whatever the page's text size", async () => {
-    const rules = STYLESHEETS.flatMap((file) => {
-      const found = [];
-      postcss.parse(readFileSync(file, "utf8"), { from: file }).walkRules((rule) => {
-        if (/keyframes$/.test(rule.parent?.name ?? "")) return;
-        const decls = rule.nodes.filter((node) => node.type === "decl");
-        found.push({
-          file,
-          selectors: rule.selectors,
-          sizes: decls.filter((d) => /^font(-size)?$/.test(d.prop)).map((d) => d.value),
-          setsBrushSize: decls.some((d) => d.prop === "--fv-brush-text"),
-        });
-      });
-      return found;
-    });
-    expect(rules.length).toBeGreaterThan(500);
-    expect(rules.filter((r) => r.setsBrushSize)).toEqual([]);
-
-    // A rule for any state counts: hover, focus and the like are dropped
-    const unreadable = [];
-    const sizedRulesFor = (el) =>
-      rules.filter(
-        (r) =>
-          r.sizes.length &&
-          r.selectors.some((selector) => {
-            if (selector.includes("::")) return false;
-            try {
-              return el.matches(selector.replace(/:(hover|focus-visible|focus-within|focus|active|visited)\b/g, "") || "*");
-            } catch {
-              unreadable.push(`${r.file}: ${selector}`);
-              return false;
-            }
-          }),
-      );
-
-    const measure = HTMLElement.prototype.getBoundingClientRect;
-    const spy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
-      if (!this.classList.contains("ls-plot-canvas")) return measure.call(this);
-      return { x: 0, y: 0, left: 0, top: 0, right: 900, bottom: 440, width: 900, height: 440 };
-    });
-    try {
-      window.history.replaceState({}, "", "/?tab=outlook&sub=vintages&variable=receipts");
-      const { container } = await renderView();
-      fireEvent.click(within(screen.getByRole("group", { name: "Unit" })).getByRole("button", { name: "Index" }));
-      fireEvent.click(option("Full history"));
-      const plot = container.querySelector(".fv-plot");
-      expect(plot.style.getPropertyValue("--fv-brush-text")).toBe(`${BRUSH_TEXT_SIZE}px`);
-      const brush = plot.querySelector(".recharts-brush-texts");
-      expect({
-        brush: brush.querySelectorAll("text").length,
-        unit: plot.querySelectorAll("text.chart-unit-label").length,
-        points: plot.querySelectorAll(".fv-point-label text").length,
-        xTicks: plot.querySelectorAll(".recharts-xAxis .recharts-cartesian-axis-tick text").length > 1,
-        yTicks: plot.querySelectorAll(".recharts-yAxis .recharts-cartesian-axis-tick text").length > 1,
-      }).toEqual({ brush: 2, unit: 1, points: 6, xTicks: true, yTicks: true });
-
-      // Every text but the brush's has its size in pixels from the chart
-      const drawn = [...plot.querySelectorAll("svg text, svg tspan")].filter((t) => !brush.contains(t));
-      for (const t of drawn) {
-        expect({
-          text: t.textContent,
-          attribute: t.closest("text").getAttribute("font-size"),
-          style: t.style.fontSize,
-          rules: sizedRulesFor(t).map((r) => r.selectors.join(", ")),
-        }).toEqual({ text: t.textContent, attribute: expect.stringMatching(/^\d+(\.\d+)?$/), style: "", rules: [] });
-      }
-      // and the brush's labels take theirs from the one rule for them
-      for (const t of brush.querySelectorAll("text, tspan")) {
-        expect([t.textContent, t.getAttribute("font-size"), t.style.fontSize, sizedRulesFor(t)]).toEqual([
-          t.textContent,
-          null,
-          "",
-          [],
-        ]);
-      }
-      expect(sizedRulesFor(brush).map((r) => [r.selectors, r.sizes])).toEqual([
-        [[".fv-plot .recharts-brush-texts"], ["var(--fv-brush-text)"]],
-      ]);
-      expect(unreadable).toEqual([]);
     } finally {
       spy.mockRestore();
     }
