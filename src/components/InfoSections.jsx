@@ -15,6 +15,7 @@ import "./InfoSections.css";
  * @property {Array<{term: string, meaning: import("react").ReactNode} | {ref: keyof typeof GLOSSARY}>} [definitions]
  *   - A term only this card uses, with its meaning; or `{ ref }`, a term the
  *   charts share, defined once in Methodology and linked from here
+ * @property {string} [definitionsTitle] - The Definitions heading, when a card's terms want their own name
  * @property {import("react").ReactNode[]} [caveats] - Caveats: one bullet each
  * @property {Array<{label: string, href?: string, date?: string, note?: string}>} [sources]
  * @property {{anchor: string, label: string}} [method] - The relevant Methodology
@@ -32,6 +33,7 @@ export function infoParts(info = {}) {
     how: clean(info.how),
     own: definitions.filter((d) => !d.ref),
     shared: definitions.filter((d) => d.ref && GLOSSARY[d.ref]),
+    definitionsTitle: info.definitionsTitle || "Definitions",
     caveats: clean(info.caveats),
     sources: clean(info.sources),
     method: info.method || null,
@@ -49,7 +51,7 @@ export function infoPreview(info) {
   const parts = [
     p.lead && p.lead.title,
     p.how.length > 0 && "How it's calculated",
-    (p.own.length > 0 || p.shared.length > 0) && "Definitions",
+    (p.own.length > 0 || p.shared.length > 0) && p.definitionsTitle,
     p.caveats.length > 0 && "Caveats",
     p.sources.length > 0 && (p.sources.length > 1 ? "Sources" : "Source"),
   ].filter(Boolean);
@@ -105,7 +107,7 @@ export default function InfoSections({ info }) {
         </Section>
       )}
       {(p.own.length > 0 || p.shared.length > 0) && (
-        <Section icon={BookOpen} title="Definitions">
+        <Section icon={BookOpen} title={p.definitionsTitle}>
           {p.own.length > 0 && (
             <dl className="info-terms">
               {p.own.map(({ term, meaning }) => (
