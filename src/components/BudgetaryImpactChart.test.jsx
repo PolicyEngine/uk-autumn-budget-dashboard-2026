@@ -51,9 +51,11 @@ describe("BudgetaryImpactChart", () => {
       netImpact: 0,
     }));
     const { container } = render(
-      <MeasureCatalogueProvider catalogue={catalogue}><BudgetaryImpactChart data={zero} selectedYear={YEAR} /></MeasureCatalogueProvider>,
+      <MeasureCatalogueProvider catalogue={catalogue}><BudgetaryImpactChart data={zero} selectedYear={YEAR} selectedPolicies={[ALPHA]} /></MeasureCatalogueProvider>,
     );
     expect(screen.getByRole("status")).toHaveTextContent("None of the selected policies changes revenue in");
+    // Only the selection's reasons: an unselected measure is never named
+    expect(screen.getByRole("status")).not.toHaveTextContent(catalogue.byId.get(BETA).name);
     expect(screen.queryByTestId("recharts-responsive-container")).not.toBeInTheDocument();
     // Said once, and no empty key
     expect(container.querySelector(".chart-description").textContent).not.toMatch(/roughly balance|no revenue/);
