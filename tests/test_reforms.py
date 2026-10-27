@@ -228,6 +228,21 @@ def test_the_fuel_duty_path_by_hand():
     assert set(rates) == {str(year) for year in POLICY_YEARS}
 
 
+def test_the_april_2027_rise_is_never_made_up_and_the_card_says_so():
+    """From 2028-29 the measure's rate stays a year's RPI below current
+    law (57.95p against 59.75p, uprated alike), so it costs revenue in
+    every later year; the description says the rise is never made up."""
+    rates = fuel_duty_deferral_rates()
+    current = fiscal_year_means(FUEL_DUTY_CURRENT_LAW)
+    for year in (y for y in POLICY_YEARS if y >= 2028):
+        assert rates[str(year)] == pytest.approx(
+            current[str(year)] * 0.5795 / 0.5975, abs=1e-4
+        ), year
+        assert rates[str(year)] < current[str(year)], year
+    description = get_reform("fuel_duty_rise_deferral").description
+    assert "with no April 2027 RPI rise" in description
+    assert "so that rise is never made up" in description
+
 def test_the_pump_vat_defaults_are_20_percent_of_the_duty_change():
     rates = fuel_duty_deferral_rates()
     current = fiscal_year_means(FUEL_DUTY_CURRENT_LAW)

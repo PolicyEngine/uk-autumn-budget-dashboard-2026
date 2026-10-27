@@ -44,7 +44,7 @@ export const POLICY_DETAILS = [
     sentence: "deferring the fuel duty rises",
     name: "Fuel duty rises deferred",
     description: "Defer the January and March 2027 fuel duty rises",
-    writtenFor: "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+    writtenFor: "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p, so that rise is never made up. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
     summary:
       "Keeps fuel duty at 52.95p a litre until September 2027, then restores the 5p in two steps by December 2027.",
     starts: "January 2027",
