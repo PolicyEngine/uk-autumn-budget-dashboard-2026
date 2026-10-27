@@ -566,7 +566,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
             caveats: [
               isChange && smallChange && "The change is under 1% of net income at every salary.",
-              drops.length > 0 && "In the shaded bands net income falls as salary rises, as benefits are withdrawn.",
+              drops.length > 0 && "In the shaded bands net income falls as salary rises: taxes and withdrawn benefits take more than the extra pay.",
             ],
           }}
         />

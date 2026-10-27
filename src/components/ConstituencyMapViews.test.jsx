@@ -224,7 +224,9 @@ describe("constituencyInfo", () => {
     expect(how).toMatch(/90% interval from 1,000 bootstrap resamples/);
     expect(how).toMatch(/fewer than 30 effective survey households is approximate/);
     expect(how).toMatch(/fewer than 10 survey households/);
-    expect(how).toMatch(/under 0.1% either way, a small change 0.1% to 1%, a large change 1% or more/);
+    // The breaks are said once, in the key's tip: About this chart points there
+    expect(how).not.toMatch(/either way/);
+    expect(how).toMatch(/How to read the key/);
     expect(local.definitions.map((d) => d.term ?? d.ref)).toContain("Hex map");
     // A release that routes nothing by area: what it shows, no method
     expect(constituencyInfo({ ...base, notRouted: true }).how).toBeUndefined();

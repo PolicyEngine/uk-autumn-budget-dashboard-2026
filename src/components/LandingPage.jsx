@@ -32,11 +32,15 @@ function LandingBox({ tab, sub, icon, title, description, onOpen }) {
   );
 }
 
-/** The three ways in, in order: [tab, sub, icon, title, line]. */
-const BOXES = [
+/**
+ * The three ways in, in order: [tab, sub, icon, title, line]. While the
+ * measures are provisional, the policies box names them as modelled
+ * measures, not the Budget's contents.
+ */
+const boxes = (provisional) => [
   ["dashboard", "finances", "users", "The Budget and society", "Costs and who gains or loses"],
   ["household", undefined, "house", "Your household", "See how your income changes"],
-  ["policies", undefined, "list", "What's in the Budget", "Every measure, and how we model it"],
+  ["policies", undefined, "list", provisional ? "The measures modelled" : "What's in the Budget", "Every measure, and how we model it"],
 ];
 
 /**
@@ -90,7 +94,8 @@ function LandingRow({ tab, sub, icon, title, description, onOpen }) {
  * The three ways in: boxes side by side (the landing page), or a list of
  * rows (`list`, the overview drawer), labelled by `labelledBy`.
  */
-export function LandingBoxes({ onOpen, list = false, labelledBy }) {
+export function LandingBoxes({ onOpen, list = false, labelledBy, provisional = false }) {
+  const BOXES = boxes(provisional);
   if (list) {
     return (
       <ul className="landing-rows" aria-labelledby={labelledBy}>
@@ -129,12 +134,13 @@ export function LandingBoxes({ onOpen, list = false, labelledBy }) {
  * @param {Object} props
  * @param {(tab: string, sub?: string) => void} props.onOpen - Open a view (App's handleTabChange)
  * @param {React.ReactNode} [props.provisional] - The provisional notice, when it applies
+ * @param {boolean} [props.provisionalWording] - Whether the measures are provisional (the boxes' wording)
  */
-export default function LandingPage({ onOpen, provisional }) {
+export default function LandingPage({ onOpen, provisional, provisionalWording = false }) {
   return (
     <section className="landing" aria-labelledby="landing-heading">
       <LandingIntro headingId="landing-heading" provisional={provisional} />
-      <LandingBoxes onOpen={onOpen} />
+      <LandingBoxes onOpen={onOpen} provisional={provisionalWording} />
     </section>
   );
 }

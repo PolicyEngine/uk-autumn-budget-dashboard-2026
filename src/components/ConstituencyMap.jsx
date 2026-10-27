@@ -186,7 +186,8 @@ const exportDescription = (label, outcome) =>
  * disclosure layer's defaults (policyengine.disclosure DisclosureSettings,
  * which uk_budget_data.geography uses unchanged: min_sources 10,
  * max_top_share 0.5, min_rest_share 0.1, approximate_below_n_eff 30,
- * 1,000 bootstrap replicates, a 90% interval) and classify.js's breaks.
+ * 1,000 bootstrap replicates, a 90% interval); classify.js's breaks are
+ * in the key's tip (MapKey), not here.
  * `releaseKind` is the area routing's: which dataset the seats come from.
  */
 export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRouted }) {
@@ -195,8 +196,6 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
     `constituencies in ${yearLabel}, ${outcome === "average_change" ? "in £ a year per household" : "as a share of household income"}. ` +
     `Shown: ${label}.`;
   if (notRouted) return { shows };
-  const show = (text) => formatFigure(outcome, text, { signed: false });
-  const { small, large } = CATEGORY_BREAKS[outcome];
   return {
     shows,
     how: [
@@ -204,7 +203,8 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
         ? "Households in the national dataset (the enhanced Family Resources Survey) are reweighted to each constituency with constituency weights estimated for 2025; later years keep each household's 2025 split, scaled to that year's weights."
         : "Each survey household in PolicyEngine's local-area dataset belongs to one constituency; a constituency's figure averages its households, by weight.",
       "Each figure has a 90% interval from 1,000 bootstrap resamples of survey households, with their weights held fixed.",
-      `The colours use breaks fixed in advance: little change is under ${show(small)} either way, a small change ${show(small)} to ${show(large)}, a large change ${show(large)} or more. A constituency is coloured only when its interval lies within one category or two neighbouring ones; otherwise it is too uncertain to classify, and drawn light grey.`,
+      // The colours' breaks are said once, in the key's tip
+      "The colours' fixed breaks, and when a constituency is too uncertain to classify, are in the key's \u201cHow to read the key\u201d tip.",
       "A figure resting on fewer than 30 effective survey households is approximate, and dotted.",
       "A figure is not published, and hatched, when fewer than 10 survey households lie behind it, or when one or two households would make up too much of it.",
     ],

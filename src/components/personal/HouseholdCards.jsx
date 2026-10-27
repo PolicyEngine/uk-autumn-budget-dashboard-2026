@@ -20,7 +20,7 @@ import useDataFile from "../../hooks/useDataFile";
 import { buildHouseholdRequest } from "../../utils/householdImpactApi";
 import { presetInputs } from "../../utils/householdPresets";
 import { DISTRIBUTION_FILE, curveOf, distributionRunFor, householdPosition, ordinal, parseDistribution } from "../../utils/incomePosition";
-import { useMeasureCatalogue } from "../../utils/measureCatalogue";
+import { catalogueProvisional, useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { fiscalYearTick, shortFiscalYearTick } from "../../utils/chartTheme";
 import { SELECTABLE_YEARS, isDisplayYear } from "../../utils/displayYears";
 import { MINUS, money } from "../../utils/singleYear";
@@ -466,6 +466,8 @@ export default function HouseholdCards({
  * a tick, as an example is); pressing it again closes it.
  */
 function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
+  // While the measures are provisional, they are the selected measures, not the Budget
+  const provisional = catalogueProvisional(useMeasureCatalogue());
   const calculated = Number.isFinite(change);
   const action = formOpen ? "Hide your answers" : calculated ? "Change your answers" : "Enter your household";
   return (
@@ -483,7 +485,10 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
         {/* The card's name, for the button's: the title says it on screen */}
         <span className="household-card-name visually-hidden">Your household</span>
         <span className="household-yours-title">Enter your own household</span>
-        <span className="household-yours-lead">See how the Budget changes your income, in about 30 seconds.</span>
+        <span className="household-yours-lead">
+          {provisional ? "See how the selected measures change your income" : "See how the Budget changes your income"}
+          {", in about 30 seconds."}
+        </span>
       </span>
       <span className="household-yours-side">
         {calculated && (

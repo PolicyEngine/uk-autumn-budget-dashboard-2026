@@ -113,6 +113,8 @@ describe.each([
     render(<Chart rawData={rows} selectedPolicies={[EMPLOYER_NI]} selectedYear={2027} />);
     expect(screen.getByRole("status")).toHaveTextContent("None of the selected policies changes household incomes in 2027-28.");
     expect(document.querySelector(".recharts-wrapper")).toBeNull();
+    // Said once: the card's sentence does not add "almost no change" at both ends
+    expect(document.querySelector(".chart-description").textContent).not.toMatch(/almost no change/);
   });
 
   it("greys out the employer NI relief and says why under the chart", () => {

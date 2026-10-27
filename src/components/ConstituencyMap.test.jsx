@@ -312,7 +312,8 @@ describe("ConstituencyMap", () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000004"));
     const card = tooltip(container);
-    expect(card).toHaveTextContent("Too close to call: the interval includes zero");
+    expect(card).toHaveTextContent("The interval includes zero");
+    expect(card).not.toHaveTextContent("Too close to call");
     expect(card).toHaveTextContent("Map category: Too uncertain to classify");
   });
 

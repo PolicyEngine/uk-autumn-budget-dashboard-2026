@@ -6,7 +6,9 @@
 // the rate times the outlook's population that year (povertyPeople.js);
 // without a population the card falls back to percentage points
 // throughout. Measures that move no one are one line in More info, not
-// empty rows.
+// empty rows. A run that does not carry the chosen measure (one written
+// before the poverty and inequality measures) is never a step of 0: the
+// card then shows the headline measure, and says so.
 // The poverty choice is shared with the Change in the poverty rate chart
 // beside it (usePovertyChoice, ?poverty=).
 
@@ -18,9 +20,9 @@ import ControlBar from "./ControlBar";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
-import SummaryMetricChart, { SUMMARY_METRICS, hasColumn, povertyMetric, usePovertyChoice } from "./SummaryMetricChart";
+import SummaryMetricChart, { SUMMARY_METRICS, hasColumn, metricValue, povertyMetric, usePovertyChoice } from "./SummaryMetricChart";
 import { useOutlook } from "./livingStandards/useOutlook";
-import { formatPp, outlookPopulation } from "../utils/povertyPeople";
+import { formatPp, outlookPopulation, roundPeople } from "../utils/povertyPeople";
 import { CHART_COLOURS, fiscalYearTick } from "../utils/chartTheme";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
@@ -34,13 +36,14 @@ import "./MeasuresPovertyCard.css";
 // Why the measures with no effect move no one: one sentence, true of every
 // such measure, not a reason per measure
 const NO_EFFECT_TEXT =
-  "They change prices, capital gains or employers' costs, which the income poverty is measured on leaves out, or move no one across the line this year.";
+  "They change prices, capital gains or employers' costs, which the income behind the poverty measure leaves out, or move no one across the poverty line this year.";
 
 /**
  * The measures' own changes in the poverty rate (pp) in `year`, for the
  * measures that change incomes that year ({members} lists all, £0 ones
  * muted), and the package's (the combined run) when one run covers the
- * selection.
+ * selection. {missing} lists the runs read whose rows do not carry `key`;
+ * such a measure's value is null, never 0.
  */
 export function measurePovertyRows(rows, catalogue, selectedPolicies, year, key) {
   const rowFor = (id) => (rows ?? []).find((row) => row.reform_id === id && Number(row.year) === year);
@@ -51,13 +54,37 @@ export function measurePovertyRows(rows, catalogue, selectedPolicies, year, key)
       id: member.id,
       name: shortNameOf(member),
       description: member.description,
-      value: Number(rowFor(member.id)?.[key]) || 0,
+      value: metricValue(rowFor(member.id), key),
       colour: catalogue.byId.get(member.id)?.color ?? CHART_COLOURS.noChange,
     }));
   const combinedId = catalogue.combinedId;
   const run = wholeSelectionRun(catalogue.displayable, selectedPolicies, combinedId);
-  const total = combinedId && run === combinedId ? Number(rowFor(run)?.[key]) : NaN;
-  return { members, measures, total: Number.isFinite(total) ? total : null };
+  const packageRow = combinedId && run === combinedId ? rowFor(run) : undefined;
+  const total = packageRow ? metricValue(packageRow, key) : null;
+  const missing = [
+    ...measures.filter((measure) => measure.value === null).map((measure) => measure.id),
+    ...(packageRow && total === null ? [run] : []),
+  ];
+  return { members, measures, total, missing };
+}
+
+// The headline poverty measure: metrics' own column, which every run carries
+const HEADLINE = povertyMetric({ basis: "absolute", housing: "bhc", group: "all" });
+
+/**
+ * The card's poverty measure and rows in `year`: the chosen measure where
+ * every run the card reads carries it, and some run does; otherwise the
+ * headline ({fellBack}), which every run carries; null where not even that
+ * is carried. The chart beside it decides on the runs it reads over all
+ * years (choiceRows), so the two can differ; the card then says it shows
+ * the headline.
+ */
+export function povertyCardRows(rows, catalogue, selectedPolicies, year, chosen) {
+  for (const metric of chosen.key === HEADLINE.key ? [chosen] : [chosen, HEADLINE]) {
+    const read = measurePovertyRows(rows, catalogue, selectedPolicies, year, metric.key);
+    if (read.missing.length === 0 && hasColumn(rows, metric.key)) return { metric, fellBack: metric !== chosen, ...read };
+  }
+  return null;
 }
 
 /**
@@ -117,15 +144,18 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   // ?poverty= says, as Change in the poverty rate does, never nothing
   const wide = hasColumn(rows, "child_poverty_rel_ahc_change_pp");
   const poverty = wide ? chosen : { basis: "absolute", housing: "bhc", group: "all" };
-  const metric = povertyMetric(poverty);
+  // The headline, said, where a run read here does not carry the choice
+  const read = povertyCardRows(rows, catalogue, selectedPolicies, selectedYear, povertyMetric(poverty));
+  const metric = read?.metric ?? HEADLINE;
   const { tip, handlers } = useFloatingTooltip(plotRef, `${metric.key}-${selectedYear}`);
-  if (!hasColumn(rows, metric.key)) return null;
+  if (!read) return null;
 
   const year = fiscalYearTick(selectedYear);
-  const { members, measures, total } = measurePovertyRows(rows, catalogue, selectedPolicies, selectedYear, metric.key);
-  const millions = population ? population(selectedYear, poverty.group) : null;
+  const { members, measures, total } = read;
+  // The shown measure's people: everyone's when the card falls back
+  const millions = population ? population(selectedYear, metric.group) : null;
   const { steps, zero, peopleMode } = povertyWaterfall(measures, total, millions);
-  const who = poverty.group === "children" ? "children" : "people";
+  const who = metric.group === "children" ? "children" : "people";
 
   // The rate's change in words: "down 0.005 percentage points"
   const rateWords = (pp) =>
@@ -135,7 +165,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     if (!peopleMode) return rateWords(step.pp);
     const n = Math.abs(step.x);
     const way = step.x > 0 ? "fewer" : "more";
-    const count = n < 1000 ? "under 1,000" : `about ${thousands.format(Math.round(n / 1000) * 1000)}`;
+    const count = n < 1000 ? "under 1,000" : `about ${roundPeople(n)}`;
     return `${count} ${way} ${who}`;
   };
   // Thousands with commas ("4,000"); the ticks are spaced so they never meet
@@ -170,7 +200,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   // A plain sentence: no "≈" and no "pp" (the values are in the rows)
   const about = (step) => {
     const n = Math.abs(step.x);
-    return n < 1000 ? "fewer than 1,000" : `about ${thousands.format(Math.round(n / 1000) * 1000)}`;
+    return n < 1000 ? "fewer than 1,000" : `about ${roundPeople(n)}`;
   };
   // The measure as a sentence's subject: its own sentence form where the
   // catalogue publishes one ("Unfreezing the Plan 2 threshold"), otherwise
@@ -180,15 +210,14 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     const sentence = measure?.sentence ?? policyDetailsFor(measure)?.sentence;
     return sentence ? `${sentence[0].toUpperCase()}${sentence.slice(1)}` : `Of the measures, ${step.name}`;
   };
-  const moves = (step) => (step.x > 0 ? `lifting ${about(step)} ${who} out of poverty` : `pushing ${about(step)} ${who} into poverty`);
+  const moves = (step) => (step.x > 0 ? `moving ${about(step)} ${who} out of poverty` : `moving ${about(step)} ${who} into poverty`);
   const summary = top ? (
     peopleMode ? (
       <>
-        {subjectOf(top)} does most, {moves(top)}
+        {subjectOf(top)} has the largest effect, {moves(top)}
         {totalStep ? (
           <>
-            ; all the measures together {totalStep.x > 0 ? "lift" : "push"} {about(totalStep)}
-            {(totalStep.x > 0) !== (top.x > 0) ? (totalStep.x > 0 ? " out of poverty" : " into poverty") : ""}.
+            ; all the measures together move {about(totalStep)} {who} {totalStep.x > 0 ? "out of" : "into"} poverty.
           </>
         ) : (
           "."
@@ -246,6 +275,11 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
             ],
             // The measures that move no one, and why, here rather than under the chart
             caveats: [
+              read.fellBack && (
+                <span className="mp-fell-back">
+                  Not every measure shown has the chosen poverty line published, so this shows {HEADLINE.phrase}.
+                </span>
+              ),
               zero.length > 0 && (
                 <span className="wf-none">
                   <strong>No effect on poverty:</strong> {zero.map((m) => m.name).join(", ")}. {NO_EFFECT_TEXT}
