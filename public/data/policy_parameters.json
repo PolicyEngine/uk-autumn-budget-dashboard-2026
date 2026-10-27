@@ -2,8 +2,8 @@
   "schema": "uk-budget-dashboard/policy-parameters/v1",
   "generator": "uk-budget-data policy-table",
   "engine": {
-    "policyengine": "6.10.2",
-    "policyengine_uk": "2.132.6"
+    "policyengine": "6.11.1",
+    "policyengine_uk": "2.151.0"
   },
   "years": [
     2026,
@@ -15,7 +15,7 @@
   ],
   "measures": {
     "fuel_duty_rise_deferral": {
-      "description": "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+      "description": "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p, so that rise is never made up. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
       "display": "schedule",
       "rows": [
         {
@@ -170,7 +170,7 @@
       ]
     },
     "state_pension_income_tax_protection": {
-      "description": "Candidate measure. From 6 April 2027, people over State Pension age get an income tax allowance equal to the full new State Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 for £1 of income above it, down to the standard personal allowance. Someone whose only income is the full new State Pension pays no income tax.",
+      "description": "Candidate measure. From 6 April 2027, people over State Pension age whose only income is the State Pension (savings interest aside) get an income tax allowance equal to the full new State Pension (rounded up to the pound: £13,037 in 2027-28), rising with it. Someone whose only income is the full new State Pension pays no income tax; £1 of other income takes the allowance away.",
       "display": "path",
       "rows": [
         {
@@ -191,21 +191,21 @@
               "label": "2027-28",
               "year": 2027,
               "before": 12570.0,
-              "after": 13040.0
+              "after": 13037.0
             },
             {
               "key": "2028",
               "label": "2028-29",
               "year": 2028,
               "before": 12570.0,
-              "after": 13370.0
+              "after": 13363.0
             },
             {
               "key": "2029",
               "label": "2029-30",
               "year": 2029,
               "before": 12570.0,
-              "after": 13700.0
+              "after": 13697.0
             },
             {
               "key": "2030",
@@ -219,7 +219,7 @@
               "label": "2031-32",
               "year": 2031,
               "before": 12830.0,
-              "after": 14400.0
+              "after": 14391.0
             }
           ],
           "source": {
@@ -229,10 +229,10 @@
             },
             "after": {
               "kind": "modifier_constant",
-              "where": "budget_measures/state_pension_income_tax_allowance.py state_pension_income_tax_allowance(allowance_2027 to 2031)"
+              "where": "budget_measures/state_pension_only_income_tax_allowance.py state_pension_only_income_tax_allowance(allowance_2027 to 2031)"
             }
           },
-          "note": "With the measure, withdrawn £1 for each £1 of income above it, down to the personal allowance"
+          "note": "With the measure, only for people whose only income is the State Pension (savings interest aside); any other income takes it away"
         }
       ]
     },
@@ -357,133 +357,6 @@
             }
           },
           "note": "As modelled: the cut weighted in 2026-27 by the October to March share of a year's electricity use, not by its days in force"
-        }
-      ]
-    },
-    "employer_ni_relief_under_25s": {
-      "description": "Candidate measure. From 6 April 2027 employers pay no secondary Class 1 National Insurance on earnings up to the upper earnings limit (£50,270) for employees under 25, extending the under-21 relief to ages 21 to 24. Wages are held fixed, so it changes revenue, not household incomes. The data identify no apprentices, so the cost includes 21 to 24-year-old apprentices, whose employers already pay none in law.",
-      "display": "before-after",
-      "rows": [
-        {
-          "label": "Employer National Insurance rate, employees aged 21 to 24",
-          "unit": "percent",
-          "unit_words": null,
-          "primary": true,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 0.15,
-              "after": 0.15
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.15,
-              "after": 0.0
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.15,
-              "after": 0.0
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.15,
-              "after": 0.0
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.15,
-              "after": 0.0
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.15,
-              "after": 0.0
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.national_insurance.class_1.rates.employer, at 6 April of each year"
-            },
-            "after": {
-              "kind": "modifier_constant",
-              "where": "budget_measures/employer_ni_relief_ages_21_to_24.py employer_ni_relief_ages_21_to_24(start_year, lowest_age, age_limit)"
-            }
-          },
-          "note": "On earnings from the secondary threshold up to the limit below; above it, the full rate"
-        },
-        {
-          "label": "Earnings relieved for ages 21 to 24, up to",
-          "unit": "gbp",
-          "unit_words": "£ a year",
-          "primary": false,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": null,
-              "after": null
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": null,
-              "after": 50270.0
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": null,
-              "after": 50270.0
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": null,
-              "after": 50270.0
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": null,
-              "after": 50270.0
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": null,
-              "after": 51330.0
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "none: current law relieves no earnings at these ages in policyengine-uk 2.132.6"
-            },
-            "after": {
-              "kind": "modifier_constant",
-              "where": "budget_measures/employer_ni_relief_ages_21_to_24.py employer_ni_relief_ages_21_to_24(upper_secondary_threshold_2027 to 2031)"
-            }
-          }
         }
       ]
     },
@@ -669,72 +542,6 @@
             "after": {
               "kind": "measure_parameter_change",
               "where": "reforms.py _create_threshold_freeze_2031_32(): gov.hmrc.income_tax.rates.uk[1].threshold; current law elsewhere"
-            }
-          }
-        }
-      ]
-    },
-    "badr_lifetime_limit_cut": {
-      "description": "Candidate measure. From 6 April 2027 the lifetime limit on gains qualifying for Business Asset Disposal Relief falls from £1 million to £500,000; the relief rate stays at 18%. Gains above the limit pay the main capital gains tax rates. The model applies the limit to each year's gains. Capital gains are imputed and calibrated to 2024-25, when disposals were unusually high ahead of the April 2025 rise in the relief's rate, so the relief's base, and the revenue from restricting it, are likely 1.5 to 1.7 times too high.",
-      "display": "before-after",
-      "rows": [
-        {
-          "label": "Business Asset Disposal Relief lifetime limit",
-          "unit": "gbp",
-          "unit_words": "£ of gains over a lifetime",
-          "primary": true,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 1000000.0,
-              "after": 1000000.0
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 1000000.0,
-              "after": 500000.0
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 1000000.0,
-              "after": 500000.0
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 1000000.0,
-              "after": 500000.0
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 1000000.0,
-              "after": 500000.0
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 1000000.0,
-              "after": 500000.0
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.cgt.badr.lifetime_limit, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py _create_badr_lifetime_limit_cut(): gov.hmrc.cgt.badr.lifetime_limit; current law elsewhere"
             }
           }
         }

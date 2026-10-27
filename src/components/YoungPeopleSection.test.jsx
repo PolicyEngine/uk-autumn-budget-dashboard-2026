@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render as renderReact, screen, within } from "@testing-library/react";
-import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR } from "./YoungPeopleSection";
+import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR, bandAxis } from "./YoungPeopleSection";
 import {
   meanChangeByBand,
   meanChangeBySingleAge,
@@ -100,6 +100,29 @@ beforeEach(() => {
   );
 });
 afterEach(() => vi.unstubAllGlobals());
+
+describe("Average change by age's axis", () => {
+  const policies = [{ id: "a" }, { id: "b" }];
+  it("fits the year shown, from £0 when every group gains, not a range over every year", () => {
+    const data = [
+      { "measure:a": 30, "measure:b": 5, netChange: 35 },
+      { "measure:a": 110, "measure:b": 6, netChange: 116 },
+    ];
+    const { domain, ticks } = bandAxis(data, policies);
+    expect(domain[0]).toBe(0);
+    expect(domain[1]).toBeGreaterThanOrEqual(116);
+    expect(domain[1]).toBeLessThan(200);
+    expect(ticks[0]).toBe(0);
+  });
+
+  it("reaches below £0 only for the losses shown, not mirrored", () => {
+    const data = [{ "measure:a": 120, "measure:b": -40, netChange: 80 }];
+    const { domain } = bandAxis(data, policies);
+    expect(domain[0]).toBeLessThan(-40);
+    expect(domain[0]).toBeGreaterThan(-120);
+    expect(domain[1]).toBeGreaterThanOrEqual(120);
+  });
+});
 
 describe("results by age", () => {
   it("adds up mean changes across policies, and hides thin bands", () => {
@@ -202,7 +225,7 @@ describe("YoungPeopleSection", () => {
       />,
     );
     // One row per measure for the 16 to 24 group, no blocking message
-    expect(await screen.findByText(/each selected measure on its own/)).toBeInTheDocument();
+    expect(await screen.findByText(/each selected policy on its own/)).toBeInTheDocument();
     expect(screen.queryByText(/shown for a single policy or for all policies/)).toBeNull();
     // The shares as the shared per-measure chart, one row per measure
     expect(document.querySelectorAll(".msc [role='rowheader']").length).toBeGreaterThan(0);

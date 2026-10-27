@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { OPEN_POPULATION_SUB } from "../utils/populationSub";
 import SubTabs, { SubTabPanel, subTabId, useSubTabParam } from "./SubTabs";
-import { YOUNG_PEOPLE_ANCHOR } from "./YoungPeopleSection";
+import { YOUNG_PEOPLE_ANCHOR } from "../utils/viewAnchors";
+import { scrollBelowBars, settleHeadings } from "../utils/pageScroll";
 
 /** Population impact's sub-tabs; the first, Public finances, is the default. */
 export const POPULATION_SUB_TABS = [
@@ -30,7 +31,9 @@ function scrollToHashWhenShown(hash) {
     if (window.location.hash !== hash) return;
     const element = document.getElementById(hash.slice(1));
     if (element && element.offsetParent !== null) {
-      element.scrollIntoView?.({ block: "start" });
+      scrollBelowBars(element);
+      // Charts above it can still be loading: check its heading once more
+      setTimeout(settleHeadings, 2000);
       return;
     }
     if (Date.now() - started < 8000) setTimeout(step, 150);

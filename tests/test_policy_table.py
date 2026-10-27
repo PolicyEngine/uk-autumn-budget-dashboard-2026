@@ -126,9 +126,9 @@ def test_the_state_pension_allowance_is_the_full_state_pension_rounded_up(
         weekly = PARAMETERS.gov.dwp.state_pension.new_state_pension.amount(
             f"{year}-04-06"
         )
-        assert row[str(year)][1] == math.ceil(weekly * 52 / 10) * 10
-    assert row["2027"] == (12_570, 13_040)
-    assert row["2031"] == (12_830, 14_400)
+        assert row[str(year)][1] == math.ceil(weekly * 52)
+    assert row["2027"] == (12_570, 13_037)
+    assert row["2031"] == (12_830, 14_391)
 
 
 def test_warm_home_discount(document):
@@ -190,16 +190,14 @@ def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
         in_force_rate_change(registry.FUEL_VAT_ID, {2028: -0.025})
 
 
-def test_employer_ni(document):
-    table = rows(document, "employer_ni_relief_under_25s")
-    rate = by_key(
-        table["Employer National Insurance rate, employees aged 21 to 24"]
+def test_the_table_covers_the_seven_package_measures_only(document):
+    # BADR and employer NI are withdrawn (27 October 2026)
+    assert list(document["measures"]) == list(
+        registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
     )
-    assert rate["2026"] == (0.15, 0.15)
-    assert all(rate[str(year)] == (0.15, 0.0) for year in range(2027, 2032))
-    limit = by_key(table["Earnings relieved for ages 21 to 24, up to"])
-    assert limit["2027"] == (None, 50_270)
-    assert limit["2031"] == (None, 51_330)
+    assert len(document["measures"]) == 7
+    assert registry.BADR_ID not in document["measures"]
+    assert registry.EMPLOYER_NI_ID not in document["measures"]
 
 
 def test_threshold_freeze(document):
@@ -214,14 +212,7 @@ def test_threshold_freeze(document):
         )
 
 
-def test_badr_and_plan_2(document):
-    limit = by_key(
-        rows(document, "badr_lifetime_limit_cut")[
-            "Business Asset Disposal Relief lifetime limit"
-        ]
-    )
-    assert limit["2026"] == (1_000_000, 1_000_000)
-    assert limit["2027"] == (1_000_000, 500_000)
+def test_plan_2(document):
     plan_2 = by_key(
         rows(document, "plan_2_threshold_unfreeze")[
             "Plan 2 repayment threshold"
@@ -246,9 +237,7 @@ def test_each_measure_gets_the_display_its_shape_calls_for(document):
         "state_pension_income_tax_protection": "path",
         "warm_home_discount_top_up": "switch",
         "domestic_electricity_zero_vat": "switch",
-        "employer_ni_relief_under_25s": "before-after",
         "threshold_freeze_2031_32": "table",
-        "badr_lifetime_limit_cut": "before-after",
         "road_fuel_vat_cut": "switch",
         "plan_2_threshold_unfreeze": "path",
     }

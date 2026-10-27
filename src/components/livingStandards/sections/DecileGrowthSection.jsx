@@ -7,7 +7,7 @@
 
 import { housingOption, yearsOption } from "../controlOptions";
 import { LsBarChart } from "../LsCharts";
-import { divergingAxis, incomeGroupColours, useNarrowViewport } from "../../../utils/chartTheme";
+import { divergingAxis, fittedAxis, incomeGroupColours, useNarrowViewport } from "../../../utils/chartTheme";
 import {
   changeVerb,
   fyDash,
@@ -77,13 +77,15 @@ const VIEWS = { period: "Whole period", annual: "Year by year" };
 
 /**
  * A y axis close to the data: the nice step (2 to 4 ticks a side) whose
- * end is nearest the largest value, symmetric about 0 when values fall on
- * both sides (±0.47 → ±0.5 by 0.25s, not ±0.75).
+ * end is nearest the largest value, from 0 when the values have one sign;
+ * fitted to each side, never forced symmetric, when they fall on both
+ * (−0.46 to +0.13 → −0.5 to +0.15 by 0.1s; chartTheme.fittedAxis).
  */
 export function tightAxis(values) {
   const vals = values.filter((v) => v != null && Number.isFinite(v));
   const largest = Math.max(0, ...vals.map(Math.abs)) * 1.02 || 1;
   const both = vals.some((v) => v > 1e-9) && vals.some((v) => v < -1e-9);
+  if (both) return fittedAxis(vals);
   const steps = [0.01, 0.02, 0.025, 0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10, 20, 25, 50];
   let best = null;
   for (const step of steps) {
@@ -300,9 +302,9 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   };
   const summary = diff ? (
     largest < 0.25 ? (
-      <>The measures barely change income growth at either end, under {formatOneDp(Math.max(0.1, Math.ceil(largest * 10 + 1e-9) / 10))} points{per}.</>
+      <>The policies barely change income growth at either end, under {formatOneDp(Math.max(0.1, Math.ceil(largest * 10 + 1e-9) / 10))} points{per}.</>
     ) : (
-      <>The measures change income growth {gap < 0.15 ? "about equally at both ends" : highMean > lowMean ? "more at the top" : "more at the bottom"} {ends}.</>
+      <>The policies change income growth {gap < 0.15 ? "about equally at both ends" : highMean > lowMean ? "more at the top" : "more at the bottom"} {ends}.</>
     )
   ) : (
     <>Under current law, real incomes {trend(lowMean, highMean)} {ends}.</>
@@ -317,7 +319,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   };
   const rangesNote = `Bottom is the ${low}, top the highest-income ${g.share}${who}. ${
     annual ? `Each year from ${fyDash(annualYears[0].year)} to ${fyDash(end.year)}` : `From ${fyDash(first.year)} to ${fyDash(end.year)}`
-  }, ${diff ? "the measures change their growth by" : "their real income changes by"} ${between(lowVals)}${diff ? " points" : "%"}${per} and ${between(highVals)}${diff ? " points" : "%"} respectively.`;
+  }, ${diff ? "the policies change their growth by" : "their real income changes by"} ${between(lowVals)}${diff ? " points" : "%"}${per} and ${between(highVals)}${diff ? " points" : "%"} respectively.`;
 
   // Under the key only the short decile-1 (AHC) caution; the vigintile
   // note is in About this chart, with the key starting at vigintile 2
@@ -356,13 +358,13 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const statistic = (block?.statistic || data.income_by_decile.statistic).replace(/decile/, "group");
   const popNote = population === "non_pensioners" ? ` ${block.populations.non_pensioners}, ranked among themselves.` : "";
   const measuresAbout = !measures
-    ? " Without the measures (current law): real growth of each group's median income before any Budget measure."
+    ? " Without the policies (current law): real growth of each group's median income before any Budget policy."
     : diff
-      ? " With the selected measures: each bar is the measures' effect on that growth, in percentage points: real growth with the measures less growth without them, from the same pair of simulations (the measure's or the package's run and its own baseline)."
-      : " With the selected measures: current law's growth (the Pre-measures forecast tab's chart) plus the measures' effect on it, from the same pair of simulations (the measure's or the package's run and its own baseline). So with less without is exactly the effect.";
+      ? " With the selected policies: each bar is the policies' effect on that growth, in percentage points: real growth with the policies less growth without them, from the same pair of simulations (the policy's or the package's run and its own baseline)."
+      : " With the selected policies: current law's growth (the Pre-measures forecast tab's chart) plus the policies' effect on it, from the same pair of simulations (the policy's or the package's run and its own baseline). So with less without is exactly the effect.";
   const about = `${statistic}: each bar is the real change in that ${g.noun}'s median, ${annual ? "on the year before" : "between the two years"}.${measuresAbout} Groups are re-ranked each year, so this compares positions in the distribution, not the same people.${popNote}${skip ? ` ${VIGINTILE_ABOUT}` : ""}${grouping === "decile" && basis === "ahc" ? ` ${DECILE_AHC_ABOUT}` : ""}`;
   const fileStem = `income-growth${measures ? (diff ? "-effect-of-measures" : "-with-measures") : ""}-by-${g.noun}-${basis}${population === "all" ? "" : "-non-pensioners"}`;
-  const csvTitle = (t) => (measures ? `${t}${diff ? ": effect of the selected measures" : ", with the selected measures"}` : t);
+  const csvTitle = (t) => (measures ? `${t}${diff ? ": effect of the selected policies" : ", with the selected policies"}` : t);
 
   return {
     period: periodLabel(first.year, end.year),
@@ -377,11 +379,11 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     source: <PeSource />,
     sourceText: CSV_SOURCES.pe,
     info: {
-      shows: `The real change in the median income of each ${g.share} of people, ${annual ? "on the year before" : "between the two years"}${diff ? ", with the measures less without them, in percentage points" : ""}.`,
+      shows: `The real change in the median income of each ${g.share} of people, ${annual ? "on the year before" : "between the two years"}${diff ? ", with the policies less without them, in percentage points" : ""}.`,
       how: [
-        measures && !diff && "Current law's growth plus the measures' effect, from the same pair of simulations.",
+        measures && !diff && "Current law's growth plus the policies' effect, from the same pair of simulations.",
         `Bottom is the ${low}; top the highest-income ${g.share}${who}.`,
-        `${annual ? `Each year from ${fyDash(annualYears[0].year)} to ${fyDash(end.year)}` : `From ${fyDash(first.year)} to ${fyDash(end.year)}`}, ${diff ? "the measures change their growth by" : "their real income changes by"} ${between(lowVals)}${diff ? " points" : "%"}${per} and ${between(highVals)}${diff ? " points" : "%"} respectively.`,
+        `${annual ? `Each year from ${fyDash(annualYears[0].year)} to ${fyDash(end.year)}` : `From ${fyDash(first.year)} to ${fyDash(end.year)}`}, ${diff ? "the policies change their growth by" : "their real income changes by"} ${between(lowVals)}${diff ? " points" : "%"}${per} and ${between(highVals)}${diff ? " points" : "%"} respectively.`,
         popNote.trim(),
       ],
       caveats: [
@@ -402,7 +404,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
             seriesCsv({
               title: csvTitle(`Annual income growth by ${g.noun} (${basisShort})${who}`),
               units: diff
-                ? "Percentage points: real growth in median equivalised income on the year before, with the measures less without"
+                ? "Percentage points: real growth in median equivalised income on the year before, with the policies less without"
                 : "% real change in median equivalised income on the year before",
               source: CSV_SOURCES.pe,
               rows: annualRows,
@@ -418,7 +420,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
             seriesCsv({
               title: csvTitle(`Income growth by ${g.noun} (${basisShort})${who}`),
               units: diff
-                ? `Percentage points: real growth in median equivalised income, ${fyDash(first.year)} to ${fyDash(end.year)}, with the measures less without`
+                ? `Percentage points: real growth in median equivalised income, ${fyDash(first.year)} to ${fyDash(end.year)}, with the policies less without`
                 : `% real change in median equivalised income, ${fyDash(first.year)} to ${fyDash(end.year)}`,
               source: CSV_SOURCES.pe,
               rows: periodRows,

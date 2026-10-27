@@ -123,9 +123,9 @@ describe("scatterView", () => {
     expect(view(["a"], 2029, { status: "unavailable", rows: null }).reason).toBe(
       "Household results are not yet published.",
     );
-    expect(view(["b"]).reason).toMatch(/not yet published for this measure/);
+    expect(view(["b"]).reason).toMatch(/not yet published for this policy/);
     expect(view(["a"], 2031).reason).toMatch(/2031-32/);
-    expect(view([]).reason).toMatch(/Select a measure/);
+    expect(view([]).reason).toMatch(/Select a policy/);
     expect(view(["a"], 2029, { status: "loading", rows: null }).kind).toBe("loading");
   });
 });

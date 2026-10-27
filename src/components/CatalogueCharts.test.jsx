@@ -9,6 +9,9 @@ import YoungPeopleSection from "./YoungPeopleSection";
 import GroupedLegend from "./GroupedLegend";
 import ChartTooltip from "./ChartTooltip";
 import PolicySelector from "./PolicySelector";
+import { MeasureKeyProvider } from "./MeasureKey";
+import { LOGO_ROOM as SCATTER_LOGO_ROOM } from "./HouseholdScatter";
+import { chartMargin } from "../utils/chartTheme";
 import {
   buildMeasureCatalogue,
   MeasureCatalogueProvider,
@@ -25,11 +28,11 @@ vi.setConfig({ testTimeout: 30000 });
 vi.mock("recharts", async () => {
   const React = await import("react");
   const ChartData = React.createContext([]);
-  const Chart = ({ data, children }) => {
+  const Chart = ({ data, margin, children }) => {
     const rows = data ?? React.Children.toArray(children).find((child) => Array.isArray(child.props?.data))?.props.data ?? [];
     return (
       <ChartData.Provider value={rows}>
-        <div data-testid="chart-rows" data-rows={JSON.stringify(rows)}>{children}</div>
+        <div data-testid="chart-rows" data-rows={JSON.stringify(rows)} data-margin={JSON.stringify(margin ?? null)}>{children}</div>
       </ChartData.Provider>
     );
   };
@@ -71,7 +74,7 @@ vi.mock("../utils/loadDashboard", async (importOriginal) => {
 });
 vi.mock("../utils/chartLogo", () => ({
   PolicyEngineLogo: () => null,
-  CHART_LOGO: { href: "data:image/png;base64,iVBORw0KGgo=", width: 80, height: 17 },
+  CHART_LOGO: { href: "data:image/png;base64,iVBORw0KGgo=", width: 80, height: 17, padding: 8 },
 }));
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -109,7 +112,7 @@ describe("published measure catalogue in population views", () => {
     expect(catalogue.combinedId).toBeNull();
   });
 
-  it("lists each published measure by its short name, grouped by revenue effect, with no description, and excludes unavailable ones", () => {
+  it("lists each published measure by its short name in one flat list, raises first, with no group labels or description, and excludes unavailable ones", () => {
     const catalogue = catalogueFor(measureCatalogueFixture());
     const toggle = vi.fn();
     render(withCatalogue(catalogue, <PolicySelector selectedPolicies={[ALPHA, BETA]} onPolicyToggle={toggle} />));
@@ -119,8 +122,13 @@ describe("published measure catalogue in population views", () => {
       expect(screen.getByText(measure.label)).toBeInTheDocument();
       expect(screen.queryByText(measure.description)).not.toBeInTheDocument();
     }
-    expect(screen.getByRole("group", { name: "Raises revenue" })).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "Costs revenue" })).toBeInTheDocument();
+    expect(screen.queryByText("Raises revenue")).toBeNull();
+    expect(screen.queryByText("Costs revenue")).toBeNull();
+    expect(document.querySelector(".policy-group")).toBeNull();
+    // Raises revenue first, then costs, in the catalogue's order
+    const order = (measure) => ["revenue", "cost", "neutral"].indexOf(measure.direction);
+    const expected = [...catalogue.displayable].sort((a, b) => order(a) - order(b)).map((m) => m.label);
+    expect([...document.querySelectorAll(".policy-selector-name")].map((node) => node.textContent)).toEqual(expected);
     expect(screen.queryByText(catalogue.byId.get(HELD).name)).not.toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("checkbox")[0]);
     expect(toggle).toHaveBeenCalledWith(catalogue.displayable[0].id);
@@ -179,8 +187,8 @@ describe("published measure catalogue in population views", () => {
   });
 
   it.each([
-    ["relative", DistributionalChart, "distributional", "value", -1, "Later years differ: in 2030-31, both the lowest- and highest-income tenths lose."],
-    ["absolute", WaterfallChart, "winnersLosers", "avg_change", -500, "Later years differ: in 2030-31, both the lowest- and highest-income tenths lose."],
+    ["relative", DistributionalChart, "distributional", "value", -1, /; in 2030-31 both lose\.$/],
+    ["absolute", WaterfallChart, "winnersLosers", "avg_change", -500, /; in 2030-31 both lose\.$/],
   ])("points the %s view to a later year in which the ends turn", (_name, Chart, source, key, later, note) => {
     const fixture = measureCatalogueFixture({ held: false });
     // The same rows a year on, with the first measure turned to a loss
@@ -188,13 +196,14 @@ describe("published measure catalogue in population views", () => {
     const { container, unmount } = render(withCatalogue(catalogueFor(fixture),
       <Chart rawData={[...fixture[source], ...next]} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
     ));
-    expect(container.querySelector(".later-years-note")).toHaveTextContent(note);
+    // The turn is the decile sentence's last clause
+    expect(container.querySelector(".chart-description").textContent).toMatch(note);
     unmount();
     // The same rows in both years: no turn, no pointer
     const same = render(withCatalogue(catalogueFor(fixture),
       <Chart rawData={[...fixture[source], ...fixture[source].map((row) => ({ ...row, year: YEAR + 1 }))]} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
     ));
-    expect(same.container.querySelector(".later-years-note")).toBeNull();
+    expect(same.container.querySelector(".chart-description").textContent).not.toMatch(/; in \d/);
   });
 
   it("shares the catalogue's colours between standalone legends and tooltips", () => {
@@ -207,8 +216,9 @@ describe("published measure catalogue in population views", () => {
     </>));
     for (const measure of catalogue.displayable) {
       const row = [...container.querySelectorAll(".chart-tooltip-row")].find((node) => node.textContent.includes(measure.name));
-      const swatch = row.querySelector(".chart-tooltip-swatch");
-      expect(swatch).toHaveStyle({ background: measure.color });
+      // A measure's row shows its category icon tile in the catalogue colour
+      const tile = row.querySelector(".mrl-icon");
+      expect(tile.style.getPropertyValue("--mrl-colour")).toBe(measure.color);
     }
     expect(screen.getAllByText("Raise revenue")).toHaveLength(2);
     expect(screen.getAllByText("Cost revenue")).toHaveLength(2);
@@ -224,7 +234,7 @@ describe("published measure catalogue in population views", () => {
     ));
     // The withdrawn package is never drawn: the shares card shows each
     // measure's own run, one row per measure, and says so
-    expect(await screen.findByText(/each selected measure on its own/)).toBeInTheDocument();
+    expect(await screen.findByText(/each selected policy on its own/)).toBeInTheDocument();
     expect(screen.queryByText(/directly affected:/)).not.toBeInTheDocument();
     const shares = container.querySelector(".young-people-shares");
     expect(shares.querySelector('[data-testid="chart-rows"]')).toBeNull();
@@ -247,7 +257,7 @@ describe("published measure catalogue in population views", () => {
     expect(await screen.findByText(/The net change is unavailable for those age groups/)).toBeInTheDocument();
     expect(chartRows(container).every((point) => point[`measure:${ALPHA}`] === null && point.netChange === null)).toBe(true);
     // The combined run is refused: no package shares, only each measure's own
-    expect(screen.getByText(/each selected measure on its own/)).toBeInTheDocument();
+    expect(screen.getByText(/each selected policy on its own/)).toBeInTheDocument();
     const shares = container.querySelector(".young-people-shares");
     const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("title"));
     const alpha = catalogue.byId.get(ALPHA);
@@ -325,8 +335,32 @@ describe("measure chart keys", () => {
     const catalogue = catalogueFor(fixture);
     const { container } = render(withCatalogue(catalogue, <ChartTooltip active payload={catalogue.displayable.map((measure) => ({ dataKey: measure.seriesKey, name: "untrusted display label", value: 1 }))} format={String} />));
     const headings = [...container.querySelectorAll(".chart-tooltip-heading")].map((node) => node.textContent);
-    expect(headings).toEqual(["Raise revenue", "Other measures"]);
+    expect(headings).toEqual(["Raise revenue", "Other policies"]);
     expect(screen.getByText(catalogue.byId.get(ALPHA).label)).toBeInTheDocument();
     expect(screen.queryByText("Cost revenue")).not.toBeInTheDocument();
+  });
+});
+
+// All households' By income pair: the decile card (either view) beside the
+// household scatter. Both draw their logo in the SVG under the same axis
+// margins, so the plots, axis titles and logos sit level (HouseholdScatter
+// .test.jsx checks the scatter's side).
+describe("income decile card beside the household scatter", () => {
+  it("draws both decile views with the scatter's top margin and logo room under the axis", () => {
+    const fixture = measureCatalogueFixture();
+    const catalogue = catalogueFor(fixture);
+    const selected = [ALPHA, BETA];
+    render(withCatalogue(catalogue, (
+      <MeasureKeyProvider>
+        <div data-testid="relative"><DistributionalChart rawData={fixture.distributional} selectedPolicies={selected} selectedYear={YEAR} /></div>
+        <div data-testid="absolute"><WaterfallChart rawData={fixture.winnersLosers} selectedPolicies={selected} selectedYear={YEAR} /></div>
+      </MeasureKeyProvider>
+    )));
+    expect(SCATTER_LOGO_ROOM).toBe(31);
+    for (const chart of ["relative", "absolute"]) {
+      const margin = JSON.parse(within(screen.getByTestId(chart)).getByTestId("chart-rows").dataset.margin);
+      expect(margin.top).toBe(chartMargin(false).top);
+      expect(margin.bottom).toBe(SCATTER_LOGO_ROOM);
+    }
   });
 });

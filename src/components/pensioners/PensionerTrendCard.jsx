@@ -1,16 +1,6 @@
 import { useMemo, useRef, useState } from "react";
-import {
-  Bar,
-  CartesianGrid,
-  ComposedChart,
-  Customized,
-  Line,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, CartesianGrid, ComposedChart, Customized, Line, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Tooltip } from "../ViewportTooltip";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import ChartDownloadMenu from "../ChartDownloadMenu";
@@ -50,7 +40,7 @@ const FOCUS_COLOUR = CHART_COLOURS.gain;
 
 const VIEW_OPTIONS = [
   { value: "lines", label: "Lines", summary: "Lines" },
-  { value: "measures", label: "Measures, pensioners", summary: "By measure" },
+  { value: "measures", label: "Policies, pensioners", summary: "By policy" },
 ];
 const YEARS_OPTIONS = [
   { value: "each", label: "Each year", summary: "Each year" },
@@ -185,7 +175,7 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
     csv: () =>
       buildChartCsv({
         title: `Average change in household net income per pensioner by year, ${first} to ${last}`,
-        units: `${cumulative ? "£ per person, running total from the first year" : "£ per person per year"}; each measure's own effect; pensioners are aged 66 and over in 2026-27 and 67 and over from 2027-28`,
+        units: `${cumulative ? "£ per person, running total from the first year" : "£ per person per year"}; each policy's own effect; pensioners are aged 66 and over in 2026-27 and 67 and over from 2027-28`,
         columns: [
           { key: "yearLabel", label: "Year" },
           ...partKeys.map((each) => ({ key: each, label: catalogue.bySeriesKey.get(each)?.label ?? each, decimals: 2 })),

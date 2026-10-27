@@ -1,0 +1,57 @@
+/* The PolicyEngine site header (@policyengine/ui-kit 0.12's Header, from
+   PolicyEngineShell in layout.tsx) brought to policyengine.org's current
+   look (policyengine-app-v2 website/src/components/Header.tsx). The ui-kit
+   header already has app-v2's height (58px), teal-800 to teal-600
+   gradient, border, shadow, 24px logo and 15px links; its menu and side
+   padding come in as props (utils/siteNav.js). What props cannot reach is
+   here: the 40px gap after the logo, the links' 8px 14px padding, and the
+   white underline that grows under a link on hover or focus in place of
+   the ui-kit's tinted box. Only the header's look: where it sits and when
+   it shows are globals.css's (the site-nav rules) and App.jsx's.
+   Written against the ui-kit 0.12 markup: the header is the shell's first
+   child, its logo link holds the "PolicyEngine" image, and its desktop
+   links are the children of the "hidden lg:flex items-center gap-6" row. */
+
+.min-h-screen.flex.flex-col > div:first-child a:has(> img[alt="PolicyEngine"]) {
+  margin-right: 40px !important;
+}
+
+.min-h-screen.flex.flex-col > div:first-child .hidden.lg\:flex.gap-6 > a,
+.min-h-screen.flex.flex-col > div:first-child .hidden.lg\:flex.gap-6 > div > button {
+  position: relative;
+  padding: 8px 14px !important;
+  border-radius: 0 !important;
+  /* The ui-kit tints the link's box on hover from its script */
+  background-color: transparent !important;
+}
+
+.min-h-screen.flex.flex-col > div:first-child .hidden.lg\:flex.gap-6 > a::after,
+.min-h-screen.flex.flex-col > div:first-child .hidden.lg\:flex.gap-6 > div > button::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--text-inverse);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.min-h-screen.flex.flex-col > div:first-child .hidden.lg\:flex.gap-6 > a:hover::after,
+.min-h-screen.flex.flex-col > div:first-child .hidden.lg\:flex.gap-6 > a:focus-visible::after,
+.min-h-screen.flex.flex-col > div:first-child .hidden.lg\:flex.gap-6 > div > button:hover::after,
+.min-h-screen.flex.flex-col > div:first-child .hidden.lg\:flex.gap-6 > div > button:focus-visible::after,
+.min-h-screen.flex.flex-col > div:first-child .hidden.lg\:flex.gap-6 > div > button[aria-expanded="true"]::after {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .min-h-screen.flex.flex-col > div:first-child .hidden.lg\:flex.gap-6 > a::after,
+  .min-h-screen.flex.flex-col > div:first-child .hidden.lg\:flex.gap-6 > div > button::after {
+    transition: none;
+  }
+}

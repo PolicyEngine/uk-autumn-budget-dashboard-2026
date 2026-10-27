@@ -35,6 +35,9 @@ from uk_budget_data.budget_measures.road_fuel_vat_cut import road_fuel_vat_cut
 from uk_budget_data.budget_measures.state_pension_income_tax_allowance import (
     state_pension_income_tax_allowance,
 )
+from uk_budget_data.budget_measures.state_pension_only_income_tax_allowance import (
+    state_pension_only_income_tax_allowance,
+)
 from uk_budget_data.budget_measures.warm_home_discount_top_up import (
     warm_home_discount_top_up,
 )
@@ -196,9 +199,9 @@ def _create_fuel_duty_rise_deferral() -> Reform:
             "Candidate measure. Fuel duty stays at 52.95p a litre through "
             "winter 2026-27, with no April 2027 RPI rise; the 5p is restored "
             "in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI "
-            "uprating resumes in April 2028 from 57.95p. Rates are "
-            "day-weighted to fiscal years. Includes the VAT on the lower "
-            "pump price."
+            "uprating resumes in April 2028 from 57.95p, so that rise is never "
+            "made up. Rates are day-weighted to fiscal years. Includes the "
+            "VAT on the lower pump price."
         ),
         parameter_changes=rate_change(FUEL_DUTY, fuel_duty_deferral_rates()),
         simulation_modifier=pump_vat_on_fuel_duty_deferral,
@@ -210,19 +213,47 @@ def _create_fuel_duty_rise_deferral() -> Reform:
 # =============================================================================
 
 
-def _create_state_pension_income_tax_protection() -> Reform:
+# The design: "sole_income" follows the reporting of 26 October 2026 (BBC;
+# The Times): an allowance of the full new State Pension for pensioners
+# "wholly reliant on the state pension", about a million people, costing
+# about £200m a year by 2030. "tapered", the design modelled until then,
+# gives the allowance to everyone over State Pension age and withdraws it
+# £1 for £1 of income above it. A large other_income_limit in the
+# sole-income module gives it to every pensioner, untapered.
+STATE_PENSION_PROTECTION_DESIGN = "sole_income"
+STATE_PENSION_PROTECTION_DESIGNS = {
+    "sole_income": (
+        state_pension_only_income_tax_allowance,
+        "Candidate measure. From 6 April 2027, people over State Pension "
+        "age whose only income is the State Pension (savings interest "
+        "aside) get an income tax allowance equal to the full new State "
+        "Pension (rounded up to the pound: £13,037 in 2027-28), rising with "
+        "it. Someone whose only income is the full new State Pension pays "
+        "no income tax; £1 of other income takes the allowance away.",
+    ),
+    "tapered": (
+        state_pension_income_tax_allowance,
+        "Candidate measure. From 6 April 2027, people over State Pension "
+        "age get an income tax allowance equal to the full new State "
+        "Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 "
+        "for £1 of income above it, down to the standard personal "
+        "allowance. Someone whose only income is the full new State "
+        "Pension pays no income tax.",
+    ),
+}
+
+
+def _create_state_pension_income_tax_protection(
+    design: str = None,
+) -> Reform:
+    modifier, description = STATE_PENSION_PROTECTION_DESIGNS[
+        design or STATE_PENSION_PROTECTION_DESIGN
+    ]
     return Reform(
         id=STATE_PENSION_ALLOWANCE_ID,
         name="State Pension income tax protection",
-        description=(
-            "Candidate measure. From 6 April 2027, people over State Pension "
-            "age get an income tax allowance equal to the full new State "
-            "Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 "
-            "for £1 of income above it, down to the standard personal "
-            "allowance. Someone whose only income is the full new State "
-            "Pension pays no income tax."
-        ),
-        simulation_modifier=state_pension_income_tax_allowance,
+        description=description,
+        simulation_modifier=modifier,
         # The allowance moves taxable income, so the capital gains rate.
         parameter_changes=static_capital_gains(),
     )
@@ -417,6 +448,11 @@ def _create_plan_2_threshold_unfreeze() -> Reform:
 # =============================================================================
 
 AUTUMN_BUDGET_2026_COMBINED_ID = "autumn_budget_2026_combined"
+# The seven measures kept for the package (Vahid, 27 October 2026); the
+# Business Asset Disposal Relief cut (``BADR_ID``) and the employer NI
+# relief for under-25s (``EMPLOYER_NI_ID``) are withdrawn, so neither is in
+# the package nor in the registry (``_MEASURE_FACTORIES``): no default
+# command runs or publishes them. Their factories stay below, unregistered.
 # The measures the combined reform brings together, by id. The combined
 # reform is simulated whole, so this list does not change what it does; it
 # names its parts, so results by area can check it as a package of them.
@@ -425,9 +461,7 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
     STATE_PENSION_ALLOWANCE_ID,
     WARM_HOME_DISCOUNT_ID,
     ELECTRICITY_VAT_ID,
-    EMPLOYER_NI_ID,
     THRESHOLD_FREEZE_ID,
-    BADR_ID,
     FUEL_VAT_ID,
     PLAN_2_ID,
 )
@@ -437,9 +471,7 @@ _MEASURE_FACTORIES = (
     _create_state_pension_income_tax_protection,
     _create_warm_home_discount_top_up,
     _create_domestic_electricity_zero_vat,
-    _create_employer_ni_relief_under_25s,
     _create_threshold_freeze_2031_32,
-    _create_badr_lifetime_limit_cut,
     _create_road_fuel_vat_cut,
     _create_plan_2_threshold_unfreeze,
 )
@@ -462,7 +494,7 @@ def _create_combined_autumn_budget_reform(members: list[Reform]) -> Reform:
         id=AUTUMN_BUDGET_2026_COMBINED_ID,
         name="Autumn Budget 2026 candidates (combined)",
         description=(
-            "All nine candidate measures simulated together: "
+            "All seven candidate measures simulated together: "
             + ", ".join(member.name for member in members)
             + ". Shows the package's impact with interactions."
         ),
@@ -502,7 +534,7 @@ def _get_reform_lookup() -> dict[str, Reform]:
 
 
 def get_autumn_budget_2026_reforms() -> list[Reform]:
-    """The combined package, then the nine candidate measures."""
+    """The combined package, then the seven candidate measures."""
     return _get_autumn_budget_2026_reforms()
 
 

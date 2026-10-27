@@ -118,7 +118,7 @@ describe("ConstituencyMap on Budget day", () => {
     expect(container.querySelector(".map-title-focus")).toHaveTextContent("2 child limit repeal");
     // The flat measure is not offered, so there is nothing to pick between
     fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
-    expect(screen.queryByRole("radiogroup", { name: "Measure" })).toBeNull();
+    expect(screen.queryByRole("radiogroup", { name: "Policy" })).toBeNull();
   });
 
   it("draws a measure that moves no seat as no change and withheld, never as a figure", async () => {

@@ -155,3 +155,14 @@ describe("net income's layers", () => {
     expect(layerLegendItems(layersInUse(rows)).map((item) => item.label)).toContain("Child Benefit and its charge");
   });
 });
+
+describe("the change view's y axis", () => {
+  it("keeps a +£110 change and its You dot inside the plot, with a tick above it", async () => {
+    const { ticksToDomain } = await import("./EarningsChart");
+    const { divergingAxis } = await import("../../utils/chartTheme");
+    const ticks = ticksToDomain(divergingAxis([110, -110], { pad: 0.1 }));
+    expect(ticks[ticks.length - 1]).toBeGreaterThanOrEqual(121);
+    expect(ticks[0]).toBeLessThanOrEqual(-121);
+    expect(ticks).toContain(0);
+  });
+});

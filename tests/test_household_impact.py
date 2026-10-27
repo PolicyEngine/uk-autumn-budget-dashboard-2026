@@ -563,7 +563,7 @@ def test_each_measure_matches_the_national_route(measure):
 def test_every_modelled_measure_together_matches_the_national_route(year):
     """Differential: the measures merged into one pair of sides give the
     national route's combined run, interactions included."""
-    measures = sorted([*MOVED_BY, "badr_lifetime_limit_cut"])
+    measures = sorted(MOVED_BY)
     answers = dataclasses.replace(EVERYTHING, salary_year=year)
     result = calculate(answers, measures, year)
     before, after = national_route(answers, measures, year)
@@ -587,9 +587,8 @@ def test_a_30k_single_renter_in_2028():
     """£30,000, single, renting, 2028-29:
 
     - threshold freeze to 2031-32: nothing in 2028, exactly £0.
-    - Business Asset Disposal Relief: no gains, exactly £0.
     """
-    measures = ["threshold_freeze_2031_32", "badr_lifetime_limit_cut"]
+    measures = ["threshold_freeze_2031_32"]
     result = calculate(SINGLE_RENTER, measures, 2028, include=("by_policy",))
     by_measure = changes_by_measure(result)
     for measure in measures:
@@ -860,7 +859,7 @@ def test_a_pensioner_gets_the_full_new_state_pension_not_pension_credit():
         savings_interest_income=2_000,
         dividend_income=1_000,
     )
-    result = calculate(answers, ["badr_lifetime_limit_cut"])
+    result = calculate(answers, ["threshold_freeze_2031_32"])
     full = household_impact.full_new_state_pension(YEAR)
     assert programme(result, "state_pension")["baseline"] == pytest.approx(
         full, abs=0.01
@@ -877,7 +876,7 @@ def test_a_pensioner_gets_the_full_new_state_pension_not_pension_credit():
     assert programme(result, "income_tax")["baseline"] > 0
     entered = calculate(
         Answers(**{**vars(answers), "state_pension": 9_000}),
-        ["badr_lifetime_limit_cut"],
+        ["threshold_freeze_2031_32"],
     )
     assert programme(entered, "state_pension")["baseline"] == (
         pytest.approx(9_000, abs=0.01)
@@ -1292,8 +1291,11 @@ def _rows_add_up(result):
 def test_a_private_pension_is_income_the_qa_pensioner_couple():
     """The QA's pensioner couple (70 and 68, the full new State Pension
     each) with a £10,000 private pension: £10,000 less £2,000 basic-rate
-    tax on top of their £25,907.11, as an independent policyengine-uk run
-    and the public API give: £33,907.11."""
+    tax on top of their £25,907.16, as an independent policyengine-uk
+    2.151.0 run gives: £33,907.16. (policyengine-uk 2.132.6 gave £33,907.11:
+    its expected_sdlt added the property sale rate, 0.045, to every
+    household's stamp duty as pounds. From 2.151.0 it is the household's
+    own stamp duty, nil here.)"""
     answers = household_impact.HouseholdAnswers(
         age=70,
         employment_income=0,
@@ -1308,7 +1310,7 @@ def test_a_private_pension_is_income_the_qa_pensioner_couple():
     result = household_impact.calculate_household_impact(
         answers, household_impact.measure_ids(), 2027, include=()
     )
-    assert result["net_income"]["baseline"] == pytest.approx(33_907.11)
+    assert result["net_income"]["baseline"] == pytest.approx(33_907.16)
     assert _programme(result, "private_pension_income")["baseline"] == 10_000
     assert _programme(result, "other_income")["baseline"] == 0
     _rows_add_up(result)
@@ -1664,12 +1666,10 @@ def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
 
     household_impact.clear_runs()
     monkeypatch.setattr(household_impact, "run_scenario", run_scenario)
-    # In 2029 the freeze (from 2031-32) and the employer NI relief (an
-    # employer cost) cannot move the household; Plan 2 can, for a Plan 2
-    # borrower.
+    # In 2029 the freeze (from 2031-32) cannot move the household; Plan 2
+    # can, for a Plan 2 borrower.
     measures = [
         "threshold_freeze_2031_32",
-        "employer_ni_relief_under_25s",
         "plan_2_threshold_unfreeze",
     ]
     sides = household_impact.measure_sides(measures)
@@ -1681,9 +1681,8 @@ def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
         sides.singles["plan_2_threshold_unfreeze"],
     ]
     by_id = changes_by_measure(result)
-    for id_ in ("threshold_freeze_2031_32", "employer_ni_relief_under_25s"):
-        assert by_id[id_]["change"] == 0
-        assert by_id[id_]["status"] == "not_affected"
+    assert by_id["threshold_freeze_2031_32"]["change"] == 0
+    assert by_id["threshold_freeze_2031_32"]["status"] == "not_affected"
     assert by_id["plan_2_threshold_unfreeze"]["status"] == "affected"
     household_impact.clear_runs()
 

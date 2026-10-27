@@ -77,6 +77,10 @@ MAX_CONTAINERS = int(os.environ.get("HOUSEHOLD_MODAL_MAX_CONTAINERS", "40"))
 # first run; a test app has no schedule and keeps it.
 MIN_CONTAINERS = int(os.environ.get("HOUSEHOLD_MODAL_MIN_CONTAINERS", "0"))
 SCALEDOWN_SECONDS = 120
+# How many requests one Web container takes at once (Modal's
+# ``max_inputs``), and so the route's own limiter there. A request on Modal
+# waits on its runs' containers, using little of the Web container's CPU.
+WEB_INPUTS = int(os.environ.get("HOUSEHOLD_MODAL_WEB_INPUTS", "16"))
 # Memory snapshots (on by default): a container's start-up (the engine's
 # import and one run of every side, so its parameter caches are built) is
 # done once, when the snapshot is taken, and each later cold start restores
@@ -90,6 +94,7 @@ DEPLOY_SETTINGS = {
     "HOUSEHOLD_MODAL_MAX_CONTAINERS": str(MAX_CONTAINERS),
     "HOUSEHOLD_MODAL_SNAPSHOT": "1" if SNAPSHOT else "0",
     "HOUSEHOLD_MODAL_CPU": str(CPU),
+    "HOUSEHOLD_MODAL_WEB_INPUTS": str(WEB_INPUTS),
 }
 
 from uk_budget_data.household_runs import (  # noqa: E402
@@ -134,6 +139,12 @@ def build_image() -> modal.Image:
                 "OMP_NUM_THREADS": "1",
                 "HOUSEHOLD_RUNNER": "modal",
                 "HOUSEHOLD_WORKERS": "1",
+                # The Web container's household requests at once
+                # (api.household_request_limit), equal to its inputs at
+                # once (WEB_INPUTS). Its runs are in other containers, so a
+                # request here only waits on them; at 4, five visitors at
+                # once queued up to 13 s for a slot (27 October 2026).
+                "HOUSEHOLD_CONCURRENT_REQUESTS": str(WEB_INPUTS),
                 # The checkout's own commit, or none if the files copied
                 # below differ from it: the page uses this service's
                 # breakdowns only under a headline from the same commit
@@ -254,7 +265,7 @@ def fan_out(jobs: list) -> list:
     scaledown_window=SCALEDOWN_SECONDS,
     enable_memory_snapshot=SNAPSHOT,
 )
-@modal.concurrent(max_inputs=8)
+@modal.concurrent(max_inputs=WEB_INPUTS)
 class Web:
     """The same API as on Cloud Run, its runs fanned out (``fan_out``). A
     class, so the API's import (the engine with it) is in the snapshot."""

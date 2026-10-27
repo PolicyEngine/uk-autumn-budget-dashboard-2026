@@ -17,7 +17,7 @@ import contract from "./contract.json";
 import { isDisplayable, measureAvailability } from "./manifest";
 
 export const REASONS = {
-  noSelection: "No measures selected",
+  noSelection: "No policies selected",
   notPublished: "Not yet published",
   unsupportedYear: "Beyond the dataset's projected years",
   yearNotPublished: "Not published for this year",

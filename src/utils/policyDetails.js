@@ -44,7 +44,7 @@ export const POLICY_DETAILS = [
     sentence: "deferring the fuel duty rises",
     name: "Fuel duty rises deferred",
     description: "Defer the January and March 2027 fuel duty rises",
-    writtenFor: "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+    writtenFor: "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p, so that rise is never made up. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
     summary:
       "Keeps fuel duty at 52.95p a litre until September 2027, then restores the 5p in two steps by December 2027.",
     starts: "January 2027",
@@ -56,7 +56,7 @@ export const POLICY_DETAILS = [
     ],
     stepsLabel: "5p restored",
     details:
-      "Assumes 3p back on 1 September and 2p on 1 December 2027, then RPI from April 2028 on 57.95p. The April 2027 RPI rise is skipped and never made up, so duty stays about 2p a litre below current law and the measure costs revenue in every later year. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel bought for vans, lorries and business use of cars is not modelled, so the revenue figure covers households' own purchases only.",
+      "Assumes 3p back on 1 September and 2p on 1 December 2027, then RPI from April 2028 on 57.95p. The April 2027 RPI rise is skipped and never made up, so duty stays about 2p a litre below current law and the policy costs revenue in every later year. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel bought for vans, lorries and business use of cars is not modelled, so the revenue figure covers households' own purchases only.",
     source: {
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
@@ -69,14 +69,14 @@ export const POLICY_DETAILS = [
     name: "State Pension income tax protection",
     description:
       "No income tax for pensioners whose only income is the State Pension",
-    writtenFor: "Candidate measure. From 6 April 2027, people over State Pension age get an income tax allowance equal to the full new State Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 for £1 of income above it, down to the standard personal allowance. Someone whose only income is the full new State Pension pays no income tax.",
+    writtenFor: "Candidate measure. From 6 April 2027, people over State Pension age whose only income is the State Pension (savings interest aside) get an income tax allowance equal to the full new State Pension (rounded up to the pound: £13,037 in 2027-28), rising with it. Someone whose only income is the full new State Pension pays no income tax; £1 of other income takes the allowance away.",
     summary:
       "People whose only income is the full new State Pension pay no income tax.",
     starts: "April 2027",
     type: "Income tax",
     inForce: { from: "2027-04" },
     details:
-      "Modelled as an allowance for people over State Pension age equal to the full new State Pension (£13,040 in 2027-28), withdrawn £1 for £1 of other income down to the standard personal allowance. The mechanism is an assumption made before the Budget.",
+      "Modelled as an allowance equal to the full new State Pension (£13,037 in 2027-28, rising with it) for people over State Pension age whose only income is the State Pension, savings interest aside. Any other income, such as a private pension, takes the allowance away. Based on reporting on 26 October 2026; the mechanism is an assumption made before the Budget.",
   },
   {
     id: "warm_home_discount_top_up",
@@ -133,7 +133,7 @@ export const POLICY_DETAILS = [
     type: "National Insurance",
     inForce: { from: "2027-04" },
     details:
-      "Extends the existing under-21 relief to ages 21 to 24, up to the upper earnings limit. Wages are held fixed, so the measure changes revenue but not household incomes, and shows no change in the household charts.",
+      "Extends the existing under-21 relief to ages 21 to 24, up to the upper earnings limit. Wages are held fixed, so the policy changes revenue but not household incomes, and shows no change in the household charts.",
   },
   {
     id: "threshold_freeze_2031_32",

@@ -495,13 +495,16 @@ def run_generate(parsed: argparse.Namespace) -> int:
                     f"{len(combined_sets)}"
                 )
             else:
+                # Refused, not warned: without them the package rows are the
+                # registry's autumn_budget_2026_combined, which the page
+                # never reads; it reads a package only under the manifest's
+                # combined key (#228).
                 console.print(
-                    "[yellow]No --published-package or --combined: the "
-                    "package rows are the registry's "
-                    "autumn_budget_2026_combined (every candidate), which "
-                    "the page never reads. It reads a package only under "
-                    "the manifest's combined key (#228).[/yellow]"
+                    f"[red]Error: --only {parsed.only} writes the package's "
+                    "rows into a public file: pass --published-package (the "
+                    "manifest's package) or --combined ID... (#228)[/red]"
                 )
+                return 1
         # With --combined alone the measures are the sets' members
         measures = (
             len(reforms)

@@ -1,8 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import App, { POLICIES_INACTIVE, VIEWS, YEAR_INACTIVE, oldOutlookBaseline, opensYoungPeople, viewFromLocation } from "./App";
+import App, { POLICIES_INACTIVE, VIEWS, YEAR_INACTIVE, oldOutlookBaseline, opensYoungPeople, viewFromLocation, preloadAllViews } from "./App";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture";
 import { CANDIDATE_PROVISIONAL_LABEL } from "./utils/publication/manifest";
+
+// Every view's code is in before a test renders it (App.jsx lazyView)
+beforeAll(preloadAllViews, 60_000);
 
 beforeEach(() => {
   const original = fixtureJson("manifest.json");
@@ -180,7 +183,7 @@ describe("the view tabs", () => {
     await renderApp();
     // Population impact neither repeats the cards nor points to them
     expect(screen.queryByText("About selected policies")).toBeNull();
-    expect(screen.queryByText(/What each measure does is on/)).toBeNull();
+    expect(screen.queryByText(/What each policy does is on/)).toBeNull();
     fireEvent.click(screen.getByRole("tab", { name: "Policies" }));
     const panel = screen.getByRole("tabpanel", { name: "Policies" });
     // The fixture publishes one measure (beforeEach)
@@ -364,7 +367,7 @@ describe("the view tabs", () => {
     for (const name of [
       "At a glance",
       "Data",
-      "Model and measures",
+      "Model and policies",
       "Population impact",
       "Household impact",
       "Pre-measures forecast",
@@ -389,7 +392,7 @@ describe("the view tabs", () => {
     // Said once on the page
     for (const phrase of [
       /dominance and p% rules/g,
-      /leave out interactions between measures/g,
+      /leave out interactions between policies/g,
     ]) {
       expect(container.textContent.match(phrase)).toHaveLength(1);
     }

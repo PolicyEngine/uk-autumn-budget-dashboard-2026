@@ -16,8 +16,8 @@ function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemov
   if (!catalogue.manifest || unavailable.length) {
     const names = unavailable.map((id) => catalogue.byId.get(id)?.name ?? id);
     return (
-      <UnavailableNotice reason="Household impact is unavailable for the selected measures">
-        <p>{names.join(", ") || "No verified Budget measures are published yet."}</p>
+      <UnavailableNotice reason="Household impact is unavailable for the selected policies">
+        <p>{names.join(", ") || "No verified Budget policies are published yet."}</p>
         {catalogue.manifest && onRemoveUnavailable && (
           <RemoveUnavailable names={names} onRemove={() => onRemoveUnavailable(unavailable)} />
         )}
@@ -29,7 +29,7 @@ function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemov
   const expectedEngine = publishedEngine(catalogue, selectedPolicies);
   if (selectedPolicies.length && !expectedEngine) {
     return (
-      <UnavailableNotice reason="Household impact is unavailable for the selected measures">
+      <UnavailableNotice reason="Household impact is unavailable for the selected policies">
         <p>Their published figures do not name one model version for the household calculator to match.</p>
       </UnavailableNotice>
     );

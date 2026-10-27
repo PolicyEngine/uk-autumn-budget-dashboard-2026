@@ -54,7 +54,7 @@ function trendRows(projection, startYear, end) {
 
 /** The info tip: the measure, and that the levels sit below official figures. */
 const tileInfo = (measure) =>
-  `${povertyDefinition(measure)} The tile leads with the change: the model's levels sit below DWP's official rates, so the levels are model estimates. Official rates are on the Poverty over time card.`;
+  `${povertyDefinition(measure)} The tile leads with the change, as the model's levels sit below DWP's official rates (shown on the Poverty over time card).`;
 
 export default function PovertyTiles({ data }) {
   const years = rangeYears(data);

@@ -83,7 +83,7 @@ export function ReasonList({ items, icon = false }) {
 }
 
 /**
- * One folded topic of a section ("More info", "Household scatter"): the
+ * One folded topic of a section ("The dataset", "Household scatter"): the
  * shared Disclosure, closed until asked for, with a one-line preview of
  * what is inside. Its content stays in the page while closed, so a link
  * to an id inside it (a term, a heading) finds it and opens it.

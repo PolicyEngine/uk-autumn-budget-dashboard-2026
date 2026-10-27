@@ -115,7 +115,7 @@ describe("the page's figures are the household API's own (real answers, 2027-28)
       });
       // The headline figure is the API's net income change, in whole pounds
       await waitFor(() =>
-        expect(card.querySelector(".result-value").textContent).toBe(
+        expect(card.querySelector(".result-change-value").textContent).toBe(
           change === 0 ? "No change" : `${change > 0 ? "+" : "−"}${pounds(change)}`,
         ),
       );
@@ -128,7 +128,7 @@ describe("the page's figures are the household API's own (real answers, 2027-28)
       const steps = [...card.querySelectorAll(".waterfall-row.is-step")];
       const moving = answer.by_policy.measures.filter((m) => m.status !== "not_affected" && Math.round(m.change) !== 0);
       expect(steps.map((step) => step.dataset.row).sort()).toEqual(moving.map((m) => m.id).sort());
-      const sum = steps.map((step) => parse(step.querySelectorAll("text")[1].textContent)).reduce((a, b) => a + b, 0);
+      const sum = steps.map((step) => parse(step.querySelector(".waterfall-value").textContent)).reduce((a, b) => a + b, 0);
       expect(sum).toBe(change);
       // The marginal rate at your salary is the API's own point
       const own = answer.sweep.own_point;

@@ -143,12 +143,14 @@
 }
 
 .publication-tooltip {
-  padding: 8px 10px;
-  background: var(--c-surface);
-  border: 1px solid var(--c-grid);
-  border-radius: 4px;
-  font-size: var(--fs-small);
-  color: var(--pe-gray-700);
+  padding: var(--tip-padding);
+  background: var(--tip-bg);
+  border: var(--tip-border);
+  border-radius: var(--tip-radius);
+  box-shadow: var(--tip-shadow);
+  font-size: var(--tip-font-size);
+  line-height: var(--tip-line-height);
+  color: var(--tip-color);
 }
 
 .publication-tooltip p {

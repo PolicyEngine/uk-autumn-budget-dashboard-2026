@@ -125,7 +125,36 @@ describe("what the figures are with", () => {
     const figure = document.querySelector(".household-card-figure");
     fireEvent.mouseEnter(figure);
     expect(document.getElementById(figure.getAttribute("aria-describedby"))).toHaveTextContent(
-      "Change in net income in 2027-28 with the measures the calculator supports",
+      "Change in net income in 2027-28 with the policies the calculator supports",
     );
+  });
+});
+
+// A chosen card, Your household or a chip shows it by its fill and border
+// and aria-pressed / aria-selected only: never a tick badge.
+describe("the chosen household", () => {
+  const ticks = () => document.querySelectorAll(".lucide-check, .household-card-check");
+  const first = HOUSEHOLD_EXAMPLES[0];
+
+  it.each([
+    ["an example card", { value: first.id, yoursSelected: false }],
+    ["Your household", { value: null, yoursSelected: true }],
+  ])("shows no tick on %s, folded or not", (_, props) => {
+    for (const chosen of [false, true]) {
+      const { unmount } = render(
+        <HouseholdCards examples={HOUSEHOLD_EXAMPLES} formOpen={false} formId="f" onYours={() => {}} onChoose={() => {}} presets={null} yoursChange={null} year={2029} chosen={chosen} {...props} />,
+      );
+      expect(ticks()).toHaveLength(0);
+      unmount();
+    }
+  });
+
+  it("is still pressed for assistive tech", () => {
+    render(
+      <HouseholdCards examples={HOUSEHOLD_EXAMPLES} value={first.id} formOpen={false} formId="f" onYours={() => {}} onChoose={() => {}} presets={null} yoursChange={null} year={2029} />,
+    );
+    const card = screen.getByRole("button", { name: new RegExp(`^${first.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`) });
+    expect(card).toHaveAttribute("aria-pressed", "true");
+    expect(card.closest(".household-card")).toHaveClass("is-selected");
   });
 });

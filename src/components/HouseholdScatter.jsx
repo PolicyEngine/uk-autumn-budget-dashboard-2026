@@ -8,7 +8,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { CHART_LOGO } from "../utils/chartLogo";
+import { CHART_LOGO, PolicyEngineLogo } from "../utils/chartLogo";
 import { SCATTER_BINS, changeKind } from "../utils/publication/scatter";
 import { fiscalYearLabel } from "../utils/publication/format";
 import {
@@ -22,12 +22,13 @@ import {
   scatterCsv,
   scatterView,
 } from "../utils/householdScatter";
-import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS, noHouseholdChange } from "../utils/chartTheme";
+import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS, noHouseholdChange, chartMargin } from "../utils/chartTheme";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { colourFor } from "./publication/BinnedHouseholdScatter";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartMoreInfo from "./ChartMoreInfo";
+import { ViewportBox, pointIn } from "./ViewportTooltip";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import NoBreakYear from "./NoBreakYear";
@@ -60,10 +61,14 @@ const DOT_OPACITY = 0.51;
 const GRID = { strokeDasharray: "3 3", stroke: CHART_COLOURS.grid };
 const TICK = { fontSize: 11, fill: CHART_COLOURS.tick };
 const AXIS_TITLE = { fontSize: 12, fill: CHART_COLOURS.text };
-// Below the side-by-side layout the plot keeps the 2025 chart's height; in
-// it, the plot fills the rows the map beside it uses for its controls, map
-// and colour scale (see HouseholdScatterTemplate.css).
+// Below the side-by-side layout the plot keeps the 2025 chart's height;
+// beside the income decile card it takes that card's plot height (see
+// HouseholdScatterTemplate.css).
 const STACKED_HEIGHT = 400;
+// Room under the axis for the logo, drawn in the SVG as the decile card
+// beside it draws its own (WaterfallChart's LOGO_ROOM), so the two plots,
+// axis titles and logos sit level
+export const LOGO_ROOM = CHART_LOGO.height + CHART_LOGO.padding + 6;
 
 // The dots' colours, as colourFor draws them; the key under the plot
 // carries them. Groups beyond the axis sit at its edge, coloured alike.
@@ -90,6 +95,22 @@ const roundedThousands = (value) => number(Math.max(1000, Math.round(value / 100
 const describe = (perDot) =>
   `Each dot is about ${roundedThousands(perDot)} households: right of the line they gain, left they lose.`;
 
+// The same line on the card, with the gain and loss colours as dots
+// beside their words: the chart's key, so no key row under the plot
+const KeyWord = ({ color, children }) => (
+  <span className="scatter-key-word">
+    <span className="scatter-legend-dot" style={{ background: color }} aria-hidden="true" />
+    {children}
+  </span>
+);
+const describeWithKey = (perDot) => (
+  <>
+    Each dot is about {roundedThousands(perDot)} households: right of the line they{" "}
+    <KeyWord color={CHART_COLOURS.gain}>gain</KeyWord>, left they{" "}
+    <KeyWord color={CHART_COLOURS.loss}>lose</KeyWord>.
+  </>
+);
+
 /**
  * The card's "About this chart": how to read a dot and the axes. The
  * subtitle already gives the households per dot and the side of the line
@@ -100,7 +121,7 @@ function ScatterMoreInfo({ basisLabel }) {
     <ChartMoreInfo
       info={{
         how: [
-          `Each dot is a group in a ${pounds(SCATTER_BINS.income_band_width)} band of ${basisLabel} income before the measures, fixed across years.`,
+          `Each dot is a group in a ${pounds(SCATTER_BINS.income_band_width)} band of ${basisLabel} income before the policies, fixed across years.`,
           "So a dot moves only sideways when the year changes, and its row stays the same households.",
           `Change axis: 1st to 99th percentile across years, capped at ±${pounds(CHANGE_AXIS_DOMAIN[1])}; larger changes sit at its edge.`,
           "No change (under £1 either way) is an unfilled ring on £0.",
@@ -330,7 +351,6 @@ function youSentence({ perDot, you, points, basisLabel, incomeMatches }) {
 function GroupTooltip({ hover, basisLabel, yearLabel }) {
   if (!hover) return null;
   const point = hover.dot;
-  const plotWidth = hover.width ?? 0;
   const incomeTop = Math.min(
     point.incomeBand + SCATTER_BINS.income_band_width,
     SCATTER_BINS.income_max,
@@ -340,17 +360,9 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
     kind === "zero"
       ? "no change"
       : `a change of ${pounds(point.changeBand)} to ${pounds(point.changeBandUpper)}`;
-  const flip = plotWidth > 0 && hover.x > plotWidth / 2;
   return (
-    <div
-      className="household-scatter-tooltip"
-      role="tooltip"
-      style={{
-        top: hover.y + 10,
-        left: flip ? undefined : hover.x + 12,
-        right: flip ? plotWidth - hover.x + 12 : undefined,
-      }}
-    >
+    <ViewportBox locate={(probe) => pointIn(probe, hover.x, hover.y)} offset={12}>
+    <div className="household-scatter-tooltip">
       <p>
         In {yearLabel}, about <strong>{number(point.households)} households</strong> with{" "}
         {basisLabel} income{" "}
@@ -361,6 +373,7 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
         {point.clamped ? " Beyond the axis range, so drawn at its edge." : ""}
       </p>
     </div>
+    </ViewportBox>
   );
 }
 
@@ -512,9 +525,16 @@ function HouseholdScatter({
     // The download changes with what it describes, not with every render
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onDownload, ready, view, description, chartTitle, exportName]);
-  const incomeTitle = basisLabel
-    ? `Household net income, ${basisLabel} (£k)`
-    : "Household net income (£k)";
+  // Households keep their basis-year band in every year (the y axis does
+  // not move with the year), so the title names no year; About this chart
+  // and the tooltip give the basis year
+  const incomeTitle = "Household net income before the policies (£k)";
+  // The key: in the sentence, with the logo in the SVG as on the decile
+  // card; with the reader's household, a key row under the plot and the
+  // logo below it. A note instead of a plot keeps the logo row.
+  const keyRow = ready && !nothingChanges && Boolean(youShown);
+  const svgLogo = !embedded && !youShown;
+  const htmlLogo = !embedded && (Boolean(youShown) || nothingChanges);
 
   // Beside a household's result, a selection the chart is not published
   // for gets the reason in a line, not an empty plot
@@ -590,7 +610,7 @@ function HouseholdScatter({
               </span>
             </h3>
             <p className="chart-description">
-              {description}
+              {ready && !youShown && !nothingChanges ? describeWithKey(householdsPerDot(view.basisPoints)) : description}
               {descriptionLink && <> {descriptionLink}</>}
             </p>
           </div>
@@ -606,8 +626,8 @@ function HouseholdScatter({
         <div className="chart-controls household-scatter-controls">
           <PillSelect
             variant="light"
-            name="Measure shown"
-            prefix="Measure"
+            name="Policy shown"
+            prefix="Policy"
             value={view.reform}
             onChange={setFocusId}
             options={focus.options.map((id) => ({ value: id, label: focusName(id) }))}
@@ -624,7 +644,14 @@ function HouseholdScatter({
             </div>
           ) : (
           <ResponsiveContainer width="100%" height="100%" minHeight={STACKED_HEIGHT / 2}>
-            <ScatterChart margin={{ top: 6, right: narrow ? 22 : 20, left: 0, bottom: 0 }}>
+            <ScatterChart
+              margin={{
+                top: chartMargin(narrow).top,
+                right: narrow ? 22 : 20,
+                left: 0,
+                bottom: svgLogo ? LOGO_ROOM : 0,
+              }}
+            >
               <CartesianGrid {...GRID} />
               <XAxis
                 type="number"
@@ -640,7 +667,7 @@ function HouseholdScatter({
                 label={{
                   value: "Net income change (£ a year)",
                   position: "insideBottom",
-                  offset: 4,
+                  offset: 2,
                   style: AXIS_TITLE,
                 }}
               />
@@ -664,6 +691,7 @@ function HouseholdScatter({
                 />
               )}
               <Customized component={<ChartUnitLabel text={incomeTitle} />} />
+              {svgLogo && <Customized component={PolicyEngineLogo} />}
             </ScatterChart>
           </ResponsiveContainer>
           )}
@@ -687,7 +715,7 @@ function HouseholdScatter({
         )}
       </div>
 
-      {ready && !nothingChanges && (
+      {keyRow && (
         <ul className="scatter-legend chart-legend" aria-label="Key">
           {key.map((item) => (
             <li key={item.label}>
@@ -702,7 +730,7 @@ function HouseholdScatter({
         </ul>
       )}
 
-      {!embedded && (
+      {htmlLogo && (
         <div className="chart-logo">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={CHART_LOGO.href} alt="PolicyEngine" />

@@ -148,7 +148,9 @@ it("passes on the main API's own refusal of a measure its code doesn't register"
 });
 
 // m13: once a part refuses the whole answer, the other part's request is
-// stopped, wherever it was sent
+// stopped, wherever it was sent. With a detail URL the parts are also asked
+// for early, with the headline (#252), so the sweep can have two requests:
+// each is stopped
 it("stops the other part's request once a part takes the whole answer away", async () => {
   const sweeps = [];
   vi.stubGlobal("fetch", (url, init) => {
@@ -165,6 +167,6 @@ it("stops the other part's request once a part takes the whole answer away", asy
   const hook = renderHook(() => useHouseholdImpact(params));
   await waitFor(() => expect(hook.result.current.status).toBe("error"));
   expect(hook.result.current.error).toBeInstanceOf(DefinitionMismatchError);
-  expect(sweeps).toHaveLength(1);
-  await waitFor(() => expect(sweeps[0].aborted).toBe(true));
+  expect(sweeps.length).toBeGreaterThan(0);
+  await waitFor(() => expect(sweeps.every((signal) => signal.aborted)).toBe(true));
 });

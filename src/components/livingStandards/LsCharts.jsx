@@ -1,19 +1,6 @@
 import { useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Customized,
-  Line,
-  LineChart,
-  ReferenceArea,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, Customized, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Tooltip } from "../ViewportTooltip";
 import ChartTooltip, { TOOLTIP_PROPS } from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
 import SelectedYearShade from "../SelectedYearShade";
@@ -193,42 +180,56 @@ export function ChartRows({ plotRef, children, legendItems, height, legendNote =
 // Room right of the plot for direct labels, and their least spacing
 const END_LABEL_WIDTH = 150;
 const END_LABEL_GAP = 14;
+// How far (px) left of the latest end a line may stop and still be
+// labelled in the shared column
+const END_LABEL_COLUMN_REACH = 24;
 
 /**
  * Each line's name at its last point, right of the plot, nudged apart so
  * close lines' labels never overlap (a thin leader joins a moved label to
  * its line). Drawn in the chart's SVG, so the downloads carry it.
  */
-function EndLabels({ xAxisMap, yAxisMap, data, series, xKey }) {
+function EndLabels({ xAxisMap, yAxisMap, data, series, xKey, focusKey = null }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
   const labels = series
+    .filter((s) => s.endLabel !== false)
     .map((s) => {
       const last = [...data].reverse().find((d) => d[s.key] != null);
       if (!last) return null;
       const x = xAxis.scale(last[xKey]) + (xAxis.scale.bandwidth?.() ?? 0) / 2;
       const y = yAxis.scale(last[s.key]);
-      return { key: s.key, name: s.name, colour: s.colour, x, y, at: y };
+      return { key: s.key, group: s.forecastOf ?? s.key, name: s.endLabel ?? s.name, colour: s.colour, x, y, at: y };
     })
     .filter(Boolean)
     .sort((a, b) => a.y - b.y);
-  // Push each label down clear of the one above, then back up from the
-  // bottom so the stack stays inside the plot
-  for (let i = 1; i < labels.length; i += 1) labels[i].at = Math.max(labels[i].at, labels[i - 1].at + END_LABEL_GAP);
+  // One column of labels, right of the latest end: a line that stops a
+  // month early (earnings) is not labelled over a neighbour's leader. A
+  // line that ends well before it (a series with no forecast, beside
+  // forecast lines) is labelled at its own end, so no leader runs on
+  // across the forecast like a line of its own
+  const latestX = Math.max(...labels.map((l) => l.x));
+  for (const l of labels) l.col = latestX - l.x > END_LABEL_COLUMN_REACH ? l.x + 14 : latestX + 14;
+  // In each column, push each label down clear of the one above, then back
+  // up from the bottom so the stack stays inside the plot
   const bottom = yAxis.y + yAxis.height;
-  for (let i = labels.length - 1; i >= 0; i -= 1) {
-    const limit = i === labels.length - 1 ? bottom : labels[i + 1].at - END_LABEL_GAP;
-    labels[i].at = Math.min(labels[i].at, limit);
+  for (const col of new Set(labels.map((l) => l.col))) {
+    const stack = labels.filter((l) => l.col === col);
+    for (let i = 1; i < stack.length; i += 1) stack[i].at = Math.max(stack[i].at, stack[i - 1].at + END_LABEL_GAP);
+    for (let i = stack.length - 1; i >= 0; i -= 1) {
+      const limit = i === stack.length - 1 ? bottom : stack[i + 1].at - END_LABEL_GAP;
+      stack[i].at = Math.min(stack[i].at, limit);
+    }
   }
   return (
     <g className="ls-end-labels">
       {labels.map((l) => (
-        <g key={l.key}>
-          {Math.abs(l.at - l.y) > 2 && (
-            <path d={`M${l.x + 5},${l.y} L${l.x + 12},${l.at}`} stroke={l.colour} strokeWidth={1} fill="none" />
+        <g key={l.key} opacity={focusKey && focusKey !== l.group ? 0.25 : 1}>
+          {(Math.abs(l.at - l.y) > 2 || l.col - l.x > 16) && (
+            <path d={`M${l.x + 5},${l.y} L${l.col - 2},${l.at}`} stroke={l.colour} strokeWidth={1} fill="none" />
           )}
-          <text x={l.x + 14} y={l.at} dy="0.35em" fontSize={12} fontWeight={600} fill={l.colour}>
+          <text x={l.col} y={l.at} dy="0.35em" fontSize={12} fontWeight={600} fill={l.colour}>
             {l.name}
           </text>
         </g>
@@ -242,8 +243,12 @@ function EndLabels({ xAxisMap, yAxisMap, data, series, xKey }) {
  * unit above the plot, the shared tooltip, and the shared legend and the
  * logo in the card's rows below the plot.
  *
- * series: [{ key, name, colour, dash?, dashed?, hidden? }]. Hidden series
- * are not drawn.
+ * series: [{ key, name, colour, dash?, dashed?, hidden?, width?, endLabel? }].
+ * Hidden series are not drawn; width (default 2.5) emphasises a line;
+ * endLabel is a shorter name for the label at its end (false: none).
+ * forecastOf names the line a forecast continues: drawn lighter, it takes
+ * that line's focus and hover, and the tooltip leaves it out where the
+ * line itself has a value (the month they join). opacity lightens a line.
  */
 export function LsLineChart({
   data,
@@ -260,7 +265,9 @@ export function LsLineChart({
   // [from, to]: the years a card's sentence compares, shaded on the chart
   highlight = null,
   // Name each line at its end, right of the plot (wide screens only; the
-  // legend names them on a phone)
+  // legend names them on a phone). True, or { width, minWidth }: the room
+  // the labels take and the least chart width that shows them (short
+  // endLabel names fit a half-width card)
   endLabels = false,
   // False where the card's own chips (SeriesToggle) are the key
   legend = true,
@@ -268,18 +275,36 @@ export function LsLineChart({
   focusKey = null,
   // The card's line chips (SeriesToggle), drawn under the plot as its key
   keyContent = null,
+  // The x values to label, in place of every one (e.g. each January of a
+  // monthly series); labelled with xTickFormat, the tooltip with xFormat
+  xTickValues = null,
+  xTickFormat = xFormat,
+  // A dot at every point; false for long series (monthly data)
+  dots = true,
+  // (key|null) => void: hovering a line (a wide invisible band along it)
+  // names it, so the card can bring it forward as a chip does
+  onLineHover = null,
+  // { from, to, label }: the x values of a forecast period, shaded and
+  // labelled (e.g. "OBR forecast")
+  forecastRegion = null,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
   const visible = series.filter((s) => !s.hidden);
-  const labelled = endLabels && !narrow && width >= 560;
-  const margin = labelled ? { ...MARGIN, right: END_LABEL_WIDTH } : MARGIN;
+  // A forecast line's focus is its outturn line's
+  const groupOf = (s) => s.forecastOf ?? s.key;
+  const forecastOf = new Map(visible.filter((s) => s.forecastOf).map((s) => [s.key, s.forecastOf]));
+  const labelRoom = { width: END_LABEL_WIDTH, minWidth: 560, ...(typeof endLabels === "object" ? endLabels : {}) };
+  const labelled = Boolean(endLabels) && !narrow && width >= labelRoom.minWidth;
+  const margin = labelled ? { ...MARGIN, right: labelRoom.width } : MARGIN;
   // Rows key years by their start (2028) or as "2028-29"; match either
   const asKey = (fy) => (typeof data[0]?.[xKey] === "number" ? Number(String(fy).slice(0, 4)) : fy);
   const band = highlight ? highlight.map(asKey) : null;
   const shaded = band && data.some((d) => d[xKey] === band[0]) && data.some((d) => d[xKey] === band[1]);
   const yWidth = tickWidth(yTicks, yFormat);
-  const xTicks = xTicksFor({ width, data, xKey, yAxisWidth: yWidth, fiscal: xFormat === fyLabel, xFormat, base: baseYear });
+  const xTicks = xTickValues
+    ? { ticks: xTickValues, tickFormatter: xTickFormat, interval: 0 }
+    : xTicksFor({ width, data, xKey, yAxisWidth: yWidth, fiscal: xFormat === fyLabel, xFormat, base: baseYear });
 
   return (
     <ChartRows plotRef={ref} legendItems={lineLegendItems(visible)} height={plotHeight(narrow)} legend={legend} keyContent={keyContent}>
@@ -309,7 +334,19 @@ export function LsLineChart({
           />
           <Tooltip
             {...TOOLTIP_PROPS}
-            content={<ChartTooltip format={tooltipFormat} labelFormat={xFormat} grouped={false} showPlus={showPlus} />}
+            // The lines' hover bands (onLineHover) are not series to list
+            content={(props) => (
+              <ChartTooltip
+                {...props}
+                payload={props.payload?.filter(
+                  (p) => p.type !== "none" && !(forecastOf.has(p.dataKey) && p.payload?.[forecastOf.get(p.dataKey)] != null),
+                )}
+                format={tooltipFormat}
+                labelFormat={xFormat}
+                grouped={false}
+                showPlus={showPlus}
+              />
+            )}
           />
           {shaded && (
             <ReferenceArea
@@ -321,24 +358,53 @@ export function LsLineChart({
               ifOverflow="extendDomain"
             />
           )}
-          {visible.map((s) => (
+          {forecastRegion && data.some((d) => d[xKey] === forecastRegion.from) && (
+            <ReferenceArea
+              x1={forecastRegion.from}
+              x2={forecastRegion.to}
+              fill={CHART_COLOURS.mutedFill}
+              fillOpacity={0.8}
+              stroke="none"
+              label={{ value: forecastRegion.label, position: "insideTopLeft", offset: 6, fill: CHART_COLOURS.obrText, fontSize: 11, fontWeight: 600 }}
+            />
+          )}
+          {/* The focused line drawn last, over the others */}
+          {[...visible.filter((s) => groupOf(s) !== focusKey), ...visible.filter((s) => groupOf(s) === focusKey)].map((s) => (
             <Line
               key={s.key}
               type="monotone"
               dataKey={s.key}
               name={s.name}
               stroke={s.colour}
-              strokeWidth={focusKey === s.key ? 3.5 : 2.5}
-              strokeOpacity={focusKey && focusKey !== s.key ? 0.2 : 1}
+              strokeWidth={focusKey === groupOf(s) ? (s.width ?? 2.5) + 1 : s.width ?? 2.5}
+              strokeOpacity={(focusKey && focusKey !== groupOf(s) ? 0.2 : 1) * (s.opacity ?? 1)}
               strokeDasharray={dashOf(s)}
-              dot={{ r: 3, fill: s.colour, stroke: s.colour, strokeWidth: 1, fillOpacity: focusKey && focusKey !== s.key ? 0.2 : 1 }}
-              activeDot={{ r: 5 }}
+              dot={dots ? { r: 3, fill: s.colour, stroke: s.colour, strokeWidth: 1, fillOpacity: focusKey && focusKey !== groupOf(s) ? 0.2 : 1 } : false}
+              activeDot={{ r: dots ? 5 : 4 }}
               connectNulls={false}
               isAnimationActive={false}
             />
           ))}
+          {onLineHover &&
+            visible.map((s) => (
+              <Line
+                key={`${s.key}-hit`}
+                type="monotone"
+                dataKey={s.key}
+                stroke="transparent"
+                strokeWidth={14}
+                dot={false}
+                activeDot={false}
+                tooltipType="none"
+                legendType="none"
+                connectNulls={false}
+                isAnimationActive={false}
+                onMouseEnter={() => onLineHover(groupOf(s))}
+                onMouseLeave={() => onLineHover(null)}
+              />
+            ))}
           <Customized component={<ChartUnitLabel text={yLabel} horizontal />} />
-          {labelled && <Customized component={<EndLabels data={data} series={visible} xKey={xKey} />} />}
+          {labelled && <Customized component={<EndLabels data={data} series={visible} xKey={xKey} focusKey={focusKey} />} />}
         </LineChart>
       </ResponsiveContainer>
     </ChartRows>

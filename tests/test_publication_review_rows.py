@@ -36,6 +36,14 @@ from uk_budget_data.publication.artifacts import (
 )
 from uk_budget_data.publication.publish import approve, stage
 
+# A data limit in force: the PIP points thresholds (the purchase limits
+# these tests first used lifted at the a6299504 cut).
+PIP_POINTS = next(
+    limit for limit in DATA_LIMITS if limit.key == "pip_daily_living_points"
+)
+PIP_THRESHOLD = "gov.dwp.pip.daily_living.points_thresholds.enhanced"
+
+
 REPO = Path(__file__).resolve().parents[1]
 BUILD_CHECK = REPO / "scripts" / "check-public-files.mjs"
 COLUMNS_FILE = REPO / "scripts" / "disclosure_public_columns.json"
@@ -100,18 +108,12 @@ def base(tmp_path_factory):
         refs["gamma"] = world.write("gamma", {2027: 0.5, 2028: 0.6}, rate=0.25)
         world.reconcile(refs["gamma"])
         stage(manifest, refs["gamma"].path, provisional=True, **args)
-        surcharge = record(
-            DATA_LIMITS[0],
-            [
-                "gov.hmrc.stamp_duty.residential.purchase.additional"
-                ".rate[1].rate"
-            ],
-        )
+        points = record(PIP_POINTS, [PIP_THRESHOLD])
         refs[LIMITED_KEY] = world.write(
             LIMITED_KEY,
             {2027: 0.0, 2028: 0.0},
             rate=0.26,
-            data_limits=[surcharge],
+            data_limits=[points],
         )
         stage(manifest, refs[LIMITED_KEY].path, **args)
         members = []
@@ -819,7 +821,7 @@ def test_a_not_computable_receipt_listing_files_refuses():
             "key": LIMITED_KEY,
             "files": {"budgetary_impact.csv": "a" * 64},
             "digests": {"outputs_sha256": "b" * 64},
-            "data_limits": [{"key": "additional_dwelling_purchases"}],
+            "data_limits": [{"key": "pip_daily_living_points"}],
             "generated_at": "2026-10-23T12:00:00+00:00",
             "generator_argv": ["test"],
         },
@@ -834,7 +836,7 @@ def test_a_not_computable_receipt_listing_files_refuses():
         execution_identity_sha256="d" * 64,
         artifact_sha256=receipt_module.artifact_sha256(document),
         years=[2027],
-        data_limits=["additional_dwelling_purchases"],
+        data_limits=["pip_daily_living_points"],
         reason="r",
     )
     problems = rr._receipt_problems(
@@ -930,10 +932,7 @@ def test_a_displayed_receipt_recording_a_data_limit_refuses(base):
     """A data-limited artifact written with its tables, as before option
     (d), named by a displayed entry: no row attests figures the data can't
     support, whatever ``publish check`` would say."""
-    limit = record(
-        DATA_LIMITS[0],
-        ["gov.hmrc.stamp_duty.residential.purchase.additional.rate[1].rate"],
-    )
+    limit = record(PIP_POINTS, [PIP_THRESHOLD])
 
     def add_the_limit(document):
         document["dashboard"]["data_limits"] = [limit]

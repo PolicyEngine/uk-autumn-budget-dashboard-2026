@@ -47,6 +47,9 @@ from uk_budget_data.budget_measures.road_fuel_vat_cut import (
 from uk_budget_data.budget_measures.state_pension_income_tax_allowance import (
     state_pension_income_tax_allowance,
 )
+from uk_budget_data.budget_measures.state_pension_only_income_tax_allowance import (
+    state_pension_only_income_tax_allowance,
+)
 from uk_budget_data.budget_measures.warm_home_discount_top_up import (
     warm_home_discount_top_up,
 )
@@ -394,11 +397,40 @@ def _fuel_duty(reform) -> list[dict]:
 
 def _state_pension_allowance(reform) -> list[dict]:
     path = registry.PERSONAL_ALLOWANCE
-    values = constants(state_pension_income_tax_allowance)
+    modifier = reform.simulation_modifier
+    if modifier not in (
+        state_pension_income_tax_allowance,
+        state_pension_only_income_tax_allowance,
+    ):
+        raise ValueError(
+            "The State Pension allowance table knows the sole-income and "
+            f"tapered designs only, not {modifier.__name__}"
+        )
+    values = constants(modifier)
     allowance = {}
     for name, value in values.items():
-        if name.startswith("allowance_"):
+        if not name.startswith("allowance_"):
+            continue
+        if isinstance(value, dict):
             allowance.update({int(k): v for k, v in value.items()})
+        else:
+            allowance[int(name.removeprefix("allowance_"))] = value
+    if modifier is state_pension_only_income_tax_allowance:
+        note = (
+            "With the measure, only for people whose only income is the "
+            "State Pension"
+            + (
+                " (savings interest aside)"
+                if values["disregard_savings_interest"]
+                else ""
+            )
+            + "; any other income takes it away"
+        )
+    else:
+        note = (
+            f"With the measure, withdrawn £{values['taper_rate']:g} for "
+            "each £1 of income above it, down to the personal allowance"
+        )
     return [
         _row(
             "Income tax allowance over State Pension age",
@@ -409,14 +441,9 @@ def _state_pension_allowance(reform) -> list[dict]:
             ),
             _source(
                 _engine_source(path),
-                _modifier_source(
-                    state_pension_income_tax_allowance,
-                    "allowance_2027 to 2031",
-                ),
+                _modifier_source(modifier, "allowance_2027 to 2031"),
             ),
-            note="With the measure, withdrawn £"
-            f"{values['taper_rate']:g} for each £1 of income above it, down "
-            "to the personal allowance",
+            note=note,
         )
     ]
 

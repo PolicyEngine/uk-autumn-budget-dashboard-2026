@@ -1,22 +1,10 @@
-/** A reading caveat: a short visible line with an ⓘ, under a chart or a section. */
+import { Info } from "lucide-react";
+
+/** A reading caveat: a short visible line with the info icon (lucide's Info, as InfoTip), under a chart or a section. */
 function Note({ children }) {
   return (
     <p className="note">
-      <svg
-        width="13"
-        height="13"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="16" x2="12" y2="12" />
-        <line x1="12" y1="8" x2="12.01" y2="8" />
-      </svg>
+      <Info size={16} strokeWidth={1.8} aria-hidden="true" />
       <span>{children}</span>
     </p>
   );

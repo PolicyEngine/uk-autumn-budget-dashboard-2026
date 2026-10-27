@@ -109,6 +109,20 @@ function valueAt(points, income, key) {
  *   it (SingleYearResults' AcrossEarnings): { view, setView, hidden (component
  *   keys switched off), setHidden, hover: {income, card} | null, setHover }
  */
+// Headroom past the furthest value on each side of the y axis
+const Y_HEADROOM = 0.1;
+
+/** An axis's ticks, extended by its own step until they cover its domain. */
+export function ticksToDomain({ domain, ticks }) {
+  if (ticks.length < 2) return ticks;
+  const step = ticks[1] - ticks[0];
+  const out = [...ticks];
+  const clean = (v) => Math.round(v * 1e9) / 1e9 || 0;
+  while (out[0] > domain[0] + step * 1e-9) out.unshift(clean(out[0] - step));
+  while (out[out.length - 1] < domain[1] - step * 1e-9) out.push(clean(out[out.length - 1] + step));
+  return out;
+}
+
 export default function EarningsChart({ initialView = "after", sweep, salary, yearLabel, sync = null }) {
   const [ownView, setOwnView] = useState(initialView);
   const view = sync?.view ?? ownView;
@@ -129,7 +143,11 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
     () => [...hiddenParts("net", hiddenKeys), ...(hiddenKeys.includes("total") ? ["total"] : [])],
     [hiddenKeys],
   );
-  const [focus, setFocus] = useState(null);
+  // The chip hovered, shared with the marginal rate card when the two
+  // have one Show control (`sync.focus`)
+  const [ownFocus, setOwnFocus] = useState(null);
+  const focus = sync?.setFocus ? sync.focus : ownFocus;
+  const setFocus = sync?.setFocus ?? setOwnFocus;
   const width = measured > 0 ? measured : narrow ? 358 : 560;
   const title = `Household net income, ${yearLabel}`;
   // The file and image name the view shown
@@ -177,10 +195,24 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   // The change's axis: symmetric about £0 (gains above, losses below), so
   // a change that is the same at every salary reads as a band above zero,
   // not as a block filling the plot
-  const changeReach = Math.max(Math.abs(stack.top), Math.abs(stack.bottom), ...points.map((p) => Math.abs(p.change)), 1);
-  const yTicks = isChange
-    ? divergingAxis([changeReach, -changeReach]).ticks
-    : zeroBasedAxis(levelReach).ticks;
+  // Your own point is on the axis too, and every end has 10% headroom, so
+  // neither the area nor the "You" dot is cut at the plot's edge. The plot
+  // runs to the axis's domain, not its last tick (the domain can sit half a
+  // step past it).
+  const youAt = salary !== null ? valueAt(rows, salary, "total") : null;
+  const changeReach = Math.max(
+    Math.abs(stack.top),
+    Math.abs(stack.bottom),
+    ...points.map((p) => Math.abs(p.change)),
+    youAt == null ? 0 : Math.abs(youAt),
+    1,
+  );
+  const yAxis = isChange
+    ? divergingAxis([changeReach, -changeReach], { pad: Y_HEADROOM })
+    : zeroBasedAxis([...levelReach, youAt], { pad: Y_HEADROOM });
+  // Ticks out to both ends, so the top value is always labelled above
+  // the highest point (+£110 reads against a £150 tick, not a £100 one)
+  const yTicks = ticksToDomain(yAxis);
   const yLo = yTicks[0];
   const yHi = yTicks[yTicks.length - 1];
 
@@ -194,7 +226,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const y = (v) => top + plotH - ((v - yLo) / (yHi - yLo || 1)) * plotH;
 
   const youX = salary !== null && salary <= xMax ? x(salary) : null;
-  const youValue = salary !== null ? valueAt(rows, salary, "total") : null;
+  const youValue = youAt;
 
   const onMove = (event) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -324,7 +356,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             <span className="title-text">{title}</span>
           </h3>
           {/* One plain sentence at your salary; what the chart shows is in
-              More info */}
+              About this chart */}
           <p className="chart-description">{youSentence ?? description}</p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={viewTitle} />
@@ -522,7 +554,16 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
         </div>
       </div>
       <div className="single-year-legend chart-legend">
-        {netParts ? (
+        {netParts && sync?.sharedLegend ? (
+          // The Show control is above the pair; only this card's own key
+          // item (the shaded bands) stays here
+          drops.length > 0 && (
+            <span className="series-toggle-extra">
+              <span className="series-toggle-band" style={{ background: DROP_FILL }} aria-hidden="true" />
+              {DROP_ITEM.label}
+            </span>
+          )
+        ) : netParts ? (
           // The layers and the total as chips: show or hide each, hover to
           // bring one forward
           <SeriesToggle
