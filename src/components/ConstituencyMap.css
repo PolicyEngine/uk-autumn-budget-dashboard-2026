@@ -156,13 +156,6 @@
 }
 
 /* The line under the map when no seat shows a published change */
-.map-flat-note {
-  margin: 0;
-  font-size: var(--fs-small);
-  color: var(--pe-gray-600);
-  text-align: center;
-}
-
 .map-canvas {
   position: relative;
   flex: 1 1 auto;

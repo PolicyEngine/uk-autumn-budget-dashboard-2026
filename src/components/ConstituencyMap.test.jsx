@@ -109,6 +109,13 @@ describe("ConstituencyMap", () => {
     expect(pattern.id).not.toMatch(/[\d:]/);
   });
 
+  it("says under its title where households gain or lose, from the figures the map colours", async () => {
+    const { container } = await renderMap();
+    expect(container.querySelector(".chart-header .chart-description").textContent).toMatch(
+      /^Households (gain|lose) on average in \d+ constituenc/,
+    );
+  });
+
   it("hatches withheld seats and never colours them", async () => {
     const { container } = await renderMap();
     const withheld = seat(container, "Z14000003");

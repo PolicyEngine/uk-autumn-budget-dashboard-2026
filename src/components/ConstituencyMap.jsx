@@ -64,8 +64,7 @@ import {
   seatCode,
   seatName,
   seatStates,
-  movesNoSeat,
-  noSeatMovedNote,
+  constituencySentence,
   seatStyle,
   seatSummary,
   unchangedLine,
@@ -860,11 +859,15 @@ export default function ConstituencyMap({
   // (a style on the page only; the exported file never carries it)
   const [keyHighlight, setKeyHighlight] = useState(null);
   const counts = useMemo(() => keyCounts(states), [states]);
-  // Every seat zero or withheld: say so, so the map's grey and hatching
-  // are not left to explain themselves
-  const flatNote = useMemo(
-    () => (movesNoSeat(states) ? noSeatMovedNote({ yearLabel, several: choice.kind === "package" }) : null),
-    [states, yearLabel, choice.kind],
+  // The card's one sentence under its title, from the rows the map
+  // colours; when every seat is zero or withheld it says so, so the map's
+  // grey and hatching are not left to explain themselves
+  const sentence = useMemo(
+    () =>
+      view.kind === "rows"
+        ? constituencySentence(states, { outcome, yearLabel, several: choice.kind === "package" })
+        : null,
+    [view.kind, states, outcome, yearLabel, choice.kind],
   );
   useEffect(() => {
     const map = mapRef.current;
@@ -1131,13 +1134,16 @@ export default function ConstituencyMap({
                 {titleSubject && <span className="map-title-focus">: {titleSubject}</span>}
               </span>
             </h3>
-            {/* What the card shows is the section's subtitle, and how to
-                read it is in About this chart; a release that routes no
-                results by area gets a line describing the measure only */}
-            {notRouted && (
+            {/* One plain sentence from the map's figures, as the other
+                cards have; how to read the map is in About this chart. A
+                release that routes no results by area gets a line
+                describing the measure only */}
+            {notRouted ? (
               <p className="chart-description">
                 Average change in household net income by constituency.
               </p>
+            ) : (
+              sentence && <p className="chart-description">{sentence}</p>
             )}
           </div>
           {downloadsReady ? (
@@ -1332,7 +1338,6 @@ export default function ConstituencyMap({
               )}
               <FloatingTooltip tip={hoverTip} />
             </div>
-            {flatNote && <p className="map-flat-note">{flatNote}</p>}
           </div>
         )}
       </SwapTransition>
