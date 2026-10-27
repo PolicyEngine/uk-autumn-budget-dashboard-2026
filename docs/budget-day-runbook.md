@@ -1178,6 +1178,18 @@ W5 re-measured on the same file for 2025:
 
 Exports are built only from approved entries of one manifest revision. A measure held at the first cut joins the briefing once it is approved. Each chart is stamped with the model, the data and the manifest revision (#22, a draft). Use no figure that is not in that revision.
 
+## Team test link
+
+The team's live test link is https://ab2026-local-preview.vercel.app/uk/autumn-budget-2026 (Vercel `ab2026-local-preview`, public, no login). It shows the local checkout's untracked data in `public/data`. Redeploy it after each local load: the G2 measures, the package, then the area run.
+
+```sh
+tools/deploy-test-link.sh [household-api-url]   # default: the Modal test app; or set HOUSEHOLD_API_URL
+```
+
+- It refuses unless `public/data/manifest.json` exists, has at least one provisional measure (so the page shows the "Provisional" banner), and isn't the manifest production serves.
+- It links the checkout, builds with `next build` (skipping `check-public-files`, which correctly refuses unsigned rehearsal data), deploys, and checks the link returns 200. `vercel.json`, `.env.local`, `.gitignore` and `.vercel/` are restored on exit, and nothing is committed.
+- **Rule:** this is a team link, not publication. Real publication is still the signed path: #207, then `main`, then the production Vercel deploy.
+
 ## Rollback
 
 - **Dashboard.**
