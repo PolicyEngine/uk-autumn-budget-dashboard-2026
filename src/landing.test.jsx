@@ -6,6 +6,8 @@ import { resetPresetResults } from "./utils/householdPresets";
 import { DEEP_LINK_HASHES, DEEP_LINK_SCRIPT, opensLanding } from "./utils/landing";
 import { provisionalLabel } from "./utils/publication/manifest";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture";
+import { DEFAULT_RELEASE, HISTORICAL_RELEASES } from "./utils/publication/release";
+import { RELEASE_PARAM } from "./components/historical/pastEventPaths";
 
 // Every view's code is in before a test renders it (App.jsx lazyView)
 beforeAll(preloadAllViews, 60_000);
@@ -373,6 +375,23 @@ describe("the landing page's rules", () => {
     };
     for (const [search, hash] of [["", ""], ["?tab=policies", ""], ["?year=2028", ""], ["", "#deciles"], ["?x=1", "#other"]]) {
       expect(run(search, hash)).toBe(!opensLanding({ search, hash }));
+    }
+  });
+
+  it("marks a link to a past event on this Budget's page, and nothing else, before the first paint", () => {
+    const marks = (search) => {
+      const attributes = {};
+      const document = { documentElement: { setAttribute: (name, value) => { attributes[name] = value; } } };
+      new Function("window", "document", DEEP_LINK_SCRIPT)({ location: { search, hash: "" } }, document);
+      return attributes;
+    };
+    for (const release of HISTORICAL_RELEASES) {
+      expect(marks(`?${RELEASE_PARAM}=${release.id}`)).toEqual({ "data-past-event": "" });
+      // As the band writes it once the event is open
+      expect(marks(`?${RELEASE_PARAM}=${release.id}&tab=dashboard`)).toEqual({ "data-deep-link": "", "data-past-event": "" });
+    }
+    for (const search of ["", `?${RELEASE_PARAM}=${DEFAULT_RELEASE.id}`, `?${RELEASE_PARAM}=unknown`, `?${RELEASE_PARAM}=`, `?x${RELEASE_PARAM}=${HISTORICAL_RELEASES[0].id}`]) {
+      expect(marks(search)).not.toHaveProperty("data-past-event");
     }
   });
 });

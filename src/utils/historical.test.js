@@ -13,6 +13,7 @@ import {
   COVERAGE_HEADER,
   coverageProblems,
   equals,
+  eventYear,
   formatShare,
   fraction,
   groupNotModelled,
@@ -290,5 +291,17 @@ describe("a release's years", () => {
       const expected = new Set(catalogue.displayable.flatMap((measure) => measure.years.filter((year) => !measure.unsupported_years.includes(year))));
       expect(years).toEqual([...expected].sort((a, b) => a - b));
     }));
+  });
+
+  it("give the year asked for when it is one of them, and the first otherwise", () => {
+    fc.assert(fc.property(fc.uniqueArray(fc.integer({ min: 2020, max: 2035 })).map((years) => years.sort((a, b) => a - b)), fc.integer({ min: 2015, max: 2040 }), (years, asked) => {
+      const year = eventYear(years, asked);
+      if (!years.length) expect(year).toBeUndefined();
+      else expect(years).toContain(year);
+      expect(year).toBe(years.includes(asked) ? asked : years[0]);
+    }));
+    // A link's year that is not a number asks for none of them
+    expect(eventYear([2026, 2027], Number(null))).toBe(2026);
+    expect(eventYear([2026, 2027], Number("x"))).toBe(2026);
   });
 });

@@ -4,7 +4,7 @@ import { EARLY_FILES, earlyManifestScript, manifestUrl, takeEarlyManifest, takeE
 import { isDisplayable, MANIFEST_FILE } from "./manifest";
 import { loadArtifact, loadManifest } from "./load";
 import { dataRoot, DEFAULT_RELEASE, HISTORICAL_RELEASES } from "./release";
-import { isPastEventPath, PAST_EVENTS_PATH } from "../../components/historical/pastEventPaths";
+import { isPastEventAddress, isPastEventPath, PAST_EVENTS_PATH, RELEASE_PARAM } from "../../components/historical/pastEventPaths";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "../../test/publicationFixture";
 
 const manifest = fixtureJson("manifest.json");
@@ -138,6 +138,54 @@ describe("a past event's pages", () => {
         clearEarly();
       }),
       { numRuns: 60 },
+    );
+  });
+
+  // The dashboard shows a past event on this Budget's page too, when the
+  // address's ?budget= names one (App.jsx)
+  const ids = HISTORICAL_RELEASES.map((release) => release.id);
+  it.each(ids.flatMap((id) => [`/?${RELEASE_PARAM}=${id}`, `/?tab=dashboard&${RELEASE_PARAM}=${id}&sub=age`]))(
+    "request nothing early at %s, which shows a past event",
+    async (page) => {
+      window.history.replaceState({}, "", `${BASE_PATH}${page}`);
+      expect(isPastEventAddress(window.location, ids, BASE_PATH)).toBe(true);
+      const stub = await runScript();
+      expect(stub).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([`/?${RELEASE_PARAM}=${DEFAULT_RELEASE.id}`, `/?${RELEASE_PARAM}=unknown`, `/?${RELEASE_PARAM}=`, `/?x${RELEASE_PARAM}=${ids[0]}`])(
+    "still request this Budget's manifest at %s, which shows this Budget",
+    async (page) => {
+      window.history.replaceState({}, "", `${BASE_PATH}${page}`);
+      expect(isPastEventAddress(window.location, ids, BASE_PATH)).toBe(false);
+      const stub = await runScript();
+      expect(stub.mock.calls[0]?.[0]).toBe(manifestUrl(BASE_PATH));
+    },
+  );
+
+  it("are exactly where isPastEventAddress says, on any path and query", async () => {
+    const segment = fc.constantFrom("budgets", "budget", "uk", ids[0]);
+    const pair = fc.constantFrom(
+      ...ids.map((id) => `${RELEASE_PARAM}=${id}`),
+      `${RELEASE_PARAM}=${DEFAULT_RELEASE.id}`,
+      `${RELEASE_PARAM}=${encodeURIComponent(ids[0])}`,
+      `${RELEASE_PARAM}=${ids[0].replace("u", "%75")}`,
+      `${RELEASE_PARAM}=${ids[0]}x`,
+      `${RELEASE_PARAM}`,
+      `x${RELEASE_PARAM}=${ids[0]}`,
+      "tab=household",
+      "sub=age",
+    );
+    await fc.assert(
+      fc.asyncProperty(fc.boolean(), fc.array(segment, { maxLength: 3 }), fc.array(pair, { maxLength: 3 }), async (based, segments, pairs) => {
+        window.history.replaceState({}, "", `${based ? BASE_PATH : ""}/${segments.join("/")}${pairs.length ? `?${pairs.join("&")}` : ""}`);
+        const stub = await runScript();
+        // As App reads the address: ?budget='s first value, decoded
+        expect(stub.mock.calls.length === 0).toBe(isPastEventAddress(window.location, ids, BASE_PATH));
+        clearEarly();
+      }),
+      { numRuns: 80 },
     );
   });
 

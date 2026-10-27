@@ -7,6 +7,9 @@
  * and App.jsx read the same rule.
  */
 
+import { HISTORICAL_RELEASES } from "./publication/release";
+import { RELEASE_PARAM } from "../components/historical/pastEventPaths";
+
 /** The query parameters that make an address a link to a view. */
 export const DEEP_LINK_PARAMS = Object.freeze(["tab", "sub", "policies", "year"]);
 
@@ -30,10 +33,17 @@ export function opensLanding({ search, hash }) {
  * for every address, stays hidden until the browser has read the address
  * and opened the view. Without it a shared link would flash the landing
  * page first.
+ *
+ * A link to a past event on this Budget's page (?budget=, App.jsx) is
+ * marked too (html[data-past-event]): the server's HTML is this Budget's,
+ * so its landing page, its view tabs and its placeholders all stay hidden
+ * until the page's code opens the event, which has none of them.
  */
 export const DEEP_LINK_SCRIPT =
   "(function(){try{" +
-  "var l=window.location,p=new URLSearchParams(l.search);" +
+  "var l=window.location,p=new URLSearchParams(l.search),d=document.documentElement;" +
   `if(${JSON.stringify(DEEP_LINK_PARAMS)}.some(function(k){return p.has(k)})||${JSON.stringify(DEEP_LINK_HASHES)}.indexOf(l.hash)>=0)` +
-  'document.documentElement.setAttribute("data-deep-link","")' +
+  'd.setAttribute("data-deep-link","");' +
+  `if(${JSON.stringify(HISTORICAL_RELEASES.map((release) => release.id))}.indexOf(p.get(${JSON.stringify(RELEASE_PARAM)}))>=0)` +
+  'd.setAttribute("data-past-event","")' +
   "}catch(e){}})();";

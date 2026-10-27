@@ -1,0 +1,1205 @@
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import fc from "fast-check";
+import { renderToString } from "react-dom/server";
+import { hydrateRoot } from "react-dom/client";
+import App, { pastEventAddress, preloadAllViews, RELEASE_INACTIVE, RELEASE_PARAM, viewsFor } from "./App";
+import HistoricalRelease from "./app/budgets/[release]/page";
+import { HISTORICAL_PROVISIONAL_LABEL, SCORECARD_URL } from "./components/historical/PastEvent";
+import { dashboardFixtureFetch } from "./test/dashboardFixture";
+import { coverageOf, releaseFixtureFetch, toCsv } from "./test/historicalFixture";
+import { BASE_PATH, BEYOND_DATA, fixtureFetch, fixtureJson, IN_DATA } from "./test/publicationFixture";
+import { loadDashboardParts } from "./utils/loadDashboard";
+import { resetVerifiedCache } from "./utils/publication/cache";
+import { resetParsedTables } from "./utils/publication/load";
+import { fraction, NOT_MODELLED_HEADER, OBR_HEADER } from "./utils/historical";
+import { isDisplayable, PROVISIONAL_LABEL } from "./utils/publication/manifest";
+import { CURRENT_BUDGET, dataRoot, DEFAULT_RELEASE, findRelease, HISTORICAL_RELEASES, newestFirst } from "./utils/publication/release";
+
+// Every view's code is in before a test renders it (App.jsx lazyView)
+beforeAll(preloadAllViews, 60_000);
+
+// The charts and the views that load their own files are stood in for, so
+// the render is the page's own markup and the figures it hands the charts.
+// The rows come in the order their artifacts verified, which can differ
+// between loads, so the stand-ins list them sorted.
+const { inOrder } = vi.hoisted(() => ({
+  inOrder: (rows) => [...rows].sort((a, b) => (JSON.stringify(a) < JSON.stringify(b) ? -1 : 1)),
+}));
+vi.mock("./components/BudgetaryImpactChart", async () => {
+  // What a download of the chart would say it shows (DownloadContext)
+  const { useDownloadContext } = await import("./utils/downloadContext");
+  return {
+    default: function BudgetFigures({ data, selectedYear }) {
+      const download = useDownloadContext();
+      return <div data-testid="budget-figures" data-year={selectedYear} data-rows={JSON.stringify(data)} data-download={JSON.stringify(download)} />;
+    },
+  };
+});
+// With the years shown that the decile charts read (useDisplayYears)
+vi.mock("./components/DistributionalChart", async () => {
+  const { useDisplayYears } = await vi.importActual("./utils/displayYears");
+  return {
+    default: function DistributionalFigures({ rawData, selectedPolicies, selectedYear }) {
+      const years = useDisplayYears();
+      return <div data-testid="distributional-figures" data-year={selectedYear} data-years={JSON.stringify(years)} data-rows={JSON.stringify(inOrder(rawData))} data-selected={JSON.stringify(selectedPolicies)} />;
+    },
+  };
+});
+vi.mock("./components/WaterfallChart", () => ({
+  default: ({ rawData, selectedYear }) => <div data-testid="winners-losers-figures" data-year={selectedYear} data-rows={JSON.stringify(inOrder(rawData))} />,
+}));
+// This Budget's decile card shows £ by default (main's DecileImpactCard);
+// these tests read its % rows, as a past event's decile chart shows them
+vi.mock("./components/DecileImpactCard", () => ({
+  default: ({ distributional, selectedPolicies, selectedYear }) => <div data-testid="distributional-figures" data-year={selectedYear} data-rows={JSON.stringify(inOrder(distributional))} data-selected={JSON.stringify(selectedPolicies)} />,
+}));
+// The fixture's measures share one year in the data, so a test gives a
+// past event a second year here (`extraYear.value`; none by default),
+// which its figures do not cover: for what the page does with its years
+const extraYear = vi.hoisted(() => ({ value: null }));
+vi.mock("./utils/historical", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    releaseYears: (catalogue) => {
+      const years = actual.releaseYears(catalogue);
+      return extraYear.value !== null && years.length ? [...years, extraYear.value] : years;
+    },
+  };
+});
+vi.mock("./components/ConstituencyMap", () => ({ default: () => <div data-testid="constituency-view" /> }));
+vi.mock("./components/HouseholdScatter", () => ({ default: () => <div data-testid="scatter-view" /> }));
+vi.mock("./components/PersonalImpactTab", () => ({ default: () => <div data-testid="household-view" /> }));
+vi.mock("./components/OBRComparisonTable", () => ({ default: () => null, ObrComparisonCard: () => <div data-testid="obr-foot-2026" /> }));
+vi.mock("./components/YoungPeopleSection", () => ({ default: () => <div data-testid="young-view" />, YOUNG_PEOPLE_ANCHOR: "young-people" }));
+// Population impact's By age sub-tab, where Young people now is
+vi.mock("./components/AgeSection", () => ({ default: () => <div data-testid="age-view" /> }));
+vi.mock("./components/MethodologyTab", () => ({ default: () => <div data-testid="methodology-view" />, METHOD_SECTIONS: { geography: "geography" } }));
+vi.mock("./components/PolicyCards", () => ({ default: () => <div data-testid="policies-view" /> }));
+// The Pre-measures forecast, and the current-law cards that Population
+// impact's Living standards and Poverty sub-tabs link to
+vi.mock("./components/livingStandards/LivingStandardsTab", () => ({ default: () => <div data-testid="outlook-view" /> }));
+vi.mock("./components/livingStandards/CurrentLawSection", () => ({ default: () => <div data-testid="current-law" /> }));
+
+/** A fetch stand-in serving this Budget's fixture, recording every URL. */
+function recordingFetch(options) {
+  const serve = dashboardFixtureFetch(options);
+  const calls = [];
+  let pending = 0;
+  const fetchImpl = (url, init) => {
+    calls.push(String(url));
+    pending += 1;
+    return Promise.resolve(serve(url, init)).finally(() => { pending -= 1; });
+  };
+  fetchImpl.calls = calls;
+  // How many of its requests have not yet been answered
+  fetchImpl.inFlight = () => pending;
+  return fetchImpl;
+}
+
+/**
+ * The page's idle prefetching (App.jsx whenIdle), held until the test runs
+ * it, so every request it makes is in before the requests are read. The
+ * function returned runs each held step, and each step it schedules in
+ * turn, until none comes for two seconds with none of `fetchImpl`'s
+ * requests in flight (a step still loading schedules the next when done).
+ */
+function holdIdle(fetchImpl) {
+  const held = new Map();
+  let handles = 0;
+  window.requestIdleCallback = (run) => {
+    handles += 1;
+    held.set(handles, run);
+    return handles;
+  };
+  // A page that unmounts cancels the step it was waiting on
+  window.cancelIdleCallback = (handle) => { held.delete(handle); };
+  return async () => {
+    for (;;) {
+      const run = await waitFor(() => {
+        const [first] = held;
+        if (!first) throw new Error("no idle step held");
+        held.delete(first[0]);
+        return first[1];
+      }, { timeout: 2000 }).catch(() => null);
+      if (run) await act(async () => { run(); });
+      else if (!(fetchImpl?.inFlight?.() > 0)) return;
+    }
+  };
+}
+
+// The build's verified publication (app/publicationBoot.ts), built from the
+// fixture through the same loader, as AppBoot.test.jsx builds it
+async function buildBoot() {
+  const serve = fixtureFetch();
+  const parts = await loadDashboardParts("", { fetchImpl: (url, init) => serve(`${BASE_PATH}${url}`, init) });
+  resetVerifiedCache();
+  resetParsedTables();
+  return structuredClone(parts);
+}
+
+beforeEach(() => { window.history.replaceState({}, "", "/"); });
+afterEach(() => {
+  cleanup();
+  extraYear.value = null;
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+  delete window.requestIdleCallback;
+  delete window.cancelIdleCallback;
+});
+
+describe("the 2026 page with no past event to choose", () => {
+  // Captured at #107's head, before the budget selector: with only this
+  // Budget published, the page renders exactly this and requests exactly
+  // these files, its idle prefetching included. Regenerate (vitest -u)
+  // only for an intended change to the 2026 page.
+  it("renders its landing page byte for byte as before the budget selector, and requests nothing more", async () => {
+    const fetchImpl = recordingFetch();
+    vi.stubGlobal("fetch", fetchImpl);
+    const idle = holdIdle(fetchImpl);
+    const { container } = render(<App />);
+    await expect(container.innerHTML).toMatchFileSnapshot("./__snapshots__/app-2026-loading.html");
+    await waitFor(() => expect(container.querySelector(".app")).toHaveAttribute("data-publication", "verified"));
+    await idle();
+    await expect(container.innerHTML).toMatchFileSnapshot("./__snapshots__/app-2026-loaded.html");
+    expect(window.location.search).toBe("");
+    await expect(`${[...fetchImpl.calls].sort().join("\n")}\n`).toMatchFileSnapshot("./__snapshots__/app-2026-requests.txt");
+  });
+
+  // (After the test above: the map and the example households it loaded
+  // stay cached for the file's life, so this page requests neither)
+  it("opens Population impact from a link byte for byte as before, and requests nothing more", async () => {
+    window.history.replaceState({}, "", "/?tab=dashboard");
+    const fetchImpl = recordingFetch();
+    vi.stubGlobal("fetch", fetchImpl);
+    const idle = holdIdle(fetchImpl);
+    const { container } = render(<App />);
+    await screen.findByTestId("budget-figures");
+    await idle();
+    await expect(container.innerHTML).toMatchFileSnapshot("./__snapshots__/app-2026-dashboard.html");
+    expect(window.location.search).toBe("?tab=dashboard");
+    await expect(`${[...fetchImpl.calls].sort().join("\n")}\n`).toMatchFileSnapshot("./__snapshots__/app-2026-dashboard-requests.txt");
+  });
+
+  // The build's figures (App's `boot`, on `/`): the server's HTML, and the
+  // page once it has hydrated at a link and checked them itself
+  it("renders the build's figures byte for byte as before, in the server's HTML and once the page has checked them", async () => {
+    const boot = await buildBoot();
+    const html = renderToString(<App boot={boot} />);
+    await expect(html).toMatchFileSnapshot("./__snapshots__/app-2026-boot-server.html");
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    document.body.appendChild(container);
+    window.history.replaceState({}, "", "/?tab=dashboard&policies=alpha");
+    const serve = fixtureFetch();
+    const calls = [];
+    vi.stubGlobal("fetch", (url, init) => { calls.push(String(url)); return serve(`${BASE_PATH}${url}`, init); });
+    const idle = holdIdle();
+    const errors = [];
+    let root;
+    await act(async () => {
+      root = hydrateRoot(container, <App boot={boot} />, { onRecoverableError: (error) => errors.push(error) });
+    });
+    expect(errors).toEqual([]);
+    await waitFor(() => expect(container.querySelector('.app[data-publication-check="page"]')).not.toBeNull());
+    await idle();
+    await expect(container.innerHTML).toMatchFileSnapshot("./__snapshots__/app-2026-boot-checked.html");
+    expect(window.location.search).toBe("?tab=dashboard&policies=alpha");
+    await expect(`${[...calls].sort().join("\n")}\n`).toMatchFileSnapshot("./__snapshots__/app-2026-boot-requests.txt");
+    act(() => root.unmount());
+    container.remove();
+    resetVerifiedCache();
+    resetParsedTables();
+  });
+});
+
+// Synthetic flat views for a past event built from the publication
+// fixture: its coverage, the measures it does not model and its OBR
+// comparison. Test data only; never real figures.
+const FIXTURE_MEASURES = fixtureJson("manifest.json").measures;
+const PAGE_IDS = Object.keys(FIXTURE_MEASURES);
+const DISPLAYABLE_IDS = PAGE_IDS.filter((id) => isDisplayable(FIXTURE_MEASURES[id]));
+const cell = (pounds, places = 0) => ({ classification: "partial", gap: null, value: fraction(BigInt(pounds), 10n ** BigInt(places)), constructed: true });
+const UNMODELLED = [
+  { id: "n1", classification: "not_expressible", gap: "construction_pending", computed: false, rows: [{ ...cell(400_000_000), classification: "not_expressible", constructed: false }] },
+  { id: "n2", classification: "not_expressible", gap: "model_or_data_gap", computed: false, rows: [{ ...cell(-3_000_000_005, 1), classification: "not_expressible", constructed: false }] },
+  { id: "n3", classification: "out_of_household_scope", gap: null, computed: false, rows: [{ ...cell(9_000_000_000), classification: "out_of_household_scope", constructed: false }] },
+];
+const NOT_MODELLED = [
+  ["n1", "Levy on widgets", "not_expressible", "construction_pending", "No construction has been established.", 1, "400000000"],
+  ["n2", "Relief for gadgets", "not_expressible", "model_or_data_gap", "The data has no gadgets.", 1, "300000000.5"],
+  ["n3", "Capital spending", "out_of_household_scope", "", "Departmental spending.", 1, "9000000000"],
+];
+const PAIR = "policyengine-uk 2.130.1, synthetic.h5 at revision 1.0.0";
+const OBR = [
+  ["alpha", "Alpha", String(IN_DATA), "2500000000", "2000000000", "1900000000", PAIR],
+  ["beta", "Beta", String(IN_DATA), "-1000000000", "-800000000", "", PAIR],
+];
+
+/** The three flat views of a past event whose page models `ids`. */
+function flatFor(ids = PAGE_IDS) {
+  const measures = [
+    ...ids.map((id, index) => ({ id, classification: "partial", gap: "model_or_data_gap", computed: true, rows: [cell(1_000_000_000 * (index + 1)), { ...cell(-250_000_000), classification: "out_of_household_scope", constructed: false }] })),
+    ...UNMODELLED,
+  ];
+  return {
+    "coverage.csv": coverageOf(measures),
+    "not_modelled.csv": toCsv(NOT_MODELLED_HEADER, NOT_MODELLED),
+    "obr_comparison.csv": toCsv(OBR_HEADER, OBR.filter(([id]) => ids.includes(id))),
+  };
+}
+
+/**
+ * The whole site: this Budget's fixture at the data root, and each past
+ * event in `past` (id to releaseFixtureFetch options) at its own root. A
+ * past event not listed has no files. `gates` holds a past event's
+ * artifacts until its promise settles. Every URL is recorded.
+ */
+async function siteFetch({ past = {}, current, gates = {} } = {}) {
+  const thisBudget = dashboardFixtureFetch(current);
+  const roots = await Promise.all(Object.entries(past).map(async ([id, options]) => {
+    const release = findRelease(id);
+    return { id, root: `${dataRoot("", release)}/`, serve: await releaseFixtureFetch(release, options) };
+  }));
+  const calls = [];
+  let pending = 0;
+  const answer = async (url, init) => {
+    const text = String(url);
+    const site = roots.find(({ root }) => text.startsWith(root));
+    if (site) {
+      if (gates[site.id] && text.includes("/artifacts/")) await gates[site.id];
+      return site.serve(url, init);
+    }
+    if (text.startsWith("/data/releases/")) return new Response(null, { status: 404 });
+    return thisBudget(url, init);
+  };
+  const fetchImpl = (url, init) => {
+    calls.push(String(url));
+    pending += 1;
+    return answer(url, init).finally(() => { pending -= 1; });
+  };
+  fetchImpl.calls = calls;
+  fetchImpl.inFlight = () => pending;
+  return fetchImpl;
+}
+
+const [AB2025, SS2025, AB2024] = ["uk-autumn-budget-2025", "uk-spring-statement-2025", "uk-autumn-budget-2024"].map(findRelease);
+const BANNER = "Today's model and data, not what was known at the time.";
+
+/**
+ * Open the page at a link to Population impact (the bare address is the
+ * landing page, with no view mounted), and wait for its figures. The idle
+ * prefetching waits until a test runs it (`idle` on the result).
+ */
+async function open(fetchImpl, { candidates = [], url = "/?tab=dashboard", element = <App /> } = {}) {
+  window.history.replaceState({}, "", url);
+  vi.stubGlobal("fetch", fetchImpl);
+  if (candidates.length) vi.stubEnv("NEXT_PUBLIC_PUBLISHED_RELEASES", candidates.map((release) => release.id).join(","));
+  const idle = holdIdle(fetchImpl);
+  const view = render(element);
+  await screen.findByTestId("budget-figures");
+  return Object.assign(view, { idle });
+}
+
+const pill = () => screen.queryByRole("button", { name: /^Budget: / });
+
+/** Choose a release in the band, and wait for its figures. */
+async function choose(release) {
+  fireEvent.click(pill());
+  fireEvent.click(within(screen.getByRole("listbox", { name: "Budget" })).getByRole("option", { name: release.name }));
+  await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(release === DEFAULT_RELEASE ? "UK Autumn Budget 2026" : release.name));
+  await screen.findByTestId("budget-figures");
+}
+
+const offeredNames = () => {
+  fireEvent.click(pill());
+  const names = within(screen.getByRole("listbox", { name: "Budget" })).getAllByRole("option").map((option) => option.textContent.replace("✓", ""));
+  fireEvent.keyDown(screen.getByRole("listbox", { name: "Budget" }), { key: "Escape" });
+  return names;
+};
+
+const shownIds = () => new Set(JSON.parse(screen.getByTestId("distributional-figures").dataset.selected));
+const rowIds = () => new Set(JSON.parse(screen.getByTestId("distributional-figures").dataset.rows).map((row) => row.reform_id));
+const tabs = () => within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab").map((tab) => tab.textContent);
+const param = (name) => new URLSearchParams(window.location.search).get(name);
+
+describe("the budget selector", () => {
+  it("is not shown while every past event the build lists fails to verify, and asks only for their manifests", async () => {
+    const fetchImpl = await siteFetch({ past: { [SS2025.id]: { identity: CURRENT_BUDGET } } });
+    await open(fetchImpl, { candidates: [AB2025, SS2025] });
+    await waitFor(() => expect(fetchImpl.calls).toContain(`${dataRoot("", SS2025)}/manifest.json`));
+    expect(pill()).toBeNull();
+    expect(document.querySelector(".has-releases, .band-release")).toBeNull();
+    expect(fetchImpl.calls.filter((url) => url.startsWith("/data/releases/")).sort()).toEqual(
+      [AB2025, SS2025].map((release) => `${dataRoot("", release)}/manifest.json`).sort(),
+    );
+  });
+
+  it("offers this Budget and every past event whose manifest verifies, newest first", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2024.id]: { flat: flatFor() }, [AB2025.id]: { flat: flatFor() }, [SS2025.id]: { identity: { id: AB2025.id, date: AB2025.date } } } });
+    await open(fetchImpl, { candidates: [AB2024, AB2025, SS2025] });
+    await waitFor(() => expect(pill()).not.toBeNull());
+    expect(pill()).toHaveAccessibleName("Budget: Autumn Budget 2026");
+    expect(offeredNames()).toEqual(["Autumn Budget 2026", "Autumn Budget 2025", "Autumn Budget 2024"]);
+    expect(document.querySelector(".title-row")).toHaveClass("has-releases");
+  });
+
+  it("keeps this Budget listed when its own manifest fails, and shows that as unavailable", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } }, current: { overrides: { "manifest.json": "{}" } } });
+    window.history.replaceState({}, "", "/?tab=dashboard");
+    vi.stubGlobal("fetch", fetchImpl);
+    vi.stubEnv("NEXT_PUBLIC_PUBLISHED_RELEASES", AB2025.id);
+    render(<App />);
+    expect(await screen.findByText("Published results are unavailable")).toBeInTheDocument();
+    await waitFor(() => expect(pill()).not.toBeNull());
+    expect(offeredNames()).toEqual(["Autumn Budget 2026", "Autumn Budget 2025"]);
+    await choose(AB2025);
+    expect(screen.getByText(BANNER)).toBeInTheDocument();
+  });
+
+  it("shows a past event as its one view, with its own sections, and this Budget again as it was", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    const { container } = await open(fetchImpl, { candidates: [AB2025] });
+    await waitFor(() => expect(pill()).not.toBeNull());
+    const before = container.innerHTML;
+    // This Budget's overview, on the window's edge; a past event has none
+    expect(container.querySelector(".edge-about")).not.toBeNull();
+    await choose(AB2025);
+    expect(container.querySelector(".edge-about")).toBeNull();
+    expect(param(RELEASE_PARAM)).toBe(AB2025.id);
+    expect(tabs()).toEqual(["Population impact"]);
+    expect(screen.queryByRole("tablist", { name: "Population impact sections" })).toBeNull();
+    expect(screen.getByRole("note")).toHaveTextContent(BANNER);
+    expect(container.querySelector(".dashboard-intro")).toBeNull();
+    expect(document.getElementById("coverage")).toHaveTextContent("The scorecard sorts each of the event's");
+    expect(screen.getByRole("button", { name: "Compare with the OBR's costing" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Measures not modelled" })).toBeInTheDocument();
+    for (const id of ["household-view", "outlook-view", "policies-view", "methodology-view", "young-view", "constituency-view", "scatter-view", "current-law", "obr-foot-2026"]) {
+      expect(screen.queryByTestId(id)).toBeNull();
+    }
+    expect(container.querySelector(".app")).toHaveClass("historical-release");
+    expect(within(screen.getByRole("link", { name: "PolicyEngine scorecard" }).parentElement).getByRole("link")).toHaveAttribute("href", SCORECARD_URL);
+    await choose(DEFAULT_RELEASE);
+    expect(param(RELEASE_PARAM)).toBeNull();
+    expect(tabs()).toEqual(["Population impact", "Household impact", "Pre-measures forecast", "Policies", "Methodology"]);
+    // The same page, but for the ids React generates afresh on a new mount
+    const ids = (html) => html.replace(/_r_[0-9a-z]+_/g, "_r_");
+    expect(ids(container.innerHTML)).toBe(ids(before));
+  });
+
+  it("drops what belonged to the release left: its measures, sub-tab, each view's own state, Young people hash and views", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    // An old Young people link opens By age with 16 to 24 chosen (?age=);
+    // ?map= and ?pf= are the map's and the Policies filter's
+    window.history.replaceState({}, "", "/?sub=young&policies=alpha,beta&map=list&pf=tax#young-people");
+    vi.stubGlobal("fetch", fetchImpl);
+    vi.stubEnv("NEXT_PUBLIC_PUBLISHED_RELEASES", AB2025.id);
+    render(<App />);
+    await screen.findByTestId("age-view");
+    await waitFor(() => expect(pill()).not.toBeNull());
+    expect(param("policies")).toBe("alpha,beta");
+    expect(param("age")).toBe("16-24");
+    await choose(AB2025);
+    expect(window.location.search).toBe(`?tab=dashboard&${RELEASE_PARAM}=${AB2025.id}`);
+    expect(window.location.hash).toBe("");
+    expect(shownIds()).toEqual(new Set(DISPLAYABLE_IDS));
+    await choose(DEFAULT_RELEASE);
+    expect(window.location.search).toBe("?tab=dashboard");
+  });
+
+  it("is faded on the views a past event does not have, and does not open there, as the year and policy pills are", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    await open(fetchImpl, { candidates: [AB2025] });
+    await waitFor(() => expect(pill()).not.toBeNull());
+    const app = document.querySelector(".app");
+    expect(pill()).toHaveAccessibleName(`Budget: ${DEFAULT_RELEASE.name}`);
+    expect(pill()).not.toHaveAttribute("aria-disabled");
+    expect(pill()).toHaveClass("band-control");
+    expect(app).toHaveAttribute("data-release-pill", "shown");
+    for (const name of ["Household impact", "Pre-measures forecast", "Policies", "Methodology"]) {
+      fireEvent.click(screen.getByRole("tab", { name }));
+      expect(pill()).toHaveAccessibleName(`Budget: ${DEFAULT_RELEASE.name}: ${RELEASE_INACTIVE}`);
+      expect(pill()).toHaveAttribute("aria-disabled", "true");
+      expect(pill()).toHaveClass("is-inactive");
+      fireEvent.click(pill());
+      expect(screen.queryByRole("listbox", { name: "Budget" })).toBeNull();
+      // The band keeps its shape: on a phone the pill keeps its row
+      expect(app).toHaveAttribute("data-release-pill", "shown");
+      expect(document.querySelector(".band-release")).not.toHaveClass("is-hidden");
+    }
+    // An open list closes when its view goes
+    fireEvent.click(screen.getByRole("tab", { name: "Population impact" }));
+    fireEvent.click(pill());
+    expect(screen.getByRole("listbox", { name: "Budget" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Policies" }));
+    expect(screen.queryByRole("listbox", { name: "Budget" })).toBeNull();
+  });
+
+  it("opens the release a link names, keeping a selection it has, and drops a view it does not have", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}&tab=household&sub=young&policies=alpha`);
+    vi.stubGlobal("fetch", fetchImpl);
+    render(<App />);
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(AB2025.name));
+    await screen.findByTestId("budget-figures");
+    expect(shownIds()).toEqual(new Set(["alpha"]));
+    expect(tabs()).toEqual(["Population impact"]);
+    await waitFor(() => expect(param("tab")).toBe("dashboard"));
+    expect(param(RELEASE_PARAM)).toBe(AB2025.id);
+    // Not offered: no build lists it, so the pill does not show
+    expect(pill()).toBeNull();
+    expect(fetchImpl.calls.every((url) => url.startsWith(`${dataRoot("", AB2025)}/`))).toBe(true);
+  });
+
+  it("drops this Budget's sub-tab and Young people hash from a link that opens a past event", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}&tab=living&sub=baseline&policies=alpha#young-people`);
+    vi.stubGlobal("fetch", fetchImpl);
+    render(<App />);
+    await screen.findByTestId("budget-figures");
+    expect(shownIds()).toEqual(new Set(["alpha"]));
+    await waitFor(() => expect(param("tab")).toBe("dashboard"));
+    expect(param("sub")).toBeNull();
+    expect(window.location.hash).toBe("");
+    expect(param("policies")).toBe("alpha");
+    expect(param(RELEASE_PARAM)).toBe(AB2025.id);
+  });
+
+  // This Budget's page mounts first, on Population impact, before the
+  // link's ?budget= is read; it must not rewrite the link as its own (an
+  // old Young people link opens By age, with ?age=), nor its sub-tab write
+  // ?sub= back. The view is the one view's (main always writes ?tab=).
+  it.each(["sub=living", "sub=young", "sub=young#young-people", "tab=young", "sub=pensioners", "#deciles"])("opens a past event from a link to this Budget's sub-tab, without it (%s)", async (link) => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    const [query, hash = ""] = link.split("#");
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}${query ? `&${query}` : ""}${hash ? `#${hash}` : ""}`);
+    vi.stubGlobal("fetch", fetchImpl);
+    render(<App />);
+    await screen.findByTestId("budget-figures");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(AB2025.name);
+    await waitFor(() => expect(window.location.search).toBe(`?${RELEASE_PARAM}=${AB2025.id}&tab=dashboard`));
+    expect(window.location.hash).toBe(hash === "young-people" || !hash ? "" : `#${hash}`);
+  });
+
+  it("names the release a link opens, but lets only a verified one be chosen", async () => {
+    // The build lists both; only Autumn Budget 2025 has files
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${SS2025.id}`);
+    vi.stubGlobal("fetch", fetchImpl);
+    vi.stubEnv("NEXT_PUBLIC_PUBLISHED_RELEASES", [AB2025.id, SS2025.id].join(","));
+    render(<App />);
+    expect(await screen.findByText(`No results for the ${SS2025.name} are published yet`)).toBeInTheDocument();
+    await waitFor(() => expect(pill()).not.toBeNull());
+    expect(pill()).toHaveAccessibleName(`Budget: ${SS2025.name}`);
+    fireEvent.click(pill());
+    const options = within(screen.getByRole("listbox", { name: "Budget" })).getAllByRole("option");
+    const choosable = options.filter((option) => option.getAttribute("aria-disabled") !== "true").map((option) => option.textContent.replace("✓", ""));
+    expect(choosable).toEqual([DEFAULT_RELEASE.name, AB2025.name]);
+    const unverified = options.find((option) => option.textContent.includes(SS2025.name));
+    expect(unverified).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(unverified);
+    expect(param(RELEASE_PARAM)).toBe(SS2025.id);
+    fireEvent.click(within(screen.getByRole("listbox", { name: "Budget" })).getByRole("option", { name: AB2025.name }));
+    await screen.findByTestId("budget-figures");
+    expect(param(RELEASE_PARAM)).toBe(AB2025.id);
+    // Gone once another release is shown: it never verified
+    expect(offeredNames()).toEqual([DEFAULT_RELEASE.name, AB2025.name]);
+  });
+
+  it.each(["uk-autumn-budget-1999", DEFAULT_RELEASE.id])("opens this Budget for ?budget=%s and takes it out of the address", async (id) => {
+    const fetchImpl = await siteFetch();
+    await open(fetchImpl, { url: `/?${RELEASE_PARAM}=${id}&policies=alpha` });
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("UK Autumn Budget 2026");
+    expect(param(RELEASE_PARAM)).toBeNull();
+    expect(param("policies")).toBe("alpha");
+    expect(fetchImpl.calls.some((url) => url.startsWith("/data/releases/"))).toBe(false);
+  });
+
+  it("stops this Budget's idle prefetching once a past event is chosen", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    const { idle } = await open(fetchImpl, { candidates: [AB2025] });
+    await waitFor(() => expect(pill()).not.toBeNull());
+    await choose(AB2025);
+    const from = fetchImpl.calls.length;
+    await idle();
+    expect(fetchImpl.calls.slice(from).filter((url) => !url.startsWith(`${dataRoot("", AB2025)}/`))).toEqual([]);
+    // and this Budget's runs again once it is chosen back
+    await choose(DEFAULT_RELEASE);
+    const back = fetchImpl.calls.length;
+    await idle();
+    expect(fetchImpl.calls.slice(back).some((url) => url.endsWith("/household_scatter_binned.csv"))).toBe(true);
+  });
+
+  it("never shows a release's header over another release's figures, even while it loads", async () => {
+    let release;
+    const gate = new Promise((resolve) => { release = resolve; });
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor(["alpha"]), measures: ["alpha"] } }, gates: { [AB2025.id]: gate } });
+    await open(fetchImpl, { candidates: [AB2025] });
+    await waitFor(() => expect(pill()).not.toBeNull());
+    fireEvent.click(pill());
+    fireEvent.click(within(screen.getByRole("listbox", { name: "Budget" })).getByRole("option", { name: AB2025.name }));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(AB2025.name);
+    expect(screen.queryByTestId("budget-figures")).toBeNull();
+    expect(screen.queryByTestId("distributional-figures")).toBeNull();
+    // The view's placeholders, while the event's figures load
+    expect(document.querySelector(".skeleton-caption")).toHaveTextContent("Loading results…");
+    // No years to offer yet: the year pill keeps its place, unseen, and the
+    // release pill, the way back, stays in the band
+    expect(document.querySelector(".band-year")).toHaveClass("is-hidden");
+    expect(document.querySelector(".band-year")).toHaveAttribute("aria-hidden", "true");
+    expect(pill()).not.toHaveAttribute("aria-disabled");
+    expect(document.querySelector(".app")).toHaveAttribute("data-release-pill", "shown");
+    await act(async () => { release(); });
+    await screen.findByTestId("budget-figures");
+    expect(shownIds()).toEqual(new Set(["alpha"]));
+    expect(rowIds()).toEqual(new Set(["alpha"]));
+  });
+
+  it("stays in the band, leading back, when a past event's figures fail after it is offered", async () => {
+    // Its manifest verifies, so it is offered; its one measure's receipt is
+    // missing, so it has no figures and no years. It is opened from a link:
+    // the fixture's events share this Budget's artifacts, which a page that
+    // had loaded this Budget would read from its verified cache (cache.js)
+    const missing = { [`${FIXTURE_MEASURES.alpha.artifact}/receipt.json`]: 404 };
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor(["alpha"]), measures: ["alpha"], overrides: missing } } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}`);
+    vi.stubGlobal("fetch", fetchImpl);
+    vi.stubEnv("NEXT_PUBLIC_PUBLISHED_RELEASES", AB2025.id);
+    render(<App />);
+    await waitFor(() => expect(pill()).not.toBeNull());
+    await waitFor(() => expect(document.querySelector(".skeleton-caption")).toBeNull());
+    expect(fetchImpl.calls).toContain(`${dataRoot("", AB2025)}/${FIXTURE_MEASURES.alpha.artifact}/receipt.json`);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(AB2025.name);
+    expect(screen.queryByTestId("budget-figures")).toBeNull();
+    expect(document.querySelector(".band-year")).toHaveClass("is-hidden");
+    expect(pill()).not.toHaveAttribute("aria-disabled");
+    await choose(DEFAULT_RELEASE);
+    expect(document.querySelector(".band-year")).not.toHaveClass("is-hidden");
+    expect(param(RELEASE_PARAM)).toBeNull();
+  });
+
+  it("never shows one release's files or figures under another's, whatever is published and chosen", async () => {
+    const releaseIds = HISTORICAL_RELEASES.map((item) => item.id);
+    const subset = fc.uniqueArray(fc.constantFrom(...DISPLAYABLE_IDS), { minLength: 1, maxLength: DISPLAYABLE_IDS.length - 1 }).map((ids) => [...ids].sort());
+    const published = fc
+      .uniqueArray(fc.record({ id: fc.constantFrom(...releaseIds), ids: subset }), { minLength: 1, maxLength: 3, selector: (item) => item.id })
+      .filter((items) => new Set(items.map((item) => item.ids.join())).size === items.length);
+    await fc.assert(
+      fc.asyncProperty(published, fc.array(fc.nat(), { minLength: 1, maxLength: 3 }), async (events, picks) => {
+        cleanup();
+        vi.unstubAllEnvs();
+        const fetchImpl = await siteFetch({ past: Object.fromEntries(events.map(({ id, ids }) => [id, { flat: flatFor(ids), measures: ids }])) });
+        // The build lists every past event; only the published ones verify
+        await open(fetchImpl, { candidates: HISTORICAL_RELEASES });
+        await waitFor(() => expect(pill()).not.toBeNull());
+        const offered = newestFirst([DEFAULT_RELEASE, ...events.map(({ id }) => findRelease(id))]);
+        expect(offeredNames()).toEqual(offered.map((item) => item.name));
+        let shown = DEFAULT_RELEASE;
+        for (const pick of picks) {
+          const target = offered[pick % offered.length];
+          if (target === shown) continue;
+          const from = fetchImpl.calls.length;
+          await choose(target);
+          shown = target;
+          const calls = fetchImpl.calls.slice(from);
+          expect(calls.length).toBeGreaterThan(0);
+          if (target === DEFAULT_RELEASE) {
+            expect(calls.every((url) => url.startsWith("/data/") && !url.startsWith("/data/releases/"))).toBe(true);
+          } else {
+            expect(calls.every((url) => url.startsWith(`${dataRoot("", target)}/`))).toBe(true);
+          }
+          // This Budget's decile charts are on Population impact's All
+          // households sub-tab; a past event's are on its one view
+          if (target === DEFAULT_RELEASE) {
+            fireEvent.click(within(screen.getByRole("tablist", { name: "Population impact sections" })).getByRole("tab", { name: "All households" }));
+            await screen.findByTestId("distributional-figures");
+          }
+          const expected = target === DEFAULT_RELEASE ? DISPLAYABLE_IDS : events.find(({ id }) => id === target.id).ids;
+          expect(shownIds()).toEqual(new Set(expected));
+          for (const id of rowIds()) expect(expected).toContain(id);
+          expect(tabs()).toEqual(viewsFor(target).map((view) => view.label));
+          expect(param(RELEASE_PARAM)).toBe(target === DEFAULT_RELEASE ? null : target.id);
+          expect(document.querySelector(".app")).toHaveAttribute("data-release-pill", "shown");
+        }
+      }),
+      { numRuns: 6 },
+    );
+  }, 300000);
+});
+
+// A past event's sections, as the dashboard shows them once it is chosen
+// (they were #107's own page)
+describe("a past event in the dashboard", () => {
+  // The idle prefetching waits until a test runs it (`idle` on the result)
+  const openPast = async (options = {}) => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor(), ...options } } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}`);
+    vi.stubGlobal("fetch", fetchImpl);
+    const idle = holdIdle(fetchImpl);
+    render(<App />);
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(AB2025.name));
+    return Object.assign(fetchImpl, { idle });
+  };
+
+  it("says the figures are on today's model and data, and names that model and data", async () => {
+    await openPast();
+    await screen.findByTestId("budget-figures");
+    const banner = screen.getByRole("note");
+    const { model, data } = fixtureJson("manifest.json").execution.identity;
+    expect(banner).toHaveTextContent(`${model.name} ${model.version}, ${data.dataset} (build ${data.build_id})`);
+    expect(banner).toHaveTextContent("They are not the estimates published at the time.");
+    // The fixture publishes one year, named once
+    expect(banner).toHaveTextContent(`today's law, for ${IN_DATA}-${String((IN_DATA + 1) % 100).padStart(2, "0")}.`);
+    // A past event awaits no Treasury costing
+    expect(screen.getByText(HISTORICAL_PROVISIONAL_LABEL)).toBeInTheDocument();
+    expect(screen.queryByText(PROVISIONAL_LABEL)).toBeNull();
+    // Any sum is labelled as a sum of separately costed measures
+    expect(screen.getByText(/sum of the measures, each costed on its own/)).toBeInTheDocument();
+    // Its own years, the first chosen
+    expect(screen.getByTestId("budget-figures").dataset.year).toBe(String(IN_DATA));
+    expect(JSON.parse(screen.getByTestId("budget-figures").dataset.rows).map((point) => point.year)).toEqual([IN_DATA]);
+  });
+
+  it("gives its charts its own years as the years shown, not this Budget's", async () => {
+    await openPast();
+    const chart = await screen.findByTestId("distributional-figures");
+    expect(JSON.parse(chart.dataset.years)).toEqual([IN_DATA]);
+    expect(chart.dataset.year).toBe(String(IN_DATA));
+  });
+
+  it("offers only the event's own years in its year pill, not this Budget's", async () => {
+    await openPast();
+    await screen.findByTestId("budget-figures");
+    fireEvent.click(screen.getByRole("button", { name: /^Year / }));
+    const label = `${IN_DATA}-${String((IN_DATA + 1) % 100).padStart(2, "0")}`;
+    expect(screen.getAllByRole("option").map((option) => option.textContent.replace("✓", "").trim())).toEqual([label]);
+  });
+
+  it("gives every element a unique id, its section headings' included, beside the band and tabs", async () => {
+    // SectionHeading takes its title's slug as its id unless given one
+    await openPast();
+    await screen.findByTestId("budget-figures");
+    const ids = [...document.body.querySelectorAll("[id]")].map((element) => element.id);
+    expect(ids).toEqual(expect.arrayContaining(["coverage", "coverage-heading"]));
+    expect(ids.filter((id, index) => ids.indexOf(id) !== index)).toEqual([]);
+  });
+
+  it("has no landing page and no About tab or overview drawer, which introduce this Budget", async () => {
+    await openPast();
+    await screen.findByTestId("budget-figures");
+    expect(document.querySelector(".landing, .view-stage.is-landing, .boot-skeleton")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^About this dashboard/ })).toBeNull();
+    expect(document.querySelector(".edge-about")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("reads every file from its own release root, and nothing from this Budget's", async () => {
+    const fetchImpl = await openPast();
+    await screen.findByTestId("budget-figures");
+    // Its idle steps too: none prefetches this Budget's tables, map,
+    // outlook or example households
+    await fetchImpl.idle();
+    const root = `${dataRoot("", AB2025)}/`;
+    expect(fetchImpl.calls.length).toBeGreaterThan(3);
+    expect(fetchImpl.calls.every((url) => url.startsWith(root))).toBe(true);
+    for (const file of Object.keys(flatFor())) expect(fetchImpl.calls).toContain(`${root}${file}`);
+  });
+
+  it("names the event, on today's model and data, in what a chart's download says it shows, with its own provisional label", async () => {
+    await openPast();
+    const download = JSON.parse((await screen.findByTestId("budget-figures")).dataset.download);
+    expect(download.policies).toMatch(new RegExp(`^${AB2025.name} on today's model and data: \\S`));
+    expect(download.policies).not.toMatch(/Budget policies/);
+    expect(download.provisional).toBe(HISTORICAL_PROVISIONAL_LABEL);
+  });
+
+  it("keeps a link's ?year= while its figures load, then opens its first year for a year it does not cover", async () => {
+    let release;
+    const gate = new Promise((resolve) => { release = resolve; });
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } }, gates: { [AB2025.id]: gate } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}&year=1999`);
+    vi.stubGlobal("fetch", fetchImpl);
+    render(<App />);
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(AB2025.name));
+    // Its years are unknown until its figures are in, so nothing is written
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(param("year")).toBe("1999");
+    release();
+    expect((await screen.findByTestId("budget-figures")).dataset.year).toBe(String(IN_DATA));
+    // Its first year is its default, which stays out of the address
+    await waitFor(() => expect(param("year")).toBeNull());
+  });
+
+  // Every artifact of the event fails until `recover` is called; then the
+  // same manifest's artifacts verify on the next check (on focus), and
+  // the view stays mounted
+  const openFailingPast = async (link) => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    let failing = true;
+    const artifacts = `${dataRoot("", AB2025)}/artifacts/`;
+    const flaky = async (url, init) => (failing && String(url).startsWith(artifacts) ? new Response(null, { status: 503 }) : fetchImpl(url, init));
+    window.history.replaceState({}, "", link);
+    vi.stubGlobal("fetch", flaky);
+    render(<App />);
+    expect(await screen.findByText("No figures for this event are published yet.")).toBeInTheDocument();
+    return async () => {
+      failing = false;
+      await act(async () => { window.dispatchEvent(new Event("focus")); });
+      return screen.findByTestId("budget-figures");
+    };
+  };
+
+  it("keeps a link's ?year= while every artifact fails, then opens its first year for a year the artifacts that verify later do not cover", async () => {
+    const recover = await openFailingPast(`/?${RELEASE_PARAM}=${AB2025.id}&year=${BEYOND_DATA}`);
+    expect(param("year")).toBe(String(BEYOND_DATA));
+    expect((await recover()).dataset.year).toBe(String(IN_DATA));
+    expect(screen.getByTestId("distributional-figures").dataset.year).toBe(String(IN_DATA));
+    // Its first year is its default, which stays out of the address
+    await waitFor(() => expect(param("year")).toBeNull());
+  });
+
+  it("opens a link's ?year= once artifacts that cover it verify on a later check, and keeps it in the address", async () => {
+    extraYear.value = BEYOND_DATA;
+    const recover = await openFailingPast(`/?${RELEASE_PARAM}=${AB2025.id}&year=${BEYOND_DATA}`);
+    expect(param("year")).toBe(String(BEYOND_DATA));
+    expect((await recover()).dataset.year).toBe(String(BEYOND_DATA));
+    expect(screen.getByTestId("distributional-figures").dataset.year).toBe(String(BEYOND_DATA));
+    expect(param("year")).toBe(String(BEYOND_DATA));
+    // And its year pill offers both, the link's chosen
+    fireEvent.click(screen.getByRole("button", { name: /^Year / }));
+    expect(screen.getAllByRole("option")).toHaveLength(2);
+    expect(screen.getByRole("option", { selected: true })).toHaveTextContent(`${BEYOND_DATA}-${String((BEYOND_DATA + 1) % 100).padStart(2, "0")}`);
+  });
+
+  it("opens a link's ?year= that the event covers on a fresh load, and keeps it in the address", async () => {
+    extraYear.value = BEYOND_DATA;
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}&year=${BEYOND_DATA}`);
+    vi.stubGlobal("fetch", fetchImpl);
+    render(<App />);
+    expect((await screen.findByTestId("budget-figures")).dataset.year).toBe(String(BEYOND_DATA));
+    expect(param("year")).toBe(String(BEYOND_DATA));
+  });
+
+  it("shows a past event a link opens over the build's figures from its own load, and writes none of this Budget's address", async () => {
+    const boot = await buildBoot();
+    const html = renderToString(<App boot={boot} />);
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    document.body.appendChild(container);
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    vi.stubGlobal("fetch", fetchImpl);
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}&policies=alpha&sub=all`);
+    const errors = [];
+    let root;
+    try {
+      await act(async () => {
+        root = hydrateRoot(container, <App boot={boot} />, { onRecoverableError: (error) => errors.push(error) });
+      });
+      expect(errors).toEqual([]);
+      await waitFor(() => expect(container.querySelector("h1")).toHaveTextContent(AB2025.name));
+      await screen.findByTestId("budget-figures");
+      // The build checked this Budget's figures, never the event's
+      expect(container.querySelector(".app")).toHaveAttribute("data-publication-check", "page");
+      expect(shownIds()).toEqual(new Set(["alpha"]));
+      expect(param(RELEASE_PARAM)).toBe(AB2025.id);
+      expect(param("policies")).toBe("alpha");
+      expect(param("sub")).toBeNull();
+      const own = `${dataRoot("", AB2025)}/`;
+      expect(fetchImpl.calls.length).toBeGreaterThan(3);
+      expect(fetchImpl.calls.every((url) => url.startsWith(own))).toBe(true);
+    } finally {
+      act(() => root?.unmount());
+      container.remove();
+      resetVerifiedCache();
+      resetParsedTables();
+    }
+  });
+
+  it("loads this Budget afresh, checked by the page, when it is chosen again after a past event on the page with the build's figures", async () => {
+    const boot = await buildBoot();
+    const html = renderToString(<App boot={boot} />);
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    document.body.appendChild(container);
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    vi.stubGlobal("fetch", fetchImpl);
+    vi.stubEnv("NEXT_PUBLIC_PUBLISHED_RELEASES", AB2025.id);
+    window.history.replaceState({}, "", "/?tab=dashboard");
+    let root;
+    try {
+      await act(async () => {
+        root = hydrateRoot(container, <App boot={boot} />);
+      });
+      await waitFor(() => expect(container.querySelector('.app[data-publication-check="page"]')).not.toBeNull());
+      await waitFor(() => expect(pill()).not.toBeNull());
+      await choose(AB2025);
+      expect(container.querySelector(".app")).toHaveAttribute("data-publication-check", "page");
+      const manifests = () => fetchImpl.calls.filter((url) => url === "/data/manifest.json").length;
+      const before = manifests();
+      await choose(DEFAULT_RELEASE);
+      // Its own load: the manifest again, and the figures verified by the page
+      expect(manifests()).toBe(before + 1);
+      expect(container.querySelector(".app")).toHaveAttribute("data-publication", "verified");
+      expect(container.querySelector(".app")).toHaveAttribute("data-publication-check", "page");
+    } finally {
+      act(() => root?.unmount());
+      container.remove();
+      resetVerifiedCache();
+      resetParsedTables();
+    }
+  });
+
+  it("says this Budget is checked by the page when it is chosen again before the page's check of the build's figures finished", async () => {
+    const boot = await buildBoot();
+    const html = renderToString(<App boot={boot} />);
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    document.body.appendChild(container);
+    const site = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    // The page's first check of the build's figures waits on this Budget's
+    // manifest, held until the test lets it go
+    let letGo;
+    const held = new Promise((resolve) => { letGo = resolve; });
+    let first = true;
+    const fetchImpl = (url, init) => {
+      if (first && String(url) === "/data/manifest.json") {
+        first = false;
+        return held.then(() => site(url, init));
+      }
+      return site(url, init);
+    };
+    vi.stubGlobal("fetch", fetchImpl);
+    vi.stubEnv("NEXT_PUBLIC_PUBLISHED_RELEASES", AB2025.id);
+    window.history.replaceState({}, "", "/?tab=dashboard");
+    let root;
+    try {
+      await act(async () => {
+        root = hydrateRoot(container, <App boot={boot} />);
+      });
+      await waitFor(() => expect(pill()).not.toBeNull());
+      // Still the build's figures, the page's check not yet done
+      expect(container.querySelector(".app")).toHaveAttribute("data-publication-check", "build");
+      await choose(AB2025);
+      expect(container.querySelector(".app")).toHaveAttribute("data-publication-check", "page");
+      // The held check ends after the page has moved on: it changes nothing
+      await act(async () => { letGo(); });
+      await choose(DEFAULT_RELEASE);
+      // This Budget's figures now come from the page's own load
+      expect(container.querySelector(".app")).toHaveAttribute("data-publication", "verified");
+      expect(container.querySelector(".app")).toHaveAttribute("data-publication-check", "page");
+    } finally {
+      act(() => root?.unmount());
+      container.remove();
+      resetVerifiedCache();
+      resetParsedTables();
+    }
+  });
+
+  it("keeps nothing of this Budget's earlier figures when it is chosen again before a past event loaded", async () => {
+    const boot = await buildBoot();
+    const html = renderToString(<App boot={boot} />);
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    document.body.appendChild(container);
+    // The past event's figures never arrive; this Budget's second load waits
+    // until the test lets it go
+    const site = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } }, gates: { [AB2025.id]: new Promise(() => {}) } });
+    let letGo;
+    const held = new Promise((resolve) => { letGo = resolve; });
+    let manifests = 0;
+    const fetchImpl = (url, init) => {
+      if (String(url) === "/data/manifest.json" && ++manifests === 2) return held.then(() => site(url, init));
+      return site(url, init);
+    };
+    vi.stubGlobal("fetch", fetchImpl);
+    vi.stubEnv("NEXT_PUBLIC_PUBLISHED_RELEASES", AB2025.id);
+    window.history.replaceState({}, "", "/?tab=dashboard");
+    let root;
+    const pick = (release) => {
+      fireEvent.click(pill());
+      fireEvent.click(within(screen.getByRole("listbox", { name: "Budget" })).getByRole("option", { name: release.name }));
+    };
+    try {
+      await act(async () => {
+        root = hydrateRoot(container, <App boot={boot} />);
+      });
+      await waitFor(() => expect(container.querySelector('.app[data-publication-check="page"]')).not.toBeNull());
+      await waitFor(() => expect(pill()).not.toBeNull());
+      pick(AB2025);
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(AB2025.name);
+      expect(screen.queryByTestId("budget-figures")).toBeNull();
+      pick(DEFAULT_RELEASE);
+      // This Budget's own load, not the figures shown before the switch
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("UK Autumn Budget 2026");
+      expect(screen.queryByTestId("budget-figures")).toBeNull();
+      expect(document.querySelector(".skeleton-caption")).toHaveTextContent("Loading results…");
+      await act(async () => { letGo(); });
+      await screen.findByTestId("budget-figures");
+      expect(container.querySelector(".app")).toHaveAttribute("data-publication", "verified");
+      expect(container.querySelector(".app")).toHaveAttribute("data-publication-check", "page");
+    } finally {
+      act(() => root?.unmount());
+      container.remove();
+      resetVerifiedCache();
+      resetParsedTables();
+    }
+  });
+
+  it("ends with the replication line, as this Budget's About drawer has it, each link in a new tab", async () => {
+    await openPast();
+    await screen.findByTestId("budget-figures");
+    const line = document.querySelector(".historical-built-with");
+    expect(line.textContent).toMatch(/^Built with our replication code \(opens in a new tab\)( on policyengine\.py \S+ \(opens in a new tab\))?\.$/);
+    const links = [...line.querySelectorAll("a")];
+    expect(links[0].getAttribute("href")).toBe("https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026");
+    for (const link of links) {
+      expect(link.getAttribute("target")).toBe("_blank");
+      expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    }
+  });
+
+  it("shows the coverage with exact shares, and the replay's computed measures", async () => {
+    await openPast();
+    await screen.findByTestId("budget-figures");
+    const coverage = document.getElementById("coverage");
+    const total = PAGE_IDS.length + UNMODELLED.length;
+    expect(coverage).toHaveTextContent(`Its replay computed ${PAGE_IDS.length} of the ${total}`);
+    const partial = within(coverage).getByText("Partly expressible").closest("tr");
+    // The fixture's measures, a share of every measure of the event
+    expect(partial).toHaveTextContent(`${PAGE_IDS.length}${((100 * PAGE_IDS.length) / total).toFixed(1)}%`);
+    expect(within(coverage).getByText(/No executable construction yet/)).toBeInTheDocument();
+  });
+
+  it("counts the measures with figures here apart from those the replay computed", async () => {
+    // Review's probe: the replay computed every measure the fixture
+    // publishes, but some of them are held or not computable
+    expect(DISPLAYABLE_IDS.length).toBeLessThan(PAGE_IDS.length);
+    await openPast();
+    await screen.findByTestId("budget-figures");
+    const coverage = document.getElementById("coverage");
+    expect(coverage).toHaveTextContent(`This page has figures for ${DISPLAYABLE_IDS.length} of its ${PAGE_IDS.length} measures; the others are listed above as unavailable.`);
+  });
+
+  it("lists the measures it does not model by class and gap, with their reasons", async () => {
+    await openPast();
+    await screen.findByTestId("budget-figures");
+    fireEvent.click(screen.getByRole("button", { name: "Measures not modelled" }));
+    const list = document.querySelector(".not-modelled");
+    expect(within(list).getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
+      "Not expressible: No executable construction yet. This does not show that the model lacks the tax or benefit. (1)",
+      "Not expressible: A model mechanism or data input is missing. (1)",
+      "Outside household scope (1)",
+    ]);
+    expect(list).toHaveTextContent("The data has no gadgets.");
+    expect(list).toHaveTextContent("£0.3bn");
+  });
+
+  it("compares with the OBR's costing beside this page's figure and the scorecard's", async () => {
+    await openPast();
+    await screen.findByTestId("budget-figures");
+    fireEvent.click(screen.getByRole("button", { name: "Compare with the OBR's costing" }));
+    const table = document.querySelector(".historical-obr-table");
+    const alpha = within(table).getByText("Alpha").closest("tr");
+    expect(alpha).toHaveTextContent("£2.5bn£2.0bn");
+    expect(alpha).toHaveTextContent("£1.9bn");
+    // An empty replay cell is missing, never zero
+    expect(within(table).getByText("Beta").closest("tr")).toHaveTextContent(/—$/);
+    const note = document.querySelector(".historical-obr");
+    expect(note).toHaveTextContent(PAIR);
+    expect(within(note).getByRole("link", { name: "scorecard" })).toHaveAttribute("href", SCORECARD_URL);
+  });
+
+  it("tries a flat view that failed again on the next check, and shows it once it loads", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    let failures = 1;
+    const flaky = async (url, init) => {
+      if (String(url) === `${dataRoot("", AB2025)}/coverage.csv` && failures > 0) {
+        failures -= 1;
+        return new Response(null, { status: 503 });
+      }
+      return fetchImpl(url, init);
+    };
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}`);
+    vi.stubGlobal("fetch", flaky);
+    render(<App />);
+    expect(await screen.findByText("The coverage of this event is unavailable")).toBeInTheDocument();
+    await screen.findByTestId("budget-figures");
+    await act(async () => { window.dispatchEvent(new Event("focus")); });
+    await waitFor(() => expect(screen.queryByText("The coverage of this event is unavailable")).toBeNull());
+    expect(within(document.getElementById("coverage")).getByText("Partly expressible")).toBeInTheDocument();
+  });
+
+  it("keeps its coverage and measures when the selection has an unavailable measure, and withholds only its figures", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}&policies=alpha,missing`);
+    vi.stubGlobal("fetch", fetchImpl);
+    render(<App />);
+    expect(await screen.findByText("Some selected policies are unavailable")).toBeInTheDocument();
+    expect(screen.queryByTestId("budget-figures")).toBeNull();
+    expect(screen.queryByTestId("distributional-figures")).toBeNull();
+    // The notice names what is unavailable; no count of a selection with it
+    expect(document.querySelector(".showing-line")).toBeNull();
+    expect(within(document.getElementById("coverage")).getByText("Partly expressible")).toBeInTheDocument();
+    expect(document.getElementById("policy-details")).toHaveTextContent("About the modelled measures");
+    expect(document.getElementById("policy-details")).toHaveTextContent("Measures not modelled");
+    expect(screen.getByRole("link", { name: "PolicyEngine scorecard" })).toHaveAttribute("href", SCORECARD_URL);
+    fireEvent.click(screen.getByRole("button", { name: "Remove missing from the selection" }));
+    await screen.findByTestId("budget-figures");
+    expect(shownIds()).toEqual(new Set(["alpha"]));
+    expect(document.querySelector(".showing-line")).toHaveTextContent("Showing: Alpha");
+  });
+
+  it("names an unknown measure in a link without a selection note, alone or on an event with no figures", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}&policies=missing`);
+    vi.stubGlobal("fetch", fetchImpl);
+    const view = render(<App />);
+    expect(await screen.findByText("Some selected policies are unavailable")).toBeInTheDocument();
+    expect(document.querySelector(".showing-line")).toBeNull();
+    expect(document.body).not.toHaveTextContent("undefined");
+    view.unmount();
+
+    // Its one measure's receipt is missing, so it has no figures and no
+    // years; the notice still comes first, with its remove button
+    const missing = { [`${FIXTURE_MEASURES.alpha.artifact}/receipt.json`]: 404 };
+    const empty = await siteFetch({ past: { [AB2025.id]: { flat: flatFor(["alpha"]), measures: ["alpha"], overrides: missing } } });
+    window.history.replaceState({}, "", `/?${RELEASE_PARAM}=${AB2025.id}&policies=missing`);
+    vi.stubGlobal("fetch", empty);
+    render(<App />);
+    expect(await screen.findByText("Some selected policies are unavailable")).toBeInTheDocument();
+    expect(screen.queryByText("No figures for this event are published yet.")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Remove missing from the selection" }));
+    expect(await screen.findByText("No figures for this event are published yet.")).toBeInTheDocument();
+    // An explicit selection stays explicit, now empty, as on the 2026 page
+    expect(param("policies")).toBe("");
+  });
+
+  it("shows nothing when its root holds another release's manifest", async () => {
+    await openPast({ identity: CURRENT_BUDGET });
+    expect(await screen.findByText(`Published results for the ${AB2025.name} are unavailable`)).toBeInTheDocument();
+    expect(screen.queryByTestId("budget-figures")).toBeNull();
+    expect(document.getElementById("coverage")).toBeNull();
+  });
+
+  it("says so when no results are published yet", async () => {
+    await openPast({ overrides: { "manifest.json": 404 } });
+    expect(await screen.findByText(`No results for the ${AB2025.name} are published yet`)).toBeInTheDocument();
+    expect(screen.getByText(`Figures appear here once results for the ${AB2025.name} are published.`)).toBeInTheDocument();
+    expect(screen.queryByTestId("budget-figures")).toBeNull();
+  });
+
+  it("withholds a flat view whose bytes changed, and shows the rest", async () => {
+    await openPast({ overrides: { "coverage.csv": `${flatFor()["coverage.csv"]}\n` } });
+    await screen.findByTestId("budget-figures");
+    expect(screen.getByText("The coverage of this event is unavailable")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Compare with the OBR's costing" })).toBeInTheDocument();
+  });
+
+  it("is what its own route opens, with this Budget a link away", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    vi.stubGlobal("fetch", fetchImpl);
+    window.history.replaceState({}, "", `/budgets/${AB2025.id}`);
+    render(await HistoricalRelease({ params: Promise.resolve({ release: AB2025.id }) }));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(AB2025.name);
+    await screen.findByTestId("budget-figures");
+    expect(screen.getByText(BANNER)).toBeInTheDocument();
+    // Its one view, which the page writes as every view
+    expect(window.location.search).toBe("?tab=dashboard");
+    expect(document.querySelector(".landing")).toBeNull();
+    cleanup();
+    window.history.replaceState({}, "", `/budgets/${AB2025.id}?${RELEASE_PARAM}=${DEFAULT_RELEASE.id}`);
+    render(await HistoricalRelease({ params: Promise.resolve({ release: AB2025.id }) }));
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("UK Autumn Budget 2026"));
+    expect(param(RELEASE_PARAM)).toBe(DEFAULT_RELEASE.id);
+  });
+
+  it("draws no landing page, view tabs or About tab of this Budget's in its route's server HTML", async () => {
+    // The static export's HTML for the route, before any script runs
+    const html = renderToString(await HistoricalRelease({ params: Promise.resolve({ release: AB2025.id }) }));
+    expect(html).toContain(`<h1>${AB2025.name}</h1>`);
+    for (const part of ['class="landing', "is-landing", "boot-skeleton", "edge-about", "UK Autumn Budget 2026", "Household impact"]) expect(html).not.toContain(part);
+  });
+
+  // The route's own release, a past event, mounts first; the link's
+  // ?budget= is read after it, so a past event's address cleanup must wait
+  // for it, or this Budget would lose the sub-tab the link opens
+  it.each([
+    // An old Young people link opens By age, with 16 to 24 chosen
+    ["sub=young#young-people", "age", "By age"],
+    ["sub=living", "living", "Living standards"],
+  ])("opens this Budget's sub-tab when the route's link names this Budget (%s)", async (link, sub, tab) => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    vi.stubGlobal("fetch", fetchImpl);
+    window.history.replaceState({}, "", `/budgets/${AB2025.id}?${RELEASE_PARAM}=${DEFAULT_RELEASE.id}&${link}`);
+    render(await HistoricalRelease({ params: Promise.resolve({ release: AB2025.id }) }));
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("UK Autumn Budget 2026"));
+    const sections = await screen.findByRole("tablist", { name: "Population impact sections" }, { timeout: 5000 });
+    expect(within(sections).getByRole("tab", { name: tab })).toHaveAttribute("aria-selected", "true");
+    expect(param("sub")).toBe(sub);
+    expect(param(RELEASE_PARAM)).toBe(DEFAULT_RELEASE.id);
+  });
+
+  it("drops this Budget's sub-tab and Young people hash from a link to a past event's own route", async () => {
+    const fetchImpl = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    vi.stubGlobal("fetch", fetchImpl);
+    window.history.replaceState({}, "", `/budgets/${AB2025.id}?sub=living&policies=alpha#young-people`);
+    render(await HistoricalRelease({ params: Promise.resolve({ release: AB2025.id }) }));
+    await screen.findByTestId("budget-figures");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(AB2025.name);
+    expect(shownIds()).toEqual(new Set(["alpha"]));
+    expect(window.location.pathname).toBe(`/budgets/${AB2025.id}`);
+    await waitFor(() => expect(window.location.search).toBe("?policies=alpha&tab=dashboard"));
+    expect(window.location.hash).toBe("");
+  });
+});
+
+// A link's address, in its parts, as window.location gives them
+const addressParts = (address) => {
+  const at = address.indexOf("#");
+  const beforeHash = at < 0 ? address : address.slice(0, at);
+  const query = beforeHash.indexOf("?");
+  return {
+    pathname: query < 0 ? beforeHash : beforeHash.slice(0, query),
+    search: query < 0 ? "" : beforeHash.slice(query),
+    hash: at < 0 ? "" : address.slice(at),
+  };
+};
+
+describe("a past event's address from a link", () => {
+  // A link's query as written, not as URLSearchParams would write it: a
+  // value can hold a comma or a plus, which writing it again would encode,
+  // a key can be written encoded (%73ub is sub), and a key can start with
+  // "?": "?sub" is not sub, first or not, since a query loses one "?" only
+  const pairs = fc.array(
+    fc.tuple(fc.constantFrom(RELEASE_PARAM, "tab", "sub", "%73ub", "?sub", "subs", "policies", "other"), fc.constantFrom("", "alpha", "alpha,beta", "a+b", "%2C")),
+    { maxLength: 6 },
+  );
+  const hashes = fc.constantFrom("", "#young-people", "#coverage", "#young-people-2");
+  const isSub = (key) => decodeURIComponent(key) === "sub";
+
+  it("loses only ?sub= and #young-people, and keeps every other pair as written, in order", () => {
+    fc.assert(
+      fc.property(pairs, hashes, (link, hash) => {
+        const search = link.length ? `?${link.map(([key, value]) => `${key}=${value}`).join("&")}` : "";
+        const address = pastEventAddress({ pathname: "/budgets/x", search, hash });
+        const parts = addressParts(address);
+        expect(parts.pathname).toBe("/budgets/x");
+        const kept = link.filter(([key]) => !isSub(key)).map(([key, value]) => `${key}=${value}`).join("&");
+        expect(parts.search).toBe(kept ? `?${kept}` : "");
+        expect([...new URLSearchParams(parts.search)]).toEqual([...new URLSearchParams(search)].filter(([key]) => key !== "sub"));
+        expect(parts.hash).toBe(hash === "#young-people" ? "" : hash);
+        if (!link.some(([key]) => isSub(key)) && hash !== "#young-people") expect(address).toBe(`/budgets/x${search}${hash}`);
+        expect(pastEventAddress(parts)).toBe(address);
+      }),
+      { numRuns: 300 },
+    );
+  });
+
+  it("keeps a pair whose key is ?sub, not sub, first or later", () => {
+    expect(pastEventAddress({ pathname: "/budgets/x", search: "?other=1&?sub=keep&sub=drop", hash: "" })).toBe("/budgets/x?other=1&?sub=keep");
+    expect(pastEventAddress({ pathname: "/budgets/x", search: "??sub=keep&sub=drop", hash: "" })).toBe("/budgets/x??sub=keep");
+    expect([...new URL("https://example.test/budgets/x??sub=keep").searchParams.keys()]).toEqual(["?sub"]);
+  });
+});

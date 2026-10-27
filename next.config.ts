@@ -32,6 +32,24 @@ function publishedGeography(): string {
     .join(',');
 }
 
+/**
+ * The past fiscal events this build ships a manifest for, comma-separated
+ * ids. The page asks for no other past event's manifest, so a build with
+ * none makes no request for one, and offers a listed event only once its
+ * manifest verifies.
+ */
+function publishedReleases(): string {
+  type Release = { id: string; kind: string; data_root: string };
+  const registry = JSON.parse(
+    readFileSync(join(process.cwd(), 'src', 'uk_budget_data', 'releases.json'), 'utf8'),
+  ) as { releases: Release[] };
+  return registry.releases
+    .filter((release) => release.kind === 'historical')
+    .filter((release) => existsSync(join(process.cwd(), 'public', 'data', release.data_root, 'manifest.json')))
+    .map((release) => release.id)
+    .join(',');
+}
+
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH !== undefined
   ? process.env.NEXT_PUBLIC_BASE_PATH
   : '/uk/autumn-budget-2026';
@@ -48,6 +66,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BASE_PATH: basePath,
     NEXT_PUBLIC_POLICYENGINE_VERSION: lockedVersion('policyengine'),
     NEXT_PUBLIC_PUBLISHED_GEOGRAPHY: publishedGeography(),
+    NEXT_PUBLIC_PUBLISHED_RELEASES: publishedReleases(),
   },
   // recharts and d3 ship CJS interop and rely on browser globals; transpiling
   // them through Next's pipeline avoids ESM/CJS mismatch errors during build.

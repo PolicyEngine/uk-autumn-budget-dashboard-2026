@@ -387,6 +387,12 @@ html[data-deep-link] .boot-skeleton {
   display: block;
 }
 
+/* ...but not for a past event (utils/landing.js): they are this Budget's
+   views' placeholders */
+html[data-past-event] .boot-skeleton {
+  display: none;
+}
+
 /* Its copy of the tab bar, then the panel's own top space, as the view's */
 .boot-skeleton .boot-view-tabs + .skeleton-caption {
   margin-top: 32px;

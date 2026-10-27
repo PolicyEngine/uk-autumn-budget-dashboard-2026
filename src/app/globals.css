@@ -481,6 +481,70 @@ body {
   visibility: hidden;
 }
 
+/* The release pill: which Budget or past event the page shows. It is there
+   only once more than one is published (App.jsx sets has-releases), so the
+   band is unchanged until then, and then on every view, as the year and
+   policy pills are. Wide: after the title. Below 900px: beside the year
+   pill. 480px and below: a row of its own under the title, as a release's
+   name is too long to share the pill row. */
+.title-row.has-releases {
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  grid-template-areas: "title release year policy";
+}
+
+.band-release {
+  grid-area: release;
+}
+
+@media (max-width: 899px) {
+  .title-row.has-releases {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title policy"
+      "year release";
+  }
+
+  .band-release {
+    justify-self: end;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Its list spans the band, as the other pills' do */
+  .band-release .pill-select {
+    position: static;
+  }
+}
+
+/* Four on one row from 900px leave the title too little room: below 1024px
+   the pills drop their labels and units, as on a phone */
+@media (min-width: 900px) and (max-width: 1023px) {
+  .title-row.has-releases .band-control-label,
+  .title-row.has-releases .band-control-unit {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  /* With the pill (App.jsx sets data-release-pill), the band is one pill
+     row taller, the same height whatever the view */
+  .app[data-release-pill="shown"] {
+    --title-row-height: 138px;
+    --sticky-offset: calc(138px + var(--view-tabs-height));
+  }
+
+  .app[data-release-pill="shown"] .title-row {
+    grid-template-areas:
+      "title title"
+      "release release"
+      "year policy";
+  }
+
+  .band-release {
+    justify-self: start;
+  }
+}
+
 .tab-panel {
   padding-top: 32px;
 }

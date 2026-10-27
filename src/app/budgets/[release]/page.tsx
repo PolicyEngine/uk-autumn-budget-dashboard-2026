@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
-import HistoricalReleasePage from '@/components/historical/HistoricalReleasePage';
+import App from '@/App';
 import { getHistoricalRelease, HISTORICAL_RELEASES } from '@/utils/publication/release';
 
 // A past fiscal event's page, one per registered historical release
-// (src/uk_budget_data/releases.json). Any other id is a 404: the route
-// never serves a release the registry does not list.
+// (src/uk_budget_data/releases.json): the dashboard, opened with that
+// event selected. Any other id is a 404: the route never serves a release
+// the registry does not list.
 export const dynamicParams = false;
 
 type Params = { params: Promise<{ release: string }> };
@@ -22,5 +23,6 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 export default async function HistoricalRelease({ params }: Params) {
-  return <HistoricalReleasePage releaseId={(await params).release} />;
+  const { id } = getHistoricalRelease((await params).release);
+  return <App releaseId={id} />;
 }

@@ -110,6 +110,16 @@ html[data-deep-link] .view-tabs-bar[hidden] {
   display: block;
 }
 
+/* A link to a past event (DEEP_LINK_SCRIPT): the server's landing page and
+   tab bar are this Budget's, so neither shows before the event opens */
+html[data-past-event] .view-stage.is-landing {
+  visibility: hidden;
+}
+
+html[data-past-event] .view-tabs-bar[hidden] {
+  display: none;
+}
+
 .landing {
   position: relative;
   z-index: 1;

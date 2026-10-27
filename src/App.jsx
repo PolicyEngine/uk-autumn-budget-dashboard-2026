@@ -31,6 +31,12 @@ import { bootView } from "./utils/bootView";
 import UpdateToast from "./components/publication/UpdateToast";
 import { provisionalLabel } from "./utils/publication/manifest";
 import { DownloadContext, policiesLabel } from "./utils/downloadContext";
+import { ScrollText } from "lucide-react";
+import PillSelect from "./components/PillSelect";
+import { HISTORICAL_PROVISIONAL_LABEL, loadHistoricalViews, PastEventBanner } from "./components/historical/PastEvent";
+import { DEFAULT_RELEASE, findRelease, HISTORICAL_RELEASES, newestFirst, publishedHistoricalReleases } from "./utils/publication/release";
+import { eventYear, releaseYears } from "./utils/historical";
+import { isPastEventAddress, RELEASE_PARAM } from "./components/historical/pastEventPaths";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
 import { createSiteNavIntent, isProgrammaticScroll, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
@@ -58,6 +64,7 @@ const InequalityChart = lazyView(chartViews, (m) => {
 const PovertyMeasuresRow = lazyView(chartViews, (m) => m.PovertyMeasuresRow);
 const PersonalImpactTab = lazyView(chartViews, (m) => m.PersonalImpactTab);
 const LivingStandardsTab = lazyView(chartViews, (m) => m.LivingStandardsTab);
+const PastEventPopulation = lazyView(chartViews, (m) => m.PastEventPopulation);
 const PolicyCards = lazyView(() => import("./components/PolicyCards"));
 const MethodologyTab = lazyView(() => import("./components/MethodologyTab"));
 
@@ -72,6 +79,8 @@ const VIEW_CODE = {
   outlook: [LivingStandardsTab],
   policies: [PolicyCards],
   methodology: [MethodologyTab],
+  // A past event's one view (components/historical/PastEventPopulation.jsx)
+  past: [PastEventPopulation],
 };
 
 /** Load every view's code (tests: views then render without suspending). */
@@ -85,13 +94,17 @@ export function preloadView(view) {
 }
 
 // A link to a view starts that view's code now, beside the page's own,
-// rather than after hydration and the publication check
-if (typeof window !== "undefined" && !opensLanding(window.location)) {
-  preloadView(bootView(window.location));
+// rather than after hydration and the publication check. So does a past
+// event's page, or a link to one (?budget=), for its one view.
+if (typeof window !== "undefined") {
+  const pastIds = HISTORICAL_RELEASES.map((release) => release.id);
+  if (isPastEventAddress(window.location, pastIds, process.env.NEXT_PUBLIC_BASE_PATH || "")) preloadView("past");
+  else if (!opensLanding(window.location)) preloadView(bootView(window.location));
 }
 
-/** The placeholder a view shows while its code loads. */
-function viewFallback(value) {
+/** The placeholder a view shows while its code loads (`past`: a past event's, with no sub-tabs). */
+function viewFallback(value, past = false) {
+  if (past) return <ViewSkeleton view="dashboard:finances" subTabs={false} />;
   if (value === "dashboard") return <ViewSkeleton view={loadingView(value)} />;
   if (value !== "outlook") return <ViewSkeleton view={value} />;
   const params = new URLSearchParams(window.location.search);
@@ -123,6 +136,7 @@ const VIEW_BY_KEY = Object.fromEntries(VIEWS.map((view) => [view.value, view]));
 // view shown (no visible tip)
 export const YEAR_INACTIVE = "The year doesn't change this tab";
 export const POLICIES_INACTIVE = "Policy choices don't change this tab";
+export const RELEASE_INACTIVE = "Past events show on Population impact";
 
 // Old ?tab= values still opened by shared links, and the view each is now;
 // the address is rewritten to the new value
@@ -154,6 +168,18 @@ export function opensYoungPeople({ search, hash }) {
   return (
     hash === `#${YOUNG_PEOPLE_ANCHOR}` || new URLSearchParams(search).get("tab") === "young"
   );
+}
+
+/**
+ * The views a release has. A past event is one view, Population impact
+ * without its sub-tabs (docs/historical-releases.md, question 4): Household
+ * impact, Young people, Living standards, results by area and the example
+ * households are built on 2026 inputs, the Pre-measures forecast is this
+ * Budget's baseline outlook, Policies describes this Budget's measures and
+ * Methodology its modelling.
+ */
+export function viewsFor(release = DEFAULT_RELEASE) {
+  return release.kind === "historical" ? VIEWS.filter((view) => view.value === DEFAULT_VIEW) : VIEWS;
 }
 
 /**
@@ -190,11 +216,44 @@ export function oldAgeSubGroup({ search }) {
 }
 
 /** The view a page address opens: an old Young people link, else ?tab=, else the default. */
-export function viewFromLocation({ search, hash }) {
+export function viewFromLocation({ search, hash }, views = VIEWS) {
   if (opensYoungPeople({ search, hash })) return DEFAULT_VIEW;
   if (opensDeciles({ hash })) return DEFAULT_VIEW;
   const tab = viewKey(new URLSearchParams(search).get("tab"));
-  return VIEW_BY_KEY[tab] ? tab : DEFAULT_VIEW;
+  return views.some((view) => view.value === tab) ? tab : DEFAULT_VIEW;
+}
+
+// The selected release, when it is not the page's own: ?budget=<id>
+export { RELEASE_PARAM };
+
+/**
+ * The address for another release: its view, where the new release has it,
+ * and ?budget= naming it (none for the page's own). Each release has its
+ * own measures, years, views and sub-tabs, so the rest of the query goes:
+ * the measures, the sub-tab and each view's own state (?age=, ?map=, ?pf=
+ * and the like). So does the Young people hash.
+ */
+export function releaseAddress({ pathname, search, hash }, release, own = DEFAULT_RELEASE) {
+  const tab = new URLSearchParams(search).get("tab");
+  const params = new URLSearchParams();
+  if (tab !== null && viewsFor(release).some((view) => view.value === viewKey(tab))) params.set("tab", tab);
+  if (release !== own) params.set(RELEASE_PARAM, release.id);
+  const query = params.toString();
+  return `${pathname}${query ? `?${query}` : ""}${hash === `#${YOUNG_PEOPLE_ANCHOR}` ? "" : hash}`;
+}
+
+/**
+ * A past event's address, from the one a link opened it at. A past event
+ * has no sub-tabs and no Young people section, so a link's ?sub= and
+ * #young-people (this Budget's) go, as releaseAddress drops them on a
+ * switch. Every other pair is kept as the link wrote it, byte for byte.
+ */
+export function pastEventAddress({ pathname, search, hash }) {
+  // Each pair is read after an "&", which URLSearchParams never strips as
+  // it does a leading "?": "?sub=x" after the first pair is the key "?sub"
+  const kept = search.replace(/^\?/, "").split("&").filter((pair) => !new URLSearchParams(`&${pair}`).has(SUB_TAB_PARAM));
+  const query = kept.join("&");
+  return `${pathname}${query ? `?${query}` : ""}${hash === `#${YOUNG_PEOPLE_ANCHOR}` ? "" : hash}`;
 }
 
 
@@ -256,9 +315,22 @@ function whenIdle(run) {
 const requestedPolicies = (requested) =>
   requested === null ? [] : [...new Set(requested.split(",").map((id) => id.trim()).filter(Boolean))];
 
-function Dashboard({ published, unavailable = null, updated = false, fromBuild = false, checkedBy = "page" }) {
+/**
+ * The page for one release: this Budget's by default, or a past event's.
+ * `releases` lists the releases the band offers, newest first, when there
+ * is more than one; `onReleaseChange` takes the id chosen. `fromBuild`: the
+ * first render may be the server's, with the build's figures (App's `boot`).
+ */
+function Dashboard({ published, unavailable = null, updated = false, fromBuild = false, checkedBy = "page", release = DEFAULT_RELEASE, releases = null, onReleaseChange }) {
   const catalogue = useMeasureCatalogue();
   const POLICIES = catalogue.measures;
+  const past = release.kind === "historical";
+  const views = viewsFor(release);
+  // A past event's own years; this Budget's are the dashboard's
+  const pastYears = useMemo(() => (past ? releaseYears(catalogue) : null), [past, catalogue]);
+  // The year selected when the address names none: a past event's first
+  // (none until its figures are in), this Budget's default
+  const yearDefault = pastYears ? pastYears[0] : DEFAULT_DISPLAY_YEAR;
   // A link's ?policies= is a chosen selection. Without one the selection is
   // the default, every displayable measure, and follows the publication.
   // With the build's figures the first render is the server's (hydration),
@@ -283,11 +355,16 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   useEffect(() => {
     if (!catalogue.manifest || !catalogue.tablesByKey) return undefined;
     // One step per idle period, the views' own tables first
+    // (A past event's one view has its tables already; the other views'
+    // tables, the map, the outlook and the example households are this
+    // Budget's, so a past event loads none of them)
     const steps = [
-      // Every view's code, so a tab switch need not wait for it
-      ...Object.keys(VIEW_CODE).map((view) => () => preloadView(view)),
-      ...IDLE_TABLES.map((table) => () => loadVerifiedTablesOnce(catalogue, table).catch(() => {})),
-      () => loadOutlook().catch(() => {}),
+      ...(past ? [] : [
+        // Every view's code, so a tab switch need not wait for it
+        ...Object.keys(VIEW_CODE).map((view) => () => preloadView(view)),
+        ...IDLE_TABLES.map((table) => () => loadVerifiedTablesOnce(catalogue, table).catch(() => {})),
+        () => loadOutlook().catch(() => {}),
+      ]),
       () => pruneVerifiedCache().catch(() => {}),
     ];
     let cancel;
@@ -306,7 +383,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       steps.length = 0;
       cancel?.();
     };
-  }, [catalogue]);
+  }, [catalogue, past]);
   // The two big files (the map's boundaries and results by area; the
   // example households' answers) load only for the views that show them:
   // when one opens (its cards ask), or a little before, as the pointer or
@@ -333,13 +410,14 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       document.removeEventListener("focusin", onIntent);
     };
   }, [catalogue]);
-  const [distributionalYear, setDistributionalYear] = useState(DEFAULT_DISPLAY_YEAR);
+  const [distributionalYear, setDistributionalYear] = useState(yearDefault);
   const [activeTab, setActiveTab] = useState(DEFAULT_VIEW);
   const [locationReady, setLocationReady] = useState(false);
   // The landing page (LandingPage.jsx), at the bare address only, over the
   // default view (Public finances), which stays mounted behind it, faded
-  // and inert. Choosing any view leaves it.
-  const [landing, setLanding] = useState(true);
+  // and inert. Choosing any view leaves it. It introduces this Budget, so a
+  // past event has none, not even in its own route's first render.
+  const [landing, setLanding] = useState(!past);
   // The overview drawer, opened by the "About" tab on the window's edge
   const [overviewOpen, setOverviewOpen] = useState(false);
   const aboutTabRef = useRef(null);
@@ -360,24 +438,39 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   useLayoutEffect(() => {
     // An old link to the Young people view opens its sub-tab; the hash
     // stays, so the page scrolls to the section
-    const view = viewFromLocation(window.location);
-    // (By age, with 16 to 24 chosen; an old Pensioners sub-tab link opens
-    // By age with pensioners chosen)
-    const oldGroup = oldAgeSubGroup(window.location);
-    if (opensYoungPeople(window.location)) dropSubTab("age", { age: "16-24" });
-    else if (oldGroup) dropSubTab("age", { age: oldGroup });
-    // A link to the decile pair opens All households, where it now is
-    else if (opensDeciles(window.location)) dropSubTab("all");
-    // An old Baseline outlook link opens the Pre-measures forecast tab's Living
-    // standards, its default sub-tab (?sub=forecast is still its Forecast changes)
-    if (oldOutlookBaseline(window.location)) dropSubTab(null);
-    setLanding(opensLanding(window.location));
+    const view = viewFromLocation(window.location, views);
+    // A past event has no sub-tabs and no landing page: App's
+    // pastEventAddress has taken this Budget's ?sub= and #young-people
+    // from its address already. Nor is a link that opens one (?budget=)
+    // this Budget's to rewrite: App reads it after this, and shows the
+    // event in this page's place.
+    const leaving = !past && findRelease(new URLSearchParams(window.location.search).get(RELEASE_PARAM))?.kind === "historical";
+    if (!past && !leaving) {
+      // (By age, with 16 to 24 chosen; an old Pensioners sub-tab link opens
+      // By age with pensioners chosen)
+      const oldGroup = oldAgeSubGroup(window.location);
+      if (opensYoungPeople(window.location)) dropSubTab("age", { age: "16-24" });
+      else if (oldGroup) dropSubTab("age", { age: oldGroup });
+      // A link to the decile pair opens All households, where it now is
+      else if (opensDeciles(window.location)) dropSubTab("all");
+      // An old Baseline outlook link opens the Pre-measures forecast tab's Living
+      // standards, its default sub-tab (?sub=forecast is still its Forecast changes)
+      if (oldOutlookBaseline(window.location)) dropSubTab(null);
+    }
+    setLanding(!past && !leaving && opensLanding(window.location));
     setActiveTab(view);
-    // A shared link's ?year= opens that year; one not offered opens the
-    // default. 2026-27 is kept here and dropped below if the selection has
-    // no effect in it
+    // The link's ?year=, ?policies= and the rest are the event's, for its
+    // own page to read: this one writes nothing to the address
+    if (leaving) return;
+    // A shared link's ?year= opens that year; one not offered (a year a
+    // past event's figures do not cover) opens the default. This Budget's
+    // 2026-27 is kept here and dropped below if the selection has no
+    // effect in it
     const askedYear = new URLSearchParams(window.location.search).get("year");
-    if (askedYear !== null) setDistributionalYear(Number(askedYear) === EARLY_YEAR ? EARLY_YEAR : selectableYearOr(askedYear));
+    if (askedYear !== null) {
+      if (!pastYears) setDistributionalYear(Number(askedYear) === EARLY_YEAR ? EARLY_YEAR : selectableYearOr(askedYear));
+      else setDistributionalYear(eventYear(pastYears, Number(askedYear)));
+    }
     if (fromBuild) {
       const linked = readRequested();
       if (linked !== null) {
@@ -386,7 +479,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       }
     }
     setLocationReady(true);
-    // Once, on mount: the address as the page opened
+    // Once, on mount: the address as the page opened (a release is its own mount)
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -407,19 +500,31 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       else params.delete("policies");
     }
     // The year chosen in the header, so a shared link opens on it; the
-    // default stays out of the address, as the selection's does
-    if (!landing && distributionalYear !== DEFAULT_DISPLAY_YEAR) params.set("year", String(distributionalYear));
+    // default stays out of the address, as the selection's does. A past
+    // event's link keeps its ?year= until the event's figures (and so its
+    // years) are in.
+    if (pastYears && !pastYears.length) {
+      // (kept as the link wrote it)
+    } else if (!landing && distributionalYear !== yearDefault) params.set("year", String(distributionalYear));
     else params.delete("year");
     window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`);
-  }, [selectedPolicies, selectionChosen, activeTab, landing, locationReady, unavailable, distributionalYear]);
+  }, [selectedPolicies, selectionChosen, activeTab, landing, locationReady, unavailable, distributionalYear, pastYears, yearDefault]);
 
-  // The years shown: 2026-27 first only while a selected policy has an
-  // effect in it (yearsForSelection)
-  const shownYears = useMemo(() => yearsForSelection(published.budgetary, selectedPolicies), [published, selectedPolicies]);
+  // The years shown: a past event's own; this Budget's, 2026-27 first only
+  // while a selected policy has an effect in it (yearsForSelection)
+  const shownYears = useMemo(() => pastYears ?? yearsForSelection(published.budgetary, selectedPolicies), [pastYears, published, selectedPolicies]);
   // A year no longer shown (2026-27 after its last policy is deselected)
   // falls back to the default, once the published figures are in (set
   // while rendering, as `visited` is above)
-  if (published.budgetary?.length && !shownYears.includes(distributionalYear)) setDistributionalYear(DEFAULT_DISPLAY_YEAR);
+  if (!pastYears && published.budgetary?.length && !shownYears.includes(distributionalYear)) setDistributionalYear(DEFAULT_DISPLAY_YEAR);
+  // A past event's year is one of its own (its ?year= read above, and its
+  // year pill). Its years come with its figures: where each artifact failed
+  // at first and verified on a later check under the same manifest, this
+  // view stayed mounted with none, so the link's ?year=, kept in the
+  // address until then, is read against them now, before the address is
+  // written (never on a first render, which has the event's first year or
+  // no years)
+  if (pastYears?.length && !pastYears.includes(distributionalYear)) setDistributionalYear(eventYear(pastYears, Number(new URLSearchParams(window.location.search).get("year"))));
   const results = useMemo(() => ({
     budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, shownYears),
     rawDistributional: published.distributional.filter((row) => selectedPolicies.includes(row.reform_id)),
@@ -662,6 +767,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   // A link to #young-people from elsewhere on the page opens Population
   // impact's Young people sub-tab (PopulationImpactView shows it if open)
   useEffect(() => {
+    if (past) return undefined;
     const onHashChange = () => {
       if (window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
         dropSubTab("age", { age: "16-24" });
@@ -671,7 +777,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
+  }, [past]);
 
   // The tab bar's place in the page, before it sticks under the band
   const tabsSentinelRef = useRef(null);
@@ -821,10 +927,31 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     }).join("; "),
   } : null;
   const viewUnavailable = (value) => unavailable ?? (value === "dashboard" ? selectionUnavailable : null);
+  // The notice in place of a view's figures: none are published, or the
+  // selection has a measure that is unavailable
+  const unavailableNotice = (value) => (
+    <UnavailableNotice reason={viewUnavailable(value).reason}>
+      {viewUnavailable(value).detail && <p>{viewUnavailable(value).detail}</p>}
+      {unavailable ? (
+        unavailable.empty && <p>{past ? `Figures appear here once results for the ${release.name} are published.` : "Figures appear here once the 2026 Budget policies are approved for publication."}</p>
+      ) : (
+        <>
+          <p>No figures are shown for a selection while any of it is unavailable.</p>
+          <RemoveUnavailable
+            names={unavailableIds.map((id) => catalogue.byId.get(id)?.name ?? id)}
+            onRemove={() => removeFromSelection(unavailableIds)}
+          />
+        </>
+      )}
+    </UnavailableNotice>
+  );
+
+
   // The views with sub-tabs open into their band (SubTabs); not while
   // Population impact shows its unavailable notice instead, nor on the
-  // landing page, where no view tab is chosen
-  const hasSubTabs = !landing && (activeTab === "outlook" || (activeTab === "dashboard" && !viewUnavailable("dashboard")));
+  // landing page, where no view tab is chosen. A past event's one view has
+  // none.
+  const hasSubTabs = !past && !landing && (activeTab === "outlook" || (activeTab === "dashboard" && !viewUnavailable("dashboard")));
 
   const view = VIEW_BY_KEY[activeTab] ?? VIEW_BY_KEY[DEFAULT_VIEW];
   // Both pills show on the landing page: the band stays the same from the
@@ -834,7 +961,16 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   // year pill offers those years and a band year of 2026-27 shows 2027-28
   const householdView = !landing && activeTab === "household";
   const householdYear = SELECTABLE_YEARS.includes(distributionalYear) ? distributionalYear : DEFAULT_DISPLAY_YEAR;
+  // The year pill's years; a past event with none yet keeps the pill's
+  // default ones, unseen (yearPill below)
+  const pillYears = householdView || !shownYears.length ? SELECTABLE_YEARS : shownYears;
   const policiesShown = landing || view.policies;
+  // A past event with no figures yet (loading, or unavailable) has no years
+  // to offer: its year pill keeps its place, unseen
+  const yearPill = !pastYears || pastYears.length > 0;
+  // The release pill applies to Population impact, the one view every
+  // release has, and so to the landing page over it
+  const releaseShown = landing || activeTab === DEFAULT_VIEW;
 
   // A caveat on the results while any shown measure is provisional: one
   // small badge on the landing page, nowhere above the views
@@ -842,14 +978,25 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
 
   // What a downloaded chart says it shows (ChartDownloadMenu's frame): the
   // band's policies on the views it drives, the provisional label while
-  // any shown measure is provisional
-  const downloadContext = (value) =>
-    VIEW_BY_KEY[value]?.policies
+  // any shown measure is provisional. A past event's are named as the
+  // event's, on today's model and data: the frame's source line is this
+  // dashboard's, so a chart of the event would otherwise read as this
+  // Budget's.
+  const downloadContext = (value) => {
+    if (past) {
+      const label = policiesLabel(selectedPolicies, POLICIES);
+      return {
+        policies: `${release.name} on today's model and data${label ? `: ${label}` : ""}`,
+        provisional: provisional ? HISTORICAL_PROVISIONAL_LABEL : null,
+      };
+    }
+    return VIEW_BY_KEY[value]?.policies
       ? {
           policies: policiesLabel(selectedPolicies, POLICIES),
           provisional: provisional ? provisionalLabel(catalogue.manifest) : null,
         }
       : { policies: value === "outlook" ? "Current law (before the Budget policies)" : null, provisional: null };
+  };
 
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
@@ -1068,12 +1215,14 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     <DisplayYearsContext.Provider value={shownYears}>
     {/* A view without the year pill has a one-row band on a phone */}
     <div
-      className="app"
+      className={past ? "app historical-release" : "app"}
       ref={appRef}
       data-sub-band={hasSubTabs ? "" : undefined}
       data-tabs-stuck={tabsStuck ? "" : undefined}
       data-publication={unavailable ? "unavailable" : "verified"}
-      data-publication-check={checkedBy}>
+      data-publication-check={checkedBy}
+      data-release-pill={releases ? "shown" : undefined}
+      data-release={past ? release.id : undefined}>
       {/* A div, not <main>: the PolicyEngine shell around the page is the
           main landmark, and a second one inside it is a landmark error */}
       <div className="main-content" ref={mainRef}>
@@ -1081,11 +1230,33 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
             once the reader scrolls past it, compact, with the policy
             selector still in reach. The sentinel tells it when it is stuck. */}
         <div ref={titleSentinelRef} className="title-sentinel" aria-hidden="true" />
-        <div className={`title-row ${titleStuck ? "is-stuck" : ""}`}>
+        <div className={`title-row ${titleStuck ? "is-stuck" : ""}${releases ? " has-releases" : ""}`}>
           <div className="title-head">
             <TitleMark />
-            <h1>UK Autumn Budget 2026</h1>
+            <h1>{past ? release.name : "UK Autumn Budget 2026"}</h1>
           </div>
+
+          {/* Which Budget or past fiscal event the page shows, once more
+              than one is published: each has its own measures, years and
+              views, so choosing one starts the page afresh. Like the year
+              and policy pills, it is on every view, faded where it does not
+              apply. */}
+          {releases && (
+            <div className="band-release">
+              <PillSelect
+                options={releases.map((option) => ({
+                  value: option.id,
+                  label: option.name,
+                  ...(option.choosable ? {} : { disabled: true, title: "Its results are not published" }),
+                }))}
+                value={release.id}
+                onChange={onReleaseChange}
+                name="Budget"
+                icon={ScrollText}
+                inactiveReason={releaseShown ? undefined : RELEASE_INACTIVE}
+              />
+            </div>
+          )}
 
           {/* The year applies to every chart on Population impact (both
               sub-tabs) and to Household impact, and
@@ -1094,9 +1265,13 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
               applies to those views and Household impact. A pill that does
               not apply stays in its place, faded, and does not open; its
               reason is in its accessible name only. Both are on every view, so the band never moves. */}
-          <div className={`band-year${yearShown ? "" : " is-inactive"}`}>
+          <div
+            className={`band-year${yearShown ? "" : " is-inactive"}${yearPill ? "" : " is-hidden"}`}
+            aria-hidden={yearPill ? undefined : "true"}
+            inert={!yearPill}
+          >
             <YearSlider
-              years={householdView ? SELECTABLE_YEARS : shownYears}
+              years={pillYears}
               selectedYear={householdView ? householdYear : distributionalYear}
               onYearChange={setDistributionalYear}
               inactiveReason={yearShown ? undefined : YEAR_INACTIVE}
@@ -1115,16 +1290,32 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
           </div>
         </div>
 
+        {/* A past event's lead, above its one view: what its figures are.
+            This Budget's is on its landing page and in the overview drawer. */}
+        {past && <PastEventBanner release={release} years={pastYears} />}
         {/* A newer publication replaced the figures: a passing note, once */}
         <UpdateToast show={updated} />
+        {past && provisional && (
+          <p className="publication-provisional" role="status">{HISTORICAL_PROVISIONAL_LABEL}</p>
+        )}
+        {/* A past event names each of its measures without figures here:
+            its coverage panel points up to them */}
+        {past && catalogue.measures.filter((measure) => !measure.availability.available).map((measure) => (
+          <UnavailableNotice key={measure.id} reason={`${measure.name}: ${measure.availability.reason}`}>
+            <p>{measure.description}</p>
+            <p>This measure is excluded from the displayed figures. Totals cover the selected available measures.</p>
+          </UnavailableNotice>
+        ))}
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
         <ViewTabs
-          leading={!landing && (
-            // "About": opens the overview drawer (below)
+          leading={!landing && !past && (
+            // "About": opens the overview drawer (below). That describes
+            // this Budget, so a past event, whose banner says what its
+            // figures are, has neither.
             <EdgeAboutTab open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
           )}
-          tabs={VIEWS}
+          tabs={views}
           value={landing ? null : activeTab}
           onChange={handleTabChange}
           tabId={tabId}
@@ -1152,7 +1343,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
             with the page (no data, no charts to load), faded and blurred */}
         {landing && <LandingBackdrop />}
         <div className="view-panels">
-        {VIEWS.filter(({ value }) => visited.includes(value)).map(({ value }) => (
+        {views.filter(({ value }) => visited.includes(value)).map(({ value }) => (
         <div
           key={value}
           id={panelId(value)}
@@ -1162,26 +1353,16 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
           hidden={landing || value !== activeTab}
         >
         <DownloadContext.Provider value={downloadContext(value)}>
-        <Suspense fallback={viewFallback(value)}>
+        <Suspense fallback={viewFallback(value, past)}>
         {BUDGET_VIEWS.has(value) && unavailable?.loading ? (
           // Placeholders at once while the verified figures load; the
-          // "not published yet" line is only for an empty publication
-          <ViewSkeleton view={loadingView(value)} />
-        ) : BUDGET_VIEWS.has(value) && viewUnavailable(value) ? (
-          <UnavailableNotice reason={viewUnavailable(value).reason}>
-            {viewUnavailable(value).detail && <p>{viewUnavailable(value).detail}</p>}
-            {unavailable ? (
-              unavailable.empty && <p>Figures appear here once the 2026 Budget policies are approved for publication.</p>
-            ) : (
-              <>
-                <p>No figures are shown for a selection while any of it is unavailable.</p>
-                <RemoveUnavailable
-                  names={unavailableIds.map((id) => catalogue.byId.get(id)?.name ?? id)}
-                  onRemove={() => removeFromSelection(unavailableIds)}
-                />
-              </>
-            )}
-          </UnavailableNotice>
+          // "not published yet" line is only for an empty publication. A past
+          // event's one view has no sub-tabs.
+          past ? <ViewSkeleton view="dashboard:finances" subTabs={false} /> : <ViewSkeleton view={loadingView(value)} />
+        ) : BUDGET_VIEWS.has(value) && viewUnavailable(value) && (unavailable || !past) ? (
+          // A past event's coverage and measures do not depend on the
+          // selection, so an unavailable one gates only its figures
+          unavailableNotice(value)
         ) : value === "outlook" ? (
           // Current law needs no publication: its sub-tabs read only the
           // independent outlook, so they show whatever Population impact shows
@@ -1204,6 +1385,19 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
           </div>
         ) : value === "methodology" ? (
           <MethodologyTab onShowTab={handleTabChange} />
+        ) : past ? (
+          // A past event's one view (components/historical/PastEventPopulation.jsx)
+          <PastEventPopulation
+            published={published}
+            views={published.views}
+            selectedPolicies={selectedPolicies}
+            selectedYear={distributionalYear}
+            years={pastYears}
+            budgetData={results.budgetData}
+            emptyState={emptyState}
+            note={showingLine}
+            figuresNotice={selectionUnavailable && unavailableNotice(value)}
+          />
         ) : value === "household" ? (
           <PersonalImpactTab
             selectedPolicies={selectedPolicies}
@@ -1225,8 +1419,9 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
         ))}
         </div>
         </div>
-        {/* The overview drawer, opened by the "About" pill in the tab row */}
-        {!landing && (
+        {/* The overview drawer, opened by the "About" pill in the tab row
+            (none on a past event) */}
+        {!landing && !past && (
           <>
             <OverviewDrawer
               open={overviewOpen}
@@ -1263,18 +1458,47 @@ async function reverifyBoot(base, boot, signal) {
 // regains focus
 const RECHECK_MS = 5 * 60 * 1000;
 
-/** @param {{ boot?: Object | null }} props */
-function App({ boot = null }) {
-  // The publication the build verified (app/publicationBoot.ts), shown from
-  // the first paint; the page's own check below then confirms it, or
-  // withdraws it. Without one the page loads and checks before it shows.
+/**
+ * One release's verified publication: loadDashboard's, and for a past event
+ * its three flat views, checked against the same catalogue
+ * (components/historical/PastEvent.jsx).
+ */
+async function loadRelease(base, release, { signal }) {
+  const published = await loadDashboard(base, { signal, release });
+  if (release.kind !== "historical" || published.status !== "ready") return published;
+  return { ...published, views: await loadHistoricalViews(published.catalogue, { signal }) };
+}
+
+/**
+ * The dashboard. `releaseId` is the release the page opens with: this
+ * Budget's on `/`, a past event's on its own route. A link's ?budget= opens
+ * another registered release instead. `boot` is the page's own release's
+ * publication as the build verified it (app/publicationBoot.ts; `/` only).
+ *
+ * @param {{ releaseId?: string, boot?: Object | null }} [props]
+ */
+function App({ releaseId, boot = null } = {}) {
+  const own = (releaseId && findRelease(releaseId)) || DEFAULT_RELEASE;
+  // The server and the first render show the page's own release; the
+  // address is read before paint, and only then is anything loaded
+  const [chosen, setChosen] = useState(null);
+  const [located, setLocated] = useState(false);
+  const release = chosen ?? own;
+  // The publication the build verified, shown from the first paint; the
+  // page's own check below then confirms it, or withdraws it. Without one
+  // the page loads and checks before it shows.
   const [fromBuild] = useState(() => (boot ? dashboardFromParts(boot) : null));
-  const [published, setPublished] = useState(fromBuild);
+  // Each result is kept with the release it is of, so a release's header
+  // never shows over another release's figures, not even for one render
+  const [published, setPublished] = useState(() => (fromBuild ? { release: own, result: fromBuild } : null));
   const [error, setError] = useState(null);
-  const [updated, setUpdated] = useState(false);
+  const [updated, setUpdated] = useState(null);
   // Who has checked the figures shown: "build" until the page has checked
-  // them itself, then "page" (data-publication-check)
+  // them itself, then "page" (data-publication-check). Another release's
+  // figures are only ever the page's.
   const [checkedBy, setCheckedBy] = useState(fromBuild ? "build" : "page");
+  // The past events this build ships, each offered once its manifest verifies
+  const [offered, setOffered] = useState([]);
   const current = useRef(fromBuild);
   const confirmer = useRef(null);
   // Stable for the page's life: each Household impact request waits on it
@@ -1282,16 +1506,60 @@ function App({ boot = null }) {
     (snapshot) => (confirmer.current ? confirmer.current(snapshot) : Promise.resolve(false)),
     [],
   );
+  useLayoutEffect(() => {
+    const id = new URLSearchParams(window.location.search).get(RELEASE_PARAM);
+    const named = id === null ? undefined : findRelease(id);
+    if (named && named !== own) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the address is read once, before paint
+      setChosen(named);
+    } else if (id !== null) {
+      // An unknown release, or the page's own, leaves the address
+      const params = new URLSearchParams(window.location.search);
+      params.delete(RELEASE_PARAM);
+      window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`);
+    }
+    // Only now is the release the address opens known: a past event's own
+    // route can name this Budget, whose ?sub= and #young-people a link
+    // keeps. A past event's address loses both. The page's own Dashboard
+    // has read the address already (a past event's reads neither), and its
+    // address writer is a passive effect, so it runs after this.
+    if ((named && named !== own ? named : own).kind === "historical") {
+      const { pathname, search, hash } = window.location;
+      const address = pastEventAddress(window.location);
+      if (address !== `${pathname}${search}${hash}`) window.history.replaceState({}, "", address);
+    }
+    setLocated(true);
+  }, [own]);
+
   useEffect(() => {
+    const candidates = publishedHistoricalReleases();
+    // A build with no past event's manifest asks for none
+    if (!candidates.length) return undefined;
     const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
     const controller = new AbortController();
+    Promise.all(candidates.map((candidate) =>
+      loadManifest(base, { signal: controller.signal, release: candidate }).then((manifest) => (manifest ? candidate : null), () => null),
+    )).then((verified) => { if (!controller.signal.aborted) setOffered(verified.filter(Boolean)); });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (!located) return undefined;
+    const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+    const controller = new AbortController();
+    // The build's figures, while they are still the ones shown, are checked
+    // against the live publication (reverifyBoot); any other release, or
+    // this page's own again after another, loads afresh through the same
+    // checks
+    const booted = fromBuild !== null && release === own && current.current === fromBuild;
+    if (!booted) current.current = null;
     const show = (result) => {
       current.current = result;
-      setPublished(result);
+      setPublished({ release, result });
       setError(null);
     };
     let initialComplete = false;
-    const initial = (fromBuild
+    const initial = (booted
       ? reverifyBoot(base, boot, controller.signal).then((parts) => {
         if (controller.signal.aborted) return;
         // The page's check found exactly the build's figures: they stay
@@ -1301,16 +1569,16 @@ function App({ boot = null }) {
         const result = dashboardFromParts(parts);
         show(result);
         setCheckedBy("page");
-        if ((result.catalogue.manifest?.snapshotSha256 ?? null) !== boot.snapshotSha256 && parts.status === "ready") setUpdated(true);
+        if ((result.catalogue.manifest?.snapshotSha256 ?? null) !== boot.snapshotSha256 && parts.status === "ready") setUpdated(release);
       })
-      : loadDashboard(base, { signal: controller.signal })
+      : loadRelease(base, release, { signal: controller.signal })
         .then((result) => { if (!controller.signal.aborted) show(result); }))
       .catch((failure) => {
         if (controller.signal.aborted) return;
         // A check that fails withdraws the build's figures too
         current.current = null;
         setPublished(null);
-        setError(failure.message);
+        setError({ release, message: failure.message });
         setCheckedBy("page");
       })
       .finally(() => { initialComplete = true; });
@@ -1322,22 +1590,24 @@ function App({ boot = null }) {
     // Each check resolves to the live snapshot it found, or null for none.
     const run = async () => {
       try {
-        const live = await loadManifest(base, { signal: controller.signal });
+        const live = await loadManifest(base, { signal: controller.signal, release });
         const catalogue = current.current?.catalogue;
         const shown = catalogue?.manifest?.snapshotSha256 ?? null;
-        const failed = Object.keys(catalogue?.failures ?? {}).length > 0;
+        // A past event's flat views that failed are tried again too
+        const failed = Object.keys(catalogue?.failures ?? {}).length > 0 ||
+          Object.values(current.current?.views ?? {}).some((view) => view.error !== undefined);
         if (current.current !== null && (live?.snapshotSha256 ?? null) === shown && !failed) return shown;
-        const next = await loadDashboard(base, { signal: controller.signal });
+        const next = await loadRelease(base, release, { signal: controller.signal });
         if (controller.signal.aborted) return null;
         show(next);
         const found = next.catalogue.manifest?.snapshotSha256 ?? null;
-        if (found !== shown) setUpdated(true);
+        if (found !== shown) setUpdated(release);
         return found;
       } catch (failure) {
         if (controller.signal.aborted) return null;
         current.current = null;
         setPublished(null);
-        setError(failure.message);
+        setError({ release, message: failure.message });
         return null;
       }
     };
@@ -1362,22 +1632,55 @@ function App({ boot = null }) {
       window.removeEventListener("focus", recheck);
       document.removeEventListener("visibilitychange", onVisible);
     };
-    // Once, on mount: the build's figures are the first render's
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const unavailable = !published && !error
-    ? { reason: "Loading published policies…", loading: true }
-    : error
-    ? { reason: "Published results are unavailable", detail: error }
-    : published.status === "no-manifest"
-      ? { reason: "No Budget results are published yet", empty: true }
+  }, [release, located, own, fromBuild, boot]);
+
+  // Another release starts the page afresh: its own address, measures,
+  // years and views, from a load of its own (the build's figures are the
+  // page's own release's first paint only)
+  const changeRelease = useCallback((id) => {
+    const next = findRelease(id);
+    if (!next || next === release) return;
+    window.history.replaceState({}, "", releaseAddress(window.location, next, own));
+    setUpdated(null);
+    setPublished(null);
+    setError(null);
+    setCheckedBy("page");
+    setChosen(next);
+  }, [release, own]);
+
+  const past = release.kind === "historical";
+  const result = published?.release === release ? published.result : null;
+  const failure = error?.release === release ? error.message : null;
+  const unavailable = !result && !failure
+    ? { reason: past ? "Loading published measures…" : "Loading published policies…", loading: true }
+    : failure
+    ? { reason: past ? `Published results for the ${release.name} are unavailable` : "Published results are unavailable", detail: failure }
+    : result.status === "no-manifest"
+      ? { reason: past ? `No results for the ${release.name} are published yet` : "No Budget results are published yet", empty: true }
       : null;
-  const shown = unavailable ? NOTHING_PUBLISHED : published;
-  // One snapshot per mount: a newer one starts the views afresh
+  const shown = unavailable ? NOTHING_PUBLISHED : result;
+  // The band offers a choice once a past event's manifest verifies: this
+  // Budget and every verified past event, newest first. The release shown
+  // is listed too, so the pill names it, but one that did not verify (a
+  // link to it) cannot be chosen
+  const choices = offered.length ? [DEFAULT_RELEASE, ...offered] : null;
+  const releases = choices && newestFirst([...new Set([...choices, release])]).map((item) => ({ ...item, choosable: choices.includes(item) }));
+  // One release and snapshot per mount: another starts the views afresh
   const snapshot = shown.catalogue.manifest?.snapshotSha256 ?? "none";
   return (
     <PublicationCheckContext.Provider value={confirmPublication}>
       <MeasureCatalogueProvider catalogue={shown.catalogue}>
-        <Dashboard key={snapshot} published={shown} unavailable={unavailable} updated={updated && !unavailable} fromBuild={Boolean(boot)} checkedBy={checkedBy} />
+        <Dashboard
+          key={`${release.id}:${snapshot}`}
+          published={shown}
+          unavailable={unavailable}
+          updated={updated === release && !unavailable}
+          fromBuild={Boolean(boot)}
+          checkedBy={release === own ? checkedBy : "page"}
+          release={release}
+          releases={releases}
+          onReleaseChange={changeRelease}
+        />
       </MeasureCatalogueProvider>
     </PublicationCheckContext.Provider>
   );
