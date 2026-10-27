@@ -1282,8 +1282,8 @@
   "forecast": {
     "pre_label": "OBR March 2026 (pre-Budget)",
     "basis": "Calendar year, growth in annual average",
-    "post_label": "Budget forecast",
-    "post_published": false,
+    "post_label": "OBR November 2025 (Budget 2025): rehearsal stand-in, not for publication",
+    "post_published": true,
     "headline": [
       "cpi",
       "rpi",
@@ -1333,7 +1333,8 @@
                 "year": "2030",
                 "value": 0.02
               }
-            ]
+            ],
+            "post_source": "Table 1.7 Inflation, CPI (calendar year)"
           },
           {
             "key": "cpih",
@@ -1361,21 +1362,22 @@
             "post": [
               {
                 "year": "2027",
-                "value": 0.0211
+                "value": 0.0215
               },
               {
                 "year": "2028",
-                "value": 0.0204
+                "value": 0.0208
               },
               {
                 "year": "2029",
-                "value": 0.0209
+                "value": 0.0211
               },
               {
                 "year": "2030",
-                "value": 0.0212
+                "value": 0.0213
               }
-            ]
+            ],
+            "post_source": "Table 1.7 Inflation, CPIH (calendar year)"
           },
           {
             "key": "cpi_ahc",
@@ -1417,7 +1419,8 @@
                 "year": "2030",
                 "value": 0.019
               }
-            ]
+            ],
+            "post_source": "PolicyEngine approximation: the pre-Budget CPI after housing costs moved by the change in OBR CPI for the same year (not an OBR series)"
           },
           {
             "key": "rpi",
@@ -1445,11 +1448,11 @@
             "post": [
               {
                 "year": "2027",
-                "value": 0.03
+                "value": 0.031
               },
               {
                 "year": "2028",
-                "value": 0.028
+                "value": 0.029
               },
               {
                 "year": "2029",
@@ -1459,7 +1462,8 @@
                 "year": "2030",
                 "value": 0.023
               }
-            ]
+            ],
+            "post_source": "Table 1.7 Inflation, RPI (calendar year)"
           }
         ]
       },
@@ -1492,7 +1496,7 @@
             "post": [
               {
                 "year": "2027",
-                "value": 0.024
+                "value": 0.023
               },
               {
                 "year": "2028",
@@ -1504,9 +1508,10 @@
               },
               {
                 "year": "2030",
-                "value": 0.024
+                "value": 0.023
               }
-            ]
+            ],
+            "post_source": "Table 1.6 Labour market, Average weekly earnings growth (per cent) (calendar year)"
           },
           {
             "key": "non_labour_income",
@@ -1534,21 +1539,22 @@
             "post": [
               {
                 "year": "2027",
-                "value": 0.0513
+                "value": 0.0474
               },
               {
                 "year": "2028",
-                "value": 0.035
+                "value": 0.0364
               },
               {
                 "year": "2029",
-                "value": 0.0301
+                "value": 0.0302
               },
               {
                 "year": "2030",
-                "value": 0.0317
+                "value": 0.0292
               }
-            ]
+            ],
+            "post_source": "Table 1.12 Household disposable income (\u00a3 billion current prices, seasonally adjusted), Non-labour income (growth in the calendar-year level)"
           }
         ]
       },
@@ -1581,7 +1587,7 @@
             "post": [
               {
                 "year": "2027",
-                "value": 0.029
+                "value": 0.028
               },
               {
                 "year": "2028",
@@ -1595,7 +1601,8 @@
                 "year": "2030",
                 "value": 0.024
               }
-            ]
+            ],
+            "post_source": "Table 1.16 Housing market, House price index (per cent change on a year earlier) (calendar year)"
           },
           {
             "key": "rent",
@@ -1623,21 +1630,22 @@
             "post": [
               {
                 "year": "2027",
-                "value": 0.0302
+                "value": 0.0311
               },
               {
                 "year": "2028",
-                "value": 0.023
+                "value": 0.0243
               },
               {
                 "year": "2029",
-                "value": 0.0238
+                "value": 0.0234
               },
               {
                 "year": "2030",
-                "value": 0.0258
+                "value": 0.0254
               }
-            ]
+            ],
+            "post_source": "Table 1.7 Inflation, Actual rents for housing (calendar year)"
           },
           {
             "key": "social_rent",
@@ -1665,7 +1673,7 @@
             "post": [
               {
                 "year": "2027",
-                "value": 0.033
+                "value": 0.035
               },
               {
                 "year": "2028",
@@ -1679,7 +1687,8 @@
                 "year": "2030",
                 "value": 0.03
               }
-            ]
+            ],
+            "post_source": "England social rent policy cap: OBR calendar-year CPI for the year before + 1%; 2026 set by September 2025 CPI outturn (not an OBR forecast)"
           },
           {
             "key": "mortgage_interest",
@@ -1707,21 +1716,22 @@
             "post": [
               {
                 "year": "2027",
-                "value": 0.104
+                "value": 0.1032
               },
               {
                 "year": "2028",
-                "value": 0.0476
+                "value": 0.047
               },
               {
                 "year": "2029",
-                "value": 0.0468
+                "value": 0.0466
               },
               {
                 "year": "2030",
                 "value": 0.0553
               }
-            ]
+            ],
+            "post_source": "Table 1.7 Inflation, Mortgage interest payments (calendar year)"
           }
         ]
       }
@@ -1731,7 +1741,12 @@
       "url": "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",
       "via": "policyengine-uk parameters gov.economic_assumptions.yoy_growth.obr.*"
     },
-    "post_source": null
+    "post_source": {
+      "release": "OBR November 2025 (Budget 2025): rehearsal stand-in, not for publication",
+      "file": "Economy_Detailed_forecast_tables_November_2025.xlsx",
+      "file_sha256": "bf2ad1bd633d73efa484b260b62aa4c6d2c0f3b2e4c64fa15e5f7204612e88d6",
+      "url": "https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/"
+    }
   },
   "income_by_decile": {
     "base_year": "2027-28",
