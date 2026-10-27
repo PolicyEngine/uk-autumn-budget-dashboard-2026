@@ -1733,8 +1733,10 @@ body {
   flex-direction: column;
   width: 100%;
   /* The gap between the last card and the site footer, on every tab and
-     at every width (the replication line that used to own it is gone) */
-  padding-bottom: var(--pe-space-2xl);
+     at every width (the replication line that used to own it is gone).
+     48px: the ui-kit's --pe-space-4xl (its --pe-space-2xl, which wins over
+     this file's, is 24px). */
+  padding-bottom: var(--pe-space-4xl, 48px);
 }
 
 .app > .main-content > * {
