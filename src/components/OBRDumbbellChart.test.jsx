@@ -52,7 +52,7 @@ describe("OBRDumbbellChart", () => {
     );
     expect(
       screen.getByRole("heading", {
-        name: "PolicyEngine and OBR estimates, 2029-30",
+        name: "PolicyEngine and official costings, 2029-30",
       }),
     ).toBeInTheDocument();
     expect(rowNames(container)).toEqual([
@@ -68,7 +68,7 @@ describe("OBRDumbbellChart", () => {
     );
     const row = container.querySelector('[data-policy="salary_sacrifice_cap"]');
     expect(row.querySelector(".obr-dumbbell-missing").textContent).toBe(
-      "OBR not yet published",
+      "Official costing not yet published",
     );
     expect(row.querySelector(".obr-dumbbell-dot.obr")).toBeNull();
     expect(row.querySelector(".obr-dumbbell-dot.pe")).not.toBeNull();

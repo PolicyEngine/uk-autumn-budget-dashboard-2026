@@ -31,8 +31,8 @@ describe("tooltips on hand-drawn charts", () => {
     const tip = screen.getByRole("tooltip");
     expect(tip).toHaveTextContent("Fuel duty rises deferred, 2027-28");
     expect(tip).toHaveTextContent("PolicyEngine (static)−£1.2bn");
-    expect(tip).toHaveTextContent("OBR (static)−£1.0bn");
-    expect(tip).toHaveTextContent("Difference (PolicyEngine − OBR)−£0.2bn");
+    expect(tip).toHaveTextContent("Official (static)−£1.0bn");
+    expect(tip).toHaveTextContent("Difference (PolicyEngine − official)−£0.2bn");
     // A new year (the Play button) clears it: no last year's figures
     rerender(<OBRDumbbellChart policies={policies} year={2028} showBehavioural={false} />);
     expect(screen.queryByRole("tooltip")).toBeNull();

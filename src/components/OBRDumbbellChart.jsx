@@ -119,9 +119,9 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
   // Cleared when the year or the OBR basis changes, so it never shows the
   // last year's figures while the year pill plays
   const { tip, handlers } = useFloatingTooltip(wrapperRef, `${year}-${showBehavioural}`);
-  const chartTitle = `PolicyEngine and OBR estimates, ${yearLabel}`;
+  const chartTitle = `PolicyEngine and official costings, ${yearLabel}`;
   // Only in exported images, which carry no surrounding text
-  const description = `Each row shows a measure's budgetary impact in ${yearLabel}, in £ billion: PolicyEngine's static estimate and the OBR's ${obrKind} costing. Positive values raise revenue or reduce spending; negative values do the opposite.`;
+  const description = `Each row shows a measure's budgetary impact in ${yearLabel}, in £ billion: PolicyEngine's static estimate and the official ${obrKind} costing. Positive values raise revenue or reduce spending; negative values do the opposite.`;
 
   const rows = useMemo(
     () =>
@@ -185,14 +185,14 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
 
   const legendItems = [
     { color: PE_COLOUR, label: "PolicyEngine", type: "dot" },
-    { color: OBR_COLOUR, label: `OBR (${obrKind})`, type: "ring" },
+    { color: OBR_COLOUR, label: `Official (${obrKind})`, type: "ring" },
     ...BANDS.map((band) => ({
       color: band.colour,
-      label: `Difference from OBR ${band.label}`,
+      label: `Difference from the official costing ${band.label}`,
       type: "line",
     })),
   ];
-  const exportName = `policyengine-obr-estimates-${year}`;
+  const exportName = `policyengine-official-costings-${year}`;
   const exportOptions = {
     title: chartTitle,
     description,
@@ -208,14 +208,14 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
             buildChartCsv({
               title: chartTitle,
               units: "£ billion a year; positive values raise revenue",
-              source: `PolicyEngine UK microsimulation; OBR ${obrKind} costings, ${SOURCES.obr_budget_2026_costings.label.replace(/^the /, "")}`,
+              source: `PolicyEngine UK microsimulation; ${obrKind} figures from ${SOURCES.obr_budget_2026_costings.label}`,
               columns: [
                 { key: "name", label: "Policy" },
                 { key: "pe", label: "PolicyEngine (£bn)", decimals: 4 },
-                { key: "obr", label: `OBR ${obrKind} (£bn)`, decimals: 4 },
+                { key: "obr", label: `Official ${obrKind} (£bn)`, decimals: 4 },
                 {
                   key: "difference",
-                  label: "Difference, PolicyEngine minus OBR (£bn)",
+                  label: "Difference, PolicyEngine minus official (£bn)",
                   decimals: 4,
                 },
                 { key: "band", label: "Difference band" },
@@ -390,7 +390,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
           "label",
         ),
         missingLabel(
-          pePart ? "OBR not yet published" : "PolicyEngine not yet published",
+          pePart ? "Official costing not yet published" : "PolicyEngine not yet published",
           otherSide,
           cx + (otherSide === "right" ? 2 : -2),
           cy,
@@ -466,7 +466,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
           },
           {
             key: "obr",
-            name: `OBR (${obrKind})`,
+            name: `Official (${obrKind})`,
             text: obrPart ? formatBn(row.obr) : "Not yet published",
             color: OBR_COLOUR,
           },
@@ -474,7 +474,7 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
             ? [
                 {
                   key: "difference",
-                  name: "Difference (PolicyEngine − OBR)",
+                  name: "Difference (PolicyEngine − official)",
                   text: formatBn(row.pe - row.obr),
                   color: row.band.colour,
                 },
@@ -605,8 +605,8 @@ function OBRDumbbellChart({ policies, year, showBehavioural }) {
               OBR
             </li>
           </ul>
-          <ul className="obr-dumbbell-legend" aria-label="Difference from OBR">
-            <li className="obr-dumbbell-legend-title">Difference from OBR:</li>
+          <ul className="obr-dumbbell-legend" aria-label="Difference from the official costing">
+            <li className="obr-dumbbell-legend-title">Difference from the official costing:</li>
             {BANDS.map((band) => (
               <li key={band.key}>
                 <span
