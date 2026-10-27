@@ -256,6 +256,7 @@ function MethodologyTab({ onShowTab }) {
                   <>
                     A figure for a small group rests on few survey households, so the page leaves
                     out or marks such figures: see the{" "}
+                    <AnchorLink id={METHOD_ANCHORS.byIncome}>income deciles</AnchorLink>,{" "}
                     <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>,{" "}
                     <AnchorLink id={METHOD_SECTIONS.geography}>figures by area</AnchorLink> and{" "}
                     <AnchorLink id={METHOD_SECTIONS.young}>results by age</AnchorLink>.
@@ -409,6 +410,7 @@ function MethodologyTab({ onShowTab }) {
                       </>,
                       "Negative incomes count as zero for the ranking.",
                       "Households without a decile are left out.",
+                      "A measure whose change in any decile comes from only one or two survey households is not shown, the UK Data Service's minimum for survey data.",
                     ],
                   },
                 ],
@@ -590,7 +592,8 @@ function MethodologyTab({ onShowTab }) {
                       </>
                     ),
                     more: [
-                      `A band or age with fewer than ${MIN_SAMPLE_SIZE} survey records is not shown.`,
+                      `A band or age with fewer than ${MIN_SAMPLE_SIZE} records in the dataset is not shown. Microcosm builds several records from one survey household, so this counts records, not households.`,
+                      "A figure resting on one or two survey households is not published, nor any figure that would give it back.",
                       <>
                         Each person counts their whole household&apos;s change in net income, not
                         equivalised, and averages are <Term id="perPerson">per person</Term>.
