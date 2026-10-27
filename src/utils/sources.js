@@ -95,6 +95,16 @@ export const SOURCES = {
     label: "Microcosm",
     url: "https://github.com/PolicyEngine/microcosm",
   },
+  // Microcosm's own site, and PolicyEngine's page on how Microcosm UK is
+  // built, stage by stage (both checked 27 October 2026)
+  microcosm_site: {
+    label: "Microcosm",
+    url: "https://microcosm.institute",
+  },
+  uk_data_pipeline: {
+    label: "PolicyEngine, UK microdata pipeline",
+    url: "https://www.policyengine.org/uk/model/data/pipeline",
+  },
   // Section 8, Equivalisation: HBAI's modified OECD scale (checked 26 October 2026)
   dwp_hbai_methodology: {
     label: "DWP, Households Below Average Income: background information and methodology",

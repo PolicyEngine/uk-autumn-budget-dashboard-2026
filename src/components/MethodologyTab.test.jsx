@@ -176,6 +176,19 @@ describe("MethodologyTab", () => {
     expect(onShowTab).toHaveBeenLastCalledWith("dashboard", "age", { age: "16-24" });
   });
 
+  it("sums up how the data is built, linking the pipeline page and Microcosm, and quotes no counts", () => {
+    renderTab();
+    const card = screen.getByRole("button", { name: "The dataset" }).closest(".method-topic");
+    const terms = [...card.querySelectorAll(".method-fact dt")].map((term) => term.textContent);
+    expect(terms).toEqual(["Dataset", "Pipeline", "Survey", "Weights", "Projection", "Small groups"]);
+    const pipeline = within(card).getByRole("link", { name: /^Read how Microcosm UK is built/, hidden: true });
+    expect(pipeline).toHaveAttribute("href", "https://www.policyengine.org/uk/model/data/pipeline");
+    const microcosm = within(card).getByRole("link", { name: /^Microcosm\s*\(opens in a new tab\)$/, hidden: true });
+    expect(microcosm).toHaveAttribute("href", "https://microcosm.institute");
+    // Aggregate words only: no record or household counts from the pipeline page
+    expect(card.textContent).not.toMatch(/\d{1,3}(,\d{3})+/);
+  });
+
   it("links every external source in a new tab, saying so, and every shared term to its definition", () => {
     const { container } = renderTab();
     const external = [...container.querySelectorAll('a[href^="http"]')];
