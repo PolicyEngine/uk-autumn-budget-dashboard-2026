@@ -28,11 +28,12 @@ export const AWE_BULLETIN = {
   date: "20 October 2026",
 };
 
-// Each line: its name, chip name on a phone, colour and pattern. The whole
-// economy is the reference line, grey and dashed, as on the prices card.
+// Each line: its name, chip name on a phone, colour and pattern. As on the
+// prices card, each sector is a solid line in its own hue and the benchmark
+// (the whole economy) a dashed neutral grey.
 const LINES = {
   public: { name: "Public sector", short: "Public", colour: CHART_COLOURS.highlight },
-  private: { name: "Private sector", short: "Private", colour: CHART_COLOURS.marketIncome, dash: DASH.short },
+  private: { name: "Private sector", short: "Private", colour: CHART_COLOURS.marketIncome },
   whole: { name: "Whole economy", short: "Whole", colour: CHART_COLOURS.reference, dash: DASH.long },
 };
 const ORDER = ["public", "private", "whole"];
