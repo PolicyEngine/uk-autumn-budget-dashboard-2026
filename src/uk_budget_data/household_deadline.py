@@ -24,11 +24,17 @@ rather than starting again. A retry that reaches another Web container
 
 import asyncio
 import json
+import os
 from collections.abc import Iterable
 
 # Below Modal's 150 s, with room for a Web container's own cold start (its
 # snapshot restore) before the request reaches the app.
-DEADLINE_SECONDS = 100.0
+# HOUSEHOLD_MODAL_DEADLINE_SECONDS tunes it at deploy: Modal's clock starts
+# at its edge, this one only once the Web container is running, so it must
+# leave room for that container's own start.
+DEADLINE_SECONDS = float(
+    os.environ.get("HOUSEHOLD_MODAL_DEADLINE_SECONDS", "100")
+)
 # What the page waits before asking again: long enough for containers that
 # have started to finish, short against the page's 150 s budget.
 RETRY_AFTER_SECONDS = 10

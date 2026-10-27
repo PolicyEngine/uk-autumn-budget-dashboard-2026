@@ -96,6 +96,10 @@ DEPLOY_SETTINGS = {
     "HOUSEHOLD_MODAL_SNAPSHOT": "1" if SNAPSHOT else "0",
     "HOUSEHOLD_MODAL_CPU": str(CPU),
     "HOUSEHOLD_MODAL_WEB_INPUTS": str(WEB_INPUTS),
+    # The Web's deadline for a household answer (household_deadline)
+    "HOUSEHOLD_MODAL_DEADLINE_SECONDS": os.environ.get(
+        "HOUSEHOLD_MODAL_DEADLINE_SECONDS", "100"
+    ),
 }
 
 from uk_budget_data.household_runs import (  # noqa: E402
