@@ -2,8 +2,8 @@
   "schema": "uk-budget-dashboard/policy-parameters/v1",
   "generator": "uk-budget-data policy-table",
   "engine": {
-    "policyengine": "6.10.2",
-    "policyengine_uk": "2.132.6"
+    "policyengine": "6.11.1",
+    "policyengine_uk": "2.151.0"
   },
   "years": [
     2026,
