@@ -127,7 +127,7 @@ export function examplePercentile(example, point, { year, policies, rows, catalo
 /** A small strip with a dot where the example sits, and its percentile. */
 function PositionStrip({ percentile, yearLabel }) {
   return (
-    <Tip content={`${percentile} in 100 people in the UK have a lower household income than this household, adjusted for household size (${yearLabel}, after the selected policies)`}>
+    <Tip content={`${percentile} in 100 people in the UK live in a household with a lower income than this one, adjusted for household size (${yearLabel}, after the selected policies)`}>
     <span className="household-card-position">
       <span className="household-card-position-track" aria-hidden="true">
         <span className="household-card-position-dot" style={{ left: `${percentile}%` }} />
@@ -299,7 +299,7 @@ export default function HouseholdCards({
   const positionPolicies = fill?.reduced ?? figurePolicies;
   // What the figures are with, on hover (no line above the cards): every
   // measure (the file), the selected ones, or those the calculator supports
-  const figuresWith = !fill ? "every measure" : fill.reduced ? "the measures the calculator supports" : "the selected measures";
+  const figuresWith = !fill ? "every policy" : fill.reduced ? "the policies the calculator supports" : "the selected policies";
   // Folded into the strip once a household is chosen; "Show all
   // households" opens the grid again, and a choice there folds it
   const [showAll, setShowAll] = useState(false);
@@ -476,7 +476,7 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
         <span className="household-card-name visually-hidden">Your household</span>
         <span className="household-yours-title">Enter your own household</span>
         <span className="household-yours-lead">
-          {provisional ? "See how the selected measures change your income" : "See how the Budget changes your income"}
+          {provisional ? "See how the selected policies change your income" : "See how the Budget changes your income"}
           {", in about 30 seconds."}
         </span>
       </span>
@@ -507,7 +507,7 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
  * The cards folded: a chip for each card, in the cards' order and grid
  * (Your household the width of the grid, then the eight examples below
  * it), each its icon, a short name and its change, the chosen one in its
- * colour with a tick. One listbox, Your household first (choosing it opens
+ * colour (fill and border). One listbox, Your household first (choosing it opens
  * the form, which it controls; choosing it again while chosen closes or
  * reopens the form): the arrow keys (and Home, End) move between chips,
  * Enter or Space chooses one, a click chooses it at once.

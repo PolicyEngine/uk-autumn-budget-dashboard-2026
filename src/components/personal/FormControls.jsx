@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { InfoTip } from "../Tip";
 
 /**
  * One choice from a few, as selectable boxes: native radio buttons styled
@@ -12,7 +13,7 @@ import { useId, useState } from "react";
  * @param {Array<{value: string|number|boolean, label: string, hint?: string}>} props.options
  * @param {*} props.value - The chosen option's value
  * @param {(value: *) => void} props.onChange
- * @param {string} [props.hint] - A line under the boxes, or behind an "i"
+ * @param {string} [props.hint] - A line under the boxes, or behind the info icon
  * @param {"below"|"tooltip"} [props.hintAs] - Where the hint goes
  * @param {boolean} [props.hideLabel] - Keep the question for screen readers
  *   only (a row above already shows it)
@@ -41,7 +42,7 @@ export function ChoiceTiles({ id, label, options, value, onChange, hint, hintAs 
           <span id={labelId} className="field-label">
             {label}
           </span>
-          {hint && hintAs === "tooltip" && <InfoTip label={label} hint={hint} hintId={hintId} />}
+          {hint && hintAs === "tooltip" && <InfoTip content={hint} label={`About ${label}`} />}
         </div>
       )}
       <div className="choice-tiles" style={{ "--choice-count": options.length }}>
@@ -69,33 +70,29 @@ export function ChoiceTiles({ id, label, options, value, onChange, hint, hintAs 
           {hint}
         </p>
       )}
-      {hint && hintAs === "tooltip" && hideLabel && (
-        <span className="visually-hidden" id={hintId}>
-          {hint}
-        </span>
-      )}
+      {hint && hintAs === "tooltip" && <HiddenHint hint={hint} hintId={hintId} />}
     </div>
   );
 }
 
-/** The "i" beside a label: its note on hover or focus, and the field's description. */
-function InfoTip({ label, hint, hintId }) {
+/**
+ * A hint shown behind the label's info icon (InfoTip, whose tip renders
+ * only while open): kept in the page, hidden, as the field's description
+ * for screen readers.
+ */
+function HiddenHint({ hint, hintId }) {
   return (
-    <span className="info-icon-wrapper">
-      <button type="button" className="info-icon" aria-label={`About ${label}`} aria-describedby={hintId}>
-        i
-      </button>
-      <span className="info-tooltip" role="tooltip" id={hintId}>
-        {hint}
-      </span>
+    <span className="visually-hidden" id={hintId}>
+      {hint}
     </span>
   );
 }
 
 /**
  * A field's label and its hint. A short hint goes under the box; a long one
- * (`hintAs="tooltip"`) sits behind an "i" beside the label, shown on hover
- * or focus, and is still the box's description for screen readers.
+ * (`hintAs="tooltip"`) sits behind the info icon beside the label (the
+ * shared InfoTip), shown on hover, focus or a tap, and is still the box's
+ * description for screen readers.
  */
 export function FieldLabel({ htmlFor, label, hint, hintId, hintAs, hidden }) {
   if (hidden) {
@@ -117,7 +114,8 @@ export function FieldLabel({ htmlFor, label, hint, hintId, hintAs, hidden }) {
       <label className="field-label" htmlFor={htmlFor}>
         {label}
       </label>
-      <InfoTip label={label} hint={hint} hintId={hintId} />
+      <InfoTip content={hint} label={`About ${label}`} />
+      <HiddenHint hint={hint} hintId={hintId} />
     </div>
   );
 }

@@ -72,6 +72,13 @@ export default function LsCard({
   };
   const text = (n) => (typeof n === "string" ? fyDash(plainWords(n)) : n);
   const aboutNotes = (notes || []).filter(Boolean);
+  // A card without `info`: its definition, notes and source in the same
+  // shared sections as every other card
+  const legacyInfo = {
+    shows: about ? text(about) : null,
+    caveats: aboutNotes.map(text),
+    sources: source ? [{ label: source }] : [],
+  };
 
   return (
     <div id={id} className={`ls-card ${className}`.trim()}>
@@ -115,17 +122,9 @@ export default function LsCard({
             <InfoSections info={info} />
           </Disclosure>
         )}
-        {!footer && !info && (about || aboutNotes.length > 0 || source) && (
-          <Disclosure inCard title={ABOUT_THIS_CHART}>
-            {about && <p>{text(about)}</p>}
-            {aboutNotes.length > 0 && (
-              <ul className="ls-about-notes">
-                {aboutNotes.map((n, i) => (
-                  <li key={typeof n === "string" ? n : i}>{text(n)}</li>
-                ))}
-              </ul>
-            )}
-            {source && <p className="ls-source">{source}</p>}
+        {!footer && !info && hasInfo(legacyInfo) && (
+          <Disclosure inCard title={ABOUT_THIS_CHART} preview={infoPreview(legacyInfo)}>
+            <InfoSections info={legacyInfo} />
           </Disclosure>
         )}
       </div>

@@ -1,7 +1,7 @@
 // "Where you sit" reads the package's UK distribution only under the
 // manifest's combined key, and never fetches the root tenth tables (#228).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { buildMeasureCatalogue } from "../../utils/measureCatalogue";
 import { fixtureJson } from "../../test/publicationFixture";
 import { PACKAGE_NOT_IN_FILE } from "../../utils/incomePosition";
@@ -80,10 +80,21 @@ describe("Where you sit, for the published package (issue 228)", () => {
     expect(catalogue().combinedId).toBe(KEY);
   });
 
-  it("refuses a distribution file whose package is another package, saying so", async () => {
+  it("refuses a distribution file whose package is another package: no section, no empty card", async () => {
     served = { "income_distribution.csv": distribution("autumn_budget_2026_combined"), "income_mobility.csv": "" };
+    const { container } = await renderChart();
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    // The Your place tile says why, in one line (ResultTilesTenth.test)
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(container.querySelector(".card")).toBeNull();
+    expect(screen.queryByText("Where you sit")).toBeNull();
+    expect(screen.queryByText(PACKAGE_NOT_IN_FILE)).toBeNull();
+  });
+
+  it("gives the distribution its own Where you sit heading when it is there", async () => {
+    served = { "income_distribution.csv": distribution(KEY), "income_mobility.csv": "" };
     await renderChart();
-    expect(await screen.findByText(PACKAGE_NOT_IN_FILE)).toBeTruthy();
+    expect(await screen.findByRole("heading", { level: 2, name: "Where you sit" })).toBeTruthy();
   });
 
   it("reads the package's curves under the manifest's key, and never fetches the root tenth tables", async () => {
@@ -95,5 +106,19 @@ describe("Where you sit, for the published package (issue 228)", () => {
     const fetched = fetch.mock.calls.map(([url]) => String(url).split("/").pop());
     expect(fetched).not.toContain("winners_losers.csv");
     expect(fetched).not.toContain("distributional_impact.csv");
+  });
+  it("keys the Spread view under the plot: your tenth's band, the curve, you and the median lines", async () => {
+    served = { "income_distribution.csv": distribution(KEY), "income_mobility.csv": "" };
+    const { container } = await renderChart();
+    await screen.findByText(/Your place in the distribution/);
+    const legend = container.querySelector(".position-card .chart-legend");
+    expect(legend).toBeTruthy();
+    const labels = [...legend.querySelectorAll(".grouped-legend-label")].map((node) => node.textContent);
+    expect(labels).toEqual([
+      expect.stringMatching(/^Your income tenth \(.+ tenth\)$/),
+      "Share of people at each income",
+      "You",
+      "Median and its half/double",
+    ]);
   });
 });

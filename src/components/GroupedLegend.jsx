@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { FLOW_BELOW, flowWidth, legendLayout, subColumns } from "../utils/legendLayout";
+import { InfoTip } from "./Tip";
 import "./GroupedLegend.css";
 
 
@@ -18,7 +19,7 @@ export function legendGroups(items) {
   return [
     ["Raise revenue", items.filter((item) => item.direction !== "neutral" && item.raises)],
     ["Cost revenue", items.filter((item) => item.direction !== "neutral" && !item.raises)],
-    ["Other measures", items.filter((item) => item.direction === "neutral")],
+    ["Other policies", items.filter((item) => item.direction === "neutral")],
   ].filter(([, groupItems]) => groupItems.length > 0);
 }
 
@@ -64,27 +65,23 @@ function Swatch({ item }) {
   );
 }
 
-/** An item's label, with its note behind an "i" when it has one. */
+/** An item's label, with its note behind the info icon when it has one. */
 function ItemLabel({ item }) {
   return (
     <>
       <span className="grouped-legend-label">{item.label}</span>
       {item.info && (
-        <span className="info-icon-wrapper grouped-legend-info">
-          <button type="button" className="info-icon" aria-label={`About ${item.label}`}>
-            i
-          </button>
-          <span className="info-tooltip" role="tooltip">
-            {item.info}
-          </span>
+        <span className="grouped-legend-info">
+          <InfoTip content={item.info} label={`About ${item.label}`} />
         </span>
       )}
     </>
   );
 }
 
-// The room an "i" takes after a label: its button and gap
-const INFO_WIDTH = 22;
+// The room the info icon takes after a label: its 20px button and the
+// item's 6px gap, less its -2px margin (GroupedLegend.css)
+const INFO_WIDTH = 24;
 
 // The legend's font, as in GroupedLegend.css
 const LABEL_FONT = { fontSize: 12.5, fontWeight: "400" };

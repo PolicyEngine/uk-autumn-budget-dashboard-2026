@@ -36,11 +36,11 @@ The list on `main` today:
 | `state_pension_income_tax_protection` | State Pension income tax protection: an allowance of the full new State Pension for people over State Pension age whose only income is the State Pension, from April 2027 |
 | `warm_home_discount_top_up` | Warm Home Discount top-up: £150 to £250 for winter 2026-27 |
 | `domestic_electricity_zero_vat` | Zero VAT on domestic electricity, October 2026 to March 2028 |
-| `employer_ni_relief_under_25s` | Employer NI relief for employees aged 21 to 24 (extending the under-21 relief): none up to the upper earnings limit, from April 2027 |
 | `threshold_freeze_2031_32` | Threshold freeze to 2031-32: personal allowance and basic rate band frozen one more year |
-| `badr_lifetime_limit_cut` | Business Asset Disposal Relief lifetime limit cut from £1m to £500,000, from April 2027 |
 | `road_fuel_vat_cut` | VAT on petrol and diesel at 15%, December 2026 to May 2027 |
 | `plan_2_threshold_unfreeze` | Plan 2 student loan threshold uprated by RPI from April 2027 |
+
+These seven are the combined package (`autumn_budget_2026_combined`, key `combined--5c77771791661e11`). Business Asset Disposal Relief restricted and employer NI relief for under-25s were withdrawn on 27 October 2026 and are not registered.
 
 List them from the command line with `uv run uk-budget-data generate --list-reforms`.
 
@@ -63,6 +63,8 @@ Measure definitions do not authorise publication. The page builds its measure ca
 | Regional and constituency results | SHA-256-bound release index plus `area_provenance.json`, with approved artifact, receipt and actual baseline/reform identities |
 | Household impact | Live single-year household API after the same catalogue and year gate; held, unpublished or failed selections are unavailable, never zero. Each request waits for a check of the live manifest and is dropped if the snapshot changed; an answer from other policyengine, policyengine-uk or policyengine-core versions than the selected measures' receipts record is refused |
 | OBR comparison | Unavailable until a 2026 source is verified; the existing CSV contains November 2025 costings |
+
+The first row's figures are verified twice. The build runs `public/data` through the same loader (`loadDashboardParts`: manifest checks, every receipt check, every file's SHA-256 against its receipt) and bakes the verified tables into the static HTML (`src/app/publicationBoot.ts`), so the page paints them with no request. Once the opened view's code has loaded, the page loads the live manifest and every artifact through the same checks and compares: identical figures stay, different ones replace them, and a failed check withdraws them as a failed load always has. `data-publication-check` on `.app` reads `build` until then, `page` after. A deploy whose manifest the build cannot verify bakes nothing in, and the page loads and checks before it shows, as before.
 
 The page shell, Methodology, Living standards baseline and March 2026 forecast remain available without a Budget manifest. The Budget-day forecast remains unavailable until verified provenance exists; `post_published` alone does not authorise it. Missing, invalid, unreachable or other-Budget manifests remove Budget figures, with no fallback to unverified flat files. Focus and five-minute checks replace changed snapshots or restore verified results after recovery; Household impact caches are bound to the publication snapshot.
 
@@ -137,7 +139,7 @@ The full sequence, roles and timings are in the [runbook](docs/budget-day-runboo
 | OBR tables | Download the OBR workbooks **in a browser** (obr.uk refuses scripts) and import them | [Documents arrive](docs/budget-day-runbook.md#documents-arrive-1340), [OBR forecast](docs/budget-day-runbook.md#budget-day-obr-forecast-living-standards-tab-from-1340) |
 | Generate | `generate --artifacts`, one receipted artifact per measure, locally or on Modal | [G2](docs/budget-day-runbook.md#g2-provisional-numbers-1315) |
 | Stage | `publish reconcile` and `publish stage`; each measure needs a signed expected-effects row (in #140, after #104) | [G2](docs/budget-day-runbook.md#g2-provisional-numbers-1315), [G3](docs/budget-day-runbook.md#g3-rebase-and-reconcile-1340-to-1410) |
-| Attest | Hand-written modifiers (`employer_ni_relief_under_25s`, `plan_2_threshold_unfreeze`) are held until **two different people** sign an attestation for that exact receipt | [How a measure must be written](docs/budget-day-runbook.md#how-a-measure-must-be-written) |
+| Attest | Hand-written modifiers (`plan_2_threshold_unfreeze`, `state_pension_income_tax_protection`) and any package holding them are held until **two different people** sign an attestation for that exact receipt | [How a measure must be written](docs/budget-day-runbook.md#how-a-measure-must-be-written) |
 | Approve | The Reconciler runs `publish approve`, then `publish review-rows` | [G3](docs/budget-day-runbook.md#g3-rebase-and-reconcile-1340-to-1410) |
 | Combined | `generate --combined` over the approved measures, staged and approved | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
 | Results by area | `geography` over the approved ids locally, or `constituencies --backend modal` for seats on Microcosm's local-area cut; both write `area_provenance.json` for `publish index` | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |

@@ -13,31 +13,35 @@ const answer = (id, year = 2027) =>
   normaliseHouseholdImpact(file.entries.find((entry) => entry.preset_id === id && entry.year === year).response);
 
 const cards = (container) => container.querySelectorAll(".single-year-chart-pair > .single-year-card");
-// Each card's chips but its own total line (Net income after, Total rate after)
-const chipLabels = (card) =>
-  [...card.querySelectorAll(".series-toggle-chip")].map((chip) => chip.textContent).filter((label) => !/^(Net income|Total rate|Change in)/.test(label));
+const shownChips = (container) =>
+  [...container.querySelectorAll(".across-earnings-show .series-toggle-chip:not(.series-toggle-more)")].map((chip) => chip.textContent);
 
 describe("the two Across earnings cards", () => {
-  it("list the same components in the same order, and a chip toggled on one toggles the other", () => {
+  it("share one Show control above both, which switches a component on both cards", () => {
     const data = answer("higher-earner");
     const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
     const [net, rate] = cards(container);
-    // Both keys alike, chip for chip: what applies on either card, then the
-    // same "+N with no effect for you"
-    expect(chipLabels(net)).toEqual(chipLabels(rate));
-    expect(chipLabels(net)).toContain("Personal allowance taper");
-    expect(chipLabels(net)).toContain("Council Tax");
-    // Where a shown component has nothing on this card: disabled, with why
-    expect(within(rate).getByRole("button", { name: "Council Tax" })).toHaveAttribute("aria-disabled", "true");
-    const netTax = within(net).getByRole("button", { name: "Income tax" });
-    expect(within(rate).getByRole("button", { name: "Income tax" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(netTax);
-    expect(within(rate).getByRole("button", { name: "Income tax" })).toHaveAttribute("aria-pressed", "false");
-    // Those that apply on neither fold into one chip, opened on both at once
-    fireEvent.click(within(net).getByRole("button", { name: /^\+\d+ with no effect for you$/ }));
-    expect(within(rate).getByRole("button", { name: "Show fewer" })).toHaveAttribute("aria-expanded", "true");
-    // The personal allowance taper is inside income tax on the net income card
-    expect(within(net).getByRole("button", { name: "Personal allowance taper" })).toHaveAttribute("aria-disabled", "true");
+    // No Show chips on either card: one control above the pair
+    expect(net.querySelector(".series-toggle-chip")).toBeNull();
+    expect(rate.querySelector(".series-toggle-chip")).toBeNull();
+    const show = container.querySelector(".across-earnings-show");
+    expect(show).toHaveTextContent(/^Show on both charts/);
+    // Boxed as the section measure key: a titled bar above the pair
+    expect(show.querySelector(".series-toggle-wrap.is-section > .series-toggle-title")).toHaveTextContent("Show on both charts");
+    // What applies on either card, once each, then the total
+    const chips = shownChips(container);
+    expect(chips).toContain("Personal allowance taper");
+    expect(chips).toContain("Council Tax");
+    expect(chips).toContain("Income tax");
+    expect(chips[chips.length - 1]).toBe("Total");
+    expect(new Set(chips).size).toBe(chips.length);
+    const tax = within(show).getByRole("button", { name: "Income tax" });
+    expect(tax).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(tax);
+    expect(within(show).getByRole("button", { name: "Income tax" })).toHaveAttribute("aria-pressed", "false");
+    // Those that apply on neither fold into one text toggle
+    fireEvent.click(within(show).getByRole("button", { name: /^\d+ more with no effect for you$/ }));
+    expect(within(show).getByRole("button", { name: /^Hide the \d+ with no effect$/ })).toHaveAttribute("aria-expanded", "true");
     // One view for both
     chooseOption(rate, "Change");
     expect(optionsLabel(net)).toBe("Change");
@@ -51,7 +55,7 @@ describe("the two Across earnings cards", () => {
     expect(rate.querySelector(".chart-description").textContent).toMatch(/^With no earnings, your marginal tax rate on your first £200 would be 16% before and 32% after/);
     expect(net.querySelector(".earnings-you")).not.toBeNull();
     fireEvent.click(within(rate).getByRole("button", { name: "About this chart" }));
-    expect(rate.querySelector(".chart-more-info")).toHaveTextContent(/withdrawn £1 for every £1 of other income/);
+    expect(rate.querySelector(".chart-more-info")).toHaveTextContent(/Any earnings take the whole allowance away/);
   });
 });
 

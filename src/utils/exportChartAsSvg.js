@@ -15,7 +15,8 @@ import {
 import { measureTextWidth, wrapText, estimateTextHeight } from "./textMeasure";
 import { downloadSvg } from "./downloadFile";
 import { GROUP_GAP, SUB_GAP, legendLayout, subColumns, wrapLabel } from "./legendLayout";
-import { CHART_COLOURS } from "./chartTheme";
+import { CHART_COLOURS, TICK_STYLE } from "./chartTheme";
+import { EXPORT_FONT } from "./exportFrame";
 
 /**
  * Convert an image URL to a base64 data URL.
@@ -62,12 +63,21 @@ export function contentBox(svgElement) {
   }
 }
 
+// The legend's text, as the plot's tick labels draw theirs (TICK_STYLE, in
+// the dashboard's face), so a downloaded legend reads at the plot's size
+const LEGEND_TEXT = {
+  fontFamily: EXPORT_FONT,
+  fontSize: TICK_STYLE.fontSize,
+  fontWeight: "400",
+  fill: TICK_STYLE.fill,
+};
+
 // Style constants
 const STYLES = {
   padding: 20,
   titleFontSize: 18,
   descriptionFontSize: 13,
-  legendFontSize: 12,
+  legendFontSize: LEGEND_TEXT.fontSize,
   lineHeight: 1.5,
   titleDescGap: 8,
   legendIconSize: 14,
@@ -76,7 +86,7 @@ const STYLES = {
   colors: {
     title: CHART_COLOURS.text,
     description: CHART_COLOURS.axisTitle,
-    legendText: CHART_COLOURS.text,
+    legendText: LEGEND_TEXT.fill,
     background: CHART_COLOURS.surface,
   },
 };
@@ -151,6 +161,8 @@ function calculateItemWidth(item) {
   const { legendFontSize, legendIconSize, legendIconTextGap } = STYLES;
   const textWidth = measureTextWidth(item.label, {
     fontSize: legendFontSize,
+    fontWeight: LEGEND_TEXT.fontWeight,
+    fontFamily: LEGEND_TEXT.fontFamily,
   });
   return legendIconSize + legendIconTextGap + textWidth;
 }
@@ -263,12 +275,11 @@ function createLegend(items, maxWidth, yPosition, options = {}) {
         itemGroup.appendChild(rect);
       }
 
-      // Draw label with proper font styling (matching axis titles)
+      // The label in the plot's tick text (LEGEND_TEXT)
       const text = createSvgText(item.label, {
         x: currentX + legendIconSize + legendIconTextGap,
         y: currentY + legendFontSize / 3,
-        fontSize: legendFontSize,
-        fontWeight: "500",
+        ...LEGEND_TEXT,
         fill: colors.legendText,
       });
       itemGroup.appendChild(text);
@@ -596,8 +607,8 @@ export async function buildChartSvg(containerRef, options = {}) {
  */
 export function createGroupedLegend(items, areaWidth) {
   const { legendFontSize, legendIconSize, legendIconTextGap, colors } = STYLES;
-  const font = { fontSize: legendFontSize, fontWeight: "500" };
-  const headingFont = { fontSize: 11, fontWeight: "600" };
+  const font = { fontSize: legendFontSize, fontWeight: LEGEND_TEXT.fontWeight, fontFamily: LEGEND_TEXT.fontFamily };
+  const headingFont = { fontSize: 11, fontWeight: "600", fontFamily: LEGEND_TEXT.fontFamily };
   const lineHeight = legendFontSize + 4;
   const itemGap = 6;
   const headingHeight = 18;
@@ -608,7 +619,7 @@ export function createGroupedLegend(items, areaWidth) {
   const groups = [
     ["Raise revenue", items.filter((item) => item.group === "raise")],
     ["Cost revenue", items.filter((item) => item.group === "cost")],
-    ["Other measures", items.filter((item) => item.group === "other")],
+    ["Other policies", items.filter((item) => item.group === "other")],
   ].filter(([, groupItems]) => groupItems.length > 0);
   const rest = items.filter((item) => !item.group);
 

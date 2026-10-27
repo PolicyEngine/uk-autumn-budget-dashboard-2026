@@ -125,7 +125,7 @@ describe("what the figures are with", () => {
     const figure = document.querySelector(".household-card-figure");
     fireEvent.mouseEnter(figure);
     expect(document.getElementById(figure.getAttribute("aria-describedby"))).toHaveTextContent(
-      "Change in net income in 2027-28 with the measures the calculator supports",
+      "Change in net income in 2027-28 with the policies the calculator supports",
     );
   });
 });

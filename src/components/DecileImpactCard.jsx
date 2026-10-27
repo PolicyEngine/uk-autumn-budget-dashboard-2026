@@ -15,7 +15,7 @@ const VIEWS = [
 // were WaterfallChart's ABSOLUTE_INFO and DistributionalChart's RELATIVE_INFO)
 export const DECILE_INFO = {
   how: [
-    "Each bar stacks the selected measures' own effects; the line marks their total.",
+    "Each bar stacks the selected policies' own effects; the line marks their total.",
     "As a % of net income: the decile's total change over its total net income, so larger incomes weigh more than in an average of percentages.",
   ],
   method: { anchor: METHOD_ANCHORS.byIncome, label: "How we group households by income" },

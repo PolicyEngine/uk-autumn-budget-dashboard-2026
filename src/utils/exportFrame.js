@@ -2,9 +2,10 @@
  * The frame every downloaded chart image gets, so the file explains itself
  * away from the page: a header with the chart's title (with its year or
  * years) and a line saying what is shown (the policies, the Options
- * choices), the plot as the chart's own builder drew it, then a footer with
- * the source, the provisional label while the figures are provisional, the
- * date, and the PolicyEngine logo.
+ * choices), the plot and its legend as the chart's own builder drew them,
+ * at one scale, then the PolicyEngine logo at the bottom right: no source,
+ * provisional or date line and no rule above the logo in the image (the
+ * CSV keeps those facts as "#" lines).
  *
  * One path for every chart and the map: ChartDownloadMenu composes the
  * frame (downloadFrame) when a download runs and hands it to the format;
@@ -17,19 +18,15 @@ import { CHART_COLOURS } from "./chartTheme";
 export const EXPORT_SOURCE = "Source: PolicyEngine UK, UK Autumn Budget 2026 dashboard";
 
 // The dashboard's face (Inter), then the system faces it falls back to
-const FONT = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+export const EXPORT_FONT = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 // The image's width in CSS pixels (2x in the PNG: 2400 pixels)
 export const FRAME_WIDTH = 1200;
 // The plot is scaled to fill the frame's width, a half-width card's plot
 // as much as a full-width one's, unless that makes it taller than this
 export const MAX_PLOT_HEIGHT = 1000;
-// A legend below the plot is scaled apart from it, no more than this, so a
-// half-width card's legend does not grow with its plot
-export const MAX_LEGEND_SCALE = 1.25;
 const PAD = 32;
 const TITLE_SIZE = 24;
 const SUBTITLE_SIZE = 15;
-const FOOTER_SIZE = 13;
 const LINE = 1.4;
 
 const YEAR = /\b\d{4}-\d{2}\b/;
@@ -134,7 +131,7 @@ export function measure(text, size, weight = 400) {
     }
   }
   if (!measureContext) return text.length * size * 0.55;
-  measureContext.font = `${weight} ${size}px ${FONT}`;
+  measureContext.font = `${weight} ${size}px ${EXPORT_FONT}`;
   return measureContext.measureText(text).width;
 }
 
@@ -159,7 +156,7 @@ function textBlock(lines, { x, y, size, weight, fill }) {
   const tspans = lines
     .map((line, index) => `<tspan x="${x}" dy="${index === 0 ? 0 : size * LINE}">${escapeXml(line)}</tspan>`)
     .join("");
-  return `<text x="${x}" y="${y}" fill="${fill}" font-family="${escapeXml(FONT)}" font-size="${size}" font-weight="${weight}" style="font-family: ${escapeXml(FONT)}; font-size: ${size}px; font-weight: ${weight}; fill: ${fill};">${tspans}</text>`;
+  return `<text x="${x}" y="${y}" fill="${fill}" font-family="${escapeXml(EXPORT_FONT)}" font-size="${size}" font-weight="${weight}" style="font-family: ${escapeXml(EXPORT_FONT)}; font-size: ${size}px; font-weight: ${weight}; fill: ${fill};">${tspans}</text>`;
 }
 
 /** An image as a data URL, so the file needs nothing else; null if it fails. */
@@ -202,9 +199,10 @@ export function plotScale(built, inner = FRAME_WIDTH - PAD * 2) {
 
 /**
  * The parts of a built export the frame draws, top to bottom, each with
- * its own scale: the plot filling the width (plotScale), then its legend,
- * where the builder marks one (legendTop), at no more than
- * MAX_LEGEND_SCALE. Without a legend, the whole at the plot's scale.
+ * at the plot's scale: the plot filling the width (plotScale), then its
+ * legend, where the builder marks one (legendTop), at the same scale, so
+ * the legend's text, swatches and spacing match the plot's tick text.
+ * Without a legend, the whole at the plot's scale.
  *
  * @returns {Array<{top: number, sourceHeight: number, width: number, height: number}>}
  *   `top` and `sourceHeight` in the built SVG's units, the size in the frame's
@@ -215,9 +213,8 @@ export function framePieces(built, inner = FRAME_WIDTH - PAD * 2) {
   const scale = plotScale(plot, inner);
   const pieces = [{ top: 0, sourceHeight: plot.height, width: built.width * scale, height: plot.height * scale }];
   if (split) {
-    const legendScale = Math.min(scale, MAX_LEGEND_SCALE);
     const sourceHeight = built.height - split;
-    pieces.push({ top: split, sourceHeight, width: built.width * legendScale, height: sourceHeight * legendScale });
+    pieces.push({ top: split, sourceHeight, width: built.width * scale, height: sourceHeight * scale });
   }
   return pieces;
 }
@@ -317,30 +314,15 @@ export async function frameSvg(built, frame, { logo } = {}) {
   }
   const plotTop = y + 20;
 
-  // Footer: a rule, the source line on the left, the logo on the right
-  const logoWidth = logo?.width ? logo.width * 1.25 : 0;
-  const logoHeight = logo?.height ? logo.height * 1.25 : 0;
-  const footerLines = wrapLines(frame.footer, inner - (logoWidth ? logoWidth + 24 : 0), FOOTER_SIZE);
-  const footerTextHeight = FOOTER_SIZE + (footerLines.length - 1) * FOOTER_SIZE * LINE;
-  const footerHeight = Math.max(footerTextHeight, logoHeight);
-  const ruleY = plotTop + plotHeight + 16;
-  const footerTop = ruleY + 16;
-  const height = Math.ceil(footerTop + footerHeight + PAD);
-
-  parts.push(`<line x1="${PAD}" y1="${ruleY}" x2="${width - PAD}" y2="${ruleY}" stroke="${CHART_COLOURS.grid}" stroke-width="1"/>`);
-  parts.push(
-    textBlock(footerLines, {
-      x: PAD,
-      y: footerTop + (footerHeight - footerTextHeight) / 2 + FOOTER_SIZE * 0.85,
-      size: FOOTER_SIZE,
-      weight: 400,
-      fill: CHART_COLOURS.tick,
-    }),
-  );
+  // Footer: the logo alone, at the bottom right (no text line, no rule)
   const logoHref = logo?.href ? await logoDataUrl(logo.href) : null;
-  if (logoHref) {
+  const logoWidth = logoHref && logo.width ? logo.width * 1.25 : 0;
+  const logoHeight = logoHref && logo.height ? logo.height * 1.25 : 0;
+  const footerTop = plotTop + plotHeight + (logoHeight ? 16 : 0);
+  const height = Math.ceil(footerTop + logoHeight + PAD);
+  if (logoHeight) {
     parts.push(
-      `<image x="${width - PAD - logoWidth}" y="${footerTop + (footerHeight - logoHeight) / 2}" width="${logoWidth}" height="${logoHeight}" href="${logoHref}" xlink:href="${logoHref}"/>`,
+      `<image x="${width - PAD - logoWidth}" y="${footerTop}" width="${logoWidth}" height="${logoHeight}" href="${logoHref}" xlink:href="${logoHref}"/>`,
     );
   }
 
@@ -370,7 +352,7 @@ export async function frameSvg(built, frame, { logo } = {}) {
     '<?xml version="1.0" encoding="UTF-8"?>\n' +
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
     `<title>${escapeXml(frame.title)}</title>` +
-    `<desc>${escapeXml([frame.subtitle, frame.footer].filter(Boolean).join(". "))}</desc>` +
+    (frame.subtitle ? `<desc>${escapeXml(frame.subtitle)}</desc>` : "") +
     (fontCss ? `<defs><style>${fontCss}</style></defs>` : "") +
     `<rect x="0" y="0" width="${width}" height="${height}" fill="${CHART_COLOURS.surface}"/>` +
     parts.join("") +

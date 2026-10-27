@@ -388,15 +388,17 @@
    card sits just above it, placed in script so it stays inside the map. */
 .constituency-tooltip {
   position: absolute;
-  background: var(--c-surface);
-  border: 1px solid var(--pe-gray-200);
-  border-radius: var(--pe-radius-md);
+  /* The shared tip card (--tip-* in globals.css), with room for its rows */
+  background: var(--tip-bg);
+  border: var(--tip-border);
+  border-radius: var(--tip-radius);
   padding: 12px 16px;
-  box-shadow: 0 4px 12px var(--shadow-strong);
+  box-shadow: var(--tip-shadow);
+  font-size: var(--tip-font-size);
   pointer-events: auto;
   width: max-content;
   min-width: 220px;
-  max-width: min(300px, 100%);
+  max-width: min(320px, 100%);
   box-sizing: border-box;
   overflow-y: auto;
   z-index: 100;
@@ -448,88 +450,134 @@
   line-height: 1.4;
 }
 
-/* A seat's card, pinned or on hover (ConstituencyMap's SeatCard) */
+/* A seat's card, pinned or on hover (ConstituencyMap's SeatCard): one
+   width for both, so the card does not change size between seats */
+.constituency-tooltip.seat-card,
 .seat-card-hover {
-  width: max-content;
+  width: 320px;
+  min-width: 0;
+  max-width: min(320px, calc(100vw - 32px));
+  box-sizing: border-box;
+}
+
+/* The pinned card also stays inside the map */
+.constituency-tooltip.seat-card {
+  max-width: min(320px, 100%);
 }
 
 .seat-card-title {
   font-size: var(--fs-body);
   font-weight: 600;
   color: var(--pe-gray-900);
-  margin: 0 0 6px 0 !important;
+  margin: 0 0 4px 0 !important;
 }
 
 .seat-card p {
   margin: 0;
 }
 
-.seat-card-figure + .seat-card-figure {
-  margin-top: 8px;
+.seat-card-headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0;
+  line-height: 1.15;
 }
 
 .seat-card-value {
   font-size: var(--fs-xl);
   font-weight: 700;
-  line-height: 1.1;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .seat-card-value-secondary {
   font-size: var(--fs-body-lg);
 }
 
+.seat-card-dot {
+  color: var(--pe-gray-400);
+  font-size: var(--fs-body-lg);
+  white-space: pre;
+}
+
+.seat-card-unit {
+  font-size: var(--fs-caption);
+  font-weight: 400;
+  color: var(--pe-gray-500);
+}
+
 .seat-card-label {
   font-size: var(--fs-micro);
   color: var(--pe-gray-500);
-  margin-top: 2px !important;
+  margin-top: 1px !important;
 }
 
 .seat-card-policies {
-  margin-top: 10px;
-  padding-top: 8px;
+  margin-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid var(--pe-gray-200);
 }
 
 .seat-card-policies-heading {
-  font-size: var(--fs-caption);
+  font-size: var(--fs-micro);
   font-weight: 600;
   color: var(--pe-gray-700);
-  margin-bottom: 4px !important;
+  margin-bottom: 2px !important;
 }
 
 .seat-card-policy {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px auto;
+  align-items: center;
+  column-gap: 6px;
   font-size: var(--fs-caption);
-  padding: 2px 0;
+  line-height: 1.3;
+  padding: 1px 0;
 }
 
 .seat-card-policy-name {
-  flex: 1 1 auto;
   color: var(--pe-gray-700);
   min-width: 0;
+}
+
+.seat-card-policy-bar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--pe-gray-100);
+  overflow: hidden;
+}
+
+.seat-card-policy-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
 }
 
 .seat-card-policy-value {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-
-.seat-card-withheld {
-  flex: 0 1 auto;
-  max-width: 45%;
-  font-weight: 400;
-  color: var(--pe-gray-500);
-  white-space: normal;
   text-align: right;
 }
 
+/* Not published has no bar: it takes the bar's column too */
+.seat-card-withheld {
+  grid-column: 2 / 4;
+  font-weight: 400;
+  color: var(--pe-gray-500);
+  cursor: help;
+}
+
+.seat-card-unchanged {
+  margin-top: 2px !important;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+}
+
 .seat-card-note {
-  margin-top: 10px !important;
+  margin-top: 8px !important;
   font-size: var(--fs-micro);
   color: var(--pe-gray-500);
   line-height: 1.4;
@@ -542,7 +590,7 @@
 
 .seat-card-region {
   margin-top: 8px !important;
-  padding-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid var(--pe-gray-200);
   font-size: var(--fs-micro);
   color: var(--pe-gray-500);

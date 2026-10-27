@@ -97,7 +97,7 @@ export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetar
       availability.available = false;
       availability.reason = `Results unavailable: ${failures[id] || "no verified artifact"}`;
     }
-    return { id, seriesKey: `measure:${id}`, name, label: name, description, explanation: description, direction, order, size, color: NEUTRAL_COLOR, displayable: isDisplayable(entry) && verified, availability, years: [...(entry?.years ?? [])], unsupported_years: [...(entry?.unsupported_years ?? [])], personal: entry?.personal ?? receipt?.personal };
+    return { id, seriesKey: `measure:${id}`, name, label: name, description, explanation: description, direction, order, size, color: NEUTRAL_COLOR, displayable: isDisplayable(entry) && verified, availability, years: [...(entry?.years ?? [])], unsupported_years: [...(entry?.unsupported_years ?? [])], personal: entry?.personal ?? receipt?.personal, category: entry?.category ?? receipt?.category ?? null };
   });
   const labelCounts = new Map();
   for (const measure of measures) labelCounts.set(measure.name, (labelCounts.get(measure.name) ?? 0) + 1);

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import SectionHeading from "./SectionHeading";
-import { MeasureKeyProvider, SectionMeasureKey } from "./MeasureKey";
+import { MeasureKeyProvider } from "./MeasureKey";
 import TrendCard from "./youngPeople/TrendCard";
 import MeasuresCard from "./youngPeople/MeasuresCard";
 import AgeChangeCard from "./age/AgeChangeCard";
@@ -11,6 +11,7 @@ import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measure
 import { AGE_GROUP_OPTIONS, PENSIONERS, ageGroupFrom, groupSubject } from "../utils/ageGroups";
 import "./YoungPeopleSection.css";
 import "./PensionersSection.css";
+import { scrollBelowBars } from "../utils/pageScroll";
 
 /** The group in the address (?age=), read once the page is in the browser. */
 function readGroup() {
@@ -56,7 +57,7 @@ export default function AgeSection({ selectedPolicies, selectedYear, policies })
     if (status !== "ready" || scrolled.current || typeof window === "undefined") return;
     scrolled.current = true;
     const hash = window.location.hash.slice(1);
-    if (hash === YOUNG_PEOPLE_ANCHOR || hash === PENSIONERS_ANCHOR) document.getElementById(hash)?.scrollIntoView();
+    if (hash === YOUNG_PEOPLE_ANCHOR || hash === PENSIONERS_ANCHOR) scrollBelowBars(document.getElementById(hash));
   }, [status]);
 
   if (status !== "ready") {
@@ -96,9 +97,10 @@ export default function AgeSection({ selectedPolicies, selectedYear, policies })
           }
         />
         <section className="report-section young-people-section" aria-label="How each age group's income changes">
-          <SectionMeasureKey />
+          {/* The shared key is in Average change by age's legend row
+              (keyInLegend), level with Change by year's line chips */}
           <div className="charts-grid">
-            <AgeChangeCard {...props} height={narrow ? 360 : 400} />
+            <AgeChangeCard {...props} keyInLegend height={narrow ? 360 : 400} />
             <TrendCard key={group} {...props} height={narrow ? 340 : 400} />
           </div>
         </section>

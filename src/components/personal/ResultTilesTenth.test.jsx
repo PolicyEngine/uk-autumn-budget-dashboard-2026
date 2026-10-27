@@ -74,4 +74,12 @@ describe("ResultTiles' average for your income tenth", () => {
     show();
     expect(screen.getByText("Your tenth's average is not published")).toBeTruthy();
   });
+
+  it("says in the Your place tile, in one muted line, why there is no place", () => {
+    files.current = { "income_distribution.csv": { status: "ready", rows: [] } };
+    catalogueRef.current = catalogue({});
+    show();
+    expect(screen.getByText("Not available yet")).toBeTruthy();
+    expect(document.querySelector(".result-tile-missing")).toHaveTextContent(/not available/);
+  });
 });

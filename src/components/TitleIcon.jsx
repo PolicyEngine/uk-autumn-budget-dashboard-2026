@@ -312,6 +312,11 @@ const ICONS = {
  * A chart card's title icon: a small tinted chip before the title text,
  * hidden from screen readers (the title says what the chart is).
  */
+/** An icon's paths alone (24×24), for drawing inside a chart's own SVG. */
+export function titleIconPaths(name) {
+  return ICONS[name] ?? ICONS.tag;
+}
+
 export default function TitleIcon({ name, bare = false, size = 16, className }) {
   const icon = ICONS[name];
   if (!icon) return null;

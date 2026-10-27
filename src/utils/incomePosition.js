@@ -363,7 +363,7 @@ export function lowerCount(pos) {
 }
 
 /** What the number measures, said once and the same everywhere. */
-export const PLACE_MEANING = "have a lower household income than you, adjusted for household size";
+export const PLACE_MEANING = "live in a household with a lower income than yours, adjusted for household size";
 
 /**
  * The card's text: a one-sentence headline and three labelled chips (your
