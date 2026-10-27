@@ -242,28 +242,41 @@ describe("the About pill in the tab row, and its overview drawer", () => {
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(edge()).toHaveAttribute("aria-expanded", "true");
     expect(within(dialog).getByText(/^Estimates from/)).toBeInTheDocument();
-    // The header: PolicyEngine's wordmark and the close button only; below
-    // it, "About this dashboard" as a tag, then the title
+    // The header: PolicyEngine's wordmark, centred between an empty cell
+    // and the close button, sticky, with no rule under it; below it,
+    // "About this dashboard" as an eyebrow, then the title
     const header = dialog.querySelector(".overview-header");
-    expect(within(header).getByRole("img", { name: "PolicyEngine" })).toHaveClass("overview-logo");
+    const logo = within(header).getByRole("img", { name: "PolicyEngine" });
+    expect(logo).toHaveClass("overview-logo");
+    expect([...header.children].map((node) => node.className)).toEqual(["overview-header-spacer", "overview-logo", "tip-anchor"]);
+    expect(header.lastElementChild.firstElementChild).toHaveClass("overview-close");
+    expect(header).not.toHaveClass("is-scrolled");
     expect(header).not.toHaveTextContent("About this dashboard");
     const tag = within(dialog).getByText("About this dashboard");
     expect(tag).toHaveClass("overview-tag");
     expect(header.contains(tag)).toBe(false);
     const title = within(dialog).getByRole("heading", { level: 2, name: "Autumn Budget 2026: fiscal and distributional analysis" });
     expect(tag.nextElementSibling.contains(title)).toBe(true);
-    // The ways in, as a list of three rows under "Go to"
-    const rows = within(within(dialog).getByRole("list", { name: "Go to" })).getAllByRole("link");
+    // Two groups: the three views in this dashboard, then PolicyEngine's
+    // website on its own; group labels in sentence case
+    const nav = within(dialog).getByRole("navigation", { name: "Go to" });
+    expect(within(nav).getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["In this dashboard", "More from PolicyEngine"]);
+    const rows = within(within(nav).getByRole("list", { name: "In this dashboard" })).getAllByRole("link");
     expect(rows.map((row) => row.textContent)).toEqual([
       "The Budget and societyCosts and who gains or loses",
       "Your householdSee how your income changes",
       "What's in the BudgetEvery policy, and how we model it",
-      "PolicyEngineMore research, the model and the API (opens in a new tab)",
     ]);
-    const site = rows.at(-1);
+    const site = within(within(nav).getByRole("region", { name: "More from PolicyEngine" })).getByRole("link");
+    expect(site).toHaveTextContent("policyengine.orgResearch, the model and the API (opens in a new tab)");
     expect(site).toHaveAttribute("href", "https://policyengine.org/uk");
     expect(site).toHaveAttribute("target", "_blank");
     expect(site).toHaveAttribute("rel", "noopener noreferrer");
+    // The body scrolling under the header gives it a shadow
+    const panel = dialog;
+    panel.scrollTop = 40;
+    fireEvent.scroll(panel);
+    expect(header).toHaveClass("is-scrolled");
     await waitFor(() => expect(within(dialog).getByRole("button", { name: "Close" })).toHaveFocus());
     expect(document.body.style.overflow).toBe("hidden");
     // The view stays where it was
@@ -304,10 +317,12 @@ describe("the About pill in the tab row, and its overview drawer", () => {
     expect(within(drawer()).queryByRole("link", { name: "Back to the start" })).toBeNull();
   });
 
-  it("names what it is built with, each link on its own row", async () => {
+  it("names what it is built with, its links as chips that open a new tab", async () => {
     await openDrawer();
     const built = within(drawer()).getByRole("list", { name: "Built with" });
-    expect(within(built).getAllByRole("link")[0]).toHaveTextContent(/^Replication code/);
+    const [code] = within(built).getAllByRole("link");
+    expect(code).toHaveTextContent(/^Replication code \(opens in a new tab\)$/);
+    expect(code).toHaveAttribute("target", "_blank");
   });
 
   it.each([

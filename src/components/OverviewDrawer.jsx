@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { ArrowUpRight, X } from "lucide-react";
 import { LandingBoxes, LandingIntro } from "./LandingPage";
 import { replicationLinks } from "./ReplicationLine";
 import Tip from "./Tip";
 import logo from "@/assets/policyengine-teal.svg";
+import mark from "@/assets/policyengine-teal-square.svg";
 import "./OverviewDrawer.css";
 
 // A little over --motion-slide (250ms): the slide out has ended
@@ -37,6 +38,9 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, pro
   // mounting, so it slides in
   const [shown, setShown] = useState(false);
   const [entered, setEntered] = useState(false);
+  // The body has scrolled under the header: the header then casts a soft
+  // shadow (no rule between them at rest)
+  const [scrolled, setScrolled] = useState(false);
   if (open && !shown) setShown(true);
   useEffect(() => {
     if (!open) {
@@ -111,8 +115,12 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, pro
         aria-modal="true"
         aria-labelledby="overview-tag"
         onKeyDown={onKeyDown}
+        onScroll={(event) => setScrolled(event.currentTarget.scrollTop > 0)}
       >
-        <header className="overview-header">
+        {/* Sticky: the wordmark centred, the close button at the right (an
+            empty cell at the left keeps the wordmark on the centre line) */}
+        <header className={`overview-header${scrolled ? " is-scrolled" : ""}`}>
+          <span className="overview-header-spacer" aria-hidden="true" />
           {/* PolicyEngine's wordmark (@policyengine/ui-kit's teal.svg, the
               teal form of the site's own white wordmark) */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -133,32 +141,51 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, pro
         </header>
         <div className="overview-body">
           <div className="overview-lead">
-            {/* The dialog's name: a category label above the title */}
+            {/* The dialog's name: an eyebrow above the title, a short teal
+                bar then the words */}
             <p id="overview-tag" className="overview-tag">About this dashboard</p>
             <LandingIntro headingId="overview-heading" provisional={provisional} className="overview-intro" />
           </div>
-          <nav className="overview-nav" aria-labelledby="overview-goto">
-          <p id="overview-goto" className="overview-goto">Go to</p>
-          <LandingBoxes
-            list
-            labelledBy="overview-goto"
-            provisional={provisionalWording}
-            onOpen={(tab, sub) => {
-              onOpen(tab, sub);
-              onClose();
-            }}
-          />
+          {/* Two groups: the three views in this dashboard, as one card;
+              then PolicyEngine's website, a smaller muted row that leaves */}
+          <nav className="overview-nav" aria-label="Go to">
+            <section className="overview-group" aria-labelledby="overview-here">
+              <h3 id="overview-here" className="overview-group-label">In this dashboard</h3>
+              <LandingBoxes
+                list
+                labelledBy="overview-here"
+                provisional={provisionalWording}
+                onOpen={(tab, sub) => {
+                  onOpen(tab, sub);
+                  onClose();
+                }}
+              />
+            </section>
+            <section className="overview-group" aria-labelledby="overview-elsewhere">
+              <h3 id="overview-elsewhere" className="overview-group-label">More from PolicyEngine</h3>
+              <a className="overview-external" href="https://policyengine.org/uk" target="_blank" rel="noopener noreferrer">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={mark.src ?? mark} alt="" className="overview-external-mark" />
+                <span className="landing-row-text">
+                  <span className="landing-row-title">policyengine.org</span>
+                  <span className="landing-row-description">Research, the model and the API</span>
+                </span>
+                <span className="visually-hidden"> (opens in a new tab)</span>
+                <ArrowUpRight className="landing-row-chevron" size={16} strokeWidth={2} aria-hidden="true" />
+              </a>
+            </section>
           </nav>
         </div>
         <footer className="overview-footer">
-          <p id="overview-built" className="overview-built">Built with</p>
+          <p id="overview-built" className="overview-group-label">Built with</p>
           <ul className="overview-built-links" aria-labelledby="overview-built">
             {replicationLinks({ policyengine: process.env.NEXT_PUBLIC_POLICYENGINE_VERSION }).map(({ key, label, title, href, Icon }) => (
               <li key={key}>
                 <a href={href} title={title} target="_blank" rel="noopener noreferrer">
                   <Icon size={14} strokeWidth={2} aria-hidden="true" />
                   {/* A row's own start: "Replication code"; a package keeps its name */}
-                  {key === "code" ? "Replication code" : label}
+                  <span>{key === "code" ? "Replication code" : label}</span>
+                  <ArrowUpRight className="overview-built-arrow" size={12} strokeWidth={2} aria-hidden="true" />
                   <span className="visually-hidden"> (opens in a new tab)</span>
                 </a>
               </li>

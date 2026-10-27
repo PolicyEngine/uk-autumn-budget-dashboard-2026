@@ -47,38 +47,58 @@
   transform: none;
 }
 
+/* Sticky at the top of the panel; no rule under it: the body is set off by
+   space, and a soft shadow appears only once the body scrolls under it */
 .overview-header {
-  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
   flex: none;
+  grid-template-columns: 40px 1fr 40px;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  height: 68px;
-  padding: 0 10px 0 20px;
-  border-bottom: 1px solid var(--card-border);
+  gap: 8px;
+  height: 64px;
+  padding: 0 12px;
+  background: var(--c-surface);
+  transition: box-shadow var(--motion-fast) ease;
 }
 
-/* PolicyEngine's wordmark, at the header's left */
+.overview-header.is-scrolled {
+  box-shadow: 0 6px 12px -8px var(--shadow-soft), 0 1px 0 var(--pe-gray-100);
+}
+
+/* PolicyEngine's wordmark, centred in the header */
 .overview-logo {
   display: block;
+  justify-self: center;
   width: auto;
-  height: 36px;
+  height: 30px;
+  max-width: 100%;
   min-width: 0;
 }
 
-/* "About this dashboard": a tinted pill above the title */
+/* "About this dashboard": an eyebrow above the title, small teal
+   semibold words after a short teal accent bar */
 .overview-tag {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   align-self: flex-start;
-  margin: 0 0 10px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: var(--fs-micro);
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: var(--fs-small);
   font-weight: 600;
-  line-height: 1.5;
-  color: var(--pe-teal-800);
-  background: var(--pe-teal-50);
-  box-shadow: inset 0 0 0 1px var(--pe-teal-100);
+  line-height: 1.4;
+  color: var(--c-gain-text);
+}
+
+.overview-tag::before {
+  content: "";
+  flex: none;
+  width: 16px;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
 }
 
 .overview-lead {
@@ -86,21 +106,20 @@
   flex-direction: column;
 }
 
-/* A ghost icon button: no ring until focused by the keyboard */
+/* A quiet icon button: a 40px square with a 20px X in a muted grey; a
+   light grey fill on hover or keyboard focus, and a teal focus ring */
 .overview-close {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* A 40px tap area; no ring or fill at rest, a grey circle on hover or
-     keyboard focus */
   width: 40px;
   height: 40px;
   flex: none;
   padding: 0;
-  color: var(--pe-text-secondary);
+  color: var(--pe-gray-500);
   background: none;
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--pe-radius-md);
   cursor: pointer;
   transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease;
 }
@@ -116,23 +135,43 @@
 }
 
 .overview-close:focus-visible:not([data-quiet]) {
-  box-shadow: 0 0 0 3px var(--focus-ring);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
+/* One left edge (20px) for the wordmark's column, the eyebrow, the
+   title, the intro, the group labels, the cards' contents and the footer */
 .overview-body {
   display: flex;
   flex: 1;
   flex-direction: column;
   /* Spare height is shared above, between and below the intro and the
-     "Go to" group, so the panel is filled, not left with a gap at the foot */
+     groups, so the panel is filled, not left with a gap at the foot */
   justify-content: space-evenly;
-  gap: clamp(12px, 2.5svh, 24px);
-  padding: 8px 20px;
+  gap: clamp(16px, 3svh, 28px);
+  padding: 4px 20px 12px;
 }
 
 .overview-nav {
   display: flex;
   flex-direction: column;
+  gap: clamp(14px, 2.5svh, 20px);
+}
+
+.overview-group {
+  display: flex;
+  flex-direction: column;
+}
+
+/* A group's label: small semibold muted words, sentence case */
+.overview-group-label {
+  margin: 0 0 8px;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--pe-gray-500);
 }
 
 /* The intro, compact for a 380px panel */
@@ -156,49 +195,64 @@
   line-height: 1.5;
 }
 
-.overview-goto {
-  margin: 0 0 4px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--pe-gray-500);
-}
-
-/* The ways in, as a list of rows */
+/* "In this dashboard": the three views as one card, rows split by hairlines
+   inside it (none above the first or below the last) */
 .landing-rows {
-  margin: 0 -8px;
+  margin: 0;
   padding: 0;
   list-style: none;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--c-surface);
+  overflow: hidden;
 }
 
 .landing-rows > li + li {
   border-top: 1px solid var(--pe-gray-100);
 }
 
-.landing-row {
+/* A row: a 36px icon tile, the title over its line, a chevron in one
+   column at the right; the same height and padding for every row */
+.landing-row,
+.overview-external {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: clamp(6px, 2svh - 8px, 14px) 8px;
+  min-height: 64px;
+  padding: clamp(8px, 2svh - 6px, 12px) 12px;
   color: var(--c-text);
   text-decoration: none;
-  border-radius: var(--pe-radius-md);
   transition: background-color var(--motion-fast) ease;
 }
 
-.landing-row:hover {
+.landing-row:hover,
+.overview-external:hover {
   background: var(--pe-teal-50);
 }
 
-.landing-row-icon {
+.landing-row:focus-visible,
+.overview-external:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.landing-rows > li:first-child .landing-row {
+  border-radius: 11px 11px 0 0;
+}
+
+.landing-rows > li:last-child .landing-row {
+  border-radius: 0 0 11px 11px;
+}
+
+.landing-row-icon,
+.overview-external-mark {
   display: inline-flex;
   flex: none;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 10px;
   background: var(--pe-teal-50);
   color: var(--c-gain-text);
 }
@@ -211,22 +265,26 @@
   display: flex;
   flex: 1;
   flex-direction: column;
+  gap: 1px;
   min-width: 0;
 }
 
 .landing-row-title {
   font-size: var(--fs-body);
   font-weight: 600;
+  line-height: 1.35;
   color: var(--pe-gray-900);
 }
 
 .landing-row-description {
   font-size: var(--fs-small);
+  line-height: 1.4;
   color: var(--pe-gray-600);
 }
 
 .landing-row-chevron {
   flex: none;
+  width: 18px;
   color: var(--pe-gray-400);
   transition: transform var(--motion-fast) ease, color var(--motion-fast) ease;
 }
@@ -236,29 +294,48 @@
   transform: translateX(2px);
 }
 
-/* What it is built with: two links, each on one line, clear of the
-   window's bottom corner */
-/* Pinned to the foot of the panel */
+/* "More from PolicyEngine": the website, a quieter muted row of its own
+   (no border; a grey fill), with the PolicyEngine mark and an arrow out */
+.overview-external {
+  min-height: 56px;
+  border-radius: 12px;
+  background: var(--pe-gray-50);
+}
+
+.overview-external-mark {
+  padding: 8px;
+  background: var(--c-surface);
+  box-shadow: inset 0 0 0 1px var(--card-border);
+  object-fit: contain;
+}
+
+.overview-external .landing-row-title {
+  font-size: var(--fs-small);
+}
+
+.overview-external:hover .landing-row-chevron {
+  color: var(--c-gain-text);
+  transform: translate(2px, -2px);
+}
+
+/* "Built with": a compact group at the foot, on the same left edge; its
+   links as small chips, each with its icon and an arrow out */
 .overview-footer {
   flex: none;
   margin-top: auto;
-  padding: 12px 20px 20px 72px;
-  border-top: 1px solid var(--card-border);
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--pe-gray-100);
 }
 
-.overview-built {
-  margin: 0 0 4px;
+.overview-footer .overview-group-label {
   font-size: var(--fs-micro);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--pe-gray-500);
+  margin-bottom: 6px;
 }
 
 .overview-built-links {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-wrap: wrap;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -268,16 +345,36 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: var(--fs-small);
-  color: var(--pe-gray-600);
+  height: 28px;
+  padding: 0 10px;
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  color: var(--pe-gray-700);
   text-decoration: none;
   white-space: nowrap;
+  background: var(--pe-gray-50);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease, border-color var(--motion-fast) ease;
+}
+
+.overview-built-arrow {
+  color: var(--pe-gray-400);
 }
 
 .overview-built-links a:hover {
-  color: var(--pe-teal-700);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  color: var(--c-gain-text);
+  background: var(--pe-teal-50);
+  border-color: var(--pe-teal-100);
+}
+
+.overview-built-links a:hover .overview-built-arrow {
+  color: currentColor;
+}
+
+.overview-built-links a:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 /* A short window: everything a little tighter, so it still fits */
@@ -287,7 +384,7 @@
   }
 
   .overview-logo {
-    height: 30px;
+    height: 28px;
   }
 
   .overview-intro .landing-heading {
@@ -304,8 +401,12 @@
     height: 32px;
   }
 
+  .landing-row {
+    min-height: 56px;
+  }
+
   .overview-footer {
-    padding-top: 8px;
+    padding-top: 10px;
     padding-bottom: 12px;
   }
 }
@@ -317,8 +418,9 @@
   }
 
   .landing-row {
-    padding-top: 4px;
-    padding-bottom: 4px;
+    min-height: 52px;
+    padding-top: 6px;
+    padding-bottom: 6px;
   }
 
   .overview-intro .landing-heading {
@@ -341,8 +443,11 @@
   .overview,
   .overview-backdrop,
   .overview-panel,
+  .overview-header,
   .overview-close,
   .landing-row,
+  .overview-external,
+  .overview-built-links a,
   .landing-row-chevron {
     transition: none;
   }
