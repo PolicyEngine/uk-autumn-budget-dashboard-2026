@@ -45,17 +45,17 @@ export const hasInfo = (info) => {
   return Boolean(p.lead || p.shows || p.how.length || p.own.length || p.shared.length || p.caveats.length || p.sources.length || p.method);
 };
 
-/** The closed disclosure's one line: what is inside, in order ("How it's calculated · Caveats · Source"). */
+/** The closed disclosure's one line: the sections inside, in order ("What it shows · Caveats · Source"). */
 export function infoPreview(info) {
   const p = infoParts(info);
   const parts = [
     p.lead && p.lead.title,
+    p.shows && "What it shows",
     p.how.length > 0 && "How it's calculated",
     p.own.length > 0 && p.definitionsTitle,
     p.caveats.length > 0 && "Caveats",
     p.sources.length > 0 && (p.sources.length > 1 ? "Sources" : "Source"),
   ].filter(Boolean);
-  if (!parts.length && p.shows) parts.push("What it shows");
   if (!parts.length && p.method) parts.push(p.method.label);
   return parts.join(" · ");
 }

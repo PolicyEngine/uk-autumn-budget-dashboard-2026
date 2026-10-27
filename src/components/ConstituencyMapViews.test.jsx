@@ -254,6 +254,6 @@ describe("InfoSections", () => {
     expect(last).toHaveClass("info-method");
     expect(last).toHaveTextContent(/^More in Methodology: How the figures by area are estimated · Household net income →$/);
     // Shared terms alone make no Definitions section
-    expect(infoPreview({ ...info, definitions: [{ ref: "netIncome" }] })).toBe("How it's calculated · Caveats");
+    expect(infoPreview({ ...info, definitions: [{ ref: "netIncome" }] })).toBe("What it shows · How it's calculated · Caveats");
   });
 });
