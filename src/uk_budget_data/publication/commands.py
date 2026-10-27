@@ -55,7 +55,9 @@ def add_generate_arguments(parser: argparse.ArgumentParser) -> None:
         default=None,
         metavar="ID",
         help="Simulate these measures together as one combined run "
-        "(repeatable; implies --artifacts)",
+        "(repeatable; implies --artifacts, except with --only "
+        "income_distribution or income_growth, where it adds the run's "
+        "rows to that flat file under its combined key)",
     )
 
 

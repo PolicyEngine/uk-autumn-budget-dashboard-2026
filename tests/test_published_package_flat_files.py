@@ -247,6 +247,27 @@ def test_cli_published_package_reads_the_manifest(monkeypatch, tmp_path):
     }
 
 
+def test_cli_published_package_reads_the_default_manifest(
+    monkeypatch, tmp_path
+):
+    # The runbook's command gives no --manifest: it reads
+    # public/data/manifest.json from the checkout it runs in
+    data = tmp_path / "public" / "data"
+    data.mkdir(parents=True)
+    (data / "manifest.json").write_text(json.dumps(manifest_for(SEVEN)))
+    monkeypatch.chdir(tmp_path)
+    code, calls = run_cli(
+        monkeypatch,
+        tmp_path,
+        ["--only", "income_growth", "--published-package"],
+    )
+    assert code == 0
+    assert calls["generate_income_growth"] == {
+        "reforms": SEVEN,
+        "combined_sets": [SEVEN],
+    }
+
+
 def test_cli_combined_by_hand(monkeypatch, tmp_path):
     code, calls = run_cli(
         monkeypatch,
