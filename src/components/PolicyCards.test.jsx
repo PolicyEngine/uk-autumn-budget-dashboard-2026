@@ -53,7 +53,7 @@ describe("PolicyCards", () => {
   it("shows selected verified catalogue measures, raises first, each tagged and coloured like the charts", () => {
     render(<PolicyCards policies={catalogue.measures} selectedPolicies={[ALPHA, BETA, HELD]} />);
     const cards = screen.getAllByRole("listitem");
-    expect(cards.map((card) => card.querySelector("h4").textContent)).toEqual([
+    expect(cards.map((card) => card.querySelector("h3").textContent)).toEqual([
       catalogue.byId.get(BETA).label, catalogue.byId.get(ALPHA).label,
     ]);
     for (const [tag, card, id] of [["Raises revenue", cards[0], BETA], ["Costs revenue", cards[1], ALPHA]]) {
@@ -145,7 +145,7 @@ describe("PolicyCards", () => {
     expect(document.querySelector(".policy-filter-summary")).toBeNull();
     expect(within(filter).getByRole("button", { name: "All 2" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(within(filter).getByRole("button", { name: "Costs revenue 1" }));
-    expect(screen.getAllByRole("listitem").map((card) => card.querySelector("h4").textContent)).toEqual([catalogue.byId.get(ALPHA).label]);
+    expect(screen.getAllByRole("listitem").map((card) => card.querySelector("h3").textContent)).toEqual([catalogue.byId.get(ALPHA).label]);
     expect(new URLSearchParams(window.location.search).get("pf")).toBe("costs");
     expect(new URLSearchParams(window.location.search).get("tab")).toBe("policies");
     fireEvent.click(within(filter).getByRole("button", { name: "All 2" }));
@@ -154,14 +154,14 @@ describe("PolicyCards", () => {
     // Read back from the address
     window.history.replaceState(null, "", "/?tab=policies&pf=raises");
     render(<PolicyCards policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} />);
-    expect(screen.getAllByRole("listitem").map((card) => card.querySelector("h4").textContent)).toEqual([catalogue.byId.get(BETA).label]);
+    expect(screen.getAllByRole("listitem").map((card) => card.querySelector("h3").textContent)).toEqual([catalogue.byId.get(BETA).label]);
     window.history.replaceState(null, "", "/");
   });
 
   it("asks for only that measure's effect", () => {
     const onShowEffect = vi.fn();
     render(<PolicyCards policies={catalogue.measures} selectedPolicies={[ALPHA]} onShowEffect={onShowEffect} />);
-    fireEvent.click(screen.getByRole("button", { name: new RegExp(`effect of ${catalogue.byId.get(ALPHA).label}`) }));
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(`effect: ${catalogue.byId.get(ALPHA).label},`) }));
     expect(onShowEffect).toHaveBeenCalledWith(ALPHA);
   });
 });
