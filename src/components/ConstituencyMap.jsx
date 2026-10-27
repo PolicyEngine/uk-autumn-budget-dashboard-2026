@@ -161,8 +161,8 @@ const exportDescription = (label, outcome) =>
 export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRouted }) {
   const shows =
     `The average change in household net income in each of the 650 Westminster ` +
-    `constituencies in ${yearLabel}, ${outcome === "average_change" ? "in £ a year per household" : "as a share of household income"}. ` +
-    `Shown: ${label}.`;
+    `constituencies in ${yearLabel}, ${outcome === "average_change" ? "in £ a year per household" : "as a share of household income"}.` +
+    (label ? ` Shown: ${label}.` : "");
   if (notRouted) return { shows };
   return {
     shows,
