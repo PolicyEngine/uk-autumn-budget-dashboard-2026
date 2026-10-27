@@ -7,7 +7,7 @@ import { fireEvent, render, within } from "@testing-library/react";
 import { AcrossEarnings } from "./SingleYearResults";
 import { normaliseHouseholdImpact } from "../../utils/householdImpactApi";
 
-// A real answer with both cards' parts: the higher earner's, 2027-28
+// A real answer with both cards' parts: the middle earner's, 2027-28
 const file = JSON.parse(readFileSync(join(fileURLToPath(import.meta.url), "..", "..", "..", "..", "public", "data", "household_presets.json"), "utf8"));
 const answer = (id, year = 2027) =>
   normaliseHouseholdImpact(file.entries.find((entry) => entry.preset_id === id && entry.year === year).response);
@@ -18,7 +18,7 @@ const shownChips = (container) =>
 
 describe("the two Across earnings cards", () => {
   it("share one Show control above both, which switches a component on both cards", () => {
-    const data = answer("higher-earner");
+    const data = answer("middle-earner");
     const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
     const [net, rate] = cards(container);
     // No Show chips on either card: one control above the pair
@@ -48,7 +48,7 @@ describe("the two Across earnings cards", () => {
   });
 
   it("say so when the answer has no breakdown by tax and benefit, rather than silently drawing one line", () => {
-    const data = answer("higher-earner");
+    const data = answer("middle-earner");
     const bare = { ...data.sweep, netParts: null, parts: null };
     const { container } = render(<AcrossEarnings sweep={bare} salary={data.salaryUsed} yearLabel="2027-28" />);
     expect(container.querySelector(".across-earnings-no-parts")).toHaveTextContent(
@@ -59,15 +59,19 @@ describe("the two Across earnings cards", () => {
     expect(full.container.querySelector(".across-earnings-no-parts")).toBeNull();
   });
 
-  it("say 'With no earnings' for the pensioner, with the You marker at £0 and the allowance caveat", () => {
+  it("say 'With no earnings' for the pensioner, with the You marker at £0 and no State-Pension-only caveat", () => {
+    // £12,800 of pensions: the first £200 of earnings keeps the total
+    // income under the full new State Pension, so still protected
     const data = answer("pensioner-70");
     const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
     const [net, rate] = cards(container);
     expect(net.querySelector(".chart-description").textContent).toMatch(/^With no earnings, your household's net income is about £[\d,]+ a year after the selected policies\.$/);
-    expect(rate.querySelector(".chart-description").textContent).toMatch(/^With no earnings, your marginal tax rate on your first £200 would be 16% before and 32% after/);
+    expect(rate.querySelector(".chart-description").textContent).toMatch(/^With no earnings, your marginal tax rate on your first £200 would be 16% before and 0% after/);
     expect(net.querySelector(".earnings-you")).not.toBeNull();
     fireEvent.click(within(rate).getByRole("button", { name: "About this chart" }));
-    expect(rate.querySelector(".chart-more-info")).toHaveTextContent(/Any earnings take the whole allowance away/);
+    // The cliff caveat is for a pensioner on the State Pension alone; this
+    // one has a workplace pension too
+    expect(rate.querySelector(".chart-more-info")).not.toHaveTextContent(/Any earnings take the whole allowance away/);
   });
 });
 

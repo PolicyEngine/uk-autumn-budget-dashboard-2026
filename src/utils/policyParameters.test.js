@@ -36,8 +36,9 @@ describe("policy_parameters.json, as the page reads it", () => {
   });
 
   it("draws a VAT window as current law either side of it", () => {
-    const segments = segmentsFor(rowsOf("road_fuel_vat_cut")["VAT on petrol and diesel"]);
-    expect(segments.map((s) => [s.start, s.end, s.after])).toEqual([[0, 8, 0.2], [8, 14, 0.15], [14, 72, 0.2]]);
+    // October 2026 to March 2028: months 6 to 24 of the 72 from April 2026
+    const segments = segmentsFor(rowsOf("domestic_electricity_zero_vat")["VAT on domestic electricity in Great Britain"]);
+    expect(segments.map((s) => [s.start, s.end, s.after])).toEqual([[0, 6, 0.05], [6, 24, 0], [24, 72, 0.05]]);
     expect(segments[1]).toMatchObject({ from: 2026, to: 2027 });
   });
 

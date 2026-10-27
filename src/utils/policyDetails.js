@@ -40,23 +40,18 @@
 export const POLICY_DETAILS = [
   {
     id: "fuel_duty_rise_deferral",
-    shortName: "Fuel duty deferral",
-    sentence: "deferring the fuel duty rises",
+    shortName: "Fuel duty frozen",
+    sentence: "freezing fuel duty to 2028",
     name: "Fuel duty rises deferred",
-    description: "Defer the January and March 2027 fuel duty rises",
-    writtenFor: "Candidate measure. Fuel duty stays at 52.95p a litre through winter 2026-27, with no April 2027 RPI rise; the 5p is restored in 2027-28 (3p on 1 September, 2p on 1 December 2027), and RPI uprating resumes in April 2028 from 57.95p, so that rise is never made up. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+    description: "Cancel the January 2027 fuel duty rise and freeze to March 2028",
+    writtenFor: "Candidate measure. Fuel duty stays at 52.95p a litre through 2027-28 (to 31 March 2028): the rise due on 1 January 2027 does not happen, so the 5p cut continues, and there is no March 2027 step and no April 2027 RPI rise. RPI uprating resumes in April 2028 from 52.95p, so the 5p and that year's RPI are never made up. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
     summary:
-      "Keeps fuel duty at 52.95p a litre until September 2027, then restores the 5p in two steps by December 2027.",
+      "Keeps fuel duty at 52.95p a litre to March 2028, so the 5p cut is never reversed.",
     starts: "January 2027",
     type: "Fuel duty",
     inForce: { from: "2027-01" },
-    steps: [
-      { month: "2027-09", label: "3p of the 5p restored" },
-      { month: "2027-12", label: "the other 2p restored" },
-    ],
-    stepsLabel: "5p restored",
     details:
-      "Assumes 3p back on 1 September and 2p on 1 December 2027, then RPI from April 2028 on 57.95p. The April 2027 RPI rise is skipped and never made up, so duty stays about 2p a litre below current law and the policy costs revenue in every later year. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel bought for vans, lorries and business use of cars is not modelled, so the revenue figure covers households' own purchases only.",
+      "Assumes no rise on 1 January 2027 and none in March or April 2027, then RPI uprating from April 2028 on 52.95p. Duty stays the 5p and a year's RPI below current law, so the policy costs revenue in every later year. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel bought for vans, lorries and business use of cars is not modelled, so the revenue figure covers households' own purchases only.",
     source: {
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
@@ -68,15 +63,19 @@ export const POLICY_DETAILS = [
     sentence: "keeping income tax off the State Pension",
     name: "State Pension income tax protection",
     description:
-      "No income tax for pensioners whose only income is the State Pension",
-    writtenFor: "Candidate measure. From 6 April 2027, people over State Pension age whose only income is the State Pension (savings interest aside) get an income tax allowance equal to the full new State Pension (rounded up to the pound: £13,037 in 2027-28), rising with it. Someone whose only income is the full new State Pension pays no income tax; £1 of other income takes the allowance away.",
+      "No income tax for pensioners whose total income is at most the full new State Pension",
+    writtenFor: "Candidate measure. From 6 April 2027, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (rounded up to the pound: £13,037 in 2027-28, rising with it) get an income tax allowance of that amount, so pay no income tax. Above it there is no allowance: £1 of income over the threshold takes the whole allowance away.",
     summary:
-      "People whose only income is the full new State Pension pay no income tax.",
+      "People over State Pension age whose total income is no more than the full new State Pension pay no income tax.",
     starts: "April 2027",
     type: "Income tax",
     inForce: { from: "2027-04" },
     details:
-      "Modelled as an allowance equal to the full new State Pension (£13,037 in 2027-28, rising with it) for people over State Pension age whose only income is the State Pension, savings interest aside. Any other income, such as a private pension, takes the allowance away. Based on reporting on 26 October 2026; the mechanism is an assumption made before the Budget.",
+      "Modelled as an allowance equal to the full new State Pension (£13,037 in 2027-28, rising with it) for people over State Pension age whose total income, the State Pension and any other income, savings interest included, is at or below it. £1 of income above it takes the whole allowance away, so a larger State Pension (with increments or additional State Pension) alone can rule someone out. Based on reporting on 26 and 27 October 2026; the mechanism is an assumption made before the Budget.",
+    source: {
+      label: "The new State Pension: what you'll get",
+      href: "https://www.gov.uk/new-state-pension/what-youll-get",
+    },
   },
   {
     id: "warm_home_discount_top_up",
@@ -149,6 +148,10 @@ export const POLICY_DETAILS = [
     inForce: { from: "2031-04" },
     details:
       "The National Insurance primary threshold and upper earnings limit, which the model ties to the personal allowance and higher rate threshold from 2031-32, stay frozen too; the employer threshold is not held.",
+    source: {
+      label: "Finance Act 2026, section 10 (thresholds frozen to 2030-31)",
+      href: "https://www.legislation.gov.uk/ukpga/2026/11/section/10",
+    },
   },
   {
     id: "badr_lifetime_limit_cut",
@@ -202,6 +205,82 @@ export const POLICY_DETAILS = [
     source: {
       label: "Repaying your student loan",
       href: "https://www.gov.uk/repaying-your-student-loan/what-you-pay",
+    },
+  },
+  {
+    id: "carers_allowance_earnings_taper",
+    shortName: "Carer's Allowance taper",
+    sentence: "tapering Carer's Allowance above the earnings limit",
+    name: "Carer's Allowance earnings taper",
+    description: "Withdraw Carer's Allowance £1 for £1 above the earnings limit",
+    writtenFor: "Candidate measure. From 2030-31 Carer's Allowance no longer stops when weekly net earnings pass the £204 earnings limit: it is reduced by £1 for each £1 of weekly earnings above the limit, to nothing once earnings exceed the limit by the full weekly rate. Carers at or below the limit are unchanged. Scotland's Carer Support Payment is unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
+    summary:
+      "Replaces the Carer's Allowance cliff edge at the £204 weekly earnings limit with a taper of £1 for each £1 earned above it, from 2030-31.",
+    starts: "April 2030",
+    type: "Benefit",
+    inForce: { from: "2030-04" },
+    details:
+      "The start year, the limit (frozen at £204) and the £1-for-£1 rate are assumptions from reports of the announcement before the Budget. Scotland's Carer Support Payment is unchanged. Universal Credit counts Carer's Allowance in full as unearned income, and the allowance is taxable, so a carer on Universal Credit gains nothing and can lose the income tax on it. Carers the limit kept out claim at the data's 60% take-up.",
+    source: {
+      label: "Carer's Allowance",
+      href: "https://www.gov.uk/carers-allowance",
+    },
+  },
+  {
+    id: "lha_unfreeze_2027",
+    shortName: "LHA unfrozen",
+    sentence: "unfreezing Local Housing Allowance",
+    name: "Local Housing Allowance unfrozen",
+    description: "Re-set Local Housing Allowance rates to local rents from April 2027",
+    writtenFor: "Candidate measure. From April 2027 Local Housing Allowance rates are no longer frozen at their April 2024 level: each April they are re-set to the 30th percentile of local rents, as policyengine-uk determines them from its projected rents, with the national maximum and the March 2020 minimum. It raises Universal Credit's housing element and Housing Benefit for private renters whose rent is above the frozen rate. Northern Ireland's rates, which follow Great Britain's, are unfrozen too.",
+    summary:
+      "Re-sets Local Housing Allowance rates to the 30th percentile of local rents each April from 2027, ending the freeze at April 2024 levels.",
+    starts: "April 2027",
+    type: "Benefit",
+    inForce: { from: "2027-04" },
+    details:
+      "Rents are policyengine-uk's own projection of each area's rents, so the size of the re-set is modelled, not published. Only private renters claiming Universal Credit or Housing Benefit with rent above the frozen rate gain. The benefit cap still applies, so a household at the cap gains less or nothing. Northern Ireland's rates, which follow Great Britain's, are unfrozen too.",
+    source: {
+      label: "Local Housing Allowance rates (SI 2013/2978, article 4)",
+      href: "https://www.legislation.gov.uk/uksi/2013/2978/article/4/made",
+    },
+  },
+  {
+    id: "employer_nics_secondary_threshold_raise",
+    shortName: "Employer NI threshold",
+    sentence: "raising the employer National Insurance threshold",
+    name: "Employer NI threshold raised",
+    description: "Raise the employer National Insurance threshold back to £9,100",
+    writtenFor: "Candidate measure. From 6 April 2027 the threshold above which employers pay Class 1 National Insurance goes back from £5,000 to £9,100 a year (£175 a week), rising with CPI from 2031-32 as current law's does; the 15% rate is unchanged. policyengine-uk holds each employer's total cost of employment fixed, so the saving is passed to employees as higher pay in the same year.",
+    summary:
+      "Raises the earnings threshold for employer National Insurance from £5,000 back to £9,100 a year from April 2027.",
+    starts: "April 2027",
+    type: "National Insurance",
+    inForce: { from: "2027-04" },
+    details:
+      "The £9,100 threshold is an assumption made before the Budget. policyengine-uk holds each employer's total cost of employment fixed, so the National Insurance saved is paid to employees as higher wages in the same year, and income tax and employee National Insurance are then due on it.",
+    source: {
+      label: "National Insurance Contributions (Secondary Class 1 Contributions) Act 2025, section 2",
+      href: "https://www.legislation.gov.uk/ukpga/2025/11/section/2",
+    },
+  },
+  {
+    id: "unearned_income_rates_up",
+    shortName: "Unearned income tax up",
+    sentence: "raising tax on dividends, savings and property income",
+    name: "Dividend, savings and property income tax up",
+    description: "Raise income tax on dividends, savings and property income by 2 points",
+    writtenFor: "Candidate measure. From 6 April 2027 the income tax rates on dividends, savings income and property income each rise by 2 percentage points on top of current law, which already includes Budget 2025's rises: dividends to 12.75%, 37.75% and 41.35%, and savings and property income to 24%, 44% and 49% at the basic, higher and additional rates. Incomes are held fixed, with no behavioural response.",
+    summary:
+      "Raises the income tax rates on dividends, savings income and property income by 2 percentage points from April 2027.",
+    starts: "April 2027",
+    type: "Income tax",
+    inForce: { from: "2027-04" },
+    details:
+      "The 2-point rise is an assumption made before the Budget, on top of the rises Budget 2025 legislated. Incomes are held fixed: no one is assumed to change how much they take in dividends or how they hold savings or property.",
+    source: {
+      label: "Dividend tax rates (Finance Act 2022, section 4)",
+      href: "https://www.legislation.gov.uk/ukpga/2022/3/section/4/enacted",
     },
   },
 ];

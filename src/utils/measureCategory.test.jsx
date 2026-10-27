@@ -15,6 +15,9 @@ const CURRENT = [
   ["road_fuel_vat_cut", "VAT cut on road fuel", "VAT on petrol and diesel falls from 20% to 15%", "VAT", "receipt"],
   ["state_pension_income_tax_protection", "State Pension income tax protection", "people over State Pension age get an income tax allowance", "Income tax", "wallet"],
   ["threshold_freeze_2031_32", "Threshold freeze to 2031-32", "Candidate measure. The income tax personal allowance stays at £12,570 and the basic rate band at £37,700 (a higher rate threshold of £50,270) for one more year. From 2031-32 policyengine-uk sets the National Insurance primary threshold and upper earnings limit at the personal allowance and higher rate threshold.", "Income tax", "wallet"],
+  ["lha_unfreeze_2027", "Local Housing Allowance unfrozen", "Candidate measure. From April 2027 Local Housing Allowance rates are no longer frozen", "Benefits", "piggy"],
+  ["employer_nics_secondary_threshold_raise", "Employer NI threshold raised", "Candidate measure. From 6 April 2027 the threshold above which employers pay Class 1 National Insurance goes back", "National Insurance", "briefcase"],
+  ["unearned_income_rates_up", "Dividend, savings and property income tax up", "Candidate measure. From 6 April 2027 the income tax rates on dividends, savings income and property income each rise", "Income tax", "wallet"],
   ["warm_home_discount_top_up", "Warm Home Discount top-up", "£100 more to each household receiving Universal Credit, Pension Credit", "Energy", "flame"],
 ];
 

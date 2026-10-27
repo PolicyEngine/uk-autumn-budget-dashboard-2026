@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect, it } from "vitest";
 import fc from "fast-check";
 import { POLICY_DETAILS, policyDetailsFor, withPolicyDetails } from "./policyDetails";
@@ -51,5 +53,49 @@ it("records for each entry the description it was written for, and carries no re
     expect(typeof entry.writtenFor, entry.id).toBe("string");
     expect(entry.writtenFor.length, entry.id).toBeGreaterThan(0);
     for (const field of ["cost", "revenue", "budgetaryImpact", "impact", "values"]) expect(entry).not.toHaveProperty(field);
+  }
+});
+
+// The eight candidate measures of 27 October 2026, as the file the page
+// serves describes them (`uk-budget-data policy-table` copies reforms.py's
+// description verbatim): each entry must be written for exactly that text,
+// or its card falls back to the bare description.
+const CANDIDATES = [
+  "fuel_duty_rise_deferral",
+  "state_pension_income_tax_protection",
+  "warm_home_discount_top_up",
+  "domestic_electricity_zero_vat",
+  "threshold_freeze_2031_32",
+  "plan_2_threshold_unfreeze",
+  "employer_nics_secondary_threshold_raise",
+  "unearned_income_rates_up",
+];
+
+it("has an entry written for each candidate measure's published description, byte for byte", () => {
+  const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
+  for (const id of CANDIDATES) {
+    const entry = POLICY_DETAILS.find((policy) => policy.id === id);
+    expect(entry, id).toBeTruthy();
+    expect(file.measures[id], id).toBeTruthy();
+    expect(entry.writtenFor, id).toBe(file.measures[id].description);
+    expect(policyDetailsFor({ id, description: file.measures[id].description }), id).not.toBeNull();
+  }
+});
+
+// Every card the page publishes is complete and parallel: a plain one-line
+// summary, a start, when it is in force, the modelling details and a source.
+it("gives every published measure a summary, start, timeline, details and source", () => {
+  const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
+  for (const [id, measure] of Object.entries(file.measures)) {
+    const fields = policyDetailsFor({ id, description: measure.description });
+    expect(fields, id).not.toBeNull();
+    expect(fields.summary, id).toMatch(/^[A-Z].*\.$/);
+    expect(fields.summary.startsWith("Candidate measure"), id).toBe(false);
+    expect(fields.starts, id).toBeTruthy();
+    expect(fields.inForce?.from, id).toMatch(/^\d{4}-\d{2}$/);
+    if (fields.inForce.to) expect(fields.ends, id).toBeTruthy();
+    expect(fields.details, id).toBeTruthy();
+    expect(fields.source?.label, id).toBeTruthy();
+    expect(fields.source?.href, id).toMatch(/^https:\/\/www\.(gov\.uk|legislation\.gov\.uk)\//);
   }
 });
