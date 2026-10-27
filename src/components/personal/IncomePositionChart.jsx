@@ -860,7 +860,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
         icon="pin"
         id="where-you-sit"
         title="Where you sit"
-        subtitle="Where your household's income, adjusted for household size, sits among everyone in the UK, and how your change compares, before and after the selected policies."
+        subtitle="Where your income sits in the UK, and how your change compares."
       />
 
       <div className="charts-grid position-pair">

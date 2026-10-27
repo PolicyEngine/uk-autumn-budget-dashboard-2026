@@ -570,7 +570,7 @@ export function SingleYearHeadline({
             icon="wallet"
             id="your-result"
             title={`Your result, ${yearLabel}`}
-            subtitle="How the selected policies change your household's net income, and each policy's part in it."
+            subtitle="How the selected policies change your net income, policy by policy."
           />
           <ResultCard
             totals={totals}
@@ -691,7 +691,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
       <SectionHeading
         icon="briefcase"
         title="Across earnings"
-        subtitle="How your household's net income, its change from the selected policies and its marginal tax rate vary with employment income."
+        subtitle="How your net income, its change and your marginal tax rate vary with earnings."
       />
       <section className="report-section">
         {data.sweep ? (

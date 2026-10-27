@@ -461,14 +461,16 @@
 .household-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 24px;
+  /* The form, then the Your result section: the page's 48px before a
+     section heading */
+  gap: 48px;
   align-items: start;
 }
 
-@media (min-width: 1024px) {
-  .household-layout {
-    gap: 32px;
-  }
+/* No form open: the Your result heading 48px under the households, their
+   24px and this */
+.household-layout > .household-results:first-child {
+  margin-top: 24px;
 }
 
 .household-form.card {
@@ -602,10 +604,6 @@
 .household-strip-fold-inner {
   padding: 10px 3px 3px;
   margin: 0 -3px -3px;
-}
-
-.household-cards.is-folded {
-  margin-bottom: 16px;
 }
 
 .household-cards.is-folded .household-cards-head {
