@@ -785,6 +785,102 @@ describe("a past event in the dashboard", () => {
     }
   });
 
+  it("says this Budget is checked by the page when it is chosen again before the page's check of the build's figures finished", async () => {
+    const boot = await buildBoot();
+    const html = renderToString(<App boot={boot} />);
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    document.body.appendChild(container);
+    const site = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } } });
+    // The page's first check of the build's figures waits on this Budget's
+    // manifest, held until the test lets it go
+    let letGo;
+    const held = new Promise((resolve) => { letGo = resolve; });
+    let first = true;
+    const fetchImpl = (url, init) => {
+      if (first && String(url) === "/data/manifest.json") {
+        first = false;
+        return held.then(() => site(url, init));
+      }
+      return site(url, init);
+    };
+    vi.stubGlobal("fetch", fetchImpl);
+    vi.stubEnv("NEXT_PUBLIC_PUBLISHED_RELEASES", AB2025.id);
+    window.history.replaceState({}, "", "/?tab=dashboard");
+    let root;
+    try {
+      await act(async () => {
+        root = hydrateRoot(container, <App boot={boot} />);
+      });
+      await waitFor(() => expect(pill()).not.toBeNull());
+      // Still the build's figures, the page's check not yet done
+      expect(container.querySelector(".app")).toHaveAttribute("data-publication-check", "build");
+      await choose(AB2025);
+      expect(container.querySelector(".app")).toHaveAttribute("data-publication-check", "page");
+      // The held check ends after the page has moved on: it changes nothing
+      await act(async () => { letGo(); });
+      await choose(DEFAULT_RELEASE);
+      // This Budget's figures now come from the page's own load
+      expect(container.querySelector(".app")).toHaveAttribute("data-publication", "verified");
+      expect(container.querySelector(".app")).toHaveAttribute("data-publication-check", "page");
+    } finally {
+      act(() => root?.unmount());
+      container.remove();
+      resetVerifiedCache();
+      resetParsedTables();
+    }
+  });
+
+  it("keeps nothing of this Budget's earlier figures when it is chosen again before a past event loaded", async () => {
+    const boot = await buildBoot();
+    const html = renderToString(<App boot={boot} />);
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    document.body.appendChild(container);
+    // The past event's figures never arrive; this Budget's second load waits
+    // until the test lets it go
+    const site = await siteFetch({ past: { [AB2025.id]: { flat: flatFor() } }, gates: { [AB2025.id]: new Promise(() => {}) } });
+    let letGo;
+    const held = new Promise((resolve) => { letGo = resolve; });
+    let manifests = 0;
+    const fetchImpl = (url, init) => {
+      if (String(url) === "/data/manifest.json" && ++manifests === 2) return held.then(() => site(url, init));
+      return site(url, init);
+    };
+    vi.stubGlobal("fetch", fetchImpl);
+    vi.stubEnv("NEXT_PUBLIC_PUBLISHED_RELEASES", AB2025.id);
+    window.history.replaceState({}, "", "/?tab=dashboard");
+    let root;
+    const pick = (release) => {
+      fireEvent.click(pill());
+      fireEvent.click(within(screen.getByRole("listbox", { name: "Budget" })).getByRole("option", { name: release.name }));
+    };
+    try {
+      await act(async () => {
+        root = hydrateRoot(container, <App boot={boot} />);
+      });
+      await waitFor(() => expect(container.querySelector('.app[data-publication-check="page"]')).not.toBeNull());
+      await waitFor(() => expect(pill()).not.toBeNull());
+      pick(AB2025);
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(AB2025.name);
+      expect(screen.queryByTestId("budget-figures")).toBeNull();
+      pick(DEFAULT_RELEASE);
+      // This Budget's own load, not the figures shown before the switch
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("UK Autumn Budget 2026");
+      expect(screen.queryByTestId("budget-figures")).toBeNull();
+      expect(document.querySelector(".skeleton-caption")).toHaveTextContent("Loading results…");
+      await act(async () => { letGo(); });
+      await screen.findByTestId("budget-figures");
+      expect(container.querySelector(".app")).toHaveAttribute("data-publication", "verified");
+      expect(container.querySelector(".app")).toHaveAttribute("data-publication-check", "page");
+    } finally {
+      act(() => root?.unmount());
+      container.remove();
+      resetVerifiedCache();
+      resetParsedTables();
+    }
+  });
+
   it("ends with the replication line, as this Budget's About drawer has it, each link in a new tab", async () => {
     await openPast();
     await screen.findByTestId("budget-figures");
