@@ -126,6 +126,18 @@ describe("published measure catalogue in population views", () => {
     expect(toggle).toHaveBeenCalledWith(catalogue.displayable[0].id);
   });
 
+  it("closes on Escape and puts focus back on the pill when it was in the menu", () => {
+    const catalogue = catalogueFor(measureCatalogueFixture());
+    render(withCatalogue(catalogue, <PolicySelector selectedPolicies={[ALPHA, BETA]} onPolicyToggle={vi.fn()} />));
+    const pill = screen.getByRole("button", { name: /^Policies / });
+    fireEvent.click(pill);
+    expect(pill).toHaveAttribute("aria-expanded", "true");
+    screen.getAllByRole("checkbox")[0].focus();
+    fireEvent.keyDown(document.activeElement, { key: "Escape" });
+    expect(pill).toHaveAttribute("aria-expanded", "false");
+    expect(pill).toHaveFocus();
+  });
+
   it("never shows 0 of 0: while loading, the label alone; with none published, disabled", () => {
     const empty = catalogueFor({ ...measureCatalogueFixture(), manifest: null });
     const { unmount } = render(withCatalogue(empty, <PolicySelector policies={[]} selectedPolicies={[]} onPolicyToggle={vi.fn()} loading />));

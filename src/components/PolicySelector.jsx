@@ -37,8 +37,10 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
   const [isExpanded, setIsExpanded] = useState(false);
   const presence = usePresence(isExpanded);
   const dropdownRef = useRef(null);
+  const toggleRef = useRef(null);
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside, or on Escape (focus back on the
+  // pill if it was in the menu: WCAG 2.1.2 and 2.4.3)
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -46,12 +48,21 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
       }
     };
 
+    const handleEscape = (event) => {
+      if (event.key !== "Escape") return;
+      const inside = dropdownRef.current?.contains(document.activeElement);
+      setIsExpanded(false);
+      if (inside) toggleRef.current?.focus();
+    };
+
     if (isExpanded) {
       document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleEscape);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, [isExpanded]);
 
@@ -71,6 +82,7 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
       {/* A faded pill has no visible tip: its reason is in its name */}
       <Tip content={inactiveReason ? undefined : reason}>
       <button
+        ref={toggleRef}
         className={`policy-selector-toggle band-control${inactiveReason ? " is-inactive" : ""}`}
         onClick={() => { if (!inactiveReason) setIsExpanded(!isExpanded); }}
         aria-expanded={isExpanded}
