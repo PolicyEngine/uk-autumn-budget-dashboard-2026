@@ -64,7 +64,7 @@ HOUSEHOLDS = {
 # Circumstances the calculator's form doesn't ask for, added to the first
 # probe person or household so that each measure has someone to move.
 EXTRA_PEOPLE = {
-    "pensioner": {"age": 70, "state_pension": 13_100},
+    "pensioner": {"age": 70, "state_pension": 12_900},
     "graduate": {
         "age": 30,
         "employment_income": 45_000,

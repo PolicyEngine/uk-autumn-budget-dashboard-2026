@@ -255,11 +255,13 @@ def test_a_single_holds_every_other_measure_at_current_law():
         "parameter_changes": freeze.parameter_changes,
         "modifiers": [student_loans],
     }
+    # Modifiers in order of measure id: the electricity measure's
+    # (domestic_...) before the Plan 2 measure's student loans
     assert sides.singles["domestic_electricity_zero_vat"] == {
         "parameter_changes": {},
         "modifiers": [
-            student_loans,
             "uk_budget_data.budget_measures.zero_vat_on_domestic_electricity:zero_vat_on_domestic_electricity",
+            student_loans,
         ],
     }
 
