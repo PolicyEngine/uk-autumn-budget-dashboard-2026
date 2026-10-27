@@ -16,7 +16,7 @@ import {
 import { buildChartSvg } from "./exportChartAsSvg";
 import { cardSelection, policiesLabel } from "./downloadContext";
 import { chartDownloads } from "./chartDownloads";
-import { TICK_STYLE } from "./chartTheme";
+import { CHART_COLOURS, TICK_STYLE } from "./chartTheme";
 import * as downloadFile from "./downloadFile";
 
 const NOW = new Date("2026-10-27T12:00:00Z");
@@ -203,7 +203,7 @@ describe("the downloaded footer and legend", () => {
     const svg = document.querySelector("svg");
     svg.getBoundingClientRect = () => ({ width: 500, height: 410 });
     const built = await buildChartSvg({ current: document.getElementById("c") }, {
-      legendItems: [{ label: "Policy A", color: "#2C6496", type: "rect" }],
+      legendItems: [{ label: "Policy A", color: CHART_COLOURS.gain, type: "rect" }],
     });
     const label = new DOMParser().parseFromString(built.svg, "image/svg+xml").querySelector(".exported-legend text");
     expect(label.getAttribute("font-family")).toBe(EXPORT_FONT);

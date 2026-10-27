@@ -9,16 +9,19 @@ import { fyLabel, formatOneDp } from "./outlook";
 
 export const BASE_YEAR = 2026;
 
-// Each threshold: the measure entry and row label it is read from
+// Each threshold: the parameter row label it is read from, in whichever
+// published entry carries it
 export const THRESHOLDS = [
-  { key: "personal_allowance", measure: "threshold_freeze_2031_32", row: "Personal allowance" },
-  { key: "higher_rate", measure: "threshold_freeze_2031_32", row: "Higher rate threshold" },
-  { key: "plan_2", measure: "plan_2_threshold_unfreeze", row: "Plan 2 repayment threshold" },
+  { key: "personal_allowance", row: "Personal allowance" },
+  { key: "higher_rate", row: "Higher rate threshold" },
+  { key: "plan_2", row: "Plan 2 repayment threshold" },
 ];
 
 /** A threshold's current-law value by fiscal year (start year), or null if absent. */
-export function thresholdValues(document, { measure, row }) {
-  const found = document?.measures?.[measure]?.rows?.find((r) => r.label === row);
+export function thresholdValues(document, { row }) {
+  const found = Object.values(document?.measures ?? {})
+    .flatMap((entry) => entry?.rows ?? [])
+    .find((r) => r.label === row && r.points?.length);
   if (!found?.points?.length) return null;
   return Object.fromEntries(found.points.filter((p) => Number.isFinite(p.before)).map((p) => [p.year, p.before]));
 }
