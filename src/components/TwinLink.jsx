@@ -13,7 +13,7 @@
  * @param {string} [props.anchor] - An element id in the twin to bring into view (one card's twin)
  */
 export default function TwinLink({ tab, sub, onShow, label: text, anchor }) {
-  const label = text ?? (tab === "outlook" ? "See without them" : "See with the measures");
+  const label = text ?? (tab === "outlook" ? "See without them" : "See with the policies");
   return (
     <a
       className="twin-link"

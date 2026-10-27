@@ -17,7 +17,7 @@ import { BOOT_VIEW_SCRIPT } from '@/utils/bootView';
 
 const TITLE = 'UK Autumn Budget 2026 dashboard';
 const DESCRIPTION =
-  'This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 measures would affect the public finances and households: by income, area and age, and for your own household, alongside the pre-measures forecast.';
+  'This dashboard uses PolicyEngine UK to show how Autumn Budget 2026 policies would affect the public finances and households: by income, area and age, and for your own household, alongside the pre-measures forecast.';
 
 // Inter, committed with the page (fonts/: the variable face, every weight,
 // Latin subset; SIL Open Font License in fonts/OFL.txt): the

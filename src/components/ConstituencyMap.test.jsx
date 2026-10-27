@@ -423,9 +423,9 @@ describe("ConstituencyMap", () => {
     // Neither selected measure has constituency results (the fuel duty
     // freeze is published by region only), so there is no measure to pick
     // and the card says it shows one measure at a time
-    expect(await screen.findByText(/shown for one measure at a time/)).toBeInTheDocument();
+    expect(await screen.findByText(/shown for one policy at a time/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
-    expect(screen.queryByRole("radiogroup", { name: "Measure" })).toBeNull();
+    expect(screen.queryByRole("radiogroup", { name: "Policy" })).toBeNull();
     expect(screen.getByRole("radiogroup", { name: "View" })).toBeInTheDocument();
     expect(document.querySelector(".map-title-focus")).toBeNull();
   });
@@ -439,7 +439,7 @@ describe("ConstituencyMap", () => {
       />,
     );
     expect(
-      await screen.findByText("Results for this measure are published by region only."),
+      await screen.findByText("Results for this policy are published by region only."),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "See the results by region." }),
@@ -456,7 +456,7 @@ describe("ConstituencyMap", () => {
     );
     expect(
       await screen.findByText(
-        "Results by constituency are not yet published for this measure.",
+        "Results by constituency are not yet published for this policy.",
       ),
     ).toBeInTheDocument();
   });
@@ -664,7 +664,7 @@ describe("ConstituencyMap and the release's area routing", () => {
     expect(await screen.findByText(NOT_AVAILABLE)).toBeInTheDocument();
     expect(
       screen.queryByText(
-        "Results by constituency are not yet published for this measure.",
+        "Results by constituency are not yet published for this policy.",
       ),
     ).not.toBeInTheDocument();
   });

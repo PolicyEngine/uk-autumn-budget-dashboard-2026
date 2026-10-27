@@ -44,7 +44,7 @@ function EmployerReason({ id, year, text }) {
  * per line with why.
  */
 export function ZeroMeasuresDetail({ zero, year, period }) {
-  const count = zero.length === 1 ? "1 selected measure is" : `${zero.length} selected measures are`;
+  const count = zero.length === 1 ? "1 selected policy is" : `${zero.length} selected policies are`;
   return (
     <div className="zero-measures">
       <span className="zero-measures-lead">

@@ -513,8 +513,8 @@ export function areaName(brma) {
  */
 export const SINGLE_YEAR_METHOD = [
   [
-    "Engine and measures",
-    "The same engine (policyengine.py and policyengine-uk) and the same measures as the national figures, applied to one household's answers.",
+    "Engine and policies",
+    "The same engine (policyengine.py and policyengine-uk) and the same policies as the national figures, applied to one household's answers.",
   ],
   [
     "One year",

@@ -18,7 +18,7 @@ export function legendGroups(items) {
   return [
     ["Raise revenue", items.filter((item) => item.direction !== "neutral" && item.raises)],
     ["Cost revenue", items.filter((item) => item.direction !== "neutral" && !item.raises)],
-    ["Other measures", items.filter((item) => item.direction === "neutral")],
+    ["Other policies", items.filter((item) => item.direction === "neutral")],
   ].filter(([, groupItems]) => groupItems.length > 0);
 }
 

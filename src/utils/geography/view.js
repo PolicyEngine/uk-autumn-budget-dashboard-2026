@@ -92,12 +92,12 @@ export function viewState({ data, choice, year, outcome, place, routing = null }
     );
   }
   if (choice.kind === "none") {
-    return notice(`Select a measure to see results ${place}.`);
+    return notice(`Select a policy to see results ${place}.`);
   }
   if (choice.kind === "pick") {
     return notice(
-      `Results ${place} are shown for one measure at a time, or for all measures together.`,
-      "Select one measure, or all of them. Figures for different measures are published separately and are not added together.",
+      `Results ${place} are shown for one policy at a time, or for all policies together.`,
+      "Select one policy, or all of them. Figures for different policies are published separately and are not added together.",
     );
   }
   if (choice.kind === "no-package") {
@@ -105,7 +105,7 @@ export function viewState({ data, choice, year, outcome, place, routing = null }
   }
   if (!hasReform(data.table, choice.reform)) {
     return notice(
-      `Results ${place} are not yet published for this measure.`,
+      `Results ${place} are not yet published for this policy.`,
       null,
       { missingReform: true },
     );
@@ -113,7 +113,7 @@ export function viewState({ data, choice, year, outcome, place, routing = null }
   const rows = rowsFor(data.table, { reform: choice.reform, year, outcome });
   if (rows.length === 0) {
     return notice(
-      `No results ${place} are published for this measure in ${fiscalYearLabel(year)}.`,
+      `No results ${place} are published for this policy in ${fiscalYearLabel(year)}.`,
     );
   }
   return { kind: "rows", reform: choice.reform, rows };

@@ -39,7 +39,7 @@ const CSV_UNITS =
 const GROUP_FILL = CHART_COLOURS.highlightBand;
 const SHOW_OPTIONS = [
   { value: "net", label: "Net change", summary: "Net change" },
-  { value: "measures", label: "Each measure", summary: "By measure" },
+  { value: "measures", label: "Each policy", summary: "By policy" },
 ];
 
 /** "+£12", "−£8", "£0": a change in pounds with a true minus. */
@@ -336,7 +336,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
                 `One bar per single year of age, ${window[0]} to ${window[1] >= 90 ? "90 and over" : window[1]}: the sum of each selected policy's own effect.`,
                 "The line averages the five ages centred on each one, as single ages rest on few survey records.",
                 showSpa && `The dashed line marks State Pension age (${spa} in ${yearLabel}); pensioners are the ages from it.`,
-                "Each measure shows every selected measure's own part at each age, stacked.",
+                "Each policy shows every selected policy's own part at each age, stacked.",
               ],
               method: AGE_METHOD,
             }}

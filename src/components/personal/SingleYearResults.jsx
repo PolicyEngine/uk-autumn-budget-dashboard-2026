@@ -152,9 +152,9 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
       // An example's own figures say where they come from
       detail:
         assumed === "example" && spendingSource
-          ? `${spendingSource}. Fuel and electricity measures scale with what you spend; change these in More details to match your household.`
+          ? `${spendingSource}. Fuel and electricity policies scale with what you spend; change these in More details to match your household.`
           : assumed
-            ? "Fuel and electricity measures scale with what you spend; change these in More details to match your household."
+            ? "Fuel and electricity policies scale with what you spend; change these in More details to match your household."
             : "petrol, diesel and electricity, from More details",
     });
   }
@@ -456,7 +456,7 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
   return (
     <section className={`card result-card ${changeClass(totals.change)}`} aria-label="Your result">
       {/* The three tiles on top, then the waterfall from net income
-          before through each measure with an effect to after, and About
+          before through each policy with an effect to after, and About
           this result. Each fact once */}
       <ResultTiles
         totals={totals}

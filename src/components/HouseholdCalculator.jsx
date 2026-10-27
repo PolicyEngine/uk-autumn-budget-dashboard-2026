@@ -1001,7 +1001,7 @@ function HouseholdCalculator({
         label: "You",
         note:
           placed.notModelled.length > 0
-            ? `Your change leaves out ${placed.notModelled.length === 1 ? "one measure" : `${placed.notModelled.length} measures`} not modelled for one household; the dots include ${placed.notModelled.length === 1 ? "it" : "them"}.`
+            ? `Your change leaves out ${placed.notModelled.length === 1 ? "one policy" : `${placed.notModelled.length} policies`} not modelled for one household; the dots include ${placed.notModelled.length === 1 ? "it" : "them"}.`
             : null,
       }
     : null;
@@ -1083,7 +1083,7 @@ function HouseholdCalculator({
           {selectionUnavailable ? (
             <UnavailableNotice reason="Household impact is unavailable for this selection">
               <p>These measures cannot be calculated for one household: {unavailableNames.join(", ")}.</p>
-              <p>Select measures that can all be calculated to see your household&apos;s results.</p>
+              <p>Select policies that can all be calculated to see your household&apos;s results.</p>
             </UnavailableNotice>
           ) : (
             <SingleYearHeadline

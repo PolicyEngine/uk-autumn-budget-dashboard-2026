@@ -481,14 +481,14 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
     csv: () =>
       byMeasure
         ? buildChartCsv({
-            title: `${metric.title}, each measure on its own`,
+            title: `${metric.title}, each policy on its own`,
             units: metric.csvUnits,
             columns: [
               { key: "year", label: "Fiscal year" },
               ...byMeasure.map((m) => ({ key: m.id, label: `${m.name}: ${metric.unit}`, decimals: 4 })),
             ],
             rows: measureData.map((point) => ({ ...point, year: fiscalYearTick(point.year) })),
-            notes: ["Each column is one measure simulated on its own; the columns are not added up."],
+            notes: ["Each column is one policy simulated on its own; the columns are not added up."],
           })
         : buildChartCsv({
             title: metric.title,
@@ -515,7 +515,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           <p className="chart-description">
             {selected?.value != null ? (
               <>
-                In {fiscalYearTick(selectedYear)}, the selected measures{" "}
+                In {fiscalYearTick(selectedYear)}, the selected policies{" "}
                 {Math.round(selected.value * 1e6) === 0 ? (
                   <>do not change {subjectOf(metric)}</>
                 ) : metric.line && selectedCount ? (
@@ -539,7 +539,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                 const top = yearEffects(byMeasure, selectedYear, metric.decimals).rows[0];
                 return top ? (
                   <>
-                    {fiscalYearTick(selectedYear)}, each measure on its own: biggest {top.name},{" "}
+                    {fiscalYearTick(selectedYear)}, each policy on its own: biggest {top.name},{" "}
                     <strong>
                       {top.value > 0 ? "+" : "−"}
                       {metric.format(top.value)}
@@ -547,7 +547,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                     .
                   </>
                 ) : (
-                  <>{metric.short ?? metric.description} Each selected measure on its own.</>
+                  <>{metric.short ?? metric.description} Each selected policy on its own.</>
                 );
               })()
             ) : (
@@ -577,7 +577,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           <MeasureEffectsView byMeasure={byMeasure} metric={metric} selectedYear={selectedYear} view={effectView} narrow={narrow} years={years} />
         ) : !run && !byMeasure ? (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>No measure is selected that this chart covers</p>
+            <p>No policy is selected that this chart covers</p>
           </div>
         ) : shown.length === 0 ? (
           // On Budget day a run (the combined one last) can be named
@@ -669,8 +669,8 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
             shows: metric.description,
             how: byMeasure
               ? [
-                  "No published run covers this selection together, so each bar is one measure simulated on its own.",
-                  "These changes can't be added up across measures.",
+                  "No published run covers this selection together, so each bar is one policy simulated on its own.",
+                  "These changes can't be added up across policies.",
                 ]
               : [],
             method: { anchor: METHOD_ANCHORS.poverty, label: "How we measure poverty and inequality" },

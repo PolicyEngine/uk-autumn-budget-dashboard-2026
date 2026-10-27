@@ -58,7 +58,7 @@ const TERM_ICONS = {
   "Who counts": UserCheck,
   Pensioners: Users,
   "Change by year": CalendarRange,
-  "Engine and measures": Cpu,
+  "Engine and policies": Cpu,
   "One year": CalendarDays,
   Salary: PoundSterling,
   "Change by policy": ChartColumnBig,

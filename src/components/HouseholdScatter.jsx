@@ -101,7 +101,7 @@ function ScatterMoreInfo({ basisLabel }) {
     <ChartMoreInfo
       info={{
         how: [
-          `Each dot is a group in a ${pounds(SCATTER_BINS.income_band_width)} band of ${basisLabel} income before the measures, fixed across years.`,
+          `Each dot is a group in a ${pounds(SCATTER_BINS.income_band_width)} band of ${basisLabel} income before the policies, fixed across years.`,
           "So a dot moves only sideways when the year changes, and its row stays the same households.",
           `Change axis: 1st to 99th percentile across years, capped at ±${pounds(CHANGE_AXIS_DOMAIN[1])}; larger changes sit at its edge.`,
           "No change (under £1 either way) is an unfilled ring on £0.",
@@ -599,8 +599,8 @@ function HouseholdScatter({
         <div className="chart-controls household-scatter-controls">
           <PillSelect
             variant="light"
-            name="Measure shown"
-            prefix="Measure"
+            name="Policy shown"
+            prefix="Policy"
             value={view.reform}
             onChange={setFocusId}
             options={focus.options.map((id) => ({ value: id, label: focusName(id) }))}

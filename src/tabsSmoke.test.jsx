@@ -257,9 +257,9 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     await waitFor(() => expect(document.querySelector('.app[data-publication="verified"]')).not.toBeNull());
     const panel = await screen.findByRole("tabpanel", { name: label });
     expect(await within(panel).findAllByRole("heading", { name: measures }, { timeout: 5000 })).not.toHaveLength(0);
-    expect(panel.textContent).toMatch(/With the selected measures[.:,]/);
+    expect(panel.textContent).toMatch(/With the selected policies[.:,]/);
     // (the growth card with the measures links to its twin as "Without the measures")
-    expect(panel.textContent).not.toMatch(/Without the measures \(current law\)|Without the measures:/);
+    expect(panel.textContent).not.toMatch(/Without the policies \(current law\)|Without the policies:/);
     expect(within(panel).queryByRole("heading", { name: currentLaw })).toBeNull();
     // The one link to its twin
     fireEvent.click(within(panel).getByRole("link", { name: "See without them →" }));
@@ -269,9 +269,9 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     for (const name of cards) {
       expect(await within(twin).findByRole("heading", { level: 3, name: new RegExp(`^${name}$`) })).toBeInTheDocument();
     }
-    expect(twin.textContent).toMatch(/Current law, before any Budget measure\./);
-    expect(twin.textContent).not.toMatch(/With the selected measures/);
-    expect(within(twin).getByRole("link", { name: "See with the measures →" })).toBeInTheDocument();
+    expect(twin.textContent).toMatch(/Current law, before any Budget policy\./);
+    expect(twin.textContent).not.toMatch(/With the selected policies/);
+    expect(within(twin).getByRole("link", { name: "See with the policies →" })).toBeInTheDocument();
     expect(requests.filter((r) => r.url.endsWith("living_standards_outlook.json"))).toHaveLength(1);
     expect(consoleErrors).toEqual([]);
   }, 15000);

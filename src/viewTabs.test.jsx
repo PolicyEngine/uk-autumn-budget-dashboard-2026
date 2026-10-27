@@ -183,7 +183,7 @@ describe("the view tabs", () => {
     await renderApp();
     // Population impact neither repeats the cards nor points to them
     expect(screen.queryByText("About selected policies")).toBeNull();
-    expect(screen.queryByText(/What each measure does is on/)).toBeNull();
+    expect(screen.queryByText(/What each policy does is on/)).toBeNull();
     fireEvent.click(screen.getByRole("tab", { name: "Policies" }));
     const panel = screen.getByRole("tabpanel", { name: "Policies" });
     // The fixture publishes one measure (beforeEach)
@@ -367,7 +367,7 @@ describe("the view tabs", () => {
     for (const name of [
       "At a glance",
       "Data",
-      "Model and measures",
+      "Model and policies",
       "Population impact",
       "Household impact",
       "Pre-measures forecast",
@@ -392,7 +392,7 @@ describe("the view tabs", () => {
     // Said once on the page
     for (const phrase of [
       /dominance and p% rules/g,
-      /leave out interactions between measures/g,
+      /leave out interactions between policies/g,
     ]) {
       expect(container.textContent.match(phrase)).toHaveLength(1);
     }

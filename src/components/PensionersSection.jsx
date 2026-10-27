@@ -620,7 +620,7 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
   const thin = shares ? shares.groups.filter((group) => group.suppressed) : [];
   const title = `Better and worse off, ${yearLabel}`;
   const description = perMeasure
-    ? `Share of people better or worse off (a change over 0.01%), ${groupLabel.toLowerCase()}, each selected measure on its own.`
+    ? `Share of people better or worse off (a change over 0.01%), ${groupLabel.toLowerCase()}, each selected policy on its own.`
     : single
     ? `Share of people better or worse off (a change over 0.01%), by single year of age from State Pension age (${from}) to 90 and over, then all pensioners.`
     : "Share of people better or worse off (a change over 0.01%): pensioners, people under State Pension age and all ages.";
@@ -637,13 +637,13 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
     csv: () =>
       buildChartCsv({
         title: perMeasure
-          ? `People better off, unchanged and worse off, ${groupLabel.toLowerCase()}, each measure on its own, ${yearLabel}`
+          ? `People better off, unchanged and worse off, ${groupLabel.toLowerCase()}, each policy on its own, ${yearLabel}`
           : single
           ? `People better off, unchanged and worse off by single year of age, pensioners, ${yearLabel}`
           : `People better off, unchanged and worse off, pensioners and others, ${yearLabel}`,
         units: `% of people in the group; a change of more than 0.01% of household net income; pensioners are aged ${pensionerAge(year)} and over`,
         columns: [
-          { key: "group", label: perMeasure ? "Measure" : single ? "Age" : "Group" },
+          { key: "group", label: perMeasure ? "Policy" : single ? "Age" : "Group" },
           ...OUTCOMES.map((outcome) => ({ key: outcome.key, label: `${outcome.label} (%)`, decimals: 2 })),
         ],
         rows: data.map((row) => ({ group: row.group, measure: row.measure, groupLabel: row.groupLabel, ...row.real })),
@@ -674,7 +674,7 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
                 onChange: setGroupKey,
                 options: perMeasure.groups.map((group) => ({ value: group.key, label: group.label })),
               },
-              { label: "Measures with no effect", value: hide, onChange: setHide, options: SHARE_FILTER_OPTIONS.hide, omitAtDefault: "hide" },
+              { label: "Policies with no effect", value: hide, onChange: setHide, options: SHARE_FILTER_OPTIONS.hide, omitAtDefault: "hide" },
               { label: "Order", value: order, onChange: setOrder, options: SHARE_FILTER_OPTIONS.order },
               { label: "Show", value: direction, onChange: setDirection, options: SHARE_FILTER_OPTIONS.direction },
             ]}
@@ -768,7 +768,7 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
         )}
         {filtered?.hidden > 0 && (
           <Note>
-            {filtered.hidden} {filtered.hidden === 1 ? "measure" : "measures"} with no effect hidden
+            {filtered.hidden} {filtered.hidden === 1 ? "policy" : "policies"} with no effect hidden
           </Note>
         )}
         {/* The same foot as the card beside it, so the pair ends level */}
@@ -777,10 +777,10 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
           info={{
             how: perMeasure
               ? [
-                  "No published run covers this selection together, so each row is one measure simulated on its own.",
-                  "The rows' shares can't be added up across measures.",
+                  "No published run covers this selection together, so each row is one policy simulated on its own.",
+                  "The rows' shares can't be added up across policies.",
                 ]
-              : ["Shares come from one run of the whole selection, so they include how the measures interact."],
+              : ["Shares come from one run of the whole selection, so they include how the policies interact."],
             caveats: [
               perMeasure?.missing.length > 0 && `Not shown, too few survey records: ${perMeasure.missing.join(", ")}.`,
             ],

@@ -346,14 +346,14 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     // When it applies is on the timeline, so not in the label
     expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A limit$/);
     expect(block.querySelector(".pchg-tile.is-before")).toHaveTextContent("Current law£1,000");
-    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the measure£500−£500");
+    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy£500−£500");
     cleanup();
     const rate = tables("before-after", [
       { label: "A rate", unit: "percent", unit_words: null, primary: true, source, points: yearly(() => 0.15, (y) => (y >= 2027 ? 0 : 0.15)) },
     ]);
     block = within(card(rate)).getByRole("region", { name: /^What changes/ });
     expect(block.querySelector(".pchg-tile.is-before")).toHaveTextContent("Current law15%");
-    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the measure0%−15 points");
+    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy0%−15 points");
     expect(block.textContent).not.toMatch(/pp\b/);
     expect(block.querySelector("svg.pchg-svg, table")).toBeNull();
   });
@@ -365,7 +365,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     })));
     const table = within(card(three)).getByRole("table");
     expect(within(table).getAllByRole("row").map((row) => row.textContent)).toEqual([
-      "2031-32Current lawWith the measureChange", "A£100£90−£10", "B£200£190−£10", "C£300£290−£10",
+      "2031-32Current lawWith the policyChange", "A£100£90−£10", "B£200£190−£10", "C£300£290−£10",
     ]);
   });
 
@@ -377,7 +377,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     const item = card(window, { ...alpha, inForce: { from: "2026-10", to: "2028-03" } });
     const block = within(item).getByRole("region", { name: /^What changes/ });
     expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A VAT rate$/);
-    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the measure0%−5 points");
+    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy0%−5 points");
     // Each fact once: the timeline says how long, not the rates again
     expect(item.querySelector(".ptl-chip")).toHaveTextContent(/^18 months$/);
   });

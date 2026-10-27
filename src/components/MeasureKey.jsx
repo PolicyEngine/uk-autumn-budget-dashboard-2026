@@ -136,7 +136,7 @@ export function useMeasureKey(members, netLabel) {
 }
 
 /** The key above a section's cards, from what they registered. */
-export function SectionMeasureKey({ label = "Measures" }) {
+export function SectionMeasureKey({ label = "Policies" }) {
   const shared = useContext(KeyContext);
   if (!shared || shared.members.length === 0) return null;
   return (
@@ -292,7 +292,7 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
                     type="button"
                     className="measure-key-clear"
                     onClick={clear}
-                    aria-label={`Clear the ${pinnedLive.length === 1 ? "highlighted measure" : `${pinnedLive.length} highlighted measures`}`}
+                    aria-label={`Clear the ${pinnedLive.length === 1 ? "highlighted policy" : `${pinnedLive.length} highlighted policies`}`}
                   >
                     Clear
                   </button>

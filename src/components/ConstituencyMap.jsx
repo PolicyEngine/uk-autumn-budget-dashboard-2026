@@ -133,7 +133,7 @@ function constituencyCsvText(table, { reform, year, yearLabel, packageChoice, la
   const measures = packageChoice ? `${label}: ${names.join("; ")}` : label;
   return buildCsv(rowsFor(table, { reform, year }), [
     ["Generated", formatGenerated(new Date())],
-    [packageChoice ? "Measures" : "Measure", measures],
+    [packageChoice ? "Policies" : "Policy", measures],
     ["Reform", reform],
     ["Year", yearLabel],
     ["Units", EXPORT_UNITS],
@@ -387,7 +387,7 @@ function MapKey({ outcome, extent, counts, highlight, onHighlight }) {
           content={
             <>
               Colour runs smoothly from amber (a loss) through light grey (no change) to teal (a gain). The
-              scale runs from {low} to {high}, the same for every measure and year; larger changes take the end
+              scale runs from {low} to {high}, the same for every policy and year; larger changes take the end
               colour. A
               constituency whose 90% interval is too wide to place is too uncertain to classify, and mid grey.
               Dotted: approximate, under 30 effective survey households. Hatched: not published, to protect
@@ -1039,7 +1039,7 @@ export default function ConstituencyMap({
   // is shown, and the view
   const optionGroups = [
     choice.focus && choice.focus.options.length > 1 && {
-      label: "Measure",
+      label: "Policy",
       value: choice.reform,
       onChange: setFocusId,
       options: choice.focus.options.map((id) => ({ value: id, label: focusName(id) })),

@@ -105,7 +105,7 @@ describe("MeasureKey: more than one measure", () => {
     expect(card.dataset.highlight).toBe(keyOf(RAISE));
     // Clear unpins the rest and goes
     fireEvent.click(fuel);
-    fireEvent.click(screen.getByRole("button", { name: "Clear the 2 highlighted measures" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear the 2 highlighted policies" }));
     expect(card.dataset.highlight).toBe("");
     expect(screen.queryByRole("button", { name: /^Clear/ })).toBeNull();
   });

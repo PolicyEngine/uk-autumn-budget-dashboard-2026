@@ -36,7 +36,7 @@ export default function MeasureSharesChart({ rows, groupLabel, yearLabel, emphas
   const worseDecimals = shareDecimals(rows.map(({ row }) => row.pct_worse_off ?? 0));
   return (
     <div className="msc-wrap">
-    <div ref={ref} className="msc" role="table" aria-label={`Better and worse off, ${groupLabel}, each measure on its own, ${yearLabel}`}>
+    <div ref={ref} className="msc" role="table" aria-label={`Better and worse off, ${groupLabel}, each policy on its own, ${yearLabel}`}>
       <div className="msc-row msc-head" role="row">
         <span className="msc-label" />
         <span className="msc-bar-cell" />

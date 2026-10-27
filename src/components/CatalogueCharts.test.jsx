@@ -229,7 +229,7 @@ describe("published measure catalogue in population views", () => {
     ));
     // The withdrawn package is never drawn: the shares card shows each
     // measure's own run, one row per measure, and says so
-    expect(await screen.findByText(/each selected measure on its own/)).toBeInTheDocument();
+    expect(await screen.findByText(/each selected policy on its own/)).toBeInTheDocument();
     expect(screen.queryByText(/directly affected:/)).not.toBeInTheDocument();
     const shares = container.querySelector(".young-people-shares");
     expect(shares.querySelector('[data-testid="chart-rows"]')).toBeNull();
@@ -252,7 +252,7 @@ describe("published measure catalogue in population views", () => {
     expect(await screen.findByText(/The net change is unavailable for those age groups/)).toBeInTheDocument();
     expect(chartRows(container).every((point) => point[`measure:${ALPHA}`] === null && point.netChange === null)).toBe(true);
     // The combined run is refused: no package shares, only each measure's own
-    expect(screen.getByText(/each selected measure on its own/)).toBeInTheDocument();
+    expect(screen.getByText(/each selected policy on its own/)).toBeInTheDocument();
     const shares = container.querySelector(".young-people-shares");
     const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("title"));
     const alpha = catalogue.byId.get(ALPHA);
@@ -330,7 +330,7 @@ describe("measure chart keys", () => {
     const catalogue = catalogueFor(fixture);
     const { container } = render(withCatalogue(catalogue, <ChartTooltip active payload={catalogue.displayable.map((measure) => ({ dataKey: measure.seriesKey, name: "untrusted display label", value: 1 }))} format={String} />));
     const headings = [...container.querySelectorAll(".chart-tooltip-heading")].map((node) => node.textContent);
-    expect(headings).toEqual(["Raise revenue", "Other measures"]);
+    expect(headings).toEqual(["Raise revenue", "Other policies"]);
     expect(screen.getByText(catalogue.byId.get(ALPHA).label)).toBeInTheDocument();
     expect(screen.queryByText("Cost revenue")).not.toBeInTheDocument();
   });

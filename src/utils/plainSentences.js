@@ -37,11 +37,11 @@ export function revenueSentence(net, yearLabel) {
   if (net == null || !Number.isFinite(net)) return null;
   const bn = Math.abs(net) >= 0.95 ? `£${Math.abs(net).toFixed(1)} billion` : `£${Math.round(Math.abs(net) * 1000).toLocaleString("en-GB")} million`;
   // Exactly nothing (a measure not in force that year) is not "roughly balance"
-  if (Math.abs(net) < 0.0005) return `In ${yearLabel}, the selected measures change no revenue.`;
-  if (Math.abs(net) < 0.05) return `In ${yearLabel}, the selected measures roughly balance: they neither raise nor cost much revenue.`;
+  if (Math.abs(net) < 0.0005) return `In ${yearLabel}, the selected policies change no revenue.`;
+  if (Math.abs(net) < 0.05) return `In ${yearLabel}, the selected policies roughly balance: they neither raise nor cost much revenue.`;
   return net > 0
-    ? `In ${yearLabel}, the selected measures raise ${bn} for the government.`
-    : `In ${yearLabel}, the selected measures cost the government ${bn}.`;
+    ? `In ${yearLabel}, the selected policies raise ${bn} for the government.`
+    : `In ${yearLabel}, the selected policies cost the government ${bn}.`;
 }
 
 // "Later years differ" (ideas issue, 27 October): a short pointer when a
@@ -143,7 +143,7 @@ export function laterRevenueNote(net, later) {
   for (const point of later ?? []) {
     if (point.net == null || !Number.isFinite(point.net)) continue;
     const now = turnTo(revenueRounded(net), revenueRounded(point.net), CLEAR_REVENUE_CHANGE);
-    if (now) return `Later years differ: in ${point.yearLabel}, the selected measures ${REVENUE_WORDS[now]}.`;
+    if (now) return `Later years differ: in ${point.yearLabel}, the selected policies ${REVENUE_WORDS[now]}.`;
   }
   return null;
 }

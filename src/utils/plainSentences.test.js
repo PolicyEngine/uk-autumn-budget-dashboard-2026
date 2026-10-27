@@ -15,11 +15,11 @@ describe("plain card sentences", () => {
   });
 
   it("puts the revenue for the selected year in words", () => {
-    expect(revenueSentence(4.26, "2027-28")).toBe("In 2027-28, the selected measures raise £4.3 billion for the government.");
-    expect(revenueSentence(-0.42, "2027-28")).toBe("In 2027-28, the selected measures cost the government £420 million.");
+    expect(revenueSentence(4.26, "2027-28")).toBe("In 2027-28, the selected policies raise £4.3 billion for the government.");
+    expect(revenueSentence(-0.42, "2027-28")).toBe("In 2027-28, the selected policies cost the government £420 million.");
     expect(revenueSentence(null, "2027-28")).toBeNull();
     // A measure not in force that year changes nothing: not "roughly balance"
-    expect(revenueSentence(0, "2027-28")).toBe("In 2027-28, the selected measures change no revenue.");
+    expect(revenueSentence(0, "2027-28")).toBe("In 2027-28, the selected policies change no revenue.");
     expect(revenueSentence(0.02, "2027-28")).toMatch(/roughly balance/);
   });
 
@@ -101,16 +101,16 @@ describe("plain card sentences", () => {
       { yearLabel: "2029-30", net: null },
       { yearLabel: "2030-31", net: 3.2 },
     ];
-    expect(laterRevenueNote(-8.9, later)).toBe("Later years differ: in 2030-31, the selected measures raise revenue.");
+    expect(laterRevenueNote(-8.9, later)).toBe("Later years differ: in 2030-31, the selected policies raise revenue.");
     expect(laterRevenueNote(4.3, [{ yearLabel: "2031-32", net: -1.2 }])).toBe(
-      "Later years differ: in 2031-32, the selected measures cost revenue.",
+      "Later years differ: in 2031-32, the selected policies cost revenue.",
     );
     // From roughly balancing to a clear effect (at least £0.1bn)
     expect(laterRevenueNote(0.02, [{ yearLabel: "2029-30", net: 0.06 }, { yearLabel: "2031-32", net: 3.77 }])).toBe(
-      "Later years differ: in 2031-32, the selected measures raise revenue.",
+      "Later years differ: in 2031-32, the selected policies raise revenue.",
     );
     expect(laterRevenueNote(-0.01, [{ yearLabel: "2031-32", net: -0.1 }])).toBe(
-      "Later years differ: in 2031-32, the selected measures cost revenue.",
+      "Later years differ: in 2031-32, the selected policies cost revenue.",
     );
   });
 

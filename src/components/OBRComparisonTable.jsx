@@ -19,7 +19,7 @@ import { SOURCES } from "../utils/sources";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 
 /** What the comparison says when the official costings cover none of the selected measures. */
-export const OBR_UNAVAILABLE = "The official costings have no figures for the selected measures.";
+export const OBR_UNAVAILABLE = "The official costings have no figures for the selected policies.";
 
 /** Within this many £bn, an estimate counts as close to the official costing in the card's sentence. */
 export const CLOSE_BN = 0.2;
@@ -149,10 +149,10 @@ export function comparisonSentence(rows, obrKind) {
 // About this chart: what the two bases are, why the figures differ, sources
 const COMPARISON_INFO = {
   shows:
-    "PolicyEngine's estimate of each measure's effect on the public finances beside the official costing for the same year, in £ billion; positive values raise revenue or cut spending. Largest official costing first.",
+    "PolicyEngine's estimate of each policy's effect on the public finances beside the official costing for the same year, in £ billion; positive values raise revenue or cut spending. Largest official costing first.",
   how: [
     "PolicyEngine's figures are static, so they sit beside the official static costing.",
-    "On the % scale each official costing is 100%; a measure costed under £0.05bn has no %.",
+    "On the % scale each official costing is 100%; a policy costed under £0.05bn has no %.",
     "Difference is PolicyEngine minus the official figure.",
   ],
   definitions: [
@@ -161,13 +161,13 @@ const COMPARISON_INFO = {
   ],
   caveats: [
     "Effects outside households, or on incomes the survey covers thinly (such as the very top), are estimated less fully than in official costings built from administrative data.",
-    "The two can also differ in the economic forecast, take-up and the parts of a measure each models.",
+    "The two can also differ in the economic forecast, take-up and the parts of a policy each models.",
   ],
   sources: [
     { label: "PolicyEngine UK microsimulation" },
     { label: SOURCES.obr_budget_2026_costings.label.replace(/^the /, "The ") },
   ],
-  method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the measures" },
+  method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the policies" },
 };
 
 /**
@@ -227,7 +227,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
       units: "£ billion a year; positive values raise revenue or reduce spending",
       source: `PolicyEngine UK microsimulation; official figures from ${SOURCES.obr_budget_2026_costings.label}`,
       columns: [
-        { key: "name", label: "Measure" },
+        { key: "name", label: "Policy" },
         { key: "pe", label: "PolicyEngine, static (£bn)", decimals: 4 },
         { key: "obrStatic", label: "Official, static (£bn)", decimals: 4 },
         { key: "obrBehavioural", label: "Official, post-behavioural (£bn)", decimals: 4 },
@@ -249,7 +249,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
     image: !showTable && yearCovered,
     exportOptions: {
       title,
-      description: `Each row shows a measure's budgetary impact in ${yearLabel}, in £ billion: PolicyEngine's static estimate and the official ${obrKind} costing, with the difference (PolicyEngine minus official) at the right. Positive values raise revenue or reduce spending.`,
+      description: `Each row shows a policy's budgetary impact in ${yearLabel}, in £ billion: PolicyEngine's static estimate and the official ${obrKind} costing, with the difference (PolicyEngine minus official) at the right. Positive values raise revenue or reduce spending.`,
       legendItems: dumbbellLegendItems(obrKind),
       logo: CHART_LOGO,
       svgSelector: "svg",
@@ -322,7 +322,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
             <table className="comparison-table">
               <thead>
                 <tr>
-                  <th scope="col">Measure</th>
+                  <th scope="col">Policy</th>
                   <th scope="col" className="source-header pe">PolicyEngine</th>
                   <th scope="col" className="source-header obr">Official static</th>
                   <th scope="col" className="source-header obr">Official post-behavioural</th>

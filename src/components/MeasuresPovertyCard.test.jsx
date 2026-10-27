@@ -117,7 +117,7 @@ describe("the Poverty sub-tab's measures pair", () => {
     const card = async (name) =>
       (await within(panel).findByRole("heading", { level: 3, name }, { timeout: 5000 })).closest(".charts-stack > div");
     const change = await card(/^Change in the poverty rate$/);
-    const measures = await card(/^Which measures move poverty/);
+    const measures = await card(/^Which policies move poverty/);
     expect(change.parentElement).toBe(measures.parentElement);
     // Which measures first, on top
     expect(measures.compareDocumentPosition(change) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -129,18 +129,18 @@ describe("the Poverty sub-tab's measures pair", () => {
       expect(within(c).getByRole("button", { name: /^Options:/ })).toHaveAccessibleName("Options: Absolute · Before housing costs · All people");
     }
     // The change in people, from the outlook's population
-    await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/^In 2027-28, the selected measures move about [\d,]+ people out of absolute poverty \(before housing costs\), less than 0\.1 percentage points\.$/), { timeout: 5000 });
+    await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/^In 2027-28, the selected policies move about [\d,]+ people out of absolute poverty \(before housing costs\), less than 0\.1 percentage points\.$/), { timeout: 5000 });
     // A waterfall in people: short names, the package last; the measures
     // that move no one are in More info, not under the chart
     const rows = within(measures).getAllByRole("rowheader").map((r) => r.querySelector(".mrl-name")?.textContent ?? r.textContent);
     expect(rows[0]).toBe("Student loan threshold unfrozen");
-    expect(rows.at(-1)).toBe("All measures together");
+    expect(rows.at(-1)).toBe("All policies together");
     expect(rows).not.toContain("Employer National Insurance relief, under-25s");
     expect(measures.querySelector(".chart-legend .wf-none, .ls-chart-rows .wf-none")).toBeNull();
     expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^about [\d,]+ fewer people$/);
     // A plain sentence, no "≈" or "pp"
     const headline = measures.querySelector(".chart-description");
-    expect(headline).toHaveTextContent(/^All the measures together move about [\d,]+ people out of poverty; unfreezing the student loan threshold moves the most \(about [\d,]+\)\.$/);
+    expect(headline).toHaveTextContent(/^All the policies together move about [\d,]+ people out of poverty; unfreezing the student loan threshold moves the most \(about [\d,]+\)\.$/);
     expect(headline.textContent).not.toMatch(/≈|pp/);
 
     // Chosen in one card's pill, followed by the other's
@@ -176,7 +176,7 @@ describe("a published file with only the headline poverty column", () => {
         <PovertyMeasuresRow rows={narrow} policies={catalogue.measures} selectedPolicies={ALL} selectedYear={2027} />
       </MeasureCatalogueProvider>,
     );
-    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which measures move poverty/ }, { timeout: 5000 });
+    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which policies move poverty/ }, { timeout: 5000 });
     const card = heading.closest(".mp-card");
     // No choice to make, and the steps are the headline measure's
     expect(within(card).queryByRole("button", { name: /^Options:/ })).toBeNull();
@@ -197,7 +197,7 @@ describe("a measure whose artifact predates the poverty and inequality measures"
   const CHILD_REL_AHC = povertyMetric({ basis: "relative", housing: "ahc", group: "children" });
   const HEADLINE = povertyMetric({ basis: "absolute", housing: "bhc", group: "all" });
   const published2027 = (id) => metrics.find((row) => row.reform_id === id && row.year === "2027");
-  const NOTE = "Not every measure shown has the chosen poverty line published, so this shows the share of people in absolute poverty before housing costs.";
+  const NOTE = "Not every policy shown has the chosen poverty line published, so this shows the share of people in absolute poverty before housing costs.";
   const nameOf = (r) => r.querySelector(".mrl-name")?.textContent ?? r.textContent;
   const about = (millions) => {
     const n = Math.abs((Number(published2027(OLDER).poverty_change_pp) / 100) * millions * 1e6);
@@ -211,7 +211,7 @@ describe("a measure whose artifact predates the poverty and inequality measures"
         <PovertyMeasuresRow rows={rows} policies={catalogue.measures} selectedPolicies={selected} selectedYear={2027} />
       </MeasureCatalogueProvider>,
     );
-    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which measures move poverty/ }, { timeout: 5000 });
+    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which policies move poverty/ }, { timeout: 5000 });
     const card = heading.closest(".mp-card");
     fireEvent.click(within(card).getByRole("button", { name: "About this chart" }));
     return card;

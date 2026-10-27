@@ -341,7 +341,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   const [overviewOpen, setOverviewOpen] = useState(false);
   const aboutTabRef = useRef(null);
   const closeOverview = useCallback(() => setOverviewOpen(false), []);
-  const PRESETS = [{ id: "autumn-budget", name: "All measures" }];
+  const PRESETS = [{ id: "autumn-budget", name: "All policies" }];
   // Cards fade and rise in as they scroll into view
   const mainRef = useRef(null);
   useScrollReveal(mainRef);
@@ -721,7 +721,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
   // open one only.
   const unavailableIds = selectedPolicies.filter((id) => !catalogue.byId.get(id)?.displayable);
   const selectionUnavailable = unavailableIds.length ? {
-    reason: "Some selected measures are unavailable",
+    reason: "Some selected policies are unavailable",
     // One line inside the view: each selected measure and why it is out
     // (a withdrawn one never reaches here; it drops from the selection)
     detail: unavailableIds.map((id) => {
@@ -754,7 +754,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           policies: policiesLabel(selectedPolicies, POLICIES),
           provisional: provisional ? provisionalLabel(catalogue.manifest) : null,
         }
-      : { policies: value === "outlook" ? "Current law (before the Budget measures)" : null, provisional: null };
+      : { policies: value === "outlook" ? "Current law (before the Budget policies)" : null, provisional: null };
 
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
@@ -811,8 +811,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         <div className="results-container">
           <SectionHeading
             icon="wallet"
-            title="How the measures change incomes"
-            subtitle="With the selected measures: how they change income growth across the income distribution. The change by income decile is on All households."
+            title="How the policies change incomes"
+            subtitle="With the selected policies: how they change income growth across the income distribution. The change by income decile is on All households."
           />
           {/* Growth across the distribution with the measures: the twin of
               the Pre-measures forecast's chart (current law), which links
@@ -823,7 +823,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
                 selectedPolicies={selectedPolicies}
                 selectedYear={distributionalYear}
                 twinLink={
-                  <TwinLink tab="outlook" sub="living" onShow={handleTabChange} label="Without the measures" anchor={GROWTH_CURRENT_LAW_ANCHOR} />
+                  <TwinLink tab="outlook" sub="living" onShow={handleTabChange} label="Without the policies" anchor={GROWTH_CURRENT_LAW_ANCHOR} />
                 }
               />
             </div>
@@ -832,7 +832,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             id="inequality-heading"
             icon="scale"
             title="Inequality"
-            subtitle={<>With the selected measures. {twin("living")}</>}
+            subtitle={<>With the selected policies. {twin("living")}</>}
           />
           <section id="inequality" className="report-section">
             <div className="charts-grid">
@@ -853,8 +853,8 @@ function Dashboard({ published, unavailable = null, updated = false }) {
         <div className="results-container">
           <SectionHeading
             icon="lifebuoy"
-            title="How the measures change poverty"
-            subtitle={<>With the selected measures. {twin("poverty")}</>}
+            title="How the policies change poverty"
+            subtitle={<>With the selected policies. {twin("poverty")}</>}
           />
           {/* The change by year beside which measures move it */}
           <section id="poverty" className="report-section">
@@ -1072,7 +1072,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           <UnavailableNotice reason={viewUnavailable(value).reason}>
             {viewUnavailable(value).detail && <p>{viewUnavailable(value).detail}</p>}
             {unavailable ? (
-              unavailable.empty && <p>Figures appear here once the 2026 Budget measures are approved for publication.</p>
+              unavailable.empty && <p>Figures appear here once the 2026 Budget policies are approved for publication.</p>
             ) : (
               <>
                 <p>No figures are shown for a selection while any of it is unavailable.</p>
@@ -1093,7 +1093,7 @@ function Dashboard({ published, unavailable = null, updated = false }) {
             <SectionHeading
               icon="fileText"
               title="Policies"
-              subtitle={`${provisional ? `${provisionalLabel(catalogue.manifest)}. ` : ""}What each measure changes, when, and how it is modelled.`}
+              subtitle={`${provisional ? `${provisionalLabel(catalogue.manifest)}. ` : ""}What each policy changes, when, and how it is modelled.`}
             />
             <section id="policy-details" className="report-section policy-details-content">
               <PolicyCards
@@ -1223,7 +1223,7 @@ function App() {
     };
   }, []);
   const unavailable = !published && !error
-    ? { reason: "Loading published measures…", loading: true }
+    ? { reason: "Loading published policies…", loading: true }
     : error
     ? { reason: "Published results are unavailable", detail: error }
     : published.status === "no-manifest"

@@ -134,7 +134,7 @@ describe.each([
     expect(container.querySelector("[data-zero-measure]")).toBeNull();
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
-    within(moreInfo).getByText("3 selected measures are £0 for households in 2027-28, so the key folds them under “with no effect” and the tooltip leaves them out:");
+    within(moreInfo).getByText("3 selected policies are £0 for households in 2027-28, so the key folds them under “with no effect” and the tooltip leaves them out:");
     // One disclosure per card: no second style
     expect(container.querySelectorAll(".disclosure")).toHaveLength(1);
     const employer = container.querySelector(`[data-zero-measure="${EMPLOYER_NI}"]`);
@@ -163,7 +163,7 @@ describe("ChartMoreInfo", () => {
   it("says one measure in the singular, and lists only the £0 ones", () => {
     const { container } = render(<ChartMoreInfo members={members} year={2028} />);
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
-    screen.getByText("1 selected measure is £0 for households in 2028-29, so the key folds it under “with no effect” and the tooltip leaves it out:");
+    screen.getByText("1 selected policy is £0 for households in 2028-29, so the key folds it under “with no effect” and the tooltip leaves it out:");
     expect([...container.querySelectorAll("[data-zero-measure]")].map((node) => node.dataset.zeroMeasure)).toEqual([
       EMPLOYER_NI,
     ]);
@@ -183,7 +183,7 @@ describe("ChartMoreInfo", () => {
     expect(screen.getAllByRole("button")).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     screen.getByText("Single years of age rest on fewer households.");
-    screen.getByText("1 selected measure is £0 for households in 2028-29, so the key folds it under “with no effect” and the tooltip leaves it out:");
+    screen.getByText("1 selected policy is £0 for households in 2028-29, so the key folds it under “with no effect” and the tooltip leaves it out:");
   });
 });
 

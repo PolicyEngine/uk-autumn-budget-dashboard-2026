@@ -299,7 +299,7 @@ export default function HouseholdCards({
   const positionPolicies = fill?.reduced ?? figurePolicies;
   // What the figures are with, on hover (no line above the cards): every
   // measure (the file), the selected ones, or those the calculator supports
-  const figuresWith = !fill ? "every measure" : fill.reduced ? "the measures the calculator supports" : "the selected measures";
+  const figuresWith = !fill ? "every policy" : fill.reduced ? "the policies the calculator supports" : "the selected policies";
   // Folded into the strip once a household is chosen; "Show all
   // households" opens the grid again, and a choice there folds it
   const [showAll, setShowAll] = useState(false);
@@ -476,7 +476,7 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
         <span className="household-card-name visually-hidden">Your household</span>
         <span className="household-yours-title">Enter your own household</span>
         <span className="household-yours-lead">
-          {provisional ? "See how the selected measures change your income" : "See how the Budget changes your income"}
+          {provisional ? "See how the selected policies change your income" : "See how the Budget changes your income"}
           {", in about 30 seconds."}
         </span>
       </span>

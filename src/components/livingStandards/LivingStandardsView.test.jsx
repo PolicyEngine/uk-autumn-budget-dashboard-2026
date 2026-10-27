@@ -133,8 +133,8 @@ describe("the Pre-measures forecast view", () => {
     // One heading, without the measures, linking to its twin with them
     const heading = await within(living).findByRole("heading", { level: 2, name: "Living standards under current law" }, { timeout: 5000 });
     const intro = heading.closest(".section-heading");
-    expect(intro).toHaveTextContent(/^Living standards under current lawCurrent law, before any Budget measure\. See with the measures →$/);
-    expect(within(intro).getByRole("link", { name: "See with the measures →" })).toHaveAttribute("href", "?tab=dashboard&sub=living");
+    expect(intro).toHaveTextContent(/^Living standards under current lawCurrent law, before any Budget policy\. See with the policies →$/);
+    expect(within(intro).getByRole("link", { name: "See with the policies →" })).toHaveAttribute("href", "?tab=dashboard&sub=living");
     await within(living).findByRole("heading", { level: 3, name: /^Incomes over time$/ });
     const incomes = card(living, /^Incomes over time$/);
     // One card a row, full width: growth first, then incomes, then inequality
@@ -160,7 +160,7 @@ describe("the Pre-measures forecast view", () => {
     expect(inequality.querySelector(".chart-description").textContent).toMatch(/^Under current law, income inequality, measured by the Gini coefficient, (rises|falls|stays)/);
     expect(living.querySelectorAll(".ls-card")).toHaveLength(3);
     // Nothing with the measures here
-    expect(living).not.toHaveTextContent(/With the selected measures/);
+    expect(living).not.toHaveTextContent(/With the selected policies/);
     expect(within(living).queryByRole("heading", { name: /^Change in income inequality/ })).toBeNull();
 
     const panel = () => living;
@@ -193,8 +193,8 @@ describe("the Pre-measures forecast view", () => {
     expect(window.location.search).toBe("?tab=outlook&sub=poverty");
     const poverty = screen.getByRole("tabpanel", { name: "Poverty" });
     const povertyHeading = await within(poverty).findByRole("heading", { name: "Poverty under current law" });
-    expect(povertyHeading.closest(".section-heading")).toHaveTextContent(/Current law, before any Budget measure\./);
-    expect(within(poverty).getByRole("link", { name: "See with the measures →" })).toHaveAttribute("href", "?tab=dashboard&sub=poverty");
+    expect(povertyHeading.closest(".section-heading")).toHaveTextContent(/Current law, before any Budget policy\./);
+    expect(within(poverty).getByRole("link", { name: "See with the policies →" })).toHaveAttribute("href", "?tab=dashboard&sub=poverty");
     await within(poverty).findByRole("heading", { level: 3, name: /^Poverty over time$/ });
     // One card a row, both on the same measure at first, under the age
     // groups' tiles
@@ -224,25 +224,25 @@ describe("the Pre-measures forecast view", () => {
       expect(await within(panel).findByRole("heading", { level: 3, name })).toBeInTheDocument();
     }
     expect(within(panel).queryByText(/^Select policies to analyse/)).toBeNull();
-    expect(panel).not.toHaveTextContent(/With the selected measures/);
+    expect(panel).not.toHaveTextContent(/With the selected policies/);
   });
 
   it.each([
     ["living", "Living standards", "Inequality"],
-    ["poverty", "Poverty", "How the measures change poverty"],
+    ["poverty", "Poverty", "How the policies change poverty"],
   ])("Population impact's %s shows only the measures, linking to its twin without them", async (sub, label, measures) => {
     window.history.replaceState({}, "", `/?sub=${sub}`);
     await renderVerified();
     const panel = await screen.findByRole("tabpanel", { name: label });
     const heading = await within(panel).findByRole("heading", { level: 2, name: measures }, { timeout: 5000 });
-    expect(heading.closest(".section-heading")).toHaveTextContent(/With the selected measures[.:,]/);
+    expect(heading.closest(".section-heading")).toHaveTextContent(/With the selected policies[.:,]/);
     const link = within(panel).getByRole("link", { name: "See without them →" });
     expect(link).toHaveAttribute("href", `?tab=outlook&sub=${sub}`);
     // No current-law card here
     expect(within(panel).queryByRole("heading", { name: /under current law|^Inequality over time|^Incomes over time$|^Poverty over time$/ })).toBeNull();
     // (Living standards' growth card with the measures links to its twin
     // as "Without the measures"; no current-law card says it is one)
-    expect(panel).not.toHaveTextContent(/Without the measures \(current law\)|Without the measures:/);
+    expect(panel).not.toHaveTextContent(/Without the policies \(current law\)|Without the policies:/);
     // The link opens the twin in place, the address following
     fireEvent.click(link);
     expect(screen.getByRole("tab", { name: "Pre-measures forecast" })).toHaveAttribute("aria-selected", "true");
@@ -252,7 +252,7 @@ describe("the Pre-measures forecast view", () => {
     const params = new URLSearchParams(window.location.search);
     expect([params.get("tab"), params.get("sub")]).toEqual(["outlook", sub === "living" ? null : sub]);
     // And back
-    fireEvent.click(within(twin).getByRole("link", { name: "See with the measures →" }));
+    fireEvent.click(within(twin).getByRole("link", { name: "See with the policies →" }));
     expect(screen.getByRole("tab", { name: "Population impact" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tabpanel", { name: label })).toBe(panel);
     expect(new URLSearchParams(window.location.search).get("sub")).toBe(sub);

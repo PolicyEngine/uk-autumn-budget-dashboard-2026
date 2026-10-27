@@ -115,7 +115,7 @@ export function povertyWaterfall(measures, total, millions) {
       steps.push({ id: "interaction", name: "Interaction", pp: gap, x, start: at, end: at + x, colour: CHART_COLOURS.noChange, kind: "interaction" });
     }
     const x = toX(total);
-    steps.push({ id: "package", name: "All measures together", pp: total, x, start: 0, end: x, colour: null, kind: "total" });
+    steps.push({ id: "package", name: "All policies together", pp: total, x, start: 0, end: x, colour: null, kind: "total" });
   }
   return { steps, zero, peopleMode };
 }
@@ -208,7 +208,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   const subjectOf = (step) => {
     const measure = catalogue.byId?.get(step.id);
     const sentence = measure?.sentence ?? policyDetailsFor(measure)?.sentence;
-    return sentence ? `${sentence[0].toUpperCase()}${sentence.slice(1)}` : `Of the measures, ${step.name}`;
+    return sentence ? `${sentence[0].toUpperCase()}${sentence.slice(1)}` : `Of the policies, ${step.name}`;
   };
   const direction = (step) => (step.x > 0 ? "out of" : "into");
   // Mid-sentence, the measure's own sentence form as it is published
@@ -223,7 +223,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     peopleMode ? (
       totalStep ? (
         <>
-          All the measures together move {about(totalStep)} {who} {direction(totalStep)} poverty; {inSentence(top)} moves the most (
+          All the policies together move {about(totalStep)} {who} {direction(totalStep)} poverty; {inSentence(top)} moves the most (
           {about(top)}
           {direction(top) === direction(totalStep) ? "" : ` ${who} ${direction(top)} poverty`}).
         </>
@@ -238,12 +238,12 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
       </>
     )
   ) : (
-    <>No measure on its own moves anyone across this line in {year}.</>
+    <>No policy on its own moves anyone across this line in {year}.</>
   );
 
   return (
     <LsCard
-      title="Which measures move poverty"
+      title="Which policies move poverty"
       icon="bars"
       className="mp-card"
       period={year}
@@ -254,10 +254,10 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
         image: false,
         csv: () =>
           buildChartCsv({
-            title: `${metric.title} by measure, ${year}`,
+            title: `${metric.title} by policy, ${year}`,
             units: metric.csvUnits,
             columns: [
-              { key: "name", label: "Measure" },
+              { key: "name", label: "Policy" },
               { key: "pp", label: "Change (pp)", decimals: 4 },
               ...(peopleMode ? [{ key: "people", label: `Change in ${who} in poverty`, decimals: 0 }] : []),
             ],
@@ -276,7 +276,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
           year={selectedYear}
           info={{
             how: [
-              `Each step is one selected measure modelled on its own, largest first; the package bar is all of them together.`,
+              `Each step is one selected policy modelled on its own, largest first; the package bar is all of them together.`,
               <>
                 Measures can reach the same households, so their separate effects need not add up to the package&apos;s
                 {interaction ? `: here they miss it by ${main(interaction)}, shown as the interaction step.` : "."}
@@ -286,7 +286,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
             caveats: [
               read.fellBack && (
                 <span className="mp-fell-back">
-                  Not every measure shown has the chosen poverty line published, so this shows {HEADLINE.phrase}.
+                  Not every policy shown has the chosen poverty line published, so this shows {HEADLINE.phrase}.
                 </span>
               ),
               zero.length > 0 && (
@@ -301,7 +301,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
       }
     >
       <div className="chart-plot">
-        <div ref={plotRef} className="wf" role="table" aria-label={`${metric.title} by measure, ${year}`}>
+        <div ref={plotRef} className="wf" role="table" aria-label={`${metric.title} by policy, ${year}`}>
           {steps.map((step, i) => {
             const left = Math.min(pos(step.start), pos(step.end));
             const width = Math.max(Math.abs(pos(step.end) - pos(step.start)), 0.6);

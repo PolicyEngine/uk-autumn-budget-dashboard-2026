@@ -449,7 +449,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
       </div>
       <SwapTransition swapKey={view} ref={chartRef} className="chart-plot young-people-plot">
         {published && incomplete && (
-          <UnavailableNotice reason="Some selected measures have no published results by age. The net change is unavailable for those age groups." />
+          <UnavailableNotice reason="Some selected policies have no published results by age. The net change is unavailable for those age groups." />
         )}
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
@@ -642,7 +642,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
   const groupLabel = perMeasure?.groups.find((group) => group.key === groupKey)?.label ?? "";
   const single = !perMeasure && view === "single";
   const description = perMeasure
-    ? `Share of people aged ${groupLabel.replace(/^Aged? /i, "")} better or worse off (a change over 0.01%), each selected measure on its own.`
+    ? `Share of people aged ${groupLabel.replace(/^Aged? /i, "")} better or worse off (a change over 0.01%), each selected policy on its own.`
     : single
       ? SHARES_SINGLE_DESCRIPTION
       : SHARES_DESCRIPTION;
@@ -675,11 +675,11 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
   const csvText = () =>
     buildChartCsv({
       title: perMeasure
-        ? `People aged ${groupLabel} better off, unchanged and worse off, by measure on its own, ${yearLabel}`
+        ? `People aged ${groupLabel} better off, unchanged and worse off, by policy on its own, ${yearLabel}`
         : `People better off, unchanged and worse off by ${single ? "single year of age" : "age group"}, ${yearLabel}`,
       units: "% of people in the group; a change of more than 0.01% of household net income",
       columns: [
-        { key: "group", label: perMeasure ? "Measure" : single ? "Age" : "Age group" },
+        { key: "group", label: perMeasure ? "Policy" : single ? "Age" : "Age group" },
         ...OUTCOMES.map((outcome) => ({
           key: outcome.key,
           label: `${outcome.label} (%)`,
@@ -731,7 +731,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
                 onChange: setGroupKey,
                 options: perMeasure.groups.map((group) => ({ value: group.key, label: group.label })),
               },
-              { label: "Measures with no effect", value: hide, onChange: setHide, options: SHARE_FILTER_OPTIONS.hide, omitAtDefault: "hide" },
+              { label: "Policies with no effect", value: hide, onChange: setHide, options: SHARE_FILTER_OPTIONS.hide, omitAtDefault: "hide" },
               { label: "Order", value: order, onChange: setOrder, options: SHARE_FILTER_OPTIONS.order },
               { label: "Show", value: direction, onChange: setDirection, options: SHARE_FILTER_OPTIONS.direction },
             ]}
@@ -824,7 +824,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
         )}
         {filtered?.hidden > 0 && (
           <Note>
-            {filtered.hidden} {filtered.hidden === 1 ? "measure" : "measures"} with no effect hidden
+            {filtered.hidden} {filtered.hidden === 1 ? "policy" : "policies"} with no effect hidden
           </Note>
         )}
         {/* The same foot as the card beside it, so the pair ends level */}
@@ -833,10 +833,10 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
           info={{
             how: perMeasure
               ? [
-                  "No published run covers this selection together, so each row is one measure simulated on its own.",
-                  "The rows' shares can't be added up across measures.",
+                  "No published run covers this selection together, so each row is one policy simulated on its own.",
+                  "The rows' shares can't be added up across policies.",
                 ]
-              : ["Shares come from one run of the whole selection, so they include how the measures interact."],
+              : ["Shares come from one run of the whole selection, so they include how the policies interact."],
             caveats: [
               perMeasure?.missing.length > 0 && `Not shown, too few survey records: ${perMeasure.missing.join(", ")}.`,
             ],

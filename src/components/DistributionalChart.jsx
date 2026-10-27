@@ -292,7 +292,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
 
       <div ref={chartRef} className="chart-plot">
         {published && hasIncompleteResults && (
-          <UnavailableNotice reason="Some selected measures have no published results for this chart. The net change is unavailable." />
+          <UnavailableNotice reason="Some selected policies have no published results for this chart. The net change is unavailable." />
         )}
         {nothingChanges ? (
           // Only measures that change no household's income this year (an

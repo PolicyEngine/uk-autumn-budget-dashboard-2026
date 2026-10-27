@@ -11,7 +11,7 @@ import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture"
 beforeAll(preloadAllViews, 60_000);
 
 const INTRO =
-  /^Estimates from PolicyEngine UK( \(opens in a new tab\))? of how Autumn Budget 2026 measures affect the public finances and household incomes across the income distribution, regions and age groups, set against the pre-measures forecast\. Costings are our own; the economic forecast is the OBR’s Economic and fiscal outlook, March 2026( \(opens in a new tab\))?\.$/;
+  /^Estimates from PolicyEngine UK( \(opens in a new tab\))? of how Autumn Budget 2026 policies affect the public finances and household incomes across the income distribution, regions and age groups, set against the pre-measures forecast\. Costings are our own; the economic forecast is the OBR’s Economic and fiscal outlook, March 2026( \(opens in a new tab\))?\.$/;
 
 const BOXES = {
   society: /^The Budget and society/,
@@ -61,7 +61,7 @@ describe("the landing page", () => {
     expect(within(page).getAllByRole("link", { name: /Explore$/ }).map((link) => [link.getAttribute("href"), link.textContent])).toEqual([
       ["?tab=dashboard&sub=finances", "The Budget and societyCosts and who gains or losesExplore→"],
       ["?tab=household", "Your householdSee how your income changesExplore→"],
-      ["?tab=policies", "What's in the BudgetEvery measure, and how we model itExplore→"],
+      ["?tab=policies", "What's in the BudgetEvery policy, and how we model itExplore→"],
     ]);
     expect(page.querySelector(".landing-box-figure")).toBeNull();
     expect(page.querySelector(".landing-boxes")).not.toHaveTextContent(/£|\d/);
@@ -105,21 +105,21 @@ describe("the landing page", () => {
     expect(landing().querySelector(".publication-provisional")).toHaveTextContent(provisionalLabel(manifest));
     // While provisional, the policies box names modelled measures, not the Budget's contents
     expect(screen.queryByRole("link", { name: BOXES.policies })).toBeNull();
-    fireEvent.click(screen.getByRole("link", { name: /^The measures modelled/ }));
+    fireEvent.click(screen.getByRole("link", { name: /^The policies modelled/ }));
     // Not over any view (the overview drawer has it only while open)
     expect(notes()).toHaveLength(0);
     // The Policies view's subtitle says the measures are provisional
     expect(
-      screen.getByText(`${provisionalLabel(manifest)}. What each measure changes, when, and how it is modelled.`),
+      screen.getByText(`${provisionalLabel(manifest)}. What each policy changes, when, and how it is modelled.`),
     ).toBeInTheDocument();
   });
 
   it("names the policies box after the Budget, with no provisional subtitle, once every measure is approved", async () => {
     const { container } = await renderApp();
     expect(container.querySelectorAll(".publication-provisional")).toHaveLength(0);
-    expect(screen.queryByRole("link", { name: /^The measures modelled/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^The policies modelled/ })).toBeNull();
     fireEvent.click(box("policies"));
-    expect(screen.getByText("What each measure changes, when, and how it is modelled.")).toBeInTheDocument();
+    expect(screen.getByText("What each policy changes, when, and how it is modelled.")).toBeInTheDocument();
   });
 
   it("draws a silhouette of Public finances behind it, with no view mounted", async () => {
@@ -247,7 +247,7 @@ describe("the About pill in the tab row, and its overview drawer", () => {
     expect(rows.map((row) => row.textContent)).toEqual([
       "The Budget and societyCosts and who gains or loses",
       "Your householdSee how your income changes",
-      "What's in the BudgetEvery measure, and how we model it",
+      "What's in the BudgetEvery policy, and how we model it",
       "PolicyEngineMore research, the model and the API (opens in a new tab)",
     ]);
     const site = rows.at(-1);

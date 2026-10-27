@@ -74,7 +74,7 @@ const compareOptions = (label) => [
 ];
 const viewOptions = (label) => [
   { value: "lines", label: "Lines", summary: "Lines" },
-  { value: "measures", label: `Measures, ${label}`, summary: "By measure" },
+  { value: "measures", label: `Policies, ${label}`, summary: "By policy" },
 ];
 const YEARS_OPTIONS = [
   { value: "each", label: "Each year", summary: "Each year" },
@@ -603,8 +603,8 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const csvText = () =>
     byMeasure
       ? buildChartCsv({
-          title: `Change in household net income per person, ${FOCUS_LABEL}, by measure, ${first} to ${last}`,
-          units: cumulative ? "£ per person, running total from the first year" : "£ per person per year; each measure's own effect",
+          title: `Change in household net income per person, ${FOCUS_LABEL}, by policy, ${first} to ${last}`,
+          units: cumulative ? "£ per person, running total from the first year" : "£ per person per year; each policy's own effect",
           columns: [
             { key: "yearLabel", label: "Year" },
             ...partKeys.map((each) => ({ key: each, label: catalogue.bySeriesKey.get(each)?.label ?? each, decimals: 2 })),

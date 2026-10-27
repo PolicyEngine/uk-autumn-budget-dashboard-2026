@@ -71,7 +71,7 @@ function ChartTooltip({
       ? [
           ["Raise revenue", rows.filter((row) => row.direction === "revenue")],
           ["Cost revenue", rows.filter((row) => row.direction === "cost")],
-          ["Other measures", rows.filter((row) => row.direction !== "revenue" && row.direction !== "cost")],
+          ["Other policies", rows.filter((row) => row.direction !== "revenue" && row.direction !== "cost")],
         ].filter(([, sectionRows]) => sectionRows.length > 0)
       : [[null, rows]];
 

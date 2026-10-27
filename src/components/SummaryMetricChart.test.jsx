@@ -71,8 +71,8 @@ describe("SummaryMetricChart", () => {
     expect(screen.queryByText(/Choose one policy or all policies/)).toBeNull();
     // The selected year: one bar per measure with an effect, the rest counted
     expect(document.querySelectorAll(".mev-row")).toHaveLength(1);
-    expect(screen.getByText("1 measure with no effect hidden")).toBeInTheDocument();
-    expect(document.querySelector(".chart-description")).toHaveTextContent(/each measure on its own: biggest/i);
+    expect(screen.getByText("1 policy with no effect hidden")).toBeInTheDocument();
+    expect(document.querySelector(".chart-description")).toHaveTextContent(/each policy on its own: biggest/i);
     // Year by year: a table of measures by years, never a sum
     fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
     fireEvent.click(within(screen.getByRole("radiogroup", { name: "View" })).getByRole("radio", { name: "Year by year" }));

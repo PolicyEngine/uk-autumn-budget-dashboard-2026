@@ -52,7 +52,7 @@ const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 
 // The card's "About this chart"
 const ABSOLUTE_INFO = {
-  how: ["Each bar stacks the selected measures' own effects; the line marks their total."],
+  how: ["Each bar stacks the selected policies' own effects; the line marks their total."],
   method: { anchor: METHOD_ANCHORS.byIncome, label: "How we group households by income" },
 };
 
@@ -282,7 +282,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
 
       <div ref={chartRef} className="chart-plot">
         {published && hasIncompleteResults && (
-          <UnavailableNotice reason="Some selected measures have no published results for this chart. The net change is unavailable." />
+          <UnavailableNotice reason="Some selected policies have no published results for this chart. The net change is unavailable." />
         )}
         {nothingChanges ? (
           // Only measures that change no household's income this year (an

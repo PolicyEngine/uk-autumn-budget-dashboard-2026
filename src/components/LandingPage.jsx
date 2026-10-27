@@ -40,7 +40,7 @@ function LandingBox({ tab, sub, icon, title, description, onOpen }) {
 const boxes = (provisional) => [
   ["dashboard", "finances", "users", "The Budget and society", "Costs and who gains or loses"],
   ["household", undefined, "house", "Your household", "See how your income changes"],
-  ["policies", undefined, "list", provisional ? "The measures modelled" : "What's in the Budget", "Every measure, and how we model it"],
+  ["policies", undefined, "list", provisional ? "The policies modelled" : "What's in the Budget", "Every policy, and how we model it"],
 ];
 
 /**
@@ -54,7 +54,7 @@ export function LandingIntro({ headingId, provisional, className = "landing-hero
       <h2 id={headingId} className="landing-heading">Autumn Budget 2026: fiscal and distributional analysis</h2>
       <p className="landing-intro">
         Estimates from <SourceLink source="policyengine_uk_model" />{" "}of how
-        Autumn Budget 2026 measures affect the public finances and household
+        Autumn Budget 2026 policies affect the public finances and household
         incomes across the income distribution, regions and age groups, set
         against the pre-measures forecast. Costings are our own; the economic
         forecast is the OBR&rsquo;s{" "}

@@ -98,7 +98,7 @@ export function useConstituencyView({
   if (view.kind === "notice" && view.missingReform && regionalHasChoice) {
     view = {
       ...view,
-      reason: "Results for this measure are published by region only.",
+      reason: "Results for this policy are published by region only.",
     };
   }
   if (view.kind === "rows" && boundaries.status !== "ready") {
