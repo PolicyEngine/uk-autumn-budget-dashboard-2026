@@ -87,7 +87,7 @@ describe("MethodologyTab", () => {
     expect(screen.queryByRole("heading", { name: "Published measure descriptions" })).toBeNull();
     const model = container.querySelector(`#${METHOD_SECTIONS.model}`);
     const summary = model.querySelector(".section-heading p");
-    expect(summary).toHaveTextContent("What each measure does and how it is modelled is on Policies.");
+    expect(summary).toHaveTextContent("What each policy does and how it is modelled is on Policies.");
     const link = within(summary).getByRole("link", { name: "Policies" });
     expect(link).toHaveAttribute("href", "?tab=policies");
     fireEvent.click(link);
@@ -98,7 +98,7 @@ describe("MethodologyTab", () => {
 
   it("lists the unavailable measures only when there are any", () => {
     renderTab();
-    const heading = screen.queryByRole("button", { name: "Unavailable measures" });
+    const heading = screen.queryByRole("button", { name: "Unavailable policies" });
     if (UNAVAILABLE.length === 0) {
       expect(heading).toBeNull();
     } else {
@@ -109,7 +109,7 @@ describe("MethodologyTab", () => {
     const empty = { ...catalogue, measures: catalogue.measures.filter((measure) => measure.displayable) };
     cleanup();
     render(<MeasureCatalogueProvider catalogue={empty}><MethodologyTab onShowTab={vi.fn()} /></MeasureCatalogueProvider>);
-    expect(screen.queryByRole("button", { name: "Unavailable measures" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Unavailable policies" })).toBeNull();
   });
 
   it("says under Limitations that fuel duty covers households' own fuel, naming no measure", () => {
@@ -145,7 +145,7 @@ describe("MethodologyTab", () => {
     const calc = document.getElementById(METHOD_ANCHORS.householdCalc);
     expect(within(calc).getByRole("button", { name: "How the household calculation works" })).toBeInTheDocument();
     const terms = [...calc.querySelectorAll(".method-fact dt")].map((term) => term.textContent);
-    expect(terms).toEqual(expect.arrayContaining(["Engine and measures", "Salary", "Marginal tax rate", "Who counts as a child", "Council Tax"]));
+    expect(terms).toEqual(expect.arrayContaining(["Engine and policies", "Salary", "Marginal tax rate", "Who counts as a child", "Council Tax"]));
   });
 
   it("switches views from its links, in place", () => {

@@ -96,17 +96,18 @@ button.measure-key-chip:focus-visible,
   border-style: dashed;
 }
 
-.measure-key-swatch {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  background: var(--swatch);
+/* A measure's chip holds the shared label (MeasureRowLabel: badge, name,
+   category line): it grows to two lines, left-aligned, and keeps its pill */
+.measure-key-chip:has(.mrl) {
+  height: auto;
+  min-height: 26px;
+  padding: 3px 12px 3px 3px;
+  text-align: left;
+  border-radius: 18px;
 }
 
-.measure-key-chip.is-muted .measure-key-swatch {
-  background: transparent;
-  box-shadow: inset 0 0 0 1px var(--swatch);
+.measure-key-chip .mrl-text {
+  align-items: flex-start;
 }
 
 /* The net line's chip: a pill like the measures', chosen the same way */

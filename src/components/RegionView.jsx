@@ -116,7 +116,7 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
       choice.kind === "package" ? `${label}: ${names.join("; ")}` : label;
     const metadata = [
       ["Generated", formatGenerated(new Date())],
-      [choice.kind === "package" ? "Measures" : "Measure", measures],
+      [choice.kind === "package" ? "Policies" : "Policy", measures],
       ["Reform", view.reform],
       ["Year", yearLabel],
       ["Units", EXPORT_UNITS],

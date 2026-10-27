@@ -1,4 +1,5 @@
 import { openDisclosuresAround } from "./Disclosure";
+import { scrollBelowBars, smoothUnlessReduced } from "../utils/pageScroll";
 
 /**
  * A link to another view at one of its sub-tabs, switched to in place
@@ -20,7 +21,7 @@ export default function ViewLink({ tab, sub, age, hash, onShowTab, children }) {
             if (!target) return;
             openDisclosuresAround(target);
             requestAnimationFrame(() =>
-              requestAnimationFrame(() => target.scrollIntoView?.({ behavior: "smooth", block: "start" })),
+              requestAnimationFrame(() => scrollBelowBars(target, { behavior: smoothUnlessReduced() })),
             );
           }, 50);
         }

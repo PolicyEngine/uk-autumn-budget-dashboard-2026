@@ -127,8 +127,17 @@ export function seatSummary(state) {
 
 /** The card's line for a seat with no published figure. */
 export const WITHHELD_SEAT_NOTE = "Not published: too few survey households";
-/** A By policy row for a measure withheld in this seat. */
-export const WITHHELD_MEASURE_NOTE = "Not published for this seat";
+/** A By policy row for a measure withheld in this seat, and its tooltip. */
+export const WITHHELD_MEASURE_NOTE = "Not published";
+export const WITHHELD_MEASURE_TITLE =
+  "Not published for this constituency, to protect survey respondents' confidentiality.";
+
+/** The By policy heading: the package's parts, or the other selected measures. */
+export const PACKAGE_PARTS_HEADING = "Of which";
+export const OTHER_POLICIES_HEADING = "Other selected policies";
+
+/** The line for measures with no change in the seat: "+1 with no change". */
+export const unchangedLine = (count) => `+${count} with no change`;
 
 const SUPPORT_BAND_WORDS = Object.freeze({
   "<10": "fewer than 10",
@@ -153,16 +162,36 @@ export function disclosureNote(row) {
   return null;
 }
 
+/** A figure's sign, for its colour: "gain", "loss" or "zero". */
+export function signOf(value, outcome = "average_change") {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "zero";
+  // Under half a pound (or 0.005 points of income) reads as no change
+  const negligible = outcome === "relative_change" ? 0.00005 : 0.5;
+  if (Math.abs(number) < negligible) return "zero";
+  return number > 0 ? "gain" : "loss";
+}
+
 function figureOf(row) {
   if (!row || row.tier === "withheld") return null;
-  return { text: formatFigure(row.outcome, row.value), direction: row.direction };
+  return {
+    text: formatFigure(row.outcome, row.value),
+    direction: row.direction,
+    sign: signOf(row.value, row.outcome),
+  };
 }
 
 /**
- * Everything the card says about one seat: its name, the shown measure's
- * average change in £ and as a share of income, each selected measure's
- * own £ change in the seat (when two or more measures have constituency
- * results), and one muted line on how firm the figure is.
+ * Everything the card says about one seat: its name, the figure for what
+ * the map shows (one measure, or the package) in £ and as a share of
+ * income, labelled with what it is, the rest of the selection's own £
+ * changes in the seat, and one muted line on how firm the figure is.
+ *
+ * When the map shows one measure, the headline is that measure and the
+ * other selected measures follow under "Other selected policies"; when it
+ * shows the package, the headline is the package and each selected
+ * measure follows under "Of which". Measures with no change are counted,
+ * not listed.
  *
  * Every figure is a published row; nothing is summed or derived.
  *
@@ -176,13 +205,26 @@ function figureOf(row) {
  * @param {string} options.outcome - The outcome the map shows.
  * @param {Array<{id: string, name: string}>} [options.measures] - The
  *   selected measures, in the page's order, for the By policy rows.
- * @returns {{title: string, kind: string, average: Object|null,
- *   relative: Object|null, byPolicy: Array, note: string|null,
- *   region: string|null}}
+ * @param {string} [options.label] - What the map shows, under the
+ *   headline (by default the shown measure's name).
+ * @returns {{title: string, kind: string, label: string|null,
+ *   average: Object|null, relative: Object|null, policiesHeading:
+ *   string|null, byPolicy: Array, unchanged: Array<string>, note:
+ *   string|null, region: string|null}}
  */
-export function seatCard({ feature, state, table, regional, reform, year, outcome, measures = [] }) {
+export function seatCard({ feature, state, table, regional, reform, year, outcome, measures = [], label = null }) {
   const title = seatName(feature, state?.row);
-  const empty = { title, average: null, relative: null, byPolicy: [], note: null, region: null };
+  const empty = {
+    title,
+    label: null,
+    average: null,
+    relative: null,
+    policiesHeading: null,
+    byPolicy: [],
+    unchanged: [],
+    note: null,
+    region: null,
+  };
   if (!state || state.kind === "no-data") {
     return { ...empty, kind: "no-data", note: `No data. ${NO_DATA_NOTE}` };
   }
@@ -205,33 +247,61 @@ export function seatCard({ feature, state, table, regional, reform, year, outcom
   const rowOf = (id, which) => lookupRow(table, { areaCode, reform: id, year, outcome: which });
   const averageRow = outcome === "average_change" ? state.row : rowOf(reform, "average_change");
   const relativeRow = outcome === "relative_change" ? state.row : rowOf(reform, "relative_change");
-  const byPolicy = measures
+  const shownMeasure = measures.find((measure) => measure.id === reform);
+  // The map's own measure is the headline, so its row is not repeated
+  const others = shownMeasure ? measures.filter((measure) => measure.id !== reform) : measures;
+  const rows = others
     .map((measure) => ({ measure, row: rowOf(measure.id, "average_change") }))
     .filter(({ row }) => row)
     .map(({ measure, row }) =>
       row.tier === "withheld"
-        ? { id: measure.id, name: measure.name, text: WITHHELD_MEASURE_NOTE, direction: null, value: null }
+        ? {
+            id: measure.id,
+            name: measure.name,
+            text: WITHHELD_MEASURE_NOTE,
+            title: WITHHELD_MEASURE_TITLE,
+            direction: null,
+            sign: null,
+            value: null,
+          }
         : {
             id: measure.id,
             name: measure.name,
             text: formatFigure("average_change", row.value),
             direction: row.direction,
+            sign: signOf(row.value),
             value: Number(row.value),
           },
-    )
+    );
+  const unchanged = rows.filter((row) => row.sign === "zero").map((row) => row.name);
+  const byPolicy = rows
+    .filter((row) => row.sign !== "zero")
+    // Largest first, by size; not published last
     .sort((a, b) => {
       if (a.value === null || b.value === null) return (a.value === null) - (b.value === null);
-      return b.value - a.value;
+      return Math.abs(b.value) - Math.abs(a.value);
     });
+  // The package's parts are worth listing only when there are two or more
+  const listed = shownMeasure ? rows.length >= 1 : rows.length >= 2;
   return {
     ...empty,
     kind: state.kind,
+    label: label ?? shownMeasure?.name ?? null,
     average: figureOf(averageRow),
     relative: figureOf(relativeRow),
-    // One measure's row would only repeat the headline
-    byPolicy: byPolicy.length >= 2 ? byPolicy : [],
+    policiesHeading: listed ? (shownMeasure ? OTHER_POLICIES_HEADING : PACKAGE_PARTS_HEADING) : null,
+    byPolicy: listed ? byPolicy : [],
+    unchanged: listed ? unchanged : [],
     note: disclosureNote(state.row),
   };
+}
+
+/** The headline as one line: "−£150 · −0.21% of income". */
+export function headlineText(card) {
+  const parts = [];
+  if (card.average) parts.push(card.average.text);
+  if (card.relative) parts.push(`${card.relative.text} of income`);
+  return parts.join(" · ");
 }
 
 /**
@@ -243,17 +313,15 @@ export function seatCard({ feature, state, table, regional, reform, year, outcom
  */
 export function cardLines(card) {
   const lines = [];
-  if (card.average) {
-    lines.push({ kind: "value", text: card.average.text, direction: card.average.direction });
-    lines.push({ kind: "label", text: "Average household impact" });
+  if (card.average || card.relative) {
+    const lead = card.average ?? card.relative;
+    lines.push({ kind: "value", text: headlineText(card), direction: lead.sign });
+    lines.push({ kind: "label", text: card.label ?? "Average household impact" });
   }
-  if (card.relative) {
-    lines.push({ kind: "value", text: card.relative.text, direction: card.relative.direction });
-    lines.push({ kind: "label", text: "Relative change" });
-  }
-  if (card.byPolicy.length) {
-    lines.push({ kind: "detail", text: "By policy:" });
+  if (card.policiesHeading) {
+    lines.push({ kind: "detail", text: card.policiesHeading });
     card.byPolicy.forEach((row) => lines.push({ kind: "detail", text: `${row.name}: ${row.text}` }));
+    if (card.unchanged.length) lines.push({ kind: "detail", text: unchangedLine(card.unchanged.length) });
   }
   if (card.note) lines.push({ kind: "note", text: card.note });
   if (card.region) lines.push({ kind: "region", text: card.region });

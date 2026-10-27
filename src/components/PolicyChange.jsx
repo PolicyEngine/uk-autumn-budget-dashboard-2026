@@ -221,7 +221,7 @@ function BeforeAfter({ row, tone }) {
         </div>
         <ArrowRight className="pchg-ba-arrow" size={20} aria-label="becomes" />
         <div className="pchg-tile is-after">
-          <span className="pchg-tile-name">With the measure</span>
+          <span className="pchg-tile-name">With the policy</span>
           <span className="pchg-tile-value"><CountUpText text={formatValue(point.after, unit)} /></span>
           <span className={`pchg-chip is-${tone}`}>{tileChange(point.before, point.after, unit)}</span>
         </div>
@@ -239,7 +239,7 @@ function ChangeTable({ lines, unit, tone, caption, first }) {
         <tr>
           <th scope="col">{first}</th>
           <th scope="col">Current law</th>
-          <th scope="col">With the measure</th>
+          <th scope="col">With the policy</th>
           <th scope="col"><span className="policy-sr-only">Change</span></th>
         </tr>
       </thead>
@@ -265,7 +265,7 @@ const plotCaption = (row) => (row.unit_words ? `${row.label}, ${row.unit_words}`
 const Key = () => (
   <p className="pchg-key" aria-hidden="true">
     <span className="pchg-key-before">Current law</span>
-    <span className="pchg-key-after">With the measure</span>
+    <span className="pchg-key-after">With the policy</span>
   </p>
 );
 

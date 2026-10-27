@@ -3,8 +3,10 @@
 // `uk-budget-data living-standards` (src/uk_budget_data/living_standards/;
 // shape in docs/DATA_CONTRACT.md).
 
+import { OUTLOOK_URL_FILE, takeEarlyResponse } from "../publication/early";
+
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
-export const OUTLOOK_PATH = "/data/living_standards_outlook.json";
+export const OUTLOOK_PATH = `/data/${OUTLOOK_URL_FILE}`;
 
 let cached = null;
 
@@ -14,7 +16,11 @@ let cached = null;
  */
 export function loadOutlook() {
   if (!cached) {
-    cached = fetch(`${BASE}${OUTLOOK_PATH}`)
+    const url = `${BASE}${OUTLOOK_PATH}`;
+    // A link to the Pre-measures forecast requested it from the document
+    // head (publication/early.js); a failed early request is retried
+    const early = takeEarlyResponse(url);
+    cached = (early ? early.then((r) => (r.ok ? r : fetch(url)), () => fetch(url)) : fetch(url))
       .then((r) => {
         if (!r.ok) throw new Error(`${OUTLOOK_PATH}: HTTP ${r.status}`);
         return r.json();

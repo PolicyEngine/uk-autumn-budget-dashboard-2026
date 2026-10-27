@@ -99,7 +99,13 @@ describe("the personal impact form", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Your household" })).toBeInTheDocument();
     // No spaced capitals: the essentials in one grid, then More details
     expect(screen.queryByRole("heading", { level: 3, name: "You" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: "More details" })).toBeInTheDocument();
+    // More details' header: its title alone as the heading, an "Optional"
+    // tag beside it and one line under it, in the section it names
+    const more = screen.getByRole("region", { name: "More details" });
+    expect(within(more).getByRole("heading", { level: 3, name: "More details" })).toBeInTheDocument();
+    expect(within(more).getByText("Optional")).toHaveClass("household-more-tag");
+    expect(within(more).getByText("Each starts at a typical value for a household like yours.")).toBeInTheDocument();
+    expect(screen.queryByText(/^Optional: each starts/)).not.toBeInTheDocument();
     // More details: four groups, each closed at first and saying what it holds
     for (const title of DETAIL_GROUPS) expect(groupToggle(title)).toHaveAttribute("aria-expanded", "false");
     expect(groupToggle("Other income")).toHaveTextContent("None");
@@ -206,15 +212,29 @@ describe("the personal impact form", () => {
   it("starts every answer at its default, with the sources said", () => {
     renderForm();
     expect(value("Salary in 2026")).toBe(DEFAULT_SALARY);
-    expect(screen.getByText(/UK median salary in April 2026 \(ONS Annual Survey of Hours and Earnings/)).toBeInTheDocument();
+    expect(screen.getByText(/UK median salary in April 2026 \(Source: ONS Annual Survey of Hours and Earnings/)).toBeInTheDocument();
     expect(value("Rent")).toBe(REGIONAL_RENT.NORTH_WEST);
-    expect(screen.getByText(/average private rent in North West \(ONS, September 2026\)/)).toBeInTheDocument();
-    // A long note is the box's description, behind an "i" by its label
+    expect(screen.getByText(/average private rent in North West \(Source: ONS, September 2026\)/)).toBeInTheDocument();
+    // A long note is the box's description, behind the info icon by its label
     expect(box("Rent")).toHaveAccessibleDescription(/average private rent in North West/);
     expect(screen.getByRole("button", { name: "About Rent" })).toBeInTheDocument();
     openMore();
     expect(chosen("Student loan plan")).toBe("No loan");
     expect(value("Petrol")).toBe(DEFAULT_SPENDING.petrol);
+    // The form's info icons are the dashboard's one InfoTip: lucide's Info,
+    // its note in the shared white tip card, opened on focus or a tap
+    const petrolInfo = screen.getByRole("button", { name: "About Petrol" });
+    expect(petrolInfo).toHaveClass("info-tip");
+    expect(petrolInfo.querySelector("svg.lucide-info")).not.toBeNull();
+    expect(petrolInfo).not.toHaveTextContent("i");
+    expect(box("Petrol")).toHaveAccessibleDescription(/average household's spending \(Source: ONS Family Spending, 2024-25\)/);
+    fireEvent.keyDown(document, { key: "Tab" });
+    fireEvent.focus(petrolInfo);
+    expect(screen.getByRole("tooltip")).toHaveClass("tip");
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Prefilled with the average household's spending (Source: ONS Family Spending, 2024-25).");
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    expect(document.querySelector(".info-icon, .info-icon-wrapper, .info-tooltip")).toBeNull();
     expect(value("Diesel")).toBe(DEFAULT_SPENDING.diesel);
     expect(chosen("Universal Credit")).toBe("Yes");
     // Only the answers the household calculation reads
@@ -349,18 +369,24 @@ describe("the personal impact form", () => {
   });
 
   it("scrolls to the form when Your household opens it, its first box focused", async () => {
-    const scrollIntoView = vi.fn();
-    const original = Element.prototype.scrollIntoView;
-    Element.prototype.scrollIntoView = scrollIntoView;
+    // The page's scroll (utils/pageScroll): the form's top, 16px below the bars
+    const scrollTo = vi.fn();
+    const original = window.scrollTo;
+    window.scrollTo = scrollTo;
     try {
       render(<HouseholdCalculator />);
+      const form = () => screen.queryByRole("form", { name: "Your household" });
+      const rect = Element.prototype.getBoundingClientRect;
+      vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function () {
+        return this === form() ? { top: 900, bottom: 1400, height: 500 } : rect.call(this);
+      });
       fireEvent.click(yoursCard());
-      await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
-      expect(scrollIntoView.mock.instances[0]).toBe(screen.getByRole("form", { name: "Your household" }));
-      expect(scrollIntoView.mock.calls[0][0]).toMatchObject({ block: "start" });
+      await waitFor(() => expect(scrollTo).toHaveBeenCalled());
+      expect(scrollTo.mock.calls[0][0]).toMatchObject({ top: 900 - 16 });
       expect(document.activeElement).toBe(box("Age"));
     } finally {
-      Element.prototype.scrollIntoView = original;
+      window.scrollTo = original;
+      vi.restoreAllMocks();
     }
   });
 

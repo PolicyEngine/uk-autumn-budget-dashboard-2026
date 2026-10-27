@@ -18,10 +18,6 @@
   padding: 0 max(40px, calc((100vw - 1120px) / 2));
   background: var(--pe-surface);
   border-bottom: 1px solid var(--card-border);
-  /* Choosing a sub-tab brings the panel's top back to just under the band;
-     SubTabs.jsx reads this: the height of the bars above it. That scroll
-     goes up, which brings the site nav back, so its full height counts. */
-  scroll-margin-top: calc(var(--site-nav-height, 0px) + var(--title-row-height) + var(--view-tabs-height));
 }
 
 /* Stuck, the view tabs and the band are one compact bar */

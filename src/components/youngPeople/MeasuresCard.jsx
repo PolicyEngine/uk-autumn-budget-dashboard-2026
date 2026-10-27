@@ -14,6 +14,7 @@ import { pensionerMeasures } from "../pensioners/pensionersData";
 import { NoEffectList } from "../personal/PolicyBars";
 import { AGE_METHOD } from "../methodology/anchors";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
+import { noEffectRow } from "../../utils/legendMembership";
 import "./MeasureDumbbell.css";
 import TitleIcon from "../TitleIcon";
 
@@ -200,12 +201,11 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     legendItems: GROUPS.map((group) => ({ color: group.color, label: group.label, type: "rect" })),
   };
   const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
-  // No effect: in the card's About this chart, each with its colour. No reason
-  // per measure: a list of them by id would be a measure list of the page's
-  // own (the catalogue carries none)
+  // No effect: in the card's About this chart, each by its short name, and
+  // when it is in force where that is not this year
   const noEffectItems = noEffect.map((policy) => ({
     ...policy,
-    color: byId.get(policy.id)?.color,
+    ...noEffectRow(byId.get(policy.id) ?? policy, Number(selectedYear)),
   }));
   const csvText = () =>
     buildChartCsv({

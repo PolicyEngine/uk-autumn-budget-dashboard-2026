@@ -28,18 +28,9 @@ from uk_budget_data.reforms import (
 )
 
 # Factual reasons only: what was checked, never survey-level values.
+# The employer NI relief for under-25s is withdrawn (27 October 2026) and
+# unregistered, so it has no reason: nothing drafts it.
 REASONS = {
-    "employer_ni_relief_under_25s": (
-        "Checked budget_measures.employer_ni_relief_ages_21_to_24 against "
-        "HMRC's 2026-27 employer rates and thresholds: it zero-rates "
-        "employer Class 1 NI between the secondary threshold and the upper "
-        "secondary threshold (the upper earnings limit) for employees aged "
-        "21 to 24 from April 2027, changes only ni_class_1_employer, and "
-        "leaves earnings fixed. Apprentices are not identified in the data "
-        "and under-21s are charged in full by the engine (policyengine-uk "
-        "#2505); both are stated in the measure's notes. The receipt's "
-        "outputs were compared with issue #111's checks."
-    ),
     "plan_2_threshold_unfreeze": (
         "Checked budget_measures.connect_student_loan_repayments, applied "
         "on both sides: it replaces reported Plan 2 repayments with "

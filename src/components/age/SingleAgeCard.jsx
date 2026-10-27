@@ -7,7 +7,7 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import { TOOLTIP_PROPS } from "../ChartTooltip";
 import ChartMoreInfo from "../ChartMoreInfo";
 import ControlBar from "../ControlBar";
-import { measureOpacity, useMeasureKey } from "../MeasureKey";
+import { SectionMeasureKey, measureOpacity, useMeasureKey } from "../MeasureKey";
 import Note from "../Note";
 import NoBreakYear from "../NoBreakYear";
 import TitleIcon from "../TitleIcon";
@@ -39,7 +39,7 @@ const CSV_UNITS =
 const GROUP_FILL = CHART_COLOURS.highlightBand;
 const SHOW_OPTIONS = [
   { value: "net", label: "Net change", summary: "Net change" },
-  { value: "measures", label: "Each measure", summary: "By measure" },
+  { value: "measures", label: "Each policy", summary: "By policy" },
 ];
 
 /** "+£12", "−£8", "£0": a change in pounds with a true minus. */
@@ -109,7 +109,7 @@ function AgeTooltip({ active, payload, nameOf, byMeasure }) {
  * section's measure key highlights them). One axis for every year, so Play
  * shows the change between years.
  */
-export default function SingleAgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height, group = PENSIONERS, extraOptions = [], title: titleBase = "Change by single year of age" }) {
+export default function SingleAgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height, group = PENSIONERS, extraOptions = [], title: titleBase = "Change by single year of age", keyInLegend = false }) {
   const chartRef = useRef(null);
   const [show, setShow] = useState("net");
   const byMeasure = show === "measures";
@@ -318,6 +318,8 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
             </span>
           </span>
         )}
+        {/* By age: the section's shared key, in this legend row */}
+        {published && key.shared && keyInLegend && <SectionMeasureKey placement="card" />}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -336,7 +338,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
                 `One bar per single year of age, ${window[0]} to ${window[1] >= 90 ? "90 and over" : window[1]}: the sum of each selected policy's own effect.`,
                 "The line averages the five ages centred on each one, as single ages rest on few survey records.",
                 showSpa && `The dashed line marks State Pension age (${spa} in ${yearLabel}); pensioners are the ages from it.`,
-                "Each measure shows every selected measure's own part at each age, stacked.",
+                "Each policy shows every selected policy's own part at each age, stacked.",
               ],
               method: AGE_METHOD,
             }}

@@ -57,20 +57,32 @@
   color: var(--pe-gray-400);
 }
 
-/* Definitions: each term in semibold on its own line, its meaning muted below */
+/* A point's own points (the policies with no effect): open circles, close under their lead */
+.info-list.info-sublist {
+  margin-top: 2px;
+  list-style: circle;
+}
+
+.info-text > div > .info-list.info-sublist {
+  list-style: disc;
+}
+
+/* Definitions: compact rows, the term in semibold, a dash, then its meaning */
 .info-terms {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
   margin: 0;
 }
 
 .info-term dt {
+  display: inline;
   font-weight: 600;
   color: var(--pe-gray-800);
 }
 
 .info-term dd {
+  display: inline;
   margin: 0;
   color: var(--pe-gray-600);
 }
@@ -83,11 +95,6 @@
 .info-date,
 .info-source-note {
   color: var(--pe-gray-600);
-}
-
-.info-sources {
-  list-style: none;
-  padding-left: 0;
 }
 
 /* "More in Methodology:" the card's section and its shared terms, last */
@@ -108,19 +115,4 @@
 
 .info-method a:hover {
   text-decoration: underline;
-}
-
-/* The measures with no effect, as one caveat: tighter rows, no rules */
-.info-caveats .no-effect-list {
-  padding-top: 2px;
-}
-
-.info-caveats .no-effect-item {
-  padding: 1px 0;
-  border-bottom: none;
-}
-
-.info-caveats .no-effect-title {
-  font-size: inherit;
-  color: inherit;
 }

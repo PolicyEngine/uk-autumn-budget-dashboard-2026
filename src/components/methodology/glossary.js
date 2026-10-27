@@ -57,13 +57,13 @@ export const GLOSSARY = {
     meaning: "In results by age, each person counts their whole household's change, averaged over the people in the group.",
   },
   ownRuns: {
-    term: "Measures run on their own",
+    term: "Policies run on their own",
     meaning:
-      "Each measure simulated alone against current law; adding these up leaves out how measures interact.",
+      "Each policy simulated alone against current law; adding these up leaves out how policies interact.",
   },
   static: {
     term: "Static estimates",
-    meaning: "People do not change their behaviour in response to a measure: work, spending and wages stay as they were.",
+    meaning: "People do not change their behaviour in response to a policy: work, spending and wages stay as they were.",
   },
   benefitUnit: {
     term: "Benefit unit",

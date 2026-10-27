@@ -161,19 +161,19 @@ export function scatterView({ data, selectedIds, policyIds, year, packageId, foc
     size,
   });
   if (choice.kind === "none") {
-    return notice("Select a measure to see household results.");
+    return notice("Select a policy to see household results.");
   }
   if (choice.kind === "pick") {
-    return notice("Household results are not yet published for the selected measures.");
+    return notice("Household results are not yet published for the selected policies.");
   }
   if (choice.kind === "no-package") {
     return notice(
-      "Household results for all the measures together are not published yet.",
-      "Select one measure to see its households. Groups of households are published for each measure on its own and cannot be added up across measures.",
+      "Household results for all the policies together are not published yet.",
+      "Select one policy to see its households. Groups of households are published for each policy on its own and cannot be added up across policies.",
     );
   }
   if (!reforms.includes(choice.reform)) {
-    return notice("Household results are not yet published for this measure.");
+    return notice("Household results are not yet published for this policy.");
   }
   const bins = SCATTER_BINS;
   const cellsIn = (wanted) =>
@@ -194,7 +194,7 @@ export function scatterView({ data, selectedIds, policyIds, year, packageId, foc
   const points = cellsIn(year);
   if (points.length === 0) {
     return notice(
-      `No household results are published for this measure in ${fiscalYearLabel(year)}.`,
+      `No household results are published for this policy in ${fiscalYearLabel(year)}.`,
     );
   }
   const basisYear = data.rows.find(

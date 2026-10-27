@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import MeasureRowLabel from "./MeasureRowLabel";
 import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import "./PolicySelector.css";
 import { ListChecks } from "lucide-react";
@@ -26,8 +27,12 @@ const DIRECTION_ORDER = ["revenue", "cost", "neutral"];
  * @param {string} [props.inactiveReason] - Why the policies do not change the
  *   view shown: the pill stays in place, faded, does not open; the reason
  *   is in its accessible name only (no visible tip)
+ * @param {(ids: string[]) => void} [props.onPoliciesSet] - Sets the whole
+ *   selection at once (Select all, Clear). One call, never a run of
+ *   toggles: a toggle handler reads the selection of its render, so a run of
+ *   them kept only the last (Select all and Clear changed one policy).
  */
-function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicyToggle, disabledReason, loading = false, noneReason, inactiveReason }) {
+function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicyToggle, onPoliciesSet, disabledReason, loading = false, noneReason, inactiveReason }) {
   const { displayable } = useMeasureCatalogue();
   const policies = (providedPolicies ?? displayable).filter(
     (policy) => policy.displayable !== false,
@@ -65,6 +70,25 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
   }, [isExpanded]);
 
   const selectedCount = selectedPolicies.length;
+  const ids = policies.map((policy) => policy.id);
+  const allSelected = ids.every((id) => selectedPolicies.includes(id));
+  const noneSelected = !ids.some((id) => selectedPolicies.includes(id));
+  const selectAllRef = useRef(null);
+  const clearRef = useRef(null);
+  // After Select all or Clear, focus goes to the other button once the
+  // selection has re-rendered (it may have been disabled at the click)
+  const focusNext = useRef(null);
+  useEffect(() => {
+    const next = focusNext.current;
+    focusNext.current = null;
+    if (next?.current && !next.current.disabled) next.current.focus();
+  });
+  // The whole selection in one update; without onPoliciesSet, one toggle per
+  // policy that changes (a handler that accumulates them)
+  const setAll = (next) => {
+    if (onPoliciesSet) onPoliciesSet(next);
+    else ids.filter((id) => selectedPolicies.includes(id) !== next.includes(id)).forEach((id) => onPolicyToggle(id));
+  };
   const none = !loading && policies.length === 0;
   const reason = disabledReason ?? (none ? noneReason ?? "No policies are published yet" : undefined);
   const disabled = loading || Boolean(reason);
@@ -144,8 +168,7 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
                       checked={selectedPolicies.includes(policy.id)}
                       onChange={() => onPolicyToggle(policy.id)}
                     />
-                    <span className="policy-swatch" style={{ background: policy.color }} aria-hidden="true" />
-                    <span className="policy-selector-name">{shortNameOf(policy)}</span>
+                    <MeasureRowLabel tip={false} measure={policy} name={shortNameOf(policy)} nameClassName="policy-selector-name" />
                   </label>
                   {summary && <InfoTip content={summary} label={`About ${shortNameOf(policy)}`} />}
                 </div>
@@ -155,23 +178,29 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
           {/* Select all, clear and close: on a phone the list fills the
               screen, so it needs its own way out */}
           <div className="policy-selector-actions">
+            {/* The button just used goes disabled, so focus moves to the
+                other one rather than dropping to the page */}
             <button
+              ref={selectAllRef}
               type="button"
               className="policy-selector-action"
-              disabled={selectedCount === policies.length}
-              onClick={() =>
-                policies.filter((p) => !selectedPolicies.includes(p.id)).forEach((p) => onPolicyToggle(p.id))
-              }
+              disabled={allSelected}
+              onClick={() => {
+                focusNext.current = clearRef;
+                setAll(ids);
+              }}
             >
               Select all
             </button>
             <button
+              ref={clearRef}
               type="button"
               className="policy-selector-action"
-              disabled={selectedCount === 0}
-              onClick={() =>
-                policies.filter((p) => selectedPolicies.includes(p.id)).forEach((p) => onPolicyToggle(p.id))
-              }
+              disabled={noneSelected}
+              onClick={() => {
+                focusNext.current = selectAllRef;
+                setAll([]);
+              }}
             >
               Clear
             </button>

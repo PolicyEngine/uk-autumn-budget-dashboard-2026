@@ -84,7 +84,7 @@ describe("labels", () => {
     const measure = { kind: "measure", reform: "fuel_duty_freeze" };
     const pkg = { kind: "package", reform: "autumn_budget_2026_combined" };
     expect(choiceLabel(measure, POLICIES)).toBe("Fuel duty freeze extension");
-    expect(choiceLabel(pkg, POLICIES)).toBe("All measures (the full package)");
+    expect(choiceLabel(pkg, POLICIES)).toBe("All policies (the full package)");
     expect(choiceMeasureNames(pkg, POLICIES)).toEqual(
       POLICIES.map((policy) => policy.name),
     );

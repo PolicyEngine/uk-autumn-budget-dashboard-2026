@@ -52,10 +52,10 @@ describe("Growth across the distribution, with the selected measures", () => {
     expect(await screen.findByText(WITH_MEASURES_TITLE)).toBeTruthy();
     // The header holds only the twin link; "with the measures" is in About
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
-    expect(screen.getByText(/with the measures less without them, in percentage points/)).toBeTruthy();
+    expect(screen.getByText(/with the policies less without them, in percentage points/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "twin" })).toBeTruthy();
     expect(screen.getAllByText(/Difference from current law/).length).toBeGreaterThan(0);
-    expect(document.querySelector(".chart-description").textContent).toMatch(/^The measures (barely )?change income growth/);
+    expect(document.querySelector(".chart-description").textContent).toMatch(/^The policies (barely )?change income growth/);
   });
 
   it("says so, with no chart, when the measure does not move HBAI income", async () => {

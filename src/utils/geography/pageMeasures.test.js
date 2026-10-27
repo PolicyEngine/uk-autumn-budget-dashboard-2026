@@ -128,7 +128,7 @@ describe("the page's measures in the constituency views", () => {
     expect(catalogue.combinedId).toBe(COMBINED);
     const { choice, view } = await show(catalogue, IDS);
     expect(choiceLabel(choice, catalogue.displayable)).toBe(
-      "All measures (the full package)",
+      "All policies (the full package)",
     );
     expect(view).toMatchObject({ kind: "rows", reform: COMBINED });
   });
@@ -139,7 +139,7 @@ describe("the page's measures in the constituency views", () => {
       layerTable(IDS.filter((id) => id !== BETA)),
     );
     expect((await show(catalogue, [BETA])).view.reason).toBe(
-      "Results by constituency are not yet published for this measure.",
+      "Results by constituency are not yet published for this policy.",
     );
     // With no package published, every measure selected shows one measure
     // at a time (the Measure picker), never the held one nor a sum
