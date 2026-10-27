@@ -180,14 +180,13 @@ export function measureOrder(data, catalogue) {
 // Chart metadata for export
 const CHART_TITLE = "Revenue impact";
 const CHART_DESCRIPTION =
-  `Change in government revenue each year, £bn. Above zero raises revenue; below zero costs the Treasury.`;
+  `Change in government revenue each year, £bn. Above zero raises revenue; below zero costs the government.`;
 
 // The card's "About this chart"
 const REVENUE_INFO = {
   how: [
-    "Above zero the measures raise money; below zero they cost the Treasury.",
+    "Above zero the measures raise money; below zero they cost the government.",
     "The net line adds up the selected measures' separate figures.",
-    "The Plan 2 student loan measure is costed as the change in loan repayments.",
   ],
   method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the measures" },
 };

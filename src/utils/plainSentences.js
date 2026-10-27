@@ -27,7 +27,7 @@ export function decileSentence(data, kind) {
   if (ends.some((v) => v == null || !Number.isFinite(v))) return null;
   const [low, high] = ends;
   if (kind === "relative") {
-    return `On average the lowest-income tenth ${percentVerb(low)}, and the highest-income tenth ${percentVerb(high).replace(" of its net income", "")}.`;
+    return `Taken together, the lowest-income tenth ${percentVerb(low)}, and the highest-income tenth ${percentVerb(high).replace(" of its net income", "")}.`;
   }
   return `On average the lowest-income tenth ${poundsVerb(low, " a year")}, and the highest-income tenth ${poundsVerb(high, "")}.`;
 }
