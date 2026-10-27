@@ -182,7 +182,7 @@ code {
   --c-gain-text: #0f766e; /* a gain written as text */
   --c-loss: #d97706; /* worse off, fall in income */
   --c-loss-text: #b45309; /* a loss written as text */
-  --c-loss-soft: #fdf0e1; /* a loss chip's background */
+  --c-loss-soft: #fef4e8; /* a loss chip's background (loss text on it: 4.6:1, WCAG 1.4.3) */
   --c-loss-border: #fde68a; /* a loss banner's border */
   --c-no-change: #9ca3af; /* unchanged */
   --c-before: #9ca3af; /* before the Budget, pre-Budget, baseline, outturn */
@@ -2674,7 +2674,9 @@ body {
 .pchg-tile-name {
   font-size: var(--fs-micro);
   font-weight: 500;
-  color: var(--pe-gray-500);
+  /* Grey 600: grey 500 on the tiles' tints is 4.2 to 4.5:1, under the
+     4.5 WCAG 1.4.3 needs; 600 is 6.5:1 or more */
+  color: var(--pe-gray-600);
 }
 
 .pchg-tile-value {

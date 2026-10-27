@@ -1646,7 +1646,8 @@
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--pe-surface);
-  background: var(--pe-teal-500);
+  /* Teal 700, not 500: white on it is 5.5:1 (on 500, 3.5; WCAG 1.4.3) */
+  background: var(--pe-teal-700);
   border: none;
   border-radius: var(--pe-radius-md);
   cursor: pointer;
@@ -1654,7 +1655,7 @@
 }
 
 .calculate-button:hover:not(:disabled) {
-  background: var(--pe-teal-700);
+  background: var(--pe-teal-800);
 }
 
 .calculate-button:active:not(:disabled) {
@@ -1719,7 +1720,8 @@
   font-weight: 600;
   letter-spacing: 0.8px;
   text-transform: uppercase;
-  color: var(--pe-gray-400);
+  /* Grey 500, not 400: 4.8:1 on white (WCAG 1.4.3 needs 4.5) */
+  color: var(--pe-gray-500);
 }
 
 .household-subgroup-label {
@@ -1812,7 +1814,7 @@
   margin: 6px 0 0;
   font-size: 0.7rem;
   line-height: 1.3;
-  color: var(--pe-gray-400);
+  color: var(--pe-gray-500); /* 4.8:1 on white, as WCAG 1.4.3 needs */
 }
 
 /* A number: one 40px box holding £, the number, its unit and the − and +
@@ -2103,7 +2105,7 @@
   font-weight: 400;
   letter-spacing: normal;
   text-transform: none;
-  color: var(--pe-gray-400);
+  color: var(--pe-gray-500); /* 4.8:1 on white, as WCAG 1.4.3 needs */
 }
 
 .household-more-chevron {

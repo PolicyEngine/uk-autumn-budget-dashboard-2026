@@ -227,7 +227,7 @@
 
 .programme-table .change.is-zero {
   font-weight: 400;
-  color: var(--pe-gray-400);
+  color: var(--pe-gray-500); /* 4.8:1 on white, as WCAG 1.4.3 needs */
 }
 
 .programme-detail td {

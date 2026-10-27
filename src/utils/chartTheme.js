@@ -44,7 +44,7 @@ export const CHART_COLOURS = {
   gainText: "#0F766E",
   loss: "#D97706",
   lossText: "#B45309",
-  lossSoft: "#FDF0E1",
+  lossSoft: "#FEF4E8",
   lossBorder: "#FDE68A",
   noChange: "#9CA3AF",
   before: "#9CA3AF",
