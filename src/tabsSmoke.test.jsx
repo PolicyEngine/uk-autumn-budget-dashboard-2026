@@ -43,7 +43,16 @@ beforeAll(preloadAllViews, 60_000);
 vi.mock("./utils/displayYears", async (original) => {
   const actual = await original();
   const { IN_DATA } = await import("./test/publicationFixture");
-  return { ...actual, DEFAULT_DISPLAY_YEAR: IN_DATA, DISPLAY_YEARS: [...new Set([...actual.DISPLAY_YEARS, IN_DATA])] };
+  // App shows the years yearsForSelection returns and moves a year it does
+  // not offer back to DEFAULT_DISPLAY_YEAR, so the fixture year is added
+  // there too (the real function closes over the real DISPLAY_YEARS)
+  const withFixtureYear = (years) => [...new Set([...years, IN_DATA])];
+  return {
+    ...actual,
+    DEFAULT_DISPLAY_YEAR: IN_DATA,
+    DISPLAY_YEARS: withFixtureYear(actual.DISPLAY_YEARS),
+    yearsForSelection: (rows, selected) => withFixtureYear(actual.yearsForSelection(rows, selected)),
+  };
 });
 
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
