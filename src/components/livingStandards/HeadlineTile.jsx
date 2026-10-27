@@ -116,7 +116,7 @@ export function TileTrend({ rows, name, format, seriesLabel, highlight, dashed =
  * with hrefTip); info: a definition in an info tip; value and caption: the
  * figure and what it is; trend: TileTrend's props; meaning: one line.
  */
-export default function HeadlineTile({ icon: Icon, name, href, hrefTip, info, value, caption, trend, meaning }) {
+export default function HeadlineTile({ icon: Icon, name, href, hrefTip, info, value, valueKind, caption, trend, meaning, meaningKind }) {
   return (
     <div className="forecast-tile">
       <div className="forecast-tile-head">
@@ -141,11 +141,11 @@ export default function HeadlineTile({ icon: Icon, name, href, hrefTip, info, va
         )}
       </div>
       <div>
-        <p className="forecast-tile-value">{typeof value === "string" ? <CountUpText text={value} /> : value}</p>
+        <p className={`forecast-tile-value${valueKind === "text" ? " is-text" : ""}`}>{typeof value === "string" ? <CountUpText text={value} /> : value}</p>
         <p className="forecast-tile-sub">{caption}</p>
       </div>
       <TileTrend name={name} {...trend} />
-      {meaning && <p className="forecast-tile-meaning">{meaning}</p>}
+      {meaning && <p className={`forecast-tile-meaning${meaningKind === "small" ? " is-small" : ""}`}>{meaning}</p>}
     </div>
   );
 }

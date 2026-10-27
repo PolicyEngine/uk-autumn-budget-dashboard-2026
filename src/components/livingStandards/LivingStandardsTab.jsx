@@ -96,7 +96,7 @@ const ID_PREFIX = "outlook";
  * @param {boolean} [props.active] - Whether the view is shown (App keeps it mounted while hidden)
  * @param {(tab: string, sub: string) => void} [props.onShowTab] - Open another view at a sub-tab
  */
-export default function LivingStandardsTab({ active = true, onShowTab }) {
+export default function LivingStandardsTab({ active = true, onShowTab, selectedYear = null }) {
   const outlook = useOutlook();
   const [sub, setSub] = useSubTabParam(SUB_TAB_VALUES, active);
   // Sub-tabs opened so far stay mounted, hidden while another is shown
@@ -133,7 +133,7 @@ export default function LivingStandardsTab({ active = true, onShowTab }) {
                 {data?.forecast && <ForecastPanel forecast={data.forecast} data={data} onShowTab={onShowTab} />}
               </>
             ) : (
-              <CurrentLawSection id={value} outlook={outlook} onShowTab={onShowTab} />
+              <CurrentLawSection id={value} outlook={outlook} onShowTab={onShowTab} selectedYear={selectedYear} />
             )}
           </div>
         </SubTabPanel>

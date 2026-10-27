@@ -566,16 +566,20 @@ describe("the Pre-measures forecast view", () => {
     expect(document.body.textContent.match(/unvalidated/gi)).toHaveLength(1);
   });
 
-  it("hides the year and policy pills but keeps the band's layout", async () => {
+  it("keeps the year and policy pills in the band, faded and inactive, as they do not change it", async () => {
     window.history.replaceState({}, "", "/?tab=outlook");
     const { container } = render(<App />);
     await screen.findByRole("tablist", { name: "Views" });
     for (const selector of [".band-year", ".band-policy"]) {
       const pill = band(container).querySelector(selector);
-      // Still in the band, holding its place, but hidden and out of reach
-      expect(pill).toHaveClass("is-hidden");
-      expect(pill).toHaveAttribute("aria-hidden", "true");
-      expect(pill).toHaveAttribute("inert");
+      // Still in the band and visible, so the band never moves; faded, and
+      // its button says it does not change this tab
+      expect(pill).not.toHaveClass("is-hidden");
+      expect(pill).not.toHaveAttribute("aria-hidden");
+      expect(pill).not.toHaveAttribute("inert");
+      expect(pill).toHaveClass("is-inactive");
+      expect(pill.querySelector(".band-control")).toHaveAttribute("aria-disabled", "true");
+      expect(pill.querySelector(".band-control").getAttribute("aria-label")).toMatch(/change this tab/);
     }
     expect(screen.getByRole("tab", { name: "Pre-measures forecast" })).toHaveAttribute(
       "aria-selected",

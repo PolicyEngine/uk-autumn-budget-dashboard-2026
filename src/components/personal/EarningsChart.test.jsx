@@ -1,3 +1,4 @@
+import { chooseOption, optionsLabel } from "../../test/optionsPills";
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import EarningsChart from "./EarningsChart";
@@ -58,15 +59,12 @@ const hover = () => {
 };
 
 describe("EarningsChart", () => {
-  it("is one card with a Before / After / Change switch, as the marginal rate card, After first", () => {
-    render(<EarningsChart sweep={sweep} salary={35000} yearLabel="2027-28" />);
+  it("is one card with Before / After / Change in its Options pill, as the marginal rate card, After first", () => {
+    const { container } = render(<EarningsChart sweep={sweep} salary={35000} yearLabel="2027-28" />);
     expect(screen.getAllByRole("heading")).toHaveLength(1);
     expect(screen.getByRole("heading", { name: "Household net income, 2027-28" })).toBeInTheDocument();
-    const group = screen.getByRole("group", { name: "Net income view" });
-    expect(group.closest(".chart-controls")).not.toBeNull();
-    expect(screen.getByRole("button", { name: "Before" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: "After" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Change" })).toHaveAttribute("aria-pressed", "false");
+    expect(container.querySelector(".chart-controls .control-bar-button")).not.toBeNull();
+    expect(optionsLabel(container)).toBe("After");
     expect(document.querySelector("svg.earnings-svg").dataset.view).toBe("after");
   });
 
@@ -76,14 +74,14 @@ describe("EarningsChart", () => {
     expect(document.querySelector(".earnings-layer")).toBeNull();
     expect(document.querySelector(".earnings-you")).toHaveTextContent("You");
     expect(hover()).toMatch(/Net income after/);
-    fireEvent.click(screen.getByRole("button", { name: "Before" }));
+    chooseOption(document.body, "Before");
     expect(screen.getByText("Before the selected policies")).toBeInTheDocument();
     expect(screen.queryByText("After the selected policies")).not.toBeInTheDocument();
   });
 
   it("without the parts, change: the gain and loss key, the change alone in the tooltip", () => {
     render(<EarningsChart sweep={sweep} salary={35000} yearLabel="2027-28" />);
-    fireEvent.click(screen.getByRole("button", { name: "Change" }));
+    chooseOption(document.body, "Change");
     expect(document.querySelector("svg.earnings-svg").dataset.view).toBe("change");
     expect(screen.getByText("Higher net income")).toBeInTheDocument();
     expect(document.querySelector(".earnings-you")).toHaveTextContent("You");
@@ -119,7 +117,7 @@ describe("EarningsChart", () => {
 
   it("with the parts, change: only the programmes the policies change", () => {
     render(<EarningsChart sweep={stackedSweep} salary={35000} yearLabel="2027-28" />);
-    fireEvent.click(screen.getByRole("button", { name: "Change" }));
+    chooseOption(document.body, "Change");
     const drawn = [...document.querySelectorAll(".earnings-layer")].map((path) => path.dataset.layer);
     expect(drawn).toEqual(["income_tax"]);
     expect(document.querySelector(".chart-legend")).toHaveTextContent("Change in net income");

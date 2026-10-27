@@ -55,7 +55,7 @@ const SECTION_IDS = { living: "current-law-incomes", poverty: "current-law-pover
  * @param {{loading: boolean, data: Object|null, error: string|null}} props.outlook
  * @param {(tab: string, sub: string) => void} [props.onShowTab] - Open the twin
  */
-export default function CurrentLawSection({ id, outlook, onShowTab }) {
+export default function CurrentLawSection({ id, outlook, onShowTab, selectedYear = null }) {
   const { loading, data, error } = outlook;
   const section = SECTIONS[id];
   const rows = data
@@ -82,7 +82,7 @@ export default function CurrentLawSection({ id, outlook, onShowTab }) {
             {rows.map((row, i) => (
               <div key={i} className="charts-grid">
                 {row.map((S, j) => (
-                  <S key={j} data={data} onShowTab={onShowTab} />
+                  <S key={j} data={data} onShowTab={onShowTab} selectedYear={selectedYear} />
                 ))}
               </div>
             ))}

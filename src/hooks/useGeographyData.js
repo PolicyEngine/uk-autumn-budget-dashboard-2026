@@ -22,7 +22,10 @@ import { parseGeographyTable } from "../utils/geography/parse";
  * file's answer.
  */
 
-export const BOUNDARIES_FILE = "uk_constituencies_2024.geojson";
+// The 2024 boundaries as TopoJSON: the GeoJSON's shapes on a 12 m grid with
+// the four properties the page reads, a sixth of its size gzipped, drawn the
+// same at the map's size and zoom (data_inputs/public_data_review.csv)
+export const BOUNDARIES_FILE = "uk_constituencies_2024.topo.json";
 
 /**
  * Whether the release routes results by area, as uk_budget_data.area_routing
@@ -117,7 +120,14 @@ export async function loadBoundaries({
     if (!response.ok) {
       return failure("error", `${BOUNDARIES_FILE}: HTTP ${response.status}`);
     }
-    const geojson = await response.json();
+    const body = await response.json();
+    // TopoJSON is decoded to features here, with its decoder loaded only now
+    let geojson = body;
+    if (body?.type === "Topology" && body.objects && typeof body.objects === "object") {
+      const { feature } = await import("topojson-client");
+      const objects = Object.values(body.objects);
+      geojson = objects.length === 1 ? feature(body, objects[0]) : null;
+    }
     if (!Array.isArray(geojson?.features)) {
       return failure("error", `${BOUNDARIES_FILE}: not a feature collection`);
     }
@@ -216,8 +226,24 @@ function entryFor(key, name, catalogue) {
   return entry;
 }
 
+const keyFor = (name, catalogue) => `${basePath()}|${name}|${catalogue?.manifest?.snapshotSha256 ?? catalogue?.manifest?.revision ?? "none"}`;
+
+/**
+ * Start loading the map's files before any view asks for them (the page's
+ * idle prefetch), under the keys the views read, through the same checks.
+ */
+export function prefetchGeography(catalogue) {
+  if (!catalogue?.manifest) return;
+  entryFor(keyFor("routing", catalogue), "routing", catalogue);
+  const published = publishedFiles();
+  for (const name of ["constituency", "regional"]) {
+    if (!published || published.includes(FILES[name].file)) entryFor(keyFor(name, catalogue), name, catalogue);
+  }
+  entryFor(keyFor("boundaries", undefined), "boundaries", undefined);
+}
+
 function useCachedResource(name, catalogue) {
-  const key = `${basePath()}|${name}|${catalogue?.manifest?.snapshotSha256 ?? catalogue?.manifest?.revision ?? "none"}`;
+  const key = keyFor(name, catalogue);
   const subscribe = useCallback(
     (onChange) => {
       const entry = entryFor(key, name, catalogue);

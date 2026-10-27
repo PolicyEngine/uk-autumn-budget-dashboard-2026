@@ -1403,14 +1403,6 @@
   min-width: 0;
 }
 
-/* The subtitle and the hints, on one line where they fit */
-.household-yours-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-}
-
 .household-yours-title {
   font-size: 1.15rem;
   font-weight: 700;
@@ -1423,26 +1415,6 @@
   font-size: var(--fs-small);
   line-height: 1.45;
   color: var(--band-ink);
-}
-
-.household-yours-hints {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.household-yours-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 1px 9px 1px 7px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  line-height: 1.4;
-  color: var(--band-ink);
-  background: var(--band-ink-hover);
-  border: 1px solid var(--band-ink-border);
-  border-radius: 999px;
 }
 
 .household-yours-side {
@@ -1558,11 +1530,6 @@
 
   .household-yours-title {
     font-size: 1.05rem;
-  }
-
-  /* On a phone the hints go: the subtitle says enough */
-  .household-yours-hints {
-    display: none;
   }
 
   .household-yours-side {
@@ -2250,4 +2217,35 @@
 /* The form, scrolled to from "Your household": clear of the sticky bars */
 .household-form {
   scroll-margin-top: calc(var(--sticky-offset, 120px) + 12px);
+}
+
+/* "Show all households", at the start of the folded strip: a filled teal
+   secondary button, plain to see */
+.household-cards-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 10px 3px;
+  padding: 7px 14px 7px 11px;
+  font: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--pe-teal-700);
+  background: var(--pe-teal-50);
+  border: 1px solid var(--pe-teal-300);
+  border-radius: var(--pe-radius-md);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.household-cards-back:hover {
+  background: var(--pe-teal-100);
+  border-color: var(--pe-teal-600);
+}
+
+.household-cards-back:focus-visible {
+  outline: 2px solid var(--pe-teal-600);
+  outline-offset: 2px;
 }

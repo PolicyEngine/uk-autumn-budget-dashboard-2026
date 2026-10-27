@@ -1,5 +1,5 @@
-/* The band's home button (HomeButton.jsx): a translucent circle in the
-   family of the Year and Measures pills */
+/* PolicyEngine's white mark left of the title (TitleMark), and the
+   overview's rail button (EdgeAboutTab), in HomeButton.jsx */
 .title-head {
   grid-area: title;
   display: flex;
@@ -8,47 +8,16 @@
   min-width: 0;
 }
 
-.title-row .home-button {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  color: var(--band-ink);
-  /* A light tint on the band, brighter than the pills, so it reads */
-  background: var(--band-ink-active);
-  border: 1px solid var(--band-ink-border-hover);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background-color var(--landing-motion) ease, border-color var(--landing-motion) ease;
-}
-
-.title-row .home-button:hover,
-.title-row .home-button[aria-current="page"] {
-  background: color-mix(in srgb, var(--band-ink) 28%, transparent);
-  border-color: var(--band-ink);
-}
-
-/* The square mark, whole and undistorted */
-.home-button-mark {
+/* The mark, decoration only */
+.title-mark {
   display: block;
-  width: 22px;
-  height: 22px;
+  flex: none;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
 }
 
-.title-row .home-button[aria-current="page"] {
-  cursor: default;
-}
-
-.title-row .home-button:focus-visible {
-  outline: 2px solid var(--band-ink);
-  outline-offset: 2px;
-}
-
-/* Its tip, as a mini card above the band */
+/* The edge tab's tip, as a mini card */
 .tip:has(> .home-tip) {
   z-index: 1200;
   max-width: 260px;
@@ -83,19 +52,130 @@
     gap: 10px;
   }
 
-  .title-row .home-button {
-    width: 34px;
-    height: 34px;
+  .title-mark {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* The "About" rail (EdgeAboutTab): the left margin of the view tabs bar
+   and any sub-tab band, white like them, flush to the window's edge and to
+   the title band above, their full height (EdgeAboutTab sets its top and
+   height from them, stuck or not), with a rule on its right. In it, a
+   small "About" pill with the PolicyEngine mark, centred. Over the bar
+   (1090), under the title band (1100) */
+.edge-about {
+  position: fixed;
+  left: 0;
+  top: var(--title-row-height);
+  z-index: 1095;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: var(--view-tabs-height);
+  padding: 0;
+  color: var(--pe-teal-700);
+  background: var(--c-surface);
+  border: 0;
+  border-right: 1px solid var(--card-border);
+  cursor: pointer;
+}
+
+.edge-about-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px 5px 7px;
+  background: var(--pe-teal-50);
+  border: 1px solid var(--pe-teal-200);
+  border-radius: 999px;
+  transition: background-color var(--landing-motion) ease, border-color var(--landing-motion) ease;
+}
+
+.edge-about:hover .edge-about-pill {
+  background: var(--pe-teal-100);
+  border-color: var(--pe-teal-500);
+}
+
+.edge-about:focus {
+  outline: none;
+}
+
+.edge-about:focus-visible .edge-about-pill {
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  border-color: var(--pe-teal-500);
+}
+
+.edge-about-mark {
+  display: block;
+  width: 15px;
+  height: 15px;
+}
+
+.edge-about-label {
+  font-family: var(--pe-font-family);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* The bar and band make room for it where their margin is narrower */
+.app:has(.edge-about) .view-tabs-bar,
+.app:has(.edge-about) .sub-tabs-band {
+  padding-left: max(84px, calc((100vw - 1120px) / 2));
+}
+
+/* Hidden while the overview drawer is open: the drawer's own close
+   button, Esc and the backdrop close it */
+.edge-about[aria-expanded="true"] {
+  visibility: hidden;
+}
+
+/* Once a session: two soft pulses of the pill, so it is seen */
+.edge-about.is-cue .edge-about-pill {
+  animation: edge-about-cue 1.4s ease-in-out 0.8s 2;
+}
+
+@keyframes edge-about-cue {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--focus-ring);
+  }
+  50% {
+    box-shadow: 0 0 0 6px var(--focus-ring);
+  }
+}
+
+/* On a phone: a 32px circle with the mark */
+@media (max-width: 768px) {
+  .edge-about {
+    width: 44px;
   }
 
-  .home-button-mark {
-    width: 20px;
-    height: 20px;
+  .edge-about-pill {
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+  }
+
+  .edge-about-label {
+    display: none;
+  }
+
+  .app:has(.edge-about) .view-tabs-bar,
+  .app:has(.edge-about) .sub-tabs-band {
+    padding-left: 48px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .title-row .home-button {
+  .edge-about-pill {
     transition: none;
+  }
+
+  .edge-about.is-cue .edge-about-pill {
+    animation: none;
   }
 }

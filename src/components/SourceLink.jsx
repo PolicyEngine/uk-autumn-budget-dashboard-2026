@@ -2,7 +2,7 @@ import { EXTERNAL, SOURCES } from "../utils/sources";
 
 /**
  * A named source as a link to its page (src/utils/sources.js), opened in a
- * new tab; plain text while the page does not exist yet. `children`
+ * new tab (and says so to a screen reader); plain text while the page does not exist yet. `children`
  * replaces the source's own label as the anchor text.
  */
 export default function SourceLink({ source, children }) {
@@ -13,6 +13,7 @@ export default function SourceLink({ source, children }) {
   return (
     <a href={entry.url} {...EXTERNAL}>
       {text}
+      <span className="policy-sr-only"> (opens in a new tab)</span>
     </a>
   );
 }
