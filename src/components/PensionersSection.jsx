@@ -67,7 +67,7 @@ import {
 import { isPublished, singleAgeKey } from "../utils/ageImpact";
 import { DISPLAY_YEARS } from "../utils/displayYears";
 import { chartMotion, netDot } from "../utils/chartMotion";
-import { formatShare, visibleSegments } from "../utils/shareFormat";
+import { formatShare, shareDecimals, visibleSegments } from "../utils/shareFormat";
 import {
   legendMembership,
   exportLegendItems,
@@ -520,13 +520,16 @@ function SplitTick({ x, y, payload, data, narrow }) {
   // Two right-aligned columns, ▲ then ▼, ending at the axis's right edge
   // (Recharts puts x 8px into the axis), as the dumbbell's value column
   const end = x - 8 + (narrow ? SPLIT_WIDTH_NARROW : SPLIT_WIDTH);
+  // One precision per column, across every row drawn
+  const better = shareDecimals(data.map((point) => point.real.pct_better_off));
+  const worse = shareDecimals(data.map((point) => point.real.pct_worse_off));
   return (
     <text y={y} dominantBaseline="middle" fontSize={narrow ? 12 : 13} fill={CHART_COLOURS.tick} style={{ fontVariantNumeric: "tabular-nums" }}>
       <tspan x={end - SPLIT_COLUMN} textAnchor="end">
-        <tspan fill={CHART_COLOURS.gain}>▲</tspan> {formatShare(row.real.pct_better_off)}
+        <tspan fill={CHART_COLOURS.gain}>▲</tspan> {formatShare(row.real.pct_better_off, better)}
       </tspan>
       <tspan x={end} textAnchor="end">
-        <tspan fill={CHART_COLOURS.loss}>▼</tspan> {formatShare(row.real.pct_worse_off)}
+        <tspan fill={CHART_COLOURS.loss}>▼</tspan> {formatShare(row.real.pct_worse_off, worse)}
       </tspan>
     </text>
   );
