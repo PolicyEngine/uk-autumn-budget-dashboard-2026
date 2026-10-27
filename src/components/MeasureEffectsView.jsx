@@ -91,7 +91,7 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
             <tbody>
               {rows.map((m) => (
                 <tr key={m.id}>
-                  <th scope="row" title={m.fullName ?? m.name}>
+                  <th scope="row">
                     <MeasureRowLabel measure={byId?.get(m.id) ?? { id: m.id, name: m.fullName ?? m.name, color: m.colour }} name={m.name} colour={m.colour} />
                   </th>
                   {years.map((year) => {
@@ -126,7 +126,7 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
                 tabIndex={0}
                 aria-label={`${m.fullName ?? m.name}: ${signed(m.value)}`}
               >
-                <span className="mev-label" role="rowheader" title={m.fullName ?? m.name}>
+                <span className="mev-label" role="rowheader">
                   <MeasureRowLabel measure={byId?.get(m.id) ?? { id: m.id, name: m.fullName ?? m.name, color: m.colour }} name={m.name} colour={m.colour} />
                 </span>
                 <span className="mev-track" role="cell">
@@ -147,7 +147,7 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
               tabIndex={0}
               aria-label={`${m.fullName ?? m.name}: ${m.value === null ? "not published" : `no change, ${reasonOf(m)}`}`}
             >
-              <span className="mev-label" role="rowheader" title={m.fullName ?? m.name}>
+              <span className="mev-label" role="rowheader">
                 <MeasureRowLabel measure={byId?.get(m.id) ?? { id: m.id, name: m.fullName ?? m.name, color: m.colour }} name={m.name} colour={m.colour} />
               </span>
               {/* No bar: "No change" and why, across the track and value columns */}

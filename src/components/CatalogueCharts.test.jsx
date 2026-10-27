@@ -238,7 +238,7 @@ describe("published measure catalogue in population views", () => {
     expect(screen.queryByText(/directly affected:/)).not.toBeInTheDocument();
     const shares = container.querySelector(".young-people-shares");
     expect(shares.querySelector('[data-testid="chart-rows"]')).toBeNull();
-    const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("title"));
+    const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("aria-label"));
     expect(names.length).toBeGreaterThan(0);
     expect(names.every((name) => [catalogue.byId.get(ALPHA), catalogue.byId.get(BETA)].some((m) => [m.label, m.name].includes(name)))).toBe(true);
     // the average change and trend cards still chart (the measures card is a
@@ -259,7 +259,7 @@ describe("published measure catalogue in population views", () => {
     // The combined run is refused: no package shares, only each measure's own
     expect(screen.getByText(/each selected policy on its own/)).toBeInTheDocument();
     const shares = container.querySelector(".young-people-shares");
-    const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("title"));
+    const names = [...shares.querySelectorAll(".msc [role='rowheader']")].map((node) => node.getAttribute("aria-label"));
     const alpha = catalogue.byId.get(ALPHA);
     // Alpha has no supported figures this year, so it draws no row
     expect(names.some((name) => [alpha.label, alpha.name].includes(name))).toBe(false);

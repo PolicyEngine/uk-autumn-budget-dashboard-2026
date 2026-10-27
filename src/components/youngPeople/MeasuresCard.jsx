@@ -100,8 +100,10 @@ export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, year
             onBlur={() => setActive(null)}
             aria-label={`${row.name}: ${groupName} ${signedPounds(row.group)}, ${compareName.toLowerCase()} ${signedPounds(row.all)} a year`}
           >
-            <span className="measure-dumbbell-name" role="rowheader" title={row.name}>
-              <MeasureRowLabel measure={byId.get(row.id) ?? { id: row.id, name: row.name }} />
+            {/* The row's one tip is its tooltip below (full name as its
+                heading): no title or name tip of its own */}
+            <span className="measure-dumbbell-name" role="rowheader">
+              <MeasureRowLabel measure={byId.get(row.id) ?? { id: row.id, name: row.name }} tip={false} />
             </span>
             <span className="measure-dumbbell-plot" role="cell" aria-hidden="true">
               {ticks.map((tick) => (
@@ -115,21 +117,8 @@ export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, year
             </span>
             <span className="measure-dumbbell-values" role="cell">
               <strong className="row-band-value">{money(row.group)}</strong>
-              {/* In a narrow plot's card the chip is "▲ +£18" or "≈ same"
-                  (MeasureDumbbell.css), so the plot keeps its room; the
-                  row's name and tooltip still say what it is compared with */}
-              <span className={`measure-dumbbell-gap ${tone}`} title={close ? `About the same as ${compareName.toLowerCase()}` : `${signed(gap)} vs ${compareName.toLowerCase()}`}>
-                {close ? (
-                  <>
-                    ≈ <span className="measure-dumbbell-gap-vs">{compareName.toLowerCase()}</span>
-                    <span className="measure-dumbbell-gap-short">same</span>
-                  </>
-                ) : (
-                  <>
-                    {`${gap > 0 ? "▲" : "▼"} ${signed(gap)}`}
-                    <span className="measure-dumbbell-gap-vs"> vs {compareName.toLowerCase()}</span>
-                  </>
-                )}
+              <span className={`measure-dumbbell-gap ${tone}`}>
+                {close ? `≈ ${compareName.toLowerCase()}` : `${gap > 0 ? "▲" : "▼"} ${signed(gap)} vs ${compareName.toLowerCase()}`}
               </span>
             </span>
             {active === row.id && (

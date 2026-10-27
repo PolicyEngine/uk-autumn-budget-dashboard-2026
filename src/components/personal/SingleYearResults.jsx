@@ -339,7 +339,8 @@ function AboutResult({ items, caution, bars, totals }) {
               </h4>
               <ul className="result-no-effect-chips">
                 {noEffect.map((item) => (
-                  <li key={item.id} className="result-no-effect-chip" title={item.name}>
+                  // The why tip is the chip's one tip: the native title only without it
+                  <li key={item.id} className="result-no-effect-chip" title={item.reason ? undefined : item.name}>
                     {item.label ?? item.name}
                     {item.reason && <InfoTip content={shortReason(item.reason)} label={`Why ${item.name} has no effect`} />}
                   </li>

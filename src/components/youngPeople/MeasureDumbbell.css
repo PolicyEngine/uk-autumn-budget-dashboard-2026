@@ -2,14 +2,13 @@
    (the chosen group) on one £ axis, the group's value and gap at the right.
    One type scale with its pair (Better and worse off): row labels and
    values at the caption size, the gap line and axis ticks at 12px, as
-   every Recharts axis (TICK_STYLE). In a narrow card (half a pair) the
-   name wraps in about a quarter of the width and the value column holds
-   the value over a short chip ("▲ +£18"), so the plot has room for its
-   ticks (over 260px at 1280); the numbers still end on the card's right
-   edge, level with the pair's. */
+   every Recharts axis (TICK_STYLE). In a wide card each row is one line
+   (name, plot, value and gap); in a narrower one (half a pair, under
+   720px) the name and category take a line across the card and the plot
+   and value share the line below (the stacked rules at the end). */
 .measure-dumbbell {
-  --md-label: clamp(120px, 27%, 200px);
-  --md-values: 72px;
+  --md-label: 200px;
+  --md-values: 112px;
   --md-gap: 12px;
   --md-cols: var(--md-label) minmax(0, 1fr) var(--md-values);
   position: relative;
@@ -160,7 +159,7 @@
   container-type: inline-size;
 }
 
-@container (min-width: 600px) {
+@container (min-width: 720px) {
   .measure-dumbbell-row {
     grid-template-columns: var(--md-label) minmax(0, 1fr) 172px;
   }
@@ -174,33 +173,6 @@
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
-  }
-}
-
-/* The chip's "vs all ages" (or "≈ all ages"): in a wide card and on a
-   phone, where the value column has room; "▲ +£18" or "≈ same" in a
-   narrow card */
-.measure-dumbbell-gap-vs {
-  display: none;
-}
-
-@container (min-width: 600px) {
-  .measure-dumbbell-gap-vs {
-    display: inline;
-  }
-
-  .measure-dumbbell-gap-short {
-    display: none;
-  }
-}
-
-@media (max-width: 600px) {
-  .measure-dumbbell-gap-vs {
-    display: inline;
-  }
-
-  .measure-dumbbell-gap-short {
-    display: none;
   }
 }
 
@@ -378,5 +350,154 @@
 @media (min-width: 1025px) {
   .charts-grid:has(> div + div) > div:not(:has(> .chart-controls)) > .chart-plot:has(> .measure-dumbbell) {
     grid-row: 3 / span 2;
+  }
+}
+
+/* A narrower card (half a pair, under 720px), not a phone: each row is a
+   header line across the card (icon, the full name and its category on
+   one line) over the plot strip, with the value and its gap at the
+   strip's right; rows 12px apart. The axis lines up with the strip. Who
+   is in poverty keeps its own columns (LivingStandards.css). */
+@media (min-width: 601px) {
+  @container (max-width: 719px) {
+    /* (A container query styles what is inside the dumbbell, not the
+       dumbbell itself: the column width is set on each row and the unit) */
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-row,
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-unit {
+      --md-values: 148px;
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row + .measure-dumbbell-row {
+      margin-top: 12px;
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-row {
+      grid-template-columns: minmax(0, 1fr) var(--md-values);
+      grid-template-areas:
+        "name name"
+        "plot values";
+      row-gap: 4px;
+      padding: 8px 10px;
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-name {
+      grid-area: name;
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-plot {
+      grid-area: plot;
+      min-height: 36px;
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-values {
+      grid-area: values;
+    }
+
+    /* The name and its category on one line; the category drops below
+       where both do not fit, and the name ends in "…" only if it alone is
+       too long */
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .mrl {
+      width: 100%;
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .mrl-text {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: baseline;
+      column-gap: 8px;
+      white-space: nowrap;
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .mrl-name {
+      display: block;
+      flex: 0 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .mrl-caption {
+      flex: none;
+    }
+
+    /* The axis: the strip's columns, no name line */
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-axis {
+      margin-top: 4px;
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-axis .measure-dumbbell-row {
+      grid-template-areas: "plot values";
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-axis .measure-dumbbell-name {
+      display: none;
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-axis .measure-dumbbell-plot {
+      min-height: 22px;
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-unit {
+      padding-left: 10px;
+      padding-right: calc(10px + var(--md-values) + var(--md-gap));
+    }
+
+    .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-tip {
+      left: 10px;
+    }
+  }
+}
+
+/* Phones: the same header line (icon, full name and category on one
+   line, the category below where both do not fit), then the value and its gap, then the plot across the full width;
+   rows 12px apart */
+@media (max-width: 600px) {
+  .measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row + .measure-dumbbell-row {
+    margin-top: 12px;
+  }
+
+  .measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "name"
+      "values"
+      "plot";
+    row-gap: 4px;
+    padding: 8px 10px;
+  }
+
+  .measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row .measure-dumbbell-values {
+    justify-content: flex-start;
+    padding-left: 32px;
+  }
+
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .mrl {
+    width: 100%;
+  }
+
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .mrl-text {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 8px;
+    white-space: nowrap;
+  }
+
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .mrl-name {
+    display: block;
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .mrl-caption {
+    flex: none;
+  }
+
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-axis .measure-dumbbell-row {
+    padding: 0 10px;
   }
 }

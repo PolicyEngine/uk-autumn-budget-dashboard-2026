@@ -169,8 +169,9 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
                   />,
                 )}
               >
-                {/* The short name; the full one in the tooltip */}
-                <span className="waterfall-name" title={row.name !== name ? row.name : undefined}>
+                {/* The short name; the full one in the row's tooltip (its
+                    only tip: no native title) */}
+                <span className="waterfall-name">
                   {name}
                 </span>
                 <span className="waterfall-track" aria-hidden="true">
