@@ -21,16 +21,10 @@ import { formatOneDp } from "../../../utils/livingStandards/outlook";
 import { buildChartCsv } from "../../../utils/chartCsv";
 import { CSV_SOURCES, ForecastSource, forecastSourceText, forecastSources } from "../sources";
 import { METHOD_ANCHORS } from "../../methodology/anchors";
-import PriceCategoriesCard from "../PriceCategoriesCard";
-import PaySectorsCard from "../PaySectorsCard";
 
-// Each section's card of ONS history, drawn beside its forecast card: prices
-// by spending category beside the inflation measures, pay growth by sector
-// beside earnings and other income
-const HISTORY_CARDS = {
-  "Inflation and price indices": PriceCategoriesCard,
-  "Income and earnings": PaySectorsCard,
-};
+// A section's extra card, drawn beside its forecast card in the shared pair
+// (keyed by the forecast section's title); none at present
+const HISTORY_CARDS = {};
 
 // CPI after housing costs and social rent are not OBR series
 const NOT_OBR = {
@@ -235,9 +229,7 @@ function cardsFor(section) {
 
 /**
  * One section per forecast group, under its heading: one card a row, or two
- * side by side. The prices group pairs the inflation measures with the ONS
- * prices by spending category, and the pay group earnings and other income
- * with the ONS pay growth by sector.
+ * side by side, with a section's extra card (HISTORY_CARDS) beside its own.
  */
 export default function ForecastSeriesSection({ data, view, onViewChange }) {
   const forecast = data.forecast;
