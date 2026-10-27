@@ -127,9 +127,11 @@ export function changeByYear(rows, policies, selected, years) {
 export function niceRange(min, max, { maxSteps = 5 } = {}) {
   const low = Math.min(0, min);
   const high = Math.max(0, max);
-  const span = Math.max(high - low, 1);
   const steps = [25, 50, 100, 200, 250, 500, 1000, 2500];
-  const step = steps.find((candidate) => span / candidate <= maxSteps) ?? 5000;
+  // Counted after rounding the ends out, so −100 to 700 is not drawn in
+  // five steps of 200 when four are asked for
+  const step =
+    steps.find((candidate) => Math.ceil(high / candidate - 1e-9) - Math.floor(low / candidate + 1e-9) <= maxSteps) ?? 5000;
   const bottom = Math.floor(low / step) * step;
   const top = Math.ceil(high / step) * step;
   const ticks = [];

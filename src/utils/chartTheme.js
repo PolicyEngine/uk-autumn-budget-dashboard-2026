@@ -578,6 +578,89 @@ export function sweepAxis(max) {
   return { domain: [0, top], ticks };
 }
 
+/** Text width without a canvas: close enough for 12–13px system sans. */
+export const approxTextWidth = (text, fontSize = 12) => String(text).length * fontSize * 0.56;
+
+// One canvas for measuring tick labels in the page's own font
+let measureContext;
+/**
+ * A label's width in px in the page's font, measured on a canvas in a
+ * browser ("−£250" is wider than its five characters suggest); the
+ * estimate (approxTextWidth) on the server and in tests.
+ */
+export function tickTextWidth(text, fontSize = 12) {
+  if (typeof document === "undefined" || /jsdom/i.test(globalThis.navigator?.userAgent ?? "")) {
+    return approxTextWidth(text, fontSize);
+  }
+  if (measureContext === undefined) measureContext = document.createElement("canvas").getContext("2d") ?? null;
+  if (!measureContext) return approxTextWidth(text, fontSize);
+  measureContext.font = `${fontSize}px ${getComputedStyle(document.body).fontFamily}`;
+  return measureContext.measureText(String(text)).width;
+}
+
+// Round multipliers (1, 2 or 5 x 10^n; 2.5 is never a whole number of
+// steps): a thinned axis labels every second, fifth or tenth tick
+const isRound = (value) => {
+  const mantissa = value / 10 ** Math.floor(Math.log10(value) + 1e-9);
+  return [1, 2, 2.5, 5, 10].some((m) => Math.abs(mantissa - m) < 1e-6);
+};
+
+/**
+ * The tick labels that fit a plot `plotWidth` px wide: from the round
+ * `ticks` (an even step over `domain`), every tick if the labels clear one
+ * another by `minGap` px, otherwise every second, fifth … (a round step,
+ * 0 always kept), so "−£200 £0 £200 £400 £600 £800" in a narrow plot
+ * becomes "−£200 £0 £400 £800". An end of the domain off the coarser step
+ * keeps its label only where it, too, clears its neighbour. Labels are
+ * centred on their tick, or, with `inside`, the first starts at its tick
+ * and the last ends at its tick. `keep` (0 unless given, as 100 on a % of
+ * the official costing axis) is always labelled where it is a tick.
+ * Unmeasured (plotWidth 0), every tick.
+ *
+ * @param {number[]} ticks - Round ticks at one step, ascending
+ * @param {[number, number]} domain - The axis's ends
+ * @param {number} plotWidth - The plot's width in px
+ * @param {(tick: number) => string} format - A tick's label
+ * @returns {number[]} The ticks to label (and draw a gridline at)
+ */
+export function fitTicks(ticks, domain, plotWidth, format, { minGap = 12, fontSize = 12, inside = false, keep = 0 } = {}) {
+  if (!plotWidth || ticks.length < 2) return ticks;
+  const [lo, hi] = domain;
+  const x = (value) => ((value - lo) / (hi - lo || 1)) * plotWidth;
+  const width = (value) => tickTextWidth(format(value), fontSize);
+  // A label's [left, right] in px
+  const extent = (value, index, count) => {
+    const w = width(value);
+    if (inside && index === 0 && value === ticks[0]) return [x(value), x(value) + w];
+    if (inside && index === count - 1 && value === ticks[ticks.length - 1]) return [x(value) - w, x(value)];
+    return [x(value) - w / 2, x(value) + w / 2];
+  };
+  const fits = (list) =>
+    list.every((value, i) => i === 0 || extent(value, i, list.length)[0] - extent(list[i - 1], i - 1, list.length)[1] >= minGap);
+  const step = ticks[1] - ticks[0];
+  const anchor = ticks.find((tick) => Math.abs(tick - keep) < 1e-9) ?? ticks[0];
+  // The domain's ends, where they clear their neighbours
+  const withEnds = (kept) => {
+    let labelled = kept;
+    for (const end of [ticks[0], ticks[ticks.length - 1]]) {
+      if (labelled.includes(end)) continue;
+      const withEnd = [...labelled, end].sort((a, b) => a - b);
+      if (fits(withEnd)) labelled = withEnd;
+    }
+    return labelled;
+  };
+  for (let m = 1; m < ticks.length; m += 1) {
+    if (!isRound(m)) continue;
+    const kept = ticks.filter((tick) => {
+      const k = (tick - anchor) / (step * m);
+      return Math.abs(k - Math.round(k)) < 1e-6;
+    });
+    if (fits(kept)) return withEnds(kept);
+  }
+  // No round step fits: the kept tick, and an end if it clears it
+  return withEnds([anchor]);
+}
+
 // Width a full fiscal-year tick ("2027-28") needs at 12px, with a gap
 const FISCAL_TICK_WIDTH = 64;
 

@@ -6,7 +6,8 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import UnpublishedPlot from "../UnpublishedPlot";
 import NoBreakYear from "../NoBreakYear";
 import Note from "../Note";
-import { fiscalYearTick, CHART_COLOURS, noHouseholdChange } from "../../utils/chartTheme";
+import { fiscalYearTick, CHART_COLOURS, fitTicks, noHouseholdChange } from "../../utils/chartTheme";
+import useElementWidth from "../../hooks/useElementWidth";
 import ControlBar from "../ControlBar";
 import { AGE_BANDS, ALL_BAND, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
 import { measureComparison, niceRange, pounds, signedPounds } from "./youngPeopleData";
@@ -44,8 +45,9 @@ const signed = (value) => (value < 0 ? `\u2212${pounds(-value)}` : `+${pounds(va
 export const money = (value) => (Math.round(value) < 0 ? `\u2212${pounds(-value)}` : pounds(value));
 
 /**
- * At most four intervals on the £ axis (−£200, −£100, £0, £100), so the
- * tick labels never run together in the card's narrow plot.
+ * At most four intervals on the £ axis (−£200, −£100, £0, £100); the
+ * dumbbell then labels only the ticks its measured plot has room for
+ * (chartTheme.fitTicks).
  */
 export const DUMBBELL_MAX_STEPS = 4;
 
@@ -55,9 +57,12 @@ export const DUMBBELL_MAX_STEPS = 4;
  * coloured by which is larger; the group's value and its gap to all ages at
  * the right. Hovering or focusing a row shows both values and the ratio.
  */
-export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, height, compareName = "All ages" }) {
+export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, yearLabel, height, compareName = "All ages" }) {
   const { byId } = useMeasureCatalogue();
   const [active, setActive] = useState(null);
+  // The ticks whose labels fit the plot (always £0); gridlines at the same
+  const [plotRef, plotWidth] = useElementWidth();
+  const ticks = fitTicks(allTicks, domain, plotWidth, money);
   const [lo, hi] = domain;
   const pos = (value) => `${((value - lo) / (hi - lo)) * 100}%`;
   return (
@@ -134,7 +139,7 @@ export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, hei
       <div className="measure-dumbbell-axis" aria-hidden="true">
         <div className="measure-dumbbell-row">
           <span className="measure-dumbbell-name" />
-          <span className="measure-dumbbell-plot">
+          <span className="measure-dumbbell-plot" ref={plotRef}>
             {ticks.map((tick) => (
               <span key={tick} className="measure-dumbbell-tick" style={{ left: pos(tick) }}>
                 {money(tick)}

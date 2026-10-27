@@ -10,7 +10,7 @@
 import { useRef, useState } from "react";
 import LsCard from "../LsCard";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../../FloatingTooltip";
-import { CHART_COLOURS } from "../../../utils/chartTheme";
+import { CHART_COLOURS, fitTicks } from "../../../utils/chartTheme";
 import { CHART_LOGO } from "../../../utils/chartLogo";
 import { povertyMeasureOptions } from "../PovertyMeasurePills";
 import ControlBar from "../../ControlBar";
@@ -201,7 +201,9 @@ export default function WhoIsInPovertySection({ data }) {
     .sort((x, y) => (y.z ?? y.a) - (x.z ?? x.a));
   const allValue = b.all(measure);
   const values = [...rows.flatMap((r) => [r.a, r.z]), allValue].filter((v) => v != null);
-  const axis = niceAxis(Math.max(...values));
+  const roundAxis = niceAxis(Math.max(...values));
+  // Only the ticks whose labels fit the measured plot (always 0%)
+  const axis = { ...roundAxis, ticks: fitTicks(roundAxis.ticks, roundAxis.domain, plotWidth, (t) => `${t}%`) };
   const [x0, x1] = axis.domain;
   const scale = (v) => ((v - x0) / (x1 - x0)) * 100;
   const pos = (v) => `${scale(v)}%`;
