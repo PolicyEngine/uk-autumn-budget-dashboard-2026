@@ -95,8 +95,9 @@ export const SOURCES = {
     label: "Microcosm",
     url: "https://github.com/PolicyEngine/microcosm",
   },
-  // Microcosm's own site, and PolicyEngine's page on how Microcosm UK is
-  // built, stage by stage (both checked 27 October 2026)
+  // Microcosm's own site, and PolicyEngine's pages on how Microcosm UK is
+  // built, stage by stage, and on its calibration targets (all checked 27
+  // October 2026). The targets page names the release it lists.
   microcosm_site: {
     label: "Microcosm",
     url: "https://microcosm.institute",
@@ -104,6 +105,10 @@ export const SOURCES = {
   uk_data_pipeline: {
     label: "PolicyEngine, UK microdata pipeline",
     url: "https://www.policyengine.org/uk/model/data/pipeline",
+  },
+  uk_calibration_targets: {
+    label: "PolicyEngine, UK calibration targets",
+    url: "https://www.policyengine.org/uk/model/data/calibration",
   },
   // Section 8, Equivalisation: HBAI's modified OECD scale (checked 26 October 2026)
   dwp_hbai_methodology: {
