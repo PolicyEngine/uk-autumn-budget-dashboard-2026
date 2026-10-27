@@ -52,6 +52,64 @@ const forYear = (rows, year) => rows.filter((row) => row.year === Number(year));
 export const isPublished = (rows, year) => forYear(rows ?? [], year).length > 0;
 
 /**
+ * The package run to read in a year: `packageRun` (the published combined
+ * run of exactly the selection, selectionPackageKey) when the rows hold it
+ * for the year, else null.
+ */
+export function packageRunFor(rows, packageRun, year) {
+  if (!packageRun) return null;
+  return (rows ?? []).some((row) => row.reform_id === packageRun && row.year === Number(year)) ? packageRun : null;
+}
+
+/** The notice for several policies whose results by age are not published together. */
+export const COMBINATION_NOT_PUBLISHED = "Results by age for this combination of policies are not published yet.";
+
+/** Why a package's chart has its net but no policy parts. */
+export const PACKAGE_NET_ONLY =
+  "The net change is the whole package's own result. Each policy's part is not shown, as a selected policy has too few survey records by age.";
+
+const usableRow = (row) => Boolean(row) && row.sample_size >= MIN_SAMPLE_SIZE && Number.isFinite(row.mean_change);
+
+const seriesKeyOf = (policy) => policy.seriesKey ?? `measure:${policy.id}`;
+
+/**
+ * The selection rule for a chart of points (one per band or single age)
+ * whose `netChange` sums the selected policies' own rows:
+ *
+ * - a published package (`run`): `netChange` is the package's own row; each
+ *   policy's part stays only when every point has every part (`partsShown`),
+ *   so a stack never sits under a net it does not add up to;
+ * - several policies and no package: when any point lacks a member's row,
+ *   every point is null and `combinationUnavailable` (never half drawn);
+ * - one policy: its own rows, a missing point said as missing.
+ */
+function applySelectionRule(points, { rows, policies, selected, year, run, keyOf }) {
+  if (run) {
+    const yearRows = forYear(rows ?? [], year).filter((row) => row.reform_id === run);
+    const partsShown = points.every((point) => point.netChange !== null && point.netChange !== undefined);
+    return points.map((point) => {
+      const row = yearRows.find((each) => each.age_band === keyOf(point));
+      const usable = usableRow(row);
+      const next = { ...point, incomplete: false, suppressed: !usable, netChange: usable ? row.mean_change : null, fromPackage: true, partsShown };
+      if (!partsShown || !usable) {
+        for (const policy of policies) next[seriesKeyOf(policy)] = null;
+        if (next.parts) next.parts = [];
+      }
+      return next;
+    });
+  }
+  if (new Set(selected).size > 1 && points.some((point) => point.netChange === null || point.netChange === undefined)) {
+    return points.map((point) => {
+      const next = { ...point, incomplete: false, suppressed: false, netChange: null, combinationUnavailable: true };
+      for (const policy of policies) next[seriesKeyOf(policy)] = null;
+      if (next.parts) next.parts = [];
+      return next;
+    });
+  }
+  return points;
+}
+
+/**
  * One point per age band: each selected policy's mean change (keyed by its
  * namespaced id), the net change, and whether the band is too thin to show.
  *
@@ -59,8 +117,26 @@ export const isPublished = (rows, year) => forYear(rows ?? [], year).length > 0;
  * @param {Array<{id: string, name: string}>} policies - Every policy
  * @param {Array<string>} selected - Selected policy ids
  * @param {number} year
+ * @param {string|null} [packageRun] - The published combined run of exactly
+ *   the selection, read under the selection rule (applySelectionRule)
  */
-export function meanChangeByBand(rows, policies, selected, year) {
+export function meanChangeByBand(rows, policies, selected, year, packageRun = null) {
+  const points = sumByBand(rows, policies, selected, year);
+  const run = packageRunFor(rows, packageRun, year);
+  return applySelectionRule(points, { rows, policies, selected, year, run, keyOf: (point) => point.band });
+}
+
+/**
+ * meanChangeByBand's points for any list of single-year points
+ * (`{ label, netChange, parts }`, keyed by the age's row label): the same
+ * selection rule.
+ */
+export function singleAgeSelection(points, { rows, policies, selected, year, packageRun = null }) {
+  const run = packageRunFor(rows, packageRun, year);
+  return applySelectionRule(points, { rows, policies, selected, year, run, keyOf: (point) => point.label });
+}
+
+function sumByBand(rows, policies, selected, year) {
   const yearRows = forYear(rows ?? [], year);
   return AGE_BANDS.map((band) => {
     const point = { band: band.key, label: band.label, short: band.short };

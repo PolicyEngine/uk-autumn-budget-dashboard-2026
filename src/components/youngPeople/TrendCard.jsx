@@ -23,7 +23,7 @@ import {
 } from "../../utils/chartTheme";
 import { DISPLAY_YEARS, NOT_YET_PUBLISHED, useDisplayYears } from "../../utils/displayYears";
 import { X_AXIS_HEIGHT, plotMargin } from "./chartRows";
-import { AGE_GROUPS, ALL_BAND, YOUNG_BAND } from "../../utils/ageImpact";
+import { AGE_GROUPS, ALL_BAND, COMBINATION_NOT_PUBLISHED, PACKAGE_NET_ONLY, YOUNG_BAND } from "../../utils/ageImpact";
 import {
   GROUP_STYLES,
   changeByYear,
@@ -514,10 +514,22 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     () => changeByYear(rows, policies, selectedPolicies, shownYears, packageRun),
     [rows, policies, selectedPolicies, shownYears, packageRun],
   );
-  const focusSeries = useMemo(
-    () => groupSeries(rows, policies, selectedPolicies, shownYears, FOCUS, packageRun),
-    [rows, policies, selectedPolicies, shownYears, FOCUS, packageRun],
-  );
+  const focusSeries = useMemo(() => {
+    const series = groupSeries(rows, policies, selectedPolicies, shownYears, FOCUS, packageRun);
+    // A year the combination is not published by age: no figure for the group either
+    return series.map((point, i) =>
+      bands[i]?.combinationUnavailable ? { year: point.year, published: false, net: null, parts: [] } : point,
+    );
+  }, [rows, policies, selectedPolicies, shownYears, FOCUS, packageRun, bands]);
+  // The package's net with no policy parts (a selected policy withholds its rows by age)
+  const netOnly = focusSeries.some((point) => point.fromPackage && !point.partsShown);
+  const combinationYears = bands.filter((point) => point.combinationUnavailable).map((point) => point.year);
+  // Not one year published for this combination: a notice, not empty axes
+  const combinationEverywhere =
+    combinationYears.length > 0 && bands.every((point) => !point.published || point.combinationUnavailable);
+  const combinationNote = !combinationEverywhere && combinationYears.length
+    ? `${COMBINATION_NOT_PUBLISHED.replace(" yet.", "")} for ${yearList(combinationYears)}.`
+    : null;
   // Pensioners' line from their own series; the bands from the age rows
   const raw = group === PENSIONERS ? bands.map((point, i) => ({ ...point, [PENSIONERS]: focusSeries[i]?.net ?? null })) : bands;
   const groupKeys = SERIES_LIST.map((series) => series.key);
@@ -710,6 +722,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
               (point) => `${fiscalYearTick(point.year)}, too few survey records: ${point.suppressed.map(labelOf).join(", ")}`,
             ),
             ...(missingNote ? [missingNote] : []),
+            ...(combinationNote ? [combinationNote] : []),
           ],
         });
   const download = {
@@ -759,6 +772,11 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         />
       </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
+        {combinationEverywhere ? (
+          <div className="plot-empty" style={{ minHeight: height }} role="status">
+            <p>{COMBINATION_NOT_PUBLISHED}</p>
+          </div>
+        ) : (
         <ResponsiveContainer width="100%" height={height}>
           <ComposedChart data={data} margin={margin} stackOffset="sign" barCategoryGap="28%">
             <CartesianGrid {...GRID_PROPS} />
@@ -895,6 +913,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             )}
           </ComposedChart>
         </ResponsiveContainer>
+        )}
       </div>
       <div className="chart-legend">
         {/* The key, which also shows or hides each line: all age groups one
@@ -934,6 +953,8 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       {/* The same foot as the card beside it, so the pair ends level */}
       <div className="chart-footer">
         {missingNote && <Note>{missingNote}</Note>}
+        {combinationNote && <Note>{combinationNote}</Note>}
+        {byMeasure && netOnly && <Note>{PACKAGE_NET_ONLY}</Note>}
         <ChartMoreInfo
           members={members}
           year={Number(selectedYear)}

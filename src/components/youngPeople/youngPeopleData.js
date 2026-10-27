@@ -66,7 +66,13 @@ export function measureComparison(rows, policies, selected, year, band = YOUNG_B
     if (!selected.includes(policy.id) || policy.displayable === false) continue;
     const group = findRow(rows, policy.id, year, band);
     const all = findRow(rows, policy.id, year, compareBand);
-    if (!group || !all || !Number.isFinite(group.mean_change) || !Number.isFinite(all.mean_change)) continue;
+    // No rows at all this year: nothing to say. All ages but no row for the
+    // group: its bands withheld (too few survey records), said, never dropped
+    if (!group && !all) continue;
+    if (!group || !all || !Number.isFinite(group.mean_change) || !Number.isFinite(all.mean_change)) {
+      if (all && !group) suppressed.push(policy.name);
+      continue;
+    }
     if (group.sample_size < MIN_SAMPLE_SIZE || all.sample_size < MIN_SAMPLE_SIZE) {
       suppressed.push(policy.name);
     } else if (Math.abs(group.mean_change) < NO_EFFECT && Math.abs(all.mean_change) < NO_EFFECT) {
@@ -86,7 +92,9 @@ export function measureComparison(rows, policies, selected, year, band = YOUNG_B
  * the year is too thin is null and listed in `suppressed`; a group with no
  * row for a selected policy in a year it publishes (the generator withholds
  * a policy's age bands when some are too thin to publish, keeping all ages)
- * is null and listed in `missing`, so the card can say so.
+ * is null and listed in `missing`, so the card can say so. With several
+ * policies and no package, such a year is null in every group and
+ * `combinationUnavailable` (never half drawn).
  *
  * @param {Array<Object>} rows
  * @param {Array<{id: string, name: string}>} policies
@@ -133,6 +141,11 @@ export function changeByYear(rows, policies, selected, years, packageRun = null)
       if (thin) point.suppressed.push(group.key);
       else if (incomplete) point.missing.push(group.key);
       if (!thin && !incomplete) point[group.key] = total;
+    }
+    // Several policies with no package: a year drawn whole or not at all
+    if (new Set(selected).size > 1 && (point.suppressed.length || point.missing.length)) {
+      for (const group of AGE_GROUPS) point[group.key] = null;
+      return { ...point, suppressed: [], missing: [], combinationUnavailable: true };
     }
     return point;
   });

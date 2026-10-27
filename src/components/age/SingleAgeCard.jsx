@@ -28,7 +28,8 @@ import {
   barShape,
   fiscalYearTick,
 } from "../../utils/chartTheme";
-import { ALL_BAND, isPublished, singleAgeKey } from "../../utils/ageImpact";
+import { ALL_BAND, COMBINATION_NOT_PUBLISHED, PACKAGE_NET_ONLY, isPublished, singleAgeKey, singleAgeSelection } from "../../utils/ageImpact";
+import { selectionPackageKey } from "../../utils/geography/selection";
 import { useDisplayYears } from "../../utils/displayYears";
 import { legendMembership } from "../../utils/legendMembership";
 import { PENSIONERS, ageWindow, groupAges, groupLabel } from "../../utils/ageGroups";
@@ -120,8 +121,24 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
   const spa = pensionerAge(year);
   const window = ageWindow(group, year);
   const [groupFirst, groupLast] = groupAges(group, year);
-  const ageBars = (each) => smoothByAge(singleAgeBars(rows, policies, selectedPolicies, each, window[0], window[1]));
+  // The selection rule: the published package of exactly the selection
+  // reads its own rows; other combinations draw whole or not at all
+  const packageRun = selectionPackageKey(catalogue?.manifest, selectedPolicies);
+  const ageBars = (each) =>
+    smoothByAge(
+      singleAgeSelection(singleAgeBars(rows, policies, selectedPolicies, each, window[0], window[1]), {
+        rows,
+        policies,
+        selected: selectedPolicies,
+        year: each,
+        packageRun,
+      }),
+    );
   const data = ageBars(year);
+  const combinationUnavailable = data.some((point) => point.combinationUnavailable);
+  // The package's net with no policy parts: drawn as the net bars
+  const netOnly = data.some((point) => point.fromPackage && !point.partsShown);
+  const stacked = byMeasure && !netOnly && !combinationUnavailable;
   const partKeys = [...new Set(data.flatMap((point) => point.parts.map((part) => part.key)))];
   // Round £ ticks from the lowest to the highest in any year shown, through
   // £0, so the scale holds still under Play
@@ -139,16 +156,16 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
     }
     return niceRange(Math.min(...values), Math.max(...values), { maxSteps: 5 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, policies, selectedPolicies, group, byMeasure, shownYears]);
+  }, [rows, policies, selectedPolicies, group, byMeasure, shownYears, packageRun]);
   const members = useMemo(
     () =>
       legendMembership(catalogue, selectedPolicies, (id) =>
         data.some((point) => point.parts.some((part) => part.id === id && Math.abs(part.value) > 0)),
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rows, policies, selectedPolicies, year, group],
+    [rows, policies, selectedPolicies, year, group, packageRun],
   );
-  const key = useMeasureKey(byMeasure ? members : [], byMeasure ? "Net change" : undefined);
+  const key = useMeasureKey(stacked ? members : [], stacked ? "Net change" : undefined);
   const missing = data.filter((point) => point.netChange === null);
   const anyLoss = data.some((point) => (point.netChange ?? 0) < 0);
   const anyGain = data.some((point) => (point.netChange ?? 0) > 0);
@@ -170,7 +187,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
       description,
       logo: CHART_LOGO,
       reservedLegendHeight: 0,
-      legendItems: byMeasure
+      legendItems: stacked
         ? []
         : [
             ...(anyGain ? [{ color: CHART_COLOURS.gain, label: "Gain", type: "rect" }] : []),
@@ -218,6 +235,10 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
       <div ref={chartRef} className="chart-plot young-people-plot">
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
+        ) : combinationUnavailable ? (
+          <div className="plot-empty" style={{ minHeight: height }} role="status">
+            <p>{COMBINATION_NOT_PUBLISHED}</p>
+          </div>
         ) : (
           <ResponsiveContainer width="100%" height={height}>
             <ComposedChart data={data} margin={plotMargin(narrow)} barCategoryGap="12%" stackOffset="sign">
@@ -244,8 +265,8 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
                 axisLine={false}
                 tickLine={false}
               />
-              <Tooltip {...TOOLTIP_PROPS} cursor={HOVER_CURSOR} content={<AgeTooltip nameOf={nameOf} byMeasure={byMeasure} />} />
-              {byMeasure ? (
+              <Tooltip {...TOOLTIP_PROPS} cursor={HOVER_CURSOR} content={<AgeTooltip nameOf={nameOf} byMeasure={stacked} />} />
+              {stacked ? (
                 partKeys.map((each) => (
                   <Bar
                     key={each}
@@ -269,7 +290,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
                 </Bar>
               )}
               <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
-              {!byMeasure && (
+              {!stacked && (
                 <Line
                   type="monotone"
                   dataKey="smooth"
@@ -302,7 +323,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
         )}
       </div>
       <div className="chart-legend">
-        {published && !byMeasure && (
+        {published && !stacked && !combinationUnavailable && (
           <span className="measure-dumbbell-legend age-change-legend">
             {anyGain && (
               <span>
@@ -320,7 +341,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
           </span>
         )}
         {/* By age: the section's shared key, in this legend row */}
-        {published && key.shared && keyInLegend && <SectionMeasureKey placement="card" />}
+        {published && key.shared && keyInLegend && !combinationUnavailable && <SectionMeasureKey placement="card" />}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -328,7 +349,8 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
       </div>
       {published && (
         <div className="chart-footer">
-          {missing.length > 0 && (
+          {netOnly && <Note>{PACKAGE_NET_ONLY}</Note>}
+          {missing.length > 0 && !combinationUnavailable && (
             <Note>Not shown, as too few survey records: ages {missing.map((p) => p.label).join(", ")}.</Note>
           )}
           <ChartMoreInfo
