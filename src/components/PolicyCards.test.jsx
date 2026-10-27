@@ -205,6 +205,16 @@ describe("how it is modelled (measureModelling.js)", () => {
     cleanup();
   });
 
+  it("says the fuel duty figure covers households' own fuel, as a caveat, once", () => {
+    const policy = published("fuel_duty_rise_deferral", "Fuel duty rises deferred");
+    render(<PolicyCards policies={[policy]} selectedPolicies={[policy.id]} />);
+    const details = open();
+    const caveats = details.querySelector(".info-caveats");
+    expect(caveats).toHaveTextContent("vans, lorries and business use of cars is not modelled");
+    expect(details.textContent.match(/lorries/g)).toHaveLength(1);
+    cleanup();
+  });
+
   it("says each caveat once: the details' own words, not the description's again", () => {
     // The Warm Home Discount card's details say it is paid in Great Britain
     // and that eligibility in Scotland is approximate

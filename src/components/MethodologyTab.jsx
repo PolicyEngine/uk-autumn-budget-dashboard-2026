@@ -668,7 +668,7 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.limitations}
           title="Limitations"
-          summary="Most charts add up measures run separately, the economic assumptions follow one OBR forecast, and surveys under-record some incomes."
+          summary="Most charts add up measures run separately, the economic assumptions follow one OBR forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
         >
           <Topic title="Measures added up" preview="Revenue, decile and age charts · Household scatter · Shares better and worse off">
             <p className="method-more">
@@ -685,6 +685,14 @@ function MethodologyTab({ onShowTab }) {
               The economic assumptions and the weights follow the{" "}
               <SourceLink id="obr_efo_current" />. Rebasing them on a new forecast is a separate
               step.
+            </p>
+          </Topic>
+          <Topic title="Business fuel use" preview="Fuel duty on households' own purchases only">
+            <p className="method-more">
+              Fuel duty is modelled on households' own petrol and diesel purchases. Duty on fuel
+              for vans, lorries and business use of cars, roughly half of fuel duty receipts, is
+              not in the model, so the revenue from a change in fuel duty is lower than a full
+              costing would show.
             </p>
           </Topic>
           <Topic title="Survey coverage" preview="Where under-recorded incomes affect a measure">
