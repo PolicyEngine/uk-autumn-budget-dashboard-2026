@@ -2141,10 +2141,12 @@ body {
   color: var(--pe-gray-500);
 }
 
+/* The flag's pole on the dashed Budget line, the word to its right (centred
+   on the line, the line ran through "Budget") */
 .ptl-budget-label {
   position: absolute;
   top: 0;
-  transform: translateX(-50%);
+  transform: translateX(-2px);
   white-space: nowrap;
 }
 
@@ -2304,6 +2306,14 @@ body {
 
 .policy-timeline-labels > span {
   text-align: center;
+}
+
+/* A narrow phone: proportional figures, so "26-27" and "27-28" do not touch */
+@media (max-width: 400px) {
+  .policy-timeline-labels {
+    font-variant-numeric: normal;
+    letter-spacing: -0.01em;
+  }
 }
 
 .policy-timeline-label-short {
@@ -2733,6 +2743,21 @@ body {
   color: var(--pe-gray-900);
 }
 
+/* A narrow phone: the column heads wrap ("With the / measure") and the cells
+   close up, so the change chips stay inside the card (at 360px the threshold
+   freeze's "−£1,060" ran past its edge) */
+@media (max-width: 400px) {
+  .pchg-table thead th {
+    white-space: normal;
+    vertical-align: bottom;
+  }
+
+  .pchg-table th,
+  .pchg-table td {
+    padding-inline: 2px;
+  }
+}
+
 .pchg-more {
   align-self: flex-start;
   min-height: 32px;
@@ -3112,5 +3137,37 @@ body {
   .reveal {
     opacity: 1 !important;
     transform: none !important;
+  }
+}
+
+/* Touch screens: a 40px-tall tap area round the small controls (the info
+   icon, the measure and line chips, the Options pill, the chart/table
+   switch, Show the dates), drawn by an invisible layer so nothing moves.
+   As the household form's info icons (HouseholdCalculator.css). */
+@media (pointer: coarse) {
+  .info-tip,
+  .measure-key-chip,
+  .measure-key-more,
+  .series-toggle-chip,
+  .control-bar-button,
+  .view-toggle-button,
+  .pchg-more {
+    position: relative;
+  }
+
+  .info-tip::before,
+  .measure-key-chip::before,
+  .measure-key-more::before,
+  .series-toggle-chip::before,
+  .control-bar-button::before,
+  .view-toggle-button::before,
+  .pchg-more::before {
+    content: "";
+    position: absolute;
+    inset: min(0px, calc((100% - 40px) / 2)) 0;
+  }
+
+  .info-tip::before {
+    inset: -10px;
   }
 }
