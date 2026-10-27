@@ -7,23 +7,17 @@ import PolicyBars from "./personal/PolicyBars";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import { seatTooltipRows } from "./ConstituencyMap";
 
-const policies = [
-  [
-    "fuel_duty_rise_deferral",
-    {
-      name: "Fuel duty rises deferred",
-      years: {
-        2027: { policyengine: -1.24, obr_static: -1.0, obr_behavioural: -1.1 },
-        2028: { policyengine: -0.31, obr_static: -0.3, obr_behavioural: -0.3 },
-      },
-    },
-  ],
-];
+// comparisonRows() output for two years
+const rowsFor = {
+  2027: [{ id: "fuel_duty_rise_deferral", name: "Fuel duty rises deferred", pe: -1.24, obr: -1.0, obrStatic: -1.0, obrBehavioural: -1.1 }],
+  2028: [{ id: "fuel_duty_rise_deferral", name: "Fuel duty rises deferred", pe: -0.31, obr: -0.3, obrStatic: -0.3, obrBehavioural: -0.3 }],
+};
+const dumbbell = (year) => <OBRDumbbellChart rows={rowsFor[year]} yearLabel={`${year}-${String(year + 1).slice(-2)}`} obrKind="static" tooltipKey={`${year}-false`} />;
 
 describe("tooltips on hand-drawn charts", () => {
-  it("the OBR dumbbell shows PolicyEngine, the OBR and the difference, with the year", () => {
+  it("the official costings dumbbell shows PolicyEngine, the official costing and the difference, with the year", () => {
     const { container, rerender } = render(
-      <OBRDumbbellChart policies={policies} year={2027} showBehavioural={false} />,
+      dumbbell(2027),
     );
     const row = container.querySelector(".obr-dumbbell-row");
     expect(row).toHaveAttribute("tabindex", "0");
@@ -31,10 +25,10 @@ describe("tooltips on hand-drawn charts", () => {
     const tip = screen.getByRole("tooltip");
     expect(tip).toHaveTextContent("Fuel duty rises deferred, 2027-28");
     expect(tip).toHaveTextContent("PolicyEngine (static)−£1.2bn");
-    expect(tip).toHaveTextContent("Official (static)−£1.0bn");
+    expect(tip).toHaveTextContent("Official costing (static)−£1.0bn");
     expect(tip).toHaveTextContent("Difference (PolicyEngine − official)−£0.2bn");
     // A new year (the Play button) clears it: no last year's figures
-    rerender(<OBRDumbbellChart policies={policies} year={2028} showBehavioural={false} />);
+    rerender(dumbbell(2028));
     expect(screen.queryByRole("tooltip")).toBeNull();
     // Keyboard focus shows it too
     fireEvent.focus(container.querySelector(".obr-dumbbell-row"));

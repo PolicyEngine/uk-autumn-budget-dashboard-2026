@@ -39,7 +39,7 @@ import { lazyView, preloadViewCode } from "./utils/lazyView";
 // not with the page: the landing page, the band and the placeholders need
 // none of it. A view whose code has loaded renders at once.
 const BudgetaryImpactChart = lazyView(() => import("./components/BudgetaryImpactChart"));
-const ObrComparisonFoot = lazyView(() => import("./components/OBRComparisonTable"), (m) => m.ObrComparisonFoot);
+const ObrComparisonCard = lazyView(() => import("./components/OBRComparisonTable"), (m) => m.ObrComparisonCard);
 const ConstituencyMap = lazyView(() => import("./components/ConstituencyMap"));
 const DecileImpactCard = lazyView(() => import("./components/DecileImpactCard"));
 const HouseholdScatter = lazyView(() => import("./components/HouseholdScatter"));
@@ -60,7 +60,7 @@ const MethodologyTab = lazyView(() => import("./components/MethodologyTab"));
 
 // The code each view ("tab" or "tab:sub", as bootView names them) needs
 const VIEW_CODE = {
-  "dashboard:finances": [BudgetaryImpactChart, ObrComparisonFoot],
+  "dashboard:finances": [BudgetaryImpactChart, ObrComparisonCard],
   "dashboard:all": [ConstituencyMap, DecileImpactCard, HouseholdScatter],
   "dashboard:age": [AgeSection],
   "dashboard:living": [GrowthWithMeasuresCard, InequalityChart],
@@ -794,13 +794,13 @@ function Dashboard({ published, unavailable = null, updated = false }) {
           />
           <section id="revenue" className="report-section hero-chart">
             <BudgetaryImpactChart data={results.budgetData} before={results.budgetBefore} selectedYear={distributionalYear} selectedPolicies={selectedPolicies} />
-            {/* OBR comparison: an expandable row at the foot of the card
-                once the OBR has costed the measures */}
-            <ObrComparisonFoot
-              selectedPolicies={selectedPolicies}
-              selectedYear={distributionalYear}
-            />
           </section>
+          {/* The official costings beside our estimates: a card of its own,
+              once the official costings cover a selected measure */}
+          <ObrComparisonCard
+            selectedPolicies={selectedPolicies}
+            selectedYear={distributionalYear}
+          />
         </div>
       );
     }

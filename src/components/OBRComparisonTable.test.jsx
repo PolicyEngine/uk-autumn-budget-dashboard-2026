@@ -6,7 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import OBRComparisonTable, { OBR_UNAVAILABLE, ObrComparisonFoot } from "./OBRComparisonTable";
+import OBRComparisonTable, { OBR_UNAVAILABLE, ObrComparisonCard, comparisonSentence } from "./OBRComparisonTable";
 
 // The chart/table choice: two icon buttons (ViewToggle)
 const viewRadio = (label) => screen.getByRole("radio", { name: `Show as ${label.toLowerCase()}` });
@@ -67,7 +67,7 @@ const render = (element) => {
 };
 
 describe("the OBR comparison table", () => {
-  it("shows a PolicyEngine figure for a year the OBR didn't cost, with a dash for the OBR", async () => {
+  it("tables the year shown: PolicyEngine, both official bases and the difference", async () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({
@@ -75,23 +75,17 @@ describe("the OBR comparison table", () => {
         "/data/budgetary_impact.csv": BUDGETARY_IMPACT,
       }),
     );
-    render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} />);
+    render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} />);
     await screen.findByRole("radio", { name: "Show as chart" });
     show("Table");
-
-    const row = screen.getByRole("row", { name: /2 child limit repeal/ });
-    const cells = within(row).getAllByRole("cell");
-    // The policy, then PolicyEngine and the OBR for each year shown
-    const column = 1 + 2 * DISPLAY_YEARS.indexOf(2031);
-    expect(cells[column]).toHaveTextContent("−£3.6bn");
-    expect(cells[column + 1]).toHaveTextContent("—");
-    // A year both costed still pairs them, on the static basis by default
-    const column2030 = 1 + 2 * DISPLAY_YEARS.indexOf(2030);
-    expect(cells[column2030]).toHaveTextContent("−£3.4bn");
-    expect(cells[column2030 + 1]).toHaveTextContent("−£3.3bn");
+    expect(screen.getAllByRole("columnheader").map((th) => th.textContent)).toEqual([
+      "Measure", "PolicyEngine", "Official static", "Official post-behavioural", "Difference",
+    ]);
+    const cells = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell");
+    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repeal", "−£3.4bn", "−£3.3bn", "−£3.5bn", "−£0.1bn"]);
   });
 
-  it("starts on the static OBR basis and switches to post-behavioural", async () => {
+  it("starts on the static official basis and switches to post-behavioural", async () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({
@@ -99,18 +93,17 @@ describe("the OBR comparison table", () => {
         "/data/budgetary_impact.csv": BUDGETARY_IMPACT,
       }),
     );
-    render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} />);
-    const basis = await screen.findByRole("button", { name: "Official basis: Static" });
+    render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} />);
+    await screen.findByRole("radio", { name: "Show as chart" });
     show("Table");
-    fireEvent.click(basis);
-    fireEvent.click(screen.getByRole("option", { name: /Post-behavioural/ }));
-    const row = screen.getByRole("row", { name: /2 child limit repeal/ });
-    const cells = within(row).getAllByRole("cell");
-    const column2030 = 1 + 2 * DISPLAY_YEARS.indexOf(2030);
-    expect(cells[column2030 + 1]).toHaveTextContent("−£3.5bn");
+    const difference = () => within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell")[4];
+    expect(difference()).toHaveTextContent("−£0.1bn");
+    fireEvent.click(screen.getByRole("button", { name: /Options/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "Post-behavioural" }));
+    expect(difference()).toHaveTextContent("+£0.1bn");
   });
 
-  it("keeps the intro to one short sentence naming this year's official costings, from the sources config", async () => {
+  it("titles the card with the year and says in one sentence how the two compare", async () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({
@@ -118,14 +111,27 @@ describe("the OBR comparison table", () => {
         "/data/budgetary_impact.csv": BUDGETARY_IMPACT,
       }),
     );
-    const { container } = render(
-      <OBRComparisonTable selectedPolicies={["two_child_limit"]} />,
+    const { container } = render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} />);
+    expect(await screen.findByRole("heading", { name: "How our estimates compare with the official costings, 2030-31" })).toBeInTheDocument();
+    expect(container.querySelector(".chart-description").textContent).toBe(
+      "For 2 child limit repeal, our static estimate is −£3.4bn and the official static costing is −£3.3bn.",
     );
-    await waitFor(() => expect(container.querySelector(".comparison-description")).not.toBeNull());
-    expect(container.querySelector(".comparison-description").textContent.replace(/\s+/g, " ").trim()).toBe(
-      "PolicyEngine's static estimates beside the official Autumn Budget 2026 costings (HM Treasury, certified by the OBR), £bn a year; positive values raise revenue.",
+    expect(container).not.toHaveTextContent(/accura|error|OBR\b/);
+  });
+});
+
+describe("the comparison sentence", () => {
+  const row = (name, pe, obr) => ({ id: name, name, pe, obr });
+  it("counts the measures within £0.2bn and names the largest gap", () => {
+    expect(comparisonSentence([row("Employer NI relief", -6.2, -6.5), row("A", 1, 1.1), row("B", 0.4, 0.4), row("C", 0.1, null)], "static")).toBe(
+      "For 2 of 3 policies our static estimate is within £0.2bn of the official static costing; the largest gap is Employer NI relief (−£6.2bn vs −£6.5bn).",
     );
-    expect(container).not.toHaveTextContent("November 2025");
+  });
+  it("leaves out the gap when every measure rounds equal", () => {
+    expect(comparisonSentence([row("A", 1, 1.01), row("B", 2, 2)], "post-behavioural")).toBe(
+      "For all 2 policies our static estimate is within £0.2bn of the official post-behavioural costing.",
+    );
+    expect(comparisonSentence([row("A", 1, null)], "static")).toBeNull();
   });
 });
 
@@ -139,7 +145,7 @@ describe("the OBR comparison's chart and table switch", () => {
       }),
     );
     const { container } = render(
-      <OBRComparisonTable selectedPolicies={["two_child_limit"]} />,
+      <OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} />,
     );
     expect(await screen.findByRole("radio", { name: "Show as chart" })).toHaveAttribute("aria-checked", "true");
     expect(container.querySelector(".obr-dumbbell")).not.toBeNull();
@@ -152,8 +158,8 @@ describe("the OBR comparison's chart and table switch", () => {
   });
 });
 
-describe("the OBR comparison at 2031-32", () => {
-  it("plots PolicyEngine's 2031-32 figure on the dumbbell, with no official costing for that year", async () => {
+describe("the comparison at 2031-32", () => {
+  it("says 2031-32 is not in the official costings instead of plotting it", async () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({
@@ -161,75 +167,28 @@ describe("the OBR comparison at 2031-32", () => {
         "/data/budgetary_impact.csv": BUDGETARY_IMPACT,
       }),
     );
-    const { container } = render(
-      <OBRComparisonTable
-        selectedPolicies={["two_child_limit"]}
-        selectedYear={2031}
-      />,
+    const { container } = render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2031} />);
+    await screen.findByRole("heading", { name: /official costings, 2031-32/ });
+    expect(container.querySelector(".obr-not-covered").textContent).toBe(
+      "2031-32 is not in the official costings, which run to 2030-31.",
     );
-    await screen.findByRole("heading", {
-      name: /PolicyEngine and official costings, 2031-32/,
-    });
-    const row = await waitFor(() => {
-      const found = container.querySelector(
-        '.obr-dumbbell-row[data-policy="two_child_limit"]',
-      );
-      expect(found).not.toBeNull();
-      return found;
-    });
-    expect(row.querySelectorAll(".obr-dumbbell-dot.pe")).toHaveLength(1);
-    expect(row.querySelectorAll(".obr-dumbbell-dot.obr")).toHaveLength(0);
-    expect(row).toHaveTextContent("−£3.6bn");
-    expect(row).toHaveTextContent("Not in the official costings");
-  });
-
-  it("reads 'Not yet published' when no file covers 2031-32, never £0", async () => {
-    artifactRows = artifactRows.filter((row) => Number(row.year) !== 2031);
-    // A receipt-verified snapshot which stops at 2030-31
-    vi.stubGlobal(
-      "fetch",
-      geographyFetch({
-        "/data/official_costings.csv": OBR_COMPARISON,
-        "/data/budgetary_impact.csv": BUDGETARY_IMPACT.split("\n")
-          .slice(0, 2)
-          .join("\n"),
-      }),
-    );
-    const { container } = render(
-      <OBRComparisonTable
-        selectedPolicies={["two_child_limit"]}
-        selectedYear={2031}
-      />,
-    );
-    const empty = await screen.findByText("Not yet published", {
-      selector: ".obr-dumbbell-empty",
-    });
-    expect(empty).toBeInTheDocument();
     expect(container.querySelector(".obr-dumbbell-dot")).toBeNull();
-    expect(container.querySelector(".obr-dumbbell")).not.toHaveTextContent(
-      "£0",
-    );
-
     show("Table");
-    const row = screen.getByRole("row", { name: /2 child limit repeal/ });
-    const cells = within(row).getAllByRole("cell");
-    const column = 1 + 2 * DISPLAY_YEARS.indexOf(2031);
-    expect(cells[column]).toHaveTextContent("—");
-    expect(cells[column + 1]).toHaveTextContent("—");
+    const cells = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell");
+    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repeal", "−£3.6bn", "—", "—", "—"]);
   });
 });
 
-
-it("orders OBR rows from the catalogue rather than CSV insertion order", async () => {
+it("orders rows by the size of the official costing", async () => {
   const fixture = measureCatalogueFixture({ held: false });
   const catalogue = buildMeasureCatalogue({ ...fixture, tablesByKey: Object.fromEntries([ALPHA, BETA].map((id) => [id, { budgetary_impact: fixture.budgetary.filter((row) => row.reform_id === id) }])) });
-  const csv = ["reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value", `${ALPHA},CSV first,${YEAR},-1,-2`, `${BETA},CSV second,${YEAR},1,2`].join("\n");
+  const csv = ["reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value", `${ALPHA},CSV first,${YEAR},-5,-5`, `${BETA},CSV second,${YEAR},1,2`].join("\n");
   vi.stubGlobal("fetch", vi.fn(async () => new Response(csv)));
   const { container } = renderReact(<MeasureCatalogueProvider catalogue={catalogue}><OBRComparisonTable selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} /></MeasureCatalogueProvider>);
   await screen.findByRole("radio", { name: "Show as chart" });
   show("Table");
-  expect([...container.querySelectorAll(".policy-name-cell")].map((node) => node.textContent)).toEqual(catalogue.displayable.map((measure) => measure.label));
-  expect(catalogue.displayable.map((measure) => measure.id)).toEqual([BETA, ALPHA]);
+  const names = [...container.querySelectorAll(".policy-name-cell")].map((node) => node.textContent);
+  expect(names).toEqual([ALPHA, BETA].map((id) => catalogue.byId.get(id).label ?? catalogue.byId.get(id).name));
 });
 
 describe("before the OBR costs the measures", () => {
@@ -257,7 +216,7 @@ describe("the OBR comparison foot", () => {
   // state the foot has had its answer too
   const renderBoth = (selectedPolicies) => renderReact(
     <MeasureCatalogueProvider catalogue={catalogue}>
-      <div data-testid="foot"><ObrComparisonFoot selectedPolicies={selectedPolicies} selectedYear={YEAR} /></div>
+      <div data-testid="foot"><ObrComparisonCard selectedPolicies={selectedPolicies} selectedYear={YEAR} /></div>
       <OBRComparisonTable selectedPolicies={selectedPolicies} selectedYear={YEAR} />
     </MeasureCatalogueProvider>,
   );
@@ -266,7 +225,7 @@ describe("the OBR comparison foot", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(COSTED)));
     renderBoth([ALPHA]);
     const foot = screen.getByTestId("foot");
-    expect(await within(foot).findByText("Compare with the official costings")).toBeInTheDocument();
+    expect(await within(foot).findByRole("heading", { name: /How our estimates compare with the official costings/ })).toBeInTheDocument();
   });
 
   it("shows nothing while no OBR file can be bound to the approved results", async () => {
@@ -280,7 +239,7 @@ describe("the OBR comparison foot", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 404 })));
     const { container } = renderReact(
       <MeasureCatalogueProvider catalogue={catalogue}>
-        <div data-testid="foot"><ObrComparisonFoot selectedPolicies={[ALPHA]} selectedYear={YEAR} /></div>
+        <div data-testid="foot"><ObrComparisonCard selectedPolicies={[ALPHA]} selectedYear={YEAR} /></div>
       </MeasureCatalogueProvider>,
     );
     await waitFor(() => expect(fetch).toHaveBeenCalled());
@@ -303,7 +262,7 @@ describe("the OBR comparison foot", () => {
     expect(await screen.findByText(OBR_UNAVAILABLE)).toBeInTheDocument();
     expect(screen.getByTestId("foot")).toBeEmptyDOMElement();
     const { container } = renderReact(
-      <MeasureCatalogueProvider catalogue={catalogue}><ObrComparisonFoot selectedPolicies={[]} selectedYear={YEAR} /></MeasureCatalogueProvider>,
+      <MeasureCatalogueProvider catalogue={catalogue}><ObrComparisonCard selectedPolicies={[]} selectedYear={YEAR} /></MeasureCatalogueProvider>,
     );
     expect(container).toBeEmptyDOMElement();
   });

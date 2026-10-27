@@ -1170,16 +1170,6 @@ body {
   color: var(--pe-gray-600);
 }
 
-.obr-content .obr-comparison-section {
-  margin: 0;
-  padding: 0;
-  border-top: none;
-}
-
-.obr-content .obr-comparison-section h2 {
-  margin-top: 0;
-}
-
 .policy-detail {
   padding: 8px 0;
   font-size: var(--fs-small);
