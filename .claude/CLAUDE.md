@@ -46,6 +46,7 @@ The reforms in `src/uk_budget_data/reforms.py` are candidate Autumn Budget 2026 
 ## Visual Style Guide
 
 ### Colour palette
+- The template is [`docs/COLOURS.md`](../docs/COLOURS.md): every role, its token, its JS name and its hex. `src/colourGuard.test.js` and ESLint fail on any colour literal (hex, `rgb()`, `white`) outside the token files.
 - Colours are tokens, not hex in components: the `--c-*` tokens in `src/app/globals.css` (on top of `@policyengine/ui-kit/theme.css`) give each colour a meaning (gain, loss, before, after, OBR, grid and so on).
 - Charts take the same colours from `src/utils/chartTheme.js`, the JS mirror of those tokens (SVG and PNG exports need literal values); `chartTheme.test.js` keeps the two equal.
 - Measure colours come from the verified catalogue (`src/utils/measureCatalogue.jsx`), derived from the id and supported budgetary direction using the shared palette.
@@ -79,9 +80,9 @@ The stack is in the README's "Architecture" section. For components: React 19 ho
 
 ### Key components
 - `src/App.jsx`: the main controller. Holds the open tab (`VIEWS`), the selected measures and the year; loads verified publication snapshots through the catalogue, receipted artifacts and release index; keeps tab, sub-tab, measures and Household impact answers in the address.
-- `src/components/PopulationImpactView.jsx`: Population impact and its sub-tabs (All households, Young people).
+- `src/components/PopulationImpactView.jsx`: Population impact and its sub-tabs (All households, Young people, Living standards, Poverty, Public finances).
 - `src/components/PersonalImpactTab.jsx`: the household calculator; requests go through `src/utils/householdImpactApi.js`.
-- `src/components/livingStandards/`: the Living standards tab.
+- `src/components/livingStandards/`: the Pre-measures forecast tab (`?tab=outlook`).
 - `src/components/MethodologyTab.jsx`: Methodology.
 - `src/components/SubTabs.jsx` and `ViewTabs.jsx`: tab and sub-tab bars (`?sub=`).
 
@@ -108,7 +109,7 @@ The stack is in the README's "Architecture" section. For components: React 19 ho
     data={chartData}
     margin={{ top: 20, right: 30, left: 90, bottom: 20 }}
   >
-    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+    <CartesianGrid {...GRID_PROPS} />
     <XAxis dataKey="year" />
     <YAxis
       label={{
@@ -125,7 +126,7 @@ The stack is in the README's "Architecture" section. For components: React 19 ho
       labelFormatter={(label) => `Year: ${label}`}
     />
     <Legend wrapperStyle={{ paddingTop: '20px' }} />
-    <Bar dataKey="metric" fill="#319795" name="Display Name" />
+    <Bar dataKey="metric" fill={CHART_COLOURS.gain} name="Display Name" />
   </BarChart>
 </ResponsiveContainer>
 ```
@@ -148,7 +149,7 @@ The stack is in the README's "Architecture" section. For components: React 19 ho
 ### Data files
 - Files under `public/data/` are written by `uk-budget-data` and served under `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/data/<file>`. Budget figures use verified artifacts through `src/utils/publication/load.js` and `loadVerifiedTable`, or verified flat files through `src/utils/publication/flat.js`; a raw Budget CSV is never publication authority. The Living standards baseline and March 2026 forecast use their independent outlook loader.
 - Every file under `public/` is a publication and needs a review row; see "Review and sign-off" in the README.
-- The Living standards file's shape is in `docs/DATA_CONTRACT.md`.
+- The Pre-measures forecast file's shape is in `docs/DATA_CONTRACT.md`.
 
 ## URL State Management
 - Sync state to URL: Update query params when policies/params change

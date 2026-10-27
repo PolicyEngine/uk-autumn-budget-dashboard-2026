@@ -1,6 +1,6 @@
 # Living standards inputs
 
-The Living standards tab reads `public/data/living_standards_outlook.json` (shape in [`docs/DATA_CONTRACT.md`](../../docs/DATA_CONTRACT.md)). `uk-budget-data living-standards` writes it from the files here and a baseline run on the pinned policyengine.py bundle and its certified Microcosm dataset (`src/uk_budget_data/living_standards/`). Until 24 October 2026 the file was copied from PolicyEngine/uk-living-standards-outlook; that repository is no longer its source.
+The Pre-measures forecast tab (`?tab=outlook`), and Population impact's growth and poverty cards with the measures, read `public/data/living_standards_outlook.json` (shape in [`docs/DATA_CONTRACT.md`](../../docs/DATA_CONTRACT.md)). `uk-budget-data living-standards` writes it from the files here and a baseline run on the pinned policyengine.py bundle and its certified Microcosm dataset (`src/uk_budget_data/living_standards/`). Until 24 October 2026 the file was copied from PolicyEngine/uk-living-standards-outlook; that repository is no longer its source.
 
 ## Source files
 

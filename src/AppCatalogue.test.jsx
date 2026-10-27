@@ -19,15 +19,22 @@ vi.mock("./components/DistributionalChart", () => ({
 vi.mock("./components/WaterfallChart", () => ({ default: () => null }));
 vi.mock("./components/ConstituencyMap", () => ({ default: () => null }));
 vi.mock("./components/HouseholdScatter", () => ({ default: () => null }));
-vi.mock("./components/EmploymentIncomeChart", () => ({ default: () => null }));
-vi.mock("./components/EmploymentIncomeDiffChart", () => ({ default: () => null }));
 vi.mock("./components/PersonalImpactTab", () => ({ default: () => null }));
 vi.mock("./components/OBRComparisonTable", () => ({ default: () => null, ObrComparisonFoot: () => null }));
 vi.mock("./components/YoungPeopleSection", () => ({ default: () => null, YOUNG_PEOPLE_ANCHOR: "young-people" }));
 vi.mock("./components/MethodologyTab", () => ({ default: () => <div data-testid="methodology-view" />, METHOD_SECTIONS: { geography: "geography" } }));
-vi.mock("./components/livingStandards/LivingStandardsTab", () => ({ default: () => <div data-testid="living-view" /> }));
+vi.mock("./components/livingStandards/LivingStandardsTab", () => ({
+  default: () => <div data-testid="living-view" />,
+}));
+// The current-law cards (Living standards and Poverty) read the outlook,
+// which these tests do not serve
+vi.mock("./components/livingStandards/CurrentLawSection", () => ({
+  default: () => <div data-testid="current-law" />,
+}));
 
-beforeEach(() => { window.history.replaceState({}, "", "/"); });
+// The decile charts are under All households, By income (Public finances
+// is the default sub-tab)
+beforeEach(() => { window.history.replaceState({}, "", "/?sub=all"); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("the page's verified publication catalogue", () => {
@@ -41,7 +48,7 @@ describe("the page's verified publication catalogue", () => {
     const rows = JSON.parse(figures.dataset.rows);
     expect(new Set(rows.map((row) => row.reform_id))).toEqual(new Set(["alpha", "beta"]));
     expect(rows.every((row) => row.year === IN_DATA)).toBe(true);
-    fireEvent.click(screen.getByRole("button", { name: "Select policies" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Policies / }));
     const selector = within(container.querySelector(".policy-selector-dropdown"));
     expect(selector.getAllByRole("checkbox")).toHaveLength(2);
     expect(selector.getByText("Alpha")).toBeInTheDocument();
@@ -84,7 +91,7 @@ describe("the page's verified publication catalogue", () => {
   });
 
   it.each(["epsilon", "never_published"])("does not replace the requested unavailable selection %s with zeros", async (id) => {
-    window.history.replaceState({}, "", `/?policies=${id}`);
+    window.history.replaceState({}, "", `/?sub=all&policies=${id}`);
     vi.stubGlobal("fetch", dashboardFixtureFetch());
     render(<App />);
     expect(await screen.findByText("Some selected measures are unavailable")).toBeInTheDocument();
@@ -101,7 +108,7 @@ describe("the page's verified publication catalogue", () => {
     render(<App />);
     const view = search.includes("living") ? "living-view" : "methodology-view";
     expect(await screen.findByTestId(view)).toBeInTheDocument();
-    expect(within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab")).toHaveLength(4);
+    expect(within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab")).toHaveLength(5);
     // The default view is mounted from the first render and kept, hidden,
     // since #128; the open view says nothing about Budget results
     expect(within(screen.getByRole("tabpanel")).queryByText("No Budget results are published yet")).toBeNull();
@@ -120,7 +127,7 @@ describe("an open page follows the publication", () => {
   const rowIds = () => new Set(JSON.parse(screen.getByTestId("distributional-figures").dataset.rows).map((row) => row.reform_id));
 
   it("takes a chosen selection's figures away when one of its measures is withdrawn", async () => {
-    window.history.replaceState({}, "", "/?policies=alpha,beta");
+    window.history.replaceState({}, "", "/?sub=all&policies=alpha,beta");
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
     render(<App />);
     await screen.findByTestId("distributional-figures");
@@ -134,13 +141,13 @@ describe("an open page follows the publication", () => {
     expect(screen.queryByTestId("distributional-figures")).toBeNull();
     expect(screen.queryByTestId("budget-figures")).toBeNull();
     expect(new Set(new URLSearchParams(window.location.search).get("policies").split(","))).toEqual(new Set(["alpha", "beta"]));
-    expect(screen.getByText(/Newer results were published while this page was open/)).toBeInTheDocument();
+    expect(screen.getByText(/Updated with the latest published results/)).toBeInTheDocument();
   });
 
   it("lets the reader remove a withdrawn measure and keep the rest", async () => {
     // Review of 62febdd, finding 4: the selector cannot offer a withdrawn
     // measure, so the notice must, or a chosen selection never recovers
-    window.history.replaceState({}, "", "/?policies=alpha,beta");
+    window.history.replaceState({}, "", "/?sub=all&policies=alpha,beta");
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(twoMeasures()) } }));
     render(<App />);
     await screen.findByTestId("distributional-figures");
@@ -167,7 +174,7 @@ describe("an open page follows the publication", () => {
     next.revision += 1;
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": JSON.stringify(next) } }));
     await act(async () => { window.dispatchEvent(new Event("focus")); });
-    expect(await screen.findByText(/Newer results were published while this page was open/)).toBeInTheDocument();
+    expect(await screen.findByText(/Updated with the latest published results/)).toBeInTheDocument();
     await waitFor(() => expect(rowIds()).toEqual(new Set(["alpha"])));
     expect(screen.queryByText("Some selected measures are unavailable")).toBeNull();
     expect(screen.getAllByText("This measure is excluded from the displayed figures. Totals cover the selected available measures.").length).toBeGreaterThan(0);
@@ -203,7 +210,7 @@ describe("an open page follows the publication", () => {
       expect(rows.filter((row) => row.reform_id === "alpha").map((row) => row.value)).toEqual(Array(10).fill(42.25));
     });
     expect(rowIds()).toEqual(new Set(["alpha", "beta"]));
-    expect(screen.getByText(/Newer results were published while this page was open/)).toBeInTheDocument();
+    expect(screen.getByText(/Updated with the latest published results/)).toBeInTheDocument();
   });
 
   it("takes the figures away when the manifest is withdrawn or invalid", async () => {
@@ -247,7 +254,7 @@ describe("an open page follows the publication", () => {
       fc.constantFrom("receipt.json", "distributional_impact.csv"),
       fc.constantFrom(500, 503, 404),
       async (file, status) => {
-        window.history.replaceState({}, "", "/?policies=alpha,beta");
+        window.history.replaceState({}, "", "/?sub=all&policies=alpha,beta");
         const manifest = twoMeasures();
         const unchanged = { "manifest.json": JSON.stringify(manifest) };
         const failing = `${manifest.measures.beta.artifact}/${file}`;
@@ -280,7 +287,7 @@ describe("an open page follows the publication", () => {
         }, { timeout: 10000 });
         expect(rowIds()).toEqual(new Set(["alpha", "beta"]));
         expect(new Set(new URLSearchParams(window.location.search).get("policies").split(","))).toEqual(new Set(["alpha", "beta"]));
-        expect(screen.queryByText(/Newer results were published/)).toBeNull();
+        expect(screen.queryByText(/Updated with the latest published results/)).toBeNull();
         cleanup();
       },
     ), { numRuns: 6 });
@@ -309,7 +316,7 @@ describe("an open page follows the publication", () => {
     const selected = JSON.parse(screen.getByTestId("distributional-figures").dataset.selected);
     expect(new Set(selected)).toEqual(new Set(["alpha", "beta"]));
     expect(new URLSearchParams(window.location.search).has("policies")).toBe(false);
-    expect(screen.queryByText(/Newer results were published/)).toBeNull();
+    expect(screen.queryByText(/Updated with the latest published results/)).toBeNull();
 
     // The same publication loaded afresh selects the same measures
     cleanup();

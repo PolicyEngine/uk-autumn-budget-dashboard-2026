@@ -114,6 +114,14 @@ const ICONS = {
       <path d="M6 12v5c3 2 9 2 12 0v-5" />
     </>
   ),
+  // Pensioners: an armchair, as the pensioner example household's card
+  armchair: (
+    <>
+      <path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3" />
+      <path d="M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0Z" />
+      <path d="M5 18v2M19 18v2" />
+    </>
+  ),
   // Forecast changes: two arrows round
   refresh: (
     <>
@@ -190,11 +198,112 @@ const ICONS = {
       <path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h.01M12 19h4" />
     </>
   ),
+  // Section headings (SectionHeading's `icon`)
+  // Inequality: a balance
+  scale: (
+    <>
+      <path d="M12 3v18M7 21h10" />
+      <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" />
+      <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
+      <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
+    </>
+  ),
+  // Incomes: a wallet
+  wallet: (
+    <>
+      <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" />
+      <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />
+    </>
+  ),
+  // Poverty: a lifebuoy
+  lifebuoy: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4" />
+      <path d="m5.6 5.6 3.6 3.6M14.8 9.2l3.6-3.6M14.8 14.8l3.6 3.6M9.2 14.8l-3.6 3.6" />
+    </>
+  ),
+  // Public finances: a banknote
+  banknote: (
+    <>
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M6 12h.01M18 12h.01" />
+    </>
+  ),
+  // Where and who: a compass
+  compass: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m15.5 8.5-1.6 4.8a1 1 0 0 1-.6.6l-4.8 1.6 1.6-4.8a1 1 0 0 1 .6-.6Z" />
+    </>
+  ),
+  // Change by age: a birthday cake
+  cake: (
+    <>
+      <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8" />
+      <path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1" />
+      <path d="M2 21h20M7 8v3M12 8v3M17 8v3M7 4h.01M12 4h.01M17 4h.01" />
+    </>
+  ),
+  // By age: lucide "users-round" (All households has "users")
+  usersRound: (
+    <>
+      <path d="M18 21a8 8 0 0 0-16 0" />
+      <circle cx="10" cy="8" r="5" />
+      <path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3" />
+    </>
+  ),
+  // Who gains: a person with a plus
+  userPlus: (
+    <>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M19 8v6M22 11h-6" />
+    </>
+  ),
+  // Your place in the distribution: a map pin
+  pin: (
+    <>
+      <path d="M20 10c0 5-5.5 10.2-7.4 11.8a1 1 0 0 1-1.2 0C9.5 20.2 4 15 4 10a8 8 0 0 1 16 0" />
+      <circle cx="12" cy="10" r="3" />
+    </>
+  ),
+  // A breakdown: stacked layers
+  layers: (
+    <>
+      <path d="M12.8 2.2a2 2 0 0 0-1.6 0L2.6 6.1a1 1 0 0 0 0 1.8l8.6 3.9a2 2 0 0 0 1.6 0l8.6-3.9a1 1 0 0 0 0-1.8Z" />
+      <path d="m2 12.6 9.2 4.2a2 2 0 0 0 1.6 0l9.2-4.2" />
+      <path d="m2 17.6 9.2 4.2a2 2 0 0 0 1.6 0l9.2-4.2" />
+    </>
+  ),
+  // Policies: a page of text
+  fileText: (
+    <>
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4M16 13H8M16 17H8M10 9H8" />
+    </>
+  ),
   // Methodology: an open book
   book: (
     <>
       <path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2Z" />
       <path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7Z" />
+    </>
+  ),
+  // Data: a database
+  database: (
+    <>
+      <ellipse cx="12" cy="5" rx="9" ry="3" />
+      <path d="M3 5v14a9 3 0 0 0 18 0V5" />
+      <path d="M3 12a9 3 0 0 0 18 0" />
+    </>
+  ),
+  // Limitations: a warning triangle
+  alert: (
+    <>
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+      <path d="M12 9v4M12 17h.01" />
     </>
   ),
 };

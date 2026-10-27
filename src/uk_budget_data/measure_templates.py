@@ -591,6 +591,7 @@ def apply_vat_base_change(
     start_year,
     end_year,
     baseline_rate=None,
+    geography="UK",
 ):
     """Pass a signed VAT rate change through VAT-inclusive eligible spending.
 
@@ -601,9 +602,14 @@ def apply_vat_base_change(
     Wrap the current ``vat`` formula: the engine derives ``vat_change`` and
     resources from it. Missing spending defaults to the variable's native
     value (zero for spending inputs). Repeated calls add their adjustments.
+    ``geography`` is ``UK`` (every household) or ``GB`` (Northern Ireland's
+    households keep the baseline VAT, as for a change that applies in Great
+    Britain only, such as the temporary zero rate on domestic electricity).
     Call from a module-level modifier with finite JSON default arguments.
     """
     years = _annual_years(start_year, end_year)
+    if geography not in ("GB", "UK"):
+        raise ValueError("geography must be GB or UK")
     delta = _finite_number(rate_change, "rate_change")
     variable = sim.tax_benefit_system.get_variable(
         spending_variable, check_existence=True
@@ -640,7 +646,15 @@ def apply_vat_base_change(
             raise ValueError(
                 "Eligible spending must be finite and nonnegative"
             )
-        return current + spending * delta / (1 + old_rate)
+        adjustment = spending * delta / (1 + old_rate)
+        if geography == "GB":
+            country = household("country", period)
+            adjustment = np.where(
+                country != country.possible_values.NORTHERN_IRELAND,
+                adjustment,
+                0,
+            )
+        return current + adjustment
 
     _replace_formula(sim, "vat", formula)
     # Held while the installed model grosses VAT by one factor (the
@@ -895,9 +909,10 @@ def apply_age_conditioned_allowance(
         standard = _call_formula(native, person, period, parameters)
         if period.start.year not in amounts:
             return standard
-        income = person("adjusted_net_income", period) - person(
-            "gift_aid_grossed_up", period
-        )
+        # adjusted_net_income already deducts grossed-up Gift Aid (ITA 2007
+        # s. 58) from policyengine-uk 2.132.6, as the native allowance reads
+        # it; deducting it again overstated the allowance of donors.
+        income = person("adjusted_net_income", period)
         higher = (
             amounts[period.start.year]
             - np.maximum(0, income - threshold) * taper

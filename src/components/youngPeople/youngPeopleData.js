@@ -58,14 +58,14 @@ const findRow = (rows, id, year, band) =>
  * @param {number} year
  * @param {string} [band] - The age group's key (default 16 to 24)
  */
-export function measureComparison(rows, policies, selected, year, band = YOUNG_BAND) {
+export function measureComparison(rows, policies, selected, year, band = YOUNG_BAND, compareBand = ALL_BAND) {
   const shown = [];
   const noEffect = [];
   const suppressed = [];
   for (const policy of policies) {
     if (!selected.includes(policy.id) || policy.displayable === false) continue;
     const group = findRow(rows, policy.id, year, band);
-    const all = findRow(rows, policy.id, year, ALL_BAND);
+    const all = findRow(rows, policy.id, year, compareBand);
     if (!group || !all || !Number.isFinite(group.mean_change) || !Number.isFinite(all.mean_change)) continue;
     if (group.sample_size < MIN_SAMPLE_SIZE || all.sample_size < MIN_SAMPLE_SIZE) {
       suppressed.push(policy.name);
@@ -117,14 +117,15 @@ export function changeByYear(rows, policies, selected, years) {
 
 /**
  * Ticks from a nice step covering [min, max] and zero: steps of 25, 50,
- * 100, 200, 250, 500, 1,000 or 2,500, about four to six of them.
+ * 100, 200, 250, 500, 1,000 or 2,500, at most `maxSteps` intervals (five
+ * by default, so up to six ticks).
  */
-export function niceRange(min, max) {
+export function niceRange(min, max, { maxSteps = 5 } = {}) {
   const low = Math.min(0, min);
   const high = Math.max(0, max);
   const span = Math.max(high - low, 1);
   const steps = [25, 50, 100, 200, 250, 500, 1000, 2500];
-  const step = steps.find((candidate) => span / candidate <= 5) ?? 5000;
+  const step = steps.find((candidate) => span / candidate <= maxSteps) ?? 5000;
   const bottom = Math.floor(low / step) * step;
   const top = Math.ceil(high / step) * step;
   const ticks = [];
@@ -149,24 +150,27 @@ export const SINGLE_AGE_FIRST = 10;
 export const SINGLE_AGE_LAST = 40;
 
 /**
- * One bar per single year of age, SINGLE_AGE_FIRST to SINGLE_AGE_LAST: the
- * selected policies' mean changes added up (`netChange`). A bar is null
- * where any selected policy has no row for the age (the generator leaves
- * out an age with too few survey records) or a thin one.
+ * One bar per single year of age, `first` to `last` (SINGLE_AGE_FIRST to
+ * SINGLE_AGE_LAST unless given; the Pensioners sub-tab asks for older
+ * ages): the selected policies' mean changes added up (`netChange`). A bar
+ * is null where any selected policy has no row for the age (the generator
+ * leaves out an age with too few survey records) or a thin one.
  *
  * @param {Array<Object>} rows - Typed age_impact rows
  * @param {Array<{id: string}>} policies - Every policy
  * @param {Array<string>} selected - Selected policy ids
  * @param {number} year
+ * @param {number} [first]
+ * @param {number} [last]
  */
-export function singleAgeBars(rows, policies, selected, year) {
+export function singleAgeBars(rows, policies, selected, year, first = SINGLE_AGE_FIRST, last = SINGLE_AGE_LAST) {
   const byKey = new Map();
   for (const row of rows ?? []) {
     if (row.year === Number(year)) byKey.set(`${row.reform_id}|${row.age_band}`, row);
   }
   const chosen = policies.filter((policy) => selected.includes(policy.id) && policy.displayable !== false);
   const bars = [];
-  for (let age = SINGLE_AGE_FIRST; age <= SINGLE_AGE_LAST; age += 1) {
+  for (let age = first; age <= last; age += 1) {
     let net = 0;
     let complete = chosen.length > 0 && chosen.length === selected.length;
     const parts = [];
@@ -188,7 +192,7 @@ export function singleAgeBars(rows, policies, selected, year) {
     parts.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
     // Each policy's own change under its series key too, for the stacked bars
     const bySeries = complete ? Object.fromEntries(parts.map((part) => [part.key, part.value])) : {};
-    bars.push({ age, label: String(age), netChange: complete ? net : null, parts: complete ? parts : [], ...bySeries });
+    bars.push({ age, label: singleAgeKey(age), netChange: complete ? net : null, parts: complete ? parts : [], ...bySeries });
   }
   return bars;
 }
@@ -235,4 +239,104 @@ export function sharesBySingleAge(rows, policies, selected, year, combinedId = n
     groups.push({ key: String(age), label: String(age), age, row: usable, suppressed: !usable });
   }
   return { run, groups };
+}
+
+/**
+ * One age group's change in every year shown, with each selected measure's
+ * own part: `{ year, published, net, parts: [{ id, key, value }], ...bySeries }`
+ * (each part also under its series key, for stacked bars). `net` is null in
+ * a year not published, or where any measure's row is missing or too thin.
+ */
+export function groupMeasureSeries(rows, policies, selected, years, band = YOUNG_BAND) {
+  const chosen = policies.filter((policy) => selected.includes(policy.id) && policy.displayable !== false);
+  return years.map((year) => {
+    const parts = [];
+    let complete = chosen.length > 0 && chosen.length === selected.length;
+    for (const policy of chosen) {
+      const row = findRow(rows, policy.id, year, band);
+      if (!row || row.sample_size < MIN_SAMPLE_SIZE || !Number.isFinite(row.mean_change)) {
+        complete = false;
+        break;
+      }
+      parts.push({ id: policy.id, key: policy.seriesKey ?? `measure:${policy.id}`, value: row.mean_change });
+    }
+    const bySeries = complete ? Object.fromEntries(parts.map((part) => [part.key, part.value])) : {};
+    return {
+      year,
+      published: complete,
+      net: complete ? parts.reduce((sum, part) => sum + part.value, 0) : null,
+      parts: complete ? parts : [],
+      ...bySeries,
+    };
+  });
+}
+
+/**
+ * Running totals over the years: each key's value is replaced by its sum
+ * from the first year to that one (a year with no value stops the sum, so a
+ * gap is never read as zero).
+ */
+export function cumulate(points, keys) {
+  const running = Object.fromEntries(keys.map((key) => [key, 0]));
+  const broken = new Set();
+  return points.map((point) => {
+    const next = { ...point };
+    for (const key of keys) {
+      const value = point[key];
+      if (value === null || value === undefined || !Number.isFinite(value) || broken.has(key)) {
+        broken.add(key);
+        next[key] = null;
+      } else {
+        running[key] += value;
+        next[key] = running[key];
+      }
+    }
+    return next;
+  });
+}
+
+/**
+ * The year-on-year steps worth pointing out in a group's series, and the
+ * measure behind each: the largest steps (at most `limit`) that are at
+ * least `share` of the series' range, each with the measure whose own
+ * change between the two years moved most in the step's direction.
+ * Computed from the per-measure rows, so a new or changed measure is named
+ * by the data, never by a list here.
+ *
+ * @returns {Array<{year: number, from: number, step: number, value: number, measureId: string}>}
+ */
+export function stepAnnotations(series, { limit = 2, share = 0.3 } = {}) {
+  const values = series.map((point) => point.net).filter((value) => value !== null);
+  if (values.length < 2) return [];
+  const range = Math.max(...values, 0) - Math.min(...values, 0);
+  if (range <= 0) return [];
+  const steps = [];
+  for (let i = 1; i < series.length; i += 1) {
+    const before = series[i - 1];
+    const after = series[i];
+    if (before.net === null || after.net === null) continue;
+    const step = after.net - before.net;
+    if (Math.abs(step) < share * range) continue;
+    const partOf = (point, id) => point.parts.find((part) => part.id === id)?.value ?? 0;
+    const ids = new Set([...before.parts, ...after.parts].map((part) => part.id));
+    let measureId = null;
+    let best = 0;
+    for (const id of ids) {
+      const moved = (partOf(after, id) - partOf(before, id)) * Math.sign(step);
+      if (moved > best) {
+        best = moved;
+        measureId = id;
+      }
+    }
+    if (measureId) steps.push({ year: after.year, from: before.year, step, value: after.net, measureId });
+  }
+  return steps.sort((a, b) => Math.abs(b.step) - Math.abs(a.step)).slice(0, limit).sort((a, b) => a.year - b.year);
+}
+
+/** The measures that make up most of a point's change, largest first. */
+export function topParts(point, count = 2) {
+  return [...(point?.parts ?? [])]
+    .filter((part) => Math.abs(part.value) >= 0.5)
+    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+    .slice(0, count);
 }

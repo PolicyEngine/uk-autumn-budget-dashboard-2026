@@ -67,12 +67,24 @@ export const COUNCIL_TAX_NOTE = (
     lead="Estimated from your band and region, and taken off net income."
     points={[
       <>
-        Band D averages: <SourceLink source="mhclg_council_tax">MHCLG</SourceLink> for England, tax-base weighted by
+        Band D averages: <SourceLink source="mhclg_council_tax">MHCLG</SourceLink>{" "}for England, tax-base weighted by
         region; the <SourceLink source="wales_council_tax">Welsh</SourceLink> and{" "}
         <SourceLink source="scotland_council_tax">Scottish</SourceLink> governments.
       </>,
       "Starts from 2026-27 averages, grown to the chosen year with policyengine-uk's OBR Council Tax forecast.",
       "Northern Ireland has domestic rates, which are not modelled.",
+    ]}
+  />
+);
+
+export const MARGINAL_RATE_NOTE = (
+  <Note
+    icon="percent"
+    lead="The share of an extra pound of salary lost to taxes and withdrawn benefits, with everything else held as entered."
+    points={[
+      "The rate stated for you is over the next £200 of your salary, the step the Child Benefit charge moves in; the chart's steps are between neighbouring points of the earnings sweep, so near a threshold they can average across it.",
+      "“Of your next £1,000” is that rate applied to £1,000. Where earning the next £200 lowers net income by more than £200 (a cliff, such as losing childcare support above £100,000), the sentence is about that £200 instead.",
+      "Known limits: Council Tax Reduction is counted only where the model has the local scheme, so rates are understated for people who get it elsewhere. Each person has one student loan plan, so an undergraduate and postgraduate loan together is not modelled. On the engine version pinned here, Scottish top-rate taxpayers are charged £377 too much a year; policyengine-uk 2.134.3 fixes this, and the pin moves with the next engine update.",
     ]}
   />
 );

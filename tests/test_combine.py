@@ -97,6 +97,36 @@ def test_two_members_may_never_touch_one_parameter(second):
     assert BASIC_RATE in message and "both a and b" in message
 
 
+ELASTICITY = "gov.simulation.capital_gains_responses.elasticity"
+
+
+def test_members_may_share_a_setting_at_the_same_values():
+    """A shared setting (combine.SHARED_SETTINGS) is merged once."""
+    pin = {ELASTICITY: {"2027": 0.0, "2028": 0.0}}
+    combined = combine_measures(
+        [
+            measure("a", {BADR_LIMIT: {"2027": 500_000}, **pin}),
+            measure("b", {BASIC_RATE: {"2027": 0.21}, **pin}),
+        ],
+        CONFIG,
+    )
+    assert combined.parameter_changes == {
+        BADR_LIMIT: {"2027": 500_000},
+        BASIC_RATE: {"2027": 0.21},
+        **pin,
+    }
+
+
+@pytest.mark.parametrize(
+    "second",
+    [{"2027": 1.0, "2028": 0.0}, {"2027": 0.0}],  # a value; a year
+)
+def test_members_may_not_share_a_setting_at_different_values(second):
+    first = measure("a", {ELASTICITY: {"2027": 0.0, "2028": 0.0}})
+    with pytest.raises(CombineConflict, match="set differently by a and b"):
+        combine_measures([first, measure("b", {ELASTICITY: second})], CONFIG)
+
+
 def test_members_sharing_the_configured_baseline_combine():
     config = DataConfig(
         years=YEARS, baseline_parameter_changes={BASIC_RATE: {"2027": 0.19}}

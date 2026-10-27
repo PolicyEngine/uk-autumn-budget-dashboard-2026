@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ComposedChart,
   Bar,
@@ -16,14 +16,15 @@ import {
 import { PolicyEngineLogo, CHART_LOGO } from "../utils/chartLogo";
 import { decileCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
-import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
-import GroupedLegend from "./GroupedLegend";
+import { SegmentTooltip, TOOLTIP_PROPS } from "./ChartTooltip";
+import MeasureKey, { measureOpacity, useMeasureKey, netOpacity } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
+  barShape,
   useNarrowViewport,
   GRID_PROPS,
   TICK_STYLE,
@@ -33,12 +34,22 @@ import {
   legendWrapperStyle,
   axisWidth,
   CHART_COLOURS,
-  zeroBasedAxis,
-  HOVER_CURSOR,
+  divergingAxis,
+  tickDecimals,
+  noHouseholdChange,
 } from "../utils/chartTheme";
-import { DEFAULT_DISPLAY_YEAR, isDisplayYear } from "../utils/displayYears";
-import { chartMotion, netDot } from "../utils/chartMotion";
+import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
+import { chartMotion, netDotTitled } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
+import ChartMoreInfo from "./ChartMoreInfo";
+import { METHOD_ANCHORS } from "./methodology/anchors";
+import { decileSentence, laterDecileNote } from "../utils/plainSentences";
+import { laterDecileEnds } from "../utils/laterYears";
+import {
+  decileMembership,
+  exportLegendItems,
+  drawnNames,
+} from "../utils/legendMembership";
 
 // The published catalogue supplies the shared measure order and colours.
 
@@ -51,9 +62,17 @@ const formatYearRange = (year) => `${year}-${(year + 1).toString().slice(-2)}`;
 
 const waterfallDeciles = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
 
+// The card's "About this chart"
+const ABSOLUTE_INFO = {
+  how: ["Each bar stacks the selected measures' own effects; the line marks their total."],
+  method: { anchor: METHOD_ANCHORS.byIncome, label: "How we group households by income" },
+};
+
 function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR }) {
   const chartRef = useRef(null);
   const narrow = useNarrowViewport();
+  // The measure whose segment is hovered: the others dim
+  const [hoveredMeasure, setHoveredMeasure] = useState(null);
   const catalogue = useMeasureCatalogue();
   const {
     displayable: POLICIES,
@@ -101,25 +120,31 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
     });
   }, [rawData, selectedPolicies, selectedYear, POLICIES, hasUnavailableSelection, catalogue]);
 
-  // The measures with a non-zero effect in any shown year, not just this
-  // one: the legend (and so the plot's height) stays the same from year to
-  // year, so a year change or Play tweens the bars instead of rescaling
-  const activePolicies = useMemo(() => {
-    const ids = new Set(
-      (rawData ?? [])
-        .filter(
-          (row) =>
-            row.decile !== "all" && isDisplayYear(row.year) &&
-            selectedPolicies.includes(row.reform_id) &&
-            isCatalogueRowDisplayable(catalogue, row.reform_id, row.year) &&
-            Math.abs(parseFloat(row.avg_change)) > 0.01,
-        )
-        .map((row) => row.reform_id),
-    );
-    return ALL_POLICY_NAMES.filter((name) =>
-      ids.has(POLICIES.find((policy) => policy.seriesKey === name)?.id),
-    );
-  }, [rawData, selectedPolicies, POLICIES, ALL_POLICY_NAMES, catalogue]);
+  // "Later years differ": the first later year whose lowest- or
+  // highest-income tenth moves the other way (plainSentences.js)
+  const laterNote = useMemo(() => {
+    const ends = { low: data[0]?.netChange, high: data[data.length - 1]?.netChange };
+    const later = laterDecileEnds(rawData, { valueKey: "avg_change", ends: ["1", "10"], selectedPolicies, catalogue, selectedYear });
+    return laterDecileNote(ends, later, "absolute");
+  }, [data, rawData, selectedPolicies, catalogue, selectedYear]);
+
+  // Every selected measure is in the legend in every year (so the legend,
+  // and the plot's height, hold still on a year change or Play); one with
+  // no effect on any household this year is greyed out, and the note under
+  // the chart says why (legendMembership)
+  const members = useMemo(
+    () => decileMembership(catalogue, rawData, "avg_change", selectedPolicies, selectedYear),
+    [catalogue, rawData, selectedPolicies, selectedYear],
+  );
+  const activePolicies = drawnNames(members);
+  const netLabel = activePolicies.length > 1 ? "Net change" : undefined;
+  // In a section with a shared key (MeasureKey), the card draws no legend
+  const key = useMeasureKey(members, netLabel);
+  // The legend took about 160px (300 on a phone) of the chart's height;
+  // with the section's key above the pair, the plot keeps its own size
+  // With no legend under the plot, room below the axis for the logo
+  const LOGO_ROOM = CHART_LOGO.height + CHART_LOGO.padding + 6;
+  const plotHeight = key.shared ? (narrow ? 390 : 410) : narrow ? 620 : 480;
 
   // The y axis for the year shown, from the lowest to the highest stack and
   // always including 0 (not mirrored about 0, so no half of the plot is empty)
@@ -160,7 +185,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       });
     });
 
-    return zeroBasedAxis([minValue, maxValue]);
+    // Symmetric about zero when deciles gain and lose (divergingAxis)
+    return divergingAxis([minValue, maxValue]);
   };
 
   const { domain: yAxisDomain, ticks: yAxisTicks } = calculateYAxisDomain();
@@ -190,22 +216,20 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
     );
   }
 
+  // Whole pounds, unless the ticks are closer than £1 apart
+  const poundDecimals = tickDecimals(yAxisTicks, 0, 2);
   const formatCurrency = (value) => {
     const absVal = Math.abs(value).toLocaleString("en-GB", {
-      maximumFractionDigits: 0,
+      minimumFractionDigits: poundDecimals,
+      maximumFractionDigits: poundDecimals,
     });
-    return value < 0 ? `-£${absVal}` : `£${absVal}`;
+    return value < 0 && Number(absVal.replace(/,/g, "")) !== 0 ? `-£${absVal}` : `£${absVal}`;
   };
 
 
   // Legend items for export: the measures the chart draws, as on screen
   const legendItems = [
-    ...activePolicies.map((name) => ({
-      color: POLICY_COLORS[name],
-      label: bySeriesKey.get(name)?.label ?? name,
-      type: "rect",
-      group: bySeriesKey.get(name)?.direction === "revenue" ? "raise" : bySeriesKey.get(name)?.direction === "cost" ? "cost" : "other",
-    })),
+    ...exportLegendItems(members, catalogue),
     ...(activePolicies.length > 1
       ? [{ color: CHART_COLOURS.net, label: "Net change", type: "line" }]
       : []),
@@ -216,6 +240,10 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
   const published = (rawData ?? []).some(
     (row) => parseInt(row.year) === selectedYear,
   );
+  // Only measures that change no household's income this year: the plot's
+  // note says so, and the card's sentence does not repeat it as "almost no
+  // change" at both ends
+  const nothingChanges = published && activePolicies.length === 0 && !hasIncompleteResults;
   const exportName = `absolute-impact-decile-${selectedYear}`;
   const exportOptions = {
     title: chartTitle,
@@ -233,6 +261,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
     exportOptions,
     csv: () => decileCsv(data, selectedMeasures, { kind: "absolute", year: selectedYear }),
     published,
+    // No image of an empty plot: the CSV only, when no measure changes a household
+    image: activePolicies.length > 0,
   };
 
   return (
@@ -245,8 +275,10 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
               <NoBreakYear text={chartTitle} />
             </span>
           </h3>
+          {/* One plain sentence; what the chart measures is in More info */}
           <p className="chart-description">
-            {CHART_DESCRIPTION}
+            {(nothingChanges ? null : decileSentence(data, "absolute")) ?? CHART_DESCRIPTION}
+            {laterNote && <span className="later-years-note"> {laterNote}</span>}
           </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={chartTitle} />
@@ -256,11 +288,19 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
         {published && hasIncompleteResults && (
           <UnavailableNotice reason="Some selected measures have no published results for this chart. The net change is unavailable." />
         )}
-        {published ? (
-          <ResponsiveContainer width="100%" height={narrow ? 620 : 480}>
+        {nothingChanges ? (
+          // Only measures that change no household's income this year (an
+          // employer cost): a note, not an empty plot of zero ticks. A
+          // measure with no published result is not 'no change': the
+          // unavailable notice above says so and the plot keeps its gaps
+          <div className="plot-empty" style={{ minHeight: plotHeight }} role="status">
+            <p>{noHouseholdChange(formatYearRange(selectedYear))}</p>
+          </div>
+        ) : published ? (
+          <ResponsiveContainer width="100%" height={plotHeight}>
             <ComposedChart
               data={data}
-              margin={chartMargin(narrow)}
+              margin={{ ...chartMargin(narrow), bottom: key.shared ? LOGO_ROOM : 0 }}
               stackOffset="sign"
             >
               <CartesianGrid {...GRID_PROPS} />
@@ -289,45 +329,45 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
               />
               <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
 
+              {/* One segment at a time, beside the cursor; the other measures dim */}
+
               <Tooltip
 
                 {...TOOLTIP_PROPS}
 
-                cursor={HOVER_CURSOR}
+                shared={false}
 
-                content={
+                cursor={false}
 
-                  <ChartTooltip
+                offset={16}
 
-                    format={(value) => `£${Math.round(value).toLocaleString("en-GB")}`}
-
-                    labelFormat={(label) => `Income decile ${label}, ${formatYearRange(selectedYear)}`}
-
-                    netKey="netChange"
-
-                    netLabel="Net change"
-
-                  />
-
-                }
+                content={<SegmentTooltip activeKey={hoveredMeasure} labelOf={(row) => `Income decile ${row.decile}, ${formatYearRange(selectedYear)}`} format={(value) => `£${Math.round(value).toLocaleString("en-GB")}`} netKey="netChange" netLabel="Net change" />}
 
               />
-              <Legend
-                wrapperStyle={legendWrapperStyle(narrow)}
-                content={
-                  <GroupedLegend
-                    names={activePolicies}
-                    netLabel={activePolicies.length > 1 ? "Net change" : undefined}
-                  />
-                }
-              />
+              {!key.shared && (
+                <Legend
+                  wrapperStyle={legendWrapperStyle(narrow)}
+                  content={
+                    <MeasureKey
+                      members={members}
+                      netLabel={netLabel}
+                      highlight={key.highlight}
+                      onHighlight={key.setHighlight}
+                    />
+                  }
+                />
+              )}
               {ALL_POLICY_NAMES.map((policyName) => (
                 <Bar
                   key={policyName}
                   dataKey={policyName}
                   fill={POLICY_COLORS[policyName]}
+                  fillOpacity={hoveredMeasure ? (hoveredMeasure === policyName ? 1 : 0.3) : measureOpacity(key.highlight, policyName)}
+                  onMouseEnter={() => setHoveredMeasure(policyName)}
+                  onMouseLeave={() => setHoveredMeasure(null)}
                   name={bySeriesKey.get(policyName)?.label ?? policyName}
                   stackId="stack"
+                  shape={barShape(ALL_POLICY_NAMES)}
                   {...chartMotion()}
                   // Always mounted (a zero series has no height), so a series that
                   // starts in a later year grows in place instead of remounting
@@ -340,6 +380,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                 strokeLinejoin="round"
                 strokeLinecap="round"
                 dataKey="netChange"
+                strokeOpacity={netOpacity(key.highlight)}
                 stroke={CHART_COLOURS.net}
                 strokeWidth={2}
                 dot={false}
@@ -352,7 +393,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                   change; a Scatter's points tween with the line instead */}
               <Scatter
                 dataKey="netChange"
-                shape={netDot}
+                opacity={netOpacity(key.highlight)}
+                shape={netDotTitled((row) => `Decile ${String(row.decile).replace(/st|nd|rd|th/g, "")}: net change ${formatCurrency(row.netChange)}`)}
                 legendType="none"
                 tooltipType="none"
                 {...chartMotion()}
@@ -364,11 +406,16 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
           </ResponsiveContainer>
         ) : (
           <UnpublishedPlot
-            height={narrow ? 620 : 480}
+            height={plotHeight}
             yearLabel={formatYearRange(selectedYear)}
           />
         )}
       </div>
+      {published && (
+        <div className="chart-footer">
+          <ChartMoreInfo members={members} year={selectedYear} info={ABSOLUTE_INFO} />
+        </div>
+      )}
     </div>
   );
 }

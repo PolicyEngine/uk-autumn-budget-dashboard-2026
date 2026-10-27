@@ -186,6 +186,58 @@ describe("normaliseHouseholdImpact", () => {
     expect(headline.byPolicy).toBeNull();
     expect(headline.sweep).toBeNull();
   });
+
+  it("reads the marginal rate's parts when the API sends them, and none when it does not", () => {
+    expect(normaliseHouseholdImpact(HOUSEHOLD_FIXTURE).sweep.parts).toBeNull();
+    const steps = HOUSEHOLD_FIXTURE.sweep.marginal_rates.map((rate) => ({
+      income_tax: 0.2,
+      national_insurance: 0.08,
+      other: rate.reform - 0.28,
+    }));
+    const data = normaliseHouseholdImpact({
+      ...HOUSEHOLD_FIXTURE,
+      sweep: {
+        ...HOUSEHOLD_FIXTURE.sweep,
+        marginal_rate_parts: {
+          parts: ["income_tax", "national_insurance", "other"],
+          baseline: steps,
+          reform: steps,
+          own_point: {
+            baseline: { income_tax: 0.2, national_insurance: 0.08, other: 0 },
+            reform: { income_tax: 0.2, national_insurance: 0.08, other: 0 },
+          },
+        },
+      },
+    });
+    const parts = data.sweep.parts;
+    expect(parts.names).toEqual(["income_tax", "national_insurance", "other"]);
+    expect(parts.after).toHaveLength(data.sweep.rates.length);
+    expect(parts.after[0]).toEqual({ income_tax: 0.2, national_insurance: 0.08, other: steps[0].other });
+    expect(parts.own.after).toEqual({ income_tax: 0.2, national_insurance: 0.08, other: 0 });
+  });
+
+  it("reads net income's parts at each point when the API sends them, and none when it does not", () => {
+    expect(normaliseHouseholdImpact(HOUSEHOLD_FIXTURE).sweep.netParts).toBeNull();
+    const points = HOUSEHOLD_FIXTURE.sweep.points.map((point) => ({
+      employment_income: point.employment_income,
+      income_tax: -100,
+      other_taxes: point.reform - point.employment_income + 100,
+    }));
+    const withParts = (baseline) =>
+      normaliseHouseholdImpact({
+        ...HOUSEHOLD_FIXTURE,
+        sweep: {
+          ...HOUSEHOLD_FIXTURE.sweep,
+          net_income_parts: { parts: ["employment_income", "income_tax", "other_taxes"], baseline, reform: points },
+        },
+      }).sweep.netParts;
+    const parts = withParts(points);
+    expect(parts.names).toEqual(["employment_income", "income_tax", "other_taxes"]);
+    expect(parts.after).toHaveLength(HOUSEHOLD_FIXTURE.sweep.points.length);
+    expect(parts.before[1].income_tax).toBe(-100);
+    // A side with the wrong number of points is not drawn
+    expect(withParts(points.slice(1))).toBeNull();
+  });
 });
 
 // Review of 428d209, finding 2: a breakdown from one deployment was merged
@@ -658,6 +710,45 @@ describe("the programme table's whole pounds", () => {
     expect(tax.children.reduce((sum, child) => sum + child.shown.change, 0)).toBe(tax.shown.change);
   });
 
+  it("shows Council Tax as the headline card's Based on does, not nudged to make the column add up", () => {
+    // The family on Universal Credit in 2027-28 (live API, 26 October
+    // 2026): Council Tax £2,628.58 was −£2,628 in the table and £2,629 under
+    // the headline
+    const family = [
+      { id: "employment_income", group: "income", before: 21504.02, after: 21504.02, children: [] },
+      { id: "income_tax", group: "tax", before: 1534.8, after: 1534.8, children: [] },
+      { id: "national_insurance", group: "tax", before: 714.73, after: 714.73, children: [] },
+      { id: "council_tax", group: "tax", before: 2628.58, after: 2628.58, children: [] },
+      { id: "fuel_duty", group: "tax", before: 364.89, after: 338.52, children: [] },
+      { id: "vat_change", group: "tax", before: 0, after: -73.85, children: [] },
+      { id: "tv_licence", group: "tax", before: 180, after: 180, children: [] },
+      { id: "universal_credit", group: "benefit", before: 18443.07, after: 18443.07, children: [] },
+      { id: "child_benefit", group: "benefit", before: 2391.15, after: 2391.15, children: [] },
+      { id: "free_childcare", group: "benefit", before: 3633.88, after: 3633.88, children: [] },
+      { id: "other_taxes", group: "tax", before: 0.04, after: 0.05, children: [] },
+    ];
+    const totals = headlineTotals({ before: 40549.08, after: 40649.3 });
+    const rows = roundProgrammeGroups(programmeGroups(family), totals).flatMap((group) => group.rows);
+    const councilTax = rows.find((row) => row.id === "council_tax");
+    expect(councilTax.shown.before).toBe(-2629);
+    expect(councilTax.shown.after).toBe(-2629);
+    for (const side of ["before", "after", "change"]) {
+      expect(rows.reduce((sum, row) => sum + row.shown[side], 0)).toBe(totals[side]);
+    }
+  });
+
+  it("rounds an exact 50p of Council Tax as the Based on does, up to the next pound", () => {
+    // money(2628.5) is £2,629; Math.round(-2628.5) alone would give −£2,628
+    const programmes = [
+      { id: "employment_income", group: "income", before: 30000.2, after: 30000.2, children: [] },
+      { id: "council_tax", group: "tax", before: 2628.5, after: 2628.5, children: [] },
+    ];
+    const totals = headlineTotals({ before: 27371.7, after: 27371.7 });
+    const rows = roundProgrammeGroups(programmeGroups(programmes), totals).flatMap((group) => group.rows);
+    expect(rows.find((row) => row.id === "council_tax").shown.before).toBe(-2629);
+    expect(rows.reduce((sum, row) => sum + row.shown.before, 0)).toBe(totals.before);
+  });
+
   it("pins each bar to one row at most, and falls back when pins cannot reach the total", () => {
     const bars = [{ id: "a", change: 3.5, rounded: 3 }];
     expect(pinnedRound([3.5, 3.5], 7, bars)).toEqual([3, 4]);
@@ -797,6 +888,31 @@ describe("postHouseholdDetail", () => {
       postHouseholdImpact({ include: [] }, { signal: controller.signal, fetchImpl, url: "https://main.example/api/household-impact" }),
     ).rejects.toMatchObject({ name: "AbortError" });
     expect(seen).toEqual([true]);
+  });
+
+  it("uses the main API alone when told not to ask the detail URL, though the build has one", async () => {
+    const { postHouseholdDetail } = await import("./householdImpactApi");
+    const main = "https://main.example/api/household-impact";
+    const saved = { ...process.env };
+    process.env.NEXT_PUBLIC_HOUSEHOLD_API_URL = main;
+    process.env.NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL = "https://detail.example/api/household-impact";
+    try {
+      const asked = [];
+      const payload = await postHouseholdDetail(
+        { include: ["sweep"] },
+        {
+          detail: false,
+          fetchImpl: async (url) => {
+            asked.push(url);
+            return respond(200, ok);
+          },
+        },
+      );
+      expect(payload).toEqual(ok);
+      expect(asked).toEqual([main]);
+    } finally {
+      process.env = saved;
+    }
   });
 
   it("uses the main API alone when no detail URL is set", async () => {

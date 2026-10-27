@@ -8,16 +8,19 @@
 import { useEffect, useState } from "react";
 import FactList from "./FactList";
 import { TriangleAlert } from "lucide-react";
-import { SourceLink, Tag } from "./MethodUi";
+import { ExternalLink, SourceLink, Tag, Topic } from "./MethodUi";
 import { describeDataset, fyDash, fyLabel, loadOutlook, periodLabel, splitSource } from "../../utils/livingStandards/outlook";
-import { HBAI_URL, plainWords } from "../livingStandards/sources";
+import { HBAI_URL, plainWords, scrubNote } from "../livingStandards/sources";
+import { METHOD_ANCHORS } from "./anchors";
 
 // Notes said elsewhere: the validation status (Status, below) and the Budget
 // forecast date (the Forecast changes subtitle).
 const UNVALIDATED = /unvalidated|not yet validated/i;
 const SAID_ELSEWHERE = [UNVALIDATED, /OBR forecast is due on/i];
 
-const ext = { target: "_blank", rel: "noopener noreferrer" };
+// A package's GitHub release, by the version the outlook file records
+// (each tag is the bare version, e.g. policyengine.py 6.10.2, policyengine-uk 2.132.6)
+const releaseUrl = (repo, version) => `https://github.com/PolicyEngine/${repo}/releases/tag/${version}`;
 
 /** The deflators in a few words, from meta.deflator. */
 function deflatorWords(text = "") {
@@ -40,9 +43,9 @@ function ucHealthElementFix({ fix, engine }) {
     value: (
       <>
         Patched for {span} (
-        <a href={fix.upstream_fix_url} {...ext}>
+        <ExternalLink href={fix.upstream_fix_url}>
           {fix.upstream_fix.replace(/^PolicyEngine\//, "").replace("#", " #")}
-        </a>
+        </ExternalLink>
         )
       </>
     ),
@@ -54,16 +57,69 @@ function ucHealthElementFix({ fix, engine }) {
   };
 }
 
-/** The engine, data and status of the Living standards baseline, then its notes and gaps. */
+// In the data's notes, a policyengine-uk pull request ("policyengine-uk#2531")
+// and the HBAI statistics are named in words; each becomes a link
+const NOTE_LINKS = /(policyengine-uk ?#\d+|Households Below Average Income)/;
+function linkNote(note) {
+  if (typeof note !== "string" || !NOTE_LINKS.test(note)) return note;
+  return note.split(NOTE_LINKS).map((part, index) => {
+    const pr = part.match(/^policyengine-uk ?#(\d+)$/);
+    if (pr) {
+      return (
+        <ExternalLink key={index} href={`https://github.com/PolicyEngine/policyengine-uk/pull/${pr[1]}`}>
+          {part}
+        </ExternalLink>
+      );
+    }
+    if (part === "Households Below Average Income") {
+      return (
+        <ExternalLink key={index} href={HBAI_URL}>
+          {part}
+        </ExternalLink>
+      );
+    }
+    return part;
+  });
+}
+
+/**
+ * The data's notes on each chart, moved here from the cards' About this
+ * chart, which keep only what is needed to read the chart and link here.
+ */
+function ChartNotes({ outlook, meta }) {
+  if (!outlook) return null;
+  const groups = [
+    ["Incomes over time", [meta.cpi_ahc_note]],
+    ["Inequality over time", outlook.inequality?.notes],
+    ["Growth across the distribution", outlook.income_by_decile?.notes],
+    ["Poverty over time", outlook.poverty?.notes],
+    ["Depth of poverty", outlook.deep_poverty?.notes],
+    ["Who is in poverty", (outlook.poverty_by_group?.notes || []).filter((n) => !/^Region/.test(n))],
+  ]
+    .map(([title, notes]) => [title, (notes || []).filter(Boolean).map(scrubNote).map(linkNote)])
+    .filter(([, notes]) => notes.length);
+  if (!groups.length) return null;
+  return (
+    <Topic id={METHOD_ANCHORS.lsNotes} title="Notes on the forecast charts" preview={groups.map(([title]) => title).join(" · ")}>
+      <FactList items={groups.map(([title, notes]) => [title, { points: notes }, TriangleAlert])} />
+    </Topic>
+  );
+}
+
+/** The engine, data and status of the Living standards baseline, then its notes and gaps, each a folded topic. */
 export default function LivingStandardsMethod() {
   const [meta, setMeta] = useState(null);
+  const [outlook, setOutlook] = useState(null);
 
   useEffect(() => {
     let live = true;
     loadOutlook().then((r) => {
       // Without the file this says nothing; the Living standards view
       // reports the error.
-      if (live && r.data?.meta) setMeta(r.data.meta);
+      if (live && r.data?.meta) {
+        setMeta(r.data.meta);
+        setOutlook(r.data);
+      }
     });
     return () => {
       live = false;
@@ -83,11 +139,16 @@ export default function LivingStandardsMethod() {
 
   return (
     <>
-      <div className="card method-card">
-        <h3 className="method-card-title">Engine and data</h3>
+      <Topic title="Engine and data" preview="Model · Data · Period · Prices · Sources">
         <FactList
           items={[
-            ["Model", `policyengine ${meta.policyengine} (policyengine-uk ${meta.policyengine_uk})`],
+            [
+              "Model",
+              <>
+                <ExternalLink href={releaseUrl("policyengine.py", meta.policyengine)}>policyengine {meta.policyengine}</ExternalLink>{" "}
+                (<ExternalLink href={releaseUrl("policyengine-uk", meta.policyengine_uk)}>policyengine-uk {meta.policyengine_uk}</ExternalLink>)
+              </>,
+            ],
             ["Data", dataset],
             unvalidated && ["Status", <Tag key="status" tone="warning">Unvalidated</Tag>],
             meta.headline_start_year &&
@@ -106,32 +167,30 @@ export default function LivingStandardsMethod() {
               {
                 value: (
                   <>
-                    <a href={hbai.url || HBAI_URL} {...ext}>
-                      DWP HBAI
-                    </a>
+                    <ExternalLink href={hbai.url || HBAI_URL}>DWP HBAI</ExternalLink>
                     ; <SourceLink id="obr_efo_current" />
                   </>
                 ),
-                more: notes.map(text),
+                more: notes.map((n) => linkNote(text(n))),
               },
             ],
           ].filter(Boolean)}
         />
-      </div>
+      </Topic>
+
+      <ChartNotes outlook={outlook} meta={meta} />
 
       {caveats.length > 0 && (
-        <div className="card method-card">
-          <h3 className="method-card-title">What the baseline leaves out</h3>
-          <p className="method-lead">Gaps and simplifications that change how the projections read.</p>
+        <Topic title="What the baseline leaves out" preview="Gaps and simplifications that change how the projections read">
           <ul className="method-list method-list-icons method-list-caveats">
             {caveats.map((c) => (
               <li key={c}>
                 <TriangleAlert aria-hidden="true" strokeWidth={1.75} />
-                <span>{text(c)}</span>
+                <span>{linkNote(text(c))}</span>
               </li>
             ))}
           </ul>
-        </div>
+        </Topic>
       )}
     </>
   );

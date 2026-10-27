@@ -8,10 +8,12 @@ import {
   CHANGE_BY_POLICY_NOTE,
   COUNCIL_TAX_NOTE,
   EVERY_POLICY_NOTE,
+  MARGINAL_RATE_NOTE,
   WHO_IS_A_CHILD_NOTE,
 } from "../components/personal/singleYearMethodNotes";
 import { consistentRound } from "./householdImpactApi";
 import { CHART_COLOURS } from "./chartTheme";
+import { shortNameOf } from "./policyDetails";
 
 export const MINUS = "−";
 
@@ -201,10 +203,17 @@ export const INTERACTION_THRESHOLD = 1;
 export function policyRows(byPolicy, total, policies) {
   const nameOf = (row) =>
     policies.find((policy) => policy.id === row.id)?.name ?? row.name ?? row.id.replace(/_/g, " ");
+  // A short name for tight labels (policyDetails.js's, while it describes
+  // the published measure), else the name
+  const labelOf = (row) => {
+    const measure = policies.find((policy) => policy.id === row.id);
+    return measure ? shortNameOf(measure) : nameOf(row);
+  };
   const affected = byPolicy.measures.filter((row) => row.status !== "not_affected");
   const rows = affected.map((row) => ({
     id: row.id,
     name: nameOf(row),
+    label: labelOf(row),
     color: policies.find((policy) => policy.id === row.id)?.color ?? CHART_COLOURS.noChange,
     change: row.change,
   }));
@@ -242,6 +251,7 @@ export function policyRows(byPolicy, total, policies) {
       .map((row) => ({
         id: row.id,
         name: nameOf(row),
+        label: labelOf(row),
         color: policies.find((policy) => policy.id === row.id)?.color ?? CHART_COLOURS.noChange,
         reason: row.noteKind === "employer_cost" ? row.note : null,
       })),
@@ -304,6 +314,41 @@ export function pinnedRound(values, total, bars = []) {
   return sum === Math.round(total) ? out : consistentRound(values, total);
 }
 
+// Rows the headline card also states, rounded on their own there ("Based
+// on: Council Tax £2,629"): the table keeps that whole-pound figure
+// rather than nudging it by £1 to make its column add up.
+export const STATED_ELSEWHERE = new Set(["council_tax"]);
+
+/**
+ * The before column's whole pounds (consistentRound to `total`), with each
+ * row in STATED_ELSEWHERE at its own rounding and the others adding up to
+ * the rest; plain consistent rounding if they then cannot.
+ */
+export function pinnedBefore(rows, total) {
+  const values = rows.map((row) => row.before);
+  // Rounded as money() rounds the headline's positive amount: half away from
+  // zero, so a negated row at an exact 50p (−£2,628.50) is −£2,629, not −£2,628
+  const pinned = rows.map((row) =>
+    STATED_ELSEWHERE.has(row.id) ? Math.sign(row.before) * Math.round(Math.abs(row.before)) || 0 : null,
+  );
+  const free = values.map((_, index) => index).filter((index) => pinned[index] === null);
+  if (free.length === values.length || free.length === 0) return consistentRound(values, total);
+  const pinnedSum = pinned.reduce((sum, pin) => sum + (pin ?? 0), 0);
+  const freeValues = free.map((index) => values[index]);
+  const rest = Math.round(total) - pinnedSum;
+  // Only when the free rows already sum to the rest within £1, as
+  // consistentRound assumes
+  if (Math.abs(freeValues.reduce((sum, value) => sum + value, 0) - rest) > 1) {
+    return consistentRound(values, total);
+  }
+  const rounded = consistentRound(freeValues, rest);
+  const out = pinned.slice();
+  free.forEach((index, i) => {
+    out[index] = rounded[i];
+  });
+  return out;
+}
+
 /**
  * The whole pounds the programme table shows, as `shown: {before, after,
  * change}` on each row and part. The before column adds up to the before
@@ -338,10 +383,7 @@ export function roundProgrammeGroups(groups, totals, bars = []) {
     return children.map((child, index) => ({ ...child, shown: shown(before[index], change[index]) }));
   };
   const rows = groups.flatMap((group) => group.rows);
-  const before = consistentRound(
-    rows.map((row) => row.before),
-    totals.before,
-  );
+  const before = pinnedBefore(rows, totals.before);
   const change = pinnedRound(
     rows.map((row) => row.change),
     totals.change,
@@ -407,6 +449,39 @@ export function rateAt(rates, income) {
 }
 
 /**
+ * The marginal rate as money: "Of your next £1,000 of earnings, you keep
+ * £324." from the rates over the next £200 (the API's own step), before
+ * and after, said once when they round to the same pounds. A rate over
+ * 200% is a cliff (net income falls by more than the £200 earned), which
+ * a £1,000 multiple would overstate, so the sentence is then about the
+ * next £200 itself. A keep below zero is a loss: "you would lose £X".
+ * Null without both rates.
+ */
+export function keepSentence(before, after) {
+  const clause = keepClause(before, after);
+  return clause && `${clause.charAt(0).toUpperCase()}${clause.slice(1)}.`;
+}
+
+/**
+ * keepSentence's words without the capital or full stop, to follow the
+ * marginal rate in one sentence: "of your next £1,000 of earnings, you
+ * keep £720". Null without both rates.
+ */
+export function keepClause(before, after, { first = false } = {}) {
+  if (before === null || before === undefined || after === null || after === undefined) return null;
+  // With no earnings yet, the API's rate is over the first £200 only: say
+  // that, not a wider sum it may not hold for
+  const unit = first || before > 2 || after > 2 ? 200 : 1000;
+  const kept = (rate) => Math.round(unit * (1 - rate));
+  const say = (amount) =>
+    amount < 0 ? `would lose ${money(-amount)}` : `keep ${money(amount)}`;
+  const lead = `of your ${first ? "first" : "next"} ${money(unit)} of earnings, you`;
+  const [was, now] = [kept(before), kept(after)];
+  if (was === now) return `${lead} ${say(was)}`;
+  return `${lead} ${say(was)} before and ${say(now)} after`;
+}
+
+/**
  * Steps where net income after the policies falls as salary rises by more
  * than `threshold` pounds: [{from, to, drop}].
  */
@@ -432,9 +507,9 @@ export function areaName(brma) {
 }
 
 /**
- * How the single-year calculation works, in one place: Personal impact's
- * "About these figures" shows these, as [term, text]; the Methodology tab
- * links there.
+ * How the single-year calculation works, in one place: the Methodology
+ * view's Household impact section shows these, as [term, text]; the
+ * Household impact cards link there.
  */
 export const SINGLE_YEAR_METHOD = [
   [
@@ -455,7 +530,7 @@ export const SINGLE_YEAR_METHOD = [
   ],
   [
     "Marginal tax rate",
-    "The share of an extra pound of salary lost to taxes and withdrawn benefits, with everything else held as entered. The rate stated for you is over the next £100 of your salary; the chart's steps are between neighbouring points of the earnings sweep, so near a threshold they can average across it.",
+    MARGINAL_RATE_NOTE,
   ],
   [
     "Every policy applied",

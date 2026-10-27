@@ -18,9 +18,66 @@ import {
 // the policies back shows them at once
 const cache = new Map();
 
-/** Empty the session cache (for tests). */
+/**
+ * A cache entry's result when it was answered by `expectedEngine` (or no
+ * engine is expected), else null. Every reader checks this, whoever wrote
+ * the entry: a fetched answer was checked when it arrived, but a seeded one
+ * was checked against whatever engine its writer had (#104).
+ */
+function underEngine(entry, expectedEngine) {
+  if (!entry) return null;
+  if (expectedEngine && engineDifferences(expectedEngine, entry.data?.engine).length) return null;
+  return entry;
+}
+
+/**
+ * A result already in the session cache for a request key (fetched, or a
+ * precomputed example), or null; null too when `expectedEngine` is given and
+ * the result's package versions differ. Its headline may be all it has.
+ */
+export function peekHouseholdImpact(key, expectedEngine = null) {
+  return underEngine(cache.get(key), expectedEngine)?.data ?? null;
+}
+
+// Whether the detail service (NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL) may
+// still be asked this session. Its answer is used only under a headline
+// that reports a build commit, and only from that commit; once it has
+// answered from another build (another commit, none, other package versions
+// or another net income), every later answer would be refused too, so the
+// page stops waiting for it and asks the main API at once.
+let detailServiceUsable = true;
+
+/** Whether the detail service may still be asked this session (for tests). */
+export function detailServiceAsked() {
+  return detailServiceUsable;
+}
+
+/** Empty the session cache, and ask the detail service again (for tests). */
 export function clearHouseholdImpactCache() {
   cache.clear();
+  detailServiceUsable = true;
+}
+
+/**
+ * Add complete answers to the session cache, as [key, result] pairs (the
+ * key as this hook builds it: publication snapshot, then request)
+ * : the precomputed examples (utils/householdPresets.js), shown at
+ * once when asked for. An answer already fetched is kept.
+ */
+export function seedHouseholdImpactCache(entries) {
+  for (const [key, data] of entries) {
+    if (!cache.get(key)?.complete) cache.set(key, { data, complete: true });
+  }
+}
+
+/**
+ * Add one headline (no sweep or split by policy) to the session cache, as
+ * the example cards' background fill gets it (useExampleFigures.js): a
+ * request for it then shows the headline at once and asks only for the
+ * details. An entry already there is kept.
+ */
+export function rememberHouseholdHeadline(key, data) {
+  if (!cache.has(key)) cache.set(key, { data, complete: false });
 }
 
 // Wait this long after the last change before asking
@@ -43,11 +100,16 @@ const DEBOUNCE_MS = 400;
  * @param {(snapshot: string) => Promise<boolean>} [params.confirmPublication]
  *   - Resolves after a check of the live publication that started after it
  *   was called; each request waits for it and is dropped unless still current
+ * @param {number} [params.seeded] - Bumped when answers are added to the
+ *   cache, so a request still waiting picks up a precomputed answer
+ * @param {string|null} [params.household] - Which household the answers
+ *   are (an example's id, or "yours"): a result is never shown for another
+ *   household, even while the new one loads
  * @returns {{ status: "idle"|"loading"|"ready"|"error", data: Object|null,
  *   error: Error|null, detailStatus: "idle"|"loading"|"ready"|"error",
  *   detailError: Error|null, retry: () => void }}
  */
-export default function useHouseholdImpact({ inputs, year, policies, enabled, publicationKey = "", expectedEngine = null, confirmPublication = null }) {
+export default function useHouseholdImpact({ inputs, year, policies, enabled, publicationKey = "", expectedEngine = null, confirmPublication = null, seeded = 0, household = null }) {
   const body = useMemo(
     () => buildHouseholdRequest(inputs, { year, policies }),
     [inputs, year, policies],
@@ -56,10 +118,12 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
   const [attempt, setAttempt] = useState(0);
   // `key` is the request asked for last; `dataKey` the request `data`
   // answers. They differ while a new answer loads: the old numbers are then
-  // stale, however many renders that takes.
+  // stale, however many renders that takes. `dataHousehold` is whose
+  // answers `data` is: another household's is never returned.
   const [state, setState] = useState({
     key: null,
     dataKey: null,
+    dataHousehold: null,
     status: "idle",
     data: null,
     error: null,
@@ -69,11 +133,14 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
 
   useEffect(() => {
     if (!enabled || policies.length === 0) return undefined;
-    const cached = cache.get(key);
+    // An entry from other package versions is a miss: the live answer
+    // replaces it
+    const cached = underEngine(cache.get(key), expectedEngine);
     if (cached?.complete) {
       setState({
         key,
         dataKey: key,
+        dataHousehold: household,
         status: "ready",
         data: cached.data,
         error: null,
@@ -84,12 +151,18 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     }
     const controller = new AbortController();
     const { signal } = controller;
-    // Keep the last result on screen while the next one loads; it stays
-    // marked stale (dataKey) until this request's answer arrives
+    // The same household asked again (another year or set of policies):
+    // keep its last result on screen while the next one loads, marked stale
+    // (dataKey) until this request's answer arrives, as the guide's "don't
+    // clear results before new data arrives" asks. Another household (a
+    // different card) never keeps it: `shown` below hides it at once, and
+    // a late answer for the earlier request is dropped (its signal is
+    // aborted below, and every update checks it)
     setState((prev) => ({
       ...prev,
       key,
       dataKey: cached ? key : prev.dataKey,
+      dataHousehold: cached ? household : prev.dataHousehold,
       status: cached ? "ready" : "loading",
       data: cached ? cached.data : prev.data,
       error: null,
@@ -102,12 +175,16 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     const current = async () => !confirmPublication || (await confirmPublication(publicationKey));
     const refuse = (error) => {
       cache.delete(key);
-      setState({ key, dataKey: null, status: "error", data: null, error, detailStatus: "idle", detailError: null });
+      setState({ key, dataKey: null, dataHousehold: null, status: "error", data: null, error, detailStatus: "idle", detailError: null });
       // Nothing else this request asked for can be shown now
       controller.abort();
     };
     const timer = setTimeout(async () => {
       let first = cached?.data ?? null;
+      // Whether this request fetched its headline: one kept in the cache
+      // (an example card's, or this household's from earlier in the session)
+      // may come from a deploy that has since been replaced
+      const headlineFetched = !first;
       if (!first) {
         try {
           if (!(await current()) || signal.aborted) return;
@@ -121,6 +198,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
           setState({
             key,
             dataKey: null,
+            dataHousehold: null,
             status: "error",
             data: null,
             error,
@@ -141,6 +219,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
         setState({
           key,
           dataKey: key,
+          dataHousehold: household,
           status: "ready",
           data: first,
           error: null,
@@ -162,22 +241,35 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       );
       // The detail service's answer is used only if it has the part asked
       // for, reports the headline's build commit and matches it; otherwise
-      // the part is asked of the main API
+      // the part is asked of the main API. An answer from another build than
+      // a headline fetched just now stops the page asking the detail service
+      // for the rest of the session
       const acceptFor = (include) => (raw) => {
         try {
           const detail = normaliseHouseholdImpact(raw);
           const answered = include.every((part) => (part === "sweep" ? detail.sweep : detail.byPolicy) !== null);
-          return answered && stageMismatch(first, detail, { sameBuild: true }) === null;
+          const otherBuild = stageMismatch(first, detail, { sameBuild: true }) !== null;
+          // Only a headline fetched just now stands for the main API's
+          // current build: under one kept from an earlier deploy, a detail
+          // answer from the new one is refused for this request but says
+          // nothing about the next
+          if (otherBuild && headlineFetched) detailServiceUsable = false;
+          return answered && !otherBuild;
         } catch {
           return false;
         }
       };
+      // Under a headline that reports no build commit (a deploy from before
+      // answers carried one), no detail answer can be accepted: asking the
+      // detail service would only add its time, up to a cold start, before
+      // the main API is asked anyway
+      const askDetail = detailServiceUsable && typeof first.build === "string";
       await Promise.all(
         parts.map(async (include) => {
           try {
             const raw = await postHouseholdDetail(
               { ...body, include },
-              { signal, timeoutMs: DETAIL_TIMEOUT_MS, accept: acceptFor(include) },
+              { signal, timeoutMs: DETAIL_TIMEOUT_MS, accept: acceptFor(include), detail: askDetail },
             );
             if (signal.aborted || refused) return;
             // Refused unless from the headline's own package versions and,
@@ -189,6 +281,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
               ...prev,
               key,
               dataKey: key,
+              dataHousehold: household,
               status: "ready",
               data: merged,
               error: null,
@@ -222,7 +315,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     };
     // body is derived from key's inputs
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, enabled, attempt, policies.length]);
+  }, [key, household, enabled, attempt, policies.length, seeded]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
@@ -231,10 +324,13 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
   // until the new answer arrives. The page greys it and labels it with its
   // own year, never the new one.
   const asked = state.key === key;
-  const stale = state.data !== null && state.dataKey !== key;
+  // The data is for this household (another card's result is never shown
+  // as this one's, not even greyed while this one loads)
+  const shown = state.data !== null && state.dataHousehold === household ? state.data : null;
+  const stale = shown !== null && state.dataKey !== key;
   return {
     status: asked ? state.status : "loading",
-    data: state.data,
+    data: shown,
     error: asked ? state.error : null,
     detailStatus: asked ? state.detailStatus : "loading",
     detailError: asked ? state.detailError : null,

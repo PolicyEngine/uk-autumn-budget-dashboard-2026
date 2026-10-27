@@ -330,9 +330,16 @@ def build_outlook(
         "notes": [
             "Deciles are re-ranked each year, so growth compares the same position in the distribution, not the same people.",
             decile_note(ahc_deciles["cumulative_growth_to_end"]),
-            "The halves are split at the non-pensioner median and show means, not the typical (median) incomes in Resolution Foundation analysis.",
+            "The halves are split at the non-pensioner median and show means, not medians.",
         ],
     }
+
+    # 1b. Growth across the distribution: each income group's own median,
+    # every year, for all people and for non-pensioners, BHC and AHC, with
+    # the year-on-year change. A grouping is published only if every cell
+    # (each group, population, basis and year read) has at least
+    # MIN_HOUSEHOLDS unweighted households, the floor poverty_by_group uses.
+    income_growth_by_group = growth_by_group(proj, years, real)
 
     # 2. Child poverty by family.
     fam_groups = {
@@ -406,7 +413,7 @@ def build_outlook(
     deep = lambda y: P(y)["deep_poverty_ahc"]  # noqa: E731
     deep_poverty = {
         "measures": {
-            "below_40pc_median_ahc": "Very deep poverty: below 40% of median income (AHC, JRF-style)",
+            "below_40pc_median_ahc": "Very deep poverty: below 40% of median income (AHC)",
             "below_50pc_median_ahc": "Below 50% of median income (AHC)",
         },
         "projection": {
@@ -424,7 +431,7 @@ def build_outlook(
             for k in (40, 50)
         },
         "notes": [
-            "Lines are 40% and 50% of the model's own median equivalised AHC income each year, as JRF defines very deep poverty.",
+            "Lines are 40% and 50% of the model's own median equivalised AHC income each year.",
             "Not the model's in_deep_poverty_ahc flag, which is half the absolute poverty line.",
             deep_poverty_note(P(PROJECTION_START), PROJECTION_START),
         ],
@@ -735,10 +742,92 @@ def build_outlook(
         "deep_poverty": deep_poverty,
         "poverty_by_group": poverty_by_group,
         "obr_rhdi": obr_rhdi,
+        "income_growth_by_group": income_growth_by_group,
     }
     for note in outlook["meta"]["notes"] + CAVEATS:
         assert len(note) <= 160, note
     return outlook
+
+
+GROWTH_POPULATIONS = {
+    "all": "All people",
+    "non_pensioners": "Non-pensioners: people in families (benefit units) with no one at or above State Pension age",
+}
+
+
+def growth_by_group(proj: dict, years: list[int], real) -> dict:
+    """``income_growth_by_group`` (docs/DATA_CONTRACT.md) from the
+    projections' ``income_groups``: real medians, the change on the year
+    before and the change since the base year, for every grouping whose
+    cells all clear the household floor."""
+    from uk_budget_data.living_standards.projections import INCOME_GROUPINGS
+
+    P = lambda y: proj[str(y)]["income_groups"]  # noqa: E731
+    read_years = [years[0] - 1, *years]
+    series = {}
+    smallest = {}
+    for pop in GROWTH_POPULATIONS:
+        series[pop] = {}
+        for basis in ("bhc", "ahc"):
+            series[pop][basis] = {}
+            for name in INCOME_GROUPINGS:
+                cells = [P(y)[pop][basis][name] for y in read_years]
+                fewest = min(min(c["unweighted_households"]) for c in cells)
+                smallest[name] = min(smallest.get(name, fewest), fewest)
+                med = {
+                    y: [real(v, y, basis) for v in c["medians"]]
+                    for y, c in zip(read_years, cells)
+                }
+                base = med[years[0]]
+                series[pop][basis][name] = {
+                    "min_unweighted_households": fewest,
+                    "by_year": [
+                        {
+                            "year": fy(y),
+                            "real_median": [round(v) for v in med[y]],
+                            "annual_growth": [
+                                round(v / p - 1, 5)
+                                for v, p in zip(med[y], med[y - 1])
+                            ],
+                            "cumulative_growth": [
+                                round(v / b - 1, 5)
+                                for v, b in zip(med[y], base)
+                            ],
+                        }
+                        for y in years
+                    ],
+                }
+    published = [n for n in INCOME_GROUPINGS if smallest[n] >= MIN_HOUSEHOLDS]
+    withheld = {
+        n: f"A cell has {smallest[n]} unweighted households, below the floor of {MIN_HOUSEHOLDS}"
+        for n in INCOME_GROUPINGS
+        if n not in published
+    }
+    for pop in series:
+        for basis in series[pop]:
+            for n in withheld:
+                del series[pop][basis][n]
+    return {
+        "base_year": fy(years[0]),
+        "end_year": fy(years[-1]),
+        "measure": "median",
+        "statistic": f"Median equivalised household income within each person-weighted income group, real {fy(years[0])} prices",
+        "bases": {
+            "bhc": "Before housing costs (deflated by OBR CPI)",
+            "ahc": "After housing costs (deflated by CPI excluding housing costs)",
+        },
+        "populations": GROWTH_POPULATIONS,
+        "groupings": {n: INCOME_GROUPINGS[n] for n in published},
+        "min_unweighted_households": MIN_HOUSEHOLDS,
+        "withheld_groupings": withheld,
+        "method": (
+            "Each population is ranked on its own equivalised income (BHC on BHC income, AHC on AHC income), re-ranked each year, "
+            "and cut into person-weighted groups; each group's median is deflated by CPI (BHC) or CPI-AHC (AHC). "
+            f"annual_growth is the change on the year before (for {fy(years[0])}, on {fy(years[0] - 1)}); "
+            f"cumulative_growth the change since {fy(years[0])}."
+        ),
+        "series": series,
+    }
 
 
 def outlook_text(outlook: dict) -> str:
@@ -820,9 +909,8 @@ def deep_poverty_note(v: dict, year: int) -> str:
     d = v["deep_poverty_ahc"]["below_40pc"]
     # JRF, UK Poverty 2026: about 10% (6.8m) in very deep poverty in 2023-24, older HBAI series.
     return (
-        f"Our very deep poverty ({d['rate'] * 100:.1f}%, {d['people_millions']:.1f} million in {fy(year)}) is well "
-        "below JRF's figure of about 10% (6.8 million in 2023-24, on the older survey series), so read it as a "
-        "change, not a level."
+        f"Our very deep poverty ({d['rate'] * 100:.1f}%, {d['people_millions']:.1f} million in {fy(year)}) is "
+        "below published estimates on the older survey series, so read it as a change, not a level."
     )
 
 
