@@ -65,6 +65,16 @@ export function formatDifference(value) {
   return `${rounded < 0 ? MINUS : "+"}£${Math.abs(rounded).toFixed(1)}bn`;
 }
 
+/**
+ * The difference a reader can check against the labels: PolicyEngine minus
+ * official, each rounded to £0.1bn first (−£6.2bn vs −£6.5bn is +£0.3bn,
+ * never +£0.4bn). Null without both figures. Downloads keep the raw one.
+ */
+export function shownDifference(pe, obr) {
+  if (!isValue(pe) || !isValue(obr)) return null;
+  return (Math.round(pe * 10) - Math.round(obr * 10)) / 10;
+}
+
 /** PolicyEngine's estimate as a % of the official costing, or null. */
 export function pctOfOfficial(pe, obr) {
   if (!isValue(pe) || !isValue(obr) || Math.abs(obr) < MIN_PCT_BASE) return null;
@@ -221,7 +231,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
     const pePart = row.xPe !== null && row.xPe !== undefined;
     const obrPart = row.xObr !== null && row.xObr !== undefined;
     const centre = (plotLeft + plotRight) / 2;
-    const difference = isValue(row.pe) && isValue(row.obr) ? row.pe - row.obr : null;
+    const difference = shownDifference(row.pe, row.obr);
 
     if (pePart && obrPart) {
       const xPe = x(row.xPe);

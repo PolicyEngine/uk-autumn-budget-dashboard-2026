@@ -9,7 +9,7 @@ import TitleIcon from "./TitleIcon";
 import NoBreakYear from "./NoBreakYear";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import UnavailableNotice from "./publication/UnavailableNotice";
-import OBRDumbbellChart, { dumbbellLegendItems, formatBn, formatBn as formatFigure, formatDifference, obrValue } from "./OBRDumbbellChart";
+import OBRDumbbellChart, { dumbbellLegendItems, formatBn, formatBn as formatFigure, formatDifference, obrValue, shownDifference } from "./OBRDumbbellChart";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv, fiscalYear } from "../utils/chartCsv";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
@@ -135,7 +135,8 @@ export function comparisonSentence(rows, obrKind) {
     const [row] = paired;
     return `For ${row.name}, our static estimate is ${formatBn(row.pe)} and ${costing} is ${formatBn(row.obr)}.`;
   }
-  const gap = (row) => Math.abs(row.pe - row.obr);
+  // On the figures as shown, so the sentence agrees with the labels
+  const gap = (row) => Math.abs(shownDifference(row.pe, row.obr));
   const close = paired.filter((row) => gap(row) <= CLOSE_BN + 1e-9).length;
   const largest = paired.reduce((best, row) => (gap(row) > gap(best) ? row : best));
   const lead = close === paired.length
@@ -335,7 +336,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
                     <td className="value-cell obr">{cell(row.obrStatic)}</td>
                     <td className="value-cell obr">{cell(row.obrBehavioural)}</td>
                     <td className="value-cell difference">
-                      {row.pe !== null && row.obr !== null ? formatDifference(row.pe - row.obr) : "—"}
+                      {formatDifference(shownDifference(row.pe, row.obr))}
                     </td>
                   </tr>
                 ))}

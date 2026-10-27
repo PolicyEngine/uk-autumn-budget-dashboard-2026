@@ -8,6 +8,7 @@ import OBRDumbbellChart, {
   formatDifference,
   obrValue,
   pctOfOfficial,
+  shownDifference,
 } from "./OBRDumbbellChart";
 
 // comparisonRows() output, largest official costing first
@@ -116,6 +117,12 @@ describe("helpers", () => {
     expect(formatDifference(-0.31)).toBe("−£0.3bn");
     expect(formatDifference(0.01)).toBe("£0.0bn");
     expect(formatDifference(null)).toBe("—");
+  });
+
+  it("takes the difference of the figures as shown", () => {
+    expect(shownDifference(-6.15, -6.5)).toBeCloseTo(0.3);
+    expect(formatDifference(shownDifference(-0.16, -0.1))).toBe("−£0.1bn");
+    expect(shownDifference(1, null)).toBeNull();
   });
 
   it("gives a % of the official costing only where it has a base", () => {
