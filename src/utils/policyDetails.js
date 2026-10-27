@@ -69,14 +69,14 @@ export const POLICY_DETAILS = [
     name: "State Pension income tax protection",
     description:
       "No income tax for pensioners whose only income is the State Pension",
-    writtenFor: "Candidate measure. From 6 April 2027, people over State Pension age get an income tax allowance equal to the full new State Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 for £1 of income above it, down to the standard personal allowance. Someone whose only income is the full new State Pension pays no income tax.",
+    writtenFor: "Candidate measure. From 6 April 2027, people over State Pension age whose only income is the State Pension (savings interest aside) get an income tax allowance equal to the full new State Pension (rounded up to the pound: £13,037 in 2027-28), rising with it. Someone whose only income is the full new State Pension pays no income tax; £1 of other income takes the allowance away.",
     summary:
       "People whose only income is the full new State Pension pay no income tax.",
     starts: "April 2027",
     type: "Income tax",
     inForce: { from: "2027-04" },
     details:
-      "Modelled as an allowance for people over State Pension age equal to the full new State Pension (£13,040 in 2027-28), withdrawn £1 for £1 of other income down to the standard personal allowance. The mechanism is an assumption made before the Budget.",
+      "Modelled as an allowance equal to the full new State Pension (£13,037 in 2027-28, rising with it) for people over State Pension age whose only income is the State Pension, savings interest aside. Any other income, such as a private pension, takes the allowance away. Based on reporting on 26 October 2026; the mechanism is an assumption made before the Budget.",
   },
   {
     id: "warm_home_discount_top_up",
