@@ -382,7 +382,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(item.querySelector(".ptl-chip")).toHaveTextContent(/^18 months$/);
   });
 
-  it("draws the real file's seven measures each their own way", () => {
+  it("draws the real file's eight measures each their own way", () => {
     const cases = [
       ["fuel_duty_rise_deferral", "Fuel duty rises deferred", "cost", ".pchg-svg"],
       ["state_pension_income_tax_protection", "State Pension income tax protection", "cost", ".pchg-svg"],
@@ -391,6 +391,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       ["warm_home_discount_top_up", "Warm Home Discount top-up", "cost", ".pchg-ba", "£150£250+£100"],
       ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "cost", ".pchg-ba", "5%0%−5 points"],
       ["road_fuel_vat_cut", "VAT cut on road fuel", "cost", ".pchg-ba", "20%15%−5 points"],
+      ["carers_allowance_earnings_taper", "Carer's Allowance earnings taper", "cost", ".pchg-svg"],
     ];
     for (const [id, name, direction, selector, values] of cases) {
       render(<PolicyCards policies={[published(id, name, direction)]} selectedPolicies={[id]} parameterTables={file} />);

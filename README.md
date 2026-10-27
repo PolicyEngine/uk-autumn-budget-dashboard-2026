@@ -39,8 +39,9 @@ The list on `main` today:
 | `threshold_freeze_2031_32` | Threshold freeze to 2031-32: personal allowance and basic rate band frozen one more year |
 | `road_fuel_vat_cut` | VAT on petrol and diesel at 15%, December 2026 to May 2027 |
 | `plan_2_threshold_unfreeze` | Plan 2 student loan threshold uprated by RPI from April 2027 |
+| `carers_allowance_earnings_taper` | Carer's Allowance withdrawn £1 for £1 above the £204 weekly earnings limit, from 2030-31 (hand-written) |
 
-These seven are the combined package (`autumn_budget_2026_combined`, key `combined--5c77771791661e11`). Business Asset Disposal Relief restricted and employer NI relief for under-25s were withdrawn on 27 October 2026 and are not registered.
+These eight are the combined package (`autumn_budget_2026_combined`, key `combined--9f29f8fddfb61a5c`; the seven kept measures were `combined--5c77771791661e11` before the Carer's Allowance taper was added on 27 October 2026). Business Asset Disposal Relief restricted and employer NI relief for under-25s were withdrawn on 27 October 2026 and are not registered.
 
 List them from the command line with `uv run uk-budget-data generate --list-reforms`.
 

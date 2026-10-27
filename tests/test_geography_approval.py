@@ -730,7 +730,7 @@ def test_the_area_run_takes_the_seven_package_under_its_key():
     )
 
     seven = sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
-    key = "combined--5c77771791661e11"
+    key = "combined--9f29f8fddfb61a5c"
     assert g.manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     manifest = _seven_manifest(key, seven)
     package = [AUTUMN_BUDGET_2026_COMBINED_ID]
@@ -753,5 +753,5 @@ def test_the_area_run_refuses_the_withdrawn_nine_measure_package():
     )
     manifest = _seven_manifest(combined_key(nine), nine)
     assert AUTUMN_BUDGET_2026_COMBINED_ID not in g.approved_reforms(manifest)
-    with pytest.raises(ValueError, match="combined--5c77771791661e11"):
+    with pytest.raises(ValueError, match="combined--9f29f8fddfb61a5c"):
         g.approved_reforms(manifest, [AUTUMN_BUDGET_2026_COMBINED_ID])

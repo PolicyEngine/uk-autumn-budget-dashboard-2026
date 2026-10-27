@@ -59,7 +59,7 @@ CANDIDATES = (
     "carers_allowance_earnings_taper",
 )
 # Individual candidates that are not components of the combined package.
-NOT_IN_PACKAGE = ("carers_allowance_earnings_taper",)
+NOT_IN_PACKAGE = ()
 # Registered on 27 October, before its first national generation: its rows
 # are checked once budgetary_impact.csv has them.
 NOT_YET_GENERATED = ("carers_allowance_earnings_taper",)
@@ -116,19 +116,18 @@ def test_the_registry_is_the_combined_package_then_the_ten_candidates():
     )
 
 
-def test_the_package_is_the_seven_kept_measures():
+def test_the_package_is_the_seven_kept_measures_and_the_carers_taper():
     from uk_budget_data.geography import manifest_key
     from uk_budget_data.publication.combine import combined_key
 
-    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 7
-    # The seven, and the Carer's Allowance taper as an individual candidate
+    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 8
     assert len(reforms._MEASURE_FACTORIES) == 8
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
-    assert key == "combined--5c77771791661e11"
+    assert key == "combined--9f29f8fddfb61a5c"
     # The area run's package alias stands for that key
     assert manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     description = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID).description
-    assert description.startswith("All seven candidate measures")
+    assert description.startswith("All eight candidate measures")
 
 
 def test_the_withdrawn_measures_are_not_registered():
