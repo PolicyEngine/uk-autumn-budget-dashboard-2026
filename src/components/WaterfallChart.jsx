@@ -39,7 +39,7 @@ import {
   noHouseholdChange,
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
-import { chartMotion, netDot } from "../utils/chartMotion";
+import { chartMotion, netDotTitled } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
@@ -384,7 +384,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
               <Scatter
                 dataKey="netChange"
                 opacity={netOpacity(key.highlight)}
-                shape={netDot}
+                shape={netDotTitled((row) => `${row.decile} decile: net change ${formatCurrency(row.netChange)}`)}
                 legendType="none"
                 tooltipType="none"
                 {...chartMotion()}

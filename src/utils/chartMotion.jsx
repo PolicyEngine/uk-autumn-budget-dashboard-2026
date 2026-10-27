@@ -60,3 +60,24 @@ export function netDot({ cx, cy }) {
   }
   return <circle cx={cx} cy={cy} r={3.5} fill={CHART_COLOURS.net} stroke={CHART_COLOURS.surface} strokeWidth={1.5} />;
 }
+
+/**
+ * netDot with a name: Recharts wraps each Scatter point in a g with
+ * role="img", which needs a text alternative (WCAG 1.1.1), so the dot
+ * carries a <title> saying its value, from `describe(row)`.
+ *
+ * @param {(row: Object) => string} describe - The point's row to its words
+ * @returns {(props: Object) => JSX.Element|null}
+ */
+export function netDotTitled(describe) {
+  return function NetDot(props) {
+    const dot = netDot(props);
+    if (!dot) return null;
+    return (
+      <>
+        <title>{describe(props.payload ?? {})}</title>
+        {dot}
+      </>
+    );
+  };
+}
