@@ -60,7 +60,6 @@ const SECTION_ICONS = Object.fromEntries(METHOD_CONTENTS.map(({ id, titleIcon })
 const pounds = (value) => `£${Math.round(value).toLocaleString("en-GB")}`;
 const SCATTER_CHANGE_MAX = SCATTER_BINS.change_edges[SCATTER_BINS.change_edges.length - 1];
 const SCATTER_CHANGE_EDGE_LIST = SCATTER_BINS.change_edges.filter((edge) => edge > 0).map(pounds);
-const SCATTER_CHANGE_EDGES = SCATTER_CHANGE_EDGE_LIST.join(", ");
 const yearRange = `${fiscalYearTick(FIRST_DISPLAY_YEAR)} to ${fiscalYearTick(LAST_DISPLAY_YEAR)}`;
 
 /**
@@ -441,7 +440,7 @@ function MethodologyTab({ onShowTab }) {
                       `Income: 2027-28 baseline net income, in ${pounds(SCATTER_BINS.income_band_width)} bands up to ${pounds(SCATTER_BINS.income_max)}, so a group is the same households in every year.`,
                       <>
                         Change: band edges either way at
-                        <span className="method-chips" aria-label={`Band edges: ${SCATTER_CHANGE_EDGES}`}>
+                        <span className="method-chips">
                           {SCATTER_CHANGE_EDGE_LIST.map((edge) => (
                             <Tag key={edge}>{edge}</Tag>
                           ))}
