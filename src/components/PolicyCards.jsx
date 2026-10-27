@@ -222,15 +222,17 @@ function PolicyTimeline({ policy, highlight }) {
 }
 
 /**
- * One measure's card. Every card has the same six rows, in the same order,
- * and the cards of a grid row share them (CSS subgrid), so each row lines
- * up across the cards: the head (type and any "Temporary" badge on one
+ * One measure's card: the head (type and any "Temporary" badge on one
  * line, then the name), the summary, what changes (the model's parameters,
- * current law beside the measure; the slot kept, empty, when the file has
- * no table for the measure as published), when it is in force (Starts and
- * Ends, the Ends slot kept even when empty, then the timeline), the
- * source, and the footer ("How it is modelled" and "See its effect" on
- * one line).
+ * current law beside the measure), when it is in force (Starts and Ends,
+ * then the timeline), and the footer ("How it is modelled", then the
+ * source and "See its effect").
+ *
+ * A measure without card details (no entry in policyDetails.js, or one
+ * written for another description, as when a run publishes a changed
+ * measure) shows its full published description and only the blocks it
+ * has content for: no labelled box is ever drawn empty, and the card is
+ * as tall as its content rather than its row (`is-bare`).
  */
 function PolicyCard({ policy, onShowEffect, parameters }) {
   const temporary = Boolean(policy.inForce?.to);
@@ -238,47 +240,60 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
   const [highlight, setHighlight] = useState(null);
   // What the published wording says about how it is modelled
   const modelling = modellingInfo(policy);
+  // No summary means no card details apply: the published description, in full
+  const bare = !policy.summary;
+  const showModelling = hasInfo(modelling);
   return (
     <li
-      className="policy-card"
+      className={`policy-card${bare ? " is-bare" : ""}`}
       style={{ "--policy-accent": policy.color }}
     >
       <div className="policy-card-head">
         {/* No icon per measure: a map by id would be a measure list of the
             page's own (#104) */}
         <div className="policy-card-titles">
-          <div className="policy-card-topline">
-            <p className="policy-card-type">
-              {policy.type && <TitleIcon name={categoryIcon(policy.type)} bare size={14} className="policy-card-icon-inline" />}
-              {policy.type}
-            </p>
-            <span className="policy-card-tags">
-              {temporary && (
-                <span className="policy-card-badge">
-                  <Clock size={12} aria-hidden="true" />
-                  Temporary
-                </span>
+          {(policy.type || temporary) && (
+            <div className="policy-card-topline">
+              {policy.type && (
+                <p className="policy-card-type">
+                  <TitleIcon name={categoryIcon(policy.type)} bare size={14} className="policy-card-icon-inline" />
+                  {policy.type}
+                </p>
               )}
-            </span>
-          </div>
+              <span className="policy-card-tags">
+                {temporary && (
+                  <span className="policy-card-badge">
+                    <Clock size={12} aria-hidden="true" />
+                    Temporary
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
           <h3 className="policy-card-name">{policy.label ?? policy.name}</h3>
         </div>
       </div>
 
-      <p className="policy-card-summary">{policy.summary ?? policy.description}</p>
+      {bare ? (
+        policy.description && <p className="policy-card-summary is-full">{policy.description}</p>
+      ) : (
+        <p className="policy-card-summary">{policy.summary}</p>
+      )}
 
-      <div className="policy-card-spec">
-        {parameters && (
+      {parameters && (
+        <div className="policy-card-spec">
           <PolicyChange
             name={policy.label ?? policy.name}
             entry={parameters}
             direction={policy.direction}
             onHighlight={setHighlight}
           />
-        )}
-      </div>
+        </div>
+      )}
 
+      {(policy.starts || policy.inForce) && (
       <div className="policy-card-when">
+        {policy.starts && (
         <dl className="policy-card-dates">
           <div>
             <dt>
@@ -301,16 +316,18 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
             )}
           </div>
         </dl>
+        )}
         {policy.inForce && (
           <PolicyTimeline policy={policy} highlight={highlight} />
         )}
       </div>
+      )}
 
       {/* The footer: how it is modelled across the card, then the source on
           the left and its effect on the right */}
       <div className="policy-card-foot">
+        {showModelling && (
         <div className="policy-card-modelling">
-          {hasInfo(modelling) && (
             <Disclosure
               compact
               title={
@@ -324,8 +341,8 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
             >
               <InfoSections info={modelling} />
             </Disclosure>
-          )}
         </div>
+        )}
         <div className="policy-card-actions">
           {policy.source && (
             <Tip content={policy.source.label}>

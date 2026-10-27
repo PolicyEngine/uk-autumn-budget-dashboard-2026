@@ -2014,6 +2014,19 @@ body {
   line-clamp: 2;
 }
 
+/* A measure with no card details: its published description in full */
+.policy-card-summary.is-full {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
+}
+
+/* ... and a card only as tall as what it has, not its row */
+.policy-card.is-bare {
+  align-self: start;
+}
+
 /* When: start and end in words, then the timeline */
 .policy-card-when {
   display: flex;
