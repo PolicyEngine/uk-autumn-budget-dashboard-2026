@@ -14,7 +14,6 @@ nine measures apply to a household, the six with formula modifiers included.
 """
 
 import dataclasses
-import math
 
 import pytest
 from policyengine_uk.system import system
@@ -22,6 +21,7 @@ from policyengine_uk.system import system
 from uk_budget_data import household_impact, personal_impact
 from uk_budget_data.budget_measures.road_fuel_vat_cut import road_fuel_vat_cut
 from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
+    WINTER_SHARE,
     zero_vat_on_domestic_electricity,
 )
 from uk_budget_data.models import DataConfig
@@ -149,24 +149,21 @@ def test_state_pension_only_pays_no_income_tax_from_2027():
 
 
 @pytest.mark.parametrize("other", [260, 400, 2_000])
-def test_the_allowance_is_withdrawn_pound_for_pound(other):
-    """Allowance £13,040 in 2027-28, less £1 for each £1 of income above
-    it, down to the standard £12,570."""
+def test_any_private_pension_takes_the_allowance_away(other):
+    """The sole-income design: with any private pension the allowance is
+    not given, so the bill is 20% of income above the standard £12,570
+    either way."""
     full = household_impact.full_new_state_pension(2027)
     income = full + other
-    # Whole pounds: policyengine-uk rounds the allowance up
-    allowance = max(12_570, math.ceil(13_040 - max(0, income - 13_040)))
-    expected_tax = 0.2 * max(0, income - allowance)
     result = calculate(
         _pensioner(2027, private_pension_income=other),
         2027,
         ["state_pension_income_tax_protection"],
     )
     tax = programme(result, "income_tax")
-    assert tax["reform"] == pytest.approx(expected_tax, abs=0.02)
     assert tax["baseline"] == pytest.approx(0.2 * (income - 12_570), abs=0.02)
-    if income - 13_040 >= 13_040 - 12_570:
-        assert result["net_income"]["change"] == 0
+    assert tax["reform"] == pytest.approx(tax["baseline"], abs=0.02)
+    assert result["net_income"]["change"] == 0
 
 
 # --- Warm Home Discount top-up ----------------------------------------------------
@@ -237,15 +234,16 @@ def test_electricity_spending_defaults_to_the_ons_average():
 
 @pytest.mark.parametrize(
     "year, spending, weight",
-    [(2026, 1_040, 182 / 365), (2027, 1_040, 1), (2027, 2_000, 1)],
+    [(2026, 1_040, WINTER_SHARE), (2027, 1_040, 1), (2027, 2_000, 1)],
 )
 def test_electricity_vat_is_5_percent_of_the_bill_for_its_period(
     year, spending, weight
 ):
     """5% VAT on VAT-inclusive spending is spending x 0.05 / 1.05; zero
-    rated from 1 October 2026 (182 of 2026-27's days) to 31 March 2028."""
+    rated from 1 October 2026 (the October to March share of 2026-27's
+    use) to 31 March 2028."""
     assert zero_vat_on_domestic_electricity.__defaults__[0] == (
-        pytest.approx(-0.05 * 182 / 365)
+        pytest.approx(-0.05 * WINTER_SHARE)
     )
     result = calculate(
         Answers(year, electricity_spending=spending),
@@ -257,6 +255,16 @@ def test_electricity_vat_is_5_percent_of_the_bill_for_its_period(
     assert -programme(result, "vat_change")["change"] == pytest.approx(
         expected, abs=0.01
     )
+
+
+def test_the_installed_engine_has_no_electricity_zero_rate():
+    """policyengine-uk 2.153.5 and later zero-rate Great Britain's domestic
+    electricity from 1 October 2026 to 31 March 2027 in current law
+    (gov.hmrc.vat.domestic_electricity_rate). On such an engine the
+    measure's 2026 leg counts that half-year twice: set rate_change_2026 to
+    0 before moving the pin."""
+    with pytest.raises(ValueError, match="Could not find the parameter"):
+        system.parameters.get_child("gov.hmrc.vat.domestic_electricity_rate")
 
 
 def test_northern_ireland_keeps_the_electricity_vat():

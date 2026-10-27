@@ -29,7 +29,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1
  * @param {React.ReactNode} [props.provisional] - The provisional notice, when it applies
  * @param {{current: HTMLElement|null}} props.returnFocus - Where focus goes on closing
  */
-export default function OverviewDrawer({ open, onClose, onOpen, provisional, returnFocus }) {
+export default function OverviewDrawer({ open, onClose, onOpen, provisional, provisionalWording = false, returnFocus }) {
   const panelRef = useRef(null);
   const closeRef = useRef(null);
   const wasOpen = useRef(false);
@@ -75,7 +75,12 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, ret
 
   // Focus goes in once it is shown (a hidden drawer cannot take it)
   useEffect(() => {
-    if (open && entered) closeRef.current?.focus({ preventScroll: true });
+    // Quietly: no focus ring until a key is pressed on it (a drawer opened
+    // by a click would otherwise show a ring at rest)
+    if (open && entered && closeRef.current) {
+      closeRef.current.dataset.quiet = "";
+      closeRef.current.focus({ preventScroll: true });
+    }
   }, [open, entered]);
 
   // Tab and Shift+Tab go round inside the drawer
@@ -115,7 +120,15 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, ret
             <span className="overview-title">About this dashboard</span>
           </span>
           <Tip content="Close (Esc)">
-            <button ref={closeRef} type="button" className="overview-close" aria-label="Close the overview" onClick={onClose}>
+            <button
+              ref={closeRef}
+              type="button"
+              className="overview-close"
+              aria-label="Close"
+              onClick={onClose}
+              onKeyDown={(event) => { delete event.currentTarget.dataset.quiet; }}
+              onBlur={(event) => { delete event.currentTarget.dataset.quiet; }}
+            >
               <X size={20} strokeWidth={2} aria-hidden="true" />
             </button>
           </Tip>
@@ -127,6 +140,7 @@ export default function OverviewDrawer({ open, onClose, onOpen, provisional, ret
           <LandingBoxes
             list
             labelledBy="overview-goto"
+            provisional={provisionalWording}
             onOpen={(tab, sub) => {
               onOpen(tab, sub);
               onClose();

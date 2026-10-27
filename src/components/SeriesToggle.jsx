@@ -164,7 +164,13 @@ export default function SeriesToggle({
           </span>
         ))}
       </div>
-      {hint && <p className="series-toggle-hint">Click to show or hide</p>}
+      {hint && (
+        <p className="series-toggle-hint">
+          {/* "Tap" on a touch screen, "Click" with a mouse (CSS picks one) */}
+          <span className="series-toggle-hint-click">Click to show or hide</span>
+          <span className="series-toggle-hint-tap">Tap to show or hide</span>
+        </p>
+      )}
     </div>
   );
 }

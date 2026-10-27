@@ -6,16 +6,31 @@
  *   above 99 and up to 99.9 → one decimal place; above 99.9 and below 100
  *   → ">99.9%"; 100 → "100%".
  *
+ * A column of shares passes `decimals` (shareDecimals) so the column has
+ * one precision: 1 writes 1 to 99 to one decimal place too ("96.3%"
+ * beside "99.4%", never "96%" beside "99.0%").
+ *
  * @param {number} value - Percent (0 to 100)
+ * @param {number} [decimals] - Force 0 or 1 decimal places from 1 to 99
  */
-export function formatShare(value) {
+export function formatShare(value, decimals = null) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "";
   if (value <= 0) return "0%";
   if (value >= 100) return "100%";
   if (value < 0.1) return "<0.1%";
   if (value > 99.9) return ">99.9%";
-  if (value < 1 || value > 99) return `${value.toFixed(1)}%`;
+  if (value < 1 || value > 99 || decimals === 1) return `${value.toFixed(1)}%`;
   return `${Math.round(value)}%`;
+}
+
+/**
+ * The decimal places for a column of shares: 1 when any share in it is
+ * written to one decimal place on its own (below 1% or above 99%), else 0.
+ *
+ * @param {number[]} values - Percent
+ */
+export function shareDecimals(values) {
+  return values.some((value) => /\.\d%$/.test(formatShare(value))) ? 1 : 0;
 }
 
 // The narrowest a non-zero segment is drawn, in percent of the bar, so a

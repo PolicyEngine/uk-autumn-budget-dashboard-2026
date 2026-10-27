@@ -4,7 +4,7 @@
 .info-sections {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
   font-size: 0.9rem;
   line-height: 1.5;
   color: var(--pe-gray-700);
@@ -19,7 +19,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 3px;
+  margin: 0 0 1px;
   font-size: var(--fs-caption);
   font-weight: 600;
   line-height: 1.5;
@@ -39,7 +39,7 @@
   padding-left: 23px;
 }
 
-.info-shows {
+.info-text {
   margin: 0;
 }
 
@@ -50,40 +50,19 @@
 }
 
 .info-list li + li {
-  margin-top: 3px;
+  margin-top: 2px;
 }
 
 .info-list li::marker {
   color: var(--pe-gray-400);
 }
 
-/* Caveats: amber-accented */
-.info-section-caveat .info-heading svg {
-  color: var(--c-loss);
-}
-
-.info-caveats {
-  padding: 6px 10px 6px 26px;
-  border-left: 3px solid var(--c-loss);
-  border-radius: 0 6px 6px 0;
-  background: var(--c-notice-bg);
-  color: var(--pe-gray-800);
-}
-
-.info-caveats li::marker {
-  color: var(--c-loss);
-}
-
-/* Definitions: term, then its plain meaning; side by side when there is room */
+/* Definitions: each term in semibold on its own line, its meaning muted below */
 .info-terms {
-  display: grid;
-  gap: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   margin: 0;
-}
-
-.info-term {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
 }
 
 .info-term dt {
@@ -93,24 +72,6 @@
 
 .info-term dd {
   margin: 0;
-}
-
-@container (min-width: 520px) {
-  .info-term {
-    grid-template-columns: minmax(120px, 0.32fr) minmax(0, 1fr);
-    column-gap: 12px;
-  }
-}
-
-.info-shared {
-  margin: 0;
-}
-
-.info-terms + .info-shared {
-  margin-top: 6px;
-}
-
-.info-shared-label {
   color: var(--pe-gray-600);
 }
 
@@ -129,11 +90,16 @@
   padding-left: 0;
 }
 
-/* The link to the relevant Methodology section, last */
+/* "More in Methodology:" the card's section and its shared terms, last */
 .info-method {
   margin: 0;
   padding-left: 23px;
   font-weight: 500;
+}
+
+.info-method-label {
+  font-weight: 400;
+  color: var(--pe-gray-600);
 }
 
 .info-method a {

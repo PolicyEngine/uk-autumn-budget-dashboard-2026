@@ -1292,8 +1292,11 @@ def _rows_add_up(result):
 def test_a_private_pension_is_income_the_qa_pensioner_couple():
     """The QA's pensioner couple (70 and 68, the full new State Pension
     each) with a £10,000 private pension: £10,000 less £2,000 basic-rate
-    tax on top of their £25,907.11, as an independent policyengine-uk run
-    and the public API give: £33,907.11."""
+    tax on top of their £25,907.16, as an independent policyengine-uk
+    2.151.0 run gives: £33,907.16. (policyengine-uk 2.132.6 gave £33,907.11:
+    its expected_sdlt added the property sale rate, 0.045, to every
+    household's stamp duty as pounds. From 2.151.0 it is the household's
+    own stamp duty, nil here.)"""
     answers = household_impact.HouseholdAnswers(
         age=70,
         employment_income=0,
@@ -1308,7 +1311,7 @@ def test_a_private_pension_is_income_the_qa_pensioner_couple():
     result = household_impact.calculate_household_impact(
         answers, household_impact.measure_ids(), 2027, include=()
     )
-    assert result["net_income"]["baseline"] == pytest.approx(33_907.11)
+    assert result["net_income"]["baseline"] == pytest.approx(33_907.16)
     assert _programme(result, "private_pension_income")["baseline"] == 10_000
     assert _programme(result, "other_income")["baseline"] == 0
     _rows_add_up(result)
@@ -1740,40 +1743,46 @@ def test_provably_unaffected_rules(measure, answers, year, expected):
     )
 
 
+# The households the skip rules treat differently. Each (household, year)
+# is its own test, so CI can run them on separate workers: one test per year
+# ran all three households, 360-390 s each on CI, the suite's longest tests.
+SKIP_PARITY_HOUSEHOLDS = {
+    "default": dict(salary_year=2026),
+    "pensioner_petrol_no_electricity": dict(
+        salary_year=2026,
+        age=70,
+        private_pension_income=12_000,
+        petrol_spending=600,
+        electricity_spending=0,
+    ),
+    "plan_2_with_pensioner_partner_diesel": dict(
+        salary_year=2026,
+        age=24,
+        employment_income=32_000,
+        student_loan_plan="PLAN_2",
+        has_partner=True,
+        partner_age=67,
+        diesel_spending=400,
+    ),
+}
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize("year", [2027, 2029, 2031])
-def test_skips_give_the_same_answer_as_running_every_measure(year):
+@pytest.mark.parametrize("household", list(SKIP_PARITY_HOUSEHOLDS))
+def test_skips_give_the_same_answer_as_running_every_measure(household, year):
     """With the engine: the split by policy with skips is identical to the
     one running every measure, for households the rules treat differently
     (scratchpad verification ran 40 generated households x every year)."""
-    households = [
-        Answers(salary_year=2026),
-        Answers(
-            salary_year=2026,
-            age=70,
-            private_pension_income=12_000,
-            petrol_spending=600,
-            electricity_spending=0,
-        ),
-        Answers(
-            salary_year=2026,
-            age=24,
-            employment_income=32_000,
-            student_loan_plan="PLAN_2",
-            has_partner=True,
-            partner_age=67,
-            diesel_spending=400,
-        ),
-    ]
+    answers = Answers(**SKIP_PARITY_HOUSEHOLDS[household])
     measures = household_impact.measure_ids()
-    for answers in households:
-        household_impact.clear_runs()
-        full = calculate(
-            answers, measures, year, ("by_policy",), skip_unaffected=False
-        )
-        household_impact.clear_runs()
-        fast = calculate(answers, measures, year, ("by_policy",))
-        assert fast == full
+    household_impact.clear_runs()
+    full = calculate(
+        answers, measures, year, ("by_policy",), skip_unaffected=False
+    )
+    household_impact.clear_runs()
+    fast = calculate(answers, measures, year, ("by_policy",))
+    assert fast == full
     household_impact.clear_runs()
 
 

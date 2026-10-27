@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { OPEN_POPULATION_SUB } from "../utils/populationSub";
 import SubTabs, { SubTabPanel, subTabId, useSubTabParam } from "./SubTabs";
-import { YOUNG_PEOPLE_ANCHOR } from "./YoungPeopleSection";
+import { YOUNG_PEOPLE_ANCHOR } from "../utils/viewAnchors";
 
 /** Population impact's sub-tabs; the first, Public finances, is the default. */
 export const POPULATION_SUB_TABS = [

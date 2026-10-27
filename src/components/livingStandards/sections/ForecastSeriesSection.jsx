@@ -28,6 +28,15 @@ const NOT_OBR = {
   social_rent: "The social rent cap is England's rent policy for social housing (CPI plus 1%), not an OBR forecast.",
 };
 
+// What each inflation measure is, one line each, first in its card's
+// "About this chart" (the derivation caveat stays in NOT_OBR)
+const MEASURES = {
+  cpi: "Price rises across a typical basket; the Bank of England's 2% target.",
+  cpih: "CPI plus owner-occupiers' housing costs and Council Tax.",
+  cpi_ahc: "CPI without housing costs; used to adjust incomes after housing costs.",
+  rpi: "Older measure including mortgage interest; still used for some charges such as fuel duty.",
+};
+
 // Notes on a series' years, said once in its card's "About this chart"
 const SERIES_NOTES = {
   mortgage_interest:
@@ -120,6 +129,8 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange }) {
       </>
     ),
     info: {
+      definitionsTitle: "What each measure is",
+      definitions: seriesList.filter((s) => MEASURES[s.key]).map((s) => ({ term: seriesName(s), meaning: MEASURES[s.key] })),
       caveats: seriesList.flatMap((s) => [NOT_OBR[s.key], SERIES_NOTES[s.key]]),
       sources: [
         ...forecastSources(forecast),

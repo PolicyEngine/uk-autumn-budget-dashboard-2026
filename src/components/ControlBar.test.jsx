@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import ControlBar, { optionsSummary } from "./ControlBar";
+import ControlBar, { dialogPlacement, optionsSummary } from "./ControlBar";
 import { yearsOption } from "./livingStandards/controlOptions";
 import { expectCompletePills } from "../test/optionsPills";
 
@@ -126,3 +126,28 @@ describe("ControlBar", () => {
   });
 });
 
+
+describe("dialogPlacement", () => {
+  it("leaves the dialog under its pill when it fits", () => {
+    expect(dialogPlacement({ height: 300, pillTop: 200, pillBottom: 232, windowHeight: 1024, sticky: 120 })).toBeNull();
+  });
+
+  it("flips it above the pill, clear of the sticky band, when it would run below the window and fits above", () => {
+    // The growth card at 768: 88px below the window under the pill
+    expect(dialogPlacement({ height: 420, pillTop: 640, pillBottom: 672, windowHeight: 1024, sticky: 120 })).toEqual({
+      above: true,
+      maxHeight: null,
+    });
+  });
+
+  it("scrolls inside on the roomier side when it fits on neither", () => {
+    expect(dialogPlacement({ height: 900, pillTop: 400, pillBottom: 432, windowHeight: 800, sticky: 120 })).toEqual({
+      above: false,
+      maxHeight: 800 - 432 - 20,
+    });
+    expect(dialogPlacement({ height: 900, pillTop: 600, pillBottom: 632, windowHeight: 800, sticky: 120 })).toEqual({
+      above: true,
+      maxHeight: 600 - 20 - 120,
+    });
+  });
+});

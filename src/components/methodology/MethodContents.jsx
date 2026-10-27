@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { openDisclosuresAround } from "../Disclosure";
+import { COLLAPSE_MS } from "../../hooks/useCollapse";
 
 // Where a section counts as current: its top has passed this far below the
 // sticky band and tabs (their heights are CSS variables), as the reader
@@ -11,17 +13,33 @@ const reducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** Scroll a section into view, keep its anchor in the address, and move focus to its title. */
-export const OPEN_SECTION_EVENT = "method:open-section";
-
 export function goToSection(id) {
   const target = document.getElementById(id);
   if (!target) return;
-  // A section collapsed on a phone opens before it is scrolled to
-  window.dispatchEvent(new CustomEvent(OPEN_SECTION_EVENT, { detail: id }));
   target.scrollIntoView?.({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" });
   window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#${id}`);
   const title = target.querySelector("h2");
-  title?.focus({ preventScroll: true });
+  if (title) {
+    title.tabIndex = -1;
+    title.focus({ preventScroll: true });
+  }
+}
+
+/**
+ * Bring an anchor in this view into sight: open the "More info" it is
+ * folded in, then, once it is laid out, scroll to it.
+ */
+export function revealAnchor(id, { smooth = true } = {}) {
+  const target = document.getElementById(id);
+  if (!target) return false;
+  openDisclosuresAround(target);
+  const scroll = () =>
+    target.scrollIntoView?.({ behavior: smooth && !reducedMotion() ? "smooth" : "auto", block: "start" });
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => requestAnimationFrame(scroll));
+  else scroll();
+  // Once the topic has opened and the page has settled, line it up again
+  setTimeout(() => target.scrollIntoView?.({ behavior: "auto", block: "start" }), COLLAPSE_MS + 120);
+  return true;
 }
 
 /** The section whose top has most recently passed the line under the sticky band. */
@@ -29,7 +47,7 @@ function currentSection(sections) {
   const root = document.querySelector(".app") ?? document.documentElement;
   const style = getComputedStyle(root);
   const px = (name) => parseFloat(style.getPropertyValue(name)) || 0;
-  const offset = px("--title-row-height") + px("--view-tabs-height");
+  const offset = px("--nav-offset") + px("--title-row-height") + px("--view-tabs-height");
   const line = offset + CURRENT_LINE_EXTRA;
   let current = sections[0]?.id;
   for (const { id } of sections) {

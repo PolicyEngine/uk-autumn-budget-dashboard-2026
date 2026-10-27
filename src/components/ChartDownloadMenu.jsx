@@ -2,6 +2,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import { chartDownloads } from "../utils/chartDownloads";
+import { cardSelection, useDownloadContext } from "../utils/downloadContext";
+import { downloadFrame } from "../utils/exportFrame";
 import "./ChartDownloadMenu.css";
 import Tip from "./Tip";
 
@@ -43,9 +45,17 @@ function DownloadIcon() {
  *
  * For a Recharts chart, pass `download` instead of `formats`: { chartRef,
  * name, exportOptions, csv, published?, image? } (see chartDownloads).
+ *
+ * Every format is called with the file's frame (exportFrame.downloadFrame),
+ * composed when the download runs: the title (the export title, else
+ * `chartTitle`, with `period` added when it names no year), the policies
+ * selected (DownloadContext), the card's Options choices as its pills read,
+ * the provisional label and the date. The image formats draw it round the
+ * plot, the CSV writes it as "#" lines, and the file is named after it.
  */
-function ChartDownloadMenu({ formats: formatsProp, download, chartTitle, ariaLabel, disabledReason }) {
+function ChartDownloadMenu({ formats: formatsProp, download, chartTitle, period, ariaLabel, disabledReason }) {
   const formats = formatsProp ?? (download ? chartDownloads(download) : null);
+  const context = useDownloadContext();
   const [open, setOpen] = useState(false);
   const presence = usePresence(open);
   const [busy, setBusy] = useState(null);
@@ -98,7 +108,14 @@ function ChartDownloadMenu({ formats: formatsProp, download, chartTitle, ariaLab
   const run = async (format) => {
     setBusy(format);
     try {
-      await formats[format]();
+      const frame = downloadFrame({
+        title: chartTitle ?? download?.exportOptions?.title,
+        period,
+        policies: context.policies,
+        selection: cardSelection(rootRef.current),
+        provisional: context.provisional,
+      });
+      await formats[format](frame);
     } catch (error) {
       console.error(`Download as ${format} failed`, error);
     } finally {

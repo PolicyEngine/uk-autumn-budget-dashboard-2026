@@ -36,10 +36,10 @@ A parameter the certified data cannot cost (``uk_budget_data.data_limits``,
 such as the SDLT higher rates) still builds, with a ``DataLimitedWarning``:
 the measure is published as not computable, never as a figure. A parameter
 the installed model mis-costs (``uk_budget_data.model_limits``, such as the
-State Pension's full rates before policyengine-uk #2336) builds with a
+Pension Credit minimum guarantee from 2027) builds with a
 ``ModelLimitedWarning``: the measure is held at provisional, never approved.
 So does a runtime helper that changes a variable such a limit covers (the
-VAT base template, before policyengine-uk #2187).
+VAT base template was one, until policyengine-uk #2187).
 """
 
 import math
@@ -120,15 +120,18 @@ def _warn_if_variable_model_limited(name: str) -> None:
             )
 
 
-# The engine's two wealth-tax scales, and the base each is applied to. Both
-# bases start from total_wealth, which adds property, corporate, private
-# pension and savings wealth and nets no debts
-# (variables/household/wealth/total_wealth.py; net_wealth does the
-# netting): wealth_tax applies its scale to total_wealth
-# (variables/contrib/ubi_center/wealth_tax.py), and
-# non_primary_residence_wealth_tax to total_wealth less
+# The engine's two wealth-tax scales, and the base each is applied to.
+# total_wealth adds property, corporate, private pension and savings wealth
+# and nets no debts (variables/household/wealth/total_wealth.py).
+# non_primary_residence_wealth_tax applies its scale to total_wealth less
 # main_residence_value (variables/contrib/cec/
-# non_primary_residence_wealth_tax.py). Both count in household_tax and
+# non_primary_residence_wealth_tax.py). Until policyengine-uk 2.151.0,
+# wealth_tax applied its scale to total_wealth too (the UK hub's S4); from
+# it, to net_wealth, which subtracts mortgage_debt, consumer_debt and
+# student loan balances (variables/contrib/ubi_center/wealth_tax.py,
+# variables/household/wealth/net_wealth.py). Both debts are inputs, nil
+# unless the data set them, and no check here yet shows that the certified
+# data do, so that scale stays refused too. Both count in household_tax and
 # gov_tax.
 WEALTH_TAX = "gov.contrib.ubi_center.wealth_tax"
 NON_PRIMARY_RESIDENCE_WEALTH_TAX = (
@@ -139,7 +142,11 @@ _GROSS = (
     "no debts netted"
 )
 WEALTH_TAX_SCALES = {
-    WEALTH_TAX: f"the engine's wealth_tax applies to total_wealth: {_GROSS}",
+    WEALTH_TAX: (
+        "the engine's wealth_tax applies to net_wealth: total_wealth less "
+        "mortgage, consumer and student loan debt, where no check yet shows "
+        "the certified data carry the first two, which are nil without them"
+    ),
     NON_PRIMARY_RESIDENCE_WEALTH_TAX: (
         "the engine's non_primary_residence_wealth_tax applies to "
         f"total_wealth less main_residence_value: {_GROSS}, less the main "
@@ -202,15 +209,17 @@ def wealth_tax_refusal(*paths: str) -> str:
             for scale, found in by_scale.items()
         ]
         + [
-            "A wealth tax on net assets would be scored on the wrong base "
-            "(the UK hub's budget-triage/JUDGED.md, S4)."
+            "A wealth tax on net assets would be scored on the wrong base, "
+            "or on one not yet checked against the data (the UK hub's "
+            "budget-triage/JUDGED.md, S4)."
         ]
     )
 
 
 def _refuse_wealth_tax(path: str) -> None:
-    """Refuse the engine's wealth-tax scales: they tax the wrong base for a
-    wealth tax announced on net assets (the UK hub's Budget triage, S4)."""
+    """Refuse the engine's wealth-tax scales: for a wealth tax announced on
+    net assets, one taxes the wrong base and the other one not yet checked
+    against the data (the UK hub's Budget triage, S4)."""
     if is_wealth_tax_path(path):
         raise ValueError(wealth_tax_refusal(path))
 
@@ -657,8 +666,8 @@ def apply_vat_base_change(
         return current + adjustment
 
     _replace_formula(sim, "vat", formula)
-    # Held while the installed model grosses VAT by one factor (the
-    # vat_consumption_coverage limit, until policyengine-uk #2187).
+    # Held while a model limit covers VAT (vat_consumption_coverage did,
+    # until policyengine-uk #2187 grossed it by survey coverage).
     _warn_if_variable_model_limited("vat")
     return sim
 
@@ -909,9 +918,10 @@ def apply_age_conditioned_allowance(
         standard = _call_formula(native, person, period, parameters)
         if period.start.year not in amounts:
             return standard
-        income = person("adjusted_net_income", period) - person(
-            "gift_aid_grossed_up", period
-        )
+        # adjusted_net_income already deducts grossed-up Gift Aid (ITA 2007
+        # s. 58) from policyengine-uk 2.132.6, as the native allowance reads
+        # it; deducting it again overstated the allowance of donors.
+        income = person("adjusted_net_income", period)
         higher = (
             amounts[period.start.year]
             - np.maximum(0, income - threshold) * taper
@@ -949,9 +959,8 @@ _PROPERTY_INDICES = {
 def _code_names(code) -> set:
     """The names compiled code, or code nested in it, reads.
 
-    As in ``model_limits._reads``: a comment, docstring or string literal
-    naming an index is not a read of it, since only names the code looks
-    up are in ``co_names``.
+    A comment, docstring or string literal naming an index is not a read
+    of it, since only names the code looks up are in ``co_names``.
     """
     names = set()
     stack = [code] if isinstance(code, types.CodeType) else []

@@ -1,10 +1,13 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import App from "./App";
+import App, { preloadAllViews } from "./App";
 import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import { fixtureJson, fixtureText } from "./test/publicationFixture";
 import { artifactSha256 } from "./utils/publication/digest";
 import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
+
+// Every view's code is in before a test renders it (App.jsx lazyView)
+beforeAll(preloadAllViews, 60_000);
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
@@ -90,16 +93,16 @@ describe("a later snapshot keeps the reader's selection", () => {
   };
   const householdCalls = (calls) => calls.filter((call) => call.method === "POST" || call.url.includes("/api/household-impact"));
 
-  it("shows a withdrawn personal measure as unavailable instead of dropping it", async () => {
+  it("shows a stale personal measure as unavailable instead of dropping it", async () => {
     const calls = [];
     open("/?tab=household&policies=alpha,beta", await serve(), calls);
     await waitFor(() => expect(document.querySelector(".personal-impact-tab")).not.toBeNull());
     expect(policies()).toBe("alpha,beta");
     expect(screen.queryByText(REASON)).toBeNull();
     // Before the withdrawal the example cards may ask the household API in
-    // the background (useExampleFigures); once beta is withdrawn nothing more
+    // the background (useExampleFigures); once beta is stale nothing more
     // is asked for the selection
-    await publish(await serve({ beta: "withdrawn" }, 1), calls);
+    await publish(await serve({ beta: "stale" }, 1), calls);
     expect(await screen.findByText(REASON)).toBeInTheDocument();
     expect(policies()).toBe("alpha,beta");
     const asked = householdCalls(calls).length;
@@ -181,7 +184,7 @@ describe("a later snapshot keeps the reader's selection", () => {
     await waitFor(() => expect(selectedCount()).toBeGreaterThan(0));
     const all = selectedCount();
     expect(policies()).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Select policies" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Policies / }));
     fireEvent.click(screen.getAllByRole("checkbox")[0]);
     await waitFor(() => expect(selectedCount()).toBe(all - 1));
     expect(policies().split(",")).toHaveLength(all - 1);
@@ -206,5 +209,24 @@ describe("a later snapshot keeps the reader's selection", () => {
     await publish(await serve({}, 1), calls);
     expect(screen.getByText(/Select policies to analyse their impact/)).toBeInTheDocument();
     expect(policies()).toBe("");
+  });
+});
+
+describe("the header's year in the address", () => {
+  it("opens a shared link on its ?year= and keeps it there", async () => {
+    // (the default year stays out of the address, so a kept 2030 was read)
+    vi.stubGlobal("fetch", dashboardFixtureFetch());
+    window.history.replaceState({}, "", "/?tab=policies&year=2030");
+    render(<App />);
+    expect(await screen.findByRole("button", { name: /^Year 2030-31/ })).toBeInTheDocument();
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("year")).toBe("2030"));
+  });
+
+  it("drops a year it does not offer (an old 2026) and opens the default", async () => {
+    vi.stubGlobal("fetch", dashboardFixtureFetch());
+    window.history.replaceState({}, "", "/?tab=policies&year=2026");
+    render(<App />);
+    expect(await screen.findByRole("tab", { name: /Policies/ })).toBeInTheDocument();
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("year")).toBeNull());
   });
 });

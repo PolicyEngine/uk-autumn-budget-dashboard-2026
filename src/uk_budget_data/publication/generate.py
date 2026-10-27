@@ -69,10 +69,14 @@ from uk_budget_data.scored_years import missing_scored_years
 
 @dataclass
 class GenerationReport:
-    """What a generation run wrote and what it refused."""
+    """What a generation run wrote and what it refused; on Modal, also
+    which runs failed in their containers (key to error) and the combined
+    runs not started because a measure failed (key to member ids)."""
 
     written: list[ArtifactRef] = field(default_factory=list)
     refused: dict[str, str] = field(default_factory=dict)
+    failed: dict[str, str] = field(default_factory=dict)
+    not_started: dict[str, list[str]] = field(default_factory=dict)
 
 
 def _columns(rows: list[dict], table: str) -> list[dict]:
@@ -512,8 +516,9 @@ def _refuse_wealth_tax_base(
     subject: str, baseline_scenario, reform_scenario
 ) -> None:
     """Refuse a run whose either side changes one of the engine's
-    wealth-tax scales in its ``parameter_changes``: they tax gross wealth,
-    the wrong base for a wealth tax on net assets (the UK hub's
+    wealth-tax scales in its ``parameter_changes``: for a wealth tax on net
+    assets, one taxes the wrong base and the other one not yet checked
+    against the data (``measure_templates.WEALTH_TAX_SCALES``; the UK hub's
     budget-triage/JUDGED.md, S4). The templates refuse the path; this
     refuses it written as plain ``parameter_changes``."""
     paths = wealth_tax_paths(baseline_scenario, reform_scenario)
@@ -696,7 +701,21 @@ def generate_artifacts(
                 **common,
             )
         )
-    run_all(slots)
+    from uk_budget_data.modal_runner import ModalRunsFailed
+
+    try:
+        run_all(slots)
+    except ModalRunsFailed as error:
+        # Every other measure is written and reported. A combined run binds
+        # its members' outputs, so none starts until the failed measures
+        # are rerun: they are listed, with their members, for that rerun.
+        from uk_budget_data.publication import combine
+
+        report.failed.update(error.failed)
+        for members in combined_sets or []:
+            ids = sorted(member.id for member in members)
+            report.not_started[combine.combined_key(ids)] = ids
+        return report
 
     slots = []
     for members in combined_sets or []:
@@ -798,5 +817,8 @@ def generate_artifacts(
                     progress=[f"{key}: REFUSED: {error}"],
                 )
             )
-    run_all(slots)
+    try:
+        run_all(slots)
+    except ModalRunsFailed as error:
+        report.failed.update(error.failed)
     return report
