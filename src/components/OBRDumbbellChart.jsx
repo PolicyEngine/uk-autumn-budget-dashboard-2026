@@ -154,8 +154,9 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
   const plotRight = Math.max(width - diffWidth - labelRoom, plotLeft + 40);
 
   const values = plotted.flatMap((row) => row.extent);
+  // £bn: always from zero; %: around 100%, so the gaps are not squeezed
   const axis = niceScale(
-    Math.min(0, ...values),
+    pct ? Math.min(100, ...values) : Math.min(0, ...values),
     Math.max(pct ? 100 : 0, ...values),
     narrow ? 4 : 6,
   );

@@ -113,22 +113,24 @@ describe("the OBR comparison table", () => {
     );
     const { container } = render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} />);
     expect(await screen.findByRole("heading", { name: "How our estimates compare with the official costings, 2030-31" })).toBeInTheDocument();
-    expect(container.querySelector(".chart-description").textContent).toBe(
+    expect(plain(container.querySelector(".chart-description").textContent)).toBe(
       "For 2 child limit repeal, our static estimate is −£3.4bn and the official static costing is −£3.3bn.",
     );
     expect(container).not.toHaveTextContent(/accura|error|OBR\b/);
   });
 });
 
+const plain = (text) => text?.replace(/\u2060/g, "");
+
 describe("the comparison sentence", () => {
   const row = (name, pe, obr) => ({ id: name, name, pe, obr });
   it("counts the measures within £0.2bn and names the largest gap", () => {
-    expect(comparisonSentence([row("Employer NI relief", -6.2, -6.5), row("A", 1, 1.1), row("B", 0.4, 0.4), row("C", 0.1, null)], "static")).toBe(
+    expect(plain(comparisonSentence([row("Employer NI relief", -6.2, -6.5), row("A", 1, 1.1), row("B", 0.4, 0.4), row("C", 0.1, null)], "static"))).toBe(
       "For 2 of 3 policies our static estimate is within £0.2bn of the official static costing; the largest gap is Employer NI relief (−£6.2bn vs −£6.5bn).",
     );
   });
   it("leaves out the gap when every measure rounds equal", () => {
-    expect(comparisonSentence([row("A", 1, 1.01), row("B", 2, 2)], "post-behavioural")).toBe(
+    expect(plain(comparisonSentence([row("A", 1, 1.01), row("B", 2, 2)], "post-behavioural"))).toBe(
       "For all 2 policies our static estimate is within £0.2bn of the official post-behavioural costing.",
     );
     expect(comparisonSentence([row("A", 1, null)], "static")).toBeNull();

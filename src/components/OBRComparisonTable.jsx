@@ -9,7 +9,7 @@ import TitleIcon from "./TitleIcon";
 import NoBreakYear from "./NoBreakYear";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import UnavailableNotice from "./publication/UnavailableNotice";
-import OBRDumbbellChart, { dumbbellLegendItems, formatBn, formatDifference, obrValue } from "./OBRDumbbellChart";
+import OBRDumbbellChart, { dumbbellLegendItems, formatBn, formatBn as formatFigure, formatDifference, obrValue } from "./OBRDumbbellChart";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv, fiscalYear } from "../utils/chartCsv";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
@@ -123,7 +123,11 @@ export function comparisonRows(sourceRows, selectedPolicies, year, showBehaviour
  * PolicyEngine puts within £0.2bn of the official costing, and where the
  * two are furthest apart. Descriptive only. Null with nothing paired.
  */
+// A word joiner after the minus, so "−£6.5bn" never wraps after its sign
+const keep = (text) => text.replace("−", "−\u2060");
+
 export function comparisonSentence(rows, obrKind) {
+  const formatBn = (value) => keep(formatFigure(value));
   const paired = rows.filter((row) => row.pe !== null && row.obr !== null);
   if (paired.length === 0) return null;
   const costing = `the official ${obrKind} costing`;
