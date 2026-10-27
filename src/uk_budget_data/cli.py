@@ -502,7 +502,15 @@ def run_generate(parsed: argparse.Namespace) -> int:
                     "the page never reads. It reads a package only under "
                     "the manifest's combined key (#228).[/yellow]"
                 )
-        units = (len(reforms) if reforms else 0) + len(combined_sets or [])
+        # With --combined alone the measures are the sets' members
+        measures = (
+            len(reforms)
+            if reforms
+            else len(
+                {m.id for members in combined_sets or [] for m in members}
+            )
+        )
+        units = measures + len(combined_sets or [])
         runner = runner_for(parsed, max(units, 1), len(config.years))
         if parsed.only == "household_scatter":
             generate_household_scatter(
