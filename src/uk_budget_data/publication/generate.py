@@ -69,10 +69,14 @@ from uk_budget_data.scored_years import missing_scored_years
 
 @dataclass
 class GenerationReport:
-    """What a generation run wrote and what it refused."""
+    """What a generation run wrote and what it refused; on Modal, also
+    which runs failed in their containers (key to error) and the combined
+    runs not started because a measure failed (key to member ids)."""
 
     written: list[ArtifactRef] = field(default_factory=list)
     refused: dict[str, str] = field(default_factory=dict)
+    failed: dict[str, str] = field(default_factory=dict)
+    not_started: dict[str, list[str]] = field(default_factory=dict)
 
 
 def _columns(rows: list[dict], table: str) -> list[dict]:
@@ -697,7 +701,21 @@ def generate_artifacts(
                 **common,
             )
         )
-    run_all(slots)
+    from uk_budget_data.modal_runner import ModalRunsFailed
+
+    try:
+        run_all(slots)
+    except ModalRunsFailed as error:
+        # Every other measure is written and reported. A combined run binds
+        # its members' outputs, so none starts until the failed measures
+        # are rerun: they are listed, with their members, for that rerun.
+        from uk_budget_data.publication import combine
+
+        report.failed.update(error.failed)
+        for members in combined_sets or []:
+            ids = sorted(member.id for member in members)
+            report.not_started[combine.combined_key(ids)] = ids
+        return report
 
     slots = []
     for members in combined_sets or []:
@@ -799,5 +817,8 @@ def generate_artifacts(
                     progress=[f"{key}: REFUSED: {error}"],
                 )
             )
-    run_all(slots)
+    try:
+        run_all(slots)
+    except ModalRunsFailed as error:
+        report.failed.update(error.failed)
     return report

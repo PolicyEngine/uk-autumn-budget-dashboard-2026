@@ -19,7 +19,7 @@ import SectionHeading from "../SectionHeading";
 import useDataFile from "../../hooks/useDataFile";
 import { buildHouseholdRequest } from "../../utils/householdImpactApi";
 import { presetInputs } from "../../utils/householdPresets";
-import { DISTRIBUTION_FILE, curveOf, distributionRunFor, householdPosition, ordinal, parseDistribution } from "../../utils/incomePosition";
+import { DISTRIBUTION_FILE, curveOf, distributionRunOf, householdPosition, ordinal, parseDistribution } from "../../utils/incomePosition";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { fiscalYearTick, shortFiscalYearTick } from "../../utils/chartTheme";
 import { SELECTABLE_YEARS, isDisplayYear } from "../../utils/displayYears";
@@ -115,11 +115,7 @@ export function cardFigures(example, byYear, year, catalogue = null) {
  */
 export function examplePercentile(example, point, { year, policies, rows, catalogue }) {
   if (!rows || !point || !Number.isFinite(point.before) || !Number.isFinite(point.after)) return null;
-  const run = distributionRunFor(
-    policies,
-    catalogue?.displayable?.map((measure) => measure.id) ?? [],
-    catalogue?.combinedId ? (catalogue.manifest?.combined?.[catalogue.combinedId]?.measures ?? null) : null,
-  );
+  const run = distributionRunOf(policies, catalogue);
   const before = curveOf(rows, { reformId: run.reformId, year, side: "baseline" });
   const after = curveOf(rows, { reformId: run.reformId, year, side: "reform" });
   if (before.length < 2 || after.length < 2) return null;

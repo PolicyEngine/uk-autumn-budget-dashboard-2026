@@ -638,6 +638,63 @@ def test_an_unapproved_reform_is_refused_before_anything_runs(world, capsys):
     assert world.hub.downloads == [] and world.steps == []
 
 
+def test_the_default_is_the_manifests_approved_measures_not_the_candidates(
+    monkeypatch, tmp_path
+):
+    """On Budget day the manifest approves the announced measures, not the
+    candidates a package lists: the default takes what it approves."""
+    monkeypatch.setattr(g, "PACKAGES", {PKG: MEASURES})
+    manifest = publication_manifest(
+        tmp_path, ["alpha", "announced"], years=YEARS
+    )
+    assert c.default_reforms(manifest) == ["alpha", "announced"]
+
+
+def test_the_default_adds_a_package_only_with_its_approved_combined_run(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setattr(g, "PACKAGES", {PKG: MEASURES})
+    manifest = publication_manifest(
+        tmp_path, [*MEASURES, PKG], packages={PKG: MEASURES}, years=YEARS
+    )
+    assert c.default_reforms(manifest) == [*MEASURES, PKG]
+
+
+def test_the_default_leaves_out_measures_not_approved(monkeypatch, tmp_path):
+    """Provisional and withdrawn measures have no approved receipt for the
+    area run to check against, so the default takes neither."""
+    monkeypatch.setattr(g, "PACKAGES", {PKG: MEASURES})
+    manifest = publication_manifest(
+        tmp_path,
+        list(MEASURES),
+        statuses={"beta": "provisional", "zero": "withdrawn"},
+        years=YEARS,
+    )
+    assert c.default_reforms(manifest) == ["alpha"]
+
+
+def test_with_nothing_approved_the_default_run_stops_before_fetching(
+    world, capsys, tmp_path
+):
+    """Before G3 every measure is provisional: the default run says there is
+    nothing to publish, and fetches nothing."""
+    from uk_budget_data.cli import parse_args
+
+    folder = tmp_path / "before_g3"
+    folder.mkdir()
+    manifest = publication_manifest(
+        folder,
+        list(MEASURES),
+        statuses={measure: "provisional" for measure in MEASURES},
+        years=YEARS,
+    )
+    args = world.args()
+    args[args.index("--manifest") + 1] = str(manifest)
+    assert c.run_constituencies(parse_args(args), api=world.hub) == 1
+    assert "nothing the national page may publish yet" in printed(capsys)
+    assert world.hub.downloads == [] and world.steps == []
+
+
 def test_a_scratch_manifest_may_not_write_into_a_repository(world, capsys):
     from uk_budget_data.cli import parse_args
 

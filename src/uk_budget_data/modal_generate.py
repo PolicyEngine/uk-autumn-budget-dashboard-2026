@@ -118,6 +118,7 @@ def run_artifact_here(job, allow_bundle: bool):
     path is refused, since no dataset file is ever sent to Modal.
     """
     from uk_budget_data import synthetic_dataset
+    from uk_budget_data.modal_runner import Timed, phase_line
     from uk_budget_data.publication.generate import run_artifact
 
     scratch = Path(tempfile.mkdtemp(prefix="artifact-"))
@@ -136,13 +137,20 @@ def run_artifact_here(job, allow_bundle: bool):
             f"{job.key}: the smoke test runs on the synthetic dataset only"
         )
     root = scratch / "artifacts"
+    builds: list = []
+    processes: list = []
     started = time.perf_counter()
     outcome = run_artifact(
-        replace(job, artifacts_root=root, dataset_path=dataset)
+        replace(
+            job,
+            artifacts_root=root,
+            dataset_path=dataset,
+            build=Timed(job.build, builds),
+            process=Timed(job.process, processes),
+        )
     )
     outcome.progress.append(
-        f"{job.key}: {time.perf_counter() - started:.0f} s in its Modal "
-        "container"
+        phase_line(job.key, time.perf_counter() - started, builds, processes)
     )
     if outcome.reference is None:
         return outcome, None, None
@@ -164,9 +172,13 @@ def run_artifact_here(job, allow_bundle: bool):
 class Generator:
     @modal.enter(snap=True)
     def load(self):
-        """Import the engine and its parameters, so the snapshot holds them
-        loaded. No dataset is read here: the token is not used before a
-        unit runs."""
+        """Import the engine and its parameters before the first unit. No
+        dataset is read here: the token is not used before a unit runs.
+
+        The snapshot this asks for is never taken: Modal takes memory
+        snapshots for deployed apps only, and this app is ephemeral (every
+        run logs "Memory snapshots are disabled for ephemeral apps"). So
+        each container imports the engine itself, cold."""
         import policyengine_uk.system  # noqa: F401
 
         import uk_budget_data.pipeline  # noqa: F401
@@ -178,7 +190,13 @@ class Generator:
         it, gates included."""
         from uk_budget_data.pipeline import run_flat_unit
 
-        return run_flat_unit(unit)
+        started = time.perf_counter()
+        outcome = run_flat_unit(unit)
+        outcome.messages.append(
+            f"{outcome.reform_id}: {time.perf_counter() - started:.0f} s in "
+            "its Modal container"
+        )
+        return outcome
 
     @modal.method()
     def run_artifact(self, job):
