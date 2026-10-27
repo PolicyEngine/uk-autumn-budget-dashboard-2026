@@ -878,10 +878,12 @@ export const askAllAtOnce = () => householdDetailApiUrl() !== null;
  *
  * @param {Object} body
  * @param {Object} [options] - postHouseholdImpact's options, plus
- *   `accept(raw) => boolean` for the detail URL's answer
+ *   `accept(raw) => boolean` for the detail URL's answer, and `detail:
+ *   false` to ask the main API alone (the caller knows the detail URL's
+ *   answer could not be accepted, so waiting for it would only add its time)
  */
-export async function postHouseholdDetail(body, { accept = null, ...options } = {}) {
-  const detailUrl = householdDetailApiUrl();
+export async function postHouseholdDetail(body, { accept = null, detail = true, ...options } = {}) {
+  const detailUrl = detail ? householdDetailApiUrl() : null;
   if (!detailUrl) return postHouseholdImpact(body, options);
   try {
     const raw = await postHouseholdImpact(body, { ...options, url: detailUrl });

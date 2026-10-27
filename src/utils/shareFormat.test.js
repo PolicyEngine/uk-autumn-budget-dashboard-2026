@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatShare, visibleSegments, MIN_SEGMENT } from "./shareFormat";
+import { formatShare, shareDecimals, visibleSegments, MIN_SEGMENT } from "./shareFormat";
 
 describe("formatShare", () => {
   it.each([
@@ -20,6 +20,26 @@ describe("formatShare", () => {
 
   it("never writes 0.0% for a share that is not zero", () => {
     for (const value of [0.001, 0.01, 0.049, 0.05, 0.068]) expect(formatShare(value)).not.toBe("0.0%");
+  });
+});
+
+describe("shareDecimals", () => {
+  it("gives a column one precision: one decimal place for all when any share needs it", () => {
+    const column = [96.3, 99.04, 98.92, 99.3];
+    const decimals = shareDecimals(column);
+    expect(decimals).toBe(1);
+    expect(column.map((value) => formatShare(value, decimals))).toEqual(["96.3%", "99.0%", "98.9%", "99.3%"]);
+  });
+
+  it("keeps whole numbers when no share needs a decimal place", () => {
+    const column = [37.6, 62.4, 0];
+    expect(shareDecimals(column)).toBe(0);
+    expect(column.map((value) => formatShare(value, 0))).toEqual(["38%", "62%", "0%"]);
+  });
+
+  it("keeps the guards: never 0.0% or 100% for a share that is not", () => {
+    expect(formatShare(0.03, 1)).toBe("<0.1%");
+    expect(formatShare(99.97, 1)).toBe(">99.9%");
   });
 });
 

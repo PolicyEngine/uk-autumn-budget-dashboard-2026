@@ -1211,6 +1211,31 @@ describe("postHouseholdDetail", () => {
     });
   });
 
+  it("uses the main API alone when told not to ask the detail URL, though the build has one", async () => {
+    const { postHouseholdDetail } = await import("./householdImpactApi");
+    const main = "https://main.example/api/household-impact";
+    const saved = { ...process.env };
+    process.env.NEXT_PUBLIC_HOUSEHOLD_API_URL = main;
+    process.env.NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL = "https://detail.example/api/household-impact";
+    try {
+      const asked = [];
+      const payload = await postHouseholdDetail(
+        { include: ["sweep"] },
+        {
+          detail: false,
+          fetchImpl: async (url) => {
+            asked.push(url);
+            return respond(200, ok);
+          },
+        },
+      );
+      expect(payload).toEqual(ok);
+      expect(asked).toEqual([main]);
+    } finally {
+      process.env = saved;
+    }
+  });
+
   it("uses the main API alone when no detail URL is set", async () => {
     const { postHouseholdDetail } = await import("./householdImpactApi");
     const saved = { ...process.env };

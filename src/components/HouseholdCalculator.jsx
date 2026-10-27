@@ -628,6 +628,10 @@ function HouseholdCalculator({
     requestAnimationFrame(() => {
       const target = resultsRef.current;
       if (!target) return;
+      // Calculate is disabled while it runs, which drops keyboard focus
+      // to the page's start: focus goes to the results instead (WCAG 2.4.3)
+      const lost = document.activeElement;
+      if (!lost || lost === document.body || lost.disabled) target.focus({ preventScroll: true });
       const { top } = target.getBoundingClientRect();
       if (top > window.innerHeight * 0.6) {
         target.scrollIntoView?.({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
@@ -901,7 +905,8 @@ function HouseholdCalculator({
         examples={HOUSEHOLD_EXAMPLES}
         value={presetId}
         formOpen={formOpen}
-        formId={FORM_PANEL_ID}
+        // aria-controls names the panel only while it is in the page
+        formId={form.mounted ? FORM_PANEL_ID : undefined}
         onYours={chooseYours}
         onChoose={(id) => applyPreset(HOUSEHOLD_EXAMPLES.find((preset) => preset.id === id))}
         presets={noneSelected ? null : presetsAnswer ? presetChanges : fill.figures}
@@ -1011,21 +1016,8 @@ function HouseholdCalculator({
               startedAt={submitted?.at ?? null}
               salarySource={activePreset?.salarySource ?? null}
               spendingSource={activePreset?.spendingSource ?? null}
-              household={{
-                tenure: (submitted?.inputs ?? inputs).tenure,
-                regionLabel: REGION_OPTIONS.find(([value]) => value === (submitted?.inputs ?? inputs).region)?.[1] ?? null,
-                partner: Boolean((submitted?.inputs ?? inputs).has_partner),
-                children: parseChildrenAges((submitted?.inputs ?? inputs).children_ages).length,
-              }}
-              // "Edit" under the figure: the form, opened and scrolled to,
-              // with these answers (an example's become yours to change)
-              onEdit={() => {
-                if (formOpen) {
-                  document.getElementById(FORM_PANEL_ID)?.scrollIntoView?.({ behavior: "smooth", block: "start" });
-                  return;
-                }
-                chooseYours();
-              }}
+              requestHousehold={submitted ? buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }).household : null}
+              selected={submitted?.policies ?? householdPolicies}
             />
           )}
         </div>

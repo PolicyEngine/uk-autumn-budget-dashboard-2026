@@ -22,6 +22,7 @@ from policyengine_uk.system import system
 from uk_budget_data import household_impact, personal_impact
 from uk_budget_data.budget_measures.road_fuel_vat_cut import road_fuel_vat_cut
 from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
+    WINTER_SHARE,
     zero_vat_on_domestic_electricity,
 )
 from uk_budget_data.models import DataConfig
@@ -237,15 +238,16 @@ def test_electricity_spending_defaults_to_the_ons_average():
 
 @pytest.mark.parametrize(
     "year, spending, weight",
-    [(2026, 1_040, 182 / 365), (2027, 1_040, 1), (2027, 2_000, 1)],
+    [(2026, 1_040, WINTER_SHARE), (2027, 1_040, 1), (2027, 2_000, 1)],
 )
 def test_electricity_vat_is_5_percent_of_the_bill_for_its_period(
     year, spending, weight
 ):
     """5% VAT on VAT-inclusive spending is spending x 0.05 / 1.05; zero
-    rated from 1 October 2026 (182 of 2026-27's days) to 31 March 2028."""
+    rated from 1 October 2026 (the October to March share of 2026-27's
+    use) to 31 March 2028."""
     assert zero_vat_on_domestic_electricity.__defaults__[0] == (
-        pytest.approx(-0.05 * 182 / 365)
+        pytest.approx(-0.05 * WINTER_SHARE)
     )
     result = calculate(
         Answers(year, electricity_spending=spending),
@@ -257,6 +259,16 @@ def test_electricity_vat_is_5_percent_of_the_bill_for_its_period(
     assert -programme(result, "vat_change")["change"] == pytest.approx(
         expected, abs=0.01
     )
+
+
+def test_the_installed_engine_has_no_electricity_zero_rate():
+    """policyengine-uk 2.153.5 and later zero-rate Great Britain's domestic
+    electricity from 1 October 2026 to 31 March 2027 in current law
+    (gov.hmrc.vat.domestic_electricity_rate). On such an engine the
+    measure's 2026 leg counts that half-year twice: set rate_change_2026 to
+    0 before moving the pin."""
+    with pytest.raises(ValueError, match="Could not find the parameter"):
+        system.parameters.get_child("gov.hmrc.vat.domestic_electricity_rate")
 
 
 def test_northern_ireland_keeps_the_electricity_vat():

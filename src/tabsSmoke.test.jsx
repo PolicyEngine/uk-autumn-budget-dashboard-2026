@@ -226,7 +226,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
         // two stages and shows the answer
         fireEvent.click(within(panel).getByRole("button", { name: /^Calculate/ }));
         expect(
-          await within(panel).findByText(/^Change in your net income$/, {}, { timeout: 5000 }),
+          await within(panel).findByText(/^Your change$/, {}, { timeout: 5000 }),
         ).toBeInTheDocument();
         await waitFor(() => expect(panel.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull(), {
           timeout: 5000,
@@ -354,7 +354,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     // Back: the same view, with the finished answer, and nothing asked again
     fireEvent.click(screen.getByRole("tab", { name: "Household impact" }));
     expect(screen.getByRole("tabpanel", { name: "Household impact" })).toBe(personal);
-    expect(await within(personal).findByText(/^Change in your net income$/)).toBeInTheDocument();
+    expect(await within(personal).findByText(/^Your change$/)).toBeInTheDocument();
     await waitFor(() => expect(personal.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull());
     expect(requests.filter((r) => route(r.url) === HOUSEHOLD_API)).toHaveLength(3);
     expect(held).toHaveLength(0);
@@ -379,7 +379,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     }
     // Every view opened so far stays mounted; Methodology is never opened
     // The one exception: the provisional label names candidate measures
-    // while the manifest's basis is pre-Budget (Vahid, 26 October)
+    // while the manifest predates the Budget (Vahid, 26 October)
     const text = document.body.textContent.replaceAll(CANDIDATE_PROVISIONAL_LABEL, "");
     expect(text).not.toMatch(/pre-Budget/i);
     expect(text).not.toMatch(/28 October/);

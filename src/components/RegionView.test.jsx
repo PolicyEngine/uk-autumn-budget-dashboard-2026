@@ -88,7 +88,7 @@ describe("RegionView", () => {
 
     const westMidlands = within(rowFor("West Midlands"));
     expect(westMidlands.getByText("Approximate")).toBeInTheDocument();
-    expect(westMidlands.getByText("Too close to call")).toBeInTheDocument();
+    expect(westMidlands.getByText("The interval includes zero")).toBeInTheDocument();
     expect(westMidlands.getByText("10 to 29")).toBeInTheDocument();
 
     const eastOfEngland = within(rowFor("East of England"));

@@ -88,14 +88,14 @@ export default function AgeSection({ selectedPolicies, selectedYear, policies })
       <MeasureKeyProvider>
         <SectionHeading
           icon="usersRound"
-          title="How much each age group gains"
+          title="How each age group's income changes"
           subtitle={
             group === PENSIONERS
-              ? "Pensioners are people at State Pension age or over: 66 and over in 2026-27, 67 and over from 2027-28."
+              ? "The average change for pensioners, people at State Pension age or over, this year and over time; choose the group in any card's Options."
               : "The average change for each age group, this year and over time; choose the group in any card's Options."
           }
         />
-        <section className="report-section young-people-section" aria-label="How much each age group gains">
+        <section className="report-section young-people-section" aria-label="How each age group's income changes">
           <SectionMeasureKey />
           <div className="charts-grid">
             <AgeChangeCard {...props} height={narrow ? 360 : 400} />
@@ -106,10 +106,10 @@ export default function AgeSection({ selectedPolicies, selectedYear, policies })
       <SectionHeading
         id="age-who-gains"
         icon="userPlus"
-        title="Who gains and from what"
+        title="Who is better or worse off, and from what"
         subtitle={`Which policies drive the change for ${subject.toLowerCase()}, and how many are better or worse off.`}
       />
-      <section className="report-section young-people-section" aria-label="Who gains and from what">
+      <section className="report-section young-people-section" aria-label="Who is better or worse off, and from what">
         <div className="charts-grid">
           <MeasuresCard {...props} height={narrow ? 460 : 400} />
           {group === PENSIONERS ? (

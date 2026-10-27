@@ -76,7 +76,8 @@ describe("the chips' names", () => {
   it("show policyDetails.js's short name only while it describes the published measure", () => {
     const { writtenFor } = POLICY_DETAILS.find((entry) => entry.id === FUEL.id);
     const { rerender } = render(<MeasureKey members={[{ ...FUEL, description: writtenFor }]} />);
-    const chip = screen.getByRole("button", { name: FUEL.name });
+    // Its name starts with the short text it shows, then the full name
+    const chip = screen.getByRole("button", { name: `Fuel duty deferral: ${FUEL.name}` });
     expect(chip.querySelector(".measure-key-label")).toHaveTextContent("Fuel duty deferral");
     // Changed since (on Budget day, say): its published name
     rerender(<MeasureKey members={[{ ...FUEL, description: "Fuel duty rises are deferred for two years." }]} />);

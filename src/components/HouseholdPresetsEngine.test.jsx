@@ -48,7 +48,9 @@ const json = (value, status = 200) => new Response(JSON.stringify(value), { stat
 const headlineCard = () => document.querySelector(".result-card");
 function householdItem(name) {
   const region = screen.getByRole("region", { name: "Choose a household" });
-  return within(region).queryByRole("button", { name }) ?? within(region).getByRole("option", { name });
+  // A chip's name starts with its short text and ends with the full one
+  const chip = typeof name === "string" ? (n) => n === name || n.startsWith(`${name},`) || n.endsWith(`: ${name}`) : name;
+  return within(region).queryByRole("button", { name }) ?? within(region).getByRole("option", { name: chip });
 }
 
 // The presets file, under `engine` and recording `definitions` (no key at
