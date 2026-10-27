@@ -1,0 +1,863 @@
+{
+  "schema": "uk-budget-dashboard/pay-growth-sectors/v1",
+  "publisher": "Office for National Statistics",
+  "start_month": "2021-01",
+  "values": "Year-on-year growth of the three-month average, in percent, as the ONS publishes it; each month ends its three-month window. The page derives nothing from them.",
+  "series": [
+    {
+      "key": "public",
+      "cdid": "KAJ7",
+      "dataset": "LMS",
+      "title": "AWE: Public Sector Year on Year Three Month Average Growth (%): Seasonally Adjusted Regular Pay Excluding Arrears",
+      "unit": "%",
+      "seasonally_adjusted": true,
+      "source_url": "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/earningsandworkinghours/timeseries/kaj7/lms",
+      "release_date": "2026-10-20",
+      "next_release": "17 November 2026",
+      "values": [
+        {
+          "month": "2021-01",
+          "value": 4.7
+        },
+        {
+          "month": "2021-02",
+          "value": 5.1
+        },
+        {
+          "month": "2021-03",
+          "value": 5.4
+        },
+        {
+          "month": "2021-04",
+          "value": 4.9
+        },
+        {
+          "month": "2021-05",
+          "value": 3.8
+        },
+        {
+          "month": "2021-06",
+          "value": 2.7
+        },
+        {
+          "month": "2021-07",
+          "value": 2.4
+        },
+        {
+          "month": "2021-08",
+          "value": 2.6
+        },
+        {
+          "month": "2021-09",
+          "value": 2.6
+        },
+        {
+          "month": "2021-10",
+          "value": 2.7
+        },
+        {
+          "month": "2021-11",
+          "value": 2.6
+        },
+        {
+          "month": "2021-12",
+          "value": 2.7
+        },
+        {
+          "month": "2022-01",
+          "value": 2.4
+        },
+        {
+          "month": "2022-02",
+          "value": 2.1
+        },
+        {
+          "month": "2022-03",
+          "value": 1.8
+        },
+        {
+          "month": "2022-04",
+          "value": 1.7
+        },
+        {
+          "month": "2022-05",
+          "value": 1.7
+        },
+        {
+          "month": "2022-06",
+          "value": 1.8
+        },
+        {
+          "month": "2022-07",
+          "value": 2
+        },
+        {
+          "month": "2022-08",
+          "value": 2.2
+        },
+        {
+          "month": "2022-09",
+          "value": 2.2
+        },
+        {
+          "month": "2022-10",
+          "value": 2.8
+        },
+        {
+          "month": "2022-11",
+          "value": 3.4
+        },
+        {
+          "month": "2022-12",
+          "value": 4.3
+        },
+        {
+          "month": "2023-01",
+          "value": 4.9
+        },
+        {
+          "month": "2023-02",
+          "value": 5.3
+        },
+        {
+          "month": "2023-03",
+          "value": 5.6
+        },
+        {
+          "month": "2023-04",
+          "value": 5.7
+        },
+        {
+          "month": "2023-05",
+          "value": 5.9
+        },
+        {
+          "month": "2023-06",
+          "value": 6.2
+        },
+        {
+          "month": "2023-07",
+          "value": 6.6
+        },
+        {
+          "month": "2023-08",
+          "value": 6.8
+        },
+        {
+          "month": "2023-09",
+          "value": 7.4
+        },
+        {
+          "month": "2023-10",
+          "value": 7
+        },
+        {
+          "month": "2023-11",
+          "value": 6.6
+        },
+        {
+          "month": "2023-12",
+          "value": 5.9
+        },
+        {
+          "month": "2024-01",
+          "value": 6
+        },
+        {
+          "month": "2024-02",
+          "value": 6.1
+        },
+        {
+          "month": "2024-03",
+          "value": 6.4
+        },
+        {
+          "month": "2024-04",
+          "value": 6.4
+        },
+        {
+          "month": "2024-05",
+          "value": 6.4
+        },
+        {
+          "month": "2024-06",
+          "value": 6
+        },
+        {
+          "month": "2024-07",
+          "value": 5.7
+        },
+        {
+          "month": "2024-08",
+          "value": 5.2
+        },
+        {
+          "month": "2024-09",
+          "value": 4.7
+        },
+        {
+          "month": "2024-10",
+          "value": 4.3
+        },
+        {
+          "month": "2024-11",
+          "value": 4.2
+        },
+        {
+          "month": "2024-12",
+          "value": 4.7
+        },
+        {
+          "month": "2025-01",
+          "value": 5.2
+        },
+        {
+          "month": "2025-02",
+          "value": 5.7
+        },
+        {
+          "month": "2025-03",
+          "value": 5.5
+        },
+        {
+          "month": "2025-04",
+          "value": 5.6
+        },
+        {
+          "month": "2025-05",
+          "value": 5.5
+        },
+        {
+          "month": "2025-06",
+          "value": 5.7
+        },
+        {
+          "month": "2025-07",
+          "value": 5.6
+        },
+        {
+          "month": "2025-08",
+          "value": 6
+        },
+        {
+          "month": "2025-09",
+          "value": 6.6
+        },
+        {
+          "month": "2025-10",
+          "value": 7.6
+        },
+        {
+          "month": "2025-11",
+          "value": 7.9
+        },
+        {
+          "month": "2025-12",
+          "value": 7.2
+        },
+        {
+          "month": "2026-01",
+          "value": 6
+        },
+        {
+          "month": "2026-02",
+          "value": 5.2
+        },
+        {
+          "month": "2026-03",
+          "value": 4.8
+        },
+        {
+          "month": "2026-04",
+          "value": 5.1
+        },
+        {
+          "month": "2026-05",
+          "value": 5.5
+        },
+        {
+          "month": "2026-06",
+          "value": 6.1
+        },
+        {
+          "month": "2026-07",
+          "value": 6.3
+        },
+        {
+          "month": "2026-08",
+          "value": 6.3
+        }
+      ]
+    },
+    {
+      "key": "private",
+      "cdid": "KAJ4",
+      "dataset": "LMS",
+      "title": "AWE: Private Sector Year on Year Three Month Average Growth (%): Seasonally Adjusted Regular Pay Excluding Arrears",
+      "unit": "%",
+      "seasonally_adjusted": true,
+      "source_url": "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/earningsandworkinghours/timeseries/kaj4/lms",
+      "release_date": "2026-10-20",
+      "next_release": "17 November 2026",
+      "values": [
+        {
+          "month": "2021-01",
+          "value": 4.1
+        },
+        {
+          "month": "2021-02",
+          "value": 4.1
+        },
+        {
+          "month": "2021-03",
+          "value": 4.3
+        },
+        {
+          "month": "2021-04",
+          "value": 5.7
+        },
+        {
+          "month": "2021-05",
+          "value": 7.2
+        },
+        {
+          "month": "2021-06",
+          "value": 8.4
+        },
+        {
+          "month": "2021-07",
+          "value": 7.8
+        },
+        {
+          "month": "2021-08",
+          "value": 6.8
+        },
+        {
+          "month": "2021-09",
+          "value": 5.6
+        },
+        {
+          "month": "2021-10",
+          "value": 4.8
+        },
+        {
+          "month": "2021-11",
+          "value": 4.3
+        },
+        {
+          "month": "2021-12",
+          "value": 4.1
+        },
+        {
+          "month": "2022-01",
+          "value": 4.5
+        },
+        {
+          "month": "2022-02",
+          "value": 4.9
+        },
+        {
+          "month": "2022-03",
+          "value": 5.3
+        },
+        {
+          "month": "2022-04",
+          "value": 5.2
+        },
+        {
+          "month": "2022-05",
+          "value": 5.4
+        },
+        {
+          "month": "2022-06",
+          "value": 5.6
+        },
+        {
+          "month": "2022-07",
+          "value": 6.1
+        },
+        {
+          "month": "2022-08",
+          "value": 6.4
+        },
+        {
+          "month": "2022-09",
+          "value": 6.7
+        },
+        {
+          "month": "2022-10",
+          "value": 7
+        },
+        {
+          "month": "2022-11",
+          "value": 7.3
+        },
+        {
+          "month": "2022-12",
+          "value": 7.3
+        },
+        {
+          "month": "2023-01",
+          "value": 7.1
+        },
+        {
+          "month": "2023-02",
+          "value": 7.1
+        },
+        {
+          "month": "2023-03",
+          "value": 7.2
+        },
+        {
+          "month": "2023-04",
+          "value": 7.7
+        },
+        {
+          "month": "2023-05",
+          "value": 7.9
+        },
+        {
+          "month": "2023-06",
+          "value": 8.1
+        },
+        {
+          "month": "2023-07",
+          "value": 8.1
+        },
+        {
+          "month": "2023-08",
+          "value": 8.1
+        },
+        {
+          "month": "2023-09",
+          "value": 7.8
+        },
+        {
+          "month": "2023-10",
+          "value": 7.2
+        },
+        {
+          "month": "2023-11",
+          "value": 6.6
+        },
+        {
+          "month": "2023-12",
+          "value": 6.2
+        },
+        {
+          "month": "2024-01",
+          "value": 6.1
+        },
+        {
+          "month": "2024-02",
+          "value": 5.9
+        },
+        {
+          "month": "2024-03",
+          "value": 5.8
+        },
+        {
+          "month": "2024-04",
+          "value": 5.7
+        },
+        {
+          "month": "2024-05",
+          "value": 5.6
+        },
+        {
+          "month": "2024-06",
+          "value": 5.4
+        },
+        {
+          "month": "2024-07",
+          "value": 5.2
+        },
+        {
+          "month": "2024-08",
+          "value": 5.1
+        },
+        {
+          "month": "2024-09",
+          "value": 5.2
+        },
+        {
+          "month": "2024-10",
+          "value": 5.6
+        },
+        {
+          "month": "2024-11",
+          "value": 5.9
+        },
+        {
+          "month": "2024-12",
+          "value": 6.2
+        },
+        {
+          "month": "2025-01",
+          "value": 5.9
+        },
+        {
+          "month": "2025-02",
+          "value": 5.9
+        },
+        {
+          "month": "2025-03",
+          "value": 5.6
+        },
+        {
+          "month": "2025-04",
+          "value": 5.2
+        },
+        {
+          "month": "2025-05",
+          "value": 4.9
+        },
+        {
+          "month": "2025-06",
+          "value": 4.8
+        },
+        {
+          "month": "2025-07",
+          "value": 4.7
+        },
+        {
+          "month": "2025-08",
+          "value": 4.4
+        },
+        {
+          "month": "2025-09",
+          "value": 4.2
+        },
+        {
+          "month": "2025-10",
+          "value": 3.9
+        },
+        {
+          "month": "2025-11",
+          "value": 3.6
+        },
+        {
+          "month": "2025-12",
+          "value": 3.4
+        },
+        {
+          "month": "2026-01",
+          "value": 3.3
+        },
+        {
+          "month": "2026-02",
+          "value": 3.2
+        },
+        {
+          "month": "2026-03",
+          "value": 3.1
+        },
+        {
+          "month": "2026-04",
+          "value": 3
+        },
+        {
+          "month": "2026-05",
+          "value": 2.9
+        },
+        {
+          "month": "2026-06",
+          "value": 2.9
+        },
+        {
+          "month": "2026-07",
+          "value": 2.9
+        },
+        {
+          "month": "2026-08",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "key": "whole",
+      "cdid": "KAI9",
+      "dataset": "LMS",
+      "title": "AWE: Whole Economy Year on Year Three Month Average Growth (%): Seasonally Adjusted Regular Pay Excluding Arrears",
+      "unit": "%",
+      "seasonally_adjusted": true,
+      "source_url": "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/earningsandworkinghours/timeseries/kai9/lms",
+      "release_date": "2026-10-20",
+      "next_release": "17 November 2026",
+      "values": [
+        {
+          "month": "2021-01",
+          "value": 4.3
+        },
+        {
+          "month": "2021-02",
+          "value": 4.4
+        },
+        {
+          "month": "2021-03",
+          "value": 4.6
+        },
+        {
+          "month": "2021-04",
+          "value": 5.7
+        },
+        {
+          "month": "2021-05",
+          "value": 6.6
+        },
+        {
+          "month": "2021-06",
+          "value": 7.4
+        },
+        {
+          "month": "2021-07",
+          "value": 6.8
+        },
+        {
+          "month": "2021-08",
+          "value": 6
+        },
+        {
+          "month": "2021-09",
+          "value": 5.1
+        },
+        {
+          "month": "2021-10",
+          "value": 4.4
+        },
+        {
+          "month": "2021-11",
+          "value": 4
+        },
+        {
+          "month": "2021-12",
+          "value": 3.9
+        },
+        {
+          "month": "2022-01",
+          "value": 4.1
+        },
+        {
+          "month": "2022-02",
+          "value": 4.3
+        },
+        {
+          "month": "2022-03",
+          "value": 4.6
+        },
+        {
+          "month": "2022-04",
+          "value": 4.5
+        },
+        {
+          "month": "2022-05",
+          "value": 4.7
+        },
+        {
+          "month": "2022-06",
+          "value": 4.9
+        },
+        {
+          "month": "2022-07",
+          "value": 5.3
+        },
+        {
+          "month": "2022-08",
+          "value": 5.5
+        },
+        {
+          "month": "2022-09",
+          "value": 5.8
+        },
+        {
+          "month": "2022-10",
+          "value": 6.2
+        },
+        {
+          "month": "2022-11",
+          "value": 6.6
+        },
+        {
+          "month": "2022-12",
+          "value": 6.7
+        },
+        {
+          "month": "2023-01",
+          "value": 6.7
+        },
+        {
+          "month": "2023-02",
+          "value": 6.7
+        },
+        {
+          "month": "2023-03",
+          "value": 6.9
+        },
+        {
+          "month": "2023-04",
+          "value": 7.3
+        },
+        {
+          "month": "2023-05",
+          "value": 7.5
+        },
+        {
+          "month": "2023-06",
+          "value": 7.8
+        },
+        {
+          "month": "2023-07",
+          "value": 7.8
+        },
+        {
+          "month": "2023-08",
+          "value": 7.9
+        },
+        {
+          "month": "2023-09",
+          "value": 7.8
+        },
+        {
+          "month": "2023-10",
+          "value": 7.2
+        },
+        {
+          "month": "2023-11",
+          "value": 6.6
+        },
+        {
+          "month": "2023-12",
+          "value": 6.2
+        },
+        {
+          "month": "2024-01",
+          "value": 6.1
+        },
+        {
+          "month": "2024-02",
+          "value": 6
+        },
+        {
+          "month": "2024-03",
+          "value": 5.9
+        },
+        {
+          "month": "2024-04",
+          "value": 5.9
+        },
+        {
+          "month": "2024-05",
+          "value": 5.8
+        },
+        {
+          "month": "2024-06",
+          "value": 5.5
+        },
+        {
+          "month": "2024-07",
+          "value": 5.3
+        },
+        {
+          "month": "2024-08",
+          "value": 5.2
+        },
+        {
+          "month": "2024-09",
+          "value": 5.1
+        },
+        {
+          "month": "2024-10",
+          "value": 5.4
+        },
+        {
+          "month": "2024-11",
+          "value": 5.6
+        },
+        {
+          "month": "2024-12",
+          "value": 5.9
+        },
+        {
+          "month": "2025-01",
+          "value": 5.8
+        },
+        {
+          "month": "2025-02",
+          "value": 5.9
+        },
+        {
+          "month": "2025-03",
+          "value": 5.6
+        },
+        {
+          "month": "2025-04",
+          "value": 5.3
+        },
+        {
+          "month": "2025-05",
+          "value": 5
+        },
+        {
+          "month": "2025-06",
+          "value": 4.9
+        },
+        {
+          "month": "2025-07",
+          "value": 4.8
+        },
+        {
+          "month": "2025-08",
+          "value": 4.7
+        },
+        {
+          "month": "2025-09",
+          "value": 4.7
+        },
+        {
+          "month": "2025-10",
+          "value": 4.6
+        },
+        {
+          "month": "2025-11",
+          "value": 4.4
+        },
+        {
+          "month": "2025-12",
+          "value": 4.1
+        },
+        {
+          "month": "2026-01",
+          "value": 3.8
+        },
+        {
+          "month": "2026-02",
+          "value": 3.6
+        },
+        {
+          "month": "2026-03",
+          "value": 3.4
+        },
+        {
+          "month": "2026-04",
+          "value": 3.4
+        },
+        {
+          "month": "2026-05",
+          "value": 3.4
+        },
+        {
+          "month": "2026-06",
+          "value": 3.5
+        },
+        {
+          "month": "2026-07",
+          "value": 3.6
+        },
+        {
+          "month": "2026-08",
+          "value": 3.7
+        }
+      ]
+    }
+  ]
+}
