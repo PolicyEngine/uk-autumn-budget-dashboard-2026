@@ -130,6 +130,21 @@ describe("young people data", () => {
       "Not drawn in 2029-30, as a selected policy has too few survey records by age: every age group except all ages.",
     );
     expect(missingGroupsNote([complete], (key) => key)).toBeNull();
+
+    // The selection is a published combined package: its own rows, every
+    // band drawn, though a single withholds them
+    const pkg = "combined--abc";
+    const packaged = [
+      ...rows,
+      ...[2028, 2029].flatMap((year) => [...bands, "all"].map((band) => row(pkg, year, band, year === 2028 ? 55 : 45))),
+    ];
+    const fromPackage = changeByYear(packaged, POLICIES, ["two_child_limit", "threshold_freeze_extension"], [2028, 2029, 2030], pkg);
+    expect(fromPackage[1]).toMatchObject({ published: true, "16-24": 45, all: 45, missing: [], suppressed: [] });
+    expect(fromPackage[0]["0-15"]).toBe(55);
+    expect(fromPackage[2]).toMatchObject({ published: false, all: null });
+    expect(missingGroupsNote(fromPackage, (key) => key)).toBeNull();
+    // A package run with no rows loaded: the singles are summed as before
+    expect(changeByYear(rows, POLICIES, ["two_child_limit", "threshold_freeze_extension"], [2029], pkg)[0].missing).toEqual(bands);
   });
 
   it("says a run of years as a range, else lists them", () => {

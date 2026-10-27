@@ -38,6 +38,7 @@ import {
 import { chartTransition } from "../../utils/chartMotion";
 import { PENSIONERS, groupLabel, groupSeries, groupSubject } from "../../utils/ageGroups";
 import { legendMembership } from "../../utils/legendMembership";
+import { selectionPackageKey } from "../../utils/geography/selection";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { shortNameOf } from "../../utils/policyDetails";
 import TitleIcon from "../TitleIcon";
@@ -507,7 +508,12 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const cumulative = years === "total";
   const byMeasure = view === "measures";
 
-  const bands = useMemo(() => changeByYear(rows, policies, selectedPolicies, shownYears), [rows, policies, selectedPolicies, shownYears]);
+  // The published combined run of exactly the selection, read as is
+  const packageRun = selectionPackageKey(catalogue?.manifest, selectedPolicies);
+  const bands = useMemo(
+    () => changeByYear(rows, policies, selectedPolicies, shownYears, packageRun),
+    [rows, policies, selectedPolicies, shownYears, packageRun],
+  );
   const focusSeries = useMemo(
     () => groupSeries(rows, policies, selectedPolicies, shownYears, FOCUS),
     [rows, policies, selectedPolicies, shownYears, FOCUS],

@@ -92,8 +92,27 @@ export function measureComparison(rows, policies, selected, year, band = YOUNG_B
  * @param {Array<{id: string, name: string}>} policies
  * @param {Array<string>} selected
  * @param {Array<number>} years - Every year shown, in order
+ * @param {string|null} [packageRun] - The published combined run of exactly
+ *   the selection (selectionPackageKey), read instead of summing singles
  */
-export function changeByYear(rows, policies, selected, years) {
+export function changeByYear(rows, policies, selected, years, packageRun = null) {
+  // The selection is a published combined package: its own run's rows,
+  // never the singles summed (a single's withheld bands would blank them)
+  if (packageRun && (rows ?? []).some((row) => row.reform_id === packageRun)) {
+    return years.map((year) => {
+      const point = { year, published: false, suppressed: [], missing: [] };
+      for (const group of AGE_GROUPS) point[group.key] = null;
+      if (!(rows ?? []).some((row) => row.year === Number(year) && row.reform_id === packageRun)) return point;
+      point.published = true;
+      for (const group of AGE_GROUPS) {
+        const row = findRow(rows, packageRun, year, group.key);
+        if (row && row.sample_size < MIN_SAMPLE_SIZE) point.suppressed.push(group.key);
+        else if (!row || !Number.isFinite(row.mean_change)) point.missing.push(group.key);
+        else point[group.key] = row.mean_change;
+      }
+      return point;
+    });
+  }
   const chosen = policies.filter((policy) => selected.includes(policy.id) && policy.displayable !== false);
   const completeSelection = chosen.length > 0 && chosen.length === selected.length;
   return years.map((year) => {
