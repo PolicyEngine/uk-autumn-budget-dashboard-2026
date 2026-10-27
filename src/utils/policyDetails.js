@@ -106,7 +106,7 @@ export const POLICY_DETAILS = [
     sentence: "taking VAT off household electricity",
     name: "Zero VAT on domestic electricity",
     description: "Zero-rate VAT on domestic electricity to March 2028",
-    writtenFor: "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 31 March 2028: the zero rate to March 2027, not in the model's baseline, scored with a candidate one-year extension. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%), day-weighted in 2026-27.",
+    writtenFor: "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 31 March 2028: the zero rate to March 2027, not in the model's baseline, scored with a candidate one-year extension. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%). 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days.",
     summary:
       "Charges no VAT on household electricity bills in Great Britain, instead of 5%, from October 2026 to March 2028.",
     starts: "October 2026",
@@ -114,7 +114,7 @@ export const POLICY_DETAILS = [
     inForce: { from: "2026-10", to: "2028-03" },
     ends: "March 2028",
     details:
-      "The zero rate to March 2027 is already planned but not in the model's baseline; the year to March 2028 is modelled as an extension. Applied to electricity spending only, in Great Britain: Northern Ireland's households keep the 5%.",
+      "The zero rate to March 2027 is already planned but not in the model's baseline; the year to March 2028 is modelled as an extension. Applied to electricity spending only, in Great Britain: Northern Ireland's households keep the 5%. 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days.",
     source: {
       label: "Temporary zero rate of VAT for domestic electricity",
       href: "https://www.gov.uk/government/publications/temporary-zero-rate-of-vat-for-domestic-electricity-in-great-britain/temporary-zero-rate-of-vat-in-great-britain-for-domestic-electricity",
