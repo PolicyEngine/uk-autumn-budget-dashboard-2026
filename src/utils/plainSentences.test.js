@@ -44,11 +44,42 @@ describe("plain card sentences", () => {
     expect(laterDecileNote({ low: 0.3, high: 0.03 }, [{ yearLabel: "2028-29", low: 0.05, high: -0.04 }], "relative")).toBeNull();
     // £4 and -£4 both round to £0
     expect(laterDecileNote({ low: 75, high: 4 }, [{ yearLabel: "2028-29", low: 60, high: -4 }], "absolute")).toBeNull();
+    // -0.18% reads as a 0.2% loss: clear, from almost no change; the low end's fade says nothing
     expect(laterDecileNote({ low: 0.3, high: 0.03 }, [{ yearLabel: "2031-32", low: -0.02, high: -0.18 }], "relative")).toBe(
-      "Later years differ: in 2031-32, the lowest-income tenth sees almost no change and the highest-income tenth loses.",
+      "Later years differ: in 2031-32, the highest-income tenth loses.",
     );
-    expect(laterDecileNote({ low: 0.3, high: 0.2 }, [{ yearLabel: "2031-32", low: 0.3, high: 0.01 }], "relative")).toBe(
-      "Later years differ: in 2031-32, the highest-income tenth sees almost no change.",
+  });
+
+  it("says nothing when a measure ends, fades or creeps", () => {
+    // A measure ending: a gain falls to almost no change
+    expect(laterDecileNote({ low: 0.3, high: 0.2 }, [{ yearLabel: "2031-32", low: 0.3, high: 0.01 }], "relative")).toBeNull();
+    expect(laterDecileNote({ low: 75, high: 45 }, [{ yearLabel: "2028-29", low: 0, high: 0 }], "absolute")).toBeNull();
+    // A fade: 0.10% to 0.04%
+    expect(laterDecileNote({ low: 0.1, high: 0.3 }, [{ yearLabel: "2028-29", low: 0.04, high: 0.3 }], "relative")).toBeNull();
+    // A creep from about £1 to £6, and to £14 (rounds to £10, under £20)
+    expect(laterDecileNote({ low: 1, high: 30 }, [{ yearLabel: "2029-30", low: 6, high: 30 }], "absolute")).toBeNull();
+    expect(laterDecileNote({ low: 1, high: 30 }, [{ yearLabel: "2029-30", low: 14, high: 30 }], "absolute")).toBeNull();
+    // A small gain turning to a loss under the clear threshold
+    expect(laterDecileNote({ low: 40, high: 30 }, [{ yearLabel: "2029-30", low: -12, high: 30 }], "absolute")).toBeNull();
+    expect(laterDecileNote({ low: 0.3, high: 0.3 }, [{ yearLabel: "2029-30", low: -0.1, high: 0.3 }], "relative")).toBeNull();
+  });
+
+  it("points to a clear effect from almost no change, as with the threshold freeze", () => {
+    // Almost nothing in the selected year, both ends clearly lose later
+    const freeze = [
+      { yearLabel: "2028-29", low: -3, high: -8 },
+      { yearLabel: "2029-30", low: -9, high: -14 },
+      { yearLabel: "2031-32", low: -25, high: -180 },
+    ];
+    expect(laterDecileNote({ low: 0, high: -2 }, freeze, "absolute")).toBe(
+      "Later years differ: in 2031-32, both the lowest- and highest-income tenths lose.",
+    );
+    // £15 rounds to £20: clear
+    expect(laterDecileNote({ low: 1, high: 30 }, [{ yearLabel: "2029-30", low: 15, high: 30 }], "absolute")).toBe(
+      "Later years differ: in 2029-30, the lowest-income tenth gains.",
+    );
+    expect(laterDecileNote({ low: 0.02, high: 0.01 }, [{ yearLabel: "2031-32", low: -0.2, high: -0.4 }], "relative")).toBe(
+      "Later years differ: in 2031-32, both the lowest- and highest-income tenths lose.",
     );
   });
 
@@ -71,10 +102,25 @@ describe("plain card sentences", () => {
     expect(laterRevenueNote(4.3, [{ yearLabel: "2031-32", net: -1.2 }])).toBe(
       "Later years differ: in 2031-32, the selected measures cost revenue.",
     );
-    expect(laterRevenueNote(-2, [{ yearLabel: "2031-32", net: 0.02 }])).toBe(
-      "Later years differ: in 2031-32, the selected measures roughly balance.",
+    // From roughly balancing to a clear effect (at least £0.1bn)
+    expect(laterRevenueNote(0.02, [{ yearLabel: "2029-30", net: 0.06 }, { yearLabel: "2031-32", net: 3.77 }])).toBe(
+      "Later years differ: in 2031-32, the selected measures raise revenue.",
     );
+    expect(laterRevenueNote(-0.01, [{ yearLabel: "2031-32", net: -0.1 }])).toBe(
+      "Later years differ: in 2031-32, the selected measures cost revenue.",
+    );
+  });
+
+  it("says nothing when the revenue effect ends, fades or turns by less than £0.1bn", () => {
+    // A cost ending
+    expect(laterRevenueNote(-2, [{ yearLabel: "2031-32", net: 0.02 }])).toBeNull();
+    expect(laterRevenueNote(-2, [{ yearLabel: "2031-32", net: 0 }])).toBeNull();
+    // A fade
+    expect(laterRevenueNote(1.4, [{ yearLabel: "2031-32", net: 0.3 }])).toBeNull();
+    // A small turn, and a creep out of the balance band
+    expect(laterRevenueNote(-2, [{ yearLabel: "2031-32", net: 0.08 }])).toBeNull();
+    expect(laterRevenueNote(0.01, [{ yearLabel: "2031-32", net: 0.07 }])).toBeNull();
     expect(laterRevenueNote(-8.9, [{ yearLabel: "2028-29", net: -3.8 }])).toBeNull();
-    expect(laterRevenueNote(null, later)).toBeNull();
+    expect(laterRevenueNote(null, [{ yearLabel: "2030-31", net: 3.2 }])).toBeNull();
   });
 });
