@@ -55,7 +55,7 @@ describe("the two Across earnings cards", () => {
     expect(rate.querySelector(".chart-description").textContent).toMatch(/^With no earnings, your marginal tax rate on your first £200 would be 20% before and 39% after/);
     expect(net.querySelector(".earnings-you")).not.toBeNull();
     fireEvent.click(within(rate).getByRole("button", { name: "About this chart" }));
-    expect(rate.querySelector(".chart-more-info")).toHaveTextContent(/withdrawn £1 for every £1 of other income/);
+    expect(rate.querySelector(".chart-more-info")).toHaveTextContent(/Any earnings take the whole allowance away/);
   });
 });
 

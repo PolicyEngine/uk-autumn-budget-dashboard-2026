@@ -200,11 +200,11 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
     ? changeRateTicks(Math.max(0, ...data.map((row) => Math.abs(row.change)), yours ? Math.abs(yours.after - yours.before) : 0))
     : Y_TICKS;
   // A State Pension household whose income tax rate rises sharply at the
-  // start of earnings after the policies: an extra allowance withdrawn £1
-  // for £1 (said in plain words in About this chart)
+  // start of earnings after the policies: an extra allowance that any other
+  // income takes away in full (said in plain words in About this chart)
   const firstNet = sweep.netParts?.after?.[0];
   const firstRates = breakdown ? { before: breakdown.before[0]?.income_tax ?? 0, after: breakdown.after[0]?.income_tax ?? 0 } : null;
-  const pensionAllowanceTaper =
+  const pensionAllowanceCliff =
     (firstNet?.state_pension ?? 0) > 0 &&
     ((own && own.afterRate - own.beforeRate >= 0.1) || (firstRates && firstRates.after - firstRates.before >= 0.05));
   const yourParts = breakdown?.own ? describeParts(breakdown.own.after) : "";
@@ -439,8 +439,8 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
             definitions: (parts ?? []).filter((part) => part.info).map((part) => ({ term: part.label, meaning: part.info })),
             method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
             caveats: [
-              pensionAllowanceTaper &&
-                "For a pensioner on the State Pension, the selected policies add a tax-free allowance that is withdrawn £1 for every £1 of other income, so income tax takes about 40p, not 20p, of each of the first few hundred pounds earned.",
+              pensionAllowanceCliff &&
+                "For a pensioner whose only income is the State Pension, the selected policies add a tax-free allowance. Any earnings take the whole allowance away, so income tax jumps at the first pound earned.",
               "The axis runs from 0% to 100%; a rate beyond either end is marked at the edge, and the tooltip gives it in full.",
             ],
           }}
