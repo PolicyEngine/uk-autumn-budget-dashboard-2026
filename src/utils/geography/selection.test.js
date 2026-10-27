@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  SELECTION_NOT_PUBLISHED,
+  chooseSelectionReform,
+  selectionFocus,
   chooseReform,
   choiceLabel,
   choiceMeasureNames,
@@ -89,5 +92,40 @@ describe("labels", () => {
       POLICIES.map((policy) => policy.name),
     );
     expect(choiceMeasureNames({ kind: "pick" }, POLICIES)).toEqual([]);
+  });
+});
+
+describe("chooseSelectionReform", () => {
+  const SEVEN = ["a", "b", "c", "d", "e", "f", "g"];
+  const KEY = "combined--5c77771791661e11";
+
+  it("takes the combined run of exactly the selection for several policies", () => {
+    expect(chooseSelectionReform({ selectedIds: SEVEN, policyIds: SEVEN, reforms: ["a", KEY], packageKey: KEY }))
+      .toEqual({ kind: "package", reform: KEY, members: SEVEN, all: true });
+    expect(chooseSelectionReform({ selectedIds: ["c", "a"], policyIds: SEVEN, reforms: [KEY], packageKey: KEY }))
+      .toMatchObject({ kind: "package", reform: KEY, members: ["a", "c"], all: false });
+  });
+
+  it("takes one policy's own run when one is selected", () => {
+    expect(chooseSelectionReform({ selectedIds: ["b"], policyIds: SEVEN, reforms: ["b"], packageKey: KEY }))
+      .toEqual({ kind: "measure", reform: "b" });
+  });
+
+  it("says the combination is not published, never taking a policy in its place", () => {
+    for (const packageKey of [KEY, null]) {
+      const choice = chooseSelectionReform({ selectedIds: SEVEN, policyIds: SEVEN, reforms: SEVEN, packageKey });
+      expect(choice).toEqual({ kind: "no-package", reason: SELECTION_NOT_PUBLISHED, members: SEVEN, all: true });
+      expect(choice.reform).toBeUndefined();
+      // The per-policy option defaults to the combination
+      const focused = selectionFocus(choice, { reforms: SEVEN });
+      expect(focused.kind).toBe("no-package");
+      expect(focused.focus.options).toEqual(SEVEN);
+    }
+  });
+
+  it("shows one policy only when the reader picks a selected one", () => {
+    const choice = chooseSelectionReform({ selectedIds: ["a", "b"], policyIds: SEVEN, reforms: [KEY, "a"], packageKey: KEY });
+    expect(selectionFocus(choice, { reforms: ["a"], focusId: "a" })).toMatchObject({ kind: "measure", reform: "a" });
+    expect(selectionFocus(choice, { reforms: ["a"], focusId: "g" })).toMatchObject({ kind: "package", reform: KEY });
   });
 });

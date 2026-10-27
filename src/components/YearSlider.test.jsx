@@ -6,7 +6,7 @@ const open = () =>
   fireEvent.click(screen.getByRole("button", { name: "Year 2029-30" }));
 
 describe("YearSlider", () => {
-  it("opens a list of the choosable years, from 2027-28 (not 2026-27), the chosen one selected", () => {
+  it("opens a list of the choosable years, from 2027-28 by default, the chosen one selected", () => {
     render(<YearSlider selectedYear={2029} onYearChange={() => {}} />);
     open();
     const list = screen.getByRole("listbox", { name: "Year" });
@@ -19,6 +19,14 @@ describe("YearSlider", () => {
       "2031-32",
     ]);
     expect(options[2]).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("lists 2026-27 first when the selection's years include it (a policy with an effect in it)", () => {
+    render(<YearSlider years={[2026, 2027, 2028, 2029, 2030, 2031]} selectedYear={2029} onYearChange={() => {}} />);
+    open();
+    const options = Array.from(screen.getByRole("listbox", { name: "Year" }).querySelectorAll('[role="option"]'));
+    expect(options.map((option) => option.textContent.replace("✓", ""))[0]).toBe("2026-27");
+    expect(options).toHaveLength(6);
   });
 
   it("chooses by click or by arrow keys and Enter, then closes", () => {

@@ -47,10 +47,10 @@ export default function MeasureSharesChart({ rows, groupLabel, yearLabel, emphas
           <span className="msc-down">▼</span> Worse
         </span>
       </div>
-      {rows.map(({ id, name, fullName, row }) => {
+      {rows.map(({ id, name, fullName, row }, index) => {
         const drawn = visibleSegments(Object.fromEntries(KEYS.map((key) => [key, row[key] ?? 0])), KEYS);
         return (
-          <div className={`msc-row${id === emphasis ? " is-focus" : ""}`} role="row" key={id}>
+          <div className={`msc-row row-band${index % 2 === 0 ? " is-banded" : ""}${id === emphasis ? " is-focus" : ""}`} role="row" key={id}>
             <span className={`msc-label${id === emphasis ? " is-focus" : ""}`} role="rowheader" title={fullName ?? name}>
               {byId?.get(id) ? <MeasureRowLabel measure={byId.get(id)} name={name} /> : name}
             </span>
@@ -75,10 +75,10 @@ export default function MeasureSharesChart({ rows, groupLabel, yearLabel, emphas
                 )}
               </span>
             </span>
-            <span className="msc-num" role="cell">
+            <span className="msc-num row-band-value" role="cell">
               {formatShare(drawn.real.pct_better_off, betterDecimals)}
             </span>
-            <span className="msc-num" role="cell">
+            <span className="msc-num row-band-value" role="cell">
               {formatShare(drawn.real.pct_worse_off, worseDecimals)}
             </span>
           </div>

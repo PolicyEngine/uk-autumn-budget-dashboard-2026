@@ -29,7 +29,7 @@ import {
   fiscalYearTick,
 } from "../../utils/chartTheme";
 import { ALL_BAND, isPublished, singleAgeKey } from "../../utils/ageImpact";
-import { DISPLAY_YEARS } from "../../utils/displayYears";
+import { useDisplayYears } from "../../utils/displayYears";
 import { legendMembership } from "../../utils/legendMembership";
 import { PENSIONERS, ageWindow, groupAges, groupLabel } from "../../utils/ageGroups";
 
@@ -110,6 +110,7 @@ function AgeTooltip({ active, payload, nameOf, byMeasure }) {
  * shows the change between years.
  */
 export default function SingleAgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height, group = PENSIONERS, extraOptions = [], title: titleBase = "Change by single year of age", keyInLegend = false }) {
+  const shownYears = useDisplayYears();
   const chartRef = useRef(null);
   const [show, setShow] = useState("net");
   const byMeasure = show === "measures";
@@ -126,7 +127,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
   // £0, so the scale holds still under Play
   const { domain, ticks } = useMemo(() => {
     const values = [0];
-    for (const each of DISPLAY_YEARS) {
+    for (const each of shownYears) {
       for (const point of ageBars(each)) {
         if (point.netChange === null) continue;
         values.push(point.netChange);
@@ -138,7 +139,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
     }
     return niceRange(Math.min(...values), Math.max(...values), { maxSteps: 5 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, policies, selectedPolicies, group, byMeasure]);
+  }, [rows, policies, selectedPolicies, group, byMeasure, shownYears]);
   const members = useMemo(
     () =>
       legendMembership(catalogue, selectedPolicies, (id) =>

@@ -67,7 +67,7 @@ export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, hei
       aria-label={`Effect of each policy, ${yearLabel}`}
       style={height ? { "--md-height": `${height}px` } : undefined}
     >
-      {rows.map((row) => {
+      {rows.map((row, index) => {
         const gap = row.group - row.all;
         const close = Math.abs(gap) < 1;
         const tone = close ? "flat" : gap > 0 ? "more" : "less";
@@ -86,7 +86,7 @@ export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, hei
         return (
           <div
             key={row.id}
-            className={`measure-dumbbell-row${active === row.id ? " is-active" : ""}`}
+            className={`measure-dumbbell-row row-band${index % 2 === 0 ? " is-banded" : ""}${active === row.id ? " is-active" : ""}`}
             role="row"
             tabIndex={0}
             onMouseEnter={() => setActive(row.id)}
@@ -109,7 +109,7 @@ export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, hei
               <span className="measure-dumbbell-dot" style={{ left: pos(row.group) }} />
             </span>
             <span className="measure-dumbbell-values" role="cell">
-              <strong>{money(row.group)}</strong>
+              <strong className="row-band-value">{money(row.group)}</strong>
               <span className={`measure-dumbbell-gap ${tone}`}>
                 {close ? `≈ ${compareName.toLowerCase()}` : `${gap > 0 ? "▲" : "▼"} ${signed(gap)} vs ${compareName.toLowerCase()}`}
               </span>
@@ -225,10 +225,9 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     name: `young-people-change-by-policy-${band.replace("+", "-plus")}-${selectedYear}`,
     exportOptions,
     csv: csvText,
+    // The dumbbell is drawn in HTML: its images are redrawn from the page
+    // (chartDownloads)
     published: published && shown.length > 0,
-    // The dumbbell is drawn in HTML, not as a Recharts SVG, so there is no
-    // chart image to export: the CSV only
-    image: false,
   };
 
   return (

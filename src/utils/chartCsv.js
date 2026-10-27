@@ -79,7 +79,7 @@ export function revenueCsv(data, policyNames) {
     columns: [
       { key: "fiscal_year", label: "Fiscal year" },
       ...policyNames.map((policy) => policyColumn(policy, 4)),
-      { key: "netImpact", label: "Net impact", decimals: 4 },
+      { key: "netImpact", label: "Net change", decimals: 4 },
     ],
     // A year not yet published is a note, never a row of zeros
     rows: data

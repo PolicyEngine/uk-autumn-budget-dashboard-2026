@@ -44,13 +44,7 @@
   column-gap: var(--md-gap);
   min-height: 44px;
   padding: 0 6px;
-  border-radius: 6px;
   outline: none;
-}
-
-.measure-dumbbell-row:not(.measure-dumbbell-axis):hover,
-.measure-dumbbell-row.is-active {
-  background: var(--pe-gray-50);
 }
 
 .measure-dumbbell-row:focus-visible {

@@ -28,6 +28,19 @@ describe("CHART_COLOURS", () => {
     expect(CHART_COLOURS.zeroLine).toBe(CHART_COLOURS.text);
   });
 
+  it("bands every second policy row in the neutral --pe-gray-50, fainter than the hover band and the gridlines", () => {
+    const gray50 = css.match(/--pe-gray-50:\s*(#[0-9a-fA-F]{6})/)[1].toLowerCase();
+    expect(CHART_COLOURS.rowBand.toLowerCase()).toBe(gray50);
+    const level = (hex) => [1, 3, 5].reduce((sum, i) => sum + parseInt(hex.slice(i, i + 2), 16), 0);
+    expect(level(CHART_COLOURS.rowBand)).toBeGreaterThan(level(CHART_COLOURS.hover));
+    expect(level(CHART_COLOURS.rowBand)).toBeGreaterThan(level(CHART_COLOURS.grid));
+  });
+
+  it("rounds a row band as --row-radius", async () => {
+    const { ROW_RADIUS } = await import("./chartTheme");
+    expect(css).toMatch(new RegExp(`--row-radius:\\s*${ROW_RADIUS}px;`));
+  });
+
   it("draws outturn as before and the projection as after (docs/COLOURS.md)", async () => {
     const { OUTTURN_COLOUR, PROJECTION_COLOUR } = await import("./livingStandards/baseline");
     expect(OUTTURN_COLOUR).toBe(CHART_COLOURS.before);
