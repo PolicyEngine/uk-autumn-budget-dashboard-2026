@@ -10,7 +10,6 @@ import {
   fyDash,
   fyLabel,
   headlineSpan,
-  formatPounds,
   formatPoundsKAxis,
   formatPoundsWholeAxis,
   rowsPeriod,
@@ -226,8 +225,7 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
           data={chartData}
           series={series}
           yFormat={yFormat}
-          tooltipFormat={formatPounds}
-          valueFormat={poundsFull}
+          tooltipFormat={poundsFull}
           yLabel={yLabel}
         />
       ),

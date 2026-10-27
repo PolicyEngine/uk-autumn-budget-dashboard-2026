@@ -768,13 +768,6 @@
   stroke-width: 2.5;
 }
 
-.tile-trend-value {
-  font-size: 11px;
-  font-weight: 600;
-  fill: var(--c-gain-text);
-  font-variant-numeric: tabular-nums;
-}
-
 .tile-trend-hover {
   fill: var(--c-gain-text);
   stroke: var(--c-surface);
