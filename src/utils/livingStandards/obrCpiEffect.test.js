@@ -10,6 +10,7 @@ import {
   parseObrCpiEffect,
   ppAxis,
   ppText,
+  ppText2,
 } from "./obrCpiEffect";
 import { AB2025_CPI_EFFECT } from "./obrCpiEffect.fixture";
 
@@ -121,6 +122,9 @@ describe("chart helpers", () => {
     expect(ppText(-0.43)).toBe("-0.4");
     expect(ppText(0.09)).toBe("+0.1");
     expect(ppText(-0.003)).toBe("0.0");
+    expect(ppText2(-0.0455)).toBe("-0.05");
+    expect(ppText2(0.0898)).toBe("+0.09");
+    expect(ppText2(-0.001)).toBe("0.00");
   });
 
   it("steps the axis in tenths, through zero", () => {

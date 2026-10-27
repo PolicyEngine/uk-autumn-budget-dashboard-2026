@@ -23,6 +23,7 @@ import {
   obrCpiEffectTitle,
   ppAxis,
   ppText,
+  ppText2,
 } from "../../utils/livingStandards/obrCpiEffect";
 
 export const OBR_CPI_EFFECT_ANCHOR = "obr-cpi-effect";
@@ -132,12 +133,6 @@ function LoadedCard({ effect, view, onViewChange, onShowTab }) {
     : rows.map((r) => r.total);
   const axis = ppAxis(values);
 
-  const describeYear = (row) => ({
-    year: row.year,
-    title: `total ${ppText(row.total)} points`,
-    items: measures.map((m) => ({ key: m.key, label: m.name, value: row[m.key], text: ppText(row[m.key]), colour: m.colour })),
-  });
-
   const common = {
     id: OBR_CPI_EFFECT_ANCHOR,
     title,
@@ -190,8 +185,8 @@ function LoadedCard({ effect, view, onViewChange, onShowTab }) {
               {rows.map((row) => (
                 <tr key={row.year}>
                   <td>{row.year}</td>
-                  {byMeasure && measures.map((m) => <td key={m.key}>{ppText(row[m.key])}</td>)}
-                  <td>{ppText(row.total)}</td>
+                  {byMeasure && measures.map((m) => <td key={m.key}>{ppText2(row[m.key])}</td>)}
+                  <td>{ppText2(row.total)}</td>
                 </tr>
               ))}
             </tbody>
@@ -211,14 +206,13 @@ function LoadedCard({ effect, view, onViewChange, onShowTab }) {
         series={series}
         xFormat={String}
         yFormat={ppText}
-        tooltipFormat={ppText}
+        tooltipFormat={ppText2}
         yLabel="Effect on CPI inflation (percentage points)"
         yDomain={axis.domain}
         yTicks={axis.ticks}
         stacked={byMeasure}
         stackOffset={byMeasure ? "sign" : undefined}
         legendItems={byMeasure ? undefined : []}
-        describeYear={byMeasure ? describeYear : null}
         maxBarSize={64}
       />
     </LsCard>

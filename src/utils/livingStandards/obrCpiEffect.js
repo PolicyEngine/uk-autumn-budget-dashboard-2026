@@ -145,6 +145,12 @@ export function ppText(pp) {
   return `${v > 0 ? "+" : ""}${formatOneDp(v)}`;
 }
 
+/** Signed points to two places, for tooltips and the table, where a measure's part can be under 0.05: "-0.43", "+0.09". */
+export function ppText2(pp) {
+  const v = Math.round(pp * 100) / 100 + 0;
+  return `${v > 0 ? "+" : ""}${v.toFixed(2)}`;
+}
+
 /**
  * The y axis in steps of 0.1 points (0.2 or 0.5 for larger effects),
  * always including zero, wide enough for every stacked part as well as the
