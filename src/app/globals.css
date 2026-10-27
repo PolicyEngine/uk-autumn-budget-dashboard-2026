@@ -693,16 +693,14 @@ body {
   padding: 0;
 }
 
-.method-card a,
-.method-callout a {
+.method-card a {
   color: var(--pe-teal-700);
   text-decoration: underline;
   text-decoration-color: var(--pe-teal-200);
   text-underline-offset: 3px;
 }
 
-.method-card a:hover,
-.method-callout a:hover {
+.method-card a:hover {
   text-decoration-color: currentColor;
 }
 
@@ -1358,8 +1356,10 @@ body {
 }
 
 /* Stacking: the sticky title band (z-index 1100) stays above every chart.
-   Chart tooltips sit just below it (a component stylesheet sets them to
-   9999 globally). */
+   Chart tooltips sit just below it. The page's layers, low to high: the
+   sub-tab band 1085, view tabs 1090, title band 1100, update toast 1200,
+   the phone Options sheet's shade and sheet 1250/1260, the About drawer
+   1300, tips 1400 (Tip.test.jsx checks tips stay on top). */
 .main-content .recharts-tooltip-wrapper {
   z-index: 1000 !important;
 }

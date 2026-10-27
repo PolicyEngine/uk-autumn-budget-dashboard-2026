@@ -104,14 +104,6 @@
   scroll-margin-top: calc(var(--sticky-offset) + 16px);
 }
 
-.method-card-title {
-  margin: 0 0 12px;
-  font-size: var(--fs-card-title);
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--pe-gray-800);
-}
-
 .method-card .method-lead {
   margin: 0 0 16px;
   color: var(--pe-gray-700);
@@ -296,54 +288,11 @@
   }
 }
 
-/* Section headers: an icon chip, the title and subtitle, and tags ------- */
-
-.method-section-heading {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-}
-
-.method-section-titles {
-  min-width: 0;
-}
-
 .method-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px !important;
-}
-
-.method-icon {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--pe-radius-md);
-  background: var(--pe-teal-50);
-  border: 1px solid var(--pe-teal-100);
-  color: var(--pe-teal-700);
-}
-
-.method-icon-md {
-  width: 40px;
-  height: 40px;
-}
-
-.method-icon-md svg {
-  width: 20px;
-  height: 20px;
-}
-
-.method-icon-sm {
-  width: 32px;
-  height: 32px;
-}
-
-.method-icon-sm svg {
-  width: 16px;
-  height: 16px;
 }
 
 /* Tags */
@@ -405,66 +354,6 @@
   color: var(--band-teal);
 }
 
-/* Not modelled: a quieter table */
-.method-muted-card {
-  background: var(--pe-gray-50);
-}
-
-.method-card.method-muted-card .method-more {
-  margin: 0 0 12px;
-}
-
-/* Limitations: callouts */
-.method-callouts {
-  display: grid;
-  gap: 12px;
-}
-
-.method-callout {
-  display: flex;
-  gap: 12px;
-  padding: 16px 18px;
-  border: 1px solid var(--pe-teal-100);
-  border-left: 3px solid var(--pe-teal-500);
-  border-radius: var(--pe-radius-md);
-  background: var(--pe-surface);
-}
-
-.method-callout-warning {
-  border-color: var(--c-loss-border);
-  border-left-color: var(--c-loss);
-  background: var(--c-notice-bg);
-}
-
-.method-callout-icon {
-  display: inline-flex;
-  flex: none;
-  padding-top: 2px;
-  color: var(--pe-teal-600);
-}
-
-.method-callout-warning .method-callout-icon {
-  color: var(--c-loss-text);
-}
-
-.method-callout-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.method-callout-title {
-  margin: 0 0 4px;
-  font-size: var(--fs-body);
-  font-weight: 600;
-  color: var(--pe-gray-900);
-}
-
-.method-callout-text {
-  font-size: var(--fs-body);
-  line-height: 1.6;
-  color: var(--pe-gray-700);
-}
-
 /* Living standards' gaps: a list with a muted marker */
 .method-card .method-list-caveats {
   padding-left: 0;
@@ -497,15 +386,6 @@
     padding: 8px 16px;
     background: var(--pe-background);
     border-bottom: 1px solid var(--card-border);
-  }
-
-  .method-section-heading {
-    gap: 12px;
-  }
-
-  .method-icon-md {
-    width: 34px;
-    height: 34px;
   }
 }
 
@@ -559,10 +439,6 @@
   margin: -8px 0 20px;
   font-size: var(--fs-body);
   color: var(--pe-gray-700);
-}
-
-.method-callout-text p {
-  margin: 0 0 6px;
 }
 
 /* The scatter's band edges as a row of chips */
@@ -652,108 +528,8 @@
 
 }
 
-/* Flow: the step a section explains, a summary that reads on its own, and
-   the technical details behind a toggle ------------------------------- */
-
-.method-section-heading {
-  align-items: center;
-}
-
-.method-summary {
-  padding: 20px 24px;
-  border: 1px solid var(--card-border);
-  border-radius: var(--card-radius);
-  background: var(--pe-surface);
-}
-
-/* Intros and text run the card's full width, like the cards below them */
-.method-summary > p {
-  margin: 0;
-  font-size: var(--fs-body-lg);
-  line-height: 1.6;
-  color: var(--pe-gray-700);
-}
-
-.method-summary a,
-.method-details a {
-  color: var(--pe-teal-700);
-  text-decoration: underline;
-  text-decoration-color: var(--pe-teal-200);
-  text-underline-offset: 3px;
-}
-
-.method-summary a:hover,
-.method-details a:hover {
-  text-decoration-color: currentColor;
-}
-
-.method-summary .method-card-title {
-  margin-bottom: 6px;
-}
-
-.method-section > .method-summary + *,
 .method-section > .card + .card {
   margin-top: 16px;
-}
-
-.method-details {
-  margin-top: 12px;
-}
-
-.method-details > summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 40px;
-  padding: 0 14px;
-  border: 1px solid var(--card-border);
-  border-radius: 999px;
-  background: var(--pe-surface);
-  font-size: var(--fs-small);
-  font-weight: 600;
-  color: var(--pe-teal-700);
-  cursor: pointer;
-  list-style: none;
-}
-
-.method-details > summary::-webkit-details-marker {
-  display: none;
-}
-
-.method-details > summary:hover {
-  border-color: var(--pe-teal-300);
-}
-
-.method-details > summary:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: 2px;
-}
-
-.method-details > summary svg {
-  width: 16px;
-  height: 16px;
-  transition: transform var(--pe-transition-fast);
-}
-
-.method-details[open] > summary svg {
-  transform: rotate(180deg);
-}
-
-.method-details-body {
-  margin-top: 12px;
-  padding: 20px 24px;
-  border: 1px solid var(--card-border);
-  border-radius: var(--card-radius);
-  background: var(--pe-surface);
-}
-
-.method-details-body > .card {
-  border: 0;
-  padding: 0;
-}
-
-.method-details-body > .card + .card {
-  margin-top: 24px;
 }
 
 .method-details-title {
@@ -765,28 +541,6 @@
 
 .method-details-title:first-child {
   margin-top: 0;
-}
-
-@media (max-width: 899px) {
-  .method-summary,
-  .method-details-body {
-    padding: 16px;
-  }
-
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .method-details > summary svg {
-    transition: none;
-  }
-}
-
-.method-details-body .method-more {
-  margin: 0 0 12px;
-}
-
-.method-details-body > .method-facts + .method-more {
-  margin: 16px 0 0;
 }
 
 /* A term's one-line value, with its detail folded under "Details" */
@@ -829,37 +583,6 @@
   }
 }
 
-/* Section icons are circles on every tab (SectionHeading's .section-icon):
-   the title's line box tall, level with its first line */
-.method-section-heading {
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.method-section-heading .method-icon {
-  width: var(--section-line, 32px);
-  height: var(--section-line, 32px);
-  border: none;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px var(--pe-teal-100);
-}
-
-.method-section-heading .method-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-@media (max-width: 640px) {
-  .method-section-heading {
-    gap: 10px;
-  }
-
-  .method-section-heading .method-icon svg {
-    width: 16px;
-    height: 16px;
-  }
-}
-
 /* The pointer to Policies, where each measure's description and modelling live */
 /* Unavailable and not modelled: a name and its reason per line */
 .mm-reasons {
@@ -899,7 +622,6 @@
     gap: 2px;
   }
 }
-
 
 /* Consolidated layout (26 October): each section is a SectionHeading
    (icon, title, one-line summary) and one card of folded topics, each a

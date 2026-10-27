@@ -603,33 +603,6 @@
   padding: 10px 0 0;
 }
 
-/* "Show all households" / "Show fewer", right of the title */
-.household-cards-toggle {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  font: inherit;
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--pe-teal-700);
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.household-cards-toggle:hover {
-  border-color: var(--pe-teal-300);
-  background: var(--pe-teal-50);
-}
-
-.household-cards-toggle:focus-visible {
-  outline: 2px solid var(--pe-teal-600);
-  outline-offset: 2px;
-}
-
 .household-cards.is-folded {
   margin-bottom: 16px;
 }
@@ -790,7 +763,6 @@
     height: 22px;
   }
 }
-
 
 .household-cards-grid {
   display: grid;
@@ -962,7 +934,6 @@
     transform: scale(0.6);
   }
 }
-
 
 /* Two lines, always: a one-line name keeps the second line's room */
 .household-card-name {
