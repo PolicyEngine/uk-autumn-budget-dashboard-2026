@@ -279,7 +279,7 @@ function WhereView({ width, narrow, curves, position, side, decile }) {
   const tip = cursor === null ? null : spreadTip({ income: incomeOf(cursor), x, youIncome, curve, position, side, anchors, edges, mix });
 
   return (
-    <div className="position-hover" {...hover} aria-label="Hover or use the arrow keys for each income">
+    <div className="position-hover" role="group" {...hover} aria-label="Hover or use the arrow keys for each income">
     <svg className="position-where" width={width} height={height} aria-hidden="true">
       {decile && (
         <rect
@@ -375,7 +375,7 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
   };
 
   return (
-    <div className="position-hover" {...hover} aria-label="Hover or use the arrow keys for each tenth">
+    <div className="position-hover" role="group" {...hover} aria-label="Hover or use the arrow keys for each tenth">
     <svg className="position-gains" width={width} height={height} aria-hidden="true">
       {gridTicks.map((tick) => (
         <g key={`g-${tick}`}>
@@ -552,7 +552,7 @@ function RankView({ width, narrow, curves, position, side }) {
   const tip = cursor === null ? null : spreadTip({ income: incomeOf(cursor), x, youIncome, curve, position, side, anchors });
 
   return (
-    <div className="position-hover" {...hover} aria-label="Hover or use the arrow keys for each income">
+    <div className="position-hover" role="group" {...hover} aria-label="Hover or use the arrow keys for each income">
     <svg className="position-rank" width={width} height={height} aria-hidden="true">
       <text x={left} y={12} fontSize={AXIS_TITLE_STYLE.fontSize} fontWeight={AXIS_TITLE_STYLE.fontWeight} fill={AXIS_TITLE_STYLE.fill}>
         {narrow ? "People with less income" : "Share of people with less income, by income adjusted for household size"}
