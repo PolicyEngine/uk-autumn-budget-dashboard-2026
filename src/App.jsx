@@ -713,9 +713,11 @@ function Dashboard({ published, unavailable = null, updated = false }) {
     // so the site nav stays as it is; at the page's top it goes if shown.
     const top = scrollTopFor(sentinel, { gap: 0, above: sentinel });
     // A view opened before returns to where it was left, if that was below
-    // the tabs; otherwise the tabs come back up under the band
+    // the tabs; otherwise the tabs come back up under the band. (At the
+    // page's top, where a shown nav cannot be cleared, the second branch
+    // takes it away.)
     const saved = tabScroll.current[activeTab];
-    if (saved !== undefined && saved > top) scrollPageTo(saved);
+    if (saved !== undefined && saved > Math.max(0, top)) scrollPageTo(saved);
     else scrollBelowBars(sentinel, { gap: 0, above: true, onlyUp: true });
   }, [activeTab, landing]);
 
