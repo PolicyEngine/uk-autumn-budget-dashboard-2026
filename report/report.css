@@ -5,6 +5,10 @@
 html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 body { font-family: Inter, "Helvetica Neue", Arial, sans-serif; color: #1F2937; font-size: 9.6pt; line-height: 1.5; margin: 0; background: #FFFFFF; }
 h1, h2, h3 { font-weight: 700; letter-spacing: -0.01em; color: #1F2937; }
+/* Chrome builds the PDF outline from the headings' laid-out text and drops the space where a heading wraps
+   ("themeasures modelled"). Preserved spaces hang at the wrap instead, so the bookmark keeps them; the
+   generator writes each heading on one line with single spaces, so nothing else changes. */
+h1, h2, h3 { white-space: pre-wrap; }
 h2 { font-size: 16pt; color: #285E61; margin: 0 0 3mm; break-after: avoid; }
 h3 { font-size: 10.5pt; margin: 5mm 0 2mm; break-after: avoid; }
 p { margin: 0 0 2.5mm; }

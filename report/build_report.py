@@ -410,7 +410,8 @@ class Report:
     def __init__(self, pub: Publication, year: int, title: str):
         self.pub = pub
         self.year = year
-        self.title = title
+        # Headings keep their spaces (report.css), so a title typed with runs of spaces is normalised here.
+        self.title = " ".join(title.split())
         self.t = Trace(pub.data)
         self.plt = setup_matplotlib()
         self.contract = json.loads(CONTRACT.read_text()) if CONTRACT.exists() else {}

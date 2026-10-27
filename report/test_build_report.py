@@ -285,3 +285,47 @@ def test_formats(fmt, value, text):
 def test_fiscal_year_labels():
     assert br.fy(2027) == "2027-28"
     assert br.fy(2099) == "2099-00"
+
+
+def test_headings_keep_their_spaces_when_they_wrap(tmp_path):
+    # Chrome's PDF outline dropped the space at the cover title's line break
+    # ("themeasures modelled"). report.css keeps heading spaces, so every
+    # heading must be one line with single spaces.
+    import re
+
+    out = tmp_path / "out"
+    assert br.main(["build", "--data", str(publication(tmp_path)), "--out", str(out),
+                    "--title", "Autumn  Budget 2026:\nthe measures modelled"]) == 0
+    html = (out / "report.html").read_text()
+    css = (Path(br.__file__).parent / "report.css").read_text()
+    assert re.search(r"h1, h2, h3 \{ white-space: pre-wrap; \}", css)
+    headings = re.findall(r"<h([1-3])[^>]*>(.*?)</h\1>", html, flags=re.S)
+    assert headings
+    for _, text in headings:
+        assert "\n" not in text and "  " not in text, text
+    assert "<h1>Autumn Budget 2026: the measures modelled</h1>" in html
+
+
+def test_pdf_outline_keeps_the_space_at_a_wrapped_title(tmp_path):
+    # Needs Chrome, playwright and pypdf; skipped otherwise.
+    playwright = pytest.importorskip("playwright.sync_api")
+    pypdf = pytest.importorskip("pypdf")
+    css = (Path(br.__file__).parent / "report.css").read_text()
+    html = tmp_path / "t.html"
+    html.write_text(
+        f'<!doctype html><html lang="en-GB"><style>{css}</style><body class="cover">'
+        '<h1 style="font-size:30pt;max-width:160mm">Autumn Budget 2026: the measures modelled</h1>'
+        "<h2>Summary</h2><p>x</p></body></html>"
+    )
+    pdf = tmp_path / "t.pdf"
+    with playwright.sync_playwright() as p:
+        try:
+            browser = p.chromium.launch(channel="chrome")
+        except Exception as error:  # no Chrome here
+            pytest.skip(f"Chrome not available: {error}")
+        page = browser.new_page()
+        page.goto(html.resolve().as_uri())
+        page.pdf(path=str(pdf), format="A4", tagged=True, outline=True)
+        browser.close()
+    titles = [o.title for o in pypdf.PdfReader(str(pdf)).outline if not isinstance(o, list)]
+    assert titles[0] == "Autumn Budget 2026: the measures modelled"
