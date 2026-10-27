@@ -22,6 +22,9 @@ Year Y is fiscal year Y-(Y+1).
 from datetime import date
 from typing import Optional
 
+from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
+    carers_allowance_earnings_taper,
+)
 from uk_budget_data.budget_measures.connect_student_loan_repayments import (
     connect_student_loan_repayments,
 )
@@ -73,6 +76,7 @@ THRESHOLD_FREEZE_ID = "threshold_freeze_2031_32"
 BADR_ID = "badr_lifetime_limit_cut"
 FUEL_VAT_ID = "road_fuel_vat_cut"
 PLAN_2_ID = "plan_2_threshold_unfreeze"
+CARERS_ALLOWANCE_TAPER_ID = "carers_allowance_earnings_taper"
 
 
 def _years_dict(value, years: list[int] = None) -> dict[str, any]:
@@ -441,6 +445,41 @@ def _create_plan_2_threshold_unfreeze() -> Reform:
         simulation_modifier=connect_student_loan_repayments,
         baseline_simulation_modifier=connect_student_loan_repayments,
     )
+
+
+# =============================================================================
+# DEFERRED: CARER'S ALLOWANCE EARNINGS TAPER (NOT REGISTERED)
+# =============================================================================
+
+
+def _create_carers_allowance_earnings_taper() -> Reform:
+    return Reform(
+        id=CARERS_ALLOWANCE_TAPER_ID,
+        name="Carer's Allowance earnings taper",
+        description=(
+            "Candidate measure. From 2030-31 Carer's Allowance no longer "
+            "stops when weekly net earnings pass the £204 earnings limit: "
+            "it is reduced by £1 for each £1 of weekly earnings above the "
+            "limit, to nothing once earnings exceed the limit by the full "
+            "weekly rate. Carers at or below the limit are unchanged. "
+            "Scotland's Carer Support Payment is unchanged. Claims by carers "
+            "the limit kept out follow the data's take-up draw (60%)."
+        ),
+        simulation_modifier=carers_allowance_earnings_taper,
+    )
+
+
+# Built only on request, and in no list or lookup: not in
+# ``_MEASURE_FACTORIES``, so not in ``get_all_reforms()``,
+# ``list_reform_ids()``, the CLI's default set or the combined package's
+# members. Registering it changes the combined package (its members, its
+# modifier composition and its description), which the 27 October 18:00Z
+# regeneration binds; it waits until after Budget-day publication
+# (PolicyEngine/uk-autumn-budget-dashboard-2026, branch
+# carers-allowance-taper).
+DEFERRED_MEASURE_FACTORIES = {
+    CARERS_ALLOWANCE_TAPER_ID: _create_carers_allowance_earnings_taper,
+}
 
 
 # =============================================================================
