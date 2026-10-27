@@ -10,6 +10,7 @@ import { prefersReducedMotion } from "../../utils/chartMotion";
 import { fiscalYearTick, useNarrowViewport } from "../../utils/chartTheme";
 import { MINUS, areaName, money, policyRows, signedPercent, sweepPoints } from "../../utils/singleYear";
 import { STAGE_TIMES } from "../../utils/householdTiming";
+import { isStartingUp } from "../../utils/householdImpactApi";
 import NetIncomeWaterfall, { waterfallScaleStart } from "./NetIncomeWaterfall";
 import { layerRows, layersInUse } from "./netIncomeParts";
 import { partsInUse } from "./marginalRateParts";
@@ -36,14 +37,27 @@ function useDelayed(active, delay = 300) {
   return active && shown;
 }
 
+// What the page says while the calculator is starting up (a cold service
+// answered with nothing, a 5xx or not in time, and is being asked again),
+// and once it has asked again and still had no answer
+export const STARTING_UP_TITLE = "The calculator is starting up";
+export const STARTING_UP_TEXT = "This can take up to a minute. Your result will appear here.";
+export const STILL_STARTING_TITLE = "The calculator is still starting up.";
+export const STILL_STARTING_TEXT = "This can take up to a minute after a quiet spell. Please try again shortly.";
+
+const ERROR_TITLE = "Results are not available here.";
+
 /** What went wrong, in words, with the answers to check when it names them. */
-export function SingleYearError({ error, onRetry, title = "Results are not available here." }) {
+export function SingleYearError({ error, onRetry, title = ERROR_TITLE }) {
   const fields = error?.fields ?? [];
   const canRetry = ["timeout", "network", "server"].includes(error?.kind);
+  // A service that never answered after the page's own retries: calm words
+  // and Try again, not the technical cause; a part's own title is kept
+  const starting = isStartingUp(error);
   return (
     <div className="household-error single-year-error" role="alert">
-      <p className="household-error-title">{title}</p>
-      <p>{error?.message ?? "Something stopped the calculation."}</p>
+      <p className="household-error-title">{starting && title === ERROR_TITLE ? STILL_STARTING_TITLE : title}</p>
+      <p>{starting ? STILL_STARTING_TEXT : (error?.message ?? "Something stopped the calculation.")}</p>
       {fields.length > 0 && (
         <>
           <p>Check these answers:</p>
@@ -240,16 +254,16 @@ export function progressShare(seconds, typical = STAGE_TIMES.headline.typical) {
  * is happening, the usual time with the seconds so far, and a slim bar that
  * fills over the usual time.
  */
-function ProcessingPanel({ seconds }) {
+function ProcessingPanel({ seconds, startingUp = false }) {
   return (
-    <div className="processing-panel" role="status">
+    <div className="processing-panel" role="status" data-starting-up={startingUp || undefined}>
       <span className="processing-icon" aria-hidden="true">
         <TitleIcon name="calculator" bare size={22} />
         <span className="processing-spinner" />
       </span>
       <div className="processing-text">
-        <p className="processing-title">Calculating your household</p>
-        <p className="processing-time">{timeText(seconds)}</p>
+        <p className="processing-title">{startingUp ? STARTING_UP_TITLE : "Calculating your household"}</p>
+        <p className="processing-time">{startingUp ? STARTING_UP_TEXT : timeText(seconds)}</p>
         <div className="processing-bar" aria-hidden="true">
           <span style={{ transform: `scaleX(${progressShare(seconds)})` }} />
         </div>
@@ -553,7 +567,9 @@ export function SingleYearHeadline({
   if (running) {
     return (
       <div className="single-year-headline" aria-busy="true">
-        <div className="card processing-card">{showLoading && <ProcessingPanel seconds={seconds} />}</div>
+        <div className="card processing-card">
+          {(showLoading || result.startingUp) && <ProcessingPanel seconds={seconds} startingUp={Boolean(result.startingUp)} />}
+        </div>
       </div>
     );
   }
@@ -603,17 +619,17 @@ const WAITING_TEXT = {
  * across the row, so its message is said once. Shown after 300ms, so a
  * quick answer never flashes it.
  */
-function PendingSkeleton({ kind, startedAt }) {
+function PendingSkeleton({ kind, startedAt, startingUp = false }) {
   const shown = useDelayed(true);
   // Part of the same wait as the headline: counted from Calculate
   const seconds = useElapsedSeconds(true, startedAt);
   return (
     <div className={`card single-year-card waiting-card is-${kind}`} aria-busy="true">
-      {shown && (
-        <div className="waiting" role="status">
+      {(shown || startingUp) && (
+        <div className="waiting" role="status" data-starting-up={startingUp || undefined}>
           <span className="processing-spinner is-small" aria-hidden="true" />
-          <p className="waiting-title">{WAITING_TEXT[kind]}</p>
-          <p className="waiting-time">{timeText(seconds, "detail")}</p>
+          <p className="waiting-title">{startingUp ? STARTING_UP_TITLE : WAITING_TEXT[kind]}</p>
+          <p className="waiting-time">{startingUp ? STARTING_UP_TEXT : timeText(seconds, "detail")}</p>
           <div className="processing-bar waiting-bar" aria-hidden="true">
             <span style={{ transform: `scaleX(${progressShare(seconds, STAGE_TIMES.detail.typical)})` }} />
           </div>
@@ -703,7 +719,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
             <SingleYearError error={detailError} onRetry={retry} title="The earnings charts are not available." />
           </div>
         ) : (
-          <PendingSkeleton kind="earnings" startedAt={startedAt} />
+          <PendingSkeleton kind="earnings" startedAt={startedAt} startingUp={Boolean(result.detailStartingUp)} />
         )}
       </section>
     </div>

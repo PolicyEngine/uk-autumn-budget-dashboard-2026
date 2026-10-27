@@ -149,11 +149,11 @@ describe("PolicyCards", () => {
     expect(within(card).getByRole("button", { name: /^See its effect/ })).toBeTruthy();
   });
 
-  it("shows fuel duty's two-step restore as diamonds", () => {
+  it("shows the fuel duty freeze with no restore steps", () => {
     const id = "fuel_duty_rise_deferral";
     render(<PolicyCards policies={[published(id, "Fuel duty rises deferred")]} selectedPolicies={[id]} />);
-    const timeline = screen.getByRole("img", { name: /^In force from January 2027;/ });
-    expect(timeline.querySelectorAll(".ptl-diamond")).toHaveLength(2);
+    const timeline = screen.getByRole("img", { name: /^In force from January 2027/ });
+    expect(timeline.querySelectorAll(".ptl-diamond")).toHaveLength(0);
   });
 
   it("has no revenue filter: every selected card shows, whatever the address says", () => {
@@ -416,6 +416,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       ["warm_home_discount_top_up", "£150£250+£100"],
       ["domestic_electricity_zero_vat", "5%0%−5 points"],
       ["threshold_freeze_2031_32", "£12,830£12,570−£260"],
+      ["unearned_income_rates_up", "10.75%12.75%+2 points"],
     ];
     for (const [id, values] of cases) {
       if (!file.measures[id]) continue;
@@ -427,10 +428,46 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     }
   });
 
+  it("gives each of the eight candidate measures, as the real file describes it, its summary, timing, category, what changes and caveats", () => {
+    const eight = [
+      ["fuel_duty_rise_deferral", "Fuel duty rises deferred", "Fuel duty", "January 2027"],
+      ["state_pension_income_tax_protection", "State Pension income tax protection", "Income tax", "April 2027"],
+      ["warm_home_discount_top_up", "Warm Home Discount top-up", "Energy", "Winter 2026-27"],
+      ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "VAT", "October 2026"],
+      ["threshold_freeze_2031_32", "Threshold freeze to 2031-32", "Income tax", "April 2031"],
+      ["plan_2_threshold_unfreeze", "Plan 2 student loan threshold unfrozen", "Student loans", "April 2027"],
+      ["employer_nics_secondary_threshold_raise", "Employer NI threshold raised", "National Insurance", "April 2027"],
+      ["unearned_income_rates_up", "Dividend, savings and property income tax up", "Income tax", "April 2027"],
+    ];
+    for (const [id, name, category, starts] of eight) {
+      // The published description (reforms.py's, as the file carries it),
+      // not the entry's own copy: a drift between the two fails here
+      const measure = { ...published(id, name), description: file.measures[id].description };
+      render(<PolicyCards policies={[measure]} selectedPolicies={[id]} parameterTables={file} />);
+      const item = document.querySelector(".policy-card");
+      expect(item.querySelector(".policy-card-summary"), id).toHaveTextContent(detailsById[id].summary);
+      expect(item.querySelector(".policy-card-summary.is-full"), id).toBeNull();
+      expect(item.querySelector(".policy-card-topline"), id).toHaveTextContent(new RegExp(`^${category}$`));
+      expect(item.querySelector(".policy-card-start"), id).toHaveTextContent(starts);
+      expect(within(item).getByRole("region", { name: /^What changes/ }), id).toBeTruthy();
+      expect(item.querySelector(".policy-card-details"), id).toBeTruthy();
+      cleanup();
+    }
+  });
+
   it("says which year the tiles show only where the change varies by year", () => {
     const block = within(card(rising)).getByRole("region", { name: /^What changes/ });
     expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A threshold, 2027-28$/);
     expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy£1,100+£100");
+  });
+
+  it("names the incidence, benefit cap and Budget 2025 caveats on the three new measures", () => {
+    expect(detailsById.employer_nics_secondary_threshold_raise.details).toMatch(/total cost of employment fixed.*higher wages/);
+    expect(detailsById.lha_unfreeze_2027.details).toMatch(/benefit cap still applies/);
+    expect(detailsById.unearned_income_rates_up.details).toMatch(/on top of the rises Budget 2025 legislated/);
+    for (const id of ["lha_unfreeze_2027", "employer_nics_secondary_threshold_raise", "unearned_income_rates_up"]) {
+      expect(detailsById[id].source.href, id).toMatch(/^https:\/\/www\.(gov|legislation\.gov)\.uk\//);
+    }
   });
 
   it("leads fuel duty with its plot: the dates and the yearly averages only when asked", () => {
@@ -438,8 +475,10 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(screen.queryByRole("table")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Show the dates" }));
     const dates = screen.getByRole("table");
-    // From 1 January 2027 on: the timeline's first day equals current law, so is left out
-    expect(within(dates).getAllByRole("row")).toHaveLength(10);
+    // From 1 January 2027 on: the timeline's first day equals current law,
+    // so is left out; 1 January, 1 March and 1 April 2027, then each April
+    // to 2031
+    expect(within(dates).getAllByRole("row")).toHaveLength(8);
     expect(within(dates).getAllByRole("row")[1]).toHaveTextContent("1 January 202755.95p52.95p−3p");
     fireEvent.click(screen.getByRole("button", { name: "Show the yearly averages" }));
     const averages = screen.getByRole("table", { name: /As modelled/ });

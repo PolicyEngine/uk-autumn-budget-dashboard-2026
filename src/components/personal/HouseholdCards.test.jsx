@@ -7,7 +7,7 @@ import { fixtureJson } from "../../test/publicationFixture";
 
 // #104 review (m23, P2): a card names the measures it features only while
 // the catalogue publishes every one of them. The driver's card features the
-// fuel duty deferral and the road fuel VAT cut together.
+// fuel duty measure.
 const baseEntry = fixtureJson("manifest.json").measures.alpha;
 const publishing = (ids) =>
   buildMeasureCatalogue({
@@ -29,12 +29,12 @@ const driverTag = (catalogue) => {
   return driver.closest(".household-card").querySelector(".household-card-tag")?.textContent ?? null;
 };
 
-it("names both fuel measures on the driver's card while both are published", () => {
-  expect(driverTag(publishing(["fuel_duty_rise_deferral", "road_fuel_vat_cut"]))).toMatch(/fuel VAT/i);
+it("names the fuel measure on the driver's card while it is published", () => {
+  expect(driverTag(publishing(["fuel_duty_rise_deferral"]))).toMatch(/fuel duty/i);
 });
 
-it("names neither while one of them is withdrawn (on Budget day, say)", () => {
-  expect(driverTag(publishing(["fuel_duty_rise_deferral", "state_pension_income_tax_protection"]))).toBeNull();
+it("names none while it is withdrawn (on Budget day, say)", () => {
+  expect(driverTag(publishing(["state_pension_income_tax_protection"]))).toBeNull();
 });
 
 describe("a card's year bars", () => {

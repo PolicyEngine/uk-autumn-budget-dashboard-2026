@@ -278,7 +278,7 @@ describe("policy tabs on the household API's answers", () => {
     ]);
     expect(rows.income_tax_total).toMatchObject({ before: -148, after: -255 });
     expect(tab.effect).toBe(385);
-    expect(tab.how).toMatch(/^From 6 April 2027 the threshold above which employers pay/);
+    expect(tab.how).toMatch(/^Raises the earnings threshold for employer National Insurance/);
   });
 
   it("gives the employer NI tab its own tax on the higher pay when the freeze moves the same taxes", () => {

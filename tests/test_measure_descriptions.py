@@ -162,9 +162,10 @@ DECLARED = {
     # earnings limit at the allowance and higher rate threshold, so holding
     # those holds them too.
     "threshold_freeze_2031_32": {"income tax", "National Insurance"},
-    "road_fuel_vat_cut": {"VAT"},
     # Student loan repayments are not a tax.
     "plan_2_threshold_unfreeze": set(),
+    "employer_nics_secondary_threshold_raise": {"National Insurance"},
+    "unearned_income_rates_up": {"income tax"},
 }
 # The combined measure moves what its members move.
 DECLARED[AUTUMN_BUDGET_2026_COMBINED_ID] = set().union(

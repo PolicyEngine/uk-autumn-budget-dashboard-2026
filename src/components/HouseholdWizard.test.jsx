@@ -341,13 +341,13 @@ describe("the personal impact form", () => {
     expect(within(cards()).getByRole("group", { name: "Example households" })).toBeInTheDocument();
     expect(buttons.map((item) => item.querySelector(".household-card-name").textContent)).toEqual([
       "Your household",
-      "A 22-year-old renting",
-      "A 19-year-old apprentice",
-      "A pensioner on the State Pension",
-      "A family on Universal Credit",
+      "A pensioner with a small private pension",
+      "A part-time worker on £13,000",
       "A graduate on £35,000",
       "A driver with a long commute",
-      "A higher earner on £110,000",
+      "A family with high electricity use",
+      "A landlord with savings",
+      "A middle earner on £45,000",
       "A lone parent working part time",
     ]);
     const examples = buttons.slice(1);
@@ -393,34 +393,34 @@ describe("the personal impact form", () => {
 
   it("fills the form from an example card, still editable", () => {
     render(<HouseholdCalculator />);
-    applyExample("A 22-year-old renting");
+    applyExample("A graduate on £35,000");
     // Chosen: the card is marked; no note or "Change these answers" under
     // the cards (the card says what the example is)
-    expect(isChosen(exampleItem("A 22-year-old renting"))).toBe(true);
-    expect(screen.queryByText(/Rents privately at £900 a month/)).not.toBeInTheDocument();
+    expect(isChosen(exampleItem("A graduate on £35,000"))).toBe(true);
+    expect(screen.queryByText(/repays a Plan 2 student loan/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Change these answers" })).not.toBeInTheDocument();
     // Your household, chosen from it: the example's answers, named at the
     // top of the form; the example is no longer the one chosen
     fireEvent.click(yoursCard());
     expect(isChosen(yoursCard())).toBe(true);
-    expect(isChosen(exampleItem("A 22-year-old renting"))).toBe(false);
-    expect(screen.getByText("Renter, 22", { selector: ".household-start-from strong" })).toBeInTheDocument();
-    expect(value("Age")).toBe(22);
-    expect(value("Salary in 2026")).toBe(25000);
+    expect(isChosen(exampleItem("A graduate on £35,000"))).toBe(false);
+    expect(screen.getByText("Graduate", { selector: ".household-start-from strong" })).toBeInTheDocument();
+    expect(value("Age")).toBe(27);
+    expect(value("Salary in 2026")).toBe(35000);
     fireEvent.change(box("Salary in 2026"), { target: { value: "26000" } });
     expect(isChosen(yoursCard())).toBe(true);
     // Another example: the note goes
-    applyExample("A 19-year-old apprentice");
+    applyExample("A part-time worker on £13,000");
     expect(document.querySelector(".household-start-from")).toBeNull();
   });
 
   it("opens the form with an example's answers from Your household, Calculate there to change one and calculate again", () => {
     render(<HouseholdCalculator selectedPolicies={["road_fuel_vat_cut"]} />);
-    applyExample("A pensioner on the State Pension");
+    applyExample("A pensioner with a small private pension");
     fireEvent.click(yoursCard());
     expect(formIsOpen()).toBe(true);
     expect(isChosen(yoursCard())).toBe(true);
-    expect(isChosen(exampleItem("A pensioner on the State Pension"))).toBe(false);
+    expect(isChosen(exampleItem("A pensioner with a small private pension"))).toBe(false);
     expect(screen.getByText(/Starting from:/)).toHaveTextContent("Starting from: Pensioner. Change anything, then Calculate.");
     expect(value("Age")).toBe(70);
     // Calculate is there, as for your own answers
@@ -429,7 +429,7 @@ describe("the personal impact form", () => {
 
   it("closes the form again from Your household once it is chosen", () => {
     render(<HouseholdCalculator selectedPolicies={["road_fuel_vat_cut"]} />);
-    applyExample("A pensioner on the State Pension");
+    applyExample("A pensioner with a small private pension");
     fireEvent.click(yoursCard());
     expect(formIsOpen()).toBe(true);
     fireEvent.click(yoursCard());
@@ -444,7 +444,7 @@ describe("the personal impact form", () => {
     // Nothing chosen: the full grid, no strip, no toggle
     expect(within(cards()).queryByRole("listbox")).not.toBeInTheDocument();
     expect(within(cards()).queryByRole("button", { name: "Show all households" })).not.toBeInTheDocument();
-    applyExample("A 22-year-old renting");
+    applyExample("A pensioner with a small private pension");
     // Folded: the grid's cards are hidden; Your household first, then
     // eight example chips below it
     const strip = within(cards()).getByRole("listbox", { name: "Households" });
@@ -452,36 +452,36 @@ describe("the personal impact form", () => {
     expect(within(strip).getAllByRole("option")).toHaveLength(9);
     expect(within(strip).getAllByRole("option")[0]).toHaveTextContent("Your household");
     expect(chips.map((chip) => chip.textContent)).toEqual([
-      "Renter, 22",
-      "Apprentice",
       "Pensioner",
-      "Universal Credit family",
+      "Part-time worker",
       "Graduate",
       "Commuter",
-      "High earner",
+      "Universal Credit family",
+      "Landlord",
+      "Middle earner",
       "Lone parent",
     ]);
     // The full name on hover, the short one cut if it runs out of room
-    expect(chips[0]).toHaveAttribute("title", "A 22-year-old renting");
+    expect(chips[0]).toHaveAttribute("title", "A pensioner with a small private pension");
     expect(chips[0]).toHaveAttribute("aria-selected", "true");
     expect(chips[0]).toHaveAttribute("tabindex", "0");
-    expect(within(cards()).queryByRole("button", { name: /^A 19-year-old apprentice/ })).not.toBeInTheDocument();
+    expect(within(cards()).queryByRole("button", { name: /^A part-time worker/ })).not.toBeInTheDocument();
     expect(yoursCard()).toHaveClass("household-chip");
     expect(yoursCard()).toHaveAttribute("aria-selected", "false");
     // Another chip: switches, still folded
     fireEvent.click(chips[2]);
-    expect(isChosen(exampleItem("A pensioner on the State Pension"))).toBe(true);
+    expect(isChosen(exampleItem("A graduate on £35,000"))).toBe(true);
     expect(within(cards()).getByRole("listbox", { name: "Households" })).toBeInTheDocument();
     // The arrow keys move between chips; Enter chooses
-    const pensioner = exampleItem("A pensioner on the State Pension");
-    fireEvent.keyDown(pensioner, { key: "ArrowRight" });
-    expect(document.activeElement).toBe(exampleItem("A family on Universal Credit"));
+    const graduate = exampleItem("A graduate on £35,000");
+    fireEvent.keyDown(graduate, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(exampleItem("A driver with a long commute"));
     fireEvent.keyDown(document.activeElement, { key: "ArrowRight" });
     fireEvent.keyDown(document.activeElement, { key: "ArrowRight" });
     fireEvent.keyDown(document.activeElement, { key: "ArrowRight" });
-    expect(document.activeElement).toBe(exampleItem("A higher earner on £110,000"));
+    expect(document.activeElement).toBe(exampleItem("A middle earner on £45,000"));
     fireEvent.keyDown(document.activeElement, { key: "Enter" });
-    expect(isChosen(exampleItem("A higher earner on £110,000"))).toBe(true);
+    expect(isChosen(exampleItem("A middle earner on £45,000"))).toBe(true);
     // End: the last example; Home and Enter: Your household, chosen with
     // its tick, the form open
     fireEvent.keyDown(document.activeElement, { key: "End" });
@@ -490,7 +490,7 @@ describe("the personal impact form", () => {
     expect(document.activeElement).toBe(yoursCard());
     fireEvent.keyDown(document.activeElement, { key: "Enter" });
     expect(yoursCard()).toHaveAttribute("aria-selected", "true");
-    expect(isChosen(exampleItem("A higher earner on £110,000"))).toBe(false);
+    expect(isChosen(exampleItem("A middle earner on £45,000"))).toBe(false);
     expect(formIsOpen()).toBe(true);
     // Show all households: the grid again; a card there folds it
     const toggle = within(cards()).getByRole("button", { name: "Show all households" });
@@ -513,9 +513,8 @@ describe("the personal impact form", () => {
 
   it("fills the household answers from each example", () => {
     const cases = [
-      ["A 22-year-old renting", { plan: "No loan", rent: 900 }],
-      ["A 19-year-old apprentice", { plan: "No loan", rent: 600 }],
-      ["A graduate on £35,000", { plan: "Plan 2", rent: REGIONAL_RENT.NORTH_WEST }],
+      ["A graduate on £35,000", { plan: "Plan 2", rent: REGIONAL_RENT.NORTH_WEST, children: "0" }],
+      ["A lone parent working part time", { plan: "No loan", rent: REGIONAL_RENT.NORTH_WEST, children: "1" }],
     ];
     for (const [label, expected] of cases) {
       resetSavedWizard();
@@ -529,7 +528,7 @@ describe("the personal impact form", () => {
       expect(chosen("Rent from")).toBe("Private landlord");
       expect(value("Rent")).toBe(expected.rent);
       expect(chosen("Partner")).toBe("No");
-      expect(chosen("Children")).toBe("0");
+      expect(chosen("Children")).toBe(expected.children);
       openMore();
       expect(chosen("Student loan plan")).toBe(expected.plan);
       unmount();
