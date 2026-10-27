@@ -791,7 +791,9 @@ export default function ConstituencyMap({
       .style("cursor", "pointer");
     // The legend is for the exported file, which shows the whole drawing
     // area with the legend in its corner; on screen the key is HTML
-    placeMapLegend(svg.append("g").attr("class", MAP_LEGEND_CLASS), {
+    // (MapKey), so this one is never drawn there, even before the
+    // stylesheet loads (the export takes the attribute off)
+    placeMapLegend(svg.append("g").attr("class", MAP_LEGEND_CLASS).attr("display", "none").attr("aria-hidden", "true"), {
       x: LEGEND_INSET,
       y: LEGEND_INSET,
     });

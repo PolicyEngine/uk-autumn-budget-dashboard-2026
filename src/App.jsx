@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Suspense } from "react";
 import PolicySelector from "./components/PolicySelector";
-import { MeasureKeyProvider, SectionMeasureKey } from "./components/MeasureKey";
 import YearSlider from "./components/YearSlider";
 import LandingPage from "./components/LandingPage";
 import LandingBackdrop from "./components/landing/LandingBackdrop";
@@ -1022,12 +1021,10 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
         {/* Two sections: by area (the constituency map) and by income (the
             decile card beside the scatter of binned groups; the
             per-household scatter stays withdrawn, as it showed survey
-            households one by one). One measure key above them all
-            (MeasureKey): the decile cards colour by measure and register
-            with it. Results by region are hidden for now (RegionView is
+            households one by one). No key above the sections: the
+            header shows the selection and each chart draws its own key.
+            Results by region are hidden for now (RegionView is
             kept, not rendered). */}
-        <MeasureKeyProvider>
-          <SectionMeasureKey />
           <SectionHeading
             id="by-area"
             icon="compass"
@@ -1080,7 +1077,6 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
               />
             </div>
           </section>
-        </MeasureKeyProvider>
       </div>
     );
   };

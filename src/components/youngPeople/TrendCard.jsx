@@ -7,7 +7,7 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import { TOOLTIP_PROPS } from "../ChartTooltip";
 import ControlBar from "../ControlBar";
 import SeriesToggle from "../SeriesToggle";
-import { measureOpacity, useMeasureKey, netOpacity } from "../MeasureKey";
+import MeasureKey, { measureOpacity, useMeasureKey, netOpacity } from "../MeasureKey";
 import {
   GRID_PROPS,
   TICK_STYLE,
@@ -556,7 +556,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     [focusSeries, catalogue, narrow],
   );
 
-  // The measures in the breakdown, for the section's key (MeasureKey)
+  // The measures in the breakdown, for the card's key (MeasureKey)
   const members = useMemo(
     () =>
       byMeasure
@@ -944,6 +944,10 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             label="Age groups"
             narrow={narrow}
           />
+        )}
+        {/* By policy: the card's own measure key */}
+        {byMeasure && !key.shared && members.length > 0 && (
+          <MeasureKey members={members} netLabel="Net change" highlight={key.highlight} onHighlight={key.setHighlight} />
         )}
       </div>
       <div className="chart-logo">

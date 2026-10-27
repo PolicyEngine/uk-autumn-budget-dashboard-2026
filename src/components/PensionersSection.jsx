@@ -7,7 +7,7 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartTooltip, { TOOLTIP_PROPS } from "./ChartTooltip";
-import MeasureKey, { MeasureKeyProvider, SectionMeasureKey, measureOpacity, useMeasureKey } from "./MeasureKey";
+import { measureOpacity } from "./MeasureKey";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
@@ -829,17 +829,13 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
         title="Change for pensioners"
         subtitle="Pensioners are people at State Pension age or over (67 from 2027-28)."
       />
-      {/* Both cards colour by measure: one key above the pair, not a long
-          legend in each */}
-      <MeasureKeyProvider>
-        <section className="report-section young-people-section" aria-label="Change for pensioners">
-          <SectionMeasureKey />
-          <div className="charts-grid">
-            <PensionerTrendCard {...props} height={narrow ? 340 : 400} />
-            <AgeCard {...props} height={narrow ? 340 : 400} />
-          </div>
-        </section>
-      </MeasureKeyProvider>
+      {/* The trend card draws its own measure key (MeasureKey) */}
+      <section className="report-section young-people-section" aria-label="Change for pensioners">
+        <div className="charts-grid">
+          <PensionerTrendCard {...props} height={narrow ? 340 : 400} />
+          <AgeCard {...props} height={narrow ? 340 : 400} />
+        </div>
+      </section>
       <SectionHeading
         id="pensioners-who-gains"
         icon="userPlus"
