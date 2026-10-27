@@ -2309,3 +2309,39 @@
     white-space: normal;
   }
 }
+
+/* The selected policies' own questions, after the essentials: More
+   details' small header, then the boxes, each with the policies that use
+   it as badges above its label */
+.household-policy-questions .household-more-head {
+  margin-bottom: 14px;
+}
+
+/* A run of questions the same policies read: their badges once, above
+   the run's boxes, which keep the grid's columns (a run spans as many
+   columns as it has boxes, up to the row) */
+.household-policy-cluster {
+  grid-column: span var(--span, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.household-policy-cluster[data-span="2"] { --span: 2; }
+.household-policy-cluster[data-span="3"] { --span: 3; }
+
+.household-policy-cluster-fields {
+  display: grid;
+  grid-template-columns: repeat(var(--span, 1), minmax(0, 1fr));
+  gap: 14px 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .household-policy-cluster[data-span="3"] { --span: 2; }
+}
+
+@media (max-width: 640px) {
+  .household-policy-cluster[data-span] { --span: 1; }
+}

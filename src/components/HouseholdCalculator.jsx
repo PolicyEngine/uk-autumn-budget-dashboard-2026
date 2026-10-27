@@ -30,6 +30,8 @@ import { DEFAULT_SPENDING, SALARY_SOURCE, WIZARD_DEFAULTS, regionalRent } from "
 export { WIZARD_DEFAULTS };
 import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
 import ConstituencyField from "./personal/ConstituencyField";
+import PolicyBadges from "./personal/PolicyBadge";
+import { policyQuestions } from "../utils/householdPolicyFields";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
@@ -311,6 +313,20 @@ const PREFILL_HINTS = {
 };
 
 /**
+ * The selected policies' questions in runs: those next to each other read
+ * by the same policies share one row of badges.
+ */
+export function policyClusters(questions) {
+  const clusters = [];
+  for (const question of questions) {
+    const last = clusters.at(-1);
+    if (last && last.policies.join(",") === question.policies.join(",")) last.fields.push(question.id);
+    else clusters.push({ policies: question.policies, fields: [question.id] });
+  }
+  return clusters;
+}
+
+/**
  * Whether the spending the fuel and electricity measures act on is assumed:
  * "average" while it is the prefilled average household's (ONS), "example"
  * for an example's own figure, null once the reader has entered their own.
@@ -333,6 +349,8 @@ const sentence = (parts) => {
 /**
  * What a More details group holds, in one line, for its closed row:
  * "Petrol £620 · diesel £340 · electricity £1,040 a year (UK average)".
+ * `applies(id)`: whether the group asks that field (not when it does not
+ * apply, nor when the selected policies' questions ask it up front).
  */
 export function groupSummary(title, { answer, applies, inputs, presetId }) {
   const amounts = (ids) =>
@@ -348,23 +366,32 @@ export function groupSummary(title, { answer, applies, inputs, presetId }) {
       "partner_state_pension_per_year",
       "salary_sacrifice_per_year",
     ]).map((part) => part.replace(/^your state pension/, "State Pension").replace(/state pension/, "State Pension"));
-    if (parts.length === 0) parts.push("no pension income");
-    const plan = CHOICE_CONFIGS.student_loan_plan.options.find((option) => option.value === inputs.student_loan_plan);
-    parts.push(!plan || plan.value === "NONE" ? "no student loan" : `${plan.label} student loan`);
-    return sentence(parts);
+    const pensions = ["private_pension_per_year", "state_pension_per_year"];
+    if (parts.length === 0 && pensions.some((id) => applies(id))) parts.push("no pension income");
+    if (applies("student_loan_plan")) {
+      const plan = CHOICE_CONFIGS.student_loan_plan.options.find((option) => option.value === inputs.student_loan_plan);
+      parts.push(!plan || plan.value === "NONE" ? "no student loan" : `${plan.label} student loan`);
+    }
+    return sentence(parts) || "None";
   }
   if (title === "Spending") {
-    const fuel = ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"].map(
-      (id) => `${NUMBER_CONFIGS[id].label.toLowerCase()} ${pounds(answer(id))}`,
-    );
-    let text = `${sentence(fuel)} a year`;
-    if (spendingAssumed(inputs, presetId) === "average") text += " (UK average)";
-    if (applies("monthly_childcare") && answer("monthly_childcare") > 0) text += ` · childcare ${pounds(answer("monthly_childcare"))} a month`;
-    return text;
+    const fuel = ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"]
+      .filter(applies)
+      .map((id) => `${NUMBER_CONFIGS[id].label.toLowerCase()} ${pounds(answer(id))}`);
+    const parts = [];
+    if (fuel.length > 0) {
+      let text = `${sentence(fuel)} a year`;
+      if (spendingAssumed(inputs, presetId) === "average") text += " (UK average)";
+      parts.push(text);
+    }
+    if (applies("monthly_childcare") && answer("monthly_childcare") > 0) parts.push(`childcare ${pounds(answer("monthly_childcare"))} a month`);
+    return sentence(parts) || "None";
   }
   const parts = [];
   if (applies("council_tax_band")) parts.push(`Council Tax band ${inputs.council_tax_band}`);
-  parts.push(inputs.claims_universal_credit ? "claims Universal Credit if entitled" : "does not claim Universal Credit");
+  if (applies("claims_universal_credit")) {
+    parts.push(inputs.claims_universal_credit ? "claims Universal Credit if entitled" : "does not claim Universal Credit");
+  }
   return sentence(parts);
 }
 
@@ -743,6 +770,12 @@ function HouseholdCalculator({
 
   // Whether a field applies to the answers so far (rent only when renting)
   const fieldApplies = (id) => !FIELD_APPLIES[id] || FIELD_APPLIES[id](inputs, childrenCount, year);
+  // The answers the selected policies read (utils/householdPolicyFields.js),
+  // asked up front, each with its policies; More details keeps the rest
+  const policyAsks = noneSelected ? [] : policyQuestions(householdPolicies, { inputs, year, applies: fieldApplies });
+  const askedUpFront = new Set(policyAsks.map((question) => question.id));
+  const inDetails = (id) => !askedUpFront.has(id);
+  const appliesInDetails = (id) => inDetails(id) && fieldApplies(id);
 
   // The children's ages, kept as the text the household request reads
   // ("5, 3")
@@ -764,8 +797,9 @@ function HouseholdCalculator({
     }));
   };
 
-  // One question: its box, label above and hint below
-  const renderField = (id) => {
+  // One question: its box, label above and hint below; asked for the
+  // selected policies, described by their badges (`badgesId`)
+  const renderField = (id, badgesId = undefined) => {
     if (!fieldApplies(id)) return null;
     if (id === "children") return childAges.map(renderChild);
     let field;
@@ -833,6 +867,7 @@ function HouseholdCalculator({
           value={inputs[id]}
           hint={chosen?.hint ?? config.hint}
           hintAs={hintPlace(chosen?.hint ?? config.hint, config.hintAs)}
+          describedBy={badgesId}
           {...(config.layout === "segmented" ? { layout: "segmented" } : {})}
           onChange={(value) => handleInputChange(id, value)}
         />
@@ -849,6 +884,7 @@ function HouseholdCalculator({
             {...config}
             hint={hint}
             hintAs={hintPlace(hint)}
+            describedBy={badgesId}
             value={value}
             onChange={(next) => handleInputChange(id, next)}
           />
@@ -905,18 +941,58 @@ function HouseholdCalculator({
   );
 
   const renderGrid = (fields, className = "") => (
-    <div className={`household-grid ${className}`.trim()}>{fields.map(renderField)}</div>
+    <div className={`household-grid ${className}`.trim()}>{fields.map((id) => renderField(id))}</div>
   );
 
   // An answer as the calculation reads it (a prefilled field's prefill)
   const answer = (id) => inputs[id] ?? PREFILLED[id]?.(year, inputs) ?? 0;
   // Whether an answer differs from where it started (WIZARD_DEFAULTS)
   const changedFromTypical = (id) => (PREFILLED[id] ? inputs[id] !== null && inputs[id] !== undefined : inputs[id] !== WIZARD_DEFAULTS[id]);
-  // A group's answers back to where they started
+  // A group's answers back to where they started (those it asks)
   const resetGroup = (group) => {
     setPresetId(null);
-    setInputs((prev) => ({ ...prev, ...Object.fromEntries(group.fields.map((id) => [id, WIZARD_DEFAULTS[id]])) }));
+    const fields = group.fields.filter(inDetails);
+    setInputs((prev) => ({ ...prev, ...Object.fromEntries(fields.map((id) => [id, WIZARD_DEFAULTS[id]])) }));
   };
+
+  // The selected policies' own questions, after the essentials; none when
+  // no selected policy reads an answer the essentials leave out
+  const POLICY_QUESTIONS_ID = "household-policy-questions";
+  const renderPolicyQuestions = () =>
+    policyAsks.length === 0 ? null : (
+      <section key="policy-questions" className="household-group household-policy-questions" aria-labelledby={POLICY_QUESTIONS_ID}>
+        <div className="household-more-head">
+          <TitleIcon name="list" size={14} className="title-icon household-more-icon" />
+          <div className="household-more-text">
+            <h3 className="household-more-heading" id={POLICY_QUESTIONS_ID}>
+              Questions that matter for the selected policies
+            </h3>
+            <p className="household-more-note">Asked here because the policies selected use them.</p>
+          </div>
+        </div>
+        {/* Questions next to each other that the same policies read share
+            one row of badges: "Fuel duty" over Petrol and Diesel */}
+        <div className="household-grid household-grid-details household-grid-policies">
+          {policyClusters(policyAsks).map((cluster) => {
+            const badgesId = `policies-for-${cluster.fields[0]}`;
+            return (
+              <div
+                key={cluster.fields[0]}
+                className="household-policy-cluster"
+                data-span={Math.min(cluster.fields.length, 3)}
+              >
+                <PolicyBadges
+                  id={badgesId}
+                  label="Used by"
+                  measures={cluster.policies.map((policyId) => policies.find((policy) => policy.id === policyId) ?? { id: policyId, name: policyId })}
+                />
+                <div className="household-policy-cluster-fields">{cluster.fields.map((id) => renderField(id, badgesId))}</div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    );
 
   const renderSection = (section, index) => {
     if (!section.collapsible) {
@@ -945,7 +1021,7 @@ function HouseholdCalculator({
         </div>
         <div className="household-details">
           {section.groups.map((group) => {
-            const shown = group.fields.filter(fieldApplies);
+            const shown = group.fields.filter(appliesInDetails);
             if (shown.length === 0) return null;
             const slug = group.title.toLowerCase().replace(/[^a-z]+/g, "-");
             return (
@@ -956,11 +1032,11 @@ function HouseholdCalculator({
                 icon={group.icon}
                 open={Boolean(moreOpen[group.title])}
                 onToggle={() => setMoreOpen((prev) => ({ ...prev, [group.title]: !prev[group.title] }))}
-                summary={groupSummary(group.title, { answer, applies: fieldApplies, inputs, presetId })}
+                summary={groupSummary(group.title, { answer, applies: appliesInDetails, inputs, presetId })}
                 changed={shown.filter(changedFromTypical).length}
                 onReset={() => resetGroup(group)}
               >
-                {renderGrid(group.fields, "household-grid-details")}
+                {renderGrid(group.fields.filter(inDetails), "household-grid-details")}
               </DetailsGroup>
             );
           })}
@@ -1078,7 +1154,7 @@ function HouseholdCalculator({
             </button>
             </div>
           </div>
-          {FORM_SECTIONS.map(renderSection)}
+          {FORM_SECTIONS.map((section, index) => [renderSection(section, index), index === 0 && renderPolicyQuestions()])}
         </form>
         </div>
         </div>

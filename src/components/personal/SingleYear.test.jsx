@@ -308,7 +308,7 @@ describe("the household calculation, from the fixture", () => {
     // The sweep waits in its own card; the waterfall shows one step for
     // every policy until the split arrives
     await waitFor(() => expect(document.querySelectorAll(".waiting-card")).toHaveLength(1));
-    expect(await screen.findAllByText("Usually around 60 seconds")).toHaveLength(1);
+    expect(await screen.findAllByText("Usually 15–30 seconds")).toHaveLength(1);
     expect(document.querySelector('.net-income-waterfall[data-split="pending"]')).not.toBeNull();
     // Changed answers can be sent without waiting for the slower parts
     fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
@@ -887,7 +887,7 @@ describe("while a new answer loads", () => {
       expect(document.querySelector(".net-income-waterfall")).toBeNull();
     }
     expect(container.querySelector(".processing-panel")).toHaveTextContent("Calculating your household");
-    expect(container.querySelector(".processing-panel")).toHaveTextContent("Usually around 60 seconds");
+    expect(container.querySelector(".processing-panel")).toHaveTextContent("Usually 15–30 seconds");
     await waitFor(() => expect(server.held.length).toBeGreaterThan(0));
     server.releaseAll();
     await waitFor(() => expect(headlineCard()).toHaveTextContent("2030-31"));

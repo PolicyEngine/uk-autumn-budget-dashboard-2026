@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import HouseholdCalculator, { FORM_SECTIONS, WIZARD_DEFAULTS, resetSavedWizard } from "./HouseholdCalculator";
 import { DEFAULT_SALARY, DEFAULT_SPENDING, REGIONAL_RENT } from "../utils/householdDefaults";
 import { parseAmount } from "./personal/FormControls";
+import { buildHouseholdRequest } from "../utils/householdImpactApi";
 
 beforeEach(() => {
   resetSavedWizard();
@@ -561,5 +562,130 @@ describe("the personal impact form", () => {
     const panel = document.getElementById(groupToggle("Spending").getAttribute("aria-controls"));
     expect(panel).not.toHaveClass("collapse");
     expect(panel.querySelector(".collapse")).toBeNull();
+  });
+});
+
+describe("the selected policies' questions", () => {
+  // Tonight's eight measures, by id and published name
+  const EIGHT = [
+    { id: "fuel_duty_rise_deferral", name: "Fuel duty rises deferred" },
+    { id: "domestic_electricity_zero_vat", name: "Zero VAT on domestic electricity" },
+    { id: "warm_home_discount_top_up", name: "Warm Home Discount top-up" },
+    { id: "threshold_freeze_2031_32", name: "Threshold freeze to 2031-32" },
+    { id: "plan_2_threshold_unfreeze", name: "Plan 2 student loan threshold unfrozen" },
+    { id: "employer_nics_secondary_threshold_raise", name: "Employer NI threshold raised" },
+    { id: "unearned_income_rates_up", name: "Dividend, savings and property income tax up" },
+    { id: "state_pension_income_tax_protection", name: "State Pension income tax protection" },
+  ];
+  const ALL_EIGHT = EIGHT.map((policy) => policy.id);
+  const section = () => screen.queryByRole("region", { name: "Questions that matter for the selected policies" });
+  /** The section's questions, in order. */
+  const asked = () => [...section().querySelectorAll(".household-field")].map((row) => row.dataset.row);
+  /** The policies a question's badges name. */
+  const badges = (id) =>
+    [...field(id).closest(".household-policy-cluster").querySelectorAll(".policy-badge-name")].map((badge) => badge.textContent);
+  const form = (selected, props = {}) => renderForm(<HouseholdCalculator selectedPolicies={selected} policies={EIGHT} {...props} />);
+
+  it("asks, after the essentials, what the selected policies read, each with its policies as badges", () => {
+    form(ALL_EIGHT);
+    expect(asked()).toEqual([
+      "petrol_spending_per_year",
+      "diesel_spending_per_year",
+      "electricity_spending_per_year",
+      "claims_universal_credit",
+      "student_loan_plan",
+      "dividends_per_year",
+      "savings_interest_per_year",
+      "property_income_per_year",
+    ]);
+    expect(badges("petrol_spending_per_year")).toEqual(["Fuel duty rises deferred"]);
+    expect(badges("electricity_spending_per_year")).toEqual(["Zero VAT on domestic electricity"]);
+    expect(badges("claims_universal_credit")).toEqual(["Warm Home Discount top-up"]);
+    expect(badges("student_loan_plan")).toEqual(["Plan 2 student loan threshold unfrozen"]);
+    // The essentials stay first; the section comes before More details
+    const essentials = document.querySelector(".household-essentials");
+    const more = screen.getByRole("region", { name: "More details" });
+    expect(essentials.compareDocumentPosition(section()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(section().compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The badges describe the box (screen readers hear them with it), and
+    // none is a tab stop or a tick
+    const petrol = box("Petrol");
+    expect(petrol.getAttribute("aria-describedby")).toContain("policies-for-petrol_spending_per_year");
+    // Questions next to each other that the same policies read share one
+    // row of badges, which describes each of their boxes
+    expect(badges("diesel_spending_per_year")).toEqual(["Fuel duty rises deferred"]);
+    expect(box("Diesel").getAttribute("aria-describedby")).toContain("policies-for-petrol_spending_per_year");
+    expect(section().querySelectorAll(".policy-badge")).toHaveLength(5);
+    expect(section().querySelector(".policy-badges [tabindex]")).toBeNull();
+    expect(section()).not.toHaveTextContent("✓");
+    // Asked once: More details keeps only the rest, and its rows say only
+    // what they still hold
+    expect(screen.queryByRole("button", { name: /^Other income/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Spending/ })).not.toBeInTheDocument();
+    expect(groupToggle("Pension and student loan")).toHaveTextContent("No pension income");
+    expect(groupToggle("Pension and student loan")).not.toHaveTextContent(/student loan$/);
+    expect(groupToggle("Council tax and benefits")).toHaveTextContent("Council Tax band D");
+    expect(groupToggle("Council tax and benefits")).not.toHaveTextContent("Universal Credit");
+    openMore();
+    for (const id of asked()) expect(document.querySelectorAll(`[data-row="${id}"]`)).toHaveLength(1);
+  });
+
+  it("adds the State Pension and private pension from State Pension age", () => {
+    form(ALL_EIGHT);
+    fireEvent.change(box("Age"), { target: { value: "70" } });
+    expect(asked()).toEqual(expect.arrayContaining(["state_pension_per_year", "private_pension_per_year"]));
+    expect(badges("state_pension_per_year")).toEqual(["State Pension income tax protection"]);
+    expect(badges("private_pension_per_year")).toEqual(["State Pension income tax protection"]);
+    // Below it, neither
+    fireEvent.change(box("Age"), { target: { value: "40" } });
+    expect(asked()).not.toContain("state_pension_per_year");
+    expect(asked()).not.toContain("private_pension_per_year");
+  });
+
+  it("follows the selection: one policy, its question alone", () => {
+    form(["plan_2_threshold_unfreeze"]);
+    expect(asked()).toEqual(["student_loan_plan"]);
+    expect(groupToggle("Spending")).toHaveTextContent(/^Spending/);
+    expect(groupToggle("Pension and student loan")).toHaveTextContent("No pension income");
+    expect(groupToggle("Pension and student loan")).not.toHaveTextContent("student loan ·");
+  });
+
+  it("is not there when no selected policy reads anything beyond the essentials", () => {
+    for (const selected of [[], ["threshold_freeze_2031_32"], ["employer_nics_secondary_threshold_raise", "threshold_freeze_2031_32"], ["unknown_measure"]]) {
+      const { unmount } = form(selected);
+      expect(section()).toBeNull();
+      for (const title of DETAIL_GROUPS) expect(groupToggle(title)).toBeInTheDocument();
+      unmount();
+      resetSavedWizard();
+    }
+  });
+
+  it("sends the same request for the same answers, wherever they are asked", async () => {
+    const API = "https://api.test/api/household-impact";
+    const bodies = [];
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        if (url === API) bodies.push(JSON.parse(init.body));
+        return new Response("{}", { status: 404 });
+      }),
+    );
+    try {
+      form(ALL_EIGHT, { year: 2027 });
+      fireEvent.change(box("Petrol"), { target: { value: "900" } });
+      fireEvent.blur(box("Petrol"));
+      choose("Student loan plan", "Plan 2");
+      fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
+      // Your household's headline (the example cards ask for theirs too)
+      const yours = () => bodies.find((body) => body.household.petrol_spending === 900 && body.include.length === 0);
+      await waitFor(() => expect(yours()).toBeDefined());
+      const answers = { ...WIZARD_DEFAULTS, petrol_spending_per_year: 900, student_loan_plan: "PLAN_2" };
+      expect(yours()).toEqual(buildHouseholdRequest(answers, { year: 2027, policies: ALL_EIGHT }));
+      expect(yours().household).toMatchObject({ petrol_spending: 900, student_loan_plan: "PLAN_2", diesel_spending: DEFAULT_SPENDING.diesel });
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
   });
 });
