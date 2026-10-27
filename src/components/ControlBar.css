@@ -214,18 +214,26 @@
     display: block;
     position: fixed;
     inset: 0;
-    z-index: 999;
+    /* Over the sticky title band (1100) and tab rows, under the About
+       drawer (1300) and tips (1400): the sheet and its shade cover the
+       whole page, so no tab row hides the sheet's title */
+    z-index: 1250;
     background: color-mix(in srgb, var(--c-ink) 35%, transparent);
   }
 
   .control-bar-dialog {
     position: fixed;
+    z-index: 1260;
     top: auto;
     left: 0;
     right: 0;
     bottom: 0;
     width: auto;
     max-width: none;
+    /* A tall sheet (the growth card's six groups) scrolls inside the window */
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
     border-radius: 16px 16px 0 0;
   }
