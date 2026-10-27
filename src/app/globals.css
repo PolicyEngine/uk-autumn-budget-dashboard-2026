@@ -231,6 +231,7 @@ code {
   --c-market-income: #4a7ba7;
   --c-pension-contributions: #b8875a;
   --c-gain-light: #81e6d9; /* a small gain; a light teal series */
+  --c-map-gain: #14b8a6; /* the constituency map scale's gain end, as on the 2025 dashboard */
   --c-loss-light: #fbbf24; /* a small loss */
   --c-ink: #1f2937; /* the map's approximate-figure dots */
   /* Notices: data pending or provisional */

@@ -231,59 +231,39 @@
   display: none;
 }
 
-/* The ramp, its breaks under the joins, Loss and Gain under its ends */
+/* The scale, as on the 2025 dashboard: one smooth gradient from a loss
+   (amber) through no change (light grey) to a gain (teal), its two ends
+   and 0 labelled under it */
 .map-key-scale {
-  width: min(320px, 100%);
+  width: 180px;
+  max-width: 100%;
 }
 
-.map-key-ramp {
-  display: flex;
+.map-key-gradient {
   height: 12px;
-  border-radius: 6px;
-  overflow: hidden;
+  border-radius: 3px;
 }
 
-.map-key-segment {
-  flex: 1;
-  height: 12px;
-  padding: 0;
-  border: 0;
-  cursor: pointer;
-  transition: opacity var(--motion-fast, 150ms) ease;
-}
-
-.map-key-ticks {
-  position: relative;
-  height: 18px;
-}
-
-.map-key-tick {
-  position: absolute;
-  top: 5px;
-  transform: translateX(-50%);
-  font-size: 11px;
-  line-height: 12px;
-  color: var(--pe-gray-600);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-/* A small mark from the join down to its label */
-.map-key-tick::before {
-  content: "";
-  position: absolute;
-  top: -5px;
-  left: 50%;
-  height: 4px;
-  border-left: 1px solid var(--pe-gray-400);
-}
-
-.map-key-ends {
+.map-key-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
-  line-height: 12px;
+  margin-top: 3px;
+  font-size: 0.75rem;
   color: var(--pe-gray-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.map-key-labels span {
+  flex: 1;
+  text-align: center;
+}
+
+.map-key-labels span:first-child {
+  text-align: left;
+}
+
+.map-key-labels span:last-child {
+  text-align: right;
 }
 
 /* The status patterns as chips, like MeasureKey's */
@@ -292,20 +272,22 @@
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   max-width: 100%;
 }
 
+/* Compact chips */
 .map-key-item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 26px;
-  padding: 0 10px 0 8px;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px 0 5px;
   border: 1px solid var(--card-border);
   border-radius: 999px;
   background: var(--c-surface);
   font: inherit;
+  font-size: 11px;
   color: var(--c-text);
   white-space: nowrap;
   cursor: pointer;
@@ -323,11 +305,10 @@
 }
 
 /* While an entry is hovered the others fade, as do the seats it leaves out */
-.map-key.is-highlighting :is(.map-key-segment, .map-key-item):not(.is-active) {
+.map-key.is-highlighting  .map-key-item:not(.is-active) {
   opacity: 0.35;
 }
 
-.map-key-segment:focus-visible,
 .map-key-item:focus-visible,
 /* The plot scrolls on a wide screen, so the browser lets it take focus:
    the page's ring, not the browser's 1px default */
@@ -345,7 +326,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .map-key-segment,
   .map-key-item,
   .map-canvas svg path.constituency-path {
     transition: none;
@@ -734,13 +714,10 @@
   color: var(--pe-gray-700);
 }
 
-.map-scale-swatch {
-  width: 28px;
-  height: 10px;
-}
-
-.map-scale-end {
-  padding: 0 6px;
+.map-scale-gradient {
+  width: 180px;
+  height: 12px;
+  border-radius: 3px;
 }
 
 /* The card's body: the map view (search box, then map) or the Rankings

@@ -119,7 +119,7 @@ describe("ConstituencyMap views", () => {
   it("highlights the seats a key entry covers, and says how many", async () => {
     const { container } = await renderMap();
     const key = screen.getByRole("group", { name: "Key" });
-    const segment = key.querySelector('[data-key="cat:large_gain"]');
+    const segment = key.querySelector('[data-key="kind:withheld"]');
     fireEvent.mouseEnter(segment);
     const dimmed = CODES.filter((code) => seatPath(container, code).getAttribute("data-dim") === "true");
     const lit = CODES.filter((code) => !dimmed.includes(code));

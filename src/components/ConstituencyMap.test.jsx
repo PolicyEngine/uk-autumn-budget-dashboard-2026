@@ -13,12 +13,14 @@ import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { exportMapAsSvg } from "../utils/exportMapAsSvg";
 import { resetGeographyCache } from "../hooks/useGeographyData";
 import {
-  CATEGORY_COLOURS,
   NO_DATA_FILL,
+  UNCERTAIN_FILL,
   WITHHELD_FILL,
-  approximateFill,
+  approximateColourFill,
+  approximateColourPatternId,
   approximatePatternId,
 } from "../utils/geography/palette";
+import { SCALE_COLOURS, scaleColour } from "../utils/geography/scale";
 import {
   AREA_ROUTING_URL,
   areaRouting,
@@ -116,28 +118,28 @@ describe("ConstituencyMap", () => {
     expect(withheld.style.fill).toBe("");
   });
 
-  it("colours seats by category, and dots an approximate seat's colour", async () => {
+  it("colours seats on the 2025 dashboard's continuous scale, and dots an approximate seat's colour", async () => {
     const { container } = await renderMap();
     const fill = (code) => seat(container, code).getAttribute("fill");
     const opacity = (code) => seat(container, code).getAttribute("fill-opacity");
-    expect(fill("Z14000001")).toBe(CATEGORY_COLOURS.large_gain);
+    // +1.12% is past the scale's +1% end: clamped to its teal
+    expect(fill("Z14000001")).toBe(SCALE_COLOURS.gain.toLowerCase());
     expect(opacity("Z14000001")).toBe("1");
-    // Status is a texture over the category's own colour, not a lighter
+    // Status is a texture over the seat's own colour, not a lighter
     // colour that could be read as a smaller change.
-    expect(fill("Z14000002")).toBe(approximateFill("small_gain"));
+    const approximate = scaleColour("0.0068", 0.01);
+    expect(fill("Z14000002")).toBe(approximateColourFill(approximate));
     expect(opacity("Z14000002")).toBe("1");
     const dots = container.querySelector(
-      `svg > defs > pattern#${approximatePatternId("small_gain")}`,
+      `svg > defs > pattern#${approximateColourPatternId(approximate)}`,
     );
-    expect(dots.querySelector("rect").getAttribute("fill")).toBe(
-      CATEGORY_COLOURS.small_gain,
-    );
+    expect(dots.querySelector("rect").getAttribute("fill")).toBe(approximate);
     expect(dots.querySelector("circle")).not.toBeNull();
     expect(dots.id).not.toMatch(/[\d:]/);
-    expect(fill("Z14000004")).toBe(CATEGORY_COLOURS.too_uncertain);
-    expect(fill("Z14000005")).toBe(CATEGORY_COLOURS.large_loss);
-    expect(fill("Z14000007")).toBe(CATEGORY_COLOURS.little_change);
-    expect(fill("Z14000008")).toBe(CATEGORY_COLOURS.little_change);
+    expect(fill("Z14000004")).toBe(UNCERTAIN_FILL);
+    expect(fill("Z14000005")).toBe(SCALE_COLOURS.loss.toLowerCase());
+    expect(fill("Z14000007")).toBe(SCALE_COLOURS.neutral);
+    expect(fill("Z14000008")).toBe(scaleColour("0.0004", 0.01));
   });
 
   it("draws a seat with no row as no data, never as a value", async () => {
@@ -154,20 +156,16 @@ describe("ConstituencyMap", () => {
     expect(card.textContent).not.toMatch(/%|£/);
   });
 
-  it("draws the legend inside the SVG, with categories and tiers", async () => {
+  it("draws the legend inside the SVG, with the scale and the statuses", async () => {
     const { container } = await renderMap();
     const legend = container.querySelector("svg > g.map-legend");
     expect(legend).not.toBeNull();
     const text = legend.textContent;
     for (const entry of [
-      "Large gain: 1% or more",
-      "Small gain: 0.1% to 1%",
-      "Little change: under 0.1% either way",
-      "Small loss: 0.1% to 1%",
-      "Large loss: 1% or more",
+      "\u22121%",
+      "0%",
+      "+1%",
       "Too uncertain to classify",
-      "Status, shown by texture",
-      "Reported: solid",
       "Approximate: dotted, few survey households",
       "Not published: hatched, confidentiality",
       "No data: blank",
@@ -178,8 +176,9 @@ describe("ConstituencyMap", () => {
     // Status swatches carry texture over a gain and a loss colour, so none
     // reads as a size of change.
     expect(
-      legend.querySelectorAll(`rect[fill="${approximateFill("large_gain")}"]`),
+      legend.querySelectorAll(`rect[fill="url(#${approximatePatternId("large_gain")})"]`),
     ).toHaveLength(1);
+    expect(legend.querySelector('rect[fill="url(#map-legend-gradient)"]')).not.toBeNull();
     // No explanation of deliberate noise, and no red dot on any seat: the
     // only circles are the dots inside the approximate textures.
     expect(text).not.toMatch(/noise/i);
@@ -189,7 +188,7 @@ describe("ConstituencyMap", () => {
     showChangeAs("£ per household");
     await waitFor(() =>
       expect(container.querySelector("svg > g.map-legend").textContent).toContain(
-        "Large gain: £100 or more",
+        "+£100",
       ),
     );
   });
@@ -197,19 +196,17 @@ describe("ConstituencyMap", () => {
   it("puts the key under the map, never over it, and keeps the legend for the file", async () => {
     const { container } = await renderMap();
     const map = container.querySelector('svg[role="img"]');
-    // On screen the key is HTML, outside the map's SVG: a ramp from loss
-    // to gain, too uncertain, and the three status textures
+    // On screen the key is HTML, outside the map's SVG: a gradient from
+    // loss to gain labelled at its ends and 0, then chips for too
+    // uncertain and the three status textures
     const key = screen.getByRole("group", { name: "Key" });
     expect(map.contains(key)).toBe(false);
     expect(key).toHaveTextContent("Change in household net income, % of income");
-    const entries = [...key.querySelectorAll("button[data-key]")].map((button) => button.getAttribute("aria-label"));
-    expect(entries.slice(0, 5)).toEqual([
-      expect.stringMatching(/^Large loss, 1% or more: \d+ seats?$/),
-      expect.stringMatching(/^Small loss, 0.1% to 1%: /),
-      expect.stringMatching(/^Little change, under 0.1% either way: /),
-      expect.stringMatching(/^Small gain, 0.1% to 1%: /),
-      expect.stringMatching(/^Large gain, 1% or more: /),
-    ]);
+    expect(key.querySelector(".map-key-labels").textContent).toBe("\u22121%0%+1%");
+    expect(key).not.toHaveTextContent("Loss");
+    expect(key).not.toHaveTextContent("Gain");
+    expect(key).not.toHaveTextContent("0.1%");
+    expect(key.querySelectorAll("button[data-key]")).toHaveLength(4);
     expect(key).toHaveTextContent("Too uncertain");
     expect(key).not.toHaveTextContent("Shown by pattern:");
     expect(key).toHaveTextContent("Approximate");
@@ -376,7 +373,7 @@ describe("ConstituencyMap", () => {
     showChangeAs("£ per household");
     await waitFor(() =>
       expect(seat(container, "Z14000002").getAttribute("fill")).toBe(
-        approximateFill("large_gain"),
+        approximateColourFill(scaleColour("150", 100)),
       ),
     );
     fireEvent.click(seat(container, "Z14000005"));
@@ -392,7 +389,7 @@ describe("ConstituencyMap", () => {
     );
     await waitFor(() =>
       expect(seat(container, "Z14000001").getAttribute("fill")).toBe(
-        CATEGORY_COLOURS.small_gain,
+        scaleColour("0.0021", 0.01),
       ),
     );
     expect(seat(container, "Z14000002").getAttribute("data-state")).toBe("no-data");
@@ -592,7 +589,7 @@ describe("ConstituencyMap and the release's area routing", () => {
     );
     const { container } = await renderMap();
     expect(seat(container, "Z14000001").getAttribute("fill")).toBe(
-      CATEGORY_COLOURS.large_gain,
+      SCALE_COLOURS.gain.toLowerCase(),
     );
     expect(screen.queryByText(NOT_AVAILABLE)).not.toBeInTheDocument();
     expect(screen.getByText(HOW_TO_READ)).toBeInTheDocument();

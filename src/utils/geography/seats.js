@@ -10,13 +10,15 @@
  * - `no-data`: no row at all, drawn as such and never given a value.
  */
 
-import { classifyRow } from "./classify";
+import { TOO_UNCERTAIN, classifyRow } from "./classify";
 import { formatFigure, formatInterval } from "./format";
 import {
   CATEGORY_COLOURS,
   NO_DATA_FILL,
   NO_DATA_STROKE,
+  UNCERTAIN_FILL,
   WITHHELD_FILL,
+  approximateColourFill,
   approximateFill,
 } from "./palette";
 import { regionForBoundary } from "./regions";
@@ -80,18 +82,29 @@ const PLAIN_STROKE = Object.freeze({ stroke: CHART_COLOURS.surface, strokeWidth:
 /**
  * How a seat is drawn. `fill` is an attribute value: a colour, a dotted
  * pattern's url() for an approximate seat, or the hatch's for a withheld
- * one.
+ * one. With `colourOf` (a value to a #rrggbb colour, the map's continuous
+ * scale) a seat takes its figure's colour, and an approximate seat's
+ * `dots` names the colour its dot texture needs; a seat too uncertain to
+ * classify is mid grey. Without it, its category's colour.
  */
-export function seatStyle(state) {
+export function seatStyle(state, colourOf) {
+  const colour = () => {
+    if (!colourOf) return null;
+    if (state.category === TOO_UNCERTAIN) return UNCERTAIN_FILL;
+    return colourOf(state.row?.value);
+  };
   switch (state?.kind) {
     case "reported":
-      return { fill: CATEGORY_COLOURS[state.category], fillOpacity: 1, ...PLAIN_STROKE };
-    case "approximate":
+      return { fill: colour() ?? CATEGORY_COLOURS[state.category], fillOpacity: 1, ...PLAIN_STROKE };
+    case "approximate": {
+      const dots = colour();
       return {
-        fill: approximateFill(state.category),
+        fill: dots ? approximateColourFill(dots) : approximateFill(state.category),
+        ...(dots ? { dots } : {}),
         fillOpacity: 1,
         ...PLAIN_STROKE,
       };
+    }
     case "withheld":
       return { fill: WITHHELD_FILL, fillOpacity: 1, ...PLAIN_STROKE };
     default:

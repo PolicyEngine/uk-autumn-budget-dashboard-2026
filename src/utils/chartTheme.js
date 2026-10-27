@@ -75,6 +75,7 @@ export const CHART_COLOURS = {
   marketIncome: "#4A7BA7",
   pensionContributions: "#B8875A",
   gainLight: "#81E6D9",
+  mapGain: "#14B8A6",
   lossLight: "#FBBF24",
   ink: "#1F2937",
   noticeBg: "#FFF7E6",

@@ -35,22 +35,24 @@ import {
   MAP_LEGEND_CLASS,
   appendStatusPatterns,
   drawMapLegend,
+  ensureApproximateColourDots,
   placeMapLegend,
 } from "../utils/geography/legend";
 import {
-  CATEGORY_COLOURS,
   DIRECTION_TEXT_COLOURS,
   NO_DATA_FILL,
   NO_DATA_STROKE,
+  UNCERTAIN_FILL,
   WITHHELD_FILL,
   approximateFill,
 } from "../utils/geography/palette";
+import { TOO_UNCERTAIN } from "../utils/geography/classify";
 import {
-  CATEGORY_BREAKS,
-  CATEGORY_LABELS,
-  TOO_UNCERTAIN,
-  categoryRanges,
-} from "../utils/geography/classify";
+  SCALE_GRADIENT,
+  colourExtent,
+  scaleColour,
+  scaleLabels,
+} from "../utils/geography/scale";
 import { rowsFor } from "../utils/geography/rows";
 import {
   cardLines,
@@ -168,8 +170,8 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
         ? "Households in the national dataset (the enhanced Family Resources Survey) are reweighted to each constituency with constituency weights estimated for 2025; later years keep each household's 2025 split, scaled to that year's weights."
         : "Each survey household in PolicyEngine's local-area dataset belongs to one constituency; a constituency's figure averages its households, by weight.",
       "Each figure has a 90% interval from 1,000 bootstrap resamples of survey households, with their weights held fixed.",
-      // The colours' breaks are said once, in the key's tip
-      "The colours' fixed breaks, and when a constituency is too uncertain to classify, are in the key's \u201cHow to read the key\u201d tip.",
+      // How the colour scale is set is said once, in the key's tip
+      "The colour scale's range, and when a constituency is too uncertain to classify, are in the key's \u201cHow to read the key\u201d tip.",
       "A figure resting on fewer than 30 effective survey households is approximate, and dotted.",
       "A figure is not published, and hatched, when fewer than 10 survey households lie behind it, or when one or two households would make up too much of it.",
     ],
@@ -303,10 +305,9 @@ export function seatGeometry(features, mode) {
   };
 }
 
-// The map key's entries that highlight seats on hover: the five
-// categories (a diverging ramp), too uncertain, and three statuses. Solid,
-// the reported status, is the default, so it has no entry.
-const RAMP = ["large_loss", "small_loss", "little_change", "small_gain", "large_gain"];
+// The map key's entries that highlight seats on hover: three statuses and
+// too uncertain. Solid, the reported status, is the default, so it has no
+// entry; the continuous scale has no entries to hover.
 const STATUS_ENTRIES = [
   {
     key: "kind:approximate",
@@ -325,7 +326,7 @@ const STATUS_ENTRIES = [
     key: `cat:${TOO_UNCERTAIN}`,
     label: "Too uncertain",
     detail: "Too uncertain to classify",
-    fill: CATEGORY_COLOURS[TOO_UNCERTAIN],
+    fill: UNCERTAIN_FILL,
   },
 ];
 
@@ -339,11 +340,7 @@ export function matchesKey(state, key) {
 /** How many seats match each key entry. */
 export function keyCounts(states) {
   const counts = {};
-  const keys = [
-    ...RAMP.map((category) => `cat:${category}`),
-    `cat:${TOO_UNCERTAIN}`,
-    ...STATUS_ENTRIES.map((entry) => entry.key),
-  ];
+  const keys = STATUS_ENTRIES.map((entry) => entry.key);
   for (const key of keys) counts[key] = 0;
   for (const state of states?.values() ?? []) {
     for (const key of keys) if (matchesKey(state, key)) counts[key] += 1;
@@ -354,17 +351,15 @@ export function keyCounts(states) {
 const seatCount = (n) => `${n.toLocaleString("en-GB")} ${n === 1 ? "seat" : "seats"}`;
 
 /**
- * The map's key, under the map: one diverging ramp from a large loss to a
- * large gain with the fixed breaks under its joins, a grey swatch for too
- * uncertain, and a row of the three status textures. Hovering or focusing
- * an entry highlights the seats it covers (`onHighlight`) and gives their
- * number. The textures are the map SVG's own patterns.
+ * The map's key, under the map: a smooth gradient from a loss (amber)
+ * through no change (light grey) to a gain (teal), labelled at its two
+ * ends and 0, and a row of compact chips for too uncertain and the three
+ * status textures. Hovering or focusing a chip highlights the seats it
+ * covers (`onHighlight`) and gives their number. The textures are the map
+ * SVG's own patterns.
  */
-function MapKey({ outcome, counts, highlight, onHighlight }) {
-  const { small, large } = CATEGORY_BREAKS[outcome];
-  const show = (text) => formatFigure(outcome, text, { signed: false });
-  const ticks = [`\u2212${show(large)}`, `\u2212${show(small)}`, `+${show(small)}`, `+${show(large)}`];
-  const ranges = categoryRanges(outcome);
+function MapKey({ outcome, extent, counts, highlight, onHighlight }) {
+  const [low, zero, high] = scaleLabels(outcome, extent);
   const hovered = highlight ? counts[highlight] : null;
   const entryProps = (key, label) => ({
     type: "button",
@@ -377,7 +372,7 @@ function MapKey({ outcome, counts, highlight, onHighlight }) {
     onBlur: () => onHighlight(null),
   });
   const swatch = (entry) => (
-    <svg className="map-key-swatch" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+    <svg className="map-key-swatch" width="10" height="10" viewBox="0 0 12 12" aria-hidden="true">
       {entry.halves ? (
         entry.halves.map((fill, half) => <rect key={half} x={half * 6} y="0" width="6" height="12" fill={fill} />)
       ) : (
@@ -396,11 +391,12 @@ function MapKey({ outcome, counts, highlight, onHighlight }) {
           label="How to read the key"
           content={
             <>
-              Little change is under {show(small)} either way, a small change {show(small)} to {show(large)}, and a
-              large change {show(large)} or more; the breaks are fixed in advance. A constituency is coloured only
-              when its 90% interval lies within one category or two neighbouring ones; otherwise it is too
-              uncertain to classify. Dotted: approximate, few survey households. Hatched: not published, to
-              protect survey respondents&apos; confidentiality. Solid: reported.
+              Colour runs smoothly from amber (a loss) through light grey (no change) to teal (a gain). The
+              scale runs from {low} to {high}, the same for every measure and year; larger changes take the end
+              colour. A
+              constituency whose 90% interval is too wide to place is too uncertain to classify, and mid grey.
+              Dotted: approximate, few survey households. Hatched: not published, to protect survey
+              respondents&apos; confidentiality. Solid: reported.
             </>
           }
         />
@@ -408,29 +404,17 @@ function MapKey({ outcome, counts, highlight, onHighlight }) {
           {hovered !== null && hovered !== undefined ? seatCount(hovered) : ""}
         </span>
       </div>
-      {/* The ramp: five joined segments, a break under each join, and
-          Loss and Gain under its two ends */}
       <div className="map-key-scale">
-        <div className="map-key-ramp">
-          {RAMP.map((category) => (
-            <button
-              key={category}
-              className={`map-key-segment${highlight === `cat:${category}` ? " is-active" : ""}`}
-              style={{ background: CATEGORY_COLOURS[category] }}
-              {...entryProps(`cat:${category}`, `${CATEGORY_LABELS[category]}, ${ranges[category]}`)}
-            />
-          ))}
-        </div>
-        <div className="map-key-ticks" aria-hidden="true">
-          {ticks.map((tick, index) => (
-            <span key={tick} className="map-key-tick" style={{ left: `${((index + 1) * 100) / RAMP.length}%` }}>
-              {tick}
-            </span>
-          ))}
-        </div>
-        <div className="map-key-ends" aria-hidden="true">
-          <span>Loss</span>
-          <span>Gain</span>
+        <div
+          className="map-key-gradient"
+          role="img"
+          aria-label={`Colour scale from ${low} (amber) through ${zero} (grey) to ${high} (teal)`}
+          style={{ background: SCALE_GRADIENT }}
+        />
+        <div className="map-key-labels" aria-hidden="true">
+          <span>{low}</span>
+          <span>{zero}</span>
+          <span>{high}</span>
         </div>
       </div>
       <div className="map-key-statuses">
@@ -558,24 +542,9 @@ function MapTemplate({ features, mode = "map", children }) {
 
 /** The map's colour scale, from losses to gains, without values. */
 function MapScalePlaceholder() {
-  const scale = [
-    ["large_loss", "Loss"],
-    ["small_loss", null],
-    ["little_change", null],
-    ["small_gain", null],
-    ["large_gain", "Gain"],
-  ];
   return (
     <div className="map-scale-placeholder" aria-hidden="true">
-      <span className="map-scale-end">Loss</span>
-      {scale.map(([category]) => (
-        <span
-          key={category}
-          className="map-scale-swatch"
-          style={{ background: CATEGORY_COLOURS[category] }}
-        />
-      ))}
-      <span className="map-scale-end">Gain</span>
+      <span className="map-scale-gradient" style={{ background: SCALE_GRADIENT }} />
     </div>
   );
 }
@@ -789,9 +758,13 @@ export default function ConstituencyMap({
     const map = mapRef.current;
     if (!map || !states) return;
     const seats = map.layer.selectAll("path.constituency-path");
+    const extent = colourExtent(outcome);
+    const colourOf = (value) => scaleColour(value, extent);
+    const defs = map.svg.select("defs");
     seats.each(function (feature) {
       const node = d3.select(this);
-      const style = seatStyle(states.get(seatCode(feature)));
+      const style = seatStyle(states.get(seatCode(feature)), colourOf);
+      if (style.dots) ensureApproximateColourDots(defs, style.dots);
       const previous = node.attr("fill");
       node.interrupt();
       node.attr("fill-opacity", style.fillOpacity);
@@ -811,7 +784,7 @@ export default function ConstituencyMap({
       }
     });
     applyStrokes();
-    drawMapLegend(map.svg.select(`g.${MAP_LEGEND_CLASS}`), { outcome });
+    drawMapLegend(map.svg.select(`g.${MAP_LEGEND_CLASS}`), { outcome, extent });
     seats
       .on("click", (event, feature) => {
         event.stopPropagation();
@@ -1183,6 +1156,7 @@ export default function ConstituencyMap({
           <div className="map-content" hidden={!onMap}>
             <MapKey
               outcome={outcome}
+              extent={colourExtent(outcome)}
               counts={counts}
               highlight={keyHighlight}
               onHighlight={setKeyHighlight}
