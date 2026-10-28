@@ -203,4 +203,18 @@
   .mev-bars {
     grid-template-columns: minmax(0, 1fr) 76px;
   }
+
+  /* No bar: "No change" and why on one line under the name, across the
+     whole row, not squeezed into the value column */
+  .mev-row > .mev-value--none {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 2px 8px;
+    min-height: 0;
+    padding: 2px 0 8px 32px;
+    text-align: left;
+  }
 }

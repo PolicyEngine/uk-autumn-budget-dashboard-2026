@@ -10,6 +10,7 @@
  */
 import { isCatalogueRowDisplayable } from "./measureCatalogue";
 import { policyDetailsFor, shortNameOf } from "./policyDetails";
+import { measureCategoryOf } from "./measureCategory";
 import { CHART_COLOURS } from "./chartTheme";
 import { DISPLAY_YEARS } from "./displayYears";
 import { isWithheldDecileValue } from "./decileWithholding";
@@ -173,7 +174,10 @@ export function noPovertyEffectReason(measure, year, fallback = "no one crosses 
   if (policy && !inForceIn(policy, year)) return inForceText(policy).replace(/ \(\d{4}-\d{2} only\)$/, "");
   // In force, but paid through a variable poverty income leaves out
   if (policy?.outsidePovertyIncome) return "not counted in poverty income";
-  const type = policy?.type;
+  // The card's type where its details apply; else the category the
+  // publication gives the measure (measureCategoryOf), so a price policy
+  // whose description has moved on still says so
+  const type = policy?.type ?? measureCategoryOf(measure).label;
   if (PRICE_TYPES.has(type)) return "changes prices, not incomes";
   if (type === "Capital gains tax") return "taxes capital gains, not incomes";
   return fallback;

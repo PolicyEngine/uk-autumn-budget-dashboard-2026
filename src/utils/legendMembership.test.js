@@ -18,4 +18,10 @@ describe("why a policy moves no one across the poverty line", () => {
   it("keeps a price policy's reason", () => {
     expect(noPovertyEffectReason(measureFor("domestic_electricity_zero_vat"), 2027)).toBe("changes prices, not incomes");
   });
+
+  it("reads a price policy from its published category when its card details do not apply", () => {
+    const moved = { id: "domestic_electricity_zero_vat", name: "Zero VAT on domestic electricity", description: "A newer description than the card was written for." };
+    expect(noPovertyEffectReason(moved, 2026)).toBe("changes prices, not incomes");
+    expect(noPovertyEffectReason({ id: "x", name: "New benefit", description: "A new benefit." }, 2026)).toBe("no one crosses the poverty line");
+  });
 });
