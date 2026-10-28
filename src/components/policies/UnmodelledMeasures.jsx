@@ -109,7 +109,16 @@ export function unmodelledCard(measure) {
       changesText: measure.changes,
       direction: total < 0 ? "cost" : total > 0 ? "revenue" : "neutral",
       example: { title: "For a household", text: measure.household },
-      notModelled: measure.notModelled,
+      // The reason, then PolicyEngine's own work that models it, where there is some
+      notModelled: measure.seeAlso ? (
+        <>
+          {measure.notModelled} {measure.seeAlso.before}
+          <SourceLink href={measure.seeAlso.href}>{measure.seeAlso.label}</SourceLink>
+          {measure.seeAlso.after}
+        </>
+      ) : (
+        measure.notModelled
+      ),
       budgetRows: measure.costings.map(({ row }) => row),
       sources: measure.sources,
       footExtra: (

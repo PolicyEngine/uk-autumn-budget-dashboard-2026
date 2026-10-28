@@ -186,6 +186,23 @@ describe("UnmodelledMeasures", () => {
     }
   });
 
+  it("links PolicyEngine's own work where it models a measure, after the reason this dashboard does not", () => {
+    render(<UnmodelledMeasures />);
+    const linked = UNMODELLED_MEASURES.filter(({ seeAlso }) => seeAlso);
+    expect(linked.map(({ id }) => id)).toEqual(["adjusted-triple-lock"]);
+    for (const { id, seeAlso, notModelled } of linked) {
+      expect(seeAlso.href).toMatch(/^https:\/\/www\.policyengine\.org\//);
+      // A pointer, never a figure of our own
+      expect(`${seeAlso.before}${seeAlso.label}${seeAlso.after}`).not.toMatch(/£|%|\bbn\b|billion|million/);
+      const card = document.getElementById(`unmodelled-${id}`);
+      expect(card).toHaveTextContent(notModelled);
+      const label = seeAlso.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const link = within(card).getByRole("link", { name: new RegExp(`^${label}\\s*\\(opens in a new tab\\)$`) });
+      expect(link).toHaveAttribute("href", seeAlso.href);
+      expect(link).toHaveAttribute("target", "_blank");
+    }
+  });
+
   it("shows nothing for an empty list", () => {
     const { container } = render(<UnmodelledMeasures measures={[]} />);
     expect(container).toBeEmptyDOMElement();
