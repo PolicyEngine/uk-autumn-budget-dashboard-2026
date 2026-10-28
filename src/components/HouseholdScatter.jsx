@@ -121,9 +121,8 @@ function ScatterMoreInfo({ basisLabel }) {
     <ChartMoreInfo
       info={{
         how: [
-          `Each dot is a group in a ${pounds(SCATTER_BINS.income_band_width)} band of ${basisLabel} income before the policies, fixed across years.`,
-          "So a dot moves only sideways when the year changes, and its row stays the same households.",
-          `Change axis: fitted to every year's dots with a little room each side, up to ±${pounds(CHANGE_AXIS_DOMAIN[1])}. Where a few far changes would squash the rest, a side stops at its ${Math.round(CHANGE_CAP_QUANTILE * 100)}th percentile, and the groups beyond are arrows at its edge.`,
+          `Each dot is a group of households with similar ${basisLabel} incomes before the policies (${pounds(SCATTER_BINS.income_band_width)} bands). The groups are the same in every year.`,
+          `The change axis is the same in every year. Changes beyond ±${pounds(CHANGE_AXIS_DOMAIN[1])} (or beyond the ${Math.round(CHANGE_CAP_QUANTILE * 100)}th percentile) show as arrows at the edge.`,
           "No change (under £1 either way) is an unfilled ring on £0.",
         ],
         caveats: ["Groups with too few survey households are left out."],

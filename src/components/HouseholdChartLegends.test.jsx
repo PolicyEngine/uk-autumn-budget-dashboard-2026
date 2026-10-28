@@ -5,7 +5,7 @@ import { fireEvent, render as renderReact, screen, within } from "@testing-libra
 import DistributionalChart from "./DistributionalChart";
 import WaterfallChart from "./WaterfallChart";
 import ChartMoreInfo from "./ChartMoreInfo";
-import { legendMembership, zeroReason, inForceIn, inForceShort, inForceText } from "../utils/legendMembership";
+import { legendMembership, zeroReason, inForceIn, inForceShort, inForceText, noPovertyEffectReason } from "../utils/legendMembership";
 import { POLICY_DETAILS } from "../utils/policyDetails";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 
@@ -80,6 +80,12 @@ describe("legendMembership", () => {
 
   it("gives the employer NI relief its incidence, and a measure out of force its window", () => {
     expect(zeroReason(catalogue.byId.get(EMPLOYER_NI), 2027)).toEqual({ kind: "employer", text: expect.stringMatching(/held fixed/) });
+    // The employer NI threshold passes its saving to wages: in 2026-27 it is
+    // £0 only as it starts in April 2027, never "wages held fixed" (CF3)
+    const threshold = { id: "employer_nics_secondary_threshold_raise", name: "Employer NI threshold raised", description: detailsOf("employer_nics_secondary_threshold_raise").writtenFor };
+    expect(zeroReason(threshold, 2026)).toEqual({ kind: "not_in_force", text: expect.stringMatching(/April 2027/) });
+    expect(noPovertyEffectReason(threshold, 2026)).toMatch(/April 2027/);
+    expect(noPovertyEffectReason(threshold, 2026)).not.toMatch(/held fixed/);
     const whd = detailsOf("warm_home_discount_top_up");
     expect(inForceIn(whd, 2026)).toBe(true);
     expect(inForceIn(whd, 2027)).toBe(false);
@@ -142,7 +148,7 @@ describe.each([
     // One disclosure per card: no second style
     expect(container.querySelectorAll(".disclosure")).toHaveLength(1);
     const employer = container.querySelector(`[data-zero-measure="${EMPLOYER_NI}"]`);
-    expect(employer.textContent).toMatch(/^Employer National Insurance relief, under-25s — employers pay less National Insurance.*wages are held fixed in the model$/);
+    expect(employer.textContent).toMatch(/^Employer National Insurance relief, under-25s: employers pay less National Insurance.*wages are held fixed in the model$/);
     // One bullet per policy, under the lead
     expect(employer.closest("ul").classList.contains("info-sublist")).toBe(true);
     expect(employer.closest("ul").children).toHaveLength(3);
@@ -152,8 +158,13 @@ describe.each([
     );
     // The Warm Home Discount top-up is paid in 2026-27 only; the threshold
     // freeze is from 2031: when each is in force, short
-    expect(container.querySelector('[data-zero-measure="warm_home_discount_top_up"]')).toHaveTextContent("Warm Home Discount top-up — winter 2026-27");
-    expect(container.querySelector('[data-zero-measure="threshold_freeze_2031_32"]')).toHaveTextContent("Threshold freeze — from April 2031");
+    expect(container.querySelector('[data-zero-measure="warm_home_discount_top_up"]')).toHaveTextContent("Warm Home Discount top-up: winter 2026-27");
+    expect(container.querySelector('[data-zero-measure="threshold_freeze_2031_32"]')).toHaveTextContent("Threshold freeze: from April 2031");
+    // Each name links to its card on the Policies tab (Pavel's review, AH4)
+    expect(within(container.querySelector('[data-zero-measure="threshold_freeze_2031_32"]')).getByRole("link", { name: "Threshold freeze" })).toHaveAttribute(
+      "href",
+      "?tab=policies#policy-threshold_freeze_2031_32",
+    );
     // A measure with an effect is neither greyed out nor in the note
     expect(container.querySelector('[data-zero-measure="fuel_duty_rise_deferral"]')).toBeNull();
     expect(keyChips(container).find((node) => node.title === "Fuel duty rises deferred").className).not.toContain("is-muted");
@@ -172,7 +183,7 @@ describe("ChartMoreInfo", () => {
   it("says one £0 policy on one line, and lists only the £0 ones", () => {
     const { container } = render(<ChartMoreInfo members={members} year={2028} />);
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
-    expect(container.querySelector(".zero-measures")).toHaveTextContent(/^No effect on household incomes in 2028-29: Employer NI relief for under-25s — employers pay less/);
+    expect(container.querySelector(".zero-measures")).toHaveTextContent(/^No effect on household incomes in 2028-29: Employer NI relief for under-25s: employers pay less/);
     expect(container.querySelector(".info-sublist")).toBeNull();
     expect([...container.querySelectorAll("[data-zero-measure]")].map((node) => node.dataset.zeroMeasure)).toEqual([
       EMPLOYER_NI,

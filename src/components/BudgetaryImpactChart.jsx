@@ -128,10 +128,7 @@ const CHART_DESCRIPTION =
 
 // The card's "About this chart"
 const REVENUE_INFO = {
-  how: [
-    "Above zero the policies raise money; below zero they cost the government.",
-    "The net line adds up the selected policies' separate figures.",
-  ],
+  how: ["Each policy is costed on its own against current law. The net line is their sum and leaves out any interaction between them."],
   method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the policies" },
 };
 

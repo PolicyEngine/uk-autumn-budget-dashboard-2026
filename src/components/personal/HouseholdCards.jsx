@@ -59,7 +59,7 @@ const SOURCE_NAMES = {
   badr_lifetime_limit_cut: "the Business Asset Disposal Relief cut",
   carers_allowance_earnings_taper: "the Carer's Allowance taper",
   lha_unfreeze_2027: "the Local Housing Allowance unfreeze",
-  employer_nics_secondary_threshold_raise: "the employer NI threshold rise",
+  employer_nics_secondary_threshold_raise: "the employer NI threshold",
   unearned_income_rates_up: "the unearned income tax rise",
 };
 // A short name where there is one, else the catalogue's published name
