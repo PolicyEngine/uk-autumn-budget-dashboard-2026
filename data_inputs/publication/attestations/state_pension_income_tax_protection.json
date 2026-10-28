@@ -1,8 +1,8 @@
 {
   "measure_id": "state_pension_income_tax_protection",
   "receipt_sha256": "3446d35bb91f3eb3ce74750ae9f997578094ab3be53d89cf26ae7069f54c0d9f",
-  "reason": "Checked budget_measures.pension_tax_allowance: from 2027-28 to 2029-30 it reduces income_tax, never below zero, for people over State Pension age by the year's allowance (20% of the full new State Pension above £12,570, rounded up) less £1 for every £3 of total_income above the full new State Pension; other years and people keep the native liability. In those years it also replaces uc_income_tax_on_earnings and uc_income_tax_on_trade, so Universal Credit deducts the tax after the allowance (the allowance used comes off the tax on employment first, then on trade). The receipt's outputs were compared with the explainer's cases in tests/test_pension_tax_allowance.py.",
-  "checker": "",
+  "reason": "Checked budget_measures.pension_tax_allowance: from 2027-28 to 2029-30 it reduces income_tax, never below zero, for people over State Pension age by the year's allowance (20% of the full new State Pension above \u00a312,570, rounded up) less \u00a31 for every \u00a33 of total_income above the full new State Pension; other years and people keep the native liability. In those years it also replaces uc_income_tax_on_earnings and uc_income_tax_on_trade, so Universal Credit deducts the tax after the allowance (the allowance used comes off the tax on employment first, then on trade). The receipt's outputs were compared with the explainer's cases in tests/test_pension_tax_allowance.py.",
+  "checker": "vahid-ahmadi",
   "second": "juaristi22",
   "released_at": "2026-10-28T17:15:49+00:00"
 }
