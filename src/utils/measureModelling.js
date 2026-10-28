@@ -34,7 +34,7 @@ export function sentences(text) {
  * chips from the same words. A fact is a plain chip; a limitation is a
  * chip that opens to the sentence it comes from.
  */
-// Shared with interactionName.js and legendMembership.js, which read the
+// Shared with legendMembership.js, which read the
 // same words
 export const WAGES_HELD_FIXED = /\bwages are held fixed\b/i;
 export const MODELLED_NOT_SURVEY = /\breplacing those reported in the survey\b/i;

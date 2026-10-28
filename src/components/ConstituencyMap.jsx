@@ -43,6 +43,7 @@ import {
   placeMapLegend,
 } from "../utils/geography/legend";
 import {
+  CATEGORY_COLOURS,
   DIRECTION_TEXT_COLOURS,
   NO_DATA_FILL,
   NO_DATA_STROKE,
@@ -87,6 +88,10 @@ import TitleIcon from "./TitleIcon";
 import Tip, { InfoTip } from "./Tip";
 
 const CHART_TITLE = "Constituency impacts";
+// The Policy option for all the selected policies before their map is
+// published: listed, never chosen
+const COMBINED_PENDING = "combined-pending";
+export const ONE_POLICY_NOTE = "The map shows one policy at a time until the map for all selected policies is published.";
 
 // The card's three views, and the URL parameter that opens the second or
 // third. The hex map is the default: every constituency the same size, so
@@ -182,6 +187,7 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
       { ref: "netIncome" },
       { term: "Hex map", meaning: "One equal hexagon per seat, placed roughly where it lies; shapes are not geographic." },
       { term: "Map", meaning: "Each seat's real boundary, so large rural seats dominate." },
+      { term: "Too uncertain", meaning: "The 90% range spans more than two categories, so the area is not classified." },
     ],
     caveats: [
       "Survey weights are held fixed in the resampling, so the intervals understate the uncertainty.",
@@ -321,6 +327,13 @@ const STATUS_ENTRIES = [
     fill: WITHHELD_FILL,
   },
   { key: "kind:no-data", label: "No data", fill: NO_DATA_FILL, stroke: NO_DATA_STROKE },
+  // Little change: the light grey of £0, in both views (MAP1)
+  {
+    key: "cat:little_change",
+    label: "Little change",
+    detail: "Little change: under £10 (or 0.1%) either way",
+    fill: CATEGORY_COLOURS.little_change,
+  },
   {
     key: `cat:${TOO_UNCERTAIN}`,
     label: "Too uncertain",
@@ -1118,17 +1131,28 @@ export default function ConstituencyMap({
   // The card's choices, in its one Options pill: which published run of
   // the header's selection (when there is more than one), how the change
   // is shown, and the view
+  // Several policies selected and no map for all of them yet (it runs last
+  // on Budget day): All selected policies is listed first, unavailable, and
+  // the card shows one policy at a time. Singles are never summed (Pavel's
+  // review, AH1; #274 item 12)
+  const combinedPending =
+    selectedPolicies.length > 1 && policyOptions.length > 0 && !policyOptions.some((option) => option.value === COMBINED_CHOICE);
   const optionGroups = [
-    policyOptions.length > 1 && {
+    (policyOptions.length > 1 || combinedPending) && {
       label: "Policy",
       value: policyValue,
       onChange: setPolicyChoice,
       stacked: true,
-      options: policyOptions.map((option) =>
-        option.value === COMBINED_CHOICE
-          ? { value: option.value, label: "Selected policies combined", summary: "Combined" }
-          : { value: option.value, label: policyName(option.value) },
-      ),
+      options: [
+        ...(combinedPending
+          ? [{ value: COMBINED_PENDING, label: "All selected policies", disabled: true, title: "published later on Budget day" }]
+          : []),
+        ...policyOptions.map((option) =>
+          option.value === COMBINED_CHOICE
+            ? { value: option.value, label: "All selected policies", summary: "All selected" }
+            : { value: option.value, label: policyName(option.value) },
+        ),
+      ],
     },
     {
       label: "Show the change as",
@@ -1174,6 +1198,7 @@ export default function ConstituencyMap({
             ) : (
               sentence && <p className="chart-description">{sentence}</p>
             )}
+            {!notRouted && combinedPending && <p className="map-one-policy">{ONE_POLICY_NOTE}</p>}
           </div>
           {downloadsReady ? (
             <ChartDownloadMenu

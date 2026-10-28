@@ -52,6 +52,16 @@ describe("ControlBar", () => {
     expect(within(dialog).getByRole("radio", { name: "Cash terms" })).toBeDisabled();
   });
 
+  it("hides chart tooltips while its popover is open (Pavel's review, LS2)", () => {
+    render(<Harness />);
+    const root = document.documentElement;
+    expect(root.hasAttribute("data-options-open")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+    expect(root.hasAttribute("data-options-open")).toBe(true);
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(root.hasAttribute("data-options-open")).toBe(false);
+  });
+
   it("moves with the arrow keys, keeps focus inside, and closes on Escape", () => {
     render(<Harness />);
     const button = screen.getByRole("button", { name: /^Options:/ });

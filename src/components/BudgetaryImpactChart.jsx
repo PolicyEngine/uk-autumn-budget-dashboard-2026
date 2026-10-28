@@ -33,6 +33,7 @@ import { laterRevenueNote, revenueSentence } from "../utils/plainSentences";
 import { zeroReason } from "../utils/legendMembership";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
+import { MethodLink } from "../utils/methodLink";
 
 // A year not yet published gets a small grey tag just above the zero line,
 // so its empty band is never read as zero. The years' nets are not printed
@@ -127,10 +128,16 @@ const CHART_DESCRIPTION =
   `Change in government revenue each year, £bn. Above zero raises revenue; below zero costs the government.`;
 
 // The card's "About this chart"
+// The net line's gap from a run of all the policies together: interactions
+// and the runs' baselines (critic W1, round 3), explained under Limitations
 const REVENUE_INFO = {
   how: [
-    "Above zero the policies raise money; below zero they cost the government.",
-    "The net line adds up the selected policies' separate figures.",
+    "Each policy is costed on its own against current law.",
+    <>
+      The net line is their sum, so it leaves out interactions between them and any difference between the baselines
+      of the single and combined runs. <MethodLink anchor={METHOD_ANCHORS.limitations}>Policies added up</MethodLink>{" "}
+      explains both.
+    </>,
   ],
   method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the policies" },
 };

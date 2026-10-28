@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, waitFor, within } from "@testing-library/react";
 import fc from "fast-check";
-import { PovertyMeasuresRow, measurePovertyRows, povertyCardRows, povertyWaterfall } from "./MeasuresPovertyCard";
+import { PovertyMeasuresRow, TOGETHER, measurePovertyRows, povertyCardRows, povertyWaterfall } from "./MeasuresPovertyCard";
 import { povertyMetric } from "./SummaryMetricChart";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import { FLAT_EXTRA_COLUMNS } from "../utils/publication/csv";
@@ -77,7 +77,7 @@ describe("measurePovertyRows and povertyWaterfall", () => {
     expect(idle.find((m) => m.id === "employer_ni_relief_under_25s")).toMatchObject({ value: 0 });
   });
 
-  it("steps by size in people out of poverty, closes the gap with an interaction step and ends at the package", () => {
+  it("draws each policy from zero by size, with no interaction row, and ends with all of them together (POV2, POV3)", () => {
     const selected = ["state_pension_income_tax_protection", "plan_2_threshold_unfreeze", "fuel_duty_rise_deferral", "employer_ni_relief_under_25s"];
     const { measures, idle, total } = measurePovertyRows(rows, catalogue, selected, 2027, "poverty_change_pp");
     // 70 million people: 0.001pp is 700 people
@@ -88,31 +88,21 @@ describe("measurePovertyRows and povertyWaterfall", () => {
     expect(steps.map((s) => [s.kind, s.id])).toEqual([
       ["measure", "plan_2_threshold_unfreeze"],
       ["measure", "state_pension_income_tax_protection"],
-      ["interaction", "interaction"],
       ["none", "fuel_duty_rise_deferral"],
       ["none", "employer_ni_relief_under_25s"],
       ["total", "package"],
     ]);
     // A "No change" row sits at 0 and never moves the steps after it
     expect(steps.filter((s) => s.kind === "none").every((s) => s.x === 0 && s.start === 0 && s.end === 0)).toBe(true);
-    // A fall in poverty steps right; each step starts where the last ended
+    // A fall in poverty points right; every bar starts at 0, so nothing
+    // reads as stacking
     expect(steps[0].x).toBeCloseTo(3500);
-    expect(steps[1].start).toBeCloseTo(3500);
-    expect(steps[2].x).toBeCloseTo(700);
-    expect(steps.at(-1).start).toBe(0);
+    expect(steps.every((s) => s.start === 0)).toBe(true);
+    expect(steps[1].end).toBeCloseTo(steps[1].x);
+    // The last row is the combined run's own figure, never the bars summed
+    expect(steps.at(-1).name).toBe(TOGETHER);
     expect(steps.at(-1).end).toBeCloseTo(5600);
     expect(zero.map((m) => m.id)).toEqual(["fuel_duty_rise_deferral", "employer_ni_relief_under_25s"]);
-    // The Plan 2 measure is selected, so the gap holds a baseline difference too
-    expect(steps.find((s) => s.kind === "interaction").name).toBe("Interaction and baseline difference");
-  });
-
-  it("calls the gap plain 'Interaction' without the Plan 2 measure", () => {
-    const two = [
-      { id: "a", name: "A", value: -0.01 },
-      { id: "b", name: "B", value: -0.02 },
-    ];
-    const { steps } = povertyWaterfall(two, -0.05, 70);
-    expect(steps.find((s) => s.kind === "interaction").name).toBe("Interaction");
   });
 
   it("falls back to percentage points without a population, and has no package for a part selection", () => {
@@ -164,7 +154,8 @@ describe("the Poverty sub-tab's measures pair", () => {
     // change" and why, and no bar
     const rows = within(measures).getAllByRole("rowheader").map((r) => r.querySelector(".mrl-name")?.textContent ?? r.textContent);
     expect(rows[0]).toBe("Student loan threshold unfrozen");
-    expect(rows.at(-1)).toBe("All policies together");
+    expect(rows.at(-1)).toBe(TOGETHER);
+    expect(measures.querySelector(".wf-join")).toBeNull();
     const shownIds = [...measures.querySelectorAll(".wf-measure, .wf-none")].length;
     expect(shownIds).toBe(catalogue.displayable.filter((m) => ALL.includes(m.id)).length);
     expect(rows).toContain("Employer National Insurance relief, under-25s");
@@ -180,11 +171,12 @@ describe("the Poverty sub-tab's measures pair", () => {
     expect(reasonFor("Employer National Insurance relief, under-25s")).toBe("changes employers' costs; wages held fixed");
     // The steps come first, then the no-change rows, then the total
     const kinds = [...measures.querySelectorAll(".wf-measure, .wf-interaction, .wf-none, .wf-total")].map((r) => r.className.match(/wf-(measure|interaction|none|total)/)[1]);
-    expect(kinds.join(" ")).toMatch(/^(measure )+(interaction )?(none )+total$/);
+    expect(kinds.join(" ")).toMatch(/^(measure )+(none )+total$/);
     expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^about [\d,]+ fewer people$/);
     // A plain sentence, no "≈" or "pp"
     const headline = measures.querySelector(".chart-description");
-    expect(headline).toHaveTextContent(/^All the policies together move about [\d,]+ people out of poverty; unfreezing the student loan threshold moves the most \(about [\d,]+\)\.$/);
+    expect(headline).toHaveTextContent(/^The selected policies together move about [\d,]+ people out of poverty\. On its own, unfreezing the student loan threshold moves the most \(about [\d,]+\)\.$/);
+    expect(measures.textContent).not.toMatch(/package/i);
     expect(headline.textContent).not.toMatch(/≈|pp/);
 
     // Chosen in one card's pill, followed by the other's
@@ -200,35 +192,16 @@ describe("the Poverty sub-tab's measures pair", () => {
     // About this chart: that the parts need not add up; the policies that
     // move no one are in their rows, not listed again here
     fireEvent.click(within(measures).getByRole("button", { name: "About this chart" }));
-    expect(within(measures).getByText(/need not add up to the package/)).toBeInTheDocument();
+    expect(within(measures).getByText(/so the bars need not add up to it/)).toBeInTheDocument();
+    // Why, linked to Limitations (critic W2, round 3)
+    expect(within(measures).getByRole("link", { name: "Policies added up" })).toHaveAttribute("href", "?tab=methodology#method-limitations");
+    // The policy's own effect is said once, in the sentence, not again here
+    expect(within(measures).queryByText("Each bar is one policy on its own.")).toBeNull();
     const about = measures.querySelector(".chart-more-info");
     expect(about).not.toHaveTextContent(/No effect on/);
     expect(about.querySelector("[data-zero-measure]")).toBeNull();
     // The card says each fact once: the people rule is in Methodology
     expect(about).not.toHaveTextContent(/nearest 1,000/);
-  });
-
-  it("names a gap step for the baseline difference when the Plan 2 measure is selected, and links to Methodology", async () => {
-    // The tracked files' gap is below rounding, so move the package's 2027
-    // figure by 0.05pp to make one
-    const shift = (r, key) => (r[key] === undefined || r[key] === "" ? r[key] : String(Number(r[key]) - 0.05));
-    const shifted = metrics.map((r) =>
-      r.reform_id === COMBINED && Number(r.year) === 2027
-        ? { ...r, poverty_change_pp: shift(r, "poverty_change_pp"), poverty_abs_bhc_change_pp: shift(r, "poverty_abs_bhc_change_pp") }
-        : r,
-    );
-    render(
-      <MeasureCatalogueProvider catalogue={catalogue}>
-        <PovertyMeasuresRow rows={shifted} policies={catalogue.measures} selectedPolicies={ALL} selectedYear={2027} />
-      </MeasureCatalogueProvider>,
-    );
-    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which policies move poverty/ }, { timeout: 5000 });
-    const measures = heading.closest(".charts-stack > div");
-    await waitFor(() => expect(measures.querySelector(".wf-interaction .wf-label")).toHaveTextContent(/^Interaction and baseline difference$/), { timeout: 5000 });
-    fireEvent.click(within(measures).getByRole("button", { name: "About this chart" }));
-    const about = measures.querySelector(".chart-more-info");
-    expect(about).toHaveTextContent(/The “Interaction and baseline difference” step is the gap/);
-    expect(within(about).getByRole("link", { name: "Policies added up" })).toHaveAttribute("href", "?tab=methodology#method-limitations");
   });
 });
 

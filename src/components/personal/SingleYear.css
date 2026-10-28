@@ -903,6 +903,12 @@
   margin: 0 0 10px;
 }
 
+.waterfall-sub {
+  margin: 2px 0 0;
+  color: var(--pe-gray-600);
+  font-size: var(--fs-caption, 13px);
+}
+
 .waterfall-title {
   margin: 0;
 }

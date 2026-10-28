@@ -66,11 +66,11 @@ export const COMBINATION_NOT_PUBLISHED = "Results by age for this combination of
 
 /** About this chart's caveat when a package's chart shows no policy parts. */
 export const PACKAGE_PARTS_CAVEAT =
-  "Each policy's part is not shown, as a selected policy has too few survey records by age: the bars are the whole package's own result.";
+  "Each policy's part is not shown, as a selected policy has too few survey records by age. The bars show all the selected policies together.";
 
 /** Why a package's chart has its net but no policy parts. */
 export const PACKAGE_NET_ONLY =
-  "The net change is the whole package's own result. Each policy's part is not shown, as a selected policy has too few survey records by age.";
+  "The net change is all the selected policies together. Each policy's part is not shown, as a selected policy has too few survey records by age.";
 
 const usableRow = (row) => Boolean(row) && row.sample_size >= MIN_SAMPLE_SIZE && Number.isFinite(row.mean_change);
 

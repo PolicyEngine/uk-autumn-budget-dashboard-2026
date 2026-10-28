@@ -7,7 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import ConstituencyMap, { legendPlacement } from "./ConstituencyMap";
+import ConstituencyMap, { ONE_POLICY_NOTE, legendPlacement } from "./ConstituencyMap";
 import { CHART_COLOURS } from "../utils/chartTheme";
 import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { exportMapAsSvg } from "../utils/exportMapAsSvg";
@@ -223,8 +223,11 @@ describe("ConstituencyMap", () => {
     expect(key).not.toHaveTextContent("Loss");
     expect(key).not.toHaveTextContent("Gain");
     expect(key).not.toHaveTextContent("0.1%");
-    expect(key.querySelectorAll("button[data-key]")).toHaveLength(4);
+    expect(key.querySelectorAll("button[data-key]")).toHaveLength(5);
     expect(key).toHaveTextContent("Too uncertain");
+    // Little change has its own entry, in the light grey of £0; too uncertain is
+    // mid grey, in both views (Pavel's review, MAP1)
+    expect(key).toHaveTextContent("Little change");
     expect(key).not.toHaveTextContent("Shown by pattern:");
     expect(key).toHaveTextContent("Approximate");
     expect(key).toHaveTextContent("Not published");
@@ -844,16 +847,16 @@ describe("exportMapAsSvg", () => {
       vi.stubGlobal("fetch", geographyFetch({ "/data/constituency.csv": withSingles() }));
       const { container } = await renderMap();
       const pill = screen.getByRole("button", { name: /^Options:/ });
-      expect(pill).toHaveTextContent(/^Combined · /);
+      expect(pill).toHaveTextContent(/^All selected · /);
       expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: selected policies$/);
       fireEvent.click(pill);
       const group = screen.getByRole("radiogroup", { name: "Policy" });
       expect([...group.querySelectorAll('[role="radio"]')].map((radio) => radio.textContent)).toEqual([
-        "Selected policies combined",
+        "All selected policies",
         "2 child limit repeal",
         "Rail fares freeze",
       ]);
-      expect(screen.getByRole("radio", { name: "Selected policies combined" })).toHaveAttribute("aria-checked", "true");
+      expect(screen.getByRole("radio", { name: "All selected policies" })).toHaveAttribute("aria-checked", "true");
       // Selected is fill and weight, never a tick
       expect(group.textContent).not.toMatch(/\u2713|\u2714/);
       fireEvent.click(screen.getByRole("radio", { name: "2 child limit repeal" }));
@@ -863,7 +866,7 @@ describe("exportMapAsSvg", () => {
       expect(screen.getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^2 child limit repeal · /);
     });
 
-    it("offers only the selected policies, and no Policy group with one run to show", async () => {
+    it("offers only the selected policies, with All selected policies listed but unavailable until its map is published (AH1)", async () => {
       vi.stubGlobal("fetch", geographyFetch({ "/data/constituency.csv": withSingles() }));
       const { container } = render(
         <ConstituencyMap selectedPolicies={["fuel_duty_freeze", "rail_fares_freeze"]} selectedYear={2029} policies={POLICIES} />,
@@ -871,8 +874,14 @@ describe("exportMapAsSvg", () => {
       await waitFor(() =>
         expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: Rail fares freeze$/),
       );
+      expect(screen.getByText(ONE_POLICY_NOTE)).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
-      expect(screen.queryByRole("radiogroup", { name: "Policy" })).toBeNull();
+      const group = screen.getByRole("radiogroup", { name: "Policy" });
+      expect([...group.querySelectorAll('[role="radio"]')].map((radio) => radio.textContent)).toEqual(["All selected policies", "Rail fares freeze"]);
+      expect(screen.getByRole("radio", { name: "All selected policies" })).toBeDisabled();
+      expect(screen.getByText("All selected policies: published later on Budget day")).toBeInTheDocument();
+      // Never the singles summed: the map stays on the one policy's own run
+      expect(screen.getByRole("radio", { name: "Rail fares freeze" })).toHaveAttribute("aria-checked", "true");
     });
 
     it("places the key beside the map from 640px, and under it on a phone", async () => {

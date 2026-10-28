@@ -105,7 +105,7 @@ describe("Where you sit, for the published package (issue 228)", () => {
   it("reads the package's curves under the manifest's key, and never fetches the root tenth tables", async () => {
     served = { "income_distribution.csv": distribution(KEY), "income_mobility.csv": "" };
     await renderChart();
-    expect(await screen.findByText(/Your place in the distribution/)).toBeTruthy();
+    expect(await screen.findByText(/Where your income sits, \d/)).toBeTruthy();
     expect(screen.queryByText(NOT_PUBLISHED)).toBeNull();
     expect(screen.queryByText(/not available for this year/)).toBeNull();
     const fetched = fetch.mock.calls.map(([url]) => String(url).split("/").pop());
@@ -115,7 +115,7 @@ describe("Where you sit, for the published package (issue 228)", () => {
   it("compares with the combined run's tenths, never the policies' figures added up", async () => {
     served = { "income_distribution.csv": distribution(KEY), "income_mobility.csv": "" };
     await renderChart();
-    await screen.findByText(/Your place in the distribution/);
+    await screen.findByText(/Where your income sits, \d/);
     const alt = document.querySelector('[role="img"][aria-label^="Average change by tenth"]').getAttribute("aria-label");
     // The combined run's 0.50% in each tenth; alpha's 1% plus beta's 1% would be 2%
     expect(alt).toMatch(/1: \+0\.50%/);
@@ -125,7 +125,7 @@ describe("Where you sit, for the published package (issue 228)", () => {
   it("keys the Spread view under the plot: your tenth's band, the curve, you and the median lines", async () => {
     served = { "income_distribution.csv": distribution(KEY), "income_mobility.csv": "" };
     const { container } = await renderChart();
-    await screen.findByText(/Your place in the distribution/);
+    await screen.findByText(/Where your income sits, \d/);
     const legend = container.querySelector(".position-card .chart-legend");
     expect(legend).toBeTruthy();
     const labels = [...legend.querySelectorAll(".series-toggle-label")].map((node) => node.textContent);
@@ -140,7 +140,7 @@ describe("Where you sit, for the published package (issue 228)", () => {
   it("keys the tenths card too, and each key item is a button that shows or hides its part", async () => {
     served = { "income_distribution.csv": distribution(KEY), "income_mobility.csv": "" };
     const { container } = await renderChart();
-    await screen.findByText(/Your place in the distribution/);
+    await screen.findByText(/Where your income sits, \d/);
     const [whereKey, gainsKey] = container.querySelectorAll(".position-card .chart-legend");
     const chips = [...gainsKey.querySelectorAll("button.series-toggle-chip")];
     expect(chips.map((chip) => chip.textContent)).toEqual(["Your income tenth", "Change for each tenth", "You"]);
@@ -166,5 +166,20 @@ describe("Where you sit, for the published package (issue 228)", () => {
     expect(where().querySelectorAll("path").length).toBe(2);
     fireEvent.click(whereKey.querySelectorAll("button.series-toggle-chip")[1]);
     expect(where().querySelectorAll("path").length).toBe(0);
+  });
+});
+
+describe("changeFromLine: the policies behind your change (HH4)", () => {
+  it("names the two largest, mostly when there are more", async () => {
+    const { changeFromLine } = await import("./IncomePositionChart");
+    expect(
+      changeFromLine([
+        { id: "a", label: "Employer NI threshold", rounded: 343 },
+        { id: "b", label: "Student loan threshold unfrozen", rounded: 248 },
+        { id: "c", label: "Threshold freeze", rounded: -73 },
+      ]),
+    ).toBe("Largest effects: Employer NI threshold (+£343) and Student loan threshold unfrozen (+£248).");
+    expect(changeFromLine([{ id: "a", label: "Fuel duty frozen", rounded: 53 }])).toBe("Largest effect: Fuel duty frozen (+£53).");
+    expect(changeFromLine(null)).toBeNull();
   });
 });

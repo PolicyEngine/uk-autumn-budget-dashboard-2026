@@ -2484,3 +2484,47 @@
     padding-left: 0;
   }
 }
+
+/* Reset answers: a text button beside Calculate (Pavel's review, HH12) */
+.reset-answers-button {
+  margin-right: 12px;
+  padding: 8px 4px;
+  border: 0;
+  background: none;
+  color: var(--pe-gray-600);
+  font: inherit;
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.reset-answers-button:hover {
+  color: var(--pe-gray-900);
+}
+
+/* The chosen example's answers, under the cards (HH10) */
+.household-example-summary {
+  margin: 12px 0 0;
+  color: var(--pe-gray-700);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.household-example-summary .link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pe-teal-700, var(--band-teal));
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.household-results-stale {
+  margin: 16px 0 0;
+  color: var(--pe-gray-700);
+  font-size: 14px;
+}

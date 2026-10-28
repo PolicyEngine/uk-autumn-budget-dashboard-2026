@@ -3,6 +3,7 @@ import { CalendarCheck, CalendarX, ChartColumn, ExternalLink, Flag, FlaskConical
 import "./MeasureRowLabel.css";
 import { measureCategoryOf } from "../utils/measureCategory";
 import { withPolicyDetails } from "../utils/policyDetails";
+import { policyCardAnchor } from "../utils/methodLink";
 import { parameterTableFor } from "../utils/policyParameters";
 import PolicyChange, { usePolicyParameters } from "./PolicyChange";
 import Disclosure from "./Disclosure";
@@ -270,6 +271,7 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
   const showModelling = hasInfo(modelling);
   return (
     <li
+      id={policy.id ? policyCardAnchor(policy.id) : undefined}
       className={`policy-card${bare ? " is-bare" : ""}`}
       style={{ "--policy-accent": policy.color }}
     >

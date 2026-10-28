@@ -30,6 +30,35 @@ import { METHOD_ANCHORS } from "../../methodology/anchors";
 // Axis ticks to the step's own precision: a 0.25 step reads "0.25%", not
 // "0.3%" (tightAxis's steps go down to 0.01)
 const pctTickFormat = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
+
+// Both ends round to under 0.15 (one of them shown as 0): neither "grow" nor
+// "fall" describes it, and "about as fast" beside a 0 reads as an error
+const nearZero = (bottom, top) => Math.max(Math.abs(bottom), Math.abs(top)) < 0.15;
+
+// Current law, in words, from the signs of the two ends (rounded means, as shown)
+export function trendWords(bottom, top) {
+  if (nearZero(bottom, top)) return "barely change at either end";
+  if (Math.abs(top - bottom) < 0.15) return bottom >= 0 && top >= 0 ? "grow about as fast at the bottom as at the top" : bottom <= 0 && top <= 0 ? "fall about as fast at the bottom as at the top" : "barely change at either end";
+  if (bottom >= 0 && top >= 0) return top > bottom ? "grow faster at the top than at the bottom" : "grow faster at the bottom than at the top";
+  if (bottom <= 0 && top <= 0) return top > bottom ? "fall faster at the bottom than at the top" : "fall faster at the top than at the bottom";
+  return top > bottom ? "grow at the top and fall at the bottom" : "grow at the bottom and fall at the top";
+}
+
+// A single year's effect this large (pp) is no "barely", whatever the
+// average (round 3: −0.1pp on average with −0.35pp in one year)
+export const BARELY_PP = 0.2;
+
+// The policies' change, in words (rounded means, as shown). `largest` is
+// the largest single value behind the means: past BARELY_PP, a near-zero
+// average is not "barely"
+export function changeWords(bottom, top, largest = 0) {
+  if (nearZero(bottom, top)) {
+    return largest < BARELY_PP ? "barely change income growth at either end" : "change income growth little at either end";
+  }
+  if (Math.abs(top - bottom) < 0.15) return "change income growth about equally at both ends";
+  return top > bottom ? "change income growth more at the top" : "change income growth more at the bottom";
+}
+
 export const pctTick = (v) => `${pctTickFormat.format(v)}%`;
 const pct = (v) => `${formatOneDp(v)}%`;
 // The measures' effect on growth, in percentage points (two decimals: it is
@@ -184,10 +213,10 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     : own;
   const narrow = useNarrowViewport();
   const [view, setView] = useUrlChoice("ls_growth", Object.keys(VIEWS), "annual");
-  // Vigintiles by default, the finest split; deciles where the file has no
-  // vigintiles, then whatever it offers
-  const defaultGrouping = ["vigintile", "decile"].find((g) => offer.groupings.includes(g)) ?? offer.groupings[0];
-  const [grouping, setGrouping] = useUrlChoice("ls_groups", offer.groupings, defaultGrouping);
+  // Tenths, as every other distribution chart on the dashboard (Pavel's
+  // review, LS4: the fifths / tenths / twentieths choice is gone); another
+  // grouping only where the file has no deciles
+  const grouping = offer.groupings.includes("decile") ? "decile" : offer.groupings[0];
   const [basis, setBasis] = useUrlChoice("ls_housing", offer.bases, "bhc");
   const [population, setPopulation] = useUrlChoice("ls_pop", offer.populations, "all");
 
@@ -284,30 +313,34 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const highMean = round1(mean(highVals));
   const num = (v) => signed(v, "").replace(/^0\.0$/, "0");
   const per = annual ? " a year" : "";
-  const gap = Math.abs(highMean - lowMean);
-  const unitWord = diff ? " points" : "%";
+  // The effect in pp, as the axis and tooltip give it (round 3)
+  const unitWord = diff ? "pp" : "%";
+  // The years behind the average, named (round 3)
+  const span = annual
+    ? `on average over ${fyDash(annualYears[0].year)} to ${fyDash(end.year)}`
+    : `from ${fyDash(first.year)} to ${fyDash(end.year)}`;
+  // The two groups compared, named (LS1): "(lowest tenth: +0.4% a year;
+  // top tenth: +0.2%)"
+  const bottomName = skip ? `${ordinal(skip + 1)} ${g.share}` : `lowest ${g.share}`;
   const ends = (
     <>
-      (<strong>{num(lowMean)}{unitWord}</strong>
-      {per} at the bottom, <strong>{num(highMean)}{unitWord}</strong> at the top)
+      ({bottomName}: <strong>{num(lowMean)}{unitWord}</strong>
+      {per}; top {g.share}: <strong>{num(highMean)}{unitWord}</strong>)
     </>
   );
   const largest = Math.max(...[...lowVals, ...highVals].map((v) => Math.abs(v)));
-  // The finding in words, from the signs of the two ends
-  const trend = (bottom, top) => {
-    if (Math.abs(top - bottom) < 0.15) return bottom >= 0 && top >= 0 ? "grow about as fast at the bottom as at the top" : bottom <= 0 && top <= 0 ? "fall about as fast at the bottom as at the top" : "barely change at either end";
-    if (bottom >= 0 && top >= 0) return top > bottom ? "grow faster at the top than at the bottom" : "grow faster at the bottom than at the top";
-    if (bottom <= 0 && top <= 0) return top > bottom ? "fall faster at the bottom than at the top" : "fall faster at the top than at the bottom";
-    return top > bottom ? "grow at the top and fall at the bottom" : "grow at the bottom and fall at the top";
-  };
   const summary = diff ? (
-    largest < 0.25 ? (
-      <>The policies barely change income growth at either end, under {formatOneDp(Math.max(0.1, Math.ceil(largest * 10 + 1e-9) / 10))} points{per}.</>
+    largest < BARELY_PP ? (
+      <>The policies barely change income growth at either end {span}, by under {formatOneDp(Math.max(0.1, Math.ceil(largest * 10 + 1e-9) / 10))}pp{per}.</>
     ) : (
-      <>The policies change income growth {gap < 0.15 ? "about equally at both ends" : highMean > lowMean ? "more at the top" : "more at the bottom"} {ends}.</>
+      <>
+        The policies {changeWords(lowMean, highMean, largest)} {span} {ends}
+        {nearZero(lowMean, highMean) ? ", though single years move more" : ""}.
+      </>
     )
   ) : (
-    <>Under current law, real incomes {trend(lowMean, highMean)} {ends}.</>
+    // In the growth view the rows are current law plus the policies (LS1)
+    <>{measures ? "With the selected policies" : "Under current law"}, real incomes {trendWords(lowMean, highMean)} {ends}.</>
   );
   // The ranges and exact groups, for About this chart
   const low = skip ? `second-lowest-income ${g.share}` : `lowest-income ${g.share}`;
@@ -319,7 +352,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   };
   const rangesNote = `Bottom is the ${low}, top the highest-income ${g.share}${who}. ${
     annual ? `Each year from ${fyDash(annualYears[0].year)} to ${fyDash(end.year)}` : `From ${fyDash(first.year)} to ${fyDash(end.year)}`
-  }, ${diff ? "the policies change their growth by" : "their real income changes by"} ${between(lowVals)}${diff ? " points" : "%"}${per} and ${between(highVals)}${diff ? " points" : "%"} respectively.`;
+  }, ${diff ? "the policies change their growth by" : "their real income changes by"} ${between(lowVals)}${unitWord}${per} and ${between(highVals)}${unitWord} respectively.`;
 
   // Under the key only the short decile-1 (AHC) caution; the vigintile
   // note is in About this chart, with the key starting at vigintile 2
@@ -337,12 +370,6 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         value: view,
         onChange: setView,
         options: Object.entries(VIEWS).map(([value, label]) => ({ value, label })),
-      },
-      offer.groupings.length > 1 && {
-        label: "Income groups",
-        value: grouping,
-        onChange: setGrouping,
-        options: offer.groupings.map((id) => ({ value: id, label: GROUPINGS[id].label })),
       },
       housingOption(basis, setBasis, offer.bases),
       offer.populations.length > 1 && {
@@ -381,9 +408,9 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     info: {
       shows: `The real change in the median income of each ${g.share} of people, ${annual ? "on the year before" : "between the two years"}${diff ? ", with the policies less without them, in percentage points" : ""}.`,
       how: [
-        measures && !diff && "Current law's growth plus the policies' effect, from the same pair of simulations.",
+        measures && "The effect of the policies is growth with them less growth under current law.",
         `Bottom is the ${low}; top the highest-income ${g.share}${who}.`,
-        `${annual ? `Each year from ${fyDash(annualYears[0].year)} to ${fyDash(end.year)}` : `From ${fyDash(first.year)} to ${fyDash(end.year)}`}, ${diff ? "the policies change their growth by" : "their real income changes by"} ${between(lowVals)}${diff ? " points" : "%"}${per} and ${between(highVals)}${diff ? " points" : "%"} respectively.`,
+        `${annual ? `Each year from ${fyDash(annualYears[0].year)} to ${fyDash(end.year)}` : `From ${fyDash(first.year)} to ${fyDash(end.year)}`}, ${diff ? "the policies change their growth by" : "their real income changes by"} ${between(lowVals)}${unitWord}${per} and ${between(highVals)}${unitWord} respectively.`,
         popNote.trim(),
       ],
       caveats: [
