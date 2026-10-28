@@ -187,6 +187,9 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
     for (const point of data) {
       if (point.netChange === null) continue;
       values.push(point.netChange);
+      // The five-age line at an end reads ages beyond the window, so it can
+      // pass the bars: the axis holds it too
+      if (!stacked && Number.isFinite(point.smooth)) values.push(point.smooth);
       if (byMeasure) {
         values.push(point.parts.reduce((sum, part) => sum + Math.max(0, part.value), 0));
         values.push(point.parts.reduce((sum, part) => sum + Math.min(0, part.value), 0));
@@ -194,7 +197,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
     }
     return niceRange(Math.min(...values), Math.max(...values), { maxSteps: 5 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, policies, selectedPolicies, group, byMeasure, year, packageRun]);
+  }, [rows, policies, selectedPolicies, group, byMeasure, stacked, year, packageRun]);
   const members = useMemo(
     () =>
       legendMembership(catalogue, selectedPolicies, (id) =>
