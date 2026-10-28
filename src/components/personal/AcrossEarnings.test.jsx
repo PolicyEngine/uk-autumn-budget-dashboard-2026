@@ -7,7 +7,7 @@ import { fireEvent, render, within } from "@testing-library/react";
 import { AcrossEarnings } from "./SingleYearResults";
 import { normaliseHouseholdImpact } from "../../utils/householdImpactApi";
 
-// A real answer with both cards' parts: the middle earner's, 2027-28
+// A real answer with both cards' parts: the middle earner who lets a flat, 2027-28
 const file = JSON.parse(readFileSync(join(fileURLToPath(import.meta.url), "..", "..", "..", "..", "public", "data", "household_presets.json"), "utf8"));
 const answer = (id, year = 2027) =>
   normaliseHouseholdImpact(file.entries.find((entry) => entry.preset_id === id && entry.year === year).response);
@@ -19,7 +19,7 @@ const pressed = (card, name) => within(card).getByRole("button", { name }).getAt
 
 describe("the two Across earnings cards", () => {
   it("each draw the same Show chips under their plot, one state for both", () => {
-    const data = answer("middle-earner");
+    const data = answer("landlord-45k");
     const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
     const [net, rate] = cards(container);
     // No box above the pair: each card's key is in its own legend row
@@ -69,9 +69,37 @@ describe("the two Across earnings cards", () => {
     expect(optionsLabel(net)).toBe("Change");
   });
 
+  it("draw Both on both cards when it is picked on either: two total lines, no parts (Vahid, 28 Oct)", () => {
+    const data = answer("landlord-45k");
+    const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
+    const [net, rate] = cards(container);
+    chooseOption(rate, "Both");
+    // Picked on the rate card, the net income card follows
+    expect(net.querySelector("svg.earnings-svg").getAttribute("data-view")).toBe("both");
+    expect(rate.querySelector(".mtr-plot").getAttribute("data-view")).toBe("both");
+    // Net income: current law dashed and with the policies solid, no layers or chips
+    expect(net.querySelectorAll(".earnings-total")).toHaveLength(2);
+    expect(net.querySelector(".earnings-total-before").getAttribute("stroke-dasharray")).toBeTruthy();
+    expect(net.querySelector(".earnings-layer")).toBeNull();
+    for (const card of [net, rate]) {
+      expect(card.querySelector(".series-toggle-chip")).toBeNull();
+      const legend = card.querySelector(".single-year-legend");
+      expect(legend).toHaveTextContent("Under current law");
+      expect(legend).toHaveTextContent("With the selected policies");
+    }
+    // "You" gives both values
+    expect(net.querySelector(".earnings-you text").textContent).toMatch(/^You: £[\d,]+ → £[\d,]+$/);
+    expect(net.querySelector(".chart-description")).toHaveTextContent(/under current law and £[\d,]+ with the selected policies/);
+    // Back on the net income card, both switch again
+    chooseOption(net, "Change");
+    expect(rate.querySelector(".mtr-plot").getAttribute("data-view")).toBe("change");
+    chooseOption(net, "Both");
+    expect(rate.querySelector(".mtr-plot").getAttribute("data-view")).toBe("both");
+  });
+
   it("drop the 'Click to show or hide' hint from both keys at the first click", () => {
     window.sessionStorage.removeItem("pe-series-toggle-hint-seen");
-    const data = answer("middle-earner");
+    const data = answer("landlord-45k");
     const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
     const [net, rate] = cards(container);
     expect(net.querySelector(".series-toggle-hint")).toHaveTextContent("Click to show or hide");
@@ -83,7 +111,7 @@ describe("the two Across earnings cards", () => {
   });
 
   it("say so when the answer has no breakdown by tax and benefit, rather than silently drawing one line", () => {
-    const data = answer("middle-earner");
+    const data = answer("landlord-45k");
     const bare = { ...data.sweep, netParts: null, parts: null };
     const { container } = render(<AcrossEarnings sweep={bare} salary={data.salaryUsed} yearLabel="2027-28" />);
     expect(container.querySelector(".across-earnings-no-parts")).toHaveTextContent(
@@ -101,11 +129,11 @@ describe("the two Across earnings cards", () => {
     const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
     const [net, rate] = cards(container);
     expect(net.querySelector(".chart-description").textContent).toMatch(/^With no earnings, your household's net income is about £[\d,]+ a year with the selected policies\.$/);
-    expect(rate.querySelector(".chart-description").textContent).toMatch(/^On your first £200 of earnings, your marginal tax rate falls from 16% to 0%, so you keep £200 instead of £\d+\.$/);
+    expect(rate.querySelector(".chart-description").textContent).toMatch(/^On your first £200 of earnings, your marginal tax rate falls from 20% to 0%, so you keep £200 instead of £\d+\.$/);
     expect(net.querySelector(".earnings-you")).not.toBeNull();
     fireEvent.click(within(rate).getByRole("button", { name: "About this chart" }));
     // The allowance caveat flags a rate that rises at the start of earnings
-    // with the policies; here they lower it there (16% to 0%), so none
+    // with the policies; here they lower it there (20% to 0%), so none
     expect(rate.querySelector(".chart-more-info")).not.toHaveTextContent(/at or below the full new State Pension/);
     expect(rate.querySelector(".chart-more-info")).not.toHaveTextContent(/usual personal allowance applies again/);
   });

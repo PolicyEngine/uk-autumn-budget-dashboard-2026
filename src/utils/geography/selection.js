@@ -13,8 +13,8 @@ import { combinedEntryFor } from "../publication/select";
  * - otherwise the "not published yet" notice. No card picks a policy of
  *   its own: the header's Policies selector is the policy choice, and one
  *   policy never stands in silently for a selection of several. The
- *   constituency card alone offers, in its Options pill, a choice among
- *   the selection's published runs (areaPolicyOptions), named in its title.
+ *   constituency map alone, with no combined run by constituency, stacks
+ *   the selected policies' own rows (stack.js; Vahid, 28 October).
  */
 
 /**
@@ -33,12 +33,15 @@ export function choiceLabel(choice, policies) {
   if (choice.kind === "package") {
     return choice.members && !choice.all ? "Selected policies (combined)" : "All policies (the full package)";
   }
+  if (choice.kind === "stack") {
+    return choice.all ? "All policies (each policy's effect added up)" : "Selected policies (each policy's effect added up)";
+  }
   return "";
 }
 
 /** The measure names a choice covers, for export metadata. */
 export function choiceMeasureNames(choice, policies) {
-  if (choice.kind === "package" && choice.members) {
+  if ((choice.kind === "package" || choice.kind === "stack") && choice.members) {
     return choice.members.map((id) => (policies ?? []).find((policy) => policy.id === id)?.name ?? id);
   }
   if (choice.kind === "package") {
@@ -105,52 +108,4 @@ export function chooseSelectionReform({
     return { kind: "package", reform: packageKey, members, all };
   }
   return { kind: "no-package", reason, members, all };
-}
-
-/** The constituency card's Policy option for the selection's combined run. */
-export const COMBINED_CHOICE = "combined";
-
-/**
- * The constituency card's Policy options, an explicit choice in its
- * Options pill: the selection's published combined run (when one is
- * published for exactly the selected policies and the card's file has
- * rows for it), then each selected policy, in the page's order, whose own
- * run the file has. Each option is one published run, never a sum.
- *
- * The default is the combined run when published, else the first single
- * policy with results, so the card never says "not published" while a
- * selected policy has a map. No options (null default) leaves the card's
- * notice as chooseSelectionReform gives it.
- *
- * @param {{selectedIds: Array<string>, policyIds: Array<string>,
- *   packageKey?: string|null, hasArea: (reform: string) => boolean}} options
- * @returns {{options: Array<{value: string, reform: string}>,
- *   defaultValue: string|null}}
- */
-export function areaPolicyOptions({ selectedIds, policyIds, packageKey = null, hasArea }) {
-  const ids = [...new Set(selectedIds ?? [])];
-  const order = policyIds ?? [];
-  const rank = (id) => (order.indexOf(id) < 0 ? Infinity : order.indexOf(id));
-  const options = [];
-  if (ids.length > 1 && typeof packageKey === "string" && hasArea(packageKey)) {
-    options.push({ value: COMBINED_CHOICE, reform: packageKey });
-  }
-  for (const id of [...ids].sort((a, b) => rank(a) - rank(b))) {
-    if (hasArea(id)) options.push({ value: id, reform: id });
-  }
-  return { options, defaultValue: options[0]?.value ?? null };
-}
-
-/**
- * The card's choice for a Policy option (`value`, kept only while it is
- * offered; else the default), as chooseSelectionReform's shape: the
- * combined run as the package, a single policy as its own measure. With
- * no option, chooseSelectionReform's choice (its notice).
- */
-export function chooseAreaPolicy({ value, selectedIds, policyIds, reforms, packageKey = null, hasArea }) {
-  const { options, defaultValue } = areaPolicyOptions({ selectedIds, policyIds, packageKey, hasArea });
-  const chosen = options.some((option) => option.value === value) ? value : defaultValue;
-  const base = chooseSelectionReform({ selectedIds, policyIds, reforms, packageKey });
-  if (chosen === null || chosen === COMBINED_CHOICE) return { choice: base, options, value: chosen };
-  return { choice: { kind: "measure", reform: chosen }, options, value: chosen };
 }

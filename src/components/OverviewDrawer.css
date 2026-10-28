@@ -68,11 +68,13 @@
   z-index: 1;
   display: grid;
   flex: none;
-  grid-template-columns: 40px 1fr 40px;
+  grid-template-columns: 1fr 40px;
   align-items: center;
   gap: 8px;
   height: var(--overview-band-height);
-  padding: 0 12px;
+  /* The wordmark starts on the body's 20px left edge (less its link's 6px
+     padding), as the title band's mark lines up with its content */
+  padding: 0 12px 0 14px;
   background: var(--band-gradient);
   background-size: 100vw 100%;
   background-position: left top;
@@ -85,12 +87,17 @@
   box-shadow: 0 1px 0 var(--shadow-soft);
 }
 
-/* PolicyEngine's white wordmark, centred in the band at the site header's
+/* No spacer: the wordmark sits at the left, the close button at the right */
+.overview-header-spacer {
+  display: none;
+}
+
+/* PolicyEngine's white wordmark, at the left of the band at the site header's
    size (24px tall); its link a soft white tint on hover, a white ring on
    keyboard focus, as the band's mark has (.title-mark-link) */
 .overview-logo-link {
   display: flex;
-  justify-self: center;
+  justify-self: start;
   min-width: 0;
   max-width: 100%;
   padding: 4px 6px;
@@ -126,8 +133,9 @@
   align-items: center;
   align-self: flex-start;
   gap: 8px;
-  /* 8px to the title: eyebrow and title read as one label */
-  margin: 0 0 8px;
+  /* 16px to the title, 24px from the title to the intro, 32px between
+     sections: one rising rhythm from the eyebrow down */
+  margin: 0 0 16px;
   font-size: var(--fs-small);
   font-weight: 600;
   line-height: 1.4;
@@ -182,23 +190,28 @@
   outline-offset: -2px;
 }
 
-/* One spacing scale for the whole panel: 24px between sections (the
-   intro, each link group, the footer), 8px from a label to its content,
-   and one left edge (20px) for everything. The sections follow one
-   another from the top; any spare height falls below the footer, so no
-   gap opens between them however tall the window. */
+/* One spacing scale for the whole panel: 32px between sections (the
+   intro, each link group, and the hairline-split 16px + 16px above "Built
+   with"), 12px from a label to its content, and one left edge (20px) for
+   everything, 24px under the header. The panel is a full-height column
+   with "Built with" at its foot: the body grows to fill the height above
+   it, and any spare height is shared equally by the three gaps between
+   the sections (auto margins on the link groups), so it neither opens as
+   a blank block at the bottom nor piles up in one gap. A window too short
+   for them all scrolls, with the 32px gaps kept. */
 .overview-body {
   display: flex;
-  flex: none;
+  flex: 1 0 auto;
   flex-direction: column;
-  gap: 24px;
-  padding: 24px 20px 0;
+  gap: 32px;
+  padding: 24px 20px 16px;
 }
 
 .overview-nav {
   display: flex;
+  flex: 1 0 auto;
   flex-direction: column;
-  gap: 24px;
+  gap: 32px;
 }
 
 .overview-group {
@@ -206,11 +219,21 @@
   flex-direction: column;
 }
 
+/* The spare height's three equal shares: above each group, and under
+   the last one (above "Built with") */
+.overview-nav > .overview-group {
+  margin-top: auto;
+}
+
+.overview-nav > .overview-group:last-child {
+  margin-bottom: auto;
+}
+
 /* A section's label ("In this dashboard", "More from PolicyEngine",
-   "Built with"): small semibold muted words, sentence case, 8px above
+   "Built with"): small semibold muted words, sentence case, 12px above
    its content */
 .overview-group-label {
-  margin: 0 0 8px;
+  margin: 0 0 12px;
   font-size: var(--fs-small);
   font-weight: 600;
   line-height: 1.4;
@@ -220,9 +243,9 @@
 }
 
 /* The intro, compact for a 380px panel: a 22px title, 15px body at
-   1.5, 12px between them and to the provisional notice */
+   1.65, 24px between them, 16px to the provisional notice */
 .overview-intro .landing-heading {
-  margin: 0 0 12px;
+  margin: 0 0 24px;
   font-size: 1.375rem;
   /* Tight enough that a two-line title reads as one block */
   line-height: 1.25;
@@ -230,14 +253,14 @@
 
 .overview-intro .landing-intro {
   font-size: var(--fs-body);
-  line-height: 1.5;
+  line-height: 1.65;
 }
 
 /* The provisional notice: a small rounded box (not a pill, as it can
    wrap to two lines) under the intro */
 .overview-intro .publication-provisional {
   display: block;
-  margin: 12px 0 0;
+  margin: 16px 0 0;
   padding: 6px 10px;
   border-radius: 8px;
   font-size: var(--fs-micro);
@@ -364,13 +387,15 @@
   transform: translate(2px, -2px);
 }
 
-/* "Built with": the last section, 24px under the groups, set off by a
-   hairline 16px above its label; its links as small chips in one row,
-   each with its icon and an arrow out */
+/* "Built with": the last section, at the foot of the panel (the body
+   above fills the rest), at least 32px under the groups with a hairline
+   halfway (the body's 16px, then its own); its links as small chips in
+   one row, each with its icon and an arrow out; 20px under them (more on
+   a phone with a home indicator) */
 .overview-footer {
   flex: none;
-  margin: 24px 20px 0;
-  padding: 16px 0 24px;
+  margin: 0 20px;
+  padding: 16px 0 calc(20px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--pe-gray-100);
 }
 

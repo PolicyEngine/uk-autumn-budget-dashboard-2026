@@ -3,13 +3,18 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   POLICY_PARAMETERS_SCHEMA,
+  changeLines,
   describeSegment,
   formatChange,
   formatValue,
   loadPolicyParameters,
+  measureWindows,
   monthOf,
+  outOfForceText,
   parameterTableFor,
+  periodLabel,
   resetPolicyParameters,
+  schedulePeriods,
   segmentsFor,
 } from "./policyParameters";
 
@@ -36,12 +41,47 @@ describe("policy_parameters.json, as the page reads it", () => {
   });
 
   it("draws a VAT window as current law either side of it", () => {
-    // October 2026 to March 2028: months 6 to 24 of the 72 from April 2026
-    const segments = segmentsFor(rowsOf("domestic_electricity_zero_vat")["VAT on domestic electricity in Great Britain"]);
-    expect(segments.map((s) => [s.start, s.end, s.after])).toEqual([[0, 6, 0.05], [6, 24, 0], [24, 72, 0.05]]);
+    // October 2026 to June 2027: months 6 to 15 of the 72 from April 2026
+    const segments = segmentsFor(rowsOf("domestic_electricity_zero_vat")["VAT on domestic electricity"]);
+    expect(segments.map((s) => [s.start, s.end, s.after])).toEqual([[0, 6, 0.05], [6, 15, 0], [15, 72, 0.05]]);
     expect(segments[1]).toMatchObject({ from: 2026, to: 2027 });
   });
 
+  it("writes fuel duty's schedule as the periods each rate is in force, with current law either side (PR 290, Anthony, 19:37)", () => {
+    const periods = schedulePeriods(rowsOf("fuel_duty_rise_deferral")["Fuel duty"]);
+    expect(periods.map((p) => [p.label, p.before, p.after])).toEqual([
+      ["To 31 December 2026", 52.95, 52.95],
+      ["1 January to 28 February 2027", 55.95, 52.95],
+      ["1 to 31 March 2027", 57.95, 52.95],
+      ["1 April to 30 June 2027", 60.59, 52.95],
+      ["1 July 2027 to 31 March 2028", 60.59, 60.59],
+    ]);
+  });
+
+  it("says a change the same in every year once, over its years (PR 290, Anthony, 19:36)", () => {
+    const lines = changeLines(file.measures.property_income_rates_up.rows);
+    expect(lines.map((line) => [line.label, line.period, line.before, line.after])).toEqual([
+      ["Property basic rate", "2027-28 to 2031-32", 0.22, 0.24],
+      ["Property higher rate", "2027-28 to 2031-32", 0.42, 0.44],
+      ["Property additional rate", "2027-28 to 2031-32", 0.47, 0.49],
+    ]);
+    // A change that varies, or skips a year, keeps a line a year
+    const point = (year, after) => ({ key: String(year), label: `${year}`, year, before: 1, after });
+    const varying = changeLines([{ label: "A", unit: "gbp", points: [point(2027, 2), point(2028, 3)] }]);
+    expect(varying.map((line) => line.period)).toEqual(["2027", "2028"]);
+    const gap = changeLines([{ label: "B", unit: "gbp", points: [point(2027, 2), point(2028, 1), point(2029, 2)] }]);
+    expect(gap.map((line) => line.period)).toEqual(["2027", "2029"]);
+  });
+
+});
+
+describe("periods", () => {
+  it("names a period from its first day to its last", () => {
+    expect(periodLabel("2027-01-01", "2027-02-28")).toBe("1 January to 28 February 2027");
+    expect(periodLabel("2027-03-01", "2027-03-31")).toBe("1 to 31 March 2027");
+    expect(periodLabel("2027-07-01", "2028-03-31")).toBe("1 July 2027 to 31 March 2028");
+    expect(periodLabel(null, "2026-12-31")).toBe("To 31 December 2026");
+  });
 });
 
 describe("words", () => {
@@ -93,5 +133,26 @@ describe("loadPolicyParameters", () => {
     resetPolicyParameters();
     expect(await loadPolicyParameters({ fetchImpl: async () => { throw new Error("offline"); } })).toBeNull();
     resetPolicyParameters();
+  });
+});
+
+describe("each measure's scored years", () => {
+  const fy = (year) => `${year}-${String((year + 1) % 100).padStart(2, "0")}`;
+  const windows = measureWindows(file);
+
+  it("reads the first and last year a measure's parameters differ from current law", () => {
+    expect(windows.carers_allowance_earnings_taper).toEqual({ first: 2030, last: 2031 });
+    expect(windows.household_energy_payment_2026).toEqual({ first: 2026, last: 2026 });
+    expect(windows.state_pension_income_tax_protection).toEqual({ first: 2027, last: 2029 });
+    expect(measureWindows(null)).toEqual({});
+  });
+
+  it("says when a measure is not in force: before it starts, after it ends, or its one year", () => {
+    expect(outOfForceText(windows.carers_allowance_earnings_taper, 2027, fy)).toBe("Starts 2030-31");
+    expect(outOfForceText(windows.household_energy_payment_2026, 2027, fy)).toBe("2026-27 only");
+    expect(outOfForceText(windows.state_pension_income_tax_protection, 2030, fy)).toBe("Ended 2029-30");
+    // In force, or no window: nothing to say
+    expect(outOfForceText(windows.state_pension_income_tax_protection, 2028, fy)).toBeNull();
+    expect(outOfForceText(undefined, 2027, fy)).toBeNull();
   });
 });

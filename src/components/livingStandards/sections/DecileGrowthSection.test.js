@@ -59,3 +59,23 @@ describe("the growth sentences", () => {
     );
   });
 });
+
+describe("an end group's mean effect in the growth sentence", () => {
+  it("has two decimals, says under 0.01 for a tiny one, and 0 only for none", async () => {
+    const { effectEndText } = await import("./DecileGrowthSection");
+    expect(effectEndText(0.031)).toBe("+0.03");
+    expect(effectEndText(-0.0249)).toBe("−0.02");
+    expect(effectEndText(0.004)).toBe("under 0.01");
+    expect(effectEndText(-0.001)).toBe("under 0.01");
+    expect(effectEndText(0)).toBe("0");
+  });
+});
+
+describe("the growth charts leave out the lowest tenth", () => {
+  it("says why in one caveat, naming no one", async () => {
+    const { LOWEST_TENTH_CAVEAT } = await import("./DecileGrowthSection");
+    expect(LOWEST_TENTH_CAVEAT).toBe(
+      "The lowest tenth is not shown: survey incomes at the very bottom are often below what those households spend, so their growth is unreliable.",
+    );
+  });
+});

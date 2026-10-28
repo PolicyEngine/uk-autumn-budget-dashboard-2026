@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS } from "./MethodologyTab";
 import { METHOD_ANCHORS } from "./methodology/anchors";
-import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
+import { unavailableMeasures } from "./methodology/measures";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { measureCatalogueFixture } from "../test/measureCatalogueFixture";
 const catalogue = buildMeasureCatalogue(measureCatalogueFixture());
@@ -81,13 +81,14 @@ describe("MethodologyTab", () => {
 
   it("points to Policies for what each measure does and how it is modelled, listing none itself", () => {
     // Each fact once: the measures' descriptions and modelling live on the
-    // Policies cards, so Methodology names no published measure
+    // Policies cards, so Methodology names a measure only where its method
+    // differs (the costing bands, the poverty income)
     const onShowTab = vi.fn();
     const { container } = renderTab(onShowTab);
     expect(screen.queryByRole("heading", { name: "Published measure descriptions" })).toBeNull();
     const model = container.querySelector(`#${METHOD_SECTIONS.model}`);
     const summary = model.querySelector(".section-heading p");
-    expect(summary).toHaveTextContent("What each policy does and how it is modelled is on Policies.");
+    expect(summary).toHaveTextContent("what each policy does and how it is modelled is on Policies.");
     const link = within(summary).getByRole("link", { name: "Policies" });
     expect(link).toHaveAttribute("href", "?tab=policies");
     fireEvent.click(link);
@@ -119,11 +120,12 @@ describe("MethodologyTab", () => {
     expect(card).toHaveTextContent("roughly half of fuel duty receipts");
   });
 
-  it("says under Policies added up which way a policy that raises pay is off on its own, naming no measure", () => {
+  it("says under Policies added up that separate runs leave out interactions, and nothing on survey values no measure replaces", () => {
     const { container } = renderTab();
     const limitations = container.querySelector(`#${METHOD_SECTIONS.limitations}`);
     const card = within(limitations).getByRole("button", { name: "Policies added up" }).closest(".method-topic");
-    expect(card).toHaveTextContent("its cost is higher, and its fall in poverty larger, than in the run of all policies together");
+    expect(card).toHaveTextContent("so they leave out interactions between policies");
+    expect(card).not.toHaveTextContent(/values reported in the survey/);
   });
 
   it("counts a change in VAT in the inequality income, not VAT itself, and says in-kind services once", () => {
@@ -135,21 +137,38 @@ describe("MethodologyTab", () => {
     expect(text.match(/such as the NHS and schools/g)).toHaveLength(1);
   });
 
-  it("lists the measures the model cannot cost", () => {
-    renderTab();
+  it("says why some Budget policies are not modelled and links to their list on Policies, listing none itself", () => {
+    // Each fact once: the list and each reason live at the foot of Policies
+    const onShowTab = vi.fn();
+    renderTab(onShowTab);
     const card = screen.getByRole("button", { name: "Not modelled" }).closest(".method-topic");
-    fireEvent.click(within(card).getByRole("button", { name: "Not modelled" }));
-    const items = within(card).getAllByRole("listitem");
-    expect(items).toHaveLength(NOT_MODELLED.length);
-    expect(NOT_MODELLED.length).toBeGreaterThan(0);
-    for (const measure of NOT_MODELLED) {
-      expect(card).toHaveTextContent(`${measure.name}${measure.why}`);
-    }
-    // Text only: no measure the catalogue publishes, and no figure
-    for (const measure of catalogue.measures) {
-      expect(items.some((item) => item.querySelector(".mm-reason-name").textContent === measure.name)).toBe(false);
-    }
-    expect(card.querySelector("ul").textContent).not.toMatch(/£|\d+(\.\d+)?%/);
+    expect(card.querySelectorAll("li")).toHaveLength(0);
+    expect(card).toHaveTextContent("cannot be costed household by household");
+    const link = within(card).getByRole("link", { name: "Budget policies we do not model", hidden: true });
+    expect(link).toHaveAttribute("href", "?tab=policies#budget-measures-not-modelled");
+    fireEvent.click(link);
+    expect(onShowTab).toHaveBeenLastCalledWith("policies");
+    expect(card.textContent).not.toMatch(/£|\d+(\.\d+)?%/);
+  });
+
+  it("compares with the Budget's post-behavioural costings, with the wider band where they include behaviour", () => {
+    const { container } = renderTab();
+    const finances = document.getElementById(METHOD_ANCHORS.publicFinances);
+    expect(finances).toHaveTextContent("Budget 2026 publishes one costing per measure, after behavioural responses (Table 6.1");
+    expect(finances).toHaveTextContent("larger of 25% of the official one and £50m");
+    expect(finances).toHaveTextContent("larger of 10% and £50m");
+    expect(finances).not.toHaveTextContent(/static costing, like ours|Choose Post-behavioural/);
+    expect(within(finances).getByRole("link", { name: "business fuel use", hidden: true })).toHaveAttribute("href", "#method-business-fuel");
+    expect(container.querySelector("#method-business-fuel")).not.toBeNull();
+  });
+
+  it("leaves the energy payment out of poverty, and calls the local-area file uncertified", () => {
+    const { container } = renderTab();
+    expect(container.textContent).toContain(
+      "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate.",
+    );
+    expect(container.textContent).not.toContain("certified together");
+    expect(container.textContent).toContain("which that certificate does not cover");
   });
 
   it("points to the household calculation from its slot", () => {
@@ -209,6 +228,17 @@ describe("MethodologyTab", () => {
     expect(card.textContent).not.toMatch(/\d{1,3}(,\d{3})+/);
   });
 
+  it("says under Data, not the household scatter, that public files are signed off, and that a pending file can publish", () => {
+    const { container } = renderTab();
+    const data = container.querySelector(`#${METHOD_SECTIONS.data}`);
+    const card = within(data).getByRole("button", { name: "Published files" }).closest(".method-topic");
+    expect(card).toHaveTextContent("Each public data file is listed with a named reviewer");
+    expect(card).toHaveTextContent("can be published as pending, for at most 14 days");
+    const scatter = document.getElementById(METHOD_ANCHORS.scatter);
+    expect(scatter).not.toHaveTextContent("Sign-off");
+    expect(container).not.toHaveTextContent("signs off every public data file before it is published");
+  });
+
   it("states the floor of 3 survey households for the deciles and ages, and that the age filter counts records", () => {
     const { container } = renderTab();
     const small = [...container.querySelectorAll(".method-fact")].find(
@@ -223,7 +253,9 @@ describe("MethodologyTab", () => {
     expect(text).not.toContain("any figures that would give them back");
     expect(text).toContain("The rest of the measure is shown.");
     expect(text).toContain("so this counts records, not households");
-    expect(text).toContain("In the age and decile tables, a figure resting on one or two survey households is not published, nor any figure in the same table that would give it back.");
+    // The age sentence says what is withheld, as the deciles' does
+    expect(text).toContain("When an age band or single year of age rests on one or two survey households, it is not published: a single year takes the other single years of its band with it, and a band takes every row but all ages.");
+    expect(text).not.toContain("would give it back");
     expect(text).not.toContain("survey records is not shown");
   });
 

@@ -4,8 +4,10 @@
 // zero line, sorted by size, the value at the bar's end; then every selected
 // measure with no change that year, as a row with no bar, "No change" and
 // why (noPovertyEffectReason), so no selected measure goes missing; a small
-// non-zero change keeps its bar ("under 0.001pp"), coloured by direction and
-// shaded by size, the largest darkest. "Year by year": a compact table of
+// non-zero change keeps its bar ("under 0.001pp"), coloured by direction
+// only (the bar's length already shows its size): a fall in poverty or
+// inequality in the gain colour, a rise in the loss colour, as the other
+// charts use them, with a small key under the bars. "Year by year": a compact table of
 // measures by years, each cell shaded by size and sign (for poverty, a fall
 // in the gain colour and a rise in the loss colour; for inequality, one
 // neutral colour, as a change in inequality is no household's gain or loss)
@@ -14,10 +16,11 @@
 import { CHART_LOGO } from "../utils/chartLogo";
 import MeasureRowLabel from "./MeasureRowLabel";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
-import { CHART_COLOURS, fiscalYearTick, magnitudeColours, shortFiscalYearTick } from "../utils/chartTheme";
+import { CHART_COLOURS, fiscalYearTick, shortFiscalYearTick } from "../utils/chartTheme";
 
-// An inequality bar: the neutral teal-slate (SummaryMetricChart's INEQUALITY_FILL)
-const INEQUALITY_BAR = CHART_COLOURS.highlight;
+// A bar's colour by direction: a fall (better) in the gain colour, a rise
+// (worse) in the loss colour
+export const directionColour = (value) => (value < 0 ? CHART_COLOURS.gain : CHART_COLOURS.loss);
 import { useDisplayYears } from "../utils/displayYears";
 import { noPovertyEffectReason } from "../utils/legendMembership";
 import "./MeasureEffectsView.css";
@@ -67,16 +70,15 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
     1e-12,
     ...rows.flatMap((m) => (view === "years" ? m.points.map((p) => Math.abs(p.value ?? 0)) : [Math.abs(m.value)])),
   );
-  // Each bar by direction and size: for poverty, a fall in the gain ramp
-  // and a rise in the loss ramp, the largest the darkest (magnitudeColours);
-  // for inequality, one neutral colour (no household's gain or loss). The
-  // measure's own colour is the dot by its name
-  const barColours =
-    view === "years"
-      ? []
-      : metric.choices === "inequality"
-        ? rows.map(() => INEQUALITY_BAR)
-        : magnitudeColours(rows.map((m) => m.value), { better: (v) => v < 0 });
+  // Each bar by direction only, for poverty and inequality alike: a fall in
+  // the gain colour, a rise in the loss colour. The measure's own colour is
+  // its icon by the name
+  const barColours = view === "years" ? [] : rows.map((m) => directionColour(m.value));
+  const noun = metric.choices === "inequality" ? "inequality" : "poverty";
+  const key = [
+    rows.some((m) => m.value < 0) && { key: "fall", label: `Lowers ${noun}`, colour: CHART_COLOURS.gain },
+    rows.some((m) => m.value > 0) && { key: "rise", label: `Raises ${noun}`, colour: CHART_COLOURS.loss },
+  ].filter(Boolean);
   const anyNegative = view !== "years" && rows.some((m) => m.value < 0);
   const anyPositive = view !== "years" && rows.some((m) => m.value > 0);
   // The zero line: at the left when every bar goes one way, centred when both
@@ -173,6 +175,16 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
             </div>
           ))}
         </div>
+      )}
+      {view !== "years" && key.length > 0 && (
+        <ul className="mev-key" aria-label="Bar colours">
+          {key.map((item) => (
+            <li key={item.key}>
+              <span className="mev-key-swatch" style={{ background: item.colour }} aria-hidden="true" />
+              {item.label}
+            </li>
+          ))}
+        </ul>
       )}
       <div className="mev-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}

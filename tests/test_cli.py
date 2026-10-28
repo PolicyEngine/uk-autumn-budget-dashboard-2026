@@ -34,11 +34,11 @@ class TestCLI:
             [
                 "generate",
                 "--reforms",
-                "warm_home_discount_top_up",
+                "household_energy_payment_2026",
                 "fuel_duty_rise_deferral",
             ]
         )
-        assert "warm_home_discount_top_up" in args.reforms
+        assert "household_energy_payment_2026" in args.reforms
         assert "fuel_duty_rise_deferral" in args.reforms
 
     def test_parse_args_generate_years(self):
@@ -71,10 +71,10 @@ class TestReformSelection:
         from uk_budget_data.cli import get_reforms_from_ids
 
         reforms = get_reforms_from_ids(
-            ["warm_home_discount_top_up", "fuel_duty_rise_deferral"]
+            ["household_energy_payment_2026", "fuel_duty_rise_deferral"]
         )
         assert len(reforms) == 2
-        assert reforms[0].id == "warm_home_discount_top_up"
+        assert reforms[0].id == "household_energy_payment_2026"
         assert reforms[1].id == "fuel_duty_rise_deferral"
 
     def test_get_reforms_from_ids_warns_unknown(self, capsys):
@@ -82,12 +82,12 @@ class TestReformSelection:
         from uk_budget_data.cli import get_reforms_from_ids
 
         reforms = get_reforms_from_ids(
-            ["warm_home_discount_top_up", "unknown_reform_xyz"]
+            ["household_energy_payment_2026", "unknown_reform_xyz"]
         )
 
         # Should only return the valid one
         assert len(reforms) == 1
-        assert reforms[0].id == "warm_home_discount_top_up"
+        assert reforms[0].id == "household_energy_payment_2026"
 
 
 class TestLegacyGeographyFlag:

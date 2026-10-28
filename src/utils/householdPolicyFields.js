@@ -3,7 +3,8 @@ import { atStatePensionAge } from "./householdImpactApi";
 /**
  * Which of the Household calculator's answers each policy reads, by
  * measure id, so the form asks those up front ("Questions that matter for
- * the selected policies") and leaves the rest under More details.
+ * the selected policies") first in their step and leaves the rest under its
+ * "Other questions".
  *
  * One row per measure: `fields` are the form's field ids (as in
  * HouseholdCalculator's FORM_SECTIONS); `when(inputs, year, field)`
@@ -24,17 +25,13 @@ export const POLICY_FIELDS = {
   fuel_duty_rise_deferral: { fields: ["petrol_spending_per_year", "diesel_spending_per_year"] },
   // Zero VAT on domestic electricity: its electricity bill
   domestic_electricity_zero_vat: { fields: ["electricity_spending_per_year"] },
-  // Warm Home Discount top-up: paid with Universal Credit or Pension
-  // Credit, so whether the household claims what it is entitled to
-  warm_home_discount_top_up: { fields: ["claims_universal_credit"] },
-  // Plan 2 threshold: which loan, if any
-  plan_2_threshold_unfreeze: { fields: ["student_loan_plan"] },
-  // +2pp on dividend, savings and property income
-  unearned_income_rates_up: {
-    fields: ["dividends_per_year", "savings_interest_per_year", "property_income_per_year"],
-  },
-  // State Pension protection: for each adult at State Pension age, their
-  // State Pension and any private pension (which takes the allowance away)
+  // Property income tax rates: property income
+  property_income_rates_up: { fields: ["property_income_per_year"] },
+  // Savings income tax rates: savings interest
+  savings_income_rates_up: { fields: ["savings_interest_per_year"] },
+  // Pension Tax Allowance: for each adult at State Pension age, their
+  // State Pension and any private pension (total income above the full new
+  // State Pension tapers the reduction away)
   state_pension_income_tax_protection: {
     fields: [
       "state_pension_per_year",
@@ -47,8 +44,22 @@ export const POLICY_FIELDS = {
         ? Boolean(inputs.has_partner) && atStatePensionAge(inputs.partner_age, year)
         : atStatePensionAge(inputs.current_age, year),
   },
-  // The threshold freeze to 2031-32 and the employer National Insurance
-  // threshold read the salary, which the essentials ask
+  // Household energy payment: households in England in Council Tax bands
+  // A to D, so the band, where the region is in England
+  household_energy_payment_2026: {
+    fields: ["council_tax_band"],
+    when: (inputs) => !["SCOTLAND", "WALES", "NORTHERN_IRELAND"].includes(inputs.region),
+  },
+  // Carer's Allowance taper: whether you care for someone, and how many
+  // hours a week (the allowance needs 35); the hours only for a carer
+  // (HouseholdCalculator's FIELD_APPLIES)
+  carers_allowance_earnings_taper: { fields: ["is_carer", "care_hours_per_week"] },
+  // Trading allowance £1,000 to £3,000: self-employment or side income,
+  // its receipts and allowable expenses (the allowance replaces the
+  // expenses when larger)
+  trading_allowance_raise: {
+    fields: ["self_employment_receipts_per_year", "self_employment_expenses_per_year"],
+  },
 };
 
 /**

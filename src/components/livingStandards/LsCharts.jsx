@@ -226,8 +226,9 @@ export function LsLineChart({
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
   const visible = series.filter((s) => !s.hidden);
-  // A forecast line's focus is its outturn line's
-  const groupOf = (s) => s.forecastOf ?? s.key;
+  // A forecast line's focus is its outturn line's; `group` joins other
+  // lines of one series (two forecasts of it) without forecastOf's tooltip rule
+  const groupOf = (s) => s.group ?? s.forecastOf ?? s.key;
   const forecastOf = new Map(visible.filter((s) => s.forecastOf).map((s) => [s.key, s.forecastOf]));
   // Rows key years by their start (2028) or as "2028-29"; match either
   const asKey = (fy) => (typeof data[0]?.[xKey] === "number" ? Number(String(fy).slice(0, 4)) : fy);

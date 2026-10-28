@@ -137,7 +137,18 @@ def test_every_household_spends_the_average_on_electricity():
 
 @pytest.mark.parametrize("household", EXAMPLE_HOUSEHOLDS, ids=HOUSEHOLD_IDS)
 def test_zero_vat_on_electricity_reaches_every_household(household):
-    """5% VAT on £1,040 including VAT is £1,040 x 5 / 105 = £49.52."""
+    """The zero rate covers April to June of 2027-28 (from 1 July 2027 the
+    5% rate is back), so 2027-28 carries April to June's share of a year's
+    domestic electricity use (SPRING_SHARE, 22.30%): the module's
+    rate_change_2027, -0.05 x SPRING_SHARE. On £1,040 including VAT that is
+    £1,040 x 0.05 x 22.30% / 1.05 = £11.04, where the whole year's 5%
+    would be £1,040 x 5 / 105 = £49.52."""
+    import inspect
+
+    from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (  # noqa: E501
+        SPRING_SHARE,
+        zero_vat_on_domestic_electricity,
+    )
     from uk_budget_data.calculators import IncomeCurveCalculator
     from uk_budget_data.reforms import (
         ELECTRICITY_VAT_ID,
@@ -154,8 +165,14 @@ def test_zero_vat_on_electricity_reaches_every_household(household):
     reformed = calculator.simulate(household, reform.to_scenario(), [2027])[
         2027
     ]
+    rate_change = (
+        inspect.signature(zero_vat_on_domestic_electricity)
+        .parameters["rate_change_2027"]
+        .default
+    )
+    assert rate_change == pytest.approx(-0.05 * SPRING_SHARE)
     assert reformed - baseline == pytest.approx(
-        [1_040 * 5 / 105] * 3, abs=0.01
+        [1_040 * -rate_change / 1.05] * 3, abs=0.01
     )
 
 

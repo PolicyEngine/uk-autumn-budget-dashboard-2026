@@ -9,7 +9,7 @@ import useCountUp from "../../hooks/useCountUp";
 import { prefersReducedMotion } from "../../utils/chartMotion";
 import { fiscalYearTick, useNarrowViewport } from "../../utils/chartTheme";
 import { MINUS, areaName, money, policyRows, signedPercent, sweepPoints } from "../../utils/singleYear";
-import { STAGE_TIMES } from "../../utils/householdTiming";
+import { STAGE_TIMES, STILL_WORKING_SECONDS, STILL_WORKING_TEXT } from "../../utils/householdTiming";
 import { isStartingUp } from "../../utils/householdImpactApi";
 import NetIncomeWaterfall, { waterfallScaleStart } from "./NetIncomeWaterfall";
 import { layerRows, layersInUse } from "./netIncomeParts";
@@ -168,10 +168,10 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
       // An example's own figures say where they come from
       detail:
         assumed === "example" && spendingSource
-          ? `${spendingSource}. Fuel and electricity policies scale with what you spend; change these in More details to match your household.`
+          ? `${spendingSource}. Fuel and electricity policies scale with what you spend; change these in the Spending step to match your household.`
           : assumed
-            ? "Fuel and electricity policies scale with what you spend; change these in More details to match your household."
-            : "petrol, diesel and electricity, from More details",
+            ? "Fuel and electricity policies scale with what you spend; change these in the Spending step to match your household."
+            : "petrol, diesel and electricity, from the Spending step",
     });
   }
   if (showDependantsNote(data)) {
@@ -234,6 +234,7 @@ function useElapsedSeconds(active, startedAt) {
 export function timeText(seconds, stage = "headline") {
   const times = STAGE_TIMES[stage];
   if (seconds > times.slow) return "Taking longer than usual; still working";
+  if (seconds > STILL_WORKING_SECONDS) return STILL_WORKING_TEXT;
   return times.text;
 }
 
@@ -303,7 +304,8 @@ const shortReason = (text) => {
 function AboutResult({ items, caution, bars, totals }) {
   const noEffect = bars?.noEffectItems ?? [];
   // Employer costs are said with their chip under "No effect on you"
-  const notes = (bars?.notes ?? []).filter((note) => note.kind !== "employer_cost");
+  // A calculator-only measure's note is under the waterfall, beside its bar
+  const notes = (bars?.notes ?? []).filter((note) => note.kind !== "employer_cost" && note.kind !== "calculator_only");
   const under = bars?.underAPound ?? [];
   // The waterfall's bars start above £0 (its axis tick shows where): why
   const scaleStart = totals ? waterfallScaleStart(totals, bars ? bars.rows : null) : 0;
@@ -521,6 +523,16 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
           // showed (chart and table audit, 28 October)
           typeOf={(id) => policyDetailsFor(catalogue.find((policy) => policy.id === id))?.type ?? null}
         />
+        {/* A calculator-only measure (the savings rise): why it is in this
+            household's result but not the national ones, one line under
+            its bar */}
+        {(bars?.notes ?? [])
+          .filter((note) => note.kind === "calculator_only")
+          .map((note) => (
+            <p key={note.id} className="single-year-quiet result-card-calculator-only" data-note={note.kind}>
+              <strong>{note.name}</strong>: {note.text}
+            </p>
+          ))}
       </div>
       <AboutResult items={items} caution={caution} bars={bars} totals={totals} />
     </section>

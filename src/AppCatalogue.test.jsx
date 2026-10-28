@@ -249,6 +249,11 @@ describe("an open page follows the publication", () => {
     entry.artifact_sha256 = await artifactSha256(receipt);
     entry.artifact = `artifacts/alpha/${entry.artifact_sha256.slice(0, 16)}`;
     entry.approval = { ...entry.approval, outputs_sha256: entry.outputs_sha256, artifact_sha256: entry.artifact_sha256 };
+    // The combined run is re-run with it (a stale one would turn the
+    // population tabs to one policy at a time)
+    for (const combined of Object.values(next.combined)) {
+      if (combined.member_outputs_sha256?.alpha) combined.member_outputs_sha256.alpha = entry.outputs_sha256;
+    }
     const overrides = { "manifest.json": JSON.stringify(next), [`${entry.artifact}/receipt.json`]: JSON.stringify(receipt) };
     for (const file of Object.keys(receipt.dashboard.files)) {
       overrides[`${entry.artifact}/${file}`] = file === "distributional_impact.csv" ? corrected : fixtureText(`${previousArtifact}/${file}`);

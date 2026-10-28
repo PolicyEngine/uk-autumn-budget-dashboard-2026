@@ -58,7 +58,7 @@ export function LandingIntro({ headingId, provisional, className = "landing-hero
         incomes across the income distribution, regions and age groups, set
         against the pre-measures forecast. Costings are our own; the economic
         forecast is the OBR&rsquo;s{" "}
-        <SourceLink source="obr_efo_current">Economic and fiscal outlook, March 2026</SourceLink>.
+        <SourceLink source="obr_efo_current">Economic and fiscal outlook, October 2026</SourceLink>.
       </p>
       {provisional}
     </div>

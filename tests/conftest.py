@@ -197,3 +197,30 @@ def pytest_sessionfinish(session, exitstatus):
                 red=True,
             )
         session.exitstatus = pytest.ExitCode.TESTS_FAILED
+
+
+@pytest.fixture
+def pre_budget_registry(monkeypatch):
+    """The registry with the four candidates withdrawn on Budget day put
+    back: the household-calculator tests use them as fixtures of the
+    calculation's machinery (a threshold freeze, a student loan threshold,
+    a one-off payment), not as published measures. The package is
+    unchanged."""
+    from uk_budget_data import reforms
+
+    monkeypatch.setattr(
+        reforms,
+        "_MEASURE_FACTORIES",
+        (
+            *reforms._MEASURE_FACTORIES,
+            reforms._create_warm_home_discount_top_up,
+            reforms._create_threshold_freeze_2031_32,
+            reforms._create_plan_2_threshold_unfreeze,
+            reforms._create_employer_nics_secondary_threshold_raise,
+        ),
+    )
+    monkeypatch.setattr(reforms, "_AUTUMN_BUDGET_2026_REFORMS_CACHE", None)
+    monkeypatch.setattr(reforms, "_REFORM_LOOKUP_CACHE", None)
+    yield
+    reforms._AUTUMN_BUDGET_2026_REFORMS_CACHE = None
+    reforms._REFORM_LOOKUP_CACHE = None

@@ -54,7 +54,7 @@ export const SERIES = AGE_GROUPS.map((group) => ({
   ...GROUP_STYLES[group.key],
 }));
 
-export const TREND_DESCRIPTION = "Average change per person, £ a year.";
+export const TREND_DESCRIPTION = "Average change in household income per person, £ a year.";
 const cumulativeDescription = (first) => `Running total per person from ${fiscalYearTick(first)}, £.`;
 
 
@@ -355,8 +355,12 @@ export function StepLabels({ xAxisMap, yAxisMap, notes, valueAt, paths, columns,
   );
 }
 
-/** One year: the focus group, all ages and the focus group's top measures. */
-export function TrendTooltip({ active, payload, label, focusSeries, allValue, nameOf, cumulative, selectedYear, groupValue, groupLabel }) {
+/**
+ * One year: the focus group, all ages and the focus group's top measures;
+ * with `lines` (the lines shown), every shown line's value, in the key's
+ * order, so no visible line is left out of the hover.
+ */
+export function TrendTooltip({ active, payload, label, focusSeries, allValue, nameOf, cumulative, selectedYear, groupValue, groupLabel, lines = null }) {
   if (!active || !payload?.length) return null;
   const year = Number(label);
   const point = focusSeries.find((each) => each.year === year);
@@ -370,12 +374,25 @@ export function TrendTooltip({ active, payload, label, focusSeries, allValue, na
         {fiscalYearTick(year)}
         {year === Number(selectedYear) ? " · selected year" : ""}
       </p>
+      {lines ? (
+        lines
+          .map((line) => ({ line, value: payload[0]?.payload?.[line.key] }))
+          .filter(({ value }) => value !== null && value !== undefined && Number.isFinite(Number(value)))
+          .map(({ line, value }) => (
+            <div className="chart-tooltip-row" key={line.key}>
+              <span className="chart-tooltip-swatch chart-tooltip-swatch-line" style={{ background: line.colour }} />
+              <span className="chart-tooltip-name">{line.label}</span>
+              <span className="chart-tooltip-value">{signed(Number(value))}{suffix}</span>
+            </div>
+          ))
+      ) : (
       <div className="chart-tooltip-row">
         <span className="chart-tooltip-swatch" style={{ background: FOCUS_COLOUR }} />
         <span className="chart-tooltip-name">{groupLabel}</span>
         <span className="chart-tooltip-value">{signed(mine)}{suffix}</span>
       </div>
-      {allValue(year) !== null && (
+      )}
+      {!lines && allValue(year) !== null && (
         <div className="chart-tooltip-row">
           <span className="chart-tooltip-swatch chart-tooltip-swatch-line" style={{ background: CHART_COLOURS.reference }} />
           <span className="chart-tooltip-name">All ages</span>
@@ -806,6 +823,8 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                   nameOf={nameOf}
                   cumulative={cumulative}
                   selectedYear={selectedYear}
+                  // Lines: every line shown, not only the focus and all ages
+                  lines={byMeasure ? null : ordered.filter((line) => isShown(line.key))}
                 />
               }
             />
@@ -940,7 +959,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
           members={members}
           year={Number(selectedYear)}
           info={{
-            shows: "Average change per person in each age group, each year, with all ages for comparison.",
+            shows: "Average change in household income per person in each age group, each year, with all ages for comparison.",
             how: ["Running total adds up the years from the first one shown."],
             caveats: [
               missingNote,

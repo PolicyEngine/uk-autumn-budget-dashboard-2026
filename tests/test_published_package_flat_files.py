@@ -30,17 +30,17 @@ FIXTURE = (
     Path(__file__).resolve().parents[1]
     / "src/test/fixtures/publication/manifest.json"
 )
-# The eight candidate measures Vahid chose for the package (27 October 2026,
-# evening), sorted by id. (The name is kept from the seven-measure package.)
+# The seven released measures in the package (Budget day, 28 October 2026:
+# the savings and property rates split in two, the savings rates held
+# back), sorted by id.
 SEVEN = [
+    "carers_allowance_earnings_taper",
     "domestic_electricity_zero_vat",
-    "employer_nics_secondary_threshold_raise",
     "fuel_duty_rise_deferral",
-    "plan_2_threshold_unfreeze",
+    "household_energy_payment_2026",
+    "property_income_rates_up",
     "state_pension_income_tax_protection",
-    "threshold_freeze_2031_32",
-    "unearned_income_rates_up",
-    "warm_home_discount_top_up",
+    "trading_allowance_raise",
 ]
 
 
@@ -74,7 +74,7 @@ class CapturingRunner:
 def test_the_seven_compose_to_the_package_key():
     # The key tonight's combined run and the area run use (#222)
     package = portable_combined([get_reform(i) for i in SEVEN])
-    assert package.id == "combined--894152ce8c83f1d8"
+    assert package.id == "combined--f91fe847275730cb"
     assert package.id == combined_key(SEVEN)
 
 

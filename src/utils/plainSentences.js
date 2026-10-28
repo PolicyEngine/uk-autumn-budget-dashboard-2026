@@ -1,6 +1,8 @@
 // One short plain sentence per chart card (Vahid, 26 October): the
 // finding with its number; definitions sit in each card's About this chart.
 
+import { formatBnOrM } from "./moneyFormat";
+
 const gbp = (v) => `£${Math.round(Math.abs(v)).toLocaleString("en-GB")}`;
 
 /** A decile end as the sentence rounds it: £10 steps, or 0.1% of net income. */
@@ -51,7 +53,9 @@ export function decileSentence(data, kind, later = null) {
 /** The revenue chart's line for the selected year; null without a figure. */
 export function revenueSentence(net, yearLabel) {
   if (net == null || !Number.isFinite(net)) return null;
-  const bn = Math.abs(net) >= 0.95 ? `£${Math.abs(net).toFixed(1)} billion` : `£${Math.round(Math.abs(net) * 1000).toLocaleString("en-GB")} million`;
+  // The chart's own rounding (moneyFormat: £m to the nearest £5m under
+  // £1bn, £bn to one decimal), in words, so text and tooltip agree
+  const bn = formatBnOrM(Math.abs(net)).replace(/m$/, " million").replace(/bn$/, " billion");
   // Exactly nothing (a measure not in force that year) is not "roughly balance"
   if (Math.abs(net) < 0.0005) return `In ${yearLabel}, the selected policies change no revenue.`;
   if (Math.abs(net) < 0.05) return `In ${yearLabel}, the selected policies roughly balance: they neither raise nor cost much revenue.`;

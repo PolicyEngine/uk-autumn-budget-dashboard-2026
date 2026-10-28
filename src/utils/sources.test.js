@@ -37,4 +37,30 @@ describe("the dashboard's sources", () => {
     expect(SOURCES.policyengine_py_release.label).toBe(`policyengine.py ${engine.policyengine}`);
     expect(SOURCES.policyengine_py_release.url).toBe(`https://github.com/PolicyEngine/policyengine.py/releases/tag/${engine.policyengine}`);
   });
+
+  it("open the October 2026 EFO itself, not the OBR's EFO page", () => {
+    // obr.uk/efo/economic-and-fiscal-outlook-october-2026/ was a 404 on
+    // Budget day; the download is the EFO document (checked 28 October 2026)
+    for (const id of ["obr_efo_current", "obr_efo_october_2026"]) {
+      expect(SOURCES[id].url, id).toBe("https://obr.uk/download/economic-and-fiscal-outlook-october-2026/");
+      expect(SOURCES[id].label, id).toMatch(/October 2026/);
+    }
+  });
+});
+
+describe("every external link in the components", () => {
+  // A hand-written target="_blank" link says so to a screen reader, as
+  // SourceLink and MethodUi's ExternalLink do
+  const files = ["InfoSections.jsx", "livingStandards/HeadlineTile.jsx", "OverviewDrawer.jsx", "PolicyCards.jsx"];
+  it("pairs target=_blank with rel and the hidden new-tab label", () => {
+    for (const file of files) {
+      const text = readFileSync(join(__dirname, "..", "components", file), "utf8");
+      const blanks = text.match(/<a\s[^>]*target="_blank"[^>]*>[\s\S]*?<\/a>/g) ?? [];
+      expect(blanks.length, file).toBeGreaterThan(0);
+      for (const a of blanks) {
+        expect(a, file).toMatch(/rel="noopener noreferrer"/);
+        expect(a, file).toMatch(/\(opens in a new tab\)/);
+      }
+    }
+  });
 });

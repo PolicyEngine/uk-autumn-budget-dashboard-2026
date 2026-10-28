@@ -372,7 +372,11 @@ def run_projections(log=print) -> dict:
     """
     versions = engine_versions()
     expected = certified_dataset()
-    sim = pe.uk.managed_microsimulation()
+    from uk_budget_data.forecast import with_forecast
+
+    # On the OBR October 2026 forecast, as every other run
+    # (uk_budget_data.forecast).
+    sim = pe.uk.managed_microsimulation(scenario=with_forecast(None))
     bundle = getattr(sim, "policyengine_bundle", {}) or {}
     used_sha = bundle.get("runtime_dataset_sha256")
     if used_sha != expected["sha256"]:

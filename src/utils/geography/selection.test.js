@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ALPHA, BETA, COMBINED, HELD, measureCatalogueFixture } from "../../test/measureCatalogueFixture";
 import {
-  COMBINED_CHOICE,
-  areaPolicyOptions,
-  chooseAreaPolicy,
   SELECTION_NOT_PUBLISHED,
   chooseSelectionReform,
   selectionNotPublished,
@@ -78,58 +75,3 @@ describe("selectionPackageKey", () => {
   });
 });
 
-describe("the constituency card's Policy options", () => {
-  const order = ["a", "b", "c", "d"];
-  const published = (...reforms) => (reform) => reforms.includes(reform);
-
-  it("lists the combined run when published, then each selected policy with its own rows, in page order", () => {
-    const { options, defaultValue } = areaPolicyOptions({
-      selectedIds: ["c", "a", "b"],
-      policyIds: order,
-      packageKey: "pkg",
-      hasArea: published("pkg", "a", "c"),
-    });
-    expect(options.map((option) => option.value)).toEqual([COMBINED_CHOICE, "a", "c"]);
-    expect(options[0].reform).toBe("pkg");
-    expect(defaultValue).toBe(COMBINED_CHOICE);
-  });
-
-  it("offers no combined option when its run has no rows, and defaults to the first single", () => {
-    const { options, defaultValue } = areaPolicyOptions({
-      selectedIds: ["a", "b", "c"],
-      policyIds: order,
-      packageKey: "pkg",
-      hasArea: published("b", "c"),
-    });
-    expect(options.map((option) => option.value)).toEqual(["b", "c"]);
-    expect(defaultValue).toBe("b");
-  });
-
-  it("has no options, and the combination's notice, when nothing selected has rows", () => {
-    const result = chooseAreaPolicy({
-      value: null,
-      selectedIds: ["a", "b"],
-      policyIds: order,
-      reforms: [],
-      packageKey: null,
-      hasArea: published(),
-    });
-    expect(result.options).toEqual([]);
-    expect(result.value).toBeNull();
-    expect(result.choice).toMatchObject({ kind: "no-package", reason: SELECTION_NOT_PUBLISHED });
-  });
-
-  it("follows the chosen option while it is offered, else falls back to the default", () => {
-    const base = {
-      selectedIds: ["a", "b"],
-      policyIds: order,
-      reforms: ["pkg", "b"],
-      packageKey: "pkg",
-      hasArea: published("pkg", "b"),
-    };
-    expect(chooseAreaPolicy({ ...base, value: null }).choice).toMatchObject({ kind: "package", reform: "pkg" });
-    expect(chooseAreaPolicy({ ...base, value: "b" }).choice).toEqual({ kind: "measure", reform: "b" });
-    // "a" has no rows, so it is not offered: the default holds
-    expect(chooseAreaPolicy({ ...base, value: "a" })).toMatchObject({ value: COMBINED_CHOICE });
-  });
-});

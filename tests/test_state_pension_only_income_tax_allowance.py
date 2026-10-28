@@ -174,22 +174,35 @@ def test_no_change_before_april_2027():
 
 
 @pytest.mark.parametrize("year", [2027, 2028, 2029, 2030, 2031])
-def test_allowance_is_the_engine_full_new_state_pension_rounded_up(year):
+def test_allowance_is_the_engine_full_new_state_pension_rounded(year):
+    """Rounded up, or down while the module's ``ROUND_DOWN`` is set."""
+    from uk_budget_data.budget_measures import (
+        state_pension_only_income_tax_allowance as module,
+    )
+
     weekly = system.parameters.gov.dwp.state_pension.new_state_pension.amount(
         f"{year}-04-06"
     )
     defaults = state_pension_only_income_tax_allowance.__defaults__
     allowance = dict(zip(range(2027, 2032), defaults[:5]))[year]
-    assert allowance == math.ceil(weekly * 52)
+    rounding = math.floor if module.ROUND_DOWN else math.ceil
+    assert allowance == rounding(weekly * 52)
+    assert module.ROUNDED_UP[year - 2027] == math.ceil(weekly * 52)
+    assert module.ROUNDED_DOWN[year - 2027] == math.floor(weekly * 52)
 
 
-def test_the_measure_uses_the_total_income_design_and_can_switch():
+def test_the_measure_can_switch_to_the_allowance_designs():
+    """Budget 2026's design is the tax reduction
+    (tests/test_pension_tax_allowance.py); the allowance designs stay
+    selectable."""
     from uk_budget_data import reforms
     from uk_budget_data.budget_measures.state_pension_income_tax_allowance import (
         state_pension_income_tax_allowance,
     )
 
-    measure = reforms.get_reform(reforms.STATE_PENSION_ALLOWANCE_ID)
+    measure = reforms._create_state_pension_income_tax_protection(
+        "total_income"
+    )
     assert (
         measure.simulation_modifier is state_pension_only_income_tax_allowance
     )

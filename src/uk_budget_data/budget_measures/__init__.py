@@ -37,7 +37,8 @@ template changes an entitlement test).
 
 Fiscal years: year Y is Y-(Y+1). The road fuel VAT cut weights a part
 year by its days from 1 April, the public finances' year; the electricity
-zero rate weights 2026-27 by the October to March share of a year's use;
+zero rate weights 2026-27 by the October to March share of a year's use
+and 2027-28 by the April to June share;
 fuel duty is set as parameter values in ``reforms.py``, weighted from
 6 April as the engine blends that parameter.
 """

@@ -1,18 +1,21 @@
 // Prices by spending category: loads
 // public/data/obr_price_categories.json (written by
 // tools/extract-obr-price-categories.mjs from Table 1.19 of the OBR's March
-// 2026 economy detailed forecast tables): year-on-year CPI inflation for the
-// OBR's five categories, fiscal years 2026-27 to 2030-31. The page draws the
-// rates as the file holds them.
+// 2026 economy detailed forecast tables) and, once published, the October
+// 2026 tables' public/data/obr_price_categories_october_2026.json (the same
+// tool, --release october-2026): year-on-year CPI inflation for the OBR's
+// five categories, fiscal years 2026-27 to 2030-31. The page draws the rates
+// as the files hold them.
 
 import { formatOneDp, fyLabel } from "./outlook";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 export const OBR_PRICE_CATEGORIES_PATH = "/data/obr_price_categories.json";
+export const OBR_PRICE_CATEGORIES_POST_PATH = "/data/obr_price_categories_october_2026.json";
 export const OBR_PRICE_CATEGORIES_SCHEMA = "uk-budget-dashboard/obr-price-categories/v1";
 
 const FY = /^(\d{4})-\d{2}$/;
-let cached = null;
+const cached = {};
 
 /** Whether a parsed file has the shape the card reads. */
 export function isObrPriceCategories(data) {
@@ -31,32 +34,37 @@ export function isObrPriceCategories(data) {
  * not published yet (HTTP 404, before its review row) is `unavailable`; an
  * unreadable or wrongly shaped one is an error; never a throw.
  */
-export function loadObrPriceCategories() {
-  if (!cached) {
-    cached = fetch(`${BASE}${OBR_PRICE_CATEGORIES_PATH}`)
+export function loadObrPriceCategories(path = OBR_PRICE_CATEGORIES_PATH) {
+  if (!cached[path]) {
+    cached[path] = fetch(`${BASE}${path}`)
       .then((r) => {
         if (r.status === 404) return { data: null, error: null, unavailable: true };
-        if (!r.ok) throw new Error(`${OBR_PRICE_CATEGORIES_PATH}: HTTP ${r.status}`);
+        if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
         return r.json().then((data) => {
-          if (!isObrPriceCategories(data)) throw new Error(`${OBR_PRICE_CATEGORIES_PATH}: not an OBR price categories file`);
+          if (!isObrPriceCategories(data)) throw new Error(`${path}: not an OBR price categories file`);
           return { data, error: null, unavailable: false };
         });
       })
       .then((result) => {
-        if (!result.data) cached = null;
+        if (!result.data) delete cached[path];
         return result;
       })
       .catch((error) => {
-        cached = null;
+        delete cached[path];
         return { data: null, error: error.message, unavailable: false };
       });
   }
-  return cached;
+  return cached[path];
 }
 
-/** Forget the loaded file (tests). */
+/** The October 2026 file, the later forecast; { data: null } until it is published. */
+export function loadObrPriceCategoriesPost() {
+  return loadObrPriceCategories(OBR_PRICE_CATEGORIES_POST_PATH);
+}
+
+/** Forget the loaded files (tests). */
 export function clearObrPriceCategoriesCache() {
-  cached = null;
+  for (const path of Object.keys(cached)) delete cached[path];
 }
 
 /** One row per fiscal year, { year: its first calendar year, <key>: growth % }, a missing value null. */

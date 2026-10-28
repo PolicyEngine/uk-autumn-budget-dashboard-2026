@@ -59,9 +59,9 @@ export const WIZARD_DEFAULTS = {
   current_age: 30,
   current_salary: DEFAULT_SALARY,
   region: "NORTH_WEST",
-  // The constituency picked (its name, 2024 boundaries), which sets the
+  // The local authority (council) picked, by its ONS name, which sets the
   // region; null until picked. Not sent: the API reads the region
-  constituency: null,
+  council: null,
   tenure: "RENT_PRIVATELY",
   // null: the region's average private rent (ONS), until changed
   monthly_rent: null,
@@ -78,6 +78,10 @@ export const WIZARD_DEFAULTS = {
   children_in_education: [],
   // Entitlement: the household claims what it is due
   claims_universal_credit: true,
+  // Not a carer until answered; a carer's hours of care a week start at
+  // 35, the Carer's Allowance minimum
+  is_carer: false,
+  care_hours_per_week: 35,
   council_tax_band: "D",
   salary_sacrifice_per_year: 0,
   petrol_spending_per_year: DEFAULT_SPENDING.petrol,
@@ -86,6 +90,10 @@ export const WIZARD_DEFAULTS = {
   dividends_per_year: 0,
   savings_interest_per_year: 0,
   property_income_per_year: 0,
+  // Self-employment or side income: receipts (turnover) and allowable
+  // expenses, £ a year; none until answered
+  self_employment_receipts_per_year: 0,
+  self_employment_expenses_per_year: 0,
   // Private and workplace pensions in payment, £ a year
   private_pension_per_year: 0,
   partner_private_pension_per_year: 0,

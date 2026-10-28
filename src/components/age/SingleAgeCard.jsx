@@ -33,7 +33,7 @@ import { selectionPackageKey } from "../../utils/geography/selection";
 import { legendMembership } from "../../utils/legendMembership";
 import { PENSIONERS, ageWindow } from "../../utils/ageGroups";
 
-const AGE_UNIT = "Average change per person (£ a year)";
+const AGE_UNIT = "Average change in household income, per person (£ a year)";
 const CSV_UNITS =
   "£ per person per year; each person counts their household's change in net income (not equivalised)";
 const SHOW_OPTIONS = [
@@ -216,8 +216,8 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
   const title = `${titleBase}, ${yearLabel}`;
   const description =
     group === ALL_BAND
-      ? "Average change per person, £ a year, at each age."
-      : `Average change per person, £ a year, at each age from ${agesText(window)}${group === PENSIONERS ? " (pensioners)" : ""}.`;
+      ? "Average change in household income per person, £ a year, at each age."
+      : `Average change in household income per person, £ a year, at each age from ${agesText(window)}${group === PENSIONERS ? " (pensioners)" : ""}.`;
   const measureIds = [...new Set(data.flatMap((point) => point.parts.map((part) => part.id)))];
   const download = {
     chartRef,
