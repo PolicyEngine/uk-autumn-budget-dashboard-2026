@@ -863,6 +863,27 @@ describe("the selected policies' questions", () => {
       vi.unstubAllEnvs();
     }
   });
+  it("keeps the savings switch in the address, so a reload keeps it", async () => {
+    const published = ALL_SEVEN.filter((id) => id !== "savings_income_rates_up");
+    window.history.replaceState({}, "", "/?tab=household&also=savings_income_rates_up");
+    try {
+      form(published);
+      const toggle = () => screen.getByRole("checkbox", { name: /Also include: Savings income tax up/ });
+      await waitFor(() => expect(toggle()).toBeChecked());
+      // On, the savings interest question comes first in its step
+      openSteps();
+      expect(asked("Savings and other income")).toContain("savings_interest_per_year");
+      fireEvent.click(toggle());
+      expect(toggle()).not.toBeChecked();
+      await waitFor(() => expect(new URLSearchParams(window.location.search).get("also")).toBeNull());
+      expect(new URLSearchParams(window.location.search).get("tab")).toBe("household");
+      fireEvent.click(toggle());
+      await waitFor(() => expect(new URLSearchParams(window.location.search).get("also")).toBe("savings_income_rates_up"));
+    } finally {
+      window.history.replaceState({}, "", "/");
+    }
+  });
+
   it("adds the savings income tax rise to this household's request only when its switch is on", async () => {
     const API = "https://api.test/api/household-impact";
     const bodies = [];

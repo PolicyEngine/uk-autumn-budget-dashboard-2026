@@ -560,6 +560,9 @@ export function resetSavedWizard() {
   Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, optionalOpen: {}, stepOpen: {}, submitted: null, startFrom: null, extras: [] });
 }
 
+// The address parameter naming the calculator-only measures turned on
+export const EXTRAS_PARAM = "also";
+
 // The form's panel, opened by the "Your household" card
 const FORM_PANEL_ID = "household-form-panel";
 
@@ -603,6 +606,26 @@ function HouseholdCalculator({
   // Calculator-only measures turned on (utils/calculatorOnlyMeasures.js):
   // not in the header's selector or the national results; off at first
   const [extras, setExtras] = useState(() => savedWizard.extras ?? []);
+  // In the address too (?also=), so a reload or a shared link keeps it:
+  // read once after mount (the server renders it off), then written
+  const extrasRead = useRef(false);
+  useEffect(() => {
+    if (!extrasRead.current) {
+      extrasRead.current = true;
+      const asked = new URLSearchParams(window.location.search).get(EXTRAS_PARAM);
+      const fromAddress = asked ? withCalculatorOnly([], asked.split(",")) : [];
+      if (fromAddress.length && !extras.length) {
+        setExtras(fromAddress);
+        return;
+      }
+    }
+    const params = new URLSearchParams(window.location.search);
+    if (extras.length) params.set(EXTRAS_PARAM, extras.join(","));
+    else params.delete(EXTRAS_PARAM);
+    const search = params.toString();
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extras.join(",")]);
   const selectionKey = selectedPolicies.join(",");
   const narrow = useNarrow(PHONE_QUERY);
 
@@ -1314,7 +1337,9 @@ function HouseholdCalculator({
               salarySource={activePreset?.salarySource ?? null}
               spendingSource={activePreset?.spendingSource ?? null}
               requestHousehold={submitted ? buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }).household : null}
-              selected={submitted?.policies ?? householdPolicies}
+              // Your place among households is on the national results,
+              // which leave the calculator-only measures out
+              selected={withoutCalculatorOnly(submitted?.policies ?? householdPolicies)}
             />
           )}
         </div>
