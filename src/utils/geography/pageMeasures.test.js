@@ -29,7 +29,7 @@ import {
   buildMeasureCatalogue,
   MeasureCatalogueProvider,
 } from "../measureCatalogue";
-import { choiceLabel } from "./selection";
+import { SELECTION_NOT_PUBLISHED, choiceLabel } from "./selection";
 
 // TEST DATA ONLY: the area run's name for the package
 const ALIAS = "synthetic_package_alias";
@@ -128,7 +128,7 @@ describe("the page's measures in the constituency views", () => {
     expect(catalogue.combinedId).toBe(COMBINED);
     const { choice, view } = await show(catalogue, IDS);
     expect(choiceLabel(choice, catalogue.displayable)).toBe(
-      "All measures (the full package)",
+      "All policies (the full package)",
     );
     expect(view).toMatchObject({ kind: "rows", reform: COMBINED });
   });
@@ -139,14 +139,23 @@ describe("the page's measures in the constituency views", () => {
       layerTable(IDS.filter((id) => id !== BETA)),
     );
     expect((await show(catalogue, [BETA])).view.reason).toBe(
-      "Results by constituency are not yet published for this measure.",
+      "Results by constituency are not yet published for this policy.",
     );
-    // With no package published, every measure selected shows one measure
-    // at a time (the Measure picker), never the held one nor a sum
+    // With no package published, the card shows the first selected
+    // measure with its own rows (its Policy option's default), never a sum
+    // and never the left-out measure
     const all = await show(catalogue, IDS);
-    expect(all.choice.focus.options).not.toContain(BETA);
-    expect(all.choice.reform).not.toBe(BETA);
-    expect(all.view).toMatchObject({ kind: "rows", reform: all.choice.reform });
+    const first = IDS.find((id) => id !== BETA);
+    expect(all.choice).toEqual({ kind: "measure", reform: first });
+    expect(all.view).toMatchObject({ kind: "rows", reform: first });
+    expect(all.policyOptions.map((option) => option.value)).toEqual(IDS.filter((id) => id !== BETA));
+    // With no run for any selected measure, the combination's notice
+    cleanup();
+    resetGeographyCache();
+    const none = await show(await publish(layerTable([])), IDS);
+    expect(none.choice.kind).toBe("no-package");
+    expect(none.choice.reform).toBeUndefined();
+    expect(none.view).toEqual({ kind: "notice", reason: SELECTION_NOT_PUBLISHED, detail: null });
   });
 
   it("reads not yet published while no table is published", async () => {

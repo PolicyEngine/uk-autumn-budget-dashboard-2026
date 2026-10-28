@@ -13,6 +13,7 @@
  * everyone else's income changes too.
  */
 import { parseCsv } from "./publication/csv";
+import { selectionNotPublished, selectionPackageKey } from "./geography/selection";
 
 export const DISTRIBUTION_FILE = "income_distribution.csv";
 export const LOWEST_PERCENTILE = 1;
@@ -66,41 +67,30 @@ export function parseDistribution(text) {
   }));
 }
 
-const sameSet = (a, b) => a.length === b.length && a.every((id) => b.includes(id));
-
 /**
- * Which published run stands for the selection: one measure is its own
- * run; two or more are the published package's run, which is exact
- * (`exact`) only when every published measure is selected and the package
- * was run with exactly those (`packageIds`, the catalogue's package
- * members, or null when it publishes none), since runs for part of the
- * package are not published. After a measure is withdrawn the package's
- * run still holds it, so it is never exact then (#104 review).
+ * Which published run stands for the header's selection, by the rule every
+ * card follows (utils/geography/selection.js): one policy is its own run;
+ * two or more are the published combined run of exactly those policies
+ * (selectionPackageKey, the manifest's verified combined entry for the
+ * set), or none (`reformId` null) when no such run is published. The whole
+ * package never stands in for part of it, and one policy's figures are
+ * never added to another's.
  *
- * The package's rows are read under `combinedId`, the manifest's key for
- * the combined run of exactly the published measures (`combined--...`,
- * the catalogue's combinedId), never under a fixed id: the flat files'
- * rows for any other package, such as the registry's nine-measure
- * `autumn_budget_2026_combined`, are not taken for it (#228). With no
- * published package `reformId` is null and there is nothing to read.
+ * The combined run's rows are read under the manifest's key
+ * (`combined--...`), never under a fixed id: the flat files' rows for any
+ * other package, such as the registry's nine-measure
+ * `autumn_budget_2026_combined`, are not taken for it (#228).
  */
-export function distributionRunFor(selected, allIds, packageIds = null, combinedId = null) {
+export function distributionRunFor(selected, packageKey = null) {
   const ids = [...new Set(selected ?? [])];
-  if (ids.length === 1) return { reformId: ids[0], exact: true, package: false };
-  const reformId = combinedId || null;
-  const exact = Boolean(reformId) && Boolean(packageIds) && allIds.length > 0 && sameSet(ids, allIds) && sameSet(packageIds, allIds);
-  return { reformId, exact, package: true };
+  if (ids.length === 0) return { reformId: null, package: false };
+  if (ids.length === 1) return { reformId: ids[0], package: false };
+  return { reformId: packageKey || null, package: true };
 }
 
 /** distributionRunFor for a measure catalogue (utils/measureCatalogue.jsx). */
 export function distributionRunOf(selected, catalogue) {
-  const combinedId = catalogue?.combinedId ?? null;
-  return distributionRunFor(
-    selected,
-    (catalogue?.displayable ?? []).map((measure) => measure.id),
-    combinedId ? (catalogue.manifest?.combined?.[combinedId]?.measures ?? null) : null,
-    combinedId,
-  );
+  return distributionRunFor(selected, selectionPackageKey(catalogue?.manifest ?? null, selected));
 }
 
 /** Whether a flat file's rows (each with `reformId` or `reform_id`) hold a run. */
@@ -109,26 +99,15 @@ export function hasRun(rows, reformId) {
 }
 
 /**
- * Why a run's rows are missing, said on the card: for the package, that the
- * file holds another package's rows (it was not regenerated for the
- * measures published), so its figures are not shown.
+ * The card's notice in place of the selection's figures, or null: two or
+ * more policies are selected and the file has no rows for their combined
+ * run (none is published, or the file was not regenerated for it). The
+ * shared "<subject> results for this combination of policies are not
+ * published yet." notice the scatter, map and region cards show.
  */
-export const PACKAGE_NOT_IN_FILE =
-  "Results for the selected policies together are not available yet: this file holds a different set of policies, so it is not used.";
-
-/** The same, when the manifest publishes no combined run of the measures at all. */
-export const NO_PACKAGE_PUBLISHED =
-  "Results for the selected policies together are not available yet: no combined run of them has been published.";
-
-/**
- * The note a card shows in place of the package's figures, or null: the
- * package's run is wanted (two or more measures) and the file has no rows
- * for it, either because none is published (`reformId` null) or because the
- * file holds another package.
- */
-export function missingPackageNote(run, rows) {
+export function missingPackageNote(run, rows, subject) {
   if (!run?.package || hasRun(rows, run.reformId)) return null;
-  return run.reformId ? PACKAGE_NOT_IN_FILE : NO_PACKAGE_PUBLISHED;
+  return selectionNotPublished(subject);
 }
 
 /** One curve, sorted by percentile: [{ percentile, income }]. */
@@ -363,7 +342,7 @@ export function lowerCount(pos) {
 }
 
 /** What the number measures, said once and the same everywhere. */
-export const PLACE_MEANING = "have a lower household income than you, adjusted for household size";
+export const PLACE_MEANING = "live in a household with a lower income than yours, adjusted for household size";
 
 /**
  * The card's text: a one-sentence headline and three labelled chips (your

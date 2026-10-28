@@ -5,7 +5,6 @@ import {
   Baby,
   BriefcaseBusiness,
   Car,
-  Check,
   ChevronDown,
   LayoutGrid,
   GraduationCap,
@@ -58,6 +57,10 @@ const SOURCE_NAMES = {
   warm_home_discount_top_up: "the Warm Home Discount top-up",
   employer_ni_relief_under_25s: "employer National Insurance relief",
   badr_lifetime_limit_cut: "the Business Asset Disposal Relief cut",
+  carers_allowance_earnings_taper: "the Carer's Allowance taper",
+  lha_unfreeze_2027: "the Local Housing Allowance unfreeze",
+  employer_nics_secondary_threshold_raise: "the employer NI threshold rise",
+  unearned_income_rates_up: "the unearned income tax rise",
 };
 // A short name where there is one, else the catalogue's published name
 const sourceName = (id, catalogue) => SOURCE_NAMES[id] ?? catalogue?.byId.get(id)?.name ?? id;
@@ -128,7 +131,7 @@ export function examplePercentile(example, point, { year, policies, rows, catalo
 /** A small strip with a dot where the example sits, and its percentile. */
 function PositionStrip({ percentile, yearLabel }) {
   return (
-    <Tip content={`${percentile} in 100 people in the UK have a lower household income than this household, adjusted for household size (${yearLabel}, after the selected policies)`}>
+    <Tip content={`${percentile} in 100 people in the UK live in a household with a lower income than this one, adjusted for household size (${yearLabel}, after the selected policies)`}>
     <span className="household-card-position">
       <span className="household-card-position-track" aria-hidden="true">
         <span className="household-card-position-dot" style={{ left: `${percentile}%` }} />
@@ -242,7 +245,7 @@ export function YearBars({ series, year }) {
 }
 
 /**
- * The Household impact view's cards: first one wide "Your household"
+ * The Household calculator view's cards: first one wide "Your household"
  * card, which opens the form below the cards; then eight example
  * households under "Example households", all the same size, each of which
  * fills the form and shows its result at once. One section heading over
@@ -300,7 +303,7 @@ export default function HouseholdCards({
   const positionPolicies = fill?.reduced ?? figurePolicies;
   // What the figures are with, on hover (no line above the cards): every
   // measure (the file), the selected ones, or those the calculator supports
-  const figuresWith = !fill ? "every measure" : fill.reduced ? "the measures the calculator supports" : "the selected measures";
+  const figuresWith = !fill ? "every policy" : fill.reduced ? "the policies the calculator supports" : "the selected policies";
   // Folded into the strip once a household is chosen; "Show all
   // households" opens the grid again, and a choice there folds it
   const [showAll, setShowAll] = useState(false);
@@ -389,11 +392,6 @@ export default function HouseholdCards({
               >
                 <span className="household-card-name">{example.label}</span>
               </button>
-              {pressed && (
-                <span className="household-card-check" aria-hidden="true">
-                  <Check size={14} strokeWidth={2.6} />
-                </span>
-              )}
               <span className="household-card-result">
                 {figures ? (
                   <>
@@ -482,7 +480,7 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
         <span className="household-card-name visually-hidden">Your household</span>
         <span className="household-yours-title">Enter your own household</span>
         <span className="household-yours-lead">
-          {provisional ? "See how the selected measures change your income" : "See how the Budget changes your income"}
+          {provisional ? "See how the selected policies change your income" : "See how the Budget changes your income"}
           {", in about 30 seconds."}
         </span>
       </span>
@@ -505,11 +503,6 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
           )}
         </span>
       </span>
-      {selected && (
-        <span className="household-card-check" aria-hidden="true">
-          <Check size={14} strokeWidth={2.6} />
-        </span>
-      )}
     </button>
   );
 }
@@ -518,7 +511,7 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
  * The cards folded: a chip for each card, in the cards' order and grid
  * (Your household the width of the grid, then the eight examples below
  * it), each its icon, a short name and its change, the chosen one in its
- * colour with a tick. One listbox, Your household first (choosing it opens
+ * colour (fill and border). One listbox, Your household first (choosing it opens
  * the form, which it controls; choosing it again while chosen closes or
  * reopens the form): the arrow keys (and Home, End) move between chips,
  * Enter or Space chooses one, a click chooses it at once.
@@ -602,7 +595,7 @@ function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, 
                 }}
               >
                 <span className="household-chip-icon" aria-hidden="true">
-                  {isSelected ? <Check size={13} strokeWidth={2.6} /> : <item.Icon size={14} strokeWidth={1.9} />}
+                  <item.Icon size={14} strokeWidth={1.9} />
                 </span>
                 <span className="household-chip-name">
                   {item.id === null ? (

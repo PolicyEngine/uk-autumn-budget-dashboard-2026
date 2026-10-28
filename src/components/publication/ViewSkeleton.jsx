@@ -32,7 +32,7 @@ export const SKELETON_SUB_TABS = {
 const SUB_TABS = SKELETON_SUB_TABS;
 
 // Each view's first section and the shape of its cards: "bars", "lines",
-// "map", "example" (Household impact's example households) or "text"
+// "map", "example" (Household calculator's example households) or "text"
 const LAYOUTS = {
   "dashboard:finances": [
     { icon: "banknote", title: "Public finances", subtitle: "Net effect of the selected policies on government revenue and spending, by year.", cards: [["bars", "wide"], ["bars"], ["bars"]] },
@@ -45,25 +45,25 @@ const LAYOUTS = {
     { icon: "usersRound", title: "How each age group's income changes", cards: [["lines", "wide"], ["bars"], ["bars"]] },
   ],
   "dashboard:living": [
-    { icon: "wallet", title: "How the measures change incomes", subtitle: "With the selected measures: how they change income growth across the income distribution.", cards: [["lines", "wide"]] },
+    { icon: "wallet", title: "How the policies change incomes", subtitle: "With the selected policies: how they change income growth across the income distribution.", cards: [["lines", "wide"]] },
   ],
   "dashboard:poverty": [
-    { icon: "lifebuoy", title: "How the measures change poverty", subtitle: "With the selected measures.", cards: [["bars"], ["bars"]] },
+    { icon: "lifebuoy", title: "How the policies change poverty", subtitle: "With the selected policies.", cards: [["bars"], ["bars"]] },
   ],
   household: [
     { icon: "users", title: "Choose a household", subtitle: "Enter your own household, or start from an example below.", cards: Array.from({ length: 8 }, () => ["example"]) },
   ],
   "outlook:living": [
-    { icon: "wallet", title: "Living standards under current law", subtitle: "Current law, before any Budget measure.", cards: [["lines", "wide"], ["lines"], ["lines"]] },
+    { icon: "wallet", title: "Living standards under current law", subtitle: "Current law, before any Budget policy.", cards: [["lines", "wide"], ["lines"], ["lines"]] },
   ],
   "outlook:poverty": [
-    { icon: "lifebuoy", title: "Poverty under current law", subtitle: "Current law, before any Budget measure.", cards: [["lines"], ["lines"]] },
+    { icon: "lifebuoy", title: "Poverty under current law", subtitle: "Current law, before any Budget policy.", cards: [["lines"], ["lines"]] },
   ],
   "outlook:forecast": [
     { icon: "trend", title: "Economic forecast", cards: [["lines", "wide"], ["lines"], ["lines"]] },
   ],
   policies: [
-    { icon: "fileText", title: "Policies", subtitle: "What each measure changes, when, and how it is modelled.", cards: [["text", "wide"], ["text", "wide"], ["text", "wide"]] },
+    { icon: "fileText", title: "Policies", subtitle: "What each policy changes, when, and how it is modelled.", cards: [["text", "wide"], ["text", "wide"], ["text", "wide"]] },
   ],
   methodology: [
     { icon: "book", title: "Methodology", cards: [["text", "wide"], ["text", "wide"]] },

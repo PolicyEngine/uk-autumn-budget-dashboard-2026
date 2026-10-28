@@ -24,12 +24,14 @@ import {
   TrendingUp,
   UserCheck,
   Users,
+  Workflow,
   Cake,
 } from "lucide-react";
 
 // An icon for each term the Methodology view defines, by its text
 const TERM_ICONS = {
   Dataset: Database,
+  Pipeline: Workflow,
   Survey: ClipboardList,
   Weights: Scale,
   Projection: TrendingUp,
@@ -40,7 +42,7 @@ const TERM_ICONS = {
   Years: CalendarDays,
   "Budgetary impact": PoundSterling,
   Exceptions: CircleAlert,
-  "Net impact": Sigma,
+  "Net change": Sigma,
   "OBR comparison": GitCompare,
   "Income deciles": ChartColumnBig,
   "Absolute change": Banknote,
@@ -58,7 +60,7 @@ const TERM_ICONS = {
   "Who counts": UserCheck,
   Pensioners: Users,
   "Change by year": CalendarRange,
-  "Engine and measures": Cpu,
+  "Engine and policies": Cpu,
   "One year": CalendarDays,
   Salary: PoundSterling,
   "Change by policy": ChartColumnBig,

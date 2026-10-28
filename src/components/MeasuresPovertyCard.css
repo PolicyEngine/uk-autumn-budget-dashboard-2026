@@ -14,8 +14,14 @@
   font-size: var(--fs-caption);
 }
 
+/* Each row a band across the three columns (a subgrid, so the columns
+   still line up row to row): .row-band in globals.css */
 .wf-row {
-  display: contents;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  margin: 0 -6px;
+  padding: 0 6px;
 }
 
 .wf-row > * {
@@ -102,6 +108,20 @@
   font-weight: 400;
 }
 
+/* A policy that moves no one: its label, no bar, and a muted "No change"
+   with why under it */
+.wf-none .wf-main {
+  color: var(--pe-gray-500);
+  font-weight: 500;
+}
+
+.wf-reason {
+  color: var(--pe-gray-500);
+  font-size: var(--fs-micro);
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
 .wf-total > * {
   border-top: 1px solid var(--pe-gray-200);
   min-height: 42px;
@@ -137,11 +157,6 @@
   font-size: var(--fs-micro);
 }
 
-/* The measures that move no one, in More info */
-.wf-none {
-  margin: 0 0 8px;
-}
-
 @container (max-width: 520px) {
   .wf {
     grid-template-columns: minmax(112px, 36%) minmax(0, 1fr) 108px;
@@ -158,12 +173,8 @@
     display: none;
   }
 
-  /* A narrow track: the axis's ends only, and the caption across the
-     label column */
-  .wf-tick:not(:first-child):not(:last-child) {
-    display: none;
-  }
-
+  /* The caption across the label column (the ticks that fit the narrow
+     track are chosen in MeasuresPovertyCard, chartTheme.fitTicks) */
   .wf-caption > .wf-label {
     display: none;
   }
@@ -195,10 +206,10 @@
 
 /* The axis's end ticks sit inside the track, so "0" and the last never run
    into each other on a narrow card */
-.wf-axis .wf-tick:first-child {
+.wf-axis .wf-tick.is-start {
   transform: none;
 }
 
-.wf-axis .wf-tick:last-child {
+.wf-axis .wf-tick.is-end {
   transform: translateX(-100%);
 }

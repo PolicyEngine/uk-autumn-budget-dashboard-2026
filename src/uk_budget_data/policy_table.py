@@ -37,6 +37,9 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from uk_budget_data import reforms as registry
+from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
+    carers_allowance_earnings_taper,
+)
 from uk_budget_data.budget_measures.employer_ni_relief_ages_21_to_24 import (
     employer_ni_relief_ages_21_to_24,
 )
@@ -46,6 +49,9 @@ from uk_budget_data.budget_measures.road_fuel_vat_cut import (
 )
 from uk_budget_data.budget_measures.state_pension_income_tax_allowance import (
     state_pension_income_tax_allowance,
+)
+from uk_budget_data.budget_measures.state_pension_only_income_tax_allowance import (
+    state_pension_only_income_tax_allowance,
 )
 from uk_budget_data.budget_measures.warm_home_discount_top_up import (
     warm_home_discount_top_up,
@@ -93,7 +99,7 @@ def engine_value(path: str, year: int) -> float:
     (6 April, as ``reforms.plan_2_unfrozen_thresholds`` reads it)."""
     node = _parameters()
     for part in path.split("."):
-        match = re.fullmatch(r"([a-z0-9_]+)(?:\[(\d+)\])?", part)
+        match = re.fullmatch(r"([A-Za-z0-9_]+)(?:\[(\d+)\])?", part)
         node = getattr(node, match.group(1))
         if match.group(2) is not None:
             node = node.brackets[int(match.group(2))]
@@ -394,11 +400,51 @@ def _fuel_duty(reform) -> list[dict]:
 
 def _state_pension_allowance(reform) -> list[dict]:
     path = registry.PERSONAL_ALLOWANCE
-    values = constants(state_pension_income_tax_allowance)
+    modifier = reform.simulation_modifier
+    if modifier not in (
+        state_pension_income_tax_allowance,
+        state_pension_only_income_tax_allowance,
+    ):
+        raise ValueError(
+            "The State Pension allowance table knows the total-income and "
+            f"tapered designs only, not {modifier.__name__}"
+        )
+    values = constants(modifier)
     allowance = {}
     for name, value in values.items():
-        if name.startswith("allowance_"):
+        if not name.startswith("allowance_"):
+            continue
+        if isinstance(value, dict):
             allowance.update({int(k): v for k, v in value.items()})
+        else:
+            allowance[int(name.removeprefix("allowance_"))] = value
+    if modifier is state_pension_only_income_tax_allowance:
+        tests = []
+        if values["total_income_at_most_allowance"]:
+            tests.append(
+                "whose total income, State Pension included"
+                + (
+                    " (savings interest aside)"
+                    if values["disregard_savings_interest"]
+                    else ""
+                )
+                + ", is at or below it"
+            )
+        if values["other_income_limit"] is not None:
+            tests.append(
+                "whose other income is at most "
+                f"£{values['other_income_limit']:,.0f}"
+            )
+        note = (
+            "With the measure, only for people "
+            + " and ".join(tests or ["with a State Pension"])
+            + "; £1 more takes it all away"
+        )
+    else:
+        note = (
+            f"With the measure, withdrawn £{values['taper_rate']:g} for "
+            "each £1 of income above it, down to the personal allowance"
+        )
     return [
         _row(
             "Income tax allowance over State Pension age",
@@ -409,14 +455,9 @@ def _state_pension_allowance(reform) -> list[dict]:
             ),
             _source(
                 _engine_source(path),
-                _modifier_source(
-                    state_pension_income_tax_allowance,
-                    "allowance_2027 to 2031",
-                ),
+                _modifier_source(modifier, "allowance_2027 to 2031"),
             ),
-            note="With the measure, withdrawn £"
-            f"{values['taper_rate']:g} for each £1 of income above it, down "
-            "to the personal allowance",
+            note=note,
         )
     ]
 
@@ -654,6 +695,128 @@ def _plan_2(reform) -> list[dict]:
     ]
 
 
+def _carers_allowance_taper(reform) -> list[dict]:
+    values = constants(carers_allowance_earnings_taper)
+    start, taper = values["start_year"], values["taper_rate"]
+    if values["earnings_limit"] is not None:
+        raise ValueError("the table reads the engine's earnings limit")
+    limit = "gov.dwp.carers_allowance.earnings_limit"
+    rate = "gov.dwp.carers_allowance.rate"
+    modifier = _modifier_source(
+        carers_allowance_earnings_taper, "start_year, taper_rate"
+    )
+    return [
+        _row(
+            "Weekly earnings at which Carer's Allowance stops",
+            POUNDS,
+            _yearly(
+                lambda y: engine_value(limit, y),
+                lambda y: (
+                    engine_value(limit, y) + engine_value(rate, y) / taper
+                    if y >= start
+                    else engine_value(limit, y)
+                ),
+            ),
+            _source(
+                {
+                    "kind": "engine_parameter",
+                    "where": f"the earnings limit ({limit}); with the "
+                    f"measure, the limit plus the weekly rate ({rate}) "
+                    "divided by the taper rate",
+                },
+                modifier,
+            ),
+            unit_words="£ of net earnings a week",
+            note="Current law stops the allowance at £1 over the earnings "
+            "limit (£204 a week, not uprated in the engine); with the "
+            "measure it falls by £1 for each £1 above the limit",
+        ),
+    ]
+
+
+def _lha_unfreeze(reform) -> list[dict]:
+    path = "gov.dwp.LHA.freeze"
+    percentile = "gov.dwp.LHA.percentile"
+    after = _engine_or_change(reform, path)
+
+    def reset(frozen):
+        return lambda y: None if frozen(y) else engine_value(percentile, y)
+
+    return [
+        _row(
+            "Local rents the LHA rates are re-set to each April, percentile",
+            PERCENT,
+            _yearly(reset(lambda y: engine_value(path, y)), reset(after)),
+            _source(
+                {
+                    "kind": "engine_parameter",
+                    "where": f"policyengine-uk {path} (frozen: none) and "
+                    f"{percentile}, at 6 April of each year",
+                },
+                _change_source(path, "_create_lha_unfreeze_2027()"),
+            ),
+            note="Current law freezes the rates at their April 2024 level; "
+            "with the measure they are re-set each April from 2027",
+        )
+    ]
+
+
+def _employer_ni_threshold(reform) -> list[dict]:
+    path = registry.SECONDARY_THRESHOLD
+    after = _engine_or_change(reform, path)
+    return [
+        _row(
+            "Employer National Insurance threshold",
+            POUNDS,
+            _yearly(
+                lambda y: round(engine_value(path, y) * 52, 2),
+                lambda y: round(after(y) * 52, 2),
+            ),
+            _source(
+                {
+                    "kind": "engine_parameter",
+                    "where": f"policyengine-uk {path}, at 6 April of each "
+                    "year, x 52 (stored weekly)",
+                },
+                _change_source(path, "secondary_threshold_raised()"),
+            ),
+            unit_words="£ of earnings a year",
+            note="Employers pay 15% on earnings above it",
+        )
+    ]
+
+
+def _unearned_income_rates(reform) -> list[dict]:
+    labels = {
+        "dividends[0].rate": "Dividend ordinary rate",
+        "dividends[1].rate": "Dividend upper rate",
+        "dividends[2].rate": "Dividend additional rate",
+        "savings.basic": "Savings basic rate",
+        "savings.higher": "Savings higher rate",
+        "savings.additional": "Savings additional rate",
+        "property.basic": "Property basic rate",
+        "property.higher": "Property higher rate",
+        "property.additional": "Property additional rate",
+    }
+    function = "unearned_income_rates_up()"
+    rows = []
+    for suffix, label in labels.items():
+        path = f"{registry.INCOME_TAX_RATES}.{suffix}"
+        rows.append(
+            _row(
+                label,
+                PERCENT,
+                _yearly(
+                    lambda y, path=path: engine_value(path, y),
+                    _engine_or_change(reform, path),
+                ),
+                _source(_engine_source(path), _change_source(path, function)),
+                primary=suffix == "dividends[0].rate",
+            )
+        )
+    return rows
+
+
 BUILDERS = {
     registry.FUEL_DUTY_DEFERRAL_ID: _fuel_duty,
     registry.STATE_PENSION_ALLOWANCE_ID: _state_pension_allowance,
@@ -664,6 +827,10 @@ BUILDERS = {
     registry.BADR_ID: _badr,
     registry.FUEL_VAT_ID: _road_fuel_vat,
     registry.PLAN_2_ID: _plan_2,
+    registry.CARERS_ALLOWANCE_TAPER_ID: _carers_allowance_taper,
+    registry.LHA_UNFREEZE_ID: _lha_unfreeze,
+    registry.EMPLOYER_NI_THRESHOLD_ID: _employer_ni_threshold,
+    registry.UNEARNED_INCOME_RATES_ID: _unearned_income_rates,
 }
 
 
@@ -689,8 +856,12 @@ SWITCH, SCHEDULE, TABLE, BEFORE_AFTER, PATH = (
     "before-after",
     "path",
 )
-# A measure whose shape reads better another way, by id (none needed now)
-DISPLAY_OVERRIDES: dict[str, str] = {}
+# A measure whose shape reads better another way, by id: the LHA freeze
+# has no value in its frozen years ("none"), so its change is shown as a
+# before and after (display_for's shape tests need numbers).
+DISPLAY_OVERRIDES: dict[str, str] = {
+    registry.LHA_UNFREEZE_ID: BEFORE_AFTER,
+}
 
 
 def _differs(point: dict) -> bool:
@@ -734,7 +905,11 @@ def build() -> dict:
         rows = BUILDERS[measure_id](reform)
         measures[measure_id] = {
             "description": reform.description,
-            "display": DISPLAY_OVERRIDES.get(measure_id, display_for(rows)),
+            "display": (
+                DISPLAY_OVERRIDES[measure_id]
+                if measure_id in DISPLAY_OVERRIDES
+                else display_for(rows)
+            ),
             "rows": rows,
         }
     return {

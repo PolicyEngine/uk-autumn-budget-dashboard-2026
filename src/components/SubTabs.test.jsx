@@ -96,7 +96,7 @@ describe("SubTabs", () => {
     vi.stubGlobal("scrollTo", scrollTo);
     render(<Harness />);
     // The band sticks: its place in the page is the sentinel before it,
-    // and its scroll margin holds the bars above it
+    // lined up under the bars above it, measured live (utils/pageScroll)
     const band = screen.getByRole("tablist").closest(".sub-tabs-band");
     const sentinel = band.previousElementSibling;
     expect(sentinel).toHaveClass("sub-tabs-sentinel");
@@ -104,20 +104,23 @@ describe("SubTabs", () => {
     fireEvent.click(tab("Second"));
     expect(scrollTo).not.toHaveBeenCalled();
 
-    // Scrolled 800px down, with the bar 500px down the page under a 112px band
+    // Scrolled 800px down, with the bar 500px down the page under a 124px
+    // title band (the band itself sits below the sentinel, so it does not count)
+    const title = document.createElement("div");
+    title.className = "title-row";
+    document.body.prepend(title);
+    vi.spyOn(title, "getBoundingClientRect").mockReturnValue({ top: 0, bottom: 124, height: 124 });
+    vi.spyOn(band, "getBoundingClientRect").mockReturnValue({ top: 124, bottom: 173, height: 49 });
     vi.spyOn(sentinel, "getBoundingClientRect").mockReturnValue({ top: -300 });
-    const computed = window.getComputedStyle.bind(window);
-    vi.spyOn(window, "getComputedStyle").mockImplementation((el, pseudo) =>
-      el === band ? { scrollMarginTop: "124px" } : computed(el, pseudo),
-    );
     Object.defineProperty(window, "scrollY", { value: 800, configurable: true });
     fireEvent.click(tab("Third"));
-    expect(scrollTo).toHaveBeenCalledWith({ top: 500 - 124 });
+    expect(scrollTo).toHaveBeenCalledWith({ top: 500 - 124, behavior: "auto" });
     // Choosing the open tab does not scroll
     scrollTo.mockClear();
     fireEvent.click(tab("Third"));
     expect(scrollTo).not.toHaveBeenCalled();
     Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
+    title.remove();
     vi.unstubAllGlobals();
   });
 

@@ -235,8 +235,10 @@ def test_native_pension_responds_to_rates_without_total_income_override(
     pension_type, path, age, reported
 ):
     # policyengine-uk splits reported pension at the legislated baseline rate.
-    # Partial records and protected/additional amounts now respond natively;
-    # applying a second total-pension scaling modifier would count it twice.
+    # The flat-rate part follows the full rate, partial records included; a
+    # second total-pension scaling modifier would count it twice. The add-on
+    # above the full rate rises by September CPI, not the full rate, from
+    # policyengine-uk 2.151.0 (#2336), so a rate change leaves it alone.
     situation = _pensioner(2028, income=0, age=age)
     situation["people"]["p"].update(
         {
@@ -254,8 +256,11 @@ def test_native_pension_responds_to_rates_without_total_income_override(
     )
     sim = Simulation(situation=situation, scenario=policy.to_scenario())
     assert _value(baseline, "state_pension", 2028) == pytest.approx(reported)
+    full_rate = old_rate * 52
     assert _value(sim, "state_pension", 2028) == pytest.approx(
-        reported * new_rate / old_rate, abs=0.01
+        min(reported, full_rate) * new_rate / old_rate
+        + max(reported - full_rate, 0),
+        abs=0.01,
     )
     assert (_value(sim, "additional_state_pension", 2028) > 0) == (
         reported > old_rate * 52

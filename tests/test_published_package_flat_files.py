@@ -30,13 +30,16 @@ FIXTURE = (
     Path(__file__).resolve().parents[1]
     / "src/test/fixtures/publication/manifest.json"
 )
+# The eight candidate measures Vahid chose for the package (27 October 2026,
+# evening), sorted by id. (The name is kept from the seven-measure package.)
 SEVEN = [
-    "badr_lifetime_limit_cut",
     "domestic_electricity_zero_vat",
+    "employer_nics_secondary_threshold_raise",
     "fuel_duty_rise_deferral",
-    "road_fuel_vat_cut",
+    "plan_2_threshold_unfreeze",
     "state_pension_income_tax_protection",
     "threshold_freeze_2031_32",
+    "unearned_income_rates_up",
     "warm_home_discount_top_up",
 ]
 
@@ -68,10 +71,10 @@ class CapturingRunner:
         ]
 
 
-def test_the_seven_compose_to_the_key_the_manifest_gave_them():
-    # 38885fda staged the seven's combined run as combined--352e45790725cc85
+def test_the_seven_compose_to_the_package_key():
+    # The key tonight's combined run and the area run use (#222)
     package = portable_combined([get_reform(i) for i in SEVEN])
-    assert package.id == "combined--352e45790725cc85"
+    assert package.id == "combined--894152ce8c83f1d8"
     assert package.id == combined_key(SEVEN)
 
 
@@ -106,7 +109,7 @@ def test_distribution_rows_are_keyed_by_the_package_not_the_registry(
         combined_sets=[[get_reform(i) for i in SEVEN]],
     )
     ids = [unit.reform.id for unit in runner.units]
-    # The members, then their package; never the registry's nine
+    # The members, then their package; never the registry's alias
     assert ids == [*SEVEN, combined_key(SEVEN)]
     assert AUTUMN_BUDGET_2026_COMBINED_ID not in ids
     written = (tmp_path / pipeline.INCOME_DISTRIBUTION_FILE).read_text()
@@ -177,10 +180,9 @@ def parse(document):
 
 
 def test_the_published_package_is_the_displayable_measures_and_their_run():
-    ids = [*SEVEN, "employer_ni_relief_under_25s"]
-    document = manifest_for(
-        ids, statuses={"employer_ni_relief_under_25s": "staged"}
-    )
+    # A staged measure is not displayable, so not in the package
+    ids = [*SEVEN, "alpha"]
+    document = manifest_for(ids, statuses={"alpha": "staged"})
     assert cli.published_package(parse(document)) == (SEVEN, SEVEN)
 
 
@@ -288,6 +290,11 @@ def test_cli_combined_by_hand(monkeypatch, tmp_path):
         ["--only", "age_impact", "--combined", *SEVEN],
         ["--only", "age_impact", "--published-package"],
         ["--published-package"],
+        # Without the manifest's package or --combined, the package rows
+        # would be the registry's alias, which the page never reads (#228)
+        ["--only", "income_distribution"],
+        ["--only", "income_growth"],
+        ["--only", "income_growth", "--reforms", SEVEN[0]],
         ["--only", "income_distribution", "--combined", "nonexistent", "x"],
         [
             "--only",

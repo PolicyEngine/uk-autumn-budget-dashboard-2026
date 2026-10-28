@@ -4,12 +4,15 @@ import {
   DETAIL_TIMEOUT_MS,
   EngineMismatchError,
   HEADLINE_INCLUDE,
+  MODAL_TIMEOUT_MS,
   buildHouseholdRequest,
   engineDifferences,
   mergeStages,
   normaliseHouseholdImpact,
+  householdDetailApiUrl,
   postHouseholdDetail,
   postHouseholdImpact,
+  postHouseholdImpactRetrying,
   requestKey,
   stageMismatch,
 } from "../utils/householdImpactApi";
@@ -47,15 +50,36 @@ export function peekHouseholdImpact(key, expectedEngine = null) {
 // page stops waiting for it and asks the main API at once.
 let detailServiceUsable = true;
 
+// The build commit the last headline fetched this session reported:
+// undefined before the first, null when it reported none. The detail
+// service's parts are asked for early (with the headline) only while it is
+// not null: under a headline that reports no commit, no detail answer can
+// be used, so asking early would only spend its runs.
+let lastHeadlineBuild;
+
+// Overrides of RETRY_POLICY (householdImpactApi.js) for the requests this
+// hook retries while the service is starting up: none outside tests
+let retryPolicy = {};
+
 /** Whether the detail service may still be asked this session (for tests). */
 export function detailServiceAsked() {
   return detailServiceUsable;
+}
+
+/**
+ * Shorten the waits between retries (for tests: a real retry waits 5 s or
+ * the service's Retry-After). Reset by clearHouseholdImpactCache.
+ */
+export function setHouseholdRetryPolicy(overrides) {
+  retryPolicy = { ...overrides };
 }
 
 /** Empty the session cache, and ask the detail service again (for tests). */
 export function clearHouseholdImpactCache() {
   cache.clear();
   detailServiceUsable = true;
+  lastHeadlineBuild = undefined;
+  retryPolicy = {};
 }
 
 /**
@@ -84,7 +108,7 @@ export function rememberHouseholdHeadline(key, data) {
 const DEBOUNCE_MS = 400;
 
 /**
- * The Household impact results for the wizard's answers: the headline and
+ * The Household calculator results for the wizard's answers: the headline and
  * programmes first, then the earnings sweep and the per-policy split, asked
  * for at once and each shown as it arrives.
  *
@@ -107,7 +131,10 @@ const DEBOUNCE_MS = 400;
  *   household, even while the new one loads
  * @returns {{ status: "idle"|"loading"|"ready"|"error", data: Object|null,
  *   error: Error|null, detailStatus: "idle"|"loading"|"ready"|"error",
- *   detailError: Error|null, retry: () => void }}
+ *   detailError: Error|null, startingUp: boolean, detailStartingUp: boolean,
+ *   retry: () => void }} `startingUp` while the headline is asked again
+ *   because the service looked to be starting up (an empty answer, a 5xx,
+ *   a timeout); `detailStartingUp` the same for the sweep and the split
  */
 export default function useHouseholdImpact({ inputs, year, policies, enabled, publicationKey = "", expectedEngine = null, confirmPublication = null, seeded = 0, household = null }) {
   const body = useMemo(
@@ -129,6 +156,8 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     error: null,
     detailStatus: "idle",
     detailError: null,
+    startingUp: false,
+    detailStartingUp: false,
   });
 
   useEffect(() => {
@@ -146,6 +175,8 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
         error: null,
         detailStatus: "ready",
         detailError: null,
+        startingUp: false,
+        detailStartingUp: false,
       });
       return undefined;
     }
@@ -168,6 +199,8 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       error: null,
       detailStatus: "loading",
       detailError: null,
+      startingUp: false,
+      detailStartingUp: false,
     }));
     // Each request waits for a check of the live publication made after it,
     // and is dropped if the snapshot it was made under is no longer live:
@@ -175,7 +208,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     const current = async () => !confirmPublication || (await confirmPublication(publicationKey));
     const refuse = (error) => {
       cache.delete(key);
-      setState({ key, dataKey: null, dataHousehold: null, status: "error", data: null, error, detailStatus: "idle", detailError: null });
+      setState({ key, dataKey: null, dataHousehold: null, status: "error", data: null, error, detailStatus: "idle", detailError: null, startingUp: false, detailStartingUp: false });
       // Nothing else this request asked for can be shown now
       controller.abort();
     };
@@ -185,15 +218,57 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       // (an example card's, or this household's from earlier in the session)
       // may come from a deploy that has since been replaced
       const headlineFetched = !first;
+      // With a detail service (Modal), its parts are asked for at the same
+      // time as Cloud Run's headline rather than after it: each run has its
+      // own container there, so they take no worker slot from the headline,
+      // and the breakdown arrives about when the headline does instead of a
+      // detail's time later (#253: 34 s to 15-20 s on a warm Modal). An
+      // early answer is still used only under the headline once it arrives,
+      // from its build (acceptFor below); otherwise the part is asked of
+      // Cloud Run, as before. Not under a cached headline: the parts are
+      // asked at once then anyway.
+      const detailUrl = householdDetailApiUrl();
+      const early = new Map();
+      const earlyController = new AbortController();
+      signal.addEventListener("abort", () => earlyController.abort());
       if (!first) {
         try {
           if (!(await current()) || signal.aborted) return;
-          const raw = await postHouseholdImpact(
+          if (detailUrl && detailServiceUsable && lastHeadlineBuild !== null) {
+            for (const include of DETAIL_PARTS) {
+              early.set(
+                include,
+                // Not past MODAL_TIMEOUT_MS: a cold Modal that has sent
+                // nothing by then would answer with an empty body at 150 s
+                postHouseholdImpact(
+                  { ...body, include },
+                  { signal: earlyController.signal, timeoutMs: MODAL_TIMEOUT_MS, url: detailUrl },
+                ).then(
+                  (raw) => ({ raw }),
+                  (error) => ({ error }),
+                ),
+              );
+            }
+          }
+          // Asked again while the service looks to be starting up (an
+          // empty answer, a 5xx, a timeout), within RETRY_POLICY's budget;
+          // the page says so meanwhile (`startingUp`). The retried answer is
+          // checked below exactly as a first answer is.
+          const raw = await postHouseholdImpactRetrying(
             { ...body, include: HEADLINE_INCLUDE },
-            { signal },
+            {
+              signal,
+              retry: retryPolicy,
+              onRetry: () => {
+                if (!signal.aborted) setState((prev) => ({ ...prev, key, startingUp: true }));
+              },
+            },
           );
           first = normaliseHouseholdImpact(raw);
+          lastHeadlineBuild = typeof first.build === "string" ? first.build : null;
         } catch (error) {
+          // No headline: nothing asked early can be shown
+          earlyController.abort();
           if (signal.aborted) return;
           setState({
             key,
@@ -204,6 +279,8 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
             error,
             detailStatus: "idle",
             detailError: null,
+            startingUp: false,
+            detailStartingUp: false,
           });
           return;
         }
@@ -225,14 +302,22 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
           error: null,
           detailStatus: complete ? "ready" : "loading",
           detailError: null,
+          startingUp: false,
+          detailStartingUp: false,
         });
-        if (complete) return;
+        if (complete) {
+          earlyController.abort();
+          return;
+        }
       }
       // The sweep and the split by policy, asked for at once: each part is
       // shown as soon as its own answer arrives. They wait for a check of the
       // live publication, and a part answered by other package versions than
       // the headline's refuses the whole result.
-      if (!(await current()) || signal.aborted) return;
+      if (!(await current()) || signal.aborted) {
+        earlyController.abort();
+        return;
+      }
       let merged = first;
       let failure = null;
       let refused = false;
@@ -267,10 +352,31 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       await Promise.all(
         parts.map(async (include) => {
           try {
-            const raw = await postHouseholdDetail(
-              { ...body, include },
-              { signal, timeoutMs: DETAIL_TIMEOUT_MS, accept: acceptFor(include), detail: askDetail },
-            );
+            const accept = acceptFor(include);
+            // An early answer from the detail service, kept if it passes
+            // the same check a later one would; otherwise Cloud Run's
+            const asked = askDetail ? await early.get(include) : undefined;
+            if (!askDetail) earlyController.abort();
+            const raw =
+              asked && !asked.error && accept(asked.raw)
+                ? asked.raw
+                : await postHouseholdDetail(
+                    { ...body, include },
+                    {
+                      signal,
+                      timeoutMs: DETAIL_TIMEOUT_MS,
+                      accept,
+                      // Asked early already: an answer that failed or was
+                      // refused there goes to Cloud Run at once
+                      detail: askDetail && !early.has(include),
+                      // Cloud Run asked again while it looks to be starting
+                      // up; the answer is checked by mergeStages as ever
+                      retry: retryPolicy,
+                      onRetry: () => {
+                        if (!signal.aborted) setState((prev) => ({ ...prev, detailStartingUp: true }));
+                      },
+                    },
+                  );
             if (signal.aborted || refused) return;
             // Refused unless from the headline's own package versions and,
             // where both report one, its build commit
@@ -286,6 +392,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
               data: merged,
               error: null,
               detailStatus: complete ? "ready" : prev.detailStatus,
+              detailStartingUp: complete ? false : prev.detailStartingUp,
             }));
           } catch (error) {
             if (signal.aborted || refused) return;
@@ -307,6 +414,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
         ...prev,
         detailStatus: "error",
         detailError: failure ?? new Error("The household calculator's breakdown came back incomplete"),
+        detailStartingUp: false,
       }));
     }, DEBOUNCE_MS);
     return () => {
@@ -334,6 +442,8 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     error: asked ? state.error : null,
     detailStatus: asked ? state.detailStatus : "loading",
     detailError: asked ? state.detailError : null,
+    startingUp: asked ? state.startingUp : false,
+    detailStartingUp: asked ? state.detailStartingUp : false,
     stale,
     retry,
   };

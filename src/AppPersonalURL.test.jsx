@@ -1,10 +1,13 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import App from "./App";
+import App, { preloadAllViews } from "./App";
 import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import { fixtureJson, fixtureText } from "./test/publicationFixture";
 import { artifactSha256 } from "./utils/publication/digest";
 import { DEFAULT_DISPLAY_YEAR } from "./utils/displayYears";
+
+// Every view's code is in before a test renders it (App.jsx lazyView)
+beforeAll(preloadAllViews, 60_000);
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
@@ -18,7 +21,7 @@ it.each(["epsilon", "never_published"])("holds the requested household measure %
   });
   window.history.replaceState({}, "", `/?tab=household&policies=${id}`);
   render(<App />);
-  expect(await screen.findByText("Household impact is unavailable for the selected measures")).toBeInTheDocument();
+  expect(await screen.findByText("Household calculator is unavailable for the selected policies")).toBeInTheDocument();
   expect(new URLSearchParams(window.location.search).get("policies")).toBe(id);
   expect(calls.some((call) => call.method === "POST" || call.url.includes("/api/household-impact"))).toBe(false);
   expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
@@ -35,7 +38,7 @@ it("lets the reader remove an unavailable household measure without calling the 
   });
   window.history.replaceState({}, "", "/?tab=household&policies=epsilon");
   render(<App />);
-  const reason = "Household impact is unavailable for the selected measures";
+  const reason = "Household calculator is unavailable for the selected policies";
   const notice = (await screen.findByText(reason)).closest(".publication-unavailable");
   fireEvent.click(within(notice).getByRole("button", { name: /^Remove .* from the selection$/ }));
   await waitFor(() => expect(screen.queryByText(reason)).toBeNull());
@@ -46,9 +49,9 @@ it("lets the reader remove an unavailable household measure without calling the 
 // Review of 428d209, finding 3: a later snapshot remounts the views, and
 // must restore exactly the selection the reader had, an empty one included.
 describe("a later snapshot keeps the reader's selection", () => {
-  const REASON = "Household impact is unavailable for the selected measures";
+  const REASON = "Household calculator is unavailable for the selected policies";
   const policies = () => new URLSearchParams(window.location.search).get("policies");
-  // The fixture's measures cover 2032 and 2033 only, and Household impact
+  // The fixture's measures cover 2032 and 2033 only, and Household calculator
   // needs the title band's year. So alpha's and beta's receipts are also
   // published for it, re-bound through the production digest functions.
   const serve = async (statuses = {}, revision = 0) => {
@@ -90,16 +93,16 @@ describe("a later snapshot keeps the reader's selection", () => {
   };
   const householdCalls = (calls) => calls.filter((call) => call.method === "POST" || call.url.includes("/api/household-impact"));
 
-  it("shows a withdrawn personal measure as unavailable instead of dropping it", async () => {
+  it("shows a stale personal measure as unavailable instead of dropping it", async () => {
     const calls = [];
     open("/?tab=household&policies=alpha,beta", await serve(), calls);
     await waitFor(() => expect(document.querySelector(".personal-impact-tab")).not.toBeNull());
     expect(policies()).toBe("alpha,beta");
     expect(screen.queryByText(REASON)).toBeNull();
     // Before the withdrawal the example cards may ask the household API in
-    // the background (useExampleFigures); once beta is withdrawn nothing more
+    // the background (useExampleFigures); once beta is stale nothing more
     // is asked for the selection
-    await publish(await serve({ beta: "withdrawn" }, 1), calls);
+    await publish(await serve({ beta: "stale" }, 1), calls);
     expect(await screen.findByText(REASON)).toBeInTheDocument();
     expect(policies()).toBe("alpha,beta");
     const asked = householdCalls(calls).length;
@@ -146,7 +149,7 @@ describe("a later snapshot keeps the reader's selection", () => {
     await publish(await serve({}, 1), calls);
     await waitFor(() => expect(selectedCount()).toBe(before + 1));
     expect(policies()).toBeNull();
-    expect(screen.queryByText("Some selected measures are unavailable")).toBeNull();
+    expect(screen.queryByText("Some selected policies are unavailable")).toBeNull();
   });
 
   it("drops a withdrawn measure from a default selection without blocking the figures", async () => {
@@ -157,7 +160,7 @@ describe("a later snapshot keeps the reader's selection", () => {
     await publish(await serve({ beta: "withdrawn" }, 1), calls);
     await waitFor(() => expect(selectedCount()).toBe(before - 1));
     expect(policies()).toBeNull();
-    expect(screen.queryByText("Some selected measures are unavailable")).toBeNull();
+    expect(screen.queryByText("Some selected policies are unavailable")).toBeNull();
     expect(screen.queryByText(/Select policies to analyse their impact/)).toBeNull();
   });
 
@@ -190,7 +193,7 @@ describe("a later snapshot keeps the reader's selection", () => {
   it("hands the selection back to the publication when the reader picks every measure", async () => {
     const calls = [];
     open("/?policies=", await serve({ beta: "staged" }), calls);
-    fireEvent.click(await screen.findByRole("button", { name: "All measures" }));
+    fireEvent.click(await screen.findByRole("button", { name: "All policies" }));
     await waitFor(() => expect(selectedCount()).toBeGreaterThan(0));
     const before = selectedCount();
     expect(policies()).toBeNull();

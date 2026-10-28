@@ -21,6 +21,7 @@ from uk_budget_data.reforms import (
     CAPITAL_GAINS_RESPONSES,
     STATE_PENSION_ALLOWANCE_ID,
     THRESHOLD_FREEZE_ID,
+    _create_badr_lifetime_limit_cut,
     get_autumn_budget_2026_reforms,
     get_reform,
     static_capital_gains,
@@ -31,6 +32,14 @@ YEARS = [str(year) for year in POLICY_YEARS]
 # rate band (which gains pay the lower rate) and the State Pension allowance
 # (taxable income).
 PINNED = (BADR_ID, THRESHOLD_FREEZE_ID, STATE_PENSION_ALLOWANCE_ID)
+
+
+def _pinned(measure_id):
+    # BADR is withdrawn and unregistered (27 October 2026); its factory
+    # still builds it.
+    if measure_id == BADR_ID:
+        return _create_badr_lifetime_limit_cut()
+    return get_reform(measure_id)
 
 
 def test_the_pin_sets_no_response_in_every_policy_year():
@@ -69,7 +78,7 @@ def test_capital_gains_measures_combine_with_the_shared_pin():
     """Each sets the pin, to the same values, so a package of them is one
     simulation with the pin set once."""
     combined = combine_measures(
-        [get_reform(measure_id) for measure_id in PINNED], DataConfig()
+        [_pinned(measure_id) for measure_id in PINNED], DataConfig()
     )
     assert _responses(combined.parameter_changes) == static_capital_gains()
 
@@ -103,7 +112,7 @@ def test_the_pin_keeps_the_figure_static_when_gains_respond():
     responsive = {
         f"{CAPITAL_GAINS_RESPONSES}.elasticity": {y: 1 for y in YEARS}
     }
-    measure = get_reform(BADR_ID)
+    measure = _create_badr_lifetime_limit_cut()
     limit = {
         BADR_LIFETIME_LIMIT: measure.parameter_changes[BADR_LIFETIME_LIMIT]
     }

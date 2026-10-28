@@ -25,6 +25,13 @@ from uk_budget_data.publication.artifacts import read_receipt
 from uk_budget_data.publication.combine import combined_key
 from uk_budget_data.publication.publish import approve, stage, withdraw
 
+# A data limit in force: the PIP points thresholds (the purchase limits
+# these tests first used lifted at the a6299504 cut).
+PIP_POINTS = next(
+    limit for limit in DATA_LIMITS if limit.key == "pip_daily_living_points"
+)
+PIP_THRESHOLD = "gov.dwp.pip.daily_living.points_thresholds.enhanced"
+
 PACKAGE = "pkg_alpha_beta"
 MEMBERS = ("beta", "alpha")
 STATUSES = (
@@ -67,13 +74,7 @@ def publication():
             update={"status": m.STALE, "reason": "The execution changed"}
         )
 
-        limit = record(
-            DATA_LIMITS[0],
-            [
-                "gov.hmrc.stamp_duty.residential.purchase.additional."
-                "rate[1].rate"
-            ],
-        )
+        limit = record(PIP_POINTS, [PIP_THRESHOLD])
         limited = world.write(
             "not_computable", {2027: 0.0}, rate=0.27, data_limits=[limit]
         )
@@ -82,9 +83,12 @@ def publication():
             next(
                 limit
                 for limit in model_limits.MODEL_LIMITS
-                if limit.key == "state_pension_add_on_uprating"
+                if limit.key == "pc_minimum_guarantee_uprating"
             ),
-            ["gov.dwp.state_pension.new_state_pension.amount"],
+            [
+                "gov.dwp.pension_credit.guarantee_credit.minimum_guarantee"
+                ".SINGLE"
+            ],
         )
         model_limited = world.ready(
             "model_limited",
@@ -129,7 +133,7 @@ def with_status(entry, status):
     fields.update(status=status, approval=None, data_limits=[], reason=None)
     if status == m.NOT_COMPUTABLE:
         fields.update(
-            data_limits=[DATA_LIMITS[0].key],
+            data_limits=[PIP_POINTS.key],
             reason="The certified dataset cannot cost this measure",
         )
     return m.Entry.model_validate(fields)
@@ -702,3 +706,52 @@ def test_area_command_refuses_a_changed_definition_before_building(
     ):
         assert g._run_geography(parsed, certification_reason=None) == 1
     simulate.assert_not_called()
+
+
+# -- the registered package: the eight candidates (27 October 2026) --------
+
+
+def _seven_manifest(combined_key_, members):
+    from uk_budget_data.reforms import AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
+
+    seven = sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
+    return SimpleNamespace(
+        measures={i: SimpleNamespace(status=m.APPROVED) for i in seven},
+        combined={
+            combined_key_: SimpleNamespace(status=m.APPROVED, measures=members)
+        },
+    )
+
+
+def test_the_area_run_takes_the_seven_package_under_its_key():
+    from uk_budget_data.reforms import (
+        AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
+        AUTUMN_BUDGET_2026_COMBINED_ID,
+    )
+
+    seven = sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
+    key = "combined--894152ce8c83f1d8"
+    assert g.manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
+    manifest = _seven_manifest(key, seven)
+    package = [AUTUMN_BUDGET_2026_COMBINED_ID]
+    assert g.approved_reforms(manifest, package) == package
+    assert g.approved_reforms(manifest)[-1] == AUTUMN_BUDGET_2026_COMBINED_ID
+
+
+def test_the_area_run_refuses_the_withdrawn_nine_measure_package():
+    from uk_budget_data.reforms import (
+        AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
+        AUTUMN_BUDGET_2026_COMBINED_ID,
+    )
+
+    nine = sorted(
+        [
+            *AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
+            "badr_lifetime_limit_cut",
+            "employer_ni_relief_under_25s",
+        ]
+    )
+    manifest = _seven_manifest(combined_key(nine), nine)
+    assert AUTUMN_BUDGET_2026_COMBINED_ID not in g.approved_reforms(manifest)
+    with pytest.raises(ValueError, match="combined--894152ce8c83f1d8"):
+        g.approved_reforms(manifest, [AUTUMN_BUDGET_2026_COMBINED_ID])

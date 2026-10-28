@@ -1,28 +1,122 @@
 // A level over time (Incomes over time, Inequality over time, Poverty over
-// time): official figures as a solid grey line with dots, the projection
-// dashed teal over a soft "Projection" band from the last official year,
-// both named on the plot (no key). The y axis is fitted to the data
-// (zoomAxis), with a break mark when it does not start at 0. The years the
-// card's sentence compares are bracketed under the lines, with the
-// projection's value labelled at both ends. Ticks every year on a wide
-// plot, every other year on a phone.
+// time): official figures as a solid grey line with dots, PolicyEngine's
+// microsimulation solid teal (not dashed: it is not a forecast), each named
+// above its start on the plot (no key), clear of the other line. No band
+// marks the PolicyEngine years: they are not a forecast, and they overlap
+// the official ones. The y axis is fitted to the data
+// (zoomAxis), with a break mark when it does not start at 0. No values are
+// printed on the plot (the card's sentence states the years it compares,
+// the tooltip gives each value exactly). Ticks every year on a wide plot,
+// every other year on a phone.
 
-import { CartesianGrid, Customized, Line, LineChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Customized, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Tooltip } from "../ViewportTooltip";
 import { ChartRows, lineLegendItems } from "./LsCharts";
 import ChartUnitLabel, { UNIT_LABEL_TOP_MARGIN } from "../../utils/ChartUnitLabel";
 import { TOOLTIP_PROPS } from "../ChartTooltip";
 import useElementWidth from "../../hooks/useElementWidth";
 import { AXIS_LINE, CHART_COLOURS, GRID_PROPS, TICK_STYLE, axisWidth, useNarrowViewport } from "../../utils/chartTheme";
 import { zoomAxis } from "../../utils/livingStandards/baseline";
-import { fyLabel, fyStart } from "../../utils/livingStandards/outlook";
+import { fyLabel } from "../../utils/livingStandards/outlook";
 
 const MARGIN = { top: UNIT_LABEL_TOP_MARGIN, right: 24, left: 0, bottom: 0 };
 const X_AXIS_HEIGHT = 26;
 // Width a "2027-28" tick needs before every other year is labelled
 const TICK_WIDTH = 58;
 const LABEL = { fontSize: 12, fontWeight: 600 };
+// Width of a label: measured in the page's font where there is a canvas,
+// else estimated per character (12px semibold, or 11px regular)
+let measurer;
+function textWidth(text, size = 12, weight = 600) {
+  if (typeof document !== "undefined") {
+    try {
+      measurer ??= document.createElement("canvas").getContext("2d");
+    } catch {
+      measurer = null;
+    }
+    if (measurer) {
+      measurer.font = `${weight} ${size}px ${getComputedStyle(document.body).fontFamily}`;
+      const w = measurer.measureText(String(text)).width;
+      if (w > 0) return w;
+    }
+  }
+  return String(text).length * size * (weight >= 600 ? 0.53 : 0.5);
+}
+// Box of a label from its baseline (cap height above, descenders below)
+const textBox = (left, baseline, w) => ({ left, right: left + w, top: baseline - 10, bottom: baseline + 3 });
+const GAP = 4;
+const DOT = 4;
 
-/** "2029-30 (projection): £42,900", one line per series at the year. */
+/** Whether a box is clear of the lines (polylines of [x, y]), their dots and other boxes. */
+function isClear(box, lines, boxes) {
+  const L = box.left - GAP;
+  const R = box.right + GAP;
+  const T = box.top - GAP;
+  const B = box.bottom + GAP;
+  for (const pts of lines) {
+    for (const [px, py] of pts) {
+      if (px + DOT > L && px - DOT < R && py + DOT > T && py - DOT < B) return false;
+    }
+    for (let k = 1; k < pts.length; k += 1) {
+      const [x1, y1] = pts[k - 1];
+      const [x2, y2] = pts[k];
+      const lo = Math.max(L, x1);
+      const hi = Math.min(R, x2);
+      if (lo > hi) continue;
+      const at = (xx) => (x2 === x1 ? y1 : y1 + ((y2 - y1) * (xx - x1)) / (x2 - x1));
+      if (Math.min(at(lo), at(hi)) < B && Math.max(at(lo), at(hi)) > T) return false;
+    }
+  }
+  // Text from text: half the gap (the boxes already pad the glyphs)
+  const g = GAP / 2;
+  return boxes.every((b) => b.right + g <= box.left || b.left - g >= box.right || b.bottom + g <= box.top || b.top - g >= box.bottom);
+}
+
+/** The y of a polyline at each of its points within [x0, x1], and where it crosses x0 and x1. */
+function ysWithin(pts, x0, x1) {
+  const ys = pts.filter(([px]) => px >= x0 && px <= x1).map(([, py]) => py);
+  for (let k = 1; k < pts.length; k += 1) {
+    const [xa, ya] = pts[k - 1];
+    const [xb, yb] = pts[k];
+    [x0, x1].forEach((xx) => {
+      if (xx > xa && xx < xb) ys.push(ya + ((yb - ya) * (xx - xa)) / (xb - xa));
+    });
+  }
+  return ys;
+}
+
+/**
+ * Baseline for a label starting at x0 over its own line: 12px above the
+ * line's highest point under the label, nudged up until clear of the lines,
+ * dots and boxes, but not past another line above its start (it would read
+ * as that line's name); else just below its own line; else nudged up past the other
+ * line; else where it would first go.
+ */
+export function placeLabel({ own, x0, w, lines, boxes, top, bottom }) {
+  const ownYs = ysWithin(own, x0, x0 + w);
+  const ys = ownYs.length ? ownYs : [own[0][1]];
+  const preferred = Math.min(...ys) - 12;
+  // Another line above this one where the label starts: the label stays
+  // under it, so it is not read as that line's name
+  const above = lines
+    .filter((pts) => pts !== own)
+    .flatMap((pts) => ysWithin(pts, x0, x0))
+    .filter((v) => v < own[0][1]);
+  const ceiling = above.length ? Math.max(...above) : -Infinity;
+  const clear = (bl) => isClear(textBox(x0, bl, w), lines, boxes);
+  for (let bl = preferred; bl - 10 >= top && bl - 10 > ceiling; bl -= 2) {
+    if (clear(bl)) return bl;
+  }
+  for (let bl = Math.max(...ys) + 12; bl + 3 <= bottom; bl += 1) {
+    if (clear(bl)) return bl;
+  }
+  for (let bl = preferred; bl - 10 >= top; bl -= 2) {
+    if (clear(bl)) return bl;
+  }
+  return preferred;
+}
+
+/** "2029-30, PolicyEngine: £42,900", one line per series at the year. */
 function OverTimeTooltip({ active, payload, label, format }) {
   if (!active || !payload?.length) return null;
   const rows = payload.filter((p) => p.value != null);
@@ -33,7 +127,7 @@ function OverTimeTooltip({ active, payload, label, format }) {
         <p key={p.dataKey} className="chart-tooltip-row">
           <span className="chart-tooltip-swatch chart-tooltip-swatch-line" style={{ background: p.color }} />
           <span>
-            {fyLabel(label)} ({p.dataKey === "historical" ? "official" : "projection"})
+            {fyLabel(label)}, {p.name}
           </span>
           <span className="chart-tooltip-value">{format(p.value)}</span>
         </p>
@@ -43,7 +137,7 @@ function OverTimeTooltip({ active, payload, label, format }) {
 }
 
 /** The plot's annotations, in its SVG (so the downloads carry them). */
-function Annotations({ xAxisMap, yAxisMap, offset, data, showHistorical, showProjection, compare, valueFormat, broken }) {
+function Annotations({ xAxisMap, yAxisMap, offset, data, showHistorical, showProjection, broken }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale || !offset) return null;
@@ -64,55 +158,40 @@ function Annotations({ xAxisMap, yAxisMap, offset, data, showHistorical, showPro
     );
   }
 
-  // "Official figures" above the whole official line, from its first year
-  const official = showHistorical ? data.filter((d) => d.historical != null) : [];
-  if (official.length) {
-    const top = Math.min(...official.map((d) => y(d.historical)));
+  // Each line named above its start: "Official figures" grey, "PolicyEngine"
+  // teal, clear of both lines, their dots and each other
+  const lines = [
+    showHistorical && { key: "historical", text: "Official figures", fill: CHART_COLOURS.obrText },
+    showProjection && { key: "projection", text: "PolicyEngine", fill: CHART_COLOURS.highlight },
+  ].filter(Boolean);
+  const points = lines.map(({ key }) => data.filter((d) => d[key] != null).map((d) => [x(d.year), y(d[key])]));
+  const placed = [];
+  lines.forEach(({ key, text, fill }, i) => {
+    const own = points[i];
+    if (!own.length) return;
+    const x0 = own[0][0];
+    const w = textWidth(text);
+    const baseline = placeLabel({ own, x0, w, lines: points, boxes: placed, top: offset.top - 4, bottom: bottom - 2 });
+    placed.push(textBox(x0, baseline, w));
     parts.push(
-      <text key="official" x={x(official[0].year)} y={top - 12} {...LABEL} fill={CHART_COLOURS.obrText} textAnchor="start">
-        Official figures
+      <text key={key} x={x0} y={baseline} {...LABEL} fill={fill} textAnchor="start">
+        {text}
       </text>,
     );
-  }
+  });
 
-  // The years compared: a bracket under the lines, the projection's value
-  // labelled at both ends
-  if (compare && showProjection) {
-    const [a, b] = compare.map((fy) => data.find((d) => d.year === fyStart(fy)));
-    if (a && b && a.projection != null && b.projection != null) {
-      const x1 = x(a.year);
-      const x2 = x(b.year);
-      const yb = bottom - 12;
-      parts.push(
-        <g key="compare" className="ls-compare">
-          <path d={`M${x1},${yb - 5} L${x1},${yb} L${x2},${yb} L${x2},${yb - 5}`} stroke={CHART_COLOURS.highlight} strokeWidth={1.2} fill="none" />
-          <text x={(x1 + x2) / 2} y={yb - 5} fontSize={11} fill={CHART_COLOURS.highlight} textAnchor="middle">
-            Years compared
-          </text>
-          {[a, b].map((d, i) => (
-            <text key={d.year} x={x(d.year)} y={y(d.projection) - 12} {...LABEL} fill={CHART_COLOURS.highlight} textAnchor={i === 1 ? "end" : "middle"}>
-              {valueFormat(d.projection)}
-            </text>
-          ))}
-        </g>,
-      );
-    }
-  }
   return <g>{parts}</g>;
 }
 
 /**
  * series: lineSeries(viewMode, hasOutturn) (keys historical, projection).
- * compare: the years compared, ["2027-28", "2031-32"], or null.
  */
 export default function OverTimeChart({
   data,
   series,
   yFormat,
   tooltipFormat,
-  valueFormat = tooltipFormat,
   yLabel,
-  compare = null,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
@@ -125,8 +204,6 @@ export default function OverTimeChart({
   // Every year where they fit, else every other year back from the last
   const every = !narrow && (!plotWidth || plotWidth / years.length >= TICK_WIDTH);
   const ticks = every ? years : years.filter((_, i) => (years.length - 1 - i) % 2 === 0);
-  const lastOfficial = show.historical && show.projection ? [...data].reverse().find((d) => d.historical != null)?.year : null;
-  const lastYear = years[years.length - 1];
   const visible = series.filter((s) => !s.hidden);
 
   return (
@@ -134,16 +211,6 @@ export default function OverTimeChart({
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={MARGIN}>
           <CartesianGrid {...GRID_PROPS} />
-          {lastOfficial != null && lastOfficial < lastYear && (
-            <ReferenceArea
-              x1={lastOfficial}
-              x2={lastYear}
-              fill={CHART_COLOURS.mutedFill}
-              fillOpacity={0.6}
-              stroke="none"
-              label={{ value: "Projection", position: "insideTopRight", offset: 8, fill: CHART_COLOURS.gainText, fontSize: 12, fontWeight: 600 }}
-            />
-          )}
           <XAxis
             dataKey="year"
             tick={TICK_STYLE}
@@ -176,7 +243,6 @@ export default function OverTimeChart({
               name={s.name}
               stroke={s.colour}
               strokeWidth={2.5}
-              strokeDasharray={s.key === "projection" ? "8 4" : undefined}
               dot={{ r: 3, fill: s.colour, stroke: s.colour, strokeWidth: 1 }}
               activeDot={{ r: 5 }}
               connectNulls={false}
@@ -190,8 +256,6 @@ export default function OverTimeChart({
                 data={data}
                 showHistorical={show.historical}
                 showProjection={show.projection}
-                compare={compare}
-                valueFormat={valueFormat}
                 broken={axis.broken}
               />
             }

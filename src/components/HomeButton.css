@@ -8,7 +8,37 @@
   min-width: 0;
 }
 
-/* The mark, decoration only */
+/* The mark's link to PolicyEngine's home page: a soft white tint behind
+   it on hover, a white ring on keyboard focus */
+.title-mark-link {
+  display: flex;
+  flex: none;
+  padding: 4px;
+  margin: -4px;
+  border-radius: 8px;
+  transition: background-color var(--motion-fast) ease;
+}
+
+.title-mark-link:hover {
+  background: var(--band-ink-hover);
+}
+
+.title-mark-link:active {
+  background: var(--band-ink-active);
+}
+
+.title-mark-link:focus-visible {
+  outline: 2px solid var(--band-ink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-mark-link {
+    transition: none;
+  }
+}
+
+/* The mark itself */
 .title-mark {
   display: block;
   flex: none;
@@ -32,11 +62,13 @@
    row's height, sticky with the bar.
 
    Where the page's margin has room for it, it sits in the margin, left of
-   the row, and the row is pulled 16px (a tab's padding) into the margin so
+   the row, and the row is pulled a tab's padding into the margin so
    the first tab's icon, and the first sub-tab's, line up with the page
    content's left edge: in full from 1392px wide, as its icon alone (the
    card names it) from 1268px. Narrower, it comes first in the row, with a
-   divider before the first tab, and the tabs start after it. */
+   divider before the first tab, and the tabs start after it. Either way it
+   is two tab gaps from the first tab, the divider midway, so its tint and
+   the first tab's never touch the divider. */
 .view-tabs-bar.has-leading {
   display: flex;
   align-items: center;
@@ -49,14 +81,14 @@
 
 .view-tabs-bar.has-leading .edge-about {
   height: var(--view-tabs-height);
-  margin-right: 9px;
+  margin-right: calc(2 * var(--tab-gap, 8px));
 }
 
 .view-tabs-bar.has-leading .edge-about::after {
   content: "";
   position: absolute;
   top: 50%;
-  right: -5px;
+  right: calc(-1 * var(--tab-gap, 8px) - 0.5px);
   width: 1px;
   height: 22px;
   background: var(--c-grid);
@@ -65,21 +97,15 @@
 
 @media (min-width: 1268px) {
   .view-tabs-bar.has-leading > .view-tabs {
-    margin-left: -16px;
+    margin-left: calc(-1 * var(--tab-pad-x, 12px));
   }
 
-  /* In the margin: its right edge 8px short of the row's start */
+  /* In the margin: its right edge two tab gaps short of the row's start */
   .view-tabs-bar.has-leading .edge-about {
     position: absolute;
     top: 0;
-    right: calc(100% - max(40px, calc((100vw - 1120px) / 2)) + 16px + 8px);
+    right: calc(100% - max(40px, calc((100vw - 1120px) / 2)) + var(--tab-pad-x, 12px) + 2 * var(--tab-gap, 8px));
     margin-right: 0;
-    padding: 0 12px;
-  }
-
-  /* The divider, midway across the 8px to the first tab */
-  .view-tabs-bar.has-leading .edge-about::after {
-    right: -4px;
   }
 
   .view-tabs-bar.has-leading .edge-about .view-tab-label {
@@ -93,10 +119,6 @@
 }
 
 @media (min-width: 1392px) {
-  .view-tabs-bar.has-leading .edge-about {
-    padding: 0 16px;
-  }
-
   .view-tabs-bar.has-leading .edge-about .view-tab-label {
     position: static;
     width: auto;

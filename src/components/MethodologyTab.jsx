@@ -13,7 +13,7 @@ import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
 import { SCATTER_BINS } from "../utils/publication/scatter";
 import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE } from "../utils/ageImpact";
 import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST } from "./youngPeople/youngPeopleData";
-import { FIRST_DISPLAY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
+import { EARLY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { OPEN_VIEW_EVENT } from "../utils/methodLink";
@@ -21,6 +21,7 @@ import { AnchorLink, ExternalLink, ReasonList, SourceLink, Tag, Topic } from "./
 import { glossaryAnchor } from "./methodology/glossary";
 import { Calculator, ChartColumn, Compass, Database, House, TrendingUp, TriangleAlert } from "lucide-react";
 import "./methodology/Methodology.css";
+import { scrollBelowBars, smoothUnlessReduced } from "../utils/pageScroll";
 
 /**
  * The ids of the Methodology view's sections and of the topics other
@@ -48,9 +49,9 @@ export const METHOD_SECTIONS = {
 export const METHOD_CONTENTS = [
   { id: METHOD_SECTIONS.overview, title: "At a glance", icon: Compass, titleIcon: "compass" },
   { id: METHOD_SECTIONS.data, title: "Data", icon: Database, titleIcon: "database" },
-  { id: METHOD_SECTIONS.model, title: "Model and measures", icon: Calculator, titleIcon: "calculator" },
+  { id: METHOD_SECTIONS.model, title: "Model and policies", icon: Calculator, titleIcon: "calculator" },
   { id: METHOD_SECTIONS.population, title: "Population impact", icon: ChartColumn, titleIcon: "bars" },
-  { id: METHOD_SECTIONS.personal, title: "Household impact", icon: House, titleIcon: "house" },
+  { id: METHOD_SECTIONS.personal, title: "Household calculator", icon: House, titleIcon: "house" },
   { id: METHOD_SECTIONS.living, title: "Pre-measures forecast", icon: TrendingUp, titleIcon: "trend" },
   { id: METHOD_SECTIONS.limitations, title: "Limitations", icon: TriangleAlert, titleIcon: "alert" },
 ];
@@ -60,7 +61,7 @@ const SECTION_ICONS = Object.fromEntries(METHOD_CONTENTS.map(({ id, titleIcon })
 const pounds = (value) => `£${Math.round(value).toLocaleString("en-GB")}`;
 const SCATTER_CHANGE_MAX = SCATTER_BINS.change_edges[SCATTER_BINS.change_edges.length - 1];
 const SCATTER_CHANGE_EDGE_LIST = SCATTER_BINS.change_edges.filter((edge) => edge > 0).map(pounds);
-const yearRange = `${fiscalYearTick(FIRST_DISPLAY_YEAR)} to ${fiscalYearTick(LAST_DISPLAY_YEAR)}`;
+const yearRange = `${fiscalYearTick(EARLY_YEAR)} to ${fiscalYearTick(LAST_DISPLAY_YEAR)}`;
 
 /**
  * A section of the view, laid out as the other views' sections are: a
@@ -90,7 +91,7 @@ function ViewLink({ tab, sub, age, hash, onShowTab, className, children }) {
         else onShowTab(tab);
         if (hash) {
           setTimeout(() => {
-            document.getElementById(hash)?.scrollIntoView?.({ behavior: "smooth" });
+            scrollBelowBars(document.getElementById(hash), { behavior: smoothUnlessReduced() });
           }, 50);
         }
       }}
@@ -166,7 +167,7 @@ function MethodologyTab({ onShowTab }) {
           summary={
             <>
               We run <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink>{" "}on a
-              representative survey of UK households, with and without each measure, for each
+              representative survey of UK households, with and without each policy, for each
               fiscal year from {yearRange}, and weight the difference up to the whole country.
             </>
           }
@@ -191,7 +192,7 @@ function MethodologyTab({ onShowTab }) {
             </>
           }
         >
-          <Topic title="More info" preview="Dataset · Survey · Weights · Projection · Small groups">
+          <Topic title="The dataset" preview="Dataset · Pipeline · Survey · Weights · Projection · Small groups">
             <FactList
               items={[
                 [
@@ -204,10 +205,42 @@ function MethodologyTab({ onShowTab }) {
                   </>,
                 ],
                 [
+                  "Pipeline",
+                  {
+                    value: (
+                      <>
+                        Built with <SourceLink id="microcosm_site">Microcosm</SourceLink>: a sequence of
+                        stages adds to each Family Resources Survey household what the survey does not
+                        record; calibration then sets each record&apos;s weight.
+                      </>
+                    ),
+                    more: [
+                      "The stages draw on other surveys and on administrative statistics for high incomes, wealth, spending, travel, benefit take-up, capital gains, pension salary sacrifice and student loans.",
+                      "The same stages feed two files, certified together: the national file, and a local-area file for constituencies and local authorities.",
+                      "Both files are built from survey microdata licensed through the UK Data Service, so they are not public downloads.",
+                    ],
+                  },
+                ],
+                [
                   "Survey",
                   "A survey household can appear as several records, each linked to the household it was made from.",
                 ],
-                ["Weights", "Calibrated; the release pins the calibration with the data."],
+                [
+                  "Weights",
+                  {
+                    value: (
+                      <>
+                        Calibrated to published totals for the UK, its nations and the English regions (
+                        <SourceLink id="uk_calibration_targets">calibration targets</SourceLink>); the release
+                        pins the calibration with the data.
+                      </>
+                    ),
+                    more: [
+                      "The totals include HMRC income and tax statistics, DWP benefit caseloads, OBR forecasts and ONS population estimates.",
+                      "The local-area file is calibrated to constituency and local-authority totals as well.",
+                    ],
+                  },
+                ],
                 [
                   "Projection",
                   <>
@@ -230,18 +263,22 @@ function MethodologyTab({ onShowTab }) {
                 ],
               ]}
             />
+            <p className="method-more">
+              <SourceLink id="uk_data_pipeline">Read how Microcosm UK is built today, stage by stage</SourceLink>.
+              The page describes the current pipeline, which may be newer than this dashboard&apos;s data.
+            </p>
           </Topic>
         </MethodSection>
 
         <MethodSection
           id={METHOD_SECTIONS.model}
-          title="Model and measures"
+          title="Model and policies"
           summary={
             <>
               <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink>{" "}works out each
               household&apos;s taxes, benefits and <Term id="netIncome">net income</Term>{" "}under
-              current law, then again with a measure; the difference is the measure&apos;s effect.
-              What each measure does and how it is modelled is on{" "}
+              current law, then again with a policy; the difference is the policy&apos;s effect.
+              What each policy does and how it is modelled is on{" "}
               <ViewLink tab="policies" onShowTab={onShowTab}>
                 Policies
               </ViewLink>
@@ -249,7 +286,7 @@ function MethodologyTab({ onShowTab }) {
             </>
           }
         >
-          <Topic title="More info" preview="Model · Baseline · Static · Years · Prices">
+          <Topic title="The model" preview="Model · Baseline · Static · Years · Prices">
             <FactList
               items={[
                 [
@@ -275,7 +312,7 @@ function MethodologyTab({ onShowTab }) {
                   "Prices",
                   <>
                     <ViewLink tab="dashboard" onShowTab={onShowTab}>Population impact</ViewLink> and{" "}
-                    <ViewLink tab="household" onShowTab={onShowTab}>Household impact</ViewLink>{" "}figures
+                    <ViewLink tab="household" onShowTab={onShowTab}>Household calculator</ViewLink>{" "}figures
                     are in <Term id="real">cash terms</Term>{" "}for the year shown, not adjusted for
                     inflation.
                   </>,
@@ -284,11 +321,11 @@ function MethodologyTab({ onShowTab }) {
             />
           </Topic>
           {UNAVAILABLE.length > 0 && (
-            <Topic title="Unavailable measures" preview="Measures with no verified results in the current publication">
+            <Topic title="Unavailable policies" preview="Policies with no verified results in the current publication">
               <ReasonList items={UNAVAILABLE} />
             </Topic>
           )}
-          <Topic title="Not modelled" preview="Measures the household model cannot cost, and why">
+          <Topic title="Not modelled" preview="Policies the household model cannot cost, and why">
             <ReasonList items={NOT_MODELLED} icon />
           </Topic>
         </MethodSection>
@@ -308,7 +345,7 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id={METHOD_ANCHORS.publicFinances}
             title="Public finances"
-            preview="Budgetary impact · Exceptions · Net impact · OBR comparison"
+            preview="Budgetary impact · Exceptions · Net change · OBR comparison"
           >
             <p className="method-more">
               The{" "}
@@ -321,20 +358,20 @@ function MethodologyTab({ onShowTab }) {
                   "Budgetary impact",
                   {
                     value: "Taxes collected less benefits and other spending, in £ billion a year.",
-                    more: ["Each measure's figure is net of every tax and spending change it causes."],
+                    more: ["Each policy's figure is net of every tax and spending change it causes."],
                   },
                 ],
                 [
                   "Exceptions",
                   {
-                    value: "A measure whose published description says it is costed another way follows that description.",
+                    value: "A policy whose published description says it is costed another way follows that description.",
                     more: ["For example, from a Treasury cost estimate or from the change in loan repayments."],
                   },
                 ],
                 [
-                  "Net impact",
+                  "Net change",
                   <>
-                    With several measures selected, the net line adds their separate effects (see{" "}
+                    With several policies selected, the net line adds their separate effects (see{" "}
                     <AnchorLink id={METHOD_SECTIONS.limitations}>limitations</AnchorLink>).
                   </>,
                 ],
@@ -400,7 +437,7 @@ function MethodologyTab({ onShowTab }) {
                     more: [
                       <>
                         The poverty line is measured on <SourceLink id="dwp_hbai">HBAI</SourceLink>{" "}
-                        income, which is before indirect taxes, so the VAT and fuel duty measures do
+                        income, which is before indirect taxes, so the VAT and fuel duty policies do
                         not change it.
                       </>,
                       "People moved out of or into poverty are the change in the rate times that year's population in the current-law projection, to the nearest 1,000.",
@@ -536,9 +573,9 @@ function MethodologyTab({ onShowTab }) {
                   {
                     lead: "The Young people and Pensioners charts by year:",
                     points: [
-                      "Each point is a whole fiscal year, the sum of each selected measure's own effect; the curve between points never goes past them.",
-                      "A label names the measure behind each of the largest year-on-year steps.",
-                      "Breakdown by measure stacks each measure's own change, with the net change as the line; the running total adds each year's change from the first year.",
+                      "Each point is a whole fiscal year, the sum of each selected policy's own effect; the curve between points never goes past them.",
+                      "A label names the policy behind each of the largest year-on-year steps.",
+                      "Breakdown by policy stacks each policy's own change, with the net change as the line; the running total adds each year's change from the first year.",
                       "No share of income is shown: the results by age carry no income to divide by.",
                     ],
                   },
@@ -582,12 +619,12 @@ function MethodologyTab({ onShowTab }) {
 
         <MethodSection
           id={METHOD_SECTIONS.personal}
-          title="Household impact"
+          title="Household calculator"
           summary={
             <span id={METHOD_SECTIONS.singleYear} className="method-anchor">
-              The same model and measures, applied to one household&apos;s answers on the{" "}
+              The same model and policies, applied to one household&apos;s answers on the{" "}
               <ViewLink tab="household" onShowTab={onShowTab}>
-                Household impact tab
+                Household calculator tab
               </ViewLink>
               .
             </span>
@@ -637,7 +674,7 @@ function MethodologyTab({ onShowTab }) {
           title="Pre-measures forecast"
           summary={
             <>
-              Incomes and poverty under current law, before any measure, on the{" "}
+              Incomes and poverty under current law, before any policy, on the{" "}
               <ViewLink tab="outlook" sub="living" onShowTab={onShowTab}>
                 Living standards
               </ViewLink>{" "}
@@ -667,13 +704,13 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.limitations}
           title="Limitations"
-          summary="Most charts add up measures run separately, the economic assumptions follow one OBR forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
+          summary="Most charts add up policies run separately, the economic assumptions follow one OBR forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
         >
-          <Topic title="Measures added up" preview="Revenue, decile and age charts · Household scatter · Shares better and worse off">
+          <Topic title="Policies added up" preview="Revenue, decile and age charts · Household scatter · Shares better and worse off">
             <p className="method-more">
-              Each measure is also simulated on its own. Where several are selected, the revenue,
+              Each policy is also simulated on its own. Where several are selected, the revenue,
               decile and age charts add up their separate effects, so they leave out interactions
-              between measures (<Term id="ownRuns">measures run on their own</Term>); the{" "}
+              between policies (<Term id="ownRuns">policies run on their own</Term>); the{" "}
               <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>{" "}and the
               shares better and worse off come from a run of the whole selection, so they include
               them, and show nothing for a selection with no such run.
@@ -694,13 +731,13 @@ function MethodologyTab({ onShowTab }) {
               costing would show.
             </p>
           </Topic>
-          <Topic title="Survey coverage" preview="Where under-recorded incomes affect a measure">
+          <Topic title="Survey coverage" preview="Where under-recorded incomes affect a policy">
             <p className="method-more">
               The{" "}
               <ViewLink tab="policies" onShowTab={onShowTab}>
                 policy notes
               </ViewLink>{" "}
-              say where this affects a measure.
+              say where this affects a policy.
             </p>
           </Topic>
         </MethodSection>

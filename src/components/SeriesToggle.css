@@ -1,5 +1,5 @@
 /* Line toggle chips (SeriesToggle.jsx): "Show lines:" then one chip per
-   line. On: tinted in the line's colour, a check, bold-ish text. Off:
+   line. On: tinted in the line's colour (fill and border, never a tick), bold-ish text. Off:
    outlined, muted, the swatch hollow. Clearly buttons, not a legend. */
 .series-toggle-wrap {
   display: flex;
@@ -49,11 +49,6 @@
   background: color-mix(in srgb, var(--chip-colour) 14%, var(--c-surface));
   color: var(--c-text);
   font-weight: 600;
-}
-
-.series-toggle-check {
-  flex: none;
-  color: var(--chip-colour);
 }
 
 /* Off: the swatch hollow and grey */
@@ -124,7 +119,7 @@
 /* A component with nothing to draw for this household, kept so two keys
    line up: faint, its swatch grey, not clickable */
 .series-toggle-chip.is-disabled {
-  border-style: dashed;
+  border-color: var(--card-border);
   color: var(--pe-gray-400);
   background: var(--c-surface);
   opacity: 0.75;
@@ -139,10 +134,87 @@
   border-color: var(--pe-gray-300);
 }
 
-/* "+N with no effect for you": opens the disabled chips in place */
+/* "N more with no effect for you": a secondary chip, as the measure key's
+   "+N with no effect" (MeasureKey.css): same height and solid border, its
+   text muted; it opens the folded chips in place and its chevron turns */
 .series-toggle-chip.series-toggle-more {
-  padding: 0 11px;
-  border-style: dashed;
+  gap: 5px;
+  border-color: var(--card-border);
   color: var(--pe-gray-600);
   font-weight: 500;
+}
+
+.series-toggle-chip.series-toggle-more:hover,
+.series-toggle-chip.series-toggle-more[aria-expanded="true"] {
+  border-color: var(--pe-gray-400);
+  background: var(--c-hover);
+  color: var(--c-text);
+}
+
+.series-toggle-more-chevron {
+  flex: none;
+  transition: transform 0.15s ease;
+}
+
+.series-toggle-more[aria-expanded="true"] .series-toggle-more-chevron {
+  transform: rotate(90deg);
+}
+
+/* Above several cards (placement="section"): one bordered, rounded bar,
+   as the section measure key (MeasureKey.css, .measure-key.is-section):
+   its title on the left, a divider, then the chips; same padding, border,
+   radius, chip height and gap below */
+.series-toggle-wrap.is-section {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0 0 16px;
+  padding: 10px 16px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--c-surface);
+}
+
+.series-toggle-wrap.is-section .series-toggle-title {
+  align-self: start;
+  padding-right: 16px;
+  border-right: 1px solid var(--card-border);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 26px;
+  color: var(--pe-gray-500);
+  white-space: nowrap;
+}
+
+.series-toggle-wrap.is-section .series-toggle {
+  justify-content: flex-start;
+}
+
+.series-toggle-wrap.is-section .series-toggle-chip {
+  height: 26px;
+}
+
+.series-toggle-wrap.is-section .series-toggle-hint {
+  grid-column: 2;
+  text-align: left;
+}
+
+/* On a phone: the title on its own line, the chips wrapping under it */
+@media (max-width: 640px) {
+  .series-toggle-wrap.is-section {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 10px 12px;
+  }
+
+  .series-toggle-wrap.is-section .series-toggle-title {
+    padding-right: 0;
+    border-right: none;
+    line-height: 1.3;
+  }
+
+  .series-toggle-wrap.is-section .series-toggle-hint {
+    grid-column: 1;
+  }
 }

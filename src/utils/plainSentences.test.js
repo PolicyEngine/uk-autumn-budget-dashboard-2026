@@ -4,22 +4,39 @@ import { decileSentence, laterDecileNote, laterRevenueNote, revenueSentence } fr
 describe("plain card sentences", () => {
   const rows = (low, high) => [{ netChange: low }, { netChange: 0 }, { netChange: high }];
 
-  it("says what the ends of the decile pair gain or lose", () => {
-    expect(decileSentence(rows(184, -312), "absolute")).toBe(
-      "On average the lowest-income tenth gains about £180 a year, and the highest-income tenth loses about £310.",
-    );
-    expect(decileSentence(rows(0.71, 0.01), "relative")).toBe(
-      "Taken together, the lowest-income tenth gains 0.7% of its net income, and the highest-income tenth sees almost no change.",
-    );
+  it("says what the ends of the decile pair gain or lose, shortly", () => {
+    // Same direction: the verb and the unit are said once
+    expect(decileSentence(rows(18, 52), "absolute")).toBe("The lowest-income tenth gains about £20 a year and the highest about £50.");
+    expect(decileSentence(rows(-18, -52), "absolute")).toBe("The lowest-income tenth loses about £20 a year and the highest about £50.");
+    // Mixed directions: each end keeps its verb
+    expect(decileSentence(rows(184, -312), "absolute")).toBe("The lowest-income tenth gains about £180 a year and the highest loses about £310.");
+    expect(decileSentence(rows(-0.42, 0.26), "relative")).toBe("The lowest-income tenth loses 0.4% of net income and the highest gains 0.3%.");
+    // One end with almost no change
+    expect(decileSentence(rows(0.31, 0.01), "relative")).toBe("The lowest-income tenth gains 0.3% of net income and the highest almost nothing.");
+    expect(decileSentence(rows(3, -48), "absolute")).toBe("The lowest-income tenth sees almost no change and the highest loses about £50 a year.");
+    // Equal, as rounded, and no change at either end
+    expect(decileSentence(rows(21, 18), "absolute")).toBe("The lowest- and highest-income tenths each gain about £20 a year.");
+    expect(decileSentence(rows(-0.31, -0.29), "relative")).toBe("The lowest- and highest-income tenths each lose 0.3% of net income.");
+    expect(decileSentence(rows(4, -3), "absolute")).toBe("The lowest- and highest-income tenths see almost no change.");
     expect(decileSentence([], "absolute")).toBeNull();
   });
 
+  it("ends on the later-year turn, when there is one", () => {
+    expect(decileSentence(rows(18, 52), "absolute", "in 2031-32 the highest loses")).toBe(
+      "The lowest-income tenth gains about £20 a year and the highest about £50; in 2031-32 the highest loses.",
+    );
+    expect(decileSentence(rows(0.31, 0.01), "relative", "in 2031-32 the highest loses")).toBe(
+      "The lowest-income tenth gains 0.3% of net income and the highest almost nothing; in 2031-32 the highest loses.",
+    );
+    expect(decileSentence(rows(18, 52), "absolute", null)).toBe("The lowest-income tenth gains about £20 a year and the highest about £50.");
+  });
+
   it("puts the revenue for the selected year in words", () => {
-    expect(revenueSentence(4.26, "2027-28")).toBe("In 2027-28, the selected measures raise £4.3 billion for the government.");
-    expect(revenueSentence(-0.42, "2027-28")).toBe("In 2027-28, the selected measures cost the government £420 million.");
+    expect(revenueSentence(4.26, "2027-28")).toBe("In 2027-28, the selected policies raise £4.3 billion for the government.");
+    expect(revenueSentence(-0.42, "2027-28")).toBe("In 2027-28, the selected policies cost the government £420 million.");
     expect(revenueSentence(null, "2027-28")).toBeNull();
     // A measure not in force that year changes nothing: not "roughly balance"
-    expect(revenueSentence(0, "2027-28")).toBe("In 2027-28, the selected measures change no revenue.");
+    expect(revenueSentence(0, "2027-28")).toBe("In 2027-28, the selected policies change no revenue.");
     expect(revenueSentence(0.02, "2027-28")).toMatch(/roughly balance/);
   });
 
@@ -30,15 +47,22 @@ describe("plain card sentences", () => {
       { yearLabel: "2031-32", low: -5, high: -328 },
     ];
     expect(laterDecileNote({ low: 75, high: 45 }, later, "absolute")).toBe(
-      "Later years differ: in 2029-30, the highest-income tenth loses.",
+      "in 2029-30 the highest loses",
     );
     // Both ends turn the same way
     expect(laterDecileNote({ low: 75, high: 45 }, [{ yearLabel: "2031-32", low: -50, high: -328 }], "absolute")).toBe(
-      "Later years differ: in 2031-32, both the lowest- and highest-income tenths lose.",
+      "in 2031-32 both lose",
     );
     // Both turn, different ways
     expect(laterDecileNote({ low: -20, high: 45 }, [{ yearLabel: "2030-31", low: 30, high: -60 }], "absolute")).toBe(
+      "in 2030-31 the lowest gains and the highest loses",
+    );
+    // Alone, with no decile sentence to end: the tenths in full
+    expect(laterDecileNote({ low: -20, high: 45 }, [{ yearLabel: "2030-31", low: 30, high: -60 }], "absolute", { standalone: true })).toBe(
       "Later years differ: in 2030-31, the lowest-income tenth gains and the highest-income tenth loses.",
+    );
+    expect(laterDecileNote({ low: 75, high: 45 }, [{ yearLabel: "2031-32", low: -50, high: -328 }], "absolute", { standalone: true })).toBe(
+      "Later years differ: in 2031-32, both the lowest- and highest-income tenths lose.",
     );
   });
 
@@ -49,7 +73,7 @@ describe("plain card sentences", () => {
     expect(laterDecileNote({ low: 75, high: 4 }, [{ yearLabel: "2028-29", low: 60, high: -4 }], "absolute")).toBeNull();
     // -0.18% reads as a 0.2% loss: clear, from almost no change; the low end's fade says nothing
     expect(laterDecileNote({ low: 0.3, high: 0.03 }, [{ yearLabel: "2031-32", low: -0.02, high: -0.18 }], "relative")).toBe(
-      "Later years differ: in 2031-32, the highest-income tenth loses.",
+      "in 2031-32 the highest loses",
     );
   });
 
@@ -75,14 +99,14 @@ describe("plain card sentences", () => {
       { yearLabel: "2031-32", low: -25, high: -180 },
     ];
     expect(laterDecileNote({ low: 0, high: -2 }, freeze, "absolute")).toBe(
-      "Later years differ: in 2031-32, both the lowest- and highest-income tenths lose.",
+      "in 2031-32 both lose",
     );
     // £15 rounds to £20: clear
     expect(laterDecileNote({ low: 1, high: 30 }, [{ yearLabel: "2029-30", low: 15, high: 30 }], "absolute")).toBe(
-      "Later years differ: in 2029-30, the lowest-income tenth gains.",
+      "in 2029-30 the lowest gains",
     );
     expect(laterDecileNote({ low: 0.02, high: 0.01 }, [{ yearLabel: "2031-32", low: -0.2, high: -0.4 }], "relative")).toBe(
-      "Later years differ: in 2031-32, both the lowest- and highest-income tenths lose.",
+      "in 2031-32 both lose",
     );
   });
 
@@ -101,16 +125,16 @@ describe("plain card sentences", () => {
       { yearLabel: "2029-30", net: null },
       { yearLabel: "2030-31", net: 3.2 },
     ];
-    expect(laterRevenueNote(-8.9, later)).toBe("Later years differ: in 2030-31, the selected measures raise revenue.");
+    expect(laterRevenueNote(-8.9, later)).toBe("Later years differ: in 2030-31, the selected policies raise revenue.");
     expect(laterRevenueNote(4.3, [{ yearLabel: "2031-32", net: -1.2 }])).toBe(
-      "Later years differ: in 2031-32, the selected measures cost revenue.",
+      "Later years differ: in 2031-32, the selected policies cost revenue.",
     );
     // From roughly balancing to a clear effect (at least £0.1bn)
     expect(laterRevenueNote(0.02, [{ yearLabel: "2029-30", net: 0.06 }, { yearLabel: "2031-32", net: 3.77 }])).toBe(
-      "Later years differ: in 2031-32, the selected measures raise revenue.",
+      "Later years differ: in 2031-32, the selected policies raise revenue.",
     );
     expect(laterRevenueNote(-0.01, [{ yearLabel: "2031-32", net: -0.1 }])).toBe(
-      "Later years differ: in 2031-32, the selected measures cost revenue.",
+      "Later years differ: in 2031-32, the selected policies cost revenue.",
     );
   });
 

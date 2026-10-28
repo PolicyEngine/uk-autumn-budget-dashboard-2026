@@ -5,8 +5,8 @@
  * "Pensioners" are different groups: 65 and over is a band; pensioners are
  * 66 and over in 2026-27 and 67 and over from 2027-28.
  */
-import { AGE_BANDS, ALL_BAND, SINGLE_AGE_TOP, YOUNG_BAND } from "./ageImpact";
-import { pensionerAge, pensionerMeasureSeries } from "../components/pensioners/pensionersData";
+import { AGE_BANDS, ALL_BAND, MIN_SAMPLE_SIZE, SINGLE_AGE_TOP, YOUNG_BAND } from "./ageImpact";
+import { pensionerAge, pensionerMeasureSeries, pensionerRow } from "../components/pensioners/pensionersData";
 import { groupMeasureSeries } from "../components/youngPeople/youngPeopleData";
 
 export const PENSIONERS = "pensioners";
@@ -69,9 +69,33 @@ export function ageWindow(key, year) {
   return [Math.max(0, first - 10), Math.min(SINGLE_AGE_TOP, last + 10)];
 }
 
-/** The group's change in every year with each measure's part (groupMeasureSeries' shape). */
-export function groupSeries(rows, policies, selected, years, key) {
-  return key === PENSIONERS
+/**
+ * The group's change in every year with each measure's part (groupMeasureSeries' shape).
+ * With `packageRun` (the published combined run of exactly the selection,
+ * selectionPackageKey) and its rows loaded, `net` is that run's own figure,
+ * never the singles summed; each policy's own part is kept only when every
+ * single has the group's row in every published year, else no year has parts.
+ */
+export function groupSeries(rows, policies, selected, years, key, packageRun = null) {
+  const singles = key === PENSIONERS
     ? pensionerMeasureSeries(rows, policies, selected, years)
     : groupMeasureSeries(rows, policies, selected, years, key);
+  if (!packageRun || !(rows ?? []).some((row) => row.reform_id === packageRun)) return singles;
+  // Each policy's part only where every published year has them all, so a
+  // stack never sits under a net it does not add up to
+  const partsShown = singles.every((point) => point.net !== null || !(rows ?? []).some((row) => row.year === Number(point.year)));
+  const withParts = partsShown
+    ? singles
+    : singles.map((point) => {
+        const next = { ...point, parts: [] };
+        for (const part of point.parts) delete next[part.key];
+        return next;
+      });
+  return withParts.map((point) => {
+    const row = key === PENSIONERS
+      ? pensionerRow(rows, packageRun, point.year)
+      : (rows ?? []).find((each) => each.reform_id === packageRun && each.year === Number(point.year) && each.age_band === key);
+    const usable = row && Number.isFinite(row.mean_change) && (key === PENSIONERS || row.sample_size >= MIN_SAMPLE_SIZE);
+    return { ...point, published: Boolean(usable), net: usable ? row.mean_change : null, fromPackage: true, partsShown };
+  });
 }

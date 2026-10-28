@@ -21,7 +21,7 @@ const renderTab = (onShowTab = vi.fn()) => render(<MeasureCatalogueProvider cata
 
 describe("MethodologyTab", () => {
   it("keeps the anchors other views link to", () => {
-    // Other views (e.g. the map and Household impact) link to these
+    // Other views (e.g. the map and Household calculator) link to these
     expect(METHOD_SECTIONS.geography).toBe("method-area");
     expect(METHOD_SECTIONS.singleYear).toBe("method-single-year");
     const { container } = renderTab();
@@ -87,7 +87,7 @@ describe("MethodologyTab", () => {
     expect(screen.queryByRole("heading", { name: "Published measure descriptions" })).toBeNull();
     const model = container.querySelector(`#${METHOD_SECTIONS.model}`);
     const summary = model.querySelector(".section-heading p");
-    expect(summary).toHaveTextContent("What each measure does and how it is modelled is on Policies.");
+    expect(summary).toHaveTextContent("What each policy does and how it is modelled is on Policies.");
     const link = within(summary).getByRole("link", { name: "Policies" });
     expect(link).toHaveAttribute("href", "?tab=policies");
     fireEvent.click(link);
@@ -98,7 +98,7 @@ describe("MethodologyTab", () => {
 
   it("lists the unavailable measures only when there are any", () => {
     renderTab();
-    const heading = screen.queryByRole("button", { name: "Unavailable measures" });
+    const heading = screen.queryByRole("button", { name: "Unavailable policies" });
     if (UNAVAILABLE.length === 0) {
       expect(heading).toBeNull();
     } else {
@@ -109,7 +109,7 @@ describe("MethodologyTab", () => {
     const empty = { ...catalogue, measures: catalogue.measures.filter((measure) => measure.displayable) };
     cleanup();
     render(<MeasureCatalogueProvider catalogue={empty}><MethodologyTab onShowTab={vi.fn()} /></MeasureCatalogueProvider>);
-    expect(screen.queryByRole("button", { name: "Unavailable measures" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Unavailable policies" })).toBeNull();
   });
 
   it("says under Limitations that fuel duty covers households' own fuel, naming no measure", () => {
@@ -140,12 +140,12 @@ describe("MethodologyTab", () => {
     renderTab();
     const slot = document.getElementById(METHOD_SECTIONS.singleYear);
     // One line: the tab it is about; the calculation is said once, folded below
-    expect(within(slot).getByRole("link", { name: "Household impact tab" })).toBeInTheDocument();
+    expect(within(slot).getByRole("link", { name: "Household calculator tab" })).toBeInTheDocument();
     expect(slot).not.toHaveTextContent("OBR's average earnings forecast");
     const calc = document.getElementById(METHOD_ANCHORS.householdCalc);
     expect(within(calc).getByRole("button", { name: "How the household calculation works" })).toBeInTheDocument();
     const terms = [...calc.querySelectorAll(".method-fact dt")].map((term) => term.textContent);
-    expect(terms).toEqual(expect.arrayContaining(["Engine and measures", "Salary", "Marginal tax rate", "Who counts as a child", "Council Tax"]));
+    expect(terms).toEqual(expect.arrayContaining(["Engine and policies", "Salary", "Marginal tax rate", "Who counts as a child", "Council Tax"]));
   });
 
   it("switches views from its links, in place", () => {
@@ -162,10 +162,10 @@ describe("MethodologyTab", () => {
       fireEvent.click(link);
       expect(onShowTab).toHaveBeenLastCalledWith("outlook", sub);
     }
-    // Household impact is the "household" view (it was linked as "personal",
+    // Household calculator is the "household" view (it was linked as "personal",
     // a view that does not exist)
     const household = document.getElementById(METHOD_SECTIONS.singleYear);
-    const tabLink = within(household).getByRole("link", { name: "Household impact tab" });
+    const tabLink = within(household).getByRole("link", { name: "Household calculator tab" });
     expect(tabLink).toHaveAttribute("href", "?tab=household");
     fireEvent.click(tabLink);
     expect(onShowTab).toHaveBeenLastCalledWith("household");
@@ -174,6 +174,23 @@ describe("MethodologyTab", () => {
     expect(young).toHaveAttribute("href", "?tab=dashboard&sub=age&age=16-24#young-people");
     fireEvent.click(young);
     expect(onShowTab).toHaveBeenLastCalledWith("dashboard", "age", { age: "16-24" });
+  });
+
+  it("sums up how the data is built, linking the pipeline, the calibration targets and Microcosm, and quotes no counts", () => {
+    renderTab();
+    const card = screen.getByRole("button", { name: "The dataset" }).closest(".method-topic");
+    const terms = [...card.querySelectorAll(".method-fact dt")].map((term) => term.textContent);
+    expect(terms).toEqual(["Dataset", "Pipeline", "Survey", "Weights", "Projection", "Small groups"]);
+    // The pipeline page describes the current build, which may be newer than the dashboard's data
+    const pipeline = within(card).getByRole("link", { name: /^Read how Microcosm UK is built today/, hidden: true });
+    expect(pipeline).toHaveAttribute("href", "https://www.policyengine.org/uk/model/data/pipeline");
+    expect(pipeline.parentElement).toHaveTextContent("may be newer than this dashboard's data");
+    const targets = within(card).getByRole("link", { name: /^calibration targets/, hidden: true });
+    expect(targets).toHaveAttribute("href", "https://www.policyengine.org/uk/model/data/calibration");
+    const microcosm = within(card).getByRole("link", { name: /^Microcosm\s*\(opens in a new tab\)$/, hidden: true });
+    expect(microcosm).toHaveAttribute("href", "https://microcosm.institute");
+    // Aggregate words only: no record or household counts from the pipeline page
+    expect(card.textContent).not.toMatch(/\d{1,3}(,\d{3})+/);
   });
 
   it("links every external source in a new tab, saying so, and every shared term to its definition", () => {

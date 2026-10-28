@@ -36,7 +36,7 @@ The checker:
 
 ## The plumbing fixture
 
-`plumbing-single-12k-no-measure-applies.json` is a **plumbing check, not an accuracy check**. Its household is a single employee on £12,000 with nothing else. By statute, and by each measure's own definition, every one of the route's nine measures changes its net income by exactly £0 in every year, and it gets no Universal Credit. Its `reasoning` gives one line per measure.
+`plumbing-single-12k-no-measure-applies.json` is a **plumbing check, not an accuracy check**. Its household is a single employee on £12,000 with nothing else. By statute, and by each measure's own definition, six of the route's measures change its net income by exactly £0 in every year (the employer NI threshold rise, through the model's pay pass-through, and the unearned income rates are not asserted), and it gets no Universal Credit. Its `reasoning` gives one line per measure.
 
 It shows that the deployed route answers on the bundle's versions, with the response's shape, and that the measures, none of which can affect this household, give it £0. It checks no non-zero answer. Its baseline Universal Credit is checked in every year: it stays nil.
 

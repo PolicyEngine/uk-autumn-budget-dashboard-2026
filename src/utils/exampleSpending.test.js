@@ -26,9 +26,9 @@ describe("the example households' spending", () => {
       return [inputs.electricity_spending_per_year, inputs.petrol_spending_per_year, inputs.diesel_spending_per_year];
     };
     const pensioner = spend("pensioner-70");
-    const renter = spend("renter-22");
+    const renter = spend("part-time-worker");
     const family = spend("family-uc");
-    const higher = spend("higher-earner");
+    const higher = spend("landlord-saver");
     for (const [a, b] of [[pensioner, renter], [renter, family], [family, higher], [pensioner, higher]]) expect(a).not.toEqual(b);
     for (const example of HOUSEHOLD_EXAMPLES) expect(example.spendingSource, example.id).toMatch(/ONS Family Spending, FYE 2025, Table A6/);
   });

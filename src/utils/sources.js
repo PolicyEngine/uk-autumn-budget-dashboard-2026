@@ -95,6 +95,21 @@ export const SOURCES = {
     label: "Microcosm",
     url: "https://github.com/PolicyEngine/microcosm",
   },
+  // Microcosm's own site, and PolicyEngine's pages on how Microcosm UK is
+  // built, stage by stage, and on its calibration targets (all checked 27
+  // October 2026). The targets page names the release it lists.
+  microcosm_site: {
+    label: "Microcosm",
+    url: "https://microcosm.institute",
+  },
+  uk_data_pipeline: {
+    label: "PolicyEngine, UK microdata pipeline",
+    url: "https://www.policyengine.org/uk/model/data/pipeline",
+  },
+  uk_calibration_targets: {
+    label: "PolicyEngine, UK calibration targets",
+    url: "https://www.policyengine.org/uk/model/data/calibration",
+  },
   // Section 8, Equivalisation: HBAI's modified OECD scale (checked 26 October 2026)
   dwp_hbai_methodology: {
     label: "DWP, Households Below Average Income: background information and methodology",
@@ -129,8 +144,10 @@ Object.assign(SOURCES, {
     url: "https://www.gov.uk/government/organisations/hm-treasury",
   },
   // Published with the Budget on 28 October 2026; linked once it exists
+  // HM Treasury's policy costings, certified by the OBR: the figures the
+  // reconciliation gate compares (public/data/official_costings.json)
   obr_budget_2026_costings: {
-    label: "the OBR's Autumn Budget 2026 costings",
+    label: "the official Autumn Budget 2026 costings (HM Treasury, certified by the OBR)",
     url: null,
   },
   ons_ashe: {

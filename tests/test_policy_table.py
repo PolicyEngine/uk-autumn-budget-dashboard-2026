@@ -37,6 +37,18 @@ def rows(document, measure_id):
     }
 
 
+def withdrawn_rows(measure_id):
+    """A withdrawn measure's rows, from its builder (not in the file)."""
+    from uk_budget_data.policy_table import BUILDERS
+
+    factory = {
+        registry.FUEL_VAT_ID: registry._create_road_fuel_vat_cut,
+        registry.LHA_UNFREEZE_ID: registry._create_lha_unfreeze_2027,
+    }
+    reform = factory[measure_id]()
+    return {row["label"]: row for row in BUILDERS[measure_id](reform)}
+
+
 def by_key(row):
     return {
         point["key"]: (point["before"], point["after"])
@@ -83,10 +95,13 @@ def test_every_candidate_has_a_table_with_its_published_description(document):
 
 def test_fuel_duty_by_date(document):
     dated = by_key(rows(document, "fuel_duty_rise_deferral")["Fuel duty"])
+    # 52.95p held through 2027-28, then RPI from April 2028 on 52.95p:
+    # 61.54p x 52.95 / 59.75 = 54.54p
     assert dated["2027-01-01"] == (55.95, 52.95)
     assert dated["2027-03-01"] == (57.95, 52.95)
-    assert dated["2027-09-01"] == (59.75, 55.95)
-    assert dated["2027-12-01"] == (59.75, 57.95)
+    assert dated["2027-04-01"] == (59.75, 52.95)
+    assert dated["2028-04-01"] == (61.54, 54.54)
+    assert "2027-09-01" not in dated
     assert "2032-04-01" not in dated  # after the timeline
     assert dated["2026-04-01"] == (52.95, 52.95)  # the timeline's first day
 
@@ -126,9 +141,9 @@ def test_the_state_pension_allowance_is_the_full_state_pension_rounded_up(
         weekly = PARAMETERS.gov.dwp.state_pension.new_state_pension.amount(
             f"{year}-04-06"
         )
-        assert row[str(year)][1] == math.ceil(weekly * 52 / 10) * 10
-    assert row["2027"] == (12_570, 13_040)
-    assert row["2031"] == (12_830, 14_400)
+        assert row[str(year)][1] == math.ceil(weekly * 52)
+    assert row["2027"] == (12_570, 13_037)
+    assert row["2031"] == (12_830, 14_391)
 
 
 def test_warm_home_discount(document):
@@ -147,7 +162,8 @@ def test_vat_rates_while_in_force(document):
         0.05,
         0.0,
     )
-    fuel = rows(document, "road_fuel_vat_cut")
+    # The road fuel VAT cut is withdrawn, but its builder still reads it
+    fuel = withdrawn_rows(registry.FUEL_VAT_ID)
     (point,) = fuel["VAT on petrol and diesel"]["points"]
     assert (point["label"], point["before"], point["after"]) == (
         "December 2026 to May 2027",
@@ -172,7 +188,7 @@ def test_electricity_2026_carries_the_winter_share(document):
     assert averages["2026"] == (0.05, round(0.05 - 0.05 * WINTER_SHARE, 6))
     assert averages["2027"] == (0.05, 0.0)
     assert "2026-27 by the October to March share" in yearly["note"]
-    fuel = rows(document, "road_fuel_vat_cut")[
+    fuel = withdrawn_rows(registry.FUEL_VAT_ID)[
         "VAT on petrol and diesel, averaged over the year"
     ]
     assert "weighted by the days it is in force" in fuel["note"]
@@ -190,16 +206,18 @@ def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
         in_force_rate_change(registry.FUEL_VAT_ID, {2028: -0.025})
 
 
-def test_employer_ni(document):
-    table = rows(document, "employer_ni_relief_under_25s")
-    rate = by_key(
-        table["Employer National Insurance rate, employees aged 21 to 24"]
+def test_the_table_covers_the_eight_package_measures_only(document):
+    # BADR, employer NI relief and the road fuel VAT cut are withdrawn
+    # (27 October 2026)
+    assert list(document["measures"]) == list(
+        registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
     )
-    assert rate["2026"] == (0.15, 0.15)
-    assert all(rate[str(year)] == (0.15, 0.0) for year in range(2027, 2032))
-    limit = by_key(table["Earnings relieved for ages 21 to 24, up to"])
-    assert limit["2027"] == (None, 50_270)
-    assert limit["2031"] == (None, 51_330)
+    assert len(document["measures"]) == 8
+    assert registry.CARERS_ALLOWANCE_TAPER_ID not in document["measures"]
+    assert registry.LHA_UNFREEZE_ID not in document["measures"]
+    assert registry.FUEL_VAT_ID not in document["measures"]
+    assert registry.BADR_ID not in document["measures"]
+    assert registry.EMPLOYER_NI_ID not in document["measures"]
 
 
 def test_threshold_freeze(document):
@@ -214,14 +232,7 @@ def test_threshold_freeze(document):
         )
 
 
-def test_badr_and_plan_2(document):
-    limit = by_key(
-        rows(document, "badr_lifetime_limit_cut")[
-            "Business Asset Disposal Relief lifetime limit"
-        ]
-    )
-    assert limit["2026"] == (1_000_000, 1_000_000)
-    assert limit["2027"] == (1_000_000, 500_000)
+def test_plan_2(document):
     plan_2 = by_key(
         rows(document, "plan_2_threshold_unfreeze")[
             "Plan 2 repayment threshold"
@@ -246,12 +257,57 @@ def test_each_measure_gets_the_display_its_shape_calls_for(document):
         "state_pension_income_tax_protection": "path",
         "warm_home_discount_top_up": "switch",
         "domestic_electricity_zero_vat": "switch",
-        "employer_ni_relief_under_25s": "before-after",
         "threshold_freeze_2031_32": "table",
-        "badr_lifetime_limit_cut": "before-after",
-        "road_fuel_vat_cut": "switch",
         "plan_2_threshold_unfreeze": "path",
+        "employer_nics_secondary_threshold_raise": "path",
+        "unearned_income_rates_up": "before-after",
     }
+
+
+def test_lha_unfreeze():
+    # Withdrawn (thin cells), but its builder still reads it
+    row = by_key(
+        withdrawn_rows(registry.LHA_UNFREEZE_ID)[
+            "Local rents the LHA rates are re-set to each April, percentile"
+        ]
+    )
+    # Frozen in current law every year; re-set to the 30th percentile from
+    # 2027 with the measure
+    assert row["2026"] == (None, None)
+    for year in range(2027, 2032):
+        assert row[str(year)] == (None, 0.3)
+
+
+def test_employer_ni_threshold(document):
+    row = by_key(
+        rows(document, "employer_nics_secondary_threshold_raise")[
+            "Employer National Insurance threshold"
+        ]
+    )
+    assert row["2026"] == (5_000, 5_000)
+    for year in range(2027, 2031):
+        assert row[str(year)] == (5_000, 9_100)
+    # 2031-32: both raised by current law's CPI rise (2%)
+    assert row["2031"] == (5_100, 9_282)
+
+
+def test_unearned_income_rates(document):
+    table = rows(document, "unearned_income_rates_up")
+    expected = {
+        "Dividend ordinary rate": (0.1075, 0.1275),
+        "Dividend upper rate": (0.3575, 0.3775),
+        "Dividend additional rate": (0.3935, 0.4135),
+        "Savings basic rate": (0.22, 0.24),
+        "Savings higher rate": (0.42, 0.44),
+        "Savings additional rate": (0.47, 0.49),
+        "Property basic rate": (0.22, 0.24),
+        "Property higher rate": (0.42, 0.44),
+        "Property additional rate": (0.47, 0.49),
+    }
+    for label, values in expected.items():
+        row = by_key(table[label])
+        for year in range(2027, 2032):
+            assert row[str(year)] == values, (label, year)
 
 
 def test_the_display_follows_the_shape_not_the_measure():

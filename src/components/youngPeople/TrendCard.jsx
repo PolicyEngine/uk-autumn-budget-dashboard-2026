@@ -1,27 +1,18 @@
 import { useMemo, useRef, useState } from "react";
-import {
-  Bar,
-  CartesianGrid,
-  ComposedChart,
-  Customized,
-  Line,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, CartesianGrid, ComposedChart, Customized, Line, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Tooltip } from "../ViewportTooltip";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import { TOOLTIP_PROPS } from "../ChartTooltip";
 import ControlBar from "../ControlBar";
 import SeriesToggle from "../SeriesToggle";
-import { measureOpacity, useMeasureKey, netOpacity } from "../MeasureKey";
+import MeasureKey, { measureOpacity, useMeasureKey, netOpacity } from "../MeasureKey";
 import {
   GRID_PROPS,
   TICK_STYLE,
   AXIS_LINE,
+  AXIS_TITLE_STYLE,
   axisWidth,
   fiscalYearTick,
   shortFiscalYearTick,
@@ -30,15 +21,15 @@ import {
   PHONE_QUERY,
   useViewportMatch,
 } from "../../utils/chartTheme";
-import { DISPLAY_YEARS, NOT_YET_PUBLISHED } from "../../utils/displayYears";
+import { DISPLAY_YEARS, NOT_YET_PUBLISHED, useDisplayYears } from "../../utils/displayYears";
 import { X_AXIS_HEIGHT, plotMargin } from "./chartRows";
-import { AGE_GROUPS, ALL_BAND, YOUNG_BAND } from "../../utils/ageImpact";
+import { AGE_GROUPS, ALL_BAND, COMBINATION_NOT_PUBLISHED, PACKAGE_NET_ONLY, YOUNG_BAND } from "../../utils/ageImpact";
 import {
   GROUP_STYLES,
   changeByYear,
   cumulate,
   groupMeasureSeries,
-  niceRange,
+  fitRange,
   pounds,
   signedPounds,
   stepAnnotations,
@@ -47,10 +38,12 @@ import {
 import { chartTransition } from "../../utils/chartMotion";
 import { PENSIONERS, groupLabel, groupSeries, groupSubject } from "../../utils/ageGroups";
 import { legendMembership } from "../../utils/legendMembership";
+import { selectionPackageKey } from "../../utils/geography/selection";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { shortNameOf } from "../../utils/policyDetails";
 import TitleIcon from "../TitleIcon";
 import ChartMoreInfo from "../ChartMoreInfo";
+import Note from "../Note";
 import { BY_YEAR_METHOD } from "../methodology/anchors";
 
 /** Every age group's line, 16 to 24 first. */
@@ -62,7 +55,7 @@ export const SERIES = AGE_GROUPS.map((group) => ({
 }));
 
 export const TREND_DESCRIPTION = "Average change per person, £ a year.";
-const CUMULATIVE_DESCRIPTION = `Running total per person from ${fiscalYearTick(DISPLAY_YEARS[0])}, £.`;
+const cumulativeDescription = (first) => `Running total per person from ${fiscalYearTick(first)}, £.`;
 
 
 // The focus group in the brand colour, all ages as the reference, the rest
@@ -84,12 +77,35 @@ const compareOptions = (label) => [
 ];
 const viewOptions = (label) => [
   { value: "lines", label: "Lines", summary: "Lines" },
-  { value: "measures", label: `Measures, ${label}`, summary: "By measure" },
+  { value: "measures", label: `Policies, ${label}`, summary: "By policy" },
 ];
 const YEARS_OPTIONS = [
   { value: "each", label: "Each year", summary: "Each year" },
   { value: "total", label: "Running total", summary: "Running total" },
 ];
+
+/** "2027-28 to 2031-32" for a run of years, else "2027-28, 2029-30 and 2031-32". */
+export const yearList = (years) => {
+  if (years.length > 1 && years.every((year, i) => i === 0 || year === years[i - 1] + 1)) {
+    return `${fiscalYearTick(years[0])} to ${fiscalYearTick(years[years.length - 1])}`;
+  }
+  const labels = years.map(fiscalYearTick);
+  return labels.length > 1 ? `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}` : labels[0] ?? "";
+};
+
+/**
+ * Why some age groups' lines stop: a selected policy publishes all ages
+ * but not those groups in some years (its age bands withheld, as too few
+ * survey records), so their sum is unavailable there. Null when every
+ * group is complete in every published year.
+ */
+export function missingGroupsNote(points, labelOf) {
+  const gaps = points.filter((point) => point.published && point.missing?.length > 0);
+  if (!gaps.length) return null;
+  const keys = [...new Set(gaps.flatMap((point) => point.missing))];
+  const groups = keys.length >= AGE_GROUPS.length - 1 ? "every age group except all ages" : keys.map(labelOf).join(", ");
+  return `Not drawn in ${yearList(gaps.map((point) => point.year))}, as a selected policy has too few survey records by age: ${groups}.`;
+}
 
 /** "+£120", "−£180": a change with a true minus. */
 export const signed = (value) => {
@@ -108,11 +124,10 @@ export const about = (value) => {
  * The selected year's shading, and each unpublished year's grey band with
  * "Not yet published" on two lines, under the lines.
  */
-export function YearShading({ xAxisMap, yAxisMap, selectedYear, unpublishedYears }) {
+export function YearShading({ xAxisMap, yAxisMap, selectedYear, unpublishedYears, years = DISPLAY_YEARS }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis) return null;
-  const years = DISPLAY_YEARS;
   const bandwidth = xAxis.scale.bandwidth?.();
   const step = bandwidth
     ? xAxis.scale(years[1]) - xAxis.scale(years[0])
@@ -216,9 +231,12 @@ export function EndLabels({ xAxisMap, yAxisMap, data, lines, hovered, onHover, n
 
 const STEP_FONT = 12;
 const STEP_BOX_HEIGHT = STEP_FONT + 8;
+// The gap between a box and the plot's top gridline or its x axis, so a
+// box never sits on either
+export const STEP_INSET = 6;
 
-/** Whether a box overlaps anything drawn: a count of the hits, for choosing the clearer edge. */
-function stepBoxHits(box, { segments, columns, zero }) {
+/** Whether a box overlaps anything drawn: a count of the hits, for choosing the clearer place. */
+function stepBoxHits(box, { segments, columns, zero, grid = [] }) {
   const pad = 3;
   const inside = (px, py) =>
     px >= box.left - pad && px <= box.left + box.width + pad && py >= box.top - pad && py <= box.top + box.height + pad;
@@ -237,17 +255,24 @@ function stepBoxHits(box, { segments, columns, zero }) {
     if (column.right >= box.left && column.left <= box.left + box.width && column.bottom >= box.top && column.top <= box.top + box.height) hits += 1;
   }
   if (Number.isFinite(zero) && zero >= box.top - pad && zero <= box.top + box.height + pad) hits += 1;
+  // A gridline through the box
+  for (const y of grid) {
+    if (y >= box.top - 1 && y <= box.top + box.height + 1) hits += 1;
+  }
   return hits;
 }
 
 /**
- * Where each step's label goes: in a box at the plot's top or bottom edge,
- * over its year and kept inside the plot (clear of the line names in the
- * right margin), with a leader down or up to the point. The edge is the
- * one that crosses fewer of the lines, bars and £0 line (a rise's label at
- * the top, a fall's at the foot when both are clear); a second label whose
- * box would meet the first's goes to the other edge. Null when a label
- * cannot fit across the plot: the card's sentence carries the steps then.
+ * Where each step's label goes: in a box just inside the plot's top or
+ * bottom edge (STEP_INSET clear of the top gridline and the x axis), over
+ * its year and kept inside the plot (clear of the line names in the right
+ * margin), with a leader down or up to the point. The place is the one
+ * that crosses fewest of the lines, bars, gridlines and £0 line: a rise's
+ * label at the top, a fall's at the foot when both are clear, then the
+ * other edge, then the box slid along the edge (its leader still inside
+ * it); a second label whose box would meet the first's goes elsewhere.
+ * Null when a label cannot fit across the plot: the card's sentence
+ * carries the steps then.
  *
  * @param {Object} args
  * @param {Array<{year: number, step: number, text: string}>} args.notes
@@ -257,10 +282,12 @@ function stepBoxHits(box, { segments, columns, zero }) {
  * @param {Array<Array<number|null>>} [args.paths] - Each drawn line's values, one per year in `years`
  * @param {Array<{year: number, high: number, low: number}>} [args.columns] - Each year's stack, by measure
  * @param {Array<number>} [args.years]
+ * @param {Array<number>} [args.gridValues] - The y ticks, whose gridlines a box should miss
  */
-export function placeStepLabels({ notes, xAxis, yAxis, valueAt, paths = [], columns = [], years = [] }) {
-  const top = yAxis.y + 2;
-  const bottom = yAxis.y + yAxis.height - 2 - STEP_BOX_HEIGHT;
+export function placeStepLabels({ notes, xAxis, yAxis, valueAt, paths = [], columns = [], years = [], gridValues = [] }) {
+  const top = yAxis.y + STEP_INSET;
+  const bottom = yAxis.y + yAxis.height - STEP_INSET - STEP_BOX_HEIGHT;
+  const grid = gridValues.map((value) => yAxis.scale(value)).filter(Number.isFinite);
   const plotLeft = xAxis.x;
   const plotRight = xAxis.x + xAxis.width;
   const zero = yAxis.scale(0);
@@ -290,18 +317,33 @@ export function placeStepLabels({ notes, xAxis, yAxis, valueAt, paths = [], colu
     // An estimate of the text's width, for its box
     const width = note.text.length * STEP_FONT * 0.56 + 12;
     if (width > plotRight - plotLeft) return null;
-    const left = Math.min(Math.max(x - width / 2, plotLeft), plotRight - width);
+    const clamp = (start) => Math.min(Math.max(start, plotLeft), plotRight - width);
+    const centred = clamp(x - width / 2);
     const edges = note.step < 0 ? [bottom, top] : [top, bottom];
-    const meets = (boxTop) =>
+    // Centred over the year first; then slid along the edge, by half a year
+    // and a year, as long as the leader still lands inside the box
+    const slides = [0, -0.5, 0.5, -1, 1].map((k) => clamp(centred + k * Math.max(band, 24)));
+    const candidates = [];
+    for (const boxTop of edges) {
+      for (const left of slides) {
+        if (x < left + 8 || x > left + width - 8) continue;
+        if (candidates.some((each) => each.boxTop === boxTop && each.left === left)) continue;
+        candidates.push({ boxTop, left });
+      }
+    }
+    const meets = ({ boxTop, left }) =>
       placed.some((other) => other.top === boxTop && other.left < left + width + 6 && left < other.left + other.width + 6);
-    const scored = edges
-      .filter((boxTop) => !meets(boxTop))
-      .map((boxTop) => ({ boxTop, hits: stepBoxHits({ left, top: boxTop, width, height: STEP_BOX_HEIGHT }, { segments, columns: boxes, zero }) }));
+    const scored = candidates
+      .filter((each) => !meets(each))
+      .map((each) => ({
+        ...each,
+        hits: stepBoxHits({ left: each.left, top: each.boxTop, width, height: STEP_BOX_HEIGHT }, { segments, columns: boxes, zero, grid }),
+      }));
     if (!scored.length) return null;
-    // The first edge unless the other crosses less
+    // The first place unless a later one crosses less
     const best = scored.reduce((winner, each) => (each.hits < winner.hits ? each : winner));
     const y = yAxis.scale(value);
-    placed.push({ year: note.year, text: note.text, x, y, left, top: best.boxTop, width, height: STEP_BOX_HEIGHT });
+    placed.push({ year: note.year, text: note.text, x, y, left: best.left, top: best.boxTop, width, height: STEP_BOX_HEIGHT });
   }
   return placed;
 }
@@ -311,11 +353,11 @@ export function placeStepLabels({ notes, xAxis, yAxis, valueAt, paths = [], colu
  * plot's edge with a short leader to the focus line's point (see
  * placeStepLabels); nothing when the labels cannot fit.
  */
-export function StepLabels({ xAxisMap, yAxisMap, notes, valueAt, paths, columns, years }) {
+export function StepLabels({ xAxisMap, yAxisMap, notes, valueAt, paths, columns, years, gridValues }) {
   const xAxis = xAxisMap && Object.values(xAxisMap)[0];
   const yAxis = yAxisMap && Object.values(yAxisMap)[0];
   if (!xAxis?.scale || !yAxis?.scale) return null;
-  const labels = placeStepLabels({ notes, xAxis, yAxis, valueAt, paths, columns, years });
+  const labels = placeStepLabels({ notes, xAxis, yAxis, valueAt, paths, columns, years, gridValues });
   if (!labels?.length) return null;
   return (
     <g className="trend-step-labels" aria-hidden="true">
@@ -416,7 +458,10 @@ export function stackColumns(data, partKeys) {
  * does not already name, or null.
  */
 export function stepSentence(notes, headline, nameIn) {
-  const missing = notes.filter((note) => !(headline ?? "").includes(`${fiscalYearTick(note.year)} the ${nameIn(note.measureId)}`));
+  // Named already when the headline has both its year and its measure
+  const named = (note) =>
+    (headline ?? "").includes(fiscalYearTick(note.year)) && (headline ?? "").includes(`the ${nameIn(note.measureId)}`);
+  const missing = notes.filter((note) => !named(note));
   if (!missing.length) return null;
   const parts = missing.map((note) => `in ${fiscalYearTick(note.year)} from the ${nameIn(note.measureId)}`);
   const list = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}` : parts[0];
@@ -430,6 +475,7 @@ export function stepSentence(notes, headline, nameIn) {
  * segments between the annual points: there is nothing between them.
  */
 function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, extraOptions = [] }) {
+  const shownYears = useDisplayYears();
   // The focus group (By age's Age group): an age band, or pensioners from
   // their single years of age, which join the lines as a series of their own
   const FOCUS = group;
@@ -462,11 +508,28 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const cumulative = years === "total";
   const byMeasure = view === "measures";
 
-  const bands = useMemo(() => changeByYear(rows, policies, selectedPolicies, DISPLAY_YEARS), [rows, policies, selectedPolicies]);
-  const focusSeries = useMemo(
-    () => groupSeries(rows, policies, selectedPolicies, DISPLAY_YEARS, FOCUS),
-    [rows, policies, selectedPolicies, FOCUS],
+  // The published combined run of exactly the selection, read as is
+  const packageRun = selectionPackageKey(catalogue?.manifest, selectedPolicies);
+  const bands = useMemo(
+    () => changeByYear(rows, policies, selectedPolicies, shownYears, packageRun),
+    [rows, policies, selectedPolicies, shownYears, packageRun],
   );
+  const focusSeries = useMemo(() => {
+    const series = groupSeries(rows, policies, selectedPolicies, shownYears, FOCUS, packageRun);
+    // A year the combination is not published by age: no figure for the group either
+    return series.map((point, i) =>
+      bands[i]?.combinationUnavailable ? { year: point.year, published: false, net: null, parts: [] } : point,
+    );
+  }, [rows, policies, selectedPolicies, shownYears, FOCUS, packageRun, bands]);
+  // The package's net with no policy parts (a selected policy withholds its rows by age)
+  const netOnly = focusSeries.some((point) => point.fromPackage && !point.partsShown);
+  const combinationYears = bands.filter((point) => point.combinationUnavailable).map((point) => point.year);
+  // Not one year published for this combination: a notice, not empty axes
+  const combinationEverywhere =
+    combinationYears.length > 0 && bands.every((point) => !point.published || point.combinationUnavailable);
+  const combinationNote = !combinationEverywhere && combinationYears.length
+    ? `${COMBINATION_NOT_PUBLISHED.replace(" yet.", "")} for ${yearList(combinationYears)}.`
+    : null;
   // Pensioners' line from their own series; the bands from the age rows
   const raw = group === PENSIONERS ? bands.map((point, i) => ({ ...point, [PENSIONERS]: focusSeries[i]?.net ?? null })) : bands;
   const groupKeys = SERIES_LIST.map((series) => series.key);
@@ -493,7 +556,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     [focusSeries, catalogue, narrow],
   );
 
-  // The measures in the breakdown, for the section's key (MeasureKey)
+  // The measures in the breakdown, for the card's key (MeasureKey)
   const members = useMemo(
     () =>
       byMeasure
@@ -518,17 +581,24 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         // All age groups: fitted to the lines shown
         .flatMap((point) => groupKeys.filter(isShown).map((each) => point[each]))
         .filter((v) => v !== null && v !== undefined);
-  const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values));
+  // Fitted to what is drawn, a little room either side
+  const { domain, ticks } = fitRange(Math.min(0, ...values), Math.max(0, ...values));
 
   const unpublished = raw.filter((point) => !point.published);
   const suppressed = raw.filter((point) => point.published && point.suppressed.length > 0);
   const labelOf = (each) => SERIES.find((series) => series.key === each)?.label ?? each;
-  const first = fiscalYearTick(DISPLAY_YEARS[0]);
-  const last = fiscalYearTick(DISPLAY_YEARS[DISPLAY_YEARS.length - 1]);
+  // A selected policy with all ages but no age bands in some years: said,
+  // never a line that silently stops
+  const missingNote = byMeasure ? null : missingGroupsNote(raw, labelOf);
+  const first = fiscalYearTick(shownYears[0]);
+  const last = fiscalYearTick(shownYears[shownYears.length - 1]);
   const title = `Change by year, ${first} to ${last}`;
-  const description = cumulative ? CUMULATIVE_DESCRIPTION : TREND_DESCRIPTION;
+  const description = cumulative ? cumulativeDescription(shownYears[0]) : TREND_DESCRIPTION;
 
-  // The headline: the selected year, then the step that changes it most
+  // The headline, one plain sentence with the units folded in: the
+  // selected year, then the step after it that changes it most ("16 to
+  // 24-year-olds gain about £32 a person in 2029-30 and lose about £170
+  // from 2031-32, when the threshold freeze applies.")
   const selected = focusSeries.find((point) => point.year === Number(selectedYear));
   const headline = (() => {
     if (cumulative) {
@@ -537,22 +607,24 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       const total = shown.reduce((sum, point) => sum + point.net, 0);
       const span = `${fiscalYearTick(shown[0].year)} to ${fiscalYearTick(shown[shown.length - 1].year)}`;
       if (Math.round(Math.abs(total)) === 0) return `${SUBJECT} see almost no change in total from ${span}.`;
-      return `${SUBJECT} ${total >= 0 ? "gain" : "lose"} ${about(total)} each in total from ${span}.`;
+      return `${SUBJECT} ${total >= 0 ? "gain" : "lose"} ${about(total)} a person in total from ${span}.`;
     }
     if (!selected || selected.net === null) return null;
-    const verb = selected.net >= 0 ? "gain" : "lose";
+    const none = (value) => Math.round(Math.abs(value)) === 0;
     // About £0 is no gain or loss: said as almost no change
-    let text =
-      Math.round(Math.abs(selected.net)) === 0
-        ? `${SUBJECT} see almost no change in ${fiscalYearTick(selected.year)}`
-        : `${SUBJECT} ${verb} ${about(selected.net)} a year in ${fiscalYearTick(selected.year)}`;
+    let text = none(selected.net)
+      ? `${SUBJECT} see almost no change in ${fiscalYearTick(selected.year)}`
+      : `${SUBJECT} ${selected.net >= 0 ? "gain" : "lose"} ${about(selected.net)} a person in ${fiscalYearTick(selected.year)}`;
     // The biggest step after the selected year
     const later = notes.filter((note) => note.year > selected.year).sort((x, y) => Math.abs(y.step) - Math.abs(x.step))[0];
     if (later) {
-      const flips = Math.sign(later.value) !== Math.sign(selected.net) && Math.abs(later.value) >= 1;
-      text += flips
-        ? `; from ${fiscalYearTick(later.year)} the ${inSentence(nameOf(later.measureId))} turns this into a ${later.value >= 0 ? "gain" : "loss"} of ${about(later.value)}`
-        : `; in ${fiscalYearTick(later.year)} the ${inSentence(nameOf(later.measureId))} moves it to ${signed(later.value)}`;
+      const sameWay = !none(selected.net) && !none(later.value) && Math.sign(later.value) === Math.sign(selected.net);
+      const level = none(later.value)
+        ? "see almost no change"
+        : sameWay
+          ? about(later.value)
+          : `${later.value >= 0 ? "gain" : "lose"} ${about(later.value)}`;
+      text += ` and ${level} from ${fiscalYearTick(later.year)}, when the ${inSentence(nameOf(later.measureId))} applies`;
     }
     return `${text}.`;
   })();
@@ -601,6 +673,18 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     ...lines.filter((line) => line.key === FOCUS),
   ];
 
+  // A faint context line has no dots, so a value with no neighbour (its
+  // line stopping either side) gets one, or it would not be drawn at all
+  const loneDot = (line) => {
+    const present = (i) => data[i]?.[line.key] !== null && data[i]?.[line.key] !== undefined;
+    return function LoneDot({ cx, cy, index }) {
+      if (!present(index) || present(index - 1) || present(index + 1) || cx === undefined || cy === undefined) {
+        return <g key={`lone-${line.key}-${index}`} />;
+      }
+      return <circle key={`lone-${line.key}-${index}`} cx={cx} cy={cy} r={2.5} fill={line.colour} stroke={CHART_COLOURS.surface} strokeWidth={1} />;
+    };
+  };
+
   const lineValue = (each) => (year) => {
     const point = lineData.find((p) => p.year === year);
     return point?.[each] ?? null;
@@ -613,8 +697,8 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const csvText = () =>
     byMeasure
       ? buildChartCsv({
-          title: `Change in household net income per person, ${FOCUS_LABEL}, by measure, ${first} to ${last}`,
-          units: cumulative ? "£ per person, running total from the first year" : "£ per person per year; each measure's own effect",
+          title: `Change in household net income per person, ${FOCUS_LABEL}, by policy, ${first} to ${last}`,
+          units: cumulative ? "£ per person, running total from the first year" : "£ per person per year; each policy's own effect",
           columns: [
             { key: "yearLabel", label: "Year" },
             ...partKeys.map((each) => ({ key: each, label: catalogue.bySeriesKey.get(each)?.label ?? each, decimals: 2 })),
@@ -637,6 +721,8 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             ...suppressed.map(
               (point) => `${fiscalYearTick(point.year)}, too few survey records: ${point.suppressed.map(labelOf).join(", ")}`,
             ),
+            ...(missingNote ? [missingNote] : []),
+            ...(combinationNote ? [combinationNote] : []),
           ],
         });
   const download = {
@@ -666,7 +752,9 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             <span className="title-text">{title}</span>
           </h3>
           <p className="chart-description">
-            {headline ? <strong className="trend-headline">{headline}</strong> : null} {description}
+            {/* One plain sentence, units folded in; the description only
+                when there is no headline */}
+            {headline ? <span className="trend-headline">{headline}</span> : description}
             {stepsLine ? ` ${stepsLine}` : null}
           </p>
         </div>
@@ -684,12 +772,17 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         />
       </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
+        {combinationEverywhere ? (
+          <div className="plot-empty" style={{ minHeight: height }} role="status">
+            <p>{COMBINATION_NOT_PUBLISHED}</p>
+          </div>
+        ) : (
         <ResponsiveContainer width="100%" height={height}>
           <ComposedChart data={data} margin={margin} stackOffset="sign" barCategoryGap="28%">
             <CartesianGrid {...GRID_PROPS} />
             <Customized
               component={
-                <YearShading selectedYear={Number(selectedYear)} unpublishedYears={unpublished.map((point) => point.year)} />
+                <YearShading years={shownYears} selectedYear={Number(selectedYear)} unpublishedYears={unpublished.map((point) => point.year)} />
               }
             />
             <XAxis
@@ -702,6 +795,8 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
               padding={byMeasure ? undefined : narrow ? { left: 10, right: 10 } : { left: 24, right: 24 }}
               tick={narrow ? { ...TICK_STYLE, fontSize: 10 } : TICK_STYLE}
               height={X_AXIS_HEIGHT}
+              // A title as Average change by age has, so the two x axes line up
+              label={{ value: "Year", position: "insideBottom", offset: 0, style: AXIS_TITLE_STYLE }}
             />
             <YAxis
               domain={domain}
@@ -766,7 +861,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                     groupsView && hovered && hovered !== line.key ? 0.22 : line.context && hovered !== line.key ? CONTEXT_OPACITY : 1
                   }
                   strokeDasharray={line.dash}
-                  dot={line.strong || compare === "groups" ? { r: line.key === FOCUS ? 4 : 2.5, fill: line.colour, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, opacity: groupsView && hovered && hovered !== line.key ? 0.22 : 1 } : false}
+                  dot={line.strong || compare === "groups" ? { r: line.key === FOCUS ? 4 : 2.5, fill: line.colour, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, opacity: groupsView && hovered && hovered !== line.key ? 0.22 : 1 } : loneDot(line)}
                   activeDot={line.strong ? { r: 5 } : false}
                   isAnimationActive={false}
                   onMouseEnter={() => setHovered(line.key)}
@@ -811,12 +906,14 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                         : ordered.filter((line) => isShown(line.key)).map((line) => data.map((point) => point[line.key] ?? null))
                     }
                     columns={byMeasure ? stackColumns(data, partKeys) : []}
+                    gridValues={ticks}
                   />
                 }
               />
             )}
           </ComposedChart>
         </ResponsiveContainer>
+        )}
       </div>
       <div className="chart-legend">
         {/* The key, which also shows or hides each line: all age groups one
@@ -848,6 +945,10 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             narrow={narrow}
           />
         )}
+        {/* By policy: the card's own measure key */}
+        {byMeasure && !key.shared && members.length > 0 && (
+          <MeasureKey members={members} netLabel="Net change" highlight={key.highlight} onHighlight={key.setHighlight} />
+        )}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -855,11 +956,14 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       </div>
       {/* The same foot as the card beside it, so the pair ends level */}
       <div className="chart-footer">
+        {combinationNote && <Note>{combinationNote}</Note>}
         <ChartMoreInfo
           members={members}
           year={Number(selectedYear)}
           info={{
             caveats: [
+              missingNote,
+              byMeasure && netOnly && PACKAGE_NET_ONLY,
               unpublished.length > 0 &&
                 `Not yet published: ${unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.`,
             ],

@@ -10,6 +10,9 @@
 
 import { groupThousands, parseDecimal, shiftDecimal } from "./decimal";
 
+/** A true minus sign, as the page's other figures use. */
+const MINUS = "\u2212";
+
 export const OUTCOME_LABELS = Object.freeze({
   average_change: "£ per household",
   relative_change: "% of income",
@@ -69,7 +72,7 @@ export const SUPPORT_BAND_SHORT_LABELS = Object.freeze({
 
 /**
  * One published figure for display: "120.0" → "+£120", "-1234.5" →
- * "-£1,234.5", "0.0123" → "+1.23%", "0.01" → "+1%".
+ * "−£1,234.5" (a true minus), "0.0123" → "+1.23%", "0.01" → "+1%".
  *
  * @param {"average_change"|"relative_change"} outcome
  * @param {string} text - The published string.
@@ -83,13 +86,13 @@ export function formatFigure(outcome, text, { signed = true } = {}) {
     shiftDecimal(text.replace(/^[+-]/, ""), places),
   );
   const zero = digits === "0";
-  const sign = negative && !zero ? "-" : signed && !zero ? "+" : "";
+  const sign = negative && !zero ? MINUS : signed && !zero ? "+" : "";
   if (outcome === "relative_change") return `${sign}${magnitude}%`;
   if (outcome === "average_change") return `${sign}£${magnitude}`;
   throw new Error(`unknown outcome ${outcome}`);
 }
 
-/** A 90% interval: "£10 to £30", "-0.5% to 1.2%". */
+/** A 90% interval: "£10 to £30", "−0.5% to 1.2%". */
 export const formatInterval = (outcome, lo, hi) =>
   `${formatFigure(outcome, lo, { signed: false })} to ${formatFigure(
     outcome,

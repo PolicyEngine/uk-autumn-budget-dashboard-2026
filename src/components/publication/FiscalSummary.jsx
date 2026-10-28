@@ -42,7 +42,7 @@ function FiscalSummary({ series, ids, measureNames = {}, manifest = null }) {
         </caption>
         <thead>
           <tr>
-            <th scope="col">Measure</th>
+            <th scope="col">Policy</th>
             {series.map((row) => (
               <th scope="col" key={row.year}>
                 {fiscalYearLabel(row.year)}
@@ -90,7 +90,7 @@ function FiscalSummary({ series, ids, measureNames = {}, manifest = null }) {
                 <Cell
                   key={row.year}
                   value={row.interaction}
-                  reason="Needs the combined run and every measure alone"
+                  reason="Needs the combined run and every policy alone"
                 />
               ))}
             </tr>

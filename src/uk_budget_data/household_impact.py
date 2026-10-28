@@ -684,9 +684,16 @@ def measure_ids() -> list[str]:
 # including VAT: ONS, Family spending in the UK, April 2024 to March 2025,
 # Workbook 1, Table A1, line 4.4.1 (Electricity): £20.00 a week.
 # https://www.ons.gov.uk/peoplepopulationandcommunity/personalandhouseholdfinances/expenditure/datasets/familyspendingworkbook1detailedexpenditureandtrends
-# policyengine-uk reads it (``electricity_consumption``) only for the zero
-# VAT on domestic electricity, so it changes no pre-Budget figure.
+# No policyengine-uk formula reads it (``electricity_consumption`` is an
+# input): the VAT base template (``measure_templates.apply_vat_base_change``)
+# reads it for the zero VAT on domestic electricity, so it changes no
+# pre-Budget figure.
 ELECTRICITY_SPENDING = round(20.00 * 52)
+# Domestic mains gas, from the same table: line 4.4.2 (Gas), £14.10 a week,
+# averaged over all households as electricity is. ``gas_consumption`` is an
+# input too, which the VAT base template would read for a measure that
+# changes the VAT on domestic gas, so it changes no pre-Budget figure.
+GAS_SPENDING = round(14.10 * 52)
 
 
 @dataclass(frozen=True)
@@ -735,6 +742,9 @@ class HouseholdAnswers:
     diesel_spending: float = 0
     # Domestic electricity, £ a year including VAT (ELECTRICITY_SPENDING)
     electricity_spending: float = ELECTRICITY_SPENDING
+    # Domestic mains gas, £ a year including VAT (GAS_SPENDING). The form
+    # does not ask for it yet, so every calculator household has the average.
+    gas_spending: float = GAS_SPENDING
     salary_sacrifice_pension_contributions: float = 0
     # State Pension, £ a year in the year calculated, for an adult at State
     # Pension age; None is the full new State Pension (``state_pensions``)
@@ -1041,6 +1051,7 @@ def household_entities(
         "petrol_spending": answers.petrol_spending,
         "diesel_spending": answers.diesel_spending,
         "electricity_consumption": answers.electricity_spending,
+        "gas_consumption": answers.gas_spending,
     }
     if answers.brma is not None:
         household["brma"] = answers.brma
@@ -1742,6 +1753,14 @@ SKIP_REASONS = {
     "fuel_duty_rise_deferral": "no petrol or diesel spending",
     "road_fuel_vat_cut": "no petrol or diesel spending, or after 2027-28",
     "domestic_electricity_zero_vat": "no electricity spending, or after 2027-28",
+    "carers_allowance_earnings_taper": "no caring hours are asked for",
+    "lha_unfreeze_2027": "not renting privately, or before 2027-28",
+    "employer_nics_secondary_threshold_raise": (
+        "no employment income, or before 2027-28"
+    ),
+    "unearned_income_rates_up": (
+        "no dividend, savings or property income, or before 2027-28"
+    ),
 }
 
 
@@ -1773,6 +1792,27 @@ def provably_unaffected(
         return no_fuel or year >= 2028
     if measure_id == "domestic_electricity_zero_vat":
         return not answers.electricity_spending or year >= 2028
+    if measure_id == "carers_allowance_earnings_taper":
+        # The questions carry no caring hours (care_hours stays 0) and no
+        # reported Carer's Allowance, so no one meets its conditions, in
+        # any year, under current law or the taper.
+        return True
+    if measure_id == "lha_unfreeze_2027":
+        # Local Housing Allowance caps private rents only.
+        return year < 2027 or answers.tenure != "RENT_PRIVATELY"
+    if measure_id == "employer_nics_secondary_threshold_raise":
+        earnings = answers.employment_income + (
+            answers.partner_employment_income if answers.has_partner else 0
+        )
+        return year < 2027 or not earnings
+    if measure_id == "unearned_income_rates_up":
+        # Only the head's dividend, savings and property income is asked.
+        unearned = (
+            answers.dividend_income
+            + answers.savings_interest_income
+            + answers.property_income
+        )
+        return year < 2027 or not unearned
     return False
 
 

@@ -2,7 +2,7 @@
 
 The household route runs each side as a ``policyengine_uk.Simulation`` with
 the side's ``Scenario`` (parameter changes and simulation modifiers), so all
-nine measures apply to a household, the six with formula modifiers included.
+seven measures apply to a household, the six with formula modifiers included.
 
 - Hand checks: each modifier measure's change is recomputed from the
   parameters and the spending entered.
@@ -14,13 +14,11 @@ nine measures apply to a household, the six with formula modifiers included.
 """
 
 import dataclasses
-import math
 
 import pytest
 from policyengine_uk.system import system
 
 from uk_budget_data import household_impact, personal_impact
-from uk_budget_data.budget_measures.road_fuel_vat_cut import road_fuel_vat_cut
 from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
     WINTER_SHARE,
     zero_vat_on_domestic_electricity,
@@ -150,24 +148,22 @@ def test_state_pension_only_pays_no_income_tax_from_2027():
 
 
 @pytest.mark.parametrize("other", [260, 400, 2_000])
-def test_the_allowance_is_withdrawn_pound_for_pound(other):
-    """Allowance £13,040 in 2027-28, less £1 for each £1 of income above
-    it, down to the standard £12,570."""
+def test_any_private_pension_takes_the_allowance_away(other):
+    """The total-income design: a private pension on top of the full new
+    State Pension puts total income above the allowance, so it is not
+    given, and the bill is 20% of income above the standard £12,570 either
+    way."""
     full = household_impact.full_new_state_pension(2027)
     income = full + other
-    # Whole pounds: policyengine-uk rounds the allowance up
-    allowance = max(12_570, math.ceil(13_040 - max(0, income - 13_040)))
-    expected_tax = 0.2 * max(0, income - allowance)
     result = calculate(
         _pensioner(2027, private_pension_income=other),
         2027,
         ["state_pension_income_tax_protection"],
     )
     tax = programme(result, "income_tax")
-    assert tax["reform"] == pytest.approx(expected_tax, abs=0.02)
     assert tax["baseline"] == pytest.approx(0.2 * (income - 12_570), abs=0.02)
-    if income - 13_040 >= 13_040 - 12_570:
-        assert result["net_income"]["change"] == 0
+    assert tax["reform"] == pytest.approx(tax["baseline"], abs=0.02)
+    assert result["net_income"]["change"] == 0
 
 
 # --- Warm Home Discount top-up ----------------------------------------------------
@@ -225,6 +221,23 @@ def test_the_warm_home_discount_top_up_if_received(answers, region, expected):
         ["warm_home_discount_top_up"],
     )
     assert result["net_income"]["change"] == 0
+
+
+# --- gas spending ------------------------------------------------------------------
+
+
+def test_the_route_passes_gas_spending_to_gas_consumption():
+    """A measure on the VAT of domestic gas reads ``gas_consumption``; the
+    route sets it from the answer, the ONS average unless given (the
+    drill's gas measure gave every household £0 without it: review on
+    #145; a £0 default did the same: #208 review, finding 7)."""
+    assert household_impact.GAS_SPENDING == 733
+    _, _, household = household_impact.household_entities(Answers(2027))
+    assert household["gas_consumption"] == 733
+    _, _, household = household_impact.household_entities(
+        Answers(2027, gas_spending=1_050)
+    )
+    assert household["gas_consumption"] == 1_050
 
 
 # --- zero VAT on domestic electricity --------------------------------------------
@@ -289,46 +302,6 @@ def test_no_electricity_spending_no_electricity_vat_change():
         ["domestic_electricity_zero_vat"],
     )
     assert result["net_income"]["change"] == 0
-
-
-# --- employer National Insurance for under-25s -----------------------------------
-
-
-def test_employer_ni_relief_has_no_household_effect():
-    """Employers pay less for a 23-year-old from 2027-28, but wages are
-    fixed: £0, reported as an employer cost, not as not modelled."""
-    result = calculate(
-        Answers(2027, age=23, employment_income=30_000),
-        2027,
-        ["employer_ni_relief_under_25s"],
-    )
-    [measure] = result["by_policy"]["measures"]
-    assert measure["change"] == 0
-    assert measure["note_kind"] == "employer_cost"
-    assert measure["note"].startswith("No household effect (employer cost)")
-    assert result["not_modelled"] == []
-
-
-# --- VAT cut on road fuel ---------------------------------------------------------
-
-
-@pytest.mark.parametrize("year, weight", [(2026, 121 / 365), (2027, 61 / 366)])
-def test_road_fuel_vat_cut_on_the_fuel_entered(year, weight):
-    """20% to 15% from 1 December 2026 to 31 May 2027: the VAT in
-    VAT-inclusive fuel spending falls by spending x 0.05 / 1.2 over the
-    days of the year in the period."""
-    assert road_fuel_vat_cut.__defaults__[0] == pytest.approx(
-        -0.05 * 121 / 365
-    )
-    assert road_fuel_vat_cut.__defaults__[1] == pytest.approx(-0.05 * 61 / 366)
-    petrol, diesel = 1_500, 500
-    result = calculate(
-        Answers(year, petrol_spending=petrol, diesel_spending=diesel),
-        year,
-        ["road_fuel_vat_cut"],
-    )
-    expected = (petrol + diesel) * 0.05 * weight / 1.2
-    assert result["net_income"]["change"] == pytest.approx(expected, abs=0.01)
 
 
 # --- parity with the national route's household simulations ---------------------

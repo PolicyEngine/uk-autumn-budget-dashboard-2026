@@ -173,6 +173,17 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
         ),
     )
     generate_parser.add_argument(
+        "--sequential",
+        action="store_true",
+        help=(
+            "With --only income_distribution or income_growth and "
+            "--backend modal: run each measure's years one after another "
+            "in one container, as before, in place of one container per "
+            "measure and year. The files are the same bytes either way. "
+            "A local run always runs a measure's years in one unit."
+        ),
+    )
+    generate_parser.add_argument(
         "--manifest",
         type=Path,
         default=None,
@@ -495,13 +506,16 @@ def run_generate(parsed: argparse.Namespace) -> int:
                     f"{len(combined_sets)}"
                 )
             else:
+                # Refused, not warned: without them the package rows are the
+                # registry's autumn_budget_2026_combined, which the page
+                # never reads; it reads a package only under the manifest's
+                # combined key (#228).
                 console.print(
-                    "[yellow]No --published-package or --combined: the "
-                    "package rows are the registry's "
-                    "autumn_budget_2026_combined (every candidate), which "
-                    "the page never reads. It reads a package only under "
-                    "the manifest's combined key (#228).[/yellow]"
+                    f"[red]Error: --only {parsed.only} writes the package's "
+                    "rows into a public file: pass --published-package (the "
+                    "manifest's package) or --combined ID... (#228)[/red]"
                 )
+                return 1
         # With --combined alone the measures are the sets' members
         measures = (
             len(reforms)
@@ -512,6 +526,20 @@ def run_generate(parsed: argparse.Namespace) -> int:
         )
         units = measures + len(combined_sets or [])
         runner = runner_for(parsed, max(units, 1), len(config.years))
+        # On Modal, one container per measure and year: the
+        # years run side by side. Locally a measure's years stay in one
+        # unit: six builds per measure would be slower, not faster.
+        by_year = (
+            package_file
+            and getattr(parsed, "backend", "local") == "modal"
+            and not getattr(parsed, "sequential", False)
+        )
+        if package_file:
+            console.print(
+                "Years: one container per measure and year"
+                if by_year
+                else "Years: each measure's years in one unit"
+            )
         if parsed.only == "household_scatter":
             generate_household_scatter(
                 reforms=reforms, config=config, runner=runner
@@ -522,6 +550,7 @@ def run_generate(parsed: argparse.Namespace) -> int:
                 config=config,
                 runner=runner,
                 combined_sets=combined_sets,
+                by_year=by_year,
             )
         elif parsed.only == "income_growth":
             generate_income_growth(
@@ -529,6 +558,7 @@ def run_generate(parsed: argparse.Namespace) -> int:
                 config=config,
                 runner=runner,
                 combined_sets=combined_sets,
+                by_year=by_year,
             )
         else:
             generate_age_impact(reforms=reforms, config=config, runner=runner)

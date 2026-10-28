@@ -25,7 +25,9 @@ A review entry for it fails too, since nothing would read it.
 
 The record-level guard covers every public file, and no review entry turns
 it off: a public file may not carry household, benefit unit or person ids or
-weights. The area-code guard covers every tracked file: no file may carry
+weights. Nor may an artifact whose receipt records cells under the floor of
+survey households left in its tables (uk_budget_data.publication.
+disclosure_floor), whatever its review says. The area-code guard covers every tracked file: no file may carry
 more than a few constituency, local-authority or small-area codes, unless it
 is a validated table, reviewed reference geography, a pending file before
 its expiry, or a reference input under data_inputs/.
@@ -243,6 +245,26 @@ def validate_layer_table(path: Path, name: str, report: Report) -> None:
         )
 
 
+def thin_cells_in_tables(data: bytes) -> bool:
+    """Whether an artifact's receipt records cells under the floor of
+    survey households still in its tables (``dashboard.disclosure_floor``,
+    as generation writes such a run unless UK_BUDGET_THIN_DECILES=refuse;
+    the gate never stages it)."""
+    try:
+        document = json.loads(data)
+    except (ValueError, UnicodeError):
+        return False
+    dashboard = (
+        document.get("dashboard") if isinstance(document, dict) else None
+    )
+    floor = (
+        dashboard.get("disclosure_floor")
+        if isinstance(dashboard, dict)
+        else None
+    )
+    return isinstance(floor, dict) and bool(floor.get("thin_cells_in_tables"))
+
+
 def check(root: Path, today: Optional[date] = None) -> Report:
     """Run every check on the repository at ``root``."""
     today = today or datetime.now(timezone.utc).date()
@@ -277,6 +299,11 @@ def check(root: Path, today: Optional[date] = None) -> Report:
         if name.startswith(PUBLIC):
             if not binary and RECORD_LEVEL.search(data):
                 report.problems.append(f"{name}: record-level identifiers")
+            if name.endswith("/receipt.json") and thin_cells_in_tables(data):
+                report.problems.append(
+                    f"{name}: its tables hold cells under the floor of "
+                    "survey households"
+                )
             layer = is_layer_table(name, data)
             if layer:
                 validate_layer_table(path, name, report)

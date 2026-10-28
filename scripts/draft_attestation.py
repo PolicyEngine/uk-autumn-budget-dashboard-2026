@@ -22,20 +22,16 @@ from uk_budget_data.publication.attestations import (
     ATTESTATIONS_ROOT,
     receipt_document_sha256,
 )
+from uk_budget_data.reforms import (
+    STATE_PENSION_ALLOWANCE_ID,
+    STATE_PENSION_PROTECTION_DESIGN,
+)
 
 # Factual reasons only: what was checked, never survey-level values.
+# The employer NI relief for under-25s and the Carer's Allowance earnings
+# taper are withdrawn (27 October 2026) and unregistered, so neither has a
+# reason: nothing drafts them.
 REASONS = {
-    "employer_ni_relief_under_25s": (
-        "Checked budget_measures.employer_ni_relief_ages_21_to_24 against "
-        "HMRC's 2026-27 employer rates and thresholds: it zero-rates "
-        "employer Class 1 NI between the secondary threshold and the upper "
-        "secondary threshold (the upper earnings limit) for employees aged "
-        "21 to 24 from April 2027, changes only ni_class_1_employer, and "
-        "leaves earnings fixed. Apprentices are not identified in the data "
-        "and under-21s are charged in full by the engine (policyengine-uk "
-        "#2505); both are stated in the measure's notes. The receipt's "
-        "outputs were compared with issue #111's checks."
-    ),
     "plan_2_threshold_unfreeze": (
         "Checked budget_measures.connect_student_loan_repayments, applied "
         "on both sides: it replaces reported Plan 2 repayments with "
@@ -45,6 +41,24 @@ REASONS = {
         "were compared with the published revenue path."
     ),
 }
+
+# The State Pension allowance is hand-written in its total-income design
+# (state_pension_only_income_tax_allowance); the tapered design is a
+# registered template and is not held.
+if STATE_PENSION_PROTECTION_DESIGN == "total_income":
+    REASONS[STATE_PENSION_ALLOWANCE_ID] = (
+        "Checked budget_measures.state_pension_only_income_tax_allowance: "
+        "from April 2027 it raises personal_allowance to the full new State "
+        "Pension, rounded up to the pound (the engine's weekly rate x 52), "
+        "for people over State Pension age who receive a State Pension and "
+        "whose total income (total_income, savings interest included, with "
+        "no other-income test) is at or below that allowance; above it the "
+        "native allowance stands. It keeps the larger of that and the "
+        "native allowance, keeps the native taper above £100,000 of "
+        "adjusted net income and changes only personal_allowance. The "
+        "receipt's outputs were compared with the hand-computed cases in "
+        "tests/test_state_pension_only_income_tax_allowance.py."
+    )
 
 
 def main(artifact_dir: str) -> None:

@@ -21,6 +21,7 @@ import "./ControlBar.css";
  *   options: Array<{value: string, label: string, badge?: string, disabled?: boolean, title?: string}>}
  *   | {label: string, summary: string, control: React.ReactNode}>} [props.options] - A
  *   group with `control` shows that control in place of segments (the years compared)
+ *   A group with `stacked` lists its options one per line (a list of policies)
  * @param {string} [props.name] - What the options are for, for the dialog's name
  */
 export default function ControlBar({ children, options = [], name = "Chart" }) {
@@ -287,7 +288,7 @@ export function Segmented({ group, inSummary: summarised = true }) {
       </span>
       <div
         ref={thumbContainer}
-        className={`control-bar-segments${thumbReady ? " has-thumb" : ""}`}
+        className={`control-bar-segments${group.stacked ? " is-stacked" : ""}${thumbReady ? " has-thumb" : ""}`}
         role="radiogroup"
         aria-labelledby={labelId}
         onKeyDown={(event) => {
