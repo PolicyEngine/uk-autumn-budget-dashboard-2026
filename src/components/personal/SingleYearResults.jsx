@@ -9,7 +9,7 @@ import useCountUp from "../../hooks/useCountUp";
 import { prefersReducedMotion } from "../../utils/chartMotion";
 import { fiscalYearTick, useNarrowViewport } from "../../utils/chartTheme";
 import { MINUS, areaName, money, policyRows, signedPercent, sweepPoints } from "../../utils/singleYear";
-import { STAGE_TIMES } from "../../utils/householdTiming";
+import { STAGE_TIMES, STILL_WORKING_SECONDS, STILL_WORKING_TEXT } from "../../utils/householdTiming";
 import { isStartingUp } from "../../utils/householdImpactApi";
 import NetIncomeWaterfall, { waterfallScaleStart } from "./NetIncomeWaterfall";
 import { layerRows, layersInUse } from "./netIncomeParts";
@@ -234,6 +234,7 @@ function useElapsedSeconds(active, startedAt) {
 export function timeText(seconds, stage = "headline") {
   const times = STAGE_TIMES[stage];
   if (seconds > times.slow) return "Taking longer than usual; still working";
+  if (seconds > STILL_WORKING_SECONDS) return STILL_WORKING_TEXT;
   return times.text;
 }
 
