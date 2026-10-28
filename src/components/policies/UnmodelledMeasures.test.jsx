@@ -6,7 +6,6 @@ import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import {
   BUDGET_DOCUMENT,
   COSTING_YEARS,
-  TABLE_6_1_URL,
   UNMODELLED_MEASURES,
 } from "../../utils/unmodelledMeasures";
 
@@ -97,7 +96,6 @@ const open = () => fireEvent.click(toggle());
 
 describe("UnmodelledMeasures", () => {
   const cards = () => [...document.querySelectorAll(".policy-cards > .policy-card")];
-  const openCosting = (item) => fireEvent.click(within(item).getByRole("button", { name: "Treasury costing" }));
 
   it("is a section like Policies we model: its heading (a native button) and subtitle, the cards closed", () => {
     render(<UnmodelledMeasures />);
@@ -140,40 +138,44 @@ describe("UnmodelledMeasures", () => {
       for (const term of ["What changes", "For a household", WHY_NOT_MODELLED]) {
         expect(within(item).getByText(term), `${measure.id} ${term}`).toBeInTheDocument();
       }
-      expect(within(item).getByRole("button", { name: "Treasury costing" })).toBeInTheDocument();
+      expect(within(item).getByRole("region", { name: `Treasury costing: ${measure.name}` })).toBeInTheDocument();
       expect(item).toHaveTextContent(measure.changes);
       expect(item).toHaveTextContent(measure.household);
       expect(item).toHaveTextContent(measure.notModelled);
       // A model card's parts are not there
       expect(within(item).queryByRole("button", { name: /See its effect/ })).toBeNull();
       expect(within(item).queryByRole("button", { name: "About this result" })).toBeNull();
-      // Its Table 6.1 rows linked, where it has any
-      const costing = item.querySelector(".policy-card-costing");
-      expect(Boolean(costing), measure.id).toBe(measure.costings.length > 0);
-      if (costing) expect(costing).toHaveAttribute("href", TABLE_6_1_URL);
+      // Its Table 6.1 rows on the card itself, so no separate Costing link, and no timeline
+      expect(item.querySelector(".policy-card-costing"), measure.id).toBeNull();
+      expect(item.querySelector(".ptl"), measure.id).toBeNull();
+      // At a glance, What changes, For a household, Why we don't model it, Treasury costing, Sources, in that order
+      const order = [".policy-card-when", ".pchg", ".policy-card-example", ".policy-card-why", ".umm-costing-section", ".policy-card-sources"]
+        .map((selector) => item.querySelector(selector));
+      for (let i = 1; i < order.length; i += 1) {
+        expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING, `${measure.id} ${i}`).toBeTruthy();
+      }
     });
   });
 
-  it("draws What changes' values only where the entry gives them, and a plot only for a lasting change or a window", () => {
+  it("draws What changes' values only where the entry gives them, and a plot only for a change over time", () => {
     render(<UnmodelledMeasures />);
     open();
     for (const item of cards()) {
       const id = item.id.replace(/^unmodelled-/, "");
       const parameters = UNMODELLED_CARDS[id]?.parameters;
       expect(item.querySelectorAll(".pchg-tile").length, id).toBe(parameters ? 2 : 0);
-      expect(Boolean(item.querySelector(".pchg-svg")), id).toBe(["before-after", "switch"].includes(parameters?.display));
+      expect(Boolean(item.querySelector(".pchg-svg")), id).toBe(parameters?.display === "switch");
     }
     const wage = document.getElementById("unmodelled-national-living-wage");
     expect(wage.querySelector(".pchg-tile.is-before")).toHaveTextContent("£12.71");
     expect(wage.querySelector(".pchg-tile.is-after")).toHaveTextContent("£13.21+£0.50");
   });
 
-  it("shows a measure's Table 6.1 rows by year, in £ million, when its costing is opened", () => {
+  it("shows a measure's Table 6.1 rows by year, in £ million, on the card", () => {
     render(<UnmodelledMeasures />);
     open();
     const measure = UNMODELLED_MEASURES.find(({ id }) => id === "first-time-buyer-isa");
     const item = document.getElementById(`unmodelled-${measure.id}`);
-    openCosting(item);
     const table = within(item).getByRole("table", { name: "£ million, Budget 2026 Table 6.1; positive = gain to the Exchequer" });
     for (const year of COSTING_YEARS) expect(within(table).getByRole("columnheader", { name: year })).toBeInTheDocument();
     const rows = within(table).getAllByRole("row").slice(1);
@@ -183,14 +185,13 @@ describe("UnmodelledMeasures", () => {
     expect(rows.map((row) => within(row).getByRole("rowheader").textContent)).toEqual(["38", "39"]);
   });
 
-  it("says what stands in for a costing where Table 6.1 has no row", () => {
+  it("says in one muted line where Table 6.1 has no row", () => {
     render(<UnmodelledMeasures />);
     open();
     for (const measure of UNMODELLED_MEASURES.filter(({ costings }) => !costings.length)) {
       const item = document.getElementById(`unmodelled-${measure.id}`);
-      openCosting(item);
-      expect(within(item).queryByRole("table")).toBeNull();
-      expect(item).toHaveTextContent(measure.noCosting);
+        expect(within(item).queryByRole("table")).toBeNull();
+      expect(item.querySelector(".umm-no-costing")).toHaveTextContent(/^No Table 6\.1 row$/);
     }
   });
 
@@ -241,9 +242,10 @@ describe("the section's text", () => {
     expect(section.querySelector(".umm-note")).toBeNull();
   });
 
-  it("keeps each card's For a household and Why we don't model it to about 30 words", () => {
+  it("keeps each card's What changes, For a household and Why we don't model it to 30 words, and who it affects to 15", () => {
     for (const measure of UNMODELLED_MEASURES) {
-      for (const field of ["household", "notModelled"]) {
+      expect(measure.reaches.split(/\s+/).length, `${measure.id} reaches`).toBeLessThanOrEqual(15);
+      for (const field of ["changes", "household", "notModelled"]) {
         expect(measure[field].split(/\s+/).length, `${measure.id} ${field}`).toBeLessThanOrEqual(30);
       }
     }
