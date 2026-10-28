@@ -85,6 +85,46 @@ describe("why our estimates differ from the official costings", () => {
     expect(text("savings_income_rates_up")).not.toMatch(/miss(?:es)? ISA interest/);
   });
 
+  // Max, 28 Oct: compare with the line of the OBR's policy Table 1.1 that
+  // matches what we model (efo-october-2026-detailed-forecast-tables-policy
+  // .xlsx, sheet 1.1), call it the government's costing, certified by the
+  // OBR, and give Table 6.1's rounded total as context
+  it("compares each re-based note with its OBR Table 1.1 line, Table 6.1 as context", () => {
+    const note = (id) => OBR_DEVIATION_NOTES[id];
+    const text = (id) => OBR_DIFFERENCE_POINTS[id].map((point) => point.text ?? Object.values(point.byYear).join(" ")).join(" ");
+    expect(note("household_energy_payment_2026")).toMatch(/^Our £1,969 million in 2026-27 falls 25% short of the government's costing of £2,627 million, certified by the OBR/);
+    expect(note("domestic_electricity_zero_vat")).toMatch(/^Our cost is £106m \(14%\) above the VAT receipts in the government's costing, certified by the OBR, in 2026-27 \(£840m against £734m\) and £58m \(19%\)/);
+    expect(note("domestic_electricity_zero_vat")).not.toMatch(/within about 4%/);
+    expect(note("trading_allowance_raise")).toContain("Income tax and NICs lines of the government's costing, certified by the OBR (its Table 1.1: £221m, £165m, £171m and £178m)");
+    expect(note("property_income_rates_up")).toMatch(/9% to 11% above the income tax line of the government's costing, certified by the OBR[^]*\+£429m against \+£394m in 2029-30/);
+    expect(note("savings_income_rates_up")).toMatch(/68% to 69% of the income tax line of the government's costing, certified by the OBR[^]*\+£307m against \+£443m in 2029-30/);
+    // Fuel duty's is the one costing the OBR could not certify (EFO October 2026, chapter 3)
+    expect(note("fuel_duty_rise_deferral")).toMatch(/£272 million below the official figure in 2026-27 \(£301 million against £574 million\)[^]*the government's estimate, which the OBR used but could not certify/);
+    expect(note("fuel_duty_rise_deferral")).not.toMatch(/certified by the OBR/);
+    expect(OBR_COMPARISON_BASES.fuel_duty_rise_deferral).toMatch(/could not certify/);
+    // The Pension Tax Allowance's "the Treasury's 500,000" is a count, not a costing
+    for (const id of COMPARED) expect(note(id), id).not.toMatch(/the Treasury's (?!500,000)/);
+    expect(text("domestic_electricity_zero_vat")).not.toMatch(/within about 4%/);
+    expect(text("property_income_rates_up")).not.toMatch(/within 1\.5%/);
+  });
+
+  // The Table 6.1 figures a note gives as context are the Budget's own
+  // (data_inputs/treasury/sources/AB2026-T6.1.csv, the chart's official column)
+  it("gives Table 6.1's figures as the source file has them", () => {
+    const rows = parseDashboardCsv(readFileSync("data_inputs/treasury/sources/AB2026-T6.1.csv", "utf8"));
+    const t61 = (row, year) => {
+      const found = rows.find((r) => r.row_id === String(row) && r.fiscal_year === year);
+      return Math.round(Math.abs(Number(found.value_bn)) * 1000);
+    };
+    const note = (id) => OBR_DEVIATION_NOTES[id];
+    expect(note("household_energy_payment_2026")).toContain(`rounds it to £${t61(1, "2026-27").toLocaleString("en-GB")} million`);
+    expect(note("domestic_electricity_zero_vat")).toContain(`Table 6.1 rounds the totals to £${t61(2, "2026-27")}m and £${t61(2, "2027-28")}m`);
+    expect(note("fuel_duty_rise_deferral")).toContain(`Table 6.1 rounds it to £${t61(3, "2026-27")} million and £${t61(3, "2027-28")} million`);
+    expect(note("trading_allowance_raise")).toContain(`(£${t61(15, "2028-29")}m, £${t61(15, "2029-30")}m, £${t61(15, "2030-31")}m and £${t61(15, "2031-32")}m from 2028-29)`);
+    expect(note("property_income_rates_up")).toContain(`The Table 6.1 total shown here, +£${t61(61, "2029-30")}m in 2029-30`);
+    expect(note("savings_income_rates_up")).toContain(`The Table 6.1 total shown here, +£${t61(62, "2029-30")}m in 2029-30`);
+  });
+
   it("writes every point and basis side as a short fragment, tagged with one of the four reasons, \"ours\" never PolicyEngine's (Vahid, 28 Oct)", () => {
     const words = (text) => text.split(/\s+/).length;
     for (const [id, points] of Object.entries(OBR_DIFFERENCE_POINTS)) {

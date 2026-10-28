@@ -440,7 +440,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Raises the trading allowance parameter to £3,000 from 2027-28, for income tax and Class 4 National Insurance.",
     details:
-      "The Treasury's costing starts in 2028-29, when self-assessment payments fall due; ours starts in 2027-28.",
+      "The income tax and NICs lines of the government's costing, certified by the OBR, start in 2028-29, when self-assessment payments fall due; ours starts in 2027-28.",
     source: {
       label: "Budget 2026",
       href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
