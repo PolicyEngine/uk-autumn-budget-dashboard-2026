@@ -23,11 +23,12 @@
  * 2 threshold): they earn a little above Carer's Allowance's weekly
  * earnings limit, so are not entitled to it before the Budget's taper, which
  * begins within 2030-31; their partner's earnings leave the couple no
- * Universal Credit, which would otherwise offset the allowance. One still
- * features a measure not in the Budget (the threshold freeze to
- * 2031-32): the catalogue no longer publishes it, so its card shows no tag
- * or accent (featuresPublished) and keeps its household, whose results
- * come from the announced measures.
+ * Universal Credit, which would otherwise offset the allowance. A middle
+ * earner who lets a flat takes the middle earner's (the threshold freeze
+ * to 2031-32): the household in PolicyEngine's post on the savings and
+ * property income rates whose property income takes its savings interest
+ * into the higher-rate band, beside the landlord, whose salary is already
+ * there.
  * The description and note describe the household, never a measure: which
  * measures change its income is the calculation's answer, and the published
  * measures can change, so a name there could name one the page no longer
@@ -208,22 +209,34 @@ export const HOUSEHOLD_EXAMPLES = [
     spendingSource: decileSpending(8).source,
   },
   {
-    id: "middle-earner",
-    label: "A middle earner on £45,000",
-    short: "Middle earner",
-    description: "Aged 40, owns their home with a mortgage",
-    icon: "hardHat",
-    measure: "threshold_freeze_2031_32",
-    tag: "Threshold freeze, 2031-32",
+    id: "landlord-45k",
+    label: "A middle earner who lets a flat",
+    short: "Small landlord",
+    description: "£45,000 salary, £6,000 from a flat, £2,000 interest",
+    icon: "key",
+    // Both rates, as the landlord's (the measure split in 4118aacf)
+    measure: "property_income_rates_up",
+    measures: ["property_income_rates_up", "savings_income_rates_up"],
+    tag: "Savings and property tax",
     inputs: {
       ...RESET,
-      current_age: 40,
+      // The household in PolicyEngine's post on the savings and property
+      // income rates (app-v2 #1460, at f581840f) whose property income
+      // takes its savings interest into the higher-rate band; aged 35 as
+      // there (age changes none of these taxes). £150 more income tax a
+      // year, in the post and here (Max, #292)
+      current_age: 35,
       current_salary: 45000,
       tenure: "OWNED_WITH_MORTGAGE",
-      ...spendingInputs(7),
+      // Rent after allowable expenses, with no finance costs (the form has
+      // no question for a landlord's mortgage interest)
+      property_income_per_year: 6000,
+      savings_interest_per_year: 2000,
+      // Its tenth by gross income: £54,080 a year in 2027-28, £1,040 a week
+      ...spendingInputs(6),
     },
-    note: "Aged 40, earns £45,000 and owns with a mortgage. Spends £1,080 a year on electricity and £1,200 on petrol and diesel, the average for households in the seventh tenth by gross income (ONS Family Spending, FYE 2025).",
-    spendingSource: decileSpending(7).source,
+    note: "Aged 35, earns £45,000 and owns their home with a mortgage. Lets a flat, with no mortgage on it, for £6,000 a year after costs, and gets £2,000 of savings interest. Spends £1,020 a year on electricity and £1,080 on petrol and diesel, the average for households in the sixth tenth by gross income (ONS Family Spending, FYE 2025).",
+    spendingSource: decileSpending(6).source,
   },
   {
     id: "lone-parent",

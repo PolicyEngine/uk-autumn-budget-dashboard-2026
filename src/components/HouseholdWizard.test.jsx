@@ -354,7 +354,7 @@ describe("the personal impact form", () => {
       "A driver with a long commute",
       "A family with high electricity use",
       "A landlord with savings",
-      "A middle earner on £45,000",
+      "A middle earner who lets a flat",
       "A lone parent working part time",
     ]);
     const examples = buttons.slice(1);
@@ -501,7 +501,7 @@ describe("the personal impact form", () => {
       "Commuter",
       "Universal Credit family",
       "Landlord",
-      "Middle earner",
+      "Small landlord",
       "Lone parent",
     ]);
     // The full name on hover, the short one cut if it runs out of room
@@ -522,9 +522,9 @@ describe("the personal impact form", () => {
     fireEvent.keyDown(document.activeElement, { key: "ArrowRight" });
     fireEvent.keyDown(document.activeElement, { key: "ArrowRight" });
     fireEvent.keyDown(document.activeElement, { key: "ArrowRight" });
-    expect(document.activeElement).toBe(exampleItem("A middle earner on £45,000"));
+    expect(document.activeElement).toBe(exampleItem("A middle earner who lets a flat"));
     fireEvent.keyDown(document.activeElement, { key: "Enter" });
-    expect(isChosen(exampleItem("A middle earner on £45,000"))).toBe(true);
+    expect(isChosen(exampleItem("A middle earner who lets a flat"))).toBe(true);
     // End: the last example; Home and Enter: Your household, chosen with
     // its tick, the form open
     fireEvent.keyDown(document.activeElement, { key: "End" });
@@ -533,7 +533,7 @@ describe("the personal impact form", () => {
     expect(document.activeElement).toBe(yoursCard());
     fireEvent.keyDown(document.activeElement, { key: "Enter" });
     expect(yoursCard()).toHaveAttribute("aria-selected", "true");
-    expect(isChosen(exampleItem("A middle earner on £45,000"))).toBe(false);
+    expect(isChosen(exampleItem("A middle earner who lets a flat"))).toBe(false);
     expect(formIsOpen()).toBe(true);
     // Show all households: the grid again; a card there folds it
     const toggle = within(cards()).getByRole("button", { name: "Show all households" });
