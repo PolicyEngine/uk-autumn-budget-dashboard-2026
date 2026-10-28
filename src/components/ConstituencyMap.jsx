@@ -5,6 +5,7 @@ import * as d3 from "d3";
 import { CHART_MOTION_MS, prefersReducedMotion } from "../utils/chartMotion";
 import ControlBar from "./ControlBar";
 import ChartMoreInfo from "./ChartMoreInfo";
+import Note from "./Note";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import ConstituencyTable from "./ConstituencyTable";
 import { shortNameOf } from "../utils/policyDetails";
@@ -151,6 +152,9 @@ const exportDescription = (label, outcome) =>
   "ones have no data: not published, to protect survey respondents' " +
   "confidentiality, or too few survey households to estimate. Some " +
   "figures are approximate, based on fewer than 30 survey households.";
+
+/** The map's one line on local-area data, under the map. */
+export const AREA_UNCERTIFIED = "Area figures are estimates from local-area data that are not yet certified.";
 
 /**
  * The card's "About this chart". Each rule is the generator's: the
@@ -1406,6 +1410,13 @@ export default function ConstituencyMap({
       </div>
 
       <div className="chart-footer">
+        {/* Local-area results are not certified (geography.py's
+            MICROCOSM_UNCERTIFIED, policyengine.py#685): said once, here;
+            not for a release reweighting the national dataset (Vahid,
+            28 October) */}
+        {view.kind === "rows" && !notRouted && routing?.routing?.regionalReleaseKind !== "area_coded_national" && (
+          <Note>{AREA_UNCERTIFIED}</Note>
+        )}
         <ChartMoreInfo
           year={selectedYear}
           info={constituencyInfo({
