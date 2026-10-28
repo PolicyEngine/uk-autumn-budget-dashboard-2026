@@ -750,6 +750,11 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
                 reform, config, dataset_path, baseline, reformed, survey
             )
 
+    if flat or "age_impact" in unit.tables:
+        hold_flat_to_floor(
+            outcome, baseline, reformed, dataset_path, list(config.years)
+        )
+
     # This flat path has no publication gate, so say loudly when the data
     # cannot cost a measure, or the model mis-costs it.
     for limit in data_limits.limits_touched(baseline, reformed, observed):
@@ -781,6 +786,108 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
     del baseline, reformed, observed
     say(f"[green]✓[/green] {reform.name}")
     return outcome
+
+
+def _built_from_a_dataset(simulation) -> bool:
+    """Whether ``simulation`` was built from a dataset with tables by year,
+    whose household and person tables name the survey households (as
+    ``generate._built_from_a_dataset``)."""
+    dataset = getattr(simulation, "dataset", None)
+    return hasattr(dataset, "years") and hasattr(dataset, "__getitem__")
+
+
+def hold_flat_to_floor(
+    outcome: "FlatOutcome",
+    baseline,
+    reformed,
+    dataset_path: Optional[str],
+    years: list[int],
+) -> None:
+    """Hold one measure's flat rows to the floor of survey households, as
+    generation holds an artifact's (``disclosure_floor``; #285 review,
+    finding 3): the flat metrics.csv's thin figures are written as empty
+    cells, the age table's thin groups are left out with whatever gives
+    them back, and a year in which a decile rests on 1 or 2 survey
+    households has no decile rows for the measure, since a decile table
+    cannot leave one decile out. What was withheld is said in the unit's
+    lines, by table, year and column, never a figure.
+
+    A run on simulations built from no dataset (a stand-in in tests) is
+    said to be unchecked; one whose survey households cannot be told
+    apart is said loudly not to be held to it: its rows must never be
+    committed."""
+    from uk_budget_data.publication import disclosure_floor
+
+    say = outcome.messages.append
+    name = escape(outcome.reform_name or outcome.reform_id)
+    if not all(_built_from_a_dataset(sim) for sim in (baseline, reformed)):
+        say(
+            f"{name}: not held to the floor of survey households (its "
+            "simulations were not built from a dataset)"
+        )
+        return
+    try:
+        survey = scatter_survey_households(baseline, dataset_path)
+    except ValueError as error:
+        say(
+            f"[bold red]NOT HELD TO THE FLOOR[/bold red] {name}: its "
+            f"survey households cannot be told apart ({escape(str(error))})."
+            " Never commit its rows."
+        )
+        return
+    found = disclosure_floor.thin_cells(baseline, reformed, years, survey)
+    result = outcome.result
+    if result is not None:
+        result.age_impact = disclosure_floor.withhold_thin_age_rows(
+            result.age_impact, found
+        )
+        withheld = disclosure_floor.thin_metrics(
+            baseline, reformed, years, survey
+        )
+        result.metrics = disclosure_floor.withhold_metrics(
+            result.metrics, withheld
+        )
+        found.update(withheld)
+        thin_years = {
+            year
+            for table, year in found
+            if table in disclosure_floor.DECILE_TABLES
+        }
+        result.distributional_impact = [
+            row
+            for row in result.distributional_impact
+            if row["year"] not in thin_years
+        ]
+        result.winners_losers = [
+            row
+            for row in result.winners_losers
+            if row["year"] not in thin_years
+        ]
+    else:
+        # ``generate --only age_impact``: the age table alone
+        found = {
+            cell: labels
+            for cell, labels in found.items()
+            if cell[0] == disclosure_floor.AGE_TABLE
+        }
+    outcome.age_rows = disclosure_floor.withhold_thin_age_rows(
+        outcome.age_rows, found
+    )
+    record = disclosure_floor.floor_record(found)
+    line = disclosure_floor.withheld_line(record)
+    if line is not None:
+        say(f"{name}: {escape(line)}")
+    deciles = {
+        cell: labels
+        for cell, labels in found.items()
+        if cell[0] in disclosure_floor.DECILE_TABLES
+    }
+    if deciles and result is not None:
+        say(
+            f"{name}: WITHHELD, no decile rows for "
+            f"{', '.join(str(y) for y in sorted(thin_years))}: "
+            f"{escape(disclosure_floor.thin_cells_reason(deciles))}"
+        )
 
 
 def flat_units(
