@@ -69,6 +69,34 @@ describe("the two Across earnings cards", () => {
     expect(optionsLabel(net)).toBe("Change");
   });
 
+  it("draw Both on both cards when it is picked on either: two total lines, no parts (Vahid, 28 Oct)", () => {
+    const data = answer("landlord-45k");
+    const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
+    const [net, rate] = cards(container);
+    chooseOption(rate, "Both");
+    // Picked on the rate card, the net income card follows
+    expect(net.querySelector("svg.earnings-svg").getAttribute("data-view")).toBe("both");
+    expect(rate.querySelector(".mtr-plot").getAttribute("data-view")).toBe("both");
+    // Net income: current law dashed and with the policies solid, no layers or chips
+    expect(net.querySelectorAll(".earnings-total")).toHaveLength(2);
+    expect(net.querySelector(".earnings-total-before").getAttribute("stroke-dasharray")).toBeTruthy();
+    expect(net.querySelector(".earnings-layer")).toBeNull();
+    for (const card of [net, rate]) {
+      expect(card.querySelector(".series-toggle-chip")).toBeNull();
+      const legend = card.querySelector(".single-year-legend");
+      expect(legend).toHaveTextContent("Under current law");
+      expect(legend).toHaveTextContent("With the selected policies");
+    }
+    // "You" gives both values
+    expect(net.querySelector(".earnings-you text").textContent).toMatch(/^You: £[\d,]+ → £[\d,]+$/);
+    expect(net.querySelector(".chart-description")).toHaveTextContent(/under current law and £[\d,]+ with the selected policies/);
+    // Back on the net income card, both switch again
+    chooseOption(net, "Change");
+    expect(rate.querySelector(".mtr-plot").getAttribute("data-view")).toBe("change");
+    chooseOption(net, "Both");
+    expect(rate.querySelector(".mtr-plot").getAttribute("data-view")).toBe("both");
+  });
+
   it("drop the 'Click to show or hide' hint from both keys at the first click", () => {
     window.sessionStorage.removeItem("pe-series-toggle-hint-seen");
     const data = answer("landlord-45k");
