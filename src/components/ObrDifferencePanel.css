@@ -15,23 +15,21 @@
   }
 }
 
-/* Beside the chart the panel is the chart's height: placed in a cell that
-   stretches with the chart, it adds no height of its own, keeps its content
-   at the top, and scrolls inside when it is longer */
+/* Beside the chart the panel is at least the chart's height, its content at
+   the top; a longer note makes it taller rather than cutting it off or
+   scrolling inside it (Vahid, 28 Oct: the last line was clipped) */
 @media (min-width: 900px) {
   .obr-compare-layout {
     align-items: stretch;
   }
 
   .obr-panel-cell {
-    position: relative;
-    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .obr-panel-cell > .obr-panel {
-    position: absolute;
-    inset: 0;
-    overflow-y: auto;
+    flex: 1 0 auto;
   }
 }
 

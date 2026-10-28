@@ -137,25 +137,36 @@ export const HOUSEHOLD_EXAMPLES = [
     spendingSource: decileSpending(5).source,
   },
   {
-    id: "driver",
-    label: "A driver with a long commute",
-    short: "Commuter",
-    description: "£38,000, rural South West, £2,600 a year on fuel",
-    icon: "car",
-    measure: "fuel_duty_rise_deferral",
-    tag: "Fuel duty",
+    // Takes the commuter's place (Vahid, 28 October 2026): the savings
+    // income tax rise is in the Household calculator only (not in the
+    // national results, calculatorOnlyMeasures.js), and this card turns it
+    // on. A basic-rate taxpayer whose savings interest is well above their
+    // £1,000 Personal Savings Allowance, so the 2-point rise reaches £9,000
+    // of it: about £180 a year. Salary and interest together stay inside
+    // the basic-rate band in every year, and the salary is above the £5,000
+    // starting rate for savings band's reach
+    id: "saver",
+    label: "A saver with interest income",
+    short: "Saver",
+    description: "£30,000 salary, £10,000 a year of savings interest",
+    icon: "piggyBank",
+    measure: "savings_income_rates_up",
+    // Calculator-only measures this card turns on: its figures and its
+    // precomputed answers are with them added to the published ones
+    calculatorOnly: ["savings_income_rates_up"],
+    tag: "Savings tax",
     inputs: {
       ...RESET,
-      current_age: 40,
-      current_salary: 38000,
-      region: "SOUTH_WEST",
-      tenure: "OWNED_WITH_MORTGAGE",
-      petrol_spending_per_year: 1300,
-      diesel_spending_per_year: 1300,
-      electricity_spending_per_year: decileSpending(4).electricity,
+      current_age: 60,
+      current_salary: 30000,
+      tenure: "OWNED_OUTRIGHT",
+      // About £250,000 in savings at 4%
+      savings_interest_per_year: 10000,
+      // Its tenth by gross income: £40,000 a year, about £770 a week
+      ...spendingInputs(5),
     },
-    note: "Aged 40, earns £38,000 and lives in the rural South West, owning with a mortgage. Two cars, one petrol and one diesel: £2,600 a year on fuel, about three times the average household. Spends £1,010 a year on electricity, the average for households in the fourth tenth by gross income (ONS Family Spending, FYE 2025).",
-    spendingSource: own("Petrol and diesel: its own, about three times the average household. Electricity", 4),
+    note: "Aged 60, earns £30,000 and owns their home outright. Has about £250,000 in savings, which pay £10,000 a year of interest at 4%. Spends £1,060 a year on electricity and £970 on petrol and diesel, the average for households in the fifth tenth by gross income (ONS Family Spending, FYE 2025).",
+    spendingSource: decileSpending(5).source,
   },
   {
     id: "family-uc",

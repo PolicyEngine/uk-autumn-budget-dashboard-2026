@@ -29,7 +29,7 @@ import { DEFAULT_SPENDING, SALARY_SOURCE, WIZARD_DEFAULTS, regionalRent } from "
 // The form's answers at their defaults (utils/householdDefaults.js)
 export { WIZARD_DEFAULTS };
 import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
-import ConstituencyField from "./personal/ConstituencyField";
+import LocalAuthorityField from "./personal/LocalAuthorityField";
 import { policyQuestions } from "../utils/householdPolicyFields";
 import { CALCULATOR_ONLY_MEASURES, SAVINGS_INCOME_RATES_ID, withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
@@ -126,10 +126,10 @@ export const REGION_OPTIONS = [
   ["NORTHERN_IRELAND", "Northern Ireland"],
 ];
 
-// The "region" question asks for a constituency (2024 boundaries), which
-// sets the region the calculation reads; the constituency itself is not sent
-const CONSTITUENCY_HINT =
-  "Your constituency sets your region, which the calculation uses: Scotland has its own income tax rates, and the rent and Council Tax estimates and housing support follow the region.";
+// The "region" question asks for a local authority (council), which sets
+// the region the calculation reads; the council itself is not sent
+const LOCAL_AUTHORITY_HINT =
+  "Your council sets your region, which the calculation uses: Scotland has its own income tax rates, and the rent estimate and housing support follow the region. Council Tax is estimated from your band and your region's average Band D, not your own council's rate.";
 
 const YES_NO = [
   { value: false, label: "No" },
@@ -407,7 +407,7 @@ export function stepSummary(fields, { answer, applies, changed, inputs, children
       continue;
     }
     if (id === "region") {
-      if (inputs.constituency) parts.push(inputs.constituency);
+      if (inputs.council) parts.push(inputs.council);
       continue;
     }
     if (id === "care_hours_per_week") continue;
@@ -560,6 +560,9 @@ export function resetSavedWizard() {
   Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, optionalOpen: {}, stepOpen: {}, submitted: null, startFrom: null, extras: [] });
 }
 
+// Answers always shown first in their step, whatever is selected
+const ALWAYS_FIRST = ["savings_interest_per_year"];
+
 // The address parameter naming the calculator-only measures turned on
 export const EXTRAS_PARAM = "also";
 
@@ -574,7 +577,8 @@ const FORM_PANEL_ID = "household-form-panel";
  * (POST /api/household-impact).
  */
 // Each example's id and full answers, for the cards' background figures
-const EXAMPLE_REQUESTS = HOUSEHOLD_EXAMPLES.map((example) => ({ id: example.id, inputs: presetInputs(example) }));
+// (and any calculator-only measure it turns on: the saver's savings rise)
+const EXAMPLE_REQUESTS = HOUSEHOLD_EXAMPLES.map((example) => ({ id: example.id, inputs: presetInputs(example), calculatorOnly: example.calculatorOnly ?? [] }));
 
 function HouseholdCalculator({
   selectedPolicies = [],
@@ -739,10 +743,14 @@ function HouseholdCalculator({
     // progress) is scrolled to once shown
     setFormOpen(false);
     scrollToResult.current = true;
+    // An example that turns on a calculator-only measure (the saver) turns
+    // its switch on, so its precomputed answer, with it, is the one shown
+    const turnsOn = (preset.calculatorOnly ?? []).filter((id) => !extras.includes(id));
+    if (turnsOn.length) setExtras((prev) => [...prev, ...turnsOn]);
     if (householdPolicies.length > 0) {
       // Another household: its own result or a clean loading state, never
       // the previous card's (useHouseholdImpact's `household`)
-      setSubmitted({ inputs: next, year, policies: requestPolicies, at: Date.now(), household: preset.id });
+      setSubmitted({ inputs: next, year, policies: withCalculatorOnly(requestPolicies, turnsOn), at: Date.now(), household: preset.id });
     }
   };
   // The results for the answers sent with Calculate, never the ones being
@@ -990,15 +998,15 @@ function HouseholdCalculator({
       );
     } else if (id === "region") {
       field = (
-        <ConstituencyField
-          id="constituency"
-          label="Constituency"
-          value={inputs.constituency ?? null}
+        <LocalAuthorityField
+          id="council"
+          label="Local authority"
+          value={inputs.council ?? null}
           regionLabel={regionName(inputs.region)}
-          hint={CONSTITUENCY_HINT}
-          onChange={(seat) => {
+          hint={LOCAL_AUTHORITY_HINT}
+          onChange={(council) => {
             setPresetId(null);
-            setInputs((prev) => ({ ...prev, constituency: seat.name, region: seat.region }));
+            setInputs((prev) => ({ ...prev, council: council.name, region: council.region }));
           }}
         />
       );
@@ -1097,8 +1105,11 @@ function HouseholdCalculator({
   const policyOrder = policyAsks.map((question) => question.id);
   const shownGroups = FORM_GROUPS.map((group) => {
     if (group.always) return { ...group, primary: group.fields, optional: [] };
-    const asked = policyOrder.filter((id) => group.fields.includes(id));
-    if (asked.length === 0) return { ...group, primary: group.fields, optional: [] };
+    // Savings interest is always asked first in its step, so the savings
+    // switch (and the saver example) always has its answer in view
+    const read = policyOrder.filter((id) => group.fields.includes(id));
+    if (read.length === 0) return { ...group, primary: group.fields, optional: [] };
+    const asked = [...new Set([...group.fields.filter((id) => ALWAYS_FIRST.includes(id)), ...read])];
     return { ...group, primary: asked, optional: group.fields.filter((id) => !asked.includes(id)) };
   });
   // Whether a numbered group starts open: You and Household only. The
