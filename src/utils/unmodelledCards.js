@@ -151,4 +151,36 @@ export const UNMODELLED_CARDS = {
       rows: [row("Duty on higher-stake machines", "percent", null, yearly(2027, 2031, 0.2, 0.25))],
     },
   },
+  "online-marketplace-liability": {
+    category: { label: "VAT", icon: "receipt" },
+    inForce: { from: "2027-10" },
+  },
+  // "from 15% to 35% from 1 April 2027"; how long it lasts is not stated,
+  // so tiles only
+  "pubs-business-rates-relief": {
+    category: { label: "Business rates", icon: "building" },
+    inForce: { from: "2027-04" },
+    parameters: {
+      display: "table",
+      rows: [row("Business rates relief for pubs", "percent", null, [{ key: "2027", label: "2027-28", year: 2027, before: 0.15, after: 0.35 }])],
+    },
+  },
+  "your-first-home": {
+    category: { label: "Property", icon: "house" },
+    inForce: { from: "2027-04" },
+  },
+  // "6% for 15 months, from 1 January 2027 to 31 March 2028, returning to 3%
+  // from 1 April 2028"
+  "bank-surcharge": {
+    category: { label: "Business", icon: "building" },
+    inForce: { from: "2027-01", to: "2028-03" },
+    ends: "March 2028",
+    duration: "15 months",
+    parameters: {
+      display: "switch",
+      rows: [row("Bank Corporation Tax Surcharge", "percent", null, [
+        { key: "2027-01-01/2028-03-31", label: "January 2027 to March 2028", year: 2026, before: 0.03, after: 0.06 },
+      ])],
+    },
+  },
 };

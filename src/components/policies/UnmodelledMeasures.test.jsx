@@ -136,13 +136,13 @@ describe("UnmodelledMeasures", () => {
     });
   });
 
-  it("draws What changes' values only where the entry gives them, and a plot only for a lasting change", () => {
+  it("draws What changes' values only where the entry gives them, and a plot only for a lasting change or a window", () => {
     render(<UnmodelledMeasures />);
     for (const item of cards()) {
       const id = item.id.replace(/^unmodelled-/, "");
       const parameters = UNMODELLED_CARDS[id]?.parameters;
       expect(item.querySelectorAll(".pchg-tile").length, id).toBe(parameters ? 2 : 0);
-      expect(Boolean(item.querySelector(".pchg-svg")), id).toBe(parameters?.display === "before-after");
+      expect(Boolean(item.querySelector(".pchg-svg")), id).toBe(["before-after", "switch"].includes(parameters?.display));
     }
     const wage = document.getElementById("unmodelled-national-living-wage");
     expect(wage.querySelector(".pchg-tile.is-before")).toHaveTextContent("£12.71");

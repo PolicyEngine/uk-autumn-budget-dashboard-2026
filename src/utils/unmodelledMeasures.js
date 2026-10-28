@@ -252,10 +252,70 @@ export const UNMODELLED_MEASURES = [
     notModelled: "The data this dashboard uses hold no household spending on gambling.",
     sources: [budget("paragraphs 2.49 and 6.225")],
   },
+  {
+    id: "online-marketplace-liability",
+    name: "Online marketplaces to collect the tax on UK sellers' sales",
+    starts: "1 October 2027",
+    changes:
+      "Online marketplaces become responsible for collecting VAT on sales by UK VAT-registered businesses, and by any other UK business with sales of at least £90,000 a year on the platform. The rules do not apply to personal sales, second-hand goods or sales between businesses.",
+    reaches: "UK businesses selling through online marketplaces that are VAT-registered or sell at least £90,000 a year on a platform.",
+    household:
+      "The VAT rate does not change: the marketplace collects the VAT these sellers owe. Personal sales and second-hand goods are outside the rules.",
+    costings: [{ row: 46, values: [0, 165, 320, 270, 250, 265] }],
+    notModelled:
+      "This dashboard measures household incomes. The model charges VAT on households' spending as if sellers pay it in full, so collecting VAT that some sellers do not pay changes nothing in it.",
+    sources: [budget("paragraphs 2.44 and 6.154")],
+  },
+  {
+    id: "pubs-business-rates-relief",
+    name: "Business rates relief for pubs, social clubs and live music venues up to 35%",
+    starts: "1 April 2027",
+    changes:
+      "Business rates relief for pubs, social clubs and live music venues in England rises by 20 percentage points, from 15% to 35%. Live music venues with a rateable value of £1 million or more keep the 15% relief.",
+    reaches: "Pubs, social clubs and all but the very largest live music venues in England.",
+    household:
+      "Business rates are paid by businesses on their property, not by households. The Budget puts the relief at an average of over £3,000 per pub next year.",
+    costings: [{ row: 12, values: [5, -160, -115, -5, -5, -5] }],
+    notModelled:
+      "This dashboard measures household incomes, and does not trace taxes on business property through to them.",
+    sources: [budget("paragraphs 3.21 and 6.189")],
+  },
+  {
+    id: "your-first-home",
+    name: "Your First Home equity loan scheme",
+    starts: "April 2027",
+    changes:
+      "A new £4.7 billion scheme gives first-time buyers in England government equity loans of up to 20%, with a deposit of 2.5% (15% at most) and a five-year interest-free period. Income caps are £110,000 a household outside London and £140,000 inside it. Price caps follow local median prices, with £650,000 in inner London and £500,000 in outer London.",
+    reaches: "Around 70,000 first-time buyers, on the government's estimate.",
+    household:
+      "A buyer needs a smaller deposit and borrows up to 20% of the price from the government, interest-free for five years. The Budget says this will save the typical buyer hundreds of pounds a month.",
+    costings: [
+      {
+        row: 37,
+        values: [-15, 50, 95, 95, 95, 95],
+        note: "Row 37 is the scheme's net income from developer fees; the loans themselves are financial transactions, in Table 6.2.",
+      },
+    ],
+    notModelled: "The model has no home purchases or loans, and a loan is lent rather than paid, so household incomes do not change.",
+    sources: [budget("paragraphs 5.5 and 6.113")],
+  },
+  {
+    id: "bank-surcharge",
+    name: "Bank Corporation Tax Surcharge up from 3% to 6% for 15 months",
+    starts: "1 January 2027, for 15 months",
+    changes:
+      "The surcharge on banks' profits rises from 3% to 6% from 1 January 2027 to 31 March 2028, and returns to 3% from 1 April 2028. It helps fund the Household Energy Payment and the zero rate of VAT on household electricity.",
+    reaches: "Banks that pay the surcharge.",
+    household: "The surcharge is a tax on banks' profits, not on households.",
+    costings: [{ row: 55, values: [305, 950, 220, 0, 0, 0] }],
+    notModelled:
+      "This dashboard measures household incomes, and does not trace taxes on company profits through to them.",
+    sources: [budget("paragraphs 3.5 and 6.252")],
+  },
 ];
 
 /**
  * What the list leaves out, in one line after it. Set to null to drop it.
  */
 export const OTHER_MEASURES_NOTE =
-  "Table 6.1 also lists measures this section leaves out: tariff suspensions on food and heating oil, which change duties paid by importers; an equity loan scheme for first-time buyers, which lends rather than pays; and changes to other taxes on businesses, among them business rates reliefs and a temporary rise in the Bank Corporation Tax Surcharge. Machine Games Duty is listed because the model counts it against households' spending on gambling.";
+  "Table 6.1 also lists measures this section leaves out: tariff suspensions on food and heating oil, which change duties paid by importers; and changes to other taxes on businesses, among them further business rates reliefs. Machine Games Duty is listed because the model counts it against households' spending on gambling.";
