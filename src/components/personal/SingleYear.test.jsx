@@ -12,7 +12,7 @@ import { clearBasisIncomeCache } from "../../hooks/useBasisIncome";
 import { presetRequests, resetPresetResults } from "../../utils/householdPresets";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../../test/personalPolicies";
-import { keepSentence } from "../../utils/singleYear";
+import { keepSentence, marginalRateSentence } from "../../utils/singleYear";
 
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
 // The receipts' model versions, which the household fixture's answer runs:
@@ -527,8 +527,8 @@ describe("the household calculation, from the fixture", () => {
     expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
     // One sentence: the rate, said once when before and after round the
     // same, then the rate as money
-    const sentence = within(rate).getByText(/^At £34,192 your marginal tax rate is 68%/);
-    expect(sentence).toHaveTextContent(/68%, so of your next £1,000 of earnings, you keep £324\.$/);
+    const sentence = within(rate).getByText(/^At £34,192 your marginal tax rate stays at 68%/);
+    expect(sentence).toHaveTextContent(/68%, so of your next £1,000 you keep £324\.$/);
     expect(screen.queryByText(/publication's order/)).not.toBeInTheDocument();
   });
 
@@ -1098,23 +1098,51 @@ describe("the fixture", () => {
 
 describe("keepSentence: the marginal rate as money", () => {
   it("keeps of the next £1,000, before and after, once when they round the same", () => {
-    expect(keepSentence(0.62, 0.62)).toBe("Of your next £1,000 of earnings, you keep £380.");
-    expect(keepSentence(0.62, 0.65)).toBe("Of your next £1,000 of earnings, you keep £380 under current law and keep £350 with them.");
+    expect(keepSentence(0.62, 0.62)).toBe("Of your next £1,000 you keep £380.");
+    expect(keepSentence(0.62, 0.65)).toBe("Of your next £1,000 you keep £350 instead of £380.");
   });
 
   it("says a loss as a loss", () => {
-    expect(keepSentence(1.05, 0.55)).toBe("Of your next £1,000 of earnings, you would lose £50 under current law and keep £450 with them.");
+    expect(keepSentence(1.05, 0.55)).toBe("Of your next £1,000 you keep £450 instead of losing £50.");
   });
 
   it("turns to the next £200 at a cliff, where £1,000 would overstate it", () => {
     // Net income falls £2,140 over the next £200 before, £32 kept after
-    expect(keepSentence(11.7, 0.84)).toBe("Of your next £200 of earnings, you would lose £2,140 under current law and keep £32 with them.");
-    expect(keepSentence(11.7, 11.7)).toBe("Of your next £200 of earnings, you would lose £2,140.");
+    expect(keepSentence(11.7, 0.84)).toBe("Of your next £200 you keep £32 instead of losing £2,140.");
+    expect(keepSentence(11.7, 11.7)).toBe("Of your next £200 you lose £2,140.");
   });
 
   it("is null without both rates", () => {
     expect(keepSentence(null, 0.4)).toBeNull();
     expect(keepSentence(0.4, undefined)).toBeNull();
+  });
+
+  it("says a new loss as a loss, and two losses as one verb", () => {
+    expect(keepSentence(0.55, 1.05)).toBe("Of your next £1,000 you lose £50 instead of keeping £450.");
+    expect(keepSentence(11.7, 3)).toBe("Of your next £200 you lose £400 instead of £2,140.");
+  });
+});
+
+describe("marginalRateSentence: the rate's move, then the money", () => {
+  it("falls, rises and stays, with no earnings and with them", () => {
+    expect(marginalRateSentence({ salary: 0, before: 0.17, after: 0, keepBefore: 0.17, keepAfter: 0 })).toBe(
+      "On your first £200 of earnings, your marginal tax rate falls from 17% to 0%, so you keep £200 instead of £166.",
+    );
+    expect(marginalRateSentence({ salary: 30000, before: 0.62, after: 0.65, keepBefore: 0.62, keepAfter: 0.65 })).toBe(
+      "At £30,000 your marginal tax rate rises from 62% to 65%, so of your next £1,000 you keep £350 instead of £380.",
+    );
+    expect(marginalRateSentence({ salary: 30000, before: 0.65, after: 0.62, keepBefore: 0.65, keepAfter: 0.62 })).toBe(
+      "At £30,000 your marginal tax rate falls from 65% to 62%, so of your next £1,000 you keep £380 instead of £350.",
+    );
+    expect(marginalRateSentence({ salary: 0, before: 0.2, after: 0.2, keepBefore: 0.2, keepAfter: 0.2 })).toBe(
+      "On your first £200 of earnings, your marginal tax rate stays at 20%, so you keep £160.",
+    );
+  });
+
+  it("ends after the rate without the API's own rates", () => {
+    expect(marginalRateSentence({ salary: 30000, before: 0.32, after: 0.32 })).toBe(
+      "At £30,000 your marginal tax rate stays at 32%.",
+    );
   });
 });
 
