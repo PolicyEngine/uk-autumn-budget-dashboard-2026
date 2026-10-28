@@ -119,6 +119,18 @@ describe("scatterView", () => {
     );
   });
 
+  it("never says nothing changes for a combined run of no change while a member's own run moves households", () => {
+    const row = (reform_id, change_band, change_band_upper) => ({
+      reform_id, reform_name: reform_id, year: 2031, income_band: 20000, change_band, change_band_upper, households: 1000, income_basis_year: 2027,
+    });
+    const rows = [row("pkg", -1, 1), row("a", -1, 1), row("b", 10, 50)];
+    const result = scatterView({ data: { status: "ready", rows }, selectedIds: ["a", "b"], policyIds: ["a", "b"], year: 2031, packageKey: "pkg" });
+    expect(result).toEqual({ kind: "notice", reason: SCATTER_SELECTION_NOT_PUBLISHED, detail: null });
+    // Every member's own run unchanged too: a genuine no change, drawn
+    const quiet = [row("pkg", -1, 1), row("a", -1, 1), row("b", -1, 1)];
+    expect(scatterView({ data: { status: "ready", rows: quiet }, selectedIds: ["a", "b"], policyIds: ["a", "b"], year: 2031, packageKey: "pkg" }).kind).toBe("points");
+  });
+
   it("says when nothing is published", () => {
     expect(view(["a"], 2029, { status: "unavailable", rows: null }).reason).toBe(
       "Household results are not yet published.",
