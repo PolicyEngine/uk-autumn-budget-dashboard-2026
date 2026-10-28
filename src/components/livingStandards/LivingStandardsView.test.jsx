@@ -1,3 +1,4 @@
+import { FELL_BACK_NOTE } from "./sections/WhoIsInPovertySection";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -208,7 +209,7 @@ describe("the Pre-measures forecast view", () => {
     // One card a row, both on the same measure at first, under the age
     // groups' tiles
     const overTime = card(poverty, /^Poverty over time$/);
-    const who = card(poverty, /^Who is in poverty$/);
+    const who = card(poverty, /^Change in poverty by group$/);
     expect(overTime.closest(".charts-grid")).not.toBe(who.closest(".charts-grid"));
     expect(overTime.closest(".charts-grid").children).toHaveLength(1);
     for (const c of [overTime, who]) {
@@ -222,7 +223,7 @@ describe("the Pre-measures forecast view", () => {
 
   it.each([
     ["living", "Living standards", "Living standards under current law", [/^Incomes over time$/, /^Growth across the distribution$/, /^Inequality over time/]],
-    ["poverty", "Poverty", "Poverty under current law", [/^Poverty over time$/, /^Who is in poverty$/]],
+    ["poverty", "Poverty", "Poverty under current law", [/^Poverty over time$/, /^Change in poverty by group$/]],
   ])("?tab=outlook&sub=%s shows the current-law cards with no policy selected", async (sub, label, heading, cards) => {
     // A link whose policies are all unknown selects none: current law needs none
     window.history.replaceState({}, "", `/?tab=outlook&sub=${sub}&policies=not_a_measure`);
@@ -276,7 +277,7 @@ describe("the Pre-measures forecast view", () => {
       cards.push((await heading(re)).closest(".ls-card"));
     }
     fireEvent.click(screen.getByRole("tab", { name: "Poverty" }));
-    for (const re of [/^Poverty over time/, /^Who is in poverty/]) {
+    for (const re of [/^Poverty over time/, /^Change in poverty by group/]) {
       cards.push((await heading(re)).closest(".ls-card"));
     }
     for (const card of cards) {
@@ -296,7 +297,7 @@ describe("the Pre-measures forecast view", () => {
     const growth = (await heading(/^Growth across the distribution/)).closest(".ls-card");
     fireEvent.click(screen.getByRole("tab", { name: "Poverty" }));
     const poverty = (await heading(/^Poverty over time/)).closest(".ls-card");
-    const who = (await heading(/^Who is in poverty/)).closest(".ls-card");
+    const who = (await heading(/^Change in poverty by group/)).closest(".ls-card");
     // The years lead every card's one Options pill
     for (const card of [incomes, inequality, growth, poverty, who]) {
       expect(optionsSummary(card)).toMatch(/^Options: 2028-29 → 2030-31 · /);
@@ -353,7 +354,7 @@ describe("the Pre-measures forecast view", () => {
 
     // Who is in poverty: a dumbbell per group, a dot for the end year and a
     // ring for the start year, for every breakdown, with its reference group
-    const who = (await heading(/^Who is in poverty/)).closest(".ls-card");
+    const who = (await heading(/^Change in poverty by group/)).closest(".ls-card");
     // One short line on the card; the full sentence in About this chart
     expect(who.querySelector(".chart-description").textContent).toMatch(/^Under current law, [a-z].* have the highest .*: \d+\.\d% in \d{4}-\d{2}/);
     fireEvent.click(within(who).getByRole("button", { name: "About this chart" }));
@@ -403,6 +404,13 @@ describe("the Pre-measures forecast view", () => {
       expect(who.querySelector(".ls-poverty-dumbbell")).not.toBeNull();
     }
     expect(within(who).getByText(/^All children/)).toBeInTheDocument();
+    // Before housing costs chosen on a group breakdown, then a child one: the
+    // card says it shows AHC, and its pill shows the measure drawn (PM2)
+    choose(who, "Breakdown", "Tenure");
+    choose(who, "Housing costs", "Before housing costs");
+    expect(within(who).queryByText(FELL_BACK_NOTE)).toBeNull();
+    choose(who, "Breakdown", "Children: lone parent vs couple");
+    expect(within(who).getByText(FELL_BACK_NOTE)).toBeInTheDocument();
     // Children's breakdowns are after housing costs only: Before is listed, disabled
     expect(optionsSummary(who)).toMatch(/· After housing costs$/);
     choose(who, "Poverty line", "Absolute");
@@ -468,7 +476,7 @@ describe("the Pre-measures forecast view", () => {
     fireEvent.click(within(within(who).getByRole("radiogroup", { name: "From" })).getByRole("radio", { name: "2029-30" }));
     expect(new URLSearchParams(window.location.search).get("ls_from")).toBe("2029");
     // Titles carry no years (the pill, axes and sentence do): the sentences follow
-    expect(await heading(/^Who is in poverty$/)).toBeInTheDocument();
+    expect(await heading(/^Change in poverty by group$/)).toBeInTheDocument();
     expect(who.querySelector(".chart-description").textContent).toMatch(/since 2029-30|the same as in 2029-30/);
     expect(within(growth).getByText(/Each year from 2030-31 to 2031-32/)).toBeInTheDocument();
 

@@ -94,7 +94,7 @@ function ChartNotes({ outlook, meta }) {
     ["Growth across the distribution", outlook.income_by_decile?.notes],
     ["Poverty over time", outlook.poverty?.notes],
     ["Depth of poverty", outlook.deep_poverty?.notes],
-    ["Who is in poverty", (outlook.poverty_by_group?.notes || []).filter((n) => !/^Region/.test(n))],
+    ["Change in poverty by group", (outlook.poverty_by_group?.notes || []).filter((n) => !/^Region/.test(n))],
   ]
     .map(([title, notes]) => [title, (notes || []).filter(Boolean).map(scrubNote).map(linkNote)])
     .filter(([, notes]) => notes.length);
