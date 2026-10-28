@@ -667,6 +667,26 @@ def test_electricity_vat_on_1050_pounds_a_year(year, saving):
     assert reformed - baseline == pytest.approx(saving, abs=PENNY)
 
 
+@pytest.mark.parametrize(
+    "year, saving",
+    # Northern Ireland: no zero rate before April 2027 (Great Britain only),
+    # then the same 91 days of 366 as Great Britain, £12.43; none after.
+    [(2026, 0.0), (2027, 12.43), (2028, 0.0)],
+)
+def test_electricity_vat_in_northern_ireland_from_april_2027(year, saving):
+    sit = situation(
+        {"adult": {"age": {year: 40}, "employment_income": {year: 20_000}}},
+        {
+            "electricity_consumption": {year: 1_050},
+            "region": {year: "NORTHERN_IRELAND"},
+        },
+    )
+    baseline, reformed = change(
+        "domestic_electricity_zero_vat", sit, "household_net_income", year
+    )
+    assert reformed - baseline == pytest.approx(saving, abs=PENNY)
+
+
 # --- 5. Employer NI ---------------------------------------------------------
 
 

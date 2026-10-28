@@ -28,20 +28,19 @@ Every chart downloads as CSV, PNG, SVG or plain text.
 
 The measures on the page, each compared against current law in policyengine-uk. On Budget day this list becomes the measures the Chancellor announces, published one by one (see [Budget day](#budget-day)). They are defined in [`src/uk_budget_data/reforms.py`](src/uk_budget_data/reforms.py) (ids, names, full descriptions and parameter changes), with the measures that need more than a parameter change implemented as simulation modifiers in [`src/uk_budget_data/budget_measures/`](src/uk_budget_data/budget_measures/), one module per modifier. `autumn_budget_2026_combined` simulates them all together, with their interactions.
 
-The list on `main` today:
+The list on `budget-day-measures` (PR #290), the measures announced in Budget 2026 on 28 October 2026:
 
 | Id | Measure |
 |---|---|
-| `fuel_duty_rise_deferral` | Fuel duty rises deferred: no January 2027 rise, 52.95p frozen through 2027-28, RPI from April 2028 |
-| `state_pension_income_tax_protection` | State Pension income tax protection: an allowance of the full new State Pension for people over State Pension age whose total income is at or below it, from April 2027 (hand-written) |
-| `warm_home_discount_top_up` | Warm Home Discount top-up: £150 to £250 for winter 2026-27 |
-| `domestic_electricity_zero_vat` | Zero VAT on domestic electricity, October 2026 to March 2028 |
-| `threshold_freeze_2031_32` | Threshold freeze to 2031-32: personal allowance and basic rate band frozen one more year |
-| `plan_2_threshold_unfreeze` | Plan 2 student loan threshold uprated by RPI from April 2027 (hand-written) |
-| `employer_nics_secondary_threshold_raise` | Employer NI secondary threshold back to £9,100 from April 2027 |
-| `unearned_income_rates_up` | Dividend, savings and property income tax rates up 2 points from April 2027 |
+| `fuel_duty_rise_deferral` | Fuel duty cut extended: 52.95p to 1 July 2027, then current law, RPI from April 2028 |
+| `state_pension_income_tax_protection` | Pension Tax Allowance: a non-refundable income tax reduction for people over State Pension age, withdrawn £1 per £3 of income above the full new State Pension, 2027-28 to 2029-30 (hand-written) |
+| `domestic_electricity_zero_vat` | Zero VAT on domestic electricity, 1 October 2026 to 1 July 2027: Great Britain, UK-wide from April 2027 (hand-written) |
+| `unearned_income_rates_up` | Savings and property income tax rates up 2 points from 6 April 2027 (property rates in England, Wales and Northern Ireland) |
+| `carers_allowance_earnings_taper` | Carer's Allowance earnings taper: 100% above 16 x the National Living Wage, England and Wales, from within 2030-31 (hand-written) |
+| `household_energy_payment_2026` | Household Energy Payment: £100 to households in bands A to D in England, winter 2026-27 (hand-written) |
+| `trading_allowance_raise` | Trading allowance raised to £3,000 from 6 April 2027 |
 
-These eight are the combined package (`autumn_budget_2026_combined`, key `combined--894152ce8c83f1d8`), chosen on the evening of 27 October 2026. Withdrawn and not registered: Business Asset Disposal Relief restricted and employer NI relief for under-25s (27 October), and, that evening, the road fuel VAT cut, the Carer's Allowance earnings taper (#263) and the Local Housing Allowance unfreeze (both: cells by decile resting on fewer than 10 survey households).
+These seven are the combined package (`autumn_budget_2026_combined`, key `combined--4e3e325c74977848`). Withdrawn on Budget day, not in the Budget 2026 document, with their factories kept but unregistered: the Warm Home Discount top-up, the threshold freeze to 2031-32, the Plan 2 threshold unfreeze and the employer NI secondary threshold raise. Earlier the pre-Budget package was eight measures (key `combined--894152ce8c83f1d8`, chosen on the evening of 27 October 2026).
 
 List them from the command line with `uv run uk-budget-data generate --list-reforms`.
 

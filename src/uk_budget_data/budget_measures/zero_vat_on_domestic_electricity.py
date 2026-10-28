@@ -1,5 +1,6 @@
-"""Domestic electricity's zero rate of VAT extended from 31 March 2027 to
-July 2027, Great Britain only (``domestic_electricity_zero_vat``).
+"""Domestic electricity's zero rate of VAT from 1 October 2026 to 1 July
+2027: Great Britain to March 2027, UK-wide from April 2027
+(``domestic_electricity_zero_vat``).
 
 One modifier in a module of its own: see the package docstring.
 """
@@ -27,14 +28,16 @@ WINTER_SHARE = 0.5668595921041373
 # 1 October 2026 to 31 March 2027 (GOV.UK policy paper; HMRC Brief 10
 # (2026)) is extended "through the winter and spring to July". The
 # Budget 2026 document scores the whole zero rate from October 2026 as this
-# Budget's measure ("Domestic electricity VAT cut to 0% (Oct 2026-Jul
-# 2027)": -755 in 2026-27, -305 in 2027-28), so the measure is option B:
+# Budget's measure (Table 6.1 row 2, "Support for Energy Bills: Cut VAT on
+# domestic electricity from 5% to 0% from 1 October 2026 to 1 July 2027":
+# -755 in 2026-27, -305 in 2027-28), so the measure is option B:
 # 1 October 2026 to ZERO_RATE_EXTENDED_TO (to July 2027, read as to 1 July
 # like the fuel duty cut, so the last zero-rated day is 30 June). The module is proved made of templates only, so
 # its defaults must be literals: when changing the end date, set
 # rate_change_2027 to -0.05 x the share below (tests/test_reforms.py
-# checks the two agree). TODO from the documents: "2027-06-30" (91 days,
-# -0.012431693989071038) or "2027-07-31" (122 days, -0.016666666666666666).
+# checks the two agree). The Budget document (RB 6.210) and Table 6.1 say
+# "to 1 July 2027", so "2027-06-30" (91 days, -0.012431693989071038);
+# "2027-07-31" (122 days, -0.016666666666666666) is kept for comparison.
 ZERO_RATE_EXTENDED_TO = "2027-06-30"
 # The share of 2027-28 (1 April 2027 to 31 March 2028, 366 days) zero-rated,
 # by days from 1 April, as the road fuel VAT cut weights.
@@ -44,10 +47,9 @@ EXTENSION_SHARES = {
 }
 # policyengine-uk 2.151.0's baseline has no zero rate at all, so the
 # October 2026 to March 2027 zero rate is in neither side. True puts it in
-# the measure too (the candidate's attribution before the Budget): then set
+# the measure too, as Table 6.1 and the costing score it: then set
 # rate_change_2026 to -0.028342979605206865 (-0.05 x WINTER_SHARE). False
-# scores the Budget's extension only, as its costing does, with
-# rate_change_2026 = 0.0.
+# would score only the months after March 2027, with rate_change_2026 = 0.0.
 PRE_BUDGET_ZERO_RATE_IN_MEASURE = True
 # Budget 2026 document: the zero rate is "expected to apply UK-wide from
 # April 2027", so 2027-28 (geography_2027) includes Northern Ireland;
@@ -56,10 +58,11 @@ PRE_BUDGET_ZERO_RATE_IN_MEASURE = True
 
 # Domestic electricity zero-rated (5% to 0%) from 1 April 2027 to
 # ZERO_RATE_EXTENDED_TO (and from 1 October 2026 while
-# PRE_BUDGET_ZERO_RATE_IN_MEASURE), in Great Britain only: the zero rate is for domestic
-# electricity in Great Britain (GOV.UK, "Temporary zero rate of VAT in Great
-# Britain for domestic electricity"), so Northern Ireland's households keep
-# the 5%.
+# PRE_BUDGET_ZERO_RATE_IN_MEASURE): in Great Britain only to March 2027
+# (GOV.UK, "Temporary zero rate of VAT in Great Britain for domestic
+# electricity"), so Northern Ireland's households keep the 5% in 2026-27;
+# UK-wide from April 2027 (Budget 2026 document RB 6.210 and paragraph
+# 3.4), so the 2027-28 leg includes Northern Ireland.
 #
 # The model has one reduced rate for every reduced-rate good, so the change
 # is applied to electricity spending alone. 2026-27 carries the October to
