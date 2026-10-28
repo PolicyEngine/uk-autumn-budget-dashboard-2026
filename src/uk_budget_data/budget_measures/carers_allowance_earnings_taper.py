@@ -7,11 +7,26 @@ Registered in ``reforms.py`` as an individual candidate measure; it is not
 one of the combined package's components.
 """
 
+import math
+
 import numpy as np
 from policyengine_uk.utils.data_source import built_from_data
 from policyengine_uk.utils.stochastic import splitmix64_uniform
 
 from uk_budget_data.measure_templates import _call_formula, _replace_formula
+
+# The OBR's National Living Wage from each April, £ an hour (Economic and
+# fiscal outlook, October 2026, detailed forecast tables: economy, Table
+# 1.13), as (year of that April, wage) pairs: set by the Government to
+# 2027, OBR estimates after. At 16 hours, rounded up to the next pound, the
+# limit is £228 in 2030-31 and £234 in 2031-32.
+OBR_NATIONAL_LIVING_WAGE_BY_APRIL = (
+    (2027, 13.21),
+    (2028, 13.513623297578135),
+    (2029, 13.854853379339588),
+    (2030, 14.23293930734993),
+    (2031, 14.617023376183901),
+)
 
 
 def carers_allowance_earnings_taper(
@@ -25,6 +40,7 @@ def carers_allowance_earnings_taper(
     limit_hours=16,
     national_living_wage_2027=13.21,
     first_year_share=0.5,
+    national_living_wage_by_april=OBR_NATIONAL_LIVING_WAGE_BY_APRIL,
 ):
     """No cliff edge at the Carer's Allowance earnings limit: from
     ``start_year`` a carer whose weekly net earnings are above the limit
@@ -37,6 +53,15 @@ def carers_allowance_earnings_taper(
     the run's average earnings index), in England and Wales, beginning
     within 2030-31 (``first_year_share`` of 2030-31's change, 0.5 until
     the start date is confirmed).
+
+    The National Living Wage for a year is the OBR's forecast for that
+    April (``national_living_wage_by_april``) where it has one, as the
+    Treasury's costing uses "OBR projections for increases in the National
+    Living Wage"; other years move ``national_living_wage_2027`` on with
+    the run's average earnings index. The limit is rounded up to the next
+    pound, as the Government sets it "from April 2025 and in future years"
+    (Explanatory Memorandum to SI 2025/352, paragraph 5.6: £196 from
+    16 x £12.21, £204 from 16 x £12.71), so £212 at £13.21.
 
     The announcement (27 October 2026, the eve of the Budget; Brit Brief,
     citing the government's release; nation.cymru): "only £1 of support
@@ -98,19 +123,29 @@ def carers_allowance_earnings_taper(
             limit = ca.earnings_limit
         elif earnings_limit is None:
             # The Weekly Earnings Limit is 16 hours at the National Living
-            # Wage (Budget 2026, 6.13; costings p. 16): £13.21 from April
-            # 2027, carried forward with the run's average earnings index
-            # (the engine has no National Living Wage forecast).
-            index = parameters(period).gov.economic_assumptions.indices.obr
-            base = parameters(
-                "2027-04-06"
-            ).gov.economic_assumptions.indices.obr
-            limit = (
-                limit_hours
-                * national_living_wage_2027
-                * index.average_earnings
-                / base.average_earnings
-            )
+            # Wage (Budget 2026, 6.13; costings p. 16), rounded up to the
+            # next pound (EM to SI 2025/352, para. 5.6). The wage is the
+            # OBR's for that April, or else £13.21 from April 2027 carried
+            # forward with the run's average earnings index (the engine has
+            # no National Living Wage forecast).
+            obr_wages = dict(national_living_wage_by_april)
+            if year in obr_wages:
+                wage = obr_wages[year]
+            else:
+                index = parameters(
+                    period
+                ).gov.economic_assumptions.indices.obr
+                base = parameters(
+                    "2027-04-06"
+                ).gov.economic_assumptions.indices.obr
+                wage = (
+                    national_living_wage_2027
+                    * index.average_earnings
+                    / base.average_earnings
+                )
+            # Rounding to six places first keeps an exact amount from
+            # rounding up when the float product sits just above it.
+            limit = float(math.ceil(round(limit_hours * wage, 6)))
         else:
             limit = earnings_limit
         weekly = person("carers_allowance_earnings", period) / 52
