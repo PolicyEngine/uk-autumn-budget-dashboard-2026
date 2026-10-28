@@ -47,6 +47,10 @@ export const POLICY_FIELDS = {
         ? Boolean(inputs.has_partner) && atStatePensionAge(inputs.partner_age, year)
         : atStatePensionAge(inputs.current_age, year),
   },
+  // Carer's Allowance taper: whether you care for someone, and how many
+  // hours a week (the allowance needs 35)
+  // (the hours only for a carer: HouseholdCalculator's FIELD_APPLIES)
+  carers_allowance_earnings_taper: { fields: ["is_carer", "care_hours_per_week"] },
   // The threshold freeze to 2031-32 and the employer National Insurance
   // threshold read the salary, which the essentials ask
 };

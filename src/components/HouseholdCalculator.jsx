@@ -76,7 +76,7 @@ export const FORM_GROUPS = [
     key: "benefits",
     title: "Benefits and loans",
     hint: "Yes to Universal Credit counts what your answers entitle you to.",
-    fields: ["claims_universal_credit", "student_loan_plan"],
+    fields: ["claims_universal_credit", "is_carer", "care_hours_per_week", "student_loan_plan"],
     quiet: ["claims_universal_credit"],
   },
   {
@@ -118,7 +118,11 @@ export const FORM_SECTIONS = [
         icon: "cart",
         fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year", "monthly_childcare"],
       },
-      { title: "Council tax and benefits", icon: "building", fields: ["council_tax_band", "claims_universal_credit"] },
+      {
+        title: "Council tax and benefits",
+        icon: "building",
+        fields: ["council_tax_band", "claims_universal_credit", "is_carer", "care_hours_per_week"],
+      },
     ],
   },
 ];
@@ -218,6 +222,14 @@ const CHOICE_CONFIGS = {
     hint: "Yes counts the Universal Credit your answers entitle you to.",
     hintAs: "tooltip",
   },
+  is_carer: {
+    label: "Carer",
+    question: "Do you look after someone, unpaid?",
+    layout: "segmented",
+    options: YES_NO,
+    hint: "Unpaid care for someone who is ill, disabled or older. With 35 hours a week or more, the calculation counts Carer's Allowance (while your earnings are under its limit) and the carer element of Universal Credit.",
+    hintAs: "tooltip",
+  },
 };
 
 // Ages, as number boxes with − and + steppers; amounts, as £ boxes
@@ -292,6 +304,15 @@ const NUMBER_CONFIGS = {
     suffix: "a year",
     hint: "Including VAT. Prefilled with the average household's spending, £20.00 a week (Source: ONS Family Spending, 2024-25).",
   },
+  care_hours_per_week: {
+    label: "Hours of care",
+    min: 0,
+    max: 168,
+    step: 1,
+    suffix: "a week",
+    hint: "Carer's Allowance and the carer element need 35 hours a week or more.",
+    hintAs: "tooltip",
+  },
   monthly_childcare: {
     label: "Paid childcare",
     min: 0,
@@ -311,6 +332,7 @@ const FIELD_APPLIES = {
   partner_salary: (inputs) => inputs.has_partner,
   children_ages: (inputs, childrenCount) => childrenCount > 0,
   monthly_childcare: (inputs, childrenCount) => childrenCount > 0,
+  care_hours_per_week: (inputs) => Boolean(inputs.is_carer),
   partner_private_pension_per_year: (inputs) => inputs.has_partner,
   // Northern Ireland has domestic rates, not Council Tax
   council_tax_band: (inputs) => inputs.region !== "NORTHERN_IRELAND",
@@ -362,6 +384,9 @@ export function spendingAssumed(answers, presetId) {
 }
 
 const pounds = (value) => `£${d3.format(",.0f")(value)}`;
+// Hours of care, the one number the form asks that is not an amount
+const NOT_AMOUNTS = new Set(["care_hours_per_week"]);
+const careSummary = (hours) => `${d3.format(",.0f")(hours)} ${hours === 1 ? "hour" : "hours"} a week`;
 const sentence = (parts) => {
   const text = parts.join(" · ");
   return text.charAt(0).toUpperCase() + text.slice(1);
@@ -413,6 +438,7 @@ export function groupSummary(title, { answer, applies, inputs, presetId }) {
   if (applies("claims_universal_credit")) {
     parts.push(inputs.claims_universal_credit ? "claims Universal Credit if entitled" : "does not claim Universal Credit");
   }
+  if (applies("is_carer")) parts.push(inputs.is_carer ? `carer, ${careSummary(answer("care_hours_per_week"))}` : "not a carer");
   return sentence(parts);
 }
 
@@ -420,7 +446,8 @@ export function groupSummary(title, { answer, applies, inputs, presetId }) {
  * A numbered group's line while it is closed, standing in for its boxes:
  * what its answers are now. Amounts as "Petrol £1,300 · Diesel £1,300 ·
  * Electricity £1,010 a year" (those above zero; "None" when none is),
- * Universal Credit as "yes" or "no" and the loan plan by name. `changed`
+ * Universal Credit as "yes" or "no", a carer as "Carer: yes, 35 hours a
+ * week" or "Carer: no", and the loan plan by name. `changed`
  * is whether any answer differs from where it started (WIZARD_DEFAULTS,
  * or a prefill); `typical` whether it shows amounts all left there.
  */
@@ -429,7 +456,12 @@ export function stepSummary(fields, { answer, applies, changed, inputs }) {
   const amounts = [];
   const choices = [];
   for (const id of shown) {
-    if (NUMBER_CONFIGS[id]) {
+    if (id === "care_hours_per_week") {
+      // Said with the carer answer
+      continue;
+    } else if (id === "is_carer") {
+      choices.push(`Carer: ${inputs.is_carer ? `yes, ${careSummary(answer("care_hours_per_week"))}` : "no"}`);
+    } else if (NUMBER_CONFIGS[id]) {
       if (answer(id) > 0) amounts.push(`${NUMBER_CONFIGS[id].label} ${pounds(answer(id))}`);
     } else if (id === "claims_universal_credit") {
       choices.push(`Universal Credit: ${inputs[id] ? "yes" : "no"}`);
@@ -442,7 +474,7 @@ export function stepSummary(fields, { answer, applies, changed, inputs }) {
       if (chosen) choices.push(`${config.label}: ${chosen.label}`);
     }
   }
-  const numbers = shown.filter((id) => NUMBER_CONFIGS[id]);
+  const numbers = shown.filter((id) => NUMBER_CONFIGS[id] && !NOT_AMOUNTS.has(id));
   const yearly = amounts.length > 0 && numbers.every((id) => id.endsWith("_per_year"));
   const money = amounts.length > 0 ? `${amounts.join(" · ")}${yearly ? " a year" : ""}` : numbers.length > 0 ? "None" : null;
   const text = [money, ...choices].filter(Boolean).join(" · ");

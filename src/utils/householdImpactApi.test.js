@@ -61,6 +61,24 @@ describe("buildHouseholdRequest", () => {
   });
 
 
+  it("sends caring only for a carer, so every other household's request is as it was", () => {
+    const options = { year: 2031, policies: ["carers_allowance_earnings_taper"] };
+    const before = buildHouseholdRequest(WIZARD_DEFAULTS, options);
+    expect(before.household).not.toHaveProperty("is_carer");
+    expect(before.household).not.toHaveProperty("care_hours_per_week");
+    // Hours entered, then "No" to caring: not sent, the same request key
+    const notCarer = buildHouseholdRequest({ ...WIZARD_DEFAULTS, care_hours_per_week: 50 }, options);
+    expect(requestKey(notCarer)).toBe(requestKey(before));
+    // A request built from answers that predate the question: the same too
+    const { is_carer: _carer, care_hours_per_week: _hours, ...older } = WIZARD_DEFAULTS;
+    expect(requestKey(buildHouseholdRequest(older, options))).toBe(requestKey(before));
+    const carer = buildHouseholdRequest({ ...WIZARD_DEFAULTS, is_carer: true, care_hours_per_week: 50 }, options);
+    expect(carer.household).toMatchObject({ is_carer: true, care_hours_per_week: 50 });
+    // A carer whose hours box is empty is sent the form's 35
+    const empty = buildHouseholdRequest({ ...WIZARD_DEFAULTS, is_carer: true, care_hours_per_week: null }, options);
+    expect(empty.household.care_hours_per_week).toBe(35);
+  });
+
   it("sends rent only for renters and childcare only with children", () => {
     const owner = buildHouseholdRequest(
       { ...WIZARD_DEFAULTS, tenure: "OWNED_OUTRIGHT", monthly_rent: 900, monthly_childcare: 400 },

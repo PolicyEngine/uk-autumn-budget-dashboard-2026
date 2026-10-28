@@ -117,7 +117,9 @@ describe("the personal impact form", () => {
     expect(groupToggle("Spending")).toHaveTextContent(
       `Petrol £${DEFAULT_SPENDING.petrol.toLocaleString("en-GB")} · diesel £${DEFAULT_SPENDING.diesel.toLocaleString("en-GB")} · electricity £${DEFAULT_SPENDING.electricity.toLocaleString("en-GB")} a year (UK average)`,
     );
-    expect(groupToggle("Council tax and benefits")).toHaveTextContent("Council Tax band D · claims Universal Credit if entitled");
+    expect(groupToggle("Council tax and benefits")).toHaveTextContent(
+      "Council Tax band D · claims Universal Credit if entitled · not a carer",
+    );
     const essentials = ["current_age", "current_salary", "region", "has_partner", "children_count", "tenure", "rent_from", "monthly_rent"];
     expect(fields()).toEqual(essentials);
     openMore();
@@ -140,6 +142,8 @@ describe("the personal impact form", () => {
       "electricity_spending_per_year",
       "council_tax_band",
       "claims_universal_credit",
+      // The hours of care only once "Yes" to caring
+      "is_carer",
     ]);
     expect(FORM_SECTIONS).toHaveLength(2);
     expect(value("Age")).toBe(30);
@@ -350,7 +354,7 @@ describe("the personal impact form", () => {
       "A driver with a long commute",
       "A family with high electricity use",
       "A landlord with savings",
-      "A middle earner on £45,000",
+      "A carer looking after a parent",
       "A lone parent working part time",
     ]);
     const examples = buttons.slice(1);
@@ -497,7 +501,7 @@ describe("the personal impact form", () => {
       "Commuter",
       "Universal Credit family",
       "Landlord",
-      "Middle earner",
+      "Carer",
       "Lone parent",
     ]);
     // The full name on hover, the short one cut if it runs out of room
@@ -518,9 +522,9 @@ describe("the personal impact form", () => {
     fireEvent.keyDown(document.activeElement, { key: "ArrowRight" });
     fireEvent.keyDown(document.activeElement, { key: "ArrowRight" });
     fireEvent.keyDown(document.activeElement, { key: "ArrowRight" });
-    expect(document.activeElement).toBe(exampleItem("A middle earner on £45,000"));
+    expect(document.activeElement).toBe(exampleItem("A carer looking after a parent"));
     fireEvent.keyDown(document.activeElement, { key: "Enter" });
-    expect(isChosen(exampleItem("A middle earner on £45,000"))).toBe(true);
+    expect(isChosen(exampleItem("A carer looking after a parent"))).toBe(true);
     // End: the last example; Home and Enter: Your household, chosen with
     // its tick, the form open
     fireEvent.keyDown(document.activeElement, { key: "End" });
@@ -529,7 +533,7 @@ describe("the personal impact form", () => {
     expect(document.activeElement).toBe(yoursCard());
     fireEvent.keyDown(document.activeElement, { key: "Enter" });
     expect(yoursCard()).toHaveAttribute("aria-selected", "true");
-    expect(isChosen(exampleItem("A middle earner on £45,000"))).toBe(false);
+    expect(isChosen(exampleItem("A carer looking after a parent"))).toBe(false);
     expect(formIsOpen()).toBe(true);
     // Show all households: the grid again; a card there folds it
     const toggle = within(cards()).getByRole("button", { name: "Show all households" });
@@ -733,6 +737,43 @@ describe("the selected policies' questions", () => {
     fireEvent.click(stepToggle("Spending"));
     expect(box("Petrol")).toHaveValue("500");
     expect(document.querySelector(".household-form")).not.toHaveTextContent("✓");
+  });
+
+  it("asks about caring up front for the Carer's Allowance taper, the hours only for a carer", () => {
+    form(["carers_allowance_earnings_taper"]);
+    expect(groups()).toEqual(["Step 1: You", "Step 2: Household", "Step 3: Benefits and loans"]);
+    const summary = () => group("Benefits and loans").querySelector(".household-step-summary");
+    // Closed, it says the answer: not a carer, as every household was
+    // before the form asked
+    expect(summary()).toHaveTextContent(/^Carer: no$/);
+    fireEvent.click(stepToggle("Benefits and loans"));
+    expect(asked("Benefits and loans")).toEqual(["is_carer"]);
+    expect(chosen("Carer")).toBe("No");
+    choose("Carer", "Yes");
+    // A carer is asked their hours of care, starting at 35
+    expect(asked("Benefits and loans")).toEqual(["is_carer", "care_hours_per_week"]);
+    expect(value("Hours of care")).toBe(35);
+    fireEvent.change(box("Hours of care"), { target: { value: "50" } });
+    fireEvent.blur(box("Hours of care"));
+    fireEvent.click(stepToggle("Benefits and loans"));
+    expect(summary()).toHaveTextContent(/^Carer: yes, 50 hours a week Changed$/);
+    // Asked once: not in More details as well
+    openMore();
+    expect(document.querySelectorAll('[data-row="is_carer"]')).toHaveLength(1);
+    expect(groupToggle("Council tax and benefits")).not.toHaveTextContent("carer");
+  });
+
+  it("keeps caring in More details when no selected policy reads it", () => {
+    form(["plan_2_threshold_unfreeze"]);
+    expect(groupToggle("Council tax and benefits")).toHaveTextContent(
+      "Council Tax band D · claims Universal Credit if entitled · not a carer",
+    );
+    fireEvent.click(groupToggle("Council tax and benefits"));
+    expect(field("care_hours_per_week")).toBeNull();
+    choose("Carer", "Yes");
+    expect(value("Hours of care")).toBe(35);
+    fireEvent.click(groupToggle("Council tax and benefits"));
+    expect(groupToggle("Council tax and benefits")).toHaveTextContent(/carer, 35 hours a week 1 changed/);
   });
 
   it("shows an example's answers in its closed groups without opening them", () => {

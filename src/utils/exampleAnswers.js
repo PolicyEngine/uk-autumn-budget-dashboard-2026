@@ -32,6 +32,9 @@ export const EXAMPLE_ANSWERS = Object.freeze({
   children_ages: "",
   children_in_education: [],
   claims_universal_credit: true,
+  // Not a carer (nothing sent); a carer's hours start at the minimum, 35
+  is_carer: false,
+  care_hours_per_week: 35,
   council_tax_band: "D",
   salary_sacrifice_per_year: 0,
   // ONS Family Spending FYE 2025 averages, as the form's defaults

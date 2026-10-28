@@ -104,6 +104,8 @@ export const FIELD_LABELS = {
   in_education: "In full-time education",
   state_pension: "State Pension",
   partner_state_pension: "Partner's State Pension",
+  is_carer: "Carer",
+  care_hours_per_week: "Hours of care",
 };
 
 /**
@@ -307,6 +309,9 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       atStatePensionAge(inputs.partner_age, year)
         ? { partner_state_pension: inputs.partner_state_pension_per_year }
         : {}),
+      // Caring only for a carer: anyone else's request is as it was before
+      // the form asked, so its key (and a precomputed answer) still matches
+      ...(inputs.is_carer ? { is_carer: true, care_hours_per_week: careHours(inputs) } : {}),
     },
     include: [...include],
   };
@@ -317,6 +322,15 @@ export const monthlyRent = (inputs) =>
   typeof inputs.monthly_rent === "number" && Number.isFinite(inputs.monthly_rent)
     ? inputs.monthly_rent
     : regionalRent(inputs.region);
+
+/** A carer's hours of care a week: as entered, else the form's 35. */
+export const careHours = (inputs) =>
+  typeof inputs.care_hours_per_week === "number" && Number.isFinite(inputs.care_hours_per_week)
+    ? inputs.care_hours_per_week
+    : DEFAULT_CARE_HOURS;
+
+/** The Carer's Allowance minimum hours of care a week, the form's default. */
+export const DEFAULT_CARE_HOURS = 35;
 
 const statePensionEntered = (value) => typeof value === "number" && Number.isFinite(value);
 
