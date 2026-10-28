@@ -378,9 +378,12 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
     }
 
     const share = pctOfOfficial(row.pe, row.obr);
+    // Under the figures: what each side counts, then why the two differ
+    const noteLines = [row.basis, row.note].filter(Boolean);
     const tooltip = (
       <TooltipRows
         label={`${row.name}, ${yearLabel}`}
+        note={noteLines.length ? noteLines : undefined}
         rows={[
           { key: "pe", name: "PolicyEngine (static)", text: isValue(row.pe) ? bn(row.pe) : "Not yet published", color: PE_COLOUR },
           { key: "obr", name: `Official costing (${obrKind})`, text: isValue(row.obr) ? bn(row.obr) : row.notComparable ? `Not comparable: ${row.notComparable}` : "Not in the official costings", color: OBR_COLOUR },
