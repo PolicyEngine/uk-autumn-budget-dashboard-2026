@@ -19,7 +19,7 @@ const UNVALIDATED = /unvalidated|not yet validated/i;
 const SAID_ELSEWHERE = [UNVALIDATED, /OBR forecast is due on/i];
 
 // A package's GitHub release, by the version the outlook file records
-// (each tag is the bare version, e.g. policyengine.py 6.10.2, policyengine-uk 2.132.6)
+// (each tag is the bare version, e.g. policyengine.py 6.11.1, policyengine-uk 2.151.0)
 const releaseUrl = (repo, version) => `https://github.com/PolicyEngine/${repo}/releases/tag/${version}`;
 
 /** The deflators in a few words, from meta.deflator. */

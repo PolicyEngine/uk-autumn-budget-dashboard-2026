@@ -88,8 +88,8 @@ export const SOURCES = {
     url: "https://github.com/PolicyEngine/policyengine-uk/pull/2428",
   },
   policyengine_py_release: {
-    label: "policyengine.py 6.10.2",
-    url: "https://github.com/PolicyEngine/policyengine.py/releases/tag/6.10.2",
+    label: "policyengine.py 6.11.1",
+    url: "https://github.com/PolicyEngine/policyengine.py/releases/tag/6.11.1",
   },
   microcosm: {
     label: "Microcosm",
