@@ -157,15 +157,27 @@ const StaticTab = ({ item, tab }) => (
 );
 
 // The page's view tab bar as it will be, the linked view chosen, About
-// first: the real one stays hidden until the page's code opens the view
+// first: the real one stays hidden until the page's code opens the view.
+// The tabs after the chosen one go in a tail, so a row too narrow for the
+// chosen tab is scrolled as the real one will be (publication.css
+// .skeleton-tab-tail; ViewTabs.jsx, scrollToShow)
 function StaticViewTabs({ tabs, tab }) {
+  const chosen = tabs.findIndex((item) => item.value === tab);
+  const after = chosen >= 0 ? tabs.slice(chosen + 1) : [];
   return (
     <div className={`view-tabs-bar has-leading boot-view-tabs${SUB_TABS[tab] ? " has-notch" : ""}`} aria-hidden="true">
       <StaticAbout />
       <div className="view-tabs">
-        {tabs.map((item) => (
+        {tabs.slice(0, tabs.length - after.length).map((item) => (
           <StaticTab key={item.value} item={item} tab={tab} />
         ))}
+        {after.length > 0 && (
+          <span className="skeleton-tab-tail">
+            {after.map((item) => (
+              <StaticTab key={item.value} item={item} tab={tab} />
+            ))}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -174,7 +186,9 @@ function StaticViewTabs({ tabs, tab }) {
 // With the copy of the bar above it (`viewTabs`), the row starts under the
 // chosen view tab before any code runs, where the real row's --view-tab-x
 // (ViewTabs.jsx) will put it: an unseen copy of About and the tabs before
-// the chosen one goes first (publication.css .skeleton-tab-lead)
+// the chosen one goes first (publication.css .skeleton-tab-lead), cut
+// short, as a scrolled bar is, to leave the room an unseen copy of the
+// chosen tab needs (.skeleton-tab-ghost)
 function StaticSubTabs({ tab, sub, viewTabs = null }) {
   const tabs = SUB_TABS[tab];
   if (!tabs) return null;
@@ -187,6 +201,11 @@ function StaticSubTabs({ tab, sub, viewTabs = null }) {
           {viewTabs.slice(0, chosen).map((item) => (
             <StaticTab key={item.value} item={item} tab={tab} />
           ))}
+        </span>
+      )}
+      {chosen >= 0 && (
+        <span className={`skeleton-tab-ghost${chosen === viewTabs.length - 1 ? " is-last" : ""}`}>
+          <StaticTab item={viewTabs[chosen]} tab={tab} />
         </span>
       )}
       <div className="sub-tabs">

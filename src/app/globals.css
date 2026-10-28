@@ -139,6 +139,11 @@ code {
   --tab-row-height: 48px;
   /* The view tabs under the intro; they stick under the band */
   --view-tabs-height: var(--tab-row-height);
+  /* The title band's, the view tab bar's and the sub-tab band's side
+     padding, which puts their content in the page column: one value, so
+     the sub-tab row's --view-tab-x, measured in the bar, starts it under
+     the chosen view tab (ViewTabs.jsx, SubTabs.css) */
+  --bar-pad-x: max(40px, calc((100vw - 1120px) / 2));
   /* The two tab rows' one spacing (view tabs, sub-tabs and About): the gap
      between items, the padding inside each (chosen or not) and the gap
      from icon to label */
@@ -477,7 +482,7 @@ html[data-site-nav-shown] {
   /* Full-bleed with real edges: the band spans the window, and its padding
      lines its content up with the page column. */
   margin-inline: calc(50% - 50vw);
-  padding-inline: max(40px, calc((100vw - 1120px) / 2));
+  padding-inline: var(--bar-pad-x);
   /* The site header's gradient and rule, from the same tokens */
   background: var(--band-gradient);
   border-bottom: var(--band-rule);
@@ -610,7 +615,7 @@ html[data-site-nav-shown] {
   /* Under the band and its pill lists, above the charts */
   z-index: 1090;
   margin-inline: calc(50% - 50vw);
-  padding-inline: max(40px, calc((100vw - 1120px) / 2));
+  padding-inline: var(--bar-pad-x);
   /* A strip of its own: the page's main navigation */
   background: var(--pe-surface);
   border-top: 1px solid var(--card-border);
@@ -1707,9 +1712,8 @@ html[data-site-nav-shown] {
     padding: 0 24px 48px;
   }
 
-  .title-row,
-  .view-tabs-bar {
-    padding-inline: 24px;
+  :root {
+    --bar-pad-x: 24px;
   }
 }
 
@@ -1752,15 +1756,11 @@ html[data-site-nav-shown] {
   :root {
     --card-padding: 16px;
     --title-row-height: 100px;
+    --bar-pad-x: 16px;
   }
 
   .main-content {
     padding: 0 16px 48px;
-  }
-
-  .title-row,
-  .view-tabs-bar {
-    padding-inline: 16px;
   }
 
   .title-row h1 {

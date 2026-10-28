@@ -13,6 +13,22 @@ export const TAB_ICONS = {
 };
 
 /**
+ * Where a scrolling row of tabs scrolls to keep one tab in sight: where it
+ * is, while the tab has 24px of the row to spare on each side (or starts
+ * the row); otherwise with the tab 24px in from the edge it was near.
+ * `left` is the tab's offset in the row's content (offsetLeft: the row is
+ * its tabs' offset parent), `width` its width; `scrollLeft` and
+ * `clientWidth` are the row's. The browser stops it at the row's end. The
+ * loading placeholder's copy of the row is laid out to match
+ * (publication.css .skeleton-tab-tail).
+ */
+export function scrollToShow({ left, width, scrollLeft, clientWidth }) {
+  if (left - 24 < scrollLeft) return Math.max(0, left - 24);
+  if (left + width + 24 > scrollLeft + clientWidth) return left + width + 24 - clientWidth;
+  return scrollLeft;
+}
+
+/**
  * The page's views as an underline tab bar under the intro: one tab per
  * view, the chosen one underlined in PolicyEngine teal. A WAI-ARIA tablist
  * with automatic activation: Left/Right (and Home/End) move to a tab and
@@ -38,21 +54,6 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false, hidden
   const rowRef = useRef(null);
   // The chosen tab's tint and underline, sliding from tab to tab
   const indicator = useSlidingIndicator(rowRef, refs, value);
-  // The chosen tab's left edge in the page column, for the sub-tab band
-  // below to start under it (SubTabs.css, --view-tab-x)
-  useEffect(() => {
-    const row = rowRef.current;
-    const scrollLeft = row?.scrollLeft ?? 0;
-    // The row starts after anything leading it: its distance from the
-    // start of the bar's content
-    const bar = row?.parentElement;
-    const lead = row && bar
-      ? row.getBoundingClientRect().left - bar.getBoundingClientRect().left - (parseFloat(getComputedStyle(bar).paddingLeft) || 0)
-      : 0;
-    // (after About, which is pulled a tab's padding into the margin to
-    // line its icon up with PolicyEngine's mark, HomeButton.css)
-    document.documentElement.style.setProperty("--view-tab-x", `${Math.round(lead + Math.max(0, indicator.x - scrollLeft))}px`);
-  }, [indicator.x, leading]);
   // Which ends of a scrolling row have tabs out of sight, to fade them
   const [hidden, setHidden] = useState({ start: false, end: false });
 
@@ -70,15 +71,29 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false, hidden
     const row = rowRef.current;
     const node = refs.current[value];
     if (row && node) {
-      const left = node.offsetLeft - row.offsetLeft;
-      const right = left + node.offsetWidth;
-      if (left < row.scrollLeft) row.scrollLeft = Math.max(0, left - 24);
-      else if (right > row.scrollLeft + row.clientWidth) {
-        row.scrollLeft = right - row.clientWidth + 24;
-      }
+      // (the indicator's own x: offsetLeft, in the row, which About leads)
+      const next = scrollToShow({ left: node.offsetLeft, width: node.offsetWidth, scrollLeft: row.scrollLeft, clientWidth: row.clientWidth });
+      if (next !== row.scrollLeft) row.scrollLeft = next;
     }
     measure();
   }, [value]);
+
+  // The chosen tab's left edge in the page column, for the sub-tab band
+  // below to start under it (SubTabs.css, --view-tab-x), once the row has
+  // scrolled to it (above)
+  useEffect(() => {
+    const row = rowRef.current;
+    const scrollLeft = row?.scrollLeft ?? 0;
+    // The row starts after anything leading it: its distance from the
+    // start of the bar's content
+    const bar = row?.parentElement;
+    const lead = row && bar
+      ? row.getBoundingClientRect().left - bar.getBoundingClientRect().left - (parseFloat(getComputedStyle(bar).paddingLeft) || 0)
+      : 0;
+    // (after About, which is pulled a tab's padding into the margin to
+    // line its icon up with PolicyEngine's mark, HomeButton.css)
+    document.documentElement.style.setProperty("--view-tab-x", `${Math.round(lead + Math.max(0, indicator.x - scrollLeft))}px`);
+  }, [indicator.x, leading]);
 
   useEffect(() => {
     window.addEventListener("resize", measure);
