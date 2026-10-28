@@ -9,6 +9,19 @@ import { join } from "node:path";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
+// The props each card gives its line chart, to check what it asks it to draw
+const chartProps = vi.hoisted(() => []);
+vi.mock("./LsCharts", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    LsLineChart: (props) => {
+      chartProps.push(props);
+      return actual.LsLineChart(props);
+    },
+  };
+});
+
 const REAL = JSON.parse(
   readFileSync(join(__dirname, "..", "..", "..", "public", "data", "living_standards_outlook.json"), "utf8"),
 );
@@ -142,6 +155,21 @@ describe("Forecast changes with one forecast", () => {
     // The tile shows one value and no change
     expect(screen.getAllByText(pct(cpiPre())).length).toBeGreaterThan(0);
     expect(screen.queryByText(/pp$/)).toBeNull();
+  });
+
+  it("keys each many-line card by its chips alone: no end labels, no legend", async () => {
+    chartProps.length = 0;
+    await renderForecast(unpublishedOutlook());
+    const many = chartProps.filter((p) => p.series.length > 1);
+    // Inflation measures, Earnings and other income, House prices and rents
+    expect(many.length).toBeGreaterThanOrEqual(3);
+    for (const props of many) {
+      expect(props.endLabels ?? false).toBe(false);
+      expect(props.legend).toBe(false);
+      expect(props.keyContent).toBeTruthy();
+      expect(props.series.every((s) => s.endLabel === undefined)).toBe(true);
+    }
+    expect(document.querySelector(".ls-end-labels")).toBeNull();
   });
 
   it("switches every card to a table of the series by year", async () => {

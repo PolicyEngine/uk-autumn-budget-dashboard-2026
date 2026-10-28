@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import AgeSection from "../AgeSection";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
-import { COMBINATION_NOT_PUBLISHED, PACKAGE_NET_ONLY, PACKAGE_PARTS_CAVEAT, singleAgeSelection } from "../../utils/ageImpact";
+import { COMBINATION_NOT_PUBLISHED, PACKAGE_NET_ONLY, PACKAGE_PARTS_CAVEAT, policiesWithoutRows, singleAgeSelection, withheldNetOnly } from "../../utils/ageImpact";
 import { singleAgeBars } from "../youngPeople/youngPeopleData";
-import { windowTicks, withheldPartsCaveat } from "./SingleAgeCard";
+import { agesText, windowTicks, withheldPartsCaveat } from "./SingleAgeCard";
 import { ALPHA, BETA, COMBINED, YEAR, measureCatalogueFixture } from "../../test/measureCatalogueFixture";
 
 // By age's selection rule, on a publication where one single (BETA)
@@ -139,7 +139,8 @@ describe("By age's selection rule with a single that withholds its age bands", (
     expect(within(card).getByText("Average change per person, £ a year, with all the selected policies.")).toBeInTheDocument();
     expect(card.querySelector(".chart-footer .note, .chart-footer [class*='note']")).toBeNull();
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
-    expect(await within(card).findByText(PACKAGE_PARTS_CAVEAT)).toBeInTheDocument();
+    // The caveat names the policy that withholds its rows by age group
+    expect(await within(card).findByText(withheldPartsCaveat(["Mock beta contribution"], "in some age groups"))).toBeInTheDocument();
     const pill = within(card).queryByRole("button", { name: /^Options:/ });
     if (pill) {
       fireEvent.click(pill);
@@ -234,23 +235,53 @@ describe("Average change by age by single year of age (the default view)", () =>
     expect(within(card).getAllByTestId("series").map((node) => node.dataset.key).sort()).toEqual([`measure:${ALPHA}`, `measure:${BETA}`]);
   });
 
-  it("offers no By policy when a member withholds its single years, and names it in Caveats", async () => {
+  it("drops the Show choice when a member withholds its single years, giving the reason in About this chart", async () => {
     const { container } = await renderAge(withSingleAges(withheldFixture(), BETA), [ALPHA, BETA]);
     const card = singleCard(container);
     // The package's own net at every age, never its parts
     expect(ageRows(card).every((point) => point.netChange === 50 && (point[`measure:${ALPHA}`] ?? null) === null)).toBe(true);
-    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    // One usable option reads as broken (team feedback, 28 October): no Show
+    // group, and the pill does not say "Net change" when there is no choice
+    const pill = within(card).getByRole("button", { name: /^Options:/ });
+    expect(pill.getAttribute("aria-label") ?? pill.textContent).not.toMatch(/Net change/);
+    fireEvent.click(pill);
     expect(within(card).queryByRole("radio", { name: "Each policy" })).toBeNull();
+    expect(within(card).queryByRole("radio", { name: "Net change" })).toBeNull();
+    expect(within(card).queryByText(/^Each policy:/)).toBeNull();
     expect(within(card).getByRole("radio", { name: "Age groups" })).toBeInTheDocument();
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
     expect(await within(card).findByText(withheldPartsCaveat(["Mock beta contribution"]))).toBeInTheDocument();
+    // No part drawn, not even the policy with rows: beside the package's
+    // net, it would give the withheld policy's part back by difference
+    expect(within(card).getAllByTestId("series").map((node) => node.dataset.key)).toEqual(["netChange"]);
+  });
+
+  it("lists no policy as having no effect when it draws the package's net alone", async () => {
+    // The bars show the package's gains, so no policy is "no change for the
+    // households shown" (Vahid, 28 October: 16 to 24 in 2031-32 listed all 8)
+    const { container } = await renderAge(withSingleAges(withheldFixture(), BETA), [ALPHA, BETA]);
+    const card = singleCard(container);
+    fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
+    await within(card).findByText(withheldPartsCaveat(["Mock beta contribution"]));
+    expect(card.querySelectorAll("[data-zero-measure]")).toHaveLength(0);
+    expect(within(card).queryByText(/No effect on household incomes/)).toBeNull();
+  });
+
+  it("names the withheld policy in Change by year's Policies view, drawing no parts", async () => {
+    const { container } = await renderAge(withheldFixture(), [ALPHA, BETA]);
+    const trend = container.querySelector(".young-people-trend");
+    fireEvent.click(within(trend).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(trend).getByRole("radio", { name: /^Policies,/ }));
+    expect(within(trend).queryAllByTestId("series").map((node) => node.dataset.key)).not.toContain(`measure:${ALPHA}`);
+    fireEvent.click(within(trend).getByRole("button", { name: /About this chart/ }));
+    expect(await within(trend).findByText(withheldNetOnly(["Mock beta contribution"]))).toBeInTheDocument();
   });
 });
 
 describe("The single-year age axis", () => {
   it("names every withheld policy in one list", () => {
-    expect(withheldPartsCaveat(["A", "B", "C"])).toMatch(/as A, B and C have too few survey records by single year of age/);
-    expect(withheldPartsCaveat(["A"])).toMatch(/as A has too few/);
+    expect(withheldPartsCaveat(["A", "B", "C"])).toMatch(/: A, B and C have too few survey records at some ages, so the other policies' parts would reveal theirs\.$/);
+    expect(withheldPartsCaveat(["A"])).toMatch(/: A has too few/);
   });
 
   it("ticks every five years to 90+ on a wide screen and every ten on a phone, with no State Pension age tick", () => {
@@ -261,5 +292,36 @@ describe("The single-year age axis", () => {
 
   it("drops a five-year tick too close to the group's ends", () => {
     expect(windowTicks([6, 34], [16, 24], false)).toEqual(["6", "10", "16", "20", "24", "30", "34"]);
+  });
+
+  it("covers only the group's own ages (16 to 24 is 16 to 24, not 6 to 34)", () => {
+    expect(windowTicks([16, 24], [], false)).toEqual(["16", "20", "24"]);
+    expect(agesText([16, 24])).toBe("16 to 24");
+    expect(agesText([67, 90])).toBe("67 to 90 and over");
+  });
+
+  it("says in one sentence why the split by policy is not shown, naming the thin policies", () => {
+    expect(withheldPartsCaveat(["A"])).toBe(
+      "The split by policy is not shown for this selection: A has too few survey records at some ages, so the other policies' parts would reveal its part.",
+    );
+    expect(withheldPartsCaveat(["A"], "in some age groups")).toMatch(/A has too few survey records in some age groups, so/);
+    expect(withheldPartsCaveat([])).toBe(PACKAGE_PARTS_CAVEAT);
+    expect(PACKAGE_PARTS_CAVEAT).toMatch(/a selected policy has too few survey records at some ages/);
+    expect(withheldNetOnly(["A"])).toMatch(/as A has too few survey records by age, and showing only the other policies/);
+    expect(withheldNetOnly([])).toBe(PACKAGE_NET_ONLY);
+  });
+
+  it("finds the selected policies that withhold a row the chart reads", () => {
+    const policies = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "held", displayable: false }];
+    const rows = [
+      ...["16", "17"].map((age) => ({ reform_id: "a", year: YEAR, age_band: age, mean_change: 1, sample_size: 500 })),
+      { reform_id: "b", year: YEAR, age_band: "16", mean_change: 1, sample_size: 500 },
+      ...["16", "17"].map((age) => ({ reform_id: "c", year: YEAR, age_band: age, mean_change: 1, sample_size: 50 })),
+    ];
+    const ids = (selected, years = [YEAR]) => policiesWithoutRows(rows, policies, selected, years, ["16", "17"]).map((policy) => policy.id);
+    expect(ids(["a", "b", "c", "held"])).toEqual(["b", "c"]);
+    expect(ids(["a"])).toEqual([]);
+    // A year with no rows at all is not published, not withheld
+    expect(ids(["a", "b"], [YEAR + 1])).toEqual([]);
   });
 });

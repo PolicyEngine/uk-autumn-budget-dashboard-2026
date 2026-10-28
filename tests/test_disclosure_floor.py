@@ -131,6 +131,8 @@ def test_a_group_is_thin_exactly_when_one_or_two_households_changed(
         data.draw(st.lists(st.sampled_from("abc"), min_size=n, max_size=n))
     )
     groups = {label: labels == label for label in "abc"}
+    # Real groups overlap: "all" holds every decile, as a band its ages.
+    groups["all"] = np.ones(n, dtype=bool)
     thin = floor.thin_groups(groups, changed, survey)
     for label, members in groups.items():
         households = len(set(survey[members & changed].tolist()))

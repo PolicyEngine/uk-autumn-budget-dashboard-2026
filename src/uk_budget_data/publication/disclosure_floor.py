@@ -49,8 +49,10 @@ SURVEY_HOUSEHOLD_FLOOR = 3
 CHANGE_TOLERANCE = 0.01
 DECILE_TABLES = ("distributional_impact", "winners_losers")
 AGE_TABLE = "age_impact"
-# The tables the floor holds: the decile and age tables, and the binned
-# scatter, whose rows name their survey household once it has run.
+# The tables a receipt's floor record covers: the decile and age tables,
+# held to SURVEY_HOUSEHOLD_FLOOR, and the binned scatter, whose rows name
+# their survey household once it has run and which ``tables.bin_scatter``
+# holds to its own SCATTER_MIN_HOUSEHOLDS.
 FLOOR_TABLES = (*DECILE_TABLES, AGE_TABLE, "household_scatter_binned")
 # Groups no row shows but the rows give back by difference (``age_groups``):
 # a band's people whose age has no row of its own, labelled with the band
@@ -192,8 +194,10 @@ def floor_record(
     year and group label, never a figure, and whether any is still published.
     A thin "all" always keeps the refusal, including the costing. An
     omitted ``withheld`` keeps the meaning of receipts made before decile
-    withholding. A run whose survey households cannot be told apart
-    records that it was not checked, and why."""
+    withholding. ``survey_households`` is the decile and age tables'
+    floor, SURVEY_HOUSEHOLD_FLOOR; the binned scatter's is
+    SCATTER_MIN_HOUSEHOLDS. A run whose survey households cannot be told
+    apart records that it was not checked, and why."""
     cells = [
         {"table": table, "year": year, "groups": list(labels)}
         for (table, year), labels in sorted(found.items())

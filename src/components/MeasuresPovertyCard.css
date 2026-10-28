@@ -66,13 +66,6 @@
   border-left-color: var(--c-zero-line);
 }
 
-.wf-join {
-  position: absolute;
-  top: -50%;
-  height: 100%;
-  border-left: 1px dashed var(--c-reference);
-}
-
 .wf-bar {
   position: absolute;
   top: 50%;
@@ -99,13 +92,6 @@
 .wf-pp {
   color: var(--pe-gray-500);
   font-size: var(--fs-micro);
-}
-
-.wf-interaction .wf-label,
-.wf-interaction .wf-main {
-  color: var(--pe-gray-500);
-  font-style: italic;
-  font-weight: 400;
 }
 
 /* A policy that moves no one: its label, no bar, and a muted "No change"

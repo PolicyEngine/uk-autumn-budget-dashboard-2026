@@ -224,16 +224,23 @@ export function scrollBelowBars(target, { behavior = "auto", gap = STICKY_GAP, o
 const INTENT_MS = { wheel: 250, key: 800, touch: 1200 };
 
 /** How close to the window's top edge the pointer brings the site nav (px). */
-export const SITE_NAV_EDGE_PX = 8;
+export const SITE_NAV_EDGE_PX = 2;
+
+/**
+ * How long the pointer rests at that edge before the nav shows (ms): a
+ * pointer passing through it on its way to the Year pill never opens it
+ */
+export const SITE_NAV_DWELL_MS = 300;
 
 /**
  * Whether the pointer at clientY `y` asks for the site nav: at the top
- * SITE_NAV_EDGE_PX of the window, or (leaving: `left`) out through its
- * top edge. An exit-intent reveal: scrolling never shows the nav.
+ * SITE_NAV_EDGE_PX of the window. Leaving the window through its top edge
+ * does not: a pointer on its way from the address bar to the Year pill
+ * crosses it. Scrolling never shows the nav.
  */
-export function pointerWantsSiteNav(y, { left = false } = {}) {
+export function pointerWantsSiteNav(y) {
   if (typeof y !== "number" || Number.isNaN(y)) return false;
-  return left ? y <= 0 : y <= SITE_NAV_EDGE_PX;
+  return y <= SITE_NAV_EDGE_PX;
 }
 
 /** A touch-only device: no mouse to point at the window's top with. */
@@ -289,6 +296,60 @@ export function createSiteNavIntent({ y = 0 } = {}) {
       if (at < top) return "hide";
       if (programmatic || delta <= 0) return null;
       return live(t) && way !== "up" ? "hide" : null;
+    },
+  };
+}
+
+/**
+ * A phone on its side: a short, wide window, where the title band and the
+ * tab rows took about half the height. There the band tucks away on a
+ * scroll down (globals.css, the same query; App.jsx).
+ */
+export const LANDSCAPE_PHONE_QUERY = "(orientation: landscape) and (max-height: 500px)";
+
+/** Whether the window is a phone on its side (LANDSCAPE_PHONE_QUERY). */
+export function isLandscapePhone() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia(LANDSCAPE_PHONE_QUERY).matches
+  );
+}
+
+/** How far the reader scrolls down, in one go, before the band tucks away (px). */
+export const BAND_HIDE_AFTER_PX = 24;
+/** How far up brings it back (px): a finger's jitter does not. */
+export const BAND_SHOW_AFTER_PX = 8;
+
+/**
+ * Whether the title band should be tucked away, on a phone on its side:
+ * hidden once the reader has scrolled down BAND_HIDE_AFTER_PX in one go,
+ * back on a scroll up of BAND_SHOW_AFTER_PX, and always in view while the
+ * page is within `top` px of its top (the band's own place) or while the
+ * band is in use (`held`: a pill's list open, or focus in it). A scroll
+ * the page made (`programmatic`, utils/pageScroll) changes nothing: it was
+ * lined up under the bars as they were.
+ *
+ * scroll(y, { top, programmatic, held }) returns true (tuck it away),
+ * false (show it) or null (leave it as it is).
+ */
+export function createBandIntent({ y = 0 } = {}) {
+  let prev = y;
+  // The distance moved in the current direction (+ down, - up)
+  let run = 0;
+  return {
+    scroll(at, { top = 0, programmatic = false, held = false } = {}) {
+      const delta = at - prev;
+      prev = at;
+      if (at <= top || held) {
+        run = 0;
+        return false;
+      }
+      if (programmatic || delta === 0) return null;
+      run = Math.sign(delta) === Math.sign(run) ? run + delta : delta;
+      if (run >= BAND_HIDE_AFTER_PX) return true;
+      if (run <= -BAND_SHOW_AFTER_PX) return false;
+      return null;
     },
   };
 }

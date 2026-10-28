@@ -114,7 +114,7 @@ describe("the page's figures are the household API's own (real answers, 2027-28)
       );
       // The waterfall runs from the API's net income before to after
       const ends = [...card.querySelectorAll(".waterfall-row.is-total")].map((row) => row.textContent);
-      expect(ends).toEqual([`Net income before${pounds(before)}`, `Net income after${pounds(after)}`]);
+      expect(ends).toEqual([`Current law${pounds(before)}`, `With the policies${pounds(after)}`]);
       // Its steps, once the split by policy is in: one per measure the API
       // says moves the household, adding up to the headline
       await waitFor(() => expect(document.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull());
@@ -128,7 +128,7 @@ describe("the page's figures are the household API's own (real answers, 2027-28)
       const rate = Math.round(own.reform_marginal_rate * 100);
       const salary = pounds(own.employment_income);
       expect(
-        await screen.findByText((text) => text.startsWith(`At ${salary} your marginal tax rate is `) && text.includes(`${rate}%`)),
+        await screen.findByText((text) => text.startsWith(`At ${salary} your marginal tax rate `) && text.includes(`${rate}%`)),
       ).toBeInTheDocument();
     });
   }

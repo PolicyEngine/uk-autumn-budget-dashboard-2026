@@ -59,7 +59,7 @@ const SOURCE_NAMES = {
   badr_lifetime_limit_cut: "the Business Asset Disposal Relief cut",
   carers_allowance_earnings_taper: "the Carer's Allowance taper",
   lha_unfreeze_2027: "the Local Housing Allowance unfreeze",
-  employer_nics_secondary_threshold_raise: "the employer NI threshold rise",
+  employer_nics_secondary_threshold_raise: "the employer NI threshold",
   unearned_income_rates_up: "the unearned income tax rise",
 };
 // A short name where there is one, else the catalogue's published name
@@ -131,7 +131,7 @@ export function examplePercentile(example, point, { year, policies, rows, catalo
 /** A small strip with a dot where the example sits, and its percentile. */
 function PositionStrip({ percentile, yearLabel }) {
   return (
-    <Tip content={`${percentile} in 100 people in the UK live in a household with a lower income than this one, adjusted for household size (${yearLabel}, after the selected policies)`}>
+    <Tip content={`Income percentile, ${yearLabel}, with the selected policies`}>
     <span className="household-card-position">
       <span className="household-card-position-track" aria-hidden="true">
         <span className="household-card-position-dot" style={{ left: `${percentile}%` }} />
@@ -425,14 +425,16 @@ export default function HouseholdCards({
               <span className="household-card-description" id={`household-card-${example.id}-description`}>
                 {example.description}
               </span>
-              {/* One chip: the measure giving most of the year's change, with
-                  its part, in its colour; the example's own measure in the
-                  chip's title when another gives more */}
+              {/* One chip: the measure with the largest single effect in the
+                  year, with its part, in its colour; the example's own
+                  measure in the chip's title when another gives more. Not
+                  "most of the change": nothing checks it is half the change,
+                  or even its sign (W6 G1) */}
               {chip && (
                 <Tip
                   content={
                     !chip.own && featured && figures
-                      ? `This example features ${example.tag} (${signedMoney(figures.ownPart)} in ${fiscalYearTick(year)}); most of the change comes from ${chip.name} (${signedMoney(chip.part)}).`
+                      ? `This example features ${example.tag} (${signedMoney(figures.ownPart)} in ${fiscalYearTick(year)}); the largest single effect is ${chip.name} (${signedMoney(chip.part)}).`
                       : null
                   }
                 >

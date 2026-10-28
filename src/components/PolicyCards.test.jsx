@@ -391,9 +391,32 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy0%−5 points");
     // Each fact once: the timeline says how long, not the rates again
     expect(item.querySelector(".ptl-chip")).toHaveTextContent(/^18 months$/);
+    // The window as a step plot: current law either side, labelled once
+    const plot = within(block).getByRole("img");
+    expect(plot.getAttribute("aria-label")).toBe(
+      "A VAT rate. Before October 2026: 5%, as under current law; October 2026 to March 2028: 5% → 0%; After March 2028: 5%, as under current law.",
+    );
+    expect([...plot.querySelectorAll(".pchg-gap-label")].map((label) => label.textContent)).toEqual(["5% → 0%"]);
+    expect(block.querySelector(".pchg-key")).toBeTruthy();
+    // One changed period is the tiles already: no table of it
+    expect(within(block).queryByRole("button", { name: "Show the years" })).toBeNull();
   });
 
-  it("draws every measure in the real file in one form: tiles with the change, a plot only where it varies by year", () => {
+  it("switch: one year only is plotted as that year's step", () => {
+    const winter = tables("switch", [
+      { label: "A payment", unit: "gbp", unit_words: "£ a household, once", primary: true, source,
+        points: [{ key: "2026", label: "Winter 2026-27", year: 2026, before: 150, after: 250 }] },
+    ]);
+    const block = within(card(winter)).getByRole("region", { name: /^What changes/ });
+    expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A payment$/);
+    expect(block.querySelector(".pchg-caption")).toHaveTextContent("A payment, £ a household, once");
+    const plot = within(block).getByRole("img");
+    expect(plot.getAttribute("aria-label")).toBe("A payment, £ a household, once. Winter 2026-27: £150 → £250 (+£100).");
+    expect([...plot.querySelectorAll(".pchg-gap-label")].map((label) => label.textContent)).toEqual(["+£100"]);
+    expect(within(block).queryByRole("button")).toBeNull();
+  });
+
+  it("draws every measure in the real file in one form: tiles with the change, a plot where it varies by year or is a switch", () => {
     for (const [id, entry] of Object.entries(file.measures)) {
       render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
       // The card (its modelling note has list items of its own)
@@ -404,7 +427,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       expect(block.querySelector(".pchg-tile.is-after .pchg-chip"), id).toBeTruthy();
       const main = entry.rows.find((row) => row.primary) ?? entry.rows[0];
       const changes = new Set(main.points.filter((p) => p.before !== p.after).map((p) => `${p.before}|${p.after}`));
-      expect(Boolean(block.querySelector(".pchg-svg")), id).toBe(changes.size > 1);
+      expect(Boolean(block.querySelector(".pchg-svg")), id).toBe(changes.size > 1 || entry.display === "switch");
       // Every table behind a button
       expect(block.querySelector("table"), id).toBeNull();
       cleanup();

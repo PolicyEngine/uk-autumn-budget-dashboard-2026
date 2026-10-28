@@ -177,75 +177,13 @@ export function ChartRows({ plotRef, children, legendItems, height, legendNote =
   );
 }
 
-// Room right of the plot for direct labels, and their least spacing
-const END_LABEL_WIDTH = 150;
-const END_LABEL_GAP = 14;
-// How far (px) left of the latest end a line may stop and still be
-// labelled in the shared column
-const END_LABEL_COLUMN_REACH = 24;
-
-/**
- * Each line's name at its last point, right of the plot, nudged apart so
- * close lines' labels never overlap (a thin leader joins a moved label to
- * its line). Drawn in the chart's SVG, so the downloads carry it.
- */
-function EndLabels({ xAxisMap, yAxisMap, data, series, xKey, focusKey = null }) {
-  const xAxis = xAxisMap && Object.values(xAxisMap)[0];
-  const yAxis = yAxisMap && Object.values(yAxisMap)[0];
-  if (!xAxis?.scale || !yAxis?.scale) return null;
-  const labels = series
-    .filter((s) => s.endLabel !== false)
-    .map((s) => {
-      const last = [...data].reverse().find((d) => d[s.key] != null);
-      if (!last) return null;
-      const x = xAxis.scale(last[xKey]) + (xAxis.scale.bandwidth?.() ?? 0) / 2;
-      const y = yAxis.scale(last[s.key]);
-      return { key: s.key, group: s.forecastOf ?? s.key, name: s.endLabel ?? s.name, colour: s.colour, x, y, at: y };
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.y - b.y);
-  // One column of labels, right of the latest end: a line that stops a
-  // month early (earnings) is not labelled over a neighbour's leader. A
-  // line that ends well before it (a series with no forecast, beside
-  // forecast lines) is labelled at its own end, so no leader runs on
-  // across the forecast like a line of its own
-  const latestX = Math.max(...labels.map((l) => l.x));
-  for (const l of labels) l.col = latestX - l.x > END_LABEL_COLUMN_REACH ? l.x + 14 : latestX + 14;
-  // In each column, push each label down clear of the one above, then back
-  // up from the bottom so the stack stays inside the plot
-  const bottom = yAxis.y + yAxis.height;
-  for (const col of new Set(labels.map((l) => l.col))) {
-    const stack = labels.filter((l) => l.col === col);
-    for (let i = 1; i < stack.length; i += 1) stack[i].at = Math.max(stack[i].at, stack[i - 1].at + END_LABEL_GAP);
-    for (let i = stack.length - 1; i >= 0; i -= 1) {
-      const limit = i === stack.length - 1 ? bottom : stack[i + 1].at - END_LABEL_GAP;
-      stack[i].at = Math.min(stack[i].at, limit);
-    }
-  }
-  return (
-    <g className="ls-end-labels">
-      {labels.map((l) => (
-        <g key={l.key} opacity={focusKey && focusKey !== l.group ? 0.25 : 1}>
-          {(Math.abs(l.at - l.y) > 2 || l.col - l.x > 16) && (
-            <path d={`M${l.x + 5},${l.y} L${l.col - 2},${l.at}`} stroke={l.colour} strokeWidth={1} fill="none" />
-          )}
-          <text x={l.col} y={l.at} dy="0.35em" fontSize={12} fontWeight={600} fill={l.colour}>
-            {l.name}
-          </text>
-        </g>
-      ))}
-    </g>
-  );
-}
-
 /**
  * Line chart in the dashboard's chart theme: light horizontal grid, the
  * unit above the plot, the shared tooltip, and the shared legend and the
  * logo in the card's rows below the plot.
  *
- * series: [{ key, name, colour, dash?, dashed?, hidden?, width?, endLabel? }].
- * Hidden series are not drawn; width (default 2.5) emphasises a line;
- * endLabel is a shorter name for the label at its end (false: none).
+ * series: [{ key, name, colour, dash?, dashed?, hidden?, width? }].
+ * Hidden series are not drawn; width (default 2.5) emphasises a line.
  * forecastOf names the line a forecast continues: drawn lighter, it takes
  * that line's focus and hover, and the tooltip leaves it out where the
  * line itself has a value (the month they join). opacity lightens a line.
@@ -266,11 +204,6 @@ export function LsLineChart({
   baseYear = BASE_YEAR,
   // [from, to]: the years a card's sentence compares, shaded on the chart
   highlight = null,
-  // Name each line at its end, right of the plot (wide screens only; the
-  // legend names them on a phone). True, or { width, minWidth }: the room
-  // the labels take and the least chart width that shows them (short
-  // endLabel names fit a half-width card)
-  endLabels = false,
   // False where the card's own chips (SeriesToggle) are the key
   legend = true,
   // The key of a line to bring forward (a hovered chip); the others fade
@@ -296,9 +229,6 @@ export function LsLineChart({
   // A forecast line's focus is its outturn line's
   const groupOf = (s) => s.forecastOf ?? s.key;
   const forecastOf = new Map(visible.filter((s) => s.forecastOf).map((s) => [s.key, s.forecastOf]));
-  const labelRoom = { width: END_LABEL_WIDTH, minWidth: 560, ...(typeof endLabels === "object" ? endLabels : {}) };
-  const labelled = Boolean(endLabels) && !narrow && width >= labelRoom.minWidth;
-  const margin = labelled ? { ...MARGIN, right: labelRoom.width } : MARGIN;
   // Rows key years by their start (2028) or as "2028-29"; match either
   const asKey = (fy) => (typeof data[0]?.[xKey] === "number" ? Number(String(fy).slice(0, 4)) : fy);
   const band = highlight ? highlight.map(asKey) : null;
@@ -311,7 +241,7 @@ export function LsLineChart({
   return (
     <ChartRows plotRef={ref} legendItems={lineLegendItems(visible)} height={plotHeight(narrow)} legend={legend} keyContent={keyContent}>
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={margin}>
+        <LineChart data={data} margin={MARGIN}>
           <CartesianGrid {...GRID_PROPS} />
           <XAxis
             dataKey={xKey}
@@ -407,7 +337,6 @@ export function LsLineChart({
               />
             ))}
           <Customized component={<ChartUnitLabel text={yLabel} horizontal />} />
-          {labelled && <Customized component={<EndLabels data={data} series={visible} xKey={xKey} focusKey={focusKey} />} />}
         </LineChart>
       </ResponsiveContainer>
     </ChartRows>

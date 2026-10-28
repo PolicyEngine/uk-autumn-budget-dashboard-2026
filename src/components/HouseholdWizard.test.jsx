@@ -100,13 +100,16 @@ describe("the personal impact form", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Your household" })).toBeInTheDocument();
     // No spaced capitals: the essentials in one grid, then More details
     expect(screen.queryByRole("heading", { level: 3, name: "You" })).not.toBeInTheDocument();
-    // More details' header: its title alone as the heading, an "Optional"
-    // tag beside it and one line under it, in the section it names
+    // More details: a light label ("More details · Optional") over rows
+    // that look as the closed steps do: no icons, no header of its own
     const more = screen.getByRole("region", { name: "More details" });
     expect(within(more).getByRole("heading", { level: 3, name: "More details" })).toBeInTheDocument();
     expect(within(more).getByText("Optional")).toHaveClass("household-more-tag");
-    expect(within(more).getByText("Each starts at a typical value for a household like yours.")).toBeInTheDocument();
-    expect(screen.queryByText(/^Optional: each starts/)).not.toBeInTheDocument();
+    expect(more.querySelector(".household-more-icon, .household-label-icon")).toBeNull();
+    for (const row of more.querySelectorAll(".household-detail-toggle")) {
+      expect(row.querySelector(".household-detail-title")).toBeInTheDocument();
+      expect(row.querySelector(".household-step-chevron")).toBeInTheDocument();
+    }
     // More details: four groups, each closed at first and saying what it holds
     for (const title of DETAIL_GROUPS) expect(groupToggle(title)).toHaveAttribute("aria-expanded", "false");
     expect(groupToggle("Other income")).toHaveTextContent("None");
@@ -391,14 +394,50 @@ describe("the personal impact form", () => {
     }
   });
 
+  it("scrolls an example to its result's heading, not to the Edit these answers line above it (phone check)", async () => {
+    const scrollTo = vi.fn();
+    const original = window.scrollTo;
+    window.scrollTo = scrollTo;
+    try {
+      render(<HouseholdCalculator selectedPolicies={["road_fuel_vat_cut"]} />);
+      const rect = Element.prototype.getBoundingClientRect;
+      vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function () {
+        if (this.classList?.contains("household-example-summary")) return { top: 700, bottom: 820, height: 120 };
+        if (this.classList?.contains("household-results")) return { top: 840, bottom: 2000, height: 1160 };
+        return rect.call(this);
+      });
+      applyExample("A graduate on £35,000");
+      await waitFor(() => expect(scrollTo).toHaveBeenCalled());
+      expect(scrollTo.mock.calls[0][0]).toMatchObject({ top: 840 - 16 });
+      // Focus goes to the result
+      expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" }));
+    } finally {
+      window.scrollTo = original;
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("Edit these answers opens Your household from the example, and Reset answers goes back to the typical ones (HH10, HH12)", () => {
+    render(<HouseholdCalculator />);
+    applyExample("A graduate on £35,000");
+    fireEvent.click(screen.getByRole("button", { name: "Edit these answers" }));
+    expect(isChosen(yoursCard())).toBe(true);
+    expect(value("Age")).toBe(27);
+    fireEvent.click(screen.getAllByRole("button", { name: "Reset answers" })[0]);
+    expect(value("Age")).toBe(30);
+    expect(document.querySelector(".household-start-from")).toBeNull();
+    expect(document.querySelector(".household-example-summary")).toBeNull();
+  });
+
   it("fills the form from an example card, still editable", () => {
     render(<HouseholdCalculator />);
     applyExample("A graduate on £35,000");
-    // Chosen: the card is marked; no note or "Change these answers" under
-    // the cards (the card says what the example is)
+    // Chosen: the card is marked, with one short way into its answers
+    // under the cards (Pavel's review, HH10), and no description of the
+    // household there (Vahid, 28 October)
     expect(isChosen(exampleItem("A graduate on £35,000"))).toBe(true);
     expect(screen.queryByText(/repays a Plan 2 student loan/)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Change these answers" })).not.toBeInTheDocument();
+    expect(document.querySelector(".household-example-summary").textContent).toBe("Edit these answers");
     // Your household, chosen from it: the example's answers, named at the
     // top of the form; the example is no longer the one chosen
     fireEvent.click(yoursCard());
@@ -587,9 +626,18 @@ describe("the selected policies' questions", () => {
   /** The policies a group's heading names (its icons' accessible name). */
   const usedBy = (title) => within(group(title)).queryByRole("img", { name: /^Used by / })?.getAttribute("aria-label") ?? null;
   const form = (selected, props = {}) => renderForm(<HouseholdCalculator selectedPolicies={selected} policies={EIGHT} {...props} />);
+  /** A numbered group's heading button. */
+  const stepToggle = (title) => within(group(title)).getByRole("button", { name: new RegExp(`^Step \\d+: ${title}$`) });
+  /** Open every numbered group (from Step 3 they start closed). */
+  const openSteps = () => {
+    for (const toggle of document.querySelectorAll(".household-step-toggle")) {
+      if (toggle.getAttribute("aria-expanded") !== "true") fireEvent.click(toggle);
+    }
+  };
 
-  it("numbers the groups the selected policies need, after You and Household, each naming its policies by icon", () => {
+  it("numbers the groups the selected policies need, after You and Household", () => {
     form(ALL_EIGHT);
+    openSteps();
     expect(groups()).toEqual([
       "Step 1: You",
       "Step 2: Household",
@@ -602,10 +650,8 @@ describe("the selected policies' questions", () => {
     expect(asked("Spending")).toEqual(["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"]);
     expect(asked("Savings and investments")).toEqual(["dividends_per_year", "savings_interest_per_year", "property_income_per_year"]);
     expect(asked("Benefits and loans")).toEqual(["claims_universal_credit", "student_loan_plan"]);
-    expect(usedBy("You")).toBeNull();
-    expect(usedBy("Spending")).toBe("Used by Fuel duty rises deferred, Zero VAT on domestic electricity");
-    expect(usedBy("Savings and investments")).toBe("Used by Dividend, savings and property income tax up");
-    expect(usedBy("Benefits and loans")).toBe("Used by Warm Home Discount top-up, Plan 2 student loan threshold unfrozen");
+    // No policy icons in the headings: the chevron alone (Vahid, Budget day)
+    for (const title of ["You", "Spending", "Savings and investments", "Benefits and loans"]) expect(usedBy(title)).toBeNull();
     // No chips between the boxes, no tab stop in a heading, no tick
     expect(document.querySelector(".policy-badge")).toBeNull();
     expect(document.querySelector(".household-step-head [tabindex]")).toBeNull();
@@ -634,8 +680,8 @@ describe("the selected policies' questions", () => {
     form(ALL_EIGHT);
     fireEvent.change(box("Age"), { target: { value: "70" } });
     expect(groups().at(-1)).toBe("Step 6: Pensions");
+    openSteps();
     expect(asked("Pensions")).toEqual(["state_pension_per_year", "private_pension_per_year"]);
-    expect(usedBy("Pensions")).toBe("Used by State Pension income tax protection");
     fireEvent.change(box("Age"), { target: { value: "40" } });
     expect(groups()).not.toContain("Step 6: Pensions");
   });
@@ -643,36 +689,62 @@ describe("the selected policies' questions", () => {
   it("follows the selection: one policy, its group alone, numbered next", () => {
     form(["plan_2_threshold_unfreeze"]);
     expect(groups()).toEqual(["Step 1: You", "Step 2: Household", "Step 3: Benefits and loans"]);
+    openSteps();
     expect(asked("Benefits and loans")).toEqual(["student_loan_plan"]);
     expect(groupToggle("Spending")).toHaveTextContent(/^Spending/);
     expect(groupToggle("Council tax and benefits")).toHaveTextContent("Universal Credit");
     expect(groupToggle("Pension and student loan")).not.toHaveTextContent("student loan ·");
   });
 
-  it("opens and closes each numbered group from its heading, keeping its answers", () => {
+  it("opens You and Household, and closes the rest, each saying what its answers are (Vahid, Budget day)", () => {
     form(ALL_EIGHT);
-    const toggle = (title) => within(group(title)).getByRole("button", { name: new RegExp(`^Step \\d+: ${title}$`) });
-    // Open at first: each group's policies read its answers
-    for (const title of ["You", "Household", "Spending", "Savings and investments", "Benefits and loans"]) {
-      expect(toggle(title)).toHaveAttribute("aria-expanded", "true");
+    const summary = (title) => group(title).querySelector(".household-step-summary");
+    expect(stepToggle("You")).toHaveAttribute("aria-expanded", "true");
+    expect(stepToggle("Household")).toHaveAttribute("aria-expanded", "true");
+    for (const title of ["Spending", "Savings and investments", "Benefits and loans"]) {
+      expect(stepToggle(title)).toHaveAttribute("aria-expanded", "false");
+      // Closed: no boxes, its answers in one line instead of its hint
+      expect(group(title).querySelector(".household-field")).toBeNull();
+      expect(stepToggle(title)).toHaveAccessibleDescription(summary(title).textContent);
     }
-    fireEvent.change(box("Petrol"), { target: { value: "500" } });
-    fireEvent.click(toggle("Spending"));
-    expect(toggle("Spending")).toHaveAttribute("aria-expanded", "false");
-    // Closed: the heading and its line, and what its answers are
-    expect(group("Spending")).toHaveTextContent("Prefilled with the average household's spending");
-    expect(group("Spending").querySelector(".household-step-summary")).toHaveTextContent(
-      "Petrol £500 · Diesel £340 · Electricity £1,040",
+    expect(summary("Spending")).toHaveTextContent(
+      `Petrol £${DEFAULT_SPENDING.petrol.toLocaleString("en-GB")} · Diesel £${DEFAULT_SPENDING.diesel.toLocaleString("en-GB")} · Electricity £${DEFAULT_SPENDING.electricity.toLocaleString("en-GB")} a year (typical values)`,
     );
-    // A group whose answers are all as they started says nothing more
-    fireEvent.click(toggle("Savings and investments"));
-    expect(group("Savings and investments").querySelector(".household-step-summary")).toBeNull();
-    // Opened again by keyboard (a button), the answer is as it was
-    fireEvent.click(toggle("Spending"));
-    expect(toggle("Spending")).toHaveAttribute("aria-expanded", "true");
-    expect(group("Spending").querySelector(".household-step-summary")).toBeNull();
+    expect(summary("Savings and investments")).toHaveTextContent(/^None$/);
+    expect(summary("Benefits and loans")).toHaveTextContent(/^Universal Credit: yes · No student loan$/);
+    expect(document.querySelector(".household-step-changed")).toBeNull();
+    // Opened from its heading, by click or keyboard (a button): the boxes,
+    // and the hint back in place of the line
+    fireEvent.click(stepToggle("Spending"));
+    expect(stepToggle("Spending")).toHaveAttribute("aria-expanded", "true");
+    expect(summary("Spending")).toBeNull();
+    expect(group("Spending")).toHaveTextContent("Prefilled with the average household's spending");
+    fireEvent.change(box("Petrol"), { target: { value: "500" } });
+    fireEvent.blur(box("Petrol"));
+    // Closed again: the edited answer, marked Changed
+    fireEvent.click(stepToggle("Spending"));
+    expect(summary("Spending")).toHaveTextContent(/^Petrol £500 · Diesel £[\d,]+ · Electricity £[\d,]+ a year Changed$/);
+    expect(within(summary("Spending")).getByText("Changed")).toBeInTheDocument();
+    fireEvent.click(stepToggle("Benefits and loans"));
+    choose("Student loan plan", "Plan 2");
+    fireEvent.click(stepToggle("Benefits and loans"));
+    expect(summary("Benefits and loans")).toHaveTextContent(/^Universal Credit: yes · Plan 2 student loan Changed$/);
+    // The answer is kept while closed
+    fireEvent.click(stepToggle("Spending"));
     expect(box("Petrol")).toHaveValue("500");
     expect(document.querySelector(".household-form")).not.toHaveTextContent("✓");
+  });
+
+  it("shows an example's answers in its closed groups without opening them", () => {
+    form(ALL_EIGHT);
+    applyExample("A landlord with savings");
+    fireEvent.click(screen.getByRole("button", { name: "Edit these answers" }));
+    const summary = (title) => group(title).querySelector(".household-step-summary");
+    expect(stepToggle("Savings and investments")).toHaveAttribute("aria-expanded", "false");
+    expect(summary("Savings and investments")).toHaveTextContent(/^Dividends £[\d,]+ · .*a year Changed$/);
+    // Reset answers: back to the typical ones, the groups as they were
+    fireEvent.click(screen.getAllByRole("button", { name: "Reset answers" })[0]);
+    expect(summary("Savings and investments")).toHaveTextContent(/^None$/);
   });
 
   it("shows only You and Household when no selected policy reads anything more", () => {
@@ -682,6 +754,27 @@ describe("the selected policies' questions", () => {
       for (const title of DETAIL_GROUPS) expect(groupToggle(title)).toBeInTheDocument();
       unmount();
       resetSavedWizard();
+    }
+  });
+
+  it("lets Calculate start a new request when the answers change while the last one runs (HH11)", async () => {
+    const API = "https://api.test/api/household-impact";
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
+    // The household API never answers: the first request stays loading
+    vi.stubGlobal("fetch", vi.fn((url) => (url === API ? new Promise(() => {}) : Promise.resolve(new Response("{}", { status: 404 })))));
+    try {
+      form(ALL_EIGHT, { year: 2027 });
+      fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
+      await waitFor(() => expect(screen.getByRole("button", { name: /Calculating/ })).toBeDisabled());
+      // Edited while it runs: Calculate is pressable again, and the results
+      // area says the answers have changed rather than going blank
+      fireEvent.change(box("Age"), { target: { value: "41" } });
+      fireEvent.blur(box("Age"));
+      await waitFor(() => expect(screen.getByRole("button", { name: /^Calculate/ })).not.toBeDisabled());
+      expect(screen.getByText("Your answers have changed. Press Calculate to see the new result.")).toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
     }
   });
 
@@ -698,6 +791,7 @@ describe("the selected policies' questions", () => {
     );
     try {
       form(ALL_EIGHT, { year: 2027 });
+      openSteps();
       fireEvent.change(box("Petrol"), { target: { value: "900" } });
       fireEvent.blur(box("Petrol"));
       choose("Student loan plan", "Plan 2");

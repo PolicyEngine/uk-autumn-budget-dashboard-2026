@@ -13,18 +13,18 @@ import { policyDetailsFor, shortNameOf } from "./policyDetails";
 import { CHART_COLOURS } from "./chartTheme";
 import { DISPLAY_YEARS } from "./displayYears";
 import { isWithheldDecileValue } from "./decileWithholding";
+import { WAGES_HELD_FIXED } from "./measureModelling";
 
 /**
- * Measures that are £0 for every household by construction, and why, in the
- * model's own terms. Employer NI: the relief changes only employer
- * National Insurance (budget_measures/employer_ni_relief_ages_21_to_24.py);
- * the engine's wage pass-through reads the unchanged NI parameters, so
- * wages and household incomes are fixed.
+ * Measures that are £0 for every household by construction, and why: an
+ * employer cost whose published description says wages are held fixed.
+ * A measure that passes an employer saving on as pay does not say so, and
+ * gets the usual reasons (not in force, no change).
  */
-// (#185 on #104: told by the published name, so the page keeps no list
-// of measures)
+// (#185 on #104: told by the published description, as MODELLING_FACTS
+// reads it, so the page keeps no list of measures)
 export function zeroForHouseholds(measure) {
-  return /^employer\b/i.test(measure?.name ?? "")
+  return WAGES_HELD_FIXED.test(measure?.description ?? "")
     ? "Wages are held fixed in this model, so no household's income changes"
     : null;
 }

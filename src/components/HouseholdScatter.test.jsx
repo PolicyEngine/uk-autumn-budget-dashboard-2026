@@ -106,11 +106,11 @@ describe("HouseholdScatter beside the income decile card", () => {
     expect(container.querySelector(".chart-legend")).toBeNull();
   });
 
-  it("titles the y axis by income before the policies, the same in every year (the bands are fixed in the basis year)", () => {
+  it("titles the y axis by income under current law (HH6, round 3), the same in every year (the bands are fixed in the basis year)", () => {
     const title = () =>
       screen.getAllByTestId("in-svg").find((node) => node.dataset.part === "unit-label").textContent;
     const { rerender } = render(<HouseholdScatter selectedPolicies={["a"]} policies={POLICIES} selectedYear={2028} />);
-    expect(title()).toBe("Household net income before the policies (£k)");
+    expect(title()).toBe("Household net income under current law (£k)");
     expect(screen.getByRole("heading").textContent).toContain("2028-29");
     rerender(<HouseholdScatter selectedPolicies={["a"]} policies={POLICIES} selectedYear={2027} />);
     // 2027 has no change: the note replaces the plot; back to 2028 the title holds
