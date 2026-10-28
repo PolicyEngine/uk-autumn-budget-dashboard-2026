@@ -304,7 +304,7 @@ export const UNMODELLED_MEASURES = [
     name: "Bank Corporation Tax Surcharge up from 3% to 6% for 15 months",
     starts: "1 January 2027, for 15 months",
     changes:
-      "The surcharge on banks' profits rises from 3% to 6% from 1 January 2027 to 31 March 2028, and returns to 3% from 1 April 2028. It helps fund the Household Energy Payment and the zero rate of VAT on household electricity.",
+      "The surcharge on banks' profits rises from 3% to 6% from 1 January 2027 to 31 March 2028, and returns to 3% from 1 April 2028. It helps fund the £100 energy payment to households and the zero rate of VAT on household electricity.",
     reaches: "Banks that pay the surcharge.",
     household: "The surcharge is a tax on banks' profits, not on households.",
     costings: [{ row: 55, values: [305, 950, 220, 0, 0, 0] }],
