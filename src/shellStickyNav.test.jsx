@@ -40,8 +40,11 @@ describe("the ui-kit shell's sticky site nav", () => {
     expect(sheet).toMatch(/position: fixed !important;\s*top: 0 !important;/);
     expect(sheet).toContain(`:root:not([data-site-nav-shown]) ${SELECTOR} {\n  transform: translateY(-100%);`);
     expect(sheet).toMatch(/:root \{\s*--nav-offset: 0px;\s*\}/);
-    // Shown, the nav overlays the band: it never moves the sticky stack
-    expect(sheet).not.toMatch(/:root\[data-site-nav-shown\] \{\s*--nav-offset/);
+    // Shown, the nav moves the band and tab rows down by its height, so it
+    // never covers the Year and Policies pills (Pavel's review, HDR1)
+    // (html[...], not :root[...]: the CSS build folds a :root[attr] custom
+    // property rule into :root and drops it)
+    expect(sheet).toMatch(/html\[data-site-nav-shown\] \{\s*--nav-offset: var\(--site-nav-height, 0px\);/);
     expect(sheet).toMatch(/:root\[data-site-nav-shown\] \.min-h-screen\.flex\.flex-col > div:first-child\[style\*="sticky"\] \{\s*box-shadow/);
     expect(sheet).toMatch(/\.title-row \{\s*position: sticky;\s*top: var\(--nav-offset\);/);
     expect(sheet).toMatch(/\.view-tabs-bar \{\s*position: sticky;\s*top: calc\(var\(--nav-offset\) \+ var\(--title-row-height\)\);/);
@@ -169,22 +172,16 @@ describe("showing the site nav", () => {
     expect(shown()).toBe(true);
   });
 
-  it("shows when the pointer leaves the window through its top edge, and hides 0.75s after it comes back below", () => {
-    const { scrollTo, wait, shown, move, leave } = setup(true);
+  it("does not show when the pointer leaves the window, even through its top edge", () => {
+    const { scrollTo, shown, move, leave } = setup(true);
     scrollTo(1_000);
     move(300);
-    // Out through the bottom or a side: nothing
     leave(900);
     expect(shown()).toBe(false);
+    // On its way between the address bar and the Year pill (HDR1)
     leave(0);
-    expect(shown()).toBe(true);
-    // Away above the window, it stays
-    wait(10_000);
-    expect(shown()).toBe(true);
-    move(400);
-    wait(749);
-    expect(shown()).toBe(true);
-    wait(1);
+    expect(shown()).toBe(false);
+    move(20);
     expect(shown()).toBe(false);
   });
 

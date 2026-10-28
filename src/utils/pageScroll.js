@@ -228,12 +228,13 @@ export const SITE_NAV_EDGE_PX = 8;
 
 /**
  * Whether the pointer at clientY `y` asks for the site nav: at the top
- * SITE_NAV_EDGE_PX of the window, or (leaving: `left`) out through its
- * top edge. An exit-intent reveal: scrolling never shows the nav.
+ * SITE_NAV_EDGE_PX of the window. Leaving the window through its top edge
+ * does not: a pointer on its way from the address bar to the Year pill
+ * crosses it. Scrolling never shows the nav.
  */
-export function pointerWantsSiteNav(y, { left = false } = {}) {
+export function pointerWantsSiteNav(y) {
   if (typeof y !== "number" || Number.isNaN(y)) return false;
-  return left ? y <= 0 : y <= SITE_NAV_EDGE_PX;
+  return y <= SITE_NAV_EDGE_PX;
 }
 
 /** A touch-only device: no mouse to point at the window's top with. */

@@ -346,13 +346,13 @@ body {
    of the page's flow and hidden above the window by default, so the band
    sits at the very top of the page with the tab rows under it, from the
    first paint. App.jsx shows it (data-site-nav-shown on <html>) when the pointer
-   reaches the top 8px of the window or leaves it through its top edge,
-   or the reader tabs into it (never on a scroll up; on a touch-only
+   reaches the top 8px of the window, or the reader tabs into it (never on a scroll up; on a touch-only
    device, only at the page's very top), keeps it 1.5s and while it is in
    use, and hides it on any scroll down by the reader or once the pointer
    or focus has left; it measures the nav into
-   --site-nav-height. Shown, it overlays the top of the band (above it,
-   with a shadow); the band and tab rows never move, so --nav-offset is 0.
+   --site-nav-height. Shown, it sits above the band: --nav-offset becomes
+   its height, so the band and tab rows move down under it and the Year and
+   Policies pills stay in view.
    --motion-slide is 0 under reduced motion.
    Written against @policyengine/ui-kit 0.12.0, whose shell is
    <div class="min-h-screen flex flex-col"> with the nav as its first
@@ -363,10 +363,13 @@ body {
   --nav-offset: 0px;
 }
 
-/* The nav overlays the band when shown: it never moves the band or the
-   tab rows, so nothing under them is pushed or covered by the stack
-   (--nav-offset stays 0; App.jsx keeps the nav hidden at the page's top,
-   save on a touch-only device) */
+/* Shown, the nav pushes the band and tab rows down by its own height, so it
+   never covers the Year and Policies pills. On html, not :root[...]: the
+   CSS build folds a :root[attr] custom property rule into :root. */
+html[data-site-nav-shown] {
+  --nav-offset: var(--site-nav-height, 0px);
+}
+
 :root[data-site-nav-shown] .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
   box-shadow: 0 2px 8px var(--shadow-faint) !important;
 }
@@ -432,6 +435,7 @@ body {
 .title-row {
   position: sticky;
   top: var(--nav-offset);
+  transition: top var(--motion-slide) var(--ease-out);
   /* Above every chart, label, tooltip and card on the page */
   z-index: 1100;
   /* One row on a wide screen: the title, then the year and policy pills
@@ -576,6 +580,7 @@ body {
 .view-tabs-bar {
   position: sticky;
   top: calc(var(--nav-offset) + var(--title-row-height));
+  transition: top var(--motion-slide) var(--ease-out);
   /* Under the band and its pill lists, above the charts */
   z-index: 1090;
   margin-inline: calc(50% - 50vw);

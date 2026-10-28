@@ -464,11 +464,11 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
 
   // The site nav is hidden above the window by default, so the title band
   // sits at the top of the page. Scrolling never brings it in: it slides in
-  // above the band when the pointer reaches the top 8px of the window or
-  // leaves the window through its top edge (an exit-intent reveal: utils/
-  // pageScroll pointerWantsSiteNav), or when the reader tabs into it
+  // above the band when the pointer reaches the top 8px of the window
+  // (utils/pageScroll pointerWantsSiteNav), or when the reader tabs into it
   // (globals.css: data-site-nav-shown on <html>, --site-nav-height; the
-  // slide is instant under reduced motion). Once in, it stays
+  // band and tab rows move down under it, so it never covers the Year and
+  // Policies pills; the slide is instant under reduced motion). Once in, it stays
   // SITE_NAV_MIN_MS, and while the pointer or focus is in it or one of its
   // menus is open, then hides SITE_NAV_LEAVE_MS after they leave. Any
   // scroll down by the reader hides it at once (unless it is in use), and
@@ -595,15 +595,6 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
         hideAfter(SITE_NAV_LEAVE_MS);
       }
     };
-    // The pointer leaving the window through its top edge (toward the
-    // browser's tabs and address bar)
-    const onPointerOut = (event) => {
-      if (event.relatedTarget || isTouchOnly()) return;
-      if (pointerWantsSiteNav(event.clientY, { left: true })) {
-        pointerIn = true;
-        show();
-      }
-    };
     const onFocusIn = () => show();
     const onFocusOut = (event) => {
       if (!(nav && event.relatedTarget instanceof Node && nav.contains(event.relatedTarget))) {
@@ -618,7 +609,6 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
     window.addEventListener("pointerup", onPointerUp, { passive: true });
     window.addEventListener("mousemove", onPointer, { passive: true });
-    document.addEventListener("mouseout", onPointerOut, { passive: true });
     nav?.addEventListener("focusin", onFocusIn);
     nav?.addEventListener("focusout", onFocusOut);
     // On a touch-only device the nav is in at the page's top from the start
@@ -632,7 +622,6 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("mousemove", onPointer);
-      document.removeEventListener("mouseout", onPointerOut);
       nav?.removeEventListener("focusin", onFocusIn);
       nav?.removeEventListener("focusout", onFocusOut);
       if (frame) window.cancelAnimationFrame(frame);
