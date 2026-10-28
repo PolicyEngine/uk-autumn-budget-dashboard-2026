@@ -239,8 +239,6 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   //   as its entry was written for (policyDetails.test.js, PolicyCards.test.jsx);
   // - an example's measure, measures and tag: shown only while every one is
   //   published (HouseholdCards.test.jsx);
-  // - SOURCE_NAMES: a short name for a card's "+£50 from" line, where the
-  //   published name is used for any other id;
   // - SPENDING_MEASURES: those whose gain scales with fuel and electricity
   //   spending, for one line of text; one not published has no part, so the
   //   line can only show less often;
@@ -255,7 +253,6 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   const allowed = {
     "utils/policyDetails.js": [/export const POLICY_DETAILS = \[[\s\S]*?\n\];/],
     "utils/householdExamples.js": [/^\s*(?:measure|measures|tag): .*$/gm],
-    "components/personal/HouseholdCards.jsx": [/const SOURCE_NAMES = \{[\s\S]*?\n\};/],
     "components/personal/SingleYearResults.jsx": [/export const SPENDING_MEASURES = \[.*\];/],
     "utils/measureModelling.js": [/export const MODELLING_NOTE = \{[\s\S]*?\n\};/],
     "utils/singleYear.js": [/^\s*warm_home_discount_top_up: "[^"]*",$/gm],
