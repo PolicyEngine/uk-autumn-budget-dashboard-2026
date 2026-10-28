@@ -199,15 +199,15 @@ describe("createSiteNavIntent: scrolling hides the site nav, and never shows it 
 
 describe("pointerWantsSiteNav: the pointer at the window's top", () => {
   it("asks for the nav within SITE_NAV_EDGE_PX of the top, not below", () => {
-    expect(SITE_NAV_EDGE_PX).toBe(8);
+    expect(SITE_NAV_EDGE_PX).toBe(2);
     expect(pointerWantsSiteNav(0)).toBe(true);
-    expect(pointerWantsSiteNav(8)).toBe(true);
-    expect(pointerWantsSiteNav(9)).toBe(false);
+    expect(pointerWantsSiteNav(2)).toBe(true);
+    expect(pointerWantsSiteNav(3)).toBe(false);
     expect(pointerWantsSiteNav(400)).toBe(false);
     expect(pointerWantsSiteNav(undefined)).toBe(false);
   });
 
-  it("does not ask for it below the window's top 8px, wherever the pointer left from", () => {
+  it("does not ask for it below the window's top 2px, wherever the pointer left from", () => {
     expect(pointerWantsSiteNav(20)).toBe(false);
     expect(pointerWantsSiteNav(-3)).toBe(true);
   });

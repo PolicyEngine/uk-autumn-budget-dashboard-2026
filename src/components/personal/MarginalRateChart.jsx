@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import NoBreakYear from "../NoBreakYear";
 import { Area, CartesianGrid, ComposedChart, Customized, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
@@ -74,7 +75,8 @@ function EdgeMarker({ cx, cy, payload, dataKey, stroke, bounds = [0, 1] }) {
 export function RateTooltip({ yearLabel, parts, view, focusPart = null, ...props }) {
   const point = props.payload?.[0]?.payload;
   if (!props.active || !point) return null;
-  const labelFormat = (value) => `Employment income ${formatPounds(value)}, ${yearLabel}`;
+  // The year never breaks across lines ("2027-" / "28")
+  const labelFormat = (value) => <NoBreakYear text={`Employment income ${formatPounds(value)}, ${yearLabel}`} />;
   // On one part: that part alone ("At £40k: Income tax 20%")
   const one = view !== "change" && focusPart ? (parts ?? []).find((part) => part.name === focusPart) : null;
   if (one) {
@@ -283,8 +285,8 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
     exportOptions: {
       title,
       description: parts
-        ? `Share of each extra pound of salary lost to taxes and withdrawn benefits in ${yearLabel}, by part after the selected policies, with the total before and after.`
-        : `Share of each extra pound of salary lost to taxes and withdrawn benefits in ${yearLabel}, before and after the selected policies.`,
+        ? `Share of each extra pound of salary lost to taxes and withdrawn benefits in ${yearLabel}, by part with the selected policies, with the total under current law and with them.`
+        : `Share of each extra pound of salary lost to taxes and withdrawn benefits in ${yearLabel}, under current law and with the selected policies.`,
       legendItems: legendItems.map(({ info, ...item }) => item),
       logo: CHART_LOGO,
       reservedLegendHeight: 0,
@@ -452,7 +454,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
               ...(pointer.x > pointer.width / 2 ? { right: pointer.width - pointer.x + 12 } : { left: pointer.x + 12 }),
             }}
           >
-            <RateTooltip active payload={[{ payload: pointer.row }]} yearLabel={yearLabel} parts={parts} view={view} focusPart={focus} />
+            <RateTooltip active payload={[{ payload: { ...pointer.row, income: Math.round(pointer.income / 100) * 100 } }]} yearLabel={yearLabel} parts={parts} view={view} focusPart={focus} />
           </div>
         )}
       </div>

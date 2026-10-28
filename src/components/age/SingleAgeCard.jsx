@@ -140,16 +140,29 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
   // The selection rule: the published package of exactly the selection
   // reads its own rows; other combinations draw whole or not at all
   const packageRun = selectionPackageKey(catalogue?.manifest, selectedPolicies);
-  const ageBars = (each) =>
-    smoothByAge(
-      singleAgeSelection(singleAgeBars(rows, policies, selectedPolicies, each, window[0], window[1]), {
-        rows,
-        policies,
-        selected: selectedPolicies,
-        year: each,
-        packageRun,
-      }),
-    );
+  const selectAges = (each, first, last) =>
+    singleAgeSelection(singleAgeBars(rows, policies, selectedPolicies, each, first, last), {
+      rows,
+      policies,
+      selected: selectedPolicies,
+      year: each,
+      packageRun,
+    });
+  // The bars are the window's own ages, under the selection rule as one
+  // set. The five-age average at each end also reads the two ages beyond
+  // it (their net only, under the same rule), then only the window is kept
+  const ageBars = (each) => {
+    const inner = selectAges(each, window[0], window[1]);
+    const first = Math.max(0, window[0] - 2);
+    const last = Math.min(SINGLE_AGE_TOP, window[1] + 2);
+    const outer = selectAges(each, first, last);
+    const padded = [
+      ...outer.filter((point) => point.age < window[0]),
+      ...inner,
+      ...outer.filter((point) => point.age > window[1]),
+    ];
+    return smoothByAge(padded).filter((point) => point.age >= window[0] && point.age <= window[1]);
+  };
   const data = ageBars(year);
   const combinationUnavailable = data.some((point) => point.combinationUnavailable);
   // The package's net with no policy parts: drawn as the net bars

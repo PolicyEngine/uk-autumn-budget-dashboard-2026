@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render as renderReact, screen, within } from "@testing-library/react";
+import { fireEvent, render as renderReact, screen, waitFor, within } from "@testing-library/react";
 import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR, bandAxis } from "./YoungPeopleSection";
 import {
   meanChangeByBand,
@@ -209,11 +209,20 @@ describe("YoungPeopleSection", () => {
     expect(screen.queryByText(/young people aged 16 to 24 in the UK/)).not.toBeInTheDocument();
     expect(screen.queryByText(/directly affected/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: /Winners and losers, 2029-30/ })).toBeInTheDocument();
-    // Two Recharts charts; Effect of each policy is a dot plot of rows, and
-    // Winners and losers the shared rows chart: age groups, 16 to 24 in
-    // bold (no background band), ▲/▼ in two fixed columns
+    // Winners and losers opens on the chosen group's own ages (16 to 24)
+    expect(screen.getByText(/at each age from 16 to 24\./)).toBeInTheDocument();
+    // By age group: the shared rows chart, 16 to 24 in bold (no background
+    // band), ▲/▼ in two fixed columns
+    const sharesCard = document.querySelector(".young-people-shares");
+    fireEvent.click(within(sharesCard).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(within(sharesCard).getByRole("radiogroup", { name: "Show" })).getByRole("radio", { name: /By age group/ }));
+    const shares = await waitFor(() => {
+      const found = document.querySelector(".young-people-shares .msc");
+      expect(found).not.toBeNull();
+      return found;
+    });
+    // Two Recharts charts; Effect of each policy is a dot plot of rows
     expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(2);
-    const shares = document.querySelector(".young-people-shares .msc");
     expect(shares.querySelectorAll("[role='rowheader']").length).toBeGreaterThan(1);
     expect(shares.querySelector(".msc-label.is-focus")).toHaveTextContent(/16 to 24/);
     expect(shares.querySelectorAll("[role='columnheader']")).toHaveLength(2);

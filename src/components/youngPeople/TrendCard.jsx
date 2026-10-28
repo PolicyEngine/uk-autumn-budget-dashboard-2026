@@ -655,7 +655,9 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         label: series.label,
         short: series.short,
         colour: series.key === ALL_BAND ? CHART_COLOURS.reference : colourOf(series),
-        dash: series.dash,
+        // Each line keeps the dash its chip shows in the other view, so
+        // near-alike teals still tell apart; the focus stays solid
+        dash: series.key === FOCUS ? undefined : series.key === ALL_BAND ? REFERENCE_DASH : CONTEXT_DASH[series.key],
         width: series.key === FOCUS ? 3 : 1.75,
         strong: series.key === FOCUS,
       }));
@@ -974,7 +976,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
           year={Number(selectedYear)}
           info={{
             shows: "The average change per person in each age group, each year, with all ages for comparison.",
-            how: ["Each line is the selected policies' result for that group; Running total adds the years."],
+            how: ["Each line is the average change per person for that group. Running total adds up the years from the first one shown."],
             caveats: [
               missingNote,
               byMeasure && netOnly && PACKAGE_NET_ONLY,

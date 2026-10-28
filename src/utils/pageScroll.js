@@ -224,7 +224,13 @@ export function scrollBelowBars(target, { behavior = "auto", gap = STICKY_GAP, o
 const INTENT_MS = { wheel: 250, key: 800, touch: 1200 };
 
 /** How close to the window's top edge the pointer brings the site nav (px). */
-export const SITE_NAV_EDGE_PX = 8;
+export const SITE_NAV_EDGE_PX = 2;
+
+/**
+ * How long the pointer rests at that edge before the nav shows (ms): a
+ * pointer passing through it on its way to the Year pill never opens it
+ */
+export const SITE_NAV_DWELL_MS = 300;
 
 /**
  * Whether the pointer at clientY `y` asks for the site nav: at the top

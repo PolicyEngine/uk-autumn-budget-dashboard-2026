@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import NoBreakYear from "../NoBreakYear";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import {
@@ -286,7 +287,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
         : [view === "before" ? LEGEND_ITEMS[0] : LEGEND_ITEMS[1]]),
     ...(drops.length ? [DROP_ITEM] : []),
   ];
-  const sideWords = view === "before" ? "before the selected policies" : "after the selected policies";
+  const sideWords = view === "before" ? "under current law" : "with the selected policies";
   // One plain sentence: your household at your salary
   const youRounded = youValue == null ? null : Math.round(youValue / 10) * 10;
   // A change within £5 of itself at every salary: said in the sentence
@@ -555,7 +556,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
                 payload={tooltipPayload}
                 label={hovered.income}
                 format={formatPounds}
-                labelFormat={(v) => (layerTip ? `At ${formatPoundsShort(v)}` : `${X_LABEL} ${formatPounds(v)}, ${yearLabel}`)}
+                labelFormat={(v) => (layerTip ? `At ${formatPoundsShort(v)}` : <NoBreakYear text={`${X_LABEL} ${formatPounds(v)}, ${yearLabel}`} />)}
                 grouped={false}
                 netKey={netParts && !layerTip ? "total" : undefined}
                 netLabel={TOTAL_NAME[view]}

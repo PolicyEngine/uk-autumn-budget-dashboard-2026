@@ -35,6 +35,7 @@ import {
 } from "../utils/chartTheme";
 import {
   AGE_BANDS,
+  ALL_BAND,
   YOUNG_BAND,
   isPublished,
   COMBINATION_NOT_PUBLISHED,
@@ -75,7 +76,7 @@ const YOUNG_SWATCH = CHART_COLOURS.highlightBand;
 const OUTCOMES = [
   { key: "pct_better_off", label: "Gain", color: CHART_COLOURS.gain },
   { key: "pct_unchanged", label: "No change", color: CHART_COLOURS.noChange },
-  { key: "pct_worse_off", label: "Lose", color: CHART_COLOURS.loss },
+  { key: "pct_worse_off", label: "Loss", color: CHART_COLOURS.loss },
 ];
 
 // The dashboard's bar style (chartTheme barShape): the 100% share bars
@@ -308,7 +309,7 @@ const PACKAGE_DESCRIPTION = "Average change per person, £ a year, with all the 
  * withheld policy's rows).
  */
 export const PACKAGE_VIEWS = [
-  { value: "package", label: "Whole package" },
+  { value: "package", label: "All selected policies" },
   { value: "policy", label: "By policy" },
 ];
 
@@ -696,14 +697,16 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
 
 export function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, combinedId, group = YOUNG_BAND, extraOptions = [] }) {
   const chartRef = useRef(null);
-  // By age group or by single year of age, as "Average change by age"
-  const [view, setView] = useState("band");
+  // By age group or by single year of age, as "Average change by age":
+  // a chosen age group opens on its own ages, All ages on the groups
+  const [view, setView] = useState(group === ALL_BAND ? "band" : "single");
   // With no run for the whole selection: one row per measure, for one age
   // group (16 to 24 first)
   const [groupKey, setGroupKey] = useState(group);
   // By age's Age group drives it; the card's own choice holds until that changes
   useEffect(() => {
     setGroupKey(group);
+    setView(group === ALL_BAND ? "band" : "single");
   }, [group]);
   const [hide, setHide] = useState("show");
   const [order, setOrder] = useState("size");
@@ -754,8 +757,8 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
   const csvText = () =>
     buildChartCsv({
       title: perMeasure
-        ? `People aged ${groupLabel} who gain, see no change and lose, by policy on its own, ${yearLabel}`
-        : `People who gain, see no change and lose by ${single ? "single year of age" : "age group"}, ${yearLabel}`,
+        ? `Winners, losers and no change, people aged ${groupLabel}, by policy on its own, ${yearLabel}`
+        : `Winners, losers and no change by ${single ? "single year of age" : "age group"}, ${yearLabel}`,
       units: "% of people in the group; a change of more than 0.01% of household net income",
       columns: [
         { key: "group", label: perMeasure ? "Policy" : single ? "Age" : "Age group" },

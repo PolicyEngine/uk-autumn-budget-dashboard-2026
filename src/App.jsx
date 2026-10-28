@@ -32,7 +32,7 @@ import { provisionalLabel } from "./utils/publication/manifest";
 import { DownloadContext, policiesLabel } from "./utils/downloadContext";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
-import { createSiteNavIntent, isProgrammaticScroll, isTouchOnly, pointerWantsSiteNav, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
+import { createSiteNavIntent, isProgrammaticScroll, isTouchOnly, pointerWantsSiteNav, SITE_NAV_DWELL_MS, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
 
 // Each view's code (the chart library, the map's and the household
 // calculator's) loads when a view first opens, or while the page is idle,
@@ -488,6 +488,8 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     let frame = 0;
     let shownAt = 0;
     let timer = 0;
+    // The pointer resting at the window's top edge, before the nav shows
+    let edgeTimer = 0;
     let pointerIn = false;
     let touchY = null;
     // Touch-only, at the page's very top: shown for as long as it stays there
@@ -579,15 +581,32 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     const onPointer = (event) => {
       // A tap's emulated mouse events do not count on a touch-only device
       if (isTouchOnly()) return;
+      // Over the nav, or over the title band it pushes down (the Year and
+      // Policies pills), so the band never jumps back from under the pointer
+      const bandHeight = document.querySelector(".title-row")?.offsetHeight ?? 0;
       const over =
         !!nav &&
         isShown() &&
         ((event.target instanceof Node && nav.contains(event.target)) ||
-          event.clientY <= nav.offsetHeight);
+          event.clientY <= nav.offsetHeight + bandHeight);
       if (pointerWantsSiteNav(event.clientY)) {
-        pointerIn = true;
-        show();
-      } else if (over) {
+        if (isShown()) {
+          pointerIn = true;
+          show();
+        } else if (!edgeTimer) {
+          edgeTimer = window.setTimeout(() => {
+            edgeTimer = 0;
+            pointerIn = true;
+            show();
+          }, SITE_NAV_DWELL_MS);
+        }
+        return;
+      }
+      if (edgeTimer) {
+        window.clearTimeout(edgeTimer);
+        edgeTimer = 0;
+      }
+      if (over) {
         if (!pointerIn) clear();
         pointerIn = true;
       } else if (pointerIn) {
@@ -625,6 +644,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       nav?.removeEventListener("focusin", onFocusIn);
       nav?.removeEventListener("focusout", onFocusOut);
       if (frame) window.cancelAnimationFrame(frame);
+      if (edgeTimer) window.clearTimeout(edgeTimer);
       clear();
       resize?.disconnect();
       root.removeAttribute("data-site-nav-shown");
