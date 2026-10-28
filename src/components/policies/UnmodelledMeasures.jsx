@@ -118,6 +118,8 @@ export function unmodelledCard(measure) {
         measure.notModelled
       ),
       sources: measure.sources,
+      // PolicyEngine's post on it, in the footer as on the modelled cards
+      explainer: measure.explainer,
       timeline: false,
       // The Treasury's six years on the card itself, or one muted line
       footExtra: (

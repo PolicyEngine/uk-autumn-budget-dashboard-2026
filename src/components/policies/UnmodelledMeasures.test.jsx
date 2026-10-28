@@ -228,6 +228,32 @@ describe("UnmodelledMeasures", () => {
     }
   });
 
+  it("links PolicyEngine's post on a measure as \"Our explainer\" in its card's footer, in a new tab", () => {
+    render(<UnmodelledMeasures />);
+    open();
+    const explained = UNMODELLED_MEASURES.filter(({ explainer }) => explainer);
+    expect(explained.map(({ id }) => id)).toEqual(["adjusted-triple-lock"]);
+    for (const measure of UNMODELLED_MEASURES) {
+      const card = document.getElementById(`unmodelled-${measure.id}`);
+      const links = within(card).queryAllByRole("link", { name: /^Our explainer/ });
+      if (!measure.explainer) {
+        expect(links, measure.id).toHaveLength(0);
+        continue;
+      }
+      const { label, href } = measure.explainer;
+      expect(href).toMatch(/^https:\/\/www\.policyengine\.org\/uk\/research\/[a-z0-9]+(?:-[a-z0-9]+)*$/);
+      expect(label.trim().length, measure.id).toBeGreaterThan(0);
+      expect(links, measure.id).toHaveLength(1);
+      const [link] = links;
+      expect(link).toHaveAccessibleName(new RegExp(`^Our explainer: ${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\(opens in a new tab\\)$`));
+      expect(link).toHaveAttribute("href", href);
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      // In the footer's actions, where the modelled cards have it
+      expect(link.closest(".policy-card-actions")).not.toBeNull();
+    }
+  });
+
   it("shows nothing for an empty list", () => {
     const { container } = render(<UnmodelledMeasures measures={[]} />);
     expect(container).toBeEmptyDOMElement();

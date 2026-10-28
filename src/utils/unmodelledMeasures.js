@@ -42,7 +42,10 @@ const obr = (part) => ({
  * an optional `note` shown under the table. A measure with no row has
  * `noCosting` instead, saying what the documents give in its place.
  * `seeAlso` links PolicyEngine's own published work that models the
- * measure, after the reason this dashboard does not.
+ * measure, after the reason this dashboard does not. `explainer` is
+ * PolicyEngine's post on the measure, a page of policyengine.org's UK
+ * research, linked as "Our explainer" in the card's footer as on the
+ * modelled cards (policyDetails.js); its label is the post's title.
  */
 export const UNMODELLED_MEASURES = [
   {
@@ -213,6 +216,10 @@ export const UNMODELLED_MEASURES = [
       label: "The Burnham plan vs the triple lock",
       href: "https://www.policyengine.org/uk/triple-lock",
       after: '" (16 October 2026).',
+    },
+    explainer: {
+      label: "The adjusted Triple Lock: what changes in 2030 and what it saves",
+      href: "https://www.policyengine.org/uk/research/uk-triple-lock-budget-2026",
     },
     sources: [budget("paragraphs 1.29 and 5.23"), obr("paragraphs 3.49 and 3.50")],
   },
