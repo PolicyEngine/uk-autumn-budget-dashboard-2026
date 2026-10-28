@@ -52,7 +52,8 @@ describe("Frozen thresholds against pay: data", () => {
     expect(rows.map((r) => r.year)).toEqual([2026, 2027, 2028, 2029, 2030]);
     expect(rows[0]).toEqual({ year: 2026, earnings: 100, personal_allowance: 100, higher_rate: 100, plan_2: 100 });
     const last = rows.at(-1);
-    const earnings = 100 * 1.024 * 1.021 * 1.022 * 1.024;
+    // The outlook's OBR October 2026 earnings growth: 3.0%, 2.2%, 2.3%, 2.5%
+    const earnings = 100 * 1.03 * 1.022 * 1.023 * 1.025;
     expect(last.earnings).toBeCloseTo(earnings, 9);
     // Frozen: 100 / the earnings index
     expect(last.personal_allowance).toBeCloseTo((100 * 100) / earnings, 9);
@@ -76,11 +77,11 @@ describe("Frozen thresholds against pay: data", () => {
   it("says what the income tax thresholds are worth against earnings in one sentence", () => {
     const rows = thresholdRows(PARAMETERS, OUTLOOK);
     expect(thresholdsSentence(rows)).toBe(
-      "By 2030-31 the personal allowance and higher rate threshold are worth 8.6% less relative to average earnings than in 2026-27.",
+      "By 2030-31 the personal allowance and higher rate threshold are worth 9.4% less relative to average earnings than in 2026-27.",
     );
     const apart = rows.map((r) => ({ ...r, higher_rate: 100 }));
     expect(thresholdsSentence(apart)).toBe(
-      "By 2030-31 the personal allowance is worth 8.6% less and the higher rate threshold 0.0% more relative to average earnings than in 2026-27.",
+      "By 2030-31 the personal allowance is worth 9.4% less and the higher rate threshold 0.0% more relative to average earnings than in 2026-27.",
     );
   });
 
@@ -103,7 +104,7 @@ describe("Frozen thresholds against pay: data", () => {
 describe("Frozen thresholds against pay: card", () => {
   it("shows the title, the sentence and a chip per line", async () => {
     render(<FrozenThresholdsCard data={OUTLOOK} />);
-    expect(await screen.findByText(/^By 2030-31 the personal allowance and higher rate threshold are worth 8\.6% less/)).toBeTruthy();
+    expect(await screen.findByText(/^By 2030-31 the personal allowance and higher rate threshold are worth 9\.4% less/)).toBeTruthy();
     expect(screen.getByRole("heading", { level: 3, name: FROZEN_THRESHOLDS_TITLE })).toBeTruthy();
     for (const name of ["Personal allowance and higher rate threshold", "Plan 2 student loan threshold", "Keeps pace with pay"]) {
       expect(screen.getAllByText(name).length).toBeGreaterThan(0);
@@ -131,7 +132,7 @@ describe("Frozen thresholds against pay: card", () => {
     render(<FrozenThresholdsCard data={OUTLOOK} view="table" onViewChange={() => {}} />);
     await screen.findByText(/^By 2030-31/);
     const last = [...document.querySelectorAll(".ls-table tbody tr")].at(-1);
-    expect([...last.cells].map((c) => c.textContent)).toEqual(["2030-31", "109.4", "91.4", "93.5"]);
+    expect([...last.cells].map((c) => c.textContent)).toEqual(["2030-31", "110.4", "90.6", "92.7"]);
   });
 
   it("says 2031-32, when current law uprates the thresholds again, is not shown", async () => {
