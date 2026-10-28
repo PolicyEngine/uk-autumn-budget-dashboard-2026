@@ -145,7 +145,7 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
           // and benefit; both add up to the same change (Pavel's review, HH5).
           // The fuel duty policy also moves the VAT row there
           <p className="waterfall-sub">
-            By policy. The table below splits the same change by tax and benefit.
+            The table below splits the same change by tax and benefit.
             {fuelDuty &&
               " The fuel duty policy also changes the VAT on fuel, so part of its effect shows in the table's VAT row."}
           </p>

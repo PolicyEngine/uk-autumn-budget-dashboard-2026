@@ -1302,7 +1302,8 @@ describe("the waterfall's one line", () => {
     expect(container.querySelector(".waterfall-header").textContent).toBe(
       "How each policy changes your income" + container.querySelector(".waterfall-sub").textContent + container.querySelector(".visually-hidden").textContent,
     );
-    expect(container.querySelector(".waterfall-sub")).toHaveTextContent("By policy. The table below splits the same change by tax and benefit.");
+    // The title already says "each policy": the line starts with the table
+    expect(container.querySelector(".waterfall-sub")).toHaveTextContent(/^The table below splits the same change by tax and benefit\./);
     // The fuel duty policy moves this household: the VAT line, with no
     // claim that the policy is a freeze (HH5)
     expect(container.querySelector(".waterfall-sub")).toHaveTextContent(
