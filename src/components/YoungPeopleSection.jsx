@@ -697,16 +697,18 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
 
 export function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, combinedId, group = YOUNG_BAND, extraOptions = [] }) {
   const chartRef = useRef(null);
-  // By age group or by single year of age, as "Average change by age":
-  // a chosen age group opens on its own ages, All ages on the groups
-  const [view, setView] = useState(group === ALL_BAND ? "band" : "single");
+  // By age group or by single year of age. Opens on the age groups, with
+  // the chosen group marked (as main did); single years of the chosen
+  // group are in Options. The reader's choice holds when the age group
+  // changes, as on the other age cards (Pavel's review, AGE11; round 3:
+  // a nine-row single-age chart left the card half empty by default)
+  const [view, setView] = useState("band");
   // With no run for the whole selection: one row per measure, for one age
   // group (16 to 24 first)
   const [groupKey, setGroupKey] = useState(group);
   // By age's Age group drives it; the card's own choice holds until that changes
   useEffect(() => {
     setGroupKey(group);
-    setView(group === ALL_BAND ? "band" : "single");
   }, [group]);
   const [hide, setHide] = useState("show");
   const [order, setOrder] = useState("size");
@@ -911,8 +913,8 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
           info={{
             how: perMeasure
               ? [
-                  "No published run covers this selection together, so each row is one policy simulated on its own.",
-                  "The rows' shares can't be added up across policies.",
+                  // Each row's policy on its own is in the description (round 3)
+                  "No published run covers this selection together, so the rows' shares can't be added up across policies.",
                 ]
               : ["Shares come from one run of the whole selection, so they include how the policies interact."],
             caveats: [
