@@ -19,7 +19,7 @@ import ChartUnitLabel from "../../utils/ChartUnitLabel";
 import { formatPounds, formatPoundsShort } from "../../utils/exampleHouseholds";
 import ChartMoreInfo from "../ChartMoreInfo";
 import { METHOD_ANCHORS } from "../methodology/anchors";
-import { keepClause, marginalRates, rateAt } from "../../utils/singleYear";
+import { marginalRates, marginalRateSentence, rateAt } from "../../utils/singleYear";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import ChartTooltip from "../ChartTooltip";
 import GroupedLegend from "../GroupedLegend";
@@ -329,9 +329,8 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
     sync?.union ?? null,
   );
   const lineStroke = isChange ? CHANGE_COLOUR : parts ? TOTAL_COLOUR : view === "before" ? BEFORE_COLOUR : AFTER_COLOUR;
-  // The rate as money, from the API's own rates only: they are over the
-  // next £200, which the sentence scales (a sweep step is too coarse)
-  const keep = own ? keepClause(own.beforeRate, own.afterRate, { first: salary === 0 }) : null;
+  // The sentence's money is from the API's own rates only: they are over
+  // the next £200, which it scales (a sweep step is too coarse)
 
   const csvColumns = [
     { key: "income", label: "Your salary (£)", decimals: 0 },
@@ -371,15 +370,15 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
           </h3>
           {yours && (
             <p className="chart-description">
-              {/* One sentence: the rate, its parts, then what it means in
-                  money (Vahid, 26 October) */}
-              {salary === 0
-                ? "With no earnings, your marginal tax rate on your first £200 would be "
-                : `At ${formatPounds(salary)} your marginal tax rate is `}
-              {pct(yours.before) === pct(yours.after)
-                ? pct(yours.after)
-                : `${pct(yours.before)} under current law and ${pct(yours.after)} with the policies`}
-              {keep ? `, so ${keep}.` : "."}
+              {/* One sentence: the rate's move, then what it means in
+                  money (Vahid, 26 and 28 October) */}
+              {marginalRateSentence({
+                salary,
+                before: yours.before,
+                after: yours.after,
+                keepBefore: own?.beforeRate,
+                keepAfter: own?.afterRate,
+              })}
             </p>
           )}
         </div>

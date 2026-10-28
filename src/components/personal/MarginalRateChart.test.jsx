@@ -111,7 +111,7 @@ describe("MarginalRateChart", () => {
     // The parts are chips (shown, hidden or highlighted from the key)
     expect(screen.getByRole("button", { name: "Personal allowance taper" })).toHaveAttribute("aria-pressed", "true");
     // One sentence: the rate, then the rate as money; its parts in More info
-    expect(screen.getByText(/^At £110,000 your marginal tax rate is 62%, so of your next/)).toBeInTheDocument();
+    expect(screen.getByText(/^At £110,000 your marginal tax rate stays at 62%, so of your next £1,000 you keep £380\./)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     // The parts are always the rate with the policies (own.after), so it says so
     expect(screen.getByText(/your marginal rate with the policies is made up of income tax 40%, the personal allowance taper 20%, National Insurance 2%/)).toBeInTheDocument();
@@ -268,7 +268,7 @@ describe("MarginalRateChart", () => {
     render(<MarginalRateChart sweep={sweep(null)} salary={110000} yearLabel="2027-28" />);
     expect(screen.getByText("With the selected policies")).toBeInTheDocument();
     expect(screen.queryByText("Total rate with the policies")).not.toBeInTheDocument();
-    expect(screen.getByText(/^At £110,000 your marginal tax rate is 62%, so of your next/)).toBeInTheDocument();
+    expect(screen.getByText(/^At £110,000 your marginal tax rate stays at 62%, so of your next £1,000 you keep £380\./)).toBeInTheDocument();
   });
 });
 
@@ -288,7 +288,7 @@ describe("the two Across earnings cards in step", () => {
     for (const chip of net.slice(0, -1)) expect(by(rate, chip.key).colour).toBe(chip.colour);
   });
 
-  it("says 'With no earnings' at a salary of £0, over the first £200", () => {
+  it("says 'On your first £200 of earnings' at a salary of £0", () => {
     const own = { before: step(0.2, 0, 0), after: step(0.4, 0, 0) };
     render(
       <MarginalRateChart
@@ -298,7 +298,7 @@ describe("the two Across earnings cards in step", () => {
       />,
     );
     expect(document.querySelector(".chart-description").textContent).toBe(
-      "With no earnings, your marginal tax rate on your first £200 would be 20% under current law and 39% with the policies, so of your first £200 of earnings, you keep £160 under current law and keep £121 with them.",
+      "On your first £200 of earnings, your marginal tax rate rises from 20% to 39%, so you keep £121 instead of £160.",
     );
   });
 });

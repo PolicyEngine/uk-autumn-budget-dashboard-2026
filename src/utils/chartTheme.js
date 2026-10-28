@@ -77,8 +77,9 @@ export const CHART_COLOURS = {
   pensionContributions: "#CBD5E1",
   gainLight: "#81E6D9",
   mapGain: "#14B8A6",
-  // No data on the map: a cool slate, apart from the scale's 0 grey (grid)
-  noData: "#CBD5E1",
+  // No data on the map: a faint cool grey (slate-100), lighter than the
+  // scale's 0 grey (grid) and every colour on the scale
+  noData: "#F1F5F9",
   lossLight: "#FBBF24",
   ink: "#1F2937",
   noticeBg: "#FFF7E6",

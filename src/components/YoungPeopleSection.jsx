@@ -692,7 +692,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
             year={selectedYear}
             info={{
               caveats: [
-                partsWithheld && withheldPartsCaveat(withheldNames, single ? "by single year of age" : "by age group"),
+                partsWithheld && withheldPartsCaveat(withheldNames, single ? "at some ages" : "in some age groups"),
                 notShown && !combinationUnavailable && `Not shown, as too few survey records: ${notShown}.`,
                 single &&
                   "Single years of age rest on fewer households: a few large changes, such as capital gains, can move one age's average.",

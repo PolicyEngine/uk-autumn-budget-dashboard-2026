@@ -516,13 +516,13 @@ export function rateAt(rates, income) {
 }
 
 /**
- * The marginal rate as money: "Of your next £1,000 of earnings, you keep
- * £324." from the rates over the next £200 (the API's own step), before
- * and after, said once when they round to the same pounds. A rate over
- * 200% is a cliff (net income falls by more than the £200 earned), which
- * a £1,000 multiple would overstate, so the sentence is then about the
- * next £200 itself. A keep below zero is a loss: "you would lose £X".
- * Null without both rates.
+ * The marginal rate as money: "Of your next £1,000 you keep £350 instead
+ * of £380." from the rates over the next £200 (the API's own step), with
+ * the policies first, said once when they round to the same pounds. A
+ * rate over 200% is a cliff (net income falls by more than the £200
+ * earned), which a £1,000 multiple would overstate, so the sentence is
+ * then about the next £200 itself. A keep below zero is a loss: "you lose
+ * £X". Null without both rates.
  */
 export function keepSentence(before, after) {
   const clause = keepClause(before, after);
@@ -531,8 +531,10 @@ export function keepSentence(before, after) {
 
 /**
  * keepSentence's words without the capital or full stop, to follow the
- * marginal rate in one sentence: "of your next £1,000 of earnings, you
- * keep £720". Null without both rates.
+ * marginal rate in one sentence: "of your next £1,000 you keep £720
+ * instead of £700". With `first` (no earnings yet) the sum is the first
+ * £200 and the sentence has already said so: "you keep £200 instead of
+ * £166". Null without both rates.
  */
 export function keepClause(before, after, { first = false } = {}) {
   if (before === null || before === undefined || after === null || after === undefined) return null;
@@ -540,12 +542,33 @@ export function keepClause(before, after, { first = false } = {}) {
   // that, not a wider sum it may not hold for
   const unit = first || before > 2 || after > 2 ? 200 : 1000;
   const kept = (rate) => Math.round(unit * (1 - rate));
-  const say = (amount) =>
-    amount < 0 ? `would lose ${money(-amount)}` : `keep ${money(amount)}`;
-  const lead = `of your ${first ? "first" : "next"} ${money(unit)} of earnings, you`;
   const [was, now] = [kept(before), kept(after)];
-  if (was === now) return `${lead} ${say(was)}`;
-  return `${lead} ${say(was)} under current law and ${say(now)} with them`;
+  const lead = first ? "you" : `of your next ${money(unit)} you`;
+  const verb = (amount) => (amount < 0 ? "lose" : "keep");
+  if (was === now) return `${lead} ${verb(now)} ${money(Math.abs(now))}`;
+  // "keep £450 instead of £380"; across a sign, "keep £450 instead of losing £50"
+  const other =
+    verb(was) === verb(now) ? money(Math.abs(was)) : `${was < 0 ? "losing" : "keeping"} ${money(Math.abs(was))}`;
+  return `${lead} ${verb(now)} ${money(Math.abs(now))} instead of ${other}`;
+}
+
+/**
+ * The marginal rate card's one sentence: the rate under current law and
+ * with the policies, then the rate as money. "On your first £200 of
+ * earnings, your marginal tax rate falls from 17% to 0%, so you keep £200
+ * instead of £166." With earnings: "At £34,192 your marginal tax rate
+ * rises from 62% to 65%, so of your next £1,000 you keep £350 instead of
+ * £380." Rates that round to the same whole percent "stay at" it. Keep
+ * rates (the API's own, over the next £200) are optional.
+ */
+export function marginalRateSentence({ salary, before, after, keepBefore = null, keepAfter = null }) {
+  const first = salary === 0;
+  const pct = (value) => Math.round(value * 100);
+  const [was, now] = [pct(before), pct(after)];
+  const lead = first ? "On your first £200 of earnings, your" : `At ${money(salary)} your`;
+  const move = was === now ? `stays at ${now}%` : `${now > was ? "rises" : "falls"} from ${was}% to ${now}%`;
+  const keep = keepClause(keepBefore, keepAfter, { first });
+  return `${lead} marginal tax rate ${move}${keep ? `, so ${keep}` : ""}.`;
 }
 
 /**
