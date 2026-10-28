@@ -1890,7 +1890,9 @@ def test_a_local_file_without_the_export_marker_is_refused(
     assert "needs a Microcosm export" in capsys.readouterr().out
     with h5py.File(local, "a") as handle:
         handle.attrs[g.MICROCOSM_EXPORT_ATTRIBUTE] = "household"
-    manifest = publication_manifest(tmp_path, ["household_energy_payment_2026"])
+    manifest = publication_manifest(
+        tmp_path, ["household_energy_payment_2026"]
+    )
     args += [
         "--manifest",
         str(manifest),
@@ -1919,7 +1921,9 @@ def test_seat_weights_need_the_lookup_they_were_built_from(
             extra = ["--seat-lookup", str(path)]
         seats.to_csv(path, index=False)
     write_seat_weights(weights_dir / g.SEAT_WEIGHTS_FILE, np.zeros((650, 1)))
-    manifest = publication_manifest(tmp_path, ["household_energy_payment_2026"])
+    manifest = publication_manifest(
+        tmp_path, ["household_energy_payment_2026"]
+    )
     enhanced_frs_bundle(monkeypatch)
     parsed = parse_args(
         [
