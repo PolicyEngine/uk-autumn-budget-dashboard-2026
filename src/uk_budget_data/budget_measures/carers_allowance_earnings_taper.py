@@ -49,8 +49,7 @@ def carers_allowance_earnings_taper(
 
     Budget 2026 (6.13; costings p. 16): a 100% taper above the Weekly
     Earnings Limit, 16 hours at the National Living Wage (``limit_hours``
-    x ``national_living_wage_2027``, £13.21 from April 2027, moved on with
-    the run's average earnings index), in England and Wales, beginning
+    x the wage, below), in England and Wales, beginning
     within 2030-31 (``first_year_share`` of 2030-31's change, 0.5 until
     the start date is confirmed).
 
@@ -66,9 +65,8 @@ def carers_allowance_earnings_taper(
     The announcement (27 October 2026, the eve of the Budget; Brit Brief,
     citing the government's release; nation.cymru): "only £1 of support
     will taper away for every additional £1 earned" above the £204 weekly
-    earnings limit, "effective 2030-31", the delay being for DWP's IT. No
-    official document is published yet, so the start year, the limit and
-    the rate are arguments.
+    earnings limit, "effective 2030-31", the delay being for DWP's IT. The
+    start year, the limit and the rate are arguments.
 
     In current law (policyengine-uk 2.151.0) ``carers_allowance_pre_overlap``
     pays nothing to a person ``is_gainfully_employed_for_carers_allowance``
@@ -80,10 +78,10 @@ def carers_allowance_earnings_taper(
         52 x max(0, weekly rate - taper_rate x (weekly earnings - limit)).
 
     Everyone at or below the limit, and every year before ``start_year``,
-    keeps the native formula's amount. The limit is the engine's own
-    (£204 a week, not uprated after 2026-27 in the engine) unless
-    ``earnings_limit`` gives a weekly amount, which then also sets who is
-    below it. The overlapping-benefit reduction (``carers_allowance``) and
+    keeps the native formula's amount. The limit is the Budget's (above)
+    unless ``earnings_limit`` gives a weekly amount, which then also sets
+    who is below it; ``national_living_wage_2027=None`` gives the engine's
+    own (£204 a week, not uprated after 2026-27 in the engine). The overlapping-benefit reduction (``carers_allowance``) and
     everything downstream (taxable income, Universal Credit's unearned
     income, the carer premiums and elements) read the new amount as the
     engine has them.
