@@ -23,6 +23,7 @@ from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
     WINTER_SHARE,
     zero_vat_on_domestic_electricity,
 )
+from uk_budget_data.forecast import forecast_parameters
 from uk_budget_data.models import DataConfig
 from uk_budget_data.publication.combine import combine_measures
 from uk_budget_data.reforms import (
@@ -36,7 +37,8 @@ from uk_budget_data.reforms import (
 pytestmark = pytest.mark.usefixtures("pre_budget_registry")
 
 Child = household_impact.Child
-PARAMETERS = system.parameters
+# Current law on the OBR October 2026 forecast, as every run builds it.
+PARAMETERS = forecast_parameters()
 ALL = household_impact.measure_ids()
 PENNY = 0.006  # the route rounds to the penny
 
