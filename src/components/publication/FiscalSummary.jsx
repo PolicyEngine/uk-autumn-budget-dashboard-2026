@@ -22,7 +22,7 @@ function Cell({ value, reason }) {
  * with the reason for screen readers and on hover.
  *
  * The provisional label is the manifest's (provisionalLabel): candidates
- * before the Budget, Budget figures awaiting the costings check from Budget day.
+ * before the Budget, statement figures from Budget day.
  *
  * @param {{series: Array<Object>, ids: Array<string>,
  *   measureNames?: Object<string, string>, manifest?: Object|null}} props

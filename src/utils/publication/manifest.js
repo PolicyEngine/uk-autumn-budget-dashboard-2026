@@ -18,10 +18,10 @@ export const NOT_COMPUTABLE = "not_computable";
 
 /**
  * The provisional label once the Budget is announced: the entries are the
- * Budget's measures, not yet approved against the official costings.
+ * statement's measures, not yet approved against the Treasury's costing.
  */
 export const PROVISIONAL_LABEL =
-  "Provisional: not yet checked against the official costings";
+  "Provisional: statement figures, awaiting Treasury costing";
 
 /** The provisional label before the Budget: the entries are candidates. */
 export const CANDIDATE_PROVISIONAL_LABEL =
@@ -53,7 +53,7 @@ export function isCandidateManifest(manifest) {
 
 /**
  * The label for provisional figures in this manifest: the candidate label
- * before the Budget, the Budget-day label from Budget day. Approved figures
+ * before the Budget, the statement label from Budget day. Approved figures
  * carry no label (`publicationLabel`).
  */
 export function provisionalLabel(manifest) {

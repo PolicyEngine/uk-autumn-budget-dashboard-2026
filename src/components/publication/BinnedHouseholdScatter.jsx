@@ -79,7 +79,7 @@ function CellTooltip({ active, payload }) {
  * ones both read; the open bands beyond ±£5,000 sit just beyond that edge.
  *
  * The provisional label is the manifest's (provisionalLabel): candidates
- * before the Budget, Budget figures awaiting the costings check from Budget day.
+ * before the Budget, statement figures from Budget day.
  *
  * @param {{series: Object, manifest?: Object|null}} props - `series` is the
  *   result of `scatterSeries`.

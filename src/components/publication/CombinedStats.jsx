@@ -20,7 +20,7 @@ function joinNames(names) {
  * `in_poverty_bhc`), the measure the national calculator reports.
  *
  * The provisional label is the manifest's (provisionalLabel): candidates
- * before the Budget, Budget figures awaiting the costings check from Budget day.
+ * before the Budget, statement figures from Budget day.
  *
  * @param {{stats: Object, measureNames?: Object<string, string>,
  *   manifest?: Object|null}} props
