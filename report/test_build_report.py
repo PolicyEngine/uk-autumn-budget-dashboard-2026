@@ -14,6 +14,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -66,6 +67,12 @@ def _artifact(data: Path, key: str, years, scale: float, skip_year=None) -> dict
             for y in ys
             for inc in range(0, 100001, 1000)
         ],
+        "household_scatter_binned": [
+            {"reform_id": key, "year": y, "income_band": float(band), "change_band": lo, "change_band_upper": hi, "households": 1000.0 + band / 100}
+            for y in ys
+            for band in range(0, 150000, 5000)
+            for lo, hi in ((-150.0, -100.0), (-1.0, 1.0), (10.0, 25.0), (150.0, 200.0), (750.0, 1000.0))
+        ],
     }
     files = {}
     for name, rows in tables.items():
@@ -99,7 +106,7 @@ def publication(tmp: Path, n=3, statuses=None, combined=True, skip=None, unsuppo
         "schema": br.MANIFEST_SCHEMA,
         "revision": 1,
         "updated_at": "2026-10-28T13:00:00+00:00",
-        "budget": {"date": "2026-10-28"},
+        "budget": {"date": "2026-10-28", "id": "uk-autumn-budget-2026"},
         "basis": {"forecast": {"status": "pre_budget"}},
         "measures": measures,
         "combined": {},
@@ -123,91 +130,182 @@ def build(data: Path, out: Path, year=2027) -> str:
     return (out / "report.html").read_text()
 
 
+def body_text(html: str) -> str:
+    """The visible text of the body, without the stylesheet or tags."""
+    body = html[html.index("<body>"):]
+    body = re.sub(r"<img[^>]*>", " ", body)
+    body = re.sub(r"<svg.*?</svg>", " ", body, flags=re.S)
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body))
+
+
+def prose(html: str) -> list[str]:
+    """Paragraphs, key findings and exhibit titles: the report's sentences."""
+    parts = re.findall(r'<p class="para"[^>]*>(.*?)</p>', html, flags=re.S)
+    parts += re.findall(r'<li class="kf__item">.*?<p>(.*?)</p></li>', html, flags=re.S)
+    parts += re.findall(r'<p class="exhibit__title">(.*?)</p>', html, flags=re.S)
+    parts += re.findall(r'<aside class="box".*?</aside>', html, flags=re.S)
+    return [" ".join(re.sub(r"<[^>]+>", "", x).split()) for x in parts]
+
+
 def test_several_measures_use_the_combined_run_and_check_passes(tmp_path):
     html = build(publication(tmp_path), tmp_path / "out")
-    assert "All measures together" in html
-    # Figure 1 is the combined run, titled with what it shows
-    assert '<span class="ftitle">The measures together raise revenue from 2026-27 to 2028-29</span>' in html
+    assert "Measures together" in html
+    # Figure 2 is the public finances chart, titled with what it shows
+    assert '<p class="exhibit__title">The measures together raise revenue in every year from 2026-27 to 2028-29</p>' in html
     assert 'class="watermark"' in html
 
 
 def test_one_measure_is_named_not_called_the_measures_together(tmp_path):
     html = build(publication(tmp_path, n=1), tmp_path / "out")
     assert "The measures together" not in html
-    assert "All measures together" not in html
-    assert '<span class="ftitle">Measure 0 raises revenue from 2026-27 to 2028-29</span>' in html
-    assert "How one measure would change" in html
+    assert "Measures together" not in html
+    assert "The Measure 0 measure raises" in html
     assert "Each measure on its own" not in html
 
 
 def test_fifteen_measures(tmp_path):
     html = build(publication(tmp_path, n=15), tmp_path / "out")
-    assert "How 15 measures would change" in html
-    assert html.count('<th scope="row">Measure ') >= 15
+    assert "each of the 15 measures in Table 1" in html
+    table1 = html[html.index('id="table-1"'):]
+    table1 = table1[: table1.index("</table>")]
+    assert table1.count('<th scope="row">') == 15
+    # the colour ramp for more than eight measures in one direction (OKLab, alternating hue)
+    assert len(set(re.findall(r"--sw:(#[0-9A-F]{6})", table1))) == 15
 
 
-def test_figures_and_tables_are_numbered_in_order_each_with_a_source(tmp_path):
-    import re
-
+def test_page_plan_sections_and_exhibits(tmp_path):
     html = build(publication(tmp_path), tmp_path / "out")
-    figs = [int(n) for n in re.findall(r'<span class="fnum">Figure (\d+)</span>', html)]
-    tabs = [int(n) for n in re.findall(r'<span class="fnum">Table (\d+)</span>', html)]
-    assert figs == list(range(1, len(figs) + 1)) and len(figs) >= 6
-    assert tabs == list(range(1, len(tabs) + 1)) and len(tabs) >= 6
-    # every figure has a source line; every table but the descriptive measures table
-    assert html.count('<p class="fsrc">') == len(figs) + len(tabs) - 1
-    assert "PolicyEngine UK microsimulation" in html
+    heads = re.findall(r'<h1 id="h-([^"]+)"', html)
+    assert heads[0] == "summary"
+    order = [h for h in heads if h not in ("summary", "contents")]
+    assert order == ["measures", "revenue", "deciles", "people", "poverty", "households", "method", "annex-measures", "annex-tables", "annex-sources"]
+    labels = re.findall(r'<p class="exhibit__label">(Figure|Table) (\w+)</p>', html)
+    figs = [int(n) for k, n in labels if k == "Figure"]
+    tabs = [n for k, n in labels if k == "Table"]
+    assert figs == list(range(1, len(figs) + 1)) and len(figs) == 9  # no constituency data here
+    assert tabs == ["1", "2", "3", "B1", "C1", "C2", "C3", "C4", "D1"]
+    # forced breaks only before key findings, contents, section 1, Annex A and Annex C
+    breaks = set()
+    for tag in re.findall(r"<section[^>]*>", html):
+        cls = re.search(r'class="([^"]*)"', tag).group(1).split()
+        if "break-before" in cls or "summary" in cls:  # .summary breaks before in report.css
+            breaks.add(re.search(r'id="([^"]+)"', tag).group(1))
+    assert breaks == {"summary", "contents", "measures", "method", "annex-tables"}
+    # and the first heading list is tidy
+    heads = [h for h in heads if h]
+    # every exhibit but the descriptive tables (B1, D1) has the short source line
+    assert html.count('<p class="exhibit__source">') == len(labels) - 2
+    assert "Source:</b> PolicyEngine; measures together." in html
+    assert "microsimulation (" not in html
 
 
-def test_key_findings_box_running_header_and_annexes(tmp_path):
+def test_key_findings_running_header_and_annexes(tmp_path):
     html = build(publication(tmp_path), tmp_path / "out")
-    kf = html[html.index('<div class="kf">'):]
+    kf = html[html.index('<ol class="kf">'):]
     kf = kf[: kf.index("</ol>")]
-    assert 4 <= kf.count("<li>") <= 7
+    assert 5 <= kf.count('<li class="kf__item">') <= 6
     assert "@top-left" in html and "counter(pages)" in html
-    # the running header names the Budget date, not one year: several sections cover several years
-    import re
-
-    assert re.search(r'@top-right \{ content: "Budget 28 October 2026"', html)
-    for annex in ("Annex A", "Annex B"):
-        assert f'<p class="secnum">{annex}</p>' in html
-    assert '<p class="secnum">Annex C</p>' not in html
-    # areas are not published here: no empty section, the method annex says so
+    assert re.search(r'@top-right \{ content: "Autumn Budget 2026 · 2027-28"', html)
+    # areas are not published here: no empty section, Annex A says so once
     assert 'id="areas"' not in html
-    assert "not yet published in this release" in html
+    assert html.count("not yet published in this release") == 1
+    # the contents list every section with a slot for its page number
+    assert html.count('<span class="toc__page"') == 11
 
 
-def test_summary_scope_introduction_and_section_numbers(tmp_path):
-    import re
-
+def test_cover_title_subtitle_and_meta(tmp_path):
     html = build(publication(tmp_path), tmp_path / "out")
-    # The summary page holds the key findings only
-    summary = html[html.index('<section id="summary"'):]
-    summary = summary[: summary.index("</section>")]
-    assert "What the report compares" not in summary
-    # The introduction is section 1: what the report compares, and Table 1, every measure shown
-    intro = html[html.index('<section class="sec" id="introduction">'):]
-    intro = intro[: intro.index("</section>")]
-    assert '<p class="secnum">1</p><h2>Introduction</h2>' in intro
-    assert "What the report compares" in intro
-    assert '<span class="fnum">Table 1</span> <span class="ftitle">The measures in this report' in intro
-    for name in re.findall(r'<tr><th scope="row">([^<]+)</th><td class="num total-col', html):
-        if name != "All measures together":
-            assert f'<tr><th scope="row">{name}</th>' in intro
-    # Its pointer to the poverty section uses that section's number
-    num = re.search(r'<p class="secnum">(\d+)</p><h2>Poverty and inequality</h2>', html).group(1)
-    assert f"Section {num}." in intro
-    # The model description is said once, in the introduction
-    assert html.count("open-source microsimulation model") == 1
+    cover = html[html.index('<section class="cover"'):]
+    cover = cover[: cover.index("</section>")]
+    assert '<span class="cover__light">Autumn Budget 2026:</span>' in cover
+    assert "effects on households and the public finances" in cover
+    assert "Budget of 28&nbsp;October&nbsp;2026" in cover and "Figures are for 2027-28 unless stated." in cover
+    assert 'class="cover__band"' in cover
 
 
 def test_better_off_threshold_and_left_out_outlook(tmp_path):
     html = build(publication(tmp_path), tmp_path / "out")
     # calculators.py AGE_CHANGE_THRESHOLD = 0.0001: more than 0.01% of net income
     assert "rises by more than 0.01%" in html
-    assert "Changes of any size count" not in html
-    assert "Living standards outlook." in html
-    assert '<p class="explain">' in html
+    assert "Outlook for household incomes." in html
+    assert '<p class="para"' in html
+
+
+def test_text_rules(tmp_path):
+    html = build(publication(tmp_path), tmp_path / "out")
+    names = [f"Measure {i}" for i in range(3)]
+    text = body_text(html)
+    for sentence in (x for part in prose(html) for x in re.split(r"(?<=[.;:])\s+", part)):
+        for name in names:
+            assert not sentence.startswith(name), sentence
+    assert "changes by −" not in text and "changes by -" not in text
+    assert not re.search(r"\b(poor|poorer|poorest|rich|richer|richest)\b", text, flags=re.I)
+    forbidden = ["Institute for Fiscal Studies", "IFS", "Resolution Foundation", "Joseph Rowntree", "Centre for Policy Studies",
+                 "Adam Smith Institute", "Reeves", "Starmer", "Sunak", "Badenoch", "Farage", "Chancellor of the Exchequer", "Hunt"]
+    for name in forbidden:
+        assert not re.search(rf"\b{re.escape(name)}\b", text), name
+
+
+def test_provisional_appears_only_in_the_allowed_places(tmp_path):
+    html = build(publication(tmp_path), tmp_path / "out")
+    body = html[html.index("<body>"):]
+    body = re.sub(r'<div class="cover__band"[^>]*>.*?</div>', "", body)
+    body = re.sub(r'<div class="watermark"[^>]*>.*?</div>', "", body)
+    b1 = re.search(r'id="table-b1".*?</table>', body, flags=re.S).group(0)
+    body = body.replace(b1, re.sub(r"<td>Provisional</td>", "", b1))
+    # the provenance list names each artifact's status
+    body = re.sub(r'<ul class="provenance__list">.*?</ul>', "", body, flags=re.S)
+    assert not re.search("provisional", re.sub(r"<[^>]+>", " ", body), flags=re.I)
+    # the footer carries the label (a margin box in the stylesheet)
+    assert re.search(r"@bottom-left \{ content: \"Provisional:", html)
+
+
+def test_colours_match_the_dashboard_tokens():
+    theme = _js_text("src/utils/chartTheme.js")
+    colours = dict(re.findall(r'^\s+(\w+): "(#[0-9A-Fa-f]{6})",', theme, flags=re.M))
+    for k, v in br.CHART_COLOURS.items():
+        assert colours[k].upper() == v.upper(), k
+    for name in ("raise", "cost"):
+        js = re.search(rf"{name}: \[([^\]]+)\]", theme).group(1)
+        assert re.findall(r'"(#[0-9A-Fa-f]{6})"', js) == br.POLICY_RAMPS[name]
+    assert re.search(r"alternateAbove: (\d+)", theme).group(1) == str(br.MEASURE_RAMPS["alternateAbove"])
+    assert br.measure_ramp("cost", 3) == ["#0D9488", "#14B8A6", "#2DD4BF"]
+    ramp = br.measure_ramp("revenue", 12)
+    assert ramp[0] == "#78350F" and len(set(ramp)) == 12
+
+
+def test_withheld_cells_are_never_printed_as_zero(tmp_path):
+    data = publication(tmp_path)
+    m = json.loads((data / "manifest.json").read_text())
+    key = next(iter(m["combined"]))
+    d = data / m["combined"][key]["artifact"]
+    path = d / "winners_losers.csv"
+    rows = [r for r in csv.DictReader(open(path)) if not (r["decile"] == "3" and r["year"] == "2027")]
+    _write(path, rows)
+    receipt = json.loads((d / "receipt.json").read_text())
+    receipt["dashboard"]["files"]["winners_losers.csv"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    (d / "receipt.json").write_text(json.dumps(receipt))
+    html = build(data, tmp_path / "out")
+    c2 = re.search(r'id="table-c2".*?</table>', html, flags=re.S).group(0)
+    together = c2[c2.index('<tr class="total">'):]
+    cells = re.findall(r'<td class="num">([^<]*)</td>', together)
+    assert cells[2] == "withheld"
+    assert br.WITHHELD_NOTE in html
+
+
+def test_page_fill_check(tmp_path):
+    # Needs Chrome, playwright and pymupdf; skipped otherwise.
+    pytest.importorskip("playwright.sync_api")
+    pytest.importorskip("pymupdf")
+    out = tmp_path / "out"
+    try:
+        code = br.main(["build", "--data", str(publication(tmp_path)), "--out", str(out), "--pdf"])
+    except Exception as error:  # no Chrome here
+        pytest.skip(f"Chrome not available: {error}")
+    assert code == 0
+    assert br.page_problems(out / "report.pdf") == []
+    html = (out / "report.html").read_text()
+    assert re.search(r'<span class="toc__page" data-toc="measures">\d+</span>', html)
 
 
 def test_no_combined_run_shows_a_notice_never_a_sum(tmp_path):
@@ -225,18 +323,18 @@ def test_a_stale_member_means_no_combined_figures(tmp_path):
     assert "All measures together" not in build(data, tmp_path / "out")
 
 
-def test_unsupported_year_is_n_a_and_the_total_is_not_printed(tmp_path):
+def test_unsupported_year_is_n_a(tmp_path):
     html = build(publication(tmp_path, unsupported={"m01": [2028]}), tmp_path / "out")
-    rev = html[html.index('id="revenue"'):]
-    row = rev[rev.index('<th scope="row">Measure 1</th>'):]
+    c1 = html[html.index('id="table-c1"'):]
+    row = c1[c1.index("Measure 1</th>"):]
     row = row[: row.index("</tr>")]
-    assert row.count("n/a") == 2  # the 2028-29 cell and the total
+    assert row.count("n/a") == 1
 
 
 def test_a_measure_missing_a_year_is_n_a_not_zero(tmp_path):
     html = build(publication(tmp_path, skip={"m02": 2028}), tmp_path / "out")
-    rev = html[html.index('id="revenue"'):]
-    row = rev[rev.index('<th scope="row">Measure 2</th>'):]
+    c1 = html[html.index('id="table-c1"'):]
+    row = c1[c1.index("Measure 2</th>"):]
     assert "n/a" in row[: row.index("</tr>")]
 
 
@@ -296,7 +394,7 @@ def test_candidate_rule(manifest, candidate):
 
 def test_staged_measure_is_listed_not_shown(tmp_path):
     html = build(publication(tmp_path, statuses={"m02": "staged"}, combined=False), tmp_path / "out")
-    assert "Modelled but not in this report" in html
+    assert "Modelled but not shown" in html
     assert "awaiting review" in html
 
 
@@ -335,13 +433,16 @@ def test_check_catches_a_changed_figure(tmp_path):
 @pytest.mark.parametrize(
     "fmt, value, text",
     [
-        ("bn2", -2.519, "−£2.52bn"),
-        ("bn2", 0.001, "£0.00bn"),
-        ("bn_words", -2.519, "£2.5 billion"),
-        ("bn_words", -0.42, "£420 million"),
+        ("bn1", -2.519, "−£2.5bn"),
+        ("bn1", 0.001, "£0.0bn"),
+        ("bn1_num", 0.6, "+0.6"),
+        ("bn1_words", -10.98, "£11.0bn"),
         ("gbp", 85.98, "+£86"),
         ("gbp", -0.4, "£0"),
-        ("pp2", -0.002, "0.00pp"),
+        ("pp2", -0.002, "0.00"),
+        ("pp2_label", -0.32, "−0.32pp"),
+        ("pp2_words", -0.32, "0.32"),
+        ("pct1", 0.749, "+0.7%"),
         ("pct2", -0.159, "−0.16%"),
     ],
 )
@@ -370,7 +471,7 @@ def test_headings_keep_their_spaces_when_they_wrap(tmp_path):
     assert headings
     for _, text in headings:
         assert "\n" not in text and "  " not in text, text
-    assert "<h1>Autumn Budget 2026: the measures modelled</h1>" in html
+    assert '<span class="cover__strong">Autumn Budget 2026: the measures modelled</span>' in html
 
 
 def test_pdf_outline_keeps_the_space_at_a_wrapped_title(tmp_path):
@@ -426,11 +527,10 @@ def test_withheld_cells_are_not_plotted_or_ranked_as_zero(tmp_path):
     receipt["dashboard"]["files"]["age_impact.csv"] = hashlib.sha256(path.read_bytes()).hexdigest()
     (d / "receipt.json").write_text(json.dumps(receipt))
     html = build(data, tmp_path / "out")
-    age = html[html.index('id="age"'):]
+    age = html[html.index('id="people"'):]
     age = age[: age.index("</section>")]
-    assert "withheld" in age and br.WITHHELD_NOTE in age
-    assert "65 and over gain least" not in age
-    assert "every age group with a published figure" in age
+    assert br.WITHHELD_NOTE in age
+    assert "65 and over" not in " ".join(re.findall(r'<p class="exhibit__title">(.*?)</p>', age))
 
 
 def test_later_year_of_opposite_sign_is_a_key_finding(tmp_path):
@@ -448,15 +548,17 @@ def test_later_year_of_opposite_sign_is_a_key_finding(tmp_path):
     receipt["dashboard"]["files"]["winners_losers.csv"] = hashlib.sha256(path.read_bytes()).hexdigest()
     (d / "receipt.json").write_text(json.dumps(receipt))
     html = build(data, tmp_path / "out")
-    kf = html[html.index('<div class="kf">'):]
+    kf = html[html.index('<ol class="kf">'):]
     kf = kf[: kf.index("</ol>")]
-    assert "Later years." in kf and "By 2028-29" in kf and "falls by" in kf
+    assert "By 2028-29 the average household change turns to a loss of" in kf
 
 
-def test_provenance_is_one_sentence_with_no_digest_table(tmp_path):
+def test_provenance_list_prints_short_digests_only(tmp_path):
     html = build(publication(tmp_path), tmp_path / "out")
-    assert "Artifacts behind this report" not in html
-    assert "a" * 16 not in html and "b" * 16 not in html
+    prov = html[html.index('class="provenance'):]
+    prov = prov[: prov.index("</ul>")]
+    assert "<code>" + "a" * 12 + "</code>" in prov
+    assert "a" * 13 not in html
     assert "traced, with the file, row and column it came from" in html
 
 
