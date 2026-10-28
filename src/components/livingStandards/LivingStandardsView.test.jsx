@@ -421,12 +421,16 @@ describe("the Pre-measures forecast view", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Living standards" }));
     const inequality = (await heading(/^Inequality over time/)).closest(".ls-card");
     choose(inequality, "Inequality measure", "90/10 ratio");
-    expect(inequality.querySelector(".chart-description").textContent).toMatch(/^Under current law, the gap between top and bottom incomes \(90:10 ratio\) (rises|falls|stays)/);
+    expect(inequality.querySelector(".chart-description").textContent).toMatch(/^Under current law, the gap between top and bottom incomes \(90\/10 ratio\) (rises|falls|stays)/);
     // Both measures defined, whichever is shown (LS5); the years compared
     // shaded on the plot (LS6)
     fireEvent.click(within(inequality).getByRole("button", { name: "About this chart" }));
     expect(within(inequality).getByText(/0 when everyone has the same income/)).toBeInTheDocument();
     expect(within(inequality).getByText(/90% of the way up the income scale/)).toBeInTheDocument();
+    // One name for the measure on the card: the Options choice's, the
+    // sentence's and the Definitions term's
+    expect(inequality.textContent).toMatch(/90\/10 ratio/);
+    expect(inequality.textContent).not.toMatch(/90:10/);
     if (inequality.querySelector(".recharts-surface")) expect(inequality.querySelector(".over-time-span")).not.toBeNull();
     const growth = (await heading(/^Growth across the distribution/)).closest(".ls-card");
     // Year by year in tenths, as every other distribution chart (Pavel's

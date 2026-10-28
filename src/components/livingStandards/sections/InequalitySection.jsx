@@ -57,7 +57,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
     const what =
       measure === "gini"
         ? "income inequality, measured by the Gini coefficient,"
-        : "the gap between top and bottom incomes (90:10 ratio)";
+        : "the gap between top and bottom incomes (90/10 ratio)";
     summary = same ? (
       <>
         Under current law, {what} <strong>stays at {fmt(a.value)}</strong> from {fyDash(a.year)} to {fyDash(b.year)}.
@@ -85,7 +85,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
       definitions: [
         { term: "Gini coefficient", meaning: "0 when everyone has the same income, 1 when one person has it all." },
         {
-          term: "90:10 ratio",
+          term: "90/10 ratio",
           meaning: "Income of someone 90% of the way up the income scale divided by that of someone 10% of the way up.",
         },
       ],
