@@ -57,8 +57,14 @@ describe("Frozen thresholds against pay: data", () => {
     // Frozen: 100 / the earnings index
     expect(last.personal_allowance).toBeCloseTo((100 * 100) / earnings, 9);
     expect(last.higher_rate).toBe(last.personal_allowance);
-    // Plan 2 is uprated from April 2030 under current law
-    expect(last.plan_2).toBeCloseTo((100 * ((100 * 30060.868375) / 29385)) / earnings, 9);
+    // Plan 2 is uprated from April 2030 under current law (RPI, as the
+    // engine projects it: read from the file's current_law block)
+    const plan2 = Object.fromEntries(
+      PARAMETERS.current_law.rows.find((r) => r.label === "Plan 2 repayment threshold").points.map((p) => [p.year, p.before]),
+    );
+    expect(plan2[2026]).toBe(29385);
+    expect(plan2[2030]).toBeGreaterThan(29385);
+    expect(last.plan_2).toBeCloseTo((100 * ((100 * plan2[2030]) / plan2[2026])) / earnings, 9);
   });
 
   it("draws one line for the two income tax thresholds only while they are equal", () => {
