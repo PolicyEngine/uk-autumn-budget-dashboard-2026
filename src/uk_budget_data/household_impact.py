@@ -40,6 +40,7 @@ Discount), carries a note with its change (``HOUSEHOLD_NOTES``).
 
 import copy
 import importlib
+import inspect
 import json
 import os
 import threading
@@ -73,6 +74,9 @@ from policyengine_uk.variables.household.demographic.locations import (
 )
 from policyengine_uk.variables.input.council_tax_band import CouncilTaxBand
 
+from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
+    carers_allowance_earnings_taper,
+)
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.publication.combine import (
@@ -349,10 +353,27 @@ PROGRAMMES = (
                 "uc_childcare_element",
                 "benunit",
             ),
+            _row(
+                "uc_carer_element",
+                "Carer element",
+                "uc_carer_element",
+                "benunit",
+            ),
         ),
         note=(
             "Before the benefit cap, which is its own row. Elements are "
             "before the earnings taper."
+        ),
+    ),
+    Programme(
+        "carers_allowance",
+        "Carer's Allowance",
+        "benefit",
+        "carers_allowance",
+        "person",
+        note=(
+            "As paid, after any overlapping benefit such as the State "
+            "Pension. Universal Credit counts it as income, pound for pound."
         ),
     ),
     Programme(
@@ -542,6 +563,13 @@ def _all_rows():
     for programme in (*PROGRAMMES, *OTHER_ROWS):
         yield programme
         yield from programme.children
+
+
+# The rows only a carer can have: shown only for a household with one
+# (``HouseholdAnswers.is_carer``), so every other household's answer is
+# exactly as it was before the form asked about caring. They are always
+# computed, and a non-carer's are £0, so "Other benefits" is unchanged.
+CARER_ROWS = frozenset({"carers_allowance", "uc_carer_element"})
 
 
 # Measures in the national figures that the household breakdown can't
@@ -750,10 +778,14 @@ class HouseholdAnswers:
     # Pension age; None is the full new State Pension (``state_pensions``)
     state_pension: Optional[float] = None
     partner_state_pension: Optional[float] = None
-    # Hours a week the head cares for someone who gets a qualifying
-    # disability benefit (policyengine-uk's ``care_hours``, which Carer's
-    # Allowance tests against its 35 hours); 0, not a carer
-    care_hours: float = 0
+    # Whether the head looks after someone, unpaid, and for how many hours
+    # a week (policyengine-uk's ``care_hours``, read only for a carer). At
+    # the Carer's Allowance minimum (35 hours) the model pays the allowance
+    # to a carer under its earnings limit, and counts them as a carer for
+    # Universal Credit's carer element (``is_carer_for_benefits``). The
+    # partner is not asked.
+    is_carer: bool = False
+    care_hours_per_week: float = 35
 
 
 # policyengine-uk's age-derived education stage
@@ -1006,8 +1038,10 @@ def household_entities(
     ]
     if pension is not None:
         people[0]["state_pension_reported"] = pension
-    if answers.care_hours:
-        people[0]["care_hours"] = answers.care_hours
+    if answers.is_carer:
+        # Only for a carer, so a non-carer's household is exactly as before
+        # (no care_hours: policyengine-uk's default, 0)
+        people[0]["care_hours"] = answers.care_hours_per_week
     if answers.has_partner:
         people.append(
             {
@@ -1726,7 +1760,9 @@ def fiscal_year(year: int) -> str:
 PARTS = ("by_policy", "sweep")
 
 
-def _programme_entry(row: Programme, before: dict, after: dict) -> dict:
+def _programme_entry(
+    row: Programme, before: dict, after: dict, hidden: frozenset = frozenset()
+) -> dict:
     base, reform = before["rows"][row.id], after["rows"][row.id]
     entry = {
         "id": row.id,
@@ -1741,10 +1777,20 @@ def _programme_entry(row: Programme, before: dict, after: dict) -> dict:
         entry["note"] = row.note
     if row.children:
         entry["children"] = [
-            _programme_entry(child, before, after) for child in row.children
+            _programme_entry(child, before, after)
+            for child in row.children
+            if child.id not in hidden
         ]
     return entry
 
+
+# The first year the Carer's Allowance taper applies: its modifier's own
+# default, as the registered measure runs it
+CARERS_ALLOWANCE_TAPER_START = (
+    inspect.signature(carers_allowance_earnings_taper)
+    .parameters["start_year"]
+    .default
+)
 
 # Measures that cannot move this household's net income in this year,
 # from the household's answers alone, so the split by policy need not run
@@ -1761,7 +1807,7 @@ SKIP_REASONS = {
     "fuel_duty_rise_deferral": "no petrol or diesel spending",
     "road_fuel_vat_cut": "no petrol or diesel spending, or after 2027-28",
     "domestic_electricity_zero_vat": "no electricity spending, or after 2027-28",
-    "carers_allowance_earnings_taper": "no one cares for someone",
+    "carers_allowance_earnings_taper": "not a carer, or before 2030-31",
     "lha_unfreeze_2027": "not renting privately, or before 2027-28",
     "employer_nics_secondary_threshold_raise": (
         "no employment income, or before 2027-28"
@@ -1801,10 +1847,11 @@ def provably_unaffected(
     if measure_id == "domestic_electricity_zero_vat":
         return not answers.electricity_spending or year >= 2028
     if measure_id == "carers_allowance_earnings_taper":
-        # Only the head's caring is asked, and no reported Carer's
-        # Allowance: without caring hours no one meets its conditions, in
-        # any year, under current law or the taper.
-        return not answers.care_hours
+        # Only the head can be a carer (care_hours); no one reports a
+        # Carer's Allowance, so with no carer no one meets its conditions,
+        # under current law or the taper. Before its start year it is
+        # current law.
+        return not answers.is_carer or year < CARERS_ALLOWANCE_TAPER_START
     if measure_id == "lha_unfreeze_2027":
         # Local Housing Allowance caps private rents only.
         return year < 2027 or answers.tenure != "RENT_PRIVATELY"
@@ -1901,6 +1948,7 @@ def calculate_household_impact(
     combined = reform_net - base_net
 
     identity = runtime_identity()
+    hidden = frozenset() if answers.is_carer else CARER_ROWS
     result = {
         "year": year,
         "fiscal_year": fiscal_year(year),
@@ -1959,8 +2007,9 @@ def calculate_household_impact(
         "not_modelled": sides.not_modelled,
         "by_policy": None,
         "programmes": [
-            _programme_entry(row, before, after)
+            _programme_entry(row, before, after, hidden)
             for row in (*PROGRAMMES, *OTHER_ROWS)
+            if row.id not in hidden
         ],
         "not_in_breakdown": list(NOT_IN_BREAKDOWN),
         "dependants": _dependants(answers, before),

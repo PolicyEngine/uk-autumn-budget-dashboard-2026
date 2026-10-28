@@ -124,9 +124,10 @@ export const HOUSEHOLD_EXAMPLES = [
       // no Universal Credit
       partner_salary: 34200,
       tenure: "OWNED_WITH_MORTGAGE",
-      // At least 35 hours a week for someone who gets a qualifying
-      // disability benefit: Carer's Allowance's caring condition (DWP)
-      cares_for_someone: true,
+      // A carer for 35 hours a week, Carer's Allowance's minimum (DWP), for
+      // someone who gets a qualifying disability benefit
+      is_carer: true,
+      care_hours_per_week: 35,
       // Its tenth by gross income: the couple's £47,300 a year in 2027-28,
       // £910 a week
       ...spendingInputs(5),

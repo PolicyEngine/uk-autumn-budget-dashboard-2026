@@ -187,9 +187,15 @@ def check_pre_is_march(forecast: dict, efo: Path) -> None:
     example) fails here instead of drawing October as March.
     """
     years = sorted(
-        {int(p["year"]) for s in _series_by_key(forecast).values() for p in s["pre"]}
+        {
+            int(p["year"])
+            for s in _series_by_key(forecast).values()
+            for p in s["pre"]
+        }
     )
-    computed = compute_post(forecast, read_forecast(efo, [years[0] - 1, *years]))
+    computed = compute_post(
+        forecast, read_forecast(efo, [years[0] - 1, *years])
+    )
     wrong = [
         key
         for key, series in _series_by_key(forecast).items()

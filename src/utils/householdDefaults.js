@@ -78,8 +78,10 @@ export const WIZARD_DEFAULTS = {
   children_in_education: [],
   // Entitlement: the household claims what it is due
   claims_universal_credit: true,
-  // Not a carer, until answered
-  cares_for_someone: false,
+  // Not a carer until answered; a carer's hours of care a week start at
+  // 35, the Carer's Allowance minimum
+  is_carer: false,
+  care_hours_per_week: 35,
   council_tax_band: "D",
   salary_sacrifice_per_year: 0,
   petrol_spending_per_year: DEFAULT_SPENDING.petrol,

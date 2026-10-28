@@ -447,15 +447,21 @@ class HouseholdAnswersRequest(BaseModel):
         le=100_000,
         description="The partner's State Pension, as state_pension",
     )
-    care_hours: float = Field(
-        default=0,
+    is_carer: bool = Field(
+        default=False,
+        description=(
+            "Whether the head looks after someone, unpaid. Left out: not a "
+            "carer, as before the form asked."
+        ),
+    )
+    care_hours_per_week: float = Field(
+        default=35,
         ge=0,
         le=168,
         description=(
-            "Hours a week caring for someone who gets a qualifying "
-            "disability benefit, as policyengine-uk's care_hours: 35 or "
-            "more meets Carer's Allowance's caring condition. Left out: "
-            "not a carer"
+            "The head's hours of care a week, read only with is_carer, as "
+            "policyengine-uk's care_hours: from 35, Carer's Allowance (under "
+            "its earnings limit) and the Universal Credit carer element"
         ),
     )
 

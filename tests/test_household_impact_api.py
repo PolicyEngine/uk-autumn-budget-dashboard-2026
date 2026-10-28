@@ -110,10 +110,6 @@ def _with(change):
             {"household": {"partner_state_pension": 200_000}},
             ["body", "household", "partner_state_pension"],
         ),
-        (
-            {"household": {"care_hours": 169}},
-            ["body", "household", "care_hours"],
-        ),
         ({"household": {"salary_year": 2024}}, ["body", "household"]),
         ({"year": 2027, "household": {"salary_year": 2028}}, ["body"]),
     ],
@@ -150,12 +146,6 @@ def test_the_state_pension_reaches_the_answers_or_is_left_to_the_model():
     answers = request.answers()
     assert answers.state_pension is None
     assert answers.partner_state_pension == 9_000
-
-
-def test_caring_hours_reach_the_answers_and_default_to_none():
-    assert api.HouseholdAnswersRequest().answers().care_hours == 0
-    request = api.HouseholdAnswersRequest(care_hours=35)
-    assert request.answers().care_hours == 35
 
 
 def test_answers_are_kept_by_request(monkeypatch):
