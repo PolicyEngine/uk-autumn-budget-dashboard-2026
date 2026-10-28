@@ -154,6 +154,18 @@ describe("Frozen thresholds against pay: card", () => {
     expect(document.body.textContent).not.toMatch(/candidate measure/);
   });
 
+  it("links the parameters at the policyengine-uk release it names, in a new tab", async () => {
+    render(<FrozenThresholdsCard data={OUTLOOK} />);
+    await screen.findByText(/^By 2031-32/);
+    fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
+    const link = [...document.querySelectorAll("a")].find((a) => /^policyengine-uk \S+ parameters \(opens in a new tab\)$/.test(a.textContent));
+    expect(link).toBeTruthy();
+    const version = link.textContent.match(/^policyengine-uk (\S+) parameters/)[1];
+    expect(link.getAttribute("href")).toBe(`https://github.com/PolicyEngine/policyengine-uk/tree/${version}/policyengine_uk/parameters`);
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+  });
+
   it("holds its place when the thresholds file is missing", async () => {
     serve(null);
     render(<FrozenThresholdsCard data={OUTLOOK} />);
