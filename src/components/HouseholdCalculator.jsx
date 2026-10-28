@@ -30,7 +30,6 @@ import { DEFAULT_SPENDING, SALARY_SOURCE, WIZARD_DEFAULTS, regionalRent } from "
 export { WIZARD_DEFAULTS };
 import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
 import ConstituencyField from "./personal/ConstituencyField";
-import PolicyIcons from "./personal/PolicyBadge";
 import { policyQuestions } from "../utils/householdPolicyFields";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
@@ -418,42 +417,53 @@ export function groupSummary(title, { answer, applies, inputs, presetId }) {
 }
 
 /**
- * A numbered group's line for its closed heading, once any of its answers
- * differs from where it started: "Petrol £420 · Diesel £230 · Electricity
- * £910". Amounts above zero, and choices changed; null when none differs.
+ * A numbered group's line while it is closed, standing in for its boxes:
+ * what its answers are now. Amounts as "Petrol £1,300 · Diesel £1,300 ·
+ * Electricity £1,010 a year" (those above zero; "None" when none is),
+ * Universal Credit as "yes" or "no" and the loan plan by name. `changed`
+ * is whether any answer differs from where it started (WIZARD_DEFAULTS,
+ * or a prefill); `typical` whether it shows amounts all left there.
  */
 export function stepSummary(fields, { answer, applies, changed, inputs }) {
   const shown = fields.filter(applies);
-  if (!shown.some(changed)) return null;
-  const parts = [];
+  const amounts = [];
+  const choices = [];
   for (const id of shown) {
     if (NUMBER_CONFIGS[id]) {
-      if (answer(id) > 0) parts.push(`${NUMBER_CONFIGS[id].label} ${pounds(answer(id))}`);
+      if (answer(id) > 0) amounts.push(`${NUMBER_CONFIGS[id].label} ${pounds(answer(id))}`);
     } else if (id === "claims_universal_credit") {
-      if (changed(id)) parts.push(inputs[id] ? "Claims Universal Credit" : "Does not claim Universal Credit");
-    } else if (CHOICE_CONFIGS[id] && changed(id)) {
+      choices.push(`Universal Credit: ${inputs[id] ? "yes" : "no"}`);
+    } else if (id === "student_loan_plan") {
+      const chosen = CHOICE_CONFIGS[id].options.find((option) => option.value === inputs[id]);
+      choices.push(!chosen || chosen.value === "NONE" ? "No student loan" : `${chosen.label} student loan`);
+    } else if (CHOICE_CONFIGS[id]) {
       const config = CHOICE_CONFIGS[id];
       const chosen = config.options.find((option) => option.value === inputs[id]);
-      if (chosen) parts.push(id === "student_loan_plan" ? (chosen.value === "NONE" ? "No student loan" : `${chosen.label} student loan`) : `${config.label} ${chosen.label}`);
+      if (chosen) choices.push(`${config.label}: ${chosen.label}`);
     }
   }
-  return parts.length > 0 ? parts.join(" · ") : null;
+  const numbers = shown.filter((id) => NUMBER_CONFIGS[id]);
+  const yearly = amounts.length > 0 && numbers.every((id) => id.endsWith("_per_year"));
+  const money = amounts.length > 0 ? `${amounts.join(" · ")}${yearly ? " a year" : ""}` : numbers.length > 0 ? "None" : null;
+  const text = [money, ...choices].filter(Boolean).join(" · ");
+  const anyChanged = shown.some(changed);
+  return { text, changed: anyChanged, typical: !anyChanged && amounts.length > 0 };
 }
 
 /**
- * One numbered group: its heading (the number, title, one muted line and
- * the policies it is asked for as tiny icons) is a button that opens and
- * closes its boxes, with a chevron at the right. Closed, it keeps the
- * heading and its line, and under them what its answers are once any
- * differs from where it started.
+ * One numbered group: its heading (the number, title and one muted line)
+ * is a button that opens and closes its boxes, with a chevron at the
+ * right. Closed, the muted line gives way to what its answers are now
+ * (stepSummary), marked "Changed" once any differs from where it started;
+ * a tap anywhere on it opens the group.
  */
-function StepGroup({ group, number, last, open, onToggle, summary, measures, children }) {
+function StepGroup({ group, number, last, open, onToggle, summary, children }) {
   const collapse = useCollapse(open);
   const headId = `household-step-${group.key}`;
   const hintId = `${headId}-hint`;
   const summaryId = `${headId}-summary`;
   const panelId = `${headId}-panel`;
-  const showSummary = !open && summary;
+  const showSummary = !open && Boolean(summary?.text);
   return (
     <section
       className={`household-group household-step ${open ? "is-open" : ""}`.trim()}
@@ -469,7 +479,7 @@ function StepGroup({ group, number, last, open, onToggle, summary, measures, chi
           aria-expanded={open}
           aria-controls={panelId}
           aria-labelledby={headId}
-          aria-describedby={showSummary ? `${hintId} ${summaryId}` : hintId}
+          aria-describedby={showSummary ? summaryId : hintId}
           onClick={onToggle}
         >
           <span className="household-step-number" aria-hidden="true">
@@ -479,18 +489,27 @@ function StepGroup({ group, number, last, open, onToggle, summary, measures, chi
             <span className="household-step-title" id={headId}>
               <span className="visually-hidden">{`Step ${number}:`}</span> {group.title}
             </span>
-            <span className="household-step-hint" id={hintId}>
-              {group.hint}
-            </span>
-            {showSummary && (
-              <span className="household-step-summary" id={summaryId}>
-                {summary}
+            {showSummary ? (
+              <span className="household-step-summary" id={summaryId} data-changed={summary.changed || undefined}>
+                {summary.text}
+                {summary.typical && (
+                  <>
+                    {" "}
+                    <span className="household-step-summary-note">(typical values)</span>
+                  </>
+                )}
+                {summary.changed && (
+                  <>
+                    {" "}
+                    <span className="household-step-changed">Changed</span>
+                  </>
+                )}
+              </span>
+            ) : (
+              <span className="household-step-hint" id={hintId}>
+                {group.hint}
               </span>
             )}
-          </span>
-          {/* A tap on the icons shows their names, and leaves the group as it is */}
-          <span className="household-step-icons" onClick={(event) => event.stopPropagation()}>
-            <PolicyIcons measures={measures} />
           </span>
           <svg
             className="household-more-chevron household-step-chevron"
@@ -1120,21 +1139,19 @@ function HouseholdCalculator({
   };
 
   // The numbered groups: You and Household always, each other one with
-  // the answers in it the selected policies read, its policies as tiny
-  // icons at the end of its heading
-  const measureFor = (policyId) => policies.find((policy) => policy.id === policyId) ?? { id: policyId, name: policyId };
+  // the answers in it the selected policies read
   const shownGroups = FORM_GROUPS.map((group) => {
     const fields = group.always ? group.fields : group.fields.filter((id) => askedUpFront.has(id));
     const used = new Set(policyAsks.filter((question) => fields.includes(question.id)).flatMap((question) => question.policies));
     return { ...group, fields, policies: householdPolicies.filter((policyId) => used.has(policyId)) };
   }).filter((group) => group.always || group.fields.length > 0);
-  // Whether a numbered group starts open: You and Household always; any
-  // other while a selected policy reads one of its answers, or while one
-  // of its answers differs from where it started. Opened or closed by
-  // hand, it stays so for the session. Closing one only hides its boxes:
+  // Whether a numbered group starts open: You and Household only. The
+  // others start closed, each saying what its answers are (an example's
+  // too: it does not open them), so the form reads calmly at first sight
+  // (Vahid, Budget day). Opened or closed by hand, it stays so for the
+  // session. Closing one only hides its boxes:
   // the answers stay as they are, and the calculation reads them all
-  const stepStartsOpen = (group) =>
-    Boolean(group.always) || group.policies.length > 0 || group.fields.filter(fieldApplies).some(changedFromTypical);
+  const stepStartsOpen = (group) => Boolean(group.always);
   const isStepOpen = (group) => stepOpen[group.key] ?? stepStartsOpen(group);
   const renderGroup = (group, index) => (
     <StepGroup
@@ -1145,7 +1162,6 @@ function HouseholdCalculator({
       open={isStepOpen(group)}
       onToggle={() => setStepOpen((prev) => ({ ...prev, [group.key]: !isStepOpen(group) }))}
       summary={stepSummary(group.fields, { answer, applies: fieldApplies, changed: changedFromTypical, inputs })}
-      measures={group.policies.map(measureFor)}
     >
       {group.fields.map((id) => renderField(id, { quiet: group.quiet?.includes(id) }))}
     </StepGroup>

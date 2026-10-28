@@ -2381,9 +2381,23 @@
   font-variant-numeric: tabular-nums;
 }
 
-.household-step-icons {
-  display: inline-flex;
-  flex: none;
+/* "Changed": a quiet tag after a closed group's answers once any differs
+   from where it started */
+.household-step-changed {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 6px;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--pe-teal-700);
+  background: var(--pe-teal-50);
+  border-radius: var(--pe-radius-sm);
+  vertical-align: baseline;
+}
+
+.household-step-summary-note {
+  color: var(--pe-gray-500);
 }
 
 .household-step-chevron {
@@ -2438,9 +2452,6 @@
   color: var(--pe-gray-500);
 }
 
-.household-step-head .policy-icons {
-  margin-top: 4px;
-}
 
 /* The boxes sit under the heading, clear of the rail; the gap above them
    is inside the expander, so a closed group keeps none */
