@@ -1,3 +1,4 @@
+import { cloneElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render as renderReact, screen } from "@testing-library/react";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
@@ -39,9 +40,10 @@ vi.mock("recharts", async () => {
   const actual = await vi.importActual("recharts");
   return {
     ...actual,
+    // A fixed size, so the plot itself is drawn
     ResponsiveContainer: ({ children }) => (
       <div data-testid="recharts-responsive-container" style={{ width: 800, height: 500 }}>
-        {children}
+        {cloneElement(children, { width: 800, height: 400 })}
       </div>
     ),
   };
@@ -202,6 +204,15 @@ describe("PensionersSection", () => {
     expect(screen.queryByRole("link", { name: "Household calculator" })).toBeNull();
     // Every card, the dumbbell drawn in HTML too, offers CSV, PNG and SVG
     expect(expectStandardDownloads(document.body)).toBe(4);
+  });
+
+  it("keys the change-by-year lines by its chips alone, with no names at the lines' ends", async () => {
+    render(<PensionersSection selectedPolicies={ALL} selectedYear={2027} policies={POLICIES} />);
+    const heading = await screen.findByRole("heading", { name: /Change per pensioner by year/ });
+    const card = heading.closest(".pensioners-trend");
+    expect(card.querySelectorAll(".recharts-line").length).toBeGreaterThan(0);
+    expect(card.querySelector(".trend-end-labels")).toBeNull();
+    expect(card.querySelector(".chart-legend .series-toggle")).not.toBeNull();
   });
 });
 

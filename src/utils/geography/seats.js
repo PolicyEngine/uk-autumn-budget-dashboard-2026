@@ -4,10 +4,14 @@
  *
  * A seat's state comes only from its own published row:
  *
- * - `reported` or `approximate`: the row's category colour, solid when
- *   reported and under a dot texture when approximate;
- * - `withheld`: hatched, with no figure;
+ * - `reported` or `approximate`: the row's colour, solid when reported and
+ *   plain either way (the card says when it is approximate);
+ * - `withheld`: drawn as No data, with no figure;
  * - `no-data`: no row at all, drawn as such and never given a value.
+ *
+ * A seat too uncertain to place on the scale is drawn as No data too, so
+ * the key is the colour scale and one No data swatch (Vahid, 28 October);
+ * its card still gives its figure and interval.
  */
 
 import { TOO_UNCERTAIN, classifyRow } from "./classify";
@@ -17,10 +21,6 @@ import {
   CATEGORY_COLOURS,
   NO_DATA_FILL,
   NO_DATA_STROKE,
-  UNCERTAIN_FILL,
-  WITHHELD_FILL,
-  approximateColourFill,
-  approximateFill,
 } from "./palette";
 import { regionForBoundary } from "./regions";
 import { lookupRow } from "./rows";
@@ -104,7 +104,8 @@ export function constituencySentence(states, { outcome, yearLabel, several = fal
   const gains = published.filter((row) => signOf(row.value, outcome) === "gain");
   const losses = published.filter((row) => signOf(row.value, outcome) === "loss");
   const flat = published.length - gains.length - losses.length;
-  const notPublished = withheld > 0 ? `; ${seatsWord(withheld)} ${withheld === 1 ? "is" : "are"} not published` : "";
+  // "; 71 are not published": the noun is said once, on the first count
+  const notPublished = withheld > 0 ? `; ${withheld.toLocaleString("en-GB")} ${withheld === 1 ? "is" : "are"} not published` : "";
   const oneWay = flat === 0 && (gains.length === 0 || losses.length === 0);
   if (oneWay) {
     const moving = gains.length > 0 ? gains : losses;
@@ -136,40 +137,40 @@ export function constituencySentence(states, { outcome, yearLabel, several = fal
 const PLAIN_STROKE = Object.freeze({ stroke: CHART_COLOURS.surface, strokeWidth: 0.05 });
 
 /**
- * How a seat is drawn. `fill` is an attribute value: a colour, a dotted
- * pattern's url() for an approximate seat, or the hatch's for a withheld
- * one. With `colourOf` (a value to a #rrggbb colour, the map's continuous
- * scale) a seat takes its figure's colour, and an approximate seat's
- * `dots` names the colour its dot texture needs; a seat too uncertain to
- * classify is mid grey. Without it, its category's colour.
+ * Whether the map draws a seat as No data: no row, not published (the
+ * disclosure guard: never a colour, which on a map reads as a value), or
+ * too uncertain to place on the scale.
+ */
+export function drawnAsNoData(state) {
+  return !state || state.kind === "no-data" || state.kind === "withheld" || state.category === TOO_UNCERTAIN;
+}
+
+// The same thin border as every other seat (PLAIN_STROKE's width)
+const NO_DATA_STYLE = Object.freeze({
+  fill: NO_DATA_FILL,
+  fillOpacity: 1,
+  stroke: NO_DATA_STROKE,
+  strokeWidth: 0.05,
+});
+
+/**
+ * How a seat is drawn. `fill` is a plain colour, with no texture; a seat
+ * drawn as No data (drawnAsNoData) is blank and outlined. With `colourOf`
+ * (a value to a #rrggbb colour, the map's continuous scale) a seat takes
+ * its figure's colour, approximate or not. Without it, its category's
+ * colour.
  */
 export function seatStyle(state, colourOf) {
-  const colour = () => {
-    if (!colourOf) return null;
-    if (state.category === TOO_UNCERTAIN) return UNCERTAIN_FILL;
-    return colourOf(state.row?.value);
-  };
-  switch (state?.kind) {
+  if (drawnAsNoData(state)) return { ...NO_DATA_STYLE };
+  const colour = () => (colourOf ? colourOf(state.row?.value) : null);
+  switch (state.kind) {
+    // Approximate: plain colour, as a reported figure (Vahid, 28
+    // October); the card and About this chart say it is approximate
     case "reported":
+    case "approximate":
       return { fill: colour() ?? CATEGORY_COLOURS[state.category], fillOpacity: 1, ...PLAIN_STROKE };
-    case "approximate": {
-      const dots = colour();
-      return {
-        fill: dots ? approximateColourFill(dots) : approximateFill(state.category),
-        ...(dots ? { dots } : {}),
-        fillOpacity: 1,
-        ...PLAIN_STROKE,
-      };
-    }
-    case "withheld":
-      return { fill: WITHHELD_FILL, fillOpacity: 1, ...PLAIN_STROKE };
     default:
-      return {
-        fill: NO_DATA_FILL,
-        fillOpacity: 1,
-        stroke: NO_DATA_STROKE,
-        strokeWidth: 0.3,
-      };
+      return { ...NO_DATA_STYLE };
   }
 }
 
@@ -182,7 +183,9 @@ export function seatSummary(state) {
 }
 
 /** The card's line for a seat with no published figure. */
-export const WITHHELD_SEAT_NOTE = "Not published: too few survey households";
+export const WITHHELD_SEAT_NOTE = "No data: not published, too few survey households";
+/** The card's line for a seat drawn as No data for a figure too uncertain to place on the scale. */
+export const UNCERTAIN_SEAT_NOTE = "No data on the map: too uncertain to place on the scale";
 /** A By policy row for a measure withheld in this seat, and its tooltip. */
 export const WITHHELD_MEASURE_NOTE = "Not published";
 export const WITHHELD_MEASURE_TITLE =
@@ -195,25 +198,19 @@ export const OTHER_POLICIES_HEADING = "Other selected policies";
 /** The line for measures with no change in the seat: "+1 with no change". */
 export const unchangedLine = (count) => `+${count} with no change`;
 
-const SUPPORT_BAND_WORDS = Object.freeze({
-  "<10": "fewer than 10",
-  "10–29": "10–29",
-  "30+": "30 or more",
-});
+/** The card's line for an approximate figure: the map draws it plain, so the card says so. */
+export const APPROXIMATE_SEAT_NOTE = "Approximate: based on fewer than 30 survey households";
 
 /**
  * The card's one muted line on how firm a figure is, or null when there is
- * nothing to add: an approximate figure gives its survey households and
- * 90% interval; a reported figure whose interval includes zero gives the
- * interval.
+ * nothing to add: an approximate figure says so, with its 90% interval (the
+ * map draws it in plain colour, with no texture); a reported figure whose
+ * interval includes zero gives the interval.
  */
 export function disclosureNote(row) {
   if (!row || row.tier === "withheld") return null;
   const interval = `90% interval ${formatInterval(row.outcome, row.lo, row.hi)}`;
-  if (row.tier === "approximate") {
-    const band = SUPPORT_BAND_WORDS[row.supportBand];
-    return band ? `Estimate from ${band} survey households; ${interval}` : `Approximate estimate; ${interval}`;
-  }
+  if (row.tier === "approximate") return `${APPROXIMATE_SEAT_NOTE}; ${interval}`;
   if (row.direction === "too_close_to_call") return interval;
   return null;
 }
@@ -348,7 +345,12 @@ export function seatCard({ feature, state, table, regional, reform, year, outcom
     policiesHeading: listed ? (shownMeasure ? OTHER_POLICIES_HEADING : PACKAGE_PARTS_HEADING) : null,
     byPolicy: listed ? byPolicy : [],
     unchanged: listed ? unchanged : [],
-    note: disclosureNote(state.row),
+    note:
+      state.category === TOO_UNCERTAIN
+        ? `${UNCERTAIN_SEAT_NOTE}; ${
+            disclosureNote(state.row) ?? `90% interval ${formatInterval(state.row.outcome, state.row.lo, state.row.hi)}`
+          }`
+        : disclosureNote(state.row),
   };
 }
 

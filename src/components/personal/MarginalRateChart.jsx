@@ -509,7 +509,10 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
         )}
       </div>
       <div className="single-year-legend chart-legend">
-        {parts && sync?.sharedLegend ? null : parts ? (
+        {parts && sync?.legend ? (
+          // The key shared with the net income card: the same chips and state
+          sync.legend()
+        ) : parts ? (
           // The parts and the total as chips, as the net income card's
           <SeriesToggle
             lead="Show:"

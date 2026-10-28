@@ -1,7 +1,7 @@
 import { chooseOption, optionsLabel } from "../../test/optionsPills";
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import EarningsChart, { pointerOnPlot } from "./EarningsChart";
+import EarningsChart, { pointerOnPlot, tipPlacement } from "./EarningsChart";
 import { layerLegendItems, layerRows, layersInUse, stackLayers } from "./netIncomeParts";
 import { CHART_COLOURS } from "../../utils/chartTheme";
 import { RATE_PARTS } from "./marginalRateParts";
@@ -179,5 +179,21 @@ describe("pointerOnPlot: the hover follows the pointer (Pavel's review, HH7)", (
   it("maps the plot's top to the axis's top and its foot to the bottom", () => {
     expect(pointerOnPlot(0, 0, plot).value).toBe(200_000);
     expect(pointerOnPlot(0, 200, plot).value).toBe(-100_000);
+  });
+});
+
+describe("tipPlacement: the hover box keeps room for its names on a phone (phone check)", () => {
+  it("sits 12px right of the guide while there is room, left of it past 60%", () => {
+    expect(tipPlacement(40, 1000)).toEqual({ left: 52 });
+    expect(tipPlacement(700, 1000)).toEqual({ right: 312 });
+  });
+
+  it("moves in from the edge rather than squeezing below 220px", () => {
+    // A 309px phone plot, the guide near the middle: 309 - 182 left only
+    // 127px, and "Earnings and other income" took four lines
+    expect(tipPlacement(170, 309)).toEqual({ left: 89 });
+    expect(tipPlacement(250, 309)).toEqual({ right: 71 });
+    // Narrower than the box: flush with the open edge
+    expect(tipPlacement(100, 200)).toEqual({ left: 0 });
   });
 });
