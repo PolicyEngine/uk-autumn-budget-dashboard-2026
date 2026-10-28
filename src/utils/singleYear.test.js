@@ -13,3 +13,14 @@ describe("vatRowLabel: the VAT row named by what moves it (Pavel's review, HH5)"
     expect(vatRowLabel([{ id: "fuel", rounded: 0 }, { id: "elec", rounded: 48 }], typeOf)).toBe("VAT");
   });
 });
+
+describe("outOfForceReason: why a policy has no effect in the calculator's year (CF2)", () => {
+  it("says the Warm Home Discount top-up is winter 2026-27 only", async () => {
+    const { outOfForceReason } = await import("./singleYear");
+    const { POLICY_DETAILS } = await import("./policyDetails");
+    const whd = (POLICY_DETAILS ?? []).find?.((p) => p.id === "warm_home_discount_top_up");
+    expect(whd).toBeDefined();
+    expect(outOfForceReason({ id: whd.id, description: whd.writtenFor }, 2027)).toBe("Winter 2026-27 only; the calculator starts in 2027-28");
+    expect(outOfForceReason({ id: whd.id, description: whd.writtenFor }, 2026)).toBeNull();
+  });
+});

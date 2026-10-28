@@ -597,7 +597,7 @@ export function SingleYearHeadline({
             requestHousehold={requestHousehold}
             year={data.year ?? year}
             selected={selected}
-            bars={data.byPolicy ? policyRows(data.byPolicy, totals.change, policies) : null}
+            bars={data.byPolicy ? policyRows(data.byPolicy, totals.change, policies, data.year ?? year) : null}
             splitFailed={!data.byPolicy && result.detailStatus === "error"}
           />
         </div>
@@ -655,7 +655,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
   // The figures' own year (see SingleYearHeadline)
   const yearLabel = fiscalYearTick(data.year ?? year);
   const totals = headlineTotals(data.net);
-  const bars = data.byPolicy ? policyRows(data.byPolicy, totals.change, policies) : null;
+  const bars = data.byPolicy ? policyRows(data.byPolicy, totals.change, policies, data.year ?? year) : null;
   const detailFailed = detailStatus === "error";
 
   // While newer inputs load, every section shows the last figures greyed,

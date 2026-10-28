@@ -358,7 +358,11 @@ function MethodologyTab({ onShowTab }) {
                   "Budgetary impact",
                   {
                     value: "Taxes collected less benefits and other spending, in £ billion a year.",
-                    more: ["Each policy's figure is net of every tax and spending change it causes."],
+                    more: [
+                      "Revenue is the change in government receipts net of spending in the model, including employer National Insurance and VAT.",
+                      "The employer NI threshold's figure is net of the income tax and National Insurance paid on the higher pay its saving goes to.",
+                      "The Plan 2 student loan threshold's figure is the change in student loan repayments.",
+                    ],
                   },
                 ],
                 [
@@ -457,6 +461,42 @@ function MethodologyTab({ onShowTab }) {
                     Neither adds up across policies, so each is read from one run: a policy&apos;s{" "}
                     <Term id="ownRuns">own</Term>, or the combined run when every policy is selected.
                   </>,
+                ],
+              ]}
+            />
+          </Topic>
+          {/* Pavel's review MT1 to MT4: where this dashboard's definitions
+              differ from the PolicyEngine app's */}
+          <Topic
+            id="definitions-compared"
+            title="Definitions compared with the PolicyEngine app"
+            preview="Inequality · Income tenths · Gains and losses · Poverty"
+          >
+            <FactList
+              items={[
+                [
+                  "Inequality",
+                  "Inequality (Gini, 90:10) uses PolicyEngine's household net income adjusted for household size, after indirect taxes such as VAT and fuel duty, counting each person. Poverty uses the official (HBAI) income, which leaves indirect taxes out, so price policies move inequality but not poverty.",
+                ],
+                [
+                  "Income tenths",
+                  "Income tenths rank people by household income adjusted for household size, as official statistics do; each bar is the average change per household in that tenth. These tenths differ from the PolicyEngine app's.",
+                ],
+                [
+                  "Gains and losses",
+                  {
+                    value: "Three thresholds, by chart:",
+                    more: [
+                      "Winners and losers and people affected: a change of more than 0.01% of household net income.",
+                      "Figures by area: under half a pound, or 0.005 percentage points, is no change.",
+                      "Household scatter: under £1 either way is no change.",
+                      "The PolicyEngine app's winners-and-losers bands (0.1% and 5%) are not used here.",
+                    ],
+                  },
+                ],
+                [
+                  "Poverty",
+                  "Poverty follows official statistics (HBAI): relative poverty after housing costs by default, and a child is a dependent child as HBAI defines one. The PolicyEngine app's default is before housing costs and ages 0 to 17.",
                 ],
               ]}
             />
@@ -639,7 +679,7 @@ function MethodologyTab({ onShowTab }) {
           </Topic>
           <Topic
             id={METHOD_ANCHORS.incomePosition}
-            title="Your place in the UK"
+            title="Where your income sits"
             preview="Income · Tenths · Distribution · Who moves · Among all households"
           >
             <FactList
@@ -666,6 +706,12 @@ function MethodologyTab({ onShowTab }) {
                 ],
               ]}
             />
+          </Topic>
+          <Topic id="household-whd" title="Warm Home Discount" preview="Shown in full if received">
+            <p className="method-more">
+              Warm Home Discount: shown in full if received. The national figures pay it to 85% of Pension Credit
+              households and 70% of other eligible households.
+            </p>
           </Topic>
         </MethodSection>
 

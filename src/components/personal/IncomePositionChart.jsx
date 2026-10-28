@@ -1001,7 +1001,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
                 caveats: [
                   "Where the changes are small next to incomes, the curves before and after overlap almost exactly.",
                 ],
-                method: { anchor: METHOD_ANCHORS.incomePosition, label: "How your place in the UK is worked out" },
+                method: { anchor: METHOD_ANCHORS.incomePosition, label: "How your income percentile is worked out" },
               }}
             />
           </div>
@@ -1068,7 +1068,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
                   "Tenths rank people by household income before the policies, adjusted for household size, as the population charts do; each bar is the average change in that tenth.",
                 ],
                 caveats: ["The decile charts rank by HBAI income, without VAT and fuel duty, so the two medians differ slightly."],
-                method: { anchor: METHOD_ANCHORS.incomePosition, label: "How your place in the UK is worked out" },
+                method: { anchor: METHOD_ANCHORS.incomePosition, label: "How your income percentile is worked out" },
               }}
             />
           </div>
