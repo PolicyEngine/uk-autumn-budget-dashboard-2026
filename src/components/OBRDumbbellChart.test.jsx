@@ -34,11 +34,11 @@ describe("OBRDumbbellChart", () => {
     ]);
   });
 
-  it("labels each row with the shared measure label: an icon and a derived category", () => {
+  it("labels each row with the shared measure label: its icon and name, no category line", () => {
     const { container } = chart();
     const names = [...container.querySelectorAll(".obr-dumbbell-name")];
     expect(names.every((name) => name.querySelector("svg path, svg circle, svg rect, svg line, svg polyline"))).toBe(true);
-    expect(names.map((name) => name.querySelector(".mrl-svg-caption")?.textContent)).toEqual(["Other", "Benefits", "National Insurance"]);
+    expect(names.every((name) => name.querySelector(".mrl-svg-caption") === null)).toBe(true);
   });
 
   it("says 'not in the official costings' for a missing official figure instead of plotting zero", () => {

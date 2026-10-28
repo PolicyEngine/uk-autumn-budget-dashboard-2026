@@ -84,7 +84,7 @@ describe("the OBR comparison table", () => {
       "Policy", "PolicyEngine", "Official static", "Official post-behavioural", "Difference",
     ]);
     const cells = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell");
-    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repealBenefits", "−£3.4bn", "−£3.3bn", "−£3.5bn", "−£100m"]);    // The table offers the same downloads as the chart
+    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repeal", "−£3.4bn", "−£3.3bn", "−£3.5bn", "−£100m"]);    // The table offers the same downloads as the chart
     expect(expectStandardDownloads(document.body)).toBe(1);
   });
 
@@ -199,7 +199,7 @@ describe("the comparison at 2031-32", () => {
     expect(container.querySelector(".obr-dumbbell-dot")).toBeNull();
     show("Table");
     const cells = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell");
-    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repealBenefits", "−£3.6bn", "—", "—", "—"]);
+    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repeal", "−£3.6bn", "—", "—", "—"]);
     // A dash is muted and the note says why
     expect(cells.slice(2).every((td) => td.classList.contains("is-none"))).toBe(true);
     expect([...container.querySelectorAll(".comparison-table-note")].map((p) => p.textContent)).toEqual([
@@ -233,7 +233,7 @@ describe("a year classified not comparable", () => {
     expect(container).not.toHaveTextContent("is not in the official costings");
     show("Table");
     const cells = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell");
-    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repealBenefits", "−£3.6bn", "Not comparable", "Not comparable", "—"]);
+    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repeal", "−£3.6bn", "Not comparable", "Not comparable", "—"]);
     // The reason on hover, and in the note under the table
     expect(cells[2]).toHaveAttribute("title", REASON);
     expect(cells[3]).toHaveAttribute("title", REASON);
@@ -250,7 +250,7 @@ describe("a year classified not comparable", () => {
     expect(container).not.toHaveTextContent("Not comparable");
     show("Table");
     const cells = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell");
-    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repealBenefits", "−£3.4bn", "—", "−£3.5bn", "+£100m"]);
+    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repeal", "−£3.4bn", "—", "−£3.5bn", "+£100m"]);
   });
 });
 

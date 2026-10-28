@@ -57,15 +57,17 @@ describe("measureCategoryOf", () => {
 });
 
 describe("MeasureRowLabel", () => {
-  it("draws an unknown measure with an icon, its name and a category, without crashing", () => {
+  it("draws an unknown measure with an icon and its name, without crashing; the category only on request", () => {
     const { container } = render(<MeasureRowLabel measure={{ id: "budget_2026_new_levy", name: "New levy" }} />);
     expect(container.querySelector(".mrl-icon svg")).toBeTruthy();
     expect(container.querySelector(".mrl-name")).toHaveTextContent("New levy");
-    expect(container.querySelector(".mrl-caption")).toHaveTextContent("Business");
+    expect(container.querySelector(".mrl-caption")).toBeNull();
+    const { container: withCaption } = render(<MeasureRowLabel caption measure={{ id: "budget_2026_new_levy", name: "New levy" }} />);
+    expect(withCaption.querySelector(".mrl-caption")).toHaveTextContent("Business");
   });
 
   it("drops the caption in its compact form", () => {
-    const { container } = render(<MeasureRowLabel compact measure={{ id: "fuel_duty_rise_deferral", name: "Fuel duty rises deferred" }} />);
+    const { container } = render(<MeasureRowLabel compact caption measure={{ id: "fuel_duty_rise_deferral", name: "Fuel duty rises deferred" }} />);
     expect(container.querySelector(".mrl--compact .mrl-icon svg")).toBeTruthy();
     expect(container.querySelector(".mrl-caption")).toBeNull();
   });

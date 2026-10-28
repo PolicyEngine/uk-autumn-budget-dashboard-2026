@@ -204,7 +204,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
   const nameWidth = narrow
     ? 0
     : Math.min(Math.max(...rows.map((row) => approxWidth(row.name, fontSize)), 80) + 16 + BAND_PAD + SVG_LABEL_INDENT.full, width * 0.38);
-  const rowHeight = narrow ? 54 : 40;
+  const rowHeight = narrow ? 50 : 36;
   const top = 24;
   const axisHeight = 26;
   const height = top + rows.length * rowHeight + axisHeight;
@@ -227,7 +227,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
     }),
   };
   const x = (value) => plotLeft + ((value - axis.min) / (axis.max - axis.min || 1)) * (plotRight - plotLeft);
-  const dotY = (index) => top + index * rowHeight + (narrow ? 38 : rowHeight / 2);
+  const dotY = (index) => top + index * rowHeight + (narrow ? 35 : rowHeight / 2);
 
   // A backing in the row's background so a gridline or the zero line never
   // runs through a label
