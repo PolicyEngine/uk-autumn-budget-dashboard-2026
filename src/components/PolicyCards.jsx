@@ -369,6 +369,11 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
                 {policy.example.title}
               </p>
               <p className="policy-card-example-text">{policy.example.text}</p>
+              {policy.example.items?.length > 0 && (
+                <ul className="policy-card-example-items">
+                  {policy.example.items.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              )}
               {policy.example.source && (
                 <p className="policy-card-example-source">
                   <a href={policy.example.source.href} target="_blank" rel="noopener noreferrer">
