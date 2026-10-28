@@ -257,6 +257,7 @@ code {
   --c-pension-contributions: #cbd5e1; /* gray-300 */
   --c-gain-light: #81e6d9; /* a small gain on the map; a light teal series (ui-kit teal-200) */
   --c-map-gain: #14b8a6; /* the constituency map scale's gain end, as on the 2025 dashboard */
+  --c-no-data: #f1f5f9; /* a constituency with no data on the map: a faint cool grey (slate-100), lighter than the scale's 0 grey (--c-grid) and every colour on the scale */
   --c-loss-light: #fbbf24; /* a small loss on the map */
   --c-ink: #1f2937; /* the map's approximate-figure dots */
   /* Notices: data pending or provisional */
@@ -346,13 +347,13 @@ body {
    of the page's flow and hidden above the window by default, so the band
    sits at the very top of the page with the tab rows under it, from the
    first paint. App.jsx shows it (data-site-nav-shown on <html>) when the pointer
-   reaches the top 8px of the window or leaves it through its top edge,
-   or the reader tabs into it (never on a scroll up; on a touch-only
+   rests at the window's top edge (SITE_NAV_EDGE_PX for SITE_NAV_DWELL_MS, utils/pageScroll), or the reader tabs into it (never on a scroll up; on a touch-only
    device, only at the page's very top), keeps it 1.5s and while it is in
    use, and hides it on any scroll down by the reader or once the pointer
    or focus has left; it measures the nav into
-   --site-nav-height. Shown, it overlays the top of the band (above it,
-   with a shadow); the band and tab rows never move, so --nav-offset is 0.
+   --site-nav-height. Shown, it sits above the band: --nav-offset becomes
+   its height, so the band and tab rows move down under it and the Year and
+   Policies pills stay in view.
    --motion-slide is 0 under reduced motion.
    Written against @policyengine/ui-kit 0.12.0, whose shell is
    <div class="min-h-screen flex flex-col"> with the nav as its first
@@ -363,10 +364,13 @@ body {
   --nav-offset: 0px;
 }
 
-/* The nav overlays the band when shown: it never moves the band or the
-   tab rows, so nothing under them is pushed or covered by the stack
-   (--nav-offset stays 0; App.jsx keeps the nav hidden at the page's top,
-   save on a touch-only device) */
+/* Shown, the nav pushes the band and tab rows down by its own height, so it
+   never covers the Year and Policies pills. On html, not :root[...]: the
+   CSS build folds a :root[attr] custom property rule into :root. */
+html[data-site-nav-shown] {
+  --nav-offset: var(--site-nav-height, 0px);
+}
+
 :root[data-site-nav-shown] .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
   box-shadow: 0 2px 8px var(--shadow-faint) !important;
 }
@@ -384,6 +388,31 @@ body {
 :root:not([data-site-nav-shown]) .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
   transform: translateY(-100%);
   box-shadow: none !important;
+}
+
+/* A touch-only device (a phone or tablet): the site nav is part of the
+   page, at its top, and scrolls away with it; it is never laid over the
+   page. Fixed and pushing the bars down by its height (above), it hid the
+   first 58px of every view under the tab rows on load: the bars moved
+   down, the content did not (team review, Budget day). In the flow, the
+   band, the tab rows and the content all start below it, and once it has
+   scrolled away the band sticks at the window's top. --nav-offset stays 0:
+   nothing is over the band. Same selectors as above, so these win. */
+@media (hover: none) and (pointer: coarse) {
+  html[data-site-nav-shown] {
+    --nav-offset: 0px;
+  }
+
+  .min-h-screen.flex.flex-col > div:first-child[style*="sticky"],
+  :root:not([data-site-nav-shown]) .min-h-screen.flex.flex-col > div:first-child[style*="sticky"],
+  :root[data-site-nav-shown] .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
+    /* Relative, not static: it keeps its z-index, so its menus still
+       open over the band */
+    position: relative !important;
+    transform: none;
+    box-shadow: none !important;
+    transition: none;
+  }
 }
 
 .app {
@@ -432,6 +461,7 @@ body {
 .title-row {
   position: sticky;
   top: var(--nav-offset);
+  transition: top var(--motion-slide) var(--ease-out);
   /* Above every chart, label, tooltip and card on the page */
   z-index: 1100;
   /* One row on a wide screen: the title, then the year and policy pills
@@ -576,6 +606,7 @@ body {
 .view-tabs-bar {
   position: sticky;
   top: calc(var(--nav-offset) + var(--title-row-height));
+  transition: top var(--motion-slide) var(--ease-out);
   /* Under the band and its pill lists, above the charts */
   z-index: 1090;
   margin-inline: calc(50% - 50vw);
@@ -1826,6 +1857,58 @@ body {
   }
 }
 
+/* A phone on its side (a short, wide window: LANDSCAPE_PHONE_QUERY in
+   utils/pageScroll.js, the same query): the title band and both tab rows
+   took about half the window (104 + 42 + 41px of 390). The band is one
+   compact row, as on a wide screen, with the pills' icon, value and
+   chevron only; and it tucks away above the window while the reader
+   scrolls down and slides back on any scroll up (App.jsx sets
+   data-band-hidden on .app). Tucked, --nav-offset is minus the band's
+   height, so the band's sticky top puts it just above the window and the
+   tab rows, --sticky-offset and every scroll that clears the bars move up
+   with it: one variable, so nothing gets out of step. Sticky offsets move
+   no content, so the page never jumps; the bars slide on their `top`
+   transition (--motion-slide, 0 under reduced motion). After the 899,
+   768 and 480px blocks, so it wins. Desktop and portrait phones keep the
+   band always in view (27 October). */
+@media (orientation: landscape) and (max-height: 500px) {
+  :root,
+  .app[data-band="compact"] {
+    --title-row-height: 52px;
+  }
+
+  .title-row,
+  .app[data-band="compact"] .title-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "title year policy";
+    column-gap: 8px;
+  }
+
+  .title-row .band-control {
+    width: auto;
+    min-width: 0;
+    height: 36px;
+    gap: 6px;
+    padding: 0 12px 0 10px;
+  }
+
+  .band-control-label,
+  .band-control-unit {
+    display: none;
+  }
+
+  .title-row h1 {
+    font-size: var(--fs-card-title);
+  }
+
+  .app[data-band-hidden] {
+    --nav-offset: calc(0px - var(--title-row-height));
+  }
+
+  .app[data-band-hidden] .title-row {
+    box-shadow: none;
+  }
+}
 
 /* The page fills the window without overshooting it: the shell's main
    grows to the window, and the app grows inside it, just above the
@@ -1875,7 +1958,7 @@ body {
 .site-footer-inner {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px 40px;
+  padding: 16px 40px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -1913,23 +1996,39 @@ body {
 
 @media (max-width: 1024px) {
   .site-footer-inner {
-    padding: 20px 24px;
+    padding: 16px 24px;
   }
 }
 
+/* Tablet and phone: the logo and the copyright share the first line, the
+   links follow in one tight wrapping row. Each link keeps a 28px-tall tap
+   row (WCAG 2.5.8 asks for 24px) from its own height, not from extra gaps,
+   so the band stays short. */
 @media (max-width: 768px) {
   .site-footer-inner {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 20px 16px;
+    padding: 12px 16px 8px;
+    gap: 4px 12px;
   }
 
-  .site-footer-links {
-    gap: 6px 16px;
+  .site-footer-logo img {
+    height: 18px;
   }
 
   .site-footer-copy {
-    margin: 0;
+    order: 2;
+  }
+
+  .site-footer-links {
+    order: 3;
+    flex-basis: 100%;
+    gap: 0 14px;
+  }
+
+  .site-footer-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    font-size: var(--fs-caption);
   }
 }
 

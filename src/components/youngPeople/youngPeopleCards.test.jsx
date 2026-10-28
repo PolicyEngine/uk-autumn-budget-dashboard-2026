@@ -1,3 +1,4 @@
+import { cloneElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import fc from "fast-check";
 import { fireEvent, render, screen, within } from "@testing-library/react";
@@ -22,9 +23,10 @@ vi.mock("recharts", async () => {
   const actual = await vi.importActual("recharts");
   return {
     ...actual,
+    // A fixed size, so the plot itself is drawn
     ResponsiveContainer: ({ children }) => (
       <div data-testid="recharts-responsive-container" style={{ width: 800, height: 500 }}>
-        {children}
+        {cloneElement(children, { width: 800, height: 400 })}
       </div>
     ),
   };
@@ -226,7 +228,7 @@ describe("young people cards", () => {
     // The age group is the card's one Options pill
     fireEvent.click(screen.getByRole("button", { name: /^Options: 16 to 24/ }));
     fireEvent.click(within(screen.getByRole("radiogroup", { name: "Compare" })).getByRole("radio", { name: /65 and over/ }));
-    expect(screen.getByText(/65 and over vs all ages/)).toBeInTheDocument();
+    expect(screen.getByText("Average change per person from each policy, for people aged 65 and over and people of all ages.")).toBeInTheDocument();
   });
 
   it("describes missing age-group rows as unavailable", () => {
@@ -238,6 +240,15 @@ describe("young people cards", () => {
     expect(screen.queryByText(/None of the selected policies changes/)).not.toBeInTheDocument();
   });
 
+  it("compares sizes against the group compared with in the row's tooltip, never 'the average person' (W6 G1)", () => {
+    render(<MeasuresCard {...props} selectedYear={2029} />);
+    // Two losses, -£330 for 16 to 24 against -£300 for all ages: 10% larger
+    fireEvent.focus(screen.getByRole("row", { name: /^Threshold freeze extension:/ }));
+    const tip = screen.getByRole("tooltip");
+    expect(tip).toHaveTextContent("10% larger than the all ages figure");
+    expect(tip).not.toHaveTextContent(/average person|more than|less than/);
+  });
+
   it("shows a year with no rows as not yet published", () => {
     render(<MeasuresCard {...props} selectedYear={2031} />);
     expect(screen.getByText("Results for 2031-32 are not yet published.")).toBeInTheDocument();
@@ -245,7 +256,7 @@ describe("young people cards", () => {
 
   it("takes its focus from By age's group: the compare option and the dumbbell follow it", () => {
     const { unmount } = render(<TrendCard {...props} selectedYear={2029} group="25-34" />);
-    expect(screen.getByRole("button", { name: /^Options: 25 to 34 vs all/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Options: With all ages/ })).toBeInTheDocument();
     unmount();
     render(<MeasuresCard {...props} selectedYear={2028} group="pensioners" />);
     expect(screen.getByRole("button", { name: /^Options: Pensioners/ })).toBeInTheDocument();
@@ -282,6 +293,41 @@ describe("young people cards", () => {
     expect(card.querySelector(".chart-footer")).toHaveTextContent(
       `Not drawn in ${yearList(DISPLAY_YEARS)}, as a selected policy has too few survey records by age: every age group except all ages.`,
     );
+  });
+
+  it("offers no Compare with all ages chosen, so nothing reads 'All ages vs all ages' (AGE6)", () => {
+    render(<TrendCard {...props} selectedYear={2029} group="all" />);
+    const card = document.querySelector(".young-people-trend");
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    expect(within(card).queryByRole("radio", { name: /vs all ages|and all ages/ })).toBeNull();
+    expect(within(card).queryByText("Compare")).toBeNull();
+  });
+
+  it("keeps Running total when the age group changes (AGE11)", () => {
+    const { rerender } = render(<TrendCard {...props} selectedYear={2029} group="16-24" />);
+    const card = () => document.querySelector(".young-people-trend");
+    fireEvent.click(within(card()).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(card()).getByRole("radio", { name: "Running total" }));
+    rerender(<TrendCard {...props} selectedYear={2029} group="25-34" />);
+    expect(within(card()).getByRole("button", { name: /^Options: With all ages.*Running total/ })).toBeInTheDocument();
+  });
+
+  it("says what the chart shows in About this chart (AGE7)", () => {
+    render(<TrendCard {...props} selectedYear={2029} />);
+    const card = document.querySelector(".young-people-trend");
+    fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
+    expect(card).toHaveTextContent("Average change per person in each age group, each year, with all ages for comparison.");
+  });
+
+  it("keys the lines by its chips alone, with no names at the lines' ends, on a wide screen and a phone", () => {
+    for (const narrow of [false, true]) {
+      const { unmount } = render(<TrendCard {...props} narrow={narrow} selectedYear={2029} />);
+      const card = document.querySelector(".young-people-trend");
+      expect(card.querySelectorAll(".recharts-line").length).toBeGreaterThan(0);
+      expect(card.querySelector(".trend-end-labels")).toBeNull();
+      expect(card.querySelector(".chart-legend .series-toggle")).not.toBeNull();
+      unmount();
+    }
   });
 
   it("draws every year shown, whatever year is selected", () => {

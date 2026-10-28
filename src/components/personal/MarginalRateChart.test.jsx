@@ -1,8 +1,8 @@
 import { chooseOption, optionsLabel } from "../../test/optionsPills";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import MarginalRateChart, { RateTooltip } from "./MarginalRateChart";
-import { breakdownRows, describeParts, drawnKey, partsInUse, RATE_PARTS } from "./marginalRateParts";
+import MarginalRateChart, { RateTooltip, rateExportDescription } from "./MarginalRateChart";
+import { breakdownRows, describeParts, drawnKey, partsInUse, rateAxis, RATE_PARTS, stepAt } from "./marginalRateParts";
 
 // Three steps: basic rate, higher rate, then the allowance taper
 const RATES = [
@@ -45,14 +45,47 @@ describe("marginal rate parts", () => {
     for (const row of rows) expect(drawnSum(row)).toBeCloseTo(row.after, 6);
   });
 
-  it("draws a negative part at zero, with other taking up the difference", () => {
-    // Universal Credit rising with pay (−5%) and other making it up
+  it("draws a negative part below zero, as the tooltip gives it (HH8)", () => {
+    // Universal Credit rising with pay (−5%), other +5%
     const negative = { ...step(0.2, 0, 0.08, 0.05), universal_credit: -0.05 };
     const [row] = breakdownRows([RATES[0]], { after: [negative] });
     expect(row.universal_credit).toBe(-0.05);
-    expect(row[drawnKey("universal_credit")]).toBe(0);
-    expect(row[drawnKey("other")]).toBe(0);
+    expect(row[drawnKey("universal_credit")]).toBe(-0.05);
+    expect(row[drawnKey("other")]).toBeCloseTo(0.05, 9);
+    // The parts, signed, still add up to the total
     expect(drawnSum(row)).toBeCloseTo(0.28, 6);
+  });
+
+  it("never draws Other below zero: a negative remainder is no layer, and the axis stays at 0% (round 3)", () => {
+    // The named parts (28%) pass the step's total (25%): Other would be −3%
+    const [row] = breakdownRows([{ income: 0, to: 50000, before: 0.25, after: 0.25 }], { after: [step(0.2, 0, 0.08)] });
+    expect(row[drawnKey("other")]).toBe(0);
+    // Flagged, so About this chart says it is not drawn
+    expect(row.otherUndrawn).toBe(true);
+    expect(rateAxis([row.after, row[drawnKey("other")]]).domain[0]).toBe(0);
+    // A negative named part is still drawn below zero
+    const [mixed] = breakdownRows([{ income: 0, to: 50000, before: 0.2, after: 0.2 }], {
+      after: [{ ...step(0.2, 0, 0.08), universal_credit: -0.1 }],
+    });
+    expect(mixed[drawnKey("universal_credit")]).toBe(-0.1);
+    expect(mixed[drawnKey("other")]).toBeCloseTo(0.02, 9);
+  });
+
+  it("widens the rate axis below 0% for a negative rate or part, within −100% to 200% (HH8)", () => {
+    expect(rateAxis([0.2, 0.6])).toEqual({ domain: [0, 1], ticks: [0, 0.2, 0.4, 0.6, 0.8, 1] });
+    expect(rateAxis([-0.05, 0.6]).domain).toEqual([-0.2, 1]);
+    expect(rateAxis([-3, 0.6]).domain).toEqual([-1, 1]);
+    expect(rateAxis([0.3, 1.3]).domain[1]).toBeGreaterThanOrEqual(1.3);
+    expect(rateAxis([0.3, 50]).domain[1]).toBe(2);
+  });
+
+  it("hovers the step that holds the pointer's salary, not the nearest point (HH9)", () => {
+    const rows = [{ income: 0 }, { income: 50000 }, { income: 100000 }, { income: 150000 }];
+    // Past a step's middle, still that step
+    expect(stepAt(rows, 90000).income).toBe(50000);
+    expect(stepAt(rows, 50000).income).toBe(50000);
+    expect(stepAt(rows, 0).income).toBe(0);
+    expect(stepAt(rows, -1)).toBeNull();
   });
 
   it("puts your rate's parts in words, largest first", () => {
@@ -67,9 +100,9 @@ describe("MarginalRateChart", () => {
     render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);
     expect(screen.getByText("Personal allowance taper")).toBeInTheDocument();
     // One view at a time: After first, with its total only
-    expect(optionsLabel(document.body)).toBe("After");
-    expect(screen.getByText("Total rate after")).toBeInTheDocument();
-    expect(screen.queryByText("Total rate before")).not.toBeInTheDocument();
+    expect(optionsLabel(document.body)).toBe("With the policies");
+    expect(screen.getByText("Total rate with the policies")).toBeInTheDocument();
+    expect(screen.queryByText("Total rate under current law")).not.toBeInTheDocument();
     // Every shared component has a chip, so the two cards' keys line up;
     // one with nothing for this household is disabled
     fireEvent.click(screen.getByRole("button", { name: /with no effect for you$/ }));
@@ -78,24 +111,131 @@ describe("MarginalRateChart", () => {
     // The parts are chips (shown, hidden or highlighted from the key)
     expect(screen.getByRole("button", { name: "Personal allowance taper" })).toHaveAttribute("aria-pressed", "true");
     // One sentence: the rate, then the rate as money; its parts in More info
-    expect(screen.getByText(/^At £110,000 your marginal tax rate is 62%, so of your next/)).toBeInTheDocument();
+    expect(screen.getByText(/^At £110,000 your marginal tax rate stays at 62%, so of your next £1,000 you keep £380\./)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
-    expect(screen.getByText(/made up of income tax 40%, the personal allowance taper 20%, National Insurance 2%/)).toBeInTheDocument();
+    // The parts are always the rate with the policies (own.after), so it says so
+    expect(screen.getByText(/your marginal rate with the policies is made up of income tax 40%, the personal allowance taper 20%, National Insurance 2%/)).toBeInTheDocument();
     // The PA taper's note, which the legend had behind an "i", is a definition
     expect(document.querySelector(".chart-more-info")).toHaveTextContent(/Personal allowance taper/);
+  });
+
+  it("places the hover box beside the pointer, never over the top of the plot when the pointer is low, and follows a finger (round 3)", () => {
+    const own = { before: step(0.4, 0.2, 0.02), after: step(0.4, 0.2, 0.02) };
+    render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);
+    const plot = document.querySelector(".mtr-plot");
+    plot.getBoundingClientRect = () => ({ left: 0, top: 0, right: 600, bottom: 400, width: 600, height: 400, x: 0, y: 0 });
+    const tip = () => document.querySelector(".mtr-tooltip");
+    // Low in the plot: anchored above the pointer, not pinned to the top
+    // (jsdom draws nothing, so the box is given a height of 100px)
+    const height = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(100);
+    fireEvent.mouseMove(plot, { clientX: 200, clientY: 300 });
+    expect(tip()).not.toBeNull();
+    expect(tip().style.top).toBe("188px");
+    // High in the plot: below the pointer
+    fireEvent.mouseMove(plot, { clientX: 200, clientY: 50 });
+    expect(tip().style.top).toBe("62px");
+    // Never above the plot's box, nor below it
+    fireEvent.mouseMove(plot, { clientX: 200, clientY: 210 });
+    expect(tip().style.top).toBe("98px");
+    fireEvent.mouseMove(plot, { clientX: 200, clientY: 199 });
+    expect(tip().style.top).toBe("211px");
+    // A box taller than the room above the pointer (a phone) is held at the top
+    height.mockReturnValue(250);
+    fireEvent.mouseMove(plot, { clientX: 200, clientY: 220 });
+    expect(tip().style.top).toBe("0px");
+    height.mockRestore();
+    fireEvent.mouseLeave(plot);
+    expect(tip()).toBeNull();
+    // A tap shows it and lifting the finger clears it
+    fireEvent.touchStart(plot, { touches: [{ clientX: 300, clientY: 200 }] });
+    expect(tip()).not.toBeNull();
+    fireEvent.touchMove(plot, { touches: [{ clientX: 400, clientY: 220 }] });
+    expect(tip()).not.toBeNull();
+    fireEvent.touchEnd(plot, { touches: [], changedTouches: [{ clientX: 400, clientY: 220 }] });
+    expect(tip()).toBeNull();
+    // The mouse move a browser makes up after a tap does not bring it back
+    fireEvent.mouseMove(plot, { clientX: 400, clientY: 220 });
+    expect(tip()).toBeNull();
+  });
+
+  it("clears the hover box when the finger lifts off a line that was redrawn and left the page (round 4)", () => {
+    const own = { before: step(0.4, 0.2, 0.02), after: step(0.4, 0.2, 0.02) };
+    render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);
+    const plot = document.querySelector(".mtr-plot");
+    plot.getBoundingClientRect = () => ({ left: 0, top: 0, right: 600, bottom: 400, width: 600, height: 400, x: 0, y: 0 });
+    const tip = () => document.querySelector(".mtr-tooltip");
+    // A stand-in for a recharts path under the finger
+    const line = document.createElement("span");
+    plot.appendChild(line);
+    fireEvent.touchStart(line, { touches: [{ clientX: 300, clientY: 200 }] });
+    expect(tip()).not.toBeNull();
+    // Redrawn: the element leaves the page, so its touchend cannot bubble to the plot
+    line.remove();
+    fireEvent.touchEnd(line, { touches: [], changedTouches: [{ clientX: 300, clientY: 200 }] });
+    expect(tip()).toBeNull();
   });
 
   it("switches between before, after and the change, each with its own legend", () => {
     const own = { before: step(0.4, 0.2, 0.02), after: step(0.4, 0.2, 0.02) };
     render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);
-    chooseOption(document.body, "Before");
-    expect(screen.getByText("Total rate before")).toBeInTheDocument();
-    expect(screen.queryByText("Total rate after")).not.toBeInTheDocument();
+    chooseOption(document.body, "Current law");
+    expect(screen.getByText("Total rate under current law")).toBeInTheDocument();
+    expect(screen.queryByText("Total rate with the policies")).not.toBeInTheDocument();
     expect(screen.getByText("Personal allowance taper")).toBeInTheDocument();
     chooseOption(document.body, "Change");
     expect(screen.getByText("Change in marginal rate")).toBeInTheDocument();
     expect(screen.queryByText("Personal allowance taper")).not.toBeInTheDocument();
     expect(document.querySelector('[data-view="change"]')).not.toBeNull();
+  });
+
+  it("says in About this chart what the view draws: the change in points, no parts or edge markers in Change (W6 G1)", () => {
+    const own = { before: step(0.4, 0.2, 0.02), after: step(0.4, 0.2, 0.02) };
+    render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    const about = () => document.querySelector(".chart-more-info");
+    expect(about()).toHaveTextContent("Each layer is one tax's or benefit taper's part of the rate; the line is the total rate.");
+    expect(about()).toHaveTextContent(/A part that lowers the rate .* is drawn below 0%/);
+    chooseOption(document.body, "Change");
+    expect(about()).toHaveTextContent("The line is the change in the total rate, in percentage points.");
+    expect(about()).not.toHaveTextContent(/the line is the total rate|The line is the total rate\./);
+    expect(about()).not.toHaveTextContent(/drawn below 0%|marked at its edge/);
+  });
+
+  it("describes the downloaded image by the view drawn: one total, and that side's parts (W6 G1)", () => {
+    expect(rateExportDescription("before", true, "2027-28")).toBe(
+      "Share of each extra pound of salary lost to taxes and withdrawn benefits in 2027-28 under current law, by part.",
+    );
+    expect(rateExportDescription("after", false, "2027-28")).toBe(
+      "Share of each extra pound of salary lost to taxes and withdrawn benefits in 2027-28 with the policies.",
+    );
+    expect(rateExportDescription("change", false, "2027-28")).toBe(
+      "The change the selected policies make to the share of each extra pound of salary lost to taxes and withdrawn benefits in 2027-28, in percentage points.",
+    );
+    for (const view of ["before", "after", "change"]) {
+      expect(rateExportDescription(view, true, "2027-28")).not.toMatch(/under current law and with/);
+    }
+  });
+
+  it("describes the modelled State Pension allowance, not the sole-income design, for a pensioner with earnings (W6 G1)", () => {
+    // State Pension and £1,000 of salary: the rate jumps from 20% to 60%
+    // over the next £200, which sets the caveat off
+    render(
+      <MarginalRateChart
+        sweep={{
+          ...sweep({ before: STEPS, after: STEPS, own: { before: step(0.2, 0, 0), after: step(0.6, 0, 0) } }),
+          own: { income: 1000, beforeRate: 0.2, afterRate: 0.6 },
+          netParts: { names: ["state_pension"], before: [{ state_pension: 11000 }], after: [{ state_pension: 11000 }] },
+        }}
+        salary={1000}
+        yearLabel="2027-28"
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    const about = document.querySelector(".chart-more-info");
+    expect(about).toHaveTextContent(
+      "For a pensioner whose total income is at or below the full new State Pension, the selected policies raise the tax-free allowance to that amount. Once total income passes it, the usual personal allowance applies again, so income tax jumps there.",
+    );
+    expect(about).not.toHaveTextContent(/only income is the State Pension|Any earnings take the whole allowance away|first pound earned/);
   });
 
   it("gives in its tooltip only what the view draws", () => {
@@ -116,19 +256,19 @@ describe("MarginalRateChart", () => {
       return text;
     };
     expect(tip("before")).toMatch(/Income tax/);
-    expect(tip("before")).toMatch(/Total rate before.*42%/);
-    expect(tip("before")).not.toMatch(/Total rate after/);
-    expect(tip("after")).toMatch(/Total rate after.*45%/);
-    expect(tip("after")).not.toMatch(/Total rate before/);
+    expect(tip("before")).toMatch(/Total rate under current law.*42%/);
+    expect(tip("before")).not.toMatch(/Total rate with the policies/);
+    expect(tip("after")).toMatch(/Total rate with the policies.*45%/);
+    expect(tip("after")).not.toMatch(/Total rate under current law/);
     expect(tip("change")).toMatch(/Change in marginal rate.*\+3pp/);
     expect(tip("change")).not.toMatch(/Income tax|Total rate/);
   });
 
   it("draws the totals alone when the API sends no parts", () => {
     render(<MarginalRateChart sweep={sweep(null)} salary={110000} yearLabel="2027-28" />);
-    expect(screen.getByText("After the selected policies")).toBeInTheDocument();
-    expect(screen.queryByText("Total rate after")).not.toBeInTheDocument();
-    expect(screen.getByText(/^At £110,000 your marginal tax rate is 62%, so of your next/)).toBeInTheDocument();
+    expect(screen.getByText("With the selected policies")).toBeInTheDocument();
+    expect(screen.queryByText("Total rate with the policies")).not.toBeInTheDocument();
+    expect(screen.getByText(/^At £110,000 your marginal tax rate stays at 62%, so of your next £1,000 you keep £380\./)).toBeInTheDocument();
   });
 });
 
@@ -136,7 +276,7 @@ describe("the two Across earnings cards in step", () => {
   it("share one list of components: the same chips in the same order on both, those with nothing disabled", async () => {
     const { sweepChips, SWEEP_COMPONENTS } = await import("./sweepComponents");
     const net = sweepChips("net", new Set(["market_income", "income_tax", "national_insurance"]), { label: "Net income after", colour: "x" });
-    const rate = sweepChips("rate", new Set(["income_tax", "national_insurance"]), { label: "Total rate after", colour: "x" });
+    const rate = sweepChips("rate", new Set(["income_tax", "national_insurance"]), { label: "Total rate with the policies", colour: "x" });
     expect(net.map((chip) => chip.label).slice(0, -1)).toEqual(rate.map((chip) => chip.label).slice(0, -1));
     expect(net.map((chip) => chip.key).slice(0, -1)).toEqual(SWEEP_COMPONENTS.map((component) => component.key));
     const by = (chips, key) => chips.find((chip) => chip.key === key);
@@ -148,7 +288,7 @@ describe("the two Across earnings cards in step", () => {
     for (const chip of net.slice(0, -1)) expect(by(rate, chip.key).colour).toBe(chip.colour);
   });
 
-  it("says 'With no earnings' at a salary of £0, over the first £200", () => {
+  it("says 'On your first £200 of earnings' at a salary of £0", () => {
     const own = { before: step(0.2, 0, 0), after: step(0.4, 0, 0) };
     render(
       <MarginalRateChart
@@ -158,7 +298,7 @@ describe("the two Across earnings cards in step", () => {
       />,
     );
     expect(document.querySelector(".chart-description").textContent).toBe(
-      "With no earnings, your marginal tax rate on your first £200 would be 20% before and 39% after, so of your first £200 of earnings, you keep £160 before and keep £121 after.",
+      "On your first £200 of earnings, your marginal tax rate rises from 20% to 39%, so you keep £121 instead of £160.",
     );
   });
 });

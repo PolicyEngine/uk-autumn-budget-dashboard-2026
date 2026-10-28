@@ -119,6 +119,22 @@ describe("MethodologyTab", () => {
     expect(card).toHaveTextContent("roughly half of fuel duty receipts");
   });
 
+  it("says under Policies added up which way a policy that raises pay is off on its own, naming no measure", () => {
+    const { container } = renderTab();
+    const limitations = container.querySelector(`#${METHOD_SECTIONS.limitations}`);
+    const card = within(limitations).getByRole("button", { name: "Policies added up" }).closest(".method-topic");
+    expect(card).toHaveTextContent("its cost is higher, and its fall in poverty larger, than in the run of all policies together");
+  });
+
+  it("counts a change in VAT in the inequality income, not VAT itself, and says in-kind services once", () => {
+    const { container } = renderTab();
+    const text = container.textContent;
+    expect(text).toContain("after fuel duty and other duties, counting any change in VAT");
+    expect(text).toContain("fuel duty and any change in VAT included");
+    expect(text).not.toMatch(/after indirect taxes/);
+    expect(text.match(/such as the NHS and schools/g)).toHaveLength(1);
+  });
+
   it("lists the measures the model cannot cost", () => {
     renderTab();
     const card = screen.getByRole("button", { name: "Not modelled" }).closest(".method-topic");
@@ -191,6 +207,22 @@ describe("MethodologyTab", () => {
     expect(microcosm).toHaveAttribute("href", "https://microcosm.institute");
     // Aggregate words only: no record or household counts from the pipeline page
     expect(card.textContent).not.toMatch(/\d{1,3}(,\d{3})+/);
+  });
+
+  it("states the floor of 3 survey households for the deciles and ages, and that the age filter counts records", () => {
+    const { container } = renderTab();
+    const small = [...container.querySelectorAll(".method-fact")].find(
+      (fact) => fact.querySelector("dt")?.textContent === "Small groups",
+    );
+    expect(within(small).getByRole("link", { name: "income deciles", hidden: true })).toHaveAttribute(
+      "href",
+      `#${METHOD_ANCHORS.byIncome}`,
+    );
+    const text = container.textContent;
+    expect(text).toContain("comes from only one or two survey households is not shown");
+    expect(text).toContain("so this counts records, not households");
+    expect(text).toContain("In the age and decile tables, a figure resting on one or two survey households is not published, nor any figure in the same table that would give it back.");
+    expect(text).not.toContain("survey records is not shown");
   });
 
   it("links every external source in a new tab, saying so, and every shared term to its definition", () => {

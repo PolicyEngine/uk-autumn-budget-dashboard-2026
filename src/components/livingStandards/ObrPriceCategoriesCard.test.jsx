@@ -8,6 +8,19 @@ import {
   obrPriceCategoriesSentence,
 } from "../../utils/livingStandards/obrPriceCategories";
 
+// The props the card gives its line chart, to check what it asks it to draw
+const chartProps = vi.hoisted(() => []);
+vi.mock("./LsCharts", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    LsLineChart: (props) => {
+      chartProps.push(props);
+      return actual.LsLineChart(props);
+    },
+  };
+});
+
 // A short file of the shape tools/extract-obr-price-categories.mjs writes
 // (public/data/obr_price_categories.json), with Table 1.19's values
 const series = (key, label, values) => ({ key, label, values: values.map(([year, value]) => ({ year, value })) });
@@ -69,6 +82,18 @@ describe("Prices by spending category", () => {
     expect(obrPriceSourceText(FILE.source)).toBe("OBR, Economic and fiscal outlook, March 2026, Table 1.19 (CPI category inflation)");
   });
 
+  it("keys the lines by its chips alone: no end labels, no legend", async () => {
+    chartProps.length = 0;
+    render(<ObrPriceCategoriesCard />);
+    await screen.findByText(/^In 2026-27 the OBR expects/);
+    const props = chartProps.at(-1);
+    expect(props.endLabels ?? false).toBe(false);
+    expect(props.legend).toBe(false);
+    expect(props.keyContent).toBeTruthy();
+    expect(props.series.every((s) => s.endLabel === undefined)).toBe(true);
+    expect(document.querySelector(".ls-end-labels")).toBeNull();
+  });
+
   it("draws a table of fiscal years in the table view", async () => {
     render(<ObrPriceCategoriesCard view="table" onViewChange={() => {}} />);
     expect(await screen.findByRole("cell", { name: "2027-28" })).toBeTruthy();
@@ -87,5 +112,4 @@ describe("Prices by spending category", () => {
     render(<ObrPriceCategoriesCard />);
     expect((await screen.findByRole("alert")).textContent).toMatch(/not an OBR price categories file/);
   });
-
 });

@@ -65,6 +65,27 @@ describe("ResultTiles' average for your income tenth", () => {
     expect(screen.queryByText(/9\.99/)).toBeNull();
   });
 
+  it("is the tenth under current law, as the card below names it, when the policies move you across a boundary (W6 G1)", () => {
+    files.current = { "income_distribution.csv": { status: "ready", rows: DISTRIBUTION } };
+    catalogueRef.current = catalogue({
+      distributional_impact: DECILES.map((decile, i) => ({ reform_id: "alpha", year: 2027, decile, value: (i + 1) / 10 })),
+    });
+    // £29,500 is the 29.5th percentile (3rd tenth) under current law and
+    // £30,500 the 30.5th (4th tenth) with the policies
+    render(
+      <ResultTiles
+        totals={{ before: 29500, after: 30500, change: 1000 }}
+        changeValue="£1,000"
+        changeNote="2027-28"
+        household={{ has_partner: true, children: [] }}
+        year={2027}
+        policies={["alpha"]}
+      />,
+    );
+    expect(screen.getByText("Average for your income tenth: +0.30%")).toBeTruthy();
+    expect(screen.queryByText("Average for your income tenth: +0.40%")).toBeNull();
+  });
+
   it("is not published when the verified artifacts have no decile rows, whatever the root file holds", () => {
     files.current = {
       "income_distribution.csv": { status: "ready", rows: DISTRIBUTION },

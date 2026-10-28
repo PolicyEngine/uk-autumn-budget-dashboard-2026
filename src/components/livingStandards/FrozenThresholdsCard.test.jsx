@@ -7,6 +7,19 @@ import FrozenThresholdsCard, { FROZEN_THRESHOLDS_TITLE } from "./FrozenThreshold
 import { resetPolicyParameters } from "../../utils/policyParameters";
 import { earningsIndex, relativeAxis, sameThresholds, thresholdRows, thresholdsSentence } from "../../utils/livingStandards/frozenThresholds";
 
+// The props the card gives its line chart, to check what it asks it to draw
+const chartProps = vi.hoisted(() => []);
+vi.mock("./LsCharts", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    LsLineChart: (props) => {
+      chartProps.push(props);
+      return actual.LsLineChart(props);
+    },
+  };
+});
+
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "public", "data");
 const read = (name) => JSON.parse(readFileSync(join(PUBLIC, name), "utf8"));
 // The published files: the current-law thresholds and the OBR earnings growth
@@ -91,6 +104,18 @@ describe("Frozen thresholds against pay: card", () => {
     fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
     expect(document.body.textContent).not.toMatch(/£12,570|£50,270|£29,385/);
     expect(screen.getByRole("link", { name: "Policies" }).getAttribute("href")).toBe("?tab=policies");
+  });
+
+  it("keys the lines by its chips alone: no end labels, no legend", async () => {
+    chartProps.length = 0;
+    render(<FrozenThresholdsCard data={OUTLOOK} />);
+    await screen.findByText(/^By 2030-31 the personal allowance/);
+    const props = chartProps.at(-1);
+    expect(props.endLabels ?? false).toBe(false);
+    expect(props.legend).toBe(false);
+    expect(props.keyContent).toBeTruthy();
+    expect(props.series.every((s) => s.endLabel === undefined)).toBe(true);
+    expect(document.querySelector(".ls-end-labels")).toBeNull();
   });
 
   it("table view lists earnings' index and each threshold relative to it", async () => {

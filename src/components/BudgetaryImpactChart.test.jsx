@@ -117,6 +117,10 @@ describe("BudgetaryImpactChart", () => {
       expect(ticks).toContain("2026-27");
       fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
       expect(container).not.toHaveTextContent(/before the years shown/i);
+      // The net line names both gaps from a combined run and links to them
+      // (critic W1, round 3)
+      expect(container).toHaveTextContent(/leaves out interactions between them and any difference between the baselines/);
+      expect(screen.getByRole("link", { name: "Policies added up" })).toHaveAttribute("href", "?tab=methodology#method-limitations");
     });
 
     it("is absent when the data starts at 2027-28", () => {

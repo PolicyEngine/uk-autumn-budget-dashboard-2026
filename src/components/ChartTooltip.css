@@ -90,6 +90,32 @@
   pointer-events: none;
 }
 
+/* Its rows (TooltipRows) wider, with room between the name and the value:
+   "People in poverty" and "Poverty rate" no longer wrap into a narrow column
+   against their values (Pavel's review, POV1). Names still wrap, so a long
+   policy name never runs into the value column */
+.floating-tooltip .chart-tooltip {
+  min-width: 260px;
+  max-width: 360px;
+}
+
+.floating-tooltip .chart-tooltip-row {
+  column-gap: 16px;
+  padding: 3px 0;
+}
+
+
+@media (max-width: 768px) {
+  .floating-tooltip .chart-tooltip {
+    min-width: 0;
+    max-width: min(320px, calc(100vw - 32px));
+  }
+
+  .floating-tooltip .chart-tooltip-name {
+    white-space: normal;
+  }
+}
+
 /* A point that shows a tooltip on keyboard focus */
 .has-tooltip:focus {
   outline: none;
@@ -118,6 +144,13 @@
   width: 0;
   height: 0;
   pointer-events: none;
+}
+
+/* A tooltip closed by a tap elsewhere on a touch screen (ViewportTooltip
+   useTapDismiss): the chart's mark of the tapped point goes with it */
+.recharts-wrapper.is-tip-dismissed .recharts-tooltip-cursor,
+.recharts-wrapper.is-tip-dismissed .recharts-active-dot {
+  visibility: hidden;
 }
 
 .viewport-tooltip {

@@ -32,7 +32,7 @@ import { provisionalLabel } from "./utils/publication/manifest";
 import { DownloadContext, policiesLabel } from "./utils/downloadContext";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
-import { createSiteNavIntent, isProgrammaticScroll, isTouchOnly, pointerWantsSiteNav, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
+import { createBandIntent, createSiteNavIntent, isProgrammaticScroll, LANDSCAPE_PHONE_QUERY, isTouchOnly, pointerWantsSiteNav, SITE_NAV_DWELL_MS, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
 
 // Each view's code (the chart library, the map's and the household
 // calculator's) loads when a view first opens, or while the page is idle,
@@ -464,11 +464,11 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
 
   // The site nav is hidden above the window by default, so the title band
   // sits at the top of the page. Scrolling never brings it in: it slides in
-  // above the band when the pointer reaches the top 8px of the window or
-  // leaves the window through its top edge (an exit-intent reveal: utils/
-  // pageScroll pointerWantsSiteNav), or when the reader tabs into it
+  // above the band when the pointer rests at the top edge of the window
+  // (SITE_NAV_EDGE_PX for SITE_NAV_DWELL_MS: utils/pageScroll pointerWantsSiteNav), or when the reader tabs into it
   // (globals.css: data-site-nav-shown on <html>, --site-nav-height; the
-  // slide is instant under reduced motion). Once in, it stays
+  // band and tab rows move down under it, so it never covers the Year and
+  // Policies pills; the slide is instant under reduced motion). Once in, it stays
   // SITE_NAV_MIN_MS, and while the pointer or focus is in it or one of its
   // menus is open, then hides SITE_NAV_LEAVE_MS after they leave. Any
   // scroll down by the reader hides it at once (unless it is in use), and
@@ -488,6 +488,8 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     let frame = 0;
     let shownAt = 0;
     let timer = 0;
+    // The pointer resting at the window's top edge, before the nav shows
+    let edgeTimer = 0;
     let pointerIn = false;
     let touchY = null;
     // Touch-only, at the page's very top: shown for as long as it stays there
@@ -579,15 +581,32 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     const onPointer = (event) => {
       // A tap's emulated mouse events do not count on a touch-only device
       if (isTouchOnly()) return;
+      // Over the nav, or over the title band it pushes down (the Year and
+      // Policies pills), so the band never jumps back from under the pointer
+      const bandHeight = document.querySelector(".title-row")?.offsetHeight ?? 0;
       const over =
         !!nav &&
         isShown() &&
         ((event.target instanceof Node && nav.contains(event.target)) ||
-          event.clientY <= nav.offsetHeight);
+          event.clientY <= nav.offsetHeight + bandHeight);
       if (pointerWantsSiteNav(event.clientY)) {
-        pointerIn = true;
-        show();
-      } else if (over) {
+        if (isShown()) {
+          pointerIn = true;
+          show();
+        } else if (!edgeTimer) {
+          edgeTimer = window.setTimeout(() => {
+            edgeTimer = 0;
+            pointerIn = true;
+            show();
+          }, SITE_NAV_DWELL_MS);
+        }
+        return;
+      }
+      if (edgeTimer) {
+        window.clearTimeout(edgeTimer);
+        edgeTimer = 0;
+      }
+      if (over) {
         if (!pointerIn) clear();
         pointerIn = true;
       } else if (pointerIn) {
@@ -595,14 +614,12 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
         hideAfter(SITE_NAV_LEAVE_MS);
       }
     };
-    // The pointer leaving the window through its top edge (toward the
-    // browser's tabs and address bar)
+    // The pointer leaving the window (toward the tabs and address bar)
+    // before the rest is up: the nav does not open behind it (HDR1)
     const onPointerOut = (event) => {
-      if (event.relatedTarget || isTouchOnly()) return;
-      if (pointerWantsSiteNav(event.clientY, { left: true })) {
-        pointerIn = true;
-        show();
-      }
+      if (event.relatedTarget || !edgeTimer) return;
+      window.clearTimeout(edgeTimer);
+      edgeTimer = 0;
     };
     const onFocusIn = () => show();
     const onFocusOut = (event) => {
@@ -636,6 +653,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       nav?.removeEventListener("focusin", onFocusIn);
       nav?.removeEventListener("focusout", onFocusOut);
       if (frame) window.cancelAnimationFrame(frame);
+      if (edgeTimer) window.clearTimeout(edgeTimer);
       clear();
       resize?.disconnect();
       root.removeAttribute("data-site-nav-shown");
@@ -722,6 +740,51 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     return () => {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  // On a phone on its side the title band tucks away above the window
+  // while the reader scrolls down and slides back on a scroll up, so the
+  // bars do not take half the window (globals.css, data-band-hidden;
+  // utils/pageScroll createBandIntent). Never while one of its pills is
+  // open or focused, nor near the page's top. Elsewhere it stays in view.
+  const [bandHidden, setBandHidden] = useState(false);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return undefined;
+    const query = window.matchMedia(LANDSCAPE_PHONE_QUERY);
+    const intent = createBandIntent({ y: window.scrollY });
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const y = window.scrollY;
+      if (!query.matches) {
+        intent.scroll(y, { held: true });
+        setBandHidden(false);
+        return;
+      }
+      const sentinel = titleSentinelRef.current;
+      const band = document.querySelector(".title-row");
+      // The band's own place: until the page has scrolled past it, it is
+      // not stuck, so there is nothing to tuck away
+      const top = sentinel ? sentinel.getBoundingClientRect().top + y + (band?.offsetHeight ?? 0) : 0;
+      const held =
+        !!band &&
+        (band.contains(document.activeElement) || !!band.querySelector('[aria-expanded="true"]'));
+      const next = intent.scroll(y, { top, held, programmatic: isProgrammaticScroll(y) });
+      if (next !== null) setBandHidden(next);
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(check);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    query.addEventListener?.("change", onScroll);
+    // A pill opened from the tucked band's edge brings it back
+    document.addEventListener("focusin", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      query.removeEventListener?.("change", onScroll);
+      document.removeEventListener("focusin", onScroll);
       if (frame) window.cancelAnimationFrame(frame);
     };
   }, []);
@@ -1089,6 +1152,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       ref={appRef}
       data-sub-band={hasSubTabs ? "" : undefined}
       data-tabs-stuck={tabsStuck ? "" : undefined}
+      data-band-hidden={bandHidden ? "" : undefined}
       data-publication={unavailable ? "unavailable" : "verified"}
       data-publication-check={checkedBy}>
       {/* A div, not <main>: the PolicyEngine shell around the page is the

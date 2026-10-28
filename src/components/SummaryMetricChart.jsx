@@ -569,7 +569,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                     {metric.format(top.value)}.
                   </>
                 ) : (
-                  <>{metric.short ?? metric.description} Each selected policy on its own.</>
+                  <>{fiscalYearTick(selectedYear)}, each policy on its own.</>
                 );
               })()
             ) : (
@@ -693,6 +693,11 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                   "These changes can't be added up across policies.",
                 ]
               : [],
+            // Pavel's review MT1: why VAT and fuel duty move this but not poverty
+            caveats:
+              metric.choices === "inequality"
+                ? ["VAT and fuel duty count here but not in the poverty figures, so they can move inequality without moving poverty."]
+                : [],
             method: { anchor: METHOD_ANCHORS.poverty, label: "How we measure poverty and inequality" },
           }}
         />

@@ -17,12 +17,13 @@ describe("By age's age groups", () => {
     expect(groupSubject("pensioners")).toBe("Pensioners");
   });
 
-  it("gives each group its ages and a window around them for the single-year chart", () => {
+  it("gives each group its ages, and the single-year chart only those ages", () => {
     expect(groupAges("16-24", 2027)).toEqual([16, 24]);
     expect(groupAges("pensioners", 2026)).toEqual([66, 90]);
     expect(groupAges("pensioners", 2027)).toEqual([67, 90]);
-    expect(ageWindow("16-24", 2027)).toEqual([6, 34]);
-    expect(ageWindow("pensioners", 2027)).toEqual([55, 90]);
+    expect(ageWindow("16-24", 2027)).toEqual([16, 24]);
+    expect(ageWindow("pensioners", 2027)).toEqual([67, 90]);
+    expect(ageWindow("65+", 2027)).toEqual([65, 90]);
     expect(ageWindow("all", 2027)).toEqual([0, 90]);
   });
 
@@ -66,7 +67,7 @@ describe("By age's cards share one age group", async () => {
     window.history.replaceState({}, "", "/?sub=age&age=all");
     render(<AgeSection selectedPolicies={[]} selectedYear={2027} policies={[]} />);
     const pills = screen.getAllByRole("button", { name: /^Options:/ });
-    // Average change by age, Change by year, Effect of each policy, Better and worse off
+    // Average change by age, Change by year, Effect of each policy, Winners and losers
     expect(pills[2].getAttribute("aria-label")).toBe("Options: All ages");
   });
 });

@@ -167,3 +167,27 @@ describe("the chosen household", () => {
     expect(card.closest(".household-card")).toHaveClass("is-selected");
   });
 });
+
+describe("an example card's chip tooltip (W6 G1)", () => {
+  it("names the largest single effect, never 'most of the change' when it pulls the other way", () => {
+    // Illustrative figures: a loss of £90 overall, the example's own
+    // measure −£260, a gain of £320 from another: the largest, but not
+    // most of a loss
+    const own = "unearned_income_rates_up";
+    const other = "employer_nics_secondary_threshold_raise";
+    const catalogue = publishing([own, other]);
+    const presets = { "landlord-saver": { 2029: { change: -90, before: 40000, after: 39910, byPolicy: { [own]: -260, [other]: 320 } } } };
+    render(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <HouseholdCards examples={HOUSEHOLD_EXAMPLES} value={null} formOpen={false} formId="f" onYours={() => {}} onChoose={() => {}} presets={presets} yoursChange={null} year={2029} chosen={false} yoursSelected={false} />
+      </MeasureCatalogueProvider>,
+    );
+    const card = screen.getByRole("button", { name: /^A landlord with savings/ }).closest(".household-card");
+    const tag = card.querySelector(".household-card-tag");
+    expect(tag).toHaveTextContent("+£320");
+    fireEvent.mouseEnter(tag);
+    const tip = document.getElementById(tag.getAttribute("aria-describedby"));
+    expect(tip).toHaveTextContent(/^This example features Unearned income rates \(−£260 in 2029-30\); the largest single effect is .+ \(\+£320\)\.$/);
+    expect(tip).not.toHaveTextContent(/most of the change/);
+  });
+});
