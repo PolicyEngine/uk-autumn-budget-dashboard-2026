@@ -178,8 +178,8 @@ describe("the chosen household", () => {
 describe("an example card's chip tooltip (W6 G1)", () => {
   it("features its own measures, each with its part, and names a larger single effect in the tip, never 'most of the change'", () => {
     // Illustrative figures: a loss of £90 overall, the example's own
-    // measures −£260 together (property −£200, savings −£60), a gain of
-    // £320 from another: the largest, but not most of a loss
+    // measure (property) −£200, savings −£60, a gain of £320 from
+    // another: the largest, but not most of a loss
     const [property, savings] = ["property_income_rates_up", "savings_income_rates_up"];
     const other = "fuel_duty_rise_deferral";
     const catalogue = publishing([property, savings, other]);
@@ -190,12 +190,13 @@ describe("an example card's chip tooltip (W6 G1)", () => {
       </MeasureCatalogueProvider>,
     );
     const card = screen.getByRole("button", { name: /^A landlord with savings/ }).closest(".household-card");
-    // Property and savings, each with its own part, never cut short
-    expect([...card.querySelectorAll(".household-card-tag")].map((tag) => tag.textContent)).toEqual(["Property income tax up−£200", "Savings income tax up−£60"]);
+    // Its own measure, property only (the savings rate is not in the
+    // release), with its own part, never cut short
+    expect([...card.querySelectorAll(".household-card-tag")].map((tag) => tag.textContent)).toEqual(["Property income tax up−£200"]);
     const tag = card.querySelector(".household-card-tags");
     fireEvent.mouseEnter(tag);
     const tip = document.getElementById(tag.getAttribute("aria-describedby"));
-    expect(tip).toHaveTextContent(/^This example features Property income tax up and Savings income tax up \(−£260 in 2029-30\); the largest single effect is .+ \(\+£320\)\.$/);
+    expect(tip).toHaveTextContent(/^This example features Property income tax up \(−£200 in 2029-30\); the largest single effect is .+ \(\+£320\)\.$/);
     expect(tip).not.toHaveTextContent(/most of the change/);
   });
 });

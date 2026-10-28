@@ -78,11 +78,11 @@ export function modellingInfo(policy) {
 import Tip from "./Tip";
 import TitleIcon from "./TitleIcon";
 
-// The cards' order: the Budget's own, by each measure's first row in its
-// Table 6.1 (policyDetails.js `budgetRows`), so the page reads as the
-// Budget does: energy and fuel first, then benefits, then taxes. A measure
-// with no row follows, by the catalogue's budgetary direction (raises,
-// then costs, then the rest), then its order. The charts keep the
+// The cards' order: each entry's `cardOrder` (policyDetails.js), set so
+// the two cards in a row are close in height; then the Budget's own, by
+// each measure's first row in its Table 6.1 (`budgetRows`); a measure with
+// no row follows, by the catalogue's budgetary direction (raises, then
+// costs, then the rest), then its order. The charts keep the
 // catalogue's order (measureCatalogue.jsx), which also sets the colours.
 // Cards carry no revenue tag or filter: one flat list.
 const DIRECTION_ORDER = ["revenue", "cost", "neutral"];
@@ -281,7 +281,16 @@ function PolicyTimeline({ policy, highlight }) {
  * card, bare or not, is as tall as its row, its sections always in the
  * same order (CARD_SECTIONS) and the footer pinned to the bottom.
  */
-export function PolicyCard({ policy, onShowEffect, parameters }) {
+export function PolicyCard({ policy, onShowEffect, parameters: published }) {
+  // The card's own shorter words for the main row, where it has them
+  const parameters = published && policy.changeLabel
+    ? {
+        ...published,
+        rows: published.rows.map((row) =>
+          row.primary ? { ...row, label: policy.changeLabel.label, unit_words: policy.changeLabel.unitWords ?? row.unit_words } : row,
+        ),
+      }
+    : published;
   const temporary = Boolean(policy.inForce?.to);
   // Derived from the publication for any measure (utils/measureCategory.js),
   // in the same tinted tile as every per-measure row
@@ -355,7 +364,9 @@ export function PolicyCard({ policy, onShowEffect, parameters }) {
         </dl>
         </>
         )}
-        {policy.inForce && policy.timeline !== false && (
+        {/* No year strip by default: At a glance says when, and What changes
+            plots a change that moves over the years */}
+        {policy.inForce && policy.timeline === true && (
           <PolicyTimeline policy={policy} highlight={highlight} />
         )}
       </div>
@@ -528,7 +539,7 @@ function PolicyCards({ policies, selectedPolicies, onShowEffect, parameterTables
   };
   const items = shown
     .map(withPolicyDetails)
-    .sort((a, b) => budgetRank(a) - budgetRank(b) || rank(a) - rank(b) || a.order - b.order);
+    .sort((a, b) => (a.cardOrder ?? Infinity) - (b.cardOrder ?? Infinity) || budgetRank(a) - budgetRank(b) || rank(a) - rank(b) || a.order - b.order);
   if (!shown.length) return null;
   return (
     <ul className="policy-cards">

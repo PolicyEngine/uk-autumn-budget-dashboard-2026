@@ -119,6 +119,19 @@ describe("the constituency card's Policy options", () => {
     expect(result.choice).toMatchObject({ kind: "no-package", reason: SELECTION_NOT_PUBLISHED });
   });
 
+  it("offers every published policy with a map, and defaults away from a selection with none (fallback)", () => {
+    const one = areaPolicyOptions({ selectedIds: ["a"], policyIds: order, packageKey: null, hasArea: published("c", "d") });
+    expect(one.options.map((option) => option.value)).toEqual(["c", "d"]);
+    expect(one).toMatchObject({ defaultValue: "c", fallback: true });
+    const own = areaPolicyOptions({ selectedIds: ["d"], policyIds: order, packageKey: null, hasArea: published("c", "d") });
+    expect(own).toMatchObject({ defaultValue: "d", fallback: false });
+    // Several with no combined map: the first selected one with a map
+    const several = areaPolicyOptions({ selectedIds: ["a", "d"], policyIds: order, packageKey: "pkg", hasArea: published("c", "d") });
+    expect(several).toMatchObject({ defaultValue: "d", fallback: true });
+    // A reader's own choice is no fallback
+    expect(chooseAreaPolicy({ value: "c", selectedIds: ["a"], policyIds: order, reforms: [], packageKey: null, hasArea: published("c", "d") }).fallback).toBe(false);
+  });
+
   it("follows the chosen option while it is offered, else falls back to the default", () => {
     const base = {
       selectedIds: ["a", "b"],

@@ -138,9 +138,11 @@ describe("the page's measures in the constituency views", () => {
     const catalogue = await publish(
       layerTable(IDS.filter((id) => id !== BETA)),
     );
-    expect((await show(catalogue, [BETA])).view.reason).toBe(
-      "Results by constituency are not yet published for this policy.",
-    );
+    // The left-out measure alone: the card shows the first measure with
+    // its own rows instead (its Policy option's default), and says so
+    const alone = await show(catalogue, [BETA]);
+    expect(alone.view).toMatchObject({ kind: "rows", reform: IDS.find((id) => id !== BETA) });
+    expect(alone.policyFallback).toBe(true);
     // With no package published, the card shows the first selected
     // measure with its own rows (its Policy option's default), never a sum
     // and never the left-out measure

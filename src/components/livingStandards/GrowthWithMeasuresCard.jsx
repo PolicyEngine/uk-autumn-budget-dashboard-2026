@@ -10,16 +10,15 @@
 // run of exactly the selected policies, else the shared "not published
 // yet" notice.
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ViewCard from "./ViewCard";
 import useQuintileGrowthView from "./sections/DecileGrowthSection";
 import { useOutlook } from "./useOutlook";
 import { distributionRunOf, missingPackageNote } from "../../utils/incomePosition";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
-import { GROWTH_WITH_MEASURES_FILE, changesNothing, parseGrowthWithMeasures } from "../../utils/livingStandards/growthWithMeasures";
+import { GROWTH_WITH_MEASURES_FILE, changesNothing, loadGrowthWithMeasures, resetGrowthWithMeasures } from "../../utils/livingStandards/growthWithMeasures";
+import { PlotSkeleton } from "../publication/LoadingSkeleton";
 import { defaultRange, rangeYears, useYearRange } from "../../utils/livingStandards/yearRange";
-
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 export const WITH_MEASURES_TITLE = "Growth across the distribution, with the selected policies";
 export const WITH_MEASURES_ANCHOR = "growth-with-measures";
@@ -40,20 +39,17 @@ export const SHOWS = [
   },
 ];
 
-// The file is read once per page
+// The file is read and parsed once per session (loadGrowthWithMeasures),
+// the parse kept here so a remount draws at once
 let cache = null;
 function useGrowthFile() {
   const [state, setState] = useState(() => cache ?? { status: "loading", rows: null });
   useEffect(() => {
     if (cache) return undefined;
     let cancelled = false;
-    fetch(`${BASE}/data/${GROWTH_WITH_MEASURES_FILE}`)
-      .then((response) => {
-        if (!response.ok) throw new Error(`${GROWTH_WITH_MEASURES_FILE}: ${response.status}`);
-        return response.text();
-      })
-      .then((text) => {
-        cache = { status: "ready", rows: parseGrowthWithMeasures(text) };
+    loadGrowthWithMeasures()
+      .then((rows) => {
+        cache = { status: "ready", rows };
         if (!cancelled) setState(cache);
       })
       .catch((error) => {
@@ -70,6 +66,7 @@ function useGrowthFile() {
 /** For tests: forget the loaded file. */
 export function clearGrowthWithMeasuresCache() {
   cache = null;
+  resetGrowthWithMeasures();
 }
 
 /**
@@ -83,18 +80,35 @@ export default function GrowthWithMeasuresCard({ selectedPolicies, twinLink, sel
   // The header's selection: one policy's run, or the combined run of exactly them
   const catalogue = useMeasureCatalogue();
   const run = distributionRunOf(selectedPolicies, catalogue);
-  // The pills read their choices once, so the card waits for both files
-  if (!data || file.status !== "ready") return null;
+  // The pills read their choices once, so the chart waits for both files;
+  // its card holds its place at once, a skeleton in the plot's size
+  if (!data || file.status === "loading") {
+    return (
+      <div className="ls-card" id={WITH_MEASURES_ANCHOR}>
+        <div className="chart-header">
+          <div>
+            <h3>
+              <span className="title-text">{WITH_MEASURES_TITLE}</span>
+            </h3>
+          </div>
+        </div>
+        <PlotSkeleton label="Loading growth with the selected policies" height={320} />
+      </div>
+    );
+  }
+  if (file.status !== "ready") return null;
   return <LoadedCard data={data} rows={file.rows} run={run} twinLink={twinLink} selectedYear={selectedYear} />;
 }
 
 function LoadedCard({ data, rows, run, twinLink, selectedYear }) {
-  // The difference reads best: a measure moves growth by hundredths of a
-  // point, too little to see beside growth of a percent or two
-  const [show, setShow] = useState("difference");
+  // Opens on growth with the policies (%), as Vahid asked; the effect in
+  // pp is one choice away
+  const [show, setShow] = useState("growth");
   const [range, setRange] = useYearRange(rangeYears(data), defaultRange(rangeYears(data)));
-  const view = useQuintileGrowthView(data, range, setRange, { rows, reformId: run.reformId, mode: show }, selectedYear);
-  const noEffect = changesNothing(rows, run.reformId);
+  // One object per run and choice, so the view's own memos hold
+  const measures = useMemo(() => ({ rows, reformId: run.reformId, mode: show }), [rows, run.reformId, show]);
+  const view = useQuintileGrowthView(data, range, setRange, measures, selectedYear);
+  const noEffect = useMemo(() => changesNothing(rows, run.reformId), [rows, run.reformId]);
   const notPublished = missingPackageNote(run, rows, "Growth");
   if (noEffect || notPublished || !view) {
     return (

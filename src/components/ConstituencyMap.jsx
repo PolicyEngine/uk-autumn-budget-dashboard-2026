@@ -650,6 +650,7 @@ export default function ConstituencyMap({
     regionalHasChoice,
     policyOptions,
     policyValue,
+    policyFallback,
   } = useConstituencyView({ selectedPolicies, policies, selectedYear, outcome, policyChoice });
   const policyName = (id) => shortNameOf(policies.find((policy) => policy.id === id) ?? { id });
   // On a release that routes no results by area, the card describes the
@@ -891,9 +892,23 @@ export default function ConstituencyMap({
   const sentence = useMemo(
     () =>
       view.kind === "rows"
-        ? constituencySentence(states, { outcome, yearLabel, several: choice.kind === "package" })
+        ? constituencySentence(states, {
+            outcome,
+            yearLabel,
+            several: choice.kind === "package",
+            // Always which policy it describes; until the reader picks one,
+            // why this one, and that another can be chosen, in one line
+            policy: choice.kind === "measure" ? policyName(choice.reform) : null,
+            note:
+              policyChoice !== null || policyOptions.length < 2
+                ? null
+                : policyFallback
+                  ? `no map yet for ${selectedPolicies.length > 1 ? "all the policies together" : policyName(selectedPolicies[0])}; choose another policy`
+                  : "choose another policy",
+          })
         : null,
-    [view.kind, states, outcome, yearLabel, choice.kind],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [view.kind, states, outcome, yearLabel, choice.kind, choice.reform, policyChoice, policyOptions.length, policyFallback, selectedPolicies],
   );
   useEffect(() => {
     const map = mapRef.current;
@@ -1122,6 +1137,10 @@ export default function ConstituencyMap({
   // on Budget day): All selected policies is listed first, unavailable, and
   // the card shows one policy at a time. Singles are never summed (Pavel's
   // review, AH1; #274 item 12)
+  // The Policy choice: its own pill before Options, naming the policy
+  // shown (Vahid, 28 October, evening): "All selected policies" (greyed
+  // out until its map is published), then every published policy with a
+  // map, by short name
   const combinedPending =
     selectedPolicies.length > 1 && policyOptions.length > 0 && !policyOptions.some((option) => option.value === COMBINED_CHOICE);
   const policyPill = (policyOptions.length > 1 || combinedPending) && (
@@ -1133,7 +1152,7 @@ export default function ConstituencyMap({
       onChange={setPolicyChoice}
       options={[
         ...(combinedPending
-          ? [{ value: COMBINED_PENDING, label: "All selected policies", disabled: true, title: "Published later on Budget day" }]
+          ? [{ value: COMBINED_PENDING, label: "All selected policies", disabled: true, title: "No map yet for all the policies together" }]
           : []),
         ...policyOptions.map((option) =>
           option.value === COMBINED_CHOICE

@@ -1,0 +1,323 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "OBR EFO October 2026",
+        "status": "updated",
+        "vintage": "OBR Economic and fiscal outlook, October 2026 (Annex A, Tables A.1 and A.3), applied over policyengine-uk's March 2026 growth rates by src/uk_budget_data/forecast/obr_october_2026.json"
+      },
+      "notes": "The forecast is rebased on the Budget's OBR forecast: every simulation, baseline and reform alike, is built on the October 2026 growth rates in src/uk_budget_data/forecast/obr_october_2026.json (CPI, RPI, average earnings, house prices; the September 2027 CPI gap). Series that file does not list keep the March 2026 path the installed policyengine-uk ships; the receipt records the exact model version."
+    },
+    "composition": null,
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "c48a8fe082168969b5c3e6d6689a630c9f47ac64fa9de7efd11a055d2cab1a4b",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "description": "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (\u00a3212 a week at April 2027's \u00a313.21, rounded up to the pound): it is reduced by \u00a31 for each \u00a31 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The taper starts within 2030-31, on a date still to come, so the model counts half of that year. Carers at or below the limit, and Scotland's Carer Support Payment, are unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
+    "digests": {
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "outputs_sha256": "161037a4ca464ce6cafdd41f1a0901455c010d88b8ae2ed646f05a2ec36312bc",
+      "receipt_sha256": "792fb4c051af0402aa02d5bd4055d8497c742fbdfb6795643a79ab44f6d9ba3e"
+    },
+    "disclosure_floor": {
+      "checked": true,
+      "survey_households": 3,
+      "thin_cells": [
+        {
+          "groups": [
+            "12",
+            "13",
+            "21",
+            "24",
+            "25",
+            "27",
+            "28",
+            "29",
+            "3",
+            "31",
+            "32",
+            "34",
+            "35",
+            "36",
+            "37",
+            "41",
+            "43",
+            "45",
+            "46",
+            "49",
+            "52",
+            "53",
+            "54",
+            "57",
+            "58",
+            "59",
+            "6",
+            "60",
+            "62",
+            "64",
+            "67",
+            "73",
+            "82"
+          ],
+          "table": "age_impact",
+          "year": 2030
+        },
+        {
+          "groups": [
+            "12",
+            "13",
+            "21",
+            "24",
+            "25",
+            "27",
+            "28",
+            "29",
+            "3",
+            "31",
+            "32",
+            "34",
+            "35",
+            "36",
+            "37",
+            "41",
+            "43",
+            "45",
+            "46",
+            "49",
+            "52",
+            "53",
+            "54",
+            "57",
+            "58",
+            "59",
+            "6",
+            "60",
+            "62",
+            "64",
+            "67",
+            "73",
+            "82"
+          ],
+          "table": "age_impact",
+          "year": 2031
+        },
+        {
+          "groups": [
+            "7",
+            "9"
+          ],
+          "table": "distributional_impact",
+          "year": 2030
+        },
+        {
+          "groups": [
+            "7",
+            "9"
+          ],
+          "table": "distributional_impact",
+          "year": 2031
+        },
+        {
+          "groups": [
+            "7",
+            "9"
+          ],
+          "table": "winners_losers",
+          "year": 2030
+        },
+        {
+          "groups": [
+            "7",
+            "9"
+          ],
+          "table": "winners_losers",
+          "year": 2031
+        }
+      ],
+      "thin_cells_in_tables": false,
+      "withheld_cells": [
+        {
+          "groups": [
+            "7",
+            "9"
+          ],
+          "table": "distributional_impact",
+          "year": 2030
+        },
+        {
+          "groups": [
+            "7",
+            "9"
+          ],
+          "table": "distributional_impact",
+          "year": 2031
+        },
+        {
+          "groups": [
+            "7",
+            "9",
+            "all"
+          ],
+          "table": "winners_losers",
+          "year": 2030
+        },
+        {
+          "groups": [
+            "7",
+            "9",
+            "all"
+          ],
+          "table": "winners_losers",
+          "year": 2031
+        }
+      ]
+    },
+    "files": {
+      "age_impact.csv": "d5668734d6e882f0129be142b49e353741d552e3da43de8dee64586078b65140",
+      "budgetary_impact.csv": "f9d6d5b4f670acf0ceec32e2f8e5e82afaa21c3f651001959081a0ca36557344",
+      "distributional_impact.csv": "5fe1fda719869ed0d968337bd856e3dcb3b988201136cab8ddb78af009ce8459",
+      "household_scatter_binned.csv": "fee78c23abe01e0c4845360196f0168b06d32ada89e33ad8cfb269fa70f0212c",
+      "income_curve.csv": "86c248b2b11439b074725c657dd10629e8dfc364615b86962a83cc077e7fee5a",
+      "metrics.csv": "721b5d2e62fdcd91f5bf68a248f6d6581b15bc1e334a20a0a0cdd6f8b46f5eff",
+      "poverty_inequality.csv": "82f43a6e9682dc9624a8d50baac2bce2047fa20494e6f256a83daddddffa5093",
+      "winners_losers.csv": "ec8f924c3c293c830d1f11d9a23b03ddbd04791e6dfe6d45d2e74c888ea8fb15"
+    },
+    "generated_at": "2026-10-28T17:08:00.734195+00:00",
+    "generation_id": "7a63e2009c6949d88d21d1a3fb581fb5",
+    "generator_argv": [
+      "/private/tmp/claude-501/-Users-vahid/59114aef-a9b7-4663-a8bc-32b2c6146551/scratchpad/final/carers_allowance_earnings_taper/src/uk_budget_data/cli.py",
+      "generate",
+      "--artifacts",
+      "--backend",
+      "modal",
+      "--reforms",
+      "carers_allowance_earnings_taper"
+    ],
+    "git_sha": "4de166f05eebbc7e501fcf39206cdc82fd199213",
+    "key": "carers_allowance_earnings_taper",
+    "measure_ids": [
+      "carers_allowance_earnings_taper"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "9d3479f1f5ac859ab6bd2644aaff443a29c0dad3f2944b1ef98866028f9d4b89",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": [
+        null
+      ]
+    },
+    "name": "Carer's Allowance earnings taper",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.11.1",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "carers_allowance_earnings_taper baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.11.1",
+      "certificate_sha256": "f2e6fc9faafab32b50c1c76067fb070ae9686b6f375e44417776de16e9c3521f",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.151.0",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "ec8e6c4194b5e1ec0acd64c8718d0eecb6b41648b53f0b453c425b516e5a4489"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "build_model_version": "2.151.0",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.151.0"
+    },
+    "outputs_sha256": "161037a4ca464ce6cafdd41f1a0901455c010d88b8ae2ed646f05a2ec36312bc",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "code_revision",
+      "kind": "reform",
+      "name": "carers_allowance_earnings_taper",
+      "reform_sha256": "f45943c11aed787c570af3cc82d11af9cf181ce0877b5cb9350a9bc1e2f84dc8",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "linux",
+      "python_version": "3.13.3"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.11.1"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

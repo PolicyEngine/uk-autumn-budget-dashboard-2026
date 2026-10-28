@@ -21,6 +21,15 @@ import { dashboardFromParts, loadDashboard, loadDashboardParts, loadVerifiedTabl
 import { pruneVerifiedCache } from "./utils/publication/cache";
 import { prefetchGeography } from "./hooks/useGeographyData";
 import { loadOutlook } from "./utils/livingStandards/outlook";
+import { loadGrowthWithMeasures } from "./utils/livingStandards/growthWithMeasures";
+
+// Growth with the selected policies (Living standards) reads one flat file
+// of every run (about 90kB gzipped): on a page opened on Population impact
+// it is asked for with the manifest, not once its card has mounted behind
+// every artifact's tables, so the card draws as soon as it is shown
+if (typeof window !== "undefined" && /[?&]tab=dashboard\b/.test(window.location.search) && !/[?&]sub=(?!living\b)/.test(window.location.search)) {
+  loadGrowthWithMeasures().catch(() => {});
+}
 import { loadPresetChanges } from "./utils/householdPresets";
 import { loadManifest } from "./utils/publication/load";
 import { PublicationCheckContext, serialisedChecks } from "./utils/publication/check";
@@ -320,6 +329,9 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     if (!catalogue.manifest || !catalogue.tablesByKey) return undefined;
     // One step per idle period, the views' own tables first
     const steps = [
+      // Growth with the selected policies (Living standards): one flat
+      // file, read and parsed once, so its card draws at once
+      () => loadGrowthWithMeasures().catch(() => {}),
       // Every view's code, so a tab switch need not wait for it
       ...Object.keys(VIEW_CODE).map((view) => () => preloadView(view)),
       ...IDLE_TABLES.map((table) => () => loadVerifiedTablesOnce(catalogue, table).catch(() => {})),

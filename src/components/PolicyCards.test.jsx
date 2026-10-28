@@ -12,7 +12,6 @@ import PolicyCards, {
   timelineDescription,
   timelineSpan,
 } from "./PolicyCards";
-import { PLOTTED_DISPLAYS } from "./PolicyChange";
 import { buildMeasureCatalogue } from "../utils/measureCatalogue";
 import { POLICY_DETAILS } from "../utils/policyDetails";
 import { ALPHA, BETA, HELD, measureCatalogueFixture } from "../test/measureCatalogueFixture";
@@ -78,7 +77,7 @@ describe("PolicyCards", () => {
 
   it("gives a card with details its type, start and end, with the modelling closed until opened", () => {
     const id = "warm_home_discount_top_up";
-    render(<PolicyCards policies={[published(id, "Warm Home Discount top-up")]} selectedPolicies={[id]} />);
+    render(<PolicyCards policies={[{ ...published(id, "Warm Home Discount top-up"), timeline: true }]} selectedPolicies={[id]} />);
     const card = screen.getByRole("listitem");
     expect(within(card).getByRole("heading", { name: "Warm Home Discount top-up" })).toBeTruthy();
     expect(card).toHaveTextContent("StartsWinter 2026-27");
@@ -98,7 +97,7 @@ describe("PolicyCards", () => {
 
   it("marks a lasting measure as continuing, with no end date", () => {
     const id = "badr_lifetime_limit_cut";
-    render(<PolicyCards policies={[published(id, "Business Asset Disposal Relief restricted", "revenue")]} selectedPolicies={[id]} />);
+    render(<PolicyCards policies={[{ ...published(id, "Business Asset Disposal Relief restricted", "revenue"), timeline: true }]} selectedPolicies={[id]} />);
     const card = screen.getByRole("listitem");
     // At a glance says it once: Ends, Continues; the timeline only draws it
     expect(card.querySelector(".policy-card-ends")).toHaveTextContent(/^Ends\s*Continues$/);
@@ -153,7 +152,7 @@ describe("PolicyCards", () => {
 
   it("shows the fuel duty freeze with no restore steps", () => {
     const id = "fuel_duty_rise_deferral";
-    render(<PolicyCards policies={[published(id, "Fuel duty rises deferred")]} selectedPolicies={[id]} />);
+    render(<PolicyCards policies={[{ ...published(id, "Fuel duty rises deferred"), timeline: true }]} selectedPolicies={[id]} />);
     const timeline = screen.getByRole("img", { name: /^In force from January 2027/ });
     expect(timeline.querySelectorAll(".ptl-diamond")).toHaveLength(0);
   });
@@ -333,7 +332,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
   });
 
   it("marks a picked step on the card's timeline, and says it in words", () => {
-    const item = card(rising, { ...alpha, inForce: { from: "2027-04" } });
+    const item = card(rising, { ...alpha, inForce: { from: "2027-04" }, timeline: true });
     const plot = item.querySelector(".pchg-svg");
     plot.focus();
     for (let i = 0; i < 4; i += 1) fireEvent.keyDown(plot, { key: "ArrowRight" });
@@ -362,10 +361,8 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(block.querySelector(".pchg-tile.is-before")).toHaveTextContent("Current law15%");
     expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy0%−15 points");
     expect(block.textContent).not.toMatch(/pp\b/);
-    // A lasting change is plotted too, labelled once; no table
-    expect(block.querySelector("table")).toBeNull();
-    const plot = within(block).getByRole("img");
-    expect([...plot.querySelectorAll(".pchg-gap-label")].map((label) => label.textContent)).toEqual(["15% → 0%"]);
+    // One visual: the tiles only, no plot or table
+    expect(block.querySelector("svg.pchg-svg, table")).toBeNull();
   });
 
   it("table: the main parameter as tiles, then only the parameters and year that differ, when asked", () => {
@@ -385,43 +382,36 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     ]);
   });
 
-  it("switch: the two values, with the window drawn on the card's timeline", () => {
+  it("switch: the two values, with the window drawn on the card's timeline and no plot", () => {
     const window = tables("switch", [
       { label: "A VAT rate", unit: "percent", unit_words: null, primary: true, source,
         points: [{ key: "2026-10-01/2028-03-31", label: "October 2026 to March 2028", year: 2026, before: 0.05, after: 0 }] },
     ]);
-    const item = card(window, { ...alpha, inForce: { from: "2026-10", to: "2028-03" } });
+    const item = card(window, { ...alpha, inForce: { from: "2026-10", to: "2028-03" }, timeline: true });
     const block = within(item).getByRole("region", { name: /^What changes/ });
     expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A VAT rate$/);
     expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy0%−5 points");
     // Each fact once: the timeline says how long, not the rates again
     expect(item.querySelector(".ptl-chip")).toHaveTextContent(/^18 months$/);
-    // The window as a step plot: current law either side, labelled once
-    const plot = within(block).getByRole("img");
-    expect(plot.getAttribute("aria-label")).toBe(
-      "A VAT rate. Before October 2026: 5%, as under current law; October 2026 to March 2028: 5% → 0%; After March 2028: 5%, as under current law.",
-    );
-    expect([...plot.querySelectorAll(".pchg-gap-label")].map((label) => label.textContent)).toEqual(["5% → 0%"]);
-    expect(block.querySelector(".pchg-key")).toBeTruthy();
+    // One visual: a single change of value is the tiles, with no plot
+    expect(block.querySelector(".pchg-svg")).toBeNull();
     // One changed period is the tiles already: no table of it
     expect(within(block).queryByRole("button", { name: "Show the years" })).toBeNull();
   });
 
-  it("switch: one year only is plotted as that year's step", () => {
+  it("switch: one year only is the tiles, with no plot", () => {
     const winter = tables("switch", [
       { label: "A payment", unit: "gbp", unit_words: "£ a household, once", primary: true, source,
         points: [{ key: "2026", label: "Winter 2026-27", year: 2026, before: 150, after: 250 }] },
     ]);
     const block = within(card(winter)).getByRole("region", { name: /^What changes/ });
     expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A payment$/);
-    expect(block.querySelector(".pchg-caption")).toHaveTextContent("A payment, £ a household, once");
-    const plot = within(block).getByRole("img");
-    expect(plot.getAttribute("aria-label")).toBe("A payment, £ a household, once. Winter 2026-27: £150 → £250 (+£100).");
-    expect([...plot.querySelectorAll(".pchg-gap-label")].map((label) => label.textContent)).toEqual(["+£100"]);
+    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy£250+£100");
+    expect(block.querySelector(".pchg-svg")).toBeNull();
     expect(within(block).queryByRole("button")).toBeNull();
   });
 
-  it("draws every measure in the real file in one form: tiles with the change, a plot unless it is a table of several parameters", () => {
+  it("draws every measure in the real file in one form: tiles with the change, a plot only where it varies by year", () => {
     for (const [id, entry] of Object.entries(file.measures)) {
       render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
       // The card (its modelling note has list items of its own)
@@ -432,7 +422,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       expect(block.querySelector(".pchg-tile.is-after .pchg-chip"), id).toBeTruthy();
       const main = entry.rows.find((row) => row.primary) ?? entry.rows[0];
       const changes = new Set(main.points.filter((p) => p.before !== p.after).map((p) => `${p.before}|${p.after}`));
-      expect(Boolean(block.querySelector(".pchg-svg")), id).toBe(changes.size > 1 || PLOTTED_DISPLAYS.has(entry.display));
+      expect(Boolean(block.querySelector(".pchg-svg")), id).toBe(changes.size > 1);
       // Every table behind a button
       expect(block.querySelector("table"), id).toBeNull();
       cleanup();
@@ -459,14 +449,14 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
 
   it("gives each of the eight announced measures, as the real file describes it, its summary, timing, category, what changes and caveats", () => {
     const seven = [
-      ["fuel_duty_rise_deferral", "Fuel duty cut extended", "Fuel duty", "January 2027"],
-      ["state_pension_income_tax_protection", "Pension Tax Allowance", "Income tax", "April 2027"],
-      ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "VAT", "October 2026"],
-      ["property_income_rates_up", "Property income tax rates up", "Income tax", "April 2027"],
-      ["savings_income_rates_up", "Savings income tax rates up", "Income tax", "April 2027"],
+      ["fuel_duty_rise_deferral", "Fuel duty cut extended", "Fuel duty", "Jan 2027"],
+      ["state_pension_income_tax_protection", "Pension Tax Allowance", "Income tax", "Apr 2027"],
+      ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "VAT", "Oct 2026"],
+      ["property_income_rates_up", "Property income tax rates up", "Income tax", "Apr 2027"],
+      ["savings_income_rates_up", "Savings income tax rates up", "Income tax", "Apr 2027"],
       ["carers_allowance_earnings_taper", "Carer's Allowance earnings taper", "Benefits", "2030-31"],
-      ["household_energy_payment_2026", "Household Energy Payment", "Energy", "January 2027"],
-      ["trading_allowance_raise", "Trading allowance raised to £3,000", "Income tax", "April 2027"],
+      ["household_energy_payment_2026", "Household Energy Payment", "Energy", "Jan 2027"],
+      ["trading_allowance_raise", "Trading allowance raised to £3,000", "Income tax", "Apr 2027"],
     ];
     expect(Object.keys(file.measures)).toEqual(seven.map(([id]) => id));
     for (const [id, name, category, starts] of seven) {
@@ -532,7 +522,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
 describe("the card's frame", () => {
   it("stacks the footer: how it is modelled across the card, then the source and the effect; the arrow says no end date", () => {
     const id = "badr_lifetime_limit_cut";
-    render(<PolicyCards policies={[published(id, "Business Asset Disposal Relief restricted", "revenue")]} selectedPolicies={[id]} onShowEffect={() => {}} />);
+    render(<PolicyCards policies={[{ ...published(id, "Business Asset Disposal Relief restricted", "revenue"), timeline: true }]} selectedPolicies={[id]} onShowEffect={() => {}} />);
     const foot = screen.getByRole("listitem").querySelector(".policy-card-foot");
     expect([...foot.children].map((child) => child.className)).toEqual(["policy-card-modelling", "policy-card-actions"]);
     expect(foot.querySelector(".policy-card-modelling .policy-card-details")).toBeTruthy();
@@ -570,33 +560,35 @@ describe("the card's frame", () => {
       expect(item.lastElementChild).toHaveClass("policy-card-foot");
     }
     // A card with details has every section
-    const full = [...document.querySelectorAll(".policy-cards > .policy-card")].find((item) => !item.classList.contains("is-bare"));
+    const full = [...document.querySelectorAll(".policy-cards > .policy-card")].find((item) => item.querySelector(".policy-card-example"));
     for (const name of CARD_SECTIONS.filter((section) => !UNMODELLED_ONLY_SECTIONS.includes(section))) {
       expect(full.querySelector(`.${name}`), name).toBeTruthy();
     }
   });
 
-  it("makes cards in a row one height, their sections in line and the footer at the bottom", () => {
-    const css = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
-    const rule = (selector) => css.match(new RegExp(`\\n${selector.replace(/[.]/g, "\\.")} \\{([^}]*)\\}`))?.[1] ?? "";
-    expect(rule(".policy-cards")).toMatch(/display: grid;/);
+  it("makes the two cards in a row one height, the footer pinned to the bottom, no inner box stretched", () => {
+    const css = readFileSync(join(__dirname, "PolicyCards.css"), "utf8");
+    const rule = (selector) => css.match(new RegExp(`\n${selector.replace(/[.]/g, "\\.").replace(/>/g, "\\s*>\\s*")} \\{([^}]*)\\}`))?.[1] ?? "";
     expect(rule(".policy-cards")).toMatch(/align-items: stretch;/);
-    expect(rule(".policy-card")).toMatch(/display: grid;[\s\S]*grid-row: span 5;[\s\S]*grid-template-rows: subgrid;/);
-    expect(rule(".policy-card-foot")).toMatch(/align-self: end;/);
-    expect(css).toMatch(/\.policy-card > \.policy-card-foot \{ grid-row: 5; \}/);
-    expect(css).not.toMatch(/\.policy-card\.is-bare \{[^}]*align-self/);
+    expect(rule(".policy-cards > .policy-card")).toMatch(/display: flex;[\s\S]*flex-direction: column;/);
+    expect(rule(".policy-cards > .policy-card > \\*")).toMatch(/flex: none;/);
+    expect(rule(".policy-cards > .policy-card > .policy-card-foot")).toMatch(/margin-top: auto;/);
   });
 
-  it("orders the cards as the Budget's Table 6.1 does, with each card's costing row and example", () => {
-    const ids = ["savings_income_rates_up", "property_income_rates_up", "trading_allowance_raise", "household_energy_payment_2026", "carers_allowance_earnings_taper"];
-    const raises = ["property_income_rates_up", "savings_income_rates_up"];
-    render(<PolicyCards policies={ids.map((id) => published(id, id, raises.includes(id) ? "revenue" : "cost"))} selectedPolicies={ids} onShowEffect={() => {}} />);
+  it("pairs the modelled cards by shape through cardOrder: the charts together, then the tiles", () => {
+    const ordered = POLICY_DETAILS.filter((p) => p.cardOrder).sort((a, b) => a.cardOrder - b.cardOrder).map((p) => p.id);
+    expect(ordered.slice(0, 2)).toEqual(["fuel_duty_rise_deferral", "carers_allowance_earnings_taper"]);
+    expect(new Set(POLICY_DETAILS.filter((p) => p.cardOrder).map((p) => p.cardOrder)).size).toBe(ordered.length);
+  });
+
+  it("orders the cards by each entry's cardOrder, charts together, with each card's costing row and example", () => {
+    const ids = ["trading_allowance_raise", "property_income_rates_up", "household_energy_payment_2026", "carers_allowance_earnings_taper"];
+    render(<PolicyCards policies={ids.map((id) => published(id, id, id === "property_income_rates_up" ? "revenue" : "cost"))} selectedPolicies={ids} onShowEffect={() => {}} />);
     const cards = screen.getAllByRole("listitem").filter((item) => item.classList.contains("policy-card"));
-    // Rows 1, 7, 15, 61 and 62: not raises first
+    // cardOrder: Carer's Allowance 2, the energy payment 3, trading 4, property 6; not raises first
     expect(cards.map((item) => item.querySelector("h3").textContent)).toEqual([
-      "household_energy_payment_2026", "carers_allowance_earnings_taper", "trading_allowance_raise", "property_income_rates_up", "savings_income_rates_up",
+      "carers_allowance_earnings_taper", "household_energy_payment_2026", "trading_allowance_raise", "property_income_rates_up",
     ]);
-    expect(within(cards[4]).getByRole("link", { name: /^Costing: Budget 2026, Table 6\.1, row 62/ })).toBeTruthy();
     const costing = within(cards[3]).getByRole("link", { name: /^Costing: Budget 2026, Table 6\.1, row 61/ });
     expect(costing).toHaveAttribute("target", "_blank");
     expect(costing.getAttribute("href")).toMatch(/^https:\/\/www\.gov\.uk\/government\/publications\/budget-2026-document\//);
@@ -604,7 +596,7 @@ describe("the card's frame", () => {
     const example = within(cards[2]).getByRole("region", { name: /^Example: / });
     expect(example).toHaveTextContent("An employee on £30,000 with £3,000 of side income and no expenses pays £400 less income tax in 2027-28.");
     expect(cards[2].querySelector(".policy-card-spec")).toContainElement(example);
-    expect(cards[1].querySelector(".policy-card-example")).toBeNull();
+    expect(cards[0].querySelector(".policy-card-example")).toBeNull();
   });
 
   it("gives each Budget measure the Table 6.1 rows the reconciliation maps it to", () => {
@@ -618,5 +610,65 @@ describe("the card's frame", () => {
       expect(policy.budgetRows, policy.id).toEqual(mapped[policy.id]);
     }
     expect(Object.keys(mapped).filter((id) => detailsById[id]).every((id) => detailsById[id].budgetRows), "every mapped measure has its rows").toBe(true);
+  });
+
+  it("keeps every modelled card's text short: summary, example and each About this result point 20 words at most", () => {
+    const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
+    const ids = Object.keys(file.measures);
+    render(<PolicyCards policies={ids.map((id) => published(id, id))} selectedPolicies={ids} parameterTables={file} />);
+    const words = (node) => node.textContent.trim().split(/\s+/).length;
+    const long = [];
+    for (const card of document.querySelectorAll(".policy-cards > .policy-card")) {
+      const toggle = within(card).queryByRole("button", { name: "About this result" });
+      if (toggle) fireEvent.click(toggle);
+      const blocks = [
+        ...card.querySelectorAll(".policy-card-summary, .policy-card-example-text, .policy-card-example-items li, .policy-card-details li, .policy-card-details p"),
+      ];
+      for (const block of blocks) if (words(block) > 20) long.push(`${card.id}: ${block.textContent.trim()}`);
+      expect(words(card.querySelector(".policy-card-affects dd") ?? { textContent: "" }), card.id).toBeLessThanOrEqual(12);
+    }
+    expect(long).toEqual([]);
+  });
+
+  it("lists a lead line's points as real bullets", () => {
+    const id = "household_energy_payment_2026";
+    render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} />);
+    const example = screen.getByRole("region", { name: /^Who it reaches/ });
+    expect(example.querySelector(".policy-card-example-text")).toHaveTextContent(/including:$/);
+    const list = example.querySelector("ul.policy-card-example-items");
+    expect([...list.children].map((item) => item.tagName)).toEqual(["LI", "LI"]);
+    expect(list.children[0]).toHaveTextContent("83% of households spending over a tenth of their income on energy");
+  });
+
+  it("names the Carer's Allowance What changes row in the card's own short words", () => {
+    const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
+    const id = "carers_allowance_earnings_taper";
+    render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
+    const block = screen.getByRole("region", { name: /^What changes/ });
+    expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^Earnings limit/);
+    expect(block.querySelector(".pchg-caption")).toHaveTextContent("Earnings limit, £ a week");
+    expect(block).not.toHaveTextContent("Weekly earnings at which");
+  });
+
+  it("shows no year strip by default: At a glance says when", () => {
+    const id = "fuel_duty_rise_deferral";
+    render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} />);
+    expect(screen.getByRole("listitem").querySelector(".ptl")).toBeNull();
+  });
+
+  it("keeps the change beside the new value, so both tiles have the same parts", () => {
+    const id = "trading_allowance_raise";
+    const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
+    render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
+    const after = document.querySelector(".pchg-tile.is-after");
+    expect([...after.children].map((child) => child.className)).toEqual(["pchg-tile-name", "pchg-tile-row"]);
+    expect(after.querySelector(".pchg-tile-row .pchg-chip")).toBeTruthy();
+  });
+
+  it("keeps every modelled card's Starts and Ends to 20 characters", () => {
+    for (const policy of POLICY_DETAILS) {
+      expect(policy.starts.length, policy.id).toBeLessThanOrEqual(20);
+      if (policy.ends) expect(policy.ends.length, policy.id).toBeLessThanOrEqual(20);
+    }
   });
 });

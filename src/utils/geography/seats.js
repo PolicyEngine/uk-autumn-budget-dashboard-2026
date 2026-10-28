@@ -96,24 +96,61 @@ const LITTLE_CHANGE_SHARE = 0.1;
  * tenth of the seats or more. Null with no rows.
  *
  * @param {Map<string, {kind: string, row: Object|null}>|null} states - seatStates
- * @param {{outcome: string, yearLabel: string, several?: boolean}} options
+ * With `policy` (the name of the policy the map shows) the sentence names
+ * it first ("Property income tax up: households lose on average in 127
+ * constituencies, 16 too close to call; 507 have too few survey
+ * households to show"); with `note` as well, one line says why this
+ * policy and that another can be chosen ("Showing Property income tax up
+ * (no map yet for all the policies together; choose another policy): …").
+ *
+ * @param {Map<string, {kind: string, row: Object|null}>|null} states - seatStates
+ * @param {{outcome: string, yearLabel: string, several?: boolean, policy?: string|null, note?: string|null}} options
  */
-export function constituencySentence(states, { outcome, yearLabel, several = false }) {
+export function constituencySentence(states, { outcome, yearLabel, several = false, policy = null, note = null }) {
+  const plain = sentenceBody(states, { outcome, yearLabel, several });
+  if (plain === null) return null;
+  const rest = `${plain.charAt(0).toLowerCase()}${plain.slice(1)}`;
+  if (policy && note) return `Showing ${policy} (${note}): ${rest}`;
+  return policy ? `${policy}: ${rest}` : plain;
+}
+
+function sentenceBody(states, { outcome, yearLabel, several }) {
   const all = [...(states?.values() ?? [])];
   if (!all.some((state) => state?.row)) return null;
   if (movesNoSeat(states)) {
     if (all.some((state) => state?.row?.tier === "withheld")) return noSeatMovedNote({ yearLabel, several });
     return `${several ? "These policies do" : "This policy does"} not change household incomes in any constituency in ${yearLabel}.`;
   }
-  const placed = all.filter((state) => !drawnAsNoData(state)).map((state) => state.row);
-  const noData = all.length - placed.length;
-  // Signed as the seat cards colour them: a negligible figure is no change
-  const gains = placed.filter((row) => signOf(row.value, outcome) === "gain");
-  const losses = placed.filter((row) => signOf(row.value, outcome) === "loss");
+  // Each seat in the published category the file gives it (`direction`:
+  // gain, loss, no change, too close to call), so the counts are the
+  // data's; a figure with no category is signed as the seat cards colour
+  // it. A seat with no row or not published is "too few survey households
+  // to show"; one too close to call is counted apart, never as a loss
+  // A seat the map draws as too uncertain to place (with no category of
+  // too close to call) is counted with no data, as the map draws it
+  const shown = all.filter(
+    (state) =>
+      state?.row &&
+      state.kind !== "no-data" &&
+      state.kind !== "withheld" &&
+      !(state.category === TOO_UNCERTAIN && state.row.direction !== "too_close_to_call"),
+  );
+  const directionOf = (row) => {
+    if (row.direction === "too_close_to_call") return "close";
+    if (row.direction === "gain" || row.direction === "loss") return row.direction;
+    if (row.direction === "no_change") return "zero";
+    return signOf(row.value, outcome);
+  };
+  const close = shown.filter((state) => directionOf(state.row) === "close").length;
+  const placed = shown.map((state) => state.row).filter((row) => directionOf(row) !== "close");
+  const noData = all.length - shown.length;
+  const gains = placed.filter((row) => directionOf(row) === "gain");
+  const losses = placed.filter((row) => directionOf(row) === "loss");
   const flat = placed.length - gains.length - losses.length;
   // "; 71 have no data": the noun is said once, on the first count
-  const noDataPart = noData > 0 ? `; ${noData.toLocaleString("en-GB")} ${noData === 1 ? "has" : "have"} no data` : "";
-  const oneWay = flat === 0 && (gains.length === 0 || losses.length === 0);
+  const noDataPart = noData > 0 ? `, and ${noData.toLocaleString("en-GB")} ${noData === 1 ? "has" : "have"} too few survey households to show` : "";
+  const closePart = close > 0 ? `, ${close.toLocaleString("en-GB")} too close to call` : "";
+  const oneWay = flat === 0 && close === 0 && (gains.length === 0 || losses.length === 0);
   if (oneWay) {
     const moving = gains.length > 0 ? gains : losses;
     const sorted = [...moving].sort((a, b) => compareDecimal(absDecimal(a.value), absDecimal(b.value)));
@@ -127,9 +164,13 @@ export function constituencySentence(states, { outcome, yearLabel, several = fal
     return `Households ${gains.length > 0 ? "gain" : "lose"} on average in ${every}${range}.`;
   }
   const sayFlat = flat > 0 && (flat >= LITTLE_CHANGE_SHARE * all.length || (gains.length === 0 && losses.length === 0));
-  const parts = [
+  // The larger count first: "lose on average in 103 … and gain in 1"
+  const moves = [
     gains.length > 0 && ["gain", gains.length],
     losses.length > 0 && ["lose", losses.length],
+  ].filter(Boolean).sort((a, b) => b[1] - a[1]);
+  const parts = [
+    ...moves,
     // Under 50p either way (signOf), as the page's "almost no change" for a
     // figure that rounds to £0; not the map's "Little change" (under £10),
     // which counts other seats (W6 G1)
@@ -141,7 +182,8 @@ export function constituencySentence(states, { outcome, yearLabel, several = fal
     i === 0 ? `${verb} on average in ${seatsWord(n)}` : `${verb} in ${n.toLocaleString("en-GB")}`,
   );
   const joined = said.length > 1 ? `${said.slice(0, -1).join(", ")} and ${said[said.length - 1]}` : said[0];
-  return `Households ${joined}${noDataPart}.`;
+  if (!joined) return `Households' changes are too close to call in ${seatsWord(close)}${noDataPart}.`;
+  return `Households ${joined}${closePart}${noDataPart}.`;
 }
 
 const PLAIN_STROKE = Object.freeze({ stroke: CHART_COLOURS.surface, strokeWidth: 0.05 });

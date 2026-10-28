@@ -150,7 +150,7 @@ describe("ConstituencyMap on Budget day", () => {
     // The figures' line only: the greyed-out All selected policies says
     // the map shows one policy at a time
     expect(container.querySelector(".chart-header .chart-description").textContent).toBe(
-      "No constituency shows a change large enough to publish for this policy in 2029-30.",
+      "Rail fares freeze: no constituency shows a change large enough to publish for this policy in 2029-30.",
     );
   });
 
@@ -179,7 +179,7 @@ describe("ConstituencyMap on Budget day", () => {
       .filter(Boolean);
     expect(categories.every((category) => category === "no_change")).toBe(true);    // One line under the map says why every seat is grey or No data
     expect(
-      screen.getByText(/^No constituency shows a change large enough to publish for this policy in 2029-30\./),
+      screen.getByText(/^Showing Rail fares freeze \(choose another policy\): no constituency shows a change large enough to publish for this policy in 2029-30\./),
     ).toBeInTheDocument();
   });
 

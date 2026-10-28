@@ -189,11 +189,12 @@ export const HOUSEHOLD_EXAMPLES = [
     short: "Landlord",
     description: "£50,000 salary, rent from a flat, savings interest",
     icon: "briefcase",
-    // Both rates: property's colour on the card (`measure`), both in its
-    // own part (`measures`)
+    // The property rate (the savings rate is not in the release): its
+    // colour on the card and its own part. The savings interest stays an
+    // input: it is part of the household
     measure: "property_income_rates_up",
-    measures: ["property_income_rates_up", "savings_income_rates_up"],
-    tag: "Savings and property tax",
+    measures: ["property_income_rates_up"],
+    tag: "Property tax",
     inputs: {
       ...RESET,
       current_age: 55,
@@ -214,17 +215,19 @@ export const HOUSEHOLD_EXAMPLES = [
     short: "Small landlord",
     description: "£45,000 salary, £6,000 from a flat, £2,000 interest",
     icon: "key",
-    // Both rates, as the landlord's (the measure split in 4118aacf)
+    // The property rate, as the landlord's (the savings rate is not in the
+    // release); the savings interest stays an input
     measure: "property_income_rates_up",
-    measures: ["property_income_rates_up", "savings_income_rates_up"],
-    tag: "Savings and property tax",
+    measures: ["property_income_rates_up"],
+    tag: "Property tax",
     inputs: {
       ...RESET,
       // The household in PolicyEngine's post on the savings and property
       // income rates (app-v2 #1460, at f581840f) whose property income
       // takes its savings interest into the higher-rate band; aged 35 as
-      // there (age changes none of these taxes). £150 more income tax a
-      // year, in the post and here (Max, #292)
+      // there (age changes none of these taxes). The post's £150 more
+      // income tax a year was both rates together; the property rate alone
+      // is £120 a year here
       current_age: 35,
       current_salary: 45000,
       tenure: "OWNED_WITH_MORTGAGE",

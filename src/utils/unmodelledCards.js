@@ -13,10 +13,10 @@
  * - inForce / steps / stepsLabel / ends / duration: as in policyDetails.js,
  *   only where the entry states the dates;
  * - parameters: a "What changes" entry ({ display, rows }) as
- *   policy_parameters.json shapes one. "table" shows the before and after
- *   tiles only, for a single change of value; "switch" adds a plot, used
- *   only where the change runs over time and back (the bank surcharge's
- *   15 months). The cards show no timeline: Starts and Ends say when.
+ *   policy_parameters.json shapes one: "table" for the before and after
+ *   tiles only, "pairs" for each of two changes as its own tiles; never a
+ *   plot. The cards show no timeline either:
+ *   Starts and Ends say when.
  */
 
 const yearly = (from, to, before, after, beforeStart = before) =>
@@ -48,7 +48,7 @@ export const UNMODELLED_CARDS = {
   "universal-credit-surplus-earnings": {
     category: { label: "Benefits", icon: "piggy" },
     inForce: { from: "2027-04", to: "2028-03" },
-    ends: "March 2028",
+    ends: "Mar 2028",
     duration: "One year",
     parameters: {
       display: "table",
@@ -66,9 +66,14 @@ export const UNMODELLED_CARDS = {
     inForce: { from: "2026-04" },
     steps: [{ month: "2027-04", label: "35p above 10,000 miles" }],
     stepsLabel: "35p above 10,000 miles",
+    // Both changes as pairs: the first 10,000 miles' 55p made permanent
+    // ("up from 45p"), and 25p to 35p above them
     parameters: {
-      display: "table",
-      rows: [row("Tax-free rate above 10,000 business miles", "pence", "pence a mile", yearly(2027, 2031, 25, 35))],
+      display: "pairs",
+      rows: [
+        row("First 10,000 business miles", "pence", "pence a mile", [{ key: "2026", label: "2026-27", year: 2026, before: 45, after: 55 }]),
+        row("Above 10,000 business miles", "pence", "pence a mile", yearly(2027, 2031, 25, 35), false),
+      ],
     },
   },
   // "capped at £2 for one year from 1 January 2027. Until then most single
@@ -77,7 +82,7 @@ export const UNMODELLED_CARDS = {
   "bus-fare-cap": {
     category: { label: "Transport", icon: "compass" },
     inForce: { from: "2027-01", to: "2027-12" },
-    ends: "December 2027",
+    ends: "Dec 2027",
     duration: "One year",
     parameters: {
       display: "table",
@@ -87,6 +92,16 @@ export const UNMODELLED_CARDS = {
   // No start date set ("by the end of 2027, or as soon as possible after")
   "gas-standing-charges": {
     category: { label: "Energy", icon: "flame" },
+  },
+  // Rates "2 percentage points" above current law's (Budget 2025's 22%);
+  // the basic rate as the tiles, from policy_parameters.json's 2027-28 row
+  "savings-income-tax": {
+    category: { label: "Income tax", icon: "wallet" },
+    inForce: { from: "2027-04" },
+    parameters: {
+      display: "table",
+      rows: [row("Savings basic rate", "percent", null, [{ key: "2027", label: "2027-28", year: 2027, before: 0.22, after: 0.24 }])],
+    },
   },
   // The cut "to £12,000 for savers under 65 from 6 April 2027 does not go
   // ahead: the limit stays at £20,000"
@@ -123,7 +138,7 @@ export const UNMODELLED_CARDS = {
     category: { label: "Income tax", icon: "wallet" },
     inForce: { from: "2030-04" },
     parameters: {
-      display: "table",
+      display: "pairs",
       rows: [
         row("Zero-emission cars", "percent", null, [{ key: "2030", label: "2030-31", year: 2030, before: 0.09, after: 0.1 }]),
         row("Cars emitting 1 to 50g CO2/km", "percent", null, [{ key: "2030", label: "2030-31", year: 2030, before: 0.19, after: 0.2 }], false),
@@ -173,10 +188,10 @@ export const UNMODELLED_CARDS = {
   "bank-surcharge": {
     category: { label: "Business", icon: "building" },
     inForce: { from: "2027-01", to: "2028-03" },
-    ends: "March 2028",
+    ends: "Mar 2028",
     duration: "15 months",
     parameters: {
-      display: "switch",
+      display: "table",
       rows: [row("Bank Corporation Tax Surcharge", "percent", null, [
         { key: "2027-01-01/2028-03-31", label: "January 2027 to March 2028", year: 2026, before: 0.03, after: 0.06 },
       ])],
