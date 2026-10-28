@@ -65,7 +65,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Applies the duty rate in force on each day to households' petrol and diesel spending, day-weighted to fiscal years.",
     details:
-      "Assumes no rise on 1 January 2027 and none in March or April 2027 until the cut ends on 1 July 2027, when duty returns to current law's rate and its RPI rises; after that it costs nothing. The end date is the Budget document's. Includes the VAT on the lower pump price; fuel spending is held fixed. We model households' fuel only; the Treasury's figure also covers business fuel, including vans and lorries.",
+      "Assumes no rise on 1 January 2027 and none in March or April 2027 until the cut ends on 1 July 2027, when duty returns to current law's rate and its RPI rises; after that it costs nothing. The end date is the Budget document's. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel for vans, lorries and business use of cars is not modelled, so the figure covers households' own fuel; the Treasury's figure also covers business fuel.",
     source: {
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
