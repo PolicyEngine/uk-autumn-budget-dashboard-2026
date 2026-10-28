@@ -151,6 +151,21 @@ export function SegmentTooltip({ active, payload, labelOf, format, netKey, netLa
     ? payload.find((item) => item.dataKey !== netKey) ?? payload[0]
     : payload.find((item) => item.dataKey === activeKey);
   if (!entry || entry.value == null) return null;
+  // The net line hovered: its year and value alone
+  if (netKey && entry.dataKey === netKey) {
+    const row = entry.payload ?? {};
+    const value = Number(entry.value);
+    return (
+      <div className="chart-tooltip">
+        <p className="chart-tooltip-label">{labelOf(row)}</p>
+        <div className="chart-tooltip-row chart-tooltip-net">
+          <span className="chart-tooltip-swatch chart-tooltip-swatch-line" />
+          <span className="chart-tooltip-name">{netLabel}</span>
+          <span className="chart-tooltip-value">{value < 0 ? `−${format(Math.abs(value))}` : `+${format(Math.abs(value))}`}</span>
+        </div>
+      </div>
+    );
+  }
   const row = entry.payload ?? {};
   const value = Number(entry.value);
   const text = (v) => (v < 0 ? `−${format(Math.abs(v))}` : `+${format(Math.abs(v))}`);

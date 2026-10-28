@@ -60,7 +60,9 @@ CANDIDATES = (
     "trading_allowance_raise",
 )
 # Individual candidates that are not components of the combined package.
-NOT_IN_PACKAGE = ()
+# Registered but held back from the package: its yield is about 60% of
+# Table 6.1 because the data miss ISA interest (Vahid and Max, 28 Oct).
+NOT_IN_PACKAGE = ("savings_income_rates_up",)
 # Registered on 27 October, before its first national generation: its rows
 # are checked once budgetary_impact.csv has them.
 NOT_YET_GENERATED = (
@@ -149,20 +151,20 @@ def test_the_registry_is_the_combined_package_then_the_ten_candidates():
     )
 
 
-def test_the_package_is_the_eight_candidates():
+def test_the_package_is_the_seven_announced_measures():
     from uk_budget_data.geography import manifest_key
     from uk_budget_data.publication.combine import combined_key
 
-    # Eight on Budget day: the measures the Budget 2026 document announced,
-    # savings and property rates one each (Table 6.1 rows 61 and 62)
-    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 8
+    # Seven on Budget day: the announced measures with savings rates held
+    # back (Table 6.1 row 62); property rates are row 61
+    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 7
     assert len(reforms._MEASURE_FACTORIES) == 8
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
-    assert key == "combined--92701a68cf080aa8"
+    assert key == "combined--f91fe847275730cb"
     # The area run's package alias stands for that key
     assert manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     description = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID).description
-    assert description.startswith("All eight announced measures")
+    assert description.startswith("All seven announced measures")
 
 
 def test_the_withdrawn_measures_are_not_registered():

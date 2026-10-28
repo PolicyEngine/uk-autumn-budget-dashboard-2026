@@ -10,6 +10,11 @@ export const TYPICAL_CALCULATION_SECONDS = 30;
 // Past this, the panels say the calculation is taking longer than usual
 export const SLOW_CALCULATION_SECONDS = 60;
 
+// Past this, the panels say it is still working and why it can be slow (a
+// cold start), so a first run never looks stuck
+export const STILL_WORKING_SECONDS = 20;
+export const STILL_WORKING_TEXT = "Still working: this can take up to a minute the first time";
+
 // What every waiting panel says it usually takes
 export const STAGE_TIMES = {
   headline: { typical: TYPICAL_CALCULATION_SECONDS, slow: SLOW_CALCULATION_SECONDS, text: "Usually 15–30 seconds" },

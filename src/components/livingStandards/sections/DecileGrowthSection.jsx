@@ -110,17 +110,17 @@ const POPULATIONS = { all: "All people", non_pensioners: "Non-pensioners" };
 // CSV: incomes at the very bottom of the survey are often temporarily low
 // (self-employment losses, students, people living off savings) or
 // under-reported, so they say little about living standards, and with few
-// households their growth swings from year to year. Quintiles and deciles
-// keep their bottom group, which is wider and steadier.
-const SKIPPED = { vigintile: 1 };
+// households their growth swings from year to year. Decile 1, the
+// lowest-income tenth, is left out too (Vahid, 28 October): its survey
+// incomes are often below what those households spend, so its growth is
+// unreliable. Quintiles keep their bottom group, which is wider and
+// steadier. The data file is unchanged.
+const SKIPPED = { vigintile: 1, decile: 1 };
+// The caveat for the lowest tenth left out, in About this chart
+export const LOWEST_TENTH_CAVEAT =
+  "The lowest tenth is not shown: survey incomes at the very bottom are often below what those households spend, so their growth is unreliable.";
 const VIGINTILE_ABOUT =
   "Vigintile 1, the lowest-income 5% of people, is left out. Incomes at the very bottom of the survey are often temporarily low (self-employment losses, students, people living off savings) or under-reported, so they say little about living standards, and with few households behind them their growth swings from year to year. The chart starts at vigintile 2, the 5th to 10th percentile.";
-// Decile 1 after housing costs is kept, but its growth swings: a short
-// line under the key, the fuller one in About this chart
-export const DECILE_AHC_NOTE =
-  "The lowest-income tenth after housing costs swings from year to year: incomes at the very bottom of the survey are often temporarily low or under-reported.";
-const DECILE_AHC_ABOUT =
-  "Decile 1 after housing costs, the lowest-income tenth, is shown, but read it with care: incomes at the very bottom of the survey are often temporarily low (self-employment losses, students, people living off savings) or under-reported, while housing costs are not, so income after housing costs there is small and its growth swings from year to year.";
 const VIEWS = { period: "Whole period", annual: "Year by year" };
 
 /**
@@ -262,14 +262,16 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const colours = incomeGroupColours(shown.length);
   const colourOf = (i) => colours[i - skip];
   const ordinal = (k) => `${k}${k % 100 >= 11 && k % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][k % 10] ?? "th"}`;
-  const groupName = (i) =>
-    `${ordinal(i + 1)} ${g.share}${
-      i === skip ? (skip ? " (lowest shown, 5th–10th percentile)" : " (lowest income)") : i === n - 1 ? " (highest income)" : ""
-    }`;
   // "15th of 20 (70th–75th percentile)", for one bar's tooltip
   const step = 100 / n;
+  // The lowest group shown when the first is left out: "10th–20th percentile"
+  const skipSpan = `${ordinal(Math.round(skip * step))}–${ordinal(Math.round((skip + 1) * step))} percentile`;
+  const groupName = (i) =>
+    `${ordinal(i + 1)} ${g.share}${
+      i === skip ? (skip ? ` (lowest shown, ${skipSpan})` : " (lowest income)") : i === n - 1 ? " (highest income)" : ""
+    }`;
   const groupSpan = (i) => `${ordinal(i + 1)} of ${n} (${ordinal(Math.round(i * step)).replace(/^0th$/, "0")}–${ordinal(Math.round((i + 1) * step))} percentile)`;
-  const lowest = skip ? `second-lowest-income ${g.share} (5th–10th percentile)` : `lowest-income ${g.share}`;
+  const lowest = skip ? `second-lowest-income ${g.share} (${skipSpan})` : `lowest-income ${g.share}`;
   const basisShort = basis.toUpperCase();
   const who = population === "all" ? "" : " among non-pensioners";
   const say = (v) => changeVerb(v, "%") || "stays flat";
@@ -295,7 +297,9 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   // (whole period, the axis numbers the groups)
   const legendItems = (annual && groupSeries.length <= 5 ? groupSeries : [groupSeries[0], groupSeries.at(-1)]).map((s) => ({ label: s.name, color: s.colour, type: "rect" }));
   // More than five groups: one light-to-dark key, so every bar is explained
-  const ramp = groupSeries.length > 5 ? { colours: groupSeries.map((s) => s.colour), from: "Lowest income", to: "Highest income" } : null;
+  // The key starts at the lowest group shown: "Second tenth" when the
+  // lowest is left out
+  const ramp = groupSeries.length > 5 ? { colours: groupSeries.map((s) => s.colour), from: skip ? `Second ${g.share}` : "Lowest income", to: "Highest income" } : null;
 
   // Year by year: on hovering a year, every group's value, compact
   const shortValue = (v) => {
@@ -347,7 +351,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     : `from ${fyDash(first.year)} to ${fyDash(end.year)}`;
   // The two groups compared, named (LS1): "(lowest tenth: +0.4% a year;
   // top tenth: +0.2%)"
-  const bottomName = skip ? `${ordinal(skip + 1)} ${g.share}` : `lowest ${g.share}`;
+  const bottomName = skip ? `second ${g.share}` : `lowest ${g.share}`;
   const ends = (
     <>
       ({bottomName}: <strong>{diff ? ppEnd(lowMean, lowRaw) : num(lowMean)}{unitWord}</strong>
@@ -382,7 +386,8 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
 
   // Under the key only the short decile-1 (AHC) caution; the vigintile
   // note is in About this chart, with the key starting at vigintile 2
-  const legendNote = grouping === "decile" && basis === "ahc" ? DECILE_AHC_NOTE : null;
+  // (decile 1 is no longer shown, so its after-housing-costs caution goes)
+  const legendNote = null;
 
   // The years compared are the section's (CurrentLawSection); the view is
   // the card's pill and the rest sits under Options (ControlBar)
@@ -415,7 +420,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     : diff
       ? " With the selected policies: each bar is the policies' effect on that growth, in percentage points: real growth with the policies less growth without them, from the same pair of simulations (the policy's own run, or the selected policies' combined run, and its own baseline)."
       : " With the selected policies: current law's growth (the Pre-measures forecast tab's chart) plus the policies' effect on it, from the same pair of simulations (the policy's own run, or the selected policies' combined run, and its own baseline). So with less without is exactly the effect.";
-  const about = `${statistic}: each bar is the real change in that ${g.noun}'s median, ${annual ? "on the year before" : "between the two years"}.${measuresAbout} Groups are re-ranked each year, so this compares positions in the distribution, not the same people.${popNote}${skip ? ` ${VIGINTILE_ABOUT}` : ""}${grouping === "decile" && basis === "ahc" ? ` ${DECILE_AHC_ABOUT}` : ""}`;
+  const about = `${statistic}: each bar is the real change in that ${g.noun}'s median, ${annual ? "on the year before" : "between the two years"}.${measuresAbout} Groups are re-ranked each year, so this compares positions in the distribution, not the same people.${popNote}${grouping === "vigintile" ? ` ${VIGINTILE_ABOUT}` : ""}`;
   const fileStem = `income-growth${measures ? (diff ? "-effect-of-measures" : "-with-measures") : ""}-by-${g.noun}-${basis}${population === "all" ? "" : "-non-pensioners"}`;
   const csvTitle = (t) => (measures ? `${t}${diff ? ": effect of the selected policies" : ", with the selected policies"}` : t);
 
@@ -441,7 +446,8 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
       ],
       caveats: [
         "Groups are re-ranked each year: this compares positions in the distribution, not the same people.",
-        skip > 0 &&
+        grouping === "decile" && LOWEST_TENTH_CAVEAT,
+        grouping === "vigintile" &&
           `The lowest-income ${g.share} is left out: incomes there are often temporarily low or under-reported.`,
         grouping === "vigintile" &&
           `The ${low}'s median is ${formatPounds(first.real_median[skip])} a year in ${fyDash(first.year)}, so a small change in pounds is a large percentage.`,

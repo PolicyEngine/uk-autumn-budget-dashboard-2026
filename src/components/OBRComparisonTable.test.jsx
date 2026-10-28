@@ -269,7 +269,8 @@ describe("the comparison sentence", () => {
   const row = (name, pe, obr) => ({ id: name, name, pe, obr });
   it("counts the measures within £200m and names the largest gap", () => {
     expect(plain(comparisonSentence([row("Employer NI relief", -6.2, -6.5), row("A", 1, 1.1), row("B", 0.4, 0.4), row("C", 0.1, null)], "static"))).toBe(
-      "For 2 of 3 policies our static estimate is within £200m of the official static costing; the largest gap is Employer NI relief (−£6.2bn vs −£6.5bn).",
+      // Counted out of every policy the chart draws (C has no official figure)
+      "For 2 of the 4 policies our static estimate is within £200m of the official static costing; the largest gap is Employer NI relief (−£6.2bn vs −£6.5bn); 1 has no comparable official figure this year.",
     );
   });
   it("leaves out the gap when every measure rounds equal", () => {
