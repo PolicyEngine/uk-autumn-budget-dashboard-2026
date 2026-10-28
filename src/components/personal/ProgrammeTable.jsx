@@ -1,6 +1,6 @@
 import { Fragment, useRef, useState } from "react";
 import { buildChartCsv } from "../../utils/chartCsv";
-import { useNarrowViewport } from "../../utils/chartTheme";
+import { CHART_COLOURS, useNarrowViewport } from "../../utils/chartTheme";
 import {
   groupTotals,
   money,
@@ -535,6 +535,23 @@ function PolicyTable({ tab, wide, setTable, title }) {
 }
 
 /**
+ * The Summary tab's label in the policy tabs' badge style (MeasureRowLabel,
+ * compact): a list icon in a tinted circle of the same size, then its name.
+ */
+function SummaryTabLabel({ label }) {
+  return (
+    <span className="mrl mrl--compact breakdown-tab-summary" style={{ "--mrl-colour": CHART_COLOURS.highlight }}>
+      <span className="mrl-icon mrl-icon--compact" aria-hidden="true">
+        <TitleIcon name="list" bare size={11} />
+      </span>
+      <span className="mrl-text">
+        <span className="mrl-name breakdown-tab-text">{label}</span>
+      </span>
+    </span>
+  );
+}
+
+/**
  * The card's tabs: Summary, then one per policy that changes the household
  * (the policy's badge label: its tinted icon and short name), and the rest
  * folded into a muted "+N with no effect for you". A WAI-ARIA tablist with
@@ -580,7 +597,7 @@ function BreakdownTabs({ tabs, value, onChange, noEffect, note = null }) {
               className={`breakdown-tab${selected ? " is-selected" : ""}`}
               onClick={() => onChange(tab.id)}
             >
-              {tab.measure ? <MeasureRowLabel measure={tab.measure} compact tip={false} /> : <span className="breakdown-tab-text">{tab.label}</span>}
+              {tab.measure ? <MeasureRowLabel measure={tab.measure} compact tip={false} /> : <SummaryTabLabel label={tab.label} />}
             </button>
           );
         })}

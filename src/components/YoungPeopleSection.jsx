@@ -39,8 +39,10 @@ import {
   YOUNG_BAND,
   isPublished,
   COMBINATION_NOT_PUBLISHED,
-  PACKAGE_PARTS_CAVEAT,
   meanChangeByBand,
+  policiesWithoutRows,
+  singleAgeKey,
+  withheldPartsCaveat,
   singleAgeSelection,
   sharesByGroup,
   SINGLE_AGE_TOP,
@@ -360,6 +362,18 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
     : fromPackage && !byPolicy;
   // A selected policy withholds its rows by age: no policy parts to offer
   const partsWithheld = shownData.some((point) => point.fromPackage && !point.partsShown);
+  // The policies that withhold them, named in the caveat
+  const withheldNames = partsWithheld
+    ? policiesWithoutRows(
+        rows,
+        policies,
+        selectedPolicies,
+        [selectedYear],
+        single
+          ? Array.from({ length: SINGLE_AGE_LAST - SINGLE_AGE_FIRST + 1 }, (_, i) => singleAgeKey(SINGLE_AGE_FIRST + i))
+          : AGE_BANDS.map((band) => band.key),
+      ).map((policy) => catalogue.byId?.get(policy.id)?.label ?? policy.label ?? policy.name ?? policy.id)
+    : [];
   // The single-year axis fits the year shown's stacks, gains above zero and
   // losses below, with a little headroom (never mirrored)
   const stackEnds = singleData
@@ -678,7 +692,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
             year={selectedYear}
             info={{
               caveats: [
-                partsWithheld && PACKAGE_PARTS_CAVEAT,
+                partsWithheld && withheldPartsCaveat(withheldNames, single ? "by single year of age" : "by age group"),
                 notShown && !combinationUnavailable && `Not shown, as too few survey records: ${notShown}.`,
                 single &&
                   "Single years of age rest on fewer households: a few large changes, such as capital gains, can move one age's average.",

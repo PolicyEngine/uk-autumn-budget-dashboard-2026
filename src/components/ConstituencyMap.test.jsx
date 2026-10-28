@@ -14,11 +14,7 @@ import { exportMapAsSvg } from "../utils/exportMapAsSvg";
 import { resetGeographyCache } from "../hooks/useGeographyData";
 import {
   NO_DATA_FILL,
-  UNCERTAIN_FILL,
-  WITHHELD_FILL,
-  approximateColourFill,
-  approximateColourPatternId,
-  approximatePatternId,
+  NO_DATA_STROKE,
 } from "../utils/geography/palette";
 import { SCALE_COLOURS, scaleColour } from "../utils/geography/scale";
 import {
@@ -116,34 +112,34 @@ describe("ConstituencyMap", () => {
     );
   });
 
-  it("hatches withheld seats and never colours them", async () => {
+  it("draws withheld seats as No data and never colours them", async () => {
     const { container } = await renderMap();
     const withheld = seat(container, "Z14000003");
-    expect(withheld.getAttribute("fill")).toBe(WITHHELD_FILL);
-    expect(withheld.getAttribute("fill")).toBe("url(#withheld-hatch)");
+    // One No data swatch for not published, no row and too uncertain
+    // (Vahid, 28 October): blank, outlined, never a colour on the scale
+    expect(withheld.getAttribute("fill")).toBe(NO_DATA_FILL);
+    expect(withheld.getAttribute("stroke")).toBe(NO_DATA_STROKE);
     expect(withheld.getAttribute("data-state")).toBe("withheld");
     expect(withheld.style.fill).toBe("");
+    expect(seat(container, "Z14000006").getAttribute("fill")).toBe(NO_DATA_FILL);
   });
 
-  it("colours seats on the 2025 dashboard's continuous scale, and dots an approximate seat's colour", async () => {
+  it("colours seats on the 2025 dashboard's continuous scale, an approximate seat plain like the rest", async () => {
     const { container } = await renderMap();
     const fill = (code) => seat(container, code).getAttribute("fill");
     const opacity = (code) => seat(container, code).getAttribute("fill-opacity");
     // +1.12% is past the scale's +1% end: clamped to its teal
     expect(fill("Z14000001")).toBe(SCALE_COLOURS.gain.toLowerCase());
     expect(opacity("Z14000001")).toBe("1");
-    // Status is a texture over the seat's own colour, not a lighter
-    // colour that could be read as a smaller change.
-    const approximate = scaleColour("0.0068", 0.01);
-    expect(fill("Z14000002")).toBe(approximateColourFill(approximate));
+    // No texture on any seat (Vahid, 28 October): an approximate seat is
+    // its own colour, full strength; its card says it is approximate
+    expect(fill("Z14000002")).toBe(scaleColour("0.0068", 0.01));
     expect(opacity("Z14000002")).toBe("1");
-    const dots = container.querySelector(
-      `svg > defs > pattern#${approximateColourPatternId(approximate)}`,
-    );
-    expect(dots.querySelector("rect").getAttribute("fill")).toBe(approximate);
-    expect(dots.querySelector("circle")).not.toBeNull();
-    expect(dots.id).not.toMatch(/[\d:]/);
-    expect(fill("Z14000004")).toBe(UNCERTAIN_FILL);
+    const fills = [...container.querySelectorAll("path.constituency-path")].map((path) => path.getAttribute("fill"));
+    expect(fills.some((value) => value.startsWith("url("))).toBe(false);
+    // Too uncertain to place on the scale: the No data swatch, not a grey
+    // that reads as a size of change
+    expect(fill("Z14000004")).toBe(NO_DATA_FILL);
     expect(fill("Z14000005")).toBe(SCALE_COLOURS.loss.toLowerCase());
     expect(fill("Z14000007")).toBe(SCALE_COLOURS.neutral);
     expect(fill("Z14000008")).toBe(scaleColour("0.0004", 0.01));
@@ -182,22 +178,16 @@ describe("ConstituencyMap", () => {
       "\u22121%",
       "0%",
       "+1%",
-      "Too uncertain to classify",
-      "Approximate: dotted, few survey households",
-      "Not published: hatched, confidentiality",
-      "No data: blank",
+      "No data: not published, or too few survey households",
     ]) {
       expect(text).toContain(entry);
     }
-    expect(legend.querySelector(`rect[fill="${WITHHELD_FILL}"]`)).not.toBeNull();
-    // Status swatches carry texture over a gain and a loss colour, so none
-    // reads as a size of change.
-    expect(
-      legend.querySelectorAll(`rect[fill="url(#${approximatePatternId("large_gain")})"]`),
-    ).toHaveLength(1);
+    expect(text).not.toMatch(/Too uncertain|Little change|hatched/);
+    expect(legend.querySelector(`rect[fill="${NO_DATA_FILL}"]`)).not.toBeNull();
+    expect(text).not.toMatch(/Approximate|dotted/);
     expect(legend.querySelector('rect[fill="url(#map-legend-gradient)"]')).not.toBeNull();
-    // No explanation of deliberate noise, and no red dot on any seat: the
-    // only circles are the dots inside the approximate textures.
+    // No explanation of deliberate noise, and no dot on any seat: the only
+    // circles are inside the (unused) texture definitions.
     expect(text).not.toMatch(/noise/i);
     const circles = [...container.querySelectorAll('svg[role="img"] circle')];
     expect(circles.every((circle) => circle.closest("pattern"))).toBe(true);
@@ -214,8 +204,8 @@ describe("ConstituencyMap", () => {
     const { container } = await renderMap();
     const map = container.querySelector('svg[role="img"]');
     // On screen the key is HTML, outside the map's SVG: a gradient from
-    // loss to gain labelled at its ends and 0, then chips for too
-    // uncertain and the three status textures
+    // loss to gain labelled at its ends and 0, then one No data chip
+    // (Vahid, 28 October: the colour scale plus No data)
     const key = screen.getByRole("group", { name: "Key" });
     expect(map.contains(key)).toBe(false);
     expect(key).toHaveTextContent("Change in household net income, % of income");
@@ -223,15 +213,13 @@ describe("ConstituencyMap", () => {
     expect(key).not.toHaveTextContent("Loss");
     expect(key).not.toHaveTextContent("Gain");
     expect(key).not.toHaveTextContent("0.1%");
-    expect(key.querySelectorAll("button[data-key]")).toHaveLength(5);
-    expect(key).toHaveTextContent("Too uncertain");
-    // Little change has its own entry, in the light grey of £0; too uncertain is
-    // mid grey, in both views (Pavel's review, MAP1)
-    expect(key).toHaveTextContent("Little change");
+    expect([...key.querySelectorAll("button[data-key]")].map((chip) => chip.textContent)).toEqual(["No data"]);
+    // Little change is the scale's 0; approximate is said in About this chart
+    expect(key).not.toHaveTextContent("Too uncertain");
+    expect(key).not.toHaveTextContent("Little change");
     expect(key).not.toHaveTextContent("Shown by pattern:");
-    expect(key).toHaveTextContent("Approximate");
-    expect(key).toHaveTextContent("Not published");
-    expect(key).toHaveTextContent("No data");
+    expect(key).not.toHaveTextContent("Approximate");
+    expect(key).not.toHaveTextContent("Not published");
     expect(key).not.toHaveTextContent("Reported");
     // The SVG carries no logo of its own; the card's logo row does
     expect(map.querySelector("image")).toBeNull();
@@ -325,15 +313,14 @@ describe("ConstituencyMap", () => {
     expect(card.querySelector(".seat-card-policies")).toBeNull();
   });
 
-  it("gives an approximate seat one muted line with its households and interval", async () => {
+  it("gives an approximate seat one muted line saying so, with its interval", async () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000002"));
     const card = tooltip(container);
     expect(within(card).getByRole("heading")).toHaveTextContent("Harbour, Mill and Quay");
-    expect(card.querySelector(".seat-card-note")).toHaveTextContent(
-      "Estimate from 10–29 survey households; 90% interval 0.12% to 1.24%",
+    expect(card.querySelector(".seat-card-note").textContent).toBe(
+      "Approximate: based on fewer than 30 survey households; 90% interval 0.12% to 1.24%",
     );
-    expect(card).not.toHaveTextContent("Approximate:");
   });
 
   it("gives a seat whose interval includes zero its interval, not a verdict", async () => {
@@ -341,6 +328,8 @@ describe("ConstituencyMap", () => {
     fireEvent.click(seat(container, "Z14000004"));
     const card = tooltip(container);
     expect(card.querySelector(".seat-card-note")).toHaveTextContent("90% interval −0.9% to 1.7%");
+    // Drawn as No data on the map, its card says why, and keeps its figure
+    expect(card.querySelector(".seat-card-note")).toHaveTextContent(/^No data on the map: too uncertain to place on the scale; /);
     expect(card).not.toHaveTextContent("The interval includes zero");
     expect(card).not.toHaveTextContent("Map category");
   });
@@ -352,7 +341,7 @@ describe("ConstituencyMap", () => {
     expect(within(card).getByRole("heading")).toHaveTextContent("Westmoor");
     const lines = [...card.querySelectorAll("p")].map((line) => line.textContent);
     expect(lines).toEqual([
-      "Not published: too few survey households",
+      "No data: not published, too few survey households",
       "Regional figure for London, not an estimate for this constituency: +0.71% (0.52% to 0.94%)",
     ]);
   });
@@ -418,7 +407,7 @@ describe("ConstituencyMap", () => {
     showChangeAs("£ per household");
     await waitFor(() =>
       expect(seat(container, "Z14000002").getAttribute("fill")).toBe(
-        approximateColourFill(scaleColour("150", 100)),
+        scaleColour("150", 100),
       ),
     );
     fireEvent.click(seat(container, "Z14000005"));
@@ -427,7 +416,7 @@ describe("ConstituencyMap", () => {
     expect(tooltip(container)).not.toHaveTextContent("90% interval");
   });
 
-  it("follows the year, keeping hatched seats hatched", async () => {
+  it("follows the year, keeping withheld seats as No data", async () => {
     const { container, rerender } = await renderMap();
     rerender(
       <ConstituencyMap selectedPolicies={ALL} selectedYear={2030} policies={POLICIES} />,
@@ -438,7 +427,8 @@ describe("ConstituencyMap", () => {
       ),
     );
     expect(seat(container, "Z14000002").getAttribute("data-state")).toBe("no-data");
-    expect(seat(container, "Z14000003").getAttribute("fill")).toBe(WITHHELD_FILL);
+    expect(seat(container, "Z14000003").getAttribute("data-state")).toBe("withheld");
+    expect(seat(container, "Z14000003").getAttribute("fill")).toBe(NO_DATA_FILL);
     expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("2030-31");
   });
 
@@ -455,6 +445,7 @@ describe("ConstituencyMap", () => {
     expect(
       await screen.findByText("Constituency results for this combination of policies are not published yet."),
     ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Policy:/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
     expect(screen.queryByRole("radiogroup", { name: "Policy" })).toBeNull();
     expect(screen.getByRole("radiogroup", { name: "View" })).toBeInTheDocument();
@@ -466,6 +457,7 @@ describe("ConstituencyMap", () => {
     // The fixture's rows are the package's (the manifest's combined entry
     // of exactly the selected policies), so the seats are drawn from it
     expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: selected policies$/);
+    expect(screen.queryByRole("button", { name: /^Policy:/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
     expect(screen.queryByRole("radiogroup", { name: "Policy" })).toBeNull();
   });
@@ -588,7 +580,7 @@ describe("ConstituencyMap", () => {
     expect(header.split(",")[0]).toBe("area_code");
   });
 
-  it("exports the hatch, the legend and the selected seat's card", async () => {
+  it("exports the No data seats, the legend and the selected seat's card", async () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000003"));
     fireEvent.click(screen.getByRole("button", { name: "Download chart: Constituency impacts, 2029-30" }));
@@ -598,19 +590,16 @@ describe("ConstituencyMap", () => {
     expect(filename).toBe("constituency-impacts-2029-30");
     const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
     const root = doc.documentElement;
-    expect(root.querySelector(":scope > svg > defs > pattern#withheld-hatch")).not.toBeNull();
     expect(
       root.querySelector('path[data-code="Z14000003"]').getAttribute("fill"),
-    ).toBe("url(#withheld-hatch)");
+    ).toBe(NO_DATA_FILL);
     expect(root.querySelector("g.map-legend").textContent).toContain(
-      "Not published: hatched, confidentiality",
+      "No data: not published, or too few survey households",
     );
-    // The exported file carries the dot textures its approximate seats use.
-    expect(
-      root.querySelector(
-        `:scope > svg > defs > pattern#${approximatePatternId("small_gain")}`,
-      ),
-    ).not.toBeNull();
+    // No seat in the file carries a texture either
+    const filePaths = [...root.querySelectorAll("path[data-code]")];
+    expect(filePaths.length).toBeGreaterThan(0);
+    expect(filePaths.some((path) => (path.getAttribute("fill") ?? "").startsWith("url("))).toBe(false);
     expect(root.querySelector("g.map-zoom-layer").hasAttribute("transform")).toBe(
       false,
     );
@@ -619,7 +608,7 @@ describe("ConstituencyMap", () => {
       .map((line) => line.textContent)
       .join(" ");
     expect(card).toBe(
-      "Westmoor Not published: too few survey households Regional figure for London, not an estimate " +
+      "Westmoor No data: not published, too few survey households Regional figure for London, not an estimate " +
         "for this constituency: +0.71% (0.52% to 0.94%)",
     );
     expect(svgText).not.toMatch(/NaN|undefined/);
@@ -846,24 +835,28 @@ describe("exportMapAsSvg", () => {
     it("lists the combined run, then each selected policy with its own results, combined by default", async () => {
       vi.stubGlobal("fetch", geographyFetch({ "/data/constituency.csv": withSingles() }));
       const { container } = await renderMap();
-      const pill = screen.getByRole("button", { name: /^Options:/ });
-      expect(pill).toHaveTextContent(/^All selected · /);
+      // The policy is its own pill beside Options (Vahid, 28 October),
+      // never folded into the Options summary
+      const pill = screen.getByRole("button", { name: "Policy: All selected policies" });
+      expect(screen.getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^% of income · Hex map$/);
       expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: selected policies$/);
       fireEvent.click(pill);
-      const group = screen.getByRole("radiogroup", { name: "Policy" });
-      expect([...group.querySelectorAll('[role="radio"]')].map((radio) => radio.textContent)).toEqual([
+      const list = screen.getByRole("listbox", { name: "Policy" });
+      expect(within(list).getAllByRole("option").map((option) => option.textContent)).toEqual([
         "All selected policies",
         "2 child limit repeal",
         "Rail fares freeze",
       ]);
-      expect(screen.getByRole("radio", { name: "All selected policies" })).toHaveAttribute("aria-checked", "true");
+      expect(within(list).getByRole("option", { name: "All selected policies" })).toHaveAttribute("aria-selected", "true");
       // Selected is fill and weight, never a tick
-      expect(group.textContent).not.toMatch(/\u2713|\u2714/);
-      fireEvent.click(screen.getByRole("radio", { name: "2 child limit repeal" }));
+      expect(list.textContent).not.toMatch(/\u2713|\u2714/);
+      fireEvent.click(within(list).getByRole("option", { name: "2 child limit repeal" }));
       await waitFor(() =>
         expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: 2 child limit repeal$/),
       );
-      expect(screen.getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^2 child limit repeal · /);
+      expect(screen.getByRole("button", { name: "Policy: 2 child limit repeal" })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+      expect(screen.queryByRole("radiogroup", { name: "Policy" })).toBeNull();
     });
 
     it("offers only the selected policies, with All selected policies listed but unavailable until its map is published (AH1)", async () => {
@@ -874,14 +867,17 @@ describe("exportMapAsSvg", () => {
       await waitFor(() =>
         expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: Rail fares freeze$/),
       );
-      expect(screen.getByText(ONE_POLICY_NOTE)).toBeInTheDocument();
-      fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
-      const group = screen.getByRole("radiogroup", { name: "Policy" });
-      expect([...group.querySelectorAll('[role="radio"]')].map((radio) => radio.textContent)).toEqual(["All selected policies", "Rail fares freeze"]);
-      expect(screen.getByRole("radio", { name: "All selected policies" })).toBeDisabled();
-      expect(screen.getByText("All selected policies: published later on Budget day")).toBeInTheDocument();
+      // One paragraph under the title: the figures, then one policy at a time
+      const description = container.querySelector(".chart-header .chart-description");
+      expect(description.textContent).toMatch(/^Households .*\. Until the map for all selected policies is published, it shows one policy at a time\.$/);
+      expect(description.textContent.endsWith(ONE_POLICY_NOTE)).toBe(true);
+      expect(container.querySelectorAll(".chart-header .chart-description")).toHaveLength(1);
+      fireEvent.click(screen.getByRole("button", { name: /^Policy:/ }));
+      const list = screen.getByRole("listbox", { name: "Policy" });
+      expect(within(list).getAllByRole("option").map((option) => option.textContent)).toEqual(["All selected policies", "Rail fares freeze"]);
+      expect(within(list).getByRole("option", { name: "All selected policies" })).toHaveAttribute("aria-disabled", "true");
       // Never the singles summed: the map stays on the one policy's own run
-      expect(screen.getByRole("radio", { name: "Rail fares freeze" })).toHaveAttribute("aria-checked", "true");
+      expect(within(list).getByRole("option", { name: "Rail fares freeze" })).toHaveAttribute("aria-selected", "true");
     });
 
     it("places the key beside the map from 640px, and under it on a phone", async () => {

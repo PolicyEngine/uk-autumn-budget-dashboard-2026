@@ -101,19 +101,19 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 6px;
 }
 
 /* One row per policy on a grid: checkbox, icon and name over its
-   category, the info tip at the right; a hairline between rows */
+   category, the info tip at the right; a hairline between rows. The rows
+   sit on the menu's own surface, edge to edge: no inset tinted panel
+   behind them (Vahid, 28 October) */
 .policy-item {
   position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   min-height: 56px;
-  padding: 0 6px 0 12px;
-  border-radius: 6px;
+  padding: 0 12px 0 18px;
   transition: background-color var(--motion-fast) var(--ease-out);
 }
 
@@ -121,16 +121,14 @@
   content: "";
   position: absolute;
   top: 0;
-  left: 12px;
+  left: 18px;
   right: 12px;
   border-top: 1px solid var(--pe-gray-100);
 }
 
-/* The hairline gives way to a tinted or hovered row and the one after */
+/* The hairline gives way to a hovered row and the one after */
 .policy-item:hover::before,
-.policy-item:hover + .policy-item::before,
-.policy-item.is-selected::before,
-.policy-item.is-selected + .policy-item::before {
+.policy-item:hover + .policy-item::before {
   border-top-color: transparent;
 }
 
@@ -138,11 +136,8 @@
   background: var(--pe-gray-50);
 }
 
-/* A chosen row: the ticked box and a faint teal tint */
-.policy-item.is-selected {
-  background: color-mix(in srgb, var(--pe-teal-50) 70%, transparent);
-}
-
+/* A chosen row: its checked box, and a teal fill on hover. No standing
+   tint, which with every policy chosen made a tinted box inside the menu */
 .policy-item.is-selected:hover {
   background: var(--pe-teal-50);
 }
