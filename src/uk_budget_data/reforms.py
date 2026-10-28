@@ -659,9 +659,7 @@ def plan_2_unfrozen_thresholds() -> dict[str, float]:
     law did before the Budget 2025 freeze (2027-28 to 2029-30), with the
     engine's RPI index; every policy year from 2027, since the parameter is
     uprated (policyengine-uk #2430)."""
-    from policyengine_uk.system import system
-
-    rpi = system.parameters.gov.economic_assumptions.indices.obr.rpi
+    rpi = forecast_parameters().gov.economic_assumptions.indices.obr.rpi
     base = rpi("2026-04-06")
     return {
         str(year): round(PLAN_2_THRESHOLD_2026 * rpi(f"{year}-04-06") / base)
@@ -676,7 +674,7 @@ def _create_plan_2_threshold_unfreeze() -> Reform:
         name="Plan 2 student loan threshold unfrozen",
         description=(
             "Candidate measure. The Plan 2 student loan repayment threshold "
-            "rises with RPI from April 2027 (to £30,267 in 2027-28), reversing "
+            "rises with RPI from April 2027 (to £30,648 in 2027-28), reversing "
             "the freeze at £29,385 to April 2030. Repayments are modelled, "
             "replacing those reported in the survey, and the revenue figure "
             "is the change in modelled repayments."
@@ -787,9 +785,7 @@ SECONDARY_THRESHOLD_FROM = 2027
 
 def secondary_threshold_raised() -> dict[str, float]:
     """The weekly secondary threshold, every policy year from 2027."""
-    from policyengine_uk.system import system
-
-    node = system.parameters.get_child(SECONDARY_THRESHOLD)
+    node = forecast_parameters().get_child(SECONDARY_THRESHOLD)
     weekly = SECONDARY_THRESHOLD_RAISED / 52
     values = {}
     for year in POLICY_YEARS:
@@ -830,11 +826,9 @@ UNEARNED_INCOME_RATES_FROM = 2027
 
 def unearned_income_rates_up() -> dict[str, dict[str, float]]:
     """Current law's rate plus 2 points, every policy year from 2027."""
-    from policyengine_uk.system import system
-
     changes = {}
     for path in UNEARNED_INCOME_RATE_PATHS:
-        node = system.parameters.get_child(path)
+        node = forecast_parameters().get_child(path)
         changes.update(
             rate_change(
                 path,

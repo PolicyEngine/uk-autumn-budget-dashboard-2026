@@ -15,7 +15,7 @@ from policyengine_uk import Simulation
 
 from uk_budget_data import reforms
 from uk_budget_data.budget_years import POLICY_YEARS
-from uk_budget_data.forecast import forecast_parameters
+from uk_budget_data.forecast import forecast_parameters, with_forecast
 from uk_budget_data.models import DataConfig
 from uk_budget_data.publication.receipt import (
     CodeRevision,
@@ -119,10 +119,13 @@ def situation(people: dict, household: dict | None = None) -> dict:
 def change(measure_id: str, sit: dict, variable: str, year: int, measure=None):
     """(baseline, reformed) totals of a variable for one household."""
     measure = measure or get_reform(measure_id) or WITHDRAWN[measure_id]()
+    # On the OBR October 2026 forecast, both sides, as every run.
     baseline = Simulation(
-        situation=sit, scenario=measure.to_baseline_scenario()
+        situation=sit, scenario=with_forecast(measure.to_baseline_scenario())
     )
-    reformed = Simulation(situation=sit, scenario=measure.to_scenario())
+    reformed = Simulation(
+        situation=sit, scenario=with_forecast(measure.to_scenario())
+    )
     return (
         float(baseline.calculate(variable, year).sum()),
         float(reformed.calculate(variable, year).sum()),
@@ -319,8 +322,9 @@ def test_the_pump_vat_defaults_are_20_percent_of_the_duty_change():
 
 def test_a_driver_buying_1000_litres_of_petrol():
     """£1,508.14 of petrol at the model's £1.508 a litre is 1,000 litres.
-    2026-27: duty 53.95p (current law, blended) -> 52.95p, so £539.53 ->
-    £529.50, and VAT falls by 20% of the £10.03, £2.01."""
+    2026-27: duty 53.96p (current law, blended, with 60.59p from 1 April
+    2027) -> 52.95p, so £539.64 -> £529.50, and VAT falls by 20% of the
+    £10.14, £2.03."""
     year = 2026
     sit = situation(
         {"driver": {"age": {year: 40}, "employment_income": {year: 30_000}}},
@@ -329,10 +333,10 @@ def test_a_driver_buying_1000_litres_of_petrol():
     baseline, reformed = change(
         "fuel_duty_rise_deferral", sit, "fuel_duty", year
     )
-    assert baseline == pytest.approx(539.53, abs=PENNY)
+    assert baseline == pytest.approx(539.64, abs=PENNY)
     assert reformed == pytest.approx(529.50, abs=PENNY)
     vat_before, vat_after = change("fuel_duty_rise_deferral", sit, "vat", year)
-    assert vat_after - vat_before == pytest.approx(-2.01, abs=PENNY)
+    assert vat_after - vat_before == pytest.approx(-2.03, abs=PENNY)
 
 
 # --- 2. State Pension income tax protection ---------------------------------
@@ -361,25 +365,26 @@ def test_the_allowances_are_the_full_new_state_pension_rounded_up_to_10():
 @pytest.mark.parametrize("year", [2027, 2029])
 def test_a_pensioner_on_the_full_new_state_pension_alone_pays_none(year):
     """2027-28: £13,036.97 - £12,570 = £466.97 taxed at 20%, £93.39.
-    2029-30 (the allowance's last year): £13,696.98 - £12,570 =
-    £1,126.98 at 20%, £225.40."""
+    2029-30 (the allowance's last year, OBR October 2026 forecast):
+    £13,817.30 - £12,570 = £1,247.30 at 20%, £249.46."""
     sit = situation(
         {"pensioner": {"age": {year: 70}, "state_pension": {year: nsp(year)}}}
     )
     baseline, reformed = change(
         "state_pension_income_tax_protection", sit, "income_tax", year
     )
-    expected = {2027: 93.39, 2029: 225.40}[year]
+    expected = {2027: 93.39, 2029: 249.46}[year]
     assert baseline == pytest.approx(expected, abs=PENNY)
     assert reformed == pytest.approx(0, abs=PENNY)
 
 
 def test_the_tapered_design_withdraws_the_allowance_against_other_income():
-    """The tapered design (the switch's alternative). 2031-32, State
-    Pension £14,390.39 and £1,000 private pension:
-    income £15,390.39 is £990.39 over the £14,400 allowance, which falls to
-    £13,409.61, rounded up to £13,410. Tax: 20% of £1,980.39, £396.08,
-    against 20% of £2,560.39, £512.08."""
+    """The tapered design (the switch's alternative). 2031-32 (OBR October
+    2026 forecast), State Pension £14,516.81 and £1,000 private pension:
+    income £15,516.81 is £996.81 over the £14,520 allowance, which falls to
+    £13,523.19, rounded up to £13,524. Tax: 20% of £1,992.81, £398.56,
+    against 20% of £2,686.81 (over the £12,830 personal allowance),
+    £537.36."""
     year = 2031
     sit = situation(
         {
@@ -397,8 +402,8 @@ def test_the_tapered_design_withdraws_the_allowance_against_other_income():
         year,
         measure=reforms._create_state_pension_income_tax_protection("tapered"),
     )
-    assert baseline == pytest.approx(512.08, abs=PENNY)
-    assert reformed == pytest.approx(396.08, abs=PENNY)
+    assert baseline == pytest.approx(537.36, abs=PENNY)
+    assert reformed == pytest.approx(398.56, abs=PENNY)
 
 
 def test_the_tapered_design_deducts_gift_aid_once():
@@ -431,9 +436,10 @@ def test_the_tapered_design_deducts_gift_aid_once():
 
 
 def test_the_total_income_design_takes_the_allowance_away_above_it():
-    """The default design. 2031-32, State Pension £14,390.39 and £1,000
-    private pension, £15,390.39 in all, above the £14,391 allowance: no
-    allowance, so 20% of £2,560.39, £512.08, as now."""
+    """The default design. 2031-32 (OBR October 2026 forecast), State
+    Pension £14,516.81 and £1,000 private pension, £15,516.81 in all, above
+    the full new State Pension: no allowance, so 20% of £2,686.81 (over the
+    £12,830 personal allowance), £537.36, as now."""
     year = 2031
     sit = situation(
         {
@@ -447,8 +453,8 @@ def test_the_total_income_design_takes_the_allowance_away_above_it():
     baseline, reformed = change(
         "state_pension_income_tax_protection", sit, "income_tax", year
     )
-    assert baseline == pytest.approx(512.08, abs=PENNY)
-    assert reformed == pytest.approx(512.08, abs=PENNY)
+    assert baseline == pytest.approx(537.36, abs=PENNY)
+    assert reformed == pytest.approx(537.36, abs=PENNY)
 
 
 # --- 3. Warm Home Discount --------------------------------------------------
@@ -887,16 +893,16 @@ def test_vat_on_1508_pounds_of_petrol(year, saving):
 def test_the_unfrozen_thresholds_follow_rpi_from_29385_pounds():
     rpi = PARAMETERS.gov.economic_assumptions.indices.obr.rpi
     thresholds = plan_2_unfrozen_thresholds()
-    assert thresholds["2027"] == 30_267
+    assert thresholds["2027"] == 30_648  # October 2026 RPI
     for year in range(2027, 2032):
         assert thresholds[str(year)] == round(
             29_385 * rpi(f"{year}-04-06") / rpi("2026-04-06")
         )
 
 
-def test_a_graduate_on_45000_pounds_repays_79_pounds_less():
+def test_a_graduate_on_45000_pounds_repays_114_pounds_less():
     """2027-28: 9% of £45,000 - £29,385, £1,405.35, becomes 9% of
-    £45,000 - £30,267, £1,325.97."""
+    £45,000 - £30,648 (RPI on the OBR October 2026 forecast), £1,291.68."""
     year = 2027
     sit = situation(
         {
@@ -913,7 +919,7 @@ def test_a_graduate_on_45000_pounds_repays_79_pounds_less():
         "plan_2_threshold_unfreeze", sit, "student_loan_repayment", year
     )
     assert baseline == pytest.approx(1_405.35, abs=PENNY)
-    assert reformed == pytest.approx(1_325.97, abs=PENNY)
+    assert reformed == pytest.approx(1_291.68, abs=PENNY)
 
 
 # The blocks of page source that may name more than one candidate measure,
