@@ -171,3 +171,16 @@
     transition: none;
   }
 }
+
+/* The Treasury costing, on the card: the six years, or one muted line */
+.umm-costing-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.umm-no-costing {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-500);
+}

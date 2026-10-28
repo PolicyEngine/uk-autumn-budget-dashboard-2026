@@ -1,0 +1,8 @@
+{
+  "measure_id": "carers_allowance_earnings_taper",
+  "receipt_sha256": "52678adb78880ec01cd66f7af152d5e66570fc19e972dce075dd28b83ba4f5ce",
+  "reason": "Checked budget_measures.carers_allowance_earnings_taper: from 2030-31 it replaces carers_allowance_pre_overlap for carers whose weekly net earnings are above the Weekly Earnings Limit, 16 hours at the OBR's National Living Wage for that April, rounded up to the pound (£212 at April 2027's £13.21), not the engine's earnings limit, with the weekly rate less £1 for each £1 of earnings above the limit, floored at zero. 2030-31 counts half of the year's change (first_year_share=0.5). At or below the limit, before 2030-31, in Scotland (Carer Support Payment) and in Northern Ireland the native amount stands, and it adds no take-up draw of its own. The receipt's outputs were compared with the hand-computed cases in tests/test_carers_allowance_earnings_taper.py.",
+  "checker": "",
+  "second": "juaristi22",
+  "released_at": "2026-10-28T17:15:49+00:00"
+}

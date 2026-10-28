@@ -1,6 +1,5 @@
 import { useId, useState } from "react";
 import { ChevronDown, ExternalLink, Landmark } from "lucide-react";
-import Disclosure from "../Disclosure";
 import TitleIcon from "../TitleIcon";
 import { PolicyCard } from "../PolicyCards";
 import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
@@ -42,7 +41,6 @@ function SourceLink({ href, children }) {
  * always hear them in full.
  */
 function Costing({ measure }) {
-  if (!measure.costings.length) return measure.noCosting;
   return (
     <>
       <div className="umm-costing-scroll">
@@ -119,26 +117,23 @@ export function unmodelledCard(measure) {
       ) : (
         measure.notModelled
       ),
-      budgetRows: measure.costings.map(({ row }) => row),
       sources: measure.sources,
+      timeline: false,
+      // The Treasury's six years on the card itself, or one muted line
       footExtra: (
-        <div className="policy-card-modelling">
-          <Disclosure
-            compact
-            title={
-              <>
-                <Landmark size={14} aria-hidden="true" className="policy-card-icon-inline" />
-                Treasury costing
-              </>
-            }
-            className="policy-card-details umm-costing-disclosure"
-            preview={measure.costings.length ? `Table 6.1, £ million, ${COSTING_YEARS[0]} to ${COSTING_YEARS[COSTING_YEARS.length - 1]}` : "No Table 6.1 row"}
-          >
+        <section className="umm-costing-section" aria-label={`Treasury costing: ${measure.name}`}>
+          <p className="policy-card-example-title">
+            <Landmark size={14} aria-hidden="true" />
+            Treasury costing
+          </p>
+          {measure.costings.length ? (
             <div className="umm-costing-body">
               <Costing measure={measure} />
             </div>
-          </Disclosure>
-        </div>
+          ) : (
+            <p className="umm-no-costing">No Table 6.1 row</p>
+          )}
+        </section>
       ),
     },
     parameters: parameters ?? null,

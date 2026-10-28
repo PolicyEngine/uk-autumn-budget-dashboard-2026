@@ -13,11 +13,10 @@
  * - inForce / steps / stepsLabel / ends / duration: as in policyDetails.js,
  *   only where the entry states the dates;
  * - parameters: a "What changes" entry ({ display, rows }) as
- *   policy_parameters.json shapes one. A "before-after" one is plotted, so
- *   it is used only where the entry says the change lasts and gives the
- *   value before it; where it gives one year's values only, "table" shows
- *   the tiles and no plot (a plot would draw years the entry says nothing
- *   about).
+ *   policy_parameters.json shapes one. "table" shows the before and after
+ *   tiles only, for a single change of value; "switch" adds a plot, used
+ *   only where the change runs over time and back (the bank surcharge's
+ *   15 months). The cards show no timeline: Starts and Ends say when.
  */
 
 const yearly = (from, to, before, after, beforeStart = before) =>
@@ -68,7 +67,7 @@ export const UNMODELLED_CARDS = {
     steps: [{ month: "2027-04", label: "35p above 10,000 miles" }],
     stepsLabel: "35p above 10,000 miles",
     parameters: {
-      display: "before-after",
+      display: "table",
       rows: [row("Tax-free rate above 10,000 business miles", "pence", "pence a mile", yearly(2027, 2031, 25, 35))],
     },
   },
@@ -95,7 +94,7 @@ export const UNMODELLED_CARDS = {
     category: { label: "Savings", icon: "coins" },
     inForce: { from: "2027-04" },
     parameters: {
-      display: "before-after",
+      display: "table",
       rows: [row("Cash ISA limit, savers under 65", "gbp", "£ a year", yearly(2027, 2031, 12000, 20000, 20000))],
     },
   },
@@ -107,7 +106,7 @@ export const UNMODELLED_CARDS = {
     steps: [{ month: "2029-04", label: "First Time Buyer ISA opens" }],
     stepsLabel: "First Time Buyer ISA opens",
     parameters: {
-      display: "before-after",
+      display: "table",
       rows: [row("Lifetime ISA withdrawal charge on homes above £450,000", "percent", null, [
         { key: "2026-04-06", label: "6 April 2026", year: 2026, before: 0.25, after: 0.25 },
         { key: "2026-10-29", label: "29 October 2026", year: 2026, before: 0.25, after: 0.2 },
@@ -136,7 +135,7 @@ export const UNMODELLED_CARDS = {
     category: { label: "Capital gains tax", icon: "trend" },
     inForce: { from: "2027-04" },
     parameters: {
-      display: "before-after",
+      display: "table",
       rows: [row("Lifetime limit", "gbp", "£ of gains", yearly(2027, 2031, 1000000, 500000))],
     },
   },
@@ -147,7 +146,7 @@ export const UNMODELLED_CARDS = {
     steps: [{ month: "2028-04", label: "Suppliers liable" }],
     stepsLabel: "Suppliers liable",
     parameters: {
-      display: "before-after",
+      display: "table",
       rows: [row("Duty on higher-stake machines", "percent", null, yearly(2027, 2031, 0.2, 0.25))],
     },
   },
