@@ -49,6 +49,9 @@ from uk_budget_data.budget_measures.employer_ni_relief_ages_21_to_24 import (
 from uk_budget_data.budget_measures.household_energy_payment_2026 import (
     household_energy_payment_2026,
 )
+from uk_budget_data.budget_measures.pension_tax_allowance import (
+    pension_tax_allowance,
+)
 from uk_budget_data.budget_measures.road_fuel_vat_cut import (
     ROAD_FUEL_VAT_RATE,
     road_fuel_vat_cut,
@@ -415,9 +418,40 @@ def _fuel_duty(reform) -> list[dict]:
     ]
 
 
+def _pension_tax_allowance(reform) -> list[dict]:
+    values = constants(pension_tax_allowance)
+    allowance = {
+        int(name.removeprefix("allowance_")): value
+        for name, value in values.items()
+        if name.startswith("allowance_")
+    }
+    return [
+        _row(
+            "Pension Tax Allowance, the largest tax reduction",
+            POUNDS,
+            _yearly(lambda year: 0, lambda year: allowance.get(year, 0)),
+            _source(
+                {
+                    "kind": "documented",
+                    "where": "no such reduction under current law",
+                },
+                _modifier_source(
+                    pension_tax_allowance, "allowance_2027 to 2029"
+                ),
+            ),
+            unit_words="£ of income tax a year",
+            note="For people over State Pension age; reduced by £1 for "
+            f"every £{values['taper_divisor']} of total income above the "
+            "full new State Pension",
+        )
+    ]
+
+
 def _state_pension_allowance(reform) -> list[dict]:
     path = registry.PERSONAL_ALLOWANCE
     modifier = reform.simulation_modifier
+    if modifier is pension_tax_allowance:
+        return _pension_tax_allowance(reform)
     if modifier not in (
         state_pension_income_tax_allowance,
         state_pension_only_income_tax_allowance,

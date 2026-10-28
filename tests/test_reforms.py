@@ -227,6 +227,7 @@ def test_the_template_modifiers_are_proved_pure_and_three_are_hand_written():
         "employer_ni_relief_ages_21_to_24",
         "connect_student_loan_repayments",
         "state_pension_only_income_tax_allowance",
+        "pension_tax_allowance",
     ):
         assert pure_templates(modifier(name), REVISION) is None
 

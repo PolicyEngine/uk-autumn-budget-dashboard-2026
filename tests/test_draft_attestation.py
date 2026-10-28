@@ -26,7 +26,7 @@ def _load_script():
 
 
 def test_every_hand_written_measure_has_a_drafted_reason():
-    assert reforms.STATE_PENSION_PROTECTION_DESIGN == "total_income"
+    assert reforms.STATE_PENSION_PROTECTION_DESIGN == "tax_reduction"
     assert set(HAND_WRITTEN) <= set(_load_script().REASONS)
 
 
@@ -100,5 +100,5 @@ def test_the_state_pension_draft_leaves_the_signatures_empty(drafted):
         [reforms.STATE_PENSION_ALLOWANCE_ID],
     )
     assert record["measure_id"] == reforms.STATE_PENSION_ALLOWANCE_ID
-    assert "state_pension_only_income_tax_allowance" in record["reason"]
+    assert "budget_measures.pension_tax_allowance" in record["reason"]
     assert record["checker"] == record["second"] == record["released_at"] == ""

@@ -1,7 +1,6 @@
 """The Policies tab's "What changes" tables (public/data/policy_parameters.json),
 read from the model by ``uk-budget-data policy-table``."""
 
-import math
 from pathlib import Path
 
 import pytest
@@ -136,24 +135,19 @@ def test_fuel_duty_averages_are_the_engine_and_the_measure(document):
         )
 
 
-def test_the_state_pension_allowance_is_the_full_state_pension_rounded_up(
-    document,
-):
+def test_the_pension_tax_allowance_is_the_largest_reduction(document):
+    """Budget 2026: up to £94 in 2027-28, rising with the full new State
+    Pension, to 2029-30."""
     row = by_key(
         rows(document, "state_pension_income_tax_protection")[
-            "Income tax allowance over State Pension age"
+            "Pension Tax Allowance, the largest tax reduction"
         ]
     )
-    assert row["2026"] == (12_570, 12_570)
-    for year in range(2027, 2030):
-        weekly = PARAMETERS.gov.dwp.state_pension.new_state_pension.amount(
-            f"{year}-04-06"
-        )
-        assert row[str(year)][1] == math.ceil(weekly * 52)
-    assert row["2027"] == (12_570, 13_037)
-    # Budget 2026: the allowance runs to 5 April 2030 (last_year 2029)
-    assert row["2029"][1] == 13_697
-    assert row["2031"] == (12_830, 12_830)
+    assert row["2026"] == (0, 0)
+    assert row["2027"] == (0, 94)
+    assert row["2028"] == (0, 159)
+    assert row["2029"] == (0, 226)
+    assert row["2030"] == (0, 0)
 
 
 def test_warm_home_discount(document):

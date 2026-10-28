@@ -72,7 +72,7 @@ export const POLICY_DETAILS = [
     name: "State Pension income tax protection",
     description:
       "No income tax for pensioners whose total income is at most the full new State Pension",
-    writtenFor: "Candidate measure. From 6 April 2027, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (rounded up to the pound: £13,037 in 2027-28, rising with it) get an income tax allowance of that amount, so pay no income tax. Above it there is no allowance: £1 of income over the threshold takes the whole allowance away. The allowance applies to 2029-30 and ends after it.",
+    writtenFor: "Candidate measure. From 6 April 2027 to 5 April 2030, people over State Pension age get a non-refundable income tax reduction of up to £94 in 2027-28 (20% of the full new State Pension above the personal allowance, rising with the State Pension), reduced by £1 for every £3 of total income above the full new State Pension.",
     summary:
       "People over State Pension age whose total income is no more than the full new State Pension pay no income tax.",
     starts: "April 2027",

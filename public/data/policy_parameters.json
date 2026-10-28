@@ -163,69 +163,69 @@
       ]
     },
     "state_pension_income_tax_protection": {
-      "description": "Candidate measure. From 6 April 2027, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (rounded up to the pound: £13,037 in 2027-28, rising with it) get an income tax allowance of that amount, so pay no income tax. Above it there is no allowance: £1 of income over the threshold takes the whole allowance away. The allowance applies to 2029-30 and ends after it.",
+      "description": "Candidate measure. From 6 April 2027 to 5 April 2030, people over State Pension age get a non-refundable income tax reduction of up to £94 in 2027-28 (20% of the full new State Pension above the personal allowance, rising with the State Pension), reduced by £1 for every £3 of total income above the full new State Pension.",
       "display": "path",
       "rows": [
         {
-          "label": "Income tax allowance over State Pension age",
+          "label": "Pension Tax Allowance, the largest tax reduction",
           "unit": "gbp",
-          "unit_words": "£ a year",
+          "unit_words": "£ of income tax a year",
           "primary": true,
           "points": [
             {
               "key": "2026",
               "label": "2026-27",
               "year": 2026,
-              "before": 12570.0,
-              "after": 12570.0
+              "before": 0.0,
+              "after": 0.0
             },
             {
               "key": "2027",
               "label": "2027-28",
               "year": 2027,
-              "before": 12570.0,
-              "after": 13037.0
+              "before": 0.0,
+              "after": 94.0
             },
             {
               "key": "2028",
               "label": "2028-29",
               "year": 2028,
-              "before": 12570.0,
-              "after": 13363.0
+              "before": 0.0,
+              "after": 159.0
             },
             {
               "key": "2029",
               "label": "2029-30",
               "year": 2029,
-              "before": 12570.0,
-              "after": 13697.0
+              "before": 0.0,
+              "after": 226.0
             },
             {
               "key": "2030",
               "label": "2030-31",
               "year": 2030,
-              "before": 12570.0,
-              "after": 12570.0
+              "before": 0.0,
+              "after": 0.0
             },
             {
               "key": "2031",
               "label": "2031-32",
               "year": 2031,
-              "before": 12830.0,
-              "after": 12830.0
+              "before": 0.0,
+              "after": 0.0
             }
           ],
           "source": {
             "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.allowances.personal_allowance.amount, at 6 April of each year"
+              "kind": "documented",
+              "where": "no such reduction under current law"
             },
             "after": {
               "kind": "modifier_constant",
-              "where": "budget_measures/state_pension_only_income_tax_allowance.py state_pension_only_income_tax_allowance(allowance_2027 to 2031)"
+              "where": "budget_measures/pension_tax_allowance.py pension_tax_allowance(allowance_2027 to 2029)"
             }
           },
-          "note": "With the measure, only for people whose total income, State Pension included, is at or below it; £1 more takes it all away"
+          "note": "For people over State Pension age; reduced by £1 for every £3 of total income above the full new State Pension"
         }
       ]
     },

@@ -40,6 +40,9 @@ from uk_budget_data.budget_measures.employer_ni_relief_ages_21_to_24 import (
 from uk_budget_data.budget_measures.household_energy_payment_2026 import (
     household_energy_payment_2026,
 )
+from uk_budget_data.budget_measures.pension_tax_allowance import (
+    pension_tax_allowance,
+)
 from uk_budget_data.budget_measures.pump_vat_on_fuel_duty_deferral import (
     pump_vat_on_fuel_duty_deferral,
 )
@@ -420,7 +423,10 @@ def _create_fuel_duty_rise_deferral() -> Reform:
 # budget_measures/state_pension_only_income_tax_allowance.py (up: £13,037
 # in 2027-28; down: £13,036, as the Times reports). The description
 # follows the rounding.
-STATE_PENSION_PROTECTION_DESIGN = "total_income"
+# Budget 2026 (6.182; costings p. 63; HM Treasury's explainer): the
+# Pension Tax Allowance is a non-refundable tax reduction ("tax_reduction",
+# budget_measures/pension_tax_allowance.py), not a higher allowance.
+STATE_PENSION_PROTECTION_DESIGN = "tax_reduction"
 _SP_ROUNDING = "down" if _sp_threshold.ROUND_DOWN else "up"
 _SP_THRESHOLD_2027 = state_pension_only_income_tax_allowance.__defaults__[0]
 # The allowance's last fiscal year (a default of the modifier): "in this
@@ -434,6 +440,14 @@ _SP_UNTIL = (
     f"{(_SP_LAST_YEAR + 1) % 100:02d} and ends after it."
 )
 STATE_PENSION_PROTECTION_DESIGNS = {
+    "tax_reduction": (
+        pension_tax_allowance,
+        "Candidate measure. From 6 April 2027 to 5 April 2030, people over "
+        "State Pension age get a non-refundable income tax reduction of up "
+        "to £94 in 2027-28 (20% of the full new State Pension above the "
+        "personal allowance, rising with the State Pension), reduced by £1 "
+        "for every £3 of total income above the full new State Pension.",
+    ),
     "total_income": (
         state_pension_only_income_tax_allowance,
         "Candidate measure. From 6 April 2027, people over State Pension "
