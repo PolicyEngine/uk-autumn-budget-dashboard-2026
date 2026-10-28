@@ -78,7 +78,7 @@ export const agesText = ([first, last]) => `${first} to ${last >= SINGLE_AGE_TOP
 
 /** Why By policy is not offered: the policies with too few records by single year of age. */
 export const withheldPartsCaveat = (names) =>
-  `Each policy's part is not shown, as ${names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0]} ${names.length > 1 ? "have" : "has"} too few survey records by single year of age: the bars are the whole package's own result.`;
+  `Each policy's part is not shown, as ${names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0]} ${names.length > 1 ? "have" : "has"} too few survey records by single year of age. The bars show all the selected policies together.`;
 
 /** An age tick, the group's ends in bold teal. */
 function AgeTick({ x, y, payload, ends }) {
