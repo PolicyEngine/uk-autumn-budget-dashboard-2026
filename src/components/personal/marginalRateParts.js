@@ -19,7 +19,9 @@ export const RATE_PARTS = [
     label: "Personal allowance taper",
     phrase: "the personal allowance taper",
     color: CHART_COLOURS.mtrAllowanceTaper,
-    info: "The personal allowance falls by £1 for every £2 of income above £100,000, until it is gone at £125,140: each extra pound also makes 50p more taxable.",
+    // No end point: £125,140 holds only for a £12,570 allowance, and the
+    // current-law allowance in 2031-32 is higher (W6 G1)
+    info: "The personal allowance falls by £1 for every £2 of income above £100,000 until it is gone: each extra pound also makes 50p more taxable.",
   },
   { name: "national_insurance", label: "National Insurance", color: CHART_COLOURS.mtrNationalInsurance },
   { name: "student_loan", label: "Student loan", phrase: "student loan", color: CHART_COLOURS.mtrStudentLoan },
