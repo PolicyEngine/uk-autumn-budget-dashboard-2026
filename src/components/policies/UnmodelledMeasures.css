@@ -5,14 +5,6 @@
   margin-top: 40px;
 }
 
-.umm-intro {
-  max-width: 72ch;
-  margin: 0 0 16px;
-  font-size: var(--fs-body);
-  line-height: 1.6;
-  color: var(--pe-gray-700);
-}
-
 /* The Treasury costing, opened in a card's foot: the table fits the
    card's own width, two to a row or one on a phone */
 .umm-costing-body {
@@ -127,5 +119,55 @@
   .umm-costing th,
   .umm-costing td {
     padding: 3px 2px;
+  }
+}
+
+/* The section's heading as a button: the title's own size and weight
+   (globals.css .section-heading h2), with a chevron; the subtitle under it */
+.umm-heading h2 {
+  margin: 0;
+}
+
+.umm-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  font: inherit;
+  line-height: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.umm-toggle:hover {
+  color: var(--pe-teal-700);
+}
+
+.umm-toggle:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 3px;
+}
+
+.umm-chevron {
+  flex: none;
+  color: var(--pe-gray-500);
+  transition: transform 0.2s ease;
+}
+
+.umm-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.umm-subtitle {
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .umm-chevron {
+    transition: none;
   }
 }

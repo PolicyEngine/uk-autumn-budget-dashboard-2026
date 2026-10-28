@@ -1,12 +1,12 @@
-import { ExternalLink, Landmark } from "lucide-react";
+import { useId, useState } from "react";
+import { ChevronDown, ExternalLink, Landmark } from "lucide-react";
 import Disclosure from "../Disclosure";
-import SectionHeading from "../SectionHeading";
+import TitleIcon from "../TitleIcon";
 import { PolicyCard } from "../PolicyCards";
 import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import { EXTERNAL } from "../../utils/sources";
 import {
   COSTING_YEARS,
-  TABLE_6_1_URL,
   UNMODELLED_MEASURES,
 } from "../../utils/unmodelledMeasures";
 import "./UnmodelledMeasures.css";
@@ -47,7 +47,7 @@ function Costing({ measure }) {
     <>
       <div className="umm-costing-scroll">
         <table className="umm-costing">
-          <caption>£ million, Budget 2026 Table 6.1</caption>
+          <caption>£ million, Budget 2026 Table 6.1; positive = gain to the Exchequer</caption>
           <thead>
             <tr>
               <th scope="col">Row</th>
@@ -109,7 +109,16 @@ export function unmodelledCard(measure) {
       changesText: measure.changes,
       direction: total < 0 ? "cost" : total > 0 ? "revenue" : "neutral",
       example: { title: "For a household", text: measure.household },
-      notModelled: measure.notModelled,
+      // The reason, then PolicyEngine's own work that models it, where there is some
+      notModelled: measure.seeAlso ? (
+        <>
+          {measure.notModelled} {measure.seeAlso.before}
+          <SourceLink href={measure.seeAlso.href}>{measure.seeAlso.label}</SourceLink>
+          {measure.seeAlso.after}
+        </>
+      ) : (
+        measure.notModelled
+      ),
       budgetRows: measure.costings.map(({ row }) => row),
       sources: measure.sources,
       footExtra: (
@@ -143,21 +152,49 @@ export function unmodelledCard(measure) {
  * with the government's own figures only.
  */
 export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
   if (!measures.length) return null;
+  const toggle = () => setOpen((value) => !value);
   return (
     <section id="budget-measures-not-modelled" className="umm" aria-label={UNMODELLED_TITLE}>
-      <SectionHeading icon="list" title={UNMODELLED_TITLE} subtitle={UNMODELLED_SUBTITLE} />
-      <div className="report-section policy-details-content">
-        <p className="umm-intro">
-          Budget measures that affect households but are not in our figures. Costings are the Treasury's (
-          <SourceLink href={TABLE_6_1_URL}>Table 6.1</SourceLink>, £m; positive = gain to the Exchequer).
-        </p>
-        <ul className="policy-cards umm-list">
-          {measures.map((measure) => {
-            const { policy, parameters } = unmodelledCard(measure);
-            return <PolicyCard key={measure.id} policy={policy} parameters={parameters} />;
-          })}
-        </ul>
+      {/* The section's heading, as "Policies we model" has it, opening and
+          closing the cards: a native button in the h2, the subtitle under it */}
+      <div id="budget-policies-we-do-not-model" className="section-heading has-icon umm-heading">
+        <span className="section-icon" aria-hidden="true">
+          <TitleIcon name="list" bare size={18} />
+        </span>
+        <div className="section-heading-text">
+          <div className="section-heading-title">
+            <h2>
+              <button
+                type="button"
+                className="umm-toggle"
+                aria-expanded={open}
+                aria-controls={`${id}-cards`}
+                aria-describedby={`${id}-subtitle`}
+                onClick={toggle}
+              >
+                {UNMODELLED_TITLE}
+                <ChevronDown className={`umm-chevron${open ? " is-open" : ""}`} size={22} aria-hidden="true" />
+              </button>
+            </h2>
+          </div>
+          {/* Clicking the subtitle opens it too; the button is the control */}
+          <p id={`${id}-subtitle`} className="umm-subtitle" onClick={toggle}>
+            {UNMODELLED_SUBTITLE}
+          </p>
+        </div>
+      </div>
+      <div id={`${id}-cards`} className="report-section policy-details-content" hidden={!open}>
+        {open && (
+          <ul className="policy-cards umm-list">
+            {measures.map((measure) => {
+              const { policy, parameters } = unmodelledCard(measure);
+              return <PolicyCard key={measure.id} policy={policy} parameters={parameters} />;
+            })}
+          </ul>
+        )}
       </div>
     </section>
   );

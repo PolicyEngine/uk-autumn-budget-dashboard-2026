@@ -92,23 +92,42 @@ describe("formatMillions", () => {
   });
 });
 
+const toggle = () => screen.getByRole("button", { name: UNMODELLED_TITLE });
+const open = () => fireEvent.click(toggle());
+
 describe("UnmodelledMeasures", () => {
   const cards = () => [...document.querySelectorAll(".policy-cards > .policy-card")];
   const openCosting = (item) => fireEvent.click(within(item).getByRole("button", { name: "Treasury costing" }));
 
-  it("is a section like Policies we model: its heading and one-line subtitle, then the cards, open", () => {
+  it("is a section like Policies we model: its heading (a native button) and subtitle, the cards closed", () => {
     render(<UnmodelledMeasures />);
     const section = screen.getByRole("region", { name: UNMODELLED_TITLE });
-    expect(within(section).getByRole("heading", { level: 2, name: UNMODELLED_TITLE })).toBeInTheDocument();
+    const heading = within(section).getByRole("heading", { level: 2, name: UNMODELLED_TITLE });
+    expect(heading.closest(".section-heading")).toBeTruthy();
     expect(section).toHaveTextContent(UNMODELLED_SUBTITLE);
-    expect(section.querySelector(".section-heading")).toBeTruthy();
-    // No disclosure around the section: every card is on the page
+    const button = toggle();
+    expect(heading).toContainElement(button);
+    expect(button.tagName).toBe("BUTTON");
+    expect(button).toHaveAttribute("type", "button");
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(cards()).toHaveLength(0);
+  });
+
+  it("opens and closes its cards from the heading", () => {
+    render(<UnmodelledMeasures />);
+    open();
+    expect(toggle()).toHaveAttribute("aria-expanded", "true");
+    const content = document.getElementById(toggle().getAttribute("aria-controls"));
+    expect(content).not.toHaveAttribute("hidden");
     expect(cards()).toHaveLength(UNMODELLED_MEASURES.length);
-    expect(within(section).queryByRole("button", { name: UNMODELLED_TITLE })).toBeNull();
+    fireEvent.click(toggle());
+    expect(toggle()).toHaveAttribute("aria-expanded", "false");
+    expect(cards()).toHaveLength(0);
   });
 
   it("lists every measure in order as a Policies card, with each part labelled", () => {
     render(<UnmodelledMeasures />);
+    open();
     const items = cards();
     expect(items.map((item) => within(item).getByRole("heading", { level: 3 }).textContent)).toEqual(
       UNMODELLED_MEASURES.map((measure) => measure.name),
@@ -137,6 +156,7 @@ describe("UnmodelledMeasures", () => {
 
   it("draws What changes' values only where the entry gives them, and a plot only for a lasting change or a window", () => {
     render(<UnmodelledMeasures />);
+    open();
     for (const item of cards()) {
       const id = item.id.replace(/^unmodelled-/, "");
       const parameters = UNMODELLED_CARDS[id]?.parameters;
@@ -150,10 +170,11 @@ describe("UnmodelledMeasures", () => {
 
   it("shows a measure's Table 6.1 rows by year, in £ million, when its costing is opened", () => {
     render(<UnmodelledMeasures />);
+    open();
     const measure = UNMODELLED_MEASURES.find(({ id }) => id === "first-time-buyer-isa");
     const item = document.getElementById(`unmodelled-${measure.id}`);
     openCosting(item);
-    const table = within(item).getByRole("table", { name: "£ million, Budget 2026 Table 6.1" });
+    const table = within(item).getByRole("table", { name: "£ million, Budget 2026 Table 6.1; positive = gain to the Exchequer" });
     for (const year of COSTING_YEARS) expect(within(table).getByRole("columnheader", { name: year })).toBeInTheDocument();
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows.map((row) => within(row).getAllByRole("cell").map((cell) => cell.textContent))).toEqual(
@@ -164,6 +185,7 @@ describe("UnmodelledMeasures", () => {
 
   it("says what stands in for a costing where Table 6.1 has no row", () => {
     render(<UnmodelledMeasures />);
+    open();
     for (const measure of UNMODELLED_MEASURES.filter(({ costings }) => !costings.length)) {
       const item = document.getElementById(`unmodelled-${measure.id}`);
       openCosting(item);
@@ -174,6 +196,7 @@ describe("UnmodelledMeasures", () => {
 
   it("links every source in a new tab, saying so to screen readers", () => {
     render(<UnmodelledMeasures />);
+    open();
     for (const measure of UNMODELLED_MEASURES) {
       const item = document.getElementById(`unmodelled-${measure.id}`);
       for (const source of measure.sources) {
@@ -186,6 +209,24 @@ describe("UnmodelledMeasures", () => {
     }
   });
 
+  it("links PolicyEngine's own work where it models a measure, after the reason this dashboard does not", () => {
+    render(<UnmodelledMeasures />);
+    open();
+    const linked = UNMODELLED_MEASURES.filter(({ seeAlso }) => seeAlso);
+    expect(linked.map(({ id }) => id)).toEqual(["adjusted-triple-lock"]);
+    for (const { id, seeAlso, notModelled } of linked) {
+      expect(seeAlso.href).toMatch(/^https:\/\/www\.policyengine\.org\//);
+      // A pointer, never a figure of our own
+      expect(`${seeAlso.before}${seeAlso.label}${seeAlso.after}`).not.toMatch(/£|%|\bbn\b|billion|million/);
+      const card = document.getElementById(`unmodelled-${id}`);
+      expect(card).toHaveTextContent(notModelled);
+      const label = seeAlso.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const link = within(card).getByRole("link", { name: new RegExp(`^${label}\\s*\\(opens in a new tab\\)$`) });
+      expect(link).toHaveAttribute("href", seeAlso.href);
+      expect(link).toHaveAttribute("target", "_blank");
+    }
+  });
+
   it("shows nothing for an empty list", () => {
     const { container } = render(<UnmodelledMeasures measures={[]} />);
     expect(container).toBeEmptyDOMElement();
@@ -193,11 +234,10 @@ describe("UnmodelledMeasures", () => {
 });
 
 describe("the section's text", () => {
-  it("has a one-line intro and no closing note", () => {
+  it("has only its heading and subtitle above the cards: no intro, no closing note", () => {
     render(<UnmodelledMeasures />);
     const section = screen.getByRole("region", { name: UNMODELLED_TITLE });
-    expect(section.querySelectorAll(".umm-intro")).toHaveLength(1);
-    expect(section.querySelector(".umm-intro").textContent.split(/\s+/).length).toBeLessThanOrEqual(30);
+    expect(section.querySelector(".umm-intro")).toBeNull();
     expect(section.querySelector(".umm-note")).toBeNull();
   });
 

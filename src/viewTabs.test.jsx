@@ -191,6 +191,7 @@ describe("the view tabs", () => {
     const modelled = panel.querySelector("#policy-details");
     expect(within(modelled).getAllByRole("listitem")).toHaveLength(1);
     expect(within(panel).getByRole("region", { name: "Budget policies we do not model" })).toBeInTheDocument();
+    expect(within(panel).getByRole("button", { name: "Budget policies we do not model" })).toHaveAttribute("aria-expanded", "false");
     expect(new URLSearchParams(window.location.search).get("tab")).toBe("policies");
   });
 

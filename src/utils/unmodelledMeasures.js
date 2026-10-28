@@ -41,6 +41,8 @@ const obr = (part) => ({
  * 2031-32; positive is a gain to the Exchequer, negative a cost), each with
  * an optional `note` shown under the table. A measure with no row has
  * `noCosting` instead, saying what the documents give in its place.
+ * `seeAlso` links PolicyEngine's own published work that models the
+ * measure, after the reason this dashboard does not.
  */
 export const UNMODELLED_MEASURES = [
   {
@@ -206,6 +208,12 @@ export const UNMODELLED_MEASURES = [
       "Table 6.1 has no row for it. On the OBR's forecast the State Pension rises by 2.5% in both 2030-31 and 2031-32 under either rule, so the change does not affect spending in those years. The government estimates that State Pension spending would be £15 billion a year lower by the late 2030s than under the current Triple Lock; the OBR says the long-term effect depends heavily on how earnings, inflation and the 2.5% floor move relative to each other.",
     notModelled:
       "On the OBR's forecast it gives the same State Pension as the current Triple Lock in every year to 2031-32, so the model shows no change.",
+    seeAlso: {
+      before: 'PolicyEngine models it to 2039-40 in a separate analysis, "',
+      label: "The Burnham plan vs the triple lock",
+      href: "https://www.policyengine.org/uk/triple-lock",
+      after: '" (16 October 2026).',
+    },
     sources: [budget("paragraphs 1.29 and 5.23"), obr("paragraphs 3.49 and 3.50")],
   },
   {
