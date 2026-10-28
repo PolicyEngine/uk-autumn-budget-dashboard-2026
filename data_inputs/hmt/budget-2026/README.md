@@ -2,7 +2,7 @@
 
 These are the official Budget 2026 files from GOV.UK, kept unchanged so the team can read and check them without downloading each one. No dashboard calculation uses them. They do travel with the code. Every Modal app that adds all of `data_inputs/` gets them in its containers at startup: the household, generation and constituencies apps (`modal_household.py`, `modal_generate.py`, `modal_constituencies.py`) and two dev scripts (`scripts/modal_household_bench.py`, `scripts/modal_verify_household_skips.py`). None passes `copy=True` to Modal's `add_local_dir`, so the files aren't built into any image. The living-standards app adds only its own subfolder. The deploy's checkout check (`runtime_identity.py`) hashes the local files before upload. The Next.js site and the Docker image don't include them.
 
-- **Licence:** © Crown copyright 2026, published under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
+- **Licence:** © Crown copyright 2026. The documents say they are licensed under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/) "except where otherwise stated", and that any third-party copyright material they identify needs the holder's permission.
 - **Fetched:** with `curl` from GOV.UK on 28 Oct 2026, 19:44Z.
 - **Text files:** each `.txt` is a text extraction of the PDF with the same name, made with `pdftotext -layout` (poppler 26.09.0) for searching. The PDF is the authority; the extraction can misplace table columns.
 
@@ -41,6 +41,6 @@ GOV.UK replaced the main Budget PDF at 14:49Z, about 80 minutes after the 13:30Z
 ## Not kept here
 
 - **Budget 2026 (HTML):** https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html. It's a web page, not a file; the PDF has the same content.
-- **Factsheets:** every factsheet is a web page with no file attached, for example the [Pension Tax Allowance explainer](https://www.gov.uk/government/publications/pension-tax-allowance-explainer). They're listed in the [Budget 2026 factsheets collection](https://www.gov.uk/government/collections/budget-2026-factsheets).
+- **Factsheets:** none has a downloadable file. On 28 Oct the [Budget 2026 factsheets collection](https://www.gov.uk/government/collections/budget-2026-factsheets) held 9 items (checked one by one through the GOV.UK content API): 3 news stories with no attachments, and 6 publications whose 7 attachments are all HTML pages, for example the [Pension Tax Allowance explainer](https://www.gov.uk/government/publications/pension-tax-allowance-explainer).
 - **The 41 supplementary documents** in [Budget 2026 in full](https://www.gov.uk/government/collections/budget-2026-in-full): consultations, terms of reference and the like. Going by their titles, none is about a measure the dashboard models.
 - **The OBR's Economic and fiscal outlook:** see `../../obr/efo-october-2026/`.
