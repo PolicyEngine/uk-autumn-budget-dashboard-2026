@@ -232,7 +232,7 @@ export const POLICY_DETAILS = [
     type: "Student loans",
     inForce: { from: "2027-04" },
     howCalculated:
-      "Models each graduate's Plan 2 repayments from their income and the RPI-uprated threshold, replacing the repayments reported in the survey.",
+      "Models each graduate's Plan 2 repayments from their income and the RPI-uprated threshold, replacing those reported in the survey.",
     details:
       "The revenue figure is the change in graduates' cash repayments each year, not the effect on public sector borrowing, which treats changes to loan terms differently.",
     source: {

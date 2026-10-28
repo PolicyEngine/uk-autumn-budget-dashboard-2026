@@ -235,6 +235,16 @@ describe("how it is modelled (measureModelling.js)", () => {
     cleanup();
   });
 
+  it("says the Plan 2 repayments are modelled once: in How it's calculated, with no Modelled with chip under it", () => {
+    const policy = published("plan_2_threshold_unfreeze", "Plan 2 student loan threshold unfrozen");
+    render(<PolicyCards policies={[policy]} selectedPolicies={[policy.id]} />);
+    const details = open();
+    expect(details).toHaveTextContent("replacing those reported in the survey");
+    expect(details).not.toHaveTextContent("Modelled with");
+    expect(details).not.toHaveTextContent("Modelled, not survey values");
+    cleanup();
+  });
+
   it("shows the modelling note as caveats in its measure's card", () => {
     const policy = published("employer_ni_relief_under_25s", "Employer NI relief for under-25s");
     render(<PolicyCards policies={[policy]} selectedPolicies={[policy.id]} />);
