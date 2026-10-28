@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import PolicyCards, {
   BUDGET_DAY_MONTH,
   CARD_SECTIONS,
+  UNMODELLED_ONLY_SECTIONS,
   TIMELINE_START_YEAR,
   TIMELINE_YEARS,
   durationLabel,
@@ -570,7 +571,9 @@ describe("the card's frame", () => {
     }
     // A card with details has every section
     const full = [...document.querySelectorAll(".policy-cards > .policy-card")].find((item) => !item.classList.contains("is-bare"));
-    for (const name of CARD_SECTIONS) expect(full.querySelector(`.${name}`), name).toBeTruthy();
+    for (const name of CARD_SECTIONS.filter((section) => !UNMODELLED_ONLY_SECTIONS.includes(section))) {
+      expect(full.querySelector(`.${name}`), name).toBeTruthy();
+    }
   });
 
   it("makes cards in a row one height, their sections in line and the footer at the bottom", () => {

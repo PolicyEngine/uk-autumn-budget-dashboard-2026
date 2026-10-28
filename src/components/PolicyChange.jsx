@@ -323,7 +323,7 @@ function Reveal({ show, hide, children }) {
  * are several. Each fact once: lines where the measure equals current law
  * are left out.
  */
-export default function PolicyChange({ entry, direction, onHighlight, name }) {
+export default function PolicyChange({ entry, direction, onHighlight, name, lead }) {
   const id = useId();
   const tone = TONES[direction] ?? "neutral";
   const main = mainRow(entry);
@@ -357,6 +357,8 @@ export default function PolicyChange({ entry, direction, onHighlight, name }) {
           What changes
         </p>
       </div>
+      {/* A card's own words for the change, where it has them, before the values */}
+      {lead && <p className="pchg-lead">{lead}</p>}
       <BeforeAfter row={main} point={first} tone={tone} when={varies ? (schedule ? `from ${first.label}` : first.label) : null} />
       {plotted && (
         <>

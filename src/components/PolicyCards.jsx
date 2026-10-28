@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CalendarCheck, CalendarX, ChartColumn, ExternalLink, Flag, FlaskConical, Lightbulb, Users } from "lucide-react";
+import { ArrowRightLeft, CalendarCheck, CalendarX, ChartColumn, CircleSlash, ExternalLink, Flag, FlaskConical, Lightbulb, Users } from "lucide-react";
 import "./MeasureRowLabel.css";
 import "./PolicyCards.css";
 import { measureCategoryOf } from "../utils/measureCategory";
@@ -9,7 +9,6 @@ import { parameterTableFor } from "../utils/policyParameters";
 import PolicyChange, { usePolicyParameters } from "./PolicyChange";
 import Disclosure from "./Disclosure";
 import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
-import UnmodelledMeasures from "./policies/UnmodelledMeasures";
 import { TABLE_6_1_URL } from "../utils/unmodelledMeasures";
 import { MODELLING_LIMITS, measureModellingFacts, sentences } from "../utils/measureModelling";
 
@@ -29,11 +28,19 @@ export const CARD_SECTIONS = [
   "policy-card-when",
   "pchg",
   "policy-card-example",
+  "policy-card-why",
   "policy-card-details",
+  "policy-card-sources",
   "policy-card-source",
   "policy-card-costing",
   "policy-card-effect",
 ];
+
+/** The sections only a Budget measure the dashboard does not model has. */
+export const UNMODELLED_ONLY_SECTIONS = ["policy-card-why", "policy-card-sources"];
+
+/** The heading of a Budget measure's reason for being left out of the model. */
+export const WHY_NOT_MODELLED = "Why we don't model it";
 
 /** The one name of every Policies card's disclosure. */
 export const HOW_IT_IS_MODELLED = "About this result";
@@ -274,7 +281,7 @@ function PolicyTimeline({ policy, highlight }) {
  * card, bare or not, is as tall as its row, its sections always in the
  * same order (CARD_SECTIONS) and the footer pinned to the bottom.
  */
-function PolicyCard({ policy, onShowEffect, parameters }) {
+export function PolicyCard({ policy, onShowEffect, parameters }) {
   const temporary = Boolean(policy.inForce?.to);
   // Derived from the publication for any measure (utils/measureCategory.js),
   // in the same tinted tile as every per-measure row
@@ -284,11 +291,13 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
   // What the published wording says about how it is modelled
   const modelling = modellingInfo(policy);
   // No summary means no card details apply: the published description, in full
-  const bare = !policy.summary;
+  // (a Budget measure the dashboard does not model has its own sections
+  // instead: policies/UnmodelledMeasures.jsx)
+  const bare = !policy.summary && !policy.notModelled;
   const showModelling = hasInfo(modelling);
   return (
     <li
-      id={policy.id ? policyCardAnchor(policy.id) : undefined}
+      id={policy.anchorId ?? (policy.id ? policyCardAnchor(policy.id) : undefined)}
       className={`policy-card${bare ? " is-bare" : ""}`}
       style={{ "--policy-accent": policy.color }}
     >
@@ -311,7 +320,7 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
       {bare ? (
         policy.description && <p className="policy-card-summary is-full">{policy.description}</p>
       ) : (
-        <p className="policy-card-summary">{policy.summary}</p>
+        policy.summary && <p className="policy-card-summary">{policy.summary}</p>
       )}
 
       {(policy.starts || policy.inForce) && (
@@ -335,7 +344,7 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
             <dd className="policy-card-end">{temporary ? policy.ends : "Continues"}</dd>
           </div>
           {policy.affects && (
-            <div className="policy-card-affects">
+            <div className={`policy-card-affects${policy.affectsWide ? " is-wide" : ""}`}>
               <dt>
                 <Users size={13} aria-hidden="true" />
                 Affects
@@ -352,15 +361,28 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
       </div>
       )}
 
-      {(parameters || policy.example) && (
+      {(parameters || policy.example || policy.changesText) && (
         <div className="policy-card-spec">
-          {parameters && (
+          {parameters ? (
             <PolicyChange
               name={policy.label ?? policy.name}
               entry={parameters}
               direction={policy.direction}
               onHighlight={setHighlight}
+              lead={policy.changesText}
             />
+          ) : (
+            policy.changesText && (
+              <section className="pchg" aria-label={`What changes: ${policy.label ?? policy.name}`}>
+                <div className="pchg-head">
+                  <p className="pchg-title">
+                    <ArrowRightLeft size={14} aria-hidden="true" />
+                    What changes
+                  </p>
+                </div>
+                <p className="pchg-lead">{policy.changesText}</p>
+              </section>
+            )
           )}
           {policy.example && (
             <section className="policy-card-example" aria-label={`${policy.example.title}: ${policy.label ?? policy.name}`}>
@@ -390,7 +412,17 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
       {/* The footer: how it is modelled across the card, then the source on
           the left and its effect on the right */}
       <div className="policy-card-foot">
-        {showModelling && (
+        {policy.notModelled && (
+          <section className="policy-card-why" aria-label={`${WHY_NOT_MODELLED}: ${policy.label ?? policy.name}`}>
+            <p className="policy-card-example-title">
+              <CircleSlash size={14} aria-hidden="true" />
+              {WHY_NOT_MODELLED}
+            </p>
+            <p className="policy-card-example-text">{policy.notModelled}</p>
+          </section>
+        )}
+        {policy.footExtra}
+        {showModelling && !policy.notModelled && (
         <div className="policy-card-modelling">
             <Disclosure
               compact
@@ -406,6 +438,20 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
               <InfoSections info={modelling} />
             </Disclosure>
         </div>
+        )}
+        {policy.sources?.length > 0 && (
+          <p className="policy-card-sources">
+            {policy.sources.length > 1 ? "Sources: " : "Source: "}
+            {policy.sources.map((source, index) => (
+              <span key={source.label}>
+                {index > 0 && "; "}
+                <a href={source.href} target="_blank" rel="noopener noreferrer">
+                  {source.label}
+                  <span className="policy-sr-only"> (opens in a new tab)</span>
+                </a>
+              </span>
+            ))}
+          </p>
         )}
         <div className="policy-card-actions">
           {policy.source && (
@@ -466,8 +512,8 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
  * (public/data/policy_parameters.json). Revenue figures stay in the charts: "See its effect" opens
  * Population impact with only that measure selected.
  *
- * Below the cards, with or without any, the Budget measures the dashboard
- * does not model, closed by default (policies/UnmodelledMeasures.jsx).
+ * The Budget measures the dashboard does not model follow in a section of
+ * their own, as cards of this kind (policies/UnmodelledMeasures.jsx).
  */
 function PolicyCards({ policies, selectedPolicies, onShowEffect, parameterTables }) {
   const tables = usePolicyParameters(parameterTables);
@@ -481,21 +527,18 @@ function PolicyCards({ policies, selectedPolicies, onShowEffect, parameterTables
   const items = shown
     .map(withPolicyDetails)
     .sort((a, b) => budgetRank(a) - budgetRank(b) || rank(a) - rank(b) || a.order - b.order);
-  if (!shown.length) return <UnmodelledMeasures />;
+  if (!shown.length) return null;
   return (
-    <>
-      <ul className="policy-cards">
-        {items.map((policy) => (
-          <PolicyCard
-            key={policy.id}
-            policy={policy}
-            onShowEffect={onShowEffect}
-            parameters={parameterTableFor(tables, policy)}
-          />
-        ))}
-      </ul>
-      <UnmodelledMeasures />
-    </>
+    <ul className="policy-cards">
+      {items.map((policy) => (
+        <PolicyCard
+          key={policy.id}
+          policy={policy}
+          onShowEffect={onShowEffect}
+          parameters={parameterTableFor(tables, policy)}
+        />
+      ))}
+    </ul>
   );
 }
 

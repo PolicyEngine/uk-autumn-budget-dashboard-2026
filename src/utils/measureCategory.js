@@ -70,6 +70,11 @@ function categoryFromLabel(label) {
  */
 export function measureCategoryOf(measure) {
   if (!measure) return OTHER_CATEGORY;
+  // A card's own chip, given in full (a Budget measure the dashboard does
+  // not model: utils/unmodelledCards.js)
+  if (measure.category && typeof measure.category === "object" && measure.category.label) {
+    return { label: String(measure.category.label), icon: measure.category.icon ?? OTHER_CATEGORY.icon };
+  }
   const published = typeof measure.category === "string" ? categoryFromLabel(measure.category) : null;
   if (published) return published;
   for (const text of [measure.name, measure.label, measure.id]) {

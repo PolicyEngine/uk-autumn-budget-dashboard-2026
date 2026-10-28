@@ -25,18 +25,21 @@ const MONTH_NAMES = [
 const trimmed = (value, digits) =>
   value.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: digits });
 
-/** A value in its unit: "5%", "52.95p", "£30,267"; none is "none". */
+/** A value in its unit: "5%", "52.95p", "35p", "£13.21", "£30,267"; none is "none". */
 export function formatValue(value, unit) {
   if (value === null || value === undefined) return "none";
   if (unit === "percent") return `${trimmed(value * 100, 2)}%`;
   if (unit === "pence_per_litre") return `${value.toFixed(2)}p`;
+  if (unit === "pence") return `${trimmed(value, 2)}p`;
+  if (unit === "gbp_pence") return `£${value.toFixed(2)}`;
   return `£${Math.round(value).toLocaleString("en-GB")}`;
 }
 
 /** The size of a change, unsigned, in its unit: "£1,130", "6.8p". */
 export function formatSize(before, after, unit) {
   const size = Math.abs((after ?? 0) - (before ?? 0));
-  if (unit === "pence_per_litre") return `${trimmed(size, 2)}p`;
+  if (unit === "pence_per_litre" || unit === "pence") return `${trimmed(size, 2)}p`;
+  if (unit === "gbp_pence") return `£${size.toFixed(2)}`;
   return `£${Math.round(size).toLocaleString("en-GB")}`;
 }
 

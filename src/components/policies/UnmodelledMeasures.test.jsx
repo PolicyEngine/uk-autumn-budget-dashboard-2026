@@ -1,18 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import UnmodelledMeasures, { UNMODELLED_TITLE, formatMillions } from "./UnmodelledMeasures";
-import PolicyCards from "../PolicyCards";
+import UnmodelledMeasures, { UNMODELLED_SUBTITLE, UNMODELLED_TITLE, formatMillions } from "./UnmodelledMeasures";
+import { WHY_NOT_MODELLED } from "../PolicyCards";
+import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import {
   BUDGET_DOCUMENT,
   COSTING_YEARS,
   OTHER_MEASURES_NOTE,
+  TABLE_6_1_URL,
   UNMODELLED_MEASURES,
 } from "../../utils/unmodelledMeasures";
-import { buildMeasureCatalogue } from "../../utils/measureCatalogue";
-import { ALPHA, BETA, measureCatalogueFixture } from "../../test/measureCatalogueFixture";
 
-const toggle = () => screen.getByRole("button", { name: UNMODELLED_TITLE });
-const open = () => fireEvent.click(toggle());
 
 // Every string an entry shows, for the wording checks
 const entryText = (measure) =>
@@ -96,77 +94,80 @@ describe("formatMillions", () => {
 });
 
 describe("UnmodelledMeasures", () => {
-  it("starts closed: the button only, its measures out of the page", () => {
+  const cards = () => [...document.querySelectorAll(".policy-cards > .policy-card")];
+  const openCosting = (item) => fireEvent.click(within(item).getByRole("button", { name: "Treasury costing" }));
+
+  it("is a section like Policies we model: its heading and one-line subtitle, then the cards, open", () => {
     render(<UnmodelledMeasures />);
-    expect(toggle()).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: UNMODELLED_MEASURES[0].name })).not.toBeInTheDocument();
-    // The closed preview counts the measures
-    expect(toggle()).toHaveTextContent(`${UNMODELLED_MEASURES.length} measures`);
+    const section = screen.getByRole("region", { name: UNMODELLED_TITLE });
+    expect(within(section).getByRole("heading", { level: 2, name: UNMODELLED_TITLE })).toBeInTheDocument();
+    expect(section).toHaveTextContent(UNMODELLED_SUBTITLE);
+    expect(section.querySelector(".section-heading")).toBeTruthy();
+    // No disclosure around the section: every card is on the page
+    expect(cards()).toHaveLength(UNMODELLED_MEASURES.length);
+    expect(within(section).queryByRole("button", { name: UNMODELLED_TITLE })).toBeNull();
   });
 
-  it("opens and closes from a native button, so the keyboard works it too", () => {
+  it("lists every measure in order as a Policies card, with each part labelled", () => {
     render(<UnmodelledMeasures />);
-    const button = toggle();
-    // A <button> takes focus and answers Enter and Space with a click
-    expect(button.tagName).toBe("BUTTON");
-    expect(button).toHaveAttribute("type", "button");
-    expect(button).not.toHaveAttribute("tabindex", "-1");
-    button.focus();
-    expect(button).toHaveFocus();
-    open();
-    expect(button).toHaveAttribute("aria-expanded", "true");
-    const content = document.getElementById(button.getAttribute("aria-controls"));
-    expect(content).toBeInTheDocument();
-    expect(within(content).getAllByRole("listitem")).toHaveLength(UNMODELLED_MEASURES.length);
-    fireEvent.click(button);
-    expect(button).toHaveAttribute("aria-expanded", "false");
-  });
-
-  it("names its region after its title", () => {
-    render(<UnmodelledMeasures />);
-    expect(screen.getByRole("region", { name: UNMODELLED_TITLE })).toContainElement(toggle());
-  });
-
-  it("lists every measure in order, each with its name as a heading and each part labelled", () => {
-    render(<UnmodelledMeasures />);
-    open();
-    const items = screen.getAllByRole("listitem");
+    const items = cards();
     expect(items.map((item) => within(item).getByRole("heading", { level: 3 }).textContent)).toEqual(
       UNMODELLED_MEASURES.map((measure) => measure.name),
     );
     items.forEach((item, index) => {
       const measure = UNMODELLED_MEASURES[index];
-      expect(item).toHaveTextContent(`Starts ${measure.starts}`);
-      for (const term of ["What changes", "Who it reaches", "For a household", "Treasury costing", "Why it is not modelled"]) {
-        expect(within(item).getByText(term).tagName, `${measure.id} ${term}`).toBe("DT");
+      expect(item.id).toBe(`unmodelled-${measure.id}`);
+      expect(item.querySelector(".policy-card-start")).toHaveTextContent(measure.starts);
+      expect(item.querySelector(".policy-card-affects")).toHaveTextContent(measure.reaches);
+      for (const term of ["What changes", "For a household", WHY_NOT_MODELLED]) {
+        expect(within(item).getByText(term), `${measure.id} ${term}`).toBeInTheDocument();
       }
+      expect(within(item).getByRole("button", { name: "Treasury costing" })).toBeInTheDocument();
       expect(item).toHaveTextContent(measure.changes);
       expect(item).toHaveTextContent(measure.household);
       expect(item).toHaveTextContent(measure.notModelled);
+      // A model card's parts are not there
+      expect(within(item).queryByRole("button", { name: /See its effect/ })).toBeNull();
+      expect(within(item).queryByRole("button", { name: "About this result" })).toBeNull();
+      // Its Table 6.1 rows linked, where it has any
+      const costing = item.querySelector(".policy-card-costing");
+      expect(Boolean(costing), measure.id).toBe(measure.costings.length > 0);
+      if (costing) expect(costing).toHaveAttribute("href", TABLE_6_1_URL);
     });
   });
 
-  it("shows a measure's Table 6.1 rows by year, in £ million", () => {
+  it("draws What changes' values only where the entry gives them, and a plot only for a lasting change", () => {
     render(<UnmodelledMeasures />);
-    open();
+    for (const item of cards()) {
+      const id = item.id.replace(/^unmodelled-/, "");
+      const parameters = UNMODELLED_CARDS[id]?.parameters;
+      expect(item.querySelectorAll(".pchg-tile").length, id).toBe(parameters ? 2 : 0);
+      expect(Boolean(item.querySelector(".pchg-svg")), id).toBe(parameters?.display === "before-after");
+    }
+    const wage = document.getElementById("unmodelled-national-living-wage");
+    expect(wage.querySelector(".pchg-tile.is-before")).toHaveTextContent("£12.71");
+    expect(wage.querySelector(".pchg-tile.is-after")).toHaveTextContent("£13.21+£0.50");
+  });
+
+  it("shows a measure's Table 6.1 rows by year, in £ million, when its costing is opened", () => {
+    render(<UnmodelledMeasures />);
     const measure = UNMODELLED_MEASURES.find(({ id }) => id === "first-time-buyer-isa");
     const item = document.getElementById(`unmodelled-${measure.id}`);
+    openCosting(item);
     const table = within(item).getByRole("table", { name: "£ million, Budget 2026 Table 6.1" });
     for (const year of COSTING_YEARS) expect(within(table).getByRole("columnheader", { name: year })).toBeInTheDocument();
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows.map((row) => within(row).getAllByRole("cell").map((cell) => cell.textContent))).toEqual(
       measure.costings.map(({ values }) => values.map(formatMillions)),
     );
-    expect(within(table).getByRole("columnheader", { name: "Row" })).toBeInTheDocument();
     expect(rows.map((row) => within(row).getByRole("rowheader").textContent)).toEqual(["38", "39"]);
   });
 
   it("says what stands in for a costing where Table 6.1 has no row", () => {
     render(<UnmodelledMeasures />);
-    open();
     for (const measure of UNMODELLED_MEASURES.filter(({ costings }) => !costings.length)) {
       const item = document.getElementById(`unmodelled-${measure.id}`);
+      openCosting(item);
       expect(within(item).queryByRole("table")).toBeNull();
       expect(item).toHaveTextContent(measure.noCosting);
     }
@@ -174,7 +175,6 @@ describe("UnmodelledMeasures", () => {
 
   it("links every source in a new tab, saying so to screen readers", () => {
     render(<UnmodelledMeasures />);
-    open();
     for (const measure of UNMODELLED_MEASURES) {
       const item = document.getElementById(`unmodelled-${measure.id}`);
       for (const source of measure.sources) {
@@ -190,28 +190,5 @@ describe("UnmodelledMeasures", () => {
   it("shows nothing for an empty list", () => {
     const { container } = render(<UnmodelledMeasures measures={[]} />);
     expect(container).toBeEmptyDOMElement();
-  });
-});
-
-describe("the Policies tab (PolicyCards)", () => {
-  const catalogue = buildMeasureCatalogue(measureCatalogueFixture());
-
-  it("ends with the unmodelled measures, closed, after the cards", () => {
-    const { container } = render(
-      <PolicyCards policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} parameterTables={null} />,
-    );
-    const cards = container.querySelector(".policy-cards");
-    const section = screen.getByRole("region", { name: UNMODELLED_TITLE });
-    expect(cards).toBeInTheDocument();
-    expect(cards.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(section.nextElementSibling).toBeNull();
-    expect(toggle()).toHaveAttribute("aria-expanded", "false");
-  });
-
-  it("still lists them when no measure is published", () => {
-    const unverified = buildMeasureCatalogue({ manifest: measureCatalogueFixture().manifest });
-    render(<PolicyCards policies={unverified.measures} selectedPolicies={[ALPHA, BETA]} parameterTables={null} />);
-    expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
-    expect(toggle()).toHaveAttribute("aria-expanded", "false");
   });
 });

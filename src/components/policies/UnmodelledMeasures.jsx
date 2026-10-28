@@ -1,6 +1,8 @@
-import { useId } from "react";
-import { ArrowRightLeft, CalendarCheck, ExternalLink, FlaskConical, House, Landmark, Users } from "lucide-react";
+import { ExternalLink, Landmark } from "lucide-react";
 import Disclosure from "../Disclosure";
+import SectionHeading from "../SectionHeading";
+import { PolicyCard } from "../PolicyCards";
+import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import { EXTERNAL } from "../../utils/sources";
 import {
   COSTING_YEARS,
@@ -11,6 +13,7 @@ import {
 import "./UnmodelledMeasures.css";
 
 export const UNMODELLED_TITLE = "Budget policies we do not model";
+export const UNMODELLED_SUBTITLE = "What each policy changes, who it reaches and why we leave it out.";
 
 // £ million as Table 6.1 prints it: a sign on every figure but zero, with a true minus
 const millions = new Intl.NumberFormat("en-GB", { signDisplay: "exceptZero" });
@@ -82,73 +85,70 @@ function Costing({ measure }) {
   );
 }
 
-function Fact({ icon: Icon, term, children }) {
-  return (
-    <div className="umm-fact">
-      <dt>
-        <Icon size={13} aria-hidden="true" />
-        {term}
-      </dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}
-
-/** One measure: its name and start, then what changes, who it reaches, for a household, the costing, why it is left out, and its sources. */
-function Measure({ measure }) {
-  return (
-    <li className="umm-item" id={`unmodelled-${measure.id}`}>
-      <h3 className="umm-name">{measure.name}</h3>
-      <p className="umm-starts">
-        <CalendarCheck size={13} aria-hidden="true" />
-        <span className="umm-starts-label">Starts</span> {measure.starts}
-      </p>
-      <dl className="umm-facts">
-        <Fact icon={ArrowRightLeft} term="What changes">
-          {measure.changes}
-        </Fact>
-        <Fact icon={Users} term="Who it reaches">
-          {measure.reaches}
-        </Fact>
-        <Fact icon={House} term="For a household">
-          {measure.household}
-        </Fact>
-        <Fact icon={Landmark} term="Treasury costing">
-          <Costing measure={measure} />
-        </Fact>
-        <Fact icon={FlaskConical} term="Why it is not modelled">
-          {measure.notModelled}
-        </Fact>
-      </dl>
-      <p className="umm-sources">
-        {measure.sources.length > 1 ? "Sources: " : "Source: "}
-        {measure.sources.map((source, index) => (
-          <span key={source.label}>
-            {index > 0 && "; "}
-            <SourceLink href={source.href}>{source.label}</SourceLink>
-          </span>
-        ))}
-      </p>
-    </li>
-  );
+/**
+ * One measure as a Policies card (PolicyCards.jsx's PolicyCard): its
+ * category, name, At a glance (Starts, Ends, who it reaches and the
+ * timeline), What changes (the entry's words, and the values before and
+ * after where it gives them: utils/unmodelledCards.js), for a household,
+ * then why it is left out, the Treasury costing, its sources and a link to
+ * its Table 6.1 rows. The text is the entry's own.
+ */
+export function unmodelledCard(measure) {
+  const layout = UNMODELLED_CARDS[measure.id] ?? {};
+  const { parameters, ...card } = layout;
+  const total = measure.costings.reduce((sum, { values }) => sum + values.reduce((a, b) => a + b, 0), 0);
+  return {
+    policy: {
+      ...card,
+      id: measure.id,
+      anchorId: `unmodelled-${measure.id}`,
+      name: measure.name,
+      label: measure.name,
+      starts: measure.starts,
+      affects: measure.reaches,
+      affectsWide: true,
+      changesText: measure.changes,
+      direction: total < 0 ? "cost" : total > 0 ? "revenue" : "neutral",
+      example: { title: "For a household", text: measure.household },
+      notModelled: measure.notModelled,
+      budgetRows: measure.costings.map(({ row }) => row),
+      sources: measure.sources,
+      footExtra: (
+        <div className="policy-card-modelling">
+          <Disclosure
+            compact
+            title={
+              <>
+                <Landmark size={14} aria-hidden="true" className="policy-card-icon-inline" />
+                Treasury costing
+              </>
+            }
+            className="policy-card-details umm-costing-disclosure"
+            preview={measure.costings.length ? `Table 6.1, £ million, ${COSTING_YEARS[0]} to ${COSTING_YEARS[COSTING_YEARS.length - 1]}` : "No Table 6.1 row"}
+          >
+            <div className="umm-costing-body">
+              <Costing measure={measure} />
+            </div>
+          </Disclosure>
+        </div>
+      ),
+    },
+    parameters: parameters ?? null,
+  };
 }
 
 /**
- * The Budget measures this dashboard does not model, at the foot of the
- * Policies tab: one disclosure, closed by default, in the page's own style
- * (Disclosure.jsx). Open, it lists each measure from
- * utils/unmodelledMeasures.js with the government's own figures only.
+ * The Budget measures this dashboard does not model, under the modelled
+ * cards on the Policies tab: a section like theirs, with its own heading
+ * and subtitle, then one card per measure from utils/unmodelledMeasures.js,
+ * with the government's own figures only.
  */
 export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES }) {
-  const titleId = useId();
   if (!measures.length) return null;
   return (
-    <section id="budget-measures-not-modelled" className="umm" aria-labelledby={titleId}>
-      <Disclosure
-        title={<span id={titleId}>{UNMODELLED_TITLE}</span>}
-        preview={`${measures.length} measures · What changes · Who it reaches · For a household · Treasury costing`}
-        className="umm-disclosure"
-      >
+    <section id="budget-measures-not-modelled" className="umm" aria-label={UNMODELLED_TITLE}>
+      <SectionHeading icon="list" title={UNMODELLED_TITLE} subtitle={UNMODELLED_SUBTITLE} />
+      <div className="report-section policy-details-content">
         <p className="umm-intro">
           Below are Budget measures for households that this dashboard does not model, so its figures leave them
           out. Each entry says what changes, who it reaches, with the government's figures where it gives
@@ -156,13 +156,14 @@ export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES }) {
           from Table 6.1 of the <SourceLink href={TABLE_6_1_URL}>Budget document</SourceLink>, in £ million: a
           positive figure is a gain to the Exchequer, a negative figure a cost.
         </p>
-        <ul className="umm-list">
-          {measures.map((measure) => (
-            <Measure key={measure.id} measure={measure} />
-          ))}
+        <ul className="policy-cards umm-list">
+          {measures.map((measure) => {
+            const { policy, parameters } = unmodelledCard(measure);
+            return <PolicyCard key={measure.id} policy={policy} parameters={parameters} />;
+          })}
         </ul>
         {OTHER_MEASURES_NOTE && <p className="umm-note">{OTHER_MEASURES_NOTE}</p>}
-      </Disclosure>
+      </div>
     </section>
   );
 }
