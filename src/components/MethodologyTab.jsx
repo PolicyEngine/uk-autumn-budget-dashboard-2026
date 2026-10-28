@@ -166,8 +166,7 @@ function MethodologyTab({ onShowTab }) {
           summary={
             <>
               We run <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink>{" "}on a
-              representative survey of UK households, with and without each policy, for each
-              fiscal year from {yearRange}, and weight the difference up to the whole country.
+              survey of UK households with and without each policy, {yearRange}, weighted to the UK.
             </>
           }
         >
@@ -186,8 +185,7 @@ function MethodologyTab({ onShowTab }) {
           summary={
             <>
               Households from the <SourceLink id="frs_2024_25">Family Resources Survey 2024-25</SourceLink>,
-              built into <SourceLink id="microcosm">Microcosm UK 2024-25</SourceLink>, each weighted
-              to the number of UK households it stands for.
+              built into <SourceLink id="microcosm">Microcosm UK 2024-25</SourceLink>.
             </>
           }
         >
@@ -275,10 +273,8 @@ function MethodologyTab({ onShowTab }) {
           title="Model and policies"
           summary={
             <>
-              <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink>{" "}works out each
-              household&apos;s taxes, benefits and <Term id="netIncome">net income</Term>{" "}under
-              current law, then again with a policy; the difference is the policy&apos;s effect.
-              What each policy does and how it is modelled is on{" "}
+              The model works out each household&apos;s taxes, benefits and{" "}
+              <Term id="netIncome">net income</Term>; what each policy does and how it is modelled is on{" "}
               <ViewLink tab="policies" onShowTab={onShowTab}>
                 Policies
               </ViewLink>
@@ -335,10 +331,8 @@ function MethodologyTab({ onShowTab }) {
           title="Population impact"
           summary={
             <>
-              The charts on{" "}
-              <ViewLink tab="dashboard" onShowTab={onShowTab}>Population impact</ViewLink>{" "}add up
-              every household&apos;s change with its weight, by income, age and area; no household
-              is ever shown on its own.
+              <ViewLink tab="dashboard" onShowTab={onShowTab}>Population impact</ViewLink>{" "}adds up
+              weighted household changes by income, age and area, never one household alone.
             </>
           }
         >
@@ -402,7 +396,7 @@ function MethodologyTab({ onShowTab }) {
                       </>,
                       "Negative incomes count as zero for the ranking.",
                       "Households without a decile are left out.",
-                      "A measure whose change in any decile comes from only one or two survey households is not shown: the minimum the UK Data Service requires for survey data it supplies under its End User Licence.",
+                      "When a decile's change comes from only one or two survey households, its figures are not published, and nor is that year's winners and losers figure for all households; a package also leaves out the cells its members withhold. That is the minimum the UK Data Service requires for survey data it supplies under its End User Licence. The rest of the measure is shown.",
                     ],
                   },
                 ],
@@ -725,19 +719,19 @@ function MethodologyTab({ onShowTab }) {
           title="Pre-measures forecast"
           summary={
             <>
-              Incomes and poverty under current law, before any policy, on the{" "}
+              Current-law incomes and poverty on{" "}
               <ViewLink tab="outlook" sub="living" onShowTab={onShowTab}>
                 Living standards
               </ViewLink>{" "}
               and{" "}
               <ViewLink tab="outlook" sub="poverty" onShowTab={onShowTab}>
                 Poverty
-              </ViewLink>{" "}
-              tabs, built on the forecast that{" "}
+              </ViewLink>
+              , from the forecast on{" "}
               <ViewLink tab="outlook" sub="forecast" onShowTab={onShowTab}>
                 Forecast changes
-              </ViewLink>{" "}
-              shows.
+              </ViewLink>
+              .
             </>
           }
         >
@@ -755,7 +749,7 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.limitations}
           title="Limitations"
-          summary="Most charts add up policies run separately, the economic assumptions follow one OBR forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
+          summary="Most charts add up separate policy runs, assumptions follow one OBR forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
         >
           <Topic title="Policies added up" preview="Revenue, decile and age charts · Household scatter · Winners and losers">
             <p className="method-more">

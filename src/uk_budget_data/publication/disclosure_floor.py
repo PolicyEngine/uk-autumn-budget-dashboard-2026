@@ -20,13 +20,13 @@ The age table may leave rows out, so its thin cells are withheld with
 whatever would give them back by difference (``withheld_age_labels``): a
 thin single year of age takes the other single ages of its band with it,
 so the bands and "all" stay; a thin band leaves only "all"; a thin "all"
-leaves no row. The decile tables
-must hold every decile, so a run with a thin decile cell is written with a
-warning naming the cells (``generate._apply_disclosure_floor``), and the
-publication gate never stages or shows it, so ``publish review-rows``
-deletes it before anything is committed. With THIN_DECILES_ENV set to
-"refuse" where the generation starts, such a run is refused and nothing is
-written.
+leaves no row. The decile tables keep their identifying columns and
+withhold every value in a thin decile's row, plus the winners and losers
+"all" row that would give it back by difference. A combined run also
+withholds its members' withheld cells. When "all" itself is thin, the
+whole measure and its costing rest on too few households: that run keeps
+the warning and publication refusal, or is refused before writing when
+THIN_DECILES_ENV is "refuse".
 """
 
 import os
@@ -63,7 +63,7 @@ THIN_DECILES_ENV = "UK_BUDGET_THIN_DECILES"
 
 
 def refuses_thin_deciles() -> bool:
-    """Whether a run with a thin decile cell is refused (THIN_DECILES_ENV
+    """Whether a run with a thin "all" group is refused (THIN_DECILES_ENV
     set to "refuse") rather than written with a warning (the default, or
     "warn"; #208 review, finding 11). Read where the generation starts and
     carried on each run (``generate.ArtifactRun.refuse_thin_deciles``),
@@ -185,17 +185,19 @@ def thin_cells(
 def floor_record(
     found: dict[tuple[str, int], list[str]],
     *,
+    withheld: Optional[dict[tuple[str, int], list[str]]] = None,
     not_checked_because: Optional[str] = None,
 ) -> dict:
-    """What an artifact's receipt records of the floor
-    (``dashboard.disclosure_floor``): the cells found thin, by table, year
-    and group label, never a figure, and whether any is still in the tables
-    (a decile table's, unless the run was refused), which the publication
-    gate and the public data check refuse. ``survey_households`` is the
-    decile and age tables' floor, SURVEY_HOUSEHOLD_FLOOR; the binned
-    scatter's is SCATTER_MIN_HOUSEHOLDS. A run on data whose survey
-    households cannot be told apart records that it was not checked, and
-    why."""
+    """Record the floor in an artifact's receipt.
+
+    ``dashboard.disclosure_floor`` names the cells found thin by table,
+    year and group label, never a figure, and whether any is still published.
+    A thin "all" always keeps the refusal, including the costing. An
+    omitted ``withheld`` keeps the meaning of receipts made before decile
+    withholding. ``survey_households`` is the decile and age tables'
+    floor, SURVEY_HOUSEHOLD_FLOOR; the binned scatter's is
+    SCATTER_MIN_HOUSEHOLDS. A run whose survey households cannot be told
+    apart records that it was not checked, and why."""
     cells = [
         {"table": table, "year": year, "groups": list(labels)}
         for (table, year), labels in sorted(found.items())
@@ -205,12 +207,128 @@ def floor_record(
         "checked": not_checked_because is None,
         "thin_cells": cells,
         "thin_cells_in_tables": any(
-            cell["table"] in DECILE_TABLES for cell in cells
+            table in DECILE_TABLES
+            and (
+                "all" in labels
+                or any(
+                    label not in (withheld or {}).get((table, year), [])
+                    for label in labels
+                )
+            )
+            for (table, year), labels in found.items()
         ),
     }
+    if withheld is not None:
+        record["withheld_cells"] = [
+            {"table": table, "year": year, "groups": list(labels)}
+            for (table, year), labels in sorted(withheld.items())
+            if labels
+        ]
     if not_checked_because is not None:
         record["not_checked_because"] = not_checked_because
     return record
+
+
+def decile_label(label) -> str:
+    """Return the canonical group label for numeric or ordinal decile rows."""
+    value = str(label)
+    for suffix in ("st", "nd", "rd", "th"):
+        if value.endswith(suffix):
+            return value[: -len(suffix)]
+    return value
+
+
+def withheld_decile_cells(
+    found: dict[tuple[str, int], list[str]],
+    inherited: Optional[dict[tuple[str, int], list[str]]] = None,
+) -> dict[tuple[str, int], list[str]]:
+    """Return decile cells withheld for thin groups and a package's members.
+
+    The winners and losers "all" row is withheld in every affected year,
+    since a weighted total and the other deciles can give a decile back.
+    Distributional impact has no "all" row. A thin "all" keeps the whole
+    measure refusal instead of withholding its costing's underlying cases.
+    """
+    withheld = {
+        cell: set(labels) for cell, labels in (inherited or {}).items()
+    }
+    whole_years = {
+        year
+        for (table, year), labels in found.items()
+        if table in DECILE_TABLES and "all" in labels
+    }
+    for (table, year), labels in found.items():
+        if table in DECILE_TABLES and year not in whole_years:
+            withheld.setdefault((table, year), set()).update(labels)
+    for year in {year for (_, year), labels in withheld.items() if labels}:
+        withheld.setdefault(("winners_losers", year), set()).add("all")
+    return {
+        cell: sorted(
+            labels,
+            key=lambda label: (
+                label == "all",
+                int(label) if label != "all" else 0,
+            ),
+        )
+        for cell, labels in sorted(withheld.items())
+        if labels
+    }
+
+
+def withhold_decile_rows(
+    rows: list[dict],
+    table: str,
+    withheld: dict[tuple[str, int], list[str]],
+) -> list[dict]:
+    """Keep decile row identifiers and blank every withheld value."""
+    identifying = {"reform_id", "reform_name", "year", "decile"}
+    return [
+        (
+            {
+                name: value if name in identifying else None
+                for name, value in row.items()
+            }
+            if decile_label(row["decile"])
+            in withheld.get((table, row["year"]), [])
+            else row
+        )
+        for row in rows
+    ]
+
+
+def recorded_withheld_cells(record: dict) -> dict[tuple[str, int], list[str]]:
+    """Read a member's decile withholding, accepting older floor records."""
+    if not isinstance(record, dict):
+        raise ValueError("its disclosure floor is not an object")
+    cells = record.get("withheld_cells", [])
+    if not isinstance(cells, list):
+        raise ValueError("its withheld cells are not a list")
+    found: dict[tuple[str, int], list[str]] = {}
+    for cell in cells:
+        if not isinstance(cell, dict):
+            raise ValueError("its withheld cell is not an object")
+        table, year, labels = (
+            cell.get("table"),
+            cell.get("year"),
+            cell.get("groups"),
+        )
+        allowed = {str(n) for n in range(1, 11)}
+        if table == "winners_losers":
+            allowed.add("all")
+        if (
+            table not in DECILE_TABLES
+            or type(year) is not int
+            or not isinstance(labels, list)
+            or any(
+                not isinstance(label, str) or label not in allowed
+                for label in labels
+            )
+        ):
+            raise ValueError(
+                "its withheld cell has invalid table, year or groups"
+            )
+        found.setdefault((table, year), []).extend(labels)
+    return withheld_decile_cells({}, found)
 
 
 def thin_cells_reason(found: dict[tuple[str, int], list[str]]) -> str:

@@ -96,6 +96,16 @@ describe("ResultTiles' average for your income tenth", () => {
     expect(screen.getByText("Your tenth's average is not published")).toBeTruthy();
   });
 
+  it("labels a withheld verified tenth without showing a zero average", () => {
+    files.current = { "income_distribution.csv": { status: "ready", rows: DISTRIBUTION } };
+    catalogueRef.current = catalogue({
+      distributional_impact: DECILES.map((decile) => ({ reform_id: "alpha", year: 2027, decile, value: decile === "3rd" ? null : 0.1 })),
+    });
+    show();
+    expect(screen.getByText("Not published, to protect survey respondents' confidentiality")).toBeInTheDocument();
+    expect(screen.queryByText("Average for your income tenth: 0.00%")).toBeNull();
+  });
+
   it("says in the Your place tile, in one muted line, why there is no place", () => {
     files.current = { "income_distribution.csv": { status: "ready", rows: [] } };
     catalogueRef.current = catalogue({});

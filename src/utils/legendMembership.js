@@ -12,6 +12,7 @@ import { isCatalogueRowDisplayable } from "./measureCatalogue";
 import { policyDetailsFor, shortNameOf } from "./policyDetails";
 import { CHART_COLOURS } from "./chartTheme";
 import { DISPLAY_YEARS } from "./displayYears";
+import { isWithheldDecileValue } from "./decileWithholding";
 import { WAGES_HELD_FIXED } from "./measureModelling";
 
 /**
@@ -60,7 +61,7 @@ export function legendMembership(catalogue, selectedPolicies, hasEffect) {
 /**
  * legendMembership for a published table with a row per measure, year and
  * decile (winners_losers.csv, distributional_impact.csv): a measure has an
- * effect when any decile's `valueKey` is non-zero in `year`.
+ * effect when any decile's `valueKey` is non-zero or withheld in `year`.
  */
 export function decileMembership(catalogue, rows, valueKey, selectedPolicies, year) {
   const ids = new Set(
@@ -70,7 +71,7 @@ export function decileMembership(catalogue, rows, valueKey, selectedPolicies, ye
           row.decile !== "all" &&
           parseInt(row.year) === year &&
           isCatalogueRowDisplayable(catalogue, row.reform_id, row.year) &&
-          Math.abs(parseFloat(row[valueKey])) > 0,
+          (isWithheldDecileValue(row[valueKey]) || Math.abs(parseFloat(row[valueKey])) > 0),
       )
       .map((row) => row.reform_id),
   );
