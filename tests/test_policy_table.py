@@ -102,13 +102,13 @@ def test_every_candidate_has_a_table_with_its_published_description(document):
 
 def test_fuel_duty_by_date(document):
     dated = by_key(rows(document, "fuel_duty_rise_deferral")["Fuel duty"])
-    # 52.95p held to 30 June 2027, then current law's 60.04p and its RPI
-    # (OBR October 2026 forecast)
+    # 52.95p held to 30 June 2027, then current law's 60.59p (the OBR's
+    # rate, EFO October 2026 paragraph 3.19) and its RPI
     assert dated["2027-01-01"] == (55.95, 52.95)
     assert dated["2027-03-01"] == (57.95, 52.95)
-    assert dated["2027-04-01"] == (60.04, 52.95)
-    assert dated["2027-07-01"] == (60.04, 60.04)
-    assert dated["2028-04-01"] == (62.62, 62.62)
+    assert dated["2027-04-01"] == (60.59, 52.95)
+    assert dated["2027-07-01"] == (60.59, 60.59)
+    assert dated["2028-04-01"] == (63.2, 63.2)
     assert "2032-04-01" not in dated  # after the timeline
     assert dated["2026-04-01"] == (52.95, 52.95)  # the timeline's first day
 

@@ -191,3 +191,23 @@ def test_record_names_its_source():
     assert record["vintage"] == "OBR EFO October 2026"
     for entry in record["parameter_changes"].values():
         assert entry["source"].startswith("Table A.")
+
+
+def test_fuel_duty_path_is_the_obr_rate_then_october_rpi():
+    """60.59p from April 2027 (EFO October 2026, paragraph 3.19), then each
+    April the previous calendar year's Table A.1 RPI, to 0.01p; the baseline
+    and the fuel duty measure share it."""
+    from uk_budget_data.forecast import FUEL_DUTY, fuel_duty_rpi_steps
+    from uk_budget_data.reforms import FUEL_DUTY_CURRENT_LAW
+
+    steps = dict(fuel_duty_rpi_steps())
+    assert steps["2027-04-01"] == 0.6059
+    rpi = dict(zip(YEARS, TABLE_A1["rpi"]))
+    for year in range(2028, 2033):
+        expected = steps[f"{year - 1}-04-01"] * (1 + rpi[year - 1] / 100)
+        assert steps[f"{year}-04-01"] == pytest.approx(expected, abs=5e-5)
+    assert {
+        day: rate for day, rate in FUEL_DUTY_CURRENT_LAW if day in steps
+    } == (steps)
+    changes = forecast_parameter_changes()[FUEL_DUTY]
+    assert changes["2027-04-01.2028-03-31"] == 0.6059

@@ -252,11 +252,11 @@ def test_the_fuel_duty_path_by_hand():
     # 2026-27: 52.95p all year
     assert rates["2026"] == 0.5295
     # 2027-28 (6 April 2027 to 5 April 2028, 366 days): 52.95p to 30 June
-    # (86 days), then 60.04p (57.95p x 1.036, October 2026 RPI for 2026) to
-    # 31 March 2028 (275), then 62.62p (x 1.043, RPI 2027) from 1 April
-    # 2028 (5)
+    # (86 days), then 60.59p (the OBR's July 2027 rate, EFO October 2026
+    # paragraph 3.19) to 31 March 2028 (275), then 63.20p (x 1.043, October
+    # RPI for 2027) from 1 April 2028 (5)
     assert rates["2027"] == pytest.approx(
-        (86 * 0.5295 + 275 * 0.6004 + 5 * 0.6262) / 366, abs=1e-6
+        (86 * 0.5295 + 275 * 0.6059 + 5 * 0.6320) / 366, abs=1e-6
     )
     # Later years are current law's own, written for every scored year
     # (the parameter is uprated: policyengine-uk #2430)
@@ -272,7 +272,7 @@ def test_after_the_extension_fuel_duty_is_current_laws():
     """From 1 August 2027 the measure follows current law, so it costs
     nothing after 2027-28; the description says so."""
     schedule = dict(reforms.fuel_duty_deferral_schedule())
-    assert schedule["2027-07-01"] == 0.6004
+    assert schedule["2027-07-01"] == 0.6059
     for day, rate in reforms.FUEL_DUTY_CURRENT_LAW:
         if day > "2027-07-01":
             assert schedule[day] == rate

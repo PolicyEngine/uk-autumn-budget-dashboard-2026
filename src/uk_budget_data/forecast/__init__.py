@@ -26,11 +26,22 @@ FORECAST_FILE = "obr_october_2026.json"
 OBR = "gov.economic_assumptions.yoy_growth.obr."
 FUEL_DUTY = "gov.hmrc.fuel_duty.petrol_and_diesel"
 # The last statutory rate (Hydrocarbon Oil Duties Act 1979, from 1 March
-# 2027), and the 1 April RPI steps after it: each the previous calendar
-# year's RPI growth, rounded to the nearest hundredth of a penny, as
-# policyengine-uk's calculate_fuel_duty_rates.py writes its March-RPI path.
+# 2027).
 FUEL_DUTY_STATUTORY = ("2027-03-01", 0.5795)
-FUEL_DUTY_RPI_YEARS = range(2027, 2033)
+# The first RPI rise, as the OBR states it: "on 1 July 2027 the temporary
+# five pence cut ... will be reversed in full alongside an uprating of fuel
+# duty rates ... rising from 52.95 pence per litre to 60.59 pence per
+# litre" (EFO October 2026, paragraph 3.19, PDF page 73). The Budget defers
+# the planned RPI increase from April to 1 July 2027 (costings document,
+# "Fuel Duty: Extend the temporary 5p-per-litre duty cut and defer the
+# planned RPI increase"), so current law takes that same increase in April
+# 2027: 57.95p to 60.59p (+4.56%). The OBR does not say which RPI period
+# gives 4.56%; it is not calendar-year 2026 RPI (3.6%).
+FUEL_DUTY_FIRST_RPI_STEP = ("2027-04-01", 0.6059)
+# Later 1 April steps: the previous calendar year's RPI growth on the
+# forecast, rounded to the nearest hundredth of a penny, as policyengine-uk's
+# calculate_fuel_duty_rates.py writes its own (March 2026) path.
+FUEL_DUTY_RPI_YEARS = range(2028, 2033)
 PENNY_HUNDREDTH = Decimal("0.0001")
 
 
@@ -56,11 +67,12 @@ def forecast_rpi(year: int) -> float:
 
 def fuel_duty_rpi_steps() -> tuple:
     """Current law's fuel duty rate on each 1 April from 2027, ``(date,
-    rate)``: the statutory 57.95p uprated by the forecast's RPI. Both the
-    baseline (``forecast_parameter_changes``) and the fuel duty measure
+    rate)``: the OBR's 60.59p (``FUEL_DUTY_FIRST_RPI_STEP``), then the
+    forecast's RPI each April. Both the baseline
+    (``forecast_parameter_changes``) and the fuel duty measure
     (``reforms.FUEL_DUTY_CURRENT_LAW``) read it from here."""
-    rate = Decimal(str(FUEL_DUTY_STATUTORY[1]))
-    steps = []
+    rate = Decimal(str(FUEL_DUTY_FIRST_RPI_STEP[1]))
+    steps = [FUEL_DUTY_FIRST_RPI_STEP]
     for year in FUEL_DUTY_RPI_YEARS:
         growth = Decimal(str(forecast_rpi(year - 1)))
         rate = (rate * (1 + growth)).quantize(

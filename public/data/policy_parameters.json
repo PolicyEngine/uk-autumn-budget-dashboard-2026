@@ -15,7 +15,7 @@
   ],
   "measures": {
     "fuel_duty_rise_deferral": {
-      "description": "Candidate measure. Fuel duty stays at 52.95p a litre to 30 June 2027: the rise due on 1 January 2027 and the March and April 2027 steps do not happen while the 5p cut is extended. From 1 July 2027 fuel duty is current law's, 60.04p a litre, rising with RPI each April as current law has it. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+      "description": "Candidate measure. Fuel duty stays at 52.95p a litre to 30 June 2027: the rise due on 1 January 2027 and the March and April 2027 steps do not happen while the 5p cut is extended. From 1 July 2027 fuel duty is current law's, 60.59p a litre, rising with RPI each April as current law has it. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
       "display": "schedule",
       "rows": [
         {
@@ -49,43 +49,43 @@
               "key": "2027-04-01",
               "label": "1 April 2027",
               "year": 2027,
-              "before": 60.04,
+              "before": 60.59,
               "after": 52.95
             },
             {
               "key": "2027-07-01",
               "label": "1 July 2027",
               "year": 2027,
-              "before": 60.04,
-              "after": 60.04
+              "before": 60.59,
+              "after": 60.59
             },
             {
               "key": "2028-04-01",
               "label": "1 April 2028",
               "year": 2028,
-              "before": 62.62,
-              "after": 62.62
+              "before": 63.2,
+              "after": 63.2
             },
             {
               "key": "2029-04-01",
               "label": "1 April 2029",
               "year": 2029,
-              "before": 64.5,
-              "after": 64.5
+              "before": 65.1,
+              "after": 65.1
             },
             {
               "key": "2030-04-01",
               "label": "1 April 2030",
               "year": 2030,
-              "before": 66.44,
-              "after": 66.44
+              "before": 67.05,
+              "after": 67.05
             },
             {
               "key": "2031-04-01",
               "label": "1 April 2031",
               "year": 2031,
-              "before": 67.97,
-              "after": 67.97
+              "before": 68.59,
+              "after": 68.59
             }
           ],
           "source": {
@@ -109,43 +109,43 @@
               "key": "2026",
               "label": "2026-27",
               "year": 2026,
-              "before": 53.956712,
+              "before": 53.964247,
               "after": 52.95
             },
             {
               "key": "2027",
               "label": "2027-28",
               "year": 2027,
-              "before": 60.075246,
-              "after": 58.4093
+              "before": 60.625656,
+              "after": 58.8305
             },
             {
               "key": "2028",
               "label": "2028-29",
               "year": 2028,
-              "before": 62.645753,
-              "after": 62.645753
+              "before": 63.226027,
+              "after": 63.226027
             },
             {
               "key": "2029",
               "label": "2029-30",
               "year": 2029,
-              "before": 64.526575,
-              "after": 64.526575
+              "before": 65.126712,
+              "after": 65.126712
             },
             {
               "key": "2030",
               "label": "2030-31",
               "year": 2030,
-              "before": 66.460959,
-              "after": 66.460959
+              "before": 67.071096,
+              "after": 67.071096
             },
             {
               "key": "2031",
               "label": "2031-32",
               "year": 2031,
-              "before": 67.990492,
-              "after": 67.990492
+              "before": 68.610628,
+              "after": 68.610628
             }
           ],
           "source": {
