@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   POLICY_PARAMETERS_SCHEMA,
+  changeLines,
   describeSegment,
   formatChange,
   formatValue,
@@ -55,6 +56,21 @@ describe("policy_parameters.json, as the page reads it", () => {
       ["1 April to 30 June 2027", 60.59, 52.95],
       ["1 July 2027 to 31 March 2028", 60.59, 60.59],
     ]);
+  });
+
+  it("says a change the same in every year once, over its years (PR 290, Anthony, 19:36)", () => {
+    const lines = changeLines(file.measures.property_income_rates_up.rows);
+    expect(lines.map((line) => [line.label, line.period, line.before, line.after])).toEqual([
+      ["Property basic rate", "2027-28 to 2031-32", 0.22, 0.24],
+      ["Property higher rate", "2027-28 to 2031-32", 0.42, 0.44],
+      ["Property additional rate", "2027-28 to 2031-32", 0.47, 0.49],
+    ]);
+    // A change that varies, or skips a year, keeps a line a year
+    const point = (year, after) => ({ key: String(year), label: `${year}`, year, before: 1, after });
+    const varying = changeLines([{ label: "A", unit: "gbp", points: [point(2027, 2), point(2028, 3)] }]);
+    expect(varying.map((line) => line.period)).toEqual(["2027", "2028"]);
+    const gap = changeLines([{ label: "B", unit: "gbp", points: [point(2027, 2), point(2028, 1), point(2029, 2)] }]);
+    expect(gap.map((line) => line.period)).toEqual(["2027", "2029"]);
   });
 
 });

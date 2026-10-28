@@ -485,6 +485,19 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(block).not.toHaveTextContent(/2\.17%|3\.89%|in Great Britain,/);
   });
 
+  it("lists the property rates once for 2027-28 to 2031-32, not a row a year (PR 290, Anthony, 19:36)", () => {
+    const id = "property_income_rates_up";
+    render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
+    const block = screen.getByRole("region", { name: /^What changes/ });
+    fireEvent.click(within(block).getByRole("button", { name: "Show every change" }));
+    expect(within(within(block).getByRole("table")).getAllByRole("row").map((row) => row.textContent)).toEqual([
+      "2027-28 to 2031-32Current lawWith the policyChange",
+      "Property basic rate22%24%22% → 24%",
+      "Property higher rate42%44%42% → 44%",
+      "Property additional rate47%49%47% → 49%",
+    ]);
+  });
+
   it("shows nothing for a measure described otherwise than when the file was built, with no empty slot", () => {
     const item = card(rising, { ...alpha, description: "Changed on Budget day." });
     expect(within(item).queryByRole("region", { name: /^What changes/ })).toBeNull();

@@ -3,6 +3,7 @@ import { ArrowRightLeft, Table } from "lucide-react";
 import {
   FIRST_YEAR,
   MONTHS,
+  changeLines,
   describeSegment,
   differs,
   formatChange,
@@ -275,10 +276,9 @@ export function changeView(entry, lead) {
   // how the years are weighted
   const byYear = main.points.every((point) => /^\d{4}-\d{2}$/.test(point.label));
   const yearly = byYear ? null : entry.rows.find((row) => !row.primary && row.unit === main.unit) ?? null;
-  // Every changing line of every parameter, when the measure moves more than one
-  const lines = entry.rows.filter((row) => row !== yearly).flatMap((row) =>
-    row.points.filter(differs).map((point) => ({ ...point, key: `${row.label}|${point.key}`, label: row.label, unit: row.unit, period: point.label })),
-  );
+  // Every changing line of every parameter, when the measure moves more
+  // than one: a change the same in every period it applies, once
+  const lines = changeLines(entry.rows.filter((row) => row !== yearly));
   const others = entry.rows.filter((row) => row !== main && row !== yearly && row.points.some(differs));
   const periods = [...new Set(lines.map((line) => line.period))];
   const everyChange = others.length > 0;

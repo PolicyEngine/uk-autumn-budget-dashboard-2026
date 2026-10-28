@@ -196,6 +196,26 @@ export function schedulePeriods(row) {
   });
 }
 
+/**
+ * The lines of a measure's changes, one per parameter where its change is
+ * the same in every period it applies (PR 290, Anthony, 19:36: a rate the
+ * same from 2027-28 to 2031-32 is said once), else one per period.
+ */
+export function changeLines(rows) {
+  return rows.flatMap((row) => {
+    const points = row.points ?? [];
+    const moved = points.filter(differs);
+    if (!moved.length) return [];
+    const unbroken = points.indexOf(moved[moved.length - 1]) - points.indexOf(moved[0]) === moved.length - 1;
+    const once = unbroken && moved.every((point) => same(point.before, moved[0].before) && same(point.after, moved[0].after));
+    if (once && moved.length > 1) {
+      const span = `${moved[0].label} to ${moved[moved.length - 1].label}`;
+      return [{ ...moved[0], key: `${row.label}|${moved[0].key}`, label: row.label, unit: row.unit, period: span }];
+    }
+    return moved.map((point) => ({ ...point, key: `${row.label}|${point.key}`, label: row.label, unit: row.unit, period: point.label }));
+  });
+}
+
 // --- Words -----------------------------------------------------------------
 
 /** A step in words, for the plot's tooltip and its text alternative. */
