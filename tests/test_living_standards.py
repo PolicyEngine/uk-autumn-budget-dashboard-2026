@@ -9,6 +9,7 @@ projections and checks its output, and the committed file, against
 docs/DATA_CONTRACT.md. No test here needs the certified dataset.
 """
 
+import copy
 import csv
 import hashlib
 import json
@@ -27,6 +28,7 @@ from uk_budget_data.living_standards.forecast import (
     POST_FILE_NAME,
     STALE_POST_NOTE,
     apply_post,
+    check_pre_is_march,
     compute_post,
     read_post_document,
     read_post_document_from_pdf,
@@ -986,6 +988,30 @@ def test_table_a1_reconciles_with_its_changes_since_march():
         for year, change in zip(range(2027, 2031), changes):
             ours = (parsed[key].values[year] - pre[key][year]) * 100
             assert abs(ours - change) <= 0.1 + 1e-9, (key, year)
+
+
+def test_the_committed_pre_is_march_and_post_is_october():
+    """Forecast changes draws two forecasts: pre (March 2026) must not be
+    overwritten by the October forecast the projections now run on."""
+    forecast = _outlook_forecast()["forecast"]
+    cpi = next(
+        s for sec in forecast["sections"] for s in sec["series"] if s["key"] == "cpi"
+    )
+    pre = {p["year"]: p["value"] for p in cpi["pre"]}
+    post = {p["year"]: p["value"] for p in cpi["post"]}
+    assert (pre["2027"], post["2027"]) == (0.02, 0.034)
+    check_pre_is_march(forecast, INPUTS / EFO_FILE_NAME)
+
+
+def test_a_pre_series_from_the_october_forecast_is_refused():
+    """The build's guard: October values in pre fail against the March EFO."""
+    forecast = copy.deepcopy(_outlook_forecast()["forecast"])
+    for sec in forecast["sections"]:
+        for s in sec["series"]:
+            if s["key"] == "cpi":
+                s["pre"] = [dict(p) for p in s["post"]]
+    with pytest.raises(ForecastTableError, match="cpi"):
+        check_pre_is_march(forecast, INPUTS / EFO_FILE_NAME)
 
 
 def test_the_committed_post_document_reproduces_from_the_pdf():

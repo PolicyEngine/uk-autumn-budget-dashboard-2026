@@ -176,6 +176,32 @@ def compute_post(
     return out
 
 
+def check_pre_is_march(forecast: dict, efo: Path) -> None:
+    """Refuse a forecast block whose pre series are not the March 2026 EFO.
+
+    ``efo`` is the committed March 2026 economy tables
+    (data_inputs/living_standards/, obr.EFO_FILE_NAME). Every OBR series
+    must read back exactly from it; the two PolicyEngine-derived series and
+    the years CARRIED_YEARS allows are not in it. So a build that took
+    ``pre`` from a patched forecast (with_forecast's October 2026 CPI, for
+    example) fails here instead of drawing October as March.
+    """
+    years = sorted(
+        {int(p["year"]) for s in _series_by_key(forecast).values() for p in s["pre"]}
+    )
+    computed = compute_post(forecast, read_forecast(efo, [years[0] - 1, *years]))
+    wrong = [
+        key
+        for key, series in _series_by_key(forecast).items()
+        if key in computed and computed[key]["values"] != _pre(series)
+    ]
+    if wrong:
+        raise ForecastTableError(
+            "The pre-Budget series are not the OBR March 2026 forecast: "
+            + ", ".join(sorted(wrong))
+        )
+
+
 def load_post(efo: Path, label: str, url: str = OBR_FORECAST_URL) -> dict:
     """Read the EFO into the post document saved in data_inputs."""
     return {
