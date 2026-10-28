@@ -252,3 +252,15 @@ def test_derived_series_follow_october_cpi():
             assert changes[OBR + "social_rent"][key] == pytest.approx(
                 round(previous * 100, 1) / 100 + 0.01
             ), year
+
+
+def test_council_tax_is_expenditure_table_5_1(october):
+    """England's receipts: £46.806bn in 2026-27 on £44.117bn in 2025-26,
+    then £49.257bn (expenditure Table 5.1)."""
+    council_tax = october.gov.economic_assumptions.yoy_growth.obr.council_tax
+    assert council_tax.england("2026-01-01") == pytest.approx(
+        46.806 / 44.117 - 1, abs=5e-5
+    )
+    assert council_tax.england("2027-01-01") == pytest.approx(
+        49.256614 / 46.806 - 1, abs=5e-5
+    )
