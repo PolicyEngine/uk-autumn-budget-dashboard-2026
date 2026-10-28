@@ -30,6 +30,7 @@ import { chartMotion, chartTransition } from "../utils/chartMotion";
 import TitleIcon from "./TitleIcon";
 import SelectedYearShade from "./SelectedYearShade";
 import { laterRevenueNote, revenueSentence } from "../utils/plainSentences";
+import { formatBnOrM } from "../utils/moneyFormat";
 import { zeroReason } from "../utils/legendMembership";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
@@ -317,7 +318,7 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [] }) {
 
               offset={16}
 
-              content={<SegmentTooltip activeKey={hoveredMeasure} labelOf={(row) => fiscalYearTick(row.year)} format={(value) => `£${value.toFixed(1)}bn`} netKey="netImpact" netLabel="Net change" />}
+              content={<SegmentTooltip activeKey={hoveredMeasure} labelOf={(row) => fiscalYearTick(row.year)} format={(value) => formatBnOrM(value)} netKey="netImpact" netLabel="Net change" />}
 
             />
             {orderedPolicies.map((policyName) => (

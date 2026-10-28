@@ -266,7 +266,7 @@ def test_current_law_fuel_duty_blends_as_the_engine_does():
 
 def test_the_fuel_duty_path_by_hand():
     """Budget 2026: the 5p cut extended to 1 July 2027. 52.95p to
-    30 June 2027, then current law's 59.75p (FUEL_DUTY_FROZEN_UNTIL)."""
+    30 June 2027, then current law's 60.59p (FUEL_DUTY_FROZEN_UNTIL)."""
     rates = fuel_duty_deferral_rates()
     # 2026-27: 52.95p all year
     assert rates["2026"] == 0.5295
@@ -653,8 +653,9 @@ def test_electricity_defaults_follow_its_constants():
     "year, saving",
     # £1,050 a year including 5% VAT holds £50 of VAT. 2026-27: the
     # October to March share of a year's use (WINTER_SHARE), £28.34;
-    # 2027-28: 91 days of 366 to 30 June 2027, £12.43; 2028-29: none.
-    [(2026, 28.34), (2027, 12.43), (2028, 0.0)],
+    # 2027-28: the April to June share of use (SPRING_SHARE), £11.15;
+    # 2028-29: none.
+    [(2026, 28.34), (2027, 11.15), (2028, 0.0)],
 )
 def test_electricity_vat_on_1050_pounds_a_year(year, saving):
     sit = situation(
@@ -670,8 +671,9 @@ def test_electricity_vat_on_1050_pounds_a_year(year, saving):
 @pytest.mark.parametrize(
     "year, saving",
     # Northern Ireland: no zero rate before April 2027 (Great Britain only),
-    # then the same 91 days of 366 as Great Britain, £12.43; none after.
-    [(2026, 0.0), (2027, 12.43), (2028, 0.0)],
+    # then the same April to June share of use as Great Britain, £11.15;
+    # none after.
+    [(2026, 0.0), (2027, 11.15), (2028, 0.0)],
 )
 def test_electricity_vat_in_northern_ireland_from_april_2027(year, saving):
     sit = situation(

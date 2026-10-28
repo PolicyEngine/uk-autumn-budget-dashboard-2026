@@ -36,13 +36,23 @@ WINTER_SHARE = 0.5668595921041373
 # its defaults must be literals: when changing the end date, set
 # rate_change_2027 to -0.05 x the share below (tests/test_reforms.py
 # checks the two agree). The Budget document (RB 6.210) and Table 6.1 say
-# "to 1 July 2027", so "2027-06-30" (91 days, -0.012431693989071038);
-# "2027-07-31" (122 days, -0.016666666666666666) is kept for comparison.
+# "to 1 July 2027", so "2027-06-30" (April to June, -0.011149919361563782);
+# "2027-07-31" (122 days of 366, -0.016666666666666666) is kept for
+# comparison, by days.
 ZERO_RATE_EXTENDED_TO = "2027-06-30"
-# The share of 2027-28 (1 April 2027 to 31 March 2028, 366 days) zero-rated,
-# by days from 1 April, as the road fuel VAT cut weights.
+# The April to June share of a financial year's domestic electricity use,
+# pooled over 2022-23 to 2025-26, from the same DESNZ Energy Trends Table
+# 5.5 as WINTER_SHARE (ET_5.5_SEP_26.xlsx, sheet "Quarter", column I,
+# "Domestic sales", TWh): each year's Quarter 2, I116, I120, I124 and I128
+# (21.0765, 20.1277, 20.2712 and 20.3531), 81.8285 TWh, over the same
+# 366.9466 TWh. Weighted by use, as 2026-27 is, since April to June is a
+# low-use quarter: 22.30%, against 24.86% by days (91 of 366). Vahid,
+# 28 October 2026 (Max and María on #290). A literal, 81.8285 / 366.9466.
+SPRING_SHARE = 0.22299838723127563
+# The share of 2027-28 (1 April 2027 to 31 March 2028) zero-rated: by use
+# to 30 June (SPRING_SHARE); by days for the July option.
 EXTENSION_SHARES = {
-    "2027-06-30": 0.2486338797814208,
+    "2027-06-30": 0.22299838723127563,
     "2027-07-31": 0.3333333333333333,
 }
 # policyengine-uk 2.151.0's baseline has no zero rate at all, so the
@@ -68,14 +78,15 @@ PRE_BUDGET_ZERO_RATE_IN_MEASURE = True
 # is applied to electricity spending alone. 2026-27 carries the October to
 # March share of the year's use (-0.05 x WINTER_SHARE), not its 182 days of
 # 365: the zero-rated months are the higher-use half of the year. 2027-28
-# carries the extension's days (EXTENSION_SHARES). policyengine-uk 2.153.5 and later zero-rate
+# carries the April to June share of use (-0.05 x SPRING_SHARE), not its 91
+# days of 366. policyengine-uk 2.153.5 and later zero-rate
 # October 2026 to March 2027 in current law, so on those engines the 2026
 # leg would count that half-year twice: a test fails if the installed engine
 # has it.
 def zero_vat_on_domestic_electricity(
     sim,
     rate_change_2026=-0.028342979605206865,  # -0.05 x WINTER_SHARE
-    rate_change_2027=-0.012431693989071038,  # -0.05 x EXTENSION_SHARES
+    rate_change_2027=-0.011149919361563782,  # -0.05 x SPRING_SHARE
     geography="GB",
     geography_2027="UK",
 ):

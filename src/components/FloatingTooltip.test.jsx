@@ -25,7 +25,7 @@ describe("tooltips on hand-drawn charts", () => {
     expect(tip).toHaveTextContent("Fuel duty rises deferred, 2027-28");
     expect(tip).toHaveTextContent("PolicyEngine (static)−£1.2bn");
     expect(tip).toHaveTextContent("Official costing (static)−£1.0bn");
-    expect(tip).toHaveTextContent("Difference (PolicyEngine − official)−£0.2bn");
+    expect(tip).toHaveTextContent("Difference (PolicyEngine − official)−£200m");
     // A new year (the Play button) clears it: no last year's figures
     rerender(dumbbell(2028));
     expect(screen.queryByRole("tooltip")).toBeNull();

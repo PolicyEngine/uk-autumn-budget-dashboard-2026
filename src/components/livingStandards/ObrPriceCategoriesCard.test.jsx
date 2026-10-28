@@ -117,14 +117,17 @@ describe("Prices by spending category", () => {
     expect(screen.getByRole("cell", { name: "-8.0%" })).toBeTruthy();
   });
 
-  it("draws March faded and October full, with the forecasts in its Options pill, once October is published", async () => {
+  it("draws October by default once it is published, and March faded beside it on choosing both", async () => {
     serve(200, FILE, POST);
     chartProps.length = 0;
     render(<ObrPriceCategoriesCard />);
     // The sentence reads October: food 3.06 + 1 = 4.1%
     expect(await screen.findByText(/^In 2026-27 the OBR expects food, beverages and tobacco prices to rise 4\.1%/)).toBeTruthy();
-    // Both forecasts by default, chosen in the Options pill (no chips)
+    // October alone by default, chosen in the Options pill (no chips)
     expect(screen.queryByText("Show forecasts:")).toBeNull();
+    expect(chartProps.at(-1).series.map((s) => s.forecast)).toEqual(Array(5).fill("post"));
+    fireEvent.click(screen.getByRole("button", { name: "Options: October 2026 forecast" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Both" }));
     expect(screen.getByRole("button", { name: "Options: March and October 2026" })).toBeTruthy();
     const series = chartProps.at(-1).series;
     expect(series).toHaveLength(10);
@@ -135,11 +138,6 @@ describe("Prices by spending category", () => {
     ]);
     expect(food[1].name).toBe("Food, beverages and tobacco, OBR October 2026");
     expect(chartProps.at(-1).data[0].food__post).toBeCloseTo(4.06, 10);
-    // March alone: the five March lines
-    fireEvent.click(screen.getByRole("button", { name: "Options: March and October 2026" }));
-    fireEvent.click(screen.getByRole("radio", { name: "March 2026" }));
-    expect(chartProps.at(-1).series.map((s) => s.forecast)).toEqual(Array(5).fill("pre"));
-    expect(screen.getByRole("button", { name: "Options: March 2026 forecast" })).toBeTruthy();
   });
 
   it("says the forecast is not yet available before the file is published", async () => {

@@ -1,9 +1,9 @@
-measure_id,source_id,row_id,scale,year_offset,status,reason,reviewer
-household_energy_payment_2026,AB2026-T6.1,1,1,0,,,
-domestic_electricity_zero_vat,AB2026-T6.1,2,1,0,,,
-fuel_duty_rise_deferral,AB2026-T6.1,3,1,0,,,
-carers_allowance_earnings_taper,AB2026-T6.1,7,1,0,,,
-trading_allowance_raise,AB2026-T6.1,15,1,0,,,
-state_pension_income_tax_protection,AB2026-T6.1,52,1,0,,,
-unearned_income_rates_up,AB2026-T6.1,61,1,0,,,
-unearned_income_rates_up,AB2026-T6.1,62,1,0,,,
+measure_id,source_id,row_id,scale,year_offset,status,reason,reviewer,not_comparable_years
+household_energy_payment_2026,AB2026-T6.1,1,1,0,,,,
+domestic_electricity_zero_vat,AB2026-T6.1,2,1,0,,,,
+fuel_duty_rise_deferral,AB2026-T6.1,3,1,0,,,,
+carers_allowance_earnings_taper,AB2026-T6.1,7,1,0,,,,
+trading_allowance_raise,AB2026-T6.1,15,1,0,,"Self Assessment tax for 2027-28 is paid from 31 January 2029, so the Treasury's cash-basis costing starts in 2028-29 (£0 in 2027-28) while the model scores each tax year's liability. Table 6.1 row 15; policy costings p. 23.",vahid-ahmadi,2027-28
+state_pension_income_tax_protection,AB2026-T6.1,52,1,0,,"Allowance ends 5 April 2030; the Treasury's 2030-31 and 2031-32 figures (+£50m, -£15m) fall after the end, where the static model scores nothing. The policy costings (p. 63) do not explain them and assume no behavioural response (Table 6.1 row 52).",vahid-ahmadi,2030-31;2031-32
+unearned_income_rates_up,AB2026-T6.1,61,1,0,,,,
+unearned_income_rates_up,AB2026-T6.1,62,1,0,,,,

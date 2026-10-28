@@ -187,7 +187,7 @@ describe("Forecast changes with one forecast", () => {
 });
 
 describe("Forecast changes once the Budget forecast is published", () => {
-  it("draws both forecasts, March faded and October full, and says the Budget figures use October", async () => {
+  it("draws October by default, both on choosing them (March faded, October full), and says the Budget figures use October", async () => {
     chartProps.length = 0;
     await renderForecast(publishedOutlook());
     expect(screen.getByText(/Calendar-year growth in the OBR's/)).toHaveTextContent(
@@ -195,27 +195,26 @@ describe("Forecast changes once the Budget forecast is published", () => {
     );
     expect(screen.getByRole("link", { name: /^October 2026 ?\(opens in a new tab\)$/ })).toHaveAttribute("target", "_blank");
     const prices = card(/^Inflation measures$/);
-    // Which forecasts are drawn is the card's Options pill, both by
-    // default; no Show forecasts chips
-    const pill = within(prices).getByRole("button", { name: "Options: March and October 2026" });
+    // Which forecasts are drawn is the card's Options pill, October alone
+    // by default; no Show forecasts chips
+    const pill = within(prices).getByRole("button", { name: "Options: October 2026 forecast" });
     expect(within(prices).queryByRole("group", { name: "Forecasts: show or hide" })).toBeNull();
     expect(prices).not.toHaveTextContent(/Show forecasts/);
-    const lines = chartProps.find((p) => p.series.some((s) => s.key === "cpi")).series;
-    const cpi = lines.filter((s) => s.series === "cpi");
+    const cpiLines = () => chartProps.filter((p) => p.series.some((s) => s.series === "cpi")).at(-1).series.filter((s) => s.series === "cpi");
+    expect(cpiLines().map((s) => s.forecast)).toEqual(["post"]);
+    // Both: March faded, October full, and the pill says so
+    fireEvent.click(pill);
+    const choices = screen.getByRole("radiogroup", { name: "Forecasts" });
+    expect(within(choices).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Both", "March 2026", "October 2026"]);
+    fireEvent.click(within(choices).getByRole("radio", { name: "Both" }));
+    expect(within(prices).getByRole("button", { name: "Options: March and October 2026" })).toBeInTheDocument();
+    const cpi = cpiLines();
     expect(cpi.map((s) => s.name)).toEqual(["CPI, March 2026 forecast", "CPI, October 2026 forecast"]);
     expect(cpi[0].opacity).toBeLessThan(1);
     expect(cpi[1].opacity ?? 1).toBe(1);
     // The tile shows October and names March
     expect(screen.getAllByText(pct(cpiPre() + 0.003)).length).toBeGreaterThan(0);
     expect(screen.getByText(`annual growth, 2027 (March: ${pct(cpiPre())})`)).toBeInTheDocument();
-    // Choosing October alone leaves the October lines only, and the pill says so
-    fireEvent.click(pill);
-    const choices = screen.getByRole("radiogroup", { name: "Forecasts" });
-    expect(within(choices).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Both", "March 2026", "October 2026"]);
-    fireEvent.click(within(choices).getByRole("radio", { name: "October 2026" }));
-    const last = chartProps.filter((p) => p.series.some((s) => s.series === "cpi")).at(-1).series;
-    expect(last.every((s) => s.forecast === "post")).toBe(true);
-    expect(within(prices).getByRole("button", { name: "Options: October 2026 forecast" })).toBeInTheDocument();
   });
 
   it("keeps the March line alone, and says why, for a series October does not carry yet", async () => {
@@ -225,7 +224,8 @@ describe("Forecast changes once the Budget forecast is published", () => {
     }
     chartProps.length = 0;
     await renderForecast(data);
-    const lines = chartProps.find((p) => p.series.some((s) => s.key === "cpi")).series;
+    // On the default, October alone: CPIH still draws its March line
+    const lines = chartProps.find((p) => p.series.some((s) => s.series === "cpi")).series;
     expect(lines.filter((s) => s.series === "cpih").map((s) => s.forecast)).toEqual(["pre"]);
     expect(lines.find((s) => s.series === "cpih").opacity ?? 1).toBe(1);
     const prices = card(/^Inflation measures$/);

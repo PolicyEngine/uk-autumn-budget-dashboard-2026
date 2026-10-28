@@ -105,7 +105,7 @@ describe("the two Across earnings cards", () => {
     expect(net.querySelector(".earnings-you")).not.toBeNull();
     fireEvent.click(within(rate).getByRole("button", { name: "About this chart" }));
     // The allowance caveat flags a rate that rises at the start of earnings
-    // with the policies; here they lower it there (16% to 0%), so none
+    // with the policies; here they lower it there (20% to 0%), so none
     expect(rate.querySelector(".chart-more-info")).not.toHaveTextContent(/at or below the full new State Pension/);
     expect(rate.querySelector(".chart-more-info")).not.toHaveTextContent(/usual personal allowance applies again/);
   });

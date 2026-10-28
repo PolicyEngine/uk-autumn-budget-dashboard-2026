@@ -28,6 +28,12 @@
  *   (collapsed by default, under "About this result");
  * - caveats: further caveats, in sentences, where the details state none;
  * - source: a public page on the policy, where one exists;
+ * - budgetRows: the measure's rows in the Budget's Table 6.1 (as
+ *   data_inputs/treasury/mapping.csv maps them), which order the cards and
+ *   link each card to the Budget's costing;
+ * - example: { title, text, source }: a worked example, or the reach the
+ *   Budget states, every figure from its source (a cited document or a
+ *   verified household calculation), shown under "What changes";
  * - writtenFor: the measure's description in reforms.py, which the
  *   publication carries verbatim, when the entry was written. After
  *   changing a measure in reforms.py, check its entry still holds, then copy
@@ -59,11 +65,12 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Applies the duty rate in force on each day to households' petrol and diesel spending, day-weighted to fiscal years.",
     details:
-      "Assumes no rise on 1 January 2027 and none in March or April 2027 until the cut ends on 1 July 2027, when duty returns to current law's rate and its RPI rises; after that it costs nothing. The end date is the Budget document's. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel bought for vans, lorries and business use of cars is not modelled, so the revenue figure covers households' own purchases only.",
+      "Assumes no rise on 1 January 2027 and none in March or April 2027 until the cut ends on 1 July 2027, when duty returns to current law's rate and its RPI rises; after that it costs nothing. The end date is the Budget document's. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel for vans, lorries and business use of cars is not modelled, so the figure covers households' own fuel; the Treasury's figure also covers business fuel.",
     source: {
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
     },
+    budgetRows: [3],
   },
   {
     id: "state_pension_income_tax_protection",
@@ -87,6 +94,12 @@ export const POLICY_DETAILS = [
     source: {
       label: "Pension Tax Allowance explainer",
       href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer",
+    },
+    budgetRows: [52],
+    example: {
+      title: "Example",
+      text: "In 2027-28 a pensioner with only the full new State Pension, £13,036.40, pays no income tax: the allowance cancels the £93.28 due. One with total income of £13,186.40, £150 above it, gets £44 (£94 less £150 ÷ 3), and one on £13,400 gets nothing.",
+      source: { label: "Pension Tax Allowance explainer", href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer" },
     },
   },
   {
@@ -120,7 +133,7 @@ export const POLICY_DETAILS = [
     sentence: "taking VAT off household electricity",
     name: "Zero VAT on domestic electricity",
     description: "Zero-rate VAT on domestic electricity to July 2027",
-    writtenFor: "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027: in Great Britain to March 2027 and across the UK from April 2027. The model's baseline has no zero rate, so the measure covers the whole period, as the Treasury costs it. It applies to electricity spending only. 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days; 2027-28 its 91 days of 366.",
+    writtenFor: "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027: in Great Britain to March 2027 and across the UK from April 2027. The model's baseline has no zero rate, so the measure covers the whole period, as the Treasury costs it. It applies to electricity spending only. Each year carries its share of a year's electricity use, not a share of its days (DESNZ Energy Trends Table 5.5): 2026-27 the October to March share (about 57%), 2027-28 the April to June share (about 22%).",
     summary:
       "Charges no VAT on household electricity bills, instead of 5%, from October 2026 to July 2027.",
     starts: "October 2026",
@@ -131,11 +144,12 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Applies 0% VAT instead of 5% to each household's electricity spending in the survey.",
     details:
-      "The model's baseline has no zero rate, so the whole period from October 2026 counts as this Budget's measure, as the Treasury costs it. 2026-27 carries the October to March share of a year's electricity use (about 57%); 2027-28 its days to 30 June.",
+      "The model's baseline has no zero rate, so the whole period from October 2026 counts as this Budget's measure, as the Treasury costs it. 2026-27 carries the October to March share of a year's electricity use (about 57%), and 2027-28 the April to June share (about 22%), from DESNZ Energy Trends.",
     source: {
       label: "Temporary zero rate of VAT for domestic electricity",
       href: "https://www.gov.uk/government/publications/temporary-zero-rate-of-vat-for-domestic-electricity-in-great-britain/temporary-zero-rate-of-vat-in-great-britain-for-domestic-electricity",
     },
+    budgetRows: [2],
   },
   {
     id: "employer_ni_relief_under_25s",
@@ -247,7 +261,7 @@ export const POLICY_DETAILS = [
     sentence: "tapering Carer's Allowance above the earnings limit",
     name: "Carer's Allowance earnings taper",
     description: "Withdraw Carer's Allowance £1 for £1 above the earnings limit",
-    writtenFor: "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (£211.36 a week at April 2027's £13.21): it is reduced by £1 for each £1 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The taper starts within 2030-31; the model applies it to the whole of that year. Carers at or below the limit, and Scotland's Carer Support Payment, are unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
+    writtenFor: "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (£212 a week at April 2027's £13.21, rounded up to the pound): it is reduced by £1 for each £1 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The taper starts within 2030-31, on a date still to come, so the model counts half of that year. Carers at or below the limit, and Scotland's Carer Support Payment, are unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
     summary:
       "Replaces the Carer's Allowance cliff edge at the weekly earnings limit with a taper of £1 for each £1 earned above it, in England and Wales from 2030-31.",
     starts: "2030-31",
@@ -257,11 +271,12 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Applies the taper to each carer's weekly net earnings in the survey, with the limit at 16 hours at the National Living Wage.",
     details:
-      "The taper starts within 2030-31; the model applies it to the whole of that year. Scotland's Carer Support Payment is unchanged. Universal Credit counts Carer's Allowance in full as unearned income, and the allowance is taxable, so a carer on Universal Credit gains nothing and can lose the income tax on it. Carers the limit kept out claim at the data's 60% take-up.",
+      "The taper starts within 2030-31, on a date still to come, so the model counts half of that year. Scotland's Carer Support Payment is unchanged. Universal Credit counts Carer's Allowance in full as unearned income, and the allowance is taxable, so a carer on Universal Credit gains nothing and can lose the income tax on it. Carers the limit kept out claim at the data's 60% take-up.",
     source: {
       label: "Carer's Allowance",
       href: "https://www.gov.uk/carers-allowance",
     },
+    budgetRows: [7],
   },
   {
     id: "lha_unfreeze_2027",
@@ -325,6 +340,7 @@ export const POLICY_DETAILS = [
       label: "HMRC: changes to tax rates for property, savings and dividend income",
       href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
     },
+    budgetRows: [61, 62],
   },
   {
     id: "household_energy_payment_2026",
@@ -344,10 +360,16 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Adds £100 to the income of each household in England whose council tax band is A, B, C or D, in 2026-27.",
     details:
-      "The Treasury's £2.6 billion (Table 6.1) also covers the Scottish, Welsh and Northern Ireland governments' Barnett share (about £410 million) and £100 million for councils in England for further targeted support; neither is modelled, as the model covers payments in England only.",
+      "The Treasury's cost (Table 6.1) also covers the Scottish, Welsh and Northern Ireland governments' Barnett share (about £425 million) and £100 million for councils in England for further targeted support; neither is modelled, as the model covers payments in England only.",
     source: {
       label: "Budget 2026",
       href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
+    },
+    budgetRows: [1],
+    example: {
+      title: "Who it reaches",
+      text: "The Budget puts its reach at up to 20 million households, around 80% of households in England, including 83% of those whose energy costs are over 10% of their after-housing-costs income and 88% of those in the bottom three income deciles.",
+      source: { label: "Budget 2026, paragraphs 3.5 and 3.6", href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html" },
     },
   },
   {
@@ -356,20 +378,26 @@ export const POLICY_DETAILS = [
     sentence: "raising the trading allowance",
     name: "Trading allowance raised to £3,000",
     description: "Raise the trading allowance from £1,000 to £3,000",
-    writtenFor: "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from £1,000 to £3,000, for income tax and Class 4 National Insurance. Without gross receipts in the data, a profit within the allowance is treated as fully relieved, so the cost may be overstated.",
+    writtenFor: "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from £1,000 to £3,000, for income tax and Class 4 National Insurance. Without gross receipts in the data, the model relieves a profit up to £3,000 in full and gives no relief above it, so the cost may be overstated for some people and understated for others.",
     summary:
       "Raises the trading allowance, which lets people earn from trading without tax, from £1,000 to £3,000 from April 2027.",
     starts: "April 2027",
-    affects: "Self-employed people with small trading incomes",
+    affects: "Sole traders with small trading incomes or with expenses under £3,000, and people with miscellaneous income",
     type: "Income tax",
     inForce: { from: "2027-04" },
     howCalculated:
       "Raises the trading allowance parameter to £3,000 from 2027-28, for income tax and Class 4 National Insurance.",
     details:
-      "Without gross receipts, a profit within the allowance is treated as fully relieved, so the cost may be overstated. The Treasury's costing starts in 2028-29, when self-assessment payments fall due; the model's static figure starts in 2027-28.",
+      "The Treasury's costing starts in 2028-29, when self-assessment payments fall due; the model's static figure starts in 2027-28.",
     source: {
       label: "Budget 2026",
       href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
+    },
+    budgetRows: [15],
+    example: {
+      title: "Example",
+      text: "An employee on £30,000 with £1,500 of trading receipts and no expenses pays £100 less income tax in 2027-28, and £400 less with receipts of £3,000 or more; with £2,000 of expenses, receipts of £3,000 or more save £200. The population figures cannot follow this, as the data hold profits, not receipts (see About this result).",
+      source: { label: "PolicyEngine household calculations, policyengine-uk 2.151.0 (review on PR #290)", href: "https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/290" },
     },
   },
 ];

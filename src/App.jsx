@@ -1275,7 +1275,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
           <div className="results-container">
             <SectionHeading
               icon="fileText"
-              title="Policies"
+              title="Policies we model"
               subtitle={`${notice ? `${notice}. ` : ""}What each policy changes, when, and how it is modelled.`}
             />
             <section id="policy-details" className="report-section policy-details-content">

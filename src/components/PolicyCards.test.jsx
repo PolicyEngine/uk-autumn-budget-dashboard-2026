@@ -11,6 +11,7 @@ import PolicyCards, {
   timelineDescription,
   timelineSpan,
 } from "./PolicyCards";
+import { PLOTTED_DISPLAYS } from "./PolicyChange";
 import { buildMeasureCatalogue } from "../utils/measureCatalogue";
 import { POLICY_DETAILS } from "../utils/policyDetails";
 import { ALPHA, BETA, HELD, measureCatalogueFixture } from "../test/measureCatalogueFixture";
@@ -360,7 +361,10 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(block.querySelector(".pchg-tile.is-before")).toHaveTextContent("Current law15%");
     expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy0%−15 points");
     expect(block.textContent).not.toMatch(/pp\b/);
-    expect(block.querySelector("svg.pchg-svg, table")).toBeNull();
+    // A lasting change is plotted too, labelled once; no table
+    expect(block.querySelector("table")).toBeNull();
+    const plot = within(block).getByRole("img");
+    expect([...plot.querySelectorAll(".pchg-gap-label")].map((label) => label.textContent)).toEqual(["15% → 0%"]);
   });
 
   it("table: the main parameter as tiles, then only the parameters and year that differ, when asked", () => {
@@ -416,7 +420,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(within(block).queryByRole("button")).toBeNull();
   });
 
-  it("draws every measure in the real file in one form: tiles with the change, a plot where it varies by year or is a switch", () => {
+  it("draws every measure in the real file in one form: tiles with the change, a plot unless it is a table of several parameters", () => {
     for (const [id, entry] of Object.entries(file.measures)) {
       render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
       // The card (its modelling note has list items of its own)
@@ -427,7 +431,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       expect(block.querySelector(".pchg-tile.is-after .pchg-chip"), id).toBeTruthy();
       const main = entry.rows.find((row) => row.primary) ?? entry.rows[0];
       const changes = new Set(main.points.filter((p) => p.before !== p.after).map((p) => `${p.before}|${p.after}`));
-      expect(Boolean(block.querySelector(".pchg-svg")), id).toBe(changes.size > 1 || entry.display === "switch");
+      expect(Boolean(block.querySelector(".pchg-svg")), id).toBe(changes.size > 1 || PLOTTED_DISPLAYS.has(entry.display));
       // Every table behind a button
       expect(block.querySelector("table"), id).toBeNull();
       cleanup();
@@ -573,5 +577,36 @@ describe("the card's frame", () => {
     expect(rule(".policy-card-foot")).toMatch(/align-self: end;/);
     expect(css).toMatch(/\.policy-card > \.policy-card-foot \{ grid-row: 5; \}/);
     expect(css).not.toMatch(/\.policy-card\.is-bare \{[^}]*align-self/);
+  });
+
+  it("orders the cards as the Budget's Table 6.1 does, with each card's costing row and example", () => {
+    const ids = ["unearned_income_rates_up", "trading_allowance_raise", "household_energy_payment_2026", "carers_allowance_earnings_taper"];
+    render(<PolicyCards policies={ids.map((id) => published(id, id, id === "unearned_income_rates_up" ? "revenue" : "cost"))} selectedPolicies={ids} onShowEffect={() => {}} />);
+    const cards = screen.getAllByRole("listitem").filter((item) => item.classList.contains("policy-card"));
+    // Rows 1, 7, 15, then 61 and 62: not raises first
+    expect(cards.map((item) => item.querySelector("h3").textContent)).toEqual([
+      "household_energy_payment_2026", "carers_allowance_earnings_taper", "trading_allowance_raise", "unearned_income_rates_up",
+    ]);
+    const costing = within(cards[3]).getByRole("link", { name: /^Costing: Budget 2026, Table 6\.1, rows 61 and 62/ });
+    expect(costing).toHaveAttribute("target", "_blank");
+    expect(costing.getAttribute("href")).toMatch(/^https:\/\/www\.gov\.uk\/government\/publications\/budget-2026-document\//);
+    // The trading allowance's worked example, under What changes; none where no source gives one
+    const example = within(cards[2]).getByRole("region", { name: /^Example: / });
+    expect(example).toHaveTextContent("£1,500 of trading receipts and no expenses pays £100 less income tax in 2027-28");
+    expect(cards[2].querySelector(".policy-card-spec")).toContainElement(example);
+    expect(cards[1].querySelector(".policy-card-example")).toBeNull();
+  });
+
+  it("gives each Budget measure the Table 6.1 rows the reconciliation maps it to", () => {
+    const csv = readFileSync(join(__dirname, "..", "..", "data_inputs", "treasury", "mapping.csv"), "utf8").trim().split("\n").slice(1);
+    const mapped = {};
+    for (const line of csv) {
+      const [id, source, row] = line.split(",");
+      if (source === "AB2026-T6.1") (mapped[id] ??= []).push(Number(row));
+    }
+    for (const policy of POLICY_DETAILS.filter((entry) => entry.budgetRows)) {
+      expect(policy.budgetRows, policy.id).toEqual(mapped[policy.id]);
+    }
+    expect(Object.keys(mapped).filter((id) => detailsById[id]).every((id) => detailsById[id].budgetRows), "every mapped measure has its rows").toBe(true);
   });
 });

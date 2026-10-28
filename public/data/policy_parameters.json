@@ -230,7 +230,7 @@
       ]
     },
     "domestic_electricity_zero_vat": {
-      "description": "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027: in Great Britain to March 2027 and across the UK from April 2027. The model's baseline has no zero rate, so the measure covers the whole period, as the Treasury costs it. It applies to electricity spending only. 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days; 2027-28 its 91 days of 366.",
+      "description": "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027: in Great Britain to March 2027 and across the UK from April 2027. The model's baseline has no zero rate, so the measure covers the whole period, as the Treasury costs it. It applies to electricity spending only. Each year carries its share of a year's electricity use, not a share of its days (DESNZ Energy Trends Table 5.5): 2026-27 the October to March share (about 57%), 2027-28 the April to June share (about 22%).",
       "display": "switch",
       "rows": [
         {
@@ -254,7 +254,7 @@
             },
             "after": {
               "kind": "modifier_constant",
-              "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027), rate_change_2026 divided by that module's WINTER_SHARE (the October to March share of a year's electricity use) and rate_change_2027 by its share of the fiscal year's days in force, October 2026 to June 2027 (the dates in the measure's description)"
+              "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027), rate_change_2026 divided by that module's WINTER_SHARE (the October to March share of a year's electricity use) and rate_change_2027 by its SPRING_SHARE (the April to June share), October 2026 to June 2027 (the dates in the measure's description)"
             }
           }
         },
@@ -276,7 +276,7 @@
               "label": "2027-28",
               "year": 2027,
               "before": 0.05,
-              "after": 0.037568
+              "after": 0.03885
             },
             {
               "key": "2028",
@@ -317,7 +317,7 @@
               "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027)"
             }
           },
-          "note": "As modelled: the cut weighted in 2026-27 by the October to March share of a year's electricity use, not by its days in force"
+          "note": "As modelled: the cut weighted in 2026-27 by the October to March share of a year's electricity use and in 2027-28 by the April to June share, not by their days in force"
         }
       ]
     },
@@ -688,7 +688,7 @@
       ]
     },
     "carers_allowance_earnings_taper": {
-      "description": "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (£211.36 a week at April 2027's £13.21): it is reduced by £1 for each £1 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The taper starts within 2030-31; the model applies it to the whole of that year. Carers at or below the limit, and Scotland's Carer Support Payment, are unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
+      "description": "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (£212 a week at April 2027's £13.21, rounded up to the pound): it is reduced by £1 for each £1 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The taper starts within 2030-31, on a date still to come, so the model counts half of that year. Carers at or below the limit, and Scotland's Carer Support Payment, are unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
       "display": "path",
       "rows": [
         {
@@ -787,7 +787,7 @@
       ]
     },
     "trading_allowance_raise": {
-      "description": "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from £1,000 to £3,000, for income tax and Class 4 National Insurance. Without gross receipts in the data, a profit within the allowance is treated as fully relieved, so the cost may be overstated.",
+      "description": "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from £1,000 to £3,000, for income tax and Class 4 National Insurance. Without gross receipts in the data, the model relieves a profit up to £3,000 in full and gives no relief above it, so the cost may be overstated for some people and understated for others.",
       "display": "before-after",
       "rows": [
         {

@@ -100,8 +100,9 @@ export function hasObrFigures(rows, selectedPolicies) {
 /**
  * One row per selected measure for a year, largest official costing first
  * (by size, either sign), measures with no official figure last:
- * { id, name, pe, obr, obrStatic, obrBehavioural }, null for a missing
- * figure. `name` is the measure's short name, as elsewhere on the page.
+ * { id, name, pe, obr, obrStatic, obrBehavioural, notComparable }, null
+ * for a missing figure; `notComparable` is the reviewer's reason where the
+ * official costing for the year is not comparable with ours. `name` is the measure's short name, as elsewhere on the page.
  */
 export function comparisonRows(sourceRows, selectedPolicies, year, showBehavioural, catalogue) {
   const byMeasure = new Map();
@@ -123,6 +124,7 @@ export function comparisonRows(sourceRows, selectedPolicies, year, showBehaviour
       obr: obrValue(yearData, showBehavioural),
       obrStatic: isValue(row.obr_static) ? row.obr_static : null,
       obrBehavioural: isValue(row.obr_behavioural) ? row.obr_behavioural : null,
+      notComparable: typeof row.not_comparable === "string" ? row.not_comparable : null,
     };
   });
   const size = (row) => (row.obr === null ? -1 : Math.abs(row.obr));
@@ -154,8 +156,8 @@ export function comparisonSentence(rows, obrKind) {
   const close = paired.filter((row) => gap(row) <= CLOSE_BN + 1e-9).length;
   const largest = paired.reduce((best, row) => (gap(row) > gap(best) ? row : best));
   const lead = close === paired.length
-    ? `For all ${paired.length} policies our static estimate is within £${CLOSE_BN}bn of ${costing}`
-    : `For ${close} of ${paired.length} policies our static estimate is within £${CLOSE_BN}bn of ${costing}`;
+    ? `For all ${paired.length} policies our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`
+    : `For ${close} of ${paired.length} policies our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`;
   if (formatBn(largest.pe) === formatBn(largest.obr)) return `${lead}.`;
   return `${lead}; the largest gap is ${largest.name} (${formatBn(largest.pe)} vs ${formatBn(largest.obr)}).`;
 }
@@ -166,7 +168,7 @@ const COMPARISON_INFO = {
     "PolicyEngine's estimate of each policy's effect on the public finances beside the official costing for the same year, in £ billion; positive values raise revenue or cut spending. Largest official costing first.",
   how: [
     "PolicyEngine's figures are static, so an official static costing is the like-for-like comparison. Budget 2026's costings give one figure per policy, which for most policies includes behavioural responses, so the card compares with that.",
-    "On the % scale each official costing is 100%; a policy costed under £0.05bn has no %.",
+    "On the % scale each official costing is 100%; a policy costed under £50m has no %.",
     "Difference is PolicyEngine minus the official figure.",
   ],
   definitions: [
@@ -176,7 +178,7 @@ const COMPARISON_INFO = {
   caveats: [
     "Effects outside households, or on incomes the survey covers thinly (such as the very top), are estimated less fully than in official costings built from administrative data.",
     "The two can also differ in the economic forecast, take-up and the parts of a policy each models.",
-    "Our figures are by tax year. The official ones are on a National Accounts basis, so a change in tax paid through Self Assessment can appear a year later in them than in ours.",
+    "Our figures are by tax year. The official ones count tax when it is paid, so a change in tax paid through Self Assessment, such as the trading allowance, appears about a year later in them than in ours.",
   ],
   sources: [
     { label: "PolicyEngine UK microsimulation" },
@@ -237,7 +239,13 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
     .map((row) => Number(row.year));
   const yearCovered = rows.some((row) => row.obr !== null);
   const lastOfficial = officialYears.length ? Math.max(...officialYears) : null;
-  const notCovered = `${yearLabel} is not in the official costings${lastOfficial !== null && lastOfficial < selectedYear ? `, which run to ${fiscalYear(lastOfficial)}` : ""}.`;
+  // A year a reviewer classified not comparable: said so, with the reason,
+  // never as a gap in the official costings
+  const notComparableRows = rows.filter((row) => row.notComparable !== null);
+  const notComparableNote = (row) => `${row.name}: the official costing for ${yearLabel} is not comparable with our estimate. ${row.notComparable}`;
+  const notCovered = notComparableRows.length > 0 && notComparableRows.length === rows.length
+    ? notComparableRows.map(notComparableNote).join(" ")
+    : `${yearLabel} is not in the official costings${lastOfficial !== null && lastOfficial < selectedYear ? `, which run to ${fiscalYear(lastOfficial)}` : ""}.`;
 
   const title = `How our estimates compare with the official costings, ${yearLabel}`;
   const sentence = yearCovered ? comparisonSentence(rows, obrKind) : notCovered;
@@ -303,24 +311,29 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
 
   // A row's figures at the chart's precision for that row (two decimals
   // where they round equal to £0.1bn but are apart). No figure: a muted
-  // dash, said why in the note; a figure that rounds to zero (no effect
-  // that year): muted, as the household table's zero change
-  const shownZero = (text) => /^£0\.0+bn$/.test(text);
-  const cell = (value, decimals, kind) => {
+  // dash, said why in the note; a real zero (no effect that year): muted,
+  // as the household table's zero change. Under £1bn a figure is in £m,
+  // so one that is not zero never reads as nothing
+  const shownZero = (text) => text === "£0";
+  const cell = (value, decimals, kind, notComparable = null) => {
+    if (notComparable !== null) {
+      return <td className={`value-cell ${kind} is-none is-not-comparable`} title={notComparable}>Not comparable</td>;
+    }
     if (!isValue(value)) return <td className={`value-cell ${kind} is-none`}>—</td>;
     const text = formatFigure(value, decimals);
     return <td className={`value-cell ${kind}${shownZero(text) ? " is-zero" : ""}`}>{text}</td>;
   };
   // What the note says under the table: the difference, then why a cell
   // has no figure, only where one is missing
-  const officialMissing = rows.some((row) => row.obrStatic === null || row.obrBehavioural === null);
+  const officialMissing = rows.some((row) => row.notComparable === null && (row.obrStatic === null || row.obrBehavioural === null));
   const peMissing = rows.some((row) => row.pe === null);
   // A row with no figure on the chosen basis is differenced on the other
   const otherBasis = rows.some((row) => row.pe !== null && row.obr !== null && (shownBehavioural ? row.obrBehavioural === null : row.obrStatic === null));
   const tableNote = [
-    `Difference: PolicyEngine minus the official ${obrKind} costing, £bn${otherBasis ? ` (the ${shownBehavioural ? "static" : "post-behavioural"} one where the official costings give only that)` : ""}.`,
+    `Difference: PolicyEngine minus the official ${obrKind} costing${otherBasis ? ` (the ${shownBehavioural ? "static" : "post-behavioural"} one where the official costings give only that)` : ""}.`,
     officialMissing && `— where the official costings give no figure on that basis for the policy in ${yearLabel}.`,
     peMissing && `— under PolicyEngine where we publish no estimate for ${yearLabel}.`,
+    ...notComparableRows.map(notComparableNote),
   ].filter(Boolean);
 
   return (
@@ -374,21 +387,16 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
               </thead>
               <tbody>
                 {rows.map((row, index) => {
-                  // The chart's precision, or two decimals where a figure
-                  // that is not zero would read £0.0bn (−£0.05bn is a cost,
-                  // not no effect)
-                  const tiny = [row.pe, row.obrStatic, row.obrBehavioural].some(
-                    (value) => isValue(value) && value !== 0 && shownZero(formatFigure(value, 1)),
-                  );
-                  const decimals = Math.max(rowDecimals(row.pe, row.obr), tiny ? 2 : 1);
+                  // The chart's precision (figures under £1bn are in £m)
+                  const decimals = rowDecimals(row.pe, row.obr);
                   const difference = shownDifference(row.pe, row.obr, decimals);
                   return (
                     // Every second row on the faint band, as the chart's rows
                     <tr key={row.id} className={`row-band${index % 2 === 0 ? " is-banded" : ""}`}>
                       <td className="policy-name-cell"><MeasureRowLabel measure={row.measure} name={row.name} /></td>
                       {cell(row.pe, decimals, "pe")}
-                      {cell(row.obrStatic, decimals, "obr")}
-                      {cell(row.obrBehavioural, decimals, "obr")}
+                      {cell(row.obrStatic, decimals, "obr", row.notComparable)}
+                      {cell(row.obrBehavioural, decimals, "obr", row.notComparable)}
                       {/* No effect on either side: the zero difference muted too */}
                       <td
                         className={`value-cell difference${
