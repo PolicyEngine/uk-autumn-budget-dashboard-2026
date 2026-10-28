@@ -3,9 +3,15 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { parseDashboardCsv } from "./loadDashboard";
 import {
+  NOT_COMPARABLE_SHORT,
   OBR_COMPARISON_BASES,
   OBR_DEVIATION_NOTES,
   OBR_DEVIATION_STATEMENT,
+  OBR_DIFFERENCE_POINTS,
+  OBR_PANEL_BASES,
+  REASON_TYPES,
+  basisSides,
+  pointsForYear,
   comparisonBasisFor,
   deviationNoteFor,
   missingDeviationNotes,
@@ -60,33 +66,60 @@ describe("why our estimates differ from the official costings", () => {
   });
 
   // The corrections #297 made to the notes, from each measure's policy
-  // costing note
-  it("compares each note with the official costing on its own basis", () => {
-    const note = (id) => OBR_DEVIATION_NOTES[id];
-    // Pension Tax Allowance: the official costing is income tax only, so
-    // the note opens with that, then gives our net cost
-    expect(note("state_pension_income_tax_protection")).toMatch(/^The official costing counts income tax only\. Ours is £42m, £112m and £193m/);
-    expect(note("state_pension_income_tax_protection")).toContain("our net cost is £30m, £83m and £144m");
-    // Electricity: our base is DESNZ volumes at prices paid, not meter records
-    expect(note("domestic_electricity_zero_vat")).not.toMatch(/meter records/);
-    expect(note("domestic_electricity_zero_vat")).toMatch(/DESNZ's domestic electricity volumes[^]*ONS consumer spending, which is 10% to 12% lower/);
-    // Fuel duty: the rest of the 2026-27 gap fits a full 5p back on 1 January
-    expect(note("fuel_duty_rise_deferral")).not.toMatch(/no explanation/);
-    expect(note("fuel_duty_rise_deferral")).toMatch(/full 5p returns on 1 January 2027[^]*3p and then 2p from 1 March/);
-    // Savings: our interest included ISA interest; it is not missing
-    expect(note("savings_income_rates_up")).toMatch(/ours included interest in ISAs, which HMRC's figures leave out/);
-    expect(note("savings_income_rates_up")).toMatch(/We are correcting this[^]*will update the dashboard with the corrected data\.$/);
-    expect(note("savings_income_rates_up")).not.toMatch(/miss(?:es)? ISA interest/);
+  // costing note, kept in the short points (Vahid, 28 Oct)
+  it("keeps the PR 297 corrections in the points", () => {
+    const text = (id) => OBR_DIFFERENCE_POINTS[id].map((point) => point.text ?? Object.values(point.byYear).join(" ")).join(" ");
+    // Pension Tax Allowance and Carer's Allowance as Max corrected them
+    // against the OBR's policy Table 1.1 (PR 290, 6479807374)
+    expect(OBR_COMPARISON_BASES.state_pension_income_tax_protection).toMatch(/^Official: income tax and small Scottish and departmental spending lines; no benefit savings/);
+    expect(OBR_DEVIATION_NOTES.state_pension_income_tax_protection).toMatch(/^The official costing counts no benefit savings: its income tax is £44m, £83m and £144m/);
+    expect(OBR_DEVIATION_NOTES.state_pension_income_tax_protection).not.toMatch(/because our data put more pensioners/);
+    expect(OBR_DEVIATION_NOTES.carers_allowance_earnings_taper).toMatch(/£5 million and £10 million of extra block grant for Scotland/);
+    expect(OBR_DEVIATION_NOTES.carers_allowance_earnings_taper).not.toMatch(/gap is close to the income tax/);
+    expect(text("carers_allowance_earnings_taper")).not.toMatch(/explains most of the gap/);
+    expect(text("state_pension_income_tax_protection")).toMatch(/670,000 vs 500,000/);
+    expect(text("domestic_electricity_zero_vat")).not.toMatch(/meter records/);
+    expect(text("domestic_electricity_zero_vat")).toMatch(/ONS spending base is 10–12% below ours \(DESNZ\)/);
+    expect(text("fuel_duty_rise_deferral")).toMatch(/5p back on 1 Jan, law phases it/);
+    expect(text("savings_income_rates_up")).toMatch(/included ISA interest/);
+    expect(text("savings_income_rates_up")).not.toMatch(/miss(?:es)? ISA interest/);
   });
 
-  it("names the four reasons in the statement", () => {
-    for (const reason of ["when tax is counted", "coverage", "behaviour", "scope"]) {
+  it("writes every point and basis side as a short fragment, tagged with one of the four reasons, \"ours\" never PolicyEngine's (Vahid, 28 Oct)", () => {
+    const words = (text) => text.split(/\s+/).length;
+    for (const [id, points] of Object.entries(OBR_DIFFERENCE_POINTS)) {
+      expect(points.length, id).toBeGreaterThan(0);
+      expect(points.length, id).toBeLessThanOrEqual(3);
+      for (const point of points) {
+        if (point.reason !== null) expect(REASON_TYPES, id).toContain(point.reason);
+        for (const text of point.text ? [point.text] : Object.values(point.byYear)) expect(words(text), text).toBeLessThanOrEqual(12);
+      }
+    }
+    for (const [id, sides] of Object.entries(OBR_PANEL_BASES)) {
+      expect(words(sides.official), id).toBeLessThanOrEqual(12);
+      expect(words(sides.ours), id).toBeLessThanOrEqual(12);
+    }
+    for (const line of Object.values(OBR_COMPARISON_BASES)) expect(basisSides(line)).not.toBeNull();
+    for (const text of [OBR_DEVIATION_STATEMENT, ...Object.values(OBR_DEVIATION_NOTES), ...Object.values(OBR_COMPARISON_BASES), ...Object.values(NOT_COMPARABLE_SHORT)]) {
+      expect(text).not.toMatch(/PolicyEngine|£0\.0bn|\(rounded\)/);
+    }
+  });
+
+  it("gives a point only in the years its figure holds", () => {
+    expect(pointsForYear(OBR_DIFFERENCE_POINTS.fuel_duty_rise_deferral, 2026).map((p) => p.text)).toEqual([
+      "Households buy about £13bn of £24bn duty",
+      "Scaled to all fuel, ours would be about £450m",
+      "Official assumes 5p back on 1 Jan, law phases it",
+    ]);
+    expect(pointsForYear(OBR_DIFFERENCE_POINTS.fuel_duty_rise_deferral, 2027).map((p) => p.text)).toEqual(["Scaled to all fuel, ours would be about £760m"]);
+    expect(pointsForYear(OBR_DIFFERENCE_POINTS.state_pension_income_tax_protection, 2028).map((p) => p.text)).toEqual(["Pension Credit, HB and CTR take back about a quarter"]);
+  });
+
+  it("names the four reasons in one sentence", () => {
+    for (const reason of ["timing", "coverage", "behaviour", "scope"]) {
       expect(OBR_DEVIATION_STATEMENT).toContain(reason);
     }
-    // The official costings' basis as sourced (National Accounts), not
-    // "when tax is paid"
-    expect(OBR_DEVIATION_STATEMENT).toContain("National Accounts basis");
-    expect(OBR_DEVIATION_STATEMENT).not.toMatch(/when (?:it|tax) is paid/);
+    expect(OBR_DEVIATION_STATEMENT.match(/\./g)).toHaveLength(1);
   });
 
   it("finds a missing, empty or blank note, in the order given", () => {

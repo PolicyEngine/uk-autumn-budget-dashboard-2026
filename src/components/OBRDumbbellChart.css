@@ -17,6 +17,8 @@
 /* The hovered or focused row: its band is stronger (drawn in the chart)
    and its name and difference are in bold, so the row reads across */
 .obr-dumbbell-row.is-active .mrl-svg-name,
+.obr-dumbbell-row.is-selected .mrl-svg-name,
+.obr-dumbbell-row.is-selected .obr-dumbbell-difference,
 .obr-dumbbell-row.is-active .obr-dumbbell-difference {
   font-weight: 600;
 }

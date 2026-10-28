@@ -20,7 +20,8 @@ import { loadPolicyParameters, measureWindows, outOfForceText } from "../utils/p
 import { loadOfficialCostings, OfficialCostingsPendingError } from "../utils/publication/officialCostings";
 import { SOURCES } from "../utils/sources";
 import { METHOD_ANCHORS } from "./methodology/anchors";
-import { OBR_COMPARISON_BASES, OBR_DEVIATION_NOTES, OBR_DEVIATION_STATEMENT, comparisonBasisFor, deviationNoteFor } from "../utils/obrDeviationNotes";
+import { OBR_COMPARISON_BASES, OBR_DEVIATION_NOTES, OBR_DEVIATION_STATEMENT, OBR_DIFFERENCE_POINTS, OBR_PANEL_BASES, comparisonBasisFor, deviationNoteFor, differencePointsFor, panelBasisFor } from "../utils/obrDeviationNotes";
+import ObrDifferencePanel from "./ObrDifferencePanel";
 
 /** What the comparison says when the official costings cover none of the selected measures. */
 export const OBR_UNAVAILABLE = "The official costings have no figures for the selected policies.";
@@ -198,11 +199,11 @@ export function comparisonSentence(rows, obrKind) {
 // About this chart: what the two bases are, why the figures differ, sources
 const COMPARISON_INFO = {
   shows:
-    "PolicyEngine's estimate of each policy's effect on the public finances beside the official costing for the same year, in £m under £1bn and £bn above; positive values raise revenue or cut spending. Largest official costing first.",
+    "Our estimate of each policy's effect on the public finances beside the official costing for the same year, in £m under £1bn and £bn above; positive values raise revenue or cut spending. Largest official costing first.",
   how: [
-    "PolicyEngine's figures are static, so an official static costing is the like-for-like comparison. Budget 2026's costings give one figure per policy, which for most policies includes behavioural responses, so the card compares with that.",
+    "Our figures are static, so an official static costing is the like-for-like comparison. Budget 2026's costings give one figure per policy, which for most policies includes behavioural responses, so the card compares with that.",
     "Our estimate as % of the official costing: each official costing is 100%, and a bar at 90% means our estimate is nine-tenths of it. A policy costed under £50m has no %.",
-    "Difference is PolicyEngine minus the official figure.",
+    "Difference is ours minus the official figure.",
   ],
   definitions: [
     { term: "Static costing", meaning: "The direct effect, with behaviour held fixed." },
@@ -242,7 +243,7 @@ function DeviationTip({ basis, note }) {
  * in the table, on its Difference cell. Above each note, wherever it
  * shows, is the line saying what each side counts (`bases`).
  */
-function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, data, notes = OBR_DEVIATION_NOTES, bases = OBR_COMPARISON_BASES }) {
+function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, data, notes = OBR_DEVIATION_NOTES, bases = OBR_COMPARISON_BASES, points = OBR_DIFFERENCE_POINTS, panelBases = OBR_PANEL_BASES }) {
   const catalogue = useMeasureCatalogue();
   const windows = useMeasureWindows();
   const fetched = useObrComparisonData(!data);
@@ -251,6 +252,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   const [showBehavioural, setShowBehavioural] = useState(false);
   const [view, setView] = useState("chart");
   const [scale, setScale] = useState("bn");
+  // The policy the panel explains: picked by a row, else the first with a gap
+  const [picked, setPicked] = useState(null);
   const chartRef = useRef(null);
   const tableRef = useRef(null);
   const showTable = view === "table";
@@ -279,8 +282,11 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
     ...row,
     basis: comparisonBasisFor(row.measure, bases),
     note: deviationNoteFor(row.measure, notes),
+    points: differencePointsFor(row.measure, points),
+    panelBasis: panelBasisFor(row.measure, panelBases),
   }));
-  const notedRows = rows.filter((row) => row.basis !== null || row.note !== null);
+  const hasGap = (row) => row.pe !== null && row.obr !== null && row.notComparable === null && shownDifference(row.pe, row.obr, rowDecimals(row.pe, row.obr)) !== 0;
+  const selectedRow = rows.find((row) => row.id === picked) ?? rows.find(hasGap) ?? rows[0];
   // The basis the figures shown are on: the other one when the official
   // costings give none on the chosen basis this year (Budget 2026 publishes
   // one Exchequer impact per measure, post-behavioural), so no line calls
@@ -314,10 +320,10 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
       source: `PolicyEngine UK microsimulation; official figures from ${SOURCES.obr_budget_2026_costings.label}`,
       columns: [
         { key: "name", label: "Policy" },
-        { key: "pe", label: "PolicyEngine, static (£bn)", decimals: 4 },
+        { key: "pe", label: "Ours, static (£bn)", decimals: 4 },
         { key: "obrStatic", label: "Official, static (£bn)", decimals: 4 },
         { key: "obrBehavioural", label: "Official, post-behavioural (£bn)", decimals: 4 },
-        { key: "difference", label: `Difference, PolicyEngine minus official ${obrKind} (£bn)`, decimals: 4 },
+        { key: "difference", label: `Difference, ours minus official ${obrKind} (£bn)`, decimals: 4 },
         { key: "basis", label: "What each side counts" },
         { key: "note", label: "Why it differs" },
       ],
@@ -340,7 +346,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
     image: showTable || yearCovered,
     exportOptions: {
       title,
-      description: `Each row shows a policy's budgetary impact in ${yearLabel}, in £m under £1bn and £bn above: PolicyEngine's static estimate and the official ${obrKind} costing, with the difference (PolicyEngine minus official) at the right. Positive values raise revenue or reduce spending.`,
+      description: `Each row shows a policy's budgetary impact in ${yearLabel}, in £m under £1bn and £bn above: our static estimate and the official ${obrKind} costing, with the difference (ours minus official) at the right. Positive values raise revenue or reduce spending.`,
       legendItems: dumbbellLegendItems(obrKind),
       logo: CHART_LOGO,
       svgSelector: showTable ? undefined : "svg",
@@ -390,9 +396,9 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   // A row with no figure on the chosen basis is differenced on the other
   const otherBasis = rows.some((row) => row.pe !== null && row.obr !== null && (shownBehavioural ? row.obrBehavioural === null : row.obrStatic === null));
   const tableNote = [
-    `Difference: PolicyEngine minus the official ${obrKind} costing${otherBasis ? ` (the ${shownBehavioural ? "static" : "post-behavioural"} one where the official costings give only that)` : ""}.`,
+    `Difference: ours minus the official ${obrKind} costing${otherBasis ? ` (the ${shownBehavioural ? "static" : "post-behavioural"} one where the official costings give only that)` : ""}.`,
     officialMissing && `— where the official costings give no figure on that basis for the policy in ${yearLabel}.`,
-    peMissing && `— under PolicyEngine where we publish no estimate for ${yearLabel}.`,
+    peMissing && `— under Ours where we publish no estimate for ${yearLabel}.`,
     ...notComparableRows.map(notComparableNote),
   ].filter(Boolean);
 
@@ -406,7 +412,11 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
               <NoBreakYear text={title} />
             </span>
           </h3>
-          <p className="chart-description">{sentence}</p>
+          <p className="chart-description">
+            {sentence}
+            {sentence && " "}
+            <span className="obr-deviation-statement">{OBR_DEVIATION_STATEMENT}</span>
+          </p>
         </div>
         <div className="chart-header-actions">
           <ViewToggle value={view} onChange={setView} name="the official costings comparison" />
@@ -419,6 +429,10 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
         </div>
       )}
 
+      {/* Chart or table, and on its right (below, on a phone) why the
+          selected policy differs */}
+      <div className="obr-compare-layout">
+      <div className="obr-compare-main">
       {/* Chart or table: the new one fades in, the height eases */}
       <SwapTransition swapKey={`${view}-${yearCovered}`}>
         {!showTable && (yearCovered ? (
@@ -429,6 +443,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
             scale={scale}
             chartRef={chartRef}
             tooltipKey={`${selectedYear}-${showBehavioural}`}
+            selectedId={selectedRow?.id ?? null}
+            onSelect={setPicked}
           />
         ) : (
           <p className="obr-dumbbell-empty obr-not-covered">{notCovered}</p>
@@ -439,7 +455,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
               <thead>
                 <tr>
                   <th scope="col">Policy</th>
-                  <th scope="col" className="num">PolicyEngine</th>
+                  <th scope="col" className="num">Ours</th>
                   <th scope="col" className="num">Official static</th>
                   <th scope="col" className="num">Official post-behavioural</th>
                   <th scope="col" className="num">Difference</th>
@@ -453,7 +469,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
                   if (row.status) {
                     // Not in force this year on either side: why, across the figures
                     return (
-                      <tr key={row.id} className={`row-band${index % 2 === 0 ? " is-banded" : ""}`}>
+                      <tr key={row.id} className={`row-band${index % 2 === 0 ? " is-banded" : ""}${row.id === selectedRow?.id ? " is-selected" : ""}`} onClick={() => setPicked(row.id)}>
                         <td className="policy-name-cell"><MeasureRowLabel measure={row.measure} name={row.name} /></td>
                         <td className="value-cell status-cell is-zero" colSpan={4}>{row.status}</td>
                       </tr>
@@ -461,7 +477,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
                   }
                   return (
                     // Every second row on the faint band, as the chart's rows
-                    <tr key={row.id} className={`row-band${index % 2 === 0 ? " is-banded" : ""}`}>
+                    <tr key={row.id} className={`row-band${index % 2 === 0 ? " is-banded" : ""}${row.id === selectedRow?.id ? " is-selected" : ""}`} onClick={() => setPicked(row.id)}>
                       <td className="policy-name-cell"><MeasureRowLabel measure={row.measure} name={row.name} /></td>
                       {cell(row.pe, decimals, "pe")}
                       {cell(row.obrStatic, decimals, "obr", row.notComparable)}
@@ -501,31 +517,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
         )}
       </SwapTransition>
 
-      {/* Why the estimates differ, in view under the chart or table: the
-          general reasons, then each policy's own, so every gap is
-          explained on a phone too, where there is no hover */}
-      <div className="obr-deviation">
-        <p className="obr-deviation-statement">{OBR_DEVIATION_STATEMENT}</p>
-        {notedRows.length > 0 && (
-          <section className="obr-deviation-notes" aria-labelledby="obr-deviation-title">
-            <h4 className="obr-deviation-title" id="obr-deviation-title">Why each policy differs</h4>
-            <ul className="obr-deviation-list">
-              {notedRows.map((row) => (
-                // What each side counts on the name's line, the note
-                // under it
-                <li key={row.id} data-measure={row.id}>
-                  <strong>{row.name}:</strong> {row.basis ?? row.note}
-                  {row.basis && row.note && (
-                    <>
-                      {" "}
-                      <span className="obr-deviation-note">{row.note}</span>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+      </div>
+        <ObrDifferencePanel row={selectedRow} year={selectedYear} yearLabel={yearLabel} obrKind={obrKind} />
       </div>
 
       <div className="chart-footer">

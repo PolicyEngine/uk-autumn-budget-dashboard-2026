@@ -1,0 +1,117 @@
+/* The comparison chart (or table) and, on its right, the panel on the
+   selected policy; the panel drops below under 900px */
+.obr-compare-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 899px) {
+  .obr-compare-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+
+.obr-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  font-size: var(--fs-small);
+  line-height: 1.4;
+  color: var(--pe-gray-700);
+  background: var(--c-row-band);
+  border: 1px solid var(--pe-gray-100);
+  border-radius: 10px;
+}
+
+.obr-panel p {
+  margin: 0;
+}
+
+.obr-panel-name {
+  font-weight: 600;
+  color: var(--pe-gray-900);
+}
+
+.obr-panel-why {
+  color: var(--pe-gray-600);
+}
+
+/* Ours, official and the difference: three small figures side by side */
+.obr-panel-figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.obr-panel-figures dt,
+.obr-panel-basis dt,
+.obr-panel-head {
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  color: var(--pe-gray-500);
+}
+
+.obr-panel-figures dd {
+  margin: 2px 0 0;
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--pe-gray-900);
+}
+
+.obr-panel-figures dd.is-ours {
+  color: var(--c-gain-text);
+}
+
+/* What each side counts, as two labelled lines */
+.obr-panel-basis {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.obr-panel-basis dd {
+  margin: 2px 0 0;
+}
+
+.obr-panel-head {
+  padding-top: 12px;
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.obr-panel-points {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: -6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.obr-panel-points li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+/* The reason's kind: a small neutral chip, never a tick */
+.obr-panel-chip {
+  flex: none;
+  min-width: 4.6rem;
+  padding: 1px 8px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  text-align: center;
+  color: var(--pe-gray-600);
+  background: var(--c-surface);
+  border: 1px solid var(--pe-gray-200);
+  border-radius: 999px;
+}

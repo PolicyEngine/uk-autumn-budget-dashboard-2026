@@ -135,12 +135,12 @@ const approxWidth = approxTextWidth;
 /** The chart's legend entries, for the image downloads too. */
 export function dumbbellLegendItems(obrKind) {
   return [
-    { color: PE_COLOUR, label: "PolicyEngine (static)", type: "dot" },
+    { color: PE_COLOUR, label: "Ours (static)", type: "dot" },
     { color: OBR_COLOUR, label: `Official costing (${obrKind})`, type: "ring" },
   ];
 }
 
-function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", chartRef, tooltipKey }) {
+function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", chartRef, tooltipKey, selectedId = null, onSelect }) {
   const [wrapperRef, measuredWidth] = useElementWidth();
   const narrow = useNarrowViewport();
   // Until the plot is measured, a typical width for the screen
@@ -163,7 +163,23 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
       },
       onFocus: (event) => {
         setActive(id);
+        onSelect?.(id);
         base.onFocus(event);
+      },
+      // A row is a button: a click or Enter selects it for the panel, and
+      // the up and down arrows move between rows
+      onClick: () => onSelect?.(id),
+      onKeyDown: (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect?.(id);
+          return;
+        }
+        if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+        event.preventDefault();
+        const all = [...(event.currentTarget.ownerSVGElement?.querySelectorAll(".obr-dumbbell-row") ?? [])];
+        const next = all[all.indexOf(event.currentTarget) + (event.key === "ArrowDown" ? 1 : -1)];
+        next?.focus();
       },
       onBlur: () => {
         setActive(null);
@@ -173,7 +189,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
   };
   // A row's background: its band, the hover band, or the card
   const rowBackground = (row, index) =>
-    active === row.id ? CHART_COLOURS.hover : index % 2 === 0 ? CHART_COLOURS.rowBand : CHART_COLOURS.surface;
+    active === row.id || selectedId === row.id ? CHART_COLOURS.hover : index % 2 === 0 ? CHART_COLOURS.rowBand : CHART_COLOURS.surface;
   const pct = scale === "pct";
 
   // Where each mark sits: £bn, or % of the official costing
@@ -342,7 +358,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
       parts.push(
         valueLabel(formatBn(pePart ? row.pe : row.obr), labelSide, cx, cy, pePart ? PE_LABEL_COLOUR : OBR_LABEL_COLOUR, "label", background),
         missingLabel(
-          pePart ? (row.notComparable ? "Not comparable" : "Not in the official costings") : "PolicyEngine not yet published",
+          pePart ? (row.notComparable ? "Not comparable" : "Not in the official costings") : "Ours not yet published",
           otherSide,
           cx + (otherSide === "right" ? 2 : -2),
           cy,
@@ -378,32 +394,34 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
     }
 
     const share = pctOfOfficial(row.pe, row.obr);
-    // Under the figures: what each side counts, then why the two differ
-    const noteLines = [row.basis, row.note].filter(Boolean);
+    // The figures only: what each side counts and why they differ are in
+    // the panel beside the chart, so the tip stays the width of its card
     const tooltip = (
       <TooltipRows
         label={`${row.name}, ${yearLabel}`}
-        note={noteLines.length ? noteLines : undefined}
+        note={onSelect ? "Click for why they differ" : undefined}
         rows={[
-          { key: "pe", name: "PolicyEngine (static)", text: isValue(row.pe) ? bn(row.pe) : "Not yet published", color: PE_COLOUR },
-          { key: "obr", name: `Official costing (${obrKind})`, text: isValue(row.obr) ? bn(row.obr) : row.notComparable ? `Not comparable: ${row.notComparable}` : "Not in the official costings", color: OBR_COLOUR },
+          { key: "pe", name: "Ours (static)", text: isValue(row.pe) ? bn(row.pe) : "Not yet published", color: PE_COLOUR },
+          { key: "obr", name: `Official costing (${obrKind})`, text: isValue(row.obr) ? bn(row.obr) : row.notComparable ? "Not comparable" : "Not in the official costings", color: OBR_COLOUR },
           ...(difference !== null
-            ? [{ key: "difference", name: "Difference (PolicyEngine − official)", text: formatDifference(difference, decimals), color: GAP_COLOUR }]
+            ? [{ key: "difference", name: "Difference (ours − official)", text: formatDifference(difference, decimals), color: GAP_COLOUR }]
             : []),
-          ...(share !== null ? [{ key: "share", name: "PolicyEngine as % of official", text: `${Math.round(share)}%`, color: GAP_COLOUR }] : []),
+          ...(share !== null ? [{ key: "share", name: "Ours as % of official", text: `${Math.round(share)}%`, color: GAP_COLOUR }] : []),
         ]}
       />
     );
     const summary = row.status
       ? `${row.name}: ${row.status}`
-      : `${row.name}: PolicyEngine ${isValue(row.pe) ? bn(row.pe) : "not yet published"}, official ${isValue(row.obr) ? bn(row.obr) : row.notComparable ? "not comparable" : "none"}`;
+      : `${row.name}: ours ${isValue(row.pe) ? bn(row.pe) : "not yet published"}, official ${isValue(row.obr) ? bn(row.obr) : row.notComparable ? "not comparable" : "none"}`;
 
     return (
       <g
         key={row.id}
-        className={`obr-dumbbell-row has-tooltip${active === row.id ? " is-active" : ""}`}
+        className={`obr-dumbbell-row has-tooltip${active === row.id ? " is-active" : ""}${selectedId === row.id ? " is-selected" : ""}`}
         data-policy={row.id}
         tabIndex={0}
+        role="button"
+        aria-pressed={selectedId === row.id}
         aria-label={`${summary}, ${yearLabel}`}
         {...rowHandlers(row.id, tooltip)}
       >
@@ -460,7 +478,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
                 .map((row) => {
                   if (row.status) return `${row.name}: ${row.status}`;
                   const decimals = rowDecimals(row.pe, row.obr);
-                  return `${row.name}: PolicyEngine ${isValue(row.pe) ? formatBn(row.pe, decimals) : "not yet published"}, official ${isValue(row.obr) ? formatBn(row.obr, decimals) : row.notComparable ? "not comparable" : "none"}`;
+                  return `${row.name}: ours ${isValue(row.pe) ? formatBn(row.pe, decimals) : "not yet published"}, official ${isValue(row.obr) ? formatBn(row.obr, decimals) : row.notComparable ? "not comparable" : "none"}`;
                 })
                 .join("; ")}.`}
               style={{ fontFamily: "inherit", display: "block" }}
@@ -482,7 +500,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
                   return fill === CHART_COLOURS.surface ? null : (
                     <rect
                       key={row.id}
-                      className={`obr-dumbbell-band${active === row.id ? " is-active" : ""}`}
+                      className={`obr-dumbbell-band${active === row.id || selectedId === row.id ? " is-active" : ""}`}
                       x={0}
                       y={top + index * rowHeight + 1}
                       width={width}
@@ -530,7 +548,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
           <ul className="obr-dumbbell-legend" aria-label="Legend">
             <li>
               <span className="obr-dumbbell-key-dot" style={{ background: PE_COLOUR }} />
-              PolicyEngine (static)
+              Ours (static)
             </li>
             <li>
               <span className="obr-dumbbell-key-ring" style={{ borderColor: OBR_COLOUR }} />

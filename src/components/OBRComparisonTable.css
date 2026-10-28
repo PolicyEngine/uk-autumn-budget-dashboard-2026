@@ -260,3 +260,13 @@
   text-align: left;
   font-style: italic;
 }
+
+/* The table row whose policy the panel explains */
+.comparison-table tbody tr {
+  cursor: pointer;
+}
+
+.comparison-table tbody tr.is-selected > td,
+.comparison-table tbody tr.is-selected > .policy-name-cell {
+  background: var(--c-hover);
+}

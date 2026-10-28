@@ -50,19 +50,22 @@ describe("OBRDumbbellChart", () => {
     expect(row.querySelector(".obr-dumbbell-difference").textContent).toBe("—");
   });
 
-  it("says 'not comparable' for a year a reviewer classified so, with the reason in the tooltip", () => {
+  it("says 'not comparable' for a year a reviewer classified so, the reason left to the panel", () => {
     const reason = "Allowance ends 5 April 2030.";
     const marked = rows.map((row) => (row.id === "salary_sacrifice_cap" ? { ...row, notComparable: reason } : row));
     const { container } = chart({ rows: marked });
     const row = rowEl(container, "salary_sacrifice_cap");
     expect(row.querySelector(".obr-dumbbell-missing").textContent).toBe("Not comparable");
     expect(row.querySelector(".obr-dumbbell-dot.obr")).toBeNull();
-    expect(container.querySelector("svg[role=img]").getAttribute("aria-label")).toContain("Salary sacrifice cap: PolicyEngine £2.8bn, official not comparable");
+    expect(container.querySelector("svg[role=img]").getAttribute("aria-label")).toContain("Salary sacrifice cap: ours £2.8bn, official not comparable");
+    // The tip says "Not comparable" only: the reason is in the panel, so the
+    // tip never runs off its card (PR 290, Anthony, 19:49)
     fireEvent.mouseEnter(row);
-    expect(document.body).toHaveTextContent(`Not comparable: ${reason}`);
+    expect(document.body).toHaveTextContent("Not comparable");
+    expect(document.body).not.toHaveTextContent(reason);
   });
 
-  it("gives the difference, PolicyEngine minus official, in a column at the right", () => {
+  it("gives the difference, ours minus official, in a column at the right", () => {
     const { container } = chart();
     expect(container.querySelector(".obr-dumbbell-column-head").textContent).toBe("Difference");
     expect(rowEl(container, "two_child_limit").querySelector(".obr-dumbbell-difference").textContent).toBe("−£600m");
@@ -147,10 +150,10 @@ describe("OBRDumbbellChart", () => {
     expect(labels(container, "threshold_freeze").sort()).toEqual(["£7.6bn", "£7.8bn"]);
   });
 
-  it("keys PolicyEngine and the official costing by name, never 'OBR'", () => {
+  it("keys ours and the official costing by name, never 'OBR'", () => {
     const { container } = chart();
     const legend = container.querySelector('[aria-label="Legend"]');
-    expect(legend.textContent).toBe("PolicyEngine (static)Official costing (post-behavioural)");
+    expect(legend.textContent).toBe("Ours (static)Official costing (post-behavioural)");
     expect(legend.querySelector(".obr-dumbbell-key-ring")).not.toBeNull();
   });
 

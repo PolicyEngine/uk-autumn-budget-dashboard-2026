@@ -72,7 +72,7 @@ const render = (element) => {
 };
 
 describe("the OBR comparison table", () => {
-  it("tables the year shown: PolicyEngine, both official bases and the difference", async () => {
+  it("tables the year shown: ours, both official bases and the difference", async () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({
@@ -84,7 +84,7 @@ describe("the OBR comparison table", () => {
     await screen.findByRole("radio", { name: "Show as chart" });
     show("Table");
     expect(screen.getAllByRole("columnheader").map((th) => th.textContent)).toEqual([
-      "Policy", "PolicyEngine", "Official static", "Official post-behavioural", "Difference",
+      "Policy", "Ours", "Official static", "Official post-behavioural", "Difference",
     ]);
     const cells = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell");
     expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repeal", "−£3.4bn", "−£3.3bn", "−£3.5bn", "−£100m"]);    // The table offers the same downloads as the chart
@@ -119,8 +119,9 @@ describe("the OBR comparison table", () => {
     );
     const { container } = render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} />);
     expect(await screen.findByRole("heading", { name: "How our estimates compare with the official costings, 2030-31" })).toBeInTheDocument();
+    // One sentence on the figures, one on why they differ: no more above the chart
     expect(plain(container.querySelector(".chart-description").textContent)).toBe(
-      "For 2 child limit repeal, our static estimate is −£3.4bn and the official static costing is −£3.3bn.",
+      `For 2 child limit repeal, our static estimate is −£3.4bn and the official static costing is −£3.3bn. ${OBR_DEVIATION_STATEMENT}`,
     );
     expect(container).not.toHaveTextContent(/accura|error|OBR\b/);
   });
@@ -135,7 +136,8 @@ describe("why our estimates differ from the official costings", () => {
   const ENTRY = POLICY_DETAILS.find((entry) => entry.id === ID);
   const NOTE = "Most of the gap is in the 2029-30 base; timing affects only the first two years.";
   const BASIS = "Official: income tax, after behaviour. Ours: income tax, static.";
-  const renderNoted = ({ description = ENTRY.writtenFor, notes = { [ID]: NOTE }, bases = { [ID]: BASIS } } = {}) => {
+  const POINTS = [{ reason: "Timing", text: "Official counts Self Assessment tax a year later." }, { reason: "Coverage", text: "Our data tax too little savings interest." }];
+  const renderNoted = ({ description = ENTRY.writtenFor, notes = { [ID]: NOTE }, bases = { [ID]: BASIS }, points = {} } = {}) => {
     const impact = ["reform_id,reform_name,year,value", `${ID},${ENTRY.name},2030,0.3`].join("\n");
     vi.stubGlobal(
       "fetch",
@@ -149,33 +151,52 @@ describe("why our estimates differ from the official costings", () => {
     const catalogue = buildMeasureCatalogue({ manifest, budgetary: rows, tablesByKey: { [ID]: { budgetary_impact: rows } } });
     return renderReact(
       <MeasureCatalogueProvider catalogue={catalogue}>
-        <OBRComparisonTable selectedPolicies={[ID]} selectedYear={2030} notes={notes} bases={bases} />
+        <OBRComparisonTable selectedPolicies={[ID]} selectedYear={2030} notes={notes} bases={bases} points={points} panelBases={{}} />
       </MeasureCatalogueProvider>,
     );
   };
   const tableRow = () => screen.getAllByRole("row")[1];
 
-  it("says the general reasons under the chart, then each policy's note in a list, under what each side counts", async () => {
-    renderNoted();
+  it("explains the selected policy in a panel beside the chart: figures, what each side counts, and tagged reasons (Vahid, 28 Oct)", async () => {
+    const { container } = renderNoted({ points: { [ID]: POINTS } });
     await screen.findByRole("radio", { name: "Show as chart" });
-    expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
-    const list = screen.getByRole("region", { name: "Why each policy differs" });
-    const items = within(list).getAllByRole("listitem");
-    expect(items.map((li) => plain(li.textContent))).toEqual([`${ENTRY.shortName}: ${BASIS} ${NOTE}`]);
-    // The line on the name's line, the note on its own under it
-    expect(items[0].querySelector(".obr-deviation-note")).toHaveTextContent(NOTE);
-    expect(items[0].querySelector(".obr-deviation-note")).not.toHaveTextContent(BASIS);
-    // The statement and the list stay when the table replaces the chart
+    // No block of text under the chart
+    expect(container.querySelector(".obr-deviation-notes, .obr-deviation-list")).toBeNull();
+    const panel = screen.getByRole("complementary", { name: `Why ours differs: ${ENTRY.shortName}` });
+    const figures = [...panel.querySelectorAll(".obr-panel-figures dd")].map((dd) => plain(dd.textContent));
+    expect(figures).toEqual(["£300m", "£500m", "−£200m"]);
+    const basis = [...panel.querySelectorAll(".obr-panel-basis > div")].map((div) => div.textContent);
+    expect(basis).toEqual(["Official countsIncome tax, after behaviour", "We countIncome tax, static"]);
+    const points = [...panel.querySelectorAll(".obr-panel-points li")].map((li) => li.textContent);
+    expect(points).toEqual(["TimingOfficial counts Self Assessment tax a year later.", "CoverageOur data tax too little savings interest."]);
+    // Fragments only: no point over about 12 words
+    for (const text of [...panel.querySelectorAll(".obr-panel-points li > span:last-child, .obr-panel-basis dd")].map((node) => node.textContent)) {
+      expect(text.split(/\s+/).length, text).toBeLessThanOrEqual(12);
+    }
+    expect(panel).not.toHaveTextContent(/PolicyEngine/);
+    // The panel stays when the table replaces the chart
     show("Table");
-    expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Why each policy differs" })).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: /^Why ours differs/ })).toBeInTheDocument();
   });
 
-  it("shows a row's note in the chart's tooltip for that row, under what each side counts", async () => {
+  it("selects a row for the panel by click, focus or the arrow keys, and marks it", async () => {
+    const { container } = renderNoted();
+    await screen.findByRole("radio", { name: "Show as chart" });
+    const row = container.querySelector(`[data-policy="${ID}"]`);
+    expect(row).toHaveAttribute("role", "button");
+    // The first row with a gap is selected by default
+    expect(row).toHaveAttribute("aria-pressed", "true");
+    expect(row).toHaveClass("is-selected");
+    fireEvent.click(row);
+    expect(screen.getByRole("complementary", { name: `Why ours differs: ${ENTRY.shortName}` })).toBeInTheDocument();
+  });
+
+  it("keeps the chart's tooltip to the figures and a pointer to the panel, the reasons being in the panel", async () => {
     const { container } = renderNoted();
     await screen.findByRole("radio", { name: "Show as chart" });
     fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
-    expect([...document.querySelectorAll(".chart-tooltip-note")].map((line) => line.textContent)).toEqual([BASIS, NOTE]);
+    expect([...document.querySelectorAll(".chart-tooltip-note")].map((line) => line.textContent)).toEqual(["Click for why they differ"]);
+    expect(document.body).not.toHaveTextContent(NOTE);
   });
 
   it("shows a row's note on its Difference cell in the table, on hover and on focus", async () => {
@@ -212,22 +233,20 @@ describe("why our estimates differ from the official costings", () => {
   });
 
   it("says what each side counts for a policy with no note", async () => {
-    const { container } = renderNoted({ notes: {} });
+    renderNoted({ notes: {} });
     await screen.findByRole("radio", { name: "Show as chart" });
-    const list = screen.getByRole("region", { name: "Why each policy differs" });
-    expect(within(list).getAllByRole("listitem").map((li) => plain(li.textContent))).toEqual([`${ENTRY.shortName}: ${BASIS}`]);
-    expect(list.querySelector(".obr-deviation-note")).toBeNull();
-    fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
-    expect([...document.querySelectorAll(".chart-tooltip-note")].map((line) => line.textContent)).toEqual([BASIS]);
+    const panel = screen.getByRole("complementary", { name: /^Why ours differs/ });
+    expect(panel.querySelector(".obr-panel-basis")).toBeTruthy();
+    expect(panel.querySelector(".obr-panel-points")).toBeNull();
   });
 
-  it("keeps the statement, with no list, tooltip or anchor, for a policy with no note or line", async () => {
+  it("keeps the statement, with no reasons, tooltip or anchor, for a policy with no note or line", async () => {
     const { container } = renderNoted({ notes: { other: NOTE, [ID]: "  " }, bases: { other: BASIS } });
     await screen.findByRole("radio", { name: "Show as chart" });
     expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Why each policy differs" })).toBeNull();
+    expect(document.querySelector(".obr-panel-basis, .obr-panel-points")).toBeNull();
     fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
-    expect(document.querySelector(".chart-tooltip-note")).toBeNull();
+    expect([...document.querySelectorAll(".chart-tooltip-note")].map((line) => line.textContent)).toEqual(["Click for why they differ"]);
     show("Table");
     expect(document.querySelector(".difference-note-anchor")).toBeNull();
   });
@@ -236,11 +255,11 @@ describe("why our estimates differ from the official costings", () => {
     const { container } = renderNoted({ description: "Savings income tax rates rise by 2 points from April 2028." });
     await screen.findByRole("radio", { name: "Show as chart" });
     expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Why each policy differs" })).toBeNull();
+    expect(document.querySelector(".obr-panel-basis, .obr-panel-points")).toBeNull();
     expect(document.body).not.toHaveTextContent(NOTE);
     expect(document.body).not.toHaveTextContent(BASIS);
     fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
-    expect(document.querySelector(".chart-tooltip-note")).toBeNull();
+    expect([...document.querySelectorAll(".chart-tooltip-note")].map((line) => line.textContent)).toEqual(["Click for why they differ"]);
     show("Table");
     expect(document.querySelector(".difference-note-anchor")).toBeNull();
   });
@@ -325,7 +344,7 @@ describe("the comparison at 2031-32", () => {
     // A dash is muted and the note says why
     expect(cells.slice(2).every((td) => td.classList.contains("is-none"))).toBe(true);
     expect([...container.querySelectorAll(".comparison-table-note")].map((p) => p.textContent)).toEqual([
-      "Difference: PolicyEngine minus the official static costing.",
+      "Difference: ours minus the official static costing.",
       "— where the official costings give no figure on that basis for the policy in 2031-32.",
     ]);
   });
@@ -360,7 +379,7 @@ describe("a year classified not comparable", () => {
     expect(cells[2]).toHaveAttribute("title", REASON);
     expect(cells[3]).toHaveAttribute("title", REASON);
     expect([...container.querySelectorAll(".comparison-table-note")].map((p) => p.textContent)).toEqual([
-      "Difference: PolicyEngine minus the official static costing.",
+      "Difference: ours minus the official static costing.",
       `2 child limit repeal: the official costing for 2031-32 is not comparable with our estimate. ${REASON}`,
     ]);
   });
@@ -404,7 +423,7 @@ it("names the post-behavioural basis when the official costings give only that",
   expect(screen.queryByText("Official basis")).not.toBeInTheDocument();
   show("Table");
   expect(container.querySelector(".comparison-table-note").textContent).toBe(
-    "Difference: PolicyEngine minus the official post-behavioural costing.",
+    "Difference: ours minus the official post-behavioural costing.",
   );
 });
 
