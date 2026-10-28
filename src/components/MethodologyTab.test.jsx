@@ -162,10 +162,10 @@ describe("MethodologyTab", () => {
     expect(container.querySelector("#method-business-fuel")).not.toBeNull();
   });
 
-  it("leaves the Household Energy Payment out of poverty, and calls the local-area file uncertified", () => {
+  it("leaves the energy payment out of poverty, and calls the local-area file uncertified", () => {
     const { container } = renderTab();
     expect(container.textContent).toContain(
-      "The poverty figures leave out the Household Energy Payment, as policyengine-uk treats the 2022 council tax rebate.",
+      "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate.",
     );
     expect(container.textContent).not.toContain("certified together");
     expect(container.textContent).toContain("which that certificate does not cover");

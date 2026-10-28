@@ -383,7 +383,7 @@ function MethodologyTab({ onShowTab }) {
                       </>
                     ),
                     more: [
-                      "Before a policy is published, each year's figure must be within the larger of 25% of the official one and £50m where the costing includes behaviour, and within the larger of 10% and £50m for the Pension Tax Allowance, whose costing assumes none, and the Household Energy Payment. A reviewer can accept a larger gap only with a written reason.",
+                      "Before a policy is published, each year's figure must be within the larger of 25% of the official one and £50m where the costing includes behaviour, and within the larger of 10% and £50m where it assumes no behavioural response or the policy is a payment rather than a tax. A reviewer can accept a larger gap only with a written reason.",
                       "A reviewer can mark a year not comparable, such as a year after a policy ends; the card then says so, with the reason, and shows no difference.",
                       <>
                         Our fuel duty figures cover households&apos; own fuel only (
@@ -459,7 +459,7 @@ function MethodologyTab({ onShowTab }) {
                         income, which is before indirect taxes, so the VAT and fuel duty policies do
                         not change it.
                       </>,
-                      "The poverty figures leave out the Household Energy Payment, as policyengine-uk treats the 2022 council tax rebate.",
+                      "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate.",
                       "People moved out of or into poverty are the change in the rate times that year's population in the current-law projection, to the nearest 1,000.",
                     ],
                   },
