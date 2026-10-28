@@ -575,24 +575,14 @@ def _create_threshold_freeze_2031_32() -> Reform:
 # =============================================================================
 
 
-# Announced in the speech (28 October 2026, 13:03): "reducing the threshold
-# for business asset disposal relief in capital gains tax from £1m to
-# £500,000". Budget day, from the documents: BADR_LIMIT and BADR_FROM (the
-# first fiscal year; 2027 = from 6 April 2027. TODO: a start on Budget day
-# would need a part-year weight the parameter route does not have).
-BADR_LIMIT = 500_000
-BADR_FROM = 2027
-
-
 def _create_badr_lifetime_limit_cut() -> Reform:
     return Reform(
         id=BADR_ID,
         name="Business Asset Disposal Relief restricted",
         description=(
-            f"Candidate measure. From 6 April {BADR_FROM} the lifetime "
-            "limit on gains qualifying for Business Asset Disposal Relief "
-            f"falls from £1 million to £{BADR_LIMIT:,}; the relief rate "
-            "stays at 18%. Gains "
+            "Candidate measure. From 6 April 2027 the lifetime limit on "
+            "gains qualifying for Business Asset Disposal Relief falls from "
+            "£1 million to £500,000; the relief rate stays at 18%. Gains "
             "above the limit pay the main capital gains tax rates. The "
             "model applies the limit to each year's gains. Capital gains "
             "are imputed and calibrated to 2024-25, when disposals were "
@@ -602,7 +592,7 @@ def _create_badr_lifetime_limit_cut() -> Reform:
         ),
         parameter_changes={
             **threshold_change(
-                BADR_LIFETIME_LIMIT, _years_from(BADR_FROM, BADR_LIMIT)
+                BADR_LIFETIME_LIMIT, _years_from(2027, 500_000)
             ),
             **static_capital_gains(),
         },
@@ -1032,8 +1022,6 @@ _MEASURE_FACTORIES = (
     _create_unearned_income_rates_up,
     _create_carers_allowance_earnings_taper,
     _create_household_energy_payment_2026,
-    # Announced 13:03; registered outside the package (its key is pinned)
-    _create_badr_lifetime_limit_cut,
     # Announced 13:14; outside the package
     _create_trading_allowance_raise,
 )
