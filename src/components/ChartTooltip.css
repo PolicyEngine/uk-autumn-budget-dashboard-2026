@@ -146,6 +146,13 @@
   pointer-events: none;
 }
 
+/* A tooltip closed by a tap elsewhere on a touch screen (ViewportTooltip
+   useTapDismiss): the chart's mark of the tapped point goes with it */
+.recharts-wrapper.is-tip-dismissed .recharts-tooltip-cursor,
+.recharts-wrapper.is-tip-dismissed .recharts-active-dot {
+  visibility: hidden;
+}
+
 .viewport-tooltip {
   position: fixed;
   top: 0;

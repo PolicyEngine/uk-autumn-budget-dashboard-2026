@@ -390,6 +390,31 @@ html[data-site-nav-shown] {
   box-shadow: none !important;
 }
 
+/* A touch-only device (a phone or tablet): the site nav is part of the
+   page, at its top, and scrolls away with it; it is never laid over the
+   page. Fixed and pushing the bars down by its height (above), it hid the
+   first 58px of every view under the tab rows on load: the bars moved
+   down, the content did not (team review, Budget day). In the flow, the
+   band, the tab rows and the content all start below it, and once it has
+   scrolled away the band sticks at the window's top. --nav-offset stays 0:
+   nothing is over the band. Same selectors as above, so these win. */
+@media (hover: none) and (pointer: coarse) {
+  html[data-site-nav-shown] {
+    --nav-offset: 0px;
+  }
+
+  .min-h-screen.flex.flex-col > div:first-child[style*="sticky"],
+  :root:not([data-site-nav-shown]) .min-h-screen.flex.flex-col > div:first-child[style*="sticky"],
+  :root[data-site-nav-shown] .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
+    /* Relative, not static: it keeps its z-index, so its menus still
+       open over the band */
+    position: relative !important;
+    transform: none;
+    box-shadow: none !important;
+    transition: none;
+  }
+}
+
 .app {
   background: var(--page-bg);
   font-family: var(--pe-font-family);
@@ -1832,6 +1857,58 @@ html[data-site-nav-shown] {
   }
 }
 
+/* A phone on its side (a short, wide window: LANDSCAPE_PHONE_QUERY in
+   utils/pageScroll.js, the same query): the title band and both tab rows
+   took about half the window (104 + 42 + 41px of 390). The band is one
+   compact row, as on a wide screen, with the pills' icon, value and
+   chevron only; and it tucks away above the window while the reader
+   scrolls down and slides back on any scroll up (App.jsx sets
+   data-band-hidden on .app). Tucked, --nav-offset is minus the band's
+   height, so the band's sticky top puts it just above the window and the
+   tab rows, --sticky-offset and every scroll that clears the bars move up
+   with it: one variable, so nothing gets out of step. Sticky offsets move
+   no content, so the page never jumps; the bars slide on their `top`
+   transition (--motion-slide, 0 under reduced motion). After the 899,
+   768 and 480px blocks, so it wins. Desktop and portrait phones keep the
+   band always in view (27 October). */
+@media (orientation: landscape) and (max-height: 500px) {
+  :root,
+  .app[data-band="compact"] {
+    --title-row-height: 52px;
+  }
+
+  .title-row,
+  .app[data-band="compact"] .title-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "title year policy";
+    column-gap: 8px;
+  }
+
+  .title-row .band-control {
+    width: auto;
+    min-width: 0;
+    height: 36px;
+    gap: 6px;
+    padding: 0 12px 0 10px;
+  }
+
+  .band-control-label,
+  .band-control-unit {
+    display: none;
+  }
+
+  .title-row h1 {
+    font-size: var(--fs-card-title);
+  }
+
+  .app[data-band-hidden] {
+    --nav-offset: calc(0px - var(--title-row-height));
+  }
+
+  .app[data-band-hidden] .title-row {
+    box-shadow: none;
+  }
+}
 
 /* The page fills the window without overshooting it: the shell's main
    grows to the window, and the app grows inside it, just above the

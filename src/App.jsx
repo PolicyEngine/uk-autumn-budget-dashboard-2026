@@ -32,7 +32,7 @@ import { provisionalLabel } from "./utils/publication/manifest";
 import { DownloadContext, policiesLabel } from "./utils/downloadContext";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
-import { createSiteNavIntent, isProgrammaticScroll, isTouchOnly, pointerWantsSiteNav, SITE_NAV_DWELL_MS, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
+import { createBandIntent, createSiteNavIntent, isProgrammaticScroll, LANDSCAPE_PHONE_QUERY, isTouchOnly, pointerWantsSiteNav, SITE_NAV_DWELL_MS, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
 
 // Each view's code (the chart library, the map's and the household
 // calculator's) loads when a view first opens, or while the page is idle,
@@ -744,6 +744,51 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     };
   }, []);
 
+  // On a phone on its side the title band tucks away above the window
+  // while the reader scrolls down and slides back on a scroll up, so the
+  // bars do not take half the window (globals.css, data-band-hidden;
+  // utils/pageScroll createBandIntent). Never while one of its pills is
+  // open or focused, nor near the page's top. Elsewhere it stays in view.
+  const [bandHidden, setBandHidden] = useState(false);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return undefined;
+    const query = window.matchMedia(LANDSCAPE_PHONE_QUERY);
+    const intent = createBandIntent({ y: window.scrollY });
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const y = window.scrollY;
+      if (!query.matches) {
+        intent.scroll(y, { held: true });
+        setBandHidden(false);
+        return;
+      }
+      const sentinel = titleSentinelRef.current;
+      const band = document.querySelector(".title-row");
+      // The band's own place: until the page has scrolled past it, it is
+      // not stuck, so there is nothing to tuck away
+      const top = sentinel ? sentinel.getBoundingClientRect().top + y + (band?.offsetHeight ?? 0) : 0;
+      const held =
+        !!band &&
+        (band.contains(document.activeElement) || !!band.querySelector('[aria-expanded="true"]'));
+      const next = intent.scroll(y, { top, held, programmatic: isProgrammaticScroll(y) });
+      if (next !== null) setBandHidden(next);
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(check);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    query.addEventListener?.("change", onScroll);
+    // A pill opened from the tucked band's edge brings it back
+    document.addEventListener("focusin", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      query.removeEventListener?.("change", onScroll);
+      document.removeEventListener("focusin", onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
   // Switch view. If the reader had scrolled past the tabs, bring the new
   // view's top up under them, so it does not open part way down. The band
   // can change height with the view (compact on a phone when the view has
@@ -1107,6 +1152,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       ref={appRef}
       data-sub-band={hasSubTabs ? "" : undefined}
       data-tabs-stuck={tabsStuck ? "" : undefined}
+      data-band-hidden={bandHidden ? "" : undefined}
       data-publication={unavailable ? "unavailable" : "verified"}
       data-publication-check={checkedBy}>
       {/* A div, not <main>: the PolicyEngine shell around the page is the
