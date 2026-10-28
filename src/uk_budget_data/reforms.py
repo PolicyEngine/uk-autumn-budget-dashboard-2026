@@ -106,6 +106,7 @@ EMPLOYER_NI_THRESHOLD_ID = "employer_nics_secondary_threshold_raise"
 UNEARNED_INCOME_RATES_ID = "unearned_income_rates_up"
 LHA_UNFREEZE_ID = "lha_unfreeze_2027"
 CARERS_ALLOWANCE_TAPER_ID = "carers_allowance_earnings_taper"
+STATE_PENSION_DOUBLE_LOCK_ID = "state_pension_double_lock_2030"
 
 
 def _years_dict(value, years: list[int] = None) -> dict[str, any]:
@@ -742,6 +743,70 @@ def _create_unearned_income_rates_up() -> Reform:
             "fixed, with no behavioural response."
         ),
         parameter_changes=unearned_income_rates_up(),
+    )
+
+
+# =============================================================================
+# STATE PENSION DOUBLE LOCK FROM APRIL 2030 (not registered)
+# =============================================================================
+
+# Reported (BBC live, 11:53 on 28 October 2026): the Prime Minister's plan
+# of 29 September to drop the triple lock's earnings leg from April 2030,
+# so the State Pension rises by at least CPI or 2.5%. policyengine-uk
+# 2.151.0 builds the April uprating from these switches when they arrive
+# through Scenario(parameter_changes=...), as Reform.to_scenario sends
+# them, and it reads a bare-year key as that April's uprating. Both the
+# new and the basic State Pension follow its triple lock; the Pension
+# Credit guarantee and the additional State Pension do not.
+#
+# Budget day:
+# - DOUBLE_LOCK_FROM: the first April without the earnings leg.
+# - DOUBLE_LOCK_EARNINGS_PATH: True is the reading in Vahid's
+#   PolicyEngine/uk-triple-lock ("burnham_2030": never below an earnings
+#   link from the 2029-30 level, as the speech's "hold its value relative
+#   to earnings over time"); False is plain max(CPI, 2.5%).
+# On the engine's forecast neither reading changes anything to 2031-32:
+# the inputs for April 2030 (May-July 2029 earnings 2.19%, September 2029
+# CPI 2.05%) and April 2031 (2.39%, 2.00%) are both under 2.5%, so the
+# floor sets both upratings either way. Generation would refuse a measure
+# that scores nothing; keep it on the ledger unless the engine's forecast
+# changes.
+TRIPLE_LOCK_INCLUDE_EARNINGS = (
+    "gov.dwp.state_pension.triple_lock.include_earnings"
+)
+TRIPLE_LOCK_EARNINGS_PATH = (
+    "gov.dwp.state_pension.triple_lock.earnings_path_guarantee"
+)
+DOUBLE_LOCK_FROM = 2030
+DOUBLE_LOCK_EARNINGS_PATH = True
+
+
+def _create_state_pension_double_lock_2030() -> Reform:
+    # Switches, which the templates' numeric values refuse, so written
+    # directly as the LHA unfreeze writes its switch.
+    return Reform(
+        id=STATE_PENSION_DOUBLE_LOCK_ID,
+        name="State Pension double lock from 2030",
+        description=(
+            "Candidate measure. From April "
+            f"{DOUBLE_LOCK_FROM} the new and basic State Pension rise each "
+            "April by the higher of September CPI and 2.5%, no longer by "
+            "earnings growth when that is higher"
+            + (
+                ", but never fall below an earnings link from their "
+                f"{DOUBLE_LOCK_FROM - 1}-{DOUBLE_LOCK_FROM % 100:02d} level"
+                if DOUBLE_LOCK_EARNINGS_PATH
+                else ""
+            )
+            + ". The additional State Pension and Pension Credit are "
+            "unchanged."
+        ),
+        parameter_changes={
+            TRIPLE_LOCK_INCLUDE_EARNINGS: _years_from(DOUBLE_LOCK_FROM, False),
+            TRIPLE_LOCK_EARNINGS_PATH: _years_from(
+                DOUBLE_LOCK_FROM, DOUBLE_LOCK_EARNINGS_PATH
+            ),
+        },
     )
 
 
