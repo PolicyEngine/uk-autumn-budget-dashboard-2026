@@ -41,6 +41,8 @@ const obr = (part) => ({
  * 2031-32; positive is a gain to the Exchequer, negative a cost), each with
  * an optional `note` shown under the table. A measure with no row has
  * `noCosting` instead, saying what the documents give in its place.
+ * `heldBack`, a short muted line, marks a measure the model covers but this
+ * release holds back.
  * `seeAlso` links PolicyEngine's own published work that models the
  * measure, after the reason this dashboard does not.
  */
@@ -159,6 +161,21 @@ export const UNMODELLED_MEASURES = [
       after: '" (16 October 2026).',
     },
     sources: [budget("paragraphs 1.29 and 5.23"), obr("paragraphs 3.49 and 3.50")],
+  },
+  {
+    id: "savings-income-tax",
+    group: "savings",
+    name: "Tax on savings interest up 2 points",
+    starts: "6 April 2027",
+    changes:
+      "Income tax rates on savings income rise by 2 percentage points across the UK: to 24% basic, 44% higher and 49% additional.",
+    reaches: "People with taxable savings interest across the UK.",
+    household: "People with taxable savings interest pay 2 points more on it.",
+    costings: [{ row: 62, values: [15, 125, 555, 520, 555, 590] }],
+    notModelled:
+      "The model covers it, but it is held back from this release: our data miss ISA interest and some other savings income.",
+    heldBack: "Held back: our data miss ISA interest and some other savings income; added with the next data release.",
+    sources: [budget("paragraph 6.247")],
   },
   {
     id: "cash-isa-limit",

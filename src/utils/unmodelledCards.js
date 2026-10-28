@@ -13,10 +13,9 @@
  * - inForce / steps / stepsLabel / ends / duration: as in policyDetails.js,
  *   only where the entry states the dates;
  * - parameters: a "What changes" entry ({ display, rows }) as
- *   policy_parameters.json shapes one. "table" shows the before and after
- *   tiles only, for a single change of value; "switch" adds a plot, used
- *   only where the change runs over time and back (the bank surcharge's
- *   15 months). The cards show no timeline: Starts and Ends say when.
+ *   policy_parameters.json shapes one, always "table": the before and
+ *   after tiles only, with no plot. The cards show no timeline either:
+ *   Starts and Ends say when.
  */
 
 const yearly = (from, to, before, after, beforeStart = before) =>
@@ -87,6 +86,16 @@ export const UNMODELLED_CARDS = {
   // No start date set ("by the end of 2027, or as soon as possible after")
   "gas-standing-charges": {
     category: { label: "Energy", icon: "flame" },
+  },
+  // Rates "2 percentage points" above current law's (Budget 2025's 22%);
+  // the basic rate as the tiles, from policy_parameters.json's 2027-28 row
+  "savings-income-tax": {
+    category: { label: "Income tax", icon: "wallet" },
+    inForce: { from: "2027-04" },
+    parameters: {
+      display: "table",
+      rows: [row("Savings basic rate", "percent", null, [{ key: "2027", label: "2027-28", year: 2027, before: 0.22, after: 0.24 }])],
+    },
   },
   // The cut "to £12,000 for savers under 65 from 6 April 2027 does not go
   // ahead: the limit stays at £20,000"
@@ -176,7 +185,7 @@ export const UNMODELLED_CARDS = {
     ends: "March 2028",
     duration: "15 months",
     parameters: {
-      display: "switch",
+      display: "table",
       rows: [row("Bank Corporation Tax Surcharge", "percent", null, [
         { key: "2027-01-01/2028-03-31", label: "January 2027 to March 2028", year: 2026, before: 0.03, after: 0.06 },
       ])],
