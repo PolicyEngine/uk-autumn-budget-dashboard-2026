@@ -11,7 +11,7 @@ Every Modal command starts `uv run --with modal==1.6.2 python -m uk_budget_data.
 | by 17:30 | Integrator | Confirm which calculation-path PRs are in (#222). Nothing under `src/uk_budget_data/`, `tests/`, `scripts/`, `.github/`, `data_inputs/` (except review rows and attestations) or any `.py` merges after this until Budget day is over, except the day's own measures. |
 | before 18:00 | Integrator | Build both Modal images on the final `uv.lock` (about 12 min each if the lock changed; 1–3 min if not): `uv run --with modal==1.6.2 python scripts/budget_day/modal_smoke.py --root /tmp/modal-smoke threshold_freeze_2031_32` and `uv run --with modal==1.6.2 python scripts/budget_day/modal_constituencies_smoke.py`. |
 | 18:00 | Coordinator | Full regeneration on the final `main`, on Modal, as in "The full run on Modal" (the same three parallel shells as G2 below). |
-| after it | two reviewers | Attest the regenerated hand-written receipts (`plan_2_threshold_unfreeze`, `state_pension_income_tax_protection`) and the eight-measure package `combined--894152ce8c83f1d8` (employer NI and BADR are withdrawn and unregistered): `uv run python scripts/draft_attestation.py public/data/artifacts/<id>/<digest>/`, then two different people fill `checker`, `second`, `released_at` and commit. An attestation from before 18:00 no longer matches. |
+| after it | two reviewers | Attest the regenerated hand-written receipts (`plan_2_threshold_unfreeze`, `state_pension_income_tax_protection`) and the eight-measure package `combined--894152ce8c83f1d8` (the employer NI relief for under-25s, BADR, the road fuel VAT cut, the Carer's Allowance taper and the LHA unfreeze are withdrawn and unregistered): `uv run python scripts/draft_attestation.py public/data/artifacts/<id>/<digest>/`, then two different people fill `checker`, `second`, `released_at` and commit. An attestation from before 18:00 no longer matches. |
 
 ## Wednesday 28 October
 
@@ -19,13 +19,14 @@ Every Modal command starts `uv run --with modal==1.6.2 python -m uk_budget_data.
 |---|---|---|---|
 | by 06:00 | Integrator | Final cut adopted (runbook, "Rolling re-cuts") | |
 | 07:00 | Coordinator | Go/no-go | |
+| 07:10 | Coordinator | Warm calculator check, part of go/no-go: one household calculation on prod Modal and one on Cloud Run each return in seconds, and the `warm_schedule` log shows 12 + 1 (the cron applies the 07:00 targets up to 10 minutes late) | |
 | by 11:30 | Integrator | **G0** start receipt: the block under "G0" in the runbook, then `uv run uk-budget-data publish check` | |
 | 12:30–12:45 | Reconciler | **G1** coverage ledger | encoding starts |
 | from G1 | Integrator | Encode each measure (module, `reforms.py`, `expected_effects.csv`, `DECLARED`, one test), **commit**: a dirty tree refuses the Modal run | |
-| 13:15 | Integrator | **G2** generate, three shells at once, each from the same clean commit: | the three shells |
+| 13:15 | Integrator | **G2** generate, every call started at the same moment, each in its own shell, from the same clean commit (a call started after shell 3 has written refuses: `income_distribution.csv` is tracked, so the tree is dirty): | the shells |
 | | | 1. `MODAL generate --artifacts --backend modal --reforms <template and parameter ids>` (about 8–9 min) | 2, 3 |
-| | | 2. one call per hand-written modifier: `MODAL generate --artifacts --backend modal --reforms <one id>` (about 7 min each) | 1, 3 |
-| | | 3. only if a flat file needs re-cutting: `MODAL generate --backend modal --only income_distribution` (about 4 min). Not the package's files (`--published-package`, #233): they wait for the last manifest change, at G4 | 1, 2 |
+| | | 2. one call per hand-written modifier, each in its own shell (`plan_2_threshold_unfreeze`, `state_pension_income_tax_protection`: four shells in all): `MODAL generate --artifacts --backend modal --reforms <one id>` (about 7 min each, side by side, never one after the other) | 1, 3 |
+| | | 3. only if a flat file needs re-cutting: `MODAL generate --backend modal --only income_distribution` (about 4 min). Commit `public/data/income_distribution.csv` with its review row before the G4 combined run. Not the package's files (`--published-package`, #233): they wait for the last manifest change, at G4 | 1, 2 |
 | | Integrator | `publish reconcile`, `publish stage --provisional`, `publish check` for each written directory; household check per measure | |
 | | Reconciler | Move each `reconciliation.json` outside the checkout, then `publish review-rows` (never while a `generate` is running) | |
 | | Integrator | Publish PR, CI, merge | Documents |
