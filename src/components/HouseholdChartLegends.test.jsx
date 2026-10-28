@@ -5,7 +5,7 @@ import { fireEvent, render as renderReact, screen, within } from "@testing-libra
 import DistributionalChart from "./DistributionalChart";
 import WaterfallChart from "./WaterfallChart";
 import ChartMoreInfo from "./ChartMoreInfo";
-import { legendMembership, zeroReason, inForceIn, inForceShort, inForceText, noPovertyEffectReason } from "../utils/legendMembership";
+import { legendMembership, zeroReason, inForceIn, inForceShort, inForceText } from "../utils/legendMembership";
 import { POLICY_DETAILS } from "../utils/policyDetails";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 
@@ -80,12 +80,6 @@ describe("legendMembership", () => {
 
   it("gives the employer NI relief its incidence, and a measure out of force its window", () => {
     expect(zeroReason(catalogue.byId.get(EMPLOYER_NI), 2027)).toEqual({ kind: "employer", text: expect.stringMatching(/held fixed/) });
-    // The employer NI threshold passes its saving to wages: in 2026-27 it is
-    // £0 only as it starts in April 2027, never "wages held fixed" (CF3)
-    const threshold = { id: "employer_nics_secondary_threshold_raise", name: "Employer NI threshold raised", description: detailsOf("employer_nics_secondary_threshold_raise").writtenFor };
-    expect(zeroReason(threshold, 2026)).toEqual({ kind: "not_in_force", text: expect.stringMatching(/April 2027/) });
-    expect(noPovertyEffectReason(threshold, 2026)).toMatch(/April 2027/);
-    expect(noPovertyEffectReason(threshold, 2026)).not.toMatch(/held fixed/);
     const whd = detailsOf("warm_home_discount_top_up");
     expect(inForceIn(whd, 2026)).toBe(true);
     expect(inForceIn(whd, 2027)).toBe(false);

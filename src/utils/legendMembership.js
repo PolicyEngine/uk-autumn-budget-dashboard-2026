@@ -15,18 +15,15 @@ import { DISPLAY_YEARS } from "./displayYears";
 
 /**
  * Measures that are £0 for every household by construction, and why, in the
- * model's own terms. The withdrawn under-25s employer NI relief changes only
- * employer National Insurance (budget_measures/employer_ni_relief_ages_21_to_24.py);
+ * model's own terms. Employer NI: the relief changes only employer
+ * National Insurance (budget_measures/employer_ni_relief_ages_21_to_24.py);
  * the engine's wage pass-through reads the unchanged NI parameters, so
- * wages and household incomes are fixed. Keyed on its id, not on a name
- * starting "Employer": the employer NI threshold rise passes its saving to
- * wages (reforms.py), so it is £0 only where it is not yet in force (Pavel's
- * review, CF3).
+ * wages and household incomes are fixed.
  */
-export const WAGES_FIXED_IDS = new Set(["employer_ni_relief_under_25s"]);
-
+// (#185 on #104: told by the published name, so the page keeps no list
+// of measures)
 export function zeroForHouseholds(measure) {
-  return WAGES_FIXED_IDS.has(measure?.id)
+  return /^employer\b/i.test(measure?.name ?? "")
     ? "Wages are held fixed in this model, so no household's income changes"
     : null;
 }

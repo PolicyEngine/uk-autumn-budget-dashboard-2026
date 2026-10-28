@@ -476,7 +476,7 @@ function MethodologyTab({ onShowTab }) {
               items={[
                 [
                   "Inequality",
-                  "Inequality (Gini, 90:10) uses PolicyEngine's household net income adjusted for household size, after indirect taxes such as VAT and fuel duty, counting each person. Poverty uses the official (HBAI) income, which leaves indirect taxes out, so price policies move inequality but not poverty.",
+                  "Inequality (Gini, 90:10) uses PolicyEngine's household net income adjusted for household size, including public services in kind such as the NHS and schools and after indirect taxes such as VAT and fuel duty, counting each person. Poverty uses the official (HBAI) income, which leaves indirect taxes out, so price policies move inequality but not poverty.",
                 ],
                 [
                   "Income tenths",
