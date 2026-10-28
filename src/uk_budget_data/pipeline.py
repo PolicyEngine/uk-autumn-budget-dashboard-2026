@@ -311,6 +311,9 @@ class DataPipeline:
         self.reforms = reforms or get_autumn_budget_2026_reforms()
         self.config = config or DataConfig()
         self.household_scatter = household_scatter
+        # The tables whose rows the floor withheld in the last run
+        # (``withheld_tables``), which ``_save_all`` never leaves stale
+        self.withheld_tables: frozenset = frozenset()
 
     def run(
         self, skip_input_check: bool = False, runner=None
@@ -350,6 +353,7 @@ class DataPipeline:
 
         # Aggregate and save
         aggregated = aggregate_results(results, config=self.config)
+        self.withheld_tables = withheld_tables(outcomes)
         self._save_all(aggregated)
         if self.household_scatter:
             save_scatter(
@@ -381,6 +385,10 @@ class DataPipeline:
                 # Metadata belongs to the manifest and its bound receipts.
                 # Keep the numeric tables in the canonical artifact schema.
                 save_csv(data[key], output_dir / filename)
+            elif key in self.withheld_tables:
+                # The floor withheld every row: never leave an earlier
+                # file in the table's place
+                remove_withheld_file(output_dir / filename)
 
         console.print(f"[green]Saved results to {output_dir}/[/green]")
 
@@ -602,10 +610,12 @@ class FlatOutcome:
     growth_cells: dict = field(default_factory=dict)
     messages: list = field(default_factory=list)
     # What the floor of survey households withheld (``hold_flat_to_floor``):
-    # the whole measure, or the years with no decile rows. A package's rows
-    # carry its members' (``hold_packages_to_members``).
+    # the whole measure, the years with no decile rows, or the years with
+    # age rows left out. A package's rows carry its members'
+    # (``hold_packages_to_members``).
     withheld_whole: bool = False
     withheld_decile_years: set = field(default_factory=set)
+    withheld_age_years: set = field(default_factory=set)
 
 
 def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
@@ -902,6 +912,9 @@ def hold_flat_to_floor(
     outcome.age_rows = disclosure_floor.withhold_thin_age_rows(
         outcome.age_rows, found
     )
+    outcome.withheld_age_years |= {
+        year for table, year in found if table == disclosure_floor.AGE_TABLE
+    }
     record = disclosure_floor.floor_record(found)
     line = disclosure_floor.withheld_line(record)
     if line is not None:
@@ -927,6 +940,36 @@ _RESULT_TABLES = (
     "demographic_constituency",
     "age_impact",
 )
+
+
+def withheld_tables(outcomes: list["FlatOutcome"]) -> frozenset:
+    """The flat tables whose rows the floor of survey households withheld
+    in this run (``hold_flat_to_floor``): every table of a measure withheld
+    whole, and the OBR comparison made from its costing; the decile tables
+    in a year with a thin decile; the age table where a group was thin."""
+    tables = set()
+    for outcome in outcomes:
+        if outcome.withheld_whole:
+            tables.update((*_RESULT_TABLES, "obr_comparison"))
+        if outcome.withheld_decile_years:
+            tables.update(("distributional_impact", "winners_losers"))
+        if outcome.withheld_age_years:
+            tables.add("age_impact")
+    return frozenset(tables)
+
+
+def remove_withheld_file(path: Path) -> None:
+    """Remove ``path`` when the floor of survey households withheld every
+    row of its table in this run (#285 re-review, P1): an earlier file,
+    whose rows this run never held to the floor, must not stand in for the
+    table. Says so, naming the file, never a figure."""
+    existed = path.is_file() or path.is_symlink()
+    path.unlink(missing_ok=True)
+    console.print(
+        f"[bold red]WITHHELD[/bold red] {escape(path.name)}: the floor of "
+        "survey households withheld every row, so none is written"
+        + ("; the earlier file is removed" if existed else "")
+    )
 
 
 def _withhold_whole_measure(outcome: "FlatOutcome") -> None:
@@ -1219,7 +1262,12 @@ def generate_age_impact(
     # A member withheld whole withholds its package's rows too
     for line in hold_packages_to_members(outcomes):
         console.print(line)
-    frame = pd.DataFrame([row for o in outcomes for row in o.age_rows])
+    rows = [row for o in outcomes for row in o.age_rows]
+    if not rows and "age_impact" in withheld_tables(outcomes):
+        # The floor withheld every row: never leave an earlier file
+        remove_withheld_file(config.output_dir / "age_impact.csv")
+        return pd.DataFrame()
+    frame = pd.DataFrame(rows)
     save_csv(frame, config.output_dir / "age_impact.csv")
     console.print(
         f"[green]Saved {len(frame)} rows to "

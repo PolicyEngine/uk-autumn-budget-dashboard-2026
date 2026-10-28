@@ -494,3 +494,142 @@ def test_the_age_only_run_holds_its_package_to_its_members(
     )
     assert set(frame["reform_id"]) == {"plain"}
     assert len(frame) == len(_age_rows(YEAR))
+
+
+def _empty_result(reform_id, **tables):
+    """A measure's flat result with only ``tables`` holding rows."""
+    from uk_budget_data.models import ReformResult
+
+    empty = {
+        name: []
+        for name in (
+            "budgetary_impact",
+            "distributional_impact",
+            "winners_losers",
+            "metrics",
+            "income_curve",
+            "household_scatter",
+            "constituency",
+            "demographic_constituency",
+        )
+    }
+    return ReformResult(
+        reform_id=reform_id, reform_name=reform_id, **{**empty, **tables}
+    )
+
+
+def _run_flat(monkeypatch, tmp_path, outcome):
+    """``DataPipeline.run`` on one measure's outcome, writing to tmp_path."""
+    from uk_budget_data.models import DataConfig, Reform
+
+    monkeypatch.setattr(
+        pipeline,
+        "flat_units",
+        lambda reforms, config, dataset_path, tables, runner=None: [outcome],
+    )
+    config = DataConfig(
+        years=[YEAR], output_dir=tmp_path, data_inputs_dir=tmp_path / "in"
+    )
+    pipeline.DataPipeline([Reform(id="a", name="A")], config).run(
+        skip_input_check=True
+    )
+
+
+STALE = "rows written before this run\n"
+
+
+def test_a_table_the_floor_empties_leaves_no_earlier_file(
+    monkeypatch, tmp_path, capsys
+):
+    """#285 re-review, P1: when the floor withholds a measure whole, none
+    of its flat tables keeps an earlier file, whose rows were never held to
+    this run's floor, in its place: each is removed and the run says so,
+    naming the file, never a figure."""
+    files = [
+        "budgetary_impact.csv",
+        "distributional_impact.csv",
+        "winners_losers.csv",
+        "metrics.csv",
+        "income_curve.csv",
+        "obr_comparison.csv",
+        "age_impact.csv",
+    ]
+    for name in (*files, "household_scatter_binned.csv"):
+        (tmp_path / name).write_text(STALE)
+    outcome = pipeline.FlatOutcome(
+        reform_id="a", reform_name="A", result=_empty_result("a")
+    )
+    outcome.withheld_whole = True
+    _run_flat(monkeypatch, tmp_path, outcome)
+    assert [name for name in files if (tmp_path / name).exists()] == []
+    # Not a flat table of this run: left as it is
+    assert (tmp_path / "household_scatter_binned.csv").read_text() == STALE
+    said = capsys.readouterr().out
+    for name in files:
+        assert f"WITHHELD {name}: the floor of survey households" in said
+
+
+def test_a_table_the_run_did_not_write_is_left_alone(monkeypatch, tmp_path):
+    """Only the tables the floor emptied are removed: a year with a thin
+    decile empties the decile tables, while a table the run made no rows
+    for, the floor apart, keeps its file, and the summary rows are
+    written."""
+    for name in (
+        "distributional_impact.csv",
+        "winners_losers.csv",
+        "income_curve.csv",
+    ):
+        (tmp_path / name).write_text(STALE)
+    outcome = pipeline.FlatOutcome(
+        reform_id="a",
+        reform_name="A",
+        result=_empty_result("a", metrics=[_summary_row(YEAR)]),
+    )
+    outcome.withheld_decile_years = {YEAR}
+    _run_flat(monkeypatch, tmp_path, outcome)
+    assert not (tmp_path / "distributional_impact.csv").exists()
+    assert not (tmp_path / "winners_losers.csv").exists()
+    assert (tmp_path / "income_curve.csv").read_text() == STALE
+    assert (tmp_path / "metrics.csv").read_text() != STALE
+
+
+def test_the_age_only_run_leaves_no_earlier_file_when_all_is_withheld(
+    monkeypatch, tmp_path
+):
+    """``generate --only age_impact``: when the floor withholds every age
+    row, the earlier file is removed, never kept and never replaced by a
+    file with no header."""
+    from uk_budget_data.models import DataConfig, Reform
+
+    (tmp_path / "age_impact.csv").write_text(STALE)
+    outcome = pipeline.FlatOutcome(reform_id="a", reform_name="A")
+    outcome.withheld_age_years = {YEAR}
+    monkeypatch.setattr(
+        pipeline,
+        "flat_units",
+        lambda reforms, config, dataset_path, tables, runner=None: [outcome],
+    )
+    frame = pipeline.generate_age_impact(
+        [Reform(id="a", name="A")],
+        DataConfig(years=[YEAR], output_dir=tmp_path),
+    )
+    assert frame.empty
+    assert not (tmp_path / "age_impact.csv").exists()
+
+
+def test_the_floor_records_the_years_it_left_age_rows_out(monkeypatch):
+    """``hold_flat_to_floor`` records the years it withheld age rows in,
+    with no thin decile and so no whole measure withheld, so the writers
+    know the age table was held to the floor: one survey household's people
+    are 70, as in ``test_only_age_impact_withholds_a_thin_age_group``."""
+    baseline, reformed, survey = _population(set(range(0, 200, 2)))
+    baseline.arrays["person"]["age"][survey == 0] = 70
+    baseline, reformed = _with_dataset(
+        monkeypatch, (baseline, reformed, survey)
+    )
+    outcome = pipeline.FlatOutcome(
+        reform_id="a", reform_name="A", age_rows=_age_rows(YEAR)
+    )
+    pipeline.hold_flat_to_floor(outcome, baseline, reformed, None, [YEAR])
+    assert outcome.withheld_whole is False
+    assert outcome.withheld_age_years == {YEAR}
