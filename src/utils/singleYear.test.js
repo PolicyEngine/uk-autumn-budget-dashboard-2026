@@ -24,3 +24,15 @@ describe("outOfForceReason: why a policy has no effect in the calculator's year 
     expect(outOfForceReason({ id: whd.id, description: whd.writtenFor }, 2026)).toBeNull();
   });
 });
+
+describe("programmeGroups: the page's own note on the VAT change row", () => {
+  it("says the policies, as the rest of the page does, in place of the API's note", async () => {
+    const { programmeGroups } = await import("./singleYear");
+    const groups = programmeGroups([{ id: "vat_change", group: "tax", before: 0, after: -12, note: "The API's note.", children: [] }]);
+    const row = groups.flatMap((group) => group.rows).find((r) => r.id === "vat_change");
+    expect(row.note).toBe(
+      "Only the change the policies make to VAT on the electricity, petrol and diesel spending entered, not the VAT you pay, so a cut shows as a positive amount.",
+    );
+    expect(row.note).not.toMatch(/\bmeasures?\b/);
+  });
+});

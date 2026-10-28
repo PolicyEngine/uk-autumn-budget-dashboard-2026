@@ -132,7 +132,7 @@ export const CHANGE_ONLY = new Set(["vat_change"]);
 // This page's note on a row, in place of the API's
 const PROGRAMME_NOTES = {
   vat_change:
-    "Only the change the measures make to VAT on the electricity, petrol and diesel spending entered, not the VAT you pay, so a cut shows as a positive amount.",
+    "Only the change the policies make to VAT on the electricity, petrol and diesel spending entered, not the VAT you pay, so a cut shows as a positive amount.",
 };
 
 /**
