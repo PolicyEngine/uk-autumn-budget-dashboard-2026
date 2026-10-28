@@ -130,3 +130,7 @@ dl.glossary dd { margin: 0; }
 .explain { margin: -1mm 0 4.5mm; font-size: 9.4pt; }
 figure .explain, .tblock .explain { margin: 2.5mm 0 0; }
 .withheld-note { font-style: normal; }
+/* Notes and source stay with the figure or table above them: never a lone
+   "Source:" line at the top of a page */
+.fnote, .fsrc { break-before: avoid; }
+.tblock table + .fnote, .tblock table + .fsrc { break-before: avoid; }

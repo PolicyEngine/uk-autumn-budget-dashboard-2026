@@ -397,6 +397,32 @@ def pad_limits(values, lo_pad=0.22, hi_pad=0.22):
     return lo - (span * lo_pad if lo < 0 else 0), hi + (span * hi_pad if hi > 0 else 0)
 
 
+# The dashboard map's colour scale (src/utils/geography/scale.js and
+# chartTheme.js CHART_COLOURS: loss, grid, mapGain, noData).
+MAP_EXTENT_PCT = 1.0
+MAP_NO_DATA = "#CBD5E1"
+
+
+def _map_cmap():
+    from matplotlib.colors import LinearSegmentedColormap
+
+    return LinearSegmentedColormap.from_list("dashboard_map", ["#D97706", "#E5E7EB", "#14B8A6"], N=201)
+
+
+def isolated_points(values, floor=500.0, factor=3):
+    """Indices of single points far outside the rest of a curve: each differs
+    from both neighbours, in the same direction, by more than ``floor`` and
+    more than ``factor`` times the range of the other points."""
+    out = []
+    for i in range(1, len(values) - 1):
+        a, v, b = values[i - 1], values[i], values[i + 1]
+        rest = values[:i] + values[i + 1:]
+        limit = max(floor, factor * (max(rest) - min(rest)))
+        if (v - a) * (v - b) > 0 and min(abs(v - a), abs(v - b)) > limit:
+            out.append(i)
+    return out
+
+
 def minus_ticks(ax, axis="y", fmt="{:g}"):
     from matplotlib.ticker import FuncFormatter
 
@@ -1481,7 +1507,7 @@ class Report:
             geo_path = self.pub.data / "uk_constituencies_2024.geojson"
         geo = json.loads(geo_path.read_text())
         from matplotlib.collections import PatchCollection
-        from matplotlib.colors import BoundaryNorm, ListedColormap
+        from matplotlib.colors import Normalize
         from matplotlib.patches import Polygon as MplPolygon
         from matplotlib.ticker import FuncFormatter
 
@@ -1490,41 +1516,38 @@ class Report:
         for ax, k in zip(axes[0], keys):
             seats = {r["area_code"]: r for r in rows if r["reform"] == k}
             shown = {c: float(r["value"]) * 100 for c, r in seats.items() if r.get("value", "") != "" and r.get("tier") != "withheld"}
-            lo, hi = min(shown.values()), max(shown.values())
-            if lo < 0 < hi:
-                m = max(abs(lo), abs(hi))
-                edges = [-m, -m * 0.6, -m * 0.2, m * 0.2, m * 0.6, m * 1.0001]
-                colours = ["#B45309", "#FBBF24", "#F3F4F6", "#81E6D9", "#0F766E"]
-            else:
-                a, b = lo, hi
-                edges = [a + (b - a) * i / 5 for i in range(5)] + [b + abs(b - a) * 1e-4 + 1e-12]
-                colours = ["#E6FFFA", "#B2F5EA", "#81E6D9", "#319795", "#285E61"] if hi > 0 else ["#B45309", "#D97706", "#FBBF24", "#FDE68A", "#FEF3C7"]
-            norm = BoundaryNorm(edges, len(colours))
+            # The dashboard map's scale (src/utils/geography/scale.js): amber through
+            # the light grey of no change to teal, continuous, fixed at -1% to +1%
+            # (clamped at its ends), the same for every map; no data in slate grey.
+            norm, cmap = Normalize(-MAP_EXTENT_PCT, MAP_EXTENT_PCT, clip=True), _map_cmap()
             patches, faces = [], []
             for feature in geo["features"]:
                 code = feature["properties"]["GSScode"]
                 g = feature["geometry"]
                 rings = [g["coordinates"][0]] if g["type"] == "Polygon" else [p[0] for p in g["coordinates"]]
-                face = "#FFFFFF" if code not in shown else colours[min(int(norm(shown[code])), len(colours) - 1)]
+                face = MAP_NO_DATA if code not in shown else cmap(norm(shown[code]))
                 for ring in rings:
                     patches.append(MplPolygon(ring[::3] if len(ring) > 60 else ring, closed=True))
                     faces.append(face)
-            ax.add_collection(PatchCollection(patches, facecolor=faces, edgecolor="#9CA3AF", linewidth=0.08))
+            ax.add_collection(PatchCollection(patches, facecolor=faces, edgecolor="#FFFFFF", linewidth=0.08))
             ax.autoscale_view()
             ax.set_aspect("equal")
             ax.axis("off")
             title = label if k == key else self.name(k)
-            ax.set_title(f"{title}\n% of household net income", fontsize=8.2)
-            cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=ListedColormap(colours)), ax=ax, orientation="horizontal", fraction=0.035, pad=0.02)
-            cbar.ax.tick_params(labelsize=7)
-            cbar.ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:.2f}".replace("-", MINUS)))
-            cbar.outline.set_visible(False)
+            ax.set_title(title, fontsize=8.6, color=INK)
             withheld = len(seats) - len(shown)
             notes.append(
                 f"{esc(title)}: {self.t.fig(len(shown), 'count', path, 'value', {'reform': k, 'year': y, 'outcome': 'relative_change', 'tier': '!withheld'}, 'count', S)} seats shown, "
                 f"{self.t.fig(withheld, 'count', path, 'value', {'reform': k, 'year': y, 'outcome': 'relative_change', 'tier': 'withheld'}, 'count', S)} withheld"
             )
-        fig.tight_layout(w_pad=1.0)
+        # One key for every map: the scale is fixed, the same for each (as on the dashboard)
+        fig.tight_layout(w_pad=1.0, rect=(0, 0.1, 1, 1))
+        cax = fig.add_axes([0.3, 0.05, 0.4, 0.022])
+        cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax, orientation="horizontal", ticks=[-MAP_EXTENT_PCT, 0, MAP_EXTENT_PCT])
+        cbar.ax.tick_params(labelsize=7.5, length=0)
+        cbar.ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: "0%" if v == 0 else f"{'+' if v > 0 else MINUS}{abs(v):g}%"))
+        cbar.ax.set_title("Change in household net income, % of income", fontsize=7.5, color=TEXT, pad=3)
+        cbar.outline.set_visible(False)
         png = png_of(plt, fig, dpi=170)
         plain = "; ".join(re.sub("<[^>]+>", "", n) for n in notes)
         return self.figure(
@@ -1532,7 +1555,7 @@ class Report:
             "The change in household net income varies from constituency to constituency",
             f"Average change in household net income by Westminster constituency (2024 boundaries), % of net income, {fy(y)}",
             "Map of constituencies. " + plain + ".",
-            "White: withheld, where the estimate is too uncertain or could disclose survey records. " + plain + ". Every measure is published by constituency on the dashboard.",
+            "Colour scale as on the dashboard map, from −1% to +1%, the same for every map here; seats beyond either end take its end colour. Slate grey: no data (withheld, where the estimate is too uncertain or could disclose survey records). " + plain + ". Every measure is published by constituency on the dashboard.",
             runs="combined" if key else "each",
             img=True,
         )
@@ -1550,29 +1573,36 @@ class Report:
         n = len(ids)
         who = esc(self.together) + " changes" if self.single else "the measures together change"
         intro = f"<p>How {who} the net income of {count_words(n)} example household{'s' if n != 1 else ''} in {fy(y)}, at different incomes. {intro_base}</p>"
-        cols = 3 if n > 4 else n
+        cols = min(n, 2)
         nrows = (n + cols - 1) // cols
         # One vertical scale for every chart, so the households can be compared by eye
-        fig, axes = plt.subplots(nrows, cols, figsize=(COL_W, 1.45 * nrows), squeeze=False, sharey=True, layout="constrained")
+        fig, axes = plt.subplots(nrows, cols, figsize=(COL_W, 1.4 * nrows), squeeze=False, sharey=True, layout="constrained")
         shares = (0.2, 0.4, 0.8)
         table_rows = []
         signs = []
         per_h = {}
         all_ch = [0.0]
+        singles = []
+        spikes = []  # (household, rows on the curve, index of a single point far outside the rest)
         for i, h in enumerate(ids):
             ax = axes[i // cols][i % cols]
             hr = sorted((r for r in rows if r["household"] == h), key=lambda r: float(r["income"]))
             xs = [float(r["income"]) / 1000 for r in hr]
             ch = [float(r["reform_net_income"]) - float(r["baseline_net_income"]) for r in hr]
-            all_ch += ch
-            ax.plot(xs, ch, color=HIGHLIGHT, linewidth=1.4)
+            # Single points far from the rest are cut from the shared scale;
+            # every single-point spike over £500 is described in the text
+            out = isolated_points(ch, factor=3)
+            singles += [(h, hr, j) for j in isolated_points(ch, factor=0)]
+            spikes += [(h, hr, j) for j in out]
+            all_ch += [v for j, v in enumerate(ch) if j not in out]
+            ax.plot(xs, ch, color=HIGHLIGHT, linewidth=1.7)
             ax.axhline(0, color=ZERO, linewidth=0.7)
             ax.fill_between(xs, ch, 0, where=[v >= 0 for v in ch], color=GAIN, alpha=0.18, linewidth=0)
             ax.fill_between(xs, ch, 0, where=[v < 0 for v in ch], color=LOSS, alpha=0.25, linewidth=0)
             d = defs.get(h, {})
-            ax.set_title(d.get("label", h), fontsize=8, loc="left", color=INK)
-            ax.set_xlabel(f"{d.get('x_label', 'Income')}, £k", fontsize=7)
-            ax.tick_params(labelsize=6.8)
+            ax.set_title(d.get("label", h), fontsize=9, loc="left", color=INK, fontweight="semibold")
+            ax.set_xlabel(f"{d.get('x_label', 'Income')}, £k", fontsize=8)
+            ax.tick_params(labelsize=8)
             minus_ticks(ax)
             style_axes(ax)
             cells = []
@@ -1591,7 +1621,14 @@ class Report:
             table_rows.append(f'<tr><th scope="row">{esc(d.get("label", h))}<div class="def">{esc(self._definition(d))}</div></th>{"".join(cells)}</tr>')
         lo, hi = min(all_ch), max(all_ch)
         span = (hi - lo) or 10
-        axes[0][0].set_ylim(lo - span * 0.15, hi + span * 0.15)
+        top = hi + span * 0.15
+        axes[0][0].set_ylim(lo - span * 0.15, top)
+        for h, hr, j in spikes:
+            # A point off the shared scale: the line runs to the top edge, marked there
+            ax = axes[ids.index(h) // cols][ids.index(h) % cols]
+            x = float(hr[j]["income"]) / 1000
+            ax.plot([x], [top], marker="^", color=HIGHLIGHT, markersize=6, clip_on=False, zorder=5)
+            ax.annotate("off scale, see text", (x, top), xytext=(5, -9), textcoords="offset points", fontsize=7.5, color=MUTED)
         for j in range(n, nrows * cols):
             axes[j // cols][j % cols].axis("off")
         if signs and all(v >= 0.5 for v in signs):
@@ -1616,8 +1653,11 @@ class Report:
                 read = f"The change is the same at all three incomes for {count_words(len(flat))} of the {count_words(len(per_h))} households ({self._names([label(h) for h in flat])}); {other} with income, as its chart shows." if len(varies) == 1 else f"The change is the same at all three incomes for {count_words(len(flat))} of the {count_words(len(per_h))} households ({self._names([label(h) for h in flat])}); {other} with income, as the charts show."
             else:
                 read = "For every example household the change varies with income, as the charts show."
+        read = " ".join(t for t in [read, *(self._spike_text(h, hr, j, defs.get(h, {}), first=i == 0, off=(h, hr, j) in spikes) for i, (h, hr, j) in enumerate(singles))] if t)
         blocks = [
-            self.figure(svg_of(plt, fig), title, f"Change in net income by income, {count_words(n)} example household{'s' if n != 1 else ''}, £ a year, {fy(y)}", "Line charts of the change in each household's net income as its income varies; the table below gives the values at three incomes.", "The horizontal axis is the income named under each chart, before tax; all charts share one vertical scale. Households as defined on the dashboard.", after=self.explain(read)),
+            self.figure(svg_of(plt, fig), title, f"Change in net income by income, {count_words(n)} example household{'s' if n != 1 else ''}, £ a year, {fy(y)}", "Line charts of the change in each household's net income as its income varies; the table below gives the values at three incomes.", "The horizontal axis is the income named under each chart, before tax; all charts share one vertical scale"
+                + ("; a single point far outside it is cut at the top edge and marked with a triangle" if spikes else "")
+                + ". Households as defined on the dashboard.", after=self.explain(read)),
             self.table(
                 f"{self.together}: change in net income at three incomes",
                 f"£ a year, {fy(y)}",
@@ -1625,10 +1665,59 @@ class Report:
                 table_rows,
                 "Lower, middle and higher income: 20%, 40% and 80% of the top of each household's income range on the dashboard.",
                 cls="households",
-                keep=False,
             ),
         ]
         return self.section("households", "Example households", intro, blocks)
+
+    def _spike_text(self, h, hr, j, d, first=True, off=False):
+        """Says what a single off-scale point on an example household's curve is,
+        from the curve itself: the change there, and where current law and the
+        measures each have their step in net income, if that is what it is."""
+        c, y, S = self.pub.combined, self.year, "households"
+        label = d.get("label", h)
+        label = label[0].lower() + label[1:]
+        what = (d.get("x_label") or "income").lower()
+        r = hr[j]
+        inc = float(r["income"])
+        val = float(r["reform_net_income"]) - float(r["baseline_net_income"])
+        at = lambda row: self.t.fig(float(row["income"]), "gbp_plain", c.path("income_curve"), "income", {"reform_id": c.key, "year": y, "household": h, "income": row["income"]}, "value", S)  # noqa: E731
+        change = self.t.fig(val, "gbp", c.path("income_curve"), "reform_net_income-baseline_net_income", {"reform_id": c.key, "year": y, "household": h, "income": r["income"]}, "value", S)
+        where = " (cut at the top of the scale)" if off else ""
+        if first:
+            text = (
+                f"The spike on the chart for the {esc(label)}{where} is one point of the published curve, not a drawing error: "
+                f"at {at(r)} of {esc(what)} its net income changes by {change}, far more than at the incomes either side."
+            )
+        else:
+            text = f"The {esc(label)}'s chart has a smaller spike{where} at {at(r)} of {esc(what)}: {change}."
+        b = [float(x["baseline_net_income"]) for x in hr]
+        f = [float(x["reform_net_income"]) for x in hr]
+        if 0 < j < len(hr) - 1:
+            step_b, step_f = b[j + 1] - b[j], f[j] - f[j - 1]
+            usual = sorted(abs(b[k + 1] - b[k]) for k in range(len(b) - 1))[len(b) // 2]
+            if step_b * val > 0 and step_f * val > 0 and min(abs(step_b), abs(step_f)) > 5 * max(usual, 1) and not first:
+                text += " It has the same cause: a step in net income that comes one point earlier with the measures."
+            elif step_b * val > 0 and step_f * val > 0 and min(abs(step_b), abs(step_f)) > 5 * max(usual, 1):
+                text += (
+                    f" Under current law the household's net income {'jumps up' if step_b > 0 else 'drops'} between {at(r)} and {at(hr[j + 1])}; "
+                    f"with the measures the same {'jump' if step_b > 0 else 'drop'} comes between {at(hr[j - 1])} and {at(r)}, "
+                    "one point earlier on the curve, so the two differ by the size of that step at this one income only."
+                )
+        if not self.single:
+            best = None
+            for k in self.order:
+                e = self.pub.measures[k]
+                mr = e.row("income_curve", year=y, household=h, income=r["income"])
+                if mr is None:
+                    continue
+                mv = float(mr["reform_net_income"]) - float(mr["baseline_net_income"])
+                if best is None or abs(mv) > abs(best[1]):
+                    best = (k, mv)
+            if best is not None and abs(best[1]) > abs(val) / 2:
+                e = self.pub.measures[best[0]]
+                own = self.t.fig(best[1], "gbp", e.path("income_curve"), "reform_net_income-baseline_net_income", {"reform_id": e.key, "year": y, "household": h, "income": r["income"]}, "value", S)
+                text += f" {esc(self.name(best[0]))} on its own gives {own} there."
+        return text
 
     @staticmethod
     def _definition(d):
@@ -1711,12 +1800,6 @@ class Report:
             else f"Economic assumptions: {esc(fc.get('source', ''))} ({esc(fc.get('vintage', ''))})."
         )
         areas = "" if self.areas_published() else "<li><b>Areas.</b> Results by region and constituency are not yet published in this release; they will be added to this report once they are.</li>"
-        prov = []
-        entries = [self.pub.measures[k] for k in self.order] + ([self.pub.combined] if self.pub.combined is not None and self.pub.combined.combined else [])
-        for e in entries:
-            prov.append(
-                f'<tr><th scope="row">{esc("All measures together" if e.combined else e.name)}</th><td>{esc(e.status)}</td><td class="mono">{esc(e.entry.get("artifact_sha256", "")[:16])}</td><td class="mono">{esc(e.entry.get("receipt_sha256", "")[:16])}</td></tr>'
-            )
         commit = ""
         try:
             commit = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
@@ -1736,18 +1819,7 @@ class Report:
 {areas}
 </ul></div>""",
             f"""<div class="keep"><h3>Provenance</h3>
-<p>Publication manifest revision {esc(m.get('revision', ''))}, updated {esc(long_date(m.get('updated_at', '')))}. Each artifact's files were checked against its receipt when this report was built.</p>
-"""
-            + self.table(
-                "Artifacts behind this report",
-                "First 16 characters of each SHA-256 digest",
-                '<th scope="col">Run</th><th scope="col">Status</th><th scope="col">Artifact</th><th scope="col">Receipt</th>',
-                prov,
-                f"Built by <code>report/build_report.py</code>{' at ' + esc(commit) if commit else ''} from <code>manifest.json</code> and the artifacts it names. Every figure in this report, with the file, row and column it came from, is in the accompanying <code>figures.json</code>.",
-                runs=None,
-                cls="compact",
-            )
-            + "</div>",
+<p>Publication manifest revision {esc(m.get('revision', ''))}, updated {esc(long_date(m.get('updated_at', '')))}. Every figure in this report is traced, with the file, row and column it came from, in the accompanying <code>figures.json</code>, and each artifact's files were checked against its receipt when this report was built by <code>report/build_report.py</code>{' at ' + esc(commit) if commit else ''}.</p></div>""",
         ]
         return self.section("method", "Methodology and caveats", intro, blocks, annex="A")
 
@@ -1780,13 +1852,30 @@ class Report:
         budget_date = (self.pub.manifest.get("budget") or {}).get("date", "")
         return f"Budget {long_date(budget_date)}" if budget_date else "PolicyEngine UK"
 
+    def _header_logo(self) -> str:
+        """The logo for the running header: the cover's PNG wrapped in an SVG
+        that sets its printed size (a margin box cannot size an image), as a
+        data URL followed by a gap before the title. Empty without the logo."""
+        path = REPO / "public" / "assets" / "logos" / "policyengine-teal.png"
+        if not path.exists():
+            return ""
+        png = base64.b64encode(path.read_bytes()).decode()
+        # 996 x 207 px; 2.6mm high, about the height of the 7pt header text
+        h = 2.6
+        w = round(h * 996 / 207, 2)
+        svg = (
+            f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{w}mm" height="{h}mm" viewBox="0 0 996 207">'
+            f'<image width="996" height="207" xlink:href="data:image/png;base64,{png}"/></svg>'
+        )
+        return f'url("data:image/svg+xml;base64,{base64.b64encode(svg.encode()).decode()}") "\\2003" '
+
     def page_css(self) -> str:
         """Running header and footer, as @page margin boxes (Chrome 131 and later)."""
         font = 'font-family: Inter, "Helvetica Neue", Arial, sans-serif; font-size: 7pt; color: #4B5563;'
         left_foot = f"PolicyEngine · {self.pub.provisional_label}" if self.pub.provisional else "PolicyEngine"
         return f"""
 @page {{
-  @top-left {{ content: {css_string(self.title)}; {font} font-weight: 600; color: #285E61; vertical-align: bottom; padding-bottom: 3mm; }}
+  @top-left {{ content: {self._header_logo()}{css_string(self.title)}; {font} font-weight: 600; color: #285E61; vertical-align: bottom; padding-bottom: 3mm; }}
   @top-right {{ content: {css_string(self._header_right())}; {font} vertical-align: bottom; padding-bottom: 3mm; }}
   @bottom-left {{ content: {css_string(left_foot)}; {font} vertical-align: top; padding-top: 3mm; }}
   @bottom-right {{ content: "Page " counter(page) " of " counter(pages); {font} vertical-align: top; padding-top: 3mm; }}

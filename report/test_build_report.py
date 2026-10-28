@@ -154,8 +154,8 @@ def test_figures_and_tables_are_numbered_in_order_each_with_a_source(tmp_path):
     tabs = [int(n) for n in re.findall(r'<span class="fnum">Table (\d+)</span>', html)]
     assert figs == list(range(1, len(figs) + 1)) and len(figs) >= 6
     assert tabs == list(range(1, len(tabs) + 1)) and len(tabs) >= 6
-    # every figure has a source line; every table but the two descriptive annex tables
-    assert html.count('<p class="fsrc">') == len(figs) + len(tabs) - 2
+    # every figure has a source line; every table but the descriptive measures table
+    assert html.count('<p class="fsrc">') == len(figs) + len(tabs) - 1
     assert "PolicyEngine UK microsimulation" in html
 
 
@@ -451,3 +451,24 @@ def test_later_year_of_opposite_sign_is_a_key_finding(tmp_path):
     kf = html[html.index('<div class="kf">'):]
     kf = kf[: kf.index("</ol>")]
     assert "Later years." in kf and "By 2028-29" in kf and "falls by" in kf
+
+
+def test_provenance_is_one_sentence_with_no_digest_table(tmp_path):
+    html = build(publication(tmp_path), tmp_path / "out")
+    assert "Artifacts behind this report" not in html
+    assert "a" * 16 not in html and "b" * 16 not in html
+    assert "traced, with the file, row and column it came from" in html
+
+
+def test_running_header_carries_the_logo(tmp_path):
+    out = tmp_path / "out"
+    html = build(publication(tmp_path), out)
+    assert '@top-left { content: url("data:image/svg+xml;base64,' in html
+
+
+def test_isolated_points_finds_single_spikes_only():
+    curve = [100.0, 100.0, 640.0, 9900.0, 340.0, 300.0]
+    assert br.isolated_points(curve) == [3]
+    assert br.isolated_points([100.0, 200.0, 300.0, 400.0]) == []
+    # a step is not a spike
+    assert br.isolated_points([0.0, 0.0, 5000.0, 5000.0]) == []
