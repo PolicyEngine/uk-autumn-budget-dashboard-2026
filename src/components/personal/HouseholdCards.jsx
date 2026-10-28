@@ -99,7 +99,20 @@ export function cardFigures(example, byYear, year, catalogue = null) {
   // Every year a reader can choose: one not yet in is null (its bar a stub)
   const years = [...new Set([...SELECTABLE_YEARS, ...Object.keys(byYear).map(Number)])].filter(isDisplayYear).sort((a, b) => a - b);
   const series = years.map((y) => ({ year: y, change: byYear[y] ? byYear[y].change : null }));
-  return { change: current.change, ownPart, top, series };
+  // The chips: always the example's own measures, each by its short name
+  // with its own part (the example exists for them); a measure with no
+  // part this year but one later says when it starts, from the example's
+  // own results ("from 2030-31")
+  const startOf = (id) => years.find((y) => y > year && Math.round(byYear[y]?.byPolicy?.[id] ?? 0) !== 0) ?? null;
+  const ownChips = own.map((id) => {
+    const part = split ? split[id] ?? 0 : null;
+    const quiet = part !== null && Math.round(part) === 0;
+    return { id, name: chipName(id, catalogue), part, from: quiet ? startOf(id) : null };
+  });
+  // Several own measures: those with a part this year, else the first
+  const moving = ownChips.filter((chip) => chip.part === null || Math.round(chip.part) !== 0);
+  const chips = moving.length ? moving : ownChips.slice(0, 1);
+  return { change: current.change, ownPart, top, series, chips };
 }
 
 /**
@@ -361,10 +374,14 @@ export default function HouseholdCards({
               })
             : null;
           const featured = featuresPublished(example, catalogue);
-          // The chip: the top measure once the split is known, else the
-          // example's own; shown only while the catalogue publishes it
-          const chipFigures = figures?.top ?? { ids: example.measures ?? [example.measure], name: example.tag, part: null, own: true };
-          const chip = chipFigures.ids.every((id) => catalogue.byId.get(id)?.displayable === true) ? chipFigures : null;
+          // The chips: the example's own measures, each with its part once
+          // the split is known; shown only while the catalogue publishes them
+          const ownIds = example.measures ?? [example.measure];
+          const chips = featured
+            ? figures?.chips ?? ownIds.slice(0, 1).map((id) => ({ id, name: chipName(id, catalogue), part: null, from: null }))
+            : null;
+          // Another measure giving the larger part: said in the chips' tip
+          const larger = figures && !figures.top.own ? figures.top : null;
           const pressed = value === example.id;
           const describedBy = `household-card-${example.id}-result household-card-${example.id}-description`;
           return (
@@ -423,18 +440,30 @@ export default function HouseholdCards({
                   measure in the chip's title when another gives more. Not
                   "most of the change": nothing checks it is half the change,
                   or even its sign (W6 G1) */}
-              {chip && (
+              {chips && (
                 <Tip
                   content={
-                    !chip.own && featured && figures
-                      ? `This example features ${example.tag} (${signedMoney(figures.ownPart)} in ${fiscalYearTick(year)}); the largest single effect is ${chip.name} (${signedMoney(chip.part)}).`
+                    larger
+                      ? `This example features ${chips.map((chip) => chip.name).join(" and ")} (${signedMoney(figures.ownPart)} in ${fiscalYearTick(year)}); the largest single effect is ${larger.name} (${signedMoney(larger.part)}).`
                       : null
                   }
                 >
-                <span className="household-card-tag" style={{ "--chip-accent": catalogue.byId.get(chip.ids[0])?.color }}>
-                  <span className="household-card-dot" aria-hidden="true" />
-                  <span className="household-card-tag-name">{chip.name}</span>
-                  {chip.part != null && <span className="household-card-tag-part">{signedMoney(chip.part)}</span>}
+                <span className="household-card-tags">
+                  {chips.map((chip) => (
+                    <span
+                      key={chip.id}
+                      className={`household-card-tag${chip.from ? " is-later" : ""}`}
+                      style={{ "--chip-accent": catalogue.byId.get(chip.id)?.color }}
+                    >
+                      <span className="household-card-dot" aria-hidden="true" />
+                      <span className="household-card-tag-name">{chip.name}</span>
+                      {chip.from ? (
+                        <span className="household-card-tag-part">from {fiscalYearTick(chip.from)}</span>
+                      ) : (
+                        chip.part != null && <span className="household-card-tag-part">{signedMoney(chip.part)}</span>
+                      )}
+                    </span>
+                  ))}
                 </span>
                 </Tip>
               )}
