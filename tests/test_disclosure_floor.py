@@ -1660,6 +1660,45 @@ def test_a_cell_the_receipt_withholds_that_holds_a_figure_is_refused():
         ]
 
 
+@pytest.mark.parametrize(
+    "groups, kept, refused",
+    [
+        # "all" thin: every row of the year is withheld
+        (["all"], ["35-49", "all", "40"], ["35-49", "all", "40"]),
+        (["all"], [], []),
+        # A band thin: every row but "all"
+        (["35-49"], ["35-49", "all", "40"], ["35-49", "40"]),
+        (["35-49"], ["all"], []),
+        # A single age thin: its band's single ages
+        (["40"], ["35-49", "all", "40", "41"], ["40", "41"]),
+        (["40"], ["35-49", "all"], []),
+    ],
+)
+def test_an_age_row_the_receipt_withholds_that_is_in_the_table_is_refused(
+    groups, kept, refused
+):
+    """#285 second review: the age table's counterpart of finding 1. A row
+    the receipt's thin groups withhold, still in the table, is refused at
+    every level; the other year's rows are not affected."""
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.publish import _floor_problems
+
+    record = floor.floor_record({(floor.AGE_TABLE, YEAR): groups})
+    rows = [
+        {"year": year, "age_band": band}
+        for year in (YEAR, YEAR + 1)
+        for band in (kept if year == YEAR else ["35-49", "all", "40"])
+    ]
+    for level in (m.STAGED, m.PROVISIONAL, m.APPROVED):
+        assert _floor_problems(
+            {"disclosure_floor": record}, {floor.AGE_TABLE: rows}, level
+        ) == [
+            f"age_impact {YEAR} {band}: recorded withheld by the floor, but "
+            "in the table"
+            for band in refused
+        ]
+
+
 def test_a_receipt_that_withholds_a_figure_still_written_is_never_staged(
     monkeypatch,
 ):
