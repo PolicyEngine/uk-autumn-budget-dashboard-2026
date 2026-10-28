@@ -93,9 +93,9 @@ export const POLICY_DETAILS = [
     inForce: { from: "2027-04", to: "2030-03" },
     ends: "April 2030",
     howCalculated:
-      "Reduces each eligible person's modelled income tax, never below zero; the reduction falls by £1 for every £3 of total income above the full new State Pension.",
+      "Reduces each eligible person's modelled income tax, never below zero, and the income tax that Universal Credit deducts from their earnings; the reduction falls by £1 for every £3 of total income above the full new State Pension.",
     details:
-      "Total income counts the State Pension and all other income, savings interest included, so a larger State Pension (with increments or additional State Pension) reduces the allowance too. The personal allowance is unchanged. People who reach State Pension age after 6 October in a tax year are not included, though the allowance covers them, so its reach and cost are slightly understated.",
+      "Total income counts the State Pension and all other income, savings interest included, so a larger State Pension (with increments or additional State Pension) reduces the allowance too. The personal allowance is unchanged. People who reach State Pension age after 6 October in a tax year are not included, though the allowance covers them, so its reach and cost are slightly understated. Scottish taxpayers get the same allowance, at the 20% basic rate. Pension Credit, Housing Benefit and Council Tax Reduction count income after tax, so they take back part of the allowance, and a claimant aged 75 or over who leaves Pension Credit loses the free TV licence. Universal Credit counts pension income before tax, so it changes only where the allowance cuts the tax on earnings.",
     source: {
       label: "Pension Tax Allowance explainer",
       href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer",
