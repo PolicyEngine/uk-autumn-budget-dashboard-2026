@@ -105,10 +105,11 @@ describe("the examples' precomputed results (public/data/household_presets.json)
     expect(Math.round(figures("carer", 2031).ownPart)).not.toBe(0);
     expect(figures("carer", 2031).top).toMatchObject({ own: true });
     // The household from the post on the savings and property income
-    // rates: £150 a year more income tax, as in the post, and its own
-    // measure gives most of its change
-    expect(Math.round(figures("landlord-45k", 2027).ownPart)).toBe(-150);
-    expect(Math.round(figures("landlord-45k", 2031).ownPart)).toBe(-150);
+    // rates: the property rate alone (the savings rate is not in the
+    // release) is £120 a year more income tax (the post's £150 was both),
+    // and its own measure gives most of its change
+    expect(Math.round(figures("landlord-45k", 2027).ownPart)).toBe(-120);
+    expect(Math.round(figures("landlord-45k", 2031).ownPart)).toBe(-120);
     expect(figures("landlord-45k", 2027).top).toMatchObject({ own: true });
     // The pensioner on the full State Pension: its own measure gives most
     // of its change
