@@ -466,12 +466,41 @@ def test_running_header_carries_the_logo(tmp_path):
     assert '@top-left { content: url("data:image/svg+xml;base64,' in html
 
 
-def test_isolated_points_finds_single_spikes_only():
-    curve = [100.0, 100.0, 640.0, 9900.0, 340.0, 300.0]
-    assert br.isolated_points(curve) == [3]
-    assert br.isolated_points([100.0, 200.0, 300.0, 400.0]) == []
-    # a step is not a spike
-    assert br.isolated_points([0.0, 0.0, 5000.0, 5000.0]) == []
+def test_curve_spikes_fire_on_an_isolated_point_only():
+    flat = [0.0] * 20
+    assert br.curve_spikes(flat) == []
+    # a step is not a spike, even with a median step of zero
+    assert br.curve_spikes([0.0] * 10 + [5000.0] * 10) == []
+    # the published couple's curve: +£9,920 at one point between £636 and £342
+    curve = [101.0] * 9 + [636.0] * 10 + [9920.0] + [342.0] * 10
+    assert [i for i, _ in br.curve_spikes(curve)] == [19]
+    # small wiggles under £250 do not fire
+    assert br.curve_spikes([0.0, 0.0, 200.0, 0.0, 0.0]) == []
+
+
+def test_a_spiking_curve_leaves_the_figure_out_and_annex_a_says_why(tmp_path):
+    data = publication(tmp_path)
+    m = json.loads((data / "manifest.json").read_text())
+    key = next(iter(m["combined"]))
+    d = data / m["combined"][key]["artifact"]
+    path = d / "income_curve.csv"
+    rows = list(csv.DictReader(open(path)))
+    for r in rows:
+        if r["year"] == "2027" and r["income"] == "10000":
+            r["reform_net_income"] = str(float(r["reform_net_income"]) + 9000)
+    _write(path, rows)
+    receipt = json.loads((d / "receipt.json").read_text())
+    receipt["dashboard"]["files"]["income_curve.csv"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    (d / "receipt.json").write_text(json.dumps(receipt))
+    html = build(data, tmp_path / "out")
+    assert "How the change varies with earnings" not in html
+    assert "The earnings curves are not shown" in html and "+£9,005 at £10,000" in html
+
+
+def test_no_spike_keeps_the_curve_figure(tmp_path):
+    html = build(publication(tmp_path), tmp_path / "out")
+    assert "How the change varies with earnings" in html
+    assert "The earnings curves are not shown" not in html
 
 
 @pytest.mark.parametrize(

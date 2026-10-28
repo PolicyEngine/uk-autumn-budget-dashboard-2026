@@ -409,17 +409,21 @@ def _map_cmap():
     return LinearSegmentedColormap.from_list("dashboard_map", ["#D97706", "#E5E7EB", "#14B8A6"], N=201)
 
 
-def isolated_points(values, floor=500.0, factor=3):
-    """Indices of single points far outside the rest of a curve: each differs
-    from both neighbours, in the same direction, by more than ``floor`` and
-    more than ``factor`` times the range of the other points."""
+def curve_spikes(values, factor=5.0, floor=250.0):
+    """Isolated points on a curve, as (index, departure): a point departs from
+    the mean of its two neighbours by more than ``factor`` times the curve's
+    median absolute step and by more than ``floor`` (£), and lies above both
+    neighbours or below both (a step edge departs from one only)."""
+    if len(values) < 3:
+        return []
+    steps = sorted(abs(b - a) for a, b in zip(values, values[1:]))
+    median = steps[len(steps) // 2] if len(steps) % 2 else (steps[len(steps) // 2 - 1] + steps[len(steps) // 2]) / 2
     out = []
     for i in range(1, len(values) - 1):
         a, v, b = values[i - 1], values[i], values[i + 1]
-        rest = values[:i] + values[i + 1:]
-        limit = max(floor, factor * (max(rest) - min(rest)))
-        if (v - a) * (v - b) > 0 and min(abs(v - a), abs(v - b)) > limit:
-            out.append(i)
+        dep = v - (a + b) / 2
+        if abs(dep) > factor * median and abs(dep) > floor and (v - a) * (v - b) > 0:
+            out.append((i, dep))
     return out
 
 
@@ -1605,8 +1609,12 @@ class Report:
         )
 
     def households(self):
+        """Table: each example household at three incomes. Figure: the change
+        against earnings, left out when any curve has an isolated point
+        (curve_spikes), which Annex A then names."""
         c, y, S, plt = self.pub.combined, self.year, "households", self.plt
         intro_base = "Each is one household, not an average; real households differ in rent, spending and circumstances."
+        self.curve_review = None
         if c is None:
             return self.section("households", "Example households", f"<p>{intro_base}</p>", [self.no_combined()])
         defs = {h["id"]: h for h in self.contract.get("income_curve_households", [])}
@@ -1617,38 +1625,16 @@ class Report:
         n = len(ids)
         who = esc(self.together) + " changes" if self.single else "the measures together change"
         intro = f"<p>How {who} the net income of {count_words(n)} example household{'s' if n != 1 else ''} in {fy(y)}, at different incomes. {intro_base}</p>"
-        cols = min(n, 2)
-        nrows = (n + cols - 1) // cols
-        # One vertical scale for every chart, so the households can be compared by eye
-        fig, axes = plt.subplots(nrows, cols, figsize=(COL_W, 1.4 * nrows), squeeze=False, sharey=True, layout="constrained")
         shares = (0.2, 0.4, 0.8)
-        table_rows = []
-        signs = []
-        per_h = {}
-        all_ch = [0.0]
-        singles = []
-        spikes = []  # (household, rows on the curve, index of a single point far outside the rest)
-        for i, h in enumerate(ids):
-            ax = axes[i // cols][i % cols]
+        table_rows, curves, worst = [], [], None
+        for h in ids:
             hr = sorted((r for r in rows if r["household"] == h), key=lambda r: float(r["income"]))
-            xs = [float(r["income"]) / 1000 for r in hr]
             ch = [float(r["reform_net_income"]) - float(r["baseline_net_income"]) for r in hr]
-            # Single points far from the rest are cut from the shared scale;
-            # every single-point spike over £500 is described in the text
-            out = isolated_points(ch, factor=3)
-            singles += [(h, hr, j) for j in isolated_points(ch, factor=0)]
-            spikes += [(h, hr, j) for j in out]
-            all_ch += [v for j, v in enumerate(ch) if j not in out]
-            ax.plot(xs, ch, color=HIGHLIGHT, linewidth=1.7)
-            ax.axhline(0, color=ZERO, linewidth=0.7)
-            ax.fill_between(xs, ch, 0, where=[v >= 0 for v in ch], color=GAIN, alpha=0.18, linewidth=0)
-            ax.fill_between(xs, ch, 0, where=[v < 0 for v in ch], color=LOSS, alpha=0.25, linewidth=0)
+            curves.append((h, hr, ch))
+            for j, dep in curve_spikes(ch):
+                if worst is None or abs(dep) > worst[0]:
+                    worst = (abs(dep), h, hr, j)
             d = defs.get(h, {})
-            ax.set_title(d.get("label", h), fontsize=9, loc="left", color=INK, fontweight="semibold")
-            ax.set_xlabel(f"{d.get('x_label', 'Income')}, £k", fontsize=8)
-            ax.tick_params(labelsize=8)
-            minus_ticks(ax)
-            style_axes(ax)
             cells = []
             top = float(d.get("x_max") or max(float(r["income"]) for r in hr))
             for share in shares:
@@ -1658,50 +1644,10 @@ class Report:
                     cells.append('<td class="num">n/a</td>')
                     continue
                 v = float(r["reform_net_income"]) - float(r["baseline_net_income"])
-                signs.append(v)
                 text = self.t.fig(v, "gbp", c.path("income_curve"), "reform_net_income-baseline_net_income", {"reform_id": c.key, "year": y, "household": h, "income": r["income"]}, "value", S)
-                cells.append(f'<td class="num {self._tone_cls(v)}">{text}<div class="at">at £{float(r["income"]):,.0f}</div></td>')
-                per_h.setdefault(h, []).append(round(v))
+                cells.append(f'<td class="num">{text}<div class="at">at £{float(r["income"]):,.0f}</div></td>')
             table_rows.append(f'<tr><th scope="row">{esc(d.get("label", h))}<div class="def">{esc(self._definition(d))}</div></th>{"".join(cells)}</tr>')
-        lo, hi = min(all_ch), max(all_ch)
-        span = (hi - lo) or 10
-        top = hi + span * 0.15
-        axes[0][0].set_ylim(lo - span * 0.15, top)
-        for h, hr, j in spikes:
-            # A point off the shared scale: the line runs to the top edge, marked there
-            ax = axes[ids.index(h) // cols][ids.index(h) % cols]
-            x = float(hr[j]["income"]) / 1000
-            ax.plot([x], [top], marker="^", color=HIGHLIGHT, markersize=6, clip_on=False, zorder=5)
-            ax.annotate("off scale, see text", (x, top), xytext=(5, -9), textcoords="offset points", fontsize=7.5, color=MUTED)
-        for j in range(n, nrows * cols):
-            axes[j // cols][j % cols].axis("off")
-        if signs and all(v >= 0.5 for v in signs):
-            title = "Every example household is better off at each of the three incomes in the table"
-        elif signs and all(v <= -0.5 for v in signs):
-            title = "Every example household is worse off at each of the three incomes in the table"
-        else:
-            title = "How the change in net income varies with income differs from household to household"
-        read = ""
-        flat = [h for h, vs in per_h.items() if len(vs) == 3 and len(set(vs)) == 1]
-        if per_h:
-            label = lambda h: esc(defs.get(h, {}).get("label", h))  # noqa: E731
-            varies = [h for h in per_h if h not in flat]
-            if len(flat) == len(per_h):
-                read = "For every example household the change is the same at all three incomes: across the range of incomes shown, it does not vary with income."
-            elif flat:
-                if len(varies) == 1:
-                    other = label(varies[0])
-                    other = f"for the {other[0].lower() + other[1:]} it varies"
-                else:
-                    other = "for the others it varies"
-                read = f"The change is the same at all three incomes for {count_words(len(flat))} of the {count_words(len(per_h))} households ({self._names([label(h) for h in flat])}); {other} with income, as its chart shows." if len(varies) == 1 else f"The change is the same at all three incomes for {count_words(len(flat))} of the {count_words(len(per_h))} households ({self._names([label(h) for h in flat])}); {other} with income, as the charts show."
-            else:
-                read = "For every example household the change varies with income, as the charts show."
-        read = " ".join(t for t in [read, *(self._spike_text(h, hr, j, defs.get(h, {}), first=i == 0, off=(h, hr, j) in spikes) for i, (h, hr, j) in enumerate(singles))] if t)
         blocks = [
-            self.figure(svg_of(plt, fig), title, f"Change in net income by income, {count_words(n)} example household{'s' if n != 1 else ''}, £ a year, {fy(y)}", "Line charts of the change in each household's net income as its income varies; the table below gives the values at three incomes.", "The horizontal axis is the income named under each chart, before tax; all charts share one vertical scale"
-                + ("; a single point far outside it is cut at the top edge and marked with a triangle" if spikes else "")
-                + ". Households as defined on the dashboard.", after=self.explain(read)),
             self.table(
                 f"{self.together}: change in net income at three incomes",
                 f"£ a year, {fy(y)}",
@@ -1709,59 +1655,53 @@ class Report:
                 table_rows,
                 "Lower, middle and higher income: 20%, 40% and 80% of the top of each household's income range on the dashboard.",
                 cls="households",
-            ),
+            )
         ]
+        if worst is not None:
+            _, h, hr, j = worst
+            self.curve_review = (h, hr, j, defs.get(h, {}))
+        else:
+            blocks.append(self._curve_figure(curves, defs))
         return self.section("households", "Example households", intro, blocks)
 
-    def _spike_text(self, h, hr, j, d, first=True, off=False):
-        """Says what a single off-scale point on an example household's curve is,
-        from the curve itself: the change there, and where current law and the
-        measures each have their step in net income, if that is what it is."""
-        c, y, S = self.pub.combined, self.year, "households"
+    def _curve_figure(self, curves, defs):
+        plt, y = self.plt, self.year
+        cols = 2
+        nrows = (len(curves) + 1 + cols - 1) // cols
+        fig, axes = plt.subplots(nrows, cols, figsize=(COL_W, 1.6 * nrows), squeeze=False, layout="constrained")
+        for i, (h, hr, ch) in enumerate(curves):
+            ax = axes[i // cols][i % cols]
+            xs = [float(r["income"]) / 1000 for r in hr]
+            ax.plot(xs, ch, color=HIGHLIGHT, linewidth=1.4)
+            ax.axhline(0, color=ZERO, linewidth=0.8)
+            ax.fill_between(xs, ch, 0, where=[v >= 0 for v in ch], color=GAIN, alpha=0.18, linewidth=0)
+            ax.fill_between(xs, ch, 0, where=[v < 0 for v in ch], color=LOSS, alpha=0.25, linewidth=0)
+            d = defs.get(h, {})
+            ax.set_title(d.get("label", h), fontsize=8, loc="left", color=INK, fontweight="semibold")
+            ax.set_xlabel(f"{d.get('x_label', 'Income')}, £k", fontsize=8)
+            minus_ticks(ax)
+            style_axes(ax)
+        for j in range(len(curves), nrows * cols):
+            axes[j // cols][j % cols].axis("off")
+        return self.figure(svg_of(plt, fig), "How the change varies with earnings", f"Change in net income, £ a year, {fy(y)}", "Line charts of the change in each household's net income as its earnings vary.", "Each panel has its own vertical scale. Households as defined on the dashboard.")
+
+    def _curve_review_sentence(self):
+        """Annex A: the curves left out, and why, from the published curve."""
+        if not getattr(self, "curve_review", None):
+            return ""
+        c, y, S = self.pub.combined, self.year, "method"
+        h, hr, j, d = self.curve_review
+        r = hr[j]
         label = d.get("label", h)
         label = label[0].lower() + label[1:]
-        what = (d.get("x_label") or "income").lower()
-        r = hr[j]
-        inc = float(r["income"])
+        what = (d.get("x_label") or "earnings").lower()
         val = float(r["reform_net_income"]) - float(r["baseline_net_income"])
-        at = lambda row: self.t.fig(float(row["income"]), "gbp_plain", c.path("income_curve"), "income", {"reform_id": c.key, "year": y, "household": h, "income": row["income"]}, "value", S)  # noqa: E731
         change = self.t.fig(val, "gbp", c.path("income_curve"), "reform_net_income-baseline_net_income", {"reform_id": c.key, "year": y, "household": h, "income": r["income"]}, "value", S)
-        where = " (cut at the top of the scale)" if off else ""
-        if first:
-            text = (
-                f"The spike on the chart for the {esc(label)}{where} is one point of the published curve, not a drawing error: "
-                f"at {at(r)} of {esc(what)} its net income changes by {change}, far more than at the incomes either side."
-            )
-        else:
-            text = f"The {esc(label)}'s chart has a smaller spike{where} at {at(r)} of {esc(what)}: {change}."
-        b = [float(x["baseline_net_income"]) for x in hr]
-        f = [float(x["reform_net_income"]) for x in hr]
-        if 0 < j < len(hr) - 1:
-            step_b, step_f = b[j + 1] - b[j], f[j] - f[j - 1]
-            usual = sorted(abs(b[k + 1] - b[k]) for k in range(len(b) - 1))[len(b) // 2]
-            if step_b * val > 0 and step_f * val > 0 and min(abs(step_b), abs(step_f)) > 5 * max(usual, 1) and not first:
-                text += " It has the same cause: a step in net income that comes one point earlier with the measures."
-            elif step_b * val > 0 and step_f * val > 0 and min(abs(step_b), abs(step_f)) > 5 * max(usual, 1):
-                text += (
-                    f" Under current law the household's net income {'jumps up' if step_b > 0 else 'drops'} between {at(r)} and {at(hr[j + 1])}; "
-                    f"with the measures the same {'jump' if step_b > 0 else 'drop'} comes between {at(hr[j - 1])} and {at(r)}, "
-                    "one point earlier on the curve, so the two differ by the size of that step at this one income only."
-                )
-        if not self.single:
-            best = None
-            for k in self.order:
-                e = self.pub.measures[k]
-                mr = e.row("income_curve", year=y, household=h, income=r["income"])
-                if mr is None:
-                    continue
-                mv = float(mr["reform_net_income"]) - float(mr["baseline_net_income"])
-                if best is None or abs(mv) > abs(best[1]):
-                    best = (k, mv)
-            if best is not None and abs(best[1]) > abs(val) / 2:
-                e = self.pub.measures[best[0]]
-                own = self.t.fig(best[1], "gbp", e.path("income_curve"), "reform_net_income-baseline_net_income", {"reform_id": e.key, "year": y, "household": h, "income": r["income"]}, "value", S)
-                text += f" {esc(self.name(best[0]))} on its own gives {own} there."
-        return text
+        at = self.t.fig(float(r["income"]), "gbp_plain", c.path("income_curve"), "income", {"reform_id": c.key, "year": y, "household": h, "income": r["income"]}, "value", S)
+        return (
+            f"The earnings curves are not shown: the curve for the {esc(label)} has a change of {change} at {at} of {esc(what)} "
+            "that its neighbouring points do not share, and is under review."
+        )
 
     @staticmethod
     def _definition(d):
@@ -1861,6 +1801,7 @@ class Report:
 <li><b>Survey data.</b> Incomes and spending come from household survey data calibrated to official totals; estimates for small groups and small areas are uncertain, and cells with too few survey households are withheld.</li>
 <li><b>Living standards outlook.</b> The dashboard's outlook for household incomes rests on a separate baseline forecast that is not one of this publication's receipted artifacts, so this report does not reproduce it.</li>
 {areas}
+{('<li><b>Example households.</b> ' + self._curve_review_sentence() + '</li>') if getattr(self, 'curve_review', None) else ''}
 </ul></div>""",
             f"""<div class="keep"><h3>Provenance</h3>
 <p>Publication manifest revision {esc(m.get('revision', ''))}, updated {esc(long_date(m.get('updated_at', '')))}. Every figure in this report is traced, with the file, row and column it came from, in the accompanying <code>figures.json</code>, and each artifact's files were checked against its receipt when this report was built by <code>report/build_report.py</code>{' at ' + esc(commit) if commit else ''}.</p></div>""",
