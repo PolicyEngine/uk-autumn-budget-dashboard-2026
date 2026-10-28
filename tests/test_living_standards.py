@@ -31,7 +31,6 @@ from uk_budget_data.living_standards.forecast import (
     check_pre_is_march,
     compute_post,
     read_post_document,
-    read_post_document_from_pdf,
 )
 from uk_budget_data.living_standards.hbai import extract_hbai
 from uk_budget_data.living_standards.obr import (
@@ -847,10 +846,10 @@ def test_the_post_document_and_derived_series(tmp_path):
         pre["cpi_ahc"]["2027"] + cpi_change
     )
     # Social rent: CPI for the year before (rounded) + 1 point. 2027 takes
-    # 2026 CPI (2.46 -> 2.5), read from the EFO though 2026 is not shown.
+    # the published September 2026 CPI (3.5%), not the EFO's 2026 CPI.
     assert "2026" not in series["social_rent"]["values"]
     assert series["social_rent"]["values"]["2027"] == pytest.approx(
-        0.025 + 0.01
+        0.035 + 0.01
     )
     assert series["social_rent"]["values"]["2028"] == pytest.approx(
         0.02 + 0.01
@@ -890,7 +889,10 @@ def test_the_reader_reproduces_the_pre_budget_series_from_march_2026():
     """policyengine-uk's OBR series are the March 2026 EFO's: read them back."""
     outlook = _outlook_forecast()
     parsed = read_forecast(INPUTS / EFO_FILE_NAME, YEARS)
-    computed = compute_post(outlook["forecast"], parsed)
+    # The March forecast predates September 2026's CPI outturn.
+    computed = compute_post(
+        outlook["forecast"], parsed, published_september_cpi={}
+    )
     for sec in outlook["forecast"]["sections"]:
         for s in sec["series"]:
             pre = {int(p["year"]): p["value"] for p in s["pre"]}
@@ -943,6 +945,7 @@ def test_set_pending_replaces_one_row_and_keeps_the_rest(tmp_path):
 
 OBR_DIR = ROOT / "data_inputs" / "obr"
 OCT_PDF = OBR_DIR / "OBR-Economic-and-Fiscal-Outlook-October-2026.pdf"
+OCT_TABLES = "efo-october-2026-detailed-forecast-tables-economy.xlsx"
 OCT_TEXT = OBR_DIR / "OBR-Economic-and-Fiscal-Outlook-October-2026.txt"
 OCT_PDF_SHA256 = (
     "9e0e9c340e35e603066f3124a614fcd68feadb3d5d10d1f76fb536e150e6225e"
@@ -1017,26 +1020,20 @@ def test_a_pre_series_from_the_october_forecast_is_refused():
         check_pre_is_march(forecast, INPUTS / EFO_FILE_NAME)
 
 
-def test_the_committed_post_document_reproduces_from_the_pdf():
+def test_the_committed_post_document_reproduces_from_the_october_tables():
     outlook = _outlook_forecast()
     saved = json.loads((INPUTS / POST_FILE_NAME).read_text())
-    doc = read_post_document_from_pdf(
-        OCT_PDF,
-        OCT_TEXT,
+    doc = read_post_document(
+        INPUTS / OCT_TABLES,
         outlook,
         saved["label"],
         saved["source"]["url"],
     )
     assert doc["series"] == saved["series"]
-    assert {k: v for k, v in doc["source"].items()} == saved["source"]
-    # Table A.1 has no CPIH, rents, mortgage interest or non-labour income
-    missing = {k for k, v in doc["series"].items() if v["values"] is None}
-    assert missing == {
-        "cpih",
-        "rent",
-        "mortgage_interest",
-        "non_labour_income",
-    }
+    assert doc["source"]["file_sha256"] == saved["source"]["file_sha256"]
+    # The detailed tables carry every series, CPIH, rents, mortgage interest
+    # and non-labour income included.
+    assert not [k for k, v in doc["series"].items() if v["values"] is None]
     # The committed outlook carries it, and no longer says post repeats pre
     published = json.loads(COMMITTED.read_text())
     assert STALE_POST_NOTE not in published["meta"]["notes"]

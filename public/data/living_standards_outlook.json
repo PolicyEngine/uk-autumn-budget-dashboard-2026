@@ -1652,7 +1652,7 @@
             "post": [
               {
                 "year": "2027",
-                "value": 0.041
+                "value": 0.045
               },
               {
                 "year": "2028",
@@ -1667,7 +1667,7 @@
                 "value": 0.031
               }
             ],
-            "post_source": "England social rent policy cap: OBR calendar-year CPI for the year before + 1%; 2026 set by September 2025 CPI outturn (not an OBR forecast)"
+            "post_source": "England social rent policy cap: September CPI + 1%; 2026 and 2027 set by the September 2025 and 2026 CPI outturns, later years by OBR calendar-year CPI for the year before (not an OBR forecast)"
           },
           {
             "key": "mortgage_interest",

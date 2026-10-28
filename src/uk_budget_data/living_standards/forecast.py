@@ -65,6 +65,10 @@ STALE_POST_NOTE = (
 )
 
 SOCIAL_RENT_FIXED_YEAR = 2026  # set by September 2025 CPI outturn
+# September CPI outturns that set a later year's cap: April 2027 is
+# September 2026 CPI (ONS D7G7, published 21 October 2026) + 1%, not a
+# forecast.
+PUBLISHED_SEPTEMBER_CPI = {2026: 0.035}
 
 
 def _series_by_key(forecast: dict) -> dict:
@@ -76,7 +80,10 @@ def _pre(series: dict) -> dict[int, float]:
 
 
 def compute_post(
-    forecast: dict, parsed: dict, absent: Optional[dict] = None
+    forecast: dict,
+    parsed: dict,
+    absent: Optional[dict] = None,
+    published_september_cpi: Optional[dict] = None,
 ) -> dict:
     """Post values (fractions by year) and source per series key.
 
@@ -84,9 +91,14 @@ def compute_post(
     EFO PDF's Table A.1 has no CPIH, for example): that series gets
     ``values: None`` and the reason as its source. Any other series must be
     read. Raises ForecastTableError naming every series and year it lacks,
-    beyond the gaps CARRIED_YEARS allows.
+    beyond the gaps CARRIED_YEARS allows. ``published_september_cpi``
+    (default PUBLISHED_SEPTEMBER_CPI) sets social rent where the September
+    CPI behind it is published; the March check passes {}, since the March
+    forecast was made before it.
     """
     absent = absent or {}
+    if published_september_cpi is None:
+        published_september_cpi = PUBLISHED_SEPTEMBER_CPI
     by_key = _series_by_key(forecast)
     missing_keys = [
         k for k in by_key if k not in parsed and k not in absent
@@ -155,7 +167,7 @@ def compute_post(
                 continue
             # The year before may precede the years shown (2026 for 2027):
             # read_post_document reads it from the EFO too.
-            cpi = cpi_post.get(y - 1)
+            cpi = published_september_cpi.get(y - 1, cpi_post.get(y - 1))
             if cpi is None and "cpi" in parsed:
                 cpi = parsed["cpi"].values.get(y - 1)
             if cpi is None:
@@ -167,9 +179,10 @@ def compute_post(
         out["social_rent"] = {
             "values": values,
             "source": (
-                "England social rent policy cap: OBR calendar-year CPI for "
-                "the year before + 1%; 2026 set by September 2025 CPI "
-                "outturn (not an OBR forecast)"
+                "England social rent policy cap: September CPI + 1%; 2026 "
+                "and 2027 set by the September 2025 and 2026 CPI outturns, "
+                "later years by OBR calendar-year CPI for the year before "
+                "(not an OBR forecast)"
             ),
             "carried": [],
         }
@@ -194,7 +207,9 @@ def check_pre_is_march(forecast: dict, efo: Path) -> None:
         }
     )
     computed = compute_post(
-        forecast, read_forecast(efo, [years[0] - 1, *years])
+        forecast,
+        read_forecast(efo, [years[0] - 1, *years]),
+        published_september_cpi={},
     )
     wrong = [
         key

@@ -6,7 +6,7 @@
     "file_sha256": "96795d1747bb5a4978c7fb768689d5fd31f568e5223db8a94b1bd92ba7f6c118",
     "url": "https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/"
   },
-  "read_at": "2026-10-28T14:59:13+00:00",
+  "read_at": "2026-10-28T15:08:13+00:00",
   "series": {
     "cpi": {
       "values": {
@@ -102,12 +102,12 @@
     },
     "social_rent": {
       "values": {
-        "2027": 0.041,
+        "2027": 0.045,
         "2028": 0.044,
         "2029": 0.031,
         "2030": 0.031
       },
-      "source": "England social rent policy cap: OBR calendar-year CPI for the year before + 1%; 2026 set by September 2025 CPI outturn (not an OBR forecast)",
+      "source": "England social rent policy cap: September CPI + 1%; 2026 and 2027 set by the September 2025 and 2026 CPI outturns, later years by OBR calendar-year CPI for the year before (not an OBR forecast)",
       "carried": []
     }
   }

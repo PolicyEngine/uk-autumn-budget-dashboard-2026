@@ -272,10 +272,10 @@ def test_the_fuel_duty_path_by_hand():
     assert rates["2026"] == 0.5295
     # 2027-28 (6 April 2027 to 5 April 2028, 366 days): 52.95p to 30 June
     # (86 days), then 60.59p (the OBR's July 2027 rate, EFO October 2026
-    # paragraph 3.19) to 31 March 2028 (275), then 63.20p (x 1.043, October
+    # paragraph 3.19) to 31 March 2028 (275), then 63.21p (x 1.0432, October
     # RPI for 2027) from 1 April 2028 (5)
     assert rates["2027"] == pytest.approx(
-        (86 * 0.5295 + 275 * 0.6059 + 5 * 0.6320) / 366, abs=1e-6
+        (86 * 0.5295 + 275 * 0.6059 + 5 * 0.6321) / 366, abs=1e-6
     )
     # Later years are current law's own, written for every scored year
     # (the parameter is uprated: policyengine-uk #2430)
