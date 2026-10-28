@@ -59,7 +59,7 @@ export const GLOSSARY = {
   ownRuns: {
     term: "Policies run on their own",
     meaning:
-      "Each policy simulated alone against current law; adding these up leaves out how policies interact, and a policy that uses modelled values in place of the survey's changes the baseline too.",
+      "Each policy simulated alone against current law; adding these up leaves out how policies interact.",
   },
   static: {
     term: "Static estimates",

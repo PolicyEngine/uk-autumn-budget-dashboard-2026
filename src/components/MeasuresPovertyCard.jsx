@@ -320,8 +320,8 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
               </>,
               interaction && interaction.name !== "Interaction" && (
                 <>
-                  Why it includes a baseline difference:{" "}
-                  <MethodLink anchor={METHOD_ANCHORS.limitations}>Policies added up</MethodLink>.
+                  <MethodLink anchor={METHOD_ANCHORS.limitations}>Policies added up</MethodLink> explains the baseline
+                  difference.
                 </>
               ),
             ],

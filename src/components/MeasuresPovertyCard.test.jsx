@@ -206,14 +206,29 @@ describe("the Poverty sub-tab's measures pair", () => {
     expect(about.querySelector("[data-zero-measure]")).toBeNull();
     // The card says each fact once: the people rule is in Methodology
     expect(about).not.toHaveTextContent(/nearest 1,000/);
-    // Every policy is selected, the student loan one among them, so a gap
-    // step, when the data have one, is named for the baseline difference
-    // and links to Methodology (the local files' gap is below rounding)
-    const gap = measures.querySelector(".wf-interaction .wf-label");
-    if (gap) {
-      expect(gap).toHaveTextContent(/baseline difference/);
-      expect(within(about).getByRole("link", { name: "Policies added up" })).toHaveAttribute("href", "?tab=methodology#method-limitations");
-    }
+  });
+
+  it("names a gap step for the baseline difference when the Plan 2 measure is selected, and links to Methodology", async () => {
+    // The tracked files' gap is below rounding, so move the package's 2027
+    // figure by 0.05pp to make one
+    const shift = (r, key) => (r[key] === undefined || r[key] === "" ? r[key] : String(Number(r[key]) - 0.05));
+    const shifted = metrics.map((r) =>
+      r.reform_id === COMBINED && Number(r.year) === 2027
+        ? { ...r, poverty_change_pp: shift(r, "poverty_change_pp"), poverty_abs_bhc_change_pp: shift(r, "poverty_abs_bhc_change_pp") }
+        : r,
+    );
+    render(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <PovertyMeasuresRow rows={shifted} policies={catalogue.measures} selectedPolicies={ALL} selectedYear={2027} />
+      </MeasureCatalogueProvider>,
+    );
+    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which policies move poverty/ }, { timeout: 5000 });
+    const measures = heading.closest(".charts-stack > div");
+    await waitFor(() => expect(measures.querySelector(".wf-interaction .wf-label")).toHaveTextContent(/^Interaction and baseline difference$/), { timeout: 5000 });
+    fireEvent.click(within(measures).getByRole("button", { name: "About this chart" }));
+    const about = measures.querySelector(".chart-more-info");
+    expect(about).toHaveTextContent(/The “Interaction and baseline difference” step is the gap/);
+    expect(within(about).getByRole("link", { name: "Policies added up" })).toHaveAttribute("href", "?tab=methodology#method-limitations");
   });
 });
 

@@ -413,7 +413,7 @@ function MethodologyTab({ onShowTab }) {
                   },
                 ],
                 ["Absolute change", "The average change in household net income per household, in £ a year."],
-                ["Relative change", "The decile's total change as a percentage of its total baseline net income."],
+                ["Relative change", "The decile's total change as a percentage of its total baseline net income, which includes public services in kind, as for inequality."],
               ]}
             />
           </Topic>
@@ -448,7 +448,9 @@ function MethodologyTab({ onShowTab }) {
                   "Inequality",
                   <>
                     The relative change in the <Term id="gini">Gini coefficient</Term> of{" "}
-                    <Term id="equivalised">equivalised</Term> household net income, people weighted.
+                    <Term id="equivalised">equivalised</Term> household net income, people weighted.{" "}
+                    This income includes public services in kind, such as the NHS and schools, and is
+                    after indirect taxes, so the VAT and fuel duty policies change it.
                   </>,
                 ],
                 [
@@ -646,7 +648,7 @@ function MethodologyTab({ onShowTab }) {
               items={[
                 [
                   "Income",
-                  "Household net income after taxes (VAT and fuel duty included) and with benefits, divided by your household's size on the HBAI scale. Public spending in kind, such as the NHS and schools, is left out for everyone.",
+                  "Household net income after taxes (VAT and fuel duty included) and with benefits, divided by your household's size on the HBAI scale. Public spending in kind, such as the NHS and schools, is left out for everyone, unlike in the inequality and decile figures.",
                 ],
                 [
                   "Tenths",
