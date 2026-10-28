@@ -765,10 +765,11 @@ function MethodologyTab({ onShowTab }) {
           </Topic>
           <Topic title="Economic assumptions" preview="One OBR forecast behind the assumptions and weights">
             <p className="method-more">
-              The Budget figures grow CPI, RPI, earnings and house prices at the rates of the{" "}
-              <SourceLink id="obr_efo_current" />, in the baseline and the reform alike; other series
-              keep policyengine-uk&apos;s March 2026 path, and the weights keep the certified dataset's
-              calibration. Current law&apos;s fuel duty is the OBR&apos;s 60.59p a litre from April 2027,
+              The Budget figures grow prices, earnings, rents, mortgage interest, other incomes and
+              council tax at the rates of the{" "}
+              <SourceLink id="obr_efo_current" />, in the baseline and the reform alike; only the fuel
+              volumes behind fuel duty keep policyengine-uk&apos;s March 2026 path, and the weights keep
+              the certified dataset's calibration. Current law&apos;s fuel duty is the OBR&apos;s 60.59p a litre from April 2027,
               then rises each April with that forecast&apos;s RPI.
             </p>
           </Topic>
