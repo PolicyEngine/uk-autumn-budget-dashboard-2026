@@ -32,7 +32,7 @@ describe("the growth sentences", () => {
   it("does not call +0.1 and 0 an equal change at both ends", () => {
     expect(changeWords(0.1, 0)).toBe("barely change income growth at either end");
     // A near-zero average with one year past 0.2pp is not "barely" (round 3)
-    expect(changeWords(-0.1, -0.1, 0.35)).toBe("change average income growth little at either end");
+    expect(changeWords(-0.1, -0.1, 0.35)).toBe("change income growth little at either end");
     expect(changeWords(-0.1, -0.1, 0.15)).toBe("barely change income growth at either end");
     expect(changeWords(0.4, 0.3)).toBe("change income growth about equally at both ends");
     expect(changeWords(0.1, 0.6)).toBe("change income growth more at the top");

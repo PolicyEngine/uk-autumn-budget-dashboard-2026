@@ -63,7 +63,7 @@ describe("Growth across the distribution, with the selected measures", () => {
     expect(screen.getByRole("link", { name: "twin" })).toBeTruthy();
     expect(screen.getAllByText(/Effect \(pp\)/).length).toBeGreaterThan(0);
     const sentence = document.querySelector(".chart-description").textContent;
-    expect(sentence).toMatch(/^The policies (barely )?change (average )?income growth/);
+    expect(sentence).toMatch(/^The policies (barely )?change income growth/);
     // The years behind it named, in pp as the axis (round 3)
     expect(sentence).toMatch(/(on average over|from) \d{4}-\d{2} to \d{4}-\d{2}/);
     expect(sentence).toMatch(/pp/);

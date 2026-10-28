@@ -53,7 +53,7 @@ export const BARELY_PP = 0.2;
 // average is not "barely"
 export function changeWords(bottom, top, largest = 0) {
   if (nearZero(bottom, top)) {
-    return largest < BARELY_PP ? "barely change income growth at either end" : "change average income growth little at either end";
+    return largest < BARELY_PP ? "barely change income growth at either end" : "change income growth little at either end";
   }
   if (Math.abs(top - bottom) < 0.15) return "change income growth about equally at both ends";
   return top > bottom ? "change income growth more at the top" : "change income growth more at the bottom";
