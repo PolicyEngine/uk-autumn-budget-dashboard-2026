@@ -1,2 +1,30 @@
 # Reviewed exceptions. See README.md for the fields.
-[]
+#
+# Each one binds to the artifact's outputs_sha256 and the comparison's
+# comparator_sha256: it lapses if the measure is regenerated with different
+# outputs or any Treasury figure or mapping behind it changes. Refresh both
+# digests (and residual_bn) from reconciliation.json after the final
+# regeneration.
+- measure_id: household_energy_payment_2026
+  fiscal_year: "2026-27"
+  residual_bn: 0.656
+  explanation_class: devolved
+  explanation: >-
+    Table 6.1 row 1 (-£2,625m) covers more than the payment we model, £100
+    to households in council tax bands A to D in England only. Budget 2026
+    paragraph 3.5: "a £2.6 billion Household Energy Payment ... £100 payment
+    for households in bands A-D in England from January 2027. The devolved
+    governments will receive their share of funding through the Barnett
+    formula, which will enable them to provide similar support." Paragraph
+    3.6: "this Budget provides £100 million additional funding for local
+    authorities in England to provide further targeted support to households
+    acutely impacted by rising energy bills, some of whom are in council tax
+    bands above A-D." Neither the Barnett share nor the £100m is modelled;
+    the policy costings document has no page for this measure, so the split
+    of the £2.6bn is not published. Ours, -£1.969bn, is about 20 million
+    households at £100 (paragraph 3.5's "up to 20 million households").
+    Decided by Vahid, 28 October 2026; María to confirm.
+  reviewer: vahid-ahmadi
+  accepted_at: "2026-10-28T15:30:00Z"
+  outputs_sha256: 07f3c82d557a12ed13094291e5b6c30666447fef161cace174a93cd98af11cca
+  comparator_sha256: 6c69569b984736453a87ae5751c1fba71799f71c4cba0fce9f07683bab694565

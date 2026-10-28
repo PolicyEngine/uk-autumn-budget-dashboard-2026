@@ -1675,3 +1675,140 @@ def test_reconciliation_does_not_depend_on_mapping_order(millions, rng):
         for o in (order, shuffled)
     )
     assert first == second
+
+
+# Budget 2026 (Vahid, 28 October 2026, option (a)): no static costing is
+# published, so the gate compares the post-behavioural figure, with a wider
+# band for measures whose costing includes behaviour the model leaves out.
+BEHAVIOURAL = Policy(
+    comparator_basis="post_behavioural", includes_behaviour=["m"]
+)
+
+
+def post(year, value):
+    return source(year, value, basis="post_behavioural")
+
+
+@pytest.mark.parametrize(
+    "pe,status", [(1.24, PASS), (0.76, PASS), (1.26, FAILED), (0.74, FAILED)]
+)
+def test_a_measure_whose_costing_includes_behaviour_gets_the_wider_band(
+    pe, status
+):
+    result = run({2027: pe}, [post(2027, 1.0)], policy=BEHAVIOURAL)
+    (row,) = result["rows"]
+    assert row["status"] == status
+    assert row["comparator"]["basis"] == "post_behavioural"
+    assert row["allowance_bn"] == pytest.approx(0.25)
+    assert row["allowance_band"] == "includes_behaviour"
+
+
+def test_a_measure_not_listed_keeps_the_ordinary_band():
+    policy = Policy(
+        comparator_basis="post_behavioural", includes_behaviour=["other"]
+    )
+    result = run({2027: 1.2}, [post(2027, 1.0)], policy=policy)
+    (row,) = result["rows"]
+    assert row["status"] == FAILED
+    assert row["allowance_bn"] == pytest.approx(0.1)
+    assert "allowance_band" not in row
+
+
+def test_the_wider_band_keeps_the_floor_and_a_printed_zero_its_rounding():
+    assert allowance_bn(0.04, BEHAVIOURAL, includes_behaviour=True) == (
+        pytest.approx(0.05)
+    )
+    assert allowance_bn(0.0, BEHAVIOURAL, includes_behaviour=True) == (
+        BEHAVIOURAL.zero_tolerance_bn
+    )
+    result = run({2027: 0.01}, [post(2027, 0.0)], policy=BEHAVIOURAL)
+    assert result["rows"][0]["status"] == FAILED
+
+
+def test_a_post_behavioural_gate_does_not_wait_for_a_static_figure():
+    result = run({2027: 1.0}, [post(2027, 1.0)], policy=BEHAVIOURAL)
+    assert result["summary"]["status"] == PASS
+    # The static gate, with only a post-behavioural figure, still waits
+    static = run({2027: 1.0}, [post(2027, 1.0)])
+    assert static["summary"]["status"] == AWAITING_SOURCE
+
+
+@pytest.mark.parametrize(
+    "fields,message",
+    [
+        ({"includes_behaviour": ["m"]}, "post_behavioural comparator"),
+        (
+            {
+                "comparator_basis": "post_behavioural",
+                "includes_behaviour": "m",
+            },
+            "list of measure ids",
+        ),
+        (
+            {
+                "comparator_basis": "post_behavioural",
+                "includes_behaviour": ["m", "m"],
+            },
+            "twice",
+        ),
+        (
+            {
+                "comparator_basis": "post_behavioural",
+                "includes_behaviour": [""],
+            },
+            "non-empty",
+        ),
+        (
+            {
+                "comparator_basis": "post_behavioural",
+                "includes_behaviour": ["m"],
+                "behavioural_relative_tolerance": 0.05,
+            },
+            "at least the ordinary",
+        ),
+        (
+            {
+                "comparator_basis": "post_behavioural",
+                "includes_behaviour": ["m"],
+                "behavioural_absolute_floor_bn": 0.01,
+            },
+            "at least the ordinary",
+        ),
+        ({"behavioural_relative_tolerance": float("nan")}, "behavioural"),
+    ],
+)
+def test_the_behavioural_band_is_refused_where_it_cannot_apply(
+    fields, message
+):
+    with pytest.raises(ReconciliationInputError, match=message):
+        Policy(**fields)
+
+
+def test_the_committed_policy_gates_budget_2026_on_post_behavioural():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    policy = load_policy(root / "data_inputs/treasury/policy.yaml")
+    assert policy.comparator_basis == "post_behavioural"
+    assert set(policy.includes_behaviour) == {
+        "domestic_electricity_zero_vat",
+        "fuel_duty_rise_deferral",
+        "carers_allowance_earnings_taper",
+        "trading_allowance_raise",
+        "unearned_income_rates_up",
+    }
+    # Their costings state no behaviour, or there is none to cost
+    assert (
+        "state_pension_income_tax_protection" not in policy.includes_behaviour
+    )
+    assert "household_energy_payment_2026" not in policy.includes_behaviour
+    # The committed exceptions load: Household Energy Payment 2026-27 only
+    (entry,) = load_exceptions(root / "data_inputs/treasury/exceptions.yaml")
+    assert (entry.measure_id, entry.fiscal_year) == (
+        "household_energy_payment_2026",
+        "2026-27",
+    )
+    assert entry.explanation_class == "devolved"
+    # The returned policy serialises (reconciliation.json)
+    result = run({2027: 1.0}, [post(2027, 1.0)], policy=policy)
+    json.dumps(result)
