@@ -69,7 +69,7 @@ export const UNMODELLED_MEASURES = [
     reaches:
       "Universal Credit claimants whose pay in a month is high enough to end their award, and who claim again within six months.",
     household:
-      "Earnings up to £2,500 above the level at which an award stops, such as a one-off bonus, are not carried into a new claim to reduce its first payments.",
+      "With the threshold at £2,500, not £300, earnings up to £2,500 above where an award stops, such as a one-off bonus, are not carried into a new claim.",
     costings: [{ row: 8, values: [0, -140, 0, 0, 0, 0] }],
     notModelled:
       "The model works out Universal Credit over a whole year rather than month by month, so it has no surplus earnings rule.",
@@ -142,7 +142,7 @@ export const UNMODELLED_MEASURES = [
       "The government has asked Ofgem to abolish standing charges on domestic gas bills in Great Britain. The Budget puts the standing charge at £108 a year on average for a typical billpayer. Suppliers are to recover the costs through gas unit rates instead, and the government will set out targeted mitigation. Electricity standing charges are to be reformed, with details in 2027.",
     reaches: "Around 23 million homes, on the government's estimate.",
     household:
-      "Bills fall for low gas users and rise for high ones, before mitigation. The Treasury puts around 60% of account-holding households at about £45 a year less.",
+      "Before mitigation, bills fall for light users and rise for heavy ones; the Treasury puts about 60% of account-holding households at £45 a year less, with no figure for others.",
     costings: [],
     noCosting:
       "Table 6.1 has no row for it. Suppliers are to recover the standing charge's costs through gas unit rates instead.",
@@ -202,7 +202,7 @@ export const UNMODELLED_MEASURES = [
       "The State Pension rises each year by the highest of 2.5%, inflation, or the increase needed to keep its value relative to earnings at the level reached in April 2029. Until then it rises by the highest of 2.5%, inflation or earnings growth.",
     reaches: "Current and future State Pension recipients, from April 2030.",
     household:
-      "The pension rises each April by at least the higher of 2.5% and inflation, and by less than earnings when it is above its April 2029 value relative to earnings.",
+      "The pension rises by at least the higher of 2.5% and inflation; above its April 2029 level relative to earnings, it rises less than earnings when earnings outpace both.",
     costings: [],
     noCosting:
       "Table 6.1 has no row for it. On the OBR's forecast the State Pension rises by 2.5% in both 2030-31 and 2031-32 under either rule, so the change does not affect spending in those years. The government estimates that State Pension spending would be £15 billion a year lower by the late 2030s than under the current Triple Lock; the OBR says the long-term effect depends heavily on how earnings, inflation and the 2.5% floor move relative to each other.",
@@ -255,7 +255,7 @@ export const UNMODELLED_MEASURES = [
       "The duty on machine games with stakes over £1 or prizes over £100 rises from 20% to 25%. From 1 April 2028, machine suppliers become liable for the duty on machines they own under profit-sharing arrangements.",
     reaches: "Venues with higher-stake machines, which the Budget says are commonly found in adult gaming centres.",
     household:
-      "The duty is charged on the businesses that run the machines, not on players.",
+      "The duty is charged on the businesses that run the machines; any effect on households comes through the stakes and prizes offered, or as owners and staff.",
     costings: [{ row: 56, values: [0, 135, 150, 145, 145, 145] }],
     notModelled: "The data this dashboard uses hold no household spending on gambling.",
     sources: [budget("paragraphs 2.49 and 6.225")],
@@ -271,7 +271,7 @@ export const UNMODELLED_MEASURES = [
       "The VAT rate does not change: the marketplace collects the VAT these sellers owe. Personal sales and second-hand goods are outside the rules.",
     costings: [{ row: 46, values: [0, 165, 320, 270, 250, 265] }],
     notModelled:
-      "The model charges VAT on households' spending as if sellers pay it in full, so collecting unpaid VAT changes nothing in it.",
+      "The model charges VAT on households' spending, scaled to total receipts, with no measure of VAT sellers leave unpaid, so collecting it changes nothing in the model.",
     sources: [budget("paragraphs 2.44 and 6.154")],
   },
   {
@@ -285,7 +285,7 @@ export const UNMODELLED_MEASURES = [
       "Business rates are paid by businesses on their property, not by households. The Budget puts the relief at an average of over £3,000 per pub next year.",
     costings: [{ row: 12, values: [5, -160, -115, -5, -5, -5] }],
     notModelled:
-      "This dashboard measures household incomes, and does not trace taxes on business property through to them.",
+      "The model attributes business rates to households through shareholdings, as a share of total receipts, with no reliefs, so a relief for pubs changes nothing in it.",
     sources: [budget("paragraphs 3.21 and 6.189")],
   },
   {
@@ -296,7 +296,7 @@ export const UNMODELLED_MEASURES = [
       "A new £4.7 billion scheme gives first-time buyers in England government equity loans of up to 20%, with a deposit of 2.5% (15% at most) and a five-year interest-free period. Income caps are £110,000 a household outside London and £140,000 inside it. Price caps follow local median prices, with £650,000 in inner London and £500,000 in outer London.",
     reaches: "Around 70,000 first-time buyers, on the government's estimate.",
     household:
-      "A smaller deposit and a government loan of up to 20%, interest-free for five years: hundreds of pounds a month for the typical buyer, the Budget says.",
+      "A smaller deposit and a government loan of up to 20%, interest-free for five years; the Budget says the typical buyer saves hundreds of pounds a month.",
     costings: [
       {
         row: 37,
