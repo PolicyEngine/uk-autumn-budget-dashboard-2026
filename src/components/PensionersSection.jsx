@@ -776,8 +776,8 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
           info={{
             how: perMeasure
               ? [
-                  "No published run covers this selection together, so each row is one policy simulated on its own.",
-                  "The rows' shares can't be added up across policies.",
+                  // Each row's policy on its own is in the description, as SharesCard's (round 3)
+                  "No published run covers this selection together, so the rows' shares can't be added up across policies.",
                 ]
               : ["Shares come from one run of the whole selection, so they include how the policies interact."],
             caveats: [

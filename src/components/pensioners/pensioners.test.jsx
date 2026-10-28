@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render as renderReact, screen } from "@testing-library/react";
+import { fireEvent, render as renderReact, screen, within } from "@testing-library/react";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
 import PensionersSection from "../PensionersSection";
 import { expectStandardDownloads } from "../../test/downloadMenus";
@@ -202,6 +202,38 @@ describe("PensionersSection", () => {
     expect(screen.queryByRole("link", { name: "Household calculator" })).toBeNull();
     // Every card, the dumbbell drawn in HTML too, offers CSV, PNG and SVG
     expect(expectStandardDownloads(document.body)).toBe(4);
+  });
+});
+
+describe("Winners and losers with no run of the whole selection", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, text: async () => `${toCsv(fixture())}\n` })));
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("says once, in one line, that the rows' shares can't be added up; each policy on its own is in the description", async () => {
+    // The same measures with no combined run published
+    const noCombined = buildMeasureCatalogue({
+      manifest: {
+        measures: Object.fromEntries(POLICIES.map((policy) => [policy.id, { name: policy.name, status: "approved", years: [2026, 2027], unsupported_years: [], outputs_sha256: "a".repeat(64) }])),
+        combined: {},
+      },
+      budgetary: POLICIES.map((policy, index) => ({ reform_id: policy.id, reform_name: policy.name, year: 2027, value: index === 0 ? -1 : 1 })),
+      tablesByKey: Object.fromEntries(ALL.map((id) => [id, {}])),
+    });
+    renderReact(
+      <MeasureCatalogueProvider catalogue={noCombined}>
+        <PensionersSection selectedPolicies={ALL} selectedYear={2027} policies={POLICIES} />
+      </MeasureCatalogueProvider>,
+    );
+    const card = (await screen.findByRole("heading", { name: /Winners and losers, 2027-28/ })).closest(".pensioners-shares");
+    expect(card).toHaveTextContent(/each selected policy on its own/);
+    fireEvent.click(within(card).getByRole("button", { name: "About this chart" }));
+    expect(card).toHaveTextContent("No published run covers this selection together, so the rows' shares can't be added up across policies.");
+    expect(card.textContent).not.toMatch(/simulated on its own/);
+    expect(card.textContent.match(/added up across policies/g)).toHaveLength(1);
   });
 });
 
