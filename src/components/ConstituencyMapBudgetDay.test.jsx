@@ -133,11 +133,14 @@ describe("ConstituencyMap on Budget day", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
     const group = screen.getByRole("radiogroup", { name: "Policy" });
-    // No combined run is published, and fuel duty has no constituency rows
+    // No combined run is published (listed first, unavailable: AH1), and
+    // fuel duty has no constituency rows
     expect([...group.querySelectorAll('[role="radio"]')].map((radio) => radio.textContent)).toEqual([
+      "All selected policies",
       "2 child limit repeal",
       "Rail fares freeze",
     ]);
+    expect(screen.getByRole("radio", { name: "All selected policies" })).toBeDisabled();
     expect(screen.getByRole("radio", { name: "2 child limit repeal" })).toHaveAttribute("aria-checked", "true");
     fireEvent.click(screen.getByRole("radio", { name: "Rail fares freeze" }));
     await waitFor(() =>

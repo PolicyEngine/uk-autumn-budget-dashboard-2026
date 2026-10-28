@@ -141,6 +141,7 @@ const GRADIENT_ID = "map-legend-gradient";
  */
 export function legendEntries() {
   return [
+    { fill: CATEGORY_COLOURS.little_change, stroke: NO_DATA_STROKE, label: "No change" },
     { fill: UNCERTAIN_FILL, label: CATEGORY_LABELS[TOO_UNCERTAIN] },
     {
       halves: [`url(#${approximatePatternId("large_gain")})`, `url(#${approximatePatternId("large_loss")})`],
