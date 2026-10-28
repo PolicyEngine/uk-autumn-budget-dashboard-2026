@@ -463,3 +463,33 @@ def test_area_provenance_has_a_declared_review_kind(repo):
     assert any(
         "unexpected fields" in problem for problem in run(repo).problems
     )
+
+
+def test_a_receipt_with_withheld_summary_figures_passes(repo):
+    """A summary figure the floor withheld is an empty cell its receipt
+    names (disclosure_floor.thin_metrics): the intended outcome, so the
+    check refuses neither the receipt nor the table."""
+    directory = "public/data/artifacts/m/0123456789abcdef"
+    floor = {
+        "survey_households": 3,
+        "checked": True,
+        "thin_cells": [
+            {"table": "metrics", "year": 2027, "groups": ["people_affected"]}
+        ],
+        "thin_cells_in_tables": False,
+    }
+    receipt = write(
+        repo,
+        f"{directory}/receipt.json",
+        json.dumps({"dashboard": {"disclosure_floor": floor}}),
+    )
+    metrics = write(
+        repo,
+        f"{directory}/metrics.csv",
+        "reform_id,reform_name,year,people_affected,gini_change,"
+        "poverty_change_pp,poverty_change_pct\nm,M,2027,,0.1,0.2,0.3\n",
+    )
+    names = [str(p.relative_to(repo)) for p in (receipt, metrics)]
+    write_review(repo, [entry(repo, name) for name in names])
+    track(repo)
+    assert run(repo).problems == []

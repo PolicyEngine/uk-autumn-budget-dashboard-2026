@@ -894,3 +894,170 @@ def test_a_poverty_column_is_withheld_exactly_when_thin(survey, data):
         assert found == {}
     if count(child) == 0:
         assert not any(c.startswith("child_") for c in withheld)
+
+
+def test_a_withheld_figure_is_written_empty_recorded_and_shown(monkeypatch):
+    """A withheld summary figure is the intended outcome, unlike a thin
+    decile cell: the run is written with an empty cell, its receipt names
+    the table, year and column, and the gate stages, makes provisional and
+    approves it; the public data check finds nothing to refuse."""
+    import importlib.util
+    from pathlib import Path
+
+    from tests.publication_support import World
+    from tests.test_publication_flow import YEARS, fake_process, reform
+    from uk_budget_data.models import DataConfig
+    from uk_budget_data.publication import generate
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.artifacts import RECEIPT_FILE, read_receipt
+    from uk_budget_data.publication.publish import approve, stage
+    from uk_budget_data.publication.tables import (
+        POVERTY_INEQUALITY_COLUMNS,
+        parse_csv,
+    )
+
+    found = {
+        ("metrics", 2027): ["people_affected"],
+        ("poverty_inequality", 2028): [
+            "child_poverty_abs_bhc_change_pp",
+            "child_poverty_abs_bhc_change_pct",
+        ],
+    }
+
+    def floor_withholds(subject, job, baseline, reformed, result):
+        result.metrics = floor.withhold_metrics(result.metrics, found)
+        return [], floor.floor_record(found)
+
+    values = {"alpha": {2027: -1.0, 2028: -2.0}}
+    process = fake_process(values)
+
+    def with_poverty_measures(*args):
+        result = process(*args)
+        for row in result.metrics:
+            row.update({c: 0.5 for c, _ in POVERTY_INEQUALITY_COLUMNS})
+        return result
+
+    monkeypatch.setattr(generate, "_apply_disclosure_floor", floor_withholds)
+    world = World()
+    try:
+        monkeypatch.setattr(
+            generate, "code_revision", lambda root: world.revision()
+        )
+        (reference,) = generate.generate_artifacts(
+            [reform("alpha")],
+            DataConfig(years=YEARS),
+            artifacts_root=world.artifacts,
+            generator_argv=["test"],
+            build=lambda dataset, scenario=None: world.sim(),
+            process=with_poverty_measures,
+        ).written
+        path = Path(reference.path)
+        metrics = (path / "metrics.csv").read_bytes()
+        rows = {row["year"]: row for row in parse_csv("metrics", metrics)}
+        assert rows[2027]["people_affected"] is None
+        assert rows[2028]["people_affected"] == 8.0
+        # The empty cell itself, as the page reads it
+        (line,) = [x for x in metrics.split(b"\n") if b",2027," in x]
+        assert line.split(b",")[3] == b""
+        poverty = parse_csv(
+            "poverty_inequality",
+            (path / "poverty_inequality.csv").read_bytes(),
+        )
+        by_year = {row["year"]: row for row in poverty}
+        assert by_year[2028]["child_poverty_abs_bhc_change_pp"] is None
+        assert by_year[2028]["child_poverty_abs_bhc_change_pct"] is None
+        assert by_year[2027]["child_poverty_abs_bhc_change_pp"] == 0.5
+        record = read_receipt(reference.path)["dashboard"]["disclosure_floor"]
+        assert record == floor.floor_record(found)
+        assert record["thin_cells_in_tables"] is False
+        assert {
+            "table": "metrics",
+            "year": 2027,
+            "groups": ["people_affected"],
+        } in record["thin_cells"]
+        manifest = m.Manifest()
+        arguments = dict(data_root=world.data_root, inputs=world.inputs)
+        world.costing("alpha", values["alpha"])
+        world.reconcile(reference)
+        stage(manifest, reference.path, provisional=True, **arguments)
+        approve(manifest, "alpha", "Reviewer", **arguments)
+        assert manifest.measures["alpha"].status == m.APPROVED
+        script = Path(__file__).parent.parent / "scripts/check_public_data.py"
+        spec = importlib.util.spec_from_file_location("cpd_floor", script)
+        check_public_data = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(check_public_data)
+        receipt = (path / RECEIPT_FILE).read_bytes()
+        assert check_public_data.thin_cells_in_tables(receipt) is False
+    finally:
+        world.close()
+
+
+def test_a_withheld_cell_is_empty_and_reads_back_as_none():
+    """Only the columns the floor may withhold take an empty cell; NaN, or
+    an empty cell anywhere else, is still refused."""
+    from uk_budget_data.publication.tables import (
+        TableError,
+        canonical_csv,
+        parse_csv,
+    )
+
+    row = {
+        "reform_id": "a",
+        "reform_name": "A",
+        "year": YEAR,
+        "people_affected": None,
+        "gini_change": 0.1,
+        "poverty_change_pp": None,
+        "poverty_change_pct": None,
+    }
+    data = canonical_csv("metrics", [row])
+    assert data.endswith(b"\na,A,2027,,0.1,,\n")
+    assert parse_csv("metrics", data) == [row]
+    assert canonical_csv("metrics", parse_csv("metrics", data)) == data
+    with pytest.raises(TableError, match="people_affected.*missing value"):
+        canonical_csv("metrics", [{**row, "people_affected": float("nan")}])
+    with pytest.raises(TableError, match="missing value"):
+        canonical_csv("metrics", [{**row, "gini_change": None}])
+
+
+def test_an_empty_cell_the_receipt_does_not_name_is_never_staged(monkeypatch):
+    """Only the floor may leave a summary figure empty: one its receipt
+    does not record as withheld is a figure that failed, refused at every
+    level rather than shown as "Not published"."""
+    from tests.publication_support import World
+    from tests.test_publication_flow import YEARS, fake_process, reform
+    from uk_budget_data.models import DataConfig
+    from uk_budget_data.publication import generate
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.publish import PublishError, stage
+
+    def floor_blanks_unrecorded(subject, job, baseline, reformed, result):
+        found = {("metrics", 2027): ["people_affected"]}
+        result.metrics = floor.withhold_metrics(result.metrics, found)
+        return [], floor.floor_record({})
+
+    monkeypatch.setattr(
+        generate, "_apply_disclosure_floor", floor_blanks_unrecorded
+    )
+    values = {"alpha": {2027: -1.0, 2028: -2.0}}
+    world = World()
+    try:
+        monkeypatch.setattr(
+            generate, "code_revision", lambda root: world.revision()
+        )
+        (reference,) = generate.generate_artifacts(
+            [reform("alpha")],
+            DataConfig(years=YEARS),
+            artifacts_root=world.artifacts,
+            generator_argv=["test"],
+            build=lambda dataset, scenario=None: world.sim(),
+            process=fake_process(values),
+        ).written
+        manifest = m.Manifest()
+        arguments = dict(data_root=world.data_root, inputs=world.inputs)
+        with pytest.raises(
+            PublishError, match="metrics 2027 people_affected: empty"
+        ):
+            stage(manifest, reference.path, **arguments)
+    finally:
+        world.close()

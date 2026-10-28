@@ -5,7 +5,10 @@
  * (`uk_budget_data.publication.tables`). This reader accepts exactly those:
  * the header must be the table's columns in order, and every cell must parse
  * as its declared type. A value that is missing, not a number or not finite
- * is an error, never a zero.
+ * is an error, never a zero. The one exception is a "float_or_withheld"
+ * cell left empty: a figure the floor of survey households withholds
+ * (`disclosure_floor.thin_metrics`), read as null, which the page shows as
+ * "Not published".
  */
 
 import contract from "./contract.json";
@@ -90,7 +93,14 @@ export function parseCsv(text) {
 const INTEGER = /^-?\d+$/;
 const DECIMAL = /^-?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/;
 
+/** The kind of a figure the floor of survey households may withhold. */
+export const WITHHELD_FLOAT = "float_or_withheld";
+
 function typed(text, kind, where) {
+  if (kind === WITHHELD_FLOAT) {
+    if (text === "") return null;
+    return typed(text, "float", where);
+  }
   if (kind === "str") return text;
   if (kind === "bool") {
     if (text === "True") return true;

@@ -76,6 +76,7 @@ from uk_budget_data.publication.combine import combined_key
 from uk_budget_data.publication.disclosure_floor import (
     DECILE_TABLES,
     FLOOR_TABLES,
+    METRICS_TABLES,
 )
 from uk_budget_data.publication.receipt import (
     artifact_sha256,
@@ -579,26 +580,53 @@ def _floor_problems(dashboard: dict, tables: dict, level: str) -> list[str]:
     before the floor. No acknowledgement lifts either: such a cell rests on
     too few cases to publish."""
     floor = dashboard.get("disclosure_floor")
+    problems = _unrecorded_withheld(floor, tables)
     if floor is None:
         if level in (m.PROVISIONAL, m.APPROVED) and (
             tables.keys() & set(FLOOR_TABLES)
         ):
-            return [
+            return problems + [
                 "its receipt records no check of its household tables "
                 "against the floor of survey households, as for an artifact "
                 "generated before the floor: regenerate it"
             ]
-        return []
+        return problems
     if not floor.get("thin_cells_in_tables"):
-        return []
+        return problems
     cells = "; ".join(
         f"{cell['table']} {cell['year']} ({', '.join(cell['groups'])})"
         for cell in floor.get("thin_cells") or []
         if cell.get("table") in DECILE_TABLES
     )
-    return [
+    return problems + [
         "its tables hold cells resting on fewer than "
         f"{floor.get('survey_households')} survey households: {cells}"
+    ]
+
+
+def _unrecorded_withheld(floor: Optional[dict], tables: dict) -> list[str]:
+    """An empty cell in the summary statistics that the receipt's floor
+    record does not name as withheld: only the floor may leave one empty
+    (``disclosure_floor.thin_metrics``), so any other is a figure that
+    failed, never to be shown as "Not published"."""
+    named = {
+        (cell.get("table"), cell.get("year"), group)
+        for cell in (floor or {}).get("thin_cells") or []
+        for group in cell.get("groups") or []
+    }
+    empty = sorted(
+        {
+            (table, row["year"], column)
+            for table in METRICS_TABLES
+            for row in tables.get(table) or []
+            for column, value in row.items()
+            if value is None and (table, row["year"], column) not in named
+        }
+    )
+    return [
+        f"{table} {year} {column}: empty, but its receipt does not record "
+        "it withheld by the floor of survey households"
+        for table, year, column in empty
     ]
 
 

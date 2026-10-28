@@ -23,7 +23,9 @@ whose decile tables have a cell resting on fewer than the floor of survey
 households (``disclosure_floor``) is written with a warning, and its
 receipt names the cells, so the gate never stages or shows it; under
 ``UK_BUDGET_THIN_DECILES=refuse`` it is refused once its figures are made,
-before anything is written. The age table's thin cells are withheld.
+before anything is written. The age table's thin cells are withheld, and
+so are the summary statistics' thin figures (people affected and the
+poverty changes), which the receipt names.
 """
 
 import atexit
@@ -587,7 +589,9 @@ def _apply_disclosure_floor(
     subject: str, job: ArtifactRun, baseline, reformed, result: ReformResult
 ) -> tuple[list[str], Optional[dict]]:
     """Hold a run's household tables to the floor of survey households
-    (``disclosure_floor``): withhold the age table's thin cells, return a
+    (``disclosure_floor``): withhold the age table's thin cells and the
+    summary statistics' thin figures (``disclosure_floor.thin_metrics``,
+    recorded by table, year and column, never a figure), return a
     warning naming a thin decile cell (or, when the run was planned under
     ``UK_BUDGET_THIN_DECILES=refuse``, ``job.refuse_thin_deciles`` True,
     refuse the run), and make the binned scatter count survey households
@@ -649,6 +653,11 @@ def _apply_disclosure_floor(
     result.age_impact = disclosure_floor.withhold_thin_age_rows(
         result.age_impact, found
     )
+    withheld = disclosure_floor.thin_metrics(baseline, reformed, years, survey)
+    result.metrics = disclosure_floor.withhold_metrics(
+        result.metrics, withheld
+    )
+    found.update(withheld)
     household_ids = baseline.calculate(
         "household_id", period=years[0], map_to="household"
     ).values
