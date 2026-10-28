@@ -529,14 +529,11 @@ def _electricity_vat_description() -> str:
     if _electricity.PRE_BUDGET_ZERO_RATE_IN_MEASURE:
         return (
             "VAT on domestic electricity is 0% instead of 5% from "
-            f"1 October 2026 to {end_text}: in Great "
-            "Britain to March 2027 and across the UK from April 2027. The "
-            "model's baseline has no zero rate, so the measure covers the "
-            "whole period, as the Treasury costs it. It applies to "
-            "electricity spending only. Each year carries its share of a "
-            "year's electricity use, not a share of its days (DESNZ Energy "
-            "Trends Table 5.5): 2026-27 the October to March share (about "
-            "57%), 2027-28 the April to June share (about 22%)."
+            f"1 October 2026 to {end_text}. It applies in Great Britain "
+            "from October 2026 and across the UK from April 2027. It covers "
+            "electricity only, not gas. Each year counts its share of a "
+            "year's electricity use: about 57% in 2026-27 (October to "
+            "March) and 22% in 2027-28 (April to June)."
         )
     return (
         "The zero rate of VAT on domestic electricity, "
