@@ -4,7 +4,7 @@
 
 Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
 
-> **Sign-off is off from Budget day evening (28 October 2026).** `REQUIRED = False` in [`src/uk_budget_data/sign_off.py`](../src/uk_budget_data/sign_off.py) turns off every human sign-off this runbook describes: a pull request merges on GitHub's review alone. No public file needs a row in `data_inputs/public_data_review.csv`, no hand-written modifier is held for a two-person attestation (`scripts/draft_attestation.py` is not needed), and no step waits for a second signer or for the Reconciler's rows. Where a step below says to attest, sign or write review rows, skip it. `publish review-rows` is optional: it still deletes the artifacts no current entry names. Every automated check still blocks: record-level identifiers, the floor of survey households and its withheld cells, `validate_public`, the area-code guard, file digests, certification, responsiveness, completeness, reconciliation and combined-run membership. A changed boundary file still needs its `reference_geography` row, which is the area-code guard's record. The README's "Review and sign-off" says how to turn sign-off back on.
+> **Sign-off is off from Budget day evening (28 October 2026).** `REQUIRED = False` in [`src/uk_budget_data/sign_off.py`](../src/uk_budget_data/sign_off.py) turns off every human sign-off this runbook describes: a pull request merges once `main`'s required checks pass, with no signing step. No public file needs a row in `data_inputs/public_data_review.csv`, no hand-written modifier is held for a two-person attestation (`scripts/draft_attestation.py` is not needed), and no step waits for a second signer or for the Reconciler's rows. Where a step below says to attest, sign or write review rows, skip it. Writing review rows is optional, but `publish review-rows` still does the clearing up: the public-file checks refuse any file under `public/data/artifacts/` that no listed entry names, and the command deletes those. Every automated check still blocks: record-level identifiers, the floor of survey households and its withheld cells, `validate_public`, the area-code guard, file digests, certification, responsiveness, completeness, reconciliation and combined-run membership. A changed boundary file still needs its `reference_geography` row, which is the area-code guard's record. The README's "Review and sign-off" says how to turn sign-off back on.
 
 ## Roles
 
@@ -1263,8 +1263,8 @@ tools/deploy-test-link.sh [household-api-url]   # default: the Modal test app; o
 ```
 
 - It refuses unless `public/data/manifest.json` exists, has at least one provisional measure (so the page shows the "Provisional" banner), and isn't the manifest production serves.
-- It links the checkout, builds with `next build` (skipping `check-public-files`, which correctly refuses unsigned rehearsal data), deploys, and checks the link returns 200. `vercel.json`, `.env.local`, `.gitignore` and `.vercel/` are restored on exit, and nothing is committed.
-- **Rule:** this is a team link, not publication. Real publication is still the signed path: #207, then `main`, then the production Vercel deploy.
+- It links the checkout, builds with `next build` (skipping `check-public-files`, which refuses unsigned rehearsal data while sign-off is on), deploys, and checks the link returns 200. `vercel.json`, `.env.local`, `.gitignore` and `.vercel/` are restored on exit, and nothing is committed.
+- **Rule:** this is a team link, not publication. Real publication is still the gated path: #207, then `main` (signed while sign-off is on), then the production Vercel deploy.
 
 ## Rollback
 

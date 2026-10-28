@@ -381,6 +381,22 @@ def contract(root: Path, required: bool) -> None:
     path.write_text(json.dumps({"sign_off_required": required}))
 
 
+def listing(root: Path, artifact: str, files=()) -> dict:
+    """A manifest for this Budget listing one approved artifact, whose
+    receipt binds ``files``: the page lists them, so the check reaches
+    the rule under test. Returns the receipt's dashboard to fill in."""
+    from uk_budget_data.publication import manifest as m
+
+    manifest = {
+        "schema": m.SCHEMA,
+        "release": m.CURRENT_RELEASE,
+        "budget": m.CURRENT_BUDGET,
+        "measures": {"m": {"status": m.APPROVED, "artifact": artifact}},
+    }
+    write(root, "public/data/manifest.json", json.dumps(manifest))
+    return {"files": {name: "0" * 64 for name in files}}
+
+
 @needs_node
 @pytest.mark.parametrize("required", [None, True, False])
 def test_the_build_check_reads_the_switch_from_the_tree_contract(
@@ -448,9 +464,9 @@ def test_with_sign_off_off_the_build_check_still_refuses_what_no_review_allows(
     write(tree, "public/data/extra.csv", header + ",survey_value\n")
     receipt = "public/data/artifacts/m/0123456789abcdef/receipt.json"
     floor = {"thin_cells_in_tables": True, "thin_cells": []}
-    write(
-        tree, receipt, json.dumps({"dashboard": {"disclosure_floor": floor}})
-    )
+    dashboard = listing(tree, "artifacts/m/0123456789abcdef")
+    dashboard["disclosure_floor"] = floor
+    write(tree, receipt, json.dumps({"dashboard": dashboard}))
     write(tree, check_public_data.AREA_ROUTING_FILE, '{"area_views": "x"}\n')
     write(tree, "public/data/area_provenance.json", '{"survey_value": 12}')
     assert run(tree) == [
@@ -477,11 +493,13 @@ def test_with_sign_off_off_the_build_check_still_checks_withheld_cells(tree):
             {"table": "winners_losers", "year": 2027, "groups": ["1", "all"]},
         ],
     }
-    write(
+    dashboard = listing(
         tree,
-        f"{base}/receipt.json",
-        json.dumps({"dashboard": {"disclosure_floor": floor}}),
+        "artifacts/m/0123456789abcdef",
+        ["distributional_impact.csv", "winners_losers.csv"],
     )
+    dashboard["disclosure_floor"] = floor
+    write(tree, f"{base}/receipt.json", json.dumps({"dashboard": dashboard}))
     for table, column, labels, value in (
         ("distributional_impact", "value", ["1st"], 0.0),
         ("winners_losers", "avg_change", ["1", "all"], None),
@@ -501,3 +519,118 @@ def test_with_sign_off_off_the_build_check_still_checks_withheld_cells(tree):
         f"{base}/receipt.json: distributional_impact 2027 1 publishes a value "
         "in a withheld cell"
     ]
+
+
+def run_on(root: Path, day: str, sign_off: bool) -> list[str]:
+    """The build's check on a given day, with the switch given."""
+    source = (
+        f"import {{ checkPublicFiles }} from {json.dumps(SCRIPT.as_uri())};\n"
+        "console.log(JSON.stringify(checkPublicFiles("
+        f"{json.dumps(str(root))}, new Date({json.dumps(day + 'T12:00:00Z')}), "
+        f"{json.dumps(sign_off)})));\n"
+    )
+    output = subprocess.run(
+        [node, "--input-type=module", "-e", source],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    return json.loads(output)
+
+
+@needs_node
+def test_the_build_check_knows_the_listed_statuses():
+    from uk_budget_data.publication import manifest as m
+
+    source = (
+        f"import {{ LISTED_STATUSES }} from {json.dumps(SCRIPT.as_uri())};\n"
+        "console.log(JSON.stringify(LISTED_STATUSES));\n"
+    )
+    output = subprocess.run(
+        [node, "--input-type=module", "-e", source],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert json.loads(output) == list(m.LISTED)
+
+
+@needs_node
+def test_with_sign_off_off_the_build_check_publishes_only_listed_files(tree):
+    """As scripts/check_public_data.py: every file of the staged entry
+    (delta) and of a stray generation, and each reconciliation.json, which
+    no receipt binds, is refused; publish review-rows writes no row for
+    them."""
+    contract(tree, False)
+    fixture = REPO / "src" / "test" / "fixtures" / "publication"
+    shutil.copytree(fixture, tree / "public" / "data")
+    stray = tree / "public/data/artifacts/alpha/aaaaaaaaaaaaaaaa"
+    shutil.copytree(stray.parent / "d68eb084c02699c1", stray)
+    unlisted = sorted(
+        path.relative_to(tree).as_posix()
+        for path in (tree / "public/data/artifacts").rglob("*")
+        if path.is_file()
+        and (
+            path.parts[-3] == "delta"
+            or path.parts[-2] == stray.name
+            or path.name == "reconciliation.json"
+        )
+    )
+    assert sorted(run(tree)) == [
+        f"{name}: no listed manifest entry names it" for name in unlisted
+    ]
+
+
+@needs_node
+def test_with_sign_off_off_the_build_check_guards_area_codes(tree):
+    """A file may carry more than 20 area codes only as reference
+    geography whose exact bytes a review row names (a pending one until
+    its expiry date), or as a disclosure-layer table the release index
+    binds; this repository's constituency.csv is one."""
+    contract(tree, False)
+    seats = [f"E14{n:06d}" for n in range(1, 31)]
+    rows = "\n".join(f"{code},1" for code in seats)
+    write(tree, "public/data/seats.csv", f"code,value\n{rows}\n")
+    shaped = ",".join(PUBLIC_COLUMNS)
+    cells = "\n".join(
+        ",".join(code if c == "area_code" else "x" for c in PUBLIC_COLUMNS)
+        for code in seats
+    )
+    write(tree, "public/data/shaped.csv", f"{shaped}\n{cells}\n")
+    features = ",".join(f'{{"GSScode": "{code}"}}' for code in seats)
+    for name in ("boundaries", "held", "long"):
+        write(
+            tree,
+            f"public/data/{name}.geojson",
+            f'{{"features": [{features}]}}',
+        )
+    review(
+        tree,
+        [
+            ("public/data/boundaries.geojson", "reference_geography", ""),
+            ("public/data/held.geojson", "pending", "2026-10-26"),
+            ("public/data/long.geojson", "pending", "2026-11-30"),
+            ("public/data/seats.csv", "national_table", ""),
+        ],
+    )
+    many = "carries more than 20 area codes"
+    assert run_on(tree, "2026-10-26", False) == [
+        f"public/data/long.geojson: {many}",
+        f"public/data/seats.csv: {many}",
+        f"public/data/shaped.csv: {many}",
+    ]
+    assert run_on(tree, "2026-10-27", False) == [
+        f"public/data/held.geojson: {many}",
+        f"public/data/long.geojson: {many}",
+        f"public/data/seats.csv: {many}",
+        f"public/data/shaped.csv: {many}",
+    ]
+    # Changed bytes are not the bytes reviewed.
+    write(
+        tree,
+        "public/data/boundaries.geojson",
+        f'{{"features": [{features}, {{"value": 1.5}}]}}',
+    )
+    assert f"public/data/boundaries.geojson: {many}" in run_on(
+        tree, "2026-10-26", False
+    )

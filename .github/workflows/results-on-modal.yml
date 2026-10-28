@@ -8,8 +8,8 @@ name: Results on Modal
 # It never writes to the branch. Nothing enters public/data without a human
 # commit, and Public data check and Publication gate (ci.yml) check what is
 # committed. Sign-off is off from Budget day (src/uk_budget_data/sign_off.py,
-# as the page's contract carries it), so the pull request merges on GitHub's
-# review alone; while it is on, the review row in
+# as the page's contract carries it), so the pull request merges once main's
+# required checks pass; while it is on, the review row in
 # data_inputs/public_data_review.csv goes in the same commit, signed by the
 # person who reviewed those bytes, and the summary says which rows match.
 #
@@ -176,7 +176,7 @@ jobs:
             if [ "$sign_off" = "true" ]; then
               echo "To publish: download the artifact, copy in the files you accept, review them and sign their rows in data_inputs/public_data_review.csv, in the same commit."
             else
-              echo "To publish: download the artifact, copy in the files you accept and commit them. The pull request merges on GitHub's review, with no signing step; CI's Public data check still runs the disclosure checks on every file under public/."
+              echo "To publish: download the artifact, copy in the files you accept and commit them. The pull request merges once main's required checks pass, with no signing step; CI's Public data check still runs the disclosure checks on every file under public/."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
