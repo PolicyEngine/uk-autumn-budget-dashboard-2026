@@ -3,8 +3,8 @@
 // The headline shows as soon as it is back. Five uncached calls to the
 // live API on 25 October 2026 took 14-17 seconds for the headline; on 27
 // October the test API took 14-15 seconds for the headline and 21-25 for
-// the split by policy and the sweep, with all eight policies, asked at
-// the same time.
+// the split by policy and the sweep, with all eight pre-Budget candidate
+// measures, asked at the same time.
 export const TYPICAL_CALCULATION_SECONDS = 30;
 
 // Past this, the panels say the calculation is taking longer than usual
