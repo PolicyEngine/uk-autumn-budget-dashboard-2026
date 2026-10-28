@@ -28,7 +28,7 @@ import {
   barShape,
   fiscalYearTick,
 } from "../../utils/chartTheme";
-import { ALL_BAND, COMBINATION_NOT_PUBLISHED, SINGLE_AGE_TOP, isPublished, policiesWithoutRows, singleAgeKey, singleAgeSelection, withheldPartsCaveat, withheldPartsNote } from "../../utils/ageImpact";
+import { ALL_BAND, COMBINATION_NOT_PUBLISHED, SINGLE_AGE_TOP, isPublished, policiesWithoutRows, singleAgeKey, singleAgeSelection, withheldPartsCaveat } from "../../utils/ageImpact";
 import { selectionPackageKey } from "../../utils/geography/selection";
 import { legendMembership } from "../../utils/legendMembership";
 import { PENSIONERS, ageWindow } from "../../utils/ageGroups";
@@ -69,7 +69,7 @@ export function windowTicks([first, last], ends, narrow) {
 export const agesText = ([first, last]) => `${first} to ${last >= SINGLE_AGE_TOP ? "90 and over" : last}`;
 
 // The text helpers live with the selection rule; re-exported for the tests
-export { withheldPartsCaveat, withheldPartsNote };
+export { withheldPartsCaveat };
 
 /** An age tick, the group's ends in bold teal. */
 function AgeTick({ x, y, payload, ends }) {
@@ -116,8 +116,8 @@ function AgeTooltip({ active, payload, nameOf, byMeasure }) {
  * in their colours, a five-year average through them so the shape reads
  * through single-year noise, and State Pension age marked. Options: each
  * measure's part stacked instead (the section's measure key highlights
- * them), offered but unavailable, with its reason, when a policy is too thin
- * at some age. The £ axis fits the year shown.
+ * them), offered only when no policy is too thin at some age (else the
+ * reason is in About this chart's caveats). The £ axis fits the year shown.
  */
 export default function SingleAgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, narrow, height, group = PENSIONERS, extraOptions = [], title: titleBase = "Change by single year of age", keyInLegend = false }) {
   const chartRef = useRef(null);
@@ -274,21 +274,12 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
           name={title}
           options={[
             ...extraOptions,
-            // Shown in every year: Each policy is unavailable, with its reason,
-            // when a policy is too thin at some age (never backed out of the
-            // package's own result)
-            ...(combinationUnavailable
-              ? []
-              : [
-                  {
-                    label: "Show",
-                    value: partsOffered ? show : "net",
-                    onChange: setShow,
-                    options: SHOW_OPTIONS.map((option) =>
-                      option.value === "measures" && !partsOffered ? { ...option, disabled: true, title: withheldPartsNote(withheldNames) } : option,
-                    ),
-                  },
-                ]),
+            // Offered only when every selected policy has rows at every age
+            // shown: else no Show choice at all (one usable option reads as
+            // broken), and About this chart's caveats say why
+            ...(partsOffered
+              ? [{ label: "Show", value: show, onChange: setShow, options: SHOW_OPTIONS }]
+              : []),
           ]}
         />
       </div>
