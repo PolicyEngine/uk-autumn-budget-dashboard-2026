@@ -213,6 +213,14 @@ describe("decileAverages", () => {
     expect(decileAverages(rows, ["a"], 2027)[10]).toBe(10);
     expect(decileAverages(rows, ["a"], 2028)).toBeNull();
   });
+
+  it.each([null, ""])("keeps a withheld decile %s null when adding other measures in either order", (value) => {
+    const withheld = rows.map((row) => row.reform_id === "a" && row.decile === "3" ? { ...row, avg_change: value } : row);
+    for (const ids of [["a", "b"], ["b", "a"]]) {
+      expect(decileAverages(withheld, ids, 2027)[3]).toBeNull();
+      expect(decileAverages(withheld, ids, 2027)[2]).toBe(30);
+    }
+  });
 });
 
 import { decilePercents, logEdges, overallAverage } from "./incomePosition";
@@ -221,6 +229,16 @@ describe("decilePercents and overallAverage", () => {
   const names = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"];
   const pct = ["a", "b"].flatMap((id, k) => names.map((decile) => ({ reform_id: id, year: "2027", decile, value: String((k + 1) * 0.1) })));
   const wl = ["a", "b"].map((id, k) => ({ reform_id: id, year: "2027", decile: "all", avg_change: String((k + 1) * 50) }));
+
+  it.each([null, ""])("keeps withheld percentages and the all-household average %s null", (value) => {
+    const withheldPct = pct.map((row) => row.reform_id === "a" && row.decile === "1st" ? { ...row, value } : row);
+    const withheldAll = wl.map((row) => row.reform_id === "a" ? { ...row, avg_change: value } : row);
+    for (const ids of [["a", "b"], ["b", "a"]]) {
+      expect(decilePercents(withheldPct, ids, 2027)[1]).toBeNull();
+      expect(decilePercents(withheldPct, ids, 2027)[2]).toBeCloseTo(0.3);
+      expect(overallAverage(withheldAll, ids, 2027)).toBeNull();
+    }
+  });
   it("adds up the selected measures", () => {
     expect(decilePercents(pct, ["a", "b"], 2027)[10]).toBeCloseTo(0.3);
     expect(decilePercents(pct, ["a"], 2028)).toBeNull();

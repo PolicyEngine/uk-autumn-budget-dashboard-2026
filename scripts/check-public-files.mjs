@@ -8,8 +8,8 @@
 // must carry the layer's public columns, and a CSV that carries them must be
 // reviewed as one. No public file may carry record-level identifiers, and no
 // artifact whose receipt records cells under the floor of survey households
-// left in its tables (as generation writes such a run unless
-// UK_BUDGET_THIN_DECILES=refuse; the gate never stages it). The
+// left in its tables (a whole-measure-thin run written with a warning;
+// the gate never stages it). The
 // page's area routing status takes no review entry, and must be one of the
 // few texts uk_budget_data.area_routing writes.
 //
@@ -24,6 +24,7 @@ import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import canonicalize from "canonicalize";
 import { AREA_PROVENANCE_FILE, assertAreaProvenance, assertAreaProvenanceDocument, assertAreaReceipt, assertAreaRows } from "../src/utils/publication/area.js";
+import { withholdingProblems } from "../src/utils/publication/withholding.js";
 
 const RECORD_LEVEL = /\b(?:household|benunit|person)_(?:id|weight)\b/;
 const CURRENT_RELEASE = "uk-autumn-budget-2026";
@@ -231,6 +232,39 @@ function thinCellsInTables(text) {
   }
 }
 
+function withheldFilesProblems(path, text) {
+  let receipt;
+  try { receipt = JSON.parse(text); } catch { return []; }
+  const floor = receipt?.dashboard?.disclosure_floor;
+  const problems = [];
+  const tables = {};
+  for (const table of ["distributional_impact", "winners_losers"]) {
+    for (const suffix of ["csv", "json"]) {
+      const file = join(path, "..", `${table}.${suffix}`);
+      if (!existsSync(file)) continue;
+      if (lstatSync(file).isSymbolicLink()) {
+        problems.push(`${table}.${suffix}: symbolic link`);
+        continue;
+      }
+      try {
+        let rows;
+        if (suffix === "json") rows = JSON.parse(readFileSync(file, "utf8"));
+        else {
+          const [header, ...cells] = parseCsv(readFileSync(file, "utf8"));
+          rows = cells.map((row) => Object.fromEntries(header.map((column, index) => [column, column === "year" ? Number(row[index]) : row[index]])));
+        }
+        if (!Array.isArray(rows)) throw new Error("not a table");
+        tables[table] = rows;
+        problems.push(...withholdingProblems({ [table]: rows }, floor, { partial: true }));
+      } catch (error) {
+        problems.push(`${table}.${suffix}: ${error.message}`);
+      }
+    }
+  }
+  problems.push(...withholdingProblems(tables, floor));
+  return [...new Set(problems)];
+}
+
 export function checkPublicFiles(root, today = new Date()) {
   const { required, optional } = JSON.parse(
     readFileSync(join(root, "scripts", "disclosure_public_columns.json"), "utf8"),
@@ -252,6 +286,9 @@ export function checkPublicFiles(root, today = new Date()) {
     }
     if (text !== null && name.endsWith("/receipt.json") && thinCellsInTables(text)) {
       problems.push(`${name}: its tables hold cells under the floor of survey households`);
+    }
+    if (text !== null && name.endsWith("/receipt.json")) {
+      problems.push(...withheldFilesProblems(path, text).map((problem) => `${name}: ${problem}`));
     }
     if (name === AREA_ROUTING_FILE) {
       if (text === null || !AREA_ROUTING_CONTENTS.has(text)) {

@@ -238,7 +238,8 @@ export function decileOf(position) {
  * Average change per household by decile for the selected measures, from
  * winners_losers.csv rows ({ reform_id, year, decile, avg_change }), added
  * up across the measures as the decile charts add them: { 1: £, ... 10: £ },
- * or null when a selected measure has no rows for the year.
+ * or null when a selected measure has no rows for the year. A withheld
+ * decile stays null when other measures are added.
  */
 export function decileAverages(rows, selected, year) {
   const ids = [...new Set(selected ?? [])];
@@ -249,7 +250,8 @@ export function decileAverages(rows, selected, year) {
     if (own.length < 10) return null;
     for (const row of own) {
       const decile = Number(row.decile);
-      totals[decile] = (totals[decile] ?? 0) + Number(row.avg_change);
+      const value = Number.parseFloat(row.avg_change);
+      totals[decile] = !Number.isFinite(value) || totals[decile] === null ? null : (totals[decile] ?? 0) + value;
     }
   }
   return totals;
@@ -262,7 +264,7 @@ const DECILE_NAMES = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9
  * measures, from distributional_impact.csv rows ({ reform_id, year, decile:
  * "1st".."10th", value }), added up across the measures as the decile
  * charts add them: { 1: %, ... 10: % }, or null when a selected measure has
- * no rows for the year.
+ * no rows for the year. A withheld decile stays null in the total.
  */
 export function decilePercents(rows, selected, year) {
   const ids = [...new Set(selected ?? [])];
@@ -273,7 +275,8 @@ export function decilePercents(rows, selected, year) {
     if (own.length < 10) return null;
     for (const row of own) {
       const decile = DECILE_NAMES.indexOf(row.decile) + 1;
-      totals[decile] = (totals[decile] ?? 0) + Number(row.value);
+      const value = Number.parseFloat(row.value);
+      totals[decile] = !Number.isFinite(value) || totals[decile] === null ? null : (totals[decile] ?? 0) + value;
     }
   }
   return totals;
@@ -286,8 +289,9 @@ export function overallAverage(rows, selected, year) {
   let total = 0;
   for (const id of ids) {
     const row = rows.find((r) => r.reform_id === id && Number(r.year) === year && r.decile === "all");
-    if (!row) return null;
-    total += Number(row.avg_change);
+    const value = row ? Number.parseFloat(row.avg_change) : NaN;
+    if (!Number.isFinite(value)) return null;
+    total += value;
   }
   return total;
 }
