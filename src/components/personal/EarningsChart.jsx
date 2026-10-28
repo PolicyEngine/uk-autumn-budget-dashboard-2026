@@ -580,15 +580,10 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
         </div>
       </div>
       <div className="single-year-legend chart-legend">
-        {netParts && sync?.sharedLegend ? (
-          // The Show control is above the pair; only this card's own key
-          // item (the shaded bands) stays here
-          drops.length > 0 && (
-            <span className="series-toggle-extra">
-              <span className="series-toggle-band" style={{ background: DROP_FILL }} aria-hidden="true" />
-              {DROP_ITEM.label}
-            </span>
-          )
+        {netParts && sync?.legend ? (
+          // The key shared with the marginal rate card (the same chips and
+          // state), with this card's own shaded bands after them
+          sync.legend(drops.length ? [{ key: "drop", label: DROP_ITEM.label, fill: DROP_FILL }] : [])
         ) : netParts ? (
           // The layers and the total as chips: show or hide each, hover to
           // bring one forward

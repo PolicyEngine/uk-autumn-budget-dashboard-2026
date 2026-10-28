@@ -13,47 +13,73 @@ const answer = (id, year = 2027) =>
   normaliseHouseholdImpact(file.entries.find((entry) => entry.preset_id === id && entry.year === year).response);
 
 const cards = (container) => container.querySelectorAll(".single-year-chart-pair > .single-year-card");
-const shownChips = (container) =>
-  [...container.querySelectorAll(".across-earnings-show .series-toggle-chip:not(.series-toggle-more)")].map((chip) => chip.textContent);
+const chipsOf = (card) =>
+  [...card.querySelectorAll(".single-year-legend .series-toggle-chip:not(.series-toggle-more)")].map((chip) => chip.textContent);
+const pressed = (card, name) => within(card).getByRole("button", { name }).getAttribute("aria-pressed");
 
 describe("the two Across earnings cards", () => {
-  it("share one Show control above both, which switches a component on both cards", () => {
+  it("each draw the same Show chips under their plot, one state for both", () => {
     const data = answer("middle-earner");
     const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
     const [net, rate] = cards(container);
-    // No Show chips on either card: one control above the pair
-    expect(net.querySelector(".series-toggle-chip")).toBeNull();
-    expect(rate.querySelector(".series-toggle-chip")).toBeNull();
-    const show = container.querySelector(".across-earnings-show");
-    expect(show).toHaveTextContent(/^Show on both charts/);
-    // Boxed as the section measure key: a titled bar above the pair
-    expect(show.querySelector(".series-toggle-wrap.is-section > .series-toggle-title")).toHaveTextContent("Show on both charts");
-    // What applies on either card, once each, then the total
-    const chips = shownChips(container);
+    // No box above the pair: each card's key is in its own legend row
+    expect(container.querySelector(".across-earnings-show")).toBeNull();
+    expect(container.querySelector(".series-toggle-wrap.is-section")).toBeNull();
+    expect(container).not.toHaveTextContent("Show on both charts");
+    for (const card of [net, rate]) {
+      const legend = card.querySelector(".single-year-legend");
+      // Under the plot, before the logo and About this chart
+      expect(legend.querySelector(".series-toggle-lead")).toHaveTextContent("Show:");
+      expect(legend.compareDocumentPosition(card.querySelector(".chart-footer")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    // What applies on either card, once each, then the total; the same on both
+    const chips = chipsOf(net);
+    expect(chipsOf(rate)).toEqual(chips);
     expect(chips).toContain("Personal allowance taper");
     expect(chips).toContain("Council Tax");
     expect(chips).toContain("Income tax");
     expect(chips[chips.length - 1]).toBe("Total");
     expect(new Set(chips).size).toBe(chips.length);
-    const tax = within(show).getByRole("button", { name: "Income tax" });
-    expect(tax).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(tax);
-    expect(within(show).getByRole("button", { name: "Income tax" })).toHaveAttribute("aria-pressed", "false");
-    // Those that apply on neither fold into one text toggle
-    fireEvent.click(within(show).getByRole("button", { name: /^\d+ more with no effect for you$/ }));
-    expect(within(show).getByRole("button", { name: /^Hide the \d+ with no effect$/ })).toHaveAttribute("aria-expanded", "true");
+    // A chip on one card switches it on both keys
+    expect(pressed(net, "Income tax")).toBe("true");
+    expect(pressed(rate, "Income tax")).toBe("true");
+    fireEvent.click(within(net).getByRole("button", { name: "Income tax" }));
+    expect(pressed(net, "Income tax")).toBe("false");
+    expect(pressed(rate, "Income tax")).toBe("false");
+    fireEvent.click(within(rate).getByRole("button", { name: "Income tax" }));
+    expect(pressed(net, "Income tax")).toBe("true");
+    expect(pressed(rate, "Income tax")).toBe("true");
+    // Those that apply on neither fold into one text toggle on each, opened together
+    fireEvent.click(within(rate).getByRole("button", { name: /^\d+ more with no effect for you$/ }));
+    for (const card of [net, rate]) {
+      expect(within(card).getByRole("button", { name: /^Hide the \d+ with no effect$/ })).toHaveAttribute("aria-expanded", "true");
+    }
+    expect(chipsOf(rate)).toEqual(chipsOf(net));
     // Hovering a chip says what it is, and on which chart it has no effect
-    fireEvent.mouseEnter(within(show).getByRole("button", { name: "Council Tax" }));
+    fireEvent.mouseEnter(within(net).getByRole("button", { name: "Council Tax" }));
     expect(document.querySelector(".tip[role='tooltip']")).toHaveTextContent(
       /^Council Tax: no effect on your marginal tax rate — shown on Household net income only\. The local tax on your home/,
     );
-    fireEvent.mouseLeave(within(show).getByRole("button", { name: "Council Tax" }));
-    fireEvent.mouseEnter(within(show).getByRole("button", { name: "National Insurance" }));
+    fireEvent.mouseLeave(within(net).getByRole("button", { name: "Council Tax" }));
+    fireEvent.mouseEnter(within(rate).getByRole("button", { name: "National Insurance" }));
     expect(document.querySelector(".tip[role='tooltip']")).toHaveTextContent("Employee National Insurance on earnings.");
-    fireEvent.mouseLeave(within(show).getByRole("button", { name: "National Insurance" }));
+    fireEvent.mouseLeave(within(rate).getByRole("button", { name: "National Insurance" }));
     // One view for both
     chooseOption(rate, "Change");
     expect(optionsLabel(net)).toBe("Change");
+  });
+
+  it("drop the 'Click to show or hide' hint from both keys at the first click", () => {
+    window.sessionStorage.removeItem("pe-series-toggle-hint-seen");
+    const data = answer("middle-earner");
+    const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
+    const [net, rate] = cards(container);
+    expect(net.querySelector(".series-toggle-hint")).toHaveTextContent("Click to show or hide");
+    expect(rate.querySelector(".series-toggle-hint")).toHaveTextContent("Click to show or hide");
+    fireEvent.click(within(rate).getByRole("button", { name: "Income tax" }));
+    expect(net.querySelector(".series-toggle-hint")).toBeNull();
+    expect(rate.querySelector(".series-toggle-hint")).toBeNull();
+    window.sessionStorage.removeItem("pe-series-toggle-hint-seen");
   });
 
   it("say so when the answer has no breakdown by tax and benefit, rather than silently drawing one line", () => {
