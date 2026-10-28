@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import ObrPriceCategoriesCard, { OBR_PRICE_CATEGORIES_TITLE, obrPriceSourceText } from "./ObrPriceCategoriesCard";
 import {
   categoryRows,
@@ -67,6 +67,18 @@ describe("Prices by spending category", () => {
       expect(screen.getAllByText(name).length).toBeGreaterThan(0);
     }
     expect(obrPriceSourceText(FILE.source)).toBe("OBR, Economic and fiscal outlook, March 2026, Table 1.19 (CPI category inflation)");
+  });
+
+  it("says in About this chart where the figures come from in a reader's words, and what the forecast leaves out", async () => {
+    render(<ObrPriceCategoriesCard />);
+    await screen.findByText(/^In 2026-27 the OBR expects/);
+    fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
+    const text = document.body.textContent;
+    expect(text).toContain("The OBR's figures as published (Table 1.19, CPI category inflation); nothing is calculated here.");
+    expect(text).toContain("made before the Autumn Budget 2026, so it leaves out the policies on this page that change prices.");
+    // No repository path, and the page's word for the policies
+    expect(text).not.toMatch(/tools\/|\.mjs\b/);
+    expect(text).not.toMatch(/\bcandidate\b/i);
   });
 
   it("draws a table of fiscal years in the table view", async () => {

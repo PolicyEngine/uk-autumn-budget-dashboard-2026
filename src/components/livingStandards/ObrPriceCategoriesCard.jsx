@@ -144,7 +144,7 @@ export default function ObrPriceCategoriesCard({ view = "chart", onViewChange })
     info: {
       shows: `How fast the OBR expects prices in each of its five CPI spending categories to rise each fiscal year, ${period}.`,
       how: [
-        `The OBR's figures as published (${src.table}, ${src.table_title}), read from its spreadsheet by tools/extract-obr-price-categories.mjs; nothing is calculated on this page.`,
+        `The OBR's figures as published (${src.table}, ${src.table_title}); nothing is calculated here.`,
         "A fiscal year's value (April to March) is the average of its four quarters' year-on-year growth, as the OBR's table gives it.",
       ],
       definitions: [
@@ -152,7 +152,7 @@ export default function ObrPriceCategoriesCard({ view = "chart", onViewChange })
         { term: "Financial year", meaning: "April to March, as the OBR publishes this table; the inflation measures beside it are by calendar year." },
       ],
       caveats: [
-        "This is the OBR's March 2026 forecast, made before the Autumn Budget 2026, so it leaves out the candidate VAT, fuel duty and energy bill measures, which act directly on these prices.",
+        "This is the OBR's March 2026 forecast, made before the Autumn Budget 2026, so it leaves out the policies on this page that change prices.",
         "The OBR publishes no all-items CPI in this table; CPI and the other inflation measures are in the inflation measures card, by calendar year.",
       ],
       sources: [{ label: `${src.publisher}, ${src.workbook}, ${src.table}: ${src.table_title}`, href: src.url, date: ukDay(src.release_date) }],
