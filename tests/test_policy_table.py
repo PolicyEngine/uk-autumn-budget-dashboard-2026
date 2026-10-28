@@ -1,6 +1,7 @@
 """The Policies tab's "What changes" tables (public/data/policy_parameters.json),
 read from the model by ``uk-budget-data policy-table``."""
 
+import math
 from pathlib import Path
 
 import pytest
