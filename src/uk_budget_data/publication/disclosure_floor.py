@@ -47,8 +47,12 @@ households it does not affect are that few, since it is 100 less their
 share. A withheld figure is an empty cell, and the receipt names its
 table, year and column, never a figure. Like a withheld decile cell it is
 the intended outcome, so the artifact still stages and shows.
-Differences across runs (one measure's figure against the package's) are
-not checked.
+Differences across runs are not checked. A package inherits its members'
+withheld decile cells, but not their withheld summary figures, so a
+package's poverty figure less its other members' can give back a member's
+withheld one, closely when the measures barely interact (#285 re-review,
+P1). Keyed noise (#270) closes that route: differences between noised
+figures need no check. Until it lands, the route is open.
 """
 
 import os
@@ -86,7 +90,11 @@ AGE_TABLE = "age_impact"
 # holds to its own SCATTER_MIN_HOUSEHOLDS.
 # The summary statistics' tables, whose thin figures are withheld
 # (``thin_metrics``): the headline ones in metrics, the poverty measures by
-# group in poverty_inequality.
+# group in poverty_inequality. Only their withholdable columns
+# (``tables.WITHHELD_FLOAT``: people affected and the poverty changes) are
+# counted. Their Gini, top shares and 90/10 rest on the whole-measure
+# refusal when "all" is thin, so "tables" naming them in a receipt is no
+# check of those columns.
 METRICS_TABLES = ("metrics", "poverty_inequality")
 FLOOR_TABLES = (
     *DECILE_TABLES,
