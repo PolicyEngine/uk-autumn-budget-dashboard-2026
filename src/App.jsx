@@ -932,7 +932,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
           policies: policiesLabel(selectedPolicies, POLICIES),
           provisional: provisional ? provisionalLabel(catalogue.manifest) : null,
         }
-      : { policies: value === "outlook" ? "Current law (before the Budget policies)" : null, provisional: null };
+      : { policies: value === "outlook" ? "Current law, without the Budget measures" : null, provisional: null };
 
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
