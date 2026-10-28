@@ -405,9 +405,9 @@ describe("Change by year's hover", () => {
     const { render } = await import("@testing-library/react");
     const { TrendTooltip } = await import("./TrendCard");
     const lines = [
-      { key: "16-24", label: "16 to 24", colour: "#000" },
-      { key: "all", label: "All ages", colour: "#111" },
-      { key: "65+", label: "65 and over", colour: "#222" },
+      { key: "16-24", label: "16 to 24", colour: "var(--a)" },
+      { key: "all", label: "All ages", colour: "var(--b)" },
+      { key: "65+", label: "65 and over", colour: "var(--c)" },
     ];
     const row = { year: 2029, "16-24": -5, all: -6, "65+": 1 };
     const { container } = render(
