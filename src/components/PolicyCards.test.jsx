@@ -449,14 +449,14 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
 
   it("gives each of the eight announced measures, as the real file describes it, its summary, timing, category, what changes and caveats", () => {
     const seven = [
-      ["fuel_duty_rise_deferral", "Fuel duty cut extended", "Fuel duty", "January 2027"],
-      ["state_pension_income_tax_protection", "Pension Tax Allowance", "Income tax", "April 2027"],
-      ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "VAT", "October 2026"],
-      ["property_income_rates_up", "Property income tax rates up", "Income tax", "April 2027"],
-      ["savings_income_rates_up", "Savings income tax rates up", "Income tax", "April 2027"],
+      ["fuel_duty_rise_deferral", "Fuel duty cut extended", "Fuel duty", "Jan 2027"],
+      ["state_pension_income_tax_protection", "Pension Tax Allowance", "Income tax", "Apr 2027"],
+      ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "VAT", "Oct 2026"],
+      ["property_income_rates_up", "Property income tax rates up", "Income tax", "Apr 2027"],
+      ["savings_income_rates_up", "Savings income tax rates up", "Income tax", "Apr 2027"],
       ["carers_allowance_earnings_taper", "Carer's Allowance earnings taper", "Benefits", "2030-31"],
-      ["household_energy_payment_2026", "Household Energy Payment", "Energy", "January 2027"],
-      ["trading_allowance_raise", "Trading allowance raised to £3,000", "Income tax", "April 2027"],
+      ["household_energy_payment_2026", "Household Energy Payment", "Energy", "Jan 2027"],
+      ["trading_allowance_raise", "Trading allowance raised to £3,000", "Income tax", "Apr 2027"],
     ];
     expect(Object.keys(file.measures)).toEqual(seven.map(([id]) => id));
     for (const [id, name, category, starts] of seven) {
@@ -566,15 +566,12 @@ describe("the card's frame", () => {
     }
   });
 
-  it("makes cards in a row one height, their sections in line and the footer at the bottom", () => {
-    const css = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
-    const rule = (selector) => css.match(new RegExp(`\\n${selector.replace(/[.]/g, "\\.")} \\{([^}]*)\\}`))?.[1] ?? "";
-    expect(rule(".policy-cards")).toMatch(/display: grid;/);
-    expect(rule(".policy-cards")).toMatch(/align-items: stretch;/);
-    expect(rule(".policy-card")).toMatch(/display: grid;[\s\S]*grid-row: span 5;[\s\S]*grid-template-rows: subgrid;/);
-    expect(rule(".policy-card-foot")).toMatch(/align-self: end;/);
-    expect(css).toMatch(/\.policy-card > \.policy-card-foot \{ grid-row: 5; \}/);
-    expect(css).not.toMatch(/\.policy-card\.is-bare \{[^}]*align-self/);
+  it("sizes each card to its content, rows aligned at the top, inner boxes never stretched", () => {
+    const css = readFileSync(join(__dirname, "PolicyCards.css"), "utf8");
+    const rule = (selector) => css.match(new RegExp(`\n${selector.replace(/[.]/g, "\\.").replace(/>/g, "\\s*>\\s*")} \\{([^}]*)\\}`))?.[1] ?? "";
+    expect(rule(".policy-cards")).toMatch(/align-items: start;/);
+    expect(rule(".policy-cards > .policy-card")).toMatch(/display: flex;[\s\S]*grid-row: auto;[\s\S]*grid-template-rows: none;/);
+    expect(css).toMatch(/\.policy-cards > \.policy-card > \* \{[^}]*grid-row: auto;/);
   });
 
   it("orders the cards as the Budget's Table 6.1 does, with each card's costing row and example", () => {

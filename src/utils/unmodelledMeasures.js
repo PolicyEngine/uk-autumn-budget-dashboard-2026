@@ -148,7 +148,7 @@ export const UNMODELLED_MEASURES = [
       "The State Pension rises by the highest of 2.5%, inflation, or the rise keeping its April 2029 value against earnings.",
     reaches: "Current and future State Pension recipients, from April 2030.",
     household:
-      "At least 2.5% or inflation; above its April 2029 earnings level, less than earnings when they outpace both.",
+      "The pension still rises by at least 2.5% or inflation; it can rise by less than earnings from 2030.",
     costings: [],
     noCosting:
       "Table 6.1 has no row for it. On the OBR's forecast the State Pension rises by 2.5% in both 2030-31 and 2031-32 under either rule, so the change does not affect spending in those years. The government estimates that State Pension spending would be £15 billion a year lower by the late 2030s than under the current Triple Lock; the OBR says the long-term effect depends heavily on how earnings, inflation and the 2.5% floor move relative to each other.",
