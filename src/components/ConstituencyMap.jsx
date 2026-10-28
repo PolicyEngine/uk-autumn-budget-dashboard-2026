@@ -5,7 +5,6 @@ import * as d3 from "d3";
 import { CHART_MOTION_MS, prefersReducedMotion } from "../utils/chartMotion";
 import ControlBar from "./ControlBar";
 import ChartMoreInfo from "./ChartMoreInfo";
-import Note from "./Note";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import ConstituencyTable from "./ConstituencyTable";
 import { shortNameOf } from "../utils/policyDetails";
@@ -48,7 +47,7 @@ import {
 } from "../utils/geography/palette";
 import {
   SCALE_GRADIENT,
-  colourExtent,
+  fittedExtent,
   scaleColour,
   scaleLabels,
 } from "../utils/geography/scale";
@@ -65,28 +64,21 @@ import {
   seatSummary,
   unchangedLine,
 } from "../utils/geography/seats";
-import {
-  COMBINED_CHOICE,
-  choiceLabel,
-  choiceMeasureNames,
-} from "../utils/geography/selection";
+import { choiceLabel, choiceMeasureNames } from "../utils/geography/selection";
 import {
   REGION_VIEW_ID,
   areaViewsNotAvailable,
 } from "../utils/geography/view";
 import { fiscalYearLabel } from "../utils/publication/format";
 import "./ConstituencyMap.css";
+import { STACK_APPROXIMATE_NOTE } from "../utils/geography/stack";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { CHART_COLOURS } from "../utils/chartTheme";
 import { FloatingTooltip } from "./FloatingTooltip";
 import TitleIcon from "./TitleIcon";
 import Tip, { InfoTip } from "./Tip";
-import PillSelect from "./PillSelect";
 
 const CHART_TITLE = "Constituency impacts";
-// The Policy option for all the selected policies before their map is
-// published: listed, never chosen
-const COMBINED_PENDING = "combined-pending";
 
 // The card's three views, and the URL parameter that opens the second or
 // third. The hex map is the default: every constituency the same size, so
@@ -145,16 +137,26 @@ function constituencyCsvText(table, { reform, year, yearLabel, packageChoice, la
   ]);
 }
 
+/**
+ * How stacked figures are made, said once in About this chart (and in the
+ * exported map's description): several policies with no combined run by
+ * constituency (stack.js; Vahid, 28 October).
+ */
+export const STACK_ABOUT =
+  "With several policies selected, each constituency's figure is the sum of each policy's own effect, " +
+  "so interactions between policies are not included (nationally they come to under £1m a year). " +
+  "Its 90% interval adds up the policies' own intervals, so it is wider than a combined estimate's would be. " +
+  "A figure a policy withholds for confidentiality counts as zero, and the constituency's figure is then approximate.";
+
 /** The exported map's description: what it shows, and how to read it. */
-const exportDescription = (label, outcome) =>
+const exportDescription = (label, outcome, stacked = false) =>
   `${label}. Each constituency is coloured by the size of its average ` +
   `change in household net income, in ${OUTCOME_LABELS[outcome]}. Blank ` +
   "ones have no data: not published, to protect survey respondents' " +
-  "confidentiality, or too few survey households to estimate. Some " +
-  "figures are approximate, based on fewer than 30 survey households.";
-
-/** The map's one line on local-area data, under the map. */
-export const AREA_UNCERTIFIED = "Area figures are estimates from local-area data that are not yet certified.";
+  "confidentiality, or too few survey households to estimate. " +
+  (stacked
+    ? STACK_ABOUT
+    : "Some figures are approximate, based on fewer than 30 survey households.");
 
 /**
  * The card's "About this chart". Each rule is the generator's: the
@@ -165,7 +167,7 @@ export const AREA_UNCERTIFIED = "Area figures are estimates from local-area data
  * in the key's tip (MapKey), not here.
  * `releaseKind` is the area routing's: which dataset the seats come from.
  */
-export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRouted }) {
+export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRouted, stacked = false }) {
   const shows =
     `The average change in household net income in each of the 650 Westminster ` +
     `constituencies in ${yearLabel}, ${outcome === "average_change" ? "in £ a year per household" : "as a share of household income"}.` +
@@ -181,6 +183,7 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
       // No data and approximate: said here once; the key has the No data swatch only
       "No data: the figure is not published, to protect survey respondents' confidentiality (under 10 survey households, or one or two would make up too much of it), or there are too few survey households to estimate it (its 90% interval spans more than two of the map's size bands); hover a constituency for its interval.",
       "Some figures are approximate, based on fewer than 30 survey households, so read them as a rough guide: they are coloured like the rest, and the constituency's card says so.",
+      ...(stacked ? [STACK_ABOUT] : []),
     ],
     definitions: [
       { ref: "netIncome" },
@@ -418,8 +421,8 @@ function MapKey({ outcome, extent, counts, highlight, onHighlight, placement = "
             <InfoTip
               label="How to read the key"
               content={
-                `Amber is a loss, light grey little or no change and teal a gain, on one scale from ${low} to ${high} ` +
-                "for every policy and year. No data: not published, or too few survey households to estimate. " +
+                `Amber is a loss, light grey little or no change and teal a gain, on a scale from ${low} to ${high} ` +
+                "fitted to the figures shown (larger ones take the end colours). No data: not published, or too few survey households to estimate. " +
                 "About this chart says more."
               }
             />
@@ -553,9 +556,11 @@ const CARD_GAP = 10;
 
 /**
  * Constituency results as the disclosure layer published them, for one
- * measure or the whole package, one outcome and one year. Seats are
- * coloured on the scale (approximate ones too), and drawn as no data
- * when withheld, too uncertain to place on the scale, or with no row. Nothing is summed across measures. It draws only on a
+ * measure or the whole package, one outcome and one year; for several
+ * policies with no combined run, the sum of their own rows (stack.js).
+ * Seats are coloured on the scale (approximate ones too), and drawn as no
+ * data when withheld, too uncertain to place on the scale, or with no
+ * row. It draws only on a
  * release that says it routes results by area: on one that routes none it
  * says so, and when it can't read the release's routing it says its results
  * could not be loaded, drawing nothing either way.
@@ -623,9 +628,6 @@ export default function ConstituencyMap({
     },
     [setPanelParam],
   );
-  // The card's Policy option: null for the default (combined when
-  // published, else the first selected policy with constituency results)
-  const [policyChoice, setPolicyChoice] = useState(null);
   const legendPlace = useLegendPlacement();
   const [selectedCode, setSelectedCode] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -648,21 +650,22 @@ export default function ConstituencyMap({
     boundariesReady,
     routing,
     regionalHasChoice,
-    policyOptions,
-    policyValue,
-    policyFallback,
-  } = useConstituencyView({ selectedPolicies, policies, selectedYear, outcome, policyChoice });
+  } = useConstituencyView({ selectedPolicies, policies, selectedYear, outcome });
   const policyName = (id) => shortNameOf(policies.find((policy) => policy.id === id) ?? { id });
   // On a release that routes no results by area, the card describes the
   // measure only, not how to read a map it does not draw.
   const notRouted = areaViewsNotAvailable(routing);
   const reform = view.kind === "rows" ? view.reform : null;
   const label = choiceLabel(choice, policies);
+  // Several policies, with no combined run by constituency: each seat's
+  // figure is the sum of their own (stack.js)
+  const stacked = choice.kind === "stack";
+  const several = choice.kind === "package" || stacked;
   // What the title names: the one policy shown, or the selection
   const titleSubject =
     choice.kind === "measure"
       ? policyName(choice.reform)
-      : choice.kind === "package" || choice.kind === "no-package"
+      : several || choice.kind === "no-package"
         ? "selected policies"
         : null;
   const yearLabel = fiscalYearLabel(selectedYear);
@@ -684,6 +687,17 @@ export default function ConstituencyMap({
           })
         : null,
     [features, constituencyTable, reform, selectedYear, outcome],
+  );
+
+  // The colour scale's half-width, fitted to the figures the map colours
+  // (fittedExtent): ± their 95th percentile, rounded up to a clean step
+  const colourDomain = useMemo(
+    () =>
+      fittedExtent(
+        [...(states?.values() ?? [])].filter((state) => !drawnAsNoData(state)).map((state) => state.row.value),
+        outcome,
+      ),
+    [states, outcome],
   );
 
   // The Table view: every seat's figures for the reform and year, ranked
@@ -826,7 +840,7 @@ export default function ConstituencyMap({
     const map = mapRef.current;
     if (!map || !states) return;
     const seats = map.layer.selectAll("path.constituency-path");
-    const extent = colourExtent(outcome);
+    const extent = colourDomain;
     const colourOf = (value) => scaleColour(value, extent);
     seats.each(function (feature) {
       const node = d3.select(this);
@@ -880,7 +894,7 @@ export default function ConstituencyMap({
         );
         d3.select(this).attr("stroke", stroke).attr("stroke-width", strokeWidth);
       });
-  }, [svgNode, features, geometry, states, outcome, applyStrokes, selectSeat]);
+  }, [svgNode, features, geometry, states, outcome, colourDomain, applyStrokes, selectSeat]);
 
   // The key entry hovered: the seats it covers stand out, the rest fade
   // (a style on the page only; the exported file never carries it)
@@ -895,20 +909,13 @@ export default function ConstituencyMap({
         ? constituencySentence(states, {
             outcome,
             yearLabel,
-            several: choice.kind === "package",
-            // Always which policy it describes; until the reader picks one,
-            // why this one, and that another can be chosen, in one line
+            several,
+            // Always which policy it describes, when it is one
             policy: choice.kind === "measure" ? policyName(choice.reform) : null,
-            note:
-              policyChoice !== null || policyOptions.length < 2
-                ? null
-                : policyFallback
-                  ? `no map yet for ${selectedPolicies.length > 1 ? "all the policies together" : policyName(selectedPolicies[0])}; choose another policy`
-                  : "choose another policy",
           })
         : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view.kind, states, outcome, yearLabel, choice.kind, choice.reform, policyChoice, policyOptions.length, policyFallback, selectedPolicies],
+    [view.kind, states, outcome, yearLabel, choice.kind, choice.reform, several],
   );
   useEffect(() => {
     const map = mapRef.current;
@@ -956,7 +963,9 @@ export default function ConstituencyMap({
           year: selectedYear,
           outcome,
           measures: cardMeasures,
-          label: choice.kind === "package" ? (choice.all ? "All policies" : "Selected policies") : null,
+          label: several
+            ? `${choice.all ? "All policies" : "Selected policies"}${stacked ? ", each policy's effect added up" : ""}`
+            : null,
         })
       : null;
   const card = selectedCode ? cardFor(selectedCode) : null;
@@ -1036,7 +1045,7 @@ export default function ConstituencyMap({
   // Built when a download runs, as the SVG export always was.
   const exportOptions = () => ({
     title: `${CHART_TITLE}, ${yearLabel}`,
-    description: exportDescription(label, outcome),
+    description: exportDescription(label, outcome, stacked),
     logo: CHART_LOGO,
     tooltip,
   });
@@ -1073,7 +1082,7 @@ export default function ConstituencyMap({
       reform,
       year: selectedYear,
       yearLabel,
-      packageChoice: choice.kind === "package",
+      packageChoice: several,
       label,
       names: choiceMeasureNames(choice, policies),
     });
@@ -1129,39 +1138,9 @@ export default function ConstituencyMap({
       </UnavailableNotice>
     ) : null;
 
-  // The card's choices. Which published run of the header's selection
-  // (when there is more than one) is its own Policy pill beside Options
-  // (Vahid, 28 October), so the policy shown is never folded into a
-  // summary; Options keeps how the change is shown and the view.
-  // Several policies selected and no map for all of them yet (it runs last
-  // on Budget day): All selected policies is listed first, unavailable, and
-  // the card shows one policy at a time. Singles are never summed (Pavel's
-  // review, AH1; #274 item 12)
-  // The Policy choice: its own pill before Options, naming the policy
-  // shown (Vahid, 28 October, evening): "All selected policies" (greyed
-  // out until its map is published), then every published policy with a
-  // map, by short name
-  const combinedPending =
-    selectedPolicies.length > 1 && policyOptions.length > 0 && !policyOptions.some((option) => option.value === COMBINED_CHOICE);
-  const policyPill = (policyOptions.length > 1 || combinedPending) && (
-    <PillSelect
-      variant="light"
-      name="Policy"
-      prefix="Policy"
-      value={policyValue}
-      onChange={setPolicyChoice}
-      options={[
-        ...(combinedPending
-          ? [{ value: COMBINED_PENDING, label: "All selected policies", disabled: true, title: "No map yet for all the policies together" }]
-          : []),
-        ...policyOptions.map((option) =>
-          option.value === COMBINED_CHOICE
-            ? { value: option.value, label: "All selected policies" }
-            : { value: option.value, label: policyName(option.value) },
-        ),
-      ]}
-    />
-  );
+  // The card's choices: how the change is shown, and the view. The
+  // policies are the header's selection, stacked when there are several
+  // (Vahid, 28 October), so the card has no Policy choice of its own
   const optionGroups = [
     {
       label: "Show the change as",
@@ -1205,10 +1184,7 @@ export default function ConstituencyMap({
                 Average change in household net income by constituency.
               </p>
             ) : (
-              // One paragraph: the figures only. That the map shows one
-              // policy until all of them are published is said by the
-              // Policy pill's greyed-out All selected policies (Vahid,
-              // 28 October)
+              // One paragraph: the figures only
               sentence && <p className="chart-description">{sentence}</p>
             )}
           </div>
@@ -1231,14 +1207,11 @@ export default function ConstituencyMap({
       {/* Rows shared with the card beside it: controls, plot, legend,
           then the logo. */}
       <div className="chart-controls">
-        {/* The same row in every view: the Policy pill (when there is a
-            choice), the Options pill (how the change is shown, and the
-            view) and the search box, which picks a seat on a map and
-            filters the table */}
+        {/* The same row in every view: the Options pill (how the change
+            is shown, and the view) and the search box, which picks a seat
+            on a map and filters the table */}
         <div className="map-top-bar">
-          <ControlBar name={CHART_TITLE} options={optionGroups}>
-            {policyPill}
-          </ControlBar>
+          <ControlBar name={CHART_TITLE} options={optionGroups} />
           <div className="map-search-section">
             <div className="search-container">
               <input
@@ -1293,7 +1266,12 @@ export default function ConstituencyMap({
             empty table, count or "no match" line behind it */}
         {!onMap && view.kind === "rows" && (
           <div ref={setRankingsPanel} className="rankings-panel">
-            <ConstituencyTable entries={rankingEntriesForView} metric={metric} query={searchQuery} />
+            <ConstituencyTable
+              entries={rankingEntriesForView}
+              metric={metric}
+              query={searchQuery}
+              approximateNote={stacked ? STACK_APPROXIMATE_NOTE : undefined}
+            />
           </div>
         )}
         {!onMap && view.kind === "notice" && <div className="rankings-panel rankings-panel-notice">{notice}</div>}
@@ -1304,7 +1282,7 @@ export default function ConstituencyMap({
             <MapKey
               placement={legendPlace}
               outcome={outcome}
-              extent={colourExtent(outcome)}
+              extent={colourDomain}
               counts={counts}
               highlight={keyHighlight}
               onHighlight={setKeyHighlight}
@@ -1429,13 +1407,6 @@ export default function ConstituencyMap({
       </div>
 
       <div className="chart-footer">
-        {/* Local-area results are not certified (geography.py's
-            MICROCOSM_UNCERTIFIED, policyengine.py#685): said once, here;
-            not for a release reweighting the national dataset (Vahid,
-            28 October) */}
-        {view.kind === "rows" && !notRouted && routing?.routing?.regionalReleaseKind !== "area_coded_national" && (
-          <Note>{AREA_UNCERTIFIED}</Note>
-        )}
         <ChartMoreInfo
           year={selectedYear}
           info={constituencyInfo({
@@ -1444,6 +1415,7 @@ export default function ConstituencyMap({
             outcome,
             releaseKind: routing?.routing?.regionalReleaseKind,
             notRouted,
+            stacked,
           })}
         />
       </div>

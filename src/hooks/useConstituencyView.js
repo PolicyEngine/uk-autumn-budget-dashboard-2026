@@ -4,9 +4,26 @@ import {
   useGeographyData,
 } from "./useGeographyData";
 import { hasReform } from "../utils/geography/rows";
-import { SELECTION_NOT_PUBLISHED, chooseAreaPolicy, selectionPackageKey } from "../utils/geography/selection";
+import { SELECTION_NOT_PUBLISHED, chooseSelectionReform, selectionPackageKey } from "../utils/geography/selection";
+import { stackReform, withStack } from "../utils/geography/stack";
+import { shortNameOf } from "../utils/policyDetails";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { viewState } from "../utils/geography/view";
+
+// Stacked tables, by published table and member list, so a selection's
+// stack is built once and keeps its identity across renders
+const STACKS = new WeakMap();
+
+function stackedTable(table, memberKey) {
+  if (!table || !memberKey) return table;
+  if (!STACKS.has(table)) STACKS.set(table, new Map());
+  const byMembers = STACKS.get(table);
+  if (!byMembers.has(memberKey)) {
+    const members = JSON.parse(memberKey).map(([id, name]) => ({ id, name }));
+    byMembers.set(memberKey, members.length > 1 ? withStack(table, members) : table);
+  }
+  return byMembers.get(memberKey);
+}
 
 /**
  * What the constituency views show for a selection, year and outcome: the
@@ -21,17 +38,13 @@ import { viewState } from "../utils/geography/view";
  *
  * @returns {{view: Object, choice: Object, table: Object|null,
  *   regionalTable: Object|null, boundariesReady: boolean,
- *   features: Array|null, routing: Object, regionalHasChoice: boolean,
- *   policyOptions: Array<{value: string, reform: string}>,
- *   policyValue: string|null}}
+ *   features: Array|null, routing: Object, regionalHasChoice: boolean}}
  */
 export function useConstituencyView({
   selectedPolicies = [],
   policies = [],
   selectedYear,
   outcome,
-  // The card's Policy option ("combined" or a policy id); null for the default
-  policyChoice = null,
 }) {
   const constituency = useGeographyData("constituency");
   const regional = useGeographyData("regional");
@@ -44,28 +57,36 @@ export function useConstituencyView({
   ];
   const { manifest } = useMeasureCatalogue();
   const policyIds = policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id);
-  // The map shows a published run for the header's selection: the
-  // verified combined run of exactly the selected policies (the manifest's
-  // combined entry for the set, as the other charts take it), or one
-  // selected policy's own run, as the card's Policy option chooses
-  // (chooseAreaPolicy: combined by default when published, else the first
-  // selected policy with constituency rows). Figures are never summed. With
-  // no such run the card says so.
-  const {
-    choice,
-    options: policyOptions,
-    value: policyValue,
-    fallback: policyFallback,
-  } = chooseAreaPolicy({
-    value: policyChoice,
+  // The header's selection, as the other charts take it: one policy, its
+  // own run; several, the published combined run of exactly them when the
+  // file has rows for it (chooseSelectionReform). Otherwise the map stacks
+  // the selected policies' own published rows (stack.js; Vahid, 28
+  // October), so it always follows the header and has no policy choice of
+  // its own.
+  const base = chooseSelectionReform({
     selectedIds: selectedPolicies,
     policyIds,
     reforms,
     packageKey: selectionPackageKey(manifest, selectedPolicies),
-    hasArea: (reform) => hasReform(constituency.table, reform),
   });
+  // Stacked when no combined run is published and at least one selected
+  // policy has constituency rows: every selected policy is a member (one
+  // with no rows counts as zero everywhere, and makes the figures
+  // approximate), named as the page names it
+  const noAreaRun =
+    base.kind === "no-package" || (base.kind === "package" && !hasReform(constituency.table, base.reform));
+  const stackable =
+    noAreaRun && base.members.some((id) => hasReform(constituency.table, id));
+  const memberKey = stackable
+    ? JSON.stringify(base.members.map((id) => [id, shortNameOf(policies.find((policy) => policy.id === id) ?? { id })]))
+    : null;
+  const table = stackedTable(constituency.table, memberKey);
+  const choice =
+    stackable && base.members.length > 1
+      ? { kind: "stack", reform: stackReform(base.members), members: base.members, all: base.all }
+      : base;
   let view = viewState({
-    data: constituency,
+    data: { ...constituency, table },
     choice,
     year: selectedYear,
     outcome,
@@ -97,14 +118,11 @@ export function useConstituencyView({
   return {
     view,
     choice,
-    table: constituency.table,
+    table,
     regionalTable: regional.table,
     features: boundaries.features,
     boundariesReady: boundaries.status === "ready",
     routing,
     regionalHasChoice,
-    policyOptions,
-    policyValue,
-    policyFallback,
   };
 }

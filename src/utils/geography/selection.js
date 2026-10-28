@@ -13,8 +13,8 @@ import { combinedEntryFor } from "../publication/select";
  * - otherwise the "not published yet" notice. No card picks a policy of
  *   its own: the header's Policies selector is the policy choice, and one
  *   policy never stands in silently for a selection of several. The
- *   constituency card alone offers, in its Options pill, a choice among
- *   the selection's published runs (areaPolicyOptions), named in its title.
+ *   constituency map alone, with no combined run by constituency, stacks
+ *   the selected policies' own rows (stack.js; Vahid, 28 October).
  */
 
 /**
@@ -33,12 +33,15 @@ export function choiceLabel(choice, policies) {
   if (choice.kind === "package") {
     return choice.members && !choice.all ? "Selected policies (combined)" : "All policies (the full package)";
   }
+  if (choice.kind === "stack") {
+    return choice.all ? "All policies (each policy's effect added up)" : "Selected policies (each policy's effect added up)";
+  }
   return "";
 }
 
 /** The measure names a choice covers, for export metadata. */
 export function choiceMeasureNames(choice, policies) {
-  if (choice.kind === "package" && choice.members) {
+  if ((choice.kind === "package" || choice.kind === "stack") && choice.members) {
     return choice.members.map((id) => (policies ?? []).find((policy) => policy.id === id)?.name ?? id);
   }
   if (choice.kind === "package") {
@@ -105,66 +108,4 @@ export function chooseSelectionReform({
     return { kind: "package", reform: packageKey, members, all };
   }
   return { kind: "no-package", reason, members, all };
-}
-
-/** The constituency card's Policy option for the selection's combined run. */
-export const COMBINED_CHOICE = "combined";
-
-/**
- * The constituency card's Policy options, an explicit choice in its
- * Options pill: the selection's published combined run (when one is
- * published for exactly the selected policies and the card's file has
- * rows for it), then every published policy, in the page's order, whose
- * own run the file has (which runs have area results is the file's, as
- * the bound release index and area provenance route it). Each option is
- * one published run, never a sum.
- *
- * The default follows the header's selection: its combined run, or its
- * one policy, when that has a map; else (`fallback`) the first selected
- * policy with a map, else the first policy with one, so the card never
- * says "not published" while any policy has a map. No options (null
- * default) leaves the card's notice as chooseSelectionReform gives it.
- *
- * @param {{selectedIds: Array<string>, policyIds: Array<string>,
- *   packageKey?: string|null, hasArea: (reform: string) => boolean}} options
- * @returns {{options: Array<{value: string, reform: string}>,
- *   defaultValue: string|null, fallback: boolean}}
- */
-export function areaPolicyOptions({ selectedIds, policyIds, packageKey = null, hasArea }) {
-  const ids = [...new Set(selectedIds ?? [])];
-  const order = policyIds ?? [];
-  const rank = (id) => (order.indexOf(id) < 0 ? Infinity : order.indexOf(id));
-  const options = [];
-  const combined = ids.length > 1 && typeof packageKey === "string" && hasArea(packageKey);
-  if (combined) options.push({ value: COMBINED_CHOICE, reform: packageKey });
-  // Every published policy with area results, in the page's order, the
-  // selected ones among them, so the card can always show a map
-  const singles = [...new Set([...order, ...ids])].sort((a, b) => rank(a) - rank(b)).filter((id) => hasArea(id));
-  for (const id of singles) options.push({ value: id, reform: id });
-  // The header's selection when it has a map: all of it together, or its
-  // one policy; else (`fallback`) the first selected policy with a map,
-  // else the first policy with one
-  const own = combined ? COMBINED_CHOICE : ids.length === 1 && hasArea(ids[0]) ? ids[0] : null;
-  const firstSelected = singles.find((id) => ids.includes(id)) ?? null;
-  const defaultValue = own ?? (ids.length > 1 ? firstSelected : null) ?? singles[0] ?? null;
-  const fallback = own === null && defaultValue !== null;
-  return { options, defaultValue, fallback };
-}
-
-/**
- * The card's choice for a Policy option (`value`, kept only while it is
- * offered; else the default), as chooseSelectionReform's shape: the
- * combined run as the package, a single policy as its own measure. With
- * no option, chooseSelectionReform's choice (its notice).
- */
-export function chooseAreaPolicy({ value, selectedIds, policyIds, reforms, packageKey = null, hasArea }) {
-  const { options, defaultValue, fallback } = areaPolicyOptions({ selectedIds, policyIds, packageKey, hasArea });
-  const picked = options.some((option) => option.value === value);
-  const chosen = picked ? value : defaultValue;
-  const base = chooseSelectionReform({ selectedIds, policyIds, reforms, packageKey });
-  // `fallback`: the card shows another policy than the header's selection
-  // by default, as that selection has no map yet (said in a muted line)
-  const shownInstead = !picked && fallback;
-  if (chosen === null || chosen === COMBINED_CHOICE) return { choice: base, options, value: chosen, fallback: false };
-  return { choice: { kind: "measure", reform: chosen }, options, value: chosen, fallback: shownInstead };
 }

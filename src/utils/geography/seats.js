@@ -267,7 +267,8 @@ export const APPROXIMATE_SEAT_NOTE = "Approximate: based on fewer than 30 survey
 export function disclosureNote(row) {
   if (!row || row.tier === "withheld") return null;
   const interval = `90% interval ${formatInterval(row.outcome, row.lo, row.hi)}`;
-  if (row.tier === "approximate") return `${APPROXIMATE_SEAT_NOTE}; ${interval}`;
+  // A stacked figure says why it is approximate (stack.js)
+  if (row.tier === "approximate") return `${row.note ?? APPROXIMATE_SEAT_NOTE}; ${interval}`;
   if (row.direction === "too_close_to_call") return interval;
   return null;
 }
@@ -303,7 +304,8 @@ function figureOf(row) {
  * measure follows under "Of which". Measures with no change are counted,
  * not listed.
  *
- * Every figure is a published row; nothing is summed or derived.
+ * Every figure is a published row, or for several policies with no
+ * combined run their stacked sum (stack.js).
  *
  * @param {Object} options
  * @param {Object} options.feature - The seat's boundary feature.
