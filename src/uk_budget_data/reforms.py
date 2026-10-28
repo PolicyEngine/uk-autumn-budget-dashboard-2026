@@ -114,6 +114,8 @@ LHA_UNFREEZE_ID = "lha_unfreeze_2027"
 CARERS_ALLOWANCE_TAPER_ID = "carers_allowance_earnings_taper"
 STATE_PENSION_DOUBLE_LOCK_ID = "state_pension_double_lock_2030"
 HOUSEHOLD_ENERGY_PAYMENT_ID = "household_energy_payment_2026"
+TRADING_ALLOWANCE_ID = "trading_allowance_raise"
+TRADING_ALLOWANCE = "gov.hmrc.income_tax.allowances.trading_allowance"
 
 
 def _years_dict(value, years: list[int] = None) -> dict[str, any]:
@@ -878,6 +880,44 @@ def _create_household_energy_payment_2026() -> Reform:
 
 
 # =============================================================================
+# TRADING ALLOWANCE FROM £1,000 TO £3,000
+# =============================================================================
+
+# Announced in the speech (28 October 2026, 13:14): "a new trading
+# allowance, raising the amount people can earn from a new venture tax-free
+# from £1,000 to £3,000". Budget day, from the documents: TRADING_ALLOWANCE_
+# RAISED and TRADING_ALLOWANCE_FROM (2027 = from 6 April 2027; TODO). The
+# parameter is not uprated, so writing every year from the first is the
+# whole change. "New venture" may limit it to new businesses; the data
+# cannot tell new from old, so every self-employed person gets it. The
+# property allowance (£1,000) was not mentioned and is unchanged.
+TRADING_ALLOWANCE_RAISED = 3_000
+TRADING_ALLOWANCE_FROM = 2027
+
+
+def _create_trading_allowance_raise() -> Reform:
+    return Reform(
+        id=TRADING_ALLOWANCE_ID,
+        name="Trading allowance raised",
+        description=(
+            f"Candidate measure. From 6 April {TRADING_ALLOWANCE_FROM} the "
+            "trading allowance, which relieves trading receipts in place "
+            "of actual expenses, rises from £1,000 to "
+            f"£{TRADING_ALLOWANCE_RAISED:,}, for income tax and Class 4 "
+            "National Insurance. Every self-employed person gets it: the "
+            "data cannot tell a new venture from an established one. "
+            "Without gross receipts in the data, a profit within the "
+            "allowance is treated as fully relieved, so the cost may be "
+            "overstated."
+        ),
+        parameter_changes=threshold_change(
+            TRADING_ALLOWANCE,
+            _years_from(TRADING_ALLOWANCE_FROM, TRADING_ALLOWANCE_RAISED),
+        ),
+    )
+
+
+# =============================================================================
 # STATE PENSION DOUBLE LOCK FROM APRIL 2030 (not registered)
 # =============================================================================
 
@@ -994,6 +1034,8 @@ _MEASURE_FACTORIES = (
     _create_household_energy_payment_2026,
     # Announced 13:03; registered outside the package (its key is pinned)
     _create_badr_lifetime_limit_cut,
+    # Announced 13:14; outside the package
+    _create_trading_allowance_raise,
 )
 
 

@@ -167,6 +167,7 @@ DECLARED = {
     "carers_allowance_earnings_taper": set(),
     "household_energy_payment_2026": set(),
     "badr_lifetime_limit_cut": {"capital gains tax"},
+    "trading_allowance_raise": {"income tax", "National Insurance"},
     "employer_nics_secondary_threshold_raise": {"National Insurance"},
     "unearned_income_rates_up": {"income tax"},
 }

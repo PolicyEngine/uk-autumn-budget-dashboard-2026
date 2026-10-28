@@ -60,9 +60,14 @@ CANDIDATES = (
     "carers_allowance_earnings_taper",
     "household_energy_payment_2026",
     "badr_lifetime_limit_cut",
+    "trading_allowance_raise",
 )
 # Individual candidates that are not components of the combined package.
-NOT_IN_PACKAGE = ("household_energy_payment_2026", "badr_lifetime_limit_cut")
+NOT_IN_PACKAGE = (
+    "household_energy_payment_2026",
+    "badr_lifetime_limit_cut",
+    "trading_allowance_raise",
+)
 # Registered on 27 October, before its first national generation: its rows
 # are checked once budgetary_impact.csv has them.
 NOT_YET_GENERATED = (
@@ -73,6 +78,7 @@ NOT_YET_GENERATED = (
     # Announced in the Budget speech
     "household_energy_payment_2026",
     "badr_lifetime_limit_cut",
+    "trading_allowance_raise",
 )
 # Redefined on Budget day to the announced measure: budgetary_impact.csv
 # holds the candidate's figures until it is regenerated.
@@ -142,8 +148,9 @@ def test_the_package_is_the_eight_candidates():
 
     # Nine on Budget day: the eight and the Carer's Allowance taper
     assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 9
-    # and the household energy payment and BADR, registered outside it
-    assert len(reforms._MEASURE_FACTORIES) == 11
+    # and the household energy payment, BADR and the trading allowance,
+    # registered outside it
+    assert len(reforms._MEASURE_FACTORIES) == 12
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
     assert key == "combined--47727b6baf58047f"
     # The area run's package alias stands for that key
@@ -1059,6 +1066,13 @@ FIRST_YEARS = {
             "capital_gains": 800_000,
             "capital_gains_badr": 800_000,
         },
+        {},
+    ),
+    # £2,500 of trading profit on top of £30,000 of pay: relieved at 20%
+    "trading_allowance_raise": (
+        2027,
+        "income_tax",
+        {"employment_income": 30_000, "self_employment_income": 2_500},
         {},
     ),
     # A band B household in England: £100 in 2026-27 only
