@@ -343,7 +343,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Adds £100 to the income of each household in England whose council tax band is A, B, C or D, in 2026-27.",
     details:
-      "England only: the Scottish, Welsh and Northern Ireland governments receive a share of the funding instead, which is not modelled. The Treasury's £2.6bn cost likely includes that share and £100m for councils' targeted support.",
+      "England only: the Scottish, Welsh and Northern Ireland governments receive a share of the funding instead, which is not modelled. The Treasury's costing likely includes that share and funding for councils' targeted support.",
     source: {
       label: "Budget 2026",
       href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",

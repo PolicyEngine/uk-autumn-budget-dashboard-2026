@@ -778,16 +778,6 @@ function MethodologyTab({ onShowTab }) {
               winners and losers charts come from a run of the whole selection, so they include
               interactions, and show nothing for a selection with no such run.
             </p>
-            <p className="method-more">
-              Some policies replace values reported in the survey with modelled ones, and their
-              descriptions say so. That policy's own run and the run of all policies together use the
-              modelled values, while the other policies on their own use the survey's. So the effects
-              of each policy on its own need not add up to all policies together.
-              Modelled values can depend on pay, as student loan repayments do. A
-              policy that raises pay keeps the survey's values in its own run, and they do not rise
-              with the higher pay, so on its own its cost is higher, and its fall in poverty larger,
-              than in the run of all policies together.
-            </p>
           </Topic>
           <Topic title="Economic assumptions" preview="One OBR forecast behind the assumptions and weights">
             <p className="method-more">

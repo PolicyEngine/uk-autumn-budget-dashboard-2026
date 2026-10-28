@@ -451,18 +451,18 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     }
   });
 
-  it("gives each of the eight candidate measures, as the real file describes it, its summary, timing, category, what changes and caveats", () => {
-    const eight = [
+  it("gives each of the seven announced measures, as the real file describes it, its summary, timing, category, what changes and caveats", () => {
+    const seven = [
       ["fuel_duty_rise_deferral", "Fuel duty rises deferred", "Fuel duty", "January 2027"],
       ["state_pension_income_tax_protection", "State Pension income tax protection", "Income tax", "April 2027"],
-      ["warm_home_discount_top_up", "Warm Home Discount top-up", "Energy", "Winter 2026-27"],
       ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "VAT", "October 2026"],
-      ["threshold_freeze_2031_32", "Threshold freeze to 2031-32", "Income tax", "April 2031"],
-      ["plan_2_threshold_unfreeze", "Plan 2 student loan threshold unfrozen", "Student loans", "April 2027"],
-      ["employer_nics_secondary_threshold_raise", "Employer NI threshold raised", "National Insurance", "April 2027"],
-      ["unearned_income_rates_up", "Dividend, savings and property income tax up", "Income tax", "April 2027"],
+      ["unearned_income_rates_up", "Savings and property income tax up", "Income tax", "April 2027"],
+      ["carers_allowance_earnings_taper", "Carer's Allowance earnings taper", "Benefits", "April 2030"],
+      ["household_energy_payment_2026", "Household energy payment", "Energy", "Winter 2026-27"],
+      ["trading_allowance_raise", "Trading allowance raised", "Income tax", "April 2027"],
     ];
-    for (const [id, name, category, starts] of eight) {
+    expect(Object.keys(file.measures)).toEqual(seven.map(([id]) => id));
+    for (const [id, name, category, starts] of seven) {
       // The published description (reforms.py's, as the file carries it),
       // not the entry's own copy: a drift between the two fails here
       const measure = { ...published(id, name), description: file.measures[id].description };
@@ -537,7 +537,7 @@ describe("the card's frame", () => {
   });
 
   it("keeps every card's sections in one order, whatever it has", () => {
-    const ids = ["warm_home_discount_top_up", "fuel_duty_rise_deferral", "threshold_freeze_2031_32", "plan_2_threshold_unfreeze"];
+    const ids = ["household_energy_payment_2026", "fuel_duty_rise_deferral", "state_pension_income_tax_protection", "trading_allowance_raise"];
     const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
     const bare = { ...published("domestic_electricity_zero_vat", "Zero VAT"), description: "An older run's wording." };
     render(
