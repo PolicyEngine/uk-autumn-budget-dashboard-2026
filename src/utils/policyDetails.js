@@ -76,7 +76,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Applies each day's duty rate to households' petrol and diesel spending, day-weighted to fiscal years.",
     details:
-      "Held at 52.95p a litre to 30 June 2027: none of current law's rises in January, March or April 2027. From 1 July 2027 it is current law's 60.59p, which includes April 2027's RPI rise. RPI rises then resume each April from 2028. After that it costs nothing. The end date is the Budget document's. Includes the VAT on the lower pump price, with fuel spending held fixed. Fuel for vans, lorries and business use of cars is not modelled, so the figure covers households' own fuel. The official figure, the government's estimate, also covers business fuel, but counts duty only, without VAT.",
+      "Held at 52.95p a litre to 30 June 2027: none of current law's rises in January, March or April 2027. From 1 July 2027 it rises to 60.59p, our assumption for the pre-Budget rate, which includes April 2027's RPI rise. RPI rises then resume each April from 2028. After that it costs nothing. The end date is the Budget document's. Includes the VAT on the lower pump price, with fuel spending held fixed. The model leaves out fuel for vans, lorries and business use of cars, so the figure covers households' own fuel. The official figure, the government's estimate, also covers business fuel, but counts duty only, without VAT.",
     source: {
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
