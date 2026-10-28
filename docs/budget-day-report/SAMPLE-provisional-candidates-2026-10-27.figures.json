@@ -847,6 +847,90 @@
    "transform": "sum"
   },
   {
+   "section": "deciles-years",
+   "text": "+£68",
+   "value": 68.31290062507419,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2026,
+    "decile": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-years",
+   "text": "+£98",
+   "value": 98.35594443202642,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-years",
+   "text": "+£21",
+   "value": 20.936661412203673,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2028,
+    "decile": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-years",
+   "text": "+£23",
+   "value": 23.176669863496496,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2029,
+    "decile": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-years",
+   "text": "+£26",
+   "value": 25.620819099382555,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2030,
+    "decile": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-years",
+   "text": "−£110",
+   "value": -109.81919685100779,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2031,
+    "decile": "all"
+   },
+   "transform": "value"
+  },
+  {
    "section": "deciles",
    "text": "+£74",
    "value": 74.07852064631554,
@@ -3532,6 +3616,26 @@
   },
   {
    "section": "summary",
+   "text": "£4.2 billion",
+   "value": 4.157274821677502,
+   "format": "bn_words",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": [
+     2026,
+     2027,
+     2028,
+     2029,
+     2030,
+     2031
+    ]
+   },
+   "transform": "sum"
+  },
+  {
+   "section": "summary",
    "text": "+£98",
    "value": 98.35594443202642,
    "format": "gbp",
@@ -3540,6 +3644,20 @@
    "where": {
     "reform_id": "combined--a3e0b4a238c38c09",
     "year": 2027,
+    "decile": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "summary",
+   "text": "−£110",
+   "value": -109.81919685100779,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2031,
     "decile": "all"
    },
    "transform": "value"
@@ -3597,32 +3715,6 @@
     "reform_id": "combined--a3e0b4a238c38c09",
     "year": 2027,
     "age_band": "all"
-   },
-   "transform": "value"
-  },
-  {
-   "section": "summary",
-   "text": "0.00pp",
-   "value": -0.002050725619139049,
-   "format": "pp2",
-   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
-   "column": "poverty_abs_bhc_change_pp",
-   "where": {
-    "reform_id": "combined--a3e0b4a238c38c09",
-    "year": 2027
-   },
-   "transform": "value"
-  },
-  {
-   "section": "summary",
-   "text": "0.00pp",
-   "value": 0.0,
-   "format": "pp2",
-   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
-   "column": "child_poverty_abs_bhc_change_pp",
-   "where": {
-    "reform_id": "combined--a3e0b4a238c38c09",
-    "year": 2027
    },
    "transform": "value"
   }
