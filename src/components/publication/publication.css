@@ -338,6 +338,44 @@
   box-shadow: inset 0 -2px 0 var(--band-teal);
 }
 
+/* Under the copy of the bar, the row starts under the chosen view tab, as
+   --view-tab-x puts the real one (ViewTabs.jsx), with no code: first an
+   unseen copy of About and the tabs before the chosen one, laid out as the
+   bar lays them out (HomeButton.css: About pulled a tab's padding into the
+   margin, two tab gaps on to the first tab; a tab gap between tabs). The
+   row itself takes no --view-tab-x, which the real bar sets once it is on
+   the page. */
+.skeleton-sub-tabs.has-tab-lead {
+  display: flex;
+}
+
+.skeleton-tab-lead {
+  display: flex;
+  flex: none;
+  gap: var(--tab-gap, 8px);
+  height: 0;
+  margin: 0 var(--tab-gap, 8px) 0 calc(-1 * var(--tab-pad-x, 12px));
+  overflow: hidden;
+  visibility: hidden;
+}
+
+.skeleton-tab-lead .edge-about {
+  margin-right: var(--tab-gap, 8px);
+}
+
+.skeleton-sub-tabs.has-tab-lead .sub-tabs {
+  min-width: 0;
+  max-width: none;
+  margin-left: 0;
+}
+
+/* A phone's row starts at the left, as the real one (SubTabs.css) */
+@media (max-width: 600px) {
+  .skeleton-tab-lead {
+    display: none;
+  }
+}
+
 @keyframes skeleton-shimmer {
   from {
     background-position: 100% 0;
