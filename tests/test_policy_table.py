@@ -323,3 +323,27 @@ def test_the_display_follows_the_shape_not_the_measure():
     assert display_for([row(yearly([(1, 1), (1, 2), (1, 3)]))]) == "path"
     assert display_for([row(yearly([(1, 1), (2, 1)]))]) == "path"
     assert display_for([row(yearly([(1, 1), (2, 1)]))] * 3) == "table"
+
+
+def test_current_law_thresholds_are_the_engine_alone(document):
+    """The Frozen thresholds card reads current law from its own block,
+    whichever measures the package holds."""
+    table = {row["label"]: row for row in document["current_law"]["rows"]}
+    assert list(table) == [
+        "Personal allowance",
+        "Higher rate threshold",
+        "Plan 2 repayment threshold",
+    ]
+    for row in table.values():
+        assert all(p["before"] == p["after"] for p in row["points"])
+    allowance = by_key(table["Personal allowance"])
+    for year in range(2026, 2031):
+        assert allowance[str(year)] == (12_570, 12_570)
+        assert by_key(table["Higher rate threshold"])[str(year)] == (
+            50_270,
+            50_270,
+        )
+    assert by_key(table["Plan 2 repayment threshold"])["2026"] == (
+        29_385,
+        29_385,
+    )

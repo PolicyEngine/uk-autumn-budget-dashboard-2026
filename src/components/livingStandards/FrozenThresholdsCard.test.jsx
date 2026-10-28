@@ -79,8 +79,10 @@ describe("Frozen thresholds against pay: data", () => {
   });
 
   it("is null without a threshold entry", () => {
-    const { threshold_freeze_2031_32: _, ...measures } = PARAMETERS.measures;
-    expect(thresholdRows({ ...PARAMETERS, measures }, OUTLOOK)).toBeNull();
+    const { current_law: _, ...withoutCurrentLaw } = PARAMETERS;
+    expect(thresholdRows(withoutCurrentLaw, OUTLOOK)).toBeNull();
+    // Measures' rows are never read for current law
+    expect(thresholdRows({ ...withoutCurrentLaw, measures: { x: { rows: PARAMETERS.current_law.rows } } }, OUTLOOK)).toBeNull();
     expect(thresholdRows(PARAMETERS, null)).toBeNull();
   });
 
@@ -100,10 +102,11 @@ describe("Frozen thresholds against pay: card", () => {
     for (const name of ["Personal allowance and higher rate threshold", "Plan 2 student loan threshold", "Keeps pace with pay"]) {
       expect(screen.getAllByText(name).length).toBeGreaterThan(0);
     }
-    // The pound values live on Policies: the card links there, not repeats them
+    // Index values only: no pound values, and no pointer to Policies, which
+    // lists no threshold now that no measure changes one
     fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
     expect(document.body.textContent).not.toMatch(/£12,570|£50,270|£29,385/);
-    expect(screen.getByRole("link", { name: "Policies" }).getAttribute("href")).toBe("?tab=policies");
+    expect(screen.queryByRole("link", { name: "Policies" })).toBeNull();
   });
 
   it("keys the lines by its chips alone: no end labels, no legend", async () => {
@@ -125,11 +128,12 @@ describe("Frozen thresholds against pay: card", () => {
     expect([...last.cells].map((c) => c.textContent)).toEqual(["2030-31", "109.4", "91.4", "93.5"]);
   });
 
-  it("says the 2031-32 freeze year is not shown", async () => {
+  it("says 2031-32, when current law uprates the thresholds again, is not shown", async () => {
     render(<FrozenThresholdsCard data={OUTLOOK} />);
     await screen.findByText(/^By 2030-31/);
     fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
-    expect(document.body.textContent).toMatch(/earnings forecast ends in 2030, so the chart ends in 2030-31; 2031-32/);
+    expect(document.body.textContent).toMatch(/earnings forecast ends in 2030, so the chart ends in 2030-31; 2031-32, when current law uprates the thresholds again, is not shown\./);
+    expect(document.body.textContent).not.toMatch(/candidate measure/);
   });
 
   it("holds its place when the thresholds file is missing", async () => {

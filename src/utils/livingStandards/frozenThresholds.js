@@ -2,17 +2,17 @@
 // threshold and the Plan 2 student loan repayment threshold under current
 // law, each relative to the OBR's average earnings (2026-27 = 100): a
 // threshold that keeps pace with pay stays at 100, a frozen one falls.
-// The thresholds are the current-law ("before") values the Policies tab
-// reads (public/data/policy_parameters.json); earnings is the OBR March
-// 2026 growth in the outlook file (public/data/living_standards_outlook.json).
+// The thresholds are the current-law values policy_parameters.json carries
+// in its current_law block (uk-budget-data policy-table, the engine's own
+// parameters, whatever the package holds); earnings is the OBR growth in
+// the outlook file (public/data/living_standards_outlook.json).
 
 import { fittedAxis } from "../chartTheme";
 import { fyLabel, formatOneDp } from "./outlook";
 
 export const BASE_YEAR = 2026;
 
-// Each threshold: the parameter row label it is read from, in whichever
-// published entry carries it
+// Each threshold: the label of the current_law row it is read from
 export const THRESHOLDS = [
   { key: "personal_allowance", row: "Personal allowance" },
   { key: "higher_rate", row: "Higher rate threshold" },
@@ -21,9 +21,7 @@ export const THRESHOLDS = [
 
 /** A threshold's current-law value by fiscal year (start year), or null if absent. */
 export function thresholdValues(document, { row }) {
-  const found = Object.values(document?.measures ?? {})
-    .flatMap((entry) => entry?.rows ?? [])
-    .find((r) => r.label === row && r.points?.length);
+  const found = (document?.current_law?.rows ?? []).find((r) => r.label === row && r.points?.length);
   if (!found?.points?.length) return null;
   return Object.fromEntries(found.points.filter((p) => Number.isFinite(p.before)).map((p) => [p.year, p.before]));
 }

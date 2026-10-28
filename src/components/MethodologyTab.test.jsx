@@ -119,11 +119,12 @@ describe("MethodologyTab", () => {
     expect(card).toHaveTextContent("roughly half of fuel duty receipts");
   });
 
-  it("says under Policies added up which way a policy that raises pay is off on its own, naming no measure", () => {
+  it("says under Policies added up that separate runs leave out interactions, and nothing on survey values no measure replaces", () => {
     const { container } = renderTab();
     const limitations = container.querySelector(`#${METHOD_SECTIONS.limitations}`);
     const card = within(limitations).getByRole("button", { name: "Policies added up" }).closest(".method-topic");
-    expect(card).toHaveTextContent("its cost is higher, and its fall in poverty larger, than in the run of all policies together");
+    expect(card).toHaveTextContent("so they leave out interactions between policies");
+    expect(card).not.toHaveTextContent(/values reported in the survey/);
   });
 
   it("counts a change in VAT in the inequality income, not VAT itself, and says in-kind services once", () => {

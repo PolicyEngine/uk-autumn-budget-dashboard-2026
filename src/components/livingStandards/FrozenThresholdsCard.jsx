@@ -2,10 +2,9 @@
 // threshold and the Plan 2 student loan repayment threshold under current
 // law, each relative to the OBR's average earnings (2026-27 = 100).
 // Drawn beside "Earnings and other income" (ForecastSeriesSection). The
-// thresholds are the current-law values the Policies tab reads
-// (public/data/policy_parameters.json), earnings the outlook file's OBR
-// March 2026 growth; the index is computed in frozenThresholds.js. The
-// pound values are not repeated here: Policies lists them.
+// thresholds are the current-law values in policy_parameters.json's
+// current_law block (the engine's parameters), earnings the outlook file's OBR
+// March 2026 growth; the index is computed in frozenThresholds.js.
 
 import { useEffect, useState } from "react";
 import LsCard from "./LsCard";
@@ -17,7 +16,6 @@ import { DASH } from "../../utils/livingStandards/baseline";
 import { fyLabel, formatOneDp } from "../../utils/livingStandards/outlook";
 import { buildChartCsv } from "../../utils/chartCsv";
 import { loadPolicyParameters } from "../../utils/policyParameters";
-import { OPEN_VIEW_EVENT } from "../../utils/methodLink";
 import { SOURCES } from "../../utils/sources";
 import { METHOD_ANCHORS } from "../methodology/anchors";
 import { BASE_YEAR, relativeAxis, sameThresholds, thresholdRows, thresholdsSentence } from "../../utils/livingStandards/frozenThresholds";
@@ -77,22 +75,6 @@ function usePolicyParameters() {
     };
   }, []);
   return state;
-}
-
-/** A link to the Policies view: a real link, switched in place on a plain click. */
-function PoliciesLink() {
-  return (
-    <a
-      href="?tab=policies"
-      onClick={(event) => {
-        if (event.metaKey || event.ctrlKey || event.shiftKey) return;
-        event.preventDefault();
-        window.dispatchEvent(new CustomEvent(OPEN_VIEW_EVENT, { detail: { tab: "policies" } }));
-      }}
-    >
-      Policies
-    </a>
-  );
 }
 
 export default function FrozenThresholdsCard({ data, view = "chart", onViewChange }) {
@@ -156,9 +138,7 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
         <>
           The personal allowance, the higher rate threshold and the Plan 2 student loan repayment threshold under current
           law, each relative to average earnings with {fyLabel(BASE_YEAR)} = 100. A threshold that keeps pace with pay
-          stays at 100; one that falls below it takes a larger share of income into tax or repayments. The pound values
-          are on{" "}
-          <PoliciesLink />.
+          stays at 100; one that falls below it takes a larger share of income into tax or repayments.
         </>
       ),
       how: [
@@ -169,7 +149,7 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
       ],
       definitions: [PA, HR, PLAN_2, PAY].map((l) => ({ term: l.name, meaning: l.meaning })),
       caveats: [
-        `The OBR's March 2026 earnings forecast ends in 2030, so the chart ends in ${fyLabel(end)}; 2031-32, when current law uprates the thresholds again and a candidate measure would freeze them for one more year, is not shown.`,
+        `The OBR's March 2026 earnings forecast ends in 2030, so the chart ends in ${fyLabel(end)}; 2031-32, when current law uprates the thresholds again, is not shown.`,
         "Taking a calendar year's growth for the fiscal year starting in it is an approximation: the fiscal year runs from April to March.",
         "The earnings forecast is the OBR's from before the Autumn Budget.",
       ],

@@ -1035,8 +1035,58 @@ def display_for(rows: list[dict]) -> str:
     return PATH
 
 
+def current_law() -> dict:
+    """Thresholds under current law alone, whatever the package holds: the
+    Living standards "Frozen thresholds against pay" card reads them. Each
+    row's points carry the engine's value as both before and after."""
+    allowance, band = registry.PERSONAL_ALLOWANCE, registry.BASIC_RATE_BAND
+    plan_2 = registry.PLAN_2_THRESHOLD
+
+    def unchanged(value: Callable[[int], float]) -> list[dict]:
+        return _yearly(value, value)
+
+    def source(where: dict) -> dict:
+        return _source(where, where)
+
+    return {
+        "rows": [
+            _row(
+                "Personal allowance",
+                POUNDS,
+                unchanged(lambda y: engine_value(allowance, y)),
+                source(_engine_source(allowance)),
+            ),
+            _row(
+                "Higher rate threshold",
+                POUNDS,
+                unchanged(
+                    lambda y: engine_value(allowance, y)
+                    + engine_value(band, y)
+                ),
+                source(
+                    {
+                        "kind": "engine_parameter",
+                        "where": f"personal allowance plus basic rate band "
+                        f"({allowance} + {band})",
+                    }
+                ),
+                primary=False,
+                note="The personal allowance plus the basic rate band",
+            ),
+            _row(
+                "Plan 2 repayment threshold",
+                POUNDS,
+                unchanged(lambda y: engine_value(plan_2, y)),
+                source(_engine_source(plan_2)),
+                primary=False,
+            ),
+        ]
+    }
+
+
 def build() -> dict:
-    """Every candidate measure's table, in the registry's order."""
+    """Every candidate measure's table, in the registry's order, and the
+    current-law thresholds (``current_law``)."""
     measures = {}
     for measure_id in registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS:
         reform = registry.get_reform(measure_id)
@@ -1059,6 +1109,7 @@ def build() -> dict:
         },
         "years": list(POLICY_YEARS),
         "measures": measures,
+        "current_law": current_law(),
     }
 
 
