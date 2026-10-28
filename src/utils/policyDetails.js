@@ -76,7 +76,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Applies each day's duty rate to households' petrol and diesel spending, day-weighted to fiscal years.",
     details:
-      "Held at 52.95p a litre to 30 June 2027: none of current law's rises in January, March or April 2027. From 1 July 2027 it rises to 60.59p, our assumption for the pre-Budget rate, which includes April 2027's RPI rise. RPI rises then resume each April from 2028. After that it costs nothing. The end date is the Budget document's. Includes the VAT on the lower pump price, with fuel spending held fixed. The model leaves out fuel for vans, lorries and business use of cars, so the figure covers households' own fuel. The official figure, the government's estimate, also covers business fuel, but counts duty only, without VAT.",
+      "Duty stays at 52.95p a litre to 30 June 2027, skipping current law's January, March and April 2027 rises. From 1 July 2027 it rises to the OBR's 60.59p, which we assume current law reaches in April 2027. RPI rises then resume each April from 2028. After that it costs nothing. The end date is the Budget document's. Includes the VAT on the lower pump price, with fuel spending held fixed. The model leaves out fuel for vans, lorries and business use of cars, so the figure covers households' own fuel. The official figure, the government's estimate, also covers business fuel, but counts duty only, without VAT.",
     source: {
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
@@ -103,7 +103,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Cuts eligible people's income tax, never below zero; it tapers by £1 per £3 above the full new State Pension.",
     details:
-      "Total income counts the State Pension and all other income, savings interest included. So a larger State Pension, with increments or additional State Pension, reduces the allowance too. The personal allowance is unchanged. The model leaves out people reaching State Pension age after 6 October in a tax year, so it slightly understates reach and cost. Scottish taxpayers get the same allowance, at the 20% basic rate. Means-tested benefits can take back part of the allowance. Pension Credit, Housing Benefit and Council Tax Reduction count income after tax. A smaller award can end help that comes with it. Universal Credit counts pension income before tax, so changes only where the allowance cuts tax on earnings.",
+      "Total income counts the State Pension and all other income, savings interest included. So a larger State Pension, with increments or additional State Pension, reduces the allowance too. The personal allowance is unchanged. The model omits people reaching State Pension age after 6 October in a tax year, slightly understating reach and cost. Scottish taxpayers get the same allowance, at the 20% basic rate. Means-tested benefits can take back part of the allowance. Pension Credit, Housing Benefit and Council Tax Reduction count income after tax. A smaller award can end help that comes with it. Universal Credit counts pension income before tax, so changes only where the allowance cuts tax on earnings.",
     source: {
       label: "Pension Tax Allowance explainer",
       href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer",
@@ -205,7 +205,7 @@ export const POLICY_DETAILS = [
       href: "https://www.legislation.gov.uk/ukpga/2026/11/section/10",
     },
     caveats: [
-      "The extra year of the freeze is an assumption made before the Budget. The model holds incomes fixed, with no behavioural response.",
+      "The extra year of the freeze is an assumption we made before the Budget. The model holds incomes fixed, with no behavioural response.",
     ],
   },
   {
@@ -221,7 +221,7 @@ export const POLICY_DETAILS = [
     type: "Capital gains tax",
     inForce: { from: "2027-04" },
     details:
-      "The £500,000 limit is an assumption made before the Budget. The model applies the limit to each year's gains, as if earlier gains had used none of it. The figure is the extra tax on each year's disposals, most of which taxpayers pay in the January after the tax year ends.",
+      "The £500,000 limit is an assumption we made before the Budget. The model applies the limit to each year's gains, as if earlier gains had used none of it. The figure is the extra tax on each year's disposals, most of which taxpayers pay in the January after the tax year ends.",
     source: {
       label: "Business Asset Disposal Relief",
       href: "https://www.gov.uk/business-asset-disposal-relief",
@@ -244,7 +244,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Applies 15% VAT instead of 20% to households' petrol and diesel spending, day-weighted to fiscal years.",
     details:
-      "Assumes the cut passes through in full to pump prices and fuel spending is unchanged. The rate and dates are assumptions made before the Budget.",
+      "Assumes the cut passes through in full to pump prices and fuel spending is unchanged. The rate and dates are assumptions we made before the Budget.",
     source: {
       label: "VAT rates on different goods and services",
       href: "https://www.gov.uk/guidance/rates-of-vat-on-different-goods-and-services",
@@ -309,7 +309,7 @@ export const POLICY_DETAILS = [
     type: "Benefit",
     inForce: { from: "2027-04" },
     details:
-      "Rents are policyengine-uk's own projection of each area's rents, so the size of the re-set is a modelled estimate, not a published figure. Only private renters claiming Universal Credit or Housing Benefit with rent above the frozen rate gain. The benefit cap still applies, so a household at the cap gains less or nothing. Northern Ireland's rates, which follow Great Britain's, are unfrozen too.",
+      "Rents are policyengine-uk's own projection of each area's rents, so the size of the re-set is a modelled estimate, not a published figure. Only private renters claiming Universal Credit or Housing Benefit with rent above the frozen rate gain. The benefit cap still applies, so a household at the cap gains less or nothing. The measure unfreezes Northern Ireland's rates too, since they follow Great Britain's.",
     source: {
       label: "Local Housing Allowance rates (SI 2013/2978, article 4)",
       href: "https://www.legislation.gov.uk/uksi/2013/2978/article/4/made",
@@ -331,7 +331,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Sets the employer threshold at £9,100 a year (£175 a week) from 2027-28, rising with CPI from 2031-32 as current law's does; the 15% rate is unchanged.",
     details:
-      "The £9,100 threshold is an assumption made before the Budget. policyengine-uk holds each employer's total cost of employment fixed, so employers pass the National Insurance they save to employees as higher wages in the same year, and income tax and employee National Insurance are then due on it.",
+      "The £9,100 threshold is an assumption we made before the Budget. policyengine-uk holds each employer's total cost of employment fixed, so employers pass the National Insurance they save to employees as higher wages in the same year, and income tax and employee National Insurance are then due on it.",
     source: {
       label: "National Insurance Contributions (Secondary Class 1 Contributions) Act 2025, section 2",
       href: "https://www.legislation.gov.uk/ukpga/2025/11/section/2",
