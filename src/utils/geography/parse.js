@@ -192,6 +192,32 @@ function readRow(line, number, level) {
 }
 
 /**
+ * A policy whose every published seat in a year is exactly zero while
+ * other seats are withheld says nothing about where it lands: the seats
+ * with any affected survey household are withheld, and the rest are zero
+ * only because the survey has nobody affected there (the trading allowance
+ * and the Carer's Allowance taper; Vahid, 28 Oct). Those zeros are shown
+ * as no data, like the withheld seats beside them, instead of "no change".
+ * A year with nothing withheld keeps its zeros (a measure not yet in force).
+ */
+export function hideUninformativeZeros(rows) {
+  const groups = new Map();
+  for (const row of rows) {
+    const key = `${row.reform}|${row.year}|${row.outcome}`;
+    if (!groups.has(key)) groups.set(key, { withheld: 0, nonZero: 0 });
+    const group = groups.get(key);
+    if (row.tier === "withheld") group.withheld += 1;
+    else if (signOf(row.value) !== 0 || signOf(row.lo) !== 0 || signOf(row.hi) !== 0) group.nonZero += 1;
+  }
+  return rows.map((row) => {
+    const group = groups.get(`${row.reform}|${row.year}|${row.outcome}`);
+    if (row.tier === "withheld" || group.withheld === 0 || group.nonZero > 0) return row;
+    const cells = Object.freeze({ ...row.cells, value: "", lo: "", hi: "", direction: "", tier: "withheld", reason: "too_few_affected", support_band: "" });
+    return Object.freeze({ ...row, cells, value: "", lo: "", hi: "", direction: "", tier: "withheld", reason: "too_few_affected", supportBand: "" });
+  });
+}
+
+/**
  * Parse one file of results by area.
  *
  * @param {string} text - The file's text (UTF-8, RFC 4180).
@@ -224,7 +250,7 @@ export function parseGeographyTable(text, { level }) {
     return readRow(line, number, level);
   });
   try {
-    return indexRows(level, rows);
+    return indexRows(level, hideUninformativeZeros(rows));
   } catch (error) {
     throw new GeographyTableError(error.message);
   }
