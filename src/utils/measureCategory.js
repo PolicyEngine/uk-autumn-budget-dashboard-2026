@@ -23,7 +23,7 @@ export const MEASURE_CATEGORIES = [
   { label: "Student loans", icon: "cap", pattern: /student|\bplan [12345]\b|postgraduate loan|tuition/ },
   { label: "Childcare", icon: "users", pattern: /childcare|child care|nursery|free hours/ },
   { label: "Energy", icon: "flame", pattern: /warm home|energy|electricity|\bgas\b|heating|\bheat\b|ofgem|\bwhd\b/ },
-  { label: "Income tax", icon: "wallet", pattern: /income tax|personal allowance|basic rate|higher rate|additional rate|dividend|savings allowance|marriage allowance/ },
+  { label: "Income tax", icon: "wallet", pattern: /income tax|personal allowance|basic rate|higher rate|additional rate|dividend|savings allowance|marriage allowance|\btax allowance\b/ },
   { label: "Pensions", icon: "armchair", pattern: /pension|triple lock|annuit/ },
   { label: "Benefits", icon: "piggy", pattern: /universal credit|\buc\b|benefit|local housing allowance|\blha\b|tax credit|\bpip\b|disability|carer|jobseeker|\besa\b|two child|child limit|winter fuel/ },
   { label: "Council tax", icon: "landmark", pattern: /council tax/ },

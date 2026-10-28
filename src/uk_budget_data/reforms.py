@@ -440,16 +440,8 @@ _SP_UNTIL = (
 STATE_PENSION_PROTECTION_DESIGNS = {
     "tax_reduction": (
         pension_tax_allowance,
-        "Candidate measure. From 6 April 2027 to 5 April 2030, people over "
-        "State Pension age get a non-refundable income tax reduction of up "
-        "to £94 in 2027-28 (20% of the full new State Pension above the "
-        "personal allowance, rising with the State Pension), reduced by £1 "
-        "for every £3 of total income above the full new State Pension.",
-    ),
-    "total_income": (
-        state_pension_only_income_tax_allowance,
         "From 6 April 2027 to 5 April "
-        f"{_SP_LAST_YEAR + 1}, people over State Pension age whose total "
+        "2030, people over State Pension age whose total "
         "income (the State Pension, with any increments or additional "
         "State Pension, plus all other income, savings interest included) "
         "is at or below the full new State Pension (£13,036.40 in 2027-28) "
@@ -457,6 +449,15 @@ STATE_PENSION_PROTECTION_DESIGNS = {
         "income tax, worth up to £94 in 2027-28. It falls by £1 for every "
         "£3 of income above the full new State Pension, so it is gone at "
         "about £13,319 in 2027-28. The personal allowance is unchanged.",
+    ),
+    "total_income": (
+        state_pension_only_income_tax_allowance,
+        "From 6 April 2027, people over State Pension age whose total "
+        "income (the State Pension, with any increments or additional "
+        "State Pension, plus all other income, savings interest included) "
+        "is at or below the full new State Pension get an income tax "
+        "allowance of that amount; £1 of income above it takes the whole "
+        "allowance away.",
     ),
     "tapered": (
         state_pension_income_tax_allowance,
@@ -915,7 +916,7 @@ TRADING_ALLOWANCE_FROM = 2027
 def _create_trading_allowance_raise() -> Reform:
     return Reform(
         id=TRADING_ALLOWANCE_ID,
-        name=f"Trading allowance raised to £{TRADING_ALLOWANCE_RAISED:,}",
+        name="Trading allowance raised to £3,000",
         description=(
             f"From 6 April {TRADING_ALLOWANCE_FROM} the "
             "trading allowance, which relieves trading receipts in place "

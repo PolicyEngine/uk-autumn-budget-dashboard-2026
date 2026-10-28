@@ -453,13 +453,13 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
 
   it("gives each of the seven announced measures, as the real file describes it, its summary, timing, category, what changes and caveats", () => {
     const seven = [
-      ["fuel_duty_rise_deferral", "Fuel duty rises deferred", "Fuel duty", "January 2027"],
-      ["state_pension_income_tax_protection", "State Pension income tax protection", "Income tax", "April 2027"],
+      ["fuel_duty_rise_deferral", "Fuel duty cut extended", "Fuel duty", "January 2027"],
+      ["state_pension_income_tax_protection", "Pension Tax Allowance", "Income tax", "April 2027"],
       ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "VAT", "October 2026"],
-      ["unearned_income_rates_up", "Savings and property income tax up", "Income tax", "April 2027"],
-      ["carers_allowance_earnings_taper", "Carer's Allowance earnings taper", "Benefits", "April 2030"],
-      ["household_energy_payment_2026", "Household energy payment", "Energy", "Winter 2026-27"],
-      ["trading_allowance_raise", "Trading allowance raised", "Income tax", "April 2027"],
+      ["unearned_income_rates_up", "Savings and property income tax rates up", "Income tax", "April 2027"],
+      ["carers_allowance_earnings_taper", "Carer's Allowance earnings taper", "Benefits", "2030-31"],
+      ["household_energy_payment_2026", "Household Energy Payment", "Energy", "January 2027"],
+      ["trading_allowance_raise", "Trading allowance raised to £3,000", "Income tax", "April 2027"],
     ];
     expect(Object.keys(file.measures)).toEqual(seven.map(([id]) => id));
     for (const [id, name, category, starts] of seven) {
