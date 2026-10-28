@@ -479,7 +479,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     const block = screen.getByRole("region", { name: /^What changes/ });
     const note = block.querySelector(".pchg-note");
     expect(note).toHaveTextContent("0% instead of 5% in Great Britain from 1 October 2026.");
-    expect(note).toHaveTextContent("expects the zero rate to apply in Northern Ireland too from 1 April 2027");
+    expect(note).toHaveTextContent("expects the zero rate to apply in Northern Ireland too from April 2027");
     expect(note).toHaveTextContent("already law (SI 2026/987)");
     expect(within(block).queryByRole("button")).toBeNull();
     expect(block).not.toHaveTextContent(/2\.17%|3\.89%|in Great Britain,/);

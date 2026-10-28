@@ -621,7 +621,7 @@ def _electricity_where(values: dict) -> str:
     return (
         f"0% instead of 5% in Great Britain from {_day_label(first)}. The "
         "Budget expects the zero rate to "
-        "apply in Northern Ireland too from 1 April 2027, and the model "
+        "apply in Northern Ireland too from April 2027, and the model "
         "counts it there from then."
     )
 
