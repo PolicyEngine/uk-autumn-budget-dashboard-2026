@@ -2,8 +2,8 @@
   "schema": "uk-budget-dashboard/policy-parameters/v1",
   "generator": "uk-budget-data policy-table",
   "engine": {
-    "policyengine": "6.11.1",
-    "policyengine_uk": "2.151.0"
+    "policyengine": "6.10.2",
+    "policyengine_uk": "2.132.6"
   },
   "years": [
     2026,
@@ -656,11 +656,11 @@
           "source": {
             "before": {
               "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.national_insurance.class_1.employer_scale[1].threshold, at 6 April of each year, x 52 (stored weekly)"
+              "where": "policyengine-uk gov.hmrc.national_insurance.class_1.thresholds.secondary_threshold, at 6 April of each year, x 52 (stored weekly)"
             },
             "after": {
               "kind": "measure_parameter_change",
-              "where": "reforms.py secondary_threshold_raised(): gov.hmrc.national_insurance.class_1.employer_scale[1].threshold; current law elsewhere"
+              "where": "reforms.py secondary_threshold_raised(): gov.hmrc.national_insurance.class_1.thresholds.secondary_threshold; current law elsewhere"
             }
           },
           "note": "Employers pay 15% on earnings above it"
