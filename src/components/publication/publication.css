@@ -374,7 +374,7 @@
    --view-tab-x puts the real one (ViewTabs.jsx), with no code: first an
    unseen copy of About and the tabs before the chosen one, laid out as the
    bar lays them out (HomeButton.css: About pulled a tab's padding into the
-   margin, two tab gaps on to the first tab; a tab gap between tabs). It
+   margin, three tab gaps on to the first tab; a tab gap between tabs). It
    gives way, as the scrolled bar's tabs do, to an unseen copy of the
    chosen tab and the 24px after it (none after the last tab), in the
    row's own column; the band and the bar have one padding (globals.css
@@ -402,8 +402,9 @@
   visibility: hidden;
 }
 
+/* About's three gaps: the lead's own gap and two more */
 .skeleton-tab-lead .edge-about {
-  margin-right: var(--tab-gap, 8px);
+  margin-right: calc(2 * var(--tab-gap, 8px));
 }
 
 .skeleton-tab-ghost {

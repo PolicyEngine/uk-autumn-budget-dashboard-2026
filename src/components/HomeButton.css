@@ -64,9 +64,13 @@
    At every width it comes first in the row, under PolicyEngine's mark:
    pulled a tab's padding into the margin, so its icon starts on the mark's
    left edge (.title-mark, in the band's same page column) and on the page
-   content's. A divider follows it, then the tabs, two tab gaps on, the
+   content's. A divider follows it, then the tabs, three tab gaps on, the
    divider midway, so its tint and the first tab's never touch the
-   divider (Max, 28 Oct). */
+   divider (Max, 28 Oct). The divider is gray-300, half the row's height,
+   with a tab gap and a half of room each side, so About reads as apart
+   from the views: gray-200 (--c-grid) is the bar's own border colour and
+   did not show against the white bar (Pavel, 28 Oct). The loading
+   placeholder's copy keeps the same room (publication.css). */
 .view-tabs-bar.has-leading {
   display: flex;
   align-items: center;
@@ -81,17 +85,17 @@
   flex: none;
   height: var(--view-tabs-height);
   margin-left: calc(-1 * var(--tab-pad-x, 12px));
-  margin-right: calc(2 * var(--tab-gap, 8px));
+  margin-right: calc(3 * var(--tab-gap, 8px));
 }
 
 .view-tabs-bar.has-leading .edge-about::after {
   content: "";
   position: absolute;
   top: 50%;
-  right: calc(-1 * var(--tab-gap, 8px) - 0.5px);
+  right: calc(-1.5 * var(--tab-gap, 8px) - 0.5px);
   width: 1px;
-  height: 22px;
-  background: var(--c-grid);
+  height: calc(var(--view-tabs-height) / 2);
+  background: var(--pe-gray-300);
   transform: translateY(-50%);
 }
 
