@@ -571,16 +571,42 @@ def _create_plan_2_threshold_unfreeze() -> Reform:
 # =============================================================================
 
 
+# Announced in written statement HCWS421 (27 October 2026): "earnings above
+# the Weekly Earnings Limit will be subject to a 100% taper, where support
+# is only reduced by £1 for each £1 increase in earnings", beginning
+# "within 2030-31 once the Department for Work and Pensions have developed
+# a new IT system". The limit is 16 hours at the National Living Wage, £204
+# a week in 2026-27.
+#
+# Budget day, from the policy costings document (each a default argument
+# of budget_measures/carers_allowance_earnings_taper.py; changing one
+# changes the module's receipt, so it needs a fresh two-person
+# attestation):
+# - TODO start: ``start_year=2030`` applies the taper to the whole of
+#   2030-31. A start partway through 2030-31 needs a part-year weight the
+#   modifier does not have yet; if the costing gives a month, either keep
+#   the whole year and say so in the description, or start in 2031.
+# - TODO limit: ``earnings_limit=None`` reads the engine's limit, £204 in
+#   every year (policyengine-uk 2.151.0 does not uprate it). If the limit
+#   follows 16 x the National Living Wage, it rises each year; one weekly
+#   amount (``earnings_limit=``) applies to every year.
+# - TODO rate: ``taper_rate=1.0`` (the statement's 100%).
+# - Registration: not registered (#263, cells under the disclosure floor
+#   of 10 on main; #271 lowers it to 3 and is open, not merged).
 def _create_carers_allowance_earnings_taper() -> Reform:
     return Reform(
         id=CARERS_ALLOWANCE_TAPER_ID,
         name="Carer's Allowance earnings taper",
         description=(
             "Candidate measure. From 2030-31 Carer's Allowance no longer "
-            "stops when weekly net earnings pass the £204 earnings limit: "
-            "it is reduced by £1 for each £1 of weekly earnings above the "
-            "limit, to nothing once earnings exceed the limit by the full "
-            "weekly rate. Carers at or below the limit are unchanged. "
+            "stops when weekly net earnings pass the £204 earnings limit "
+            "(16 hours at the National Living Wage in 2026-27, held at "
+            "£204 in the model): it is reduced by £1 for each £1 of weekly "
+            "earnings above the limit, a 100% taper, to nothing once "
+            "earnings exceed the limit by the full weekly rate. The "
+            "government says the taper begins within 2030-31, once DWP's "
+            "new IT system is ready; the model applies it to the whole of "
+            "2030-31. Carers at or below the limit are unchanged. "
             "Scotland's Carer Support Payment is unchanged. Claims by carers "
             "the limit kept out follow the data's take-up draw (60%). For "
             "a carer on Universal Credit the model counts the extra "

@@ -246,14 +246,14 @@ export const POLICY_DETAILS = [
     sentence: "tapering Carer's Allowance above the earnings limit",
     name: "Carer's Allowance earnings taper",
     description: "Withdraw Carer's Allowance £1 for £1 above the earnings limit",
-    writtenFor: "Candidate measure. From 2030-31 Carer's Allowance no longer stops when weekly net earnings pass the £204 earnings limit: it is reduced by £1 for each £1 of weekly earnings above the limit, to nothing once earnings exceed the limit by the full weekly rate. Carers at or below the limit are unchanged. Scotland's Carer Support Payment is unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
+    writtenFor: "Candidate measure. From 2030-31 Carer's Allowance no longer stops when weekly net earnings pass the £204 earnings limit (16 hours at the National Living Wage in 2026-27, held at £204 in the model): it is reduced by £1 for each £1 of weekly earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The government says the taper begins within 2030-31, once DWP's new IT system is ready; the model applies it to the whole of 2030-31. Carers at or below the limit are unchanged. Scotland's Carer Support Payment is unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
     summary:
       "Replaces the Carer's Allowance cliff edge at the £204 weekly earnings limit with a taper of £1 for each £1 earned above it, from 2030-31.",
     starts: "April 2030",
     type: "Benefit",
     inForce: { from: "2030-04" },
     details:
-      "The start year, the limit (frozen at £204) and the £1-for-£1 rate are assumptions from reports of the announcement before the Budget. Scotland's Carer Support Payment is unchanged. Universal Credit counts Carer's Allowance in full as unearned income, and the allowance is taxable, so a carer on Universal Credit gains nothing and can lose the income tax on it. Carers the limit kept out claim at the data's 60% take-up.",
+      "The £1-for-£1 taper is in the government's written statement of 27 October 2026 (HCWS421), starting within 2030-31; the model applies it to the whole of 2030-31 and holds the limit at £204. Scotland's Carer Support Payment is unchanged. Universal Credit counts Carer's Allowance in full as unearned income, and the allowance is taxable, so a carer on Universal Credit gains nothing and can lose the income tax on it. Carers the limit kept out claim at the data's 60% take-up.",
     source: {
       label: "Carer's Allowance",
       href: "https://www.gov.uk/carers-allowance",

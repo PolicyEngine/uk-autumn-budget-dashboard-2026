@@ -1,5 +1,6 @@
 measure_id,direction,from_year,to_year,reviewer,note
 badr_lifetime_limit_cut,positive,2027,,juaristi22,"Lifetime limit cut to £500,000 from 6 April 2027 raises CGT on qualifying disposals; no effect before 2027-28"
+carers_allowance_earnings_taper,negative,2030,,vahid-ahmadi,"Carer's Allowance withdrawn £1 for £1 of weekly earnings above the £204 limit from 2030-31 instead of stopping at it: Carer's Allowance spending rises from 2030-31; no effect before. Reviewer to confirm (María) before publication"
 domestic_electricity_zero_vat,negative,2026,2027,juaristi22,"Zero VAT on domestic electricity in Great Britain, 1 October 2026 to 31 March 2028: VAT receipts fall in 2026-27 (182 days) and 2027-28; nothing after"
 employer_ni_relief_under_25s,negative,2027,,juaristi22,Zero employer Class 1 rate for employees aged 21 to 24 up to the upper secondary threshold from April 2027: employer NI receipts fall
 employer_nics_secondary_threshold_raise,negative,2027,,juaristi22,"Employer Class 1 secondary threshold raised from £5,000 to £9,100 a year from 6 April 2027, moving as current law's threshold does after that: employer NI receipts fall; with employers' total cost held fixed the saving goes to pay, so income tax and employee NI recover only part of it; no effect before 2027-28"
