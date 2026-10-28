@@ -11,6 +11,7 @@ import {
   relativeAxis,
   sameThresholds,
   thresholdRows,
+  thresholdsHeadline,
   thresholdsSentence,
   tradingAllowance,
 } from "../../utils/livingStandards/frozenThresholds";
@@ -145,10 +146,20 @@ describe("Frozen thresholds against pay: data", () => {
   });
 });
 
+describe("Frozen thresholds against pay: headline", () => {
+  it("is one short line, the thresholds' average gap from pay to the nearest per cent", () => {
+    expect(thresholdsHeadline(thresholdRows(PARAMETERS))).toBe("By 2031-32, frozen thresholds are worth about 10% less relative to pay.");
+    const flat = thresholdRows(PARAMETERS).map((row) => ({ ...row, personal_allowance: 100, higher_rate: 100.2, trading_allowance: null }));
+    expect(thresholdsHeadline(flat)).toBe("By 2031-32, the thresholds roughly keep pace with pay.");
+  });
+});
+
 describe("Frozen thresholds against pay: card", () => {
   it("shows the title, the sentence and a chip per line", async () => {
     render(<FrozenThresholdsCard data={OUTLOOK} />);
-    expect(await screen.findByText(/^By 2031-32 the personal allowance is worth 9\.8% less and the higher rate threshold 9\.7% less/)).toBeTruthy();
+    // One short headline; each threshold's own figure only in What it shows
+    expect(await screen.findByText("By 2031-32, frozen thresholds are worth about 10% less relative to pay.")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/9\.8% less/);
     expect(screen.getByRole("heading", { level: 3, name: FROZEN_THRESHOLDS_TITLE })).toBeTruthy();
     // Uprated apart in 2031-32, so a line each
     for (const name of ["Personal allowance", "Higher rate threshold", "Trading allowance", "Keeps pace with pay"]) {
@@ -167,7 +178,7 @@ describe("Frozen thresholds against pay: card", () => {
   it("keys the lines by its chips alone: no end labels, no legend", async () => {
     chartProps.length = 0;
     render(<FrozenThresholdsCard data={OUTLOOK} />);
-    await screen.findByText(/^By 2031-32 the personal allowance/);
+    await screen.findByText(/^By 2031-32, frozen thresholds/);
     const props = chartProps.at(-1);
     expect(props.endLabels ?? false).toBe(false);
     expect(props.legend).toBe(false);

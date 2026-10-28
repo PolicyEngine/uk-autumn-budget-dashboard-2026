@@ -121,7 +121,25 @@ const change = (relative) => `${formatOneDp(Math.abs(relative - 100))}% ${relati
 const pounds = (value) => `£${Math.round(value).toLocaleString("en-GB")}`;
 
 /**
- * The card's sentence, from the last row: what the income tax thresholds
+ * The card's headline, one short line from the last row: the thresholds
+ * drawn (the income tax thresholds and the trading allowance, each from
+ * its own start) worth about N% less (or more) relative to pay, N their
+ * average gap from 100 to the nearest whole per cent. Null without the
+ * income tax thresholds.
+ */
+export function thresholdsHeadline(rows) {
+  const last = rows?.at(-1);
+  if (last?.personal_allowance == null || last.higher_rate == null) return null;
+  const values = [last.personal_allowance, last.higher_rate, last[TRADING.key]].filter((v) => v != null);
+  const gap = values.reduce((sum, v) => sum + (v - 100), 0) / values.length;
+  const size = Math.round(Math.abs(gap));
+  if (size === 0) return `By ${fyLabel(last.year)}, the thresholds roughly keep pace with pay.`;
+  return `By ${fyLabel(last.year)}, frozen thresholds are worth about ${size}% ${gap < 0 ? "less" : "more"} relative to pay.`;
+}
+
+/**
+ * The card's full sentence (in About this chart's "What it shows"), from
+ * the last row: what the income tax thresholds
  * are worth against average earnings, then the trading allowance (with
  * its level and first year, from `trading`) when it has a line.
  */
