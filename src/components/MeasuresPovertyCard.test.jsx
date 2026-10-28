@@ -378,3 +378,58 @@ describe("a measure whose artifact predates the poverty and inequality measures"
     );
   });
 });
+
+describe("a figure the floor of survey households withheld", () => {
+  // Plan 2's run as an artifact whose 2027 figures rest on one or two
+  // survey households: the cells are empty, read as null (csv.js)
+  const WITHHELD = "plan_2_threshold_unfreeze";
+  const NAME = shortNameOf(catalogue.byId.get(WITHHELD));
+  const withheld = (columns) =>
+    metrics.map((row) =>
+      row.reform_id === WITHHELD && row.year === "2027" ? { ...row, ...Object.fromEntries(columns.map((c) => [c, null])) } : row,
+    );
+
+  it("is a withheld row, not missing, and never 0; no interaction step hides it", () => {
+    const rows = withheld(["poverty_change_pp"]);
+    const read = measurePovertyRows(rows, catalogue, ALL, 2027, "poverty_change_pp");
+    expect(read.missing).toEqual([]);
+    expect(read.measures.find((m) => m.id === WITHHELD)).toMatchObject({ value: null, withheld: true });
+    const { steps } = povertyWaterfall(read.measures, read.total, 70, read.idle, read.totalWithheld);
+    expect(steps.find((s) => s.id === WITHHELD)).toMatchObject({ kind: "withheld", pp: null, x: 0 });
+    expect(steps.some((s) => s.kind === "interaction")).toBe(false);
+    expect(steps.at(-1).kind).toBe("total");
+  });
+
+  it("keeps a measure whose people affected is withheld among those that change incomes", () => {
+    const rows = withheld(["people_affected"]);
+    const read = measurePovertyRows(rows, catalogue, ALL, 2027, "poverty_change_pp");
+    expect(read.members.find((m) => m.id === WITHHELD).muted).toBe(false);
+    expect(read.idle.some((m) => m.id === WITHHELD)).toBe(false);
+  });
+
+  it("makes the package a withheld row when its figure is withheld", () => {
+    const rows = metrics.map((row) => (row.reform_id === COMBINED && row.year === "2027" ? { ...row, poverty_change_pp: null } : row));
+    const read = measurePovertyRows(rows, catalogue, ALL, 2027, "poverty_change_pp");
+    expect(read.totalWithheld).toBe(true);
+    expect(read.missing).toEqual([]);
+    const { steps } = povertyWaterfall(read.measures, read.total, 70, read.idle, read.totalWithheld);
+    expect(steps.at(-1)).toMatchObject({ id: "package", kind: "withheld", pp: null });
+  });
+
+  it("says Not published in its row, never a change, and the card still renders", async () => {
+    window.history.replaceState({}, "", "/?sub=poverty");
+    render(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <PovertyMeasuresRow rows={withheld(["poverty_change_pp", "poverty_change_pct"])} policies={catalogue.measures} selectedPolicies={ALL} selectedYear={2027} />
+      </MeasureCatalogueProvider>,
+    );
+    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which policies move poverty/ }, { timeout: 5000 });
+    const card = heading.closest(".mp-card");
+    const row = within(card)
+      .getAllByRole("row")
+      .find((r) => r.querySelector(".mrl-name")?.textContent === NAME);
+    expect(row).toBeTruthy();
+    expect(row.querySelector(".wf-main").textContent).toBe("Not published");
+    expect(row.querySelector(".wf-bar")).toBeNull();
+  });
+});

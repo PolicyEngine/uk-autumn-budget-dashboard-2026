@@ -41,16 +41,22 @@ function CombinedStats({ stats, measureNames = {}, manifest = null }) {
       </UnavailableNotice>
     );
   }
+  // null: withheld by the floor of survey households, said, never 0
+  const shown = (value, format) =>
+    value === null ? "Not published" : format(value);
   const cards = [
-    ["People affected", formatPercent(stats.peopleAffected)],
-    ["Relative change in the Gini index", formatRelative(stats.giniChange)],
+    ["People affected", shown(stats.peopleAffected, formatPercent)],
+    [
+      "Relative change in the Gini index",
+      shown(stats.giniChange, formatRelative),
+    ],
     [
       "Change in absolute poverty, before housing costs",
-      formatPoints(stats.povertyChangePp),
+      shown(stats.povertyChangePp, formatPoints),
     ],
     [
       "Relative change in absolute poverty",
-      formatPercent(stats.povertyChangePct),
+      shown(stats.povertyChangePct, formatPercent),
     ],
   ];
   return (

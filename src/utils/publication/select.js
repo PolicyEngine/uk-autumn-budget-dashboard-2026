@@ -24,6 +24,7 @@ export const REASONS = {
   notLoaded: "The published files could not be loaded or verified",
   missingRow: "No figure published for this year",
   noCombinedRun: "No combined run is published for this selection",
+  withheld: "Not published: too few survey households",
 };
 
 /** How each decile table names its groups and its value. */
@@ -132,6 +133,11 @@ function readCell({ tablesByKey, key, entry, table, column, year, match }) {
     (row) => row.reform_id === key && row.year === year && match(row),
   );
   const value = found.length === 1 ? found[0][column] : null;
+  // An empty cell the floor of survey households left (csv.js reads it as
+  // null): withheld, which a statistic says, never a zero or a missing row
+  if (found.length === 1 && Object.hasOwn(found[0], column) && value === null) {
+    return { value: null, reason: REASONS.withheld, withheld: true };
+  }
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return { value: null, reason: REASONS.missingRow };
   }
@@ -268,8 +274,9 @@ const STATISTICS = {
  * selected, no standalone measure's statistics are ever read.
  *
  * @returns {{status: "available", key: string, year: number,
- *   provisional: boolean, peopleAffected: number, giniChange: number,
- *   povertyChangePp: number, povertyChangePct: number}
+ *   provisional: boolean, peopleAffected: number|null, giniChange: number,
+ *   povertyChangePp: number|null, povertyChangePct: number|null}
+ *   (null: withheld by the floor of survey households, REASONS.withheld)
  *   | {status: "unavailable", reason: string,
  *      availableSets: Array<Array<string>>}}
  */
@@ -292,7 +299,7 @@ export function combinedStats({ manifest, tablesByKey, selectedIds, year }) {
   }
   const statistics = {};
   for (const [name, column] of Object.entries(STATISTICS)) {
-    const { value, reason } = readCell({
+    const { value, reason, withheld } = readCell({
       tablesByKey,
       key: target.key,
       entry: target.entry,
@@ -301,7 +308,7 @@ export function combinedStats({ manifest, tablesByKey, selectedIds, year }) {
       year,
       match: () => true,
     });
-    if (value === null) return unavailable(reason);
+    if (value === null && !withheld) return unavailable(reason);
     statistics[name] = value;
   }
   return {

@@ -41,6 +41,8 @@ export function buildChartCsv({
 }) {
   const cell = (column, row) => {
     const value = row[column.key];
+    // A figure the floor of survey households withheld, said in words
+    if (value === "Not published") return csvField(value);
     if (column.decimals !== undefined) return formatCsvNumber(value, column.decimals);
     return csvField(value === null || value === undefined ? "" : String(value));
   };

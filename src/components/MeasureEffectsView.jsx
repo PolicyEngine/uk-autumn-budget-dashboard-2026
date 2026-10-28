@@ -109,7 +109,8 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
                     <MeasureRowLabel measure={byId?.get(m.id) ?? { id: m.id, name: m.fullName ?? m.name, color: m.colour }} name={m.name} colour={m.colour} />
                   </th>
                   {years.map((year) => {
-                    const v = m.points.find((p) => p.year === year)?.value ?? null;
+                    const point = m.points.find((p) => p.year === year);
+                    const v = point?.value ?? null;
                     const on = reads(v, metric.decimals);
                     const strength = on ? Math.round(15 + 70 * Math.min(1, Math.abs(v) / max)) : 0;
                     return (
@@ -118,7 +119,8 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
                         className={`${on ? (v < 0 ? "is-fall" : "is-rise") : "is-none"}${year === selectedYear ? " is-selected" : ""}`}
                         style={on ? { "--mev-strength": `${strength}%` } : undefined}
                       >
-                        {v === null ? "" : on ? signed(v) : "0"}
+                        {/* Withheld by the floor of survey households: said, never 0 */}
+                        {v === null ? (point?.withheld ? "Not published" : "") : on ? signed(v) : "0"}
                       </td>
                     );
                   })}

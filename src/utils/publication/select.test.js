@@ -130,6 +130,34 @@ describe("selection on the fixture", () => {
     });
   });
 
+  it("keeps a statistic the floor withheld as null, and the others", () => {
+    const key = "combined--alpha+beta";
+    const withheld = {
+      ...tablesByKey,
+      [key]: {
+        ...tablesByKey[key],
+        metrics: tablesByKey[key].metrics.map((row) =>
+          row.year === IN_DATA
+            ? { ...row, people_affected: null, poverty_change_pp: null, poverty_change_pct: null }
+            : row,
+        ),
+      },
+    };
+    const stats = combinedStats({
+      manifest,
+      tablesByKey: withheld,
+      selectedIds: ["alpha", "beta"],
+      year: IN_DATA,
+    });
+    expect(stats).toMatchObject({
+      status: "available",
+      peopleAffected: null,
+      giniChange: -0.0275,
+      povertyChangePp: null,
+      povertyChangePct: null,
+    });
+  });
+
   it("says combined statistics are unavailable for an unrun selection", () => {
     expect(
       combinedStats({

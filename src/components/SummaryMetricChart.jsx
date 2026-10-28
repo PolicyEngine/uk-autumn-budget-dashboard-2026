@@ -419,10 +419,24 @@ export function metricValue(row, key) {
   return Number.isFinite(value) ? value : null;
 }
 
+/** What the page says where the floor of survey households withheld a figure. */
+export const NOT_PUBLISHED = "Not published";
+
+/**
+ * Whether a run's row carries the measure but the floor of survey
+ * households withheld it (an empty cell, read as null): too few survey
+ * households are behind it to publish. Never a change of 0, and not the
+ * same as a run written before the measure (no column at all).
+ */
+export function isWithheld(row, key) {
+  return row != null && Object.hasOwn(row, key) && row[key] === null;
+}
+
 /**
  * One point per shown year: the metric for the whole selection's run, or
  * null where that run has no row for the year, or a row without the metric
- * (not yet published).
+ * (not yet published). {withheld} marks a null the floor of survey
+ * households withheld (isWithheld), which the chart says is not published.
  *
  * @param {Array<Object>} rows - metrics.csv rows (strings, as parsed)
  * @param {string|null} run - The run to read (wholeSelectionRun)
@@ -435,7 +449,11 @@ export function metricByYear(rows, run, metric, years = DISPLAY_YEARS) {
       (candidate) => candidate.reform_id === run && Number(candidate.year) === year,
     );
     const value = metricValue(row, metric.key);
-    return { year, value: value === null ? null : value * (metric.scale ?? 1) };
+    return {
+      year,
+      value: value === null ? null : value * (metric.scale ?? 1),
+      withheld: isWithheld(row, metric.key),
+    };
   });
 }
 
@@ -527,7 +545,11 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
               { key: "year", label: "Fiscal year" },
               ...byMeasure.map((m) => ({ key: m.id, label: `${m.name}: ${metric.csvLabel ?? metric.unit}`, decimals: 4 })),
             ],
-            rows: measureData.map((point) => ({ ...point, year: fiscalYearTick(point.year) })),
+            rows: measureData.map((point, i) => ({
+              ...point,
+              ...Object.fromEntries(byMeasure.filter((m) => m.points[i]?.withheld).map((m) => [m.id, NOT_PUBLISHED])),
+              year: fiscalYearTick(point.year),
+            })),
             notes: ["Each column is one policy simulated on its own; the columns are not added up."],
           })
         : buildChartCsv({
@@ -537,7 +559,10 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
               { key: "year", label: "Fiscal year" },
               { key: "value", label: metric.csvLabel ?? metric.unit, decimals: 4 },
             ],
-            rows: shown.map((point) => ({ ...point, year: fiscalYearTick(point.year) })),
+            // A withheld year says so, never 0 and never left out
+            rows: data
+              .filter((point) => point.value !== null || point.withheld)
+              .map((point) => ({ ...point, value: point.withheld ? NOT_PUBLISHED : point.value, year: fiscalYearTick(point.year) })),
           }),
     published: shown.length > 0,
   };
@@ -553,7 +578,9 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           {/* One short line: the selected year's figure; what the chart
               measures is in About this chart */}
           <p className="chart-description">
-            {selected?.value != null ? (
+            {selected?.withheld ? (
+              `Not published for ${fiscalYearTick(selectedYear)}: too few survey households are behind it.`
+            ) : selected?.value != null ? (
               Math.round(selected.value * 1e6) === 0 ? (
                 `In ${fiscalYearTick(selectedYear)} the selected policies do not change ${subjectOf(metric)}.`
               ) : (
@@ -603,9 +630,14 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           </div>
         ) : shown.length === 0 ? (
           // On Budget day a run (the combined one last) can be named
-          // before its rows are published: say so, never draw zeros
+          // before its rows are published: say so, never draw zeros. Every
+          // year withheld by the floor of survey households: say that
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>Not yet published for this selection</p>
+            <p>
+              {data.some((point) => point.withheld)
+                ? `${NOT_PUBLISHED}: too few survey households are behind these figures`
+                : "Not yet published for this selection"}
+            </p>
           </div>
         ) : allZero ? (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
