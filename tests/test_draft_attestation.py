@@ -16,6 +16,15 @@ HAND_WRITTEN = (
     reforms.PLAN_2_ID,
     reforms.STATE_PENSION_ALLOWANCE_ID,
 )
+# The Budget-day measures that carry a simulation modifier: the drafter
+# refuses a receipt with no reason
+BUDGET_MODIFIERS = (
+    reforms.CARERS_ALLOWANCE_TAPER_ID,
+    reforms.ELECTRICITY_VAT_ID,
+    reforms.FUEL_DUTY_DEFERRAL_ID,
+    reforms.HOUSEHOLD_ENERGY_PAYMENT_ID,
+    reforms.STATE_PENSION_ALLOWANCE_ID,
+)
 
 
 def _load_script():
@@ -28,6 +37,18 @@ def _load_script():
 def test_every_hand_written_measure_has_a_drafted_reason():
     assert reforms.STATE_PENSION_PROTECTION_DESIGN == "tax_reduction"
     assert set(HAND_WRITTEN) <= set(_load_script().REASONS)
+
+
+def test_every_budget_measure_with_a_modifier_has_a_drafted_reason():
+    registered = {reform.id: reform for reform in reforms.get_all_reforms()}
+    with_modifier = {
+        measure_id
+        for measure_id, reform in registered.items()
+        if reform.simulation_modifier is not None
+        and not measure_id.startswith("autumn_budget_2026")
+    }
+    assert with_modifier == set(BUDGET_MODIFIERS)
+    assert with_modifier <= set(_load_script().REASONS)
 
 
 def test_a_withdrawn_measure_has_no_drafted_reason():
@@ -74,7 +95,7 @@ def test_a_package_reason_names_every_hand_written_member(drafted):
     )
 
 
-def test_the_eight_package_reason_names_its_two_hand_written_members(
+def test_the_eight_package_reason_names_its_hand_written_members(
     drafted,
 ):
     from uk_budget_data.publication.combine import combined_key
@@ -87,6 +108,7 @@ def test_the_eight_package_reason_names_its_two_hand_written_members(
     assert record["measure_id"] == key
     assert (
         "hand-written carers_allowance_earnings_taper and "
+        "domestic_electricity_zero_vat and fuel_duty_rise_deferral and "
         "household_energy_payment_2026 and " in record["reason"]
     )
     assert reforms.STATE_PENSION_ALLOWANCE_ID in record["reason"]
