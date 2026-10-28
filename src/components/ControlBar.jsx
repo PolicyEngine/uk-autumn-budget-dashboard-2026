@@ -147,6 +147,15 @@ function OptionsButton({ groups, name }) {
   // Done stays only where a choice takes several clicks (a multi-select)
   const needsDone = groups.some((group) => group.multi);
 
+  // While the popover is open, chart tooltips are hidden (ControlBar.css):
+  // a hover tooltip drew over the open Options (Pavel's review, LS2)
+  useEffect(() => {
+    if (!open || typeof document === "undefined") return undefined;
+    const root = document.documentElement;
+    root.setAttribute("data-options-open", "");
+    return () => root.removeAttribute("data-options-open");
+  }, [open]);
+
   // A click outside closes it (the backdrop on a phone is outside too)
   useEffect(() => {
     if (!open) return undefined;

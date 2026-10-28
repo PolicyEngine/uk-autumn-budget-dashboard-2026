@@ -226,6 +226,7 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
           yFormat={yFormat}
           tooltipFormat={poundsFull}
           yLabel={yLabel}
+          span={span ? [span[0].year, span[1].year] : null}
         />
       ),
   };

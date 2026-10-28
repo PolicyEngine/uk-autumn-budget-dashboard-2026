@@ -205,10 +205,10 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     : own;
   const narrow = useNarrowViewport();
   const [view, setView] = useUrlChoice("ls_growth", Object.keys(VIEWS), "annual");
-  // Vigintiles by default, the finest split; deciles where the file has no
-  // vigintiles, then whatever it offers
-  const defaultGrouping = ["vigintile", "decile"].find((g) => offer.groupings.includes(g)) ?? offer.groupings[0];
-  const [grouping, setGrouping] = useUrlChoice("ls_groups", offer.groupings, defaultGrouping);
+  // Tenths, as every other distribution chart on the dashboard (Pavel's
+  // review, LS4: the fifths / tenths / twentieths choice is gone); another
+  // grouping only where the file has no deciles
+  const grouping = offer.groupings.includes("decile") ? "decile" : offer.groupings[0];
   const [basis, setBasis] = useUrlChoice("ls_housing", offer.bases, "bhc");
   const [population, setPopulation] = useUrlChoice("ls_pop", offer.populations, "all");
 
@@ -306,10 +306,13 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const num = (v) => signed(v, "").replace(/^0\.0$/, "0");
   const per = annual ? " a year" : "";
   const unitWord = diff ? " points" : "%";
+  // The two groups compared, named (LS1): "(lowest tenth: +0.4% a year;
+  // top tenth: +0.2%)"
+  const bottomName = skip ? `${ordinal(skip + 1)} ${g.share}` : `lowest ${g.share}`;
   const ends = (
     <>
-      (<strong>{num(lowMean)}{unitWord}</strong>
-      {per} at the bottom, <strong>{num(highMean)}{unitWord}</strong> at the top)
+      ({bottomName}: <strong>{num(lowMean)}{unitWord}</strong>
+      {per}; top {g.share}: <strong>{num(highMean)}{unitWord}</strong>)
     </>
   );
   const largest = Math.max(...[...lowVals, ...highVals].map((v) => Math.abs(v)));
@@ -320,7 +323,8 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
       <>The policies {changeWords(lowMean, highMean)} {ends}.</>
     )
   ) : (
-    <>Under current law, real incomes {trendWords(lowMean, highMean)} {ends}.</>
+    // In the growth view the rows are current law plus the policies (LS1)
+    <>{measures ? "With the selected policies" : "Under current law"}, real incomes {trendWords(lowMean, highMean)} {ends}.</>
   );
   // The ranges and exact groups, for About this chart
   const low = skip ? `second-lowest-income ${g.share}` : `lowest-income ${g.share}`;
@@ -350,12 +354,6 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         value: view,
         onChange: setView,
         options: Object.entries(VIEWS).map(([value, label]) => ({ value, label })),
-      },
-      offer.groupings.length > 1 && {
-        label: "Income groups",
-        value: grouping,
-        onChange: setGrouping,
-        options: offer.groupings.map((id) => ({ value: id, label: GROUPINGS[id].label })),
       },
       housingOption(basis, setBasis, offer.bases),
       offer.populations.length > 1 && {
@@ -394,7 +392,8 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     info: {
       shows: `The real change in the median income of each ${g.share} of people, ${annual ? "on the year before" : "between the two years"}${diff ? ", with the policies less without them, in percentage points" : ""}.`,
       how: [
-        measures && !diff && "Current law's growth plus the policies' effect, from the same pair of simulations.",
+        measures && "Effect of the policies is growth with them minus growth under current law.",
+        measures && !diff && "Total growth is current law's growth plus that effect, from the same pair of simulations.",
         `Bottom is the ${low}; top the highest-income ${g.share}${who}.`,
         `${annual ? `Each year from ${fyDash(annualYears[0].year)} to ${fyDash(end.year)}` : `From ${fyDash(first.year)} to ${fyDash(end.year)}`}, ${diff ? "the policies change their growth by" : "their real income changes by"} ${between(lowVals)}${diff ? " points" : "%"}${per} and ${between(highVals)}${diff ? " points" : "%"} respectively.`,
         popNote.trim(),

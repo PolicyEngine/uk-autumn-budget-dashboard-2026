@@ -24,10 +24,11 @@ const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 export const WITH_MEASURES_TITLE = "Growth across the distribution, with the selected policies";
 export const WITH_MEASURES_ANCHOR = "growth-with-measures";
 
-// Shows: the measures' effect first (see GrowthWithMeasuresCard)
-const SHOWS = [
-  { value: "difference", label: "Difference from current law" },
-  { value: "growth", label: "Growth with policies" },
+// Shows: the measures' effect first (see GrowthWithMeasuresCard); each
+// label says what is plotted (Pavel's review, LS3)
+export const SHOWS = [
+  { value: "difference", label: "Effect of the policies (points)" },
+  { value: "growth", label: "Total growth, with the policies" },
 ];
 
 // The file is read once per page

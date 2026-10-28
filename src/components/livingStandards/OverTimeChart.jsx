@@ -9,7 +9,7 @@
 // the tooltip gives each value exactly). Ticks every year on a wide plot,
 // every other year on a phone.
 
-import { CartesianGrid, Customized, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Customized, Line, LineChart, ReferenceArea, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { Tooltip } from "../ViewportTooltip";
 import { ChartRows, lineLegendItems } from "./LsCharts";
 import ChartUnitLabel, { UNIT_LABEL_TOP_MARGIN } from "../../utils/ChartUnitLabel";
@@ -192,6 +192,9 @@ export default function OverTimeChart({
   yFormat,
   tooltipFormat,
   yLabel,
+  // The years the card's sentence compares, [from, to], shaded so the
+  // Years choice shows on the plot (Pavel's review, LS6)
+  span = null,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
@@ -211,6 +214,16 @@ export default function OverTimeChart({
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={MARGIN}>
           <CartesianGrid {...GRID_PROPS} />
+          {span && years.includes(span[0]) && years.includes(span[1]) && (
+            <ReferenceArea
+              className="over-time-span"
+              x1={span[0]}
+              x2={span[1]}
+              fill={CHART_COLOURS.highlightBand}
+              fillOpacity={0.7}
+              ifOverflow="hidden"
+            />
+          )}
           <XAxis
             dataKey="year"
             tick={TICK_STYLE}

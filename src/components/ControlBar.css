@@ -361,3 +361,13 @@
   line-height: 1.4;
   color: var(--pe-gray-500);
 }
+
+/* While an Options popover is open, no chart tooltip draws over it (on html,
+   not :root[...], which the CSS build folds into :root) */
+html[data-options-open] .recharts-tooltip-wrapper,
+html[data-options-open] .floating-tooltip,
+html[data-options-open] .viewport-tooltip,
+html[data-options-open] .earnings-tooltip,
+html[data-options-open] .mtr-tooltip {
+  visibility: hidden !important;
+}

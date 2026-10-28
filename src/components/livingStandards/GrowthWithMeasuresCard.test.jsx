@@ -61,14 +61,25 @@ describe("Growth across the distribution, with the selected measures", () => {
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     expect(screen.getByText(/with the policies less without them, in percentage points/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "twin" })).toBeTruthy();
-    expect(screen.getAllByText(/Difference from current law/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Effect of the policies \(points\)/).length).toBeGreaterThan(0);
     expect(document.querySelector(".chart-description").textContent).toMatch(/^The policies (barely )?change income growth/);
+  });
+
+  it("names the two views by what they plot, and starts the growth view's sentence with the policies (LS1, LS3)", async () => {
+    render(<GrowthWithMeasuresCard selectedPolicies={["threshold_freeze_2031_32"]} twinLink={null} />);
+    expect(await screen.findByText(WITH_MEASURES_TITLE)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "Total growth, with the policies" }));
+    expect(document.querySelector(".chart-description").textContent).toMatch(/^With the selected policies, real incomes .+ \(lowest tenth: \S+% a year; top tenth: \S+%\)\.$/);
+    expect(document.querySelector(".chart-description").textContent).not.toMatch(/^Under current law/);
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    expect(screen.getByText("Effect of the policies is growth with them minus growth under current law.")).toBeTruthy();
   });
 
   it("says so, with no chart, when the measure does not move HBAI income", async () => {
     render(<GrowthWithMeasuresCard selectedPolicies={["road_fuel_vat_cut"]} twinLink={null} />);
     expect(await screen.findByText(/do not change this income/)).toBeTruthy();
-    expect(screen.queryByText(/Difference from current law/)).toBeNull();
+    expect(screen.queryByText(/Effect of the policies \(points\)/)).toBeNull();
   });
 
   it("several policies: the published combined run of exactly them, with no package note", async () => {
@@ -87,7 +98,7 @@ describe("Growth across the distribution, with the selected measures", () => {
     GROWTH = FILE.replaceAll("autumn_budget_2026_combined,", `${KEY},`);
     render(<GrowthWithMeasuresCard selectedPolicies={[...PAIR, "road_fuel_vat_cut"]} twinLink={null} />, { wrapper: withCatalogue });
     expect(await screen.findByText(notPublished)).toBeTruthy();
-    expect(screen.queryByText(/Difference from current law/)).toBeNull();
+    expect(screen.queryByText(/Effect of the policies \(points\)/)).toBeNull();
     expect(screen.queryByText(/whole package/)).toBeNull();
   });
 
@@ -95,7 +106,7 @@ describe("Growth across the distribution, with the selected measures", () => {
     // The file as committed: its package rows are autumn_budget_2026_combined
     render(<GrowthWithMeasuresCard selectedPolicies={PAIR} twinLink={null} />, { wrapper: withCatalogue });
     expect(await screen.findByText(notPublished)).toBeTruthy();
-    expect(screen.queryByText(/Difference from current law/)).toBeNull();
+    expect(screen.queryByText(/Effect of the policies \(points\)/)).toBeNull();
   });
 
   it("gives the same notice when no manifest is loaded", async () => {
