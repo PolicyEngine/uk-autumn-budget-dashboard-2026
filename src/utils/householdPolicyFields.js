@@ -24,17 +24,13 @@ export const POLICY_FIELDS = {
   fuel_duty_rise_deferral: { fields: ["petrol_spending_per_year", "diesel_spending_per_year"] },
   // Zero VAT on domestic electricity: its electricity bill
   domestic_electricity_zero_vat: { fields: ["electricity_spending_per_year"] },
-  // Warm Home Discount top-up: paid with Universal Credit or Pension
-  // Credit, so whether the household claims what it is entitled to
-  warm_home_discount_top_up: { fields: ["claims_universal_credit"] },
-  // Plan 2 threshold: which loan, if any
-  plan_2_threshold_unfreeze: { fields: ["student_loan_plan"] },
-  // +2pp on dividend, savings and property income
+  // Savings and property income tax rates: those incomes
   unearned_income_rates_up: {
-    fields: ["dividends_per_year", "savings_interest_per_year", "property_income_per_year"],
+    fields: ["savings_interest_per_year", "property_income_per_year"],
   },
-  // State Pension protection: for each adult at State Pension age, their
-  // State Pension and any private pension (which takes the allowance away)
+  // Pension Tax Allowance: for each adult at State Pension age, their
+  // State Pension and any private pension (total income above the full new
+  // State Pension tapers the reduction away)
   state_pension_income_tax_protection: {
     fields: [
       "state_pension_per_year",
@@ -47,8 +43,16 @@ export const POLICY_FIELDS = {
         ? Boolean(inputs.has_partner) && atStatePensionAge(inputs.partner_age, year)
         : atStatePensionAge(inputs.current_age, year),
   },
-  // The threshold freeze to 2031-32 and the employer National Insurance
-  // threshold read the salary, which the essentials ask
+  // Household energy payment: households in England in Council Tax bands
+  // A to D, so the band, where the region is in England
+  household_energy_payment_2026: {
+    fields: ["council_tax_band"],
+    when: (inputs) => !["SCOTLAND", "WALES", "NORTHERN_IRELAND"].includes(inputs.region),
+  },
+  // The trading allowance reads self-employment income, which neither the
+  // form nor the household API takes, so it has no row: the calculator
+  // cannot show it for a household. The Carer's Allowance taper's answers
+  // are added with its inputs.
 };
 
 /**
