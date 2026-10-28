@@ -995,7 +995,10 @@ def test_the_committed_pre_is_march_and_post_is_october():
     overwritten by the October forecast the projections now run on."""
     forecast = _outlook_forecast()["forecast"]
     cpi = next(
-        s for sec in forecast["sections"] for s in sec["series"] if s["key"] == "cpi"
+        s
+        for sec in forecast["sections"]
+        for s in sec["series"]
+        if s["key"] == "cpi"
     )
     pre = {p["year"]: p["value"] for p in cpi["pre"]}
     post = {p["year"]: p["value"] for p in cpi["post"]}
