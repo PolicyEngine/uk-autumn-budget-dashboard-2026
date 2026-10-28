@@ -98,7 +98,7 @@ export const POLICY_DETAILS = [
     budgetRows: [52],
     example: {
       title: "Example",
-      text: "In 2027-28 a pensioner with only the full new State Pension, £13,036.40, pays no income tax: the allowance cancels the £93.28 due. One with total income of £13,186.40, £150 above it, gets £44 (£94 less £150 ÷ 3), and one on £13,400 gets nothing.",
+      text: "In 2027-28 a pensioner whose only income is the full new State Pension (£13,036.40) pays no income tax. Above that, the allowance falls by £1 for every £3 of extra income, so at £13,186.40 it is worth £44.",
       source: { label: "Pension Tax Allowance explainer", href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer" },
     },
   },
@@ -396,8 +396,8 @@ export const POLICY_DETAILS = [
     budgetRows: [15],
     example: {
       title: "Example",
-      text: "An employee on £30,000 with £1,500 of trading receipts and no expenses pays £100 less income tax in 2027-28, and £400 less with receipts of £3,000 or more; with £2,000 of expenses, receipts of £3,000 or more save £200. The population figures cannot follow this, as the data hold profits, not receipts (see About this result).",
-      source: { label: "PolicyEngine household calculations, policyengine-uk 2.151.0 (review on PR #290)", href: "https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/290" },
+      text: "An employee on £30,000 with £3,000 of side income and no expenses pays £400 less income tax in 2027-28.",
+      source: { label: "PolicyEngine household calculations, policyengine-uk 2.151.0 (review on PR 290)", href: "https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/290" },
     },
   },
 ];
