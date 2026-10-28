@@ -152,7 +152,7 @@ def test_the_package_is_the_eight_candidates():
     # The area run's package alias stands for that key
     assert manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     description = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID).description
-    assert description.startswith("All seven candidate measures")
+    assert description.startswith("All seven announced measures")
 
 
 def test_the_withdrawn_measures_are_not_registered():
@@ -168,11 +168,27 @@ def test_the_2025_placeholders_are_gone():
         assert get_reform(old) is None, old
 
 
-def test_every_measure_says_it_is_a_candidate():
+# The measures the Budget announced (28 October 2026): their copy states
+# the announced policy, so carries no "Candidate measure." label; any
+# other registered measure still does.
+ANNOUNCED = (
+    "fuel_duty_rise_deferral",
+    "state_pension_income_tax_protection",
+    "domestic_electricity_zero_vat",
+    "household_energy_payment_2026",
+    "carers_allowance_earnings_taper",
+    "unearned_income_rates_up",
+    "trading_allowance_raise",
+)
+
+
+def test_only_unannounced_measures_say_they_are_candidates():
     for measure_id in CANDIDATES:
-        assert get_reform(measure_id).description.startswith(
-            "Candidate measure."
+        description = get_reform(measure_id).description
+        assert description.startswith("Candidate measure.") == (
+            measure_id not in ANNOUNCED
         ), measure_id
+        assert "pre-Budget" not in description, measure_id
 
 
 def test_get_reform_returns_none_for_an_unknown_id():

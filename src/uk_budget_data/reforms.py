@@ -345,13 +345,13 @@ def _fuel_duty_cut_extension_description() -> str:
     last = date.fromordinal(back.toordinal() - 1)
     rate = dict(fuel_duty_deferral_schedule())[FUEL_DUTY_FROZEN_UNTIL]
     return (
-        f"Candidate measure. Fuel duty stays at {frozen} a litre to "
-        f"{last.day} {last:%B %Y}: the rise due on 1 January 2027 and the "
-        "March and April 2027 steps do not happen while the 5p cut is "
-        f"extended. From {back.day} {back:%B %Y} fuel duty is current "
-        f"law's, {_pence(rate)} a litre, rising with RPI each April as "
-        "current law has it. Rates are day-weighted to fiscal years. "
-        "Includes the VAT on the lower pump price."
+        "The 5p cut in fuel duty is kept: the main rate stays at "
+        f"{frozen} a litre to {last.day} {last:%B %Y}, so the rise due on "
+        "1 January 2027 and the March and April 2027 steps do not happen. "
+        f"From {back.day} {back:%B %Y} it returns to current law's "
+        f"{_pence(rate)} a litre, rising with RPI each April. Rates are "
+        "day-weighted to fiscal years, and the VAT on the lower pump "
+        "price is included."
     )
 
 
@@ -390,7 +390,7 @@ def _fuel_duty_deferral_description() -> str:
 def _create_fuel_duty_rise_deferral() -> Reform:
     return Reform(
         id=FUEL_DUTY_DEFERRAL_ID,
-        name="Fuel duty rises deferred",
+        name="Fuel duty cut extended",
         description=_fuel_duty_deferral_description(),
         parameter_changes=rate_change(FUEL_DUTY, fuel_duty_deferral_rates()),
         simulation_modifier=pump_vat_on_fuel_duty_deferral,
@@ -448,19 +448,19 @@ STATE_PENSION_PROTECTION_DESIGNS = {
     ),
     "total_income": (
         state_pension_only_income_tax_allowance,
-        "Candidate measure. From 6 April 2027, people over State Pension "
-        "age whose total income (the State Pension, with any increments "
-        "or additional State Pension, plus all other income, savings "
-        "interest included) is at or below the full new State Pension "
-        f"(rounded {_SP_ROUNDING} to the pound: £{_SP_THRESHOLD_2027:,} in "
-        "2027-28, rising with it) get "
-        "an income tax allowance of that amount, so pay no income tax. "
-        "Above it there is no allowance: £1 of income over the threshold "
-        "takes the whole allowance away." + _SP_UNTIL,
+        "From 6 April 2027 to 5 April "
+        f"{_SP_LAST_YEAR + 1}, people over State Pension age whose total "
+        "income (the State Pension, with any increments or additional "
+        "State Pension, plus all other income, savings interest included) "
+        "is at or below the full new State Pension (£13,036.40 in 2027-28) "
+        "get a Pension Tax Allowance: a non-refundable reduction in their "
+        "income tax, worth up to £94 in 2027-28. It falls by £1 for every "
+        "£3 of income above the full new State Pension, so it is gone at "
+        "about £13,319 in 2027-28. The personal allowance is unchanged.",
     ),
     "tapered": (
         state_pension_income_tax_allowance,
-        "Candidate measure. From 6 April 2027, people over State Pension "
+        "From 6 April 2027, people over State Pension "
         "age get an income tax allowance equal to the full new State "
         "Pension (rounded up to £10: £13,040 in 2027-28), withdrawn £1 "
         "for £1 of income above it, down to the standard personal "
@@ -478,7 +478,7 @@ def _create_state_pension_income_tax_protection(
     ]
     return Reform(
         id=STATE_PENSION_ALLOWANCE_ID,
-        name="State Pension income tax protection",
+        name="Pension Tax Allowance",
         description=description,
         simulation_modifier=modifier,
         # The allowance moves taxable income, so the capital gains rate.
@@ -519,19 +519,17 @@ def _electricity_vat_description() -> str:
     days = (end - date(2027, 4, 1)).days + 1
     if _electricity.PRE_BUDGET_ZERO_RATE_IN_MEASURE:
         return (
-            "Candidate measure. VAT on domestic electricity is 0% instead "
-            f"of 5% from 1 October 2026 to {end_text}: the zero rate to "
-            "March 2027, not in the model's baseline, and its extension, "
-            "which the Budget scores together. "
-            "Applied to electricity spending only: in Great Britain to "
-            "March 2027, and UK-wide from April 2027, as the Budget expects "
-            "(Northern Ireland keeps the 5% until then). 2026-27 carries "
-            "the October "
-            "to March share of a year's electricity use (about 57%), not a "
+            "VAT on domestic electricity is 0% instead of 5% from "
+            f"1 October 2026 to {end_text}: in Great "
+            "Britain to March 2027 and across the UK from April 2027. The "
+            "model's baseline has no zero rate, so the measure covers the "
+            "whole period, as the Treasury costs it. It applies to "
+            "electricity spending only. 2026-27 carries the October to "
+            "March share of a year's electricity use (about 57%), not a "
             f"share of its days; 2027-28 its {days} days of 366."
         )
     return (
-        "Candidate measure. The zero rate of VAT on domestic electricity, "
+        "The zero rate of VAT on domestic electricity, "
         "in force from 1 October 2026 to 31 March 2027, is extended to "
         f"{end_text}: VAT is 0% instead of 5% from 1 April 2027 to "
         f"{end_text}. Applied to electricity spending only, in Great "
@@ -722,16 +720,15 @@ def _create_carers_allowance_earnings_taper() -> Reform:
         id=CARERS_ALLOWANCE_TAPER_ID,
         name="Carer's Allowance earnings taper",
         description=(
-            "Candidate measure. From 2030-31 Carer's Allowance no longer "
-            "stops when weekly net earnings pass the £204 earnings limit "
-            "(16 hours at the National Living Wage in 2026-27, held at "
-            "£204 in the model): it is reduced by £1 for each £1 of weekly "
-            "earnings above the limit, a 100% taper, to nothing once "
-            "earnings exceed the limit by the full weekly rate. The "
-            "government says the taper begins within 2030-31, once DWP's "
-            "new IT system is ready; the model applies it to the whole of "
-            "2030-31. Carers at or below the limit are unchanged. "
-            "Scotland's Carer Support Payment is unchanged. Claims by carers "
+            "In England and Wales, Carer's Allowance no longer stops when "
+            "weekly net earnings pass the Weekly Earnings Limit, 16 hours at "
+            "the National Living Wage (£211.36 a week at April 2027's £13.21): it is "
+            "reduced by £1 for each £1 of earnings above the limit, a 100% "
+            "taper, to nothing once earnings exceed the limit by the full "
+            "weekly rate. The taper starts within 2030-31; the model applies "
+            "it to the whole of that year. Carers at or below the limit, and "
+            "Scotland's Carer Support Payment, are unchanged. Claims by "
+            "carers "
             "the limit kept out follow the data's take-up draw (60%). For "
             "a carer on Universal Credit the model counts the extra "
             "allowance in full as unearned income but deducts none of the "
@@ -855,14 +852,16 @@ def unearned_income_rates_up() -> dict[str, dict[str, float]]:
 def _create_unearned_income_rates_up() -> Reform:
     return Reform(
         id=UNEARNED_INCOME_RATES_ID,
-        name="Savings and property income tax up",
+        name="Savings and property income tax rates up",
         description=(
-            "Candidate measure. From 6 April 2027 the income tax rates on "
-            "savings income and property income each rise by 2 percentage "
-            "points on top of current law, which already includes Budget "
-            "2025's rises: to 24%, 44% and 49% at the basic, higher and "
-            "additional rates. Dividend rates are unchanged. Incomes are "
-            "held fixed, with no behavioural response."
+            "From 6 April 2027 the income tax rates on savings income rise "
+            "to 24%, 44% and 49% at the basic, higher and additional rates "
+            "across the UK, and those on property income to the same rates "
+            "in England, Wales and Northern Ireland: 2 percentage points "
+            "above current law, which already includes Budget 2025's rises. "
+            "Finance cost relief for landlords follows the property basic "
+            "rate, so rises to 24%. Dividend rates are unchanged. Incomes "
+            "are held fixed, with no behavioural response."
         ),
         parameter_changes=unearned_income_rates_up(),
     )
@@ -884,14 +883,14 @@ def _create_unearned_income_rates_up() -> Reform:
 def _create_household_energy_payment_2026() -> Reform:
     return Reform(
         id=HOUSEHOLD_ENERGY_PAYMENT_ID,
-        name="Household energy payment",
+        name="Household Energy Payment",
         description=(
-            "Candidate measure. A one-off payment of £100 in winter 2026-27 "
-            "to each household in England in property valuation bands A to "
-            "D (the lowest four of England's eight), paid into bank "
-            "accounts. Scotland, Wales and Northern Ireland "
-            "receive a share of the funding instead, which is not modelled. "
-            "It counts as household income."
+            "A one-off £100 payment from January 2027 to each household in "
+            "England in property valuation bands A to D (the lowest four of "
+            "England's eight), up to 20 million households, paid into bank "
+            "accounts and counted as household income in 2026-27. Scotland, "
+            "Wales and Northern Ireland receive a share of the funding "
+            "instead, which is not modelled."
         ),
         simulation_modifier=household_energy_payment_2026,
     )
@@ -916,15 +915,13 @@ TRADING_ALLOWANCE_FROM = 2027
 def _create_trading_allowance_raise() -> Reform:
     return Reform(
         id=TRADING_ALLOWANCE_ID,
-        name="Trading allowance raised",
+        name=f"Trading allowance raised to £{TRADING_ALLOWANCE_RAISED:,}",
         description=(
-            f"Candidate measure. From 6 April {TRADING_ALLOWANCE_FROM} the "
+            f"From 6 April {TRADING_ALLOWANCE_FROM} the "
             "trading allowance, which relieves trading receipts in place "
             "of actual expenses, rises from £1,000 to "
             f"£{TRADING_ALLOWANCE_RAISED:,}, for income tax and Class 4 "
-            "National Insurance. Every self-employed person gets it: the "
-            "data cannot tell a new venture from an established one. "
-            "Without gross receipts in the data, a profit within the "
+            "National Insurance. Without gross receipts in the data, a profit within the "
             "allowance is treated as fully relieved, so the cost may be "
             "overstated."
         ),
@@ -1076,9 +1073,9 @@ def _create_combined_autumn_budget_reform(members: list[Reform]) -> Reform:
     combined = combine_measures(members, DataConfig())
     return Reform(
         id=AUTUMN_BUDGET_2026_COMBINED_ID,
-        name="Autumn Budget 2026 candidates (combined)",
+        name="Autumn Budget 2026 measures (combined)",
         description=(
-            f"All {_NUMBER_WORDS[len(members)]} candidate measures simulated "
+            f"All {_NUMBER_WORDS[len(members)]} announced measures simulated "
             "together: "
             + ", ".join(member.name for member in members)
             + ". Shows the package's impact with interactions."

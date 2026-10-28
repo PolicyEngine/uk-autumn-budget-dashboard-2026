@@ -45,6 +45,8 @@ TAX_NAMES = {
         rf"dividends|savings|income|earnings)\b)",
         r"(?i:\bhigh income child benefit charge\b)",
         r"\bHICBC\b",
+        # Budget 2026's reduction in pensioners' income tax.
+        r"(?i:\bpension tax allowance\b)",
     ),
     "National Insurance": (
         r"(?i:\bnational[- ]insurance\b)",
@@ -360,6 +362,7 @@ def test_the_names_are_read_as_copy_uses_them():
         "capital gains tax relief": {"capital gains tax"},
         "R&D tax relief": {"corporation tax"},
         "the High Income Child Benefit Charge": {"income tax"},
+        "a Pension Tax Allowance": {"income tax"},
         "where employers spread increased NI costs": {"National Insurance"},
         "attract employee and employer National Insurance": {
             "National Insurance"

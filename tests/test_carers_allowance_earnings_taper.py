@@ -228,6 +228,6 @@ def test_registered_on_budget_day():
     assert CARERS_ALLOWANCE_TAPER_ID in list_reform_ids()
     assert CARERS_ALLOWANCE_TAPER_ID in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
     assert measure.simulation_modifier is carers_allowance_earnings_taper
-    assert measure.description.startswith("Candidate measure.")
+    assert not measure.description.startswith("Candidate measure.")
     combined = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID)
     assert measure.name in combined.description
