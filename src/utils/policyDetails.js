@@ -250,8 +250,11 @@ export const POLICY_DETAILS = [
     summary:
       "Replaces the Carer's Allowance cliff edge at the £204 weekly earnings limit with a taper of £1 for each £1 earned above it, from 2030-31.",
     starts: "April 2030",
+    affects: "Carers earning above the Carer's Allowance earnings limit",
     type: "Benefit",
     inForce: { from: "2030-04" },
+    howCalculated:
+      "Reduces Carer's Allowance by £1 for each £1 of weekly net earnings above the £204 limit, instead of stopping it, from 2030-31.",
     details:
       "The £1-for-£1 taper is in the government's written statement of 27 October 2026 (HCWS421), starting within 2030-31; the model applies it to the whole of 2030-31 and holds the limit at £204. Scotland's Carer Support Payment is unchanged. Universal Credit counts Carer's Allowance in full as unearned income, and the allowance is taxable, so a carer on Universal Credit gains nothing and can lose the income tax on it. Carers the limit kept out claim at the data's 60% take-up.",
     source: {

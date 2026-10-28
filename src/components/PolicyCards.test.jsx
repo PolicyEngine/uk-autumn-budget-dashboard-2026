@@ -263,7 +263,7 @@ describe("the in-force timeline", () => {
 
   it("counts a temporary measure's months", () => {
     expect(durationLabel(detailsById.road_fuel_vat_cut)).toBe("6 months");
-    expect(durationLabel(detailsById.domestic_electricity_zero_vat)).toBe("18 months");
+    expect(durationLabel(detailsById.domestic_electricity_zero_vat)).toBe("9 months");
     expect(durationLabel(detailsById.warm_home_discount_top_up)).toBe("One winter");
     expect(timelineDescription(detailsById.road_fuel_vat_cut)).toBe(
       "In force from December 2026 to May 2027 (6 months).",
@@ -439,7 +439,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       ["warm_home_discount_top_up", "£150£250+£100"],
       ["domestic_electricity_zero_vat", "5%0%−5 points"],
       ["threshold_freeze_2031_32", "£12,830£12,570−£260"],
-      ["unearned_income_rates_up", "10.75%12.75%+2 points"],
+      ["unearned_income_rates_up", "22%24%+2 points"],
     ];
     for (const [id, values] of cases) {
       if (!file.measures[id]) continue;
@@ -498,10 +498,10 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(screen.queryByRole("table")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Show the dates" }));
     const dates = screen.getByRole("table");
-    // From 1 January 2027 on: the timeline's first day equals current law,
-    // so is left out; 1 January, 1 March and 1 April 2027, then each April
-    // to 2031
-    expect(within(dates).getAllByRole("row")).toHaveLength(8);
+    // Only the dates the measure changes: the timeline's first day and
+    // every date from 1 July 2027 equal current law, so are left out;
+    // 1 January, 1 March and 1 April 2027
+    expect(within(dates).getAllByRole("row")).toHaveLength(4);
     expect(within(dates).getAllByRole("row")[1]).toHaveTextContent("1 January 202755.95p52.95p−3p");
     fireEvent.click(screen.getByRole("button", { name: "Show the yearly averages" }));
     const averages = screen.getByRole("table", { name: /As modelled/ });
