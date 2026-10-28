@@ -211,3 +211,24 @@ def test_fuel_duty_path_is_the_obr_rate_then_october_rpi():
     } == (steps)
     changes = forecast_parameter_changes()[FUEL_DUTY]
     assert changes["2027-04-01.2028-03-31"] == 0.6059
+
+
+def test_derived_series_follow_october_cpi(current_law):
+    """CPI after housing costs: March's moved by the change in CPI; social
+    rent: the previous year's CPI + 1% (England's cap)."""
+    changes = forecast_parameter_changes()
+    cpi = dict(zip(YEARS, TABLE_A1["consumer_price_index"]))
+    march_cpi = current_law.get_child(OBR + "consumer_price_index")
+    march_ahc = current_law.get_child(OBR + "consumer_price_index_ahc")
+    for year in YEARS:
+        key = f"{year}-01-01.{year}-12-31"
+        assert changes[OBR + "consumer_price_index_ahc"][key] == pytest.approx(
+            march_ahc(f"{year}-01-01")
+            + cpi[year] / 100
+            - march_cpi(f"{year}-01-01"),
+            abs=1e-9,
+        ), year
+        if year > 2026:
+            assert changes[OBR + "social_rent"][key] == pytest.approx(
+                cpi[year - 1] / 100 + 0.01
+            ), year
