@@ -245,7 +245,7 @@ describe("young people cards", () => {
 
   it("takes its focus from By age's group: the compare option and the dumbbell follow it", () => {
     const { unmount } = render(<TrendCard {...props} selectedYear={2029} group="25-34" />);
-    expect(screen.getByRole("button", { name: /^Options: 25 to 34 vs all/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Options: 25 to 34 and all/ })).toBeInTheDocument();
     unmount();
     render(<MeasuresCard {...props} selectedYear={2028} group="pensioners" />);
     expect(screen.getByRole("button", { name: /^Options: Pensioners/ })).toBeInTheDocument();
@@ -282,6 +282,30 @@ describe("young people cards", () => {
     expect(card.querySelector(".chart-footer")).toHaveTextContent(
       `Not drawn in ${yearList(DISPLAY_YEARS)}, as a selected policy has too few survey records by age: every age group except all ages.`,
     );
+  });
+
+  it("offers no Compare with all ages chosen, so nothing reads 'All ages vs all ages' (AGE6)", () => {
+    render(<TrendCard {...props} selectedYear={2029} group="all" />);
+    const card = document.querySelector(".young-people-trend");
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    expect(within(card).queryByRole("radio", { name: /vs all ages|and all ages/ })).toBeNull();
+    expect(within(card).queryByText("Compare")).toBeNull();
+  });
+
+  it("keeps Running total when the age group changes (AGE11)", () => {
+    const { rerender } = render(<TrendCard {...props} selectedYear={2029} group="16-24" />);
+    const card = () => document.querySelector(".young-people-trend");
+    fireEvent.click(within(card()).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(card()).getByRole("radio", { name: "Running total" }));
+    rerender(<TrendCard {...props} selectedYear={2029} group="25-34" />);
+    expect(within(card()).getByRole("button", { name: /^Options: 25 to 34.*Running total/ })).toBeInTheDocument();
+  });
+
+  it("says what the chart shows in About this chart (AGE7)", () => {
+    render(<TrendCard {...props} selectedYear={2029} />);
+    const card = document.querySelector(".young-people-trend");
+    fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
+    expect(card).toHaveTextContent("The average change per person in each age group, each year, with all ages for comparison.");
   });
 
   it("draws every year shown, whatever year is selected", () => {

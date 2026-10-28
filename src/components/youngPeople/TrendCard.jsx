@@ -72,8 +72,8 @@ const SELECTED_FILL = CHART_COLOURS.highlightBand;
 
 
 const compareOptions = (label) => [
-  { value: "focus", label: `${label} vs all ages`, summary: `${label} vs all` },
-  { value: "groups", label: "All age groups", summary: "All groups" },
+  { value: "focus", label: `${label} and all ages`, summary: `${label} and all` },
+  { value: "groups", label: "Every age group", summary: "Every group" },
 ];
 const viewOptions = (label) => [
   { value: "lines", label: "Lines", summary: "Lines" },
@@ -486,17 +486,29 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const catalogue = useMeasureCatalogue();
   // On a phone the step labels do not fit the plot: the sentence names them
   const phone = useViewportMatch(PHONE_QUERY);
-  const [compare, setCompare] = useState("focus");
+  // Compare, Breakdown and Years hold when the shared Age group changes
+  // (the card is not remounted); only the line chips start again
+  const [chosenCompare, setCompare] = useState("focus");
+  // All ages has nothing to compare with all ages: every group's lines
+  const compare = group === ALL_BAND ? "groups" : chosenCompare;
   const [view, setView] = useState("lines");
   const [years, setYears] = useState("each");
   const [hovered, setHovered] = useState(null);
   // All age groups: which lines are drawn (SeriesToggle), every one at first
   const [shownGroups, setShownGroups] = useState(() => SERIES_LIST.map((series) => series.key));
+  const [chipsGroup, setChipsGroup] = useState(group);
   const groupsView = compare === "groups" && view === "lines";
   // The focus view: 16 to 24, all ages and the other groups (one chip for
   // all of them), every one at first
   // Every group on at first: 16 to 24 and all ages strong, the others faint
   const [shownFocus, setShownFocus] = useState(() => SERIES_LIST.map((series) => series.key));
+  if (chipsGroup !== group) {
+    // A new group: every line on again (pensioners add a line of their own)
+    setChipsGroup(group);
+    setShownGroups(SERIES_LIST.map((series) => series.key));
+    setShownFocus(SERIES_LIST.map((series) => series.key));
+    setHovered(null);
+  }
   const focusView = compare === "focus" && view === "lines";
   /** Whether a line is drawn in the view shown. */
   const isShown = (key) =>
@@ -765,7 +777,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
           name={title}
           options={[
             ...extraOptions,
-            { label: "Compare", value: compare, onChange: setCompare, options: compareOptions(FOCUS_LABEL) },
+            group !== ALL_BAND && { label: "Compare", value: compare, onChange: setCompare, options: compareOptions(FOCUS_LABEL) },
             { label: "Breakdown", value: view, onChange: setView, options: viewOptions(FOCUS_LABEL) },
             { label: "Years", value: years, onChange: setYears, options: YEARS_OPTIONS },
           ]}
@@ -961,6 +973,8 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
           members={members}
           year={Number(selectedYear)}
           info={{
+            shows: "The average change per person in each age group, each year, with all ages for comparison.",
+            how: ["Each line is the selected policies' result for that group; Running total adds the years."],
             caveats: [
               missingNote,
               byMeasure && netOnly && PACKAGE_NET_ONLY,

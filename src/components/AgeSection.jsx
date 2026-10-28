@@ -101,7 +101,7 @@ export default function AgeSection({ selectedPolicies, selectedYear, policies })
               (keyInLegend), level with Change by year's line chips */}
           <div className="charts-grid">
             <AgeChangeCard {...props} keyInLegend height={narrow ? 360 : 400} />
-            <TrendCard key={group} {...props} height={narrow ? 340 : 400} />
+            <TrendCard {...props} height={narrow ? 340 : 400} />
           </div>
         </section>
       </MeasureKeyProvider>
