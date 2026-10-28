@@ -175,7 +175,7 @@ export const UNMODELLED_MEASURES = [
       after: '" (16 October 2026).',
     },
     explainer: {
-      label: "The adjusted Triple Lock: what changes in 2030 and what it saves",
+      label: "The adjusted Triple Lock in the Autumn Budget 2026",
       href: "https://www.policyengine.org/uk/research/uk-triple-lock-budget-2026",
     },
     sources: [budget("paragraphs 1.29 and 5.23"), obr("paragraphs 3.49 and 3.50")],

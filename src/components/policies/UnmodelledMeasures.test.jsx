@@ -238,7 +238,10 @@ describe("UnmodelledMeasures", () => {
     render(<UnmodelledMeasures />);
     open();
     const explained = UNMODELLED_MEASURES.filter(({ explainer }) => explainer);
-    expect(explained.map(({ id }) => id)).toEqual(["adjusted-triple-lock"]);
+    // Each post on the card it explains, by its slug
+    expect(Object.fromEntries(explained.map(({ id, explainer }) => [id, explainer.href]))).toEqual({
+      "adjusted-triple-lock": "https://www.policyengine.org/uk/research/uk-triple-lock-budget-2026",
+    });
     for (const measure of UNMODELLED_MEASURES) {
       const card = document.getElementById(`unmodelled-${measure.id}`);
       const links = within(card).queryAllByRole("link", { name: /^Our explainer/ });
