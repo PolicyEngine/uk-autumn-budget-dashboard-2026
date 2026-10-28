@@ -182,53 +182,6 @@ export function xOf(xAxis, year) {
   return start + (xAxis.scale.bandwidth?.() ?? 0) / 2;
 }
 
-/**
- * Each line's name at its last point, in its colour, nudged apart so no
- * two overlap; hovering a name brings its line forward, as hovering the
- * line does.
- */
-export function EndLabels({ xAxisMap, yAxisMap, data, lines, hovered, onHover, narrow }) {
-  const xAxis = xAxisMap && Object.values(xAxisMap)[0];
-  const yAxis = yAxisMap && Object.values(yAxisMap)[0];
-  if (!xAxis?.scale || !yAxis?.scale) return null;
-  const labels = [];
-  // In the focus view only the lines in colour are named; a grey context
-  // line is named while it is hovered
-  for (const line of lines.filter((each) => each.strong || each.key === hovered)) {
-    const last = [...data].reverse().find((point) => point[line.key] !== null && point[line.key] !== undefined);
-    if (!last) continue;
-    const x = xOf(xAxis, last.year);
-    if (x === null) continue;
-    labels.push({ ...line, x: x + 8, y: yAxis.scale(last[line.key]) });
-  }
-  // Top to bottom, at least 13px apart
-  labels.sort((a, b) => a.y - b.y);
-  const GAP = 13;
-  for (let i = 1; i < labels.length; i += 1) {
-    if (labels[i].y - labels[i - 1].y < GAP) labels[i].y = labels[i - 1].y + GAP;
-  }
-  return (
-    <g className="trend-end-labels">
-      {labels.map((label) => (
-        <text
-          key={label.key}
-          x={label.x}
-          y={label.y}
-          dy="0.35em"
-          fontSize={narrow ? 11 : 12}
-          fontWeight={label.strong || hovered === label.key ? 600 : 400}
-          fill={hovered === label.key ? label.hoverColour ?? label.colour : label.textColour ?? label.colour}
-          style={{ cursor: "default" }}
-          onMouseEnter={() => onHover(label.key)}
-          onMouseLeave={() => onHover(null)}
-        >
-          {narrow ? label.short : label.label}
-        </text>
-      ))}
-    </g>
-  );
-}
-
 const STEP_FONT = 12;
 const STEP_BOX_HEIGHT = STEP_FONT + 8;
 // The gap between a box and the plot's top gridline or its x axis, so a
@@ -265,8 +218,8 @@ function stepBoxHits(box, { segments, columns, zero, grid = [] }) {
 /**
  * Where each step's label goes: in a box just inside the plot's top or
  * bottom edge (STEP_INSET clear of the top gridline and the x axis), over
- * its year and kept inside the plot (clear of the line names in the right
- * margin), with a leader down or up to the point. The place is the one
+ * its year and kept inside the plot, with a leader down or up to the
+ * point. The place is the one
  * that crosses fewest of the lines, bars, gridlines and £0 line: a rise's
  * label at the top, a fall's at the foot when both are clear, then the
  * other edge, then the box slid along the edge (its leader still inside
@@ -771,7 +724,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     published: raw.some((point) => point.published),
   };
   const yWidth = axisWidth(ticks, signedPounds);
-  const margin = plotMargin(narrow, { right: byMeasure || groupsView ? 16 : narrow ? 44 : 84 });
+  const margin = plotMargin(narrow, { right: 16 });
 
   return (
     <div className="young-people-trend">
@@ -916,13 +869,6 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                   onMouseLeave={() => setHovered(null)}
                 />
               ))}
-            {!byMeasure && !groupsView && (
-              <Customized
-                component={
-                  <EndLabels data={lineData} lines={lines.filter((line) => isShown(line.key))} hovered={hovered} onHover={setHovered} narrow={narrow} />
-                }
-              />
-            )}
             {!cumulative && !phone && notes.length > 0 && (
               <Customized
                 component={
