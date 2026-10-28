@@ -140,14 +140,11 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
           <TitleIcon name="bars" className="forecast-tile-icon" />
           <span className="forecast-tile-name">How each policy changes your income</span>
         </h3>
-        {!noChange && (
-          // Named against the table below: this is by policy, that by tax
-          // and benefit; both add up to the same change (Pavel's review, HH5).
-          // The fuel duty policy also moves the VAT row there
+        {!noChange && fuelDuty && (
+          // The fuel duty policy also moves the VAT row in the table below
+          // (HH5); no line otherwise (Vahid, 28 October)
           <p className="waterfall-sub">
-            By policy. The table below splits the same change by tax and benefit.
-            {fuelDuty &&
-              " The fuel duty policy also changes the VAT on fuel, so part of its effect shows in the table's VAT row."}
+            The fuel duty policy also changes the VAT on fuel, so part of its effect shows in the table&apos;s VAT row.
           </p>
         )}
         <p id={sentenceId} className={noChange ? "waterfall-no-change" : "visually-hidden"}>
