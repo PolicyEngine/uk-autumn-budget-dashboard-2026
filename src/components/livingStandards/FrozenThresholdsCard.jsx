@@ -36,27 +36,34 @@ export const FROZEN_THRESHOLDS_TITLE = "Frozen thresholds against pay";
 // allowance and higher rate threshold move together (both frozen) one line
 // draws both (sameThresholds); the trading allowance has its own, from
 // its first year. Average earnings is the
-// flat dashed reference at 100: keeping pace with pay.
+// flat dashed reference at 100: keeping pace with pay. The two income tax
+// thresholds lie almost on one another once they part (2031-32), so the
+// personal allowance is a wide teal band and the higher rate threshold a
+// thin dark blue dash drawn on top of it: both stay visible. The trading
+// allowance takes the amber chart token, apart from the blues and teals.
 const PA = {
   key: "personal_allowance",
   name: "Personal allowance",
   short: "Allowance",
   colour: SERIES_COLOURS[0],
+  width: 5,
   meaning: "The income on which no income tax is paid.",
 };
 const HR = {
   key: "higher_rate",
   name: "Higher rate threshold",
   short: "Higher rate",
-  colour: SERIES_COLOURS[2],
+  colour: SERIES_COLOURS[1],
+  dash: DASH.short,
+  width: 2,
   meaning: "The income above which income tax is paid at the higher rate (the personal allowance plus the basic rate band).",
 };
-const BOTH = { ...PA, name: "Personal allowance and higher rate threshold", short: "Income tax" };
+const BOTH = { ...PA, width: undefined, name: "Personal allowance and higher rate threshold", short: "Income tax" };
 const TA = {
   key: TRADING.key,
   name: "Trading allowance",
   short: "Trading",
-  colour: SERIES_COLOURS[1],
+  colour: CHART_COLOURS.loss,
   meaning:
     "Trading income up to this amount a year is free of income tax and Class 4 National Insurance. The line is the level the Budget sets, held in cash, from the year it takes effect.",
 };
@@ -127,9 +134,10 @@ export default function FrozenThresholdsCard({ view = "chart", onViewChange }) {
   const shown = lineSet.map((l) => l.key).filter((k) => !hidden.includes(k));
   const setShown = (keys) => setHidden(lineSet.map((l) => l.key).filter((k) => !keys.includes(k)));
   const lines = lineSet.filter((l) => shown.includes(l.key));
-  // Drawn in reverse, so the income tax line lies on top (and the tooltip
-  // lists the lines top to bottom, as they end)
-  const drawn = [...lines].reverse();
+  // Drawn in reverse, so the income tax lines lie on top, the higher rate
+  // threshold's dash last of all, over the personal allowance's band (and
+  // the tooltip lists the lines top to bottom, as they end)
+  const drawn = [...lines].reverse().sort((a, b) => (a.key === HR.key) - (b.key === HR.key));
   const earningsColumn = { key: "earnings", label: `Average earnings (index, ${fyLabel(BASE_YEAR)} = 100)` };
   const thresholdLines = lineSet.filter((l) => l.key !== "pay");
 
