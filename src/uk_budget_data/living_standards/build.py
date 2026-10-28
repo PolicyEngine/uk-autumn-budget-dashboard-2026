@@ -168,7 +168,10 @@ def build_outlook(
             f"{pe_uk} needs."
         )
     HEADLINE_END_YEAR = headline_end_year(pe_uk)
-    params = system.parameters.gov.economic_assumptions
+    # The OBR October 2026 forecast the projections are run on.
+    from uk_budget_data.forecast import forecast_parameters
+
+    params = forecast_parameters().gov.economic_assumptions
 
     # Real terms: chained OBR CPI index (BHC) and CPI after housing costs (AHC)
     # from the pinned package; the value for calendar key Y is applied to

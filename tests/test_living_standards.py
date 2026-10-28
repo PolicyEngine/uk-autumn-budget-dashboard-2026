@@ -266,9 +266,9 @@ def outlook(projections):
 
 
 def _cpi(basis: str):
-    from policyengine_uk.system import system
+    from uk_budget_data.forecast import forecast_parameters
 
-    indices = system.parameters.gov.economic_assumptions.indices.obr
+    indices = forecast_parameters().gov.economic_assumptions.indices.obr
     leaf = (
         "consumer_price_index"
         if basis == "bhc"
@@ -445,7 +445,7 @@ def test_the_period_is_the_same_on_every_engine(pe_uk, patched):
     assert engine.headline_end_year(pe_uk) == 2031
     assert engine.projection_years(pe_uk) == list(range(2024, 2032))
     note = engine.headline_end_year_note(pe_uk)
-    assert note.startswith("2031-32 is past the OBR March 2026 forecast")
+    assert note.startswith("2031-32 is the last year of the OBR October 2026")
     assert needs_uc_health_element_extension(pe_uk) is patched
 
 
@@ -496,7 +496,7 @@ def check_contract(doc: dict) -> None:
     end = meta["headline_end_year"]
     assert end == "2031-32"
     assert meta["headline_end_year_note"].startswith(
-        f"{end} is past the OBR March 2026 forecast"
+        f"{end} is the last year of the OBR October 2026"
     )
     if needs_uc_health_element_extension(meta["policyengine_uk"]):
         assert meta["uc_health_element_extension"]["years"] == [2030, 2031]
