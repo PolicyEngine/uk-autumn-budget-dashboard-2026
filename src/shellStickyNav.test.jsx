@@ -218,6 +218,15 @@ describe("showing the site nav", () => {
     expect(shown()).toBe(false);
   });
 
+  it("does not show when the pointer rests at the edge, then leaves the window (HDR1)", () => {
+    const { scrollTo, wait, shown, move, leave } = setup(true);
+    scrollTo(1_000);
+    move(1);
+    leave(0);
+    wait(SITE_NAV_DWELL_MS * 2);
+    expect(shown()).toBe(false);
+  });
+
   it("on a touch-only device, shows only while the page is at its very top", () => {
     const { wait, shown, move, leave, touchScroll } = setup(true, { touchOnly: true });
     // On load, at the top

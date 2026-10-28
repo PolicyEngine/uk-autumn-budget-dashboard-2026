@@ -614,6 +614,13 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
         hideAfter(SITE_NAV_LEAVE_MS);
       }
     };
+    // The pointer leaving the window (toward the tabs and address bar)
+    // before the rest is up: the nav does not open behind it (HDR1)
+    const onPointerOut = (event) => {
+      if (event.relatedTarget || !edgeTimer) return;
+      window.clearTimeout(edgeTimer);
+      edgeTimer = 0;
+    };
     const onFocusIn = () => show();
     const onFocusOut = (event) => {
       if (!(nav && event.relatedTarget instanceof Node && nav.contains(event.relatedTarget))) {
@@ -628,6 +635,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
     window.addEventListener("pointerup", onPointerUp, { passive: true });
     window.addEventListener("mousemove", onPointer, { passive: true });
+    document.addEventListener("mouseout", onPointerOut, { passive: true });
     nav?.addEventListener("focusin", onFocusIn);
     nav?.addEventListener("focusout", onFocusOut);
     // On a touch-only device the nav is in at the page's top from the start
@@ -641,6 +649,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("mousemove", onPointer);
+      document.removeEventListener("mouseout", onPointerOut);
       nav?.removeEventListener("focusin", onFocusIn);
       nav?.removeEventListener("focusout", onFocusOut);
       if (frame) window.cancelAnimationFrame(frame);
