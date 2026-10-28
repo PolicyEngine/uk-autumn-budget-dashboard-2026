@@ -165,3 +165,48 @@ describe("a summary chart with a withheld year that is not the selected one", ()
     expect(document.body).toHaveTextContent(NOTE);
   });
 });
+
+describe("a summary chart whose published years are all no change but one is withheld", () => {
+  // #285 review: the all-zero note once said "no change in any year shown"
+  // over a withheld year, and drew no "Not published" at all
+  const rows = [
+    { reform_id: RUN, year: "2027", poverty_change_pp: null },
+    { reform_id: RUN, year: "2028", poverty_change_pp: "0" },
+    // Rounds to 0 at the chart's precision
+    { reform_id: RUN, year: "2029", poverty_change_pp: "0.0000001" },
+  ];
+  const draw = (selectedYear, chartRows = rows) =>
+    render(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <SummaryMetricChart
+          metric={SUMMARY_METRICS.poverty}
+          rows={chartRows}
+          policies={POLICIES}
+          selectedPolicies={[RUN]}
+          selectedYear={selectedYear}
+        />
+      </MeasureCatalogueProvider>,
+    ).container;
+  const note = (container) => container.querySelector(".plot-empty[role=status]")?.textContent;
+
+  it.each([2027, 2028])("names the withheld year, never calling every year no change (%s selected)", (year) => {
+    const container = draw(year);
+    expect(note(container)).toBe(
+      "Not published for 2027-28: too few survey households are behind it. In the other years shown, the selected policies do not change the poverty rate.",
+    );
+    expect(note(container)).not.toContain(SUMMARY_METRICS.poverty.noChange);
+    expect(container.querySelector(".chart-description")).toHaveTextContent(
+      year === 2027 ? "Not published for 2027-28: too few survey households are behind it." : "In 2028-29 the selected policies do not change the poverty rate.",
+    );
+  });
+
+  it("names every withheld year", () => {
+    const container = draw(2028, [...rows, { reform_id: RUN, year: "2030", poverty_change_pp: null }]);
+    expect(note(container)).toMatch(/^Not published for 2027-28 and 2030-31: too few survey households are behind them\. /);
+  });
+
+  it("keeps the plain note when nothing is withheld", () => {
+    const container = draw(2028, rows.slice(1));
+    expect(note(container)).toBe(SUMMARY_METRICS.poverty.noChange);
+  });
+});

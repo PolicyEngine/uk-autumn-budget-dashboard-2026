@@ -433,6 +433,24 @@ export function isWithheld(row, key) {
 }
 
 /**
+ * The note in place of the plot when every published year reads as no
+ * change but the floor of survey households withheld some (#285 review):
+ * it names the withheld years, never saying "no change" of them.
+ *
+ * @param {Object} metric - The chart's metric (its title names the subject).
+ * @param {number[]} years - The withheld years, in order.
+ * @returns {string}
+ */
+export function withheldNoChangeNote(metric, years) {
+  const names = years.map(fiscalYearTick);
+  const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
+  return (
+    `${NOT_PUBLISHED} for ${list}: too few survey households are behind ${names.length > 1 ? "them" : "it"}. ` +
+    `In the other years shown, the selected policies do not change ${subjectOf(metric)}.`
+  );
+}
+
+/**
  * The hover's line under a year's figure: for a year the floor of survey
  * households withheld, that it is not published (#285 review, finding 7:
  * no bar is drawn, so the hover is all there is); otherwise the people a
@@ -575,9 +593,12 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
     ? byMeasure.flatMap((m) => m.points).filter((point) => point.value !== null)
     : data.filter((point) => point.value !== null);
   // Every shown value reads as zero at the tooltip's precision (a measure
-  // that moves no one across the poverty line): a note, not a plot of zeros
+  // that moves no one across the poverty line): a note, not a plot of zeros.
+  // A year the floor withheld is not among them, so the note names it
+  // rather than call every year shown no change (#285 review)
   const allZero =
     shown.length > 0 && shown.every((point) => Number(Math.abs(point.value).toFixed(metric.decimals)) === 0);
+  const withheldYears = data.filter((point) => point.withheld).map((point) => point.year);
   // Fitted to the data: from zero when every bar has one sign, fitted to
   // each side when they go both ways, with round ticks (tightAxis)
   const { domain, ticks } = tightAxis(shown.map((point) => point.value));
@@ -711,7 +732,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           </div>
         ) : allZero ? (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>{metric.noChange}</p>
+            <p>{withheldYears.length ? withheldNoChangeNote(metric, withheldYears) : metric.noChange}</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={height}>
