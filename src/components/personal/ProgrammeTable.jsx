@@ -19,6 +19,8 @@ import MeasureRowLabel from "../MeasureRowLabel";
 import Tip from "../Tip";
 import { usePolicyParameters } from "../PolicyChange";
 import { parameterChange, policyTabs } from "../../utils/policyBreakdown";
+import { vatRowLabel } from "../../utils/singleYear";
+import { policyDetailsFor } from "../../utils/policyDetails";
 import { formatValue } from "../../utils/policyParameters";
 
 // A row's note from the API, without any internal constant's name in
@@ -128,7 +130,11 @@ export default function ProgrammeTable({
   parameterTables,
 }) {
   const narrow = useNarrowViewport();
-  const groups = groupTotals(roundProgrammeGroups(programmeGroups(programmes), totals, bars));
+  // The VAT row named by what moves it: VAT on fuel duty when only the fuel
+  // duty policy does (HH5)
+  const vatLabel = vatRowLabel(split?.rows, (id) => policyDetailsFor(policies.find((policy) => policy.id === id))?.type);
+  const relabel = (rows) => rows?.map((row) => ({ ...row, ...(row.id === "vat_change" ? { label: vatLabel } : {}), ...(row.rows ? { rows: relabel(row.rows) } : {}), ...(row.children ? { children: relabel(row.children) } : {}) }));
+  const groups = relabel(groupTotals(roundProgrammeGroups(programmeGroups(programmes), totals, bars)));
   // One tab per selected policy that changes this household, from the
   // split by policy once it is in (policyBreakdown.js)
   const parameters = usePolicyParameters(parameterTables);
@@ -181,8 +187,8 @@ export default function ProgrammeTable({
           columns: [
             { key: "group", label: "Group" },
             { key: "item", label: "Item" },
-            { key: "before", label: "Before (£)", decimals: 0 },
-            { key: "after", label: "After (£)", decimals: 0 },
+            { key: "before", label: "Current law (£)", decimals: 0 },
+            { key: "after", label: "With the policies (£)", decimals: 0 },
             { key: "change", label: "Change (£)", decimals: 0 },
           ],
           rows: [
@@ -219,8 +225,8 @@ export default function ProgrammeTable({
               columns: [
                 { key: "section", label: "Section" },
                 { key: "item", label: "Item" },
-                { key: "before", label: "Before" },
-                { key: "after", label: "After" },
+                { key: "before", label: "Current law" },
+                { key: "after", label: "With the policies" },
                 { key: "change", label: "Change" },
               ],
               rows: policyCsvRows(activePolicy),
@@ -285,7 +291,9 @@ export default function ProgrammeTable({
             <TitleIcon name="layers" />
             <span className="title-text">{title}</span>
           </h3>
-          {!showTabs && <p className="chart-description">{sentence}</p>}
+          {/* Named against the waterfall above: that is by policy, this by
+              tax and benefit; both add up to the same change (HH5) */}
+          <p className="chart-description">By tax and benefit.{!showTabs && ` ${sentence}`}</p>
         </div>
         <ChartDownloadMenu formats={formats} chartTitle={policyTitle} ariaLabel={`Download table: ${policyTitle}`} />
       </div>
@@ -314,7 +322,7 @@ export default function ProgrammeTable({
           aria-pressed={showBoth}
           onClick={() => setShowBoth((value) => !value)}
         >
-          {showBoth ? "Hide before and after" : "Show before and after"}
+          {showBoth ? "Hide current law and with the policies" : "Show current law and with the policies"}
         </button>
       )}
       {activePolicy ? (
@@ -341,12 +349,12 @@ export default function ProgrammeTable({
               </th>
               {wide && (
                 <th scope="col" className="num">
-                  Before
+                  Current law
                 </th>
               )}
               {wide && (
                 <th scope="col" className="num">
-                  After
+                  With the policies
                 </th>
               )}
               <th scope="col" className="num">

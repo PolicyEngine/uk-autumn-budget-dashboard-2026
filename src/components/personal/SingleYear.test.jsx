@@ -448,7 +448,7 @@ describe("the household calculation, from the fixture", () => {
     expect(topNames).toEqual(["Market income", "Taxes", "Benefits", "Net income"]);
     // Open at first: the programmes show under their groups
     expect(rowNames()).toContain("Income tax");
-    for (const name of ["Before", "After", "Change"]) {
+    for (const name of ["Current law", "With the policies", "Change"]) {
       expect(within(table).getByRole("columnheader", { name })).toBeInTheDocument();
     }
     // Net income: the bold total row, with its change (the rows add up to it)
@@ -517,9 +517,9 @@ describe("the household calculation, from the fixture", () => {
     expect(earnings.querySelector(".chart-controls .control-bar-button")).not.toBeNull();
     expect(rate.querySelector(".chart-controls .control-bar-button")).not.toBeNull();
     // After first, as the marginal rate card, marking you
-    expect(optionsLabel(earnings)).toBe("After");
+    expect(optionsLabel(earnings)).toBe("With the policies");
     expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
-    expect(within(earnings).getByText("After the selected policies")).toBeInTheDocument();
+    expect(within(earnings).getByText("With the selected policies")).toBeInTheDocument();
     // Change: the gain and loss key, still marking you
     chooseOption(earnings, "Change");
     expect(earnings.querySelector("svg.earnings-svg").dataset.view).toBe("change");
@@ -1150,8 +1150,8 @@ describe("the Across earnings cards together", () => {
     await waitFor(() => expect(container.querySelector(".single-year-chart-pair .earnings-svg")).not.toBeNull(), { timeout: 5000 });
     const pair = container.querySelector(".single-year-chart-pair");
     const [netCard, rateCard] = pair.querySelectorAll(".single-year-card");
-    chooseOption(netCard, "Before");
-    expect(optionsLabel(rateCard)).toBe("Before");
+    chooseOption(netCard, "Current law");
+    expect(optionsLabel(rateCard)).toBe("Current law");
     // Where both cards have their parts, a chip toggled on one is toggled
     // on the other, and both keys list the same components in order
     const rateChip = within(rateCard).queryByRole("button", { name: "Income tax" });
@@ -1219,7 +1219,8 @@ describe("the breakdown's rows", () => {
     const { default: ProgrammeTable } = await import("./ProgrammeTable");
     render(<ProgrammeTable programmes={programmes} totals={totals} yearLabel="2029-30" />);
     const table = screen.getByRole("table");
-    const vat = within(table).getByRole("row", { name: /VAT change/ });
+    // Named by what moves it: VAT on fuel duty when only fuel duty does (HH5)
+    const vat = within(table).getByRole("row", { name: /^VAT/ });
     // No before; the cut a positive amount after, as a smaller tax
     expect(vat).toHaveTextContent("—+£1+£1");
     expect(within(table).getByRole("row", { name: /Council Tax/ })).toHaveTextContent("−£2,000−£2,000—");
@@ -1295,7 +1296,12 @@ describe("the waterfall's one line", () => {
       />,
     );
     expect(container.querySelector(".waterfall-sentence")).toBeNull();
-    expect(container.querySelector(".waterfall-header").textContent).toBe("How each policy changes your income" + container.querySelector(".visually-hidden").textContent);
+    // The title, the one line naming it against the table (HH5), then the
+    // sentence, read out but not shown
+    expect(container.querySelector(".waterfall-header").textContent).toBe(
+      "How each policy changes your income" + container.querySelector(".waterfall-sub").textContent + container.querySelector(".visually-hidden").textContent,
+    );
+    expect(container.querySelector(".waterfall-sub")).toHaveTextContent("By policy. The table by tax and benefit below adds up to the same change.");
     const chart = container.querySelector("ol.waterfall-rows");
     const described = document.getElementById(chart.getAttribute("aria-describedby"));
     expect(described).toHaveClass("visually-hidden");

@@ -135,6 +135,13 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
           <TitleIcon name="bars" className="forecast-tile-icon" />
           <span className="forecast-tile-name">How each policy changes your income</span>
         </h3>
+        {!noChange && (
+          // Named against the table below: this is by policy, that by tax
+          // and benefit; both add up to the same change (Pavel's review, HH5)
+          <p className="waterfall-sub">
+            By policy. The table by tax and benefit below adds up to the same change.
+          </p>
+        )}
         <p id={sentenceId} className={noChange ? "waterfall-no-change" : "visually-hidden"}>
           {sentence}
         </p>

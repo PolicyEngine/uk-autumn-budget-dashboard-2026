@@ -51,7 +51,7 @@ export const PROGRAMME_LABELS = {
   student_loan_repayments: "Student loan repayment",
   council_tax: "Council Tax",
   fuel_duty: "Fuel duty",
-  vat_change: "VAT change",
+  vat_change: "VAT",
   tv_licence: "TV licence",
   pension_contributions: "Pension contributions from pay",
   other_taxes: "Other taxes",
@@ -194,6 +194,18 @@ export function programmeNotes(groups) {
     .filter((row) => row.note)
     .filter((row) => !NOTE_PART[row.id] || row.children.some((child) => child.id === NOTE_PART[row.id]))
     .map((row) => ({ id: row.id, label: row.label, note: row.note }));
+}
+
+/**
+ * The table's VAT row by what moves it (Pavel's review, HH5): "VAT on fuel
+ * duty" when the only selected policy moving this household that touches
+ * prices at the pump is the fuel duty one (the VAT charged on duty), else
+ * "VAT". `steps` are policyRows(...).rows; `typeOf` gives a measure's type.
+ */
+export function vatRowLabel(steps, typeOf) {
+  const moving = (steps ?? []).filter((step) => step.id !== "interaction" && Math.round(step.rounded ?? step.change ?? 0) !== 0);
+  const types = moving.map((step) => typeOf(step.id));
+  return !types.includes("VAT") && types.includes("Fuel duty") ? "VAT on fuel duty" : "VAT";
 }
 
 /** The interaction row shows only from this size (£), so bars add up. */

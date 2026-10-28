@@ -2,7 +2,7 @@ import { chooseOption, optionsLabel } from "../../test/optionsPills";
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import MarginalRateChart, { RateTooltip } from "./MarginalRateChart";
-import { breakdownRows, describeParts, drawnKey, partsInUse, RATE_PARTS } from "./marginalRateParts";
+import { breakdownRows, describeParts, drawnKey, partsInUse, rateAxis, RATE_PARTS, stepAt } from "./marginalRateParts";
 
 // Three steps: basic rate, higher rate, then the allowance taper
 const RATES = [
@@ -45,14 +45,32 @@ describe("marginal rate parts", () => {
     for (const row of rows) expect(drawnSum(row)).toBeCloseTo(row.after, 6);
   });
 
-  it("draws a negative part at zero, with other taking up the difference", () => {
-    // Universal Credit rising with pay (−5%) and other making it up
+  it("draws a negative part below zero, as the tooltip gives it (HH8)", () => {
+    // Universal Credit rising with pay (−5%), other +5%
     const negative = { ...step(0.2, 0, 0.08, 0.05), universal_credit: -0.05 };
     const [row] = breakdownRows([RATES[0]], { after: [negative] });
     expect(row.universal_credit).toBe(-0.05);
-    expect(row[drawnKey("universal_credit")]).toBe(0);
-    expect(row[drawnKey("other")]).toBe(0);
+    expect(row[drawnKey("universal_credit")]).toBe(-0.05);
+    expect(row[drawnKey("other")]).toBeCloseTo(0.05, 9);
+    // The parts, signed, still add up to the total
     expect(drawnSum(row)).toBeCloseTo(0.28, 6);
+  });
+
+  it("widens the rate axis below 0% for a negative rate or part, within −100% to 200% (HH8)", () => {
+    expect(rateAxis([0.2, 0.6])).toEqual({ domain: [0, 1], ticks: [0, 0.2, 0.4, 0.6, 0.8, 1] });
+    expect(rateAxis([-0.05, 0.6]).domain).toEqual([-0.2, 1]);
+    expect(rateAxis([-3, 0.6]).domain).toEqual([-1, 1]);
+    expect(rateAxis([0.3, 1.3]).domain[1]).toBeGreaterThanOrEqual(1.3);
+    expect(rateAxis([0.3, 50]).domain[1]).toBe(2);
+  });
+
+  it("hovers the step that holds the pointer's salary, not the nearest point (HH9)", () => {
+    const rows = [{ income: 0 }, { income: 50000 }, { income: 100000 }, { income: 150000 }];
+    // Past a step's middle, still that step
+    expect(stepAt(rows, 90000).income).toBe(50000);
+    expect(stepAt(rows, 50000).income).toBe(50000);
+    expect(stepAt(rows, 0).income).toBe(0);
+    expect(stepAt(rows, -1)).toBeNull();
   });
 
   it("puts your rate's parts in words, largest first", () => {
@@ -67,9 +85,9 @@ describe("MarginalRateChart", () => {
     render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);
     expect(screen.getByText("Personal allowance taper")).toBeInTheDocument();
     // One view at a time: After first, with its total only
-    expect(optionsLabel(document.body)).toBe("After");
-    expect(screen.getByText("Total rate after")).toBeInTheDocument();
-    expect(screen.queryByText("Total rate before")).not.toBeInTheDocument();
+    expect(optionsLabel(document.body)).toBe("With the policies");
+    expect(screen.getByText("Total rate with the policies")).toBeInTheDocument();
+    expect(screen.queryByText("Total rate under current law")).not.toBeInTheDocument();
     // Every shared component has a chip, so the two cards' keys line up;
     // one with nothing for this household is disabled
     fireEvent.click(screen.getByRole("button", { name: /with no effect for you$/ }));
@@ -88,9 +106,9 @@ describe("MarginalRateChart", () => {
   it("switches between before, after and the change, each with its own legend", () => {
     const own = { before: step(0.4, 0.2, 0.02), after: step(0.4, 0.2, 0.02) };
     render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);
-    chooseOption(document.body, "Before");
-    expect(screen.getByText("Total rate before")).toBeInTheDocument();
-    expect(screen.queryByText("Total rate after")).not.toBeInTheDocument();
+    chooseOption(document.body, "Current law");
+    expect(screen.getByText("Total rate under current law")).toBeInTheDocument();
+    expect(screen.queryByText("Total rate with the policies")).not.toBeInTheDocument();
     expect(screen.getByText("Personal allowance taper")).toBeInTheDocument();
     chooseOption(document.body, "Change");
     expect(screen.getByText("Change in marginal rate")).toBeInTheDocument();
@@ -116,18 +134,18 @@ describe("MarginalRateChart", () => {
       return text;
     };
     expect(tip("before")).toMatch(/Income tax/);
-    expect(tip("before")).toMatch(/Total rate before.*42%/);
-    expect(tip("before")).not.toMatch(/Total rate after/);
-    expect(tip("after")).toMatch(/Total rate after.*45%/);
-    expect(tip("after")).not.toMatch(/Total rate before/);
+    expect(tip("before")).toMatch(/Total rate under current law.*42%/);
+    expect(tip("before")).not.toMatch(/Total rate with the policies/);
+    expect(tip("after")).toMatch(/Total rate with the policies.*45%/);
+    expect(tip("after")).not.toMatch(/Total rate under current law/);
     expect(tip("change")).toMatch(/Change in marginal rate.*\+3pp/);
     expect(tip("change")).not.toMatch(/Income tax|Total rate/);
   });
 
   it("draws the totals alone when the API sends no parts", () => {
     render(<MarginalRateChart sweep={sweep(null)} salary={110000} yearLabel="2027-28" />);
-    expect(screen.getByText("After the selected policies")).toBeInTheDocument();
-    expect(screen.queryByText("Total rate after")).not.toBeInTheDocument();
+    expect(screen.getByText("With the selected policies")).toBeInTheDocument();
+    expect(screen.queryByText("Total rate with the policies")).not.toBeInTheDocument();
     expect(screen.getByText(/^At £110,000 your marginal tax rate is 62%, so of your next/)).toBeInTheDocument();
   });
 });
@@ -136,7 +154,7 @@ describe("the two Across earnings cards in step", () => {
   it("share one list of components: the same chips in the same order on both, those with nothing disabled", async () => {
     const { sweepChips, SWEEP_COMPONENTS } = await import("./sweepComponents");
     const net = sweepChips("net", new Set(["market_income", "income_tax", "national_insurance"]), { label: "Net income after", colour: "x" });
-    const rate = sweepChips("rate", new Set(["income_tax", "national_insurance"]), { label: "Total rate after", colour: "x" });
+    const rate = sweepChips("rate", new Set(["income_tax", "national_insurance"]), { label: "Total rate with the policies", colour: "x" });
     expect(net.map((chip) => chip.label).slice(0, -1)).toEqual(rate.map((chip) => chip.label).slice(0, -1));
     expect(net.map((chip) => chip.key).slice(0, -1)).toEqual(SWEEP_COMPONENTS.map((component) => component.key));
     const by = (chips, key) => chips.find((chip) => chip.key === key);

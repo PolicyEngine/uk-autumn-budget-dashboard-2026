@@ -639,8 +639,8 @@ function RankView({ width, narrow, curves, position, side }) {
 /* ------------------------------------------------------------------ */
 
 const SIDES = [
-  { value: "before", label: "Before" },
-  { value: "after", label: "After" },
+  { value: "before", label: "Current law" },
+  { value: "after", label: "With the policies" },
 ];
 const SHOW_AS = [
   { value: "spread", label: "Spread" },
