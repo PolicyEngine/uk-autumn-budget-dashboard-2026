@@ -38,7 +38,7 @@ function ChartTooltip({
   showPlus = false,
   showZero = false,
   // A line under the rows from the hovered point (e.g. the people a
-  // poverty change is), or nothing
+  // poverty change is), or several in order, or nothing
   note,
 }) {
   const { bySeriesKey, byId } = useMeasureCatalogue();
@@ -79,7 +79,7 @@ function ChartTooltip({
         ].filter(([, sectionRows]) => sectionRows.length > 0)
       : [[null, rows]];
 
-  const noteText = note ? note(payload[0]?.payload) : null;
+  const noteLines = [].concat((note ? note(payload[0]?.payload) : null) ?? []).filter(Boolean);
   const valueText = (value) =>
     showPlus && value > 0 ? `+${format(value)}` : signed(format(Math.abs(value)), value);
 
@@ -113,7 +113,9 @@ function ChartTooltip({
           <span className="chart-tooltip-value">{valueText(Number(net.value))}</span>
         </div>
       )}
-      {noteText && <p className="chart-tooltip-note">{noteText}</p>}
+      {noteLines.map((line) => (
+        <p key={line} className="chart-tooltip-note">{line}</p>
+      ))}
     </div>
   );
 }

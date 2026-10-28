@@ -95,8 +95,9 @@ export function FloatingTooltip({ tip }) {
  *
  * @param {string} label - e.g. "Fuel duty rises deferred, 2027-28"
  * @param {Array<{key: string, name: string, text: string, color: string}>} rows
- * @param {string} [note] - A line under the rows (e.g. why a policy's
- *   estimate differs from the official costing), or none
+ * @param {string|string[]} [note] - A line under the rows (e.g. why a
+ *   policy's estimate differs from the official costing), several in
+ *   order, or none
  */
 export function TooltipRows({ label, rows, note }) {
   return (

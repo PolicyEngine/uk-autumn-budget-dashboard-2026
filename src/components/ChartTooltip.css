@@ -135,6 +135,14 @@
   font-size: var(--fs-micro);
 }
 
+/* A second line under the first (e.g. a policy's note under what each
+   side of the comparison counts): one rule above them both */
+.chart-tooltip-note + .chart-tooltip-note {
+  margin-top: 4px;
+  padding-top: 0;
+  border-top: 0;
+}
+
 /* A hover tooltip drawn in the window (ViewportTooltip.jsx): fixed, placed
    by placeTooltip so it is never cut off by a card or the window's edge */
 .viewport-tooltip-probe {

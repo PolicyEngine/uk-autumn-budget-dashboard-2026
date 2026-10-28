@@ -248,7 +248,9 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   // - OBR_DEVIATION_NOTES: why each measure's estimate differs from the
   //   official costing, shown only beside that measure's published row in
   //   the comparison, and only while its POLICY_DETAILS entry fits it
-  //   (obrDeviationNotes.test.js, OBRComparisonTable.test.jsx).
+  //   (obrDeviationNotes.test.js, OBRComparisonTable.test.jsx);
+  // - OBR_COMPARISON_BASES: what each side of that comparison counts, one
+  //   line above each note, by the same rule (#297).
   // Before #185: MODELLING_NOTE, whose id test_reforms.py holds to a
   // registered measure, and singleYear.js's labels for the household API's
   // own programme line of the same name as the Warm Home Discount top-up.
@@ -261,7 +263,7 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
     "utils/measureModelling.js": [/export const MODELLING_NOTE = \{[\s\S]*?\n\};/],
     "utils/singleYear.js": [/^\s*warm_home_discount_top_up: "[^"]*",$/gm],
     "utils/householdPolicyFields.js": [/export const POLICY_FIELDS = \{[\s\S]*?\n\};/],
-    "utils/obrDeviationNotes.js": [/export const OBR_DEVIATION_NOTES = \{[\s\S]*?\n\};/],
+    "utils/obrDeviationNotes.js": [/export const OBR_DEVIATION_NOTES = \{[\s\S]*?\n\};/, /export const OBR_COMPARISON_BASES = \{[\s\S]*?\n\};/],
   };
   const uncommented = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   const outsideAllowed = (path, text) => (allowed[relative(root, path)] ?? []).reduce((rest, block) => rest.replace(block, ""), text);

@@ -20,7 +20,7 @@ import { loadPolicyParameters, measureWindows, outOfForceText } from "../utils/p
 import { loadOfficialCostings, OfficialCostingsPendingError } from "../utils/publication/officialCostings";
 import { SOURCES } from "../utils/sources";
 import { METHOD_ANCHORS } from "./methodology/anchors";
-import { OBR_DEVIATION_NOTES, OBR_DEVIATION_STATEMENT, deviationNoteFor } from "../utils/obrDeviationNotes";
+import { OBR_COMPARISON_BASES, OBR_DEVIATION_NOTES, OBR_DEVIATION_STATEMENT, comparisonBasisFor, deviationNoteFor } from "../utils/obrDeviationNotes";
 
 /** What the comparison says when the official costings cover none of the selected measures. */
 export const OBR_UNAVAILABLE = "The official costings have no figures for the selected policies.";
@@ -215,6 +215,17 @@ const COMPARISON_INFO = {
   method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the policies" },
 };
 
+/** A Difference cell's tip: what each side counts, then why they differ. */
+function DeviationTip({ basis, note }) {
+  return (
+    <>
+      {basis && <span className="obr-basis-line">{basis}</span>}
+      {basis && note && " "}
+      {note}
+    </>
+  );
+}
+
 /**
  * How our estimates compare with the official costings: a card of its own
  * on Public finances, directly under Revenue impact, for the year in the
@@ -223,9 +234,10 @@ const COMPARISON_INFO = {
  * the official basis and the chart's scale. Under it, why the two differ:
  * the general statement, then each policy's note (`notes`, by measure id:
  * utils/obrDeviationNotes.js), which also shows in its row's tooltip and,
- * in the table, on its Difference cell.
+ * in the table, on its Difference cell. Above each note, wherever it
+ * shows, is the line saying what each side counts (`bases`).
  */
-function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, data, notes = OBR_DEVIATION_NOTES }) {
+function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, data, notes = OBR_DEVIATION_NOTES, bases = OBR_COMPARISON_BASES }) {
   const catalogue = useMeasureCatalogue();
   const windows = useMeasureWindows();
   const fetched = useObrComparisonData(!data);
@@ -256,13 +268,14 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   }
 
   const yearLabel = fiscalYear(selectedYear);
-  // Each row with why it differs from the official costing, while its note
-  // was written for the measure as published
+  // Each row with what each side counts and why it differs from the
+  // official costing, while they were written for the measure as published
   const rows = comparisonRows(selectedRows, selectedPolicies, selectedYear, showBehavioural, catalogue, windows).map((row) => ({
     ...row,
+    basis: comparisonBasisFor(row.measure, bases),
     note: deviationNoteFor(row.measure, notes),
   }));
-  const notedRows = rows.filter((row) => row.note !== null);
+  const notedRows = rows.filter((row) => row.basis !== null || row.note !== null);
   // The basis the figures shown are on: the other one when the official
   // costings give none on the chosen basis this year (Budget 2026 publishes
   // one Exchequer impact per measure, post-behavioural), so no line calls
@@ -300,6 +313,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
         { key: "obrStatic", label: "Official, static (£bn)", decimals: 4 },
         { key: "obrBehavioural", label: "Official, post-behavioural (£bn)", decimals: 4 },
         { key: "difference", label: `Difference, PolicyEngine minus official ${obrKind} (£bn)`, decimals: 4 },
+        { key: "basis", label: "What each side counts" },
         { key: "note", label: "Why it differs" },
       ],
       rows: rows.map((row) => ({
@@ -308,6 +322,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
         obrStatic: row.obrStatic ?? undefined,
         obrBehavioural: row.obrBehavioural ?? undefined,
         difference: row.pe !== null && row.obr !== null ? row.pe - row.obr : undefined,
+        basis: row.basis ?? undefined,
         note: row.note ?? undefined,
       })),
     });
@@ -456,10 +471,11 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
                               : ""
                         }`}
                       >
-                        {/* Why it differs, on hover, focus or a tap; the
-                            list under the table says it too */}
-                        {row.note ? (
-                          <Tip content={row.note} wide>
+                        {/* What each side counts and why it differs, on
+                            hover, focus or a tap; the list under the table
+                            says them too */}
+                        {row.basis || row.note ? (
+                          <Tip content={<DeviationTip basis={row.basis} note={row.note} />} wide>
                             <span className="difference-note-anchor" tabIndex={0}>
                               {formatDifference(difference, decimals)}
                             </span>
@@ -490,8 +506,16 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
             <h4 className="obr-deviation-title" id="obr-deviation-title">Why each policy differs</h4>
             <ul className="obr-deviation-list">
               {notedRows.map((row) => (
+                // What each side counts on the name's line, the note
+                // under it
                 <li key={row.id} data-measure={row.id}>
-                  <strong>{row.name}:</strong> {row.note}
+                  <strong>{row.name}:</strong> {row.basis ?? row.note}
+                  {row.basis && row.note && (
+                    <>
+                      {" "}
+                      <span className="obr-deviation-note">{row.note}</span>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
