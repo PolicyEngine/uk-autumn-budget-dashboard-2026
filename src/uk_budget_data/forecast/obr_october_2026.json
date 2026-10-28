@@ -1,54 +1,84 @@
 {
   "vintage": "OBR EFO October 2026",
-  "source": "OBR, Economic and fiscal outlook, October 2026, Annex A",
-  "source_url": "https://www.gov.uk/government/publications/october-2026-economic-and-fiscal-outlook",
+  "source": "OBR, Economic and fiscal outlook, October 2026: Annex A and the detailed forecast tables (economy, receipts)",
+  "source_url": "https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/",
   "replaces": "OBR EFO March 2026, as shipped in policyengine-uk 2.151.0 (gov.economic_assumptions.yoy_growth.obr)",
   "applies_to": "Every simulation the dashboard builds, baseline and reform alike (uk_budget_data.forecast.with_forecast). Applied before data load, so the dataset's projected years follow it.",
   "notes": [
-    "Growth rates are Table A.1 (Economy forecast, EFO page 180), percentage change on a year earlier, calendar years 2026 to 2031, keyed YYYY-01-01.YYYY-12-31. 2025 is outturn in Table A.1 and is left as shipped; after 2031 the engine's long-run path is kept.",
-    "The engine's March values equal the March Table A.1 rows: the October value minus the Table A.2 change since March, to within 0.1pp rounding (tests/test_forecast_basis.py).",
-    "Statutory uprating inputs keep their published outturns (September 2026 CPI 3.5%, May-July 2026 earnings 3.9%). Their forecast years are calendar-year growth plus the engine's forecast_gap, which still holds the March 2026 quarterly gaps except where noted below.",
-    "September 2027 CPI: Table A.3 (EFO page 181) gives the 2027-28 triple-lock guarantee as 3.4%, the highest of Q2 2027 earnings growth, Q3 2027 CPI and 2.5%. Q2 earnings cannot reach 3.4% (calendar-year 2027 earnings growth is 3.0%), so Q3 2027 CPI is 3.4%, equal to calendar-year 2027 CPI: the gap is 0. The March gap (+0.07pp) would have given 3.5%.",
-    "Every later Table A.3 triple-lock figure (2.5, 2.5, 2.5, 2.6 for 2028-29 to 2031-32) is reproduced by these series and the remaining March gaps (tests/test_forecast_basis.py).",
-    "Fuel duty (gov.hmrc.fuel_duty.petrol_and_diesel), added in code (uk_budget_data.forecast.fuel_duty_rpi_steps): policyengine-uk stores current law's RPI steps as values from its March RPI. Current law here is the OBR's 60.59p from April 2027 (EFO paragraph 3.19: on 1 July 2027 the 5p cut is reversed with an RPI uprating, 52.95p to 60.59p; the Budget defers that same planned RPI increase from April), then each 1 April the previous calendar year's Table A.1 RPI. The baseline and the fuel duty measure both read this one path.",
-    "Not updated (the OBR detailed forecast tables could not be retrieved): cpih, non_labour_income, rent, mortgage_interest, per_capita, council_tax, fuel volume and price series. They keep the March 2026 path. consumer_price_index_ahc and social_rent are derived from Table A.1 CPI (see their sources)."
+    "Growth rates are calendar years 2026 to 2031, keyed YYYY-01-01.YYYY-12-31 and applied before data load. CPI, RPI, CPIH, average earnings and rents are the economy detailed forecast tables' Tables 1.6 and 1.7 at four decimals, read as policyengine-uk's import_obr_forecasts reads them (the source of the engine's own March values); they equal Table A.1 to one decimal. House prices are Table A.1, as the engine cites. 2025 is outturn and is left as shipped (the October tables revise some 2025 figures, e.g. earnings 5.3% to 4.1%); after 2031 the engine's long-run path is kept.",
+    "Statutory uprating inputs keep their published outturns (September 2026 CPI 3.5%, May-July 2026 earnings 3.9%). Their forecast years are calendar-year growth plus forecast_gap, recomputed from the October tables as import_obr_forecasts does: September CPI from receipts Table 4.19, May-July earnings from Table 1.6's Q2 growth. Every Table A.3 triple-lock figure is reproduced (tests/test_forecast_basis.py).",
+    "Per-capita series (GDP, mixed income, non-labour income) are aggregate growth minus ons.population growth (the engine's March 2025 vintage), as the engine derives them: nominal GDP from Table A.1, mixed and non-labour income from Table 1.12.",
+    "consumer_price_index_ahc is recomputed by policyengine-uk's create_ahc_deflator from the October CPI and rents (and Ofwat water bills, unchanged).",
+    "Fuel duty (gov.hmrc.fuel_duty.petrol_and_diesel), added in code (uk_budget_data.forecast.fuel_duty_rpi_steps): current law is the OBR's 60.59p from April 2027 (EFO paragraph 3.19), then each 1 April the previous calendar year's RPI from this file. The baseline and the fuel duty measure both read this one path.",
+    "Not updated: road_fuel_volume and the petrol/diesel spending litre proxies (the engine derives volume from the OBR's fuel duty receipts net of non-road fuel, over fiscal-year average duty rates; receipts Table 4.8 is the cash-basis total, and with the March receipts tables unavailable here the method cannot be checked against the engine's March values, so it is left for policyengine-uk's importer), and ons.population (a March 2025 vintage the engine keeps by choice). They keep the March 2026 path."
   ],
   "parameter_changes": {
     "gov.economic_assumptions.yoy_growth.obr.consumer_price_index": {
-      "source": "Table A.1, Inflation: CPI",
+      "source": "Table 1.7, CPI (economy detailed forecast tables, calendar year), read as policyengine-uk's import_obr_forecasts reads them",
       "values": {
-        "2026-01-01.2026-12-31": 0.031,
-        "2027-01-01.2027-12-31": 0.034,
+        "2026-01-01.2026-12-31": 0.0311,
+        "2027-01-01.2027-12-31": 0.0342,
         "2028-01-01.2028-12-31": 0.021,
         "2029-01-01.2029-12-31": 0.021,
-        "2030-01-01.2030-12-31": 0.02,
+        "2030-01-01.2030-12-31": 0.0201,
         "2031-01-01.2031-12-31": 0.02
       }
     },
     "gov.economic_assumptions.yoy_growth.obr.rpi": {
-      "source": "Table A.1, Inflation: RPI",
+      "source": "Table 1.7, RPI (economy detailed forecast tables, calendar year), read as policyengine-uk's import_obr_forecasts reads them",
       "values": {
-        "2026-01-01.2026-12-31": 0.036,
-        "2027-01-01.2027-12-31": 0.043,
-        "2028-01-01.2028-12-31": 0.03,
-        "2029-01-01.2029-12-31": 0.03,
-        "2030-01-01.2030-12-31": 0.023,
-        "2031-01-01.2031-12-31": 0.022
+        "2026-01-01.2026-12-31": 0.0359,
+        "2027-01-01.2027-12-31": 0.0432,
+        "2028-01-01.2028-12-31": 0.0303,
+        "2029-01-01.2029-12-31": 0.0298,
+        "2030-01-01.2030-12-31": 0.0229,
+        "2031-01-01.2031-12-31": 0.0218
       }
     },
     "gov.economic_assumptions.yoy_growth.obr.average_earnings": {
-      "source": "Table A.1, Labour market: Average weekly earnings (wages and salaries divided by employees)",
+      "source": "Table 1.6, average weekly earnings growth (economy detailed forecast tables, calendar year), read as policyengine-uk's import_obr_forecasts reads them",
       "values": {
-        "2026-01-01.2026-12-31": 0.037,
-        "2027-01-01.2027-12-31": 0.03,
-        "2028-01-01.2028-12-31": 0.022,
-        "2029-01-01.2029-12-31": 0.023,
-        "2030-01-01.2030-12-31": 0.025,
+        "2026-01-01.2026-12-31": 0.0373,
+        "2027-01-01.2027-12-31": 0.0299,
+        "2028-01-01.2028-12-31": 0.0215,
+        "2029-01-01.2029-12-31": 0.0227,
+        "2030-01-01.2030-12-31": 0.0249,
         "2031-01-01.2031-12-31": 0.026
       }
     },
+    "gov.economic_assumptions.yoy_growth.obr.cpih": {
+      "source": "Table 1.7, CPIH (economy detailed forecast tables, calendar year), read as policyengine-uk's import_obr_forecasts reads them",
+      "values": {
+        "2026-01-01.2026-12-31": 0.0324,
+        "2027-01-01.2027-12-31": 0.033,
+        "2028-01-01.2028-12-31": 0.0214,
+        "2029-01-01.2029-12-31": 0.0217,
+        "2030-01-01.2030-12-31": 0.0214,
+        "2031-01-01.2031-12-31": 0.0218
+      }
+    },
+    "gov.economic_assumptions.yoy_growth.obr.rent": {
+      "source": "Table 1.7, actual rents (economy detailed forecast tables, calendar year), read as policyengine-uk's import_obr_forecasts reads them",
+      "values": {
+        "2026-01-01.2026-12-31": 0.0365,
+        "2027-01-01.2027-12-31": 0.0316,
+        "2028-01-01.2028-12-31": 0.0268,
+        "2029-01-01.2029-12-31": 0.0261,
+        "2030-01-01.2030-12-31": 0.0254,
+        "2031-01-01.2031-12-31": 0.0275
+      }
+    },
+    "gov.economic_assumptions.yoy_growth.obr.mortgage_interest": {
+      "source": "Table 1.7, mortgage interest payments (economy detailed forecast tables, calendar year), 2026 to 2029; the OBR's table stops in 2030 Q1, so 2030 on keeps the engine's value",
+      "values": {
+        "2026-01-01.2026-12-31": 0.0623,
+        "2027-01-01.2027-12-31": 0.1156,
+        "2028-01-01.2028-12-31": 0.0668,
+        "2029-01-01.2029-12-31": 0.0475
+      }
+    },
     "gov.economic_assumptions.yoy_growth.obr.house_prices": {
-      "source": "Table A.1, Household sector: House prices",
+      "source": "Table A.1, Household sector: House prices (the engine's house_prices cites Table A.1)",
       "values": {
         "2026-01-01.2026-12-31": 0.021,
         "2027-01-01.2027-12-31": 0.024,
@@ -58,32 +88,128 @@
         "2031-01-01.2031-12-31": 0.027
       }
     },
-    "gov.economic_assumptions.yoy_growth.obr.consumer_price_index_ahc": {
-      "source": "Table A.1, CPI, as a change: PolicyEngine approximation (not an OBR series), policyengine-uk's March 2026 CPI after housing costs moved by the change in Table A.1 CPI for the same year, as the Living standards tab's October series (living_standards/forecast.py)",
+    "gov.economic_assumptions.yoy_growth.obr.per_capita.gdp": {
+      "source": "Table A.1, nominal GDP growth, minus ons.population growth (as the engine derives it)",
       "values": {
-        "2026-01-01.2026-12-31": 0.0297,
-        "2027-01-01.2027-12-31": 0.0328,
-        "2028-01-01.2028-12-31": 0.0204,
-        "2029-01-01.2029-12-31": 0.0204,
-        "2030-01-01.2030-12-31": 0.0192,
-        "2031-01-01.2031-12-31": 0.0192
+        "2026-01-01.2026-12-31": 0.0382,
+        "2027-01-01.2027-12-31": 0.0283,
+        "2028-01-01.2028-12-31": 0.032,
+        "2029-01-01.2029-12-31": 0.0336,
+        "2030-01-01.2030-12-31": 0.0325,
+        "2031-01-01.2031-12-31": 0.0317
+      }
+    },
+    "gov.economic_assumptions.yoy_growth.obr.per_capita.mixed_income": {
+      "source": "Table 1.12, mixed income (£bn, calendar-year level growth), minus ons.population growth",
+      "values": {
+        "2026-01-01.2026-12-31": 0.028,
+        "2027-01-01.2027-12-31": 0.0299,
+        "2028-01-01.2028-12-31": 0.0333,
+        "2029-01-01.2029-12-31": 0.0358,
+        "2030-01-01.2030-12-31": 0.0385,
+        "2031-01-01.2031-12-31": 0.0382
+      }
+    },
+    "gov.economic_assumptions.yoy_growth.obr.non_labour_income": {
+      "source": "Table 1.12, non-labour income (£bn, calendar-year level growth)",
+      "values": {
+        "2026-01-01.2026-12-31": 0.0302,
+        "2027-01-01.2027-12-31": 0.0468,
+        "2028-01-01.2028-12-31": 0.0419,
+        "2029-01-01.2029-12-31": 0.0409,
+        "2030-01-01.2030-12-31": 0.0382,
+        "2031-01-01.2031-12-31": 0.0332
+      }
+    },
+    "gov.economic_assumptions.yoy_growth.obr.per_capita.non_labour_income": {
+      "source": "Table 1.12, non-labour income growth, minus ons.population growth",
+      "values": {
+        "2026-01-01.2026-12-31": 0.0264,
+        "2027-01-01.2027-12-31": 0.0431,
+        "2028-01-01.2028-12-31": 0.0379,
+        "2029-01-01.2029-12-31": 0.0365,
+        "2030-01-01.2030-12-31": 0.0337,
+        "2031-01-01.2031-12-31": 0.0289
       }
     },
     "gov.economic_assumptions.yoy_growth.obr.social_rent": {
-      "source": "Table A.1, CPI: England social rent policy cap, the previous calendar year's CPI + 1% (2026 is set by September 2025 CPI outturn and kept), as the Living standards tab's October series",
+      "source": "England social rent cap, September CPI + 1%: 2027 from the published September 2026 CPI (3.5%); later years the previous calendar year's Table 1.7 CPI to 1 d.p. + 1%",
       "values": {
-        "2027-01-01.2027-12-31": 0.041,
+        "2027-01-01.2027-12-31": 0.045,
         "2028-01-01.2028-12-31": 0.044,
         "2029-01-01.2029-12-31": 0.031,
         "2030-01-01.2030-12-31": 0.031,
         "2031-01-01.2031-12-31": 0.03
       }
     },
-    "gov.economic_assumptions.statutory_uprating_inputs.forecast_gap.cpi_september": {
-      "source": "Table A.3, 'Triple-lock' guarantee 2027-28: 3.4 (Q3 2027 CPI) minus Table A.1 calendar-year 2027 CPI 3.4",
+    "gov.economic_assumptions.yoy_growth.obr.consumer_price_index_ahc": {
+      "source": "Table 1.7 CPI and actual rents through policyengine-uk's create_ahc_deflator.create_modified_cpi_forecast (CPI excluding rents, water and repairs; Ofwat water bills unchanged), 2026 to 2031, four decimals",
       "values": {
-        "2027-09-01.2028-08-31": 0.0
+        "2026-01-01.2026-12-31": 0.0304,
+        "2027-01-01.2027-12-31": 0.0343,
+        "2028-01-01.2028-12-31": 0.0202,
+        "2029-01-01.2029-12-31": 0.0203,
+        "2030-01-01.2030-12-31": 0.0193,
+        "2031-01-01.2031-12-31": 0.019
+      }
+    },
+    "gov.economic_assumptions.statutory_uprating_inputs.forecast_gap.cpi_september": {
+      "source": "Receipts detailed forecast tables, Table 4.19 'CPI used to uprate thresholds' (September CPI) minus Table 1.7 calendar-year CPI, as import_obr_forecasts computes it",
+      "values": {
+        "2027-09-01.2028-08-31": 0.0002,
+        "2028-09-01.2029-08-31": -0.00058,
+        "2029-09-01.2030-08-31": 0.00073,
+        "2030-09-01.2031-08-31": 5e-05,
+        "2031-09-01.2032-08-31": 0.0
+      }
+    },
+    "gov.economic_assumptions.statutory_uprating_inputs.forecast_gap.awe_total_pay_may_july": {
+      "source": "Table 1.6, Q2 average earnings growth on a year earlier minus calendar-year growth, as import_obr_forecasts computes it",
+      "values": {
+        "2027-07-01.2028-06-30": 0.00306,
+        "2028-07-01.2029-06-30": -0.00025,
+        "2029-07-01.2030-06-30": -0.00014,
+        "2030-07-01.2031-06-30": -0.00031,
+        "2031-07-01.2032-06-30": 0.00014
+      }
+    },
+    "gov.economic_assumptions.yoy_growth.obr.council_tax.england": {
+      "source": "Expenditure detailed forecast tables, Table 5.1 'Council tax receipts', England council tax receipts: growth over the year before, fiscal year t stored at t (2026 = 2026-27 on 2025-26), as the engine stores it (its March values cite the same table, then numbered 4.1). Receipts Table 4.22 has only the UK total.",
+      "values": {
+        "2026-01-01.2026-12-31": 0.061,
+        "2027-01-01.2027-12-31": 0.0524,
+        "2028-01-01.2028-12-31": 0.0561,
+        "2029-01-01.2029-12-31": 0.0555,
+        "2030-01-01.2030-12-31": 0.0542,
+        "2031-01-01.2031-12-31": 0.0531
+      }
+    },
+    "gov.economic_assumptions.yoy_growth.obr.council_tax.scotland": {
+      "source": "Expenditure detailed forecast tables, Table 5.1 'Council tax receipts', Scotland council tax receipts: growth over the year before, fiscal year t stored at t (2026 = 2026-27 on 2025-26), as the engine stores it (its March values cite the same table, then numbered 4.1). Receipts Table 4.22 has only the UK total.",
+      "values": {
+        "2026-01-01.2026-12-31": 0.0386,
+        "2027-01-01.2027-12-31": 0.0386,
+        "2028-01-01.2028-12-31": 0.0386,
+        "2029-01-01.2029-12-31": 0.0386,
+        "2030-01-01.2030-12-31": 0.0386,
+        "2031-01-01.2031-12-31": 0.0386
+      }
+    },
+    "gov.economic_assumptions.yoy_growth.obr.council_tax.wales": {
+      "source": "Expenditure detailed forecast tables, Table 5.1 'Council tax receipts', Wales council tax receipts: growth over the year before, fiscal year t stored at t (2026 = 2026-27 on 2025-26), as the engine stores it (its March values cite the same table, then numbered 4.1). Receipts Table 4.22 has only the UK total.",
+      "values": {
+        "2026-01-01.2026-12-31": 0.074,
+        "2027-01-01.2027-12-31": 0.074,
+        "2028-01-01.2028-12-31": 0.074,
+        "2029-01-01.2029-12-31": 0.074,
+        "2030-01-01.2030-12-31": 0.074,
+        "2031-01-01.2031-12-31": 0.074
       }
     }
+  },
+  "files": {
+    "efo-october-2026-detailed-forecast-tables-economy.xlsx": "96795d1747bb5a4978c7fb768689d5fd31f568e5223db8a94b1bd92ba7f6c118",
+    "efo-october-2026-detailed-forecast-tables-receipts.xlsx": "d115705716d77b11c190385d41cb1924f30080c9331a8a386c04d4e65a368e95",
+    "efo-october-2026-detailed-forecast-tables-expenditure.xlsx": "f379f1b88431405c279332519c4ada10b67c060bcc5370453028d98c1ac81167"
   }
 }

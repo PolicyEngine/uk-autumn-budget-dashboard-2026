@@ -13,6 +13,8 @@ import LsCard from "../LsCard";
 import { useState } from "react";
 import ViewToggle from "../../ViewToggle";
 import SeriesToggle from "../../SeriesToggle";
+import ControlBar from "../../ControlBar";
+import { forecastsOption } from "../controlOptions";
 import { useNarrowViewport } from "../../../utils/chartTheme";
 import SectionHeading from "../../SectionHeading";
 import { LsLineChart, lineLegendItems } from "../LsCharts";
@@ -114,7 +116,8 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange, yea
   const narrow = useNarrowViewport();
   // The series shown (chips, at least one on) and the one a chip's hover brings forward
   const [shown, setShown] = useState(() => seriesList.map((s) => s.key));
-  // With a later forecast: which forecasts are drawn (chips, at least one on)
+  // With a later forecast: which forecasts are drawn (the card's Options
+  // pill: both, the earlier or the later)
   const [forecastsShown, setForecastsShown] = useState(["pre", "post"]);
   const [hovered, setHovered] = useState(null);
   const withPost = seriesList.filter((s) => hasPost(forecast, s));
@@ -211,6 +214,9 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange, yea
     },
     // Chart or table: one choice for every card, as icons in its header
     viewToggle: onViewChange && <ViewToggle value={view} onChange={onViewChange} name={card.title} />,
+    // With a later forecast, which forecasts are drawn: the Options pill
+    // the other tabs' cards have (ControlBar), its face naming the choice
+    controls: both && <ControlBar name={card.title} options={[forecastsOption(forecastsShown, setForecastsShown, preName, postName)]} />,
   };
   // One chip per line, in its colour: the card's key, under the plot (as
   // every chart's key), so no legend repeats the names. A card of one line
@@ -225,26 +231,7 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange, yea
       narrow={narrow}
     />
   );
-  // The two forecasts, in neutral greys: faded is the earlier, full the later
-  const forecastChips = both && (
-    <SeriesToggle
-      series={[
-        { key: "pre", label: preName, colour: CHART_COLOURS.before },
-        { key: "post", label: postName, colour: CHART_COLOURS.reference },
-      ]}
-      shown={forecastsShown}
-      onChange={setForecastsShown}
-      label="Forecasts"
-      lead="Show forecasts:"
-      narrow={narrow}
-    />
-  );
-  const chips = (seriesChips || forecastChips) && (
-    <>
-      {seriesChips}
-      {forecastChips}
-    </>
-  );
+  const chips = seriesChips;
 
   if (view === "table") {
     return (

@@ -394,18 +394,26 @@ describe("the Pre-measures forecast view", () => {
     fireEvent.blur(area);
     expect(screen.queryByRole("tooltip")).toBeNull();
     // A change that rounds to nothing is said once as no change, never as a
-    // signed zero: outright owners, relative before housing costs, 13.4%
-    // in both years (0.05 points lower unrounded)
-    choose(who, "Breakdown", "Tenure");
+    // signed zero: people in pensioner families, absolute after housing
+    // costs, 11.8% in both years (0.01 points lower unrounded)
+    choose(who, "Breakdown", "Family type");
     fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
-    const owners = within(who).getByRole("rowheader", { name: "Outright owners" }).closest(".measure-dumbbell-row");
-    expect(owners).toHaveTextContent(/13\.4%no change$/);
+    choose(who, "Poverty line", "Absolute");
+    fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
+    choose(who, "Housing costs", "After housing costs");
+    fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
+    const owners = within(who).getByRole("rowheader", { name: "People in pensioner families" }).closest(".measure-dumbbell-row");
+    expect(owners).toHaveTextContent(/11\.8%no change$/);
     expect(owners.textContent).not.toMatch(/[−-]0\.0/);
     fireEvent.focus(owners);
     tip = screen.getByRole("tooltip");
-    expect(tip).toHaveTextContent("2027-2813.4%");
+    expect(tip).toHaveTextContent("2027-2811.8%");
     expect(tip).toHaveTextContent("ChangeNo change");
     fireEvent.blur(owners);
+    choose(who, "Poverty line", "Relative");
+    fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
+    choose(who, "Housing costs", "Before housing costs");
+    fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
     choose(who, "Breakdown", "Family type");
     fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
     // After housing costs, from here: 20.3% in 2027-28, 20.5% in 2031-32

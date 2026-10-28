@@ -8,6 +8,9 @@ One modifier in a module of its own: see the package docstring.
 """
 
 import numpy as np
+from policyengine_uk.utils.uc_income_tax import (
+    uc_income_tax_on_earnings_slice,
+)
 
 from uk_budget_data.measure_templates import _call_formula, _replace_formula
 
@@ -49,12 +52,20 @@ def pension_tax_allowance(
     £13,186.40 gets £44 (£94 - £150 / 3); £13,400 gets nothing.
     """
     native = sim.tax_benefit_system.get_variable("income_tax")
+    native_uc_earnings = sim.tax_benefit_system.get_variable(
+        "uc_income_tax_on_earnings"
+    )
+    native_uc_trade = sim.tax_benefit_system.get_variable(
+        "uc_income_tax_on_trade"
+    )
 
-    def formula(person, period, parameters):
-        current = _call_formula(native, person, period, parameters)
+    def in_force(period):
+        return first_year <= period.start.year <= last_year
+
+    def reduction_used(person, period, parameters):
+        """The PTA used: the reduction, capped at the tax otherwise due."""
         year = period.start.year
-        if year < first_year or year > last_year:
-            return current
+        current = _call_formula(native, person, period, parameters)
         on = parameters(f"{year}-04-06").gov
         weekly = on.dwp.state_pension.new_state_pension.amount
         steps = np.floor(weekly / weekly_rounding + 1e-9)
@@ -69,7 +80,51 @@ def pension_tax_allowance(
         excess = np.maximum(0, total - full_state_pension)
         reduction = np.maximum(0, allowance - excess / taper_divisor)
         reduction = np.where(person("is_SP_age", period), reduction, 0)
-        return np.maximum(0, current - reduction)
+        return current, np.minimum(reduction, np.maximum(0, current))
+
+    def formula(person, period, parameters):
+        if not in_force(period):
+            return _call_formula(native, person, period, parameters)
+        current, used = reduction_used(person, period, parameters)
+        return np.maximum(0, current - used)
+
+    # Universal Credit deducts the income tax paid on earnings (UC Regs
+    # 2013 reg. 55(5)(b), reg. 57(2) step 3), which policyengine-uk 2.151.0
+    # recomputes from the rates less income_tax_subtractions, not from
+    # income_tax, so it would miss the PTA. Like the engine's other
+    # reductions, the PTA used comes off the tax on the employment (the
+    # lower slice) first, then off the tax on the trade. Pension income is
+    # counted before tax (reg. 66), so it needs nothing here. Both are
+    # derived from the engine's slice directly: its native trade formula
+    # reads uc_income_tax_on_earnings.
+    def earnings_split(person, period, parameters):
+        _, used = reduction_used(person, period, parameters)
+        with_trade = uc_income_tax_on_earnings_slice(
+            person, period, parameters
+        )
+        without_trade = uc_income_tax_on_earnings_slice(
+            person, period, parameters, include_trade=False
+        )
+        employment = np.maximum(0, without_trade - used)
+        left = np.maximum(0, used - without_trade)
+        trade = np.maximum(0, (with_trade - without_trade) - left)
+        return employment, trade
+
+    def uc_earnings_formula(person, period, parameters):
+        if not in_force(period):
+            return _call_formula(
+                native_uc_earnings, person, period, parameters
+            )
+        employment, trade = earnings_split(person, period, parameters)
+        return employment + trade
+
+    def uc_trade_formula(person, period, parameters):
+        if not in_force(period):
+            return _call_formula(native_uc_trade, person, period, parameters)
+        _, trade = earnings_split(person, period, parameters)
+        return trade
 
     _replace_formula(sim, "income_tax", formula)
+    _replace_formula(sim, "uc_income_tax_on_earnings", uc_earnings_formula)
+    _replace_formula(sim, "uc_income_tax_on_trade", uc_trade_formula)
     return sim

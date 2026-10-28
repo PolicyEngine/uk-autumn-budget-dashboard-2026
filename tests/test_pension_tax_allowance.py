@@ -102,3 +102,68 @@ def test_savings_dividends_and_property_count_in_total_income(income):
     situation["people"]["p"][income] = {YEAR: 2_000}
     baseline, reformed = _income_tax(situation)
     assert reformed == pytest.approx(baseline, abs=0.01)
+
+
+def _mixed_age_couple_on_uc(income_variable):
+    """A couple on Universal Credit in the North West, renting: the older
+    partner (70) has £13,036.40 of earnings or trading profit and no State
+    Pension (deferred); the younger (60) earns £13,000, so no marriage
+    allowance is transferred."""
+    return {
+        "people": {
+            "old": {"age": {YEAR: 70}, income_variable: {YEAR: 13_036.40}},
+            "young": {"age": {YEAR: 60}, "employment_income": {YEAR: 13_000}},
+        },
+        "benunits": {
+            "b": {"members": ["old", "young"], "would_claim_uc": {YEAR: True}}
+        },
+        "households": {
+            "h": {
+                "members": ["old", "young"],
+                "region": {YEAR: "NORTH_WEST"},
+                "tenure_type": {YEAR: "RENT_PRIVATELY"},
+                "rent": {YEAR: 6_000},
+            }
+        },
+    }
+
+
+@pytest.mark.parametrize(
+    "income_variable", ["employment_income", "self_employment_income"]
+)
+def test_universal_credit_deducts_the_tax_after_the_pta(income_variable):
+    """UC deducts the income tax paid on earnings (UC Regs 2013 reg.
+    55(5)(b), reg. 57(2) step 3), which policyengine-uk recomputes outside
+    income_tax. The £93.28 PTA lowers that deduction too, so earned income
+    rises by £93.28 and UC takes back 55% of it (£51.30): +£41.97 net."""
+    situation = _mixed_age_couple_on_uc(income_variable)
+    baseline = Simulation(situation=situation)
+    reformed = Simulation(situation=situation)
+    pension_tax_allowance(reformed)
+
+    def get(sim, variable):
+        return sim.calculate(variable, YEAR)
+
+    pta = float(
+        get(baseline, "income_tax")[0] - get(reformed, "income_tax")[0]
+    )
+    assert pta == pytest.approx(93.28, abs=0.01)
+    assert float(
+        get(reformed, "uc_income_tax_on_earnings")[0]
+    ) == pytest.approx(0, abs=0.01)
+    on_trade = float(get(reformed, "uc_income_tax_on_trade")[0])
+    assert on_trade == pytest.approx(0, abs=0.01)
+    # The younger partner, under State Pension age, is unchanged
+    assert float(get(reformed, "uc_income_tax_on_earnings")[1]) == (
+        pytest.approx(float(get(baseline, "uc_income_tax_on_earnings")[1]))
+    )
+    uc_change = float(
+        get(reformed, "universal_credit")[0]
+        - get(baseline, "universal_credit")[0]
+    )
+    assert uc_change == pytest.approx(-0.55 * 93.28, abs=0.01)
+    net_change = float(
+        get(reformed, "household_net_income")[0]
+        - get(baseline, "household_net_income")[0]
+    )
+    assert net_change == pytest.approx(93.28 * 0.45, abs=0.02)

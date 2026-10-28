@@ -12,6 +12,8 @@ personal allowance and the primary threshold (£12,570 each) net pay is
 gross pay; above, 20% income tax and 8% NI come off the excess.
 """
 
+import math
+
 import pytest
 from policyengine_uk import Simulation
 
@@ -247,10 +249,14 @@ def test_the_budget_limit_is_16_hours_at_the_national_living_wage():
 
     year = 2030
     index = system.parameters.gov.economic_assumptions.indices.obr
-    limit = (
-        211.36
-        * index.average_earnings(f"{year}-04-06")
-        / index.average_earnings("2027-04-06")
+    # Rounded up to the next pound (EM to SI 2025/352, para. 5.6)
+    limit = math.ceil(
+        round(
+            211.36
+            * index.average_earnings(f"{year}-04-06")
+            / index.average_earnings("2027-04-06"),
+            6,
+        )
     )
     rate = system.parameters.gov.dwp.carers_allowance.rate(f"{year}-04-06")
     situation = _carer(round((limit + 20) * 52, 2))
@@ -260,7 +266,8 @@ def test_the_budget_limit_is_16_hours_at_the_national_living_wage():
     situation["households"]["h"]["region"] = {year: "LONDON"}
     baseline = Simulation(situation=situation)
     reformed = Simulation(situation=situation)
-    carers_allowance_earnings_taper(reformed)
+    # The average earnings route, without the OBR's wages
+    carers_allowance_earnings_taper(reformed, national_living_wage_by_april=())
     before = baseline.calculate("carers_allowance", year)[0]
     after = reformed.calculate("carers_allowance", year)[0]
     # Earnings for the limit are net of PAYE and NI on the pay
@@ -277,3 +284,80 @@ def test_northern_ireland_keeps_the_cliff():
         _carer(11_000, region="NORTHERN_IRELAND"), "carers_allowance"
     )
     assert after == 0
+
+
+def _weekly_awards_in(year, weekly_pays, **arguments):
+    """For carers in London on each weekly pay (below the personal
+    allowance), the Carer's Allowance a week before and after the taper in
+    ``year``, and their weekly earnings for the limit (the engine moves
+    the pay on a little in later years, so these are read, not assumed).
+    The first pay should be below every limit, so its award is the full
+    weekly rate."""
+    results = []
+    for weekly_pay in weekly_pays:
+        situation = _carer(round(weekly_pay * 52, 2))
+        for person in situation["people"].values():
+            for key in person:
+                person[key] = {year: list(person[key].values())[0]}
+        situation["households"]["h"]["region"] = {year: "LONDON"}
+        baseline = Simulation(situation=situation)
+        reformed = Simulation(situation=situation)
+        carers_allowance_earnings_taper(reformed, **arguments)
+        results.append(
+            (
+                baseline.calculate("carers_allowance", year)[0] / 52,
+                reformed.calculate("carers_allowance", year)[0] / 52,
+                baseline.calculate("carers_allowance_earnings", year)[0] / 52,
+            )
+        )
+    return results
+
+
+def test_the_limit_rounds_up_to_the_next_pound():
+    # 16 x £13.21 = £211.36, set at £212 (EM to SI 2025/352, para. 5.6).
+    # 2031-32 is a full year of the taper. Earnings between £211.36 and
+    # £212 are under the limit: the native amount (nothing, over the
+    # engine's £204) stands. Over £212 the excess is from £212.
+    (full, _, _), below, over = _weekly_awards_in(
+        2031,
+        (150, 211.90, 213.50),
+        national_living_wage_by_april=((2031, 13.21),),
+    )
+    assert 211.36 < below[2] <= 212
+    assert below[:2] == (0, 0)
+    assert 212 < over[2] < 212 + full
+    assert over[0] == 0
+    assert over[1] == pytest.approx(full - (over[2] - 212), abs=0.01)
+
+
+def test_an_exact_pound_limit_is_not_rounded_up():
+    # 16 x £12.75 = £204.00 exactly, which stays £204, not £205.
+    (full, _, _), over = _weekly_awards_in(
+        2031,
+        (150, 204.80),
+        national_living_wage_by_april=((2031, 12.75),),
+    )
+    assert 204 < over[2] < 205
+    assert over[1] == pytest.approx(full - (over[2] - 204), abs=0.01)
+
+
+def test_the_obr_wage_sets_the_limit_for_its_year():
+    # £14.00 in April 2031 gives £224: about £220 is under it, about £230
+    # over it.
+    (full, _, _), under, over = _weekly_awards_in(
+        2031,
+        (150, 220, 230),
+        national_living_wage_by_april=((2030, 13.00), (2031, 14.00)),
+    )
+    assert under[2] < 224 < over[2]
+    assert under[:2] == (0, 0)
+    assert over[1] == pytest.approx(full - (over[2] - 224), abs=0.01)
+
+
+def test_the_default_limit_is_the_obr_wage_rounded_up():
+    # OBR October 2026 Table 1.13: £14.617 in April 2031, x 16 = £233.87,
+    # so £234 in 2031-32, a full year of the taper.
+    (full, _, _), under, over = _weekly_awards_in(2031, (150, 233.50, 237))
+    assert under[2] < 234 < over[2]
+    assert under[:2] == (0, 0)
+    assert over[1] == pytest.approx(full - (over[2] - 234), abs=0.01)

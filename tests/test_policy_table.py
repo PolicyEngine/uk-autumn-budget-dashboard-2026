@@ -109,7 +109,7 @@ def test_fuel_duty_by_date(document):
     assert dated["2027-03-01"] == (57.95, 52.95)
     assert dated["2027-04-01"] == (60.59, 52.95)
     assert dated["2027-07-01"] == (60.59, 60.59)
-    assert dated["2028-04-01"] == (63.2, 63.2)
+    assert dated["2028-04-01"] == (63.21, 63.21)
     assert "2032-04-01" not in dated  # after the timeline
     assert dated["2026-04-01"] == (52.95, 52.95)  # the timeline's first day
 

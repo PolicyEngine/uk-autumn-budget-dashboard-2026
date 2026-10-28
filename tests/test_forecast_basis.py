@@ -63,13 +63,18 @@ def october():
     ).tax_benefit_system.parameters
 
 
-def test_stored_values_are_table_a1():
+def test_stored_values_are_table_a1_to_one_decimal():
+    """Tables 1.6 and 1.7 at four decimals round to Table A.1; house prices
+    are Table A.1 itself."""
     changes = forecast_parameter_changes()
     for series, row in TABLE_A1.items():
         stored = changes[OBR + series]
+        exact = series == "house_prices"
         assert [
             stored[f"{y}-01-01.{y}-12-31"] for y in YEARS
-        ] == pytest.approx([v / 100 for v in row]), series
+        ] == pytest.approx(
+            [v / 100 for v in row], abs=1e-9 if exact else 0.00051
+        ), series
 
 
 def test_engine_march_values_are_the_same_rows(current_law):
@@ -89,7 +94,7 @@ def test_the_forecast_reaches_the_growth_rates(october):
         for year, value in zip(YEARS, row):
             assert october.get_child(OBR + series)(
                 f"{year}-01-01"
-            ) == pytest.approx(value / 100), (series, year)
+            ) == pytest.approx(value / 100, abs=0.00051), (series, year)
 
 
 def test_published_statutory_inputs_are_kept(october, current_law):
@@ -162,7 +167,7 @@ def test_a_measure_wins_over_the_forecast():
     )
     assert (
         changed.parameter_changes[OBR + "rpi"]["2027-01-01.2027-12-31"]
-        == 0.043
+        == 0.0432
     )
 
 
@@ -190,21 +195,22 @@ def test_record_names_its_source():
     record = forecast_record()
     assert record["vintage"] == "OBR EFO October 2026"
     for entry in record["parameter_changes"].values():
-        assert entry["source"].startswith("Table A.")
+        assert entry["source"], entry
 
 
 def test_fuel_duty_path_is_the_obr_rate_then_october_rpi():
     """60.59p from April 2027 (EFO October 2026, paragraph 3.19), then each
-    April the previous calendar year's Table A.1 RPI, to 0.01p; the baseline
+    April the previous calendar year's October RPI, to 0.01p; the baseline
     and the fuel duty measure share it."""
     from uk_budget_data.forecast import FUEL_DUTY, fuel_duty_rpi_steps
     from uk_budget_data.reforms import FUEL_DUTY_CURRENT_LAW
 
     steps = dict(fuel_duty_rpi_steps())
     assert steps["2027-04-01"] == 0.6059
-    rpi = dict(zip(YEARS, TABLE_A1["rpi"]))
+    rpi = forecast_parameter_changes()[OBR + "rpi"]
     for year in range(2028, 2033):
-        expected = steps[f"{year - 1}-04-01"] * (1 + rpi[year - 1] / 100)
+        growth = rpi[f"{year - 1}-01-01.{year - 1}-12-31"]
+        expected = steps[f"{year - 1}-04-01"] * (1 + growth)
         assert steps[f"{year}-04-01"] == pytest.approx(expected, abs=5e-5)
     assert {
         day: rate for day, rate in FUEL_DUTY_CURRENT_LAW if day in steps
@@ -213,22 +219,48 @@ def test_fuel_duty_path_is_the_obr_rate_then_october_rpi():
     assert changes["2027-04-01.2028-03-31"] == 0.6059
 
 
-def test_derived_series_follow_october_cpi(current_law):
-    """CPI after housing costs: March's moved by the change in CPI; social
-    rent: the previous year's CPI + 1% (England's cap)."""
+def test_derived_series_follow_october_cpi():
+    """CPI after housing costs: policyengine-uk's own derivation on the
+    October CPI and rents; social rent: September CPI + 1% (England's cap),
+    the published 3.5% for 2027, then the previous year's CPI to 1 d.p."""
+    from policyengine_uk.utils import create_ahc_deflator as ahc
+
+    from uk_budget_data.forecast import forecast_parameters
+
     changes = forecast_parameter_changes()
-    cpi = dict(zip(YEARS, TABLE_A1["consumer_price_index"]))
-    march_cpi = current_law.get_child(OBR + "consumer_price_index")
-    march_ahc = current_law.get_child(OBR + "consumer_price_index_ahc")
+    indices = forecast_parameters().gov.economic_assumptions.indices
+    derived = ahc.create_modified_cpi_forecast(
+        indices.obr.consumer_price_index,
+        indices.ofwat.water_bills,
+        indices.obr.rent,
+        ahc.historical_modified_cpi,
+        ahc.initial_weights,
+        2026,
+        2031,
+    )
+    by_period = dict(zip(derived.period, derived.modified_cpi_yoy))
+    cpi = changes[OBR + "consumer_price_index"]
     for year in YEARS:
         key = f"{year}-01-01.{year}-12-31"
         assert changes[OBR + "consumer_price_index_ahc"][key] == pytest.approx(
-            march_ahc(f"{year}-01-01")
-            + cpi[year] / 100
-            - march_cpi(f"{year}-01-01"),
-            abs=1e-9,
+            by_period[f"{year}-01-01"], abs=5e-5
         ), year
-        if year > 2026:
+        if year == 2027:
+            assert changes[OBR + "social_rent"][key] == 0.045
+        elif year > 2027:
+            previous = cpi[f"{year - 1}-01-01.{year - 1}-12-31"]
             assert changes[OBR + "social_rent"][key] == pytest.approx(
-                cpi[year - 1] / 100 + 0.01
+                round(previous * 100, 1) / 100 + 0.01
             ), year
+
+
+def test_council_tax_is_expenditure_table_5_1(october):
+    """England's receipts: £46.806bn in 2026-27 on £44.117bn in 2025-26,
+    then £49.257bn (expenditure Table 5.1)."""
+    council_tax = october.gov.economic_assumptions.yoy_growth.obr.council_tax
+    assert council_tax.england("2026-01-01") == pytest.approx(
+        46.806 / 44.117 - 1, abs=5e-5
+    )
+    assert council_tax.england("2027-01-01") == pytest.approx(
+        49.256614 / 46.806 - 1, abs=5e-5
+    )

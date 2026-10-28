@@ -142,7 +142,8 @@ def static_capital_gains() -> dict[str, dict[str, any]]:
     Set by every measure that moves capital gains tax, through its rates,
     bands, allowances or reliefs, so its figure is static: the Business
     Asset Disposal Relief limit, the threshold freeze (the basic rate band)
-    and the State Pension allowance (taxable income). This is the static
+    and the State Pension allowance designs (taxable income; not the Pension
+    Tax Allowance, a tax reduction). This is the static
     setting policyengine-uk's own parameter descriptions give: both
     elasticities 0, and gains qualifying for the relief on the main
     elasticity. 2.132.6 has no response by default, so nothing changes on
@@ -398,8 +399,8 @@ def _create_fuel_duty_rise_deferral() -> Reform:
 
 
 # =============================================================================
-# 2. NO INCOME TAX FOR PENSIONERS WHOSE TOTAL INCOME IS AT MOST THE FULL
-#    NEW STATE PENSION
+# 2. PENSION TAX ALLOWANCE: AN INCOME TAX REDUCTION FOR PENSIONERS WHOSE
+#    TOTAL INCOME IS AT MOST THE FULL NEW STATE PENSION
 # =============================================================================
 
 
@@ -474,16 +475,20 @@ STATE_PENSION_PROTECTION_DESIGNS = {
 def _create_state_pension_income_tax_protection(
     design: str = None,
 ) -> Reform:
-    modifier, description = STATE_PENSION_PROTECTION_DESIGNS[
-        design or STATE_PENSION_PROTECTION_DESIGN
-    ]
+    design = design or STATE_PENSION_PROTECTION_DESIGN
+    modifier, description = STATE_PENSION_PROTECTION_DESIGNS[design]
     return Reform(
         id=STATE_PENSION_ALLOWANCE_ID,
         name="Pension Tax Allowance",
         description=description,
         simulation_modifier=modifier,
-        # The allowance moves taxable income, so the capital gains rate.
-        parameter_changes=static_capital_gains(),
+        # The PTA ("tax_reduction") lowers the liability and leaves taxable
+        # income, and so the capital gains rate, alone: no capital gains
+        # pin, which would only add noise in the years it is not in force.
+        # The allowance designs move taxable income, so they carry it.
+        parameter_changes=(
+            None if design == "tax_reduction" else static_capital_gains()
+        ),
     )
 
 
@@ -871,8 +876,8 @@ def _create_unearned_income_rates_up() -> Reform:
 # budget_measures/household_energy_payment_2026.py; changing one needs a
 # fresh attestation): amount=100, year=2026 (winter 2026-27),
 # country="ENGLAND" (devolved governments get a Barnett share instead; "UK"
-# pays every country), bands=("A", "B", "C", "D"). Registered, but not in
-# the package: adding it changes the package key the tests pin.
+# pays every country), bands=("A", "B", "C", "D"). In the package
+# (AUTUMN_BUDGET_2026_COMBINED_COMPONENTS).
 
 
 def _create_household_energy_payment_2026() -> Reform:
