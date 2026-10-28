@@ -9,9 +9,15 @@ const COMPACTABLE = ".ls-year-panel-list, .chart-tooltip-section";
 // The hovered row, kept in view when the tooltip scrolls inside
 const ACTIVE_ROW = ".is-hovered, [data-active='true']";
 
-/** Whether a tooltip's anchor (window px) is inside the window. */
+/**
+ * Whether a tooltip's point (window px) is inside the window: its anchor,
+ * or for a box pinned elsewhere (under the plot, say) the point it is for
+ * (`anchor.point`). A coordinate that is not a number is not checked.
+ */
 export function anchorInWindow(anchor, viewportWidth, viewportHeight) {
-  return anchor.x >= 0 && anchor.x <= viewportWidth && anchor.y >= 0 && anchor.y <= viewportHeight;
+  const { x, y } = anchor.point ?? anchor;
+  const inside = (value, size) => !Number.isFinite(value) || (value >= 0 && value <= size);
+  return inside(x, viewportWidth) && inside(y, viewportHeight);
 }
 
 /** Measure the box and place it (placeTooltip), compacting a tall list. */
@@ -215,7 +221,9 @@ function ViewportContent({ inner, ...props }) {
     const x = pinned && Number.isFinite(position.x) ? position.x : coordinate.x;
     const y = pinned && Number.isFinite(position.y) ? position.y : coordinate.y;
     if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-    return { x: box.left + x, y: box.top + y };
+    // Pinned, the box is still for the point hovered or tapped
+    const point = pinned ? { x: box.left + coordinate.x, y: box.top + coordinate.y } : undefined;
+    return { x: box.left + x, y: box.top + y, point };
   };
   return (
     <ViewportBox locate={locate} offset={pinned ? 0 : offset ?? 12}>
