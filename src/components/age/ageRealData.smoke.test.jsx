@@ -78,7 +78,10 @@ afterEach(() => {
 const chartRows = (container) =>
   [...container.querySelectorAll('[data-testid="chart-rows"]')].map((node) => JSON.parse(node.dataset.rows));
 const KEYS = ["netChange", "net", ...BANDS, "all"];
-const drawnValue = (point) => KEYS.some((key) => Number.isFinite(point[key]));
+// The winners and losers charts draw shares; a thin single age is left out
+// on its own, so shares count as drawn but are not checked for half drawing
+const SHARES = ["pct_better_off", "pct_unchanged", "pct_worse_off"];
+const drawnValue = (point) => [...KEYS, ...SHARES].some((key) => Number.isFinite(point[key]));
 
 const ids = loaded ? Object.keys(loaded.manifest.measures) : [];
 // Two fixed pairs: one with the policy that withholds its age bands from
