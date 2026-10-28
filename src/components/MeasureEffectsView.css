@@ -155,6 +155,31 @@
 }
 
 /* The logo below everything, with clear space */
+/* The bars' colours, under them: a fall in the gain colour, a rise in the loss colour */
+.mev-key {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 16px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-600);
+}
+
+.mev-key li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mev-key-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
 .mev-logo {
   display: flex;
   justify-content: flex-end;
