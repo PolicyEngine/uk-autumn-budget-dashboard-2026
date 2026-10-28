@@ -24,9 +24,12 @@ from uk_budget_data.cli import main, parse_args
 from uk_budget_data.living_standards import INPUTS_DIR, OUTPUT_PATH, engine
 from uk_budget_data.living_standards.build import build_outlook, outlook_text
 from uk_budget_data.living_standards.forecast import (
+    POST_FILE_NAME,
+    STALE_POST_NOTE,
     apply_post,
     compute_post,
     read_post_document,
+    read_post_document_from_pdf,
 )
 from uk_budget_data.living_standards.hbai import extract_hbai
 from uk_budget_data.living_standards.obr import (
@@ -35,6 +38,7 @@ from uk_budget_data.living_standards.obr import (
     ParsedSeries,
     extract_rhdi,
     read_forecast,
+    read_pdf_table_a1,
 )
 from uk_budget_data.living_standards.projections import (
     INCOME_GROUPINGS,
@@ -577,6 +581,11 @@ def check_contract(doc: dict) -> None:
                 "2029",
                 "2030",
             ]
+            # post is null only for a series the loaded Budget forecast
+            # lacks, and post_source says why
+            if s["post"] is None:
+                assert forecast["post_published"] and s["post_source"]
+                continue
             assert [p["year"] for p in s["pre"]] == [
                 p["year"] for p in s["post"]
             ]
@@ -921,3 +930,89 @@ def test_set_pending_replaces_one_row_and_keeps_the_rest(tmp_path):
     assert (row[1], row[3]) == ("pending", "vahid-ahmadi")
     assert row[2] == hashlib.sha256(b"new bytes").hexdigest()
     assert row[4:] == ["2026-10-28", "2026-11-11", "New basis, with a comma"]
+
+
+# --- The October 2026 EFO PDF's Table A.1 (before the detailed tables) ------
+
+OBR_DIR = ROOT / "data_inputs" / "obr"
+OCT_PDF = OBR_DIR / "OBR-Economic-and-Fiscal-Outlook-October-2026.pdf"
+OCT_TEXT = OBR_DIR / "OBR-Economic-and-Fiscal-Outlook-October-2026.txt"
+OCT_PDF_SHA256 = (
+    "9e0e9c340e35e603066f3124a614fcd68feadb3d5d10d1f76fb536e150e6225e"
+)
+
+
+def test_the_october_2026_table_a1_rows():
+    """Table A.1 (PDF page 183), as printed: 2026 to 2030, per cent."""
+    assert hashlib.sha256(OCT_PDF.read_bytes()).hexdigest() == OCT_PDF_SHA256
+    parsed, page = read_pdf_table_a1(OCT_TEXT.read_text(), YEARS)
+    assert page == "183"
+    printed = {
+        "cpi": [3.4, 3.1, 3.4, 2.1, 2.1, 2.0],
+        "rpi": [4.1, 3.6, 4.3, 3.0, 3.0, 2.3],
+        "earnings": [4.1, 3.7, 3.0, 2.2, 2.3, 2.5],
+        "house_prices": [2.6, 2.1, 2.4, 2.8, 2.8, 2.7],
+    }
+    for key, values in printed.items():
+        assert [parsed[key].values[y] for y in YEARS] == [
+            round(v / 100, 4) for v in values
+        ], key
+
+
+def test_table_a1_reconciles_with_its_changes_since_march():
+    """October minus the committed pre (policyengine-uk's March 2026 series)
+    is Table A.2's change since March, to its rounding (0.1 points): so pre
+    is the March 2026 EFO and post is October's."""
+    parsed, _ = read_pdf_table_a1(OCT_TEXT.read_text(), YEARS)
+    # Table A.2, 2027 to 2030 (PDF page 184)
+    table_a2 = {
+        "cpi": [1.5, 0.1, 0.1, 0.0],
+        "rpi": [1.3, 0.3, 0.1, 0.0],
+        "earnings": [0.6, 0.1, 0.1, 0.1],
+        "house_prices": [-0.5, 0.1, 0.2, 0.3],
+    }
+    forecast = _outlook_forecast()["forecast"]
+    pre = {
+        s["key"]: {int(p["year"]): p["value"] for p in s["pre"]}
+        for sec in forecast["sections"]
+        for s in sec["series"]
+    }
+    for key, changes in table_a2.items():
+        for year, change in zip(range(2027, 2031), changes):
+            ours = (parsed[key].values[year] - pre[key][year]) * 100
+            assert abs(ours - change) <= 0.1 + 1e-9, (key, year)
+
+
+def test_the_committed_post_document_reproduces_from_the_pdf():
+    outlook = _outlook_forecast()
+    saved = json.loads((INPUTS / POST_FILE_NAME).read_text())
+    doc = read_post_document_from_pdf(
+        OCT_PDF,
+        OCT_TEXT,
+        outlook,
+        saved["label"],
+        saved["source"]["url"],
+    )
+    assert doc["series"] == saved["series"]
+    assert {k: v for k, v in doc["source"].items()} == saved["source"]
+    # Table A.1 has no CPIH, rents, mortgage interest or non-labour income
+    missing = {k for k, v in doc["series"].items() if v["values"] is None}
+    assert missing == {
+        "cpih",
+        "rent",
+        "mortgage_interest",
+        "non_labour_income",
+    }
+    # The committed outlook carries it, and no longer says post repeats pre
+    published = json.loads(COMMITTED.read_text())
+    assert STALE_POST_NOTE not in published["meta"]["notes"]
+    applied = apply_post(json.loads(json.dumps(published)), saved)
+    assert applied["forecast"] == published["forecast"]
+    check_contract(published)
+
+
+def test_a_series_absent_from_the_source_is_refused_unless_named(tmp_path):
+    outlook = _outlook_forecast()
+    parsed, _ = read_pdf_table_a1(OCT_TEXT.read_text(), YEARS)
+    with pytest.raises(ForecastTableError, match="cpih"):
+        compute_post(outlook["forecast"], parsed)

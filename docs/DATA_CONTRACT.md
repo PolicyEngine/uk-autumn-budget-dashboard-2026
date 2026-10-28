@@ -55,7 +55,7 @@ Projection years: the income (`living_standards`), poverty (`poverty`) and inequ
 }
 ```
 
-Until the Budget forecast is published, `post` equals `pre` and `post_published` is `false`; the UI must say so visibly.
+Until the Budget forecast is published, `post` equals `pre` and `post_published` is `false`; the UI must say so visibly. Once it is loaded, the Forecast changes sub-tab draws both: `pre` (the March 2026 forecast, behind the microsimulation) faded and `post` (the October 2026 forecast) full, with "March 2026 forecast" and "October 2026 forecast" chips (28 October 2026).
 
 Both deflators (OBR CPI for BHC, CPI after housing costs for AHC) are rebased to 2027-28 = 1 (changed on 24 October 2026 from 2025-26 to 2026-27, and later that day to 2027-28).
 
@@ -180,3 +180,6 @@ policyengine-uk 2.132.6, which the latest bundle (policyengine 6.10.2) pins, set
 
 ### `forecast` sources and the Budget forecast (24 October 2026)
 `forecast.pre_source` names where the pre-Budget series come from: `{"release": "OBR Economic and fiscal outlook, March 2026", "url": "...", "via": "policyengine-uk parameters gov.economic_assumptions.yoy_growth.obr.*"}`. `forecast.post_source` is `null` until `uk-budget-data obr-forecast` loads a new EFO; it then holds `{"release", "file", "file_sha256", "url"}`, `post_published` is `true`, `post_label` names the forecast (e.g. `"OBR October 2026 (Autumn Budget)"`), and each series has `post` values from that file and a `post_source` string naming the table and column read (for the two PolicyEngine-derived series, how they were recomputed). Years and keys of `post` always equal those of `pre`. A year the EFO lacks is refused, except mortgage interest in the last year, which keeps its pre-Budget value and says so in `post_source`.
+
+### A series the Budget forecast lacks: `post: null` (28 October 2026)
+`uk-budget-data obr-forecast --efo-pdf <pdf> --efo-text <text extract>` loads the Budget forecast from the EFO PDF's Table A.1 ("Economy forecast", calendar-year growth to 1 d.p.) while the OBR's detailed forecast tables are not yet out. Table A.1 carries CPI, RPI, average weekly earnings and house prices; CPI after housing costs and social rent are recomputed from its CPI as before. CPIH, actual rents, mortgage interest payments and non-labour income are only in the detailed tables, so on this route those series have `post: null` and a `post_source` saying so; the page keeps their March line alone and says why. `post_source` (the block) then also holds `table` and the text extract's file name and SHA-256. Loading the detailed tables with `--efo` replaces the document and fills every series. `meta.notes` loses the build's line that post repeats pre once any Budget forecast is loaded.

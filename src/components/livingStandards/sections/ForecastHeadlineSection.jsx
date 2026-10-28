@@ -3,11 +3,11 @@
 // the first forecast year as a big figure, a small trend of the forecast
 // years (HeadlineTile), and one plain line on what it means
 // (forecastWords.tileMeaning), which never repeats the figure. The basis and source are in the panel's
-// intro, once. The Budget-day forecast is held (ForecastPanel), so a tile
-// shows the one published forecast.
+// intro, once. With a later OBR forecast loaded (post_published), a tile
+// shows the later forecast and names the earlier one's figure in its caption.
 
 import { Briefcase, Coins, House, KeyRound, Percent, Receipt, Tag } from "lucide-react";
-import { heroYear, pctLabel, toRows } from "../../../utils/livingStandards/forecast";
+import { forecastChip, hasPost, heroYear, pctLabel, toRows } from "../../../utils/livingStandards/forecast";
 import { tileMeaning } from "../../../utils/livingStandards/forecastWords";
 import HeadlineTile from "../HeadlineTile";
 
@@ -45,8 +45,13 @@ export default function ForecastHeadlineSection({ data }) {
   const year = heroYear(forecast);
   const byKey = {};
   forecast.sections.forEach((s) => s.series.forEach((series) => (byKey[series.key] = series)));
-  // Every series' rows as { year, value } in percent, for the comparisons
-  const rowsOf = (key) => (byKey[key] ? toRows(byKey[key], false).map((r) => ({ year: r.year, value: r.previous })) : null);
+  // Every series' rows as { year, value } in percent, for the comparisons:
+  // the later forecast where the series has it
+  const rowsOf = (key) =>
+    byKey[key]
+      ? toRows(byKey[key], true).map((r) => ({ year: r.year, value: hasPost(forecast, byKey[key]) ? r.updated : r.previous }))
+      : null;
+  const preOf = (key) => toRows(byKey[key], false).find((r) => r.year === year)?.previous;
   const allRows = Object.fromEntries(Object.keys(byKey).map((key) => [key, rowsOf(key)]));
 
   const tiles = (forecast.headline || [])
@@ -54,7 +59,7 @@ export default function ForecastHeadlineSection({ data }) {
       const rows = allRows[key];
       const row = rows?.find((r) => r.year === year);
       if (!row || row.value == null) return null;
-      return { key, name: NAMES[key] ?? byKey[key].label, rows, value: row.value };
+      return { key, name: NAMES[key] ?? byKey[key].label, rows, value: row.value, later: hasPost(forecast, byKey[key]) };
     })
     .filter(Boolean);
 
@@ -70,11 +75,15 @@ export default function ForecastHeadlineSection({ data }) {
           href={ONS_SERIES[tile.key]}
           hrefTip={ONS_SERIES[tile.key] && "The ONS series this measures"}
           value={pctLabel(tile.value)}
-          caption={`annual growth, ${year}`}
+          caption={
+            tile.later
+              ? `annual growth, ${year}, ${forecastChip(forecast.post_label)}; ${forecastChip(forecast.pre_label)}: ${pctLabel(preOf(tile.key))}`
+              : `annual growth, ${year}`
+          }
           trend={{
             rows: tile.rows.map((r) => ({ label: r.year, value: r.value })),
             format: pctLabel,
-            seriesLabel: "OBR forecast",
+            seriesLabel: tile.later ? `OBR ${forecastChip(forecast.post_label)}` : "OBR forecast",
             highlight: year,
             minSpan: 1,
           }}

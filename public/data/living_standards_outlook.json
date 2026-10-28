@@ -110,8 +110,7 @@
       "Income outturn is HBAI, published in real terms; BHC cash values are recovered with OBR CPI, and AHC outturn is shown in real terms only.",
       "Poverty and inequality outturn is the HBAI admin-linked series, which starts in 2021-22.",
       "The 2024-25 model point uses the weights solved for 2025, scaled for population, so it carries 2025 composition and caseloads (UC \u00a374bn).",
-      "OBR series are calendar years; CPI after housing costs and social rent are PolicyEngine derivations, not OBR forecasts.",
-      "Until a later OBR forecast is loaded, the post series repeat the March 2026 forecast."
+      "OBR series are calendar years; CPI after housing costs and social rent are PolicyEngine derivations, not OBR forecasts."
     ],
     "caveats": [
       "Ages and benefit take-up are held fixed, so the State Pension age rise to 67 removes State Pension from 66-year-olds with no work response.",
@@ -1262,8 +1261,8 @@
   "forecast": {
     "pre_label": "OBR March 2026 (pre-Budget)",
     "basis": "Calendar year, growth in annual average",
-    "post_label": "Budget forecast",
-    "post_published": false,
+    "post_label": "OBR October 2026 (Autumn Budget)",
+    "post_published": true,
     "headline": [
       "cpi",
       "rpi",
@@ -1299,21 +1298,22 @@
             "post": [
               {
                 "year": "2027",
-                "value": 0.02
+                "value": 0.034
               },
               {
                 "year": "2028",
-                "value": 0.02
+                "value": 0.021
               },
               {
                 "year": "2029",
-                "value": 0.02
+                "value": 0.021
               },
               {
                 "year": "2030",
                 "value": 0.02
               }
-            ]
+            ],
+            "post_source": "Table A.1: Economy forecast (PDF page 183), row 'CPI' (calendar year, per cent, 1 d.p.)"
           },
           {
             "key": "cpih",
@@ -1338,24 +1338,8 @@
                 "value": 0.0212
               }
             ],
-            "post": [
-              {
-                "year": "2027",
-                "value": 0.0211
-              },
-              {
-                "year": "2028",
-                "value": 0.0204
-              },
-              {
-                "year": "2029",
-                "value": 0.0209
-              },
-              {
-                "year": "2030",
-                "value": 0.0212
-              }
-            ]
+            "post": null,
+            "post_source": "OBR October 2026 (Autumn Budget): not in the EFO PDF's Table A.1; the OBR's CPIH forecast is in the detailed forecast tables (economy), not yet loaded"
           },
           {
             "key": "cpi_ahc",
@@ -1383,21 +1367,22 @@
             "post": [
               {
                 "year": "2027",
-                "value": 0.0188
+                "value": 0.0328
               },
               {
                 "year": "2028",
-                "value": 0.0194
+                "value": 0.0204
               },
               {
                 "year": "2029",
-                "value": 0.0194
+                "value": 0.0204
               },
               {
                 "year": "2030",
                 "value": 0.0192
               }
-            ]
+            ],
+            "post_source": "PolicyEngine approximation: the pre-Budget CPI after housing costs moved by the change in OBR CPI for the same year (not an OBR series)"
           },
           {
             "key": "rpi",
@@ -1425,21 +1410,22 @@
             "post": [
               {
                 "year": "2027",
-                "value": 0.03
+                "value": 0.043
               },
               {
                 "year": "2028",
-                "value": 0.028
+                "value": 0.03
               },
               {
                 "year": "2029",
-                "value": 0.029
+                "value": 0.03
               },
               {
                 "year": "2030",
                 "value": 0.023
               }
-            ]
+            ],
+            "post_source": "Table A.1: Economy forecast (PDF page 183), row 'RPI' (calendar year, per cent, 1 d.p.)"
           }
         ]
       },
@@ -1472,21 +1458,22 @@
             "post": [
               {
                 "year": "2027",
-                "value": 0.024
+                "value": 0.03
               },
               {
                 "year": "2028",
-                "value": 0.021
-              },
-              {
-                "year": "2029",
                 "value": 0.022
               },
               {
+                "year": "2029",
+                "value": 0.023
+              },
+              {
                 "year": "2030",
-                "value": 0.024
+                "value": 0.025
               }
-            ]
+            ],
+            "post_source": "Table A.1: Economy forecast (PDF page 183), row 'Average weekly earnings' (calendar year, per cent, 1 d.p.)"
           },
           {
             "key": "non_labour_income",
@@ -1511,24 +1498,8 @@
                 "value": 0.0317
               }
             ],
-            "post": [
-              {
-                "year": "2027",
-                "value": 0.0513
-              },
-              {
-                "year": "2028",
-                "value": 0.035
-              },
-              {
-                "year": "2029",
-                "value": 0.0301
-              },
-              {
-                "year": "2030",
-                "value": 0.0317
-              }
-            ]
+            "post": null,
+            "post_source": "OBR October 2026 (Autumn Budget): not in the EFO PDF's Table A.1; the OBR's non-labour income forecast is in the detailed forecast tables (economy), not yet loaded"
           }
         ]
       },
@@ -1561,21 +1532,22 @@
             "post": [
               {
                 "year": "2027",
-                "value": 0.029
+                "value": 0.024
               },
               {
                 "year": "2028",
-                "value": 0.027
+                "value": 0.028
               },
               {
                 "year": "2029",
-                "value": 0.026
+                "value": 0.028
               },
               {
                 "year": "2030",
-                "value": 0.024
+                "value": 0.027
               }
-            ]
+            ],
+            "post_source": "Table A.1: Economy forecast (PDF page 183), row 'House prices' (calendar year, per cent, 1 d.p.)"
           },
           {
             "key": "rent",
@@ -1600,24 +1572,8 @@
                 "value": 0.0258
               }
             ],
-            "post": [
-              {
-                "year": "2027",
-                "value": 0.0302
-              },
-              {
-                "year": "2028",
-                "value": 0.023
-              },
-              {
-                "year": "2029",
-                "value": 0.0238
-              },
-              {
-                "year": "2030",
-                "value": 0.0258
-              }
-            ]
+            "post": null,
+            "post_source": "OBR October 2026 (Autumn Budget): not in the EFO PDF's Table A.1; the OBR's actual rents for housing forecast is in the detailed forecast tables (economy), not yet loaded"
           },
           {
             "key": "social_rent",
@@ -1645,21 +1601,22 @@
             "post": [
               {
                 "year": "2027",
-                "value": 0.033
+                "value": 0.041
               },
               {
                 "year": "2028",
-                "value": 0.03
+                "value": 0.044
               },
               {
                 "year": "2029",
-                "value": 0.03
+                "value": 0.031
               },
               {
                 "year": "2030",
-                "value": 0.03
+                "value": 0.031
               }
-            ]
+            ],
+            "post_source": "England social rent policy cap: OBR calendar-year CPI for the year before + 1%; 2026 set by September 2025 CPI outturn (not an OBR forecast)"
           },
           {
             "key": "mortgage_interest",
@@ -1684,24 +1641,8 @@
                 "value": 0.0553
               }
             ],
-            "post": [
-              {
-                "year": "2027",
-                "value": 0.104
-              },
-              {
-                "year": "2028",
-                "value": 0.0476
-              },
-              {
-                "year": "2029",
-                "value": 0.0468
-              },
-              {
-                "year": "2030",
-                "value": 0.0553
-              }
-            ]
+            "post": null,
+            "post_source": "OBR October 2026 (Autumn Budget): not in the EFO PDF's Table A.1; the OBR's mortgage interest payments forecast is in the detailed forecast tables (economy), not yet loaded"
           }
         ]
       }
@@ -1711,7 +1652,15 @@
       "url": "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",
       "via": "policyengine-uk parameters gov.economic_assumptions.yoy_growth.obr.*"
     },
-    "post_source": null
+    "post_source": {
+      "release": "OBR Economic and fiscal outlook, October 2026: Table A.1, Economy forecast",
+      "file": "OBR-Economic-and-Fiscal-Outlook-October-2026.pdf",
+      "file_sha256": "9e0e9c340e35e603066f3124a614fcd68feadb3d5d10d1f76fb536e150e6225e",
+      "url": "https://obr.uk/download/economic-and-fiscal-outlook-october-2026/",
+      "table": "Table A.1: Economy forecast, PDF page 183",
+      "text_extract": "OBR-Economic-and-Fiscal-Outlook-October-2026.txt",
+      "text_extract_sha256": "099637cb5c1d37949881c8b2c74beaecbbc371c3cacaaf482b6455ae491a1c17"
+    }
   },
   "income_by_decile": {
     "base_year": "2027-28",

@@ -1,0 +1,95 @@
+{
+  "label": "OBR October 2026 (Autumn Budget)",
+  "source": {
+    "release": "OBR Economic and fiscal outlook, October 2026: Table A.1, Economy forecast",
+    "file": "OBR-Economic-and-Fiscal-Outlook-October-2026.pdf",
+    "file_sha256": "9e0e9c340e35e603066f3124a614fcd68feadb3d5d10d1f76fb536e150e6225e",
+    "url": "https://obr.uk/download/economic-and-fiscal-outlook-october-2026/",
+    "table": "Table A.1: Economy forecast, PDF page 183",
+    "text_extract": "OBR-Economic-and-Fiscal-Outlook-October-2026.txt",
+    "text_extract_sha256": "099637cb5c1d37949881c8b2c74beaecbbc371c3cacaaf482b6455ae491a1c17"
+  },
+  "read_at": "2026-10-28T13:46:12+00:00",
+  "series": {
+    "cpi": {
+      "values": {
+        "2027": 0.034,
+        "2028": 0.021,
+        "2029": 0.021,
+        "2030": 0.02
+      },
+      "source": "Table A.1: Economy forecast (PDF page 183), row 'CPI' (calendar year, per cent, 1 d.p.)",
+      "carried": []
+    },
+    "cpih": {
+      "values": null,
+      "source": "OBR October 2026 (Autumn Budget): not in the EFO PDF's Table A.1; the OBR's CPIH forecast is in the detailed forecast tables (economy), not yet loaded",
+      "carried": []
+    },
+    "rpi": {
+      "values": {
+        "2027": 0.043,
+        "2028": 0.03,
+        "2029": 0.03,
+        "2030": 0.023
+      },
+      "source": "Table A.1: Economy forecast (PDF page 183), row 'RPI' (calendar year, per cent, 1 d.p.)",
+      "carried": []
+    },
+    "earnings": {
+      "values": {
+        "2027": 0.03,
+        "2028": 0.022,
+        "2029": 0.023,
+        "2030": 0.025
+      },
+      "source": "Table A.1: Economy forecast (PDF page 183), row 'Average weekly earnings' (calendar year, per cent, 1 d.p.)",
+      "carried": []
+    },
+    "non_labour_income": {
+      "values": null,
+      "source": "OBR October 2026 (Autumn Budget): not in the EFO PDF's Table A.1; the OBR's non-labour income forecast is in the detailed forecast tables (economy), not yet loaded",
+      "carried": []
+    },
+    "house_prices": {
+      "values": {
+        "2027": 0.024,
+        "2028": 0.028,
+        "2029": 0.028,
+        "2030": 0.027
+      },
+      "source": "Table A.1: Economy forecast (PDF page 183), row 'House prices' (calendar year, per cent, 1 d.p.)",
+      "carried": []
+    },
+    "rent": {
+      "values": null,
+      "source": "OBR October 2026 (Autumn Budget): not in the EFO PDF's Table A.1; the OBR's actual rents for housing forecast is in the detailed forecast tables (economy), not yet loaded",
+      "carried": []
+    },
+    "mortgage_interest": {
+      "values": null,
+      "source": "OBR October 2026 (Autumn Budget): not in the EFO PDF's Table A.1; the OBR's mortgage interest payments forecast is in the detailed forecast tables (economy), not yet loaded",
+      "carried": []
+    },
+    "cpi_ahc": {
+      "values": {
+        "2027": 0.0328,
+        "2028": 0.0204,
+        "2029": 0.0204,
+        "2030": 0.0192
+      },
+      "source": "PolicyEngine approximation: the pre-Budget CPI after housing costs moved by the change in OBR CPI for the same year (not an OBR series)",
+      "carried": []
+    },
+    "social_rent": {
+      "values": {
+        "2027": 0.041,
+        "2028": 0.044,
+        "2029": 0.031,
+        "2030": 0.031
+      },
+      "source": "England social rent policy cap: OBR calendar-year CPI for the year before + 1%; 2026 set by September 2025 CPI outturn (not an OBR forecast)",
+      "carried": []
+    }
+  }
+}
