@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { parseDashboardCsv } from "./loadDashboard";
-import { OBR_DEVIATION_NOTES, OBR_DEVIATION_STATEMENT, missingDeviationNotes } from "./obrDeviationNotes";
+import { OBR_DEVIATION_NOTES, OBR_DEVIATION_STATEMENT, deviationNoteFor, missingDeviationNotes } from "./obrDeviationNotes";
+import { POLICY_DETAILS } from "./policyDetails";
 
 // The measures the comparison costs: each one the Treasury mapping maps to
 // the Budget's Table 6.1
@@ -39,5 +41,28 @@ describe("why our estimates differ from the official costings", () => {
     const notes = { a: "Timing.", b: "", c: "   ", e: 4 };
     expect(missingDeviationNotes(["a", "b", "c", "d", "e"], notes)).toEqual(["b", "c", "d", "e"]);
     expect(missingDeviationNotes([], notes)).toEqual([]);
+  });
+
+  it("shows every note for its measure as its card entry was written for", () => {
+    for (const id of COMPARED) {
+      const entry = POLICY_DETAILS.find((candidate) => candidate.id === id);
+      expect(entry, id).toBeDefined();
+      expect(deviationNoteFor({ id, description: entry.writtenFor }), id).toBe(OBR_DEVIATION_NOTES[id]);
+    }
+  });
+
+  it("shows a note for no other description, and none for a missing measure or note", () => {
+    const written = Object.fromEntries(POLICY_DETAILS.map((entry) => [entry.id, entry.writtenFor]));
+    fc.assert(
+      fc.property(fc.constantFrom(...COMPARED), fc.string(), (id, description) => {
+        fc.pre(description !== written[id]);
+        expect(deviationNoteFor({ id, description })).toBeNull();
+      }),
+    );
+    expect(deviationNoteFor(undefined)).toBeNull();
+    expect(deviationNoteFor(null)).toBeNull();
+    const [id] = COMPARED;
+    expect(deviationNoteFor({ id, description: written[id] }, {})).toBeNull();
+    expect(deviationNoteFor({ id, description: written[id] }, { [id]: " Timing. " })).toBe("Timing.");
   });
 });

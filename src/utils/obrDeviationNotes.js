@@ -1,3 +1,5 @@
+import { policyDetailsFor } from "./policyDetails";
+
 /**
  * Why our estimates differ from the official costings, for the comparison
  * with them on Public finances (OBRComparisonTable).
@@ -14,6 +16,12 @@
  * scope or forecast). A measure within its band still has one. The
  * comparison shows a measure's note in the tooltip of its row and in "Why
  * each policy differs" under the chart, which works on a phone.
+ *
+ * A note was written for the measure as the publication then described it,
+ * so it shows only while its card entry (policyDetails.js) still fits: the
+ * publication describes the measure exactly as the entry's `writtenFor`
+ * (deviationNoteFor). A redescribed measure shows the statement alone until
+ * its entry, and its note, are rewritten.
  */
 export const OBR_DEVIATION_STATEMENT =
   "Our estimates differ from the official costings for four main reasons: when tax is counted (we score each tax year's liability; official costings count tax when it is paid), coverage (we use household survey data, so effects outside households, and on incomes the survey records thinly, are estimated less fully in ours), behaviour (ours are static; most official costings include responses) and scope (the parts of a policy each models). Each policy's note below says which apply.";
@@ -36,6 +44,15 @@ export const OBR_DEVIATION_NOTES = {
   savings_income_rates_up:
     "Timing affects 2027-28 and 2028-29, as for property; from 2029-30 ours is 58% to 59% of the official costing (+£307m against +£520m in 2029-30), and behaviour widens the gap, because the official figure is already after about £0.2bn a year of savers moving money into ISAs. The gap is in how much savings income is taxed at the raised basic, higher and additional rates: about £36bn to £40bn a year in the official costing from 2029-30 to 2031-32, against £15bn to £17bn in ours. Our savings interest is at least as large as HMRC's survey of personal incomes records (£21bn for people with incomes over £12,570 in 2024-25, against £18bn for 2023-24), but that compares interest only, while the official base is all taxable savings income, so we're still investigating the difference.",
 };
+
+/**
+ * A comparison row's note: the one `notes` has for its catalogue measure,
+ * while its card entry fits it (policyDetailsFor); else null.
+ */
+export function deviationNoteFor(measure, notes = OBR_DEVIATION_NOTES) {
+  const note = measure ? notes[measure.id] : undefined;
+  return typeof note === "string" && note.trim() && policyDetailsFor(measure) ? note.trim() : null;
+}
 
 /** The measures in `ids` with no note in `notes`, in order. */
 export function missingDeviationNotes(ids, notes = OBR_DEVIATION_NOTES) {

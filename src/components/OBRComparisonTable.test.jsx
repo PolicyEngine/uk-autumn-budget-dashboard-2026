@@ -18,6 +18,7 @@ import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measur
 import { parseDashboardCsv } from "../utils/loadDashboard";
 import { ALPHA, BETA, YEAR, measureCatalogueFixture } from "../test/measureCatalogueFixture";
 import { OBR_DEVIATION_STATEMENT } from "../utils/obrDeviationNotes";
+import { POLICY_DETAILS } from "../utils/policyDetails";
 import { downloadFile } from "../utils/downloadFile";
 
 // The official costings as rows, from a CSV fixture; the loader's own checks
@@ -128,23 +129,37 @@ describe("the OBR comparison table", () => {
 const plain = (text) => text?.replace(/\u2060/g, "");
 
 describe("why our estimates differ from the official costings", () => {
+  // A real measure, published as its card entry was written for, so its
+  // note fits (deviationNoteFor); invented figures
+  const ID = "savings_income_rates_up";
+  const ENTRY = POLICY_DETAILS.find((entry) => entry.id === ID);
   const NOTE = "Ours counts each tax year's liability; the official costing counts tax when it is paid.";
-  const stub = () =>
+  const renderNoted = ({ description = ENTRY.writtenFor, notes = { [ID]: NOTE } } = {}) => {
+    const impact = ["reform_id,reform_name,year,value", `${ID},${ENTRY.name},2030,0.3`].join("\n");
     vi.stubGlobal(
       "fetch",
       geographyFetch({
-        "/data/official_costings.csv": OBR_COMPARISON,
-        "/data/budgetary_impact.csv": BUDGETARY_IMPACT,
+        "/data/official_costings.csv": ["reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value", `${ID},${ENTRY.name},2030,0.5,0.5`].join("\n"),
+        "/data/budgetary_impact.csv": impact,
       }),
     );
+    const rows = parseDashboardCsv(impact);
+    const manifest = { measures: { [ID]: { name: ENTRY.name, description, status: "approved", years: DISPLAY_YEARS, unsupported_years: [] } }, combined: {} };
+    const catalogue = buildMeasureCatalogue({ manifest, budgetary: rows, tablesByKey: { [ID]: { budgetary_impact: rows } } });
+    return renderReact(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <OBRComparisonTable selectedPolicies={[ID]} selectedYear={2030} notes={notes} />
+      </MeasureCatalogueProvider>,
+    );
+  };
+  const tableRow = () => screen.getAllByRole("row")[1];
 
   it("says the general reasons under the chart, then each policy's note in a list", async () => {
-    stub();
-    render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} notes={{ two_child_limit: NOTE }} />);
+    renderNoted();
     await screen.findByRole("radio", { name: "Show as chart" });
     expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
     const list = screen.getByRole("region", { name: "Why each policy differs" });
-    expect(within(list).getAllByRole("listitem").map((li) => plain(li.textContent))).toEqual([`2 child limit repeal: ${NOTE}`]);
+    expect(within(list).getAllByRole("listitem").map((li) => plain(li.textContent))).toEqual([`${ENTRY.shortName}: ${NOTE}`]);
     // The statement and the list stay when the table replaces the chart
     show("Table");
     expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
@@ -152,21 +167,19 @@ describe("why our estimates differ from the official costings", () => {
   });
 
   it("shows a row's note in the chart's tooltip for that row", async () => {
-    stub();
-    const { container } = render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} notes={{ two_child_limit: NOTE }} />);
+    const { container } = renderNoted();
     await screen.findByRole("radio", { name: "Show as chart" });
-    fireEvent.mouseEnter(container.querySelector('[data-policy="two_child_limit"]'));
+    fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
     expect(document.querySelector(".chart-tooltip-note")).toHaveTextContent(NOTE);
   });
 
   it("shows a row's note on its Difference cell in the table, on hover and on focus", async () => {
-    stub();
-    render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} notes={{ two_child_limit: NOTE }} />);
+    renderNoted();
     await screen.findByRole("radio", { name: "Show as chart" });
     show("Table");
-    const difference = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell")[4];
+    const difference = within(tableRow()).getAllByRole("cell")[4];
     // The figure itself is unchanged; the note is on hover, focus or a tap
-    expect(difference).toHaveTextContent(/^−£100m$/);
+    expect(difference).toHaveTextContent(/^−£200m$/);
     const anchor = difference.querySelector(".difference-note-anchor");
     fireEvent.mouseEnter(anchor);
     expect(screen.getByRole("tooltip")).toHaveTextContent(NOTE);
@@ -176,8 +189,7 @@ describe("why our estimates differ from the official costings", () => {
   });
 
   it("adds each note to the table's CSV download", async () => {
-    stub();
-    render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} notes={{ two_child_limit: NOTE }} />);
+    renderNoted();
     await screen.findByRole("radio", { name: "Show as chart" });
     show("Table");
     vi.mocked(downloadFile).mockClear();
@@ -190,11 +202,24 @@ describe("why our estimates differ from the official costings", () => {
   });
 
   it("keeps the statement, with no list, tooltip or anchor, for a policy with no note", async () => {
-    stub();
-    render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} notes={{ other: NOTE, two_child_limit: "  " }} />);
+    const { container } = renderNoted({ notes: { other: NOTE, [ID]: "  " } });
     await screen.findByRole("radio", { name: "Show as chart" });
     expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Why each policy differs" })).toBeNull();
+    fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
+    expect(document.querySelector(".chart-tooltip-note")).toBeNull();
+    show("Table");
+    expect(document.querySelector(".difference-note-anchor")).toBeNull();
+  });
+
+  it("steps the note aside, keeping the statement, once the publication describes the measure differently", async () => {
+    const { container } = renderNoted({ description: "Savings income tax rates rise by 2 points from April 2028." });
+    await screen.findByRole("radio", { name: "Show as chart" });
+    expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Why each policy differs" })).toBeNull();
+    expect(document.body).not.toHaveTextContent(NOTE);
+    fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
+    expect(document.querySelector(".chart-tooltip-note")).toBeNull();
     show("Table");
     expect(document.querySelector(".difference-note-anchor")).toBeNull();
   });

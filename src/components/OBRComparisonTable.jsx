@@ -20,7 +20,7 @@ import { loadPolicyParameters, measureWindows, outOfForceText } from "../utils/p
 import { loadOfficialCostings, OfficialCostingsPendingError } from "../utils/publication/officialCostings";
 import { SOURCES } from "../utils/sources";
 import { METHOD_ANCHORS } from "./methodology/anchors";
-import { OBR_DEVIATION_NOTES, OBR_DEVIATION_STATEMENT } from "../utils/obrDeviationNotes";
+import { OBR_DEVIATION_NOTES, OBR_DEVIATION_STATEMENT, deviationNoteFor } from "../utils/obrDeviationNotes";
 
 /** What the comparison says when the official costings cover none of the selected measures. */
 export const OBR_UNAVAILABLE = "The official costings have no figures for the selected policies.";
@@ -256,10 +256,11 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   }
 
   const yearLabel = fiscalYear(selectedYear);
-  // Each row with why it differs from the official costing, where its note says
+  // Each row with why it differs from the official costing, while its note
+  // was written for the measure as published
   const rows = comparisonRows(selectedRows, selectedPolicies, selectedYear, showBehavioural, catalogue, windows).map((row) => ({
     ...row,
-    note: typeof notes[row.id] === "string" && notes[row.id].trim() ? notes[row.id].trim() : null,
+    note: deviationNoteFor(row.measure, notes),
   }));
   const notedRows = rows.filter((row) => row.note !== null);
   // The basis the figures shown are on: the other one when the official
