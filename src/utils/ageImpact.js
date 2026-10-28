@@ -81,7 +81,7 @@ const haveOrHas = (names) => (names.length > 1 ? "have" : "has");
  * shown, so the other policies' parts beside it would give the thin
  * policies' part back by difference (never revealed by subtraction).
  */
-const BY_DIFFERENCE = "showing only the other policies would let theirs be worked out from the net change";
+const BY_DIFFERENCE = "showing only the other policies would let the withheld policies' part be worked out from the net change";
 
 /** Why Each policy is unavailable, as the short line under the Show choice. */
 export const withheldPartsNote = (names) =>

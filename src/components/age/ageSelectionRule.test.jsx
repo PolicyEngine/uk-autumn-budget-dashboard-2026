@@ -289,7 +289,7 @@ describe("The single-year age axis", () => {
 
   it("says why Each policy is unavailable, naming the thin policies and why the others are not shown either", () => {
     expect(withheldPartsNote(["A", "B"])).toBe(
-      "not available, as A and B have too few survey records at some ages, and showing only the other policies would let theirs be worked out from the net change",
+      "not available, as A and B have too few survey records at some ages, and showing only the other policies would let the withheld policies' part be worked out from the net change",
     );
     expect(withheldPartsCaveat(["A"], "by age group")).toMatch(/as A has too few survey records by age group, and showing only the other policies/);
     expect(withheldPartsCaveat([])).toBe(PACKAGE_PARTS_CAVEAT);
