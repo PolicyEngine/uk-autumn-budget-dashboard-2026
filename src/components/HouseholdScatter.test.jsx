@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { parseScatterCsv } from "../utils/householdScatter";
 
 const HEADER =
@@ -132,6 +132,20 @@ describe("HouseholdScatter beside the income decile card", () => {
     expect(container.querySelector(".chart-logo img")).toBeTruthy();
     expect(screen.getAllByTestId("in-svg").map((node) => node.dataset.part)).not.toContain("PolicyEngineLogo");
     expect(JSON.parse(screen.getByTestId("scatter-chart").dataset.margin).bottom).toBe(0);
+  });
+});
+
+describe("HouseholdScatter's About this chart", () => {
+  it("says what the disclosure floor leaves out: rare changes within an income band, at the contract's minimum", async () => {
+    const { SCATTER_BINS } = await import("../utils/publication/scatter");
+    render(<HouseholdScatter selectedPolicies={["a"]} policies={POLICIES} selectedYear={2028} />);
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    const text = document.body.textContent;
+    expect(SCATTER_BINS.min_households).toBeGreaterThan(0);
+    expect(text).toContain(
+      `Rare changes, seen in fewer than ${SCATTER_BINS.min_households} survey households in an income band, are left out.`,
+    );
+    expect(text).not.toMatch(/Groups with too few/);
   });
 });
 

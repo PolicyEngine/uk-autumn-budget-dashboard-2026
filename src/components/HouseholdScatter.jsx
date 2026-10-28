@@ -123,7 +123,9 @@ function ScatterMoreInfo({ basisLabel }) {
           "The groups and the change axis are the same in every year. Changes beyond the axis show as arrows at its edge.",
           "No change (under £1 either way) is an unfilled ring on £0.",
         ],
-        caveats: ["Groups with too few survey households are left out."],
+        // What tables.py drops: an income band's change band with fewer than
+        // min_households survey households, so the rarest changes, not whole groups
+        caveats: [`Rare changes, seen in fewer than ${SCATTER_BINS.min_households} survey households in an income band, are left out.`],
         method: { anchor: METHOD_ANCHORS.scatter, label: "How the household groups are built" },
       }}
     />
