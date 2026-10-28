@@ -132,16 +132,34 @@ const CHART_DESCRIPTION =
 // The net line's gap from a run of all the policies together: interactions
 // (critic W1, round 3), explained under Limitations; every run shares one
 // declared baseline
-const REVENUE_INFO = {
-  how: [
-    "Each policy is costed on its own against current law.",
-    <>
-      The net line is their sum, so it leaves out interactions between them.{" "}
-      <MethodLink anchor={METHOD_ANCHORS.limitations}>Policies added up</MethodLink>{" "}explains this.
-    </>,
-  ],
-  method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the policies" },
-};
+// The net line is the selected policies' combined run when one is
+// published (budgetChartData's netFromPackage), else the bars' sum; with
+// the run, how far the two are apart in the years shown
+export function revenueInfo(data) {
+  const fromPackage = data.some((point) => point.netFromPackage);
+  const gaps = data
+    .filter((point) => point.netFromPackage && Number.isFinite(point.barsSum))
+    .map((point) => Math.abs(point.netImpact - point.barsSum));
+  const gapM = gaps.length ? Math.max(...gaps) * 1000 : null;
+  return {
+    how: fromPackage
+      ? [
+          "Each bar is one policy on its own against current law; the net line is all the policies run together.",
+          gapM !== null &&
+            (gapM < 1
+              ? "The net line and the bars added up agree within £1m a year."
+              : `The net line and the bars added up differ by up to £${Math.round(gapM).toLocaleString("en-GB")}m a year: interactions between the policies.`),
+        ].filter(Boolean)
+      : [
+          "Each bar is one policy on its own against current law; the net line adds up the bars.",
+          <>
+            So it leaves out interactions between them.{" "}
+            <MethodLink anchor={METHOD_ANCHORS.limitations}>Policies added up</MethodLink>{" "}explains this.
+          </>,
+        ],
+    method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the policies" },
+  };
+}
 
 function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [] }) {
   const chartRef = useRef(null);
@@ -384,7 +402,7 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [] }) {
       <div className="chart-footer">
         <ChartMoreInfo
           year={selectedYear}
-          info={REVENUE_INFO}
+          info={revenueInfo(data)}
         />
       </div>
     </div>

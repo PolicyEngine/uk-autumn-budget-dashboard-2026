@@ -22,6 +22,7 @@ import { pruneVerifiedCache } from "./utils/publication/cache";
 import { prefetchGeography } from "./hooks/useGeographyData";
 import { loadOutlook } from "./utils/livingStandards/outlook";
 import { loadGrowthWithMeasures } from "./utils/livingStandards/growthWithMeasures";
+import { selectionPackageKey } from "./utils/geography/selection";
 
 // Growth with the selected policies (Living standards) reads one flat file
 // of every run (about 90kB gzipped): on a page opened on Population impact
@@ -481,7 +482,9 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   // while rendering, as `visited` is above)
   if (published.budgetary?.length && !shownYears.includes(distributionalYear)) setDistributionalYear(DEFAULT_DISPLAY_YEAR);
   const results = useMemo(() => ({
-    budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, shownYears),
+    // The net line from the selected policies' combined run when one is
+    // published, else the bars' sum
+    budgetData: budgetChartData(published.budgetary, catalogue.displayable, selectedPolicies, shownYears, selectionPackageKey(catalogue.manifest, selectedPolicies)),
     rawDistributional: published.distributional.filter((row) => selectedPolicies.includes(row.reform_id)),
     rawWinnersLosers: published.winnersLosers.filter((row) => selectedPolicies.includes(row.reform_id)),
     // Every verified run's rows: the summary statistics read one run, not a
