@@ -472,3 +472,26 @@ def test_isolated_points_finds_single_spikes_only():
     assert br.isolated_points([100.0, 200.0, 300.0, 400.0]) == []
     # a step is not a spike
     assert br.isolated_points([0.0, 0.0, 5000.0, 5000.0]) == []
+
+
+@pytest.mark.parametrize(
+    "values, shape",
+    [
+        ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], ("rising", None)),
+        ([1, 2, 3, 4, 3.5, 6, 7, 8, 9, 10], ("rising", None)),
+        ([10, 9, 8, 7, 6, 5, 4, 3, 2, 1], ("falling", None)),
+        ([1, 3, 5, 9, 7, 5, 3, 2, 1, 1], ("peaked", 4)),
+        ([9, 7, 5, 1, 3, 5, 7, 8, 9, 9], ("troughed", 4)),
+        ([1, 5, 1, 5, 1, 5, 1, 5, 1, 5], ("mixed", None)),
+        ([1, 2, None, 4, 5, 6, 7, 8, 9, 10], ("mixed", None)),
+        # the published 2027-28 pattern: a hump, D1 £194, D9 £612, D10 £87
+        ([194, 268, 283, 355, 407, 512, 525, 594, 612, 87], ("peaked", 9)),
+    ],
+)
+def test_decile_shape(values, shape):
+    assert br.decile_shape(values) == shape
+
+
+def test_the_hump_reads_highest_in_the_ninth_decile_never_a_comparison_of_ends():
+    text = br.shape_phrase([194, 268, 283, 355, 407, 512, 525, 594, 612, 87])
+    assert text == "is highest in the ninth decile"

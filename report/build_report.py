@@ -479,6 +479,56 @@ def sign_runs(years, values, tol):
     return runs
 
 
+
+def decile_shape(values):
+    """The shape of ten decile values: ("rising"|"falling"|"peaked"|"troughed"|"mixed", k).
+
+    rising: non-decreasing, allowing one dip of under 10% of the range;
+    falling: the mirror; peaked at decile k: an interior maximum with both
+    ends at least 25% of the range below it; troughed: the mirror; anything
+    else (or any withheld value) is mixed. k is 1-based, for peaked/troughed.
+    """
+    if not values or any(v is None for v in values):
+        return "mixed", None
+    lo, hi = min(values), max(values)
+    span = hi - lo
+    if span <= 0:
+        return "mixed", None
+
+    def monotone(vs):
+        dips = [b - a for a, b in zip(vs, vs[1:]) if b < a]
+        return len(dips) <= 1 and all(-d < 0.1 * span for d in dips) and vs[-1] > vs[0]
+
+    if monotone(values):
+        return "rising", None
+    if monotone([-v for v in values]):
+        return "falling", None
+    k = max(range(len(values)), key=lambda i: values[i])
+    if 0 < k < len(values) - 1 and values[k] - values[0] >= 0.25 * span and values[k] - values[-1] >= 0.25 * span:
+        return "peaked", k + 1
+    k = min(range(len(values)), key=lambda i: values[i])
+    if 0 < k < len(values) - 1 and values[0] - values[k] >= 0.25 * span and values[-1] - values[k] >= 0.25 * span:
+        return "troughed", k + 1
+    return "mixed", None
+
+
+DECILE_WORDS = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"]
+
+
+def shape_phrase(values):
+    """The classified shape in words, never a comparison of the two ends."""
+    kind, k = decile_shape(values)
+    if kind == "rising":
+        return "rises from the bottom decile to the top decile"
+    if kind == "falling":
+        return "falls from the bottom decile to the top decile"
+    if kind == "peaked":
+        return f"is highest in the {DECILE_WORDS[k - 1]} decile"
+    if kind == "troughed":
+        return f"is lowest in the {DECILE_WORDS[k - 1]} decile"
+    return ""
+
+
 def css_string(text: str) -> str:
     return '"' + str(text).replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ") + '"'
 
@@ -1111,16 +1161,10 @@ class Report:
                 rtitle = f"As a share of net income, {decile_phrase(i + 1)} {'gains' if vi > 0 else 'loses'} most"
             chart = self._bar_chart(DECILES, rel_vals, rel_labels, [tone(v or 0.0) for v in rel_vals], height=2.2, size=7.2)
             alt = "; ".join(f"decile {d}: {r}" for d, r in zip(DECILES, rel_labels))
-            a0, a9, r0, r9 = abs_vals[0], abs_vals[9], rel_vals[0], rel_vals[9]
             read = ""
-            if None not in (a0, a9, r0, r9):
-                if a9 > a0 > 0 and r0 > r9 > 0:
-                    read = (
-                        f"Figures {f_abs} and {f_abs + 1} read together: the cash gain is larger for higher-income households, "
-                        "but smaller relative to their income, so the gain is a larger share of income for lower-income households."
-                    )
-                elif a0 > a9 > 0:
-                    read = "The cash gain is larger for lower-income households than for higher-income ones."
+            phrase = shape_phrase(abs_vals)
+            if phrase:
+                read = f"The average change in pounds {phrase}."
             blocks.append(self.figure(chart, rtitle, f"Average change in household net income by income decile, % of net income, UK, {fy(y)}", alt, self._withheld_note(rel_vals), after=self.explain(read)))
 
         # Each measure by decile (one measure: the charts above are its own)
