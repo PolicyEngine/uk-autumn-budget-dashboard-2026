@@ -68,11 +68,13 @@
   z-index: 1;
   display: grid;
   flex: none;
-  grid-template-columns: 40px 1fr 40px;
+  grid-template-columns: 1fr 40px;
   align-items: center;
   gap: 8px;
   height: var(--overview-band-height);
-  padding: 0 12px;
+  /* The wordmark starts on the body's 20px left edge (less its link's 6px
+     padding), as the title band's mark lines up with its content */
+  padding: 0 12px 0 14px;
   background: var(--band-gradient);
   background-size: 100vw 100%;
   background-position: left top;
@@ -85,12 +87,17 @@
   box-shadow: 0 1px 0 var(--shadow-soft);
 }
 
-/* PolicyEngine's white wordmark, centred in the band at the site header's
+/* No spacer: the wordmark sits at the left, the close button at the right */
+.overview-header-spacer {
+  display: none;
+}
+
+/* PolicyEngine's white wordmark, at the left of the band at the site header's
    size (24px tall); its link a soft white tint on hover, a white ring on
    keyboard focus, as the band's mark has (.title-mark-link) */
 .overview-logo-link {
   display: flex;
-  justify-self: center;
+  justify-self: start;
   min-width: 0;
   max-width: 100%;
   padding: 4px 6px;
