@@ -942,18 +942,22 @@ def _trading_allowance(reform) -> list[dict]:
     ]
 
 
-def _unearned_income_rates(reform) -> list[dict]:
-    labels = {
-        "savings.basic": "Savings basic rate",
-        "savings.higher": "Savings higher rate",
-        "savings.additional": "Savings additional rate",
-        "property.basic": "Property basic rate",
-        "property.higher": "Property higher rate",
-        "property.additional": "Property additional rate",
-    }
-    function = "unearned_income_rates_up()"
+_RATE_LABELS = {
+    "savings.basic": "Savings basic rate",
+    "savings.higher": "Savings higher rate",
+    "savings.additional": "Savings additional rate",
+    "property.basic": "Property basic rate",
+    "property.higher": "Property higher rate",
+    "property.additional": "Property additional rate",
+}
+
+
+def _income_rates(reform, kinds, function, primary) -> list[dict]:
+    """The rates of each income in ``kinds``, the ``primary`` one first."""
     rows = []
-    for suffix, label in labels.items():
+    for suffix, label in _RATE_LABELS.items():
+        if suffix.split(".")[0] not in kinds:
+            continue
         path = f"{registry.INCOME_TAX_RATES}.{suffix}"
         rows.append(
             _row(
@@ -964,10 +968,32 @@ def _unearned_income_rates(reform) -> list[dict]:
                     _engine_or_change(reform, path),
                 ),
                 _source(_engine_source(path), _change_source(path, function)),
-                primary=suffix == "savings.basic",
+                primary=suffix == primary,
             )
         )
     return rows
+
+
+def _property_income_rates(reform) -> list[dict]:
+    return _income_rates(
+        reform, ("property",), "property_income_rates_up()", "property.basic"
+    )
+
+
+def _savings_income_rates(reform) -> list[dict]:
+    return _income_rates(
+        reform, ("savings",), "savings_income_rates_up()", "savings.basic"
+    )
+
+
+def _unearned_income_rates(reform) -> list[dict]:
+    # Withdrawn (split into the two above); its builder still reads it
+    return _income_rates(
+        reform,
+        ("savings", "property"),
+        "unearned_income_rates_up()",
+        "savings.basic",
+    )
 
 
 BUILDERS = {
@@ -984,6 +1010,8 @@ BUILDERS = {
     registry.LHA_UNFREEZE_ID: _lha_unfreeze,
     registry.EMPLOYER_NI_THRESHOLD_ID: _employer_ni_threshold,
     registry.UNEARNED_INCOME_RATES_ID: _unearned_income_rates,
+    registry.PROPERTY_INCOME_RATES_ID: _property_income_rates,
+    registry.SAVINGS_INCOME_RATES_ID: _savings_income_rates,
     registry.HOUSEHOLD_ENERGY_PAYMENT_ID: _household_energy_payment,
     registry.TRADING_ALLOWANCE_ID: _trading_allowance,
 }

@@ -10,9 +10,11 @@ describe("the questions the selected policies read", () => {
     for (const region of ["SCOTLAND", "WALES", "NORTHERN_IRELAND"]) expect(ask(region)).toEqual([]);
   });
 
-  it("asks savings and property income, not dividends, for the savings and property rates", () => {
-    const ids = policyQuestions(["unearned_income_rates_up"], { inputs: {}, year: 2027 }).map((q) => q.id);
-    expect(ids).toEqual(["savings_interest_per_year", "property_income_per_year"]);
+  it("asks property income for the property rates and savings interest for the savings rates, not dividends", () => {
+    const ask = (ids) => policyQuestions(ids, { inputs: {}, year: 2027 }).map((q) => q.id);
+    expect(ask(["property_income_rates_up"])).toEqual(["property_income_per_year"]);
+    expect(ask(["savings_income_rates_up"])).toEqual(["savings_interest_per_year"]);
+    expect(ask(["property_income_rates_up", "savings_income_rates_up"])).toEqual(["property_income_per_year", "savings_interest_per_year"]);
   });
 
   it("has no rows for the measures the Budget left out", () => {

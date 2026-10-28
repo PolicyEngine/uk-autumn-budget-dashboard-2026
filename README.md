@@ -35,12 +35,13 @@ The list on `budget-day-measures` (PR #290), the measures announced in Budget 20
 | `fuel_duty_rise_deferral` | Fuel duty cut extended: 52.95p to 1 July 2027, then current law, RPI from April 2028 |
 | `state_pension_income_tax_protection` | Pension Tax Allowance: a non-refundable income tax reduction for people over State Pension age, withdrawn £1 per £3 of income above the full new State Pension, 2027-28 to 2029-30 (hand-written) |
 | `domestic_electricity_zero_vat` | Zero VAT on domestic electricity, 1 October 2026 to 1 July 2027: Great Britain, UK-wide from April 2027 (hand-written) |
-| `unearned_income_rates_up` | Savings and property income tax rates up 2 points from 6 April 2027 (property rates in England, Wales and Northern Ireland) |
+| `property_income_rates_up` | Property income tax rates up 2 points from 6 April 2027, in England, Wales and Northern Ireland; finance cost relief follows the basic rate UK-wide (Table 6.1 row 61) |
+| `savings_income_rates_up` | Savings income tax rates up 2 points from 6 April 2027, UK-wide (Table 6.1 row 62) |
 | `carers_allowance_earnings_taper` | Carer's Allowance earnings taper: 100% above 16 x the National Living Wage, England and Wales, from within 2030-31 (hand-written) |
 | `household_energy_payment_2026` | Household Energy Payment: £100 to households in bands A to D in England, winter 2026-27 (hand-written) |
 | `trading_allowance_raise` | Trading allowance raised to £3,000 from 6 April 2027 |
 
-These seven are the combined package (`autumn_budget_2026_combined`, key `combined--4e3e325c74977848`). Withdrawn on Budget day, not in the Budget 2026 document, with their factories kept but unregistered: the Warm Home Discount top-up, the threshold freeze to 2031-32, the Plan 2 threshold unfreeze and the employer NI secondary threshold raise. Earlier the pre-Budget package was eight measures (key `combined--894152ce8c83f1d8`, chosen on the evening of 27 October 2026).
+These eight are the combined package (`autumn_budget_2026_combined`, key `combined--92701a68cf080aa8`); before the savings and property rates were split into one measure per Table 6.1 row (`unearned_income_rates_up`, withdrawn with its factory kept), the package was seven (key `combined--4e3e325c74977848`). Withdrawn on Budget day, not in the Budget 2026 document, with their factories kept but unregistered: the Warm Home Discount top-up, the threshold freeze to 2031-32, the Plan 2 threshold unfreeze and the employer NI secondary threshold raise. Earlier the pre-Budget package was eight measures (key `combined--894152ce8c83f1d8`, chosen on the evening of 27 October 2026).
 
 List them from the command line with `uv run uk-budget-data generate --list-reforms`.
 

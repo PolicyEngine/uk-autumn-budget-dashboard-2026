@@ -188,7 +188,10 @@ export const HOUSEHOLD_EXAMPLES = [
     short: "Landlord",
     description: "£50,000 salary, rent from a flat, savings interest",
     icon: "briefcase",
-    measure: "unearned_income_rates_up",
+    // Both rates: property's colour on the card (`measure`), both in its
+    // own part (`measures`)
+    measure: "property_income_rates_up",
+    measures: ["property_income_rates_up", "savings_income_rates_up"],
     tag: "Savings and property tax",
     inputs: {
       ...RESET,

@@ -161,7 +161,8 @@ DECLARED = {
     "carers_allowance_earnings_taper": set(),
     "household_energy_payment_2026": set(),
     "trading_allowance_raise": {"income tax", "National Insurance"},
-    "unearned_income_rates_up": {"income tax"},
+    "property_income_rates_up": {"income tax"},
+    "savings_income_rates_up": {"income tax"},
 }
 # The combined measure moves what its members move.
 DECLARED[AUTUMN_BUDGET_2026_COMBINED_ID] = set().union(

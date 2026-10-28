@@ -1815,6 +1815,8 @@ SKIP_REASONS = {
     "unearned_income_rates_up": (
         "no dividend, savings or property income, or before 2027-28"
     ),
+    "property_income_rates_up": "no property income, or before 2027-28",
+    "savings_income_rates_up": "no savings interest, or before 2027-28",
 }
 
 
@@ -1868,6 +1870,12 @@ def provably_unaffected(
             + answers.property_income
         )
         return year < 2027 or not unearned
+    if measure_id == "property_income_rates_up":
+        # Only the head's property income is asked; the answers carry no
+        # finance costs, the other thing the property basic rate reaches.
+        return year < 2027 or not answers.property_income
+    if measure_id == "savings_income_rates_up":
+        return year < 2027 or not answers.savings_interest_income
     return False
 
 

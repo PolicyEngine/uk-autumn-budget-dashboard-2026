@@ -321,27 +321,50 @@ export const POLICY_DETAILS = [
     },
   },
   {
-    id: "unearned_income_rates_up",
-    shortName: "Savings and property tax up",
-    sentence: "raising tax on savings and property income",
-    name: "Savings and property income tax rates up",
-    description: "Raise income tax on savings and property income by 2 points",
-    writtenFor: "From 6 April 2027 the income tax rates on savings income rise to 24%, 44% and 49% at the basic, higher and additional rates across the UK, and those on property income to the same rates in England, Wales and Northern Ireland: 2 percentage points above current law, which already includes Budget 2025's rises. Finance cost relief for landlords follows the property basic rate, so rises to 24%. Dividend rates are unchanged. Incomes are held fixed, with no behavioural response.",
+    id: "property_income_rates_up",
+    shortName: "Property income tax up",
+    sentence: "raising tax on property income",
+    name: "Property income tax rates up",
+    description: "Raise income tax on property income by 2 points",
+    writtenFor: "From 6 April 2027 the income tax rates on property income rise to 24%, 44% and 49% at the basic, higher and additional rates in England, Wales and Northern Ireland: 2 percentage points above current law, which already includes Budget 2025's rises. Finance cost relief for landlords follows the property basic rate, so rises to 24%, Scottish landlords' included. Incomes are held fixed, with no behavioural response.",
     summary:
-      "Raises the income tax rates on savings income, and on property income outside Scotland, by 2 percentage points from April 2027.",
+      "Raises the income tax rates on property income outside Scotland by 2 percentage points from April 2027.",
     starts: "April 2027",
-    affects: "People with savings interest or rental income",
+    affects: "People with rental income",
     type: "Income tax",
     inForce: { from: "2027-04" },
     howCalculated:
-      "Adds 2 percentage points to each savings and property income rate from 2027-28: to 24%, 44% and 49% at the basic, higher and additional rates. Dividend rates are unchanged.",
+      "Adds 2 percentage points to each property income rate from 2027-28: to 24%, 44% and 49% at the basic, higher and additional rates.",
     details:
-      "The 2-point rise is on top of the rises Budget 2025 legislated. Scottish taxpayers pay Scottish rates on property income, so their property rates don't change. Finance cost relief follows the property basic rate, which the law as it stands sets for the whole UK, so Scottish landlords' relief also rises to 24% and they pay a little less tax. Incomes are held fixed: no one is assumed to change how they hold savings or property.",
+      "The 2-point rise is on top of the rises Budget 2025 legislated. Scottish taxpayers pay Scottish rates on property income, so their property rates don't change. Finance cost relief follows the property basic rate, which the law as it stands sets for the whole UK, so Scottish landlords' relief also rises to 24% and they pay a little less tax. Incomes are held fixed: no one is assumed to change how they hold property.",
     source: {
       label: "HMRC: changes to tax rates for property, savings and dividend income",
       href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
     },
-    budgetRows: [61, 62],
+    budgetRows: [61],
+  },
+  {
+    id: "savings_income_rates_up",
+    shortName: "Savings income tax up",
+    sentence: "raising tax on savings income",
+    name: "Savings income tax rates up",
+    description: "Raise income tax on savings income by 2 points",
+    writtenFor: "From 6 April 2027 the income tax rates on savings income rise to 24%, 44% and 49% at the basic, higher and additional rates across the UK: 2 percentage points above current law, which already includes Budget 2025's rises. Dividend rates are unchanged. Incomes are held fixed, with no behavioural response.",
+    summary:
+      "Raises the income tax rates on savings income across the UK by 2 percentage points from April 2027.",
+    starts: "April 2027",
+    affects: "People with savings interest",
+    type: "Income tax",
+    inForce: { from: "2027-04" },
+    howCalculated:
+      "Adds 2 percentage points to each savings income rate from 2027-28: to 24%, 44% and 49% at the basic, higher and additional rates. Dividend rates are unchanged.",
+    details:
+      "The 2-point rise is on top of the rises Budget 2025 legislated. It applies across the UK, Scotland included: savings income is taxed at UK rates. Incomes are held fixed: no one is assumed to change how they hold savings.",
+    source: {
+      label: "HMRC: changes to tax rates for property, savings and dividend income",
+      href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
+    },
+    budgetRows: [62],
   },
   {
     id: "household_energy_payment_2026",

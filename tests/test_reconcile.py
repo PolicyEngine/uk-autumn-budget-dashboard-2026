@@ -1795,7 +1795,8 @@ def test_the_committed_policy_gates_budget_2026_on_post_behavioural():
         "fuel_duty_rise_deferral",
         "carers_allowance_earnings_taper",
         "trading_allowance_raise",
-        "unearned_income_rates_up",
+        "property_income_rates_up",
+        "savings_income_rates_up",
     }
     # Their costings state no behaviour, or there is none to cost
     assert (

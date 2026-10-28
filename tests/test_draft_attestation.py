@@ -81,8 +81,8 @@ def test_the_eight_package_reason_names_its_two_hand_written_members(
 
     members = list(reforms.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
     key = combined_key(members)
-    # Seven on Budget day
-    assert key == "combined--4e3e325c74977848"
+    # Eight on Budget day: savings and property rates split in two
+    assert key == "combined--92701a68cf080aa8"
     record = drafted(key, members)
     assert record["measure_id"] == key
     assert (

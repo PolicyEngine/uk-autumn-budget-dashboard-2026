@@ -53,6 +53,10 @@ def withdrawn_rows(measure_id):
         registry.EMPLOYER_NI_THRESHOLD_ID: (
             registry._create_employer_nics_secondary_threshold_raise
         ),
+        # Split into the property and savings measures on Budget day
+        registry.UNEARNED_INCOME_RATES_ID: (
+            registry._create_unearned_income_rates_up
+        ),
     }
     reform = factory[measure_id]()
     return {row["label"]: row for row in BUILDERS[measure_id](reform)}
@@ -221,8 +225,10 @@ def test_the_table_covers_the_eight_package_measures_only(document):
     assert list(document["measures"]) == list(
         registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
     )
-    # Nine on Budget day: the Carer's Allowance taper is registered again
-    assert len(document["measures"]) == 7
+    # Eight on Budget day: the savings and property rates split in two
+    # (Table 6.1 rows 61 and 62)
+    assert len(document["measures"]) == 8
+    assert registry.UNEARNED_INCOME_RATES_ID not in document["measures"]
     assert registry.CARERS_ALLOWANCE_TAPER_ID in document["measures"]
     assert registry.LHA_UNFREEZE_ID not in document["measures"]
     assert registry.FUEL_VAT_ID not in document["measures"]
@@ -267,7 +273,8 @@ def test_each_measure_gets_the_display_its_shape_calls_for(document):
         "fuel_duty_rise_deferral": "schedule",
         "state_pension_income_tax_protection": "path",
         "domestic_electricity_zero_vat": "switch",
-        "unearned_income_rates_up": "path",
+        "property_income_rates_up": "path",
+        "savings_income_rates_up": "path",
         "carers_allowance_earnings_taper": "path",
         "household_energy_payment_2026": "switch",
         "trading_allowance_raise": "before-after",
@@ -301,17 +308,42 @@ def test_employer_ni_threshold(document):
     assert row["2031"] == (5_100, 9_282)
 
 
-def test_unearned_income_rates(document):
-    table = rows(document, "unearned_income_rates_up")
+RATES_UP = {
+    "Savings basic rate": (0.22, 0.24),
+    "Savings higher rate": (0.42, 0.44),
+    "Savings additional rate": (0.47, 0.49),
+    "Property basic rate": (0.22, 0.24),
+    "Property higher rate": (0.42, 0.44),
+    "Property additional rate": (0.47, 0.49),
+}
+
+
+@pytest.mark.parametrize(
+    "measure_id, income",
+    [
+        ("property_income_rates_up", "Property"),
+        ("savings_income_rates_up", "Savings"),
+    ],
+)
+def test_property_and_savings_income_rates(document, measure_id, income):
+    # Each measure shows its own income's three rates, and only those
+    table = rows(document, measure_id)
     expected = {
-        "Savings basic rate": (0.22, 0.24),
-        "Savings higher rate": (0.42, 0.44),
-        "Savings additional rate": (0.47, 0.49),
-        "Property basic rate": (0.22, 0.24),
-        "Property higher rate": (0.42, 0.44),
-        "Property additional rate": (0.47, 0.49),
+        label: values
+        for label, values in RATES_UP.items()
+        if label.startswith(income)
     }
+    assert set(table) == set(expected)
     for label, values in expected.items():
+        row = by_key(table[label])
+        for year in range(2027, 2032):
+            assert row[str(year)] == values, (label, year)
+
+
+def test_unearned_income_rates_withdrawn():
+    # Withdrawn (split in two), but its builder still reads it
+    table = withdrawn_rows(registry.UNEARNED_INCOME_RATES_ID)
+    for label, values in RATES_UP.items():
         row = by_key(table[label])
         for year in range(2027, 2032):
             assert row[str(year)] == values, (label, year)

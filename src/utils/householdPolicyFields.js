@@ -24,10 +24,10 @@ export const POLICY_FIELDS = {
   fuel_duty_rise_deferral: { fields: ["petrol_spending_per_year", "diesel_spending_per_year"] },
   // Zero VAT on domestic electricity: its electricity bill
   domestic_electricity_zero_vat: { fields: ["electricity_spending_per_year"] },
-  // Savings and property income tax rates: those incomes
-  unearned_income_rates_up: {
-    fields: ["savings_interest_per_year", "property_income_per_year"],
-  },
+  // Property income tax rates: property income
+  property_income_rates_up: { fields: ["property_income_per_year"] },
+  // Savings income tax rates: savings interest
+  savings_income_rates_up: { fields: ["savings_interest_per_year"] },
   // Pension Tax Allowance: for each adult at State Pension age, their
   // State Pension and any private pension (total income above the full new
   // State Pension tapers the reduction away)

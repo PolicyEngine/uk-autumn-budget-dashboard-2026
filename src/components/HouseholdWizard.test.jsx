@@ -611,12 +611,14 @@ describe("the personal impact form", () => {
 });
 
 describe("the selected policies' questions", () => {
-  // The Budget's seven announced measures, by id and published name
+  // The Budget's eight announced measures, by id and published name (the
+  // name SEVEN kept from the seven-measure package)
   const SEVEN = [
     { id: "fuel_duty_rise_deferral", name: "Fuel duty cut extended" },
     { id: "state_pension_income_tax_protection", name: "Pension Tax Allowance" },
     { id: "domestic_electricity_zero_vat", name: "Zero VAT on domestic electricity" },
-    { id: "unearned_income_rates_up", name: "Savings and property income tax up" },
+    { id: "property_income_rates_up", name: "Property income tax rates up" },
+    { id: "savings_income_rates_up", name: "Savings income tax rates up" },
     { id: "carers_allowance_earnings_taper", name: "Carer's Allowance earnings taper" },
     { id: "household_energy_payment_2026", name: "Household energy payment" },
     { id: "trading_allowance_raise", name: "Trading allowance raised" },
