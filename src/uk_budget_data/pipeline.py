@@ -1216,6 +1216,9 @@ def generate_age_impact(
     config = config or DataConfig()
     dataset_path = str(config.dataset_path) if config.dataset_path else None
     outcomes = flat_units(reforms, config, dataset_path, AGE, runner)
+    # A member withheld whole withholds its package's rows too
+    for line in hold_packages_to_members(outcomes):
+        console.print(line)
     frame = pd.DataFrame([row for o in outcomes for row in o.age_rows])
     save_csv(frame, config.output_dir / "age_impact.csv")
     console.print(

@@ -458,3 +458,39 @@ def test_the_flat_run_holds_its_package_to_its_members(monkeypatch):
     )
     package = saved["results"][0]
     assert {row["year"] for row in package.winners_losers} == {YEAR + 1}
+
+
+def test_the_age_only_run_holds_its_package_to_its_members(
+    monkeypatch, tmp_path
+):
+    """``generate --only age_impact``: a member withheld whole leaves its
+    package no age rows either, since the package less the other members
+    would give the member's back."""
+    from uk_budget_data.models import DataConfig, Reform
+    from uk_budget_data.reforms import AUTUMN_BUDGET_2026_COMBINED_ID
+
+    def flat_units(reforms, config, dataset_path, tables, runner=None):
+        made = [
+            pipeline.FlatOutcome(
+                reform_id=reform.id,
+                reform_name=reform.name,
+                age_rows=[
+                    {**row, "reform_id": reform.id} for row in _age_rows(YEAR)
+                ],
+            )
+            for reform in reforms
+        ]
+        made[1].age_rows, made[1].withheld_whole = [], True
+        return made
+
+    monkeypatch.setattr(pipeline, "flat_units", flat_units)
+    frame = pipeline.generate_age_impact(
+        [
+            Reform(id=AUTUMN_BUDGET_2026_COMBINED_ID, name="Package"),
+            Reform(id="thin", name="Thin"),
+            Reform(id="plain", name="Plain"),
+        ],
+        DataConfig(years=[YEAR], output_dir=tmp_path),
+    )
+    assert set(frame["reform_id"]) == {"plain"}
+    assert len(frame) == len(_age_rows(YEAR))
