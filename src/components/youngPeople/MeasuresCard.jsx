@@ -91,8 +91,10 @@ export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, year
           ratio === null
             ? null
             : ratio === 0
-              ? "about the same as the average person"
-              : `${Math.abs(ratio)}% ${ratio > 0 ? "more" : "less"} than the average person`;
+              ? `about the same as the ${compareName.toLowerCase()} figure`
+              : // Against what Compare with names, by size (both figures have
+                // one sign): for two losses "more" would read as a gain
+                `${Math.abs(ratio)}% ${ratio > 0 ? "larger" : "smaller"} than the ${compareName.toLowerCase()} figure`;
         const left = Math.min(row.group, row.all);
         const right = Math.max(row.group, row.all);
         return (

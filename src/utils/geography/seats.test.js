@@ -70,7 +70,7 @@ describe("seat states", () => {
     };
     const withheld = { kind: "withheld", row: null, category: null };
     const { lines } = describeSeat({ feature, state: withheld, regional, ...options });
-    expect(lines).toEqual([{ kind: "note", text: "No data: not published, too few survey households" }]);
+    expect(lines).toEqual([{ kind: "note", text: "No data: not published, to protect survey respondents' confidentiality" }]);
   });
 
   it("label the regional figure as the region's, approximate where it is", () => {
@@ -210,16 +210,16 @@ describe("the card's sentence", () => {
     // Under half a pound reads as no change, as on the seat cards
     const rows = [row("A", "10.0"), row("B", "20.0"), row("C", "-5.0"), row("D", "0.3"), withheld];
     expect(constituencySentence(seats(rows), options)).toBe(
-      "Households gain on average in 2 constituencies, lose in 1 and see little change in 1; 1 has no data.",
+      "Households gain on average in 2 constituencies, lose in 1 and see almost no change in 1; 1 has no data.",
     );
     expect(constituencySentence(seats([row("A", "10.0"), row("C", "-5.0")]), options)).toBe(
       "Households gain on average in 1 constituency and lose in 1.",
     );
   });
 
-  it("names little change only when it covers a tenth of the seats or more (Vahid, 28 October)", () => {
+  it("names almost no change only when it covers a tenth of the seats or more (Vahid, 28 October)", () => {
     const many = (n, make) => Array.from({ length: n }, (_, i) => make(i));
-    // 577 lose, 2 little change, 71 not published: the 2 are not said
+    // 577 lose, 2 almost no change, 71 not published: the 2 are not said
     const budgetDay = [...many(577, (i) => row(`L${i}`, "-40.0")), row("F1", "0.2"), row("F2", "-0.1"), ...many(71, () => withheld)];
     expect(constituencySentence(seats(budgetDay), options)).toBe("Households lose on average in 577 constituencies; 71 have no data.");
     // Both ways, a few flat: the gains and losses are each said
@@ -227,10 +227,10 @@ describe("the card's sentence", () => {
     expect(constituencySentence(seats(both), options)).toBe("Households gain on average in 500 constituencies and lose in 80.");
     // A tenth or more flat: said
     const flatShare = [...many(80, (i) => row(`G${i}`, "40.0")), ...many(20, (i) => row(`F${i}`, "0.1"))];
-    expect(constituencySentence(seats(flatShare), options)).toBe("Households gain on average in 80 constituencies and see little change in 20.");
+    expect(constituencySentence(seats(flatShare), options)).toBe("Households gain on average in 80 constituencies and see almost no change in 20.");
     // Only a few seats flat and nothing else placed: still said
     expect(constituencySentence(seats([row("F", "0.1"), withheld, withheld, withheld, withheld, withheld, withheld, withheld, withheld, withheld, withheld, withheld]), options)).toBe(
-      "Households see little change on average in 1 constituency; 11 have no data.",
+      "Households see almost no change on average in 1 constituency; 11 have no data.",
     );
   });
 

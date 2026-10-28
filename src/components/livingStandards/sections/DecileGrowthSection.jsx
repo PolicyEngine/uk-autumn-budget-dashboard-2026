@@ -56,7 +56,14 @@ export function changeWords(bottom, top, largest = 0) {
     return largest < BARELY_PP ? "barely change income growth at either end" : "change income growth little at either end";
   }
   if (Math.abs(top - bottom) < 0.15) return "change income growth about equally at both ends";
-  return top > bottom ? "change income growth more at the top" : "change income growth more at the bottom";
+  // "More" by size, not sign: a 0.4pp cut at the top beside 0 at the bottom
+  // is more at the top (W6 G1). Sizes this close with values this far apart
+  // are opposite signs: said as such, never "more" at either end
+  const sizeGap = Math.abs(top) - Math.abs(bottom);
+  if (Math.abs(sizeGap) < 0.15) {
+    return bottom > top ? "raise income growth at the bottom and lower it at the top" : "raise income growth at the top and lower it at the bottom";
+  }
+  return sizeGap > 0 ? "change income growth more at the top" : "change income growth more at the bottom";
 }
 
 export const pctTick = (v) => `${pctTickFormat.format(v)}%`;

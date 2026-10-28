@@ -691,9 +691,12 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         })
       : buildChartCsv({
           title: `Average change in household net income per person by year, ${first} to ${last}`,
+          // Not "the sum of each policy's own effect": with a published run of
+          // the whole selection (the default), the lines are that run's rows
+          // (changeByYear, groupSeries)
           units: cumulative
-            ? "£ per person, running total from the first year; the sum of each selected policy's own effect"
-            : "£ per person per year; the sum of each selected policy's own effect; each person counts their household's change in net income (not equivalised)",
+            ? "£ per person, running total from the first year"
+            : "£ per person per year; each person counts their household's change in net income (not equivalised)",
           columns: [
             { key: "yearLabel", label: "Year" },
             ...SERIES_LIST.map((series) => ({ key: series.key, label: series.label, decimals: 2 })),

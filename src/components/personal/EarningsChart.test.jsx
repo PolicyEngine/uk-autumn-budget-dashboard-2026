@@ -127,6 +127,37 @@ describe("EarningsChart", () => {
   });
 });
 
+describe("EarningsChart's About this chart (W6 G1)", () => {
+  const how = () => {
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    return document.querySelector(".chart-more-info").textContent;
+  };
+
+  it("says what each view draws: in Change, the parts of the change and the change as the line", () => {
+    render(<EarningsChart sweep={stackedSweep} salary={35000} yearLabel="2027-28" />);
+    chooseOption(document.body, "Change");
+    const text = how();
+    expect(text).toContain("Each layer is one tax or benefit's part of the change: above zero where it adds to net income, below where it takes away. The line is the change in net income.");
+    expect(text).not.toMatch(/part of net income|the line is net income/);
+  });
+
+  it("in a level view, the parts of net income, saying held fixed once", () => {
+    render(<EarningsChart sweep={stackedSweep} salary={35000} yearLabel="2027-28" />);
+    const text = how();
+    expect(text).toContain("Each layer is one part of net income (earnings, a benefit or a tax), and the line is net income.");
+    expect(text).toContain("Your household is calculated again at each salary from £0 up.");
+    expect(text.match(/everything else held fixed/g)).toHaveLength(1);
+  });
+
+  it("without the parts, Change: the shaded area, never a line it does not draw", () => {
+    render(<EarningsChart sweep={sweep} salary={35000} yearLabel="2027-28" />);
+    chooseOption(document.body, "Change");
+    const text = how();
+    expect(text).toContain("The shaded area is the change: above zero a gain, below a loss.");
+    expect(text).not.toMatch(/The line is your household's net income/);
+  });
+});
+
 describe("net income's layers", () => {
   it("add up to net income, stacked outward from zero", () => {
     const rows = layerRows(stackedSweep.points, stackedSweep.netParts, "after");

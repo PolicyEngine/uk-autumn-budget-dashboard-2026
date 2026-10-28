@@ -240,6 +240,15 @@ describe("young people cards", () => {
     expect(screen.queryByText(/None of the selected policies changes/)).not.toBeInTheDocument();
   });
 
+  it("compares sizes against the group compared with in the row's tooltip, never 'the average person' (W6 G1)", () => {
+    render(<MeasuresCard {...props} selectedYear={2029} />);
+    // Two losses, -£330 for 16 to 24 against -£300 for all ages: 10% larger
+    fireEvent.focus(screen.getByRole("row", { name: /^Threshold freeze extension:/ }));
+    const tip = screen.getByRole("tooltip");
+    expect(tip).toHaveTextContent("10% larger than the all ages figure");
+    expect(tip).not.toHaveTextContent(/average person|more than|less than/);
+  });
+
   it("shows a year with no rows as not yet published", () => {
     render(<MeasuresCard {...props} selectedYear={2031} />);
     expect(screen.getByText("Results for 2031-32 are not yet published.")).toBeInTheDocument();

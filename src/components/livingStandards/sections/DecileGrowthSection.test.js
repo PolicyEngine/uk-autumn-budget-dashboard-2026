@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import fc from "fast-check";
 import { changeWords, pctTick, tightAxis, trendWords } from "./DecileGrowthSection";
 
 describe("tightAxis", () => {
@@ -36,5 +37,25 @@ describe("the growth sentences", () => {
     expect(changeWords(-0.1, -0.1, 0.15)).toBe("barely change income growth at either end");
     expect(changeWords(0.4, 0.3)).toBe("change income growth about equally at both ends");
     expect(changeWords(0.1, 0.6)).toBe("change income growth more at the top");
+  });
+  it("says more at the end with the larger change by size, not by sign (W6 G1)", () => {
+    // The 2031-32 threshold freeze alone, whole period, after housing costs
+    expect(changeWords(0, -0.4, 0.4)).toBe("change income growth more at the top");
+    expect(changeWords(-0.5, 0.1, 0.5)).toBe("change income growth more at the bottom");
+    expect(changeWords(0.3, -0.3, 0.3)).toBe("raise income growth at the bottom and lower it at the top");
+    expect(changeWords(-0.2, 0.3, 0.3)).toBe("raise income growth at the top and lower it at the bottom");
+  });
+  it("never says more at an end whose change is not the larger in size", () => {
+    const shown = fc.integer({ min: -30, max: 30 }).map((tenths) => tenths / 10);
+    fc.assert(
+      fc.property(shown, shown, fc.double({ min: 0, max: 3, noNaN: true }), (bottom, top, largest) => {
+        const words = changeWords(bottom, top, largest);
+        if (/more at the top/.test(words)) expect(Math.abs(top)).toBeGreaterThan(Math.abs(bottom));
+        if (/more at the bottom/.test(words)) expect(Math.abs(bottom)).toBeGreaterThan(Math.abs(top));
+        if (/raise income growth at the bottom/.test(words)) expect(bottom > 0 && top < 0).toBe(true);
+        if (/raise income growth at the top/.test(words)) expect(top > 0 && bottom < 0).toBe(true);
+      }),
+      { numRuns: 500 },
+    );
   });
 });

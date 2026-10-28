@@ -46,6 +46,18 @@ const points = (value) => {
 };
 
 /**
+ * The downloaded image's description, for the view drawn: one total line
+ * (the view's own, or the change in points), and the parts of that side
+ * when they are drawn (W6 G1: it claimed both totals in every view).
+ */
+export function rateExportDescription(view, hasParts, yearLabel) {
+  if (view === "change") {
+    return `The change the selected policies make to the share of each extra pound of salary lost to taxes and withdrawn benefits in ${yearLabel}, in percentage points.`;
+  }
+  return `Share of each extra pound of salary lost to taxes and withdrawn benefits in ${yearLabel} ${SIDE_NAME[view]}${hasParts ? ", by part" : ""}.`;
+}
+
+/**
  * Symmetric ticks for a change in rate: ±4, 10, 20, 50 or 100 points
  * (whole-point halves), with 10% headroom past the largest change so it is
  * never drawn on the plot's edge.
@@ -290,8 +302,10 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
     sync?.setHover({ income, card: "rate" });
   };
   // A State Pension household whose income tax rate rises sharply at the
-  // start of earnings after the policies: an extra allowance that any other
-  // income takes away in full (said in plain words in About this chart)
+  // start of earnings after the policies: the allowance of the full new
+  // State Pension, which the model gives only while total income is at or
+  // below it (state_pension_only_income_tax_allowance, total_income design),
+  // said in plain words in About this chart
   const firstNet = sweep.netParts?.after?.[0];
   const firstRates = breakdown ? { before: breakdown.before[0]?.income_tax ?? 0, after: breakdown.after[0]?.income_tax ?? 0 } : null;
   const pensionAllowanceCliff =
@@ -331,9 +345,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
     name: `marginal-tax-rate-${yearLabel}`,
     exportOptions: {
       title,
-      description: parts
-        ? `Share of each extra pound of salary lost to taxes and withdrawn benefits in ${yearLabel}, by part with the selected policies, with the total under current law and with them.`
-        : `Share of each extra pound of salary lost to taxes and withdrawn benefits in ${yearLabel}, under current law and with the selected policies.`,
+      description: rateExportDescription(view, Boolean(parts), yearLabel),
       legendItems: legendItems.map(({ info, ...item }) => item),
       logo: CHART_LOGO,
       reservedLegendHeight: 0,
@@ -542,13 +554,15 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
         <ChartMoreInfo
           info={{
             shows: yourParts
-              ? `${salary === 0 ? "With no earnings" : `At ${formatPounds(salary)}`}, your marginal rate is made up of ${yourParts}.`
+              ? `${salary === 0 ? "With no earnings" : `At ${formatPounds(salary)}`}, your marginal rate with the policies is made up of ${yourParts}.`
               : "Of each extra pound of salary, the share lost to taxes and withdrawn benefits.",
             how: [
               "Worked out from the same salary sweep as the net income card: one minus the change in net income over the change in salary, from each salary to the next.",
-              parts
-                ? "Each layer is one tax's or benefit taper's part of the rate; the line is the total rate."
-                : "The line is the total rate.",
+              isChange
+                ? "The line is the change in the total rate, in percentage points."
+                : parts
+                  ? "Each layer is one tax's or benefit taper's part of the rate; the line is the total rate."
+                  : "The line is the total rate.",
               "The dashed line marks your salary.",
             ],
             // Each part's note (the Child Benefit clawback, the personal
@@ -557,8 +571,11 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
             method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
             caveats: [
               pensionAllowanceCliff &&
-                "For a pensioner whose only income is the State Pension, the selected policies add a tax-free allowance. Any earnings take the whole allowance away, so income tax jumps at the first pound earned.",
-              "A part that lowers the rate (a benefit rising with pay) is drawn below 0%. A rate beyond the axis is marked at its edge, and the tooltip gives it in full.",
+                "For a pensioner whose total income is at or below the full new State Pension, the selected policies raise the tax-free allowance to that amount. Once total income passes it, the usual personal allowance applies again, so income tax jumps there.",
+              // Change draws no parts and no edge markers, on an axis that
+              // covers every change
+              !isChange &&
+                "A part that lowers the rate (a benefit rising with pay) is drawn below 0%. A rate beyond the axis is marked at its edge, and the tooltip gives it in full.",
               // Round 3: Other is floored at zero, so where it is negative
               // the layers pass the total line
               parts &&
