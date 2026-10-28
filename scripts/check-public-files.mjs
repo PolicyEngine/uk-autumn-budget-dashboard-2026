@@ -1,21 +1,25 @@
 #!/usr/bin/env node
 // Fail the build if a file under public/ may not be published.
 //
-// Every file a deploy would serve must be listed in
+// While sign-off is on (uk_budget_data/sign_off.py, carried by the page's
+// contract), every file a deploy would serve must be listed in
 // data_inputs/public_data_review.csv with the sha256 of the bytes a person
 // reviewed, tables from the disclosure layer included; a pending entry
 // passes only until its expiry date. A file reviewed as a disclosure table
 // must carry the layer's public columns, and a CSV that carries them must be
-// reviewed as one. No public file may carry record-level identifiers, and no
-// artifact whose receipt records cells under the floor of survey households
-// left in its tables (a whole-measure-thin run written with a warning;
-// the gate never stages it). The
-// page's area routing status takes no review entry, and must be one of the
-// few texts uk_budget_data.area_routing writes.
+// reviewed as one. Sign-off is off from Budget day (28 October 2026): the
+// review list is not read, and a CSV with the layer's columns may carry no
+// column the layer does not publish. Either way, no public file may carry
+// record-level identifiers, and no artifact whose receipt records cells
+// under the floor of survey households left in its tables (a
+// whole-measure-thin run written with a warning; the gate never stages it).
+// The page's area routing status takes no review entry, and must be one of
+// the few texts uk_budget_data.area_routing writes; the area run's
+// provenance must keep to its closed schema.
 //
 // scripts/check_public_data.py runs the full check in CI, including the
 // layer's validate_public. This smaller check runs in the build, so a deploy
-// that skips CI cannot ship an unreviewed file. It walks the files on disk,
+// that skips CI cannot ship a file it refuses. It walks the files on disk,
 // which is what a deploy serves, and prints paths and rule names only.
 
 import { createHash } from "node:crypto";
@@ -265,12 +269,20 @@ function withheldFilesProblems(path, text) {
   return [...new Set(problems)];
 }
 
-export function checkPublicFiles(root, today = new Date()) {
+// The sign-off switch, as the tree's contract carries it. A tree without
+// that contract is checked with sign-off on, the stricter reading.
+export function signOffRequired(root) {
+  const path = join(root, "src", "utils", "publication", "contract.json");
+  if (!existsSync(path)) return true;
+  return JSON.parse(readFileSync(path, "utf8")).sign_off_required !== false;
+}
+
+export function checkPublicFiles(root, today = new Date(), signOff = signOffRequired(root)) {
   const { required, optional } = JSON.parse(
     readFileSync(join(root, "scripts", "disclosure_public_columns.json"), "utf8"),
   );
   const allowed = new Set([...required, ...optional]);
-  const review = readReview(root);
+  const review = signOff ? readReview(root) : new Map();
   const day = today.toISOString().slice(0, 10);
   const problems = checkReleaseIndex(root);
   for (const [path, stat] of walk(join(root, "public"))) {
@@ -297,16 +309,26 @@ export function checkPublicFiles(root, today = new Date()) {
       if (review.has(name)) problems.push(`${name}: needs no review entry`);
       continue;
     }
-    const entry = review.get(name);
-    if (!entry) {
-      problems.push(`${name}: not reviewed`);
-      continue;
-    }
     const columns =
       text === null || !name.endsWith(".csv")
         ? []
         : (parseCsv(text.replace(/^\uFEFF/, ""))[0] ?? []);
     const layerShaped = required.every((column) => columns.includes(column));
+    if (!signOff) {
+      if (layerShaped && !columns.every((column) => allowed.has(column))) {
+        problems.push(`${name}: a disclosure table with columns the layer does not publish`);
+      }
+      if (name === `public/data/${AREA_PROVENANCE_FILE}`) {
+        try { assertAreaProvenanceDocument(JSON.parse(text)); }
+        catch { problems.push(`${name}: invalid publication provenance`); }
+      }
+      continue;
+    }
+    const entry = review.get(name);
+    if (!entry) {
+      problems.push(`${name}: not reviewed`);
+      continue;
+    }
     if (entry.kind === "publication_provenance" && name !== `public/data/${AREA_PROVENANCE_FILE}`) {
       problems.push(`${name}: publication provenance is only allowed for the area run's record`);
     }

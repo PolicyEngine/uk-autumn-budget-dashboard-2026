@@ -142,8 +142,15 @@ def _common(parser: argparse.ArgumentParser) -> None:
 
 
 def _mark_pending(parsed, text: str, basis: str) -> None:
+    from uk_budget_data import sign_off
     from uk_budget_data.living_standards.review import set_pending
 
+    if not sign_off.REQUIRED:
+        console.print(
+            "Review row not updated: sign-off is off "
+            "(uk_budget_data/sign_off.py), so no check needs one."
+        )
+        return
     if not parsed.reviewer:
         console.print(
             "[yellow]Review row not updated: the public-file checks fail "

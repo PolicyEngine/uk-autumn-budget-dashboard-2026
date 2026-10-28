@@ -6,9 +6,12 @@ name: Results on Modal
 # files differ from the branch's public/data.
 #
 # It never writes to the branch. Nothing enters public/data without a human
-# commit, and the review row in data_inputs/public_data_review.csv goes in
-# the same commit, signed by the person who reviewed those bytes. Public
-# data check and Publication gate (ci.yml) enforce that as before.
+# commit, and Public data check and Publication gate (ci.yml) check what is
+# committed. Sign-off is off from Budget day (src/uk_budget_data/sign_off.py,
+# as the page's contract carries it), so the pull request merges on GitHub's
+# review alone; while it is on, the review row in
+# data_inputs/public_data_review.csv goes in the same commit, signed by the
+# person who reviewed those bytes, and the summary says which rows match.
 #
 # Why an artifact and not a commit back to the branch:
 # - this workflow needs read access only (permissions: contents: read);
@@ -140,6 +143,9 @@ jobs:
       - name: Compare with the branch's public/data
         run: |
           set -euo pipefail
+          # The sign-off switch (src/uk_budget_data/sign_off.py), as the
+          # page's contract carries it: "true" or "false".
+          sign_off=$(python3 -c 'import json; print(json.dumps(json.load(open("src/utils/publication/contract.json"))["sign_off_required"]))')
           {
             echo "## Flat CSVs on Modal"
             echo
@@ -157,15 +163,21 @@ jobs:
               else
                 state="**differs**"
               fi
-              if grep -q "^public/data/$name,[^,]*,$sha," data_inputs/public_data_review.csv; then
-                row="matches"
-              else
+              row="not needed: sign-off is off"
+              if [ "$sign_off" = "true" ]; then
                 row="needs a person's review"
+                if grep -q "^public/data/$name,[^,]*,$sha," data_inputs/public_data_review.csv; then
+                  row="matches"
+                fi
               fi
               echo "| \`$name\` | $state | \`$sha\` | $row |"
             done
             echo
-            echo "To publish: download the artifact, copy in the files you accept, review them and sign their rows in data_inputs/public_data_review.csv, in the same commit."
+            if [ "$sign_off" = "true" ]; then
+              echo "To publish: download the artifact, copy in the files you accept, review them and sign their rows in data_inputs/public_data_review.csv, in the same commit."
+            else
+              echo "To publish: download the artifact, copy in the files you accept and commit them. The pull request merges on GitHub's review, with no signing step; CI's Public data check still runs the disclosure checks on every file under public/."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the results
