@@ -418,6 +418,10 @@ def _state_pension_allowance(reform) -> list[dict]:
             allowance.update({int(k): v for k, v in value.items()})
         else:
             allowance[int(name.removeprefix("allowance_"))] = value
+    # The allowance's last year, where the modifier has one
+    last = values.get("last_year")
+    if last is not None:
+        allowance = {y: v for y, v in allowance.items() if y <= last}
     if modifier is state_pension_only_income_tax_allowance:
         tests = []
         if values["total_income_at_most_allowance"]:

@@ -34,6 +34,7 @@ def state_pension_only_income_tax_allowance(
     total_income_at_most_allowance=True,
     disregard_savings_interest=False,
     test_at_rounded_up_pension=True,
+    last_year=2031,
 ):
     """A personal allowance of the full new State Pension, from April 2027,
     for people over State Pension age whose total income is at most that
@@ -60,6 +61,11 @@ def state_pension_only_income_tax_allowance(
     Pension with SERPS) is itself above it. Savings interest counts unless
     ``disregard_savings_interest`` is set (the reported test is on total
     income).
+
+    ``last_year`` is the last fiscal year the allowance applies (2031 =
+    2031-32, the last scored year). Budget day: the speech said "in this
+    Parliament", so the documents may end it earlier (2028 = 2028-29, or
+    2029 = 2029-30).
 
     Rounded down (``ROUND_DOWN``), the total-income test stays at the full
     new State Pension rounded up unless ``test_at_rounded_up_pension`` is
@@ -89,7 +95,7 @@ def state_pension_only_income_tax_allowance(
     def formula(person, period, parameters):
         current = _call_formula(native, person, period, parameters)
         year = period.start.year
-        if year not in allowances:
+        if year not in allowances or year > last_year:
             return current
         state_pension = person("state_pension", period)
         total = person("total_income", period)

@@ -342,6 +342,16 @@ def _create_fuel_duty_rise_deferral() -> Reform:
 STATE_PENSION_PROTECTION_DESIGN = "total_income"
 _SP_ROUNDING = "down" if _sp_threshold.ROUND_DOWN else "up"
 _SP_THRESHOLD_2027 = state_pension_only_income_tax_allowance.__defaults__[0]
+# The allowance's last fiscal year (a default of the modifier): "in this
+# Parliament", per the speech; the description names it only when it ends
+# before 2031-32, the last scored year.
+_SP_LAST_YEAR = state_pension_only_income_tax_allowance.__defaults__[-1]
+_SP_UNTIL = (
+    ""
+    if _SP_LAST_YEAR >= POLICY_YEARS[-1]
+    else f" The allowance applies to {_SP_LAST_YEAR}-"
+    f"{(_SP_LAST_YEAR + 1) % 100:02d} and ends after it."
+)
 STATE_PENSION_PROTECTION_DESIGNS = {
     "total_income": (
         state_pension_only_income_tax_allowance,
@@ -353,7 +363,7 @@ STATE_PENSION_PROTECTION_DESIGNS = {
         "2027-28, rising with it) get "
         "an income tax allowance of that amount, so pay no income tax. "
         "Above it there is no allowance: £1 of income over the threshold "
-        "takes the whole allowance away.",
+        "takes the whole allowance away." + _SP_UNTIL,
     ),
     "tapered": (
         state_pension_income_tax_allowance,
