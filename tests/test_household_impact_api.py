@@ -12,6 +12,10 @@ from fastapi.testclient import TestClient
 from uk_budget_data import api, household_impact
 from uk_budget_data.runtime_identity import runtime_identity
 
+# The four candidates withdrawn on Budget day stay fixtures of the
+# calculation's machinery here (tests/conftest.py).
+pytestmark = pytest.mark.usefixtures("pre_budget_registry")
+
 client = TestClient(api.app)
 ROUTE = "/api/household-impact"
 REQUEST = {

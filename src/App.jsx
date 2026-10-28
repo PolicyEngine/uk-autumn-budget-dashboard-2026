@@ -859,9 +859,9 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   const handleShowEffect = (policyId) => {
     setChosenPolicies([policyId]);
     setSelectionChosen(true);
-    // Open on a year the measure moves revenue in: the threshold freeze
-    // (2031-32 only) opened on 2027-28 showed only empty charts; the Warm
-    // Home Discount top-up opens on 2026-27
+    // Open on a year the measure moves revenue in: one in force in a single
+    // later year opened on 2027-28 showed only empty charts, and the
+    // household energy payment (winter 2026-27) opens on 2026-27
     const moves = (year) =>
       published.budgetary.some((row) => row.reform_id === policyId && Number(row.year) === year && Math.abs(Number(row.value)) > 0.0005);
     if (!moves(distributionalYear)) {

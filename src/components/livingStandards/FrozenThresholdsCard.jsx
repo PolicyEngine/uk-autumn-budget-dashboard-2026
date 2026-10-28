@@ -3,8 +3,8 @@
 // law, each relative to the OBR's average earnings (2026-27 = 100).
 // Drawn beside "Earnings and other income" (ForecastSeriesSection). The
 // thresholds are the current-law values in policy_parameters.json's
-// current_law block (the engine's parameters), earnings the outlook file's OBR
-// March 2026 growth; the index is computed in frozenThresholds.js.
+// current_law block (the engine's parameters), earnings the OBR October 2026
+// growth the runs use; the index is computed in frozenThresholds.js.
 
 import { useEffect, useState } from "react";
 import LsCard from "./LsCard";
@@ -77,13 +77,13 @@ function usePolicyParameters() {
   return state;
 }
 
-export default function FrozenThresholdsCard({ data, view = "chart", onViewChange }) {
+export default function FrozenThresholdsCard({ view = "chart", onViewChange }) {
   const { loading, document } = usePolicyParameters();
   const narrow = useNarrowViewport();
   const [hidden, setHidden] = useState([]);
   const [hovered, setHovered] = useState(null);
   const base = { id: "forecast-frozen-thresholds", title: FROZEN_THRESHOLDS_TITLE, icon: "briefcase" };
-  const rows = document && thresholdRows(document, data)?.map((r) => ({ ...r, pay: 100 }));
+  const rows = document && thresholdRows(document)?.map((r) => ({ ...r, pay: 100 }));
 
   if (!rows) {
     // The card holds its place in the pair while the file loads
@@ -98,8 +98,8 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
 
   const end = rows.at(-1).year;
   const period = `${fyLabel(BASE_YEAR)} to ${fyLabel(end)}`;
-  const preSource = data?.forecast?.pre_source;
-  const obrName = preSource?.release ?? "OBR, Economic and fiscal outlook (March 2026)";
+  const obr = SOURCES.obr_efo_october_2026;
+  const obrName = obr.label;
   const engine = document.engine?.policyengine_uk;
   const sourceText = `${obrName}: average earnings growth; policyengine-uk${engine ? ` ${engine}` : ""} parameters (current law); indexed by PolicyEngine`;
   const lineSet = linesFor(rows);
@@ -149,12 +149,11 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
       ],
       definitions: [PA, HR, PLAN_2, PAY].map((l) => ({ term: l.name, meaning: l.meaning })),
       caveats: [
-        `The OBR's March 2026 earnings forecast ends in 2030, so the chart ends in ${fyLabel(end)}; 2031-32, when current law uprates the thresholds again, is not shown.`,
+        `The OBR's October 2026 earnings forecast ends in ${end}, so the chart ends in ${fyLabel(end)}.`,
         "Taking a calendar year's growth for the fiscal year starting in it is an approximation: the fiscal year runs from April to March.",
-        "The earnings forecast is the OBR's from before the Autumn Budget.",
       ],
       sources: [
-        { label: `${obrName}: average earnings growth (calendar years)`, href: preSource?.url },
+        { label: `${obrName}: average earnings growth (calendar years, Table A.1)`, href: obr.url },
         {
           label: `policyengine-uk${engine ? ` ${engine}` : ""} parameters`,
           href: SOURCES.policyengine_uk_parameters.url,

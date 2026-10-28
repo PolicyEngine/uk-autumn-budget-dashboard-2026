@@ -73,6 +73,12 @@ export const FORM_GROUPS = [
     fields: ["dividends_per_year", "savings_interest_per_year", "property_income_per_year"],
   },
   {
+    key: "home",
+    title: "Council Tax",
+    hint: "Your home's band, as on your Council Tax bill.",
+    fields: ["council_tax_band"],
+  },
+  {
     key: "benefits",
     title: "Benefits and loans",
     hint: "Yes to Universal Credit counts what your answers entitle you to.",

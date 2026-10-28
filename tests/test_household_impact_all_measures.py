@@ -31,6 +31,10 @@ from uk_budget_data.reforms import (
     get_reform,
 )
 
+# The four candidates withdrawn on Budget day stay fixtures of the
+# calculation's machinery here (tests/conftest.py).
+pytestmark = pytest.mark.usefixtures("pre_budget_registry")
+
 Child = household_impact.Child
 PARAMETERS = system.parameters
 ALL = household_impact.measure_ids()
