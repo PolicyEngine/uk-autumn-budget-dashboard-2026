@@ -468,6 +468,25 @@ def thin_cells_reason(found: dict[tuple[str, int], list[str]]) -> str:
     )
 
 
+def withheld_line(record: Optional[dict]) -> Optional[str]:
+    """One line naming what the floor withheld in a run's tables, for the
+    generation's progress (#285 review, finding 9): the summary statistics'
+    columns and the age table's thin groups, by table and year, never a
+    figure. None when it withheld nothing. A thin decile cell, which is not
+    withheld, is the run's warning (``thin_cells_reason``)."""
+    parts = [
+        f"{cell['table']} {cell['year']} ({', '.join(cell['groups'])})"
+        for cell in (record or {}).get("thin_cells") or []
+        if cell.get("table") in (*METRICS_TABLES, AGE_TABLE)
+    ]
+    if not parts:
+        return None
+    return (
+        f"WITHHELD, resting on fewer than {SURVEY_HOUSEHOLD_FLOOR} survey "
+        f"households: {'; '.join(parts)}"
+    )
+
+
 def _band_of_single_age(label: str) -> str:
     """The band a single year of age's label ("40", "90+") falls in."""
     return age_band_of(np.array([int(label.rstrip("+"))]))[0]

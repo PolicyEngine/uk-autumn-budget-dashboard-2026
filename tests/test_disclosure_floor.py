@@ -1139,22 +1139,28 @@ def test_withholding_blanks_only_the_found_columns_of_their_year():
     data=st.data(),
 )
 def test_a_poverty_column_is_withheld_exactly_when_thin(survey, data):
-    """For every survey grouping, line crossing and set of children:
-    everyone's columns are withheld exactly when the people crossing come
-    from 1 to FLOOR - 1 survey households; the children's exactly when
-    theirs do, or when the others' do and everyone's is published; the
-    pct with the pp; and never when nobody crosses."""
+    """For every survey grouping, set of children and poverty flags on
+    each side, each measure its own (finding 9: people enter and leave
+    poverty, and the measures differ): a measure's everyone columns are
+    withheld exactly when the people whose flag it changes come from 1 to
+    FLOOR - 1 survey households; its children's exactly when theirs do,
+    or when the others' do and everyone's is published; the pct with the
+    pp; the headline in metrics with absolute poverty before housing
+    costs; and nothing when nobody's flag changes."""
     n = len(survey)
     survey = np.array(survey)
     household_id = np.arange(n) + 1_000
-    crossing = np.array(
-        data.draw(st.lists(st.booleans(), min_size=n, max_size=n))
-    )
-    child = np.array(
-        data.draw(st.lists(st.booleans(), min_size=n, max_size=n))
-    )
+
+    def flags():
+        return np.array(
+            data.draw(st.lists(st.booleans(), min_size=n, max_size=n))
+        )
+
+    child = flags()
     before = {**_no_poverty(n), "is_hbai_dependent_child": child}
-    after = {**before, **{flag: crossing for flag in POVERTY_FLAGS}}
+    after = dict(before)
+    for flag in POVERTY_FLAGS:
+        before[flag], after[flag] = flags(), flags()
     household = {
         "household_id": household_id,
         "household_income_decile": np.ones(n),
@@ -1169,16 +1175,19 @@ def test_a_poverty_column_is_withheld_exactly_when_thin(survey, data):
     )
     withheld = set(found.get(("poverty_inequality", YEAR), []))
 
-    def count(members):
-        return len(set(survey[members & crossing].tolist()))
-
-    def thin(members):
-        return 0 < count(members) < FLOOR
+    def thin(members, crossing):
+        count = len(set(survey[members & crossing].tolist()))
+        return 0 < count < FLOOR
 
     everyone = np.ones(n, dtype=bool)
-    expected_everyone = thin(everyone)
-    expected_child = thin(child) or (thin(~child) and not expected_everyone)
-    for measure in ("abs_bhc", "abs_ahc", "rel_bhc", "rel_ahc"):
+    from uk_budget_data.calculators import HEADLINE_POVERTY, POVERTY_MEASURES
+
+    for measure, flag in POVERTY_MEASURES.items():
+        crossing = before[flag] != after[flag]
+        expected_everyone = thin(everyone, crossing)
+        expected_child = thin(child, crossing) or (
+            thin(~child, crossing) and not expected_everyone
+        )
         for unit in ("pp", "pct"):
             assert (f"poverty_{measure}_change_{unit}" in withheld) == (
                 expected_everyone
@@ -1186,17 +1195,49 @@ def test_a_poverty_column_is_withheld_exactly_when_thin(survey, data):
             assert (f"child_poverty_{measure}_change_{unit}" in withheld) == (
                 expected_child
             )
+        if not (child & crossing).any():
+            # The children's exact 0 gives back nothing everyone's does not
+            assert f"child_poverty_{measure}_change_pp" not in withheld
     headline = set(found.get(("metrics", YEAR), []))
-    assert ("poverty_change_pp" in headline) == expected_everyone
+    crossing = before[HEADLINE_POVERTY] != after[HEADLINE_POVERTY]
+    for unit in ("pp", "pct"):
+        assert (f"poverty_change_{unit}" in headline) == thin(
+            everyone, crossing
+        )
     # Nobody's income moves, so everyone is not affected: people affected
     # (0) rests on them all, thin only in a population of 1 or 2 survey
     # households (finding 5)
     households = len(set(survey.tolist()))
     assert ("people_affected" in headline) == (0 < households < FLOOR)
-    if not crossing.any():
+    if all((before[f] == after[f]).all() for f in POVERTY_FLAGS):
         assert ("poverty_inequality", YEAR) not in found
-    if count(child) == 0:
-        assert not any(c.startswith("child_") for c in withheld)
+
+
+def test_the_withheld_line_names_cells_never_figures():
+    """Finding 9: one line per run naming the summary columns and age
+    groups the floor withheld, by table and year; a thin decile cell is the
+    run's warning, not withheld, so it is not named here."""
+    record = floor.floor_record(
+        {
+            ("metrics", 2027): ["people_affected"],
+            (floor.AGE_TABLE, 2027): ["all"],
+            ("winners_losers", 2027): ["5"],
+            ("poverty_inequality", 2028): [
+                "poverty_rel_ahc_change_pp",
+                "poverty_rel_ahc_change_pct",
+            ],
+        }
+    )
+    assert floor.withheld_line(record) == (
+        f"WITHHELD, resting on fewer than {FLOOR} survey households: "
+        "age_impact 2027 (all); metrics 2027 (people_affected); "
+        "poverty_inequality 2028 (poverty_rel_ahc_change_pp, "
+        "poverty_rel_ahc_change_pct)"
+    )
+    assert floor.withheld_line(floor.floor_record({})) is None
+    assert floor.withheld_line(None) is None
+    deciles = floor.floor_record({("winners_losers", 2027): ["5"]})
+    assert floor.withheld_line(deciles) is None
 
 
 def test_a_withheld_figure_is_written_empty_recorded_and_shown(monkeypatch):
@@ -1242,6 +1283,7 @@ def test_a_withheld_figure_is_written_empty_recorded_and_shown(monkeypatch):
 
     monkeypatch.setattr(generate, "_apply_disclosure_floor", floor_withholds)
     world = World()
+    lines = []
     try:
         monkeypatch.setattr(
             generate, "code_revision", lambda root: world.revision()
@@ -1253,7 +1295,16 @@ def test_a_withheld_figure_is_written_empty_recorded_and_shown(monkeypatch):
             generator_argv=["test"],
             build=lambda dataset, scenario=None: world.sim(),
             process=with_poverty_measures,
+            on_progress=lines.append,
         ).written
+        # One line names what was withheld, never a figure (finding 9)
+        (withheld,) = [line for line in lines if "WITHHELD" in line]
+        assert withheld == (
+            f"alpha: WITHHELD, resting on fewer than {FLOOR} survey "
+            "households: metrics 2027 (people_affected); "
+            "poverty_inequality 2028 (child_poverty_abs_bhc_change_pp, "
+            "child_poverty_abs_bhc_change_pct)"
+        )
         path = Path(reference.path)
         metrics = (path / "metrics.csv").read_bytes()
         rows = {row["year"]: row for row in parse_csv("metrics", metrics)}

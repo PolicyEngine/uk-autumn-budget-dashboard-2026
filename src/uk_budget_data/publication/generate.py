@@ -422,7 +422,7 @@ def run_artifact(job: ArtifactRun) -> ArtifactOutcome:
     be receipted is refused, not raised; any other failure raises."""
     outcome = ArtifactOutcome(key=job.key)
     try:
-        reference, limited, warnings = _write_run(job)
+        reference, limited, warnings, withheld = _write_run(job)
     except ReceiptUnavailable as error:
         outcome.refused = error.reason
         outcome.progress.append(f"{job.key}: REFUSED: {error.reason}")
@@ -433,11 +433,16 @@ def run_artifact(job: ArtifactRun) -> ArtifactOutcome:
         f"{job.key}: {'wrote' if reference.created else 'unchanged'} "
         f"{reference.path}{note if limited else ''}"
     )
+    if withheld is not None:
+        # What the floor withheld, by table, year and column, never a figure
+        outcome.progress.append(f"{job.key}: {withheld}")
     outcome.progress.extend(f"{job.key}: WARNING: {w}" for w in warnings)
     return outcome
 
 
-def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool, list[str]]:
+def _write_run(
+    job: ArtifactRun,
+) -> tuple[ArtifactRef, bool, list[str], Optional[str]]:
     config = job.config
     reform, members = _run_reform(job)
     key = job.key
@@ -547,7 +552,12 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool, list[str]]:
         build_receipt,
         job.artifacts_root,
     )
-    return reference, bool(limits), warnings
+    return (
+        reference,
+        bool(limits),
+        warnings,
+        disclosure_floor.withheld_line(floor),
+    )
 
 
 # What the receipt records of the floor for a run whose simulations were
