@@ -91,8 +91,9 @@ function GeographyMethodology() {
             <>
               Constituency figures come from Microcosm&apos;s local-area
               dataset, in which each household belongs to one constituency.
-              They do not add up exactly to the regional ones, which may come
-              from a different dataset.
+              The data certificate covers only the national file, so read
+              them as estimates. They do not add up exactly to the regional
+              ones, which may come from a different dataset.
             </>,
             Layers,
           ],

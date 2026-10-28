@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS } from "./MethodologyTab";
 import { METHOD_ANCHORS } from "./methodology/anchors";
-import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
+import { unavailableMeasures } from "./methodology/measures";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { measureCatalogueFixture } from "../test/measureCatalogueFixture";
 const catalogue = buildMeasureCatalogue(measureCatalogueFixture());
@@ -81,7 +81,8 @@ describe("MethodologyTab", () => {
 
   it("points to Policies for what each measure does and how it is modelled, listing none itself", () => {
     // Each fact once: the measures' descriptions and modelling live on the
-    // Policies cards, so Methodology names no published measure
+    // Policies cards, so Methodology names a measure only where its method
+    // differs (the costing bands, the poverty income)
     const onShowTab = vi.fn();
     const { container } = renderTab(onShowTab);
     expect(screen.queryByRole("heading", { name: "Published measure descriptions" })).toBeNull();
@@ -136,21 +137,38 @@ describe("MethodologyTab", () => {
     expect(text.match(/such as the NHS and schools/g)).toHaveLength(1);
   });
 
-  it("lists the measures the model cannot cost", () => {
-    renderTab();
+  it("says why some Budget policies are not modelled and links to their list on Policies, listing none itself", () => {
+    // Each fact once: the list and each reason live at the foot of Policies
+    const onShowTab = vi.fn();
+    renderTab(onShowTab);
     const card = screen.getByRole("button", { name: "Not modelled" }).closest(".method-topic");
-    fireEvent.click(within(card).getByRole("button", { name: "Not modelled" }));
-    const items = within(card).getAllByRole("listitem");
-    expect(items).toHaveLength(NOT_MODELLED.length);
-    expect(NOT_MODELLED.length).toBeGreaterThan(0);
-    for (const measure of NOT_MODELLED) {
-      expect(card).toHaveTextContent(`${measure.name}${measure.why}`);
-    }
-    // Text only: no measure the catalogue publishes, and no figure
-    for (const measure of catalogue.measures) {
-      expect(items.some((item) => item.querySelector(".mm-reason-name").textContent === measure.name)).toBe(false);
-    }
-    expect(card.querySelector("ul").textContent).not.toMatch(/£|\d+(\.\d+)?%/);
+    expect(card.querySelectorAll("li")).toHaveLength(0);
+    expect(card).toHaveTextContent("cannot be costed household by household");
+    const link = within(card).getByRole("link", { name: "Budget policies we do not model", hidden: true });
+    expect(link).toHaveAttribute("href", "?tab=policies#budget-measures-not-modelled");
+    fireEvent.click(link);
+    expect(onShowTab).toHaveBeenLastCalledWith("policies");
+    expect(card.textContent).not.toMatch(/£|\d+(\.\d+)?%/);
+  });
+
+  it("compares with the Budget's post-behavioural costings, with the wider band where they include behaviour", () => {
+    const { container } = renderTab();
+    const finances = document.getElementById(METHOD_ANCHORS.publicFinances);
+    expect(finances).toHaveTextContent("Budget 2026 publishes one costing per measure, after behavioural responses (Table 6.1");
+    expect(finances).toHaveTextContent("larger of 25% of the official one and £50m");
+    expect(finances).toHaveTextContent("larger of 10% and £50m");
+    expect(finances).not.toHaveTextContent(/static costing, like ours|Choose Post-behavioural/);
+    expect(within(finances).getByRole("link", { name: "business fuel use", hidden: true })).toHaveAttribute("href", "#method-business-fuel");
+    expect(container.querySelector("#method-business-fuel")).not.toBeNull();
+  });
+
+  it("leaves the Household Energy Payment out of poverty, and calls the local-area file uncertified", () => {
+    const { container } = renderTab();
+    expect(container.textContent).toContain(
+      "The poverty figures leave out the Household Energy Payment, as policyengine-uk treats the 2022 council tax rebate.",
+    );
+    expect(container.textContent).not.toContain("certified together");
+    expect(container.textContent).toContain("which that certificate does not cover");
   });
 
   it("points to the household calculation from its slot", () => {

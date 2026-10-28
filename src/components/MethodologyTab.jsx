@@ -9,7 +9,7 @@ import { HIGHEST_PERCENTILE, LOWEST_PERCENTILE, ordinal } from "../utils/incomeP
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import { SINGLE_YEAR_METHOD } from "../utils/singleYear";
 import MethodContents, { revealAnchor } from "./methodology/MethodContents";
-import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
+import { unavailableMeasures } from "./methodology/measures";
 import { SCATTER_BINS } from "../utils/publication/scatter";
 import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE } from "../utils/ageImpact";
 import { EARLY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
@@ -213,7 +213,7 @@ function MethodologyTab({ onShowTab }) {
                     ),
                     more: [
                       "The stages draw on other surveys and on administrative statistics for high incomes, wealth, spending, travel, benefit take-up, capital gains, pension salary sacrifice and student loans.",
-                      "The same stages feed two files, certified together: the national file, and a local-area file for constituencies and local authorities.",
+                      "The same stages feed two files: the national file, certified with the model, and a local-area file for constituencies and local authorities, which that certificate does not cover.",
                       "Both files are built from survey microdata licensed through the UK Data Service, so they are not public downloads.",
                     ],
                   },
@@ -321,8 +321,16 @@ function MethodologyTab({ onShowTab }) {
               <ReasonList items={UNAVAILABLE} />
             </Topic>
           )}
-          <Topic title="Not modelled" preview="Policies the household model cannot cost, and why">
-            <ReasonList items={NOT_MODELLED} icon />
+          <Topic title="Not modelled" preview="Why some Budget policies have no figures here">
+            <p className="method-more">
+              Some Budget policies act on something the model or its survey data do not hold, such as
+              prices, ISAs or business mileage, or have rules not yet published, so they cannot be
+              costed household by household.{" "}
+              <ViewLink tab="policies" hash="budget-measures-not-modelled" onShowTab={onShowTab}>
+                Budget policies we do not model
+              </ViewLink>
+              , on Policies, lists each with its reason.
+            </p>
           </Topic>
         </MethodSection>
 
@@ -339,7 +347,7 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id={METHOD_ANCHORS.publicFinances}
             title="Public finances"
-            preview="Budgetary impact · Net change · OBR comparison"
+            preview="Budgetary impact · Net change · Official costings"
           >
             <p className="method-more">
               The{" "}
@@ -352,7 +360,7 @@ function MethodologyTab({ onShowTab }) {
                   "Budgetary impact",
                   {
                     value: "Taxes collected less benefits and other spending, in £ billion a year.",
-                    more: ["It includes employer National Insurance and VAT receipts."],
+                    more: ["It counts indirect taxes, such as VAT and fuel duty, as well as taxes on income."],
                   },
                 ],
                 [
@@ -363,10 +371,26 @@ function MethodologyTab({ onShowTab }) {
                   </>,
                 ],
                 [
-                  "OBR comparison",
+                  "Official costings",
                   {
-                    value: "Opens on the OBR's static costing, like ours, where it has one.",
-                    more: ["Choose Post-behavioural to include the OBR's estimate of behavioural responses."],
+                    value: (
+                      <>
+                        Budget 2026 publishes one costing per measure, after behavioural responses
+                        (Table 6.1 of the{" "}
+                        <SourceLink id="obr_budget_2026_costings">official costings</SourceLink>). Ours is
+                        static, so where the costing includes behaviour the comparison allows a wider
+                        margin.
+                      </>
+                    ),
+                    more: [
+                      "Before a policy is published, each year's figure must be within the larger of 25% of the official one and £50m where the costing includes behaviour, and within the larger of 10% and £50m for the Pension Tax Allowance, whose costing assumes none, and the Household Energy Payment. A reviewer can accept a larger gap only with a written reason.",
+                      "A reviewer can mark a year not comparable, such as a year after a policy ends; the card then says so, with the reason, and shows no difference.",
+                      <>
+                        Our fuel duty figures cover households&apos; own fuel only (
+                        <AnchorLink id="method-business-fuel">business fuel use</AnchorLink>), a narrower
+                        base than the official costing&apos;s.
+                      </>,
+                    ],
                   },
                 ],
               ]}
@@ -435,6 +459,7 @@ function MethodologyTab({ onShowTab }) {
                         income, which is before indirect taxes, so the VAT and fuel duty policies do
                         not change it.
                       </>,
+                      "The poverty figures leave out the Household Energy Payment, as policyengine-uk treats the 2022 council tax rebate.",
                       "People moved out of or into poverty are the change in the rate times that year's population in the current-law projection, to the nearest 1,000.",
                     ],
                   },
@@ -731,7 +756,7 @@ function MethodologyTab({ onShowTab }) {
               <ViewLink tab="outlook" sub="forecast" onShowTab={onShowTab}>
                 Forecast changes
               </ViewLink>
-              .
+              , where the March 2026 forecast stays beside it for comparison.
             </>
           }
         >
@@ -749,18 +774,21 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.limitations}
           title="Limitations"
-          summary="Most charts add up separate policy runs, assumptions follow one OBR forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
+          summary="The revenue and decile charts add up separate policy runs, assumptions follow one OBR forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
         >
           <Topic title="Policies added up" preview="Revenue, decile and age charts · Household scatter · Winners and losers">
             <p className="method-more">
-              Each policy is also simulated on its own. Where several are selected, the revenue
-              and decile charts add up their separate effects, so they leave out interactions
-              between policies (<Term id="ownRuns">policies run on their own</Term>); the
-              average-change age charts do so only when no run of the whole selection is
-              published; the{" "}
-              <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>{" "}and the
-              winners and losers charts come from a run of the whole selection, so they include
-              interactions, and show nothing for a selection with no such run.
+              Each policy is simulated on its own, and the full package of policies together in one
+              run. Where several are selected, the revenue and decile charts add up the policies&apos;
+              separate effects, so they leave out interactions between policies (
+              <Term id="ownRuns">policies run on their own</Term>). The average-change age charts
+              read the package&apos;s run when the selection is the full package, and otherwise add
+              up the separate effects. The{" "}
+              <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>, the winners
+              and losers charts, the headline poverty and inequality figures and the{" "}
+              <AnchorLink id={METHOD_SECTIONS.geography}>figures by area</AnchorLink>{" "}come from a
+              run of the whole selection, so they include interactions, and show nothing for a
+              selection with no such run.
             </p>
           </Topic>
           <Topic title="Economic assumptions" preview="One OBR forecast behind the assumptions and weights">
@@ -773,12 +801,12 @@ function MethodologyTab({ onShowTab }) {
               then rises each April with that forecast&apos;s RPI.
             </p>
           </Topic>
-          <Topic title="Business fuel use" preview="Fuel duty on households' own purchases only">
+          <Topic id="method-business-fuel" title="Business fuel use" preview="Fuel duty on households' own purchases only">
             <p className="method-more">
               Fuel duty is modelled on households' own petrol and diesel purchases. Duty on fuel
               for vans, lorries and business use of cars, roughly half of fuel duty receipts, is
-              not in the model, so the revenue from a change in fuel duty is lower than a full
-              costing would show.
+              not in the model, so a change in fuel duty moves revenue by less here than in a
+              full costing.
             </p>
           </Topic>
           <Topic title="Survey coverage" preview="Where under-recorded incomes affect a policy">

@@ -617,6 +617,14 @@ export const SINGLE_YEAR_METHOD = [
     "Entered for 2026 and grown to the chosen year with the OBR's average earnings forecast, the index policyengine-uk uprates earnings with.",
   ],
   [
+    "State Pension",
+    "Asked from State Pension age and prefilled with the full new State Pension for the chosen year, as policyengine-uk sets it; a figure you enter replaces it.",
+  ],
+  [
+    "Examples",
+    "Each example household fills every answer with fixed values, so its results are worked out in advance; every answer stays editable.",
+  ],
+  [
     "Change by policy",
     CHANGE_BY_POLICY_NOTE,
   ],
