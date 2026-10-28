@@ -408,20 +408,20 @@ describe("the Pre-measures forecast view", () => {
     fireEvent.blur(owners);
     choose(who, "Breakdown", "Family type");
     fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
-    // After housing costs, from here: 20.2% in 2027-28, 20.4% in 2031-32
+    // After housing costs, from here: 20.3% in 2027-28, 20.5% in 2031-32
     choose(who, "Housing costs", "After housing costs");
     fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
     couples = couplesRow();
     // Each value beside its mark: the start year left of its ring, the end
     // year right of its dot
-    expect(couples).toHaveTextContent("People in couple families with children20.2%20.4%+0.2pp");
-    expect(couples.querySelector(".ls-dumbbell-value.from.left")).toHaveTextContent("20.2%");
-    expect(couples.querySelector(".ls-dumbbell-value.to.right")).toHaveTextContent("20.4%");
+    expect(couples).toHaveTextContent("People in couple families with children20.3%20.5%+0.2pp");
+    expect(couples.querySelector(".ls-dumbbell-value.from.left")).toHaveTextContent("20.3%");
+    expect(couples.querySelector(".ls-dumbbell-value.to.right")).toHaveTextContent("20.5%");
     area = couples;
     fireEvent.focus(area);
     tip = screen.getByRole("tooltip");
     expect(tip).toHaveTextContent("People in couple families with children: relative poverty (AHC)");
-    expect(tip).toHaveTextContent("2027-2820.2%");
+    expect(tip).toHaveTextContent("2027-2820.3%");
     expect(tip).toHaveTextContent("Change+0.2pp");
     fireEvent.blur(area);
     expect(within(who).getByText(/^All people/)).toBeInTheDocument();
