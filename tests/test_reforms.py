@@ -72,6 +72,12 @@ NOT_YET_GENERATED = (
     # Announced in the Budget speech
     "household_energy_payment_2026",
 )
+# Redefined on Budget day to the announced measure: budgetary_impact.csv
+# holds the candidate's figures until it is regenerated.
+REDEFINED_ON_BUDGET_DAY = (
+    "fuel_duty_rise_deferral",
+    "domestic_electricity_zero_vat",
+)
 # Withdrawn on 27 October 2026 (Vahid): out of the registry and the
 # package, so no default command runs or publishes them. Their factories
 # stay, unregistered, and are still tested here as code.
@@ -1091,6 +1097,9 @@ def test_the_published_revenue_starts_in_each_measures_first_year():
         if measure_id in NOT_YET_GENERATED and (
             (measure_id, first) not in values
         ):
+            continue
+        if measure_id in REDEFINED_ON_BUDGET_DAY:
+            # Its published rows are the candidate's until it is regenerated
             continue
         assert abs(values[(measure_id, first)]) > 0.01, measure_id
         for year in POLICY_YEARS:
