@@ -173,16 +173,16 @@ export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, year
   );
 }
 
-/** "Average change per person from each policy, for 16 to 24-year-olds and people of all ages." */
+/** "Average change in household income from each policy, for 16 to 24-year-olds and people of all ages." */
 export const measuresDescription = (band, compareKey = ALL_BAND) =>
-  `Average change per person from each policy, for ${groupSubject(band).toLowerCase()} and ${groupSubject(compareKey).toLowerCase()}.`;
+  `Average change in household income from each policy, for ${groupSubject(band).toLowerCase()} and ${groupSubject(compareKey).toLowerCase()}.`;
 
 const BAND_OPTIONS = [
   ...AGE_BANDS.map((band) => ({ value: band.key, label: band.label })),
   { value: "pensioners", label: "Pensioners" },
 ];
 
-const UNIT = "Average change per person (£ a year)";
+const UNIT = "Average change in household income, per person (£ a year)";
 
 /**
  * "Which measures matter most": each selected policy's mean change for a
@@ -206,7 +206,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
   const compareName = compareKey === ALL_BAND ? "All ages" : AGE_BANDS.find((b) => b.key === compareKey)?.label ?? compareKey;
   const GROUPS = groupsFor(band).map((item) => (item.key === "all" ? { ...item, label: compareName } : item));
   const description = single
-    ? "Average change per person from each policy, for people of all ages."
+    ? "Average change in household income from each policy, for people of all ages."
     : measuresDescription(band, compareKey);
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);

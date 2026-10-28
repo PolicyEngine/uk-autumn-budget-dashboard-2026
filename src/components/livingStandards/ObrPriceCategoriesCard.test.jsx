@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import ObrPriceCategoriesCard, { OBR_PRICE_CATEGORIES_TITLE, obrPriceSourceText } from "./ObrPriceCategoriesCard";
 import {
   categoryRows,
@@ -46,7 +46,24 @@ const FILE = {
 };
 const NAMES = { food: "food, beverages and tobacco", utilities: "utilities", fuels: "fuels", other_tradables: "other tradables", other_non_tradables: "other non-tradables" };
 
-const serve = (status, body) => vi.stubGlobal("fetch", vi.fn(async () => new Response(body ? JSON.stringify(body) : "", { status })));
+// The October file (obr_price_categories_october_2026.json): 404 unless given
+const POST = {
+  ...FILE,
+  source: {
+    ...FILE.source,
+    release: "Economic and fiscal outlook, October 2026",
+    release_date: "2026-10-28",
+    workbook: "Economic and fiscal outlook, October 2026: detailed forecast tables, economy",
+  },
+  vintage: "OBR October 2026 forecast (the Autumn Budget 2026)",
+  series: FILE.series.map((s) => ({ ...s, values: s.values.map((v) => ({ ...v, value: v.value + 1 })) })),
+};
+const respond = (status, body) => new Response(body ? JSON.stringify(body) : "", { status });
+const serve = (status, body, post = null) =>
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url) => (String(url).includes("october_2026") ? (post ? respond(200, post) : respond(404)) : respond(status, body))),
+  );
 
 beforeEach(() => {
   clearObrPriceCategoriesCache();
@@ -98,6 +115,29 @@ describe("Prices by spending category", () => {
     render(<ObrPriceCategoriesCard view="table" onViewChange={() => {}} />);
     expect(await screen.findByRole("cell", { name: "2027-28" })).toBeTruthy();
     expect(screen.getByRole("cell", { name: "-8.0%" })).toBeTruthy();
+  });
+
+  it("draws October by default once it is published, and March faded beside it on choosing both", async () => {
+    serve(200, FILE, POST);
+    chartProps.length = 0;
+    render(<ObrPriceCategoriesCard />);
+    // The sentence reads October: food 3.06 + 1 = 4.1%
+    expect(await screen.findByText(/^In 2026-27 the OBR expects food, beverages and tobacco prices to rise 4\.1%/)).toBeTruthy();
+    // October alone by default, chosen in the Options pill (no chips)
+    expect(screen.queryByText("Show forecasts:")).toBeNull();
+    expect(chartProps.at(-1).series.map((s) => s.forecast)).toEqual(Array(5).fill("post"));
+    fireEvent.click(screen.getByRole("button", { name: "Options: October 2026 forecast" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Both" }));
+    expect(screen.getByRole("button", { name: "Options: March and October 2026" })).toBeTruthy();
+    const series = chartProps.at(-1).series;
+    expect(series).toHaveLength(10);
+    const food = series.filter((s) => s.category === "food");
+    expect(food.map((s) => [s.key, s.opacity])).toEqual([
+      ["food", 0.4],
+      ["food__post", undefined],
+    ]);
+    expect(food[1].name).toBe("Food, beverages and tobacco, OBR October 2026");
+    expect(chartProps.at(-1).data[0].food__post).toBeCloseTo(4.06, 10);
   });
 
   it("says the forecast is not yet available before the file is published", async () => {

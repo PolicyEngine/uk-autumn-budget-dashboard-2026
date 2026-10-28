@@ -1218,16 +1218,24 @@
   color: var(--pe-gray-500);
 }
 
-/* The measure it is for, pinned to the foot, with its own part */
-.household-card-tag {
+/* The measures it is for, pinned to the foot, each with its own part;
+   two chips wrap to a second line rather than cut a name short */
+.household-card-tags {
   grid-area: tag;
   align-self: end;
   justify-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 100%;
+  margin-top: 16px;
+}
+
+.household-card-tag {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   max-width: 100%;
-  margin-top: 16px;
   padding: 4px 10px 4px 9px;
   font-size: var(--fs-micro);
   font-weight: 600;
@@ -1242,8 +1250,25 @@
 
 .household-card-tag-name {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+/* Too long for one line on a narrow card ("Carer's Allowance taper",
+   "from 2030-31"): the part wraps under the name inside the chip, never
+   over it */
+.household-card-tag {
+  flex-wrap: wrap;
+  row-gap: 0;
+  border-radius: 12px;
+}
+
+/* A measure not yet in force that year ("from 2030-31"): muted */
+.household-card-tag.is-later {
+  color: var(--pe-gray-500);
+  background: var(--pe-gray-50);
+}
+
+.household-card-tag.is-later .household-card-dot {
+  background: var(--pe-gray-300);
 }
 
 .household-card-tag-part {
@@ -1565,7 +1590,7 @@
     margin-top: 4px;
   }
 
-  .household-card-tag {
+  .household-card-tags {
     margin-top: 10px;
   }
 }
@@ -2552,7 +2577,7 @@
   .household-field select,
   .household-field input[type="text"],
   .household-field input[type="number"],
-  .constituency-box input {
+  .council-box input {
     font-size: 16px;
   }
 }
@@ -2575,11 +2600,11 @@
     min-height: 44px;
   }
 
-  .constituency-box input {
+  .council-box input {
     height: 44px;
   }
 
-  .constituency-toggle {
+  .council-toggle {
     width: 44px;
     height: 44px;
   }
@@ -2775,4 +2800,51 @@
   .household-detail-summary {
     padding-left: 0;
   }
+}
+
+/* A step's "Other questions": the answers no selected policy reads, under
+   the ones it does, collapsed until opened; lined up with the step's boxes */
+.household-step-optional {
+  margin-top: 14px;
+  padding-left: 36px;
+}
+
+.household-step-optional > .household-grid-step {
+  padding-left: 0;
+}
+
+@media (max-width: 640px) {
+  .household-step-optional {
+    padding-left: 0;
+  }
+}
+
+/* Calculator-only measures: one switch under the example cards, apart from
+   the header's policy selector */
+.household-extra-measures {
+  margin: 12px 0 0;
+}
+
+.household-extra-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--pe-gray-700);
+  cursor: pointer;
+}
+
+.household-extra-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--pe-teal-600);
+  cursor: pointer;
+}
+
+.household-extra-toggle input:disabled,
+.household-extra-toggle input:disabled + span {
+  cursor: not-allowed;
+  opacity: 0.6;
 }

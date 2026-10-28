@@ -18,6 +18,10 @@
  * - inForce: the months it is in force, as "YYYY-MM" (`to` is the last
  *   month; a lasting measure has none), for the card's timeline;
  * - ends: when a temporary measure ends, in words (only with `to`);
+ * - outsidePovertyIncome: true where the model pays the measure through a
+ *   variable HBAI's household net income leaves out (policyengine-uk's
+ *   hbai_household_net_income), so poverty and inequality cannot move with
+ *   it even in the years it is in force;
  * - duration: a temporary measure's length in words, where a count of
  *   months would mislead (a one-off winter payment);
  * - steps / stepsLabel: dated stages within a measure, drawn as diamonds,
@@ -28,6 +32,18 @@
  *   (collapsed by default, under "About this result");
  * - caveats: further caveats, in sentences, where the details state none;
  * - source: a public page on the policy, where one exists;
+ * - cardOrder: the card's place on the Policies tab (1 up), set so the two
+ *   cards in a row are close in height (the charts together, the tiles
+ *   together); cards without one follow, by budgetRows;
+ * - budgetRows: the measure's rows in the Budget's Table 6.1 (as
+ *   data_inputs/treasury/mapping.csv maps them), which link each card to
+ *   the Budget's costing;
+ * - example: { title, text, items?, source }: a worked example, or the reach the
+ *   Budget states, every figure from its source (a cited document or a
+ *   verified household calculation), shown under "What changes": one short line, and any further points as
+ *   a short list (`items`), never a long paragraph;
+ * - changeLabel: { label, unitWords } a shorter name and units for the What
+ *   changes block's main row, in place of policy_parameters.json's;
  * - writtenFor: the measure's description in reforms.py, which the
  *   publication carries verbatim, when the entry was written. After
  *   changing a measure in reforms.py, check its entry still holds, then copy
@@ -45,47 +61,59 @@
 export const POLICY_DETAILS = [
   {
     id: "fuel_duty_rise_deferral",
-    shortName: "Fuel duty frozen",
-    sentence: "freezing fuel duty to 2028",
-    name: "Fuel duty rises deferred",
-    description: "Cancel the January 2027 fuel duty rise and freeze to March 2028",
-    writtenFor: "Candidate measure. Fuel duty stays at 52.95p a litre through 2027-28 (to 31 March 2028): the rise due on 1 January 2027 does not happen, so the 5p cut continues, and there is no March 2027 step and no April 2027 RPI rise. RPI uprating resumes in April 2028 from 52.95p, so the 5p and that year's RPI are never made up. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+    cardOrder: 1,
+    shortName: "Fuel duty cut extended",
+    sentence: "extending the 5p fuel duty cut to 1 July 2027",
+    name: "Fuel duty cut extended",
+    description: "Keep the 5p fuel duty cut to July 2027",
+    writtenFor: "The 5p cut in fuel duty is kept: the main rate stays at 52.95p a litre to 30 June 2027, so the rise due on 1 January 2027 and the March and April 2027 steps do not happen. From 1 July 2027 it returns to current law's 60.59p a litre, rising with RPI each April. Rates are day-weighted to fiscal years, and the VAT on the lower pump price is included.",
     summary:
-      "Keeps fuel duty at 52.95p a litre to March 2028, so the 5p cut is never reversed.",
-    starts: "January 2027",
+      "Keeps fuel duty at 52.95p a litre to July 2027, then returns it to current law's rate.",
+    starts: "Jan 2027",
     affects: "Households buying petrol or diesel",
     type: "Fuel duty",
     inForce: { from: "2027-01" },
     howCalculated:
-      "Applies the duty rate in force on each day to households' petrol and diesel spending, day-weighted to fiscal years.",
+      "Applies each day's duty rate to households' petrol and diesel spending, day-weighted to fiscal years.",
     details:
-      "Assumes no rise on 1 January 2027 and none in March or April 2027, then RPI uprating from April 2028 on 52.95p. Duty stays the 5p and a year's RPI below current law, so the policy costs revenue in every later year. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel bought for vans, lorries and business use of cars is not modelled, so the revenue figure covers households' own purchases only.",
+      "Held at 52.95p a litre to 30 June 2027: none of current law's rises in January, March or April 2027. From 1 July 2027 it is current law's 60.59p, which includes April 2027's RPI rise. RPI rises then resume each April from 2028. After that it costs nothing. The end date is the Budget document's. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel for vans, lorries and business use of cars is not modelled, so the figure covers households' own fuel. The Treasury's figure also covers business fuel, but counts duty only, without VAT.",
     source: {
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
     },
+    changeLabel: { label: "Duty", unitWords: "pence a litre" },
+    budgetRows: [3],
   },
   {
     id: "state_pension_income_tax_protection",
-    shortName: "State Pension protection",
-    sentence: "keeping income tax off the State Pension",
-    name: "State Pension income tax protection",
+    cardOrder: 7,
+    shortName: "Pension Tax Allowance",
+    sentence: "introducing the Pension Tax Allowance",
+    name: "Pension Tax Allowance",
     description:
-      "No income tax for pensioners whose total income is at most the full new State Pension",
-    writtenFor: "Candidate measure. From 6 April 2027, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (rounded up to the pound: £13,037 in 2027-28, rising with it) get an income tax allowance of that amount, so pay no income tax. Above it there is no allowance: £1 of income over the threshold takes the whole allowance away.",
+      "An income tax reduction for pensioners with total income up to the full new State Pension",
+    writtenFor: "From 6 April 2027 to 5 April 2030, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (£13,036.40 in 2027-28) get a Pension Tax Allowance: a non-refundable reduction in their income tax, worth up to £94 in 2027-28. It falls by £1 for every £3 of income above the full new State Pension, so it is gone at about £13,319 in 2027-28. The personal allowance is unchanged.",
     summary:
-      "People over State Pension age whose total income is no more than the full new State Pension pay no income tax.",
-    starts: "April 2027",
+      "Pensioners on up to the full new State Pension pay less income tax, 2027-28 to 2029-30.",
+    starts: "Apr 2027",
     affects: "People over State Pension age",
     type: "Income tax",
-    inForce: { from: "2027-04" },
+    inForce: { from: "2027-04", to: "2030-03" },
+    ends: "Apr 2030",
     howCalculated:
-      "Gives people over State Pension age an income tax allowance equal to the full new State Pension (£13,037 in 2027-28, rising with it) when their total income is at or below it.",
+      "Cuts eligible people's income tax, never below zero; it tapers by £1 per £3 above the full new State Pension.",
     details:
-      "Total income counts the State Pension and any other income, savings interest included. £1 of income above it takes the whole allowance away, so a larger State Pension (with increments or additional State Pension) alone can rule someone out. Based on reporting on 26 and 27 October 2026; the mechanism is an assumption made before the Budget.",
+      "Total income counts the State Pension and all other income, savings interest included. So a larger State Pension, with increments or additional State Pension, reduces the allowance too. The personal allowance is unchanged. People reaching State Pension age after 6 October in a tax year are not included: reach and cost slightly understated. Scottish taxpayers get the same allowance, at the 20% basic rate. Means-tested benefits can take back part of the allowance. Pension Credit, Housing Benefit and Council Tax Reduction count income after tax. A smaller award can end help that comes with it. Universal Credit counts pension income before tax, so changes only where the allowance cuts tax on earnings.",
     source: {
-      label: "The new State Pension: what you'll get",
-      href: "https://www.gov.uk/new-state-pension/what-youll-get",
+      label: "Pension Tax Allowance explainer",
+      href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer",
+    },
+    changeLabel: { label: "Largest tax cut", unitWords: "£ a year" },
+    budgetRows: [52],
+    example: {
+      title: "Example",
+      text: "2027-28: on the full new State Pension (£13,036), no income tax; at £13,186, the allowance is £44.",
+      source: { label: "Pension Tax Allowance explainer", href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer" },
     },
   },
   {
@@ -115,26 +143,30 @@ export const POLICY_DETAILS = [
   },
   {
     id: "domestic_electricity_zero_vat",
+    cardOrder: 5,
     shortName: "Zero VAT on electricity",
     sentence: "taking VAT off household electricity",
     name: "Zero VAT on domestic electricity",
-    description: "Zero-rate VAT on domestic electricity to March 2028",
-    writtenFor: "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 31 March 2028: the zero rate to March 2027, not in the model's baseline, scored with a candidate one-year extension. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%). 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days.",
+    description: "Zero-rate VAT on domestic electricity to July 2027",
+    writtenFor: "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027. It applies in Great Britain from October 2026 and across the UK from April 2027. It covers electricity only, not gas. Each year counts its share of a year's electricity use: about 57% in 2026-27 (October to March) and 22% in 2027-28 (April to June).",
     summary:
-      "Charges no VAT on household electricity bills in Great Britain, instead of 5%, from October 2026 to March 2028.",
-    starts: "October 2026",
-    affects: "Households in Great Britain",
+      "Charges no VAT on household electricity bills, instead of 5%, from October 2026 to July 2027.",
+    starts: "Oct 2026",
+    affects: "Households in Great Britain, and expected in Northern Ireland from April 2027",
     type: "VAT",
-    inForce: { from: "2026-10", to: "2028-03" },
-    ends: "March 2028",
+    inForce: { from: "2026-10", to: "2027-06" },
+    ends: "Jul 2027",
     howCalculated:
       "Applies 0% VAT instead of 5% to each household's electricity spending in the survey.",
     details:
-      "The zero rate to March 2027 is already planned but not in the model's baseline; the year to March 2028 is modelled as an extension. Applied to electricity spending only, in Great Britain: Northern Ireland's households keep the 5%. 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days.",
+      "Shares of a year's electricity use: October to March for 2026-27 (about 57%), April to June for 2027-28 (about 22%). Both from DESNZ Energy Trends.",
+    // HMRC's VAT Notice 701/19, which sets out the zero rate's dates and
+    // where it applies (#290, Max, 6480086305)
     source: {
-      label: "Temporary zero rate of VAT for domestic electricity",
-      href: "https://www.gov.uk/government/publications/temporary-zero-rate-of-vat-for-domestic-electricity-in-great-britain/temporary-zero-rate-of-vat-in-great-britain-for-domestic-electricity",
+      label: "VAT on fuel and power (VAT Notice 701/19)",
+      href: "https://www.gov.uk/guidance/vat-on-fuel-and-power-notice-70119",
     },
+    budgetRows: [2],
   },
   {
     id: "employer_ni_relief_under_25s",
@@ -242,22 +274,27 @@ export const POLICY_DETAILS = [
   },
   {
     id: "carers_allowance_earnings_taper",
+    cardOrder: 2,
     shortName: "Carer's Allowance taper",
     sentence: "tapering Carer's Allowance above the earnings limit",
     name: "Carer's Allowance earnings taper",
     description: "Withdraw Carer's Allowance £1 for £1 above the earnings limit",
-    writtenFor: "Candidate measure. From 2030-31 Carer's Allowance no longer stops when weekly net earnings pass the £204 earnings limit: it is reduced by £1 for each £1 of weekly earnings above the limit, to nothing once earnings exceed the limit by the full weekly rate. Carers at or below the limit are unchanged. Scotland's Carer Support Payment is unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
+    writtenFor: "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (£212 a week at April 2027's £13.21, rounded up to the pound): it is reduced by £1 for each £1 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The taper starts within 2030-31, on a date still to come, so the model counts half of that year. Carers at or below the limit, and Scotland's Carer Support Payment, are unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
     summary:
-      "Replaces the Carer's Allowance cliff edge at the £204 weekly earnings limit with a taper of £1 for each £1 earned above it, from 2030-31.",
-    starts: "April 2030",
+      "Replaces the earnings-limit cliff edge with a £1-for-£1 taper, in England and Wales from 2030-31.",
+    starts: "2030-31",
+    affects: "Carers in England and Wales earning above the limit",
     type: "Benefit",
     inForce: { from: "2030-04" },
+    howCalculated:
+      "Applies the taper to carers' weekly net earnings in the survey, with the limit at 16 hours' National Living Wage.",
     details:
-      "The start year, the limit (frozen at £204) and the £1-for-£1 rate are assumptions from reports of the announcement before the Budget. Scotland's Carer Support Payment is unchanged. Universal Credit counts Carer's Allowance in full as unearned income, and the allowance is taxable, so a carer on Universal Credit gains nothing and can lose the income tax on it. Carers the limit kept out claim at the data's 60% take-up.",
+      "The taper starts within 2030-31, on a date still to come, so the model counts half that year. Scotland's Carer Support Payment is unchanged. On Universal Credit, a carer gains nothing (it counts the allowance in full) and can lose the tax on it. Carers the limit kept out claim at the data's 60% take-up.",
     source: {
       label: "Carer's Allowance",
       href: "https://www.gov.uk/carers-allowance",
     },
+    budgetRows: [7],
   },
   {
     id: "lha_unfreeze_2027",
@@ -301,25 +338,118 @@ export const POLICY_DETAILS = [
     },
   },
   {
-    id: "unearned_income_rates_up",
-    shortName: "Unearned income tax up",
-    sentence: "raising tax on dividends, savings and property income",
-    name: "Dividend, savings and property income tax up",
-    description: "Raise income tax on dividends, savings and property income by 2 points",
-    writtenFor: "Candidate measure. From 6 April 2027 the income tax rates on dividends, savings income and property income each rise by 2 percentage points on top of current law, which already includes Budget 2025's rises: dividends to 12.75%, 37.75% and 41.35%, and savings and property income to 24%, 44% and 49% at the basic, higher and additional rates. Incomes are held fixed, with no behavioural response.",
+    id: "property_income_rates_up",
+    cardOrder: 6,
+    shortName: "Property income tax up",
+    sentence: "raising tax on property income",
+    name: "Property income tax rates up",
+    description: "Raise income tax on property income by 2 points",
+    writtenFor: "From 6 April 2027 the income tax rates on property income rise to 24%, 44% and 49% at the basic, higher and additional rates in England, Wales and Northern Ireland: 2 percentage points above current law, which already includes Budget 2025's rises. Finance cost relief for landlords follows the property basic rate, so rises to 24%, Scottish landlords' included. Incomes are held fixed, with no behavioural response.",
     summary:
-      "Raises the income tax rates on dividends, savings income and property income by 2 percentage points from April 2027.",
-    starts: "April 2027",
-    affects: "People with dividends, savings interest or rental income",
+      "Raises the income tax rates on property income outside Scotland by 2 percentage points from April 2027.",
+    starts: "Apr 2027",
+    affects: "People with rental income",
     type: "Income tax",
     inForce: { from: "2027-04" },
     howCalculated:
-      "Adds 2 percentage points to each rate from 2027-28: dividends to 12.75%, 37.75% and 41.35%, and savings and property income to 24%, 44% and 49% at the basic, higher and additional rates.",
+      "Adds 2 points to each property income rate from 2027-28: 24%, 44% and 49% at basic, higher and additional.",
     details:
-      "The 2-point rise is an assumption made before the Budget, on top of the rises Budget 2025 legislated. Incomes are held fixed: no one is assumed to change how much they take in dividends or how they hold savings or property.",
+      "The 2-point rise is on top of the rises Budget 2025 legislated. Scottish taxpayers pay Scottish rates on property income, so their rates don't change. Finance cost relief follows the UK property basic rate, so Scottish landlords' relief also rises to 24%. They pay slightly less tax. Incomes are held fixed: no one changes how they hold property.",
     source: {
       label: "HMRC: changes to tax rates for property, savings and dividend income",
       href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
+    },
+    budgetRows: [61],
+  },
+  {
+    id: "savings_income_rates_up",
+    cardOrder: 8,
+    shortName: "Savings income tax up",
+    sentence: "raising tax on savings income",
+    name: "Savings income tax rates up",
+    description: "Raise income tax on savings income by 2 points",
+    writtenFor: "From 6 April 2027 the income tax rates on savings income rise to 24%, 44% and 49% at the basic, higher and additional rates across the UK: 2 percentage points above current law, which already includes Budget 2025's rises. Dividend rates are unchanged. Incomes are held fixed, with no behavioural response.",
+    summary:
+      "Raises the income tax rates on savings income across the UK by 2 percentage points from April 2027.",
+    starts: "Apr 2027",
+    affects: "People with savings interest",
+    type: "Income tax",
+    inForce: { from: "2027-04" },
+    howCalculated:
+      "Adds 2 points to each savings income rate from 2027-28: 24%, 44% and 49%. Dividend rates are unchanged.",
+    details:
+      "The 2-point rise is on top of the rises Budget 2025 legislated. It applies across the UK: savings income is taxed at UK rates, Scotland included. Incomes are held fixed: no one changes how they hold savings.",
+    source: {
+      label: "HMRC: changes to tax rates for property, savings and dividend income",
+      href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
+    },
+    budgetRows: [62],
+  },
+  {
+    id: "household_energy_payment_2026",
+    cardOrder: 3,
+    shortName: "Energy payment",
+    sentence: "paying £100 towards energy bills",
+    name: "Household Energy Payment",
+    description: "Pay £100 to households in council tax bands A to D in England this winter",
+    writtenFor: "A one-off £100 payment from January 2027 to each household in England in property valuation bands A to D (the lowest four of England's eight), up to 20 million households, paid into bank accounts and counted as household income in 2026-27. Scotland, Wales and Northern Ireland receive a share of the funding instead, which is not modelled.",
+    summary:
+      "Pays £100 once, from January 2027, to each household in England in council tax bands A to D.",
+    starts: "Jan 2027",
+    affects: "Households in England in council tax bands A to D",
+    type: "Payment",
+    inForce: { from: "2027-01", to: "2027-03" },
+    // Paid through ebr_council_tax_rebate (energy_bills_rebate), which
+    // policyengine-uk 2.151.0's hbai_household_net_income does not add
+    outsidePovertyIncome: true,
+    ends: "After one winter",
+    duration: "One winter",
+    howCalculated:
+      "Adds £100 to the income of each household in England whose council tax band is A, B, C or D, in 2026-27.",
+    details:
+      "The Treasury's cost also covers the devolved governments' Barnett share (about £425 million), which the model leaves out. It also covers £100 million for councils in England for targeted support, also not modelled.",
+    source: {
+      label: "Budget 2026",
+      href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
+    },
+    budgetRows: [1],
+    example: {
+      title: "Who it reaches",
+      text: "Up to 20 million households in England (about 80%), including:",
+      items: [
+        "83% of households spending over a tenth of their income on energy",
+        "88% of households in the bottom three income deciles",
+      ],
+      source: { label: "Budget 2026, paragraphs 3.5 and 3.6", href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html" },
+    },
+  },
+  {
+    id: "trading_allowance_raise",
+    cardOrder: 4,
+    shortName: "Trading allowance",
+    sentence: "raising the trading allowance",
+    name: "Trading allowance raised to £3,000",
+    description: "Raise the trading allowance from £1,000 to £3,000",
+    writtenFor: "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from £1,000 to £3,000, for income tax and Class 4 National Insurance. Without gross receipts in the data, the model relieves a profit up to £3,000 in full and gives no relief above it, so the cost may be overstated for some people and understated for others.",
+    summary:
+      "Raises the trading allowance, which lets people earn from trading without tax, from £1,000 to £3,000 from April 2027.",
+    starts: "Apr 2027",
+    affects: "Sole traders with small incomes or expenses under £3,000",
+    type: "Income tax",
+    inForce: { from: "2027-04" },
+    howCalculated:
+      "Raises the trading allowance parameter to £3,000 from 2027-28, for income tax and Class 4 National Insurance.",
+    details:
+      "The Treasury's costing starts in 2028-29, when self-assessment payments fall due; ours starts in 2027-28.",
+    source: {
+      label: "Budget 2026",
+      href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
+    },
+    budgetRows: [15],
+    example: {
+      title: "Example",
+      text: "An employee on £30,000 with £3,000 of side income and no expenses pays £400 less income tax in 2027-28.",
+      source: { label: "PolicyEngine household calculations, policyengine-uk 2.151.0 (review on PR 290)", href: "https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/290" },
     },
   },
 ];

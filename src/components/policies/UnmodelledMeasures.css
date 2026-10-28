@@ -1,0 +1,223 @@
+/* The Budget measures this dashboard does not model (UnmodelledMeasures.jsx):
+   a section under the modelled cards, its heading like theirs, each
+   measure a Policies card (globals.css .policy-card), in groups. */
+.umm {
+  margin-top: 40px;
+}
+
+/* The section's heading as a button: the title's own size and weight
+   (globals.css .section-heading h2), with a chevron; the subtitle under it */
+.umm-heading h2 {
+  margin: 0;
+}
+
+.umm-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  font: inherit;
+  line-height: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.umm-toggle:hover {
+  color: var(--pe-teal-700);
+}
+
+.umm-toggle:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 3px;
+}
+
+.umm-chevron {
+  flex: none;
+  color: var(--pe-gray-500);
+  transition: transform 0.2s ease;
+}
+
+.umm-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.umm-subtitle {
+  cursor: pointer;
+}
+
+/* The Treasury's six years as one strip of small cells */
+.umm-costing-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.umm-costing {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 3px 0;
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+  table-layout: fixed;
+}
+
+.umm-costing caption {
+  padding: 0 3px 4px;
+  font-size: var(--fs-micro);
+  text-align: left;
+  color: var(--pe-gray-500);
+}
+
+.umm-costing thead th {
+  padding: 2px 0 0;
+  font-weight: 500;
+  text-align: center;
+  color: var(--pe-gray-500);
+  background: var(--pe-gray-50);
+  border-radius: 6px 6px 0 0;
+}
+
+.umm-costing tbody td {
+  padding: 1px 0 4px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--pe-gray-800);
+  background: var(--pe-gray-50);
+  border-radius: 0 0 6px 6px;
+}
+
+/* The row's name, only where there are several */
+.umm-costing thead th:first-child,
+.umm-costing tbody th {
+  width: 0;
+  padding: 0;
+  background: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.umm-costing tbody th:not(.is-hidden) {
+  width: auto;
+  padding-right: 4px;
+  font-weight: 500;
+  text-align: left;
+  color: var(--pe-gray-500);
+}
+
+.umm-list .umm-costing:has(tbody th:not(.is-hidden)) thead th:first-child {
+  width: 3.6em;
+}
+
+.umm-costing tbody tr + tr td {
+  border-radius: 0;
+}
+
+.umm-costing tbody th.is-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+/* Years as "26-27"; screen readers hear them in full */
+.umm-year-full {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.umm-costing-note {
+  margin: 4px 0 0;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+}
+
+.umm-no-costing {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-500);
+}
+
+.umm-strip-label {
+  margin-right: 6px;
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+/* Inside Treasury costing: the sources and the Table 6.1 rows, a line each */
+.umm-costing-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+}
+
+.umm-sources {
+  margin: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.umm-link {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.umm-link:hover {
+  text-decoration-color: currentColor;
+}
+
+/* The icon stays with the last word when the label wraps */
+.umm-link-end {
+  white-space: nowrap;
+}
+
+.umm-link svg {
+  display: inline;
+  margin-left: 4px;
+  vertical-align: -1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .umm-chevron {
+    transition: none;
+  }
+}
+
+/* A measure the model covers but this release holds back */
+.umm-held-back {
+  margin: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--pe-gray-500);
+}
+
+/* A group of cards by why we do not model them: its title, the reason in
+   a line, then its cards */
+.umm-group + .umm-group {
+  margin-top: 32px;
+}
+
+.umm-group-title {
+  margin: 0;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.umm-group-why {
+  margin: 2px 0 12px;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}

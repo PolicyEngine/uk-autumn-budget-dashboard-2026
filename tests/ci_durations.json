@@ -2841,7 +2841,7 @@
 "tests/test_reconcile.py::test_wrong_sign_is_wrong_direction": 0.0,
 "tests/test_reconcile.py::test_zero_costing_tolerates_only_treasury_rounding": 0.0,
 "tests/test_reforms.py::test_a_driver_buying_1000_litres_of_petrol": 24.57,
-"tests/test_reforms.py::test_a_graduate_on_45000_pounds_repays_79_pounds_less": 14.72,
+"tests/test_reforms.py::test_a_graduate_on_45000_pounds_repays_114_pounds_less": 14.72,
 "tests/test_reforms.py::test_a_pension_credit_household_in_england_gets_100_pounds": 23.27,
 "tests/test_reforms.py::test_a_pensioner_on_the_full_new_state_pension_alone_pays_none[2027]": 11.88,
 "tests/test_reforms.py::test_a_pensioner_on_the_full_new_state_pension_alone_pays_none[2031]": 9.45,

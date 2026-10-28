@@ -136,7 +136,7 @@ describe("By age's selection rule with a single that withholds its age bands", (
     // reason in About this chart's caveats, and no By policy option
     const card = meanCard(container);
     expect(within(card).queryByText(PACKAGE_NET_ONLY)).toBeNull();
-    expect(within(card).getByText("Average change per person, £ a year, with all the selected policies.")).toBeInTheDocument();
+    expect(within(card).getByText("Average change in household income per person, £ a year, with all the selected policies.")).toBeInTheDocument();
     expect(card.querySelector(".chart-footer .note, .chart-footer [class*='note']")).toBeNull();
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
     // The caveat names the policy that withholds its rows by age group
@@ -205,7 +205,7 @@ describe("Average change by age with a package whose every member has rows by ag
     // By default: the package's own net, no policy parts
     expect(bandRows().map((point) => point.netChange)).toEqual(BANDS.map(() => 50));
     expect(bandRows().every((point) => point[`measure:${ALPHA}`] === null)).toBe(true);
-    expect(within(card).getByText("Average change per person, £ a year, with all the selected policies.")).toBeInTheDocument();
+    expect(within(card).getByText("Average change in household income per person, £ a year, with all the selected policies.")).toBeInTheDocument();
     expect(within(card).queryByText(PACKAGE_NET_ONLY)).toBeNull();
     // By policy: each policy's own rows stacked under the package's net
     fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));

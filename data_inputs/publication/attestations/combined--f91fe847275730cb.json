@@ -1,0 +1,8 @@
+{
+  "measure_id": "combined--f91fe847275730cb",
+  "receipt_sha256": "5871477963d688af9955ab3c2c46ee4efc4bedf2f7aeaa51c4dd5462e2fa6353",
+  "reason": "Checked that this combined run composes its members as published, with no change to any member's modifier: it holds the hand-written carers_allowance_earnings_taper and household_energy_payment_2026 and state_pension_income_tax_protection, each released by its own attestation for its own receipt.",
+  "checker": "vahid-ahmadi",
+  "second": "juaristi22",
+  "released_at": "2026-10-28T18:39:42+00:00"
+}

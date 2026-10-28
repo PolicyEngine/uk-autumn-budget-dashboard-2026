@@ -22,6 +22,7 @@ from policyengine_uk.scenarios import uc_reform
 from policyengine_uk.utils.scenario import Scenario
 
 from uk_budget_data import measure_templates, personal_impact
+from uk_budget_data.forecast import with_forecast
 from uk_budget_data.measure_templates import (
     UC_LCWRA_AMOUNT,
     UC_NEW_CLAIMANT_HEALTH,
@@ -248,8 +249,13 @@ def household_matches_national(situation, measure, year):
     health element and net income by the same nonzero amount on the
     national route (Scenario) and the household calculator's, and pays
     £600 a month."""
-    national_base = Simulation(situation=situation)
-    national = Simulation(situation=situation, scenario=measure.to_scenario())
+    # On the forecast, as the national run builds every simulation
+    national_base = Simulation(
+        situation=situation, scenario=with_forecast(None)
+    )
+    national = Simulation(
+        situation=situation, scenario=with_forecast(measure.to_scenario())
+    )
     baseline, reformed = personal_impact.household_simulations(
         situation, measure, DataConfig()
     )

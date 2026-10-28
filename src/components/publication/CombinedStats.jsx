@@ -1,4 +1,4 @@
-import { provisionalLabel } from "../../utils/publication/manifest";
+import { provisionalNotice } from "../../utils/publication/manifest";
 import {
   fiscalYearLabel,
   formatPercent,
@@ -19,8 +19,9 @@ function joinNames(names) {
  * Poverty is the absolute poverty rate before housing costs (policyengine-uk's
  * `in_poverty_bhc`), the measure the national calculator reports.
  *
- * The provisional label is the manifest's (provisionalLabel): candidates
- * before the Budget, statement figures from Budget day.
+ * The provisional notice is the manifest's (provisionalNotice): the
+ * candidate label before the Budget, none for statement figures from
+ * Budget day.
  *
  * @param {{stats: Object, measureNames?: Object<string, string>,
  *   manifest?: Object|null}} props
@@ -64,8 +65,8 @@ function CombinedStats({ stats, measureNames = {}, manifest = null }) {
       className="publication-stats"
       aria-label={`Combined statistics, ${fiscalYearLabel(stats.year)}`}
     >
-      {stats.provisional && (
-        <p className="publication-provisional">{provisionalLabel(manifest)}</p>
+      {stats.provisional && provisionalNotice(manifest) && (
+        <p className="publication-provisional">{provisionalNotice(manifest)}</p>
       )}
       <dl className="publication-stats-grid">
         {cards.map(([label, value]) => (

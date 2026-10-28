@@ -98,7 +98,7 @@
   ],
   "income_curve_households": [
     {
-      "definition": "One adult aged 30 with a Plan 2 student loan, renting a one-bedroom home privately in Manchester for \u00a31,007 a month and spending \u00a31,040 a year on electricity; the unfrozen Plan 2 threshold, when selected, lowers their repayments from 2027-28.",
+      "definition": "One adult aged 30 with a Plan 2 student loan, renting a one-bedroom home privately in Manchester for \u00a31,007 a month and spending \u00a31,040 a year on electricity; the zero rate of VAT on domestic electricity, when selected, lowers their bill from April to June 2027.",
       "id": "single_renter",
       "label": "Graduate renting",
       "x_label": "Employment income",
@@ -114,7 +114,7 @@
       "x_variable": "employment_income"
     },
     {
-      "definition": "A lone parent aged 32 with children aged 6 and 9, renting a two-bedroom home privately in Manchester for \u00a31,239 a month and spending \u00a31,040 a year on electricity; while they receive Universal Credit, the Warm Home Discount top-up, when selected, adds \u00a3100 in 2026-27.",
+      "definition": "A lone parent aged 32 with children aged 6 and 9, renting a two-bedroom home privately in Manchester for \u00a31,239 a month and spending \u00a31,040 a year on electricity; the Household Energy Payment, when selected, adds \u00a3100 in 2026-27 (council tax band D).",
       "id": "lone_parent",
       "label": "Lone parent with two children",
       "x_label": "Employment income",
@@ -130,7 +130,7 @@
       "x_variable": "private_pension_income"
     },
     {
-      "definition": "One adult aged 45 who owns their home with a mortgage, with \u00a33,000 a year of savings interest and \u00a35,000 of dividends on top of their pay, spending \u00a31,040 a year on electricity; the threshold freeze, when selected, raises their income tax from 2031-32.",
+      "definition": "One adult aged 45 who owns their home with a mortgage, with \u00a33,000 a year of savings interest, \u00a35,000 of dividends and \u00a35,000 of rental profit on top of their pay, spending \u00a31,040 a year on electricity; the property income tax rates, when selected, raise their income tax from 2027-28.",
       "id": "higher_income_saver",
       "label": "Higher earner with savings",
       "x_label": "Employment income",

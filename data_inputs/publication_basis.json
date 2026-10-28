@@ -1,13 +1,13 @@
 {
   "forecast": {
-    "status": "pre_budget",
-    "source": "policyengine-uk default economic assumptions",
-    "vintage": "as shipped in the installed policyengine-uk"
+    "status": "updated",
+    "source": "OBR EFO October 2026",
+    "vintage": "OBR Economic and fiscal outlook, October 2026 (Annex A, Tables A.1 and A.3), applied over policyengine-uk's March 2026 growth rates by src/uk_budget_data/forecast/obr_october_2026.json"
   },
   "calibration": {
     "status": "pre_budget",
     "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
     "vintage": "as pinned by the installed bundle"
   },
-  "notes": "Set forecast.status to \"updated\" and name the source and vintage when the model's economic assumptions are rebased on the Budget's OBR forecast. Which OBR vintage the shipped assumptions carry is UNVERIFIED here; the receipt records the exact model version."
+  "notes": "The forecast is rebased on the Budget's OBR forecast: every simulation, baseline and reform alike, is built on the October 2026 growth rates in src/uk_budget_data/forecast/obr_october_2026.json (CPI, RPI, average earnings, house prices; the September 2027 CPI gap). Series that file does not list keep the March 2026 path the installed policyengine-uk ships; the receipt records the exact model version."
 }

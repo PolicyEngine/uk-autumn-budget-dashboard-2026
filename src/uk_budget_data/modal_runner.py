@@ -15,6 +15,7 @@ manifest holds must come from the same place, or staging needs
 ``--adopt-execution``, which marks every other entry stale.
 """
 
+import contextlib
 import io
 import os
 import shutil
@@ -96,12 +97,16 @@ class Timed:
             self.times.append(time.perf_counter() - started)
 
 
-def phase_line(key: str, total: float, builds: list, processes: list) -> str:
+def phase_line(
+    key: str, total: float, builds: list, processes: list, rows=()
+) -> str:
     """Where a container's time went. The first build also downloads and
     checks the dataset in a fresh container, so the difference between the
     two builds is roughly the download."""
     built = sum(builds)
     processed = sum(processes)
+    # The national run's package-file rows (``generate --national``).
+    read = sum(rows)
     parts = [
         (
             "builds " + " + ".join(f"{s:.0f}" for s in builds) + " s"
@@ -109,7 +114,8 @@ def phase_line(key: str, total: float, builds: list, processes: list) -> str:
             else None
         ),
         f"tables {processed:.0f} s" if processes else None,
-        f"checks and receipt {max(total - built - processed, 0):.0f} s",
+        f"checks and receipt {max(total - built - processed - read, 0):.0f} s",
+        f"package-file rows {read:.0f} s" if rows else None,
     ]
     return (
         f"{key}: {total:.0f} s in its Modal container ("
@@ -428,3 +434,90 @@ class ModalRunner:
 
 def _unit_id(unit) -> str:
     return unit.reform.id
+
+
+# --- The national run (``generate --national --backend modal``) ----------
+
+
+@contextlib.contextmanager
+def national_modal_session(say: Callable[[str], None] = print):
+    """One ephemeral app for the whole national run
+    (``modal_generate.national_app``). Yields ``remote(jobs, smoke)``,
+    which runs artifacts and their package-file rows, one container each,
+    and yields ``(outcome, relative, files, rows)`` or an exception per job
+    in job order. The dataset cache is primed once, before the first jobs
+    on the bundle's dataset. The app, and every container in it, stops when
+    the block ends."""
+    modal = _import_modal()
+    from uk_budget_data import modal_generate
+
+    try:
+        with modal.enable_output(), modal_generate.national_app.run():
+            generator = modal_generate.NationalGenerator()
+            primed = []
+
+            def remote(jobs, smoke):
+                if smoke:
+                    raise ModalUnavailable(
+                        "the national run is for the bundle's dataset; test "
+                        "the plumbing with scripts/budget_day/modal_smoke.py"
+                    )
+                if not primed:
+                    started = time.perf_counter()
+                    done = modal_generate.prime_dataset.remote()
+                    say(
+                        "Dataset cache: "
+                        + ", ".join(
+                            f"{digest[:12]} {how}"
+                            for digest, how in done.items()
+                        )
+                        + f" ({time.perf_counter() - started:.0f} s)"
+                    )
+                    primed.append(True)
+                yield from generator.run.map(
+                    jobs, order_outputs=True, return_exceptions=True
+                )
+
+            yield remote
+    except modal.exception.NotFoundError as error:
+        raise ModalUnavailable(f"{SECRET_MISSING} ({error})") from error
+
+
+class NationalModalRunner(ModalRunner):
+    """``ModalRunner`` for the national run: the same checks, ordering,
+    write-once assembly and failure handling for artifacts
+    (``_map_artifacts``), with each container's package-file rows kept in
+    ``stash`` by key. ``remote_national`` is the open session's ``remote``
+    (``national_modal_session``); tests give a fake."""
+
+    def __init__(
+        self,
+        stash: dict,
+        remote_national: Callable,
+        say: Callable[[str], None] = print,
+    ):
+        super().__init__(say=say, remote_artifacts=self._artifacts)
+        self.stash = stash
+        self.remote_national = remote_national
+
+    def map(self, function, units, on_result=lambda i, r: None) -> list:
+        from uk_budget_data.publication.generate import run_artifact
+
+        if function is not run_artifact:
+            raise ModalUnavailable("the national runner runs artifacts only")
+        return super().map(function, units, on_result)
+
+    def _artifacts(self, jobs: Sequence, smoke: bool) -> Iterable:
+        for returned in self.remote_national(jobs, smoke):
+            if isinstance(returned, BaseException):
+                yield returned
+                continue
+            outcome, relative, files, rows = returned
+            if rows is not None:
+                if rows.reform_id != outcome.key:
+                    raise ModalUnavailable(
+                        f"Modal returned {rows.reform_id}'s rows with "
+                        f"{outcome.key}"
+                    )
+                self.stash[outcome.key] = rows
+            yield outcome, relative, files

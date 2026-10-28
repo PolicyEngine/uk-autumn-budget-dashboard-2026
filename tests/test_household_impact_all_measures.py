@@ -20,9 +20,11 @@ from policyengine_uk.system import system
 
 from uk_budget_data import household_impact, personal_impact
 from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
+    SPRING_SHARE,
     WINTER_SHARE,
     zero_vat_on_domestic_electricity,
 )
+from uk_budget_data.forecast import forecast_parameters, with_forecast
 from uk_budget_data.models import DataConfig
 from uk_budget_data.publication.combine import combine_measures
 from uk_budget_data.reforms import (
@@ -31,8 +33,13 @@ from uk_budget_data.reforms import (
     get_reform,
 )
 
+# The four candidates withdrawn on Budget day stay fixtures of the
+# calculation's machinery here (tests/conftest.py).
+pytestmark = pytest.mark.usefixtures("pre_budget_registry")
+
 Child = household_impact.Child
-PARAMETERS = system.parameters
+# Current law on the OBR October 2026 forecast, as every run builds it.
+PARAMETERS = forecast_parameters()
 ALL = household_impact.measure_ids()
 PENNY = 0.006  # the route rounds to the penny
 
@@ -147,12 +154,11 @@ def test_state_pension_only_pays_no_income_tax_from_2027():
     assert result["net_income"]["change"] == 0
 
 
-@pytest.mark.parametrize("other", [260, 400, 2_000])
-def test_any_private_pension_takes_the_allowance_away(other):
-    """The total-income design: a private pension on top of the full new
-    State Pension puts total income above the allowance, so it is not
-    given, and the bill is 20% of income above the standard £12,570 either
-    way."""
+@pytest.mark.parametrize("other", [150, 260, 400, 2_000])
+def test_a_private_pension_tapers_the_reduction_away(other):
+    """The Pension Tax Allowance (Budget 2026): a reduction of up to £94
+    in 2027-28, less £1 for every £3 of total income above the full new
+    State Pension (£13,036.40), never more than the tax due."""
     full = household_impact.full_new_state_pension(2027)
     income = full + other
     result = calculate(
@@ -162,8 +168,10 @@ def test_any_private_pension_takes_the_allowance_away(other):
     )
     tax = programme(result, "income_tax")
     assert tax["baseline"] == pytest.approx(0.2 * (income - 12_570), abs=0.02)
-    assert tax["reform"] == pytest.approx(tax["baseline"], abs=0.02)
-    assert result["net_income"]["change"] == 0
+    reduction = max(0, 94 - (income - 13_036.40) / 3)
+    assert tax["reform"] == pytest.approx(
+        max(0, tax["baseline"] - reduction), abs=0.02
+    )
 
 
 # --- Warm Home Discount top-up ----------------------------------------------------
@@ -251,14 +259,18 @@ def test_electricity_spending_defaults_to_the_ons_average():
 
 @pytest.mark.parametrize(
     "year, spending, weight",
-    [(2026, 1_040, WINTER_SHARE), (2027, 1_040, 1), (2027, 2_000, 1)],
+    [
+        (2026, 1_040, WINTER_SHARE),
+        (2027, 1_040, SPRING_SHARE),
+        (2027, 2_000, SPRING_SHARE),
+    ],
 )
 def test_electricity_vat_is_5_percent_of_the_bill_for_its_period(
     year, spending, weight
 ):
     """5% VAT on VAT-inclusive spending is spending x 0.05 / 1.05; zero
     rated from 1 October 2026 (the October to March share of 2026-27's
-    use) to 31 March 2028."""
+    use) to 30 June 2027 (the April to June share of 2027-28's use)."""
     assert zero_vat_on_domestic_electricity.__defaults__[0] == (
         pytest.approx(-0.05 * WINTER_SHARE)
     )
@@ -284,15 +296,23 @@ def test_the_installed_engine_has_no_electricity_zero_rate():
         system.parameters.get_child("gov.hmrc.vat.domestic_electricity_rate")
 
 
-def test_northern_ireland_keeps_the_electricity_vat():
-    """The temporary zero rate is for domestic electricity in Great
-    Britain only."""
+def test_northern_ireland_keeps_the_electricity_vat_until_april_2027():
+    """The zero rate is Great Britain's to March 2027 and, as the Budget
+    expects, UK-wide from April 2027."""
+    result = calculate(
+        Answers(2026, region="NORTHERN_IRELAND", electricity_spending=1_040),
+        2026,
+        ["domestic_electricity_zero_vat"],
+    )
+    assert result["net_income"]["change"] == 0
     result = calculate(
         Answers(2027, region="NORTHERN_IRELAND", electricity_spending=1_040),
         2027,
         ["domestic_electricity_zero_vat"],
     )
-    assert result["net_income"]["change"] == 0
+    assert result["net_income"]["change"] == pytest.approx(
+        1_040 * 0.05 * SPRING_SHARE / 1.05, abs=0.01
+    )
 
 
 def test_no_electricity_spending_no_electricity_vat_change():
@@ -347,8 +367,9 @@ def _national(answers, year, reforms):
     """Each measure's net incomes before and after, as
     ``personal_impact.household_simulations`` builds them (the baseline
     from ``baseline_scenario_for``, the reform from ``to_scenario``, each
-    through ``effective``), one simulation per distinct scenario, as the
-    personal impact calculator shares them (``scenario_key``)."""
+    through ``effective``, on the forecast, ``with_forecast``), one
+    simulation per distinct scenario, as the personal impact calculator
+    shares them (``scenario_key``)."""
     from policyengine_uk import Simulation
 
     people, benunit, household = household_impact.household_entities(
@@ -365,7 +386,7 @@ def _national(answers, year, reforms):
         if key not in nets:
             simulation = Simulation(
                 situation=situation,
-                scenario=personal_impact.effective(scenario),
+                scenario=with_forecast(personal_impact.effective(scenario)),
             )
             nets[key] = float(
                 simulation.calculate("household_net_income", year)[0]

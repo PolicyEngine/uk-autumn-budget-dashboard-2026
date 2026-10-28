@@ -6,9 +6,35 @@
 relative_tolerance: 0.10
 absolute_floor_bn: 0.05
 
-# The basis that is gated. Table 4.1's post-behavioural figure is reported
-# alongside and never gated.
-comparator_basis: static_costing
+# The basis that is gated. Budget 2026 publishes no static costing: Table 6.1
+# and the policy costings document print one post-behavioural Exchequer impact
+# per measure, so that is the comparator (Vahid, 28 October 2026, option (a)).
+comparator_basis: post_behavioural
+
+# Measures whose published costing says it includes a behavioural response
+# the static model leaves out (AB26 policy costings document): electricity
+# VAT (switching from gas), fuel duty (pump-price demand), Carer's Allowance
+# (labour supply and take-up), the Trading Allowance (people switching from
+# expenses to the allowance), property income (incorporation; Table 6.1
+# row 61) and savings income (shifting into ISAs; row 62). Their years pass within the wider band below.
+# The Pension Tax Allowance costing "assumes no behavioural response" and the
+# Household Energy Payment is a flat payment with no costing page, so both
+# keep the ordinary band.
+includes_behaviour:
+  - domestic_electricity_zero_vat
+  - fuel_duty_rise_deferral
+  - carers_allowance_earnings_taper
+  - trading_allowance_raise
+  - property_income_rates_up
+  - savings_income_rates_up
+# PROPOSAL: 25% of the Treasury's figure, with the ordinary £50m floor. The
+# ordinary 10% covers data and forecast differences; up to about 15% more
+# covers a behavioural offset the static model cannot reproduce. Behaviour
+# scales with the measure's size, so only the relative band widens; a wider
+# floor would only loosen the small measures (Carer's Allowance, -£40m and
+# -£80m), where the £50m floor is already wider than the figure.
+behavioural_relative_tolerance: 0.25
+behavioural_absolute_floor_bn: 0.05
 
 # A figure the Treasury prints as zero tolerates only its own rounding
 # (figures are rounded to the nearest £5m).

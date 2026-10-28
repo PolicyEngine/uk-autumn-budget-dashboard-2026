@@ -15,7 +15,7 @@
   ],
   "measures": {
     "fuel_duty_rise_deferral": {
-      "description": "Candidate measure. Fuel duty stays at 52.95p a litre through 2027-28 (to 31 March 2028): the rise due on 1 January 2027 does not happen, so the 5p cut continues, and there is no March 2027 step and no April 2027 RPI rise. RPI uprating resumes in April 2028 from 52.95p, so the 5p and that year's RPI are never made up. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+      "description": "The 5p cut in fuel duty is kept: the main rate stays at 52.95p a litre to 30 June 2027, so the rise due on 1 January 2027 and the March and April 2027 steps do not happen. From 1 July 2027 it returns to current law's 60.59p a litre, rising with RPI each April. Rates are day-weighted to fiscal years, and the VAT on the lower pump price is included.",
       "display": "schedule",
       "rows": [
         {
@@ -49,36 +49,43 @@
               "key": "2027-04-01",
               "label": "1 April 2027",
               "year": 2027,
-              "before": 59.75,
+              "before": 60.59,
               "after": 52.95
+            },
+            {
+              "key": "2027-07-01",
+              "label": "1 July 2027",
+              "year": 2027,
+              "before": 60.59,
+              "after": 60.59
             },
             {
               "key": "2028-04-01",
               "label": "1 April 2028",
               "year": 2028,
-              "before": 61.54,
-              "after": 54.54
+              "before": 63.21,
+              "after": 63.21
             },
             {
               "key": "2029-04-01",
               "label": "1 April 2029",
               "year": 2029,
-              "before": 63.26,
-              "after": 56.06
+              "before": 65.13,
+              "after": 65.13
             },
             {
               "key": "2030-04-01",
               "label": "1 April 2030",
               "year": 2030,
-              "before": 65.09,
-              "after": 57.68
+              "before": 67.07,
+              "after": 67.07
             },
             {
               "key": "2031-04-01",
               "label": "1 April 2031",
               "year": 2031,
-              "before": 66.59,
-              "after": 59.01
+              "before": 68.61,
+              "after": 68.61
             }
           ],
           "source": {
@@ -102,43 +109,43 @@
               "key": "2026",
               "label": "2026-27",
               "year": 2026,
-              "before": 53.95274,
+              "before": 53.964247,
               "after": 52.95
             },
             {
               "key": "2027",
               "label": "2027-28",
               "year": 2027,
-              "before": 59.774454,
-              "after": 52.9717
+              "before": 60.625792,
+              "after": 58.8306
             },
             {
               "key": "2028",
               "label": "2028-29",
               "year": 2028,
-              "before": 61.563562,
-              "after": 54.5608
+              "before": 63.236301,
+              "after": 63.236301
             },
             {
               "key": "2029",
               "label": "2029-30",
               "year": 2029,
-              "before": 63.285068,
-              "after": 56.0822
+              "before": 65.156575,
+              "after": 65.156575
             },
             {
               "key": "2030",
               "label": "2030-31",
               "year": 2030,
-              "before": 65.110548,
-              "after": 57.6982
+              "before": 67.091096,
+              "after": 67.091096
             },
             {
               "key": "2031",
               "label": "2031-32",
               "year": 2031,
-              "before": 66.610902,
-              "after": 59.0286
+              "before": 68.630492,
+              "after": 68.630492
             }
           ],
           "source": {
@@ -156,117 +163,85 @@
       ]
     },
     "state_pension_income_tax_protection": {
-      "description": "Candidate measure. From 6 April 2027, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (rounded up to the pound: £13,037 in 2027-28, rising with it) get an income tax allowance of that amount, so pay no income tax. Above it there is no allowance: £1 of income over the threshold takes the whole allowance away.",
+      "description": "From 6 April 2027 to 5 April 2030, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (£13,036.40 in 2027-28) get a Pension Tax Allowance: a non-refundable reduction in their income tax, worth up to £94 in 2027-28. It falls by £1 for every £3 of income above the full new State Pension, so it is gone at about £13,319 in 2027-28. The personal allowance is unchanged.",
       "display": "path",
       "rows": [
         {
-          "label": "Income tax allowance over State Pension age",
+          "label": "Pension Tax Allowance, the largest tax reduction",
           "unit": "gbp",
-          "unit_words": "£ a year",
+          "unit_words": "£ of income tax a year",
           "primary": true,
           "points": [
             {
               "key": "2026",
               "label": "2026-27",
               "year": 2026,
-              "before": 12570.0,
-              "after": 12570.0
+              "before": 0.0,
+              "after": 0.0
             },
             {
               "key": "2027",
               "label": "2027-28",
               "year": 2027,
-              "before": 12570.0,
-              "after": 13037.0
+              "before": 0.0,
+              "after": 94.0
             },
             {
               "key": "2028",
               "label": "2028-29",
               "year": 2028,
-              "before": 12570.0,
-              "after": 13363.0
+              "before": 0.0,
+              "after": 182.0
             },
             {
               "key": "2029",
               "label": "2029-30",
               "year": 2029,
-              "before": 12570.0,
-              "after": 13697.0
+              "before": 0.0,
+              "after": 250.0
             },
             {
               "key": "2030",
               "label": "2030-31",
               "year": 2030,
-              "before": 12570.0,
-              "after": 14040.0
+              "before": 0.0,
+              "after": 0.0
             },
             {
               "key": "2031",
               "label": "2031-32",
               "year": 2031,
-              "before": 12830.0,
-              "after": 14391.0
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.allowances.personal_allowance.amount, at 6 April of each year"
-            },
-            "after": {
-              "kind": "modifier_constant",
-              "where": "budget_measures/state_pension_only_income_tax_allowance.py state_pension_only_income_tax_allowance(allowance_2027 to 2031)"
-            }
-          },
-          "note": "With the measure, only for people whose total income, State Pension included, is at or below it; £1 more takes it all away"
-        }
-      ]
-    },
-    "warm_home_discount_top_up": {
-      "description": "Candidate measure. The Warm Home Discount rises from £150 to £250 for winter 2026-27 only: £100 more to each household in Great Britain receiving Universal Credit, Pension Credit, Housing Benefit or income-related ESA. Receipt follows DESNZ's rates: 85% of Pension Credit households and 70% of other eligible households. Eligibility follows England and Wales's 2026-27 core group, so households in Scotland are approximate.",
-      "display": "switch",
-      "rows": [
-        {
-          "label": "Warm Home Discount",
-          "unit": "gbp",
-          "unit_words": "£ a household, once",
-          "primary": true,
-          "points": [
-            {
-              "key": "2026",
-              "label": "Winter 2026-27",
-              "year": 2026,
-              "before": 150.0,
-              "after": 250.0
+              "before": 0.0,
+              "after": 0.0
             }
           ],
           "source": {
             "before": {
               "kind": "documented",
-              "where": "the measure's description (£150); policyengine-uk 2.132.6 has no Warm Home Discount"
+              "where": "no such reduction under current law"
             },
             "after": {
               "kind": "modifier_constant",
-              "where": "£150 plus budget_measures/warm_home_discount_top_up.py warm_home_discount_top_up(amount)"
+              "where": "20% of the full new State Pension (policyengine-uk gov.dwp.state_pension.new_state_pension.amount x 52, rounded down to 5p a week) above the personal allowance (gov.hmrc.income_tax.allowances.personal_allowance.amount), rounded up; budget_measures/pension_tax_allowance.py pension_tax_allowance(first_year, last_year)"
             }
           },
-          "note": "Paid to 85% of eligible Pension Credit households and 70% of other eligible households, as modelled"
+          "note": "For people over State Pension age; reduced by £1 for every £3 of total income above the full new State Pension"
         }
       ]
     },
     "domestic_electricity_zero_vat": {
-      "description": "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 31 March 2028: the zero rate to March 2027, not in the model's baseline, scored with a candidate one-year extension. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%). 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days.",
+      "description": "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027. It applies in Great Britain from October 2026 and across the UK from April 2027. It covers electricity only, not gas. Each year counts its share of a year's electricity use: about 57% in 2026-27 (October to March) and 22% in 2027-28 (April to June).",
       "display": "switch",
       "rows": [
         {
-          "label": "VAT on domestic electricity in Great Britain",
+          "label": "VAT on domestic electricity",
           "unit": "percent",
           "unit_words": null,
           "primary": true,
           "points": [
             {
-              "key": "2026-10-01/2028-03-31",
-              "label": "October 2026 to March 2028",
+              "key": "2026-10-01/2027-06-30",
+              "label": "October 2026 to June 2027",
               "year": 2026,
               "before": 0.05,
               "after": 0.0
@@ -279,12 +254,13 @@
             },
             "after": {
               "kind": "modifier_constant",
-              "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027), rate_change_2026 divided by that module's WINTER_SHARE (the October to March share of a year's electricity use) and rate_change_2027 by its share of the fiscal year's days in force, October 2026 to March 2028 (the dates in the measure's description)"
+              "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027), rate_change_2026 divided by that module's WINTER_SHARE (the October to March share of a year's electricity use) and rate_change_2027 by its SPRING_SHARE (the April to June share), October 2026 to June 2027 (the dates in the measure's description)"
             }
-          }
+          },
+          "card_note": "0% instead of 5% in Great Britain from 1 October 2026. The Budget expects the zero rate to apply in Northern Ireland too from April 2027, and the model counts it there from then. The October to March zero rate was already law (SI 2026/987); like the Treasury's costing, the model scores the whole period against 5%."
         },
         {
-          "label": "VAT on domestic electricity in Great Britain, averaged over the year",
+          "label": "VAT on domestic electricity, averaged over the year",
           "unit": "percent",
           "unit_words": null,
           "primary": false,
@@ -301,7 +277,7 @@
               "label": "2027-28",
               "year": 2027,
               "before": 0.05,
-              "after": 0.0
+              "after": 0.03885
             },
             {
               "key": "2028",
@@ -342,700 +318,19 @@
               "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027)"
             }
           },
-          "note": "As modelled: the cut weighted in 2026-27 by the October to March share of a year's electricity use, not by its days in force"
+          "note": "As modelled: the cut weighted in 2026-27 by the October to March share of a year's electricity use and in 2027-28 by the April to June share, not by their days in force"
         }
       ]
     },
-    "threshold_freeze_2031_32": {
-      "description": "Candidate measure. The income tax personal allowance stays at £12,570 and the basic rate band at £37,700 (a higher rate threshold of £50,270) for one more year, 2031-32, instead of rising with inflation to £12,830 and £38,500. From 2031-32 policyengine-uk sets the National Insurance primary threshold and upper earnings limit at the personal allowance and higher rate threshold, so they stay at £12,570 and £50,270 too; the employer secondary threshold is not held.",
-      "display": "table",
-      "rows": [
-        {
-          "label": "Personal allowance",
-          "unit": "gbp",
-          "unit_words": "£ a year",
-          "primary": true,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 12570.0,
-              "after": 12570.0
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 12570.0,
-              "after": 12570.0
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 12570.0,
-              "after": 12570.0
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 12570.0,
-              "after": 12570.0
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 12570.0,
-              "after": 12570.0
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 12830.0,
-              "after": 12570.0
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.allowances.personal_allowance.amount, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py _create_threshold_freeze_2031_32(): gov.hmrc.income_tax.allowances.personal_allowance.amount; current law elsewhere"
-            }
-          }
-        },
-        {
-          "label": "Higher rate threshold",
-          "unit": "gbp",
-          "unit_words": "£ a year",
-          "primary": true,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 50270.0,
-              "after": 50270.0
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 50270.0,
-              "after": 50270.0
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 50270.0,
-              "after": 50270.0
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 50270.0,
-              "after": 50270.0
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 50270.0,
-              "after": 50270.0
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 51330.0,
-              "after": 50270.0
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "personal allowance plus basic rate band (gov.hmrc.income_tax.allowances.personal_allowance.amount + gov.hmrc.income_tax.rates.uk[1].threshold)"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py _create_threshold_freeze_2031_32(): gov.hmrc.income_tax.allowances.personal_allowance.amount + gov.hmrc.income_tax.rates.uk[1].threshold; current law elsewhere"
-            }
-          },
-          "note": "The personal allowance plus the basic rate band"
-        },
-        {
-          "label": "Basic rate band",
-          "unit": "gbp",
-          "unit_words": "£ a year",
-          "primary": false,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 37700.0,
-              "after": 37700.0
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 37700.0,
-              "after": 37700.0
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 37700.0,
-              "after": 37700.0
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 37700.0,
-              "after": 37700.0
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 37700.0,
-              "after": 37700.0
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 38500.0,
-              "after": 37700.0
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.uk[1].threshold, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py _create_threshold_freeze_2031_32(): gov.hmrc.income_tax.rates.uk[1].threshold; current law elsewhere"
-            }
-          }
-        }
-      ]
-    },
-    "plan_2_threshold_unfreeze": {
-      "description": "Candidate measure. The Plan 2 student loan repayment threshold rises with RPI from April 2027 (to £30,267 in 2027-28), reversing the freeze at £29,385 to April 2030. Repayments are modelled, replacing those reported in the survey, and the revenue figure is the change in modelled repayments.",
+    "property_income_rates_up": {
+      "description": "From 6 April 2027 the income tax rates on property income rise to 24%, 44% and 49% at the basic, higher and additional rates in England, Wales and Northern Ireland: 2 percentage points above current law, which already includes Budget 2025's rises. Finance cost relief for landlords follows the property basic rate, so rises to 24%, Scottish landlords' included. Incomes are held fixed, with no behavioural response.",
       "display": "path",
       "rows": [
-        {
-          "label": "Plan 2 repayment threshold",
-          "unit": "gbp",
-          "unit_words": "£ a year",
-          "primary": true,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 29385.0,
-              "after": 29385.0
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 29385.0,
-              "after": 30267.0
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 29385.0,
-              "after": 31114.0
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 29385.0,
-              "after": 32016.0
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 30060.868375,
-              "after": 32753.0
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 30752.239014,
-              "after": 33506.0
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.student_loans.thresholds.plan_2, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py plan_2_unfrozen_thresholds(): gov.hmrc.student_loans.thresholds.plan_2; current law elsewhere"
-            }
-          },
-          "note": "Current law freezes it at £29,385 to April 2030, then uprates it; with the measure it rises with RPI from April 2027"
-        }
-      ]
-    },
-    "employer_nics_secondary_threshold_raise": {
-      "description": "Candidate measure. From 6 April 2027 the threshold above which employers pay Class 1 National Insurance goes back from £5,000 to £9,100 a year (£175 a week), rising with CPI from 2031-32 as current law's does; the 15% rate is unchanged. policyengine-uk holds each employer's total cost of employment fixed, so the saving is passed to employees as higher pay in the same year.",
-      "display": "path",
-      "rows": [
-        {
-          "label": "Employer National Insurance threshold",
-          "unit": "gbp",
-          "unit_words": "£ of earnings a year",
-          "primary": true,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 5000.0,
-              "after": 5000.0
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 5000.0,
-              "after": 9100.0
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 5000.0,
-              "after": 9100.0
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 5000.0,
-              "after": 9100.0
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 5000.0,
-              "after": 9100.0
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 5100.0,
-              "after": 9282.0
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.national_insurance.class_1.employer_scale[1].threshold, at 6 April of each year, x 52 (stored weekly)"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py secondary_threshold_raised(): gov.hmrc.national_insurance.class_1.employer_scale[1].threshold; current law elsewhere"
-            }
-          },
-          "note": "Employers pay 15% on earnings above it"
-        }
-      ]
-    },
-    "unearned_income_rates_up": {
-      "description": "Candidate measure. From 6 April 2027 the income tax rates on dividends, savings income and property income each rise by 2 percentage points on top of current law, which already includes Budget 2025's rises: dividends to 12.75%, 37.75% and 41.35%, and savings and property income to 24%, 44% and 49% at the basic, higher and additional rates. Incomes are held fixed, with no behavioural response.",
-      "display": "before-after",
-      "rows": [
-        {
-          "label": "Dividend ordinary rate",
-          "unit": "percent",
-          "unit_words": null,
-          "primary": true,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 0.1075,
-              "after": 0.1075
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.1075,
-              "after": 0.1275
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.1075,
-              "after": 0.1275
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.1075,
-              "after": 0.1275
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.1075,
-              "after": 0.1275
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.1075,
-              "after": 0.1275
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.dividends[0].rate, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.dividends[0].rate; current law elsewhere"
-            }
-          }
-        },
-        {
-          "label": "Dividend upper rate",
-          "unit": "percent",
-          "unit_words": null,
-          "primary": false,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 0.3575,
-              "after": 0.3575
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.3575,
-              "after": 0.3775
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.3575,
-              "after": 0.3775
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.3575,
-              "after": 0.3775
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.3575,
-              "after": 0.3775
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.3575,
-              "after": 0.3775
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.dividends[1].rate, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.dividends[1].rate; current law elsewhere"
-            }
-          }
-        },
-        {
-          "label": "Dividend additional rate",
-          "unit": "percent",
-          "unit_words": null,
-          "primary": false,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 0.3935,
-              "after": 0.3935
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.3935,
-              "after": 0.4135
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.3935,
-              "after": 0.4135
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.3935,
-              "after": 0.4135
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.3935,
-              "after": 0.4135
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.3935,
-              "after": 0.4135
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.dividends[2].rate, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.dividends[2].rate; current law elsewhere"
-            }
-          }
-        },
-        {
-          "label": "Savings basic rate",
-          "unit": "percent",
-          "unit_words": null,
-          "primary": false,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 0.2,
-              "after": 0.2
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.22,
-              "after": 0.24
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.22,
-              "after": 0.24
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.22,
-              "after": 0.24
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.22,
-              "after": 0.24
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.22,
-              "after": 0.24
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.savings.basic, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.savings.basic; current law elsewhere"
-            }
-          }
-        },
-        {
-          "label": "Savings higher rate",
-          "unit": "percent",
-          "unit_words": null,
-          "primary": false,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 0.4,
-              "after": 0.4
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.42,
-              "after": 0.44
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.42,
-              "after": 0.44
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.42,
-              "after": 0.44
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.42,
-              "after": 0.44
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.42,
-              "after": 0.44
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.savings.higher, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.savings.higher; current law elsewhere"
-            }
-          }
-        },
-        {
-          "label": "Savings additional rate",
-          "unit": "percent",
-          "unit_words": null,
-          "primary": false,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 0.45,
-              "after": 0.45
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.47,
-              "after": 0.49
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.47,
-              "after": 0.49
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.47,
-              "after": 0.49
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.47,
-              "after": 0.49
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.47,
-              "after": 0.49
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.savings.additional, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.savings.additional; current law elsewhere"
-            }
-          }
-        },
         {
           "label": "Property basic rate",
           "unit": "percent",
           "unit_words": null,
-          "primary": false,
+          "primary": true,
           "points": [
             {
               "key": "2026",
@@ -1087,7 +382,7 @@
             },
             "after": {
               "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.property.basic; current law elsewhere"
+              "where": "reforms.py property_income_rates_up(): gov.hmrc.income_tax.rates.property.basic; current law elsewhere"
             }
           }
         },
@@ -1147,7 +442,7 @@
             },
             "after": {
               "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.property.higher; current law elsewhere"
+              "where": "reforms.py property_income_rates_up(): gov.hmrc.income_tax.rates.property.higher; current law elsewhere"
             }
           }
         },
@@ -1207,11 +502,362 @@
             },
             "after": {
               "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.property.additional; current law elsewhere"
+              "where": "reforms.py property_income_rates_up(): gov.hmrc.income_tax.rates.property.additional; current law elsewhere"
             }
           }
         }
       ]
+    },
+    "carers_allowance_earnings_taper": {
+      "description": "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (£212 a week at April 2027's £13.21, rounded up to the pound): it is reduced by £1 for each £1 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The taper starts within 2030-31, on a date still to come, so the model counts half of that year. Carers at or below the limit, and Scotland's Carer Support Payment, are unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
+      "display": "path",
+      "rows": [
+        {
+          "label": "Carer's Allowance at £1 a week over the earnings limit",
+          "unit": "gbp",
+          "unit_words": "£ a week",
+          "primary": true,
+          "points": [
+            {
+              "key": "2026",
+              "label": "2026-27",
+              "year": 2026,
+              "before": 0.0,
+              "after": 0.0
+            },
+            {
+              "key": "2027",
+              "label": "2027-28",
+              "year": 2027,
+              "before": 0.0,
+              "after": 0.0
+            },
+            {
+              "key": "2028",
+              "label": "2028-29",
+              "year": 2028,
+              "before": 0.0,
+              "after": 0.0
+            },
+            {
+              "key": "2029",
+              "label": "2029-30",
+              "year": 2029,
+              "before": 0.0,
+              "after": 0.0
+            },
+            {
+              "key": "2030",
+              "label": "2030-31",
+              "year": 2030,
+              "before": 0.0,
+              "after": 95.44
+            },
+            {
+              "key": "2031",
+              "label": "2031-32",
+              "year": 2031,
+              "before": 0.0,
+              "after": 97.37
+            }
+          ],
+          "source": {
+            "before": {
+              "kind": "documented",
+              "where": "current law pays no Carer's Allowance above the earnings limit (gov.dwp.carers_allowance.earnings_limit)"
+            },
+            "after": {
+              "kind": "modifier_constant",
+              "where": "the weekly rate (gov.dwp.carers_allowance.rate) less taper_rate x £1; budget_measures/carers_allowance_earnings_taper.py carers_allowance_earnings_taper(start_year, taper_rate, limit_hours, national_living_wage_by_april)"
+            }
+          },
+          "card_note": "The earnings limit is 16 hours at the National Living Wage, rounded up to the pound: £228 a week in 2030-31 and £234 in 2031-32. Current law stops the allowance at £1 over it. With the measure it falls by £1 for each £1 above the limit, and runs out at £324 a week in 2030-31 and £332 in 2031-32."
+        }
+      ]
+    },
+    "household_energy_payment_2026": {
+      "description": "A one-off £100 payment from January 2027 to each household in England in property valuation bands A to D (the lowest four of England's eight), up to 20 million households, paid into bank accounts and counted as household income in 2026-27. Scotland, Wales and Northern Ireland receive a share of the funding instead, which is not modelled.",
+      "display": "switch",
+      "rows": [
+        {
+          "label": "Household energy payment",
+          "unit": "gbp",
+          "unit_words": "£ a household, once",
+          "primary": true,
+          "points": [
+            {
+              "key": "2026",
+              "label": "Winter 2026-27",
+              "year": 2026,
+              "before": 0.0,
+              "after": 100.0
+            }
+          ],
+          "source": {
+            "before": {
+              "kind": "documented",
+              "where": "no such payment under current law"
+            },
+            "after": {
+              "kind": "modifier_constant",
+              "where": "budget_measures/household_energy_payment_2026.py household_energy_payment_2026(amount)"
+            }
+          },
+          "note": "Paid to households in England in council tax bands A, B, C, D"
+        }
+      ]
+    },
+    "trading_allowance_raise": {
+      "description": "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from £1,000 to £3,000, for income tax and Class 4 National Insurance. Without gross receipts in the data, the model relieves a profit up to £3,000 in full and gives no relief above it, so the cost may be overstated for some people and understated for others.",
+      "display": "before-after",
+      "rows": [
+        {
+          "label": "Trading allowance",
+          "unit": "gbp",
+          "unit_words": "£ of trading receipts a year",
+          "primary": true,
+          "points": [
+            {
+              "key": "2026",
+              "label": "2026-27",
+              "year": 2026,
+              "before": 1000.0,
+              "after": 1000.0
+            },
+            {
+              "key": "2027",
+              "label": "2027-28",
+              "year": 2027,
+              "before": 1000.0,
+              "after": 3000.0
+            },
+            {
+              "key": "2028",
+              "label": "2028-29",
+              "year": 2028,
+              "before": 1000.0,
+              "after": 3000.0
+            },
+            {
+              "key": "2029",
+              "label": "2029-30",
+              "year": 2029,
+              "before": 1000.0,
+              "after": 3000.0
+            },
+            {
+              "key": "2030",
+              "label": "2030-31",
+              "year": 2030,
+              "before": 1000.0,
+              "after": 3000.0
+            },
+            {
+              "key": "2031",
+              "label": "2031-32",
+              "year": 2031,
+              "before": 1000.0,
+              "after": 3000.0
+            }
+          ],
+          "source": {
+            "before": {
+              "kind": "engine_parameter",
+              "where": "policyengine-uk gov.hmrc.income_tax.allowances.trading_allowance, at 6 April of each year"
+            },
+            "after": {
+              "kind": "measure_parameter_change",
+              "where": "reforms.py _create_trading_allowance_raise(): gov.hmrc.income_tax.allowances.trading_allowance; current law elsewhere"
+            }
+          },
+          "note": "Relieves trading receipts in place of actual expenses"
+        }
+      ]
     }
+  },
+  "current_law": {
+    "rows": [
+      {
+        "label": "Personal allowance",
+        "unit": "gbp",
+        "unit_words": "£ a year",
+        "primary": true,
+        "points": [
+          {
+            "key": "2026",
+            "label": "2026-27",
+            "year": 2026,
+            "before": 12570.0,
+            "after": 12570.0
+          },
+          {
+            "key": "2027",
+            "label": "2027-28",
+            "year": 2027,
+            "before": 12570.0,
+            "after": 12570.0
+          },
+          {
+            "key": "2028",
+            "label": "2028-29",
+            "year": 2028,
+            "before": 12570.0,
+            "after": 12570.0
+          },
+          {
+            "key": "2029",
+            "label": "2029-30",
+            "year": 2029,
+            "before": 12570.0,
+            "after": 12570.0
+          },
+          {
+            "key": "2030",
+            "label": "2030-31",
+            "year": 2030,
+            "before": 12570.0,
+            "after": 12570.0
+          },
+          {
+            "key": "2031",
+            "label": "2031-32",
+            "year": 2031,
+            "before": 12830.0,
+            "after": 12830.0
+          }
+        ],
+        "source": {
+          "before": {
+            "kind": "engine_parameter",
+            "where": "policyengine-uk gov.hmrc.income_tax.allowances.personal_allowance.amount, at 6 April of each year"
+          },
+          "after": {
+            "kind": "engine_parameter",
+            "where": "policyengine-uk gov.hmrc.income_tax.allowances.personal_allowance.amount, at 6 April of each year"
+          }
+        }
+      },
+      {
+        "label": "Higher rate threshold",
+        "unit": "gbp",
+        "unit_words": "£ a year",
+        "primary": false,
+        "points": [
+          {
+            "key": "2026",
+            "label": "2026-27",
+            "year": 2026,
+            "before": 50270.0,
+            "after": 50270.0
+          },
+          {
+            "key": "2027",
+            "label": "2027-28",
+            "year": 2027,
+            "before": 50270.0,
+            "after": 50270.0
+          },
+          {
+            "key": "2028",
+            "label": "2028-29",
+            "year": 2028,
+            "before": 50270.0,
+            "after": 50270.0
+          },
+          {
+            "key": "2029",
+            "label": "2029-30",
+            "year": 2029,
+            "before": 50270.0,
+            "after": 50270.0
+          },
+          {
+            "key": "2030",
+            "label": "2030-31",
+            "year": 2030,
+            "before": 50270.0,
+            "after": 50270.0
+          },
+          {
+            "key": "2031",
+            "label": "2031-32",
+            "year": 2031,
+            "before": 51330.0,
+            "after": 51330.0
+          }
+        ],
+        "source": {
+          "before": {
+            "kind": "engine_parameter",
+            "where": "personal allowance plus basic rate band (gov.hmrc.income_tax.allowances.personal_allowance.amount + gov.hmrc.income_tax.rates.uk[1].threshold)"
+          },
+          "after": {
+            "kind": "engine_parameter",
+            "where": "personal allowance plus basic rate band (gov.hmrc.income_tax.allowances.personal_allowance.amount + gov.hmrc.income_tax.rates.uk[1].threshold)"
+          }
+        },
+        "note": "The personal allowance plus the basic rate band"
+      },
+      {
+        "label": "Plan 2 repayment threshold",
+        "unit": "gbp",
+        "unit_words": "£ a year",
+        "primary": false,
+        "points": [
+          {
+            "key": "2026",
+            "label": "2026-27",
+            "year": 2026,
+            "before": 29385.0,
+            "after": 29385.0
+          },
+          {
+            "key": "2027",
+            "label": "2027-28",
+            "year": 2027,
+            "before": 29385.0,
+            "after": 29385.0
+          },
+          {
+            "key": "2028",
+            "label": "2028-29",
+            "year": 2028,
+            "before": 29385.0,
+            "after": 29385.0
+          },
+          {
+            "key": "2029",
+            "label": "2029-30",
+            "year": 2029,
+            "before": 29385.0,
+            "after": 29385.0
+          },
+          {
+            "key": "2030",
+            "label": "2030-31",
+            "year": 2030,
+            "before": 30057.886645,
+            "after": 30057.886645
+          },
+          {
+            "key": "2031",
+            "label": "2031-32",
+            "year": 2031,
+            "before": 30713.202893,
+            "after": 30713.202893
+          }
+        ],
+        "source": {
+          "before": {
+            "kind": "engine_parameter",
+            "where": "policyengine-uk gov.hmrc.student_loans.thresholds.plan_2, at 6 April of each year"
+          },
+          "after": {
+            "kind": "engine_parameter",
+            "where": "policyengine-uk gov.hmrc.student_loans.thresholds.plan_2, at 6 April of each year"
+          }
+        }
+      }
+    ]
   }
 }

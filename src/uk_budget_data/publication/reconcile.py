@@ -5,8 +5,9 @@ Treasury costing on the gated basis (the static costing by default). A year
 passes when the difference is within the larger of a relative tolerance and
 an absolute floor. Anything larger fails unless a reviewed exception, bound
 to the exact outputs being published, accepts it. Years with no entered
-costing are ``awaiting_source``; rows a reviewer classified as not comparable
-are reported as such; years beyond the dataset's projection are
+costing are ``awaiting_source``; rows a reviewer classified as not comparable,
+for every year or for named fiscal years only, are reported as such; years
+beyond the dataset's projection are
 ``unsupported``. The post-behavioural figure is reported alongside and never
 gated.
 
@@ -88,6 +89,9 @@ class ReconciliationInputError(ValueError):
     """Raised for malformed reconciliation inputs."""
 
 
+_FISCAL_YEAR = re.compile(r"[1-9][0-9]{3}-[0-9]{2}")
+
+
 def _finite(value, label: str) -> float:
     try:
         return finite_impact(value, label)
@@ -114,11 +118,41 @@ class Policy:
     zero_tolerance_bn: float = 0.0025
     min_response_bn: float = 0.001
     min_response_share: float = 0.05
+    # Measures whose post-behavioural comparator includes a behavioural
+    # response the static model leaves out. Their years pass within the
+    # wider band below; it applies only when the gated basis is
+    # post_behavioural, and is never narrower than the ordinary one.
+    includes_behaviour: tuple = ()
+    behavioural_relative_tolerance: float = 0.25
+    behavioural_absolute_floor_bn: float = 0.05
 
     def __post_init__(self):
         if self.comparator_basis not in BASES:
             raise ReconciliationInputError(
                 f"comparator_basis must be one of {BASES}"
+            )
+        listed = self.includes_behaviour
+        if isinstance(listed, (str, bytes)) or not isinstance(
+            listed, (list, tuple)
+        ):
+            raise ReconciliationInputError(
+                f"includes_behaviour must be a list of measure ids, not "
+                f"{listed!r}"
+            )
+        if any(not isinstance(m, str) or not m.strip() for m in listed):
+            raise ReconciliationInputError(
+                "includes_behaviour must list non-empty measure ids"
+            )
+        if len(set(listed)) != len(listed):
+            raise ReconciliationInputError(
+                "includes_behaviour lists a measure twice"
+            )
+        object.__setattr__(self, "includes_behaviour", tuple(listed))
+        if listed and self.comparator_basis != "post_behavioural":
+            raise ReconciliationInputError(
+                "includes_behaviour widens the band only for a "
+                "post_behavioural comparator; a static costing includes no "
+                "behaviour"
             )
         for name in (
             "relative_tolerance",
@@ -126,12 +160,21 @@ class Policy:
             "zero_tolerance_bn",
             "min_response_bn",
             "min_response_share",
+            "behavioural_relative_tolerance",
+            "behavioural_absolute_floor_bn",
         ):
             value = _finite(getattr(self, name), name)
             if not value >= 0:
                 raise ReconciliationInputError(
                     f"{name} must be a finite number >= 0"
                 )
+        if listed and (
+            self.behavioural_relative_tolerance < self.relative_tolerance
+            or self.behavioural_absolute_floor_bn < self.absolute_floor_bn
+        ):
+            raise ReconciliationInputError(
+                "the behavioural band must be at least the ordinary one"
+            )
         if not self.min_response_bn > 0:
             raise ReconciliationInputError(
                 "min_response_bn must be above zero, so a measure that "
@@ -163,7 +206,16 @@ class SourceRow:
 
 @dataclass(frozen=True)
 class MappingRow:
-    """Links a measure to a Treasury row, or classifies it not comparable."""
+    """Links a measure to a Treasury row, or classifies it not comparable.
+
+    ``status: not_comparable`` takes the row out in every year.
+    ``not_comparable_years`` takes it out in the named Treasury fiscal years
+    only (``2030-31``), and compares it in the others: for a figure the
+    Treasury prints for a year the measure is not in force, such as timing
+    or behaviour before it starts or after it ends. Either needs a reason
+    and a reviewer. Neither touches a declared expected effect: a year a
+    declaration covers is still checked for responsiveness.
+    """
 
     measure_id: str
     source_id: str
@@ -173,6 +225,7 @@ class MappingRow:
     status: str = ""
     reason: str = ""
     reviewer: str = ""
+    not_comparable_years: tuple[str, ...] = ()
 
     def __post_init__(self):
         scale = _finite(self.scale, f"{self.measure_id}: mapping scale")
@@ -210,6 +263,47 @@ class MappingRow:
                     f"{self.measure_id}: the {name} for a not_comparable "
                     "mapping",
                 )
+        years = self.not_comparable_years
+        if isinstance(years, (str, bytes)) or not isinstance(
+            years, (tuple, list)
+        ):
+            raise ReconciliationInputError(
+                f"{self.measure_id}: not_comparable_years must be a list of "
+                f"fiscal years, not {years!r}"
+            )
+        years = tuple(years)
+        for year in years:
+            if not isinstance(year, str) or not _FISCAL_YEAR.fullmatch(year):
+                raise ReconciliationInputError(
+                    f"{self.measure_id}: not_comparable_years names "
+                    f"{year!r}, not a fiscal year such as 2030-31"
+                )
+        if len(set(years)) != len(years):
+            raise ReconciliationInputError(
+                f"{self.measure_id}: not_comparable_years names a year twice"
+            )
+        object.__setattr__(self, "not_comparable_years", years)
+        if years:
+            if self.status == NOT_COMPARABLE:
+                raise ReconciliationInputError(
+                    f"{self.measure_id}: a not_comparable row is out in "
+                    "every year; name not_comparable_years only on a row "
+                    "that is compared in the others"
+                )
+            for name in ("reason", "reviewer"):
+                _reviewed(
+                    getattr(self, name),
+                    f"{self.measure_id}: the {name} for the years "
+                    f"{', '.join(years)} classified not comparable",
+                )
+
+    def excluded_in(self, fiscal_year: str) -> bool:
+        """Whether a reviewer took this row out of the comparison in the
+        Treasury fiscal year ``fiscal_year``."""
+        return (
+            self.status == NOT_COMPARABLE
+            or fiscal_year in self.not_comparable_years
+        )
 
 
 @dataclass(frozen=True)
@@ -257,6 +351,7 @@ def allowance_bn(
     treasury_bn: float,
     policy: Policy,
     printed_zero: Optional[bool] = None,
+    includes_behaviour: bool = False,
 ) -> float:
     """The largest acceptable absolute difference from a Treasury figure.
 
@@ -269,11 +364,19 @@ def allowance_bn(
         policy: Thresholds.
         printed_zero: Whether every figure behind the comparator was printed
             as zero. None means "infer from the comparator itself".
+        includes_behaviour: Whether the comparator includes a behavioural
+            response the model leaves out (the policy's wider band). A
+            printed zero still tolerates only rounding.
     """
     if printed_zero is None:
         printed_zero = abs(treasury_bn) <= _EPSILON
     if printed_zero:
         return policy.zero_tolerance_bn
+    if includes_behaviour:
+        return max(
+            policy.behavioural_relative_tolerance * abs(treasury_bn),
+            policy.behavioural_absolute_floor_bn,
+        )
     return max(
         policy.relative_tolerance * abs(treasury_bn),
         policy.absolute_floor_bn,
@@ -285,11 +388,13 @@ def within_allowance(
     treasury_bn: float,
     policy: Policy,
     printed_zero: Optional[bool] = None,
+    includes_behaviour: bool = False,
 ) -> bool:
     """Whether a year passes without an exception (the bound is inclusive)."""
     return (
         abs(pe_bn - treasury_bn)
-        <= allowance_bn(treasury_bn, policy, printed_zero) + _EPSILON
+        <= allowance_bn(treasury_bn, policy, printed_zero, includes_behaviour)
+        + _EPSILON
     )
 
 
@@ -343,12 +448,23 @@ def _comparator(
     for link in mapping:
         if link.measure_id != measure_id:
             continue
+        label = fiscal_year_label(model_year, link.year_offset)
         if link.status == NOT_COMPARABLE:
             excluded.append(
                 {"source_id": link.source_id, "row_id": link.row_id}
             )
             continue
-        label = fiscal_year_label(model_year, link.year_offset)
+        if link.excluded_in(label):
+            # Named with its year, so the fingerprint of a year it leaves
+            # out never matches one of a year it compares.
+            excluded.append(
+                {
+                    "source_id": link.source_id,
+                    "row_id": link.row_id,
+                    "fiscal_year": label,
+                }
+            )
+            continue
         matches = [
             row
             for row in sources
@@ -519,6 +635,15 @@ def _checked_budgetary(
     return checked
 
 
+def excluded_links(links: list[MappingRow], model_year: int) -> list:
+    """The links a reviewer took out of the comparison in ``model_year``."""
+    return [
+        link
+        for link in links
+        if link.excluded_in(fiscal_year_label(model_year, link.year_offset))
+    ]
+
+
 def reconcile(
     budgetary: Mapping[int, float],
     *,
@@ -585,9 +710,8 @@ def reconcile(
     _one_exception_each(exceptions)
     _one_mapping_each(mapping)
     own_links = [m for m in mapping if m.measure_id == measure_id]
-    not_comparable = [m for m in own_links if m.status == NOT_COMPARABLE]
-    comparable = [m for m in own_links if m.status != NOT_COMPARABLE]
     other = next(b for b in BASES if b != policy.comparator_basis)
+    behavioural = measure_id in policy.includes_behaviour
 
     rows = []
     comparators: dict[int, Optional[float]] = {}
@@ -595,6 +719,10 @@ def reconcile(
         pe = budgetary.get(year)
         label = fiscal_year_label(year)
         row: dict = {"year": year, "fiscal_year": label, "pe_bn": pe}
+        # Classified out of scope in this year: every year, or this one
+        # (each row's own year offset)
+        not_comparable = excluded_links(own_links, year)
+        comparable = [m for m in own_links if m not in not_comparable]
         gated_side = _comparator(
             measure_id, year, policy.comparator_basis, sources, mapping
         )
@@ -646,7 +774,9 @@ def reconcile(
             }
             row["residual_bn"] = residual
             row["allowance_bn"] = _finite(
-                allowance_bn(gated, policy, gated_side.printed_zero),
+                allowance_bn(
+                    gated, policy, gated_side.printed_zero, behavioural
+                ),
                 f"{measure_id}'s {label} allowance",
             )
             if not_comparable:
@@ -654,7 +784,11 @@ def reconcile(
                     {"row_id": m.row_id, "reason": m.reason}
                     for m in not_comparable
                 ]
-            if within_allowance(pe, gated, policy, gated_side.printed_zero):
+            if behavioural:
+                row["allowance_band"] = "includes_behaviour"
+            if within_allowance(
+                pe, gated, policy, gated_side.printed_zero, behavioural
+            ):
                 row["status"] = PASS
             else:
                 row["status"] = FAILED
@@ -830,6 +964,11 @@ def load_mapping(path: Path) -> list[MappingRow]:
             status=(line.get("status") or "").strip(),
             reason=(line.get("reason") or "").strip(),
             reviewer=(line.get("reviewer") or "").strip(),
+            not_comparable_years=tuple(
+                year.strip()
+                for year in (line.get("not_comparable_years") or "").split(";")
+                if year.strip()
+            ),
         )
         for line in _read_csv(path)
     ]

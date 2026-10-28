@@ -1,2 +1,117 @@
 # Reviewed exceptions. See README.md for the fields.
-[]
+#
+# Each one binds to the artifact's outputs_sha256 and the comparison's
+# comparator_sha256: it lapses if the measure is regenerated with different
+# outputs or any Treasury figure or mapping behind it changes. Refresh both
+# digests (and residual_bn) from reconciliation.json after the final
+# regeneration.
+- measure_id: household_energy_payment_2026
+  fiscal_year: "2026-27"
+  residual_bn: 0.656
+  explanation_class: devolved
+  explanation: >-
+    Table 6.1 row 1 (-£2,625m) covers more than the payment we model, £100
+    to households in council tax bands A to D in England only. Budget 2026
+    paragraph 3.5: "a £2.6 billion Household Energy Payment ... £100 payment
+    for households in bands A-D in England from January 2027. The devolved
+    governments will receive their share of funding through the Barnett
+    formula, which will enable them to provide similar support." Paragraph
+    3.6: "this Budget provides £100 million additional funding for local
+    authorities in England to provide further targeted support to households
+    acutely impacted by rising energy bills, some of whom are in council tax
+    bands above A-D." Neither the Barnett share nor the £100m is modelled;
+    the policy costings document has no page for this measure, so the split
+    of the £2.6bn is not published. Ours, -£1.969bn, is about 20 million
+    households at £100 (paragraph 3.5's "up to 20 million households").
+    Decided by Vahid, 28 October 2026. Refreshed to the final artifact
+    (101a07dc7238a10e).
+  reviewer: vahid-ahmadi
+  accepted_at: "2026-10-28T17:59:25Z"
+  outputs_sha256: 18fb3a856326d708284266c5dd240b81e9e9ab4c427c493a062cfe6ae0997215
+  comparator_sha256: 6c69569b984736453a87ae5751c1fba71799f71c4cba0fce9f07683bab694565
+- measure_id: fuel_duty_rise_deferral
+  fiscal_year: "2026-27"
+  residual_bn: 0.274
+  explanation_class: coverage_business
+  explanation: >-
+    We model households' own petrol and diesel (bound to ONS Consumer
+    Trends household road fuel). Table 6.1 row 3's base is "every litre of
+    taxable fuel that is made available for use in the UK" (policy
+    costings, p. 13), so it also covers vans, lorries, HGVs and business
+    use of cars: the model's household duty is £13.4bn in 2026-27 against
+    £24bn of fuel duty receipts (EFO October 2026, para 4.29). Row 3 is
+    also fuel duty receipts only (OBR Table 1.1, policy tables, -573.8),
+    while ours includes the VAT on the duty (-£50m of -£301m), so the
+    comparison includes that VAT on our side only; duty alone is -£251m.
+    Behaviour does not explain the gap: the costing's pump-price response
+    lowers its cost. The costing's pre-measure path also appears to
+    differ: a full 5p from 1 January 2027 on about 45bn litres is about
+    £555m, matching row 3's -£575m, and EFO para 4.29 has rates
+    "unchanged until January 2027"; we model the law, 3p from 1 January
+    and 2p from 1 March 2027 (HMRC's amended rates, SI 2026/164 as amended
+    by SI 2026/555), about £410m on the same litres. Decided by Vahid,
+    28 October 2026; María to co-review.
+  reviewer: vahid-ahmadi
+  accepted_at: "2026-10-28T17:59:25Z"
+  outputs_sha256: 4e624ac4047411f2c5abd2e4282465e415cf892309f9aa364ffee5d842b3f079
+  comparator_sha256: e85f7b72d99cc233d56f78ef07ce318e6dd090de377518d447cac3d6bcc83621
+- measure_id: fuel_duty_rise_deferral
+  fiscal_year: "2027-28"
+  residual_bn: 0.259
+  explanation_class: coverage_business
+  explanation: >-
+    As 2026-27: households' own fuel only, against the Treasury's base of
+    every litre of taxable fuel, business, van and HGV fuel included
+    (policy costings, p. 13). Row 3 is fuel duty receipts only (OBR Table
+    1.1, -781.8), while ours includes the VAT on the duty (-£87m of
+    -£521m), so the comparison includes that VAT on our side only; duty
+    alone is -£434m. Decided by Vahid, 28 October 2026; María to
+    co-review.
+  reviewer: vahid-ahmadi
+  accepted_at: "2026-10-28T17:59:25Z"
+  outputs_sha256: 4e624ac4047411f2c5abd2e4282465e415cf892309f9aa364ffee5d842b3f079
+  comparator_sha256: 4f1ab268e83315dd32a3e416d097603f9fb8d73b740744a92bd40e63d6ae34f1
+- measure_id: trading_allowance_raise
+  fiscal_year: "2028-29"
+  residual_bn: 0.107
+  explanation_class: timing_fiscal_calendar
+  explanation: >-
+    The Self Assessment catch-up year: 2027-28's lower tax is paid from
+    31 January 2029, with payments on account, so Table 6.1 row 15's
+    2028-29 (-£225m) carries more than one year's relief, against our
+    liability by tax year (-£118m). 2027-28 is classified not comparable
+    in mapping.csv (76223668). María's classification, 28 October 2026.
+  reviewer: vahid-ahmadi
+  accepted_at: "2026-10-28T17:59:25Z"
+  outputs_sha256: 1192055fc58d352149cc8bad067655a7d03fb1cfaa6e5eb5ef9ac88d2a856ccc
+  comparator_sha256: ff24c4a3fbd7fc2d935203b8c19b42e25ae7d14e21b9933ebc65c4118745b12f
+- measure_id: trading_allowance_raise
+  fiscal_year: "2030-31"
+  residual_bn: 0.055
+  explanation_class: behavioural
+  explanation: >-
+    Not timing: the Self Assessment catch-up is over, and ours (-£120m)
+    is about a third below Table 6.1 row 15 (-£175m). The costing
+    includes people switching from expenses to the allowance (policy
+    costings p. 23), and the model gives miscellaneous income no
+    allowance and has no gross receipts to choose between the allowance
+    and expenses. María's classification, 28 October 2026.
+  reviewer: vahid-ahmadi
+  accepted_at: "2026-10-28T17:59:25Z"
+  outputs_sha256: 1192055fc58d352149cc8bad067655a7d03fb1cfaa6e5eb5ef9ac88d2a856ccc
+  comparator_sha256: 60e658868415d185029e17a9fcc6ab6ca4130da7365a64db052e83850c11417e
+- measure_id: trading_allowance_raise
+  fiscal_year: "2031-32"
+  residual_bn: 0.05
+  explanation_class: behavioural
+  explanation: >-
+    As 2030-31: ours (-£130m) against Table 6.1 row 15 (-£180m), £50.3m
+    apart against a £50m band. The costing includes people switching from
+    expenses to the allowance (policy costings p. 23), and the model gives
+    miscellaneous income no allowance and has no gross receipts.
+    Behavioural, as 2030-31; this year was inside the band on the earlier
+    run, so the class is for Vahid and María to confirm.
+  reviewer: vahid-ahmadi
+  accepted_at: "2026-10-28T17:59:25Z"
+  outputs_sha256: 1192055fc58d352149cc8bad067655a7d03fb1cfaa6e5eb5ef9ac88d2a856ccc
+  comparator_sha256: 3fb52bd16b30c4abd7cbb227f6e802d0f95788cb25114f773f8543b8b580d06f

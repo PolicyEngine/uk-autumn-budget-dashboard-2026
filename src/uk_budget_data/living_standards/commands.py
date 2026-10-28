@@ -13,6 +13,7 @@ from uk_budget_data.living_standards.forecast import (
     POST_FILE_NAME,
     apply_post,
     read_post_document,
+    read_post_document_from_pdf,
     read_saved_post,
     save_post,
 )
@@ -98,11 +99,29 @@ def add_living_standards_parsers(subparsers) -> None:
         ),
     )
     _common(fc)
-    fc.add_argument(
+    source = fc.add_mutually_exclusive_group(required=True)
+    source.add_argument(
         "--efo",
         type=Path,
-        required=True,
         help="The new EFO detailed forecast tables: economy (.xlsx)",
+    )
+    source.add_argument(
+        "--efo-pdf",
+        type=Path,
+        help=(
+            "Before the detailed tables are out: the new EFO PDF, read from "
+            "its Table A.1 (CPI, RPI, earnings, house prices); needs "
+            "--efo-text"
+        ),
+    )
+    fc.add_argument(
+        "--efo-text",
+        type=Path,
+        default=None,
+        help=(
+            "With --efo-pdf: the PDF's text extract, one cell a line, pages "
+            "marked '=====PAGE n' (PyMuPDF get_text())"
+        ),
     )
     fc.add_argument(
         "--label",
@@ -246,26 +265,49 @@ def run_living_standards(parsed: argparse.Namespace) -> int:
     return 0
 
 
+def _outside_forecast(outlook: dict) -> dict:
+    """Everything obr-forecast must leave alone: all but the forecast block
+    and meta.notes (apply_post drops the note that post repeats pre)."""
+    out = {k: v for k, v in outlook.items() if k != "forecast"}
+    out["meta"] = {k: v for k, v in out["meta"].items() if k != "notes"}
+    return json.loads(json.dumps(out))
+
+
 def run_obr_forecast(parsed: argparse.Namespace) -> int:
     """Read the new EFO into the outlook's post series (forecast block)."""
     from uk_budget_data.living_standards.build import outlook_text
     from uk_budget_data.living_standards.obr import ForecastTableError
 
-    if not parsed.efo.is_file():
-        console.print(f"[red]No such file: {parsed.efo}[/red]")
+    efo_pdf = getattr(parsed, "efo_pdf", None)
+    efo_text = getattr(parsed, "efo_text", None)
+    if efo_pdf is not None and efo_text is None:
+        console.print("[red]--efo-pdf needs --efo-text[/red]")
         return 1
+    for path in (parsed.efo, efo_pdf, efo_text):
+        if path is not None and not path.is_file():
+            console.print(f"[red]No such file: {path}[/red]")
+            return 1
     outlook = json.loads(parsed.output.read_text())
     label = parsed.label or DEFAULT_POST_LABEL
     try:
-        post = read_post_document(
-            parsed.efo, outlook, label, parsed.url or OBR_FORECAST_URL
-        )
+        if efo_pdf is not None:
+            post = read_post_document_from_pdf(
+                efo_pdf,
+                efo_text,
+                outlook,
+                label,
+                parsed.url or OBR_FORECAST_URL,
+            )
+        else:
+            post = read_post_document(
+                parsed.efo, outlook, label, parsed.url or OBR_FORECAST_URL
+            )
     except ForecastTableError as error:
         console.print(f"[red]Not loaded: {error}[/red]")
         return 1
-    before = {k: v for k, v in outlook.items() if k != "forecast"}
+    before = _outside_forecast(outlook)
     apply_post(outlook, post)
-    assert {k: v for k, v in outlook.items() if k != "forecast"} == before
+    assert _outside_forecast(outlook) == before
 
     save_post(post, parsed.inputs_dir / POST_FILE_NAME)
     text = outlook_text(outlook)
@@ -274,6 +316,11 @@ def run_obr_forecast(parsed: argparse.Namespace) -> int:
     source = post["source"]
     console.print(f"Loaded {source['file']} (sha256 {source['file_sha256']})")
     for key, series in post["series"].items():
+        if series["values"] is None:
+            console.print(
+                f"  [yellow]{key}: not loaded ({series['source']})[/yellow]"
+            )
+            continue
         values = ", ".join(
             f"{y} {v * 100:.2f}%" for y, v in series["values"].items()
         )

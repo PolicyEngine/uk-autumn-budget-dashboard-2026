@@ -1,6 +1,6 @@
 import { CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, XAxis, YAxis, ZAxis } from "recharts";
 import { Tooltip } from "../ViewportTooltip";
-import { provisionalLabel } from "../../utils/publication/manifest";
+import { provisionalNotice } from "../../utils/publication/manifest";
 import {
   bandLabel,
   CHANGE_MAX,
@@ -78,8 +78,9 @@ function CellTooltip({ active, payload }) {
  * The change axis is symlog, so the narrow bands near zero and the wide
  * ones both read; the open bands beyond ±£5,000 sit just beyond that edge.
  *
- * The provisional label is the manifest's (provisionalLabel): candidates
- * before the Budget, statement figures from Budget day.
+ * The provisional notice is the manifest's (provisionalNotice): the
+ * candidate label before the Budget, none for statement figures from
+ * Budget day.
  *
  * @param {{series: Object, manifest?: Object|null}} props - `series` is the
  *   result of `scatterSeries`.
@@ -95,8 +96,8 @@ function BinnedHouseholdScatter({ series, manifest = null }) {
   }));
   return (
     <div className="publication-scatter">
-      {series.provisional && (
-        <p className="publication-provisional">{provisionalLabel(manifest)}</p>
+      {series.provisional && provisionalNotice(manifest) && (
+        <p className="publication-provisional">{provisionalNotice(manifest)}</p>
       )}
       <ResponsiveContainer width="100%" height={350}>
         <ScatterChart margin={{ top: 20, right: 30, left: 90, bottom: 20 }}>

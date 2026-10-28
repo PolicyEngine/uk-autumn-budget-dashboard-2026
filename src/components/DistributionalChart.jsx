@@ -136,6 +136,11 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
         dataPoint[policy.seriesKey] = value;
         if (value !== null) netChange += value;
       });
+      // A withheld decile shows nothing: no other policy's bar and no net
+      // dot, as the bars shown beside a withheld member, against a net
+      // published elsewhere, would give the withheld figure back (#290,
+      // 6480462886; decided by Vahid, 28 Oct)
+      if (withheld) POLICIES.forEach((policy) => { dataPoint[policy.seriesKey] = null; });
       dataPoint.netChange = incomplete ? null : netChange;
       dataPoint.incomplete = incomplete;
       dataPoint.unavailable = unavailable;
@@ -316,9 +321,16 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
         {published && hasUnavailableResults && (
           <UnavailableNotice reason="Some selected policies have no published results for this chart. The net change is unavailable." />
         )}
-        {published && withheldDeciles.size > 0 && (
-          <p className="chart-description">
-            * Income deciles {[...withheldDeciles].map((decile) => String(decile).replace(/st|nd|rd|th/g, "")).join(", ")}: <span>{WITHHELD_DECILE_MESSAGE}</span>.
+        {/* The note's line is always kept, hidden in a year with nothing
+            withheld, so the card holds its height as Play moves through the
+            years (Vahid, 28 Oct: it jumped in 2030-31) */}
+        {published && (
+          <p
+            className="chart-description"
+            aria-hidden={withheldDeciles.size > 0 ? undefined : "true"}
+            style={withheldDeciles.size > 0 ? undefined : { visibility: "hidden" }}
+          >
+            * Income deciles {withheldDeciles.size > 0 ? [...withheldDeciles].map((decile) => String(decile).replace(/st|nd|rd|th/g, "")).join(", ") : "7, 9"}: <span>{WITHHELD_DECILE_MESSAGE}</span>.
           </p>
         )}
         {nothingChanges ? (

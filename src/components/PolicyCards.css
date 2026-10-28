@@ -1,0 +1,191 @@
+/* A card's worked example (or the reach the Budget states), under What
+   changes, in the same small type as its caption */
+.policy-card-example {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+  min-width: 0;
+}
+
+.policy-card-example-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-gray-700);
+}
+
+.policy-card-example-title svg {
+  flex: none;
+  color: var(--pe-gray-500);
+}
+
+.policy-card-example-text {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}
+
+.policy-card-example-source {
+  margin: 0;
+  font-size: var(--fs-micro);
+  line-height: 1.45;
+  color: var(--pe-gray-500);
+}
+
+.policy-card-example-source a {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+/* The Budget's costing row, beside the source and styled as it is */
+.policy-card-actions .policy-card-costing {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 40px;
+  white-space: nowrap;
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.policy-card-example-source a:hover,
+.policy-card-actions .policy-card-costing:hover {
+  text-decoration-color: currentColor;
+}
+
+/* Source and Costing side by side on the left, the effect button right */
+.policy-card-actions .policy-card-effect {
+  margin-left: auto;
+}
+
+/* A lead line's points: real bullets, indented, tight */
+.policy-card-example-items {
+  margin: 2px 0 0;
+  padding-left: 20px;
+  list-style: disc outside;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}
+
+/* Every card's summary in full, wrapping as it needs: never cut to two
+   lines with "…" (globals.css clamps it; this file loads after it) */
+.policy-card > .policy-card-summary {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
+}
+
+/* What changes, in the entry's own words, above any values */
+.pchg-lead {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-700);
+}
+
+/* A card's sources, in a line above Costing */
+.policy-card-sources {
+  margin: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.policy-card-sources a {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.policy-card-why {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Who it reaches, in full: a row of its own under Starts and Ends */
+.policy-card-affects.is-wide {
+  grid-column: 1 / -1;
+}
+
+.policy-card-example-items li {
+  display: list-item;
+}
+
+.policy-card-example-items li + li {
+  margin-top: 2px;
+}
+
+.policy-card-example-items li::marker {
+  color: var(--pe-gray-400);
+}
+
+/* The change beside the new value, so both tiles keep one height */
+.pchg-tile-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 2px;
+}
+
+/* Several before-and-after pairs: a little air between them */
+.pchg-ba + .pchg-ba {
+  margin-top: 4px;
+}
+
+/* A card's footer disclosure (About this result, Treasury costing): the
+   chevron at the row's right edge, the same on every card */
+.policy-card-modelling .disclosure-compact > .disclosure-toggle {
+  width: 100%;
+  justify-content: space-between;
+}
+
+/* The two cards in a row one height; the footer pinned to the bottom, so
+   any extra space is one gap above it; no section or box inside stretched
+   (globals.css lines the sections up with a subgrid; this replaces it) */
+.policy-cards {
+  align-items: stretch;
+}
+
+.policy-cards > .policy-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  grid-row: auto;
+  grid-template-rows: none;
+}
+
+.policy-cards > .policy-card > * {
+  grid-row: auto;
+  flex: none;
+  align-self: stretch;
+}
+
+.policy-cards > .policy-card > .policy-card-foot {
+  margin-top: auto;
+}
+
+/* At a glance where Affects has its own row: Starts and Ends wide enough
+   for "Oct 2026 / Apr 2029" on one line */
+.policy-card-dates:has(> .policy-card-affects.is-wide) {
+  grid-template-columns: minmax(160px, max-content) minmax(0, 1fr);
+}
+
+@media (max-width: 480px) {
+  .policy-card-dates:has(> .policy-card-affects.is-wide) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}

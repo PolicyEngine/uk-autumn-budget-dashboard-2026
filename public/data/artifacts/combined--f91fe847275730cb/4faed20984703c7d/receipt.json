@@ -1,0 +1,369 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "OBR EFO October 2026",
+        "status": "updated",
+        "vintage": "OBR Economic and fiscal outlook, October 2026 (Annex A, Tables A.1 and A.3), applied over policyengine-uk's March 2026 growth rates by src/uk_budget_data/forecast/obr_october_2026.json"
+      },
+      "notes": "The forecast is rebased on the Budget's OBR forecast: every simulation, baseline and reform alike, is built on the October 2026 growth rates in src/uk_budget_data/forecast/obr_october_2026.json (CPI, RPI, average earnings, house prices; the September 2027 CPI gap). Series that file does not list keep the March 2026 path the installed policyengine-uk ships; the receipt records the exact model version."
+    },
+    "composition": {
+      "baseline_applied_before_data_load": false,
+      "reform_applied_before_data_load": false
+    },
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "c48a8fe082168969b5c3e6d6689a630c9f47ac64fa9de7efd11a055d2cab1a4b",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "description": "One simulation of: carers_allowance_earnings_taper, domestic_electricity_zero_vat, fuel_duty_rise_deferral, household_energy_payment_2026, property_income_rates_up, state_pension_income_tax_protection, trading_allowance_raise",
+    "digests": {
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "outputs_sha256": "da5ba9c7a41f2ffdc97dfd9896eb357e3b22feaff54ded9264a8dd44569d1650",
+      "receipt_sha256": "cfcf475b7080c197c94a08bf81eabb27bc5d9b57616d3a29fab64f3816c10258"
+    },
+    "disclosure_floor": {
+      "checked": true,
+      "survey_households": 3,
+      "thin_cells": [],
+      "thin_cells_in_tables": false,
+      "withheld_cells": [
+        {
+          "groups": [
+            "7",
+            "9"
+          ],
+          "table": "distributional_impact",
+          "year": 2030
+        },
+        {
+          "groups": [
+            "7",
+            "9"
+          ],
+          "table": "distributional_impact",
+          "year": 2031
+        },
+        {
+          "groups": [
+            "7",
+            "9",
+            "all"
+          ],
+          "table": "winners_losers",
+          "year": 2030
+        },
+        {
+          "groups": [
+            "7",
+            "9",
+            "all"
+          ],
+          "table": "winners_losers",
+          "year": 2031
+        }
+      ]
+    },
+    "files": {
+      "age_impact.csv": "9e3be29d565ced7114b642247d822aec3091d5e0e7a08796121b109290831add",
+      "budgetary_impact.csv": "45e0677c4b5d2827966c156fa83bb9d899f2de40a821b056c428f70cbf69f945",
+      "distributional_impact.csv": "3150bb9c98682abc4c15881daaeaf9d0429157dab49bacd459b9dbde49d26aa5",
+      "household_scatter_binned.csv": "71348cbee072347084b5cad9ca1b48d4d9a96830936a31e00706ac4805dc3b0e",
+      "income_curve.csv": "802f422f7e663b6699627d068d7a94e04153b18f76fd5f1ba8f9c1027f2f7c33",
+      "metrics.csv": "ed986475837235864f0ed137fcf7cf27dc935098ec7f4db6b7471ff70a56927c",
+      "poverty_inequality.csv": "15b5c46b6bc7991019f2504c1756aed335245db3893cb420e8e730478c4fb310",
+      "winners_losers.csv": "97aebc1eafbc9f0ab96f2ddd541023392caad9e31043639b37253b33cca56ef5"
+    },
+    "generated_at": "2026-10-28T17:54:34.931664+00:00",
+    "generation_id": "6b3ad0eba83042c0b0ea50658b0668f5",
+    "generator_argv": [
+      "/private/tmp/claude-501/-Users-vahid/59114aef-a9b7-4663-a8bc-32b2c6146551/scratchpad/final/repo/src/uk_budget_data/cli.py",
+      "generate",
+      "--combined",
+      "household_energy_payment_2026",
+      "domestic_electricity_zero_vat",
+      "fuel_duty_rise_deferral",
+      "carers_allowance_earnings_taper",
+      "trading_allowance_raise",
+      "state_pension_income_tax_protection",
+      "property_income_rates_up",
+      "--backend",
+      "modal"
+    ],
+    "git_sha": "45785ecb9004345b0f58b3cf5d4c7744721fa01e",
+    "key": "combined--f91fe847275730cb",
+    "measure_ids": [
+      "carers_allowance_earnings_taper",
+      "domestic_electricity_zero_vat",
+      "fuel_duty_rise_deferral",
+      "household_energy_payment_2026",
+      "property_income_rates_up",
+      "state_pension_income_tax_protection",
+      "trading_allowance_raise"
+    ],
+    "member_outputs_sha256": {
+      "carers_allowance_earnings_taper": "161037a4ca464ce6cafdd41f1a0901455c010d88b8ae2ed646f05a2ec36312bc",
+      "domestic_electricity_zero_vat": "86bbb52bc9100cd479e56d7baaf785aeee74027e2e59d50bb0ade667977ee0a2",
+      "fuel_duty_rise_deferral": "4e624ac4047411f2c5abd2e4282465e415cf892309f9aa364ffee5d842b3f079",
+      "household_energy_payment_2026": "18fb3a856326d708284266c5dd240b81e9e9ab4c427c493a062cfe6ae0997215",
+      "property_income_rates_up": "6748d5ee971f1b8428186ca778b4bd01ee1320c4e9f7cc67f34b5fc398330d47",
+      "state_pension_income_tax_protection": "bc98a27c3d80a54f3b56ef1ebffe5ca3085077be0d3626b887eab822042776e5",
+      "trading_allowance_raise": "1192055fc58d352149cc8bad067655a7d03fb1cfaa6e5eb5ef9ac88d2a856ccc"
+    },
+    "members": [
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "carers_allowance_earnings_taper baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": true,
+        "id": "carers_allowance_earnings_taper",
+        "reform": {
+          "binding": "code_revision",
+          "kind": "reform",
+          "name": "carers_allowance_earnings_taper",
+          "reform_sha256": "f45943c11aed787c570af3cc82d11af9cf181ce0877b5cb9350a9bc1e2f84dc8",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "domestic_electricity_zero_vat baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "domestic_electricity_zero_vat",
+        "reform": {
+          "binding": "code_revision",
+          "kind": "reform",
+          "name": "domestic_electricity_zero_vat",
+          "reform_sha256": "5ee4d8844432367d5557df38ee89e23b206e2c1236bce2451b0336ada02b58b6",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "fuel_duty_rise_deferral baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "fuel_duty_rise_deferral",
+        "reform": {
+          "binding": "code_revision",
+          "kind": "reform",
+          "name": "fuel_duty_rise_deferral",
+          "reform_sha256": "1dae41af83e4402f6b3af756d7dcdcc1dd525883dd32c3c8b9050456f52310f1",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "household_energy_payment_2026 baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "household_energy_payment_2026",
+        "reform": {
+          "binding": "code_revision",
+          "kind": "reform",
+          "name": "household_energy_payment_2026",
+          "reform_sha256": "ceede8365a9462ac389dc5210882ea23850babfed6e5bff8cf264e774cd616ad",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "property_income_rates_up baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "property_income_rates_up",
+        "reform": {
+          "binding": "content",
+          "kind": "reform",
+          "name": "property_income_rates_up",
+          "reform_sha256": "d46bf10b10b298db4059d7b6a2dccac7997e09afec0a88542c2059ea70646aa0",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "state_pension_income_tax_protection baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "state_pension_income_tax_protection",
+        "reform": {
+          "binding": "code_revision",
+          "kind": "reform",
+          "name": "state_pension_income_tax_protection",
+          "reform_sha256": "65a95c811e5d6c6dd0b54255dd20ab1439c542994f1918778b93769c14199524",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      },
+      {
+        "baseline": {
+          "binding": "content",
+          "kind": "current_law",
+          "name": "trading_allowance_raise baseline",
+          "reform_sha256": null,
+          "representation": null
+        },
+        "baseline_bound": false,
+        "id": "trading_allowance_raise",
+        "reform": {
+          "binding": "content",
+          "kind": "reform",
+          "name": "trading_allowance_raise",
+          "reform_sha256": "cdcc8b19d5234afe31ae857db16a8f2d6a18578a1d7da1c890b3c5f21832c268",
+          "representation": "policyengine-uk.scenario/v1"
+        }
+      }
+    ],
+    "model_limits": [],
+    "model_limits_registry_sha256": "9d3479f1f5ac859ab6bd2644aaff443a29c0dad3f2944b1ef98866028f9d4b89",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": [
+        null,
+        [
+          "apply_vat_base_change"
+        ],
+        [
+          "apply_vat_base_change"
+        ],
+        null,
+        null
+      ]
+    },
+    "name": "Combined: Carer's Allowance earnings taper, Zero VAT on domestic electricity, Fuel duty cut extended, Household Energy Payment, Property income tax rates up, Pension Tax Allowance, Trading allowance raised to \u00a33,000",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.11.1",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "carers_allowance_earnings_taper+domestic_electricity_zero_vat+fuel_duty_rise_deferral+household_energy_payment_2026+property_income_rates_up+state_pension_income_tax_protection+trading_allowance_raise baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.11.1",
+      "certificate_sha256": "f2e6fc9faafab32b50c1c76067fb070ae9686b6f375e44417776de16e9c3521f",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.151.0",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "ec8e6c4194b5e1ec0acd64c8718d0eecb6b41648b53f0b453c425b516e5a4489"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "build_model_version": "2.151.0",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.151.0"
+    },
+    "outputs_sha256": "da5ba9c7a41f2ffdc97dfd9896eb357e3b22feaff54ded9264a8dd44569d1650",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "code_revision",
+      "kind": "reform",
+      "name": "carers_allowance_earnings_taper+domestic_electricity_zero_vat+fuel_duty_rise_deferral+household_energy_payment_2026+property_income_rates_up+state_pension_income_tax_protection+trading_allowance_raise",
+      "reform_sha256": "09498c7b550716444725ef211725c894bc0efa13bd6c855efb8bdadc93b0e834",
+      "representation": "policyengine-uk.scenario_composition/v1"
+    },
+    "runtime": {
+      "platform": "linux",
+      "python_version": "3.13.3"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.11.1"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}
