@@ -153,11 +153,11 @@
   justify-content: space-between;
 }
 
-/* Each card as tall as its content: rows of the list aligned at the top,
-   no section or box stretched to match the card beside it (globals.css
-   lines the sections up across a row with a subgrid; this undoes it) */
+/* The two cards in a row one height; the footer pinned to the bottom, so
+   any extra space is one gap above it; no section or box inside stretched
+   (globals.css lines the sections up with a subgrid; this replaces it) */
 .policy-cards {
-  align-items: start;
+  align-items: stretch;
 }
 
 .policy-cards > .policy-card {
@@ -170,7 +170,12 @@
 
 .policy-cards > .policy-card > * {
   grid-row: auto;
+  flex: none;
   align-self: stretch;
+}
+
+.policy-cards > .policy-card > .policy-card-foot {
+  margin-top: auto;
 }
 
 /* At a glance where Affects has its own row: Starts and Ends wide enough

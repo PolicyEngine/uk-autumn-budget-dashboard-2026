@@ -34,8 +34,10 @@ const obr = (part) => ({
 });
 
 /**
- * One entry per measure, in the order shown: by group (UNMODELLED_GROUPS),
- * who the measure touches.
+ * One entry per measure, in the order shown (`order`, 1 up): cards of a
+ * like shape side by side, so the two in a row are close in height —
+ * those with one before and after, then those with two, then those with
+ * none. `group` (UNMODELLED_GROUPS) says who a measure touches.
  *
  * `costings` holds the measure's Table 6.1 rows (£ million, 2026-27 to
  * 2031-32; positive is a gain to the Exchequer, negative a cost), each with
@@ -60,6 +62,7 @@ export const UNMODELLED_GROUPS = [
 export const UNMODELLED_MEASURES = [
   {
     id: "national-living-wage",
+    order: 1,
     group: "pay",
     name: "Minimum wage up 3.9%",
     starts: "1 Apr 2027",
@@ -76,6 +79,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "universal-credit-surplus-earnings",
+    order: 2,
     group: "pay",
     name: "Universal Credit surplus earnings threshold kept at £2,500",
     starts: "1 Apr 2027",
@@ -91,79 +95,8 @@ export const UNMODELLED_MEASURES = [
     sources: [budget("paragraph 6.11"), obr("Box 5.1")],
   },
   {
-    id: "parental-allowance",
-    group: "pay",
-    name: "Parental pay for self-employed fathers, partners and adopters",
-    starts: "Apr 2029",
-    changes:
-      "Parental pay is extended to eligible self-employed fathers, partners and adopters in Great Britain, and some with irregular work.",
-    reaches: "Over 150,000 parents a year (government estimate).",
-    household:
-      "A self-employed father or partner could get two weeks' pay after a birth, now up to £194 a week (Treasury).",
-    costings: [{ row: 6, values: [0, 0, 0, -70, -70, -70] }],
-    notModelled:
-      "The eligibility rules are not yet published, and the model takes paternity pay and Maternity Allowance as reported in its data rather than working out who qualifies.",
-    sources: [
-      budget("paragraphs 3.20 and 6.12"),
-      {
-        label: "HM Treasury, release on parental pay and other measures (26 October 2026)",
-        href: "https://www.gov.uk/government/news/everyday-fixes-to-make-life-easier-for-millions-of-britons",
-      },
-    ],
-  },
-  {
-    id: "mileage-rates",
-    group: "pay",
-    name: "Tax-free mileage rates raised",
-    starts: "Apr 2026 / Apr 2027",
-    changes:
-      "The tax-free 55p a mile for the first 10,000 business miles is made permanent; above that, 25p rises to 35p.",
-    reaches: "Around 2 million employees and 1 million self-employed people (government estimate).",
-    household:
-      "Less income tax for those driving for work: £120 a year for 6,000 miles, £300 for 15,000 (Treasury).",
-    costings: [{ row: 5, values: [-30, -200, -220, -225, -235, -245] }],
-    notModelled: "The model has no business mileage.",
-    sources: [budget("paragraphs 3.14 and 6.213")],
-  },
-  {
-    id: "company-car-tax",
-    group: "pay",
-    name: "Company car tax up 1 point in 2030-31",
-    starts: "6 Apr 2030",
-    changes:
-      "Company car tax percentages for 2030-31 are 1 point above 2029-30's in every band, up to 40%.",
-    reaches: "Employees with a company car.",
-    household:
-      "More income tax on the same company car, from April 2030.",
-    costings: [{ row: 86, values: [0, 0, 0, 0, 310, 345] }],
-    notModelled: "The model has no company cars.",
-    sources: [budget("paragraph 6.207")],
-  },
-  {
-    id: "adjusted-triple-lock",
-    group: "pay",
-    name: "Adjusted Triple Lock for the State Pension",
-    starts: "Apr 2030",
-    changes:
-      "The State Pension rises by the highest of 2.5%, inflation, or the rise keeping its April 2029 value against earnings.",
-    reaches: "Current and future State Pension recipients, from April 2030.",
-    household:
-      "The pension still rises by at least 2.5% or inflation; it can rise by less than earnings from 2030.",
-    costings: [],
-    noCosting:
-      "Table 6.1 has no row for it. On the OBR's forecast the State Pension rises by 2.5% in both 2030-31 and 2031-32 under either rule, so the change does not affect spending in those years. The government estimates that State Pension spending would be £15 billion a year lower by the late 2030s than under the current Triple Lock; the OBR says the long-term effect depends heavily on how earnings, inflation and the 2.5% floor move relative to each other.",
-    notModelled:
-      "No change in our years: on the OBR's forecast the model gives the same State Pension as the current Triple Lock in every year to 2031-32.",
-    seeAlso: {
-      before: 'PolicyEngine models it to 2039-40 in a separate analysis, "',
-      label: "The Burnham plan vs the triple lock",
-      href: "https://www.policyengine.org/uk/triple-lock",
-      after: '" (16 October 2026).',
-    },
-    sources: [budget("paragraphs 1.29 and 5.23"), obr("paragraphs 3.49 and 3.50")],
-  },
-  {
     id: "savings-income-tax",
+    order: 3,
     group: "savings",
     name: "Tax on savings interest up 2 points",
     starts: "6 Apr 2027",
@@ -179,6 +112,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "cash-isa-limit",
+    order: 4,
     group: "savings",
     name: "Cash ISA limit kept at £20,000",
     starts: "6 Apr 2027",
@@ -201,6 +135,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "first-time-buyer-isa",
+    order: 5,
     group: "savings",
     name: "First Time Buyer ISA, and a lower Lifetime ISA charge",
     starts: "Oct 2026 / Apr 2029",
@@ -218,27 +153,8 @@ export const UNMODELLED_MEASURES = [
     sources: [budget("paragraphs 5.8, 5.9, 6.239 and 6.240")],
   },
   {
-    id: "your-first-home",
-    group: "savings",
-    name: "Your First Home equity loan scheme",
-    starts: "Apr 2027",
-    changes:
-      "A £4.7 billion scheme gives first-time buyers in England equity loans of up to 20%, with a 2.5% deposit.",
-    reaches: "Around 70,000 first-time buyers (government estimate).",
-    household:
-      "A smaller deposit and a loan interest-free for five years; the Budget says the typical buyer saves hundreds a month.",
-    costings: [
-      {
-        row: 37,
-        values: [-15, 50, 95, 95, 95, 95],
-        note: "Row 37 is the scheme's net income from developer fees; the loans themselves are financial transactions, in Table 6.2.",
-      },
-    ],
-    notModelled: "The model has no home purchases or loans, and a loan is lent rather than paid, so household incomes do not change.",
-    sources: [budget("paragraphs 5.5 and 6.113")],
-  },
-  {
     id: "business-asset-disposal-relief",
+    order: 6,
     group: "savings",
     name: "Business Asset Disposal Relief limit cut to £500,000",
     starts: "6 Apr 2027",
@@ -258,6 +174,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "bus-fare-cap",
+    order: 7,
     group: "costs",
     name: "Single bus fares capped at £2 outside London",
     starts: "1 Jan 2027",
@@ -284,7 +201,151 @@ export const UNMODELLED_MEASURES = [
     ],
   },
   {
+    id: "pubs-business-rates-relief",
+    order: 8,
+    group: "business",
+    name: "Business rates relief for pubs and venues up to 35%",
+    starts: "1 Apr 2027",
+    changes:
+      "Business rates relief for pubs, social clubs and most live music venues in England rises from 15% to 35%.",
+    reaches: "Pubs, social clubs and most live music venues in England.",
+    household:
+      "Paid by businesses, not households; the Budget puts the relief at over £3,000 per pub on average next year.",
+    costings: [{ row: 12, values: [5, -160, -115, -5, -5, -5] }],
+    notModelled:
+      "The model attributes business rates to households through shareholdings, as a share of total receipts, with no reliefs, so a relief for pubs changes nothing in it.",
+    sources: [budget("paragraphs 3.21 and 6.189")],
+  },
+  {
+    id: "machine-games-duty",
+    order: 9,
+    group: "business",
+    name: "Machine Games Duty up from 20% to 25%",
+    starts: "1 Apr 2027",
+    changes:
+      "The duty on machine games with stakes over £1 or prizes over £100 rises from 20% to 25%.",
+    reaches: "Venues with higher-stake machines, commonly adult gaming centres (Budget).",
+    household:
+      "Charged on businesses running the machines; any effect reaches households through stakes and prizes, or as owners and staff.",
+    costings: [{ row: 56, values: [0, 135, 150, 145, 145, 145] }],
+    notModelled: "Our data hold no household spending on gambling, so the model can't pass the duty through to households.",
+    sources: [budget("paragraphs 2.49 and 6.225")],
+  },
+  {
+    id: "bank-surcharge",
+    order: 10,
+    group: "business",
+    name: "Bank surcharge up from 3% to 6% for 15 months",
+    starts: "1 Jan 2027",
+    changes:
+      "The bank surcharge rises from 3% to 6% until March 2028, helping fund the energy payment and electricity VAT cut.",
+    reaches: "Banks that pay the surcharge.",
+    household: "The surcharge is a tax on banks' profits, not on households.",
+    costings: [{ row: 55, values: [305, 950, 220, 0, 0, 0] }],
+    notModelled:
+      "This dashboard measures household incomes, and does not trace taxes on company profits through to them.",
+    sources: [budget("paragraphs 3.5 and 6.252")],
+  },
+  {
+    id: "mileage-rates",
+    order: 11,
+    group: "pay",
+    name: "Tax-free mileage rates raised",
+    starts: "Apr 2026 / Apr 2027",
+    changes:
+      "The tax-free 55p a mile for the first 10,000 business miles is made permanent; above that, 25p rises to 35p.",
+    reaches: "Around 2 million employees and 1 million self-employed people (government estimate).",
+    household:
+      "Less income tax for those driving for work: £120 a year for 6,000 miles, £300 for 15,000 (Treasury).",
+    costings: [{ row: 5, values: [-30, -200, -220, -225, -235, -245] }],
+    notModelled: "The model has no business mileage.",
+    sources: [budget("paragraphs 3.14 and 6.213")],
+  },
+  {
+    id: "company-car-tax",
+    order: 12,
+    group: "pay",
+    name: "Company car tax up 1 point in 2030-31",
+    starts: "6 Apr 2030",
+    changes:
+      "Company car tax percentages for 2030-31 are 1 point above 2029-30's in every band, up to 40%.",
+    reaches: "Employees with a company car.",
+    household:
+      "More income tax on the same company car, from April 2030.",
+    costings: [{ row: 86, values: [0, 0, 0, 0, 310, 345] }],
+    notModelled: "The model has no company cars.",
+    sources: [budget("paragraph 6.207")],
+  },
+  {
+    id: "parental-allowance",
+    order: 13,
+    group: "pay",
+    name: "Parental pay for self-employed fathers, partners and adopters",
+    starts: "Apr 2029",
+    changes:
+      "Parental pay is extended to eligible self-employed fathers, partners and adopters in Great Britain, and some with irregular work.",
+    reaches: "Over 150,000 parents a year (government estimate).",
+    household:
+      "A self-employed father or partner could get two weeks' pay after a birth, now up to £194 a week (Treasury).",
+    costings: [{ row: 6, values: [0, 0, 0, -70, -70, -70] }],
+    notModelled:
+      "The eligibility rules are not yet published, and the model takes paternity pay and Maternity Allowance as reported in its data rather than working out who qualifies.",
+    sources: [
+      budget("paragraphs 3.20 and 6.12"),
+      {
+        label: "HM Treasury, release on parental pay and other measures (26 October 2026)",
+        href: "https://www.gov.uk/government/news/everyday-fixes-to-make-life-easier-for-millions-of-britons",
+      },
+    ],
+  },
+  {
+    id: "adjusted-triple-lock",
+    order: 14,
+    group: "pay",
+    name: "Adjusted Triple Lock for the State Pension",
+    starts: "Apr 2030",
+    changes:
+      "The State Pension rises by the highest of 2.5%, inflation, or the rise keeping its April 2029 value against earnings.",
+    reaches: "Current and future State Pension recipients, from April 2030.",
+    household:
+      "The pension still rises by at least 2.5% or inflation; it can rise by less than earnings from 2030.",
+    costings: [],
+    noCosting:
+      "Table 6.1 has no row for it. On the OBR's forecast the State Pension rises by 2.5% in both 2030-31 and 2031-32 under either rule, so the change does not affect spending in those years. The government estimates that State Pension spending would be £15 billion a year lower by the late 2030s than under the current Triple Lock; the OBR says the long-term effect depends heavily on how earnings, inflation and the 2.5% floor move relative to each other.",
+    notModelled:
+      "No change in our years: on the OBR's forecast the model gives the same State Pension as the current Triple Lock in every year to 2031-32.",
+    seeAlso: {
+      before: 'PolicyEngine models it to 2039-40 in a separate analysis, "',
+      label: "The Burnham plan vs the triple lock",
+      href: "https://www.policyengine.org/uk/triple-lock",
+      after: '" (16 October 2026).',
+    },
+    sources: [budget("paragraphs 1.29 and 5.23"), obr("paragraphs 3.49 and 3.50")],
+  },
+  {
+    id: "your-first-home",
+    order: 15,
+    group: "savings",
+    name: "Your First Home equity loan scheme",
+    starts: "Apr 2027",
+    changes:
+      "A £4.7 billion scheme gives first-time buyers in England equity loans of up to 20%, with a 2.5% deposit.",
+    reaches: "Around 70,000 first-time buyers (government estimate).",
+    household:
+      "A smaller deposit and a loan interest-free for five years; the Budget says the typical buyer saves hundreds a month.",
+    costings: [
+      {
+        row: 37,
+        values: [-15, 50, 95, 95, 95, 95],
+        note: "Row 37 is the scheme's net income from developer fees; the loans themselves are financial transactions, in Table 6.2.",
+      },
+    ],
+    notModelled: "The model has no home purchases or loans, and a loan is lent rather than paid, so household incomes do not change.",
+    sources: [budget("paragraphs 5.5 and 6.113")],
+  },
+  {
     id: "gas-standing-charges",
+    order: 16,
     group: "costs",
     name: "Gas standing charges to be abolished",
     starts: "End of 2027 or later",
@@ -308,6 +369,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "online-marketplace-liability",
+    order: 17,
     group: "business",
     name: "Online marketplaces to collect the tax on UK sellers' sales",
     starts: "1 Oct 2027",
@@ -320,48 +382,5 @@ export const UNMODELLED_MEASURES = [
     notModelled:
       "The model charges VAT on households' spending, scaled to total receipts, with no measure of VAT sellers leave unpaid, so collecting it changes nothing in the model.",
     sources: [budget("paragraphs 2.44 and 6.154")],
-  },
-  {
-    id: "pubs-business-rates-relief",
-    group: "business",
-    name: "Business rates relief for pubs and venues up to 35%",
-    starts: "1 Apr 2027",
-    changes:
-      "Business rates relief for pubs, social clubs and most live music venues in England rises from 15% to 35%.",
-    reaches: "Pubs, social clubs and most live music venues in England.",
-    household:
-      "Paid by businesses, not households; the Budget puts the relief at over £3,000 per pub on average next year.",
-    costings: [{ row: 12, values: [5, -160, -115, -5, -5, -5] }],
-    notModelled:
-      "The model attributes business rates to households through shareholdings, as a share of total receipts, with no reliefs, so a relief for pubs changes nothing in it.",
-    sources: [budget("paragraphs 3.21 and 6.189")],
-  },
-  {
-    id: "machine-games-duty",
-    group: "business",
-    name: "Machine Games Duty up from 20% to 25%",
-    starts: "1 Apr 2027",
-    changes:
-      "The duty on machine games with stakes over £1 or prizes over £100 rises from 20% to 25%.",
-    reaches: "Venues with higher-stake machines, commonly adult gaming centres (Budget).",
-    household:
-      "Charged on businesses running the machines; any effect reaches households through stakes and prizes, or as owners and staff.",
-    costings: [{ row: 56, values: [0, 135, 150, 145, 145, 145] }],
-    notModelled: "Our data hold no household spending on gambling, so the model can't pass the duty through to households.",
-    sources: [budget("paragraphs 2.49 and 6.225")],
-  },
-  {
-    id: "bank-surcharge",
-    group: "business",
-    name: "Bank surcharge up from 3% to 6% for 15 months",
-    starts: "1 Jan 2027",
-    changes:
-      "The bank surcharge rises from 3% to 6% until March 2028, helping fund the energy payment and electricity VAT cut.",
-    reaches: "Banks that pay the surcharge.",
-    household: "The surcharge is a tax on banks' profits, not on households.",
-    costings: [{ row: 55, values: [305, 950, 220, 0, 0, 0] }],
-    notModelled:
-      "This dashboard measures household incomes, and does not trace taxes on company profits through to them.",
-    sources: [budget("paragraphs 3.5 and 6.252")],
   },
 ];

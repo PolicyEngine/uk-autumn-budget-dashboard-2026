@@ -78,11 +78,11 @@ export function modellingInfo(policy) {
 import Tip from "./Tip";
 import TitleIcon from "./TitleIcon";
 
-// The cards' order: the Budget's own, by each measure's first row in its
-// Table 6.1 (policyDetails.js `budgetRows`), so the page reads as the
-// Budget does: energy and fuel first, then benefits, then taxes. A measure
-// with no row follows, by the catalogue's budgetary direction (raises,
-// then costs, then the rest), then its order. The charts keep the
+// The cards' order: each entry's `cardOrder` (policyDetails.js), set so
+// the two cards in a row are close in height; then the Budget's own, by
+// each measure's first row in its Table 6.1 (`budgetRows`); a measure with
+// no row follows, by the catalogue's budgetary direction (raises, then
+// costs, then the rest), then its order. The charts keep the
 // catalogue's order (measureCatalogue.jsx), which also sets the colours.
 // Cards carry no revenue tag or filter: one flat list.
 const DIRECTION_ORDER = ["revenue", "cost", "neutral"];
@@ -539,7 +539,7 @@ function PolicyCards({ policies, selectedPolicies, onShowEffect, parameterTables
   };
   const items = shown
     .map(withPolicyDetails)
-    .sort((a, b) => budgetRank(a) - budgetRank(b) || rank(a) - rank(b) || a.order - b.order);
+    .sort((a, b) => (a.cardOrder ?? Infinity) - (b.cardOrder ?? Infinity) || budgetRank(a) - budgetRank(b) || rank(a) - rank(b) || a.order - b.order);
   if (!shown.length) return null;
   return (
     <ul className="policy-cards">

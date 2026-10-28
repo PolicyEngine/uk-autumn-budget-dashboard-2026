@@ -560,30 +560,35 @@ describe("the card's frame", () => {
       expect(item.lastElementChild).toHaveClass("policy-card-foot");
     }
     // A card with details has every section
-    const full = [...document.querySelectorAll(".policy-cards > .policy-card")].find((item) => !item.classList.contains("is-bare"));
+    const full = [...document.querySelectorAll(".policy-cards > .policy-card")].find((item) => item.querySelector(".policy-card-example"));
     for (const name of CARD_SECTIONS.filter((section) => !UNMODELLED_ONLY_SECTIONS.includes(section))) {
       expect(full.querySelector(`.${name}`), name).toBeTruthy();
     }
   });
 
-  it("sizes each card to its content, rows aligned at the top, inner boxes never stretched", () => {
+  it("makes the two cards in a row one height, the footer pinned to the bottom, no inner box stretched", () => {
     const css = readFileSync(join(__dirname, "PolicyCards.css"), "utf8");
     const rule = (selector) => css.match(new RegExp(`\n${selector.replace(/[.]/g, "\\.").replace(/>/g, "\\s*>\\s*")} \\{([^}]*)\\}`))?.[1] ?? "";
-    expect(rule(".policy-cards")).toMatch(/align-items: start;/);
-    expect(rule(".policy-cards > .policy-card")).toMatch(/display: flex;[\s\S]*grid-row: auto;[\s\S]*grid-template-rows: none;/);
-    expect(css).toMatch(/\.policy-cards > \.policy-card > \* \{[^}]*grid-row: auto;/);
+    expect(rule(".policy-cards")).toMatch(/align-items: stretch;/);
+    expect(rule(".policy-cards > .policy-card")).toMatch(/display: flex;[\s\S]*flex-direction: column;/);
+    expect(rule(".policy-cards > .policy-card > \\*")).toMatch(/flex: none;/);
+    expect(rule(".policy-cards > .policy-card > .policy-card-foot")).toMatch(/margin-top: auto;/);
   });
 
-  it("orders the cards as the Budget's Table 6.1 does, with each card's costing row and example", () => {
-    const ids = ["savings_income_rates_up", "property_income_rates_up", "trading_allowance_raise", "household_energy_payment_2026", "carers_allowance_earnings_taper"];
-    const raises = ["property_income_rates_up", "savings_income_rates_up"];
-    render(<PolicyCards policies={ids.map((id) => published(id, id, raises.includes(id) ? "revenue" : "cost"))} selectedPolicies={ids} onShowEffect={() => {}} />);
+  it("pairs the modelled cards by shape through cardOrder: the charts together, then the tiles", () => {
+    const ordered = POLICY_DETAILS.filter((p) => p.cardOrder).sort((a, b) => a.cardOrder - b.cardOrder).map((p) => p.id);
+    expect(ordered.slice(0, 2)).toEqual(["fuel_duty_rise_deferral", "carers_allowance_earnings_taper"]);
+    expect(new Set(POLICY_DETAILS.filter((p) => p.cardOrder).map((p) => p.cardOrder)).size).toBe(ordered.length);
+  });
+
+  it("orders the cards by each entry's cardOrder, charts together, with each card's costing row and example", () => {
+    const ids = ["trading_allowance_raise", "property_income_rates_up", "household_energy_payment_2026", "carers_allowance_earnings_taper"];
+    render(<PolicyCards policies={ids.map((id) => published(id, id, id === "property_income_rates_up" ? "revenue" : "cost"))} selectedPolicies={ids} onShowEffect={() => {}} />);
     const cards = screen.getAllByRole("listitem").filter((item) => item.classList.contains("policy-card"));
-    // Rows 1, 7, 15, 61 and 62: not raises first
+    // cardOrder: Carer's Allowance 2, the energy payment 3, trading 4, property 6; not raises first
     expect(cards.map((item) => item.querySelector("h3").textContent)).toEqual([
-      "household_energy_payment_2026", "carers_allowance_earnings_taper", "trading_allowance_raise", "property_income_rates_up", "savings_income_rates_up",
+      "carers_allowance_earnings_taper", "household_energy_payment_2026", "trading_allowance_raise", "property_income_rates_up",
     ]);
-    expect(within(cards[4]).getByRole("link", { name: /^Costing: Budget 2026, Table 6\.1, row 62/ })).toBeTruthy();
     const costing = within(cards[3]).getByRole("link", { name: /^Costing: Budget 2026, Table 6\.1, row 61/ });
     expect(costing).toHaveAttribute("target", "_blank");
     expect(costing.getAttribute("href")).toMatch(/^https:\/\/www\.gov\.uk\/government\/publications\/budget-2026-document\//);
@@ -591,7 +596,7 @@ describe("the card's frame", () => {
     const example = within(cards[2]).getByRole("region", { name: /^Example: / });
     expect(example).toHaveTextContent("An employee on £30,000 with £3,000 of side income and no expenses pays £400 less income tax in 2027-28.");
     expect(cards[2].querySelector(".policy-card-spec")).toContainElement(example);
-    expect(cards[1].querySelector(".policy-card-example")).toBeNull();
+    expect(cards[0].querySelector(".policy-card-example")).toBeNull();
   });
 
   it("gives each Budget measure the Table 6.1 rows the reconciliation maps it to", () => {

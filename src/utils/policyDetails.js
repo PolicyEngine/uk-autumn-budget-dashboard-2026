@@ -32,9 +32,12 @@
  *   (collapsed by default, under "About this result");
  * - caveats: further caveats, in sentences, where the details state none;
  * - source: a public page on the policy, where one exists;
+ * - cardOrder: the card's place on the Policies tab (1 up), set so the two
+ *   cards in a row are close in height (the charts together, the tiles
+ *   together); cards without one follow, by budgetRows;
  * - budgetRows: the measure's rows in the Budget's Table 6.1 (as
- *   data_inputs/treasury/mapping.csv maps them), which order the cards and
- *   link each card to the Budget's costing;
+ *   data_inputs/treasury/mapping.csv maps them), which link each card to
+ *   the Budget's costing;
  * - example: { title, text, items?, source }: a worked example, or the reach the
  *   Budget states, every figure from its source (a cited document or a
  *   verified household calculation), shown under "What changes": one short line, and any further points as
@@ -58,6 +61,7 @@
 export const POLICY_DETAILS = [
   {
     id: "fuel_duty_rise_deferral",
+    cardOrder: 1,
     shortName: "Fuel duty cut extended",
     sentence: "extending the 5p fuel duty cut to 1 July 2027",
     name: "Fuel duty cut extended",
@@ -82,6 +86,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "state_pension_income_tax_protection",
+    cardOrder: 7,
     shortName: "Pension Tax Allowance",
     sentence: "introducing the Pension Tax Allowance",
     name: "Pension Tax Allowance",
@@ -138,6 +143,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "domestic_electricity_zero_vat",
+    cardOrder: 5,
     shortName: "Zero VAT on electricity",
     sentence: "taking VAT off household electricity",
     name: "Zero VAT on domestic electricity",
@@ -266,6 +272,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "carers_allowance_earnings_taper",
+    cardOrder: 2,
     shortName: "Carer's Allowance taper",
     sentence: "tapering Carer's Allowance above the earnings limit",
     name: "Carer's Allowance earnings taper",
@@ -333,6 +340,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "property_income_rates_up",
+    cardOrder: 6,
     shortName: "Property income tax up",
     sentence: "raising tax on property income",
     name: "Property income tax rates up",
@@ -356,6 +364,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "savings_income_rates_up",
+    cardOrder: 8,
     shortName: "Savings income tax up",
     sentence: "raising tax on savings income",
     name: "Savings income tax rates up",
@@ -379,6 +388,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "household_energy_payment_2026",
+    cardOrder: 3,
     shortName: "Energy payment",
     sentence: "paying £100 towards energy bills",
     name: "Household Energy Payment",
@@ -416,6 +426,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "trading_allowance_raise",
+    cardOrder: 4,
     shortName: "Trading allowance",
     sentence: "raising the trading allowance",
     name: "Trading allowance raised to £3,000",

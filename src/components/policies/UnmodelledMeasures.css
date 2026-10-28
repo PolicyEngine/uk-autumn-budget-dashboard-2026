@@ -49,20 +49,6 @@
   cursor: pointer;
 }
 
-/* The groups, by who a measure touches: a small label above each grid */
-.umm-group + .umm-group {
-  margin-top: 28px;
-}
-
-.umm-group-title {
-  margin: 0 0 10px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--pe-gray-500);
-}
-
 /* The Treasury's six years as one strip of small cells */
 .umm-costing-scroll {
   max-width: 100%;

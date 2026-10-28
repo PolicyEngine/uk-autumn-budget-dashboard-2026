@@ -241,15 +241,19 @@ describe("UnmodelledMeasures", () => {
     }
   });
 
-  it("shows the cards in their groups, by who a measure touches, each under its label", () => {
+  it("orders the cards by the data's own order field, pairing cards of a like shape", () => {
+    expect(UNMODELLED_MEASURES.map((m) => m.order)).toEqual(UNMODELLED_MEASURES.map((_, index) => index + 1));
     render(<UnmodelledMeasures />);
     open();
-    const groups = [...document.querySelectorAll(".umm-group")];
-    expect(groups.map((group) => group.querySelector(".umm-group-title").textContent)).toEqual(UNMODELLED_GROUPS.map(({ label }) => label));
-    for (const [index, group] of groups.entries()) {
-      const ids = [...group.querySelectorAll(".policy-card")].map((card) => card.id.replace(/^unmodelled-/, ""));
-      expect(ids).toEqual(UNMODELLED_MEASURES.filter((m) => m.group === UNMODELLED_GROUPS[index].id).map((m) => m.id));
-    }
+    expect(cards().map((card) => card.id.replace(/^unmodelled-/, ""))).toEqual(UNMODELLED_MEASURES.map((m) => m.id));
+    // Each row of two has the same shape: one pair of tiles, two, or none
+    const shape = (card) => card.querySelectorAll(".pchg-ba").length;
+    const items = cards();
+    const mismatched = [];
+    for (let i = 0; i + 1 < items.length; i += 2) if (shape(items[i]) !== shape(items[i + 1])) mismatched.push(items[i].id);
+    expect(mismatched).toEqual([]);
+    expect(document.querySelector(".umm-group-title")).toBeNull();
+    // Every measure still says who it touches
     expect(UNMODELLED_MEASURES.every((m) => UNMODELLED_GROUPS.some(({ id }) => id === m.group))).toBe(true);
   });
 
