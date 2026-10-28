@@ -123,7 +123,7 @@ export const UNMODELLED_MEASURES = [
       },
     ],
     notModelled:
-      "The model counts taxes on what households buy, such as VAT and fuel duty, but not the prices they pay, and the cap changes a fare rather than a tax.",
+      "The model prices bus journeys, but a lower fare does not change household income, which is what this dashboard measures; we plan to show the saving after Budget day.",
     sources: [
       budget("paragraphs 2.8 and 3.3"),
       {
