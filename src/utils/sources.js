@@ -8,14 +8,15 @@ export const SOURCES = {
     label: "OBR, Fiscal risks and sustainability – July 2026",
     url: "https://obr.uk/frs/fiscal-risks-and-sustainability-july-2026/",
   },
-  // The OBR forecast the page's projections follow: the microsimulation's
-  // economic assumptions (policyengine-uk's gov.economic_assumptions), so
-  // every place that names it describes the model. Point it at the October
-  // 2026 EFO with the change that moves the model onto it (#290); the
-  // Forecast changes sub-tab names each forecast by its own key below.
+  // The OBR forecast the Budget figures' simulations are built on
+  // (src/uk_budget_data/forecast/obr_october_2026.json over policyengine-uk's
+  // economic assumptions; data_inputs/publication_basis.json), so every
+  // place that names it describes the Budget runs. The Pre-measures
+  // forecast tab's projections are still on March 2026 and name
+  // obr_efo_march_2026.
   obr_efo_current: {
-    label: "OBR, Economic and fiscal outlook – March 2026",
-    url: "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",
+    label: "OBR, Economic and fiscal outlook – October 2026",
+    url: "https://obr.uk/download/economic-and-fiscal-outlook-october-2026/",
   },
   obr_efo_march_2026: {
     label: "OBR, Economic and fiscal outlook – March 2026",

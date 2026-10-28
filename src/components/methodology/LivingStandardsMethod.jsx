@@ -168,7 +168,7 @@ export default function LivingStandardsMethod() {
                 value: (
                   <>
                     <ExternalLink href={hbai.url || HBAI_URL}>DWP HBAI</ExternalLink>
-                    ; <SourceLink id="obr_efo_current" />
+                    ; <SourceLink id="obr_efo_march_2026" />
                   </>
                 ),
                 more: notes.map((n) => linkNote(text(n))),

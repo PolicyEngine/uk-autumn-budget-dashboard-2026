@@ -781,9 +781,9 @@ function MethodologyTab({ onShowTab }) {
           </Topic>
           <Topic title="Economic assumptions" preview="One OBR forecast behind the assumptions and weights">
             <p className="method-more">
-              The economic assumptions and the weights follow the{" "}
-              <SourceLink id="obr_efo_current" />. Rebasing them on a new forecast is a separate
-              step.
+              The Budget figures grow CPI, RPI, earnings and house prices at the rates of the{" "}
+              <SourceLink id="obr_efo_current" />; other series keep policyengine-uk&apos;s March 2026
+              path, and the weights keep the certified dataset's calibration.
             </p>
           </Topic>
           <Topic title="Business fuel use" preview="Fuel duty on households' own purchases only">

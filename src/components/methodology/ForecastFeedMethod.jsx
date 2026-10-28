@@ -38,7 +38,7 @@ export default function ForecastFeedMethod() {
     <>
       <p className="method-lead">
         The baseline grows wages, benefits, prices and rents at the rates of the{" "}
-        <SourceLink id="obr_efo_current" />, so the incomes and poverty figures start from that forecast.
+        <SourceLink id="obr_efo_march_2026" />, so the incomes and poverty figures start from that forecast.
       </p>
       <ul className="method-list">
         <li>Each rate is the growth in a calendar year&apos;s average on the year before.</li>

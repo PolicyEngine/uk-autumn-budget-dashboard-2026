@@ -52,7 +52,7 @@ function ForecastPanel({ forecast, data, onShowTab }) {
               </>
             ) : (
               <>
-                Calendar-year growth behind the baseline, from the <SourceLink source="obr_efo_current" />.
+                Calendar-year growth behind the baseline, from the <SourceLink source="obr_efo_march_2026" />.
               </>
             )}{" "}
             <ViewLink tab="methodology" hash={FORECAST_FEED_ANCHOR} onShowTab={onShowTab}>
