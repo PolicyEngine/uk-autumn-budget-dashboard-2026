@@ -1,0 +1,68 @@
+/* A card's worked example (or the reach the Budget states), under What
+   changes, in the same small type as its caption */
+.policy-card-example {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+  min-width: 0;
+}
+
+.policy-card-example-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-gray-700);
+}
+
+.policy-card-example-title svg {
+  flex: none;
+  color: var(--pe-gray-500);
+}
+
+.policy-card-example-text {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}
+
+.policy-card-example-source {
+  margin: 0;
+  font-size: var(--fs-micro);
+  line-height: 1.45;
+  color: var(--pe-gray-500);
+}
+
+.policy-card-example-source a {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+/* The Budget's costing row, beside the source and styled as it is */
+.policy-card-actions .policy-card-costing {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 40px;
+  white-space: nowrap;
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.policy-card-example-source a:hover,
+.policy-card-actions .policy-card-costing:hover {
+  text-decoration-color: currentColor;
+}
+
+/* Source and Costing side by side on the left, the effect button right */
+.policy-card-actions .policy-card-effect {
+  margin-left: auto;
+}

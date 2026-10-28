@@ -28,6 +28,12 @@
  *   (collapsed by default, under "About this result");
  * - caveats: further caveats, in sentences, where the details state none;
  * - source: a public page on the policy, where one exists;
+ * - budgetRows: the measure's rows in the Budget's Table 6.1 (as
+ *   data_inputs/treasury/mapping.csv maps them), which order the cards and
+ *   link each card to the Budget's costing;
+ * - example: { title, text, source }: a worked example, or the reach the
+ *   Budget states, every figure from its source (a cited document or a
+ *   verified household calculation), shown under "What changes";
  * - writtenFor: the measure's description in reforms.py, which the
  *   publication carries verbatim, when the entry was written. After
  *   changing a measure in reforms.py, check its entry still holds, then copy
@@ -64,6 +70,7 @@ export const POLICY_DETAILS = [
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
     },
+    budgetRows: [3],
   },
   {
     id: "state_pension_income_tax_protection",
@@ -87,6 +94,12 @@ export const POLICY_DETAILS = [
     source: {
       label: "Pension Tax Allowance explainer",
       href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer",
+    },
+    budgetRows: [52],
+    example: {
+      title: "Example",
+      text: "In 2027-28 a pensioner with only the full new State Pension, £13,036.40, pays no income tax: the allowance cancels the £93.28 due. One with total income of £13,186.40, £150 above it, gets £44 (£94 less £150 ÷ 3), and one on £13,400 gets nothing.",
+      source: { label: "Pension Tax Allowance explainer", href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer" },
     },
   },
   {
@@ -136,6 +149,7 @@ export const POLICY_DETAILS = [
       label: "Temporary zero rate of VAT for domestic electricity",
       href: "https://www.gov.uk/government/publications/temporary-zero-rate-of-vat-for-domestic-electricity-in-great-britain/temporary-zero-rate-of-vat-in-great-britain-for-domestic-electricity",
     },
+    budgetRows: [2],
   },
   {
     id: "employer_ni_relief_under_25s",
@@ -262,6 +276,7 @@ export const POLICY_DETAILS = [
       label: "Carer's Allowance",
       href: "https://www.gov.uk/carers-allowance",
     },
+    budgetRows: [7],
   },
   {
     id: "lha_unfreeze_2027",
@@ -325,6 +340,7 @@ export const POLICY_DETAILS = [
       label: "HMRC: changes to tax rates for property, savings and dividend income",
       href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
     },
+    budgetRows: [61, 62],
   },
   {
     id: "household_energy_payment_2026",
@@ -349,6 +365,12 @@ export const POLICY_DETAILS = [
       label: "Budget 2026",
       href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
     },
+    budgetRows: [1],
+    example: {
+      title: "Who it reaches",
+      text: "The Budget puts its reach at up to 20 million households, around 80% of households in England, including 83% of those whose energy costs are over 10% of their after-housing-costs income and 88% of those in the bottom three income deciles.",
+      source: { label: "Budget 2026, paragraphs 3.5 and 3.6", href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html" },
+    },
   },
   {
     id: "trading_allowance_raise",
@@ -370,6 +392,12 @@ export const POLICY_DETAILS = [
     source: {
       label: "Budget 2026",
       href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
+    },
+    budgetRows: [15],
+    example: {
+      title: "Example",
+      text: "An employee on £30,000 with £1,500 of trading receipts and no expenses pays £100 less income tax in 2027-28, and £400 less with receipts of £3,000 or more; with £2,000 of expenses, receipts of £3,000 or more save £200. The population figures cannot follow this, as the data hold profits, not receipts (see About this result).",
+      source: { label: "PolicyEngine household calculations, policyengine-uk 2.151.0 (review on PR #290)", href: "https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/290" },
     },
   },
 ];

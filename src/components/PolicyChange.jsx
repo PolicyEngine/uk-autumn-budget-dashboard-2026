@@ -99,7 +99,10 @@ function StepPlot({ row, segments, tone, onHighlight, label }) {
   const size = (s) => Math.abs(s.after - s.before);
   const largest = gaps.reduce((big, s) => (size(s) > size(big) + 1e-9 ? s : big), gaps[0]);
   const latest = gaps[gaps.length - 1];
-  const labelled = [...new Set([largest, latest])].filter(Boolean);
+  // Each change labelled once: a lasting step that holds the same gap to
+  // the end is labelled where it starts only
+  const sameGap = largest && latest && largest.before === latest.before && largest.after === latest.after;
+  const labelled = [...new Set(sameGap ? [largest] : [largest, latest])].filter(Boolean);
   const ticks = [...new Set([low, high].map((v) => Math.round(v * 1e6) / 1e6))];
   const set = (index) => {
     const segment = index === null || index < 0 ? null : segments[index];
@@ -271,6 +274,10 @@ function ChangeTable({ lines, unit, tone, caption, first }) {
   );
 }
 
+// The displays drawn as a step plot even when the change is one step (a
+// "table" of several parameters keeps its tiles and button only)
+export const PLOTTED_DISPLAYS = new Set(["switch", "before-after", "path"]);
+
 const plotCaption = (row) => (row.unit_words ? `${row.label}, ${row.unit_words}` : row.label);
 
 /** The plot's key: current law dashed grey, the measure in its colour. */
@@ -308,7 +315,8 @@ function Reveal({ show, hide, children }) {
  * A card's "What changes", in one form for every measure (#260): the main
  * parameter's current law and the policy as two tiles with the change,
  * then, where the change varies over the years or is a `switch` (a change
- * for a while only: a window, or one winter), the step plot of the two
+ * for a while only: a window, or one winter) or one lasting change
+ * (`before-after`, or a `path` that moves once), the step plot of the two
  * over April 2026 to March 2032 (on dates the rates change, for a
  * `schedule`). Everything else sits behind a button: the years or dates as
  * a table, the yearly averages, or every parameter that changes when there
@@ -323,8 +331,11 @@ export default function PolicyChange({ entry, direction, onHighlight, name }) {
   if (!main || !first) return null;
   const schedule = entry.display === "schedule";
   const varies = variesByPeriod(main);
-  // A switch is plotted too: it is on for a while, then off again
-  const segments = varies || entry.display === "switch" ? segmentsFor(main) : [];
+  // A switch is plotted too: it is on for a while, then off again; and so
+  // is a single lasting change (before-after, or a path that moves once),
+  // so every card shows its change over the charts' years
+  const plots = varies || PLOTTED_DISPLAYS.has(entry.display);
+  const segments = plots ? segmentsFor(main) : [];
   const plotted = segments.some(differs);
   // A schedule's or a window's averages over each fiscal year, where the
   // main row is not already by year

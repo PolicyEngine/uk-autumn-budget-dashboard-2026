@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { CalendarCheck, CalendarX, ChartColumn, ExternalLink, Flag, FlaskConical, Users } from "lucide-react";
+import { CalendarCheck, CalendarX, ChartColumn, ExternalLink, Flag, FlaskConical, Lightbulb, Users } from "lucide-react";
 import "./MeasureRowLabel.css";
+import "./PolicyCards.css";
 import { measureCategoryOf } from "../utils/measureCategory";
 import { withPolicyDetails } from "../utils/policyDetails";
 import { policyCardAnchor } from "../utils/methodLink";
@@ -9,13 +10,15 @@ import PolicyChange, { usePolicyParameters } from "./PolicyChange";
 import Disclosure from "./Disclosure";
 import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
 import UnmodelledMeasures from "./policies/UnmodelledMeasures";
+import { TABLE_6_1_URL } from "../utils/unmodelledMeasures";
 import { MODELLING_LIMITS, measureModellingFacts, sentences } from "../utils/measureModelling";
 
 /**
  * A card's sections, top to bottom, by class: the category chip, the
  * title, the one-line summary, At a glance (Starts, Ends or Continues, who
- * it affects, then the timeline), What changes, About this result, the
- * source and "See its effect". A card with details has every section;
+ * it affects, then the timeline), What changes, a worked example (or the
+ * reach the Budget states) where its entry has one, About this result, the
+ * source, the Budget's costing row and "See its effect". A card with details has every section;
  * one without leaves out those it has nothing for. Each section keeps its
  * own row of the list's grid, so the sections line up across a row.
  */
@@ -25,8 +28,10 @@ export const CARD_SECTIONS = [
   "policy-card-summary",
   "policy-card-when",
   "pchg",
+  "policy-card-example",
   "policy-card-details",
   "policy-card-source",
+  "policy-card-costing",
   "policy-card-effect",
 ];
 
@@ -66,10 +71,21 @@ export function modellingInfo(policy) {
 import Tip from "./Tip";
 import TitleIcon from "./TitleIcon";
 
-// The cards' order by the catalogue's budgetary direction: measures that
-// raise revenue, then those that cost it, then the rest. Cards carry no
-// revenue tag or filter: one flat list.
+// The cards' order: the Budget's own, by each measure's first row in its
+// Table 6.1 (policyDetails.js `budgetRows`), so the page reads as the
+// Budget does: energy and fuel first, then benefits, then taxes. A measure
+// with no row follows, by the catalogue's budgetary direction (raises,
+// then costs, then the rest), then its order. The charts keep the
+// catalogue's order (measureCatalogue.jsx), which also sets the colours.
+// Cards carry no revenue tag or filter: one flat list.
 const DIRECTION_ORDER = ["revenue", "cost", "neutral"];
+
+/** A measure's first Table 6.1 row, or Infinity without one. */
+export const budgetRank = (policy) => (policy.budgetRows?.length ? Math.min(...policy.budgetRows) : Infinity);
+
+/** "row 15", or "rows 61 and 62". */
+export const budgetRowsLabel = (rows) =>
+  rows.length === 1 ? `row ${rows[0]}` : `rows ${rows.slice(0, -1).join(", ")} and ${rows[rows.length - 1]}`;
 
 // The timeline runs over the charts' years: April 2026 to March 2032
 // (2026-27 to 2031-32), month by month
@@ -336,14 +352,33 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
       </div>
       )}
 
-      {parameters && (
+      {(parameters || policy.example) && (
         <div className="policy-card-spec">
-          <PolicyChange
-            name={policy.label ?? policy.name}
-            entry={parameters}
-            direction={policy.direction}
-            onHighlight={setHighlight}
-          />
+          {parameters && (
+            <PolicyChange
+              name={policy.label ?? policy.name}
+              entry={parameters}
+              direction={policy.direction}
+              onHighlight={setHighlight}
+            />
+          )}
+          {policy.example && (
+            <section className="policy-card-example" aria-label={`${policy.example.title}: ${policy.label ?? policy.name}`}>
+              <p className="policy-card-example-title">
+                <Lightbulb size={14} aria-hidden="true" />
+                {policy.example.title}
+              </p>
+              <p className="policy-card-example-text">{policy.example.text}</p>
+              {policy.example.source && (
+                <p className="policy-card-example-source">
+                  <a href={policy.example.source.href} target="_blank" rel="noopener noreferrer">
+                    {policy.example.source.label}
+                    <span className="policy-sr-only"> (opens in a new tab)</span>
+                  </a>
+                </p>
+              )}
+            </section>
+          )}
         </div>
       )}
 
@@ -383,6 +418,21 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
             </a>
             </Tip>
           )}
+          {policy.budgetRows?.length > 0 && (
+            <Tip content={`The Budget's costing: Table 6.1, ${budgetRowsLabel(policy.budgetRows)}`}>
+            <a
+              className="policy-card-costing"
+              href={TABLE_6_1_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Costing
+              <span className="policy-sr-only">: Budget 2026, Table 6.1, {budgetRowsLabel(policy.budgetRows)}</span>
+              <ExternalLink size={14} aria-hidden="true" />
+              <span className="policy-sr-only"> (opens in a new tab)</span>
+            </a>
+            </Tip>
+          )}
           {onShowEffect && (
             <button
               type="button"
@@ -417,14 +467,15 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
 function PolicyCards({ policies, selectedPolicies, onShowEffect, parameterTables }) {
   const tables = usePolicyParameters(parameterTables);
   const shown = policies.filter((policy) => policy.displayable === true && selectedPolicies.includes(policy.id));
-  // Raises first, then costs, then the rest, each in the catalogue's order
+  // The Budget's Table 6.1 order; a measure with no row after, raises
+  // first, then costs, then the rest, each in the catalogue's order
   const rank = (policy) => {
     const index = DIRECTION_ORDER.indexOf(policy.direction);
     return index < 0 ? DIRECTION_ORDER.length : index;
   };
   const items = shown
-    .sort((a, b) => rank(a) - rank(b) || a.order - b.order)
-    .map(withPolicyDetails);
+    .map(withPolicyDetails)
+    .sort((a, b) => budgetRank(a) - budgetRank(b) || rank(a) - rank(b) || a.order - b.order);
   if (!shown.length) return <UnmodelledMeasures />;
   return (
     <>

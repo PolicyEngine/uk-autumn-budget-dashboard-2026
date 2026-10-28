@@ -10,7 +10,7 @@ import {
 } from "../../utils/unmodelledMeasures";
 import "./UnmodelledMeasures.css";
 
-export const UNMODELLED_TITLE = "Budget measures this dashboard does not model";
+export const UNMODELLED_TITLE = "Budget policies we do not model";
 
 // £ million as Table 6.1 prints it: a sign on every figure but zero, with a true minus
 const millions = new Intl.NumberFormat("en-GB", { signDisplay: "exceptZero" });
