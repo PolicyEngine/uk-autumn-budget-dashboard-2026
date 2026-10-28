@@ -292,9 +292,6 @@ export const POLICY_DETAILS = [
       label: "Carer's Allowance",
       href: "https://www.gov.uk/carers-allowance",
     },
-    // The What changes block's own words for the file's row (whose label
-    // and units stay as policy_parameters.json publishes them)
-    changeLabel: { label: "Earnings limit", unitWords: "£ a week" },
     budgetRows: [7],
   },
   {

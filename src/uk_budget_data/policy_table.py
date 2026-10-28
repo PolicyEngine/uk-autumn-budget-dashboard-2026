@@ -179,8 +179,19 @@ UNIT_WORDS = {
 
 
 def _row(
-    label, unit, points, source, *, primary=True, note=None, unit_words=None
+    label,
+    unit,
+    points,
+    source,
+    *,
+    primary=True,
+    note=None,
+    unit_words=None,
+    card_note=None,
 ) -> dict:
+    """One parameter's points. ``note`` qualifies the row where the page
+    lists it; ``card_note``, on a measure's main row, is a line the
+    Policies card shows under its values."""
     row = {
         "label": label,
         "unit": unit,
@@ -193,6 +204,8 @@ def _row(
     }
     if note:
         row["note"] = note
+    if card_note:
+        row["card_note"] = card_note
     return row
 
 
@@ -785,55 +798,84 @@ def _plan_2(reform) -> list[dict]:
     ]
 
 
+def carers_allowance_limit(year: int) -> float:
+    """The measure's Weekly Earnings Limit, £ a week, as the modifier
+    computes it: 16 hours at the OBR's National Living Wage for that April
+    (``national_living_wage_by_april``), else £13.21 from April 2027 moved
+    on with average earnings, rounded up to the pound."""
+    values = constants(carers_allowance_earnings_taper)
+    wages = dict(values["national_living_wage_by_april"])
+    if year in wages:
+        wage = wages[year]
+    else:
+        earnings = "gov.economic_assumptions.indices.obr.average_earnings"
+        wage = (
+            values["national_living_wage_2027"]
+            * engine_value(earnings, year)
+            / engine_value(earnings, 2027)
+        )
+    return float(math.ceil(round(values["limit_hours"] * wage, 6)))
+
+
 def _carers_allowance_taper(reform) -> list[dict]:
+    """The cliff the measure removes (#290, Anthony, 19:20): the allowance
+    £1 a week over the earnings limit, nothing under current law and the
+    weekly rate less £1 with the taper. The measure does not move the limit
+    itself, so no row shows it as a change; the card's note gives the limit
+    and where the tapered allowance runs out."""
     values = constants(carers_allowance_earnings_taper)
     start, taper = values["start_year"], values["taper_rate"]
     if values["earnings_limit"] is not None:
-        raise ValueError("the table reads the engine's earnings limit")
-    limit = "gov.dwp.carers_allowance.earnings_limit"
+        raise ValueError("the table reads the measure's own earnings limit")
     rate = "gov.dwp.carers_allowance.rate"
-    earnings = "gov.economic_assumptions.indices.obr.average_earnings"
     modifier = _modifier_source(
         carers_allowance_earnings_taper,
-        "start_year, taper_rate, limit_hours, national_living_wage_2027",
+        "start_year, taper_rate, limit_hours, national_living_wage_by_april",
     )
 
-    def budget_limit(y):
-        # 16 hours at the National Living Wage (£13.21 in 2027-28), moved
-        # on with average earnings, as the modifier computes it
-        return (
-            values["limit_hours"]
-            * values["national_living_wage_2027"]
-            * engine_value(earnings, y)
-            / engine_value(earnings, 2027)
+    def over_by_a_pound(y):
+        if y < start:
+            return 0.0
+        return round(max(engine_value(rate, y) - taper * 1, 0.0), 2)
+
+    def runs_out(y):
+        return carers_allowance_limit(y) + engine_value(rate, y) / taper
+
+    shown = [y for y in POLICY_YEARS if y >= start]
+    def by_year(amount):
+        parts = [f"£{amount(y):,.0f}" for y in shown]
+        parts[0] += " a week"
+        return " and ".join(
+            f"{part} in {_fiscal_label(y)}" for part, y in zip(parts, shown)
         )
 
+    limits, ends = by_year(carers_allowance_limit), by_year(runs_out)
     return [
         _row(
-            "Weekly earnings at which Carer's Allowance stops",
+            "Carer's Allowance at £1 a week over the earnings limit",
             POUNDS,
-            _yearly(
-                lambda y: engine_value(limit, y),
-                lambda y: (
-                    round(budget_limit(y) + engine_value(rate, y) / taper, 2)
-                    if y >= start
-                    else engine_value(limit, y)
-                ),
-            ),
+            _yearly(lambda y: 0.0, over_by_a_pound),
             _source(
                 {
-                    "kind": "engine_parameter",
-                    "where": f"the earnings limit ({limit}); with the "
-                    "measure, 16 hours at the National Living Wage "
-                    f"(moved on with {earnings}) plus the weekly rate "
-                    f"({rate}) divided by the taper rate",
+                    "kind": "documented",
+                    "where": "current law pays no Carer's Allowance above "
+                    "the earnings limit (gov.dwp.carers_allowance."
+                    "earnings_limit)",
                 },
-                modifier,
+                {
+                    "kind": "modifier_constant",
+                    "where": f"the weekly rate ({rate}) less taper_rate x "
+                    "£1; " + modifier["where"],
+                },
             ),
-            unit_words="£ of net earnings a week",
-            note="Current law stops the allowance at £1 over the earnings "
-            "limit (£204 a week, not uprated in the engine); with the "
-            "measure it falls by £1 for each £1 above the limit",
+            unit_words="£ a week",
+            card_note=(
+                "The earnings limit is 16 hours at the National Living "
+                f"Wage, rounded up to the pound: {limits}. Current law "
+                "stops the allowance at £1 over it. With the measure it "
+                f"falls by £1 for each £1 above the limit, and runs out at "
+                f"{ends}."
+            ),
         ),
     ]
 

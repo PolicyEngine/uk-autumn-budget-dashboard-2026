@@ -400,3 +400,44 @@ def test_current_law_thresholds_are_the_engine_alone(document):
         29_385,
         29_385,
     )
+
+
+def test_carers_allowance_shows_the_cliff_it_removes(document):
+    """#290 (Anthony, 19:20): the measure does not move the earnings limit,
+    so the card shows the allowance £1 over it, nothing in current law and
+    the weekly rate less £1 with the taper, and the note gives the limit
+    (16 hours at the OBR's National Living Wage, rounded up to the pound,
+    as efcda9c5) and where the allowance runs out."""
+    from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
+        OBR_NATIONAL_LIVING_WAGE_BY_APRIL,
+    )
+    from uk_budget_data.policy_table import carers_allowance_limit
+
+    table = rows(document, registry.CARERS_ALLOWANCE_TAPER_ID)
+    assert list(table) == [
+        "Carer's Allowance at £1 a week over the earnings limit"
+    ]
+    row = table["Carer's Allowance at £1 a week over the earnings limit"]
+    assert row["primary"] and row["unit_words"] == "£ a week"
+    rate = PARAMETERS.gov.dwp.carers_allowance.rate
+    wages = dict(OBR_NATIONAL_LIVING_WAGE_BY_APRIL)
+    points = by_key(row)
+    for year in range(2026, 2030):
+        assert points[str(year)] == (0, 0)
+    for year in (2030, 2031):
+        weekly = rate(f"{year}-04-06")
+        assert points[str(year)] == (0, round(weekly - 1, 2))
+        limit = math.ceil(round(16 * wages[year], 6))
+        assert carers_allowance_limit(year) == limit
+    assert (carers_allowance_limit(2030), carers_allowance_limit(2031)) == (
+        228,
+        234,
+    )
+    note = row["card_note"]
+    assert "£228 a week in 2030-31 and £234 in 2031-32" in note
+    ends = [
+        f"£{228 + rate('2030-04-06'):,.0f} a week in 2030-31",
+        f"£{234 + rate('2031-04-06'):,.0f} in 2031-32",
+    ]
+    assert f"runs out at {ends[0]} and {ends[1]}" in note
+    assert "Earnings limit" not in row["label"]

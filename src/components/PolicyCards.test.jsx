@@ -639,14 +639,17 @@ describe("the card's frame", () => {
     expect(list.children[0]).toHaveTextContent("83% of households spending over a tenth of their income on energy");
   });
 
-  it("names the Carer's Allowance What changes row in the card's own short words", () => {
+  it("shows the Carer's Allowance cliff the taper removes, with the limit in the note (#290, Anthony, 19:20)", () => {
     const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
     const id = "carers_allowance_earnings_taper";
     render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
     const block = screen.getByRole("region", { name: /^What changes/ });
-    expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^Earnings limit/);
-    expect(block.querySelector(".pchg-caption")).toHaveTextContent("Earnings limit, £ a week");
-    expect(block).not.toHaveTextContent("Weekly earnings at which");
+    expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^Carer's Allowance at £1 a week over the earnings limit, 2030-31$/);
+    expect([...block.querySelectorAll(".pchg-tile-value, .pchg-tile .pchg-chip")].map((node) => node.textContent).join("")).toBe("£0£95+£95");
+    expect(block.querySelector(".pchg-note")).toHaveTextContent("£228 a week in 2030-31 and £234 in 2031-32");
+    expect(block.querySelector(".pchg-note")).toHaveTextContent("runs out at £324 a week in 2030-31 and £332 in 2031-32");
+    // The limit is not shown as a change the measure makes
+    expect(block).not.toHaveTextContent(/Earnings limit|Weekly earnings at which/);
   });
 
   it("shows no year strip by default: At a glance says when", () => {

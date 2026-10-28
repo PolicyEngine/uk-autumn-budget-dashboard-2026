@@ -361,6 +361,8 @@ export default function PolicyChange({ entry, direction, onHighlight, name, lead
       <BeforeAfter row={main} point={first} tone={tone} when={varies ? (schedule ? `from ${first.label}` : first.label) : null} />
       {/* "pairs": every changing parameter as its own before and after */}
       {pairs && others.map((row) => <BeforeAfter key={row.label} row={row} point={row.points.find(differs)} tone={tone} when={null} />)}
+      {/* The file's own line on the main row, where it has one */}
+      {main.card_note && <p className="pchg-caption pchg-note">{main.card_note}</p>}
       {plotted && (
         <>
           <div className="pchg-head is-plot">
