@@ -174,15 +174,38 @@ FUEL_DUTY_CURRENT_LAW = (
 # uprating resumes in April 2028 from 52.95p. So from April 2028 each rate
 # is current law's scaled by 52.95 / 59.75, the 5p and a year's RPI below
 # it.
-FUEL_DUTY_STAGES = (("2026-03-23", 0.5295),)
+#
+# Budget day: the two numbers to set from the Budget document.
+# - FUEL_DUTY_FROZEN: the frozen rate, £ a litre. 0.5295 keeps the 5p cut
+#   (52.95p); 0.5795 would let it lapse and freeze at 57.95p.
+# - FUEL_DUTY_FROZEN_THROUGH: the last fiscal year the freeze covers (2027
+#   = 2027-28, to 31 March 2028). RPI uprating resumes on 1 April of the
+#   next year, from the frozen rate. Must be a year with an April step in
+#   FUEL_DUTY_CURRENT_LAW (2027 to 2031).
+# Changing either changes the pump VAT modifier's defaults too
+# (budget_measures/pump_vat_on_fuel_duty_deferral.py):
+# ``uv run python -c "from uk_budget_data.reforms import
+# pump_vat_on_fuel_duty_deferral_defaults as d; print(d())"`` prints them,
+# and tests/test_reforms.py fails until they are pasted in.
 FUEL_DUTY_FROZEN = 0.5295
-FUEL_DUTY_CURRENT_LAW_APRIL_2027 = 0.5975
-FUEL_DUTY_RPI_FROM = "2028-04-01"
+FUEL_DUTY_FROZEN_THROUGH = 2027
+FUEL_DUTY_STAGES = (("2026-03-23", FUEL_DUTY_FROZEN),)
+FUEL_DUTY_RPI_FROM = f"{FUEL_DUTY_FROZEN_THROUGH + 1}-04-01"
+
+
+def _fuel_duty_scale_base() -> float:
+    """Current law's rate just before uprating resumes, which the frozen
+    rate stands in for (59.75p, its April 2027 rate, for a freeze through
+    2027-28); later rates are current law's scaled by frozen / this."""
+    before = [
+        rate for day, rate in FUEL_DUTY_CURRENT_LAW if day < FUEL_DUTY_RPI_FROM
+    ]
+    return before[-1]
 
 
 def fuel_duty_deferral_schedule() -> tuple:
     """The candidate's rates by the date each takes effect."""
-    scale = FUEL_DUTY_FROZEN / FUEL_DUTY_CURRENT_LAW_APRIL_2027
+    scale = FUEL_DUTY_FROZEN / _fuel_duty_scale_base()
     later = tuple(
         (day, round(rate * scale, 4))
         for day, rate in FUEL_DUTY_CURRENT_LAW
@@ -220,20 +243,69 @@ def fuel_duty_deferral_rates() -> dict[str, float]:
     }
 
 
+def pump_vat_on_fuel_duty_deferral_defaults() -> dict[str, float]:
+    """The pump VAT modifier's defaults for the current freeze: for each
+    fuel and year, 0.24 x the duty change / the engine's pump price (see
+    the modifier's comment). Paste them into
+    ``budget_measures/pump_vat_on_fuel_duty_deferral.py`` after changing
+    the freeze."""
+    from policyengine_uk.system import system
+
+    prices = system.parameters.household.consumption.fuel.prices
+    rates = fuel_duty_deferral_rates()
+    current = fiscal_year_means(FUEL_DUTY_CURRENT_LAW)
+    return {
+        f"{fuel}_{year}": 0.24
+        * (rates[str(year)] - current[str(year)])
+        / getattr(prices, fuel)(f"{year}-04-30")
+        for year in POLICY_YEARS
+        for fuel in ("petrol", "diesel")
+    }
+
+
+def _fiscal_year_label(year: int) -> str:
+    return f"{year}-{(year + 1) % 100:02d}"
+
+
+def _pence(rate: float) -> str:
+    return f"{rate * 100:.2f}p"
+
+
+def _fuel_duty_deferral_description() -> str:
+    frozen = _pence(FUEL_DUTY_FROZEN)
+    through = FUEL_DUTY_FROZEN_THROUGH
+    resume = through + 1
+    if FUEL_DUTY_FROZEN == 0.5295:
+        cut = "so the 5p cut continues"
+    else:
+        cut = "so the 5p cut ends"
+    rises = "there is no March 2027 step and no April 2027 RPI rise"
+    skipped = "the 5p and that year's RPI are"
+    if through > 2027:
+        rises += (
+            ", nor the April 2028 RPI rise"
+            if through == 2028
+            else f", nor any April RPI rise from 2028 to {through}"
+        )
+        skipped = "the 5p and those years' RPI are"
+    if FUEL_DUTY_FROZEN != 0.5295:
+        skipped = skipped.replace("the 5p and ", "")
+    # On main's values this is main's description, byte for byte.
+    return (
+        f"Candidate measure. Fuel duty stays at {frozen} a litre through "
+        f"{_fiscal_year_label(through)} (to 31 March {resume}): the rise "
+        f"due on 1 January 2027 does not happen, {cut}, and {rises}. RPI "
+        f"uprating resumes in April {resume} from {frozen}, so {skipped} "
+        "never made up. Rates are day-weighted to fiscal years. Includes "
+        "the VAT on the lower pump price."
+    )
+
+
 def _create_fuel_duty_rise_deferral() -> Reform:
     return Reform(
         id=FUEL_DUTY_DEFERRAL_ID,
         name="Fuel duty rises deferred",
-        description=(
-            "Candidate measure. Fuel duty stays at 52.95p a litre through "
-            "2027-28 (to 31 March 2028): the rise due on 1 January 2027 "
-            "does not happen, so the 5p cut continues, and there is no "
-            "March 2027 step and no April 2027 RPI rise. RPI uprating "
-            "resumes in April 2028 from 52.95p, so the 5p and that year's "
-            "RPI are never made up. Rates are day-weighted to fiscal "
-            "years. Includes the "
-            "VAT on the lower pump price."
-        ),
+        description=_fuel_duty_deferral_description(),
         parameter_changes=rate_change(FUEL_DUTY, fuel_duty_deferral_rates()),
         simulation_modifier=pump_vat_on_fuel_duty_deferral,
     )
