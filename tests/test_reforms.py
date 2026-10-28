@@ -59,9 +59,10 @@ CANDIDATES = (
     "unearned_income_rates_up",
     "carers_allowance_earnings_taper",
     "household_energy_payment_2026",
+    "badr_lifetime_limit_cut",
 )
 # Individual candidates that are not components of the combined package.
-NOT_IN_PACKAGE = ("household_energy_payment_2026",)
+NOT_IN_PACKAGE = ("household_energy_payment_2026", "badr_lifetime_limit_cut")
 # Registered on 27 October, before its first national generation: its rows
 # are checked once budgetary_impact.csv has them.
 NOT_YET_GENERATED = (
@@ -71,6 +72,7 @@ NOT_YET_GENERATED = (
     "carers_allowance_earnings_taper",
     # Announced in the Budget speech
     "household_energy_payment_2026",
+    "badr_lifetime_limit_cut",
 )
 # Redefined on Budget day to the announced measure: budgetary_impact.csv
 # holds the candidate's figures until it is regenerated.
@@ -83,7 +85,6 @@ REDEFINED_ON_BUDGET_DAY = (
 # stay, unregistered, and are still tested here as code.
 WITHDRAWN = {
     "employer_ni_relief_under_25s": reforms._create_employer_ni_relief_under_25s,
-    "badr_lifetime_limit_cut": reforms._create_badr_lifetime_limit_cut,
     # Withdrawn the same evening, when Vahid chose the ten candidates
     "road_fuel_vat_cut": reforms._create_road_fuel_vat_cut,
     # Its cells in deciles 9 and 10 rest on fewer than 10 survey households
@@ -141,8 +142,8 @@ def test_the_package_is_the_eight_candidates():
 
     # Nine on Budget day: the eight and the Carer's Allowance taper
     assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 9
-    # and the household energy payment, registered outside the package
-    assert len(reforms._MEASURE_FACTORIES) == 10
+    # and the household energy payment and BADR, registered outside it
+    assert len(reforms._MEASURE_FACTORIES) == 11
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
     assert key == "combined--47727b6baf58047f"
     # The area run's package alias stands for that key
@@ -728,7 +729,7 @@ def test_the_badr_description_carries_the_capital_gains_caveat():
     """#127 put the capital gains calibration caveat in the Methodology
     table, which now shows each measure's registry description (#104), so
     the caveat lives here, in the text G3 approves."""
-    description = WITHDRAWN["badr_lifetime_limit_cut"]().description
+    description = get_reform("badr_lifetime_limit_cut").description
     assert "calibrated to 2024-25" in description
     assert "1.5 to 1.7 times too high" in description
 
@@ -1046,6 +1047,18 @@ FIRST_YEARS = {
         2030,
         "carers_allowance",
         {"employment_income": 11_000, "care_hours": 35},
+        {},
+    ),
+    # An £800,000 qualifying gain: £300,000 more at the main rates
+    "badr_lifetime_limit_cut": (
+        2027,
+        "capital_gains_tax",
+        {
+            "age": 55,
+            "employment_income": 100_000,
+            "capital_gains": 800_000,
+            "capital_gains_badr": 800_000,
+        },
         {},
     ),
     # A band B household in England: £100 in 2026-27 only

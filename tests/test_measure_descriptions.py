@@ -166,6 +166,7 @@ DECLARED = {
     "plan_2_threshold_unfreeze": set(),
     "carers_allowance_earnings_taper": set(),
     "household_energy_payment_2026": set(),
+    "badr_lifetime_limit_cut": {"capital gains tax"},
     "employer_nics_secondary_threshold_raise": {"National Insurance"},
     "unearned_income_rates_up": {"income tax"},
 }
