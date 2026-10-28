@@ -6,7 +6,7 @@ import { measureCategoryOf } from "../utils/measureCategory";
 import { withPolicyDetails } from "../utils/policyDetails";
 import { policyCardAnchor } from "../utils/methodLink";
 import { parameterTableFor } from "../utils/policyParameters";
-import PolicyChange, { usePolicyParameters } from "./PolicyChange";
+import PolicyChange, { changeView, usePolicyParameters } from "./PolicyChange";
 import Disclosure from "./Disclosure";
 import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
 import { TABLE_6_1_URL } from "../utils/unmodelledMeasures";
@@ -281,7 +281,10 @@ function PolicyTimeline({ policy, highlight }) {
  * card, bare or not, is as tall as its row, its sections always in the
  * same order (CARD_SECTIONS) and the footer pinned to the bottom.
  */
-export function PolicyCard({ policy, onShowEffect, parameters: published }) {
+export function PolicyCard({ policy, onShowEffect, parameters: given }) {
+  // No What changes block where it would show nothing (no tiles: a single
+  // change of value is said in the card's words; Vahid, 28 Oct)
+  const published = given && changeView(given, policy.changesText) ? given : null;
   // The card's own shorter words for the main row, where it has them
   const parameters = published && policy.changeLabel
     ? {

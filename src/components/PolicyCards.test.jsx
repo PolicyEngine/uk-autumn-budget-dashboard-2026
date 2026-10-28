@@ -344,35 +344,23 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(item.querySelector(".ptl-year-band")).toBeNull();
   });
 
-  it("before-after: the two values and, for an amount, the change; a rate as two rates", () => {
+  it("draws no Current law and With the policy tiles: a single change of value leaves no What changes block (Vahid, 28 Oct)", () => {
     const amount = tables("before-after", [
       { label: "A limit", unit: "gbp", unit_words: "£", primary: true, source, points: yearly(() => 1000, (y) => (y >= 2027 ? 500 : 1000)) },
     ]);
-    let block = within(card(amount)).getByRole("region", { name: /^What changes/ });
-    // When it applies is on the timeline, so not in the label
-    expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A limit$/);
-    expect(block.querySelector(".pchg-tile.is-before")).toHaveTextContent("Current law£1,000");
-    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy£500−£500");
-    cleanup();
-    const rate = tables("before-after", [
-      { label: "A rate", unit: "percent", unit_words: null, primary: true, source, points: yearly(() => 0.15, (y) => (y >= 2027 ? 0 : 0.15)) },
-    ]);
-    block = within(card(rate)).getByRole("region", { name: /^What changes/ });
-    expect(block.querySelector(".pchg-tile.is-before")).toHaveTextContent("Current law15%");
-    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy0%−15 points");
-    expect(block.textContent).not.toMatch(/pp\b/);
-    // One visual: the tiles only, no plot or table
-    expect(block.querySelector("svg.pchg-svg, table")).toBeNull();
+    const item = card(amount);
+    expect(within(item).queryByRole("region", { name: /^What changes/ })).toBeNull();
+    expect(item.querySelector(".pchg-tile, .pchg-ba, .policy-card-spec")).toBeNull();
+    expect(item).not.toHaveTextContent(/£1,000|£500/);
   });
 
-  it("table: the main parameter as tiles, then only the parameters and year that differ, when asked", () => {
+  it("table: only the parameters and year that differ, when asked, and no tiles", () => {
     const three = tables("table", ["A", "B", "C"].map((label, i) => ({
       label, unit: "gbp", unit_words: "£ a year", primary: i < 2, source,
       points: yearly(() => 100 * (i + 1), (y) => (y === 2031 ? 100 * (i + 1) - 10 : 100 * (i + 1))),
     })));
     const block = within(card(three)).getByRole("region", { name: /^What changes/ });
-    expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A$/);
-    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy£90−£10");
+    expect(block.querySelector(".pchg-tile, .pchg-ba")).toBeNull();
     expect(block.querySelector(".pchg-svg")).toBeNull();
     expect(within(block).queryByRole("table")).toBeNull();
     fireEvent.click(within(block).getByRole("button", { name: "Show every change" }));
@@ -382,67 +370,44 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     ]);
   });
 
-  it("switch: the two values, with the window drawn on the card's timeline and no plot", () => {
+  it("switch: a window or one winter leaves no What changes block, the timeline still saying how long", () => {
     const window = tables("switch", [
       { label: "A VAT rate", unit: "percent", unit_words: null, primary: true, source,
         points: [{ key: "2026-10-01/2028-03-31", label: "October 2026 to March 2028", year: 2026, before: 0.05, after: 0 }] },
     ]);
     const item = card(window, { ...alpha, inForce: { from: "2026-10", to: "2028-03" }, timeline: true });
-    const block = within(item).getByRole("region", { name: /^What changes/ });
-    expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A VAT rate$/);
-    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy0%−5 points");
-    // Each fact once: the timeline says how long, not the rates again
+    expect(within(item).queryByRole("region", { name: /^What changes/ })).toBeNull();
     expect(item.querySelector(".ptl-chip")).toHaveTextContent(/^18 months$/);
-    // One visual: a single change of value is the tiles, with no plot
-    expect(block.querySelector(".pchg-svg")).toBeNull();
-    // One changed period is the tiles already: no table of it
-    expect(within(block).queryByRole("button", { name: "Show the years" })).toBeNull();
-  });
-
-  it("switch: one year only is the tiles, with no plot", () => {
+    cleanup();
     const winter = tables("switch", [
       { label: "A payment", unit: "gbp", unit_words: "£ a household, once", primary: true, source,
         points: [{ key: "2026", label: "Winter 2026-27", year: 2026, before: 150, after: 250 }] },
     ]);
-    const block = within(card(winter)).getByRole("region", { name: /^What changes/ });
-    expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A payment$/);
-    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy£250+£100");
-    expect(block.querySelector(".pchg-svg")).toBeNull();
-    expect(within(block).queryByRole("button")).toBeNull();
+    expect(within(card(winter)).queryByRole("region", { name: /^What changes/ })).toBeNull();
   });
 
-  it("draws every measure in the real file in one form: tiles with the change, a plot only where it varies by year", () => {
+  it("draws no tiles on any measure in the real file, and a plot only where it varies by year", () => {
     for (const [id, entry] of Object.entries(file.measures)) {
       render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
-      // The card (its modelling note has list items of its own)
-      const block = document.querySelector(".policy-card .pchg");
-      expect(block, id).toBeTruthy();
-      expect([...block.children].map((child) => child.classList[0]).slice(0, 2), id).toEqual(["pchg-head", "pchg-ba"]);
-      expect(block.querySelectorAll(".pchg-tile"), id).toHaveLength(2);
-      expect(block.querySelector(".pchg-tile.is-after .pchg-chip"), id).toBeTruthy();
+      const item = document.querySelector(".policy-card");
+      expect(item.querySelector(".pchg-tile, .pchg-ba"), id).toBeNull();
+      expect(item).not.toHaveTextContent(/Current law.*→|becomes/);
       const main = entry.rows.find((row) => row.primary) ?? entry.rows[0];
       const changes = new Set(main.points.filter((p) => p.before !== p.after).map((p) => `${p.before}|${p.after}`));
-      expect(Boolean(block.querySelector(".pchg-svg")), id).toBe(changes.size > 1);
+      expect(Boolean(item.querySelector(".pchg-svg")), id).toBe(changes.size > 1);
       // Every table behind a button
-      expect(block.querySelector("table"), id).toBeNull();
+      expect(item.querySelector(".pchg table"), id).toBeNull();
       cleanup();
     }
   });
 
-  it("shows the real file's single changes as their two values", () => {
-    const cases = [
-      ["warm_home_discount_top_up", "£150£250+£100"],
-      ["domestic_electricity_zero_vat", "5%0%−5 points"],
-      ["threshold_freeze_2031_32", "£12,830£12,570−£260"],
-      ["property_income_rates_up", "22%24%+2 points"],
-      ["savings_income_rates_up", "22%24%+2 points"],
-    ];
-    for (const [id, values] of cases) {
-      if (!file.measures[id]) continue;
+  it("leaves the real file's single changes out: no Energy payment or trading allowance figures (Vahid, 28 Oct)", () => {
+    for (const id of ["household_energy_payment_2026", "trading_allowance_raise"]) {
       render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
       const item = document.querySelector(".policy-card");
-      const tiles = [...item.querySelectorAll(".pchg-tile-value, .pchg-tile .pchg-chip")].map((node) => node.textContent).join("");
-      expect(tiles, id).toBe(values);
+      expect(within(item).queryByRole("region", { name: /^What changes/ }), id).toBeNull();
+      expect(item.querySelector(".pchg"), id).toBeNull();
+      expect(item.querySelector(".pchg-tile"), id).toBeNull();
       cleanup();
     }
   });
@@ -468,7 +433,10 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       expect(item.querySelector(".policy-card-summary.is-full"), id).toBeNull();
       expect(item.querySelector(".policy-card-topline"), id).toHaveTextContent(new RegExp(`^${category}$`));
       expect(item.querySelector(".policy-card-start"), id).toHaveTextContent(starts);
-      expect(within(item).getByRole("region", { name: /^What changes/ }), id).toBeTruthy();
+      // What changes only where it has more than a single change of value
+      // to show (no tiles; Vahid, 28 Oct)
+      const shown = ["fuel_duty_rise_deferral", "state_pension_income_tax_protection", "domestic_electricity_zero_vat", "carers_allowance_earnings_taper", "property_income_rates_up"].includes(id);
+      expect(Boolean(within(item).queryByRole("region", { name: /^What changes/ })), id).toBe(shown);
       expect(item.querySelector(".policy-card-details"), id).toBeTruthy();
       cleanup();
     }
@@ -484,12 +452,6 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     for (const id of ["lha_unfreeze_2027", "employer_nics_secondary_threshold_raise", "property_income_rates_up", "savings_income_rates_up"]) {
       expect(detailsById[id].source.href, id).toMatch(/^https:\/\/www\.(gov|legislation\.gov)\.uk\//);
     }
-  });
-
-  it("says which year the tiles show only where the change varies by year", () => {
-    const block = within(card(rising)).getByRole("region", { name: /^What changes/ });
-    expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A threshold, 2027-28$/);
-    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy£1,100+£100");
   });
 
   it("leads fuel duty with its plot: the dates and the yearly averages only when asked", () => {
@@ -558,8 +520,8 @@ describe("the card's frame", () => {
       // The footer last, so it can sit at the bottom
       expect(item.lastElementChild).toHaveClass("policy-card-foot");
     }
-    // A card with details has every section
-    const full = [...document.querySelectorAll(".policy-cards > .policy-card")].find((item) => item.querySelector(".policy-card-example"));
+    // A card with details and a What changes block has every section
+    const full = [...document.querySelectorAll(".policy-cards > .policy-card")].find((item) => item.querySelector(".policy-card-example") && item.querySelector(".pchg"));
     for (const name of CARD_SECTIONS.filter((section) => !UNMODELLED_ONLY_SECTIONS.includes(section))) {
       expect(full.querySelector(`.${name}`), name).toBeTruthy();
     }
@@ -639,13 +601,16 @@ describe("the card's frame", () => {
     expect(list.children[0]).toHaveTextContent("83% of households spending over a tenth of their income on energy");
   });
 
-  it("shows the Carer's Allowance cliff the taper removes, with the limit in the note (#290, Anthony, 19:20)", () => {
+  it("shows the Carer's Allowance cliff the taper removes, with the limit in the note (PR 290, Anthony, 19:20)", () => {
     const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
     const id = "carers_allowance_earnings_taper";
     render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
     const block = screen.getByRole("region", { name: /^What changes/ });
-    expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^Carer's Allowance at £1 a week over the earnings limit, 2030-31$/);
-    expect([...block.querySelectorAll(".pchg-tile-value, .pchg-tile .pchg-chip")].map((node) => node.textContent).join("")).toBe("£0£95+£95");
+    // No level tiles (Vahid, 28 Oct): the note, and the plot of the
+    // allowance £1 over the limit
+    expect(block.querySelector(".pchg-tile, .pchg-ba")).toBeNull();
+    expect(block.querySelector(".pchg-head.is-plot .pchg-caption")).toHaveTextContent("Carer's Allowance at £1 a week over the earnings limit, £ a week");
+    expect(block).not.toHaveTextContent(/£204|£323|£119/);
     expect(block.querySelector(".pchg-note")).toHaveTextContent("£228 a week in 2030-31 and £234 in 2031-32");
     expect(block.querySelector(".pchg-note")).toHaveTextContent("runs out at £324 a week in 2030-31 and £332 in 2031-32");
     // The limit is not shown as a change the measure makes
@@ -656,15 +621,6 @@ describe("the card's frame", () => {
     const id = "fuel_duty_rise_deferral";
     render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} />);
     expect(screen.getByRole("listitem").querySelector(".ptl")).toBeNull();
-  });
-
-  it("keeps the change beside the new value, so both tiles have the same parts", () => {
-    const id = "trading_allowance_raise";
-    const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
-    render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
-    const after = document.querySelector(".pchg-tile.is-after");
-    expect([...after.children].map((child) => child.className)).toEqual(["pchg-tile-name", "pchg-tile-row"]);
-    expect(after.querySelector(".pchg-tile-row .pchg-chip")).toBeTruthy();
   });
 
   it("keeps every modelled card's Starts and Ends to 20 characters", () => {
