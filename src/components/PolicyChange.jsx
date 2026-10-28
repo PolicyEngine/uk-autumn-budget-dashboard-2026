@@ -229,8 +229,11 @@ function BeforeAfter({ row, point, tone, when }) {
         <ArrowRight className="pchg-ba-arrow" size={20} aria-label="becomes" />
         <div className="pchg-tile is-after">
           <span className="pchg-tile-name">With the policy</span>
-          <span className="pchg-tile-value"><CountUpText text={formatValue(point.after, unit)} /></span>
-          <span className={`pchg-chip is-${tone}`}>{tileChange(point.before, point.after, unit)}</span>
+          {/* The change beside the value, so both tiles keep one height */}
+          <span className="pchg-tile-row">
+            <span className="pchg-tile-value"><CountUpText text={formatValue(point.after, unit)} /></span>
+            <span className={`pchg-chip is-${tone}`}>{tileChange(point.before, point.after, unit)}</span>
+          </span>
         </div>
       </div>
     </div>
@@ -341,6 +344,7 @@ export default function PolicyChange({ entry, direction, onHighlight, name, lead
     row.points.filter(differs).map((point) => ({ ...point, key: `${row.label}|${point.key}`, label: row.label, unit: row.unit, period: point.label })),
   );
   const others = entry.rows.filter((row) => row !== main && row !== yearly && row.points.some(differs));
+  const pairs = entry.display === "pairs";
   const periods = [...new Set(lines.map((line) => line.period))];
   return (
     // Named with its measure: each card's section says "What changes", and
@@ -355,6 +359,8 @@ export default function PolicyChange({ entry, direction, onHighlight, name, lead
       {/* A card's own words for the change, where it has them, before the values */}
       {lead && <p className="pchg-lead">{lead}</p>}
       <BeforeAfter row={main} point={first} tone={tone} when={varies ? (schedule ? `from ${first.label}` : first.label) : null} />
+      {/* "pairs": every changing parameter as its own before and after */}
+      {pairs && others.map((row) => <BeforeAfter key={row.label} row={row} point={row.points.find(differs)} tone={tone} when={null} />)}
       {plotted && (
         <>
           <div className="pchg-head is-plot">
@@ -370,7 +376,7 @@ export default function PolicyChange({ entry, direction, onHighlight, name, lead
           />
         </>
       )}
-      {(varies || yearly?.points.some(differs) || others.length > 0) && (
+      {(varies || yearly?.points.some(differs) || (others.length > 0 && !pairs)) && (
         <div className="pchg-reveals">
           {/* One changed period is the tiles already: no table of it */}
           {varies && (
@@ -383,7 +389,7 @@ export default function PolicyChange({ entry, direction, onHighlight, name, lead
               <ChangeTable lines={yearly.points.filter(differs)} unit={yearly.unit} tone={tone} first="Year" caption={yearly.note} />
             </Reveal>
           )}
-          {others.length > 0 && (
+          {others.length > 0 && !pairs && (
             <Reveal show="Show every change" hide="Hide every change">
               <ChangeTable
                 lines={periods.length === 1 ? lines : lines.map((line) => ({ ...line, label: `${line.label}, ${line.period}` }))}

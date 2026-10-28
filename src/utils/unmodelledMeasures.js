@@ -62,7 +62,7 @@ export const UNMODELLED_MEASURES = [
     id: "national-living-wage",
     group: "pay",
     name: "Minimum wage up 3.9%",
-    starts: "1 April 2027",
+    starts: "1 Apr 2027",
     changes:
       "The National Living Wage rises from £12.71 to £13.21 an hour; younger and apprentice rates rise too.",
     reaches: "Around 2.3 million workers (government estimate, provisional).",
@@ -78,7 +78,7 @@ export const UNMODELLED_MEASURES = [
     id: "universal-credit-surplus-earnings",
     group: "pay",
     name: "Universal Credit surplus earnings threshold kept at £2,500",
-    starts: "1 April 2027, for one year",
+    starts: "1 Apr 2027",
     changes:
       "The Universal Credit surplus earnings threshold stays at £2,500 to March 2028, rather than falling to £300.",
     reaches:
@@ -94,7 +94,7 @@ export const UNMODELLED_MEASURES = [
     id: "parental-allowance",
     group: "pay",
     name: "Parental pay for self-employed fathers, partners and adopters",
-    starts: "April 2029",
+    starts: "Apr 2029",
     changes:
       "Parental pay is extended to eligible self-employed fathers, partners and adopters in Great Britain, and some with irregular work.",
     reaches: "Over 150,000 parents a year (government estimate).",
@@ -115,7 +115,7 @@ export const UNMODELLED_MEASURES = [
     id: "mileage-rates",
     group: "pay",
     name: "Tax-free mileage rates raised",
-    starts: "6 April 2026 and 6 April 2027",
+    starts: "Apr 2026 / Apr 2027",
     changes:
       "The tax-free 55p a mile for the first 10,000 business miles is made permanent; above that, 25p rises to 35p.",
     reaches: "Around 2 million employees and 1 million self-employed people (government estimate).",
@@ -129,7 +129,7 @@ export const UNMODELLED_MEASURES = [
     id: "company-car-tax",
     group: "pay",
     name: "Company car tax up 1 point in 2030-31",
-    starts: "6 April 2030",
+    starts: "6 Apr 2030",
     changes:
       "Company car tax percentages for 2030-31 are 1 point above 2029-30's in every band, up to 40%.",
     reaches: "Employees with a company car.",
@@ -143,7 +143,7 @@ export const UNMODELLED_MEASURES = [
     id: "adjusted-triple-lock",
     group: "pay",
     name: "Adjusted Triple Lock for the State Pension",
-    starts: "April 2030",
+    starts: "Apr 2030",
     changes:
       "The State Pension rises by the highest of 2.5%, inflation, or the rise keeping its April 2029 value against earnings.",
     reaches: "Current and future State Pension recipients, from April 2030.",
@@ -166,7 +166,7 @@ export const UNMODELLED_MEASURES = [
     id: "savings-income-tax",
     group: "savings",
     name: "Tax on savings interest up 2 points",
-    starts: "6 April 2027",
+    starts: "6 Apr 2027",
     changes:
       "Income tax rates on savings income rise by 2 points across the UK, to 24%, 44% and 49%.",
     reaches: "People with taxable savings interest across the UK.",
@@ -181,7 +181,7 @@ export const UNMODELLED_MEASURES = [
     id: "cash-isa-limit",
     group: "savings",
     name: "Cash ISA limit kept at £20,000",
-    starts: "6 April 2027",
+    starts: "6 Apr 2027",
     changes:
       "A planned cut in the cash ISA limit to £12,000 for under-65s does not go ahead; it stays at £20,000.",
     reaches:
@@ -203,7 +203,7 @@ export const UNMODELLED_MEASURES = [
     id: "first-time-buyer-isa",
     group: "savings",
     name: "First Time Buyer ISA, and a lower Lifetime ISA charge",
-    starts: "29 October 2026 (charge) and 6 April 2029 (new ISA)",
+    starts: "Oct 2026 / Apr 2029",
     changes:
       "A 25%-bonus First Time Buyer ISA replaces the Lifetime ISA in 2029; its charge over £450,000 falls to 20%.",
     reaches:
@@ -221,7 +221,7 @@ export const UNMODELLED_MEASURES = [
     id: "your-first-home",
     group: "savings",
     name: "Your First Home equity loan scheme",
-    starts: "April 2027",
+    starts: "Apr 2027",
     changes:
       "A £4.7 billion scheme gives first-time buyers in England equity loans of up to 20%, with a 2.5% deposit.",
     reaches: "Around 70,000 first-time buyers (government estimate).",
@@ -241,7 +241,7 @@ export const UNMODELLED_MEASURES = [
     id: "business-asset-disposal-relief",
     group: "savings",
     name: "Business Asset Disposal Relief limit cut to £500,000",
-    starts: "6 April 2027",
+    starts: "6 Apr 2027",
     changes:
       "The lifetime limit on gains taxed at Business Asset Disposal Relief's 18% falls from £1 million to £500,000.",
     reaches:
@@ -260,7 +260,7 @@ export const UNMODELLED_MEASURES = [
     id: "bus-fare-cap",
     group: "costs",
     name: "Single bus fares capped at £2 outside London",
-    starts: "1 January 2027, for one year",
+    starts: "1 Jan 2027",
     changes:
       "Single fares on participating buses in England outside London are capped at £2; most are capped at £3 until then.",
     reaches: "Bus passengers in England outside London, on participating services.",
@@ -287,7 +287,7 @@ export const UNMODELLED_MEASURES = [
     id: "gas-standing-charges",
     group: "costs",
     name: "Gas standing charges to be abolished",
-    starts: "By the end of 2027, or as soon as possible after",
+    starts: "End of 2027 or later",
     changes:
       "The government has asked Ofgem to abolish gas standing charges in Great Britain, £108 a year on average.",
     reaches: "Around 23 million homes (government estimate).",
@@ -310,7 +310,7 @@ export const UNMODELLED_MEASURES = [
     id: "online-marketplace-liability",
     group: "business",
     name: "Online marketplaces to collect the tax on UK sellers' sales",
-    starts: "1 October 2027",
+    starts: "1 Oct 2027",
     changes:
       "Online marketplaces collect VAT on sales by UK VAT-registered sellers, and those selling £90,000 a year or more there.",
     reaches: "UK businesses selling through online marketplaces above the VAT or £90,000 threshold.",
@@ -325,7 +325,7 @@ export const UNMODELLED_MEASURES = [
     id: "pubs-business-rates-relief",
     group: "business",
     name: "Business rates relief for pubs and venues up to 35%",
-    starts: "1 April 2027",
+    starts: "1 Apr 2027",
     changes:
       "Business rates relief for pubs, social clubs and most live music venues in England rises from 15% to 35%.",
     reaches: "Pubs, social clubs and most live music venues in England.",
@@ -340,7 +340,7 @@ export const UNMODELLED_MEASURES = [
     id: "machine-games-duty",
     group: "business",
     name: "Machine Games Duty up from 20% to 25%",
-    starts: "1 April 2027",
+    starts: "1 Apr 2027",
     changes:
       "The duty on machine games with stakes over £1 or prizes over £100 rises from 20% to 25%.",
     reaches: "Venues with higher-stake machines, commonly adult gaming centres (Budget).",
@@ -354,7 +354,7 @@ export const UNMODELLED_MEASURES = [
     id: "bank-surcharge",
     group: "business",
     name: "Bank surcharge up from 3% to 6% for 15 months",
-    starts: "1 January 2027, for 15 months",
+    starts: "1 Jan 2027",
     changes:
       "The bank surcharge rises from 3% to 6% until March 2028, helping fund the energy payment and electricity VAT cut.",
     reaches: "Banks that pay the surcharge.",

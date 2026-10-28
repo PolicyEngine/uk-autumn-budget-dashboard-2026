@@ -13,8 +13,9 @@
  * - inForce / steps / stepsLabel / ends / duration: as in policyDetails.js,
  *   only where the entry states the dates;
  * - parameters: a "What changes" entry ({ display, rows }) as
- *   policy_parameters.json shapes one, always "table": the before and
- *   after tiles only, with no plot. The cards show no timeline either:
+ *   policy_parameters.json shapes one: "table" for the before and after
+ *   tiles only, "pairs" for each of two changes as its own tiles; never a
+ *   plot. The cards show no timeline either:
  *   Starts and Ends say when.
  */
 
@@ -65,9 +66,14 @@ export const UNMODELLED_CARDS = {
     inForce: { from: "2026-04" },
     steps: [{ month: "2027-04", label: "35p above 10,000 miles" }],
     stepsLabel: "35p above 10,000 miles",
+    // Both changes as pairs: the first 10,000 miles' 55p made permanent
+    // ("up from 45p"), and 25p to 35p above them
     parameters: {
-      display: "table",
-      rows: [row("Tax-free rate above 10,000 business miles", "pence", "pence a mile", yearly(2027, 2031, 25, 35))],
+      display: "pairs",
+      rows: [
+        row("First 10,000 business miles", "pence", "pence a mile", [{ key: "2026", label: "2026-27", year: 2026, before: 45, after: 55 }]),
+        row("Above 10,000 business miles", "pence", "pence a mile", yearly(2027, 2031, 25, 35), false),
+      ],
     },
   },
   // "capped at £2 for one year from 1 January 2027. Until then most single
@@ -132,7 +138,7 @@ export const UNMODELLED_CARDS = {
     category: { label: "Income tax", icon: "wallet" },
     inForce: { from: "2030-04" },
     parameters: {
-      display: "table",
+      display: "pairs",
       rows: [
         row("Zero-emission cars", "percent", null, [{ key: "2030", label: "2030-31", year: 2030, before: 0.09, after: 0.1 }]),
         row("Cars emitting 1 to 50g CO2/km", "percent", null, [{ key: "2030", label: "2030-31", year: 2030, before: 0.19, after: 0.2 }], false),

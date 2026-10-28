@@ -653,4 +653,20 @@ describe("the card's frame", () => {
     render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} />);
     expect(screen.getByRole("listitem").querySelector(".ptl")).toBeNull();
   });
+
+  it("keeps the change beside the new value, so both tiles have the same parts", () => {
+    const id = "trading_allowance_raise";
+    const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
+    render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
+    const after = document.querySelector(".pchg-tile.is-after");
+    expect([...after.children].map((child) => child.className)).toEqual(["pchg-tile-name", "pchg-tile-row"]);
+    expect(after.querySelector(".pchg-tile-row .pchg-chip")).toBeTruthy();
+  });
+
+  it("keeps every modelled card's Starts and Ends to 20 characters", () => {
+    for (const policy of POLICY_DETAILS) {
+      expect(policy.starts.length, policy.id).toBeLessThanOrEqual(20);
+      if (policy.ends) expect(policy.ends.length, policy.id).toBeLessThanOrEqual(20);
+    }
+  });
 });

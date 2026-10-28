@@ -58,7 +58,7 @@ export function formatChange(before, after, unit) {
 const same = (a, b) => (a ?? null) === (b ?? null) || (a != null && b != null && Math.abs(a - b) < 1e-9);
 export const differs = (item) => !same(item.before, item.after);
 
-export const DISPLAYS = ["switch", "before-after", "path", "schedule", "table"];
+export const DISPLAYS = ["switch", "before-after", "path", "schedule", "table", "pairs"];
 
 /**
  * A measure's entry ({ display, rows }), or null: none unless the file

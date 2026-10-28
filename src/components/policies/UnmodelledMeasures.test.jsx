@@ -172,7 +172,8 @@ describe("UnmodelledMeasures", () => {
     open();
     for (const item of cards()) {
       const id = item.id.replace(/^unmodelled-/, "");
-      expect(item.querySelectorAll(".pchg-tile").length, id).toBe(UNMODELLED_CARDS[id]?.parameters ? 2 : 0);
+      const parameters = UNMODELLED_CARDS[id]?.parameters;
+      expect(item.querySelectorAll(".pchg-tile").length, id).toBe(parameters ? (parameters.display === "pairs" ? 2 * parameters.rows.length : 2) : 0);
     }
     const wage = document.getElementById("unmodelled-national-living-wage");
     expect(wage.querySelector(".pchg-tile.is-before")).toHaveTextContent("£12.71");
@@ -281,6 +282,21 @@ describe("UnmodelledMeasures", () => {
     expect(card.querySelector(".umm-held-back")).toHaveTextContent(/^Held back: our data miss ISA interest/);
     fireEvent.click(within(card).getByRole("button", { name: "Treasury costing" }));
     expect(within(card).getByRole("table", { name: COSTING_CAPTION })).toHaveTextContent("+590");
+  });
+
+  it("keeps At a glance short and the summary one sentence, and shows every change a card names", () => {
+    render(<UnmodelledMeasures />);
+    open();
+    for (const item of cards()) {
+      expect(item.querySelector(".policy-card-start").textContent.length, item.id).toBeLessThanOrEqual(20);
+      expect(item.querySelector(".policy-card-end").textContent.length, item.id).toBeLessThanOrEqual(20);
+      expect(item.querySelector(".policy-card-summary").textContent.trim(), item.id).not.toMatch(/\.\s+[A-Z]/);
+    }
+    // Two changes, two pairs of tiles
+    for (const id of ["mileage-rates", "company-car-tax"]) {
+      expect(document.getElementById(`unmodelled-${id}`).querySelectorAll(".pchg-ba"), id).toHaveLength(2);
+    }
+    expect(document.getElementById("unmodelled-mileage-rates").querySelector(".pchg-ba")).toHaveTextContent("First 10,000 business milesCurrent law45pWith the policy55p+10p");
   });
 
   it("shows nothing for an empty list", () => {
