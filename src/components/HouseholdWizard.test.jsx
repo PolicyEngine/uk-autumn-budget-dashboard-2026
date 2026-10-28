@@ -54,15 +54,15 @@ const value = (name) => {
   const input = box(name);
   return input.type === "number" ? Number(input.value) : parseAmount(input.value);
 };
-const seatBox = () => screen.getByRole("combobox", { name: "Constituency" });
-/** Pick a constituency by typing its name and choosing it from the list. */
-const pickSeat = (name) => {
-  fireEvent.focus(seatBox());
-  fireEvent.change(seatBox(), { target: { value: name } });
+const councilBox = () => screen.getByRole("combobox", { name: "Local authority" });
+/** Pick a local authority by typing its name and choosing it from the list. */
+const pickCouncil = (name) => {
+  fireEvent.focus(councilBox());
+  fireEvent.change(councilBox(), { target: { value: name } });
   fireEvent.click(within(screen.getByRole("listbox", { name: (label) => label !== "Households" })).getByRole("option", { name }));
 };
-/** The region the constituency sets, as shown under it. */
-const regionShown = () => document.getElementById("region-constituency").textContent;
+/** The region the council sets, as shown under it. */
+const regionShown = () => document.getElementById("region-council").textContent;
 const cards = () => screen.getByRole("region", { name: "Choose a household" });
 const examples = cards;
 // A card in the grid, or, once a household is chosen and the cards fold
@@ -148,8 +148,8 @@ describe("the personal impact form", () => {
       "student_loan_plan",
     ]);
     expect(value("Age")).toBe(30);
-    expect(seatBox()).toHaveValue("");
-    expect(regionShown()).toBe("North West, until you pick a constituency");
+    expect(councilBox()).toHaveValue("");
+    expect(regionShown()).toBe("North West, until you pick your council");
     expect(chosen("Partner")).toBe("No");
     expect(chosen("Housing")).toBe("Rent");
     expect(chosen("Rent from")).toBe("Private landlord");
@@ -198,8 +198,8 @@ describe("the personal impact form", () => {
     fireEvent.click(screen.getByRole("button", { name: "Age: 1 more" }));
     expect(value("Age")).toBe(31);
     expect(screen.queryByRole("button", { name: /^Salary in 2026: £/ })).toBeNull();
-    pickSeat("Holborn and St Pancras");
-    expect(seatBox()).toHaveValue("Holborn and St Pancras");
+    pickCouncil("Camden");
+    expect(councilBox()).toHaveValue("Camden");
     expect(regionShown()).toBe("London");
     // The rent follows the region until it is changed
     expect(value("Rent")).toBe(REGIONAL_RENT.LONDON);
@@ -308,7 +308,7 @@ describe("the personal impact form", () => {
     expect(value("Private or workplace pension")).toBe(0);
     expect(field("partner_private_pension_per_year")).toBeNull();
     expect(field("council_tax_band")).not.toBeNull();
-    pickSeat("Belfast South and Mid Down");
+    pickCouncil("Belfast");
     expect(field("council_tax_band")).toBeNull();
   });
 

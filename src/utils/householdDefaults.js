@@ -59,9 +59,9 @@ export const WIZARD_DEFAULTS = {
   current_age: 30,
   current_salary: DEFAULT_SALARY,
   region: "NORTH_WEST",
-  // The constituency picked (its name, 2024 boundaries), which sets the
+  // The local authority (council) picked, by its ONS name, which sets the
   // region; null until picked. Not sent: the API reads the region
-  constituency: null,
+  council: null,
   tenure: "RENT_PRIVATELY",
   // null: the region's average private rent (ONS), until changed
   monthly_rent: null,

@@ -29,7 +29,7 @@ import { DEFAULT_SPENDING, SALARY_SOURCE, WIZARD_DEFAULTS, regionalRent } from "
 // The form's answers at their defaults (utils/householdDefaults.js)
 export { WIZARD_DEFAULTS };
 import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
-import ConstituencyField from "./personal/ConstituencyField";
+import LocalAuthorityField from "./personal/LocalAuthorityField";
 import { policyQuestions } from "../utils/householdPolicyFields";
 import { CALCULATOR_ONLY_MEASURES, SAVINGS_INCOME_RATES_ID, withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
@@ -126,10 +126,10 @@ export const REGION_OPTIONS = [
   ["NORTHERN_IRELAND", "Northern Ireland"],
 ];
 
-// The "region" question asks for a constituency (2024 boundaries), which
-// sets the region the calculation reads; the constituency itself is not sent
-const CONSTITUENCY_HINT =
-  "Your constituency sets your region, which the calculation uses: Scotland has its own income tax rates, and the rent and Council Tax estimates and housing support follow the region.";
+// The "region" question asks for a local authority (council), which sets
+// the region the calculation reads; the council itself is not sent
+const LOCAL_AUTHORITY_HINT =
+  "Your council sets your region, which the calculation uses: Scotland has its own income tax rates, and the rent estimate and housing support follow the region. Council Tax is estimated from your band and your region's average Band D, not your own council's rate.";
 
 const YES_NO = [
   { value: false, label: "No" },
@@ -407,7 +407,7 @@ export function stepSummary(fields, { answer, applies, changed, inputs, children
       continue;
     }
     if (id === "region") {
-      if (inputs.constituency) parts.push(inputs.constituency);
+      if (inputs.council) parts.push(inputs.council);
       continue;
     }
     if (id === "care_hours_per_week") continue;
@@ -998,15 +998,15 @@ function HouseholdCalculator({
       );
     } else if (id === "region") {
       field = (
-        <ConstituencyField
-          id="constituency"
-          label="Constituency"
-          value={inputs.constituency ?? null}
+        <LocalAuthorityField
+          id="council"
+          label="Local authority"
+          value={inputs.council ?? null}
           regionLabel={regionName(inputs.region)}
-          hint={CONSTITUENCY_HINT}
-          onChange={(seat) => {
+          hint={LOCAL_AUTHORITY_HINT}
+          onChange={(council) => {
             setPresetId(null);
-            setInputs((prev) => ({ ...prev, constituency: seat.name, region: seat.region }));
+            setInputs((prev) => ({ ...prev, council: council.name, region: council.region }));
           }}
         />
       );
