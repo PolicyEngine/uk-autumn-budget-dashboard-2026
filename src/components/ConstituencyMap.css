@@ -212,6 +212,14 @@
   text-align: center;
 }
 
+/* The ⓘ at the end of the title's last line, centred on the text */
+.map-key-title-end .info-tip {
+  width: 16px;
+  height: 16px;
+  margin-left: 3px;
+  vertical-align: -4px;
+}
+
 .map-key-count {
   min-width: 0;
   color: var(--pe-teal-700);

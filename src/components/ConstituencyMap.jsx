@@ -400,6 +400,9 @@ const seatCount = (n) => `${n.toLocaleString("en-GB")} ${n === 1 ? "seat" : "sea
  */
 function MapKey({ outcome, extent, counts, highlight, onHighlight, placement = "below" }) {
   const [low, zero, high] = scaleLabels(outcome, extent);
+  const title = `Change in household net income, ${OUTCOME_LABELS[outcome]}`;
+  const lastSpace = title.lastIndexOf(" ");
+  const [titleStart, titleEnd] = [title.slice(0, lastSpace), title.slice(lastSpace + 1)];
   const hovered = highlight ? counts[highlight] : null;
   const entryProps = (key, label) => ({
     type: "button",
@@ -428,18 +431,23 @@ function MapKey({ outcome, extent, counts, highlight, onHighlight, placement = "
       aria-label="Key"
     >
       <div className="map-key-head">
+        {/* The ⓘ ends the title's last line, wrapping with its last word
+            (never alone on a line of its own) */}
         <p className="map-key-title">
-          Change in household net income, {OUTCOME_LABELS[outcome]}
+          {titleStart}{" "}
+          <span className="nowrap map-key-title-end">
+            {titleEnd}
+            <InfoTip
+              label="How to read the key"
+              content={
+                `Amber is a loss, light grey no change and teal a gain, on one scale from ${low} to ${high} for every ` +
+                "policy and year. Mid grey is too uncertain to classify; dotted is approximate (under 30 effective survey " +
+                "households); hatched is not published, to protect survey respondents' confidentiality (under 10 survey " +
+                "households, or one or two would make up too much of the figure); solid is reported."
+              }
+            />
+          </span>
         </p>
-        <InfoTip
-          label="How to read the key"
-          content={
-            `Amber is a loss, light grey no change and teal a gain, on one scale from ${low} to ${high} for every ` +
-            "policy and year. Mid grey is too uncertain to classify; dotted is approximate (under 30 effective survey " +
-            "households); hatched is not published, to protect survey respondents' confidentiality (under 10 survey " +
-            "households, or one or two would make up too much of the figure); solid is reported."
-          }
-        />
         <span className="map-key-count" aria-live="polite">
           {hovered !== null && hovered !== undefined ? seatCount(hovered) : ""}
         </span>
