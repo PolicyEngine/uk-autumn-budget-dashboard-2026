@@ -616,7 +616,7 @@ def test_electricity_defaults_follow_its_constants():
         zero_vat_on_domestic_electricity as module,
     )
 
-    first, second, _ = modifier(
+    first, second, *_ = modifier(
         "zero_vat_on_domestic_electricity"
     ).__defaults__
     share = module.EXTENSION_SHARES[module.ZERO_RATE_EXTENDED_TO]
