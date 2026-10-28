@@ -90,6 +90,34 @@
   pointer-events: none;
 }
 
+/* Its rows (TooltipRows) on one line each, with room between the name and
+   the value: "People in poverty" and "Poverty rate" no longer wrap into a
+   narrow column against their values (Pavel's review, POV1) */
+.floating-tooltip .chart-tooltip {
+  min-width: 260px;
+  max-width: 360px;
+}
+
+.floating-tooltip .chart-tooltip-row {
+  column-gap: 16px;
+  padding: 3px 0;
+}
+
+.floating-tooltip .chart-tooltip-name {
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .floating-tooltip .chart-tooltip {
+    min-width: 0;
+    max-width: min(320px, calc(100vw - 32px));
+  }
+
+  .floating-tooltip .chart-tooltip-name {
+    white-space: normal;
+  }
+}
+
 /* A point that shows a tooltip on keyboard focus */
 .has-tooltip:focus {
   outline: none;

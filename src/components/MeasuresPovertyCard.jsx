@@ -1,8 +1,11 @@
-// Which measures move poverty: a waterfall of people moved out of (or into)
-// poverty in the selected year. Each selected measure's own effect (its own
-// run in metrics.csv) is a step in its colour, largest first; where the
-// steps do not add up to the package (the combined run), an "interaction"
-// step closes the gap; the package total ends it. People are the change in
+// Which measures move poverty: people moved out of (or into) poverty in the
+// selected year. Each selected measure's own effect (its own run in
+// metrics.csv) is a bar from zero, largest first; then, after a rule, all
+// the selected policies together (the combined run), also from zero. No bar
+// starts where another ends and nothing is added up or backed out: each row
+// reads one published run. (Pavel's review, POV2 to POV5: the old waterfall
+// read as if the policies stacked, and its "interaction" step also held the
+// Plan 2 baseline difference.) People are the change in
 // the rate times the outlook's population that year (povertyPeople.js);
 // without a population the card falls back to percentage points
 // throughout. Every selected policy has a row: one that moves no one shows
@@ -88,46 +91,38 @@ export function povertyCardRows(rows, catalogue, selectedPolicies, year, chosen)
 }
 
 /**
- * The waterfall's rows from the measures' changes (pp): x is people moved
- * out of poverty (or, with no population, −pp), so a fall in poverty
- * steps right. Steps by size, then an interaction step where they miss
- * the package by more than rounding, then a "No change" row (no bar) for
- * each measure that moves no one (a value of exactly 0, or `idle`: no
- * income changed that year), then the total from 0. A small non-zero
- * change is a step, never "No change".
+ * The chart's rows from the measures' changes (pp): x is people moved out
+ * of poverty (or, with no population, −pp), so a fall in poverty points
+ * right. Each measure's bar from 0, by size, then a "No change" row (no
+ * bar) for each measure that moves no one (a value of exactly 0, or `idle`:
+ * no income changed that year), then all the selected policies together
+ * from 0. A small non-zero change is a bar, never "No change". Nothing is
+ * summed: no gap or interaction row.
  * Returns { steps, zero, peopleMode }; each step is
- * { id, name, pp, x, start, end, colour, kind: "measure" | "interaction" | "none" | "total" }.
+ * { id, name, pp, x, start, end, colour, kind: "measure" | "none" | "total" }.
  */
 export function povertyWaterfall(measures, total, millions, idle = []) {
   const peopleMode = Boolean(millions);
   const toX = (pp) => (peopleMode ? -(pp / 100) * millions * 1e6 : -pp);
   const zero = [...measures.filter((m) => m.value === 0), ...idle];
   const moving = measures.filter((m) => m.value !== 0).sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
-  let at = 0;
   const steps = moving.map((m) => {
     const x = toX(m.value);
-    const step = { id: m.id, name: m.name, pp: m.value, x, start: at, end: at + x, colour: m.colour, kind: "measure" };
-    at += x;
-    return step;
+    return { id: m.id, name: m.name, pp: m.value, x, start: 0, end: x, colour: m.colour, kind: "measure" };
   });
-  if (total !== null) {
-    const gap = total - moving.reduce((sum, m) => sum + m.value, 0);
-    // More than rounding: 500 people, or 0.0005pp without a population
-    if (Math.abs(toX(gap)) >= (peopleMode ? 500 : 0.0005)) {
-      const x = toX(gap);
-      steps.push({ id: "interaction", name: "Interaction", pp: gap, x, start: at, end: at + x, colour: CHART_COLOURS.noChange, kind: "interaction" });
-    }
-  }
   // At 0 to 0, so a row with no bar never widens the axis
   for (const m of zero) steps.push({ id: m.id, name: m.name, pp: 0, x: 0, start: 0, end: 0, colour: m.colour, kind: "none" });
   if (total !== null) {
     const x = toX(total);
-    steps.push({ id: "package", name: "All policies together", pp: total, x, start: 0, end: x, colour: null, kind: "total" });
+    steps.push({ id: "package", name: TOGETHER, pp: total, x, start: 0, end: x, colour: null, kind: "total" });
   }
   return { steps, zero, peopleMode };
 }
 
 const thousands = new Intl.NumberFormat("en-GB");
+
+/** The last row's name: every selected policy at once, from its own run. */
+export const TOGETHER = "All selected policies together";
 
 /** Round axis ticks over [lo, hi]: people in 1, 2 or 5 × 10^k steps, at most five. */
 function niceTicks(lo, hi) {
@@ -219,9 +214,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   const measureShades = magnitudeColours(steps.filter((s) => s.kind === "measure").map((s) => s.x));
   steps.filter((s) => s.kind === "measure").forEach((s, k) => shades.set(s.id, measureShades[k]));
   const fillOf = (step) =>
-    step.kind === "interaction"
-      ? CHART_COLOURS.noChange
-      : step.kind === "total"
+    step.kind === "total"
         ? MAGNITUDE_RAMPS[step.x >= 0 ? "gain" : "loss"][0]
         : shades.get(step.id) ?? CHART_COLOURS.noChange;
   const pos = (v) => (x1 === x0 ? 50 : ((v - x0) / (x1 - x0)) * 100);
@@ -231,7 +224,6 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   const measureSteps = steps.filter((s) => s.kind === "measure");
   const top = measureSteps[0];
   const totalStep = steps.find((s) => s.kind === "total");
-  const interaction = steps.find((s) => s.kind === "interaction");
   // A plain sentence: no "≈" and no "pp" (the values are in the rows)
   const about = (step) => {
     const n = Math.abs(step.x);
@@ -252,15 +244,23 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     const measure = catalogue.byId?.get(step.id);
     return measure?.sentence ?? policyDetailsFor(measure)?.sentence ?? step.name;
   };
-  // Led by the package's total, then the measure that moves the most, its
-  // direction named only when it differs from the total's
+  // Led by all the policies together, then the policy that moves the most:
+  // "does most of it" when it moves at least half as many the same way
+  const doesMost = (step) =>
+    totalStep && direction(step) === direction(totalStep) && Math.abs(step.x) >= Math.abs(totalStep.x) / 2;
   const summary = top ? (
     peopleMode ? (
       totalStep ? (
         <>
-          All the policies together move {about(totalStep)} {who} {direction(totalStep)} poverty; {inSentence(top)} moves the most (
-          {about(top)}
-          {direction(top) === direction(totalStep) ? "" : ` ${who} ${direction(top)} poverty`}).
+          In {year} the selected policies together move {about(totalStep)} {who} {direction(totalStep)} poverty;{" "}
+          {doesMost(top) ? (
+            <>{inSentence(top)} does most of it.</>
+          ) : (
+            <>
+              {inSentence(top)} moves the most ({about(top)}
+              {direction(top) === direction(totalStep) ? "" : ` ${who} ${direction(top)} poverty`}).
+            </>
+          )}
         </>
       ) : (
         <>
@@ -310,12 +310,8 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
         <ChartMoreInfo
           info={{
             how: [
-              "Each step is one selected policy modelled on its own, largest first.",
-              "The package bar is all of them together.",
-              <>
-                Policies can reach the same households, so their own effects need not add up to the package&apos;s
-                {interaction ? `: the interaction step is the gap (${main(interaction)}).` : "."}
-              </>,
+              "Each bar is one policy on its own.",
+              "The last bar is all the selected policies together, which can differ from adding the bars up because policies reach the same households.",
             ],
             caveats: [
               read.fellBack && (
@@ -370,8 +366,6 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
                   {ticks.map((t) => (
                     <span key={t} className={`wf-grid${t === 0 ? " wf-zero" : ""}`} style={{ left: `${pos(t)}%` }} />
                   ))}
-                  {/* The step's start, joined to the step before */}
-                  {i > 0 && (step.kind === "measure" || step.kind === "interaction") && <span className="wf-join" style={{ left: `${pos(step.start)}%` }} />}
                   <span className="wf-bar" style={{ left: `${left}%`, width: `${width}%`, background: fillOf(step) }} />
                 </span>
                 )}
