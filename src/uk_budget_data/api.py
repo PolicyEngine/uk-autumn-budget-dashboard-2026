@@ -447,6 +447,44 @@ class HouseholdAnswersRequest(BaseModel):
         le=100_000,
         description="The partner's State Pension, as state_pension",
     )
+    is_carer: bool = Field(
+        default=False,
+        description=(
+            "Whether the head looks after someone, unpaid. Left out: not a "
+            "carer, as before the form asked."
+        ),
+    )
+    care_hours_per_week: float = Field(
+        default=35,
+        ge=0,
+        le=168,
+        description=(
+            "The head's hours of care a week, read only with is_carer, as "
+            "policyengine-uk's care_hours: from 35, Carer's Allowance (under "
+            "its earnings limit) and the Universal Credit carer element"
+        ),
+    )
+
+    self_employment_receipts: float = Field(
+        default=0,
+        ge=0,
+        le=MAX_AMOUNT,
+        description=(
+            "The head's self-employment or side income, £ a year: gross "
+            "receipts (turnover), as policyengine-uk's "
+            "self_employment_gross_receipts, so the trading allowance "
+            "election can be made"
+        ),
+    )
+    self_employment_expenses: float = Field(
+        default=0,
+        ge=0,
+        le=MAX_AMOUNT,
+        description=(
+            "Its allowable expenses, £ a year; self_employment_income is "
+            "receipts less expenses"
+        ),
+    )
 
     def answers(self) -> household_impact.HouseholdAnswers:
         values = self.model_dump()

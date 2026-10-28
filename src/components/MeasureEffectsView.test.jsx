@@ -47,3 +47,23 @@ describe("MeasureEffectsView this year", () => {
   });
 });
 
+
+describe("MeasureEffectsView this year: bars by direction", () => {
+  const BY = [
+    { id: "a", name: "Big fall", colour: CHART_COLOURS.reference, points: [{ year: 2027, value: -0.4 }] },
+    { id: "b", name: "Small fall", colour: CHART_COLOURS.reference, points: [{ year: 2027, value: -0.01 }] },
+    { id: "c", name: "Rise", colour: CHART_COLOURS.reference, points: [{ year: 2027, value: 0.2 }] },
+  ];
+  // jsdom gives inline colours back as rgb()
+  const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`;
+
+  for (const choice of ["inequality", "poverty"]) {
+    it(`colours ${choice} bars by direction only, with a key that says which is which`, () => {
+      const { container } = render(<MeasureEffectsView byMeasure={BY} metric={SUMMARY_METRICS[choice]} selectedYear={2027} view="year" years={[2027]} />);
+      const bars = [...container.querySelectorAll(".mev-bar")].map((bar) => bar.style.background);
+      // Largest first: a fall, the rise, the small fall; both falls one colour
+      expect(bars).toEqual([rgb(CHART_COLOURS.gain), rgb(CHART_COLOURS.loss), rgb(CHART_COLOURS.gain)]);
+      expect([...container.querySelectorAll(".mev-key li")].map((li) => li.textContent)).toEqual([`Lowers ${choice}`, `Raises ${choice}`]);
+    });
+  }
+});

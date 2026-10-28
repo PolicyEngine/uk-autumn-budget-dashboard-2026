@@ -155,6 +155,17 @@ class _Answer:
         return self._body
 
 
+@pytest.fixture(autouse=True)
+def _no_faked_answer_left_cached():
+    """_Recording fakes the route's calculation, and the route caches what
+    it answers: clear it after each test, so a later test of the real route
+    (test_deploy_smoke's) is not answered from the fake."""
+    yield
+    from uk_budget_data import api
+
+    api._cached_household_impact.cache_clear()
+
+
 class _Recording:
     """The real household route (its calculation faked: definitions don't
     depend on it), recording what it was asked."""

@@ -64,7 +64,7 @@ export const GLOSSARY = {
   static: {
     term: "Static estimates",
     meaning:
-      "People do not change their behaviour in response to a policy: work, spending and wages stay as they were, unless a policy's description says it passes an employer saving on as pay.",
+      "People do not change their behaviour in response to a policy: work, spending and wages stay as they were.",
   },
   benefitUnit: {
     term: "Benefit unit",

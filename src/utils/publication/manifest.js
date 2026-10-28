@@ -62,6 +62,16 @@ export function provisionalLabel(manifest) {
     : PROVISIONAL_LABEL;
 }
 
+/**
+ * The provisional notice the page shows for this manifest: the candidate
+ * label before the Budget, nothing from Budget day. Statement figures stay
+ * provisional in the manifest (`provisionalLabel`, `publicationLabel`), but
+ * on Budget day the page carries no banner for them.
+ */
+export function provisionalNotice(manifest) {
+  return isCandidateManifest(manifest) ? CANDIDATE_PROVISIONAL_LABEL : "";
+}
+
 const DIGEST = /^[0-9a-f]{64}$/;
 
 function isDigest(value) {

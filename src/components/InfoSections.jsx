@@ -182,6 +182,7 @@ export default function InfoSections({ info }) {
                 {href ? (
                   <a href={href} target="_blank" rel="noopener noreferrer">
                     {label}
+                    <span className="policy-sr-only"> (opens in a new tab)</span>
                   </a>
                 ) : (
                   label

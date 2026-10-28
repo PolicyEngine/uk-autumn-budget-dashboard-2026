@@ -122,6 +122,7 @@ export default function HeadlineTile({ icon: Icon, name, href, hrefTip, info, va
             <Tip content={hrefTip}>
               <a href={href} target="_blank" rel="noopener noreferrer">
                 {name}
+                <span className="policy-sr-only"> (opens in a new tab)</span>
               </a>
             </Tip>
           ) : (

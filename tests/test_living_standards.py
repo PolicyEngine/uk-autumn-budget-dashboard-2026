@@ -9,6 +9,7 @@ projections and checks its output, and the committed file, against
 docs/DATA_CONTRACT.md. No test here needs the certified dataset.
 """
 
+import copy
 import csv
 import hashlib
 import json
@@ -24,7 +25,10 @@ from uk_budget_data.cli import main, parse_args
 from uk_budget_data.living_standards import INPUTS_DIR, OUTPUT_PATH, engine
 from uk_budget_data.living_standards.build import build_outlook, outlook_text
 from uk_budget_data.living_standards.forecast import (
+    POST_FILE_NAME,
+    STALE_POST_NOTE,
     apply_post,
+    check_pre_is_march,
     compute_post,
     read_post_document,
 )
@@ -35,6 +39,7 @@ from uk_budget_data.living_standards.obr import (
     ParsedSeries,
     extract_rhdi,
     read_forecast,
+    read_pdf_table_a1,
 )
 from uk_budget_data.living_standards.projections import (
     INCOME_GROUPINGS,
@@ -262,9 +267,9 @@ def outlook(projections):
 
 
 def _cpi(basis: str):
-    from policyengine_uk.system import system
+    from uk_budget_data.forecast import forecast_parameters
 
-    indices = system.parameters.gov.economic_assumptions.indices.obr
+    indices = forecast_parameters().gov.economic_assumptions.indices.obr
     leaf = (
         "consumer_price_index"
         if basis == "bhc"
@@ -441,7 +446,7 @@ def test_the_period_is_the_same_on_every_engine(pe_uk, patched):
     assert engine.headline_end_year(pe_uk) == 2031
     assert engine.projection_years(pe_uk) == list(range(2024, 2032))
     note = engine.headline_end_year_note(pe_uk)
-    assert note.startswith("2031-32 is past the OBR March 2026 forecast")
+    assert note.startswith("2031-32 is the last year of the OBR October 2026")
     assert needs_uc_health_element_extension(pe_uk) is patched
 
 
@@ -491,8 +496,13 @@ def check_contract(doc: dict) -> None:
     assert meta["real_price_base"] == meta["headline_start_year"] == "2027-28"
     end = meta["headline_end_year"]
     assert end == "2031-32"
+    # Runs on the OBR October 2026 forecast write the first; the committed
+    # outlook keeps the second until it is regenerated on that forecast.
     assert meta["headline_end_year_note"].startswith(
-        f"{end} is past the OBR March 2026 forecast"
+        (
+            f"{end} is the last year of the OBR October 2026",
+            f"{end} is past the OBR March 2026 forecast",
+        )
     )
     if needs_uc_health_element_extension(meta["policyengine_uk"]):
         assert meta["uc_health_element_extension"]["years"] == [2030, 2031]
@@ -577,6 +587,11 @@ def check_contract(doc: dict) -> None:
                 "2029",
                 "2030",
             ]
+            # post is null only for a series the loaded Budget forecast
+            # lacks, and post_source says why
+            if s["post"] is None:
+                assert forecast["post_published"] and s["post_source"]
+                continue
             assert [p["year"] for p in s["pre"]] == [
                 p["year"] for p in s["post"]
             ]
@@ -825,16 +840,19 @@ def test_the_post_document_and_derived_series(tmp_path):
     assert (
         "kept at the pre-Budget value" in series["mortgage_interest"]["source"]
     )
-    # CPI after housing costs moves with CPI in the same year.
-    cpi_change = series["cpi"]["values"]["2027"] - pre["cpi"]["2027"]
-    assert series["cpi_ahc"]["values"]["2027"] == pytest.approx(
-        pre["cpi_ahc"]["2027"] + cpi_change
+    # CPI after housing costs is the series the model runs on (one figure
+    # for chart and model), not derived from this test workbook.
+    from uk_budget_data.forecast import OBR, forecast_parameter_changes
+
+    model = forecast_parameter_changes()[OBR + "consumer_price_index_ahc"]
+    assert series["cpi_ahc"]["values"]["2027"] == (
+        model["2027-01-01.2027-12-31"]
     )
     # Social rent: CPI for the year before (rounded) + 1 point. 2027 takes
-    # 2026 CPI (2.46 -> 2.5), read from the EFO though 2026 is not shown.
+    # the published September 2026 CPI (3.5%), not the EFO's 2026 CPI.
     assert "2026" not in series["social_rent"]["values"]
     assert series["social_rent"]["values"]["2027"] == pytest.approx(
-        0.025 + 0.01
+        0.035 + 0.01
     )
     assert series["social_rent"]["values"]["2028"] == pytest.approx(
         0.02 + 0.01
@@ -874,7 +892,13 @@ def test_the_reader_reproduces_the_pre_budget_series_from_march_2026():
     """policyengine-uk's OBR series are the March 2026 EFO's: read them back."""
     outlook = _outlook_forecast()
     parsed = read_forecast(INPUTS / EFO_FILE_NAME, YEARS)
-    computed = compute_post(outlook["forecast"], parsed)
+    # The March forecast predates September 2026's CPI outturn.
+    computed = compute_post(
+        outlook["forecast"],
+        parsed,
+        published_september_cpi={},
+        model_cpi_ahc={},
+    )
     for sec in outlook["forecast"]["sections"]:
         for s in sec["series"]:
             pre = {int(p["year"]): p["value"] for p in s["pre"]}
@@ -921,3 +945,111 @@ def test_set_pending_replaces_one_row_and_keeps_the_rest(tmp_path):
     assert (row[1], row[3]) == ("pending", "vahid-ahmadi")
     assert row[2] == hashlib.sha256(b"new bytes").hexdigest()
     assert row[4:] == ["2026-10-28", "2026-11-11", "New basis, with a comma"]
+
+
+# --- The October 2026 EFO PDF's Table A.1 (before the detailed tables) ------
+
+OBR_DIR = ROOT / "data_inputs" / "obr"
+OCT_PDF = OBR_DIR / "OBR-Economic-and-Fiscal-Outlook-October-2026.pdf"
+OCT_TABLES = "efo-october-2026-detailed-forecast-tables-economy.xlsx"
+OCT_TEXT = OBR_DIR / "OBR-Economic-and-Fiscal-Outlook-October-2026.txt"
+OCT_PDF_SHA256 = (
+    "9e0e9c340e35e603066f3124a614fcd68feadb3d5d10d1f76fb536e150e6225e"
+)
+
+
+def test_the_october_2026_table_a1_rows():
+    """Table A.1 (PDF page 183), as printed: 2026 to 2030, per cent."""
+    assert hashlib.sha256(OCT_PDF.read_bytes()).hexdigest() == OCT_PDF_SHA256
+    parsed, page = read_pdf_table_a1(OCT_TEXT.read_text(), YEARS)
+    assert page == "183"
+    printed = {
+        "cpi": [3.4, 3.1, 3.4, 2.1, 2.1, 2.0],
+        "rpi": [4.1, 3.6, 4.3, 3.0, 3.0, 2.3],
+        "earnings": [4.1, 3.7, 3.0, 2.2, 2.3, 2.5],
+        "house_prices": [2.6, 2.1, 2.4, 2.8, 2.8, 2.7],
+    }
+    for key, values in printed.items():
+        assert [parsed[key].values[y] for y in YEARS] == [
+            round(v / 100, 4) for v in values
+        ], key
+
+
+def test_table_a1_reconciles_with_its_changes_since_march():
+    """October minus the committed pre (policyengine-uk's March 2026 series)
+    is Table A.2's change since March, to its rounding (0.1 points): so pre
+    is the March 2026 EFO and post is October's."""
+    parsed, _ = read_pdf_table_a1(OCT_TEXT.read_text(), YEARS)
+    # Table A.2, 2027 to 2030 (PDF page 184)
+    table_a2 = {
+        "cpi": [1.5, 0.1, 0.1, 0.0],
+        "rpi": [1.3, 0.3, 0.1, 0.0],
+        "earnings": [0.6, 0.1, 0.1, 0.1],
+        "house_prices": [-0.5, 0.1, 0.2, 0.3],
+    }
+    forecast = _outlook_forecast()["forecast"]
+    pre = {
+        s["key"]: {int(p["year"]): p["value"] for p in s["pre"]}
+        for sec in forecast["sections"]
+        for s in sec["series"]
+    }
+    for key, changes in table_a2.items():
+        for year, change in zip(range(2027, 2031), changes):
+            ours = (parsed[key].values[year] - pre[key][year]) * 100
+            assert abs(ours - change) <= 0.1 + 1e-9, (key, year)
+
+
+def test_the_committed_pre_is_march_and_post_is_october():
+    """Forecast changes draws two forecasts: pre (March 2026) must not be
+    overwritten by the October forecast the projections now run on."""
+    forecast = _outlook_forecast()["forecast"]
+    cpi = next(
+        s
+        for sec in forecast["sections"]
+        for s in sec["series"]
+        if s["key"] == "cpi"
+    )
+    pre = {p["year"]: p["value"] for p in cpi["pre"]}
+    post = {p["year"]: p["value"] for p in cpi["post"]}
+    assert (pre["2027"], post["2027"]) == (0.02, 0.034)
+    check_pre_is_march(forecast, INPUTS / EFO_FILE_NAME)
+
+
+def test_a_pre_series_from_the_october_forecast_is_refused():
+    """The build's guard: October values in pre fail against the March EFO."""
+    forecast = copy.deepcopy(_outlook_forecast()["forecast"])
+    for sec in forecast["sections"]:
+        for s in sec["series"]:
+            if s["key"] == "cpi":
+                s["pre"] = [dict(p) for p in s["post"]]
+    with pytest.raises(ForecastTableError, match="cpi"):
+        check_pre_is_march(forecast, INPUTS / EFO_FILE_NAME)
+
+
+def test_the_committed_post_document_reproduces_from_the_october_tables():
+    outlook = _outlook_forecast()
+    saved = json.loads((INPUTS / POST_FILE_NAME).read_text())
+    doc = read_post_document(
+        INPUTS / OCT_TABLES,
+        outlook,
+        saved["label"],
+        saved["source"]["url"],
+    )
+    assert doc["series"] == saved["series"]
+    assert doc["source"]["file_sha256"] == saved["source"]["file_sha256"]
+    # The detailed tables carry every series, CPIH, rents, mortgage interest
+    # and non-labour income included.
+    assert not [k for k, v in doc["series"].items() if v["values"] is None]
+    # The committed outlook carries it, and no longer says post repeats pre
+    published = json.loads(COMMITTED.read_text())
+    assert STALE_POST_NOTE not in published["meta"]["notes"]
+    applied = apply_post(json.loads(json.dumps(published)), saved)
+    assert applied["forecast"] == published["forecast"]
+    check_contract(published)
+
+
+def test_a_series_absent_from_the_source_is_refused_unless_named(tmp_path):
+    outlook = _outlook_forecast()
+    parsed, _ = read_pdf_table_a1(OCT_TEXT.read_text(), YEARS)
+    with pytest.raises(ForecastTableError, match="cpih"):
+        compute_post(outlook["forecast"], parsed)

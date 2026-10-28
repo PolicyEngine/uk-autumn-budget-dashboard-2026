@@ -12,8 +12,10 @@ describe("GeographyMethodology", () => {
     expect(text).toContain("understate");
     expect(text).toContain("rounded to the precision the data supports");
     expect(text).toContain("protect the confidentiality of survey respondents");
-    expect(text).toContain("do not add up exactly to the regional ones");
-    expect(text).toContain("may come from a different dataset");
+    // The region view is hidden (b368c7e6): nothing compares with regional figures
+    expect(text).not.toMatch(/regional ones|different dataset/);
+    expect(text).toContain("not from the national file behind the other figures");
+    expect(text).toContain("calibrated by region at most");
     expect(text).toContain("come from Microcosm's local-area dataset");
     expect(text).toContain("each household belongs to one constituency");
     expect(text).toContain("keeps its constituency in every year");

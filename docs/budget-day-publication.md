@@ -256,7 +256,7 @@ A **combined** entry is current only if each member's approved digest equals the
 
   If the numbers change, the exception lapses.
 - **Out of scope.** Rows that are outside scope or on a different basis are classified explicitly, with a reason and a reviewer, never dropped.
-- **Before the documents arrive**, a measure can be published only as provisional: "awaiting Treasury costing".
+- **Before the documents arrive**, a measure can be published only as provisional (not yet checked against the Treasury's costings); the page shows no banner for it, but the manifest keeps the status.
 
 ## Combined statistics
 

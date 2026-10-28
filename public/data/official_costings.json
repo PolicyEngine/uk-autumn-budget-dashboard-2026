@@ -1,0 +1,222 @@
+{
+  "budget": {
+    "date": "2026-10-28",
+    "id": "uk-autumn-budget-2026"
+  },
+  "measures": {
+    "carers_allowance_earnings_taper": {
+      "years": {
+        "2026": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2027": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2028": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2029": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2030": {
+          "post_behavioural": -0.04,
+          "static_costing": null
+        },
+        "2031": {
+          "post_behavioural": -0.08,
+          "static_costing": null
+        }
+      }
+    },
+    "domestic_electricity_zero_vat": {
+      "years": {
+        "2026": {
+          "post_behavioural": -0.755,
+          "static_costing": null
+        },
+        "2027": {
+          "post_behavioural": -0.305,
+          "static_costing": null
+        },
+        "2028": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2029": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2030": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2031": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        }
+      }
+    },
+    "fuel_duty_rise_deferral": {
+      "years": {
+        "2026": {
+          "post_behavioural": -0.575,
+          "static_costing": null
+        },
+        "2027": {
+          "post_behavioural": -0.78,
+          "static_costing": null
+        },
+        "2028": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2029": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2030": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2031": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        }
+      }
+    },
+    "household_energy_payment_2026": {
+      "years": {
+        "2026": {
+          "post_behavioural": -2.625,
+          "static_costing": null
+        },
+        "2027": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2028": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2029": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2030": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2031": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        }
+      }
+    },
+    "property_income_rates_up": {
+      "years": {
+        "2026": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2027": {
+          "not_comparable": {
+            "reason": "Self Assessment tax on 2027-28 property income is mostly paid from 31 January 2029, so the Treasury's costing (on a National Accounts basis) has \u00a335m in 2027-28 and about 1.5 years of liability in 2028-29 (\u00a3575m), while the model scores each tax year's liability. From 2029-30 the two agree within 1.5%. Table 6.1 row 61."
+          },
+          "post_behavioural": null,
+          "static_costing": null
+        },
+        "2028": {
+          "not_comparable": {
+            "reason": "Self Assessment tax on 2027-28 property income is mostly paid from 31 January 2029, so the Treasury's costing (on a National Accounts basis) has \u00a335m in 2027-28 and about 1.5 years of liability in 2028-29 (\u00a3575m), while the model scores each tax year's liability. From 2029-30 the two agree within 1.5%. Table 6.1 row 61."
+          },
+          "post_behavioural": null,
+          "static_costing": null
+        },
+        "2029": {
+          "post_behavioural": 0.435,
+          "static_costing": null
+        },
+        "2030": {
+          "post_behavioural": 0.445,
+          "static_costing": null
+        },
+        "2031": {
+          "post_behavioural": 0.455,
+          "static_costing": null
+        }
+      }
+    },
+    "state_pension_income_tax_protection": {
+      "years": {
+        "2026": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2027": {
+          "post_behavioural": -0.045,
+          "static_costing": null
+        },
+        "2028": {
+          "post_behavioural": -0.09,
+          "static_costing": null
+        },
+        "2029": {
+          "post_behavioural": -0.15,
+          "static_costing": null
+        },
+        "2030": {
+          "not_comparable": {
+            "reason": "Allowance ends 5 April 2030; the Treasury's 2030-31 and 2031-32 figures (+\u00a350m, -\u00a315m) fall after the end, where the static model scores nothing. The policy costings (p. 63) do not explain them and assume no behavioural response (Table 6.1 row 52)."
+          },
+          "post_behavioural": null,
+          "static_costing": null
+        },
+        "2031": {
+          "not_comparable": {
+            "reason": "Allowance ends 5 April 2030; the Treasury's 2030-31 and 2031-32 figures (+\u00a350m, -\u00a315m) fall after the end, where the static model scores nothing. The policy costings (p. 63) do not explain them and assume no behavioural response (Table 6.1 row 52)."
+          },
+          "post_behavioural": null,
+          "static_costing": null
+        }
+      }
+    },
+    "trading_allowance_raise": {
+      "years": {
+        "2026": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2027": {
+          "not_comparable": {
+            "reason": "Self Assessment tax for 2027-28 is paid from 31 January 2029, so the Treasury's costing (on a National Accounts basis) starts in 2028-29 (\u00a30 in 2027-28) while the model scores each tax year's liability. Table 6.1 row 15; policy costings p. 23."
+          },
+          "post_behavioural": null,
+          "static_costing": null
+        },
+        "2028": {
+          "post_behavioural": -0.225,
+          "static_costing": null
+        },
+        "2029": {
+          "post_behavioural": -0.165,
+          "static_costing": null
+        },
+        "2030": {
+          "post_behavioural": -0.175,
+          "static_costing": null
+        },
+        "2031": {
+          "post_behavioural": -0.18,
+          "static_costing": null
+        }
+      }
+    }
+  },
+  "release": "uk-autumn-budget-2026",
+  "schema": "uk-budget-official-costings/v1",
+  "sign_convention": "exchequer_positive"
+}

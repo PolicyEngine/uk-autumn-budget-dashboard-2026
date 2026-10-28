@@ -126,6 +126,12 @@ describe.skipIf(!STAGED)("By age on the staged publication", () => {
         }
       }
     }
-    if (selected === ids) expect(screen.queryByText(COMBINATION_NOT_PUBLISHED)).toBeNull();
+    // Every measure together: drawn when the release publishes their
+    // combined run (catalogue.combinedId), else said as not published
+    // (the 7-measure release of 28 October publishes none)
+    if (selected === ids) {
+      if (catalogue.combinedId) expect(screen.queryByText(COMBINATION_NOT_PUBLISHED)).toBeNull();
+      else expect(screen.getAllByText(COMBINATION_NOT_PUBLISHED).length).toBeGreaterThan(0);
+    }
   });
 });

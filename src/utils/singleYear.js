@@ -12,6 +12,7 @@ import {
   WHO_IS_A_CHILD_NOTE,
 } from "../components/personal/singleYearMethodNotes";
 import { consistentRound } from "./householdImpactApi";
+import { CALCULATOR_ONLY_MEASURES, isCalculatorOnly } from "./calculatorOnlyMeasures";
 import { CHART_COLOURS } from "./chartTheme";
 import { policyDetailsFor, shortNameOf } from "./policyDetails";
 import { inForceIn } from "./legendMembership";
@@ -61,8 +62,10 @@ export const PROGRAMME_LABELS = {
   uc_child_element: "Child element",
   uc_housing_costs_element: "Housing element",
   uc_childcare_element: "Childcare element",
+  uc_carer_element: "Carer element",
   benefit_cap: "Benefit cap",
   council_tax_reduction: "Council Tax Reduction",
+  carers_allowance: "Carer's Allowance",
   child_benefit: "Child Benefit",
   tax_free_childcare: "Tax-Free Childcare",
   housing_benefit: "Housing Benefit",
@@ -266,7 +269,10 @@ export function outOfForceReason(measure, year) {
  */
 export function policyRows(byPolicy, total, policies, year = null) {
   const nameOf = (row) =>
-    policies.find((policy) => policy.id === row.id)?.name ?? row.name ?? row.id.replace(/_/g, " ");
+    policies.find((policy) => policy.id === row.id)?.name ??
+    CALCULATOR_ONLY_MEASURES[row.id]?.name ??
+    row.name ??
+    row.id.replace(/_/g, " ");
   // A short name for tight labels (policyDetails.js's, while it describes
   // the published measure), else the name
   const labelOf = (row) => {
@@ -329,7 +335,14 @@ export function policyRows(byPolicy, total, policies, year = null) {
         (row) =>
           row.note && (row.noteKind === "employer_cost" || (row.noteKind === "if_received" && row.change !== 0)),
       )
-      .map((row) => ({ id: row.id, name: nameOf(row), kind: row.noteKind, text: row.note })),
+      .map((row) => ({ id: row.id, name: nameOf(row), kind: row.noteKind, text: row.note }))
+      // A calculator-only measure (calculatorOnlyMeasures.js): why it is
+      // not in the national results
+      .concat(
+        byPolicy.measures
+          .filter((row) => isCalculatorOnly(row.id))
+          .map((row) => ({ id: row.id, name: nameOf(row), kind: "calculator_only", text: CALCULATOR_ONLY_MEASURES[row.id].note })),
+      ),
     underAPound: rows.filter((row) => row.rounded === 0 && row.id !== "interaction").map((row) => row.name),
   };
 }
@@ -613,6 +626,14 @@ export const SINGLE_YEAR_METHOD = [
   [
     "Salary",
     "Entered for 2026 and grown to the chosen year with the OBR's average earnings forecast, the index policyengine-uk uprates earnings with.",
+  ],
+  [
+    "State Pension",
+    "Asked from State Pension age and prefilled with the full new State Pension for the chosen year, uprated on the OBR's October 2026 forecast; a figure you enter replaces it.",
+  ],
+  [
+    "Examples",
+    "Each example household fills every answer with fixed values, so its results are worked out in advance; every answer stays editable.",
   ],
   [
     "Change by policy",

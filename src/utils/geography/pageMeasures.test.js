@@ -138,17 +138,15 @@ describe("the page's measures in the constituency views", () => {
     const catalogue = await publish(
       layerTable(IDS.filter((id) => id !== BETA)),
     );
-    expect((await show(catalogue, [BETA])).view.reason).toBe(
-      "Results by constituency are not yet published for this policy.",
-    );
-    // With no package published, the card shows the first selected
-    // measure with its own rows (its Policy option's default), never a sum
-    // and never the left-out measure
+    // The left-out measure alone: the card says so (no other policy
+    // stands in for it)
+    const alone = await show(catalogue, [BETA]);
+    expect(alone.view).toMatchObject({ kind: "notice" });
+    // With no package published, the map stacks the selected measures'
+    // own rows (the left-out one counts as zero)
     const all = await show(catalogue, IDS);
-    const first = IDS.find((id) => id !== BETA);
-    expect(all.choice).toEqual({ kind: "measure", reform: first });
-    expect(all.view).toMatchObject({ kind: "rows", reform: first });
-    expect(all.policyOptions.map((option) => option.value)).toEqual(IDS.filter((id) => id !== BETA));
+    expect(all.choice).toMatchObject({ kind: "stack", members: IDS });
+    expect(all.view).toMatchObject({ kind: "rows", reform: all.choice.reform });
     // With no run for any selected measure, the combination's notice
     cleanup();
     resetGeographyCache();

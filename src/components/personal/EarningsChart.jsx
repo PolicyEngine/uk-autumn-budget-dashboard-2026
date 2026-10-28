@@ -40,7 +40,7 @@ const DROP_FILL = CHART_COLOURS.mutedFill;
 // Over the stacked layers the total is drawn in ink, as on the marginal
 // rate card
 const TOTAL_COLOUR = CHART_COLOURS.ink;
-const TOTAL_NAME = { before: "Net income under current law", after: "Net income with the policies", change: "Change in net income" };
+const TOTAL_NAME = { before: "Net income under current law", after: "Net income with the policies", both: "Net income with the policies", change: "Change in net income" };
 
 export const LEGEND_ITEMS = [
   { label: "Under current law", color: BEFORE_COLOUR, type: "line", dash: BEFORE_DASH },
@@ -156,6 +156,9 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const view = sync?.view ?? ownView;
   const setView = sync?.setView ?? setOwnView;
   const isChange = view === "change";
+  // Both: current law and with the policies as two lines, no layers
+  const isBoth = view === "both";
+  const side = isBoth ? "after" : view;
   const narrow = useNarrowViewport();
   const [wrapperRef, measured] = useElementWidth();
   const chartRef = useRef(null);
@@ -182,11 +185,14 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const viewTitle = isChange ? `Net income change, ${yearLabel}` : title;
 
   const points = useMemo(() => sweepPoints(sweep), [sweep]);
-  const netParts = sweep.netParts ?? null;
+  const netParts = isBoth ? null : (sweep.netParts ?? null);
   // The view's rows, by programme when the API sends the parts
   const rows = useMemo(
-    () => (netParts ? layerRows(points, netParts, view) : points.map((p) => ({ income: p.income, total: isChange ? p.change : p[view] }))),
-    [points, netParts, view, isChange],
+    () =>
+      netParts
+        ? layerRows(points, netParts, view)
+        : points.map((p) => ({ income: p.income, total: isChange ? p.change : p[side], ...(isBoth ? { before: p.before, after: p.after, change: p.change } : {}) })),
+    [points, netParts, view, side, isChange, isBoth],
   );
   // The layers in use before or after, so switching between them keeps the
   // legend; the change's own layers in Change
@@ -199,8 +205,8 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const totalShown = !hidden.includes("total");
   const stack = useMemo(() => stackLayers(rows, shownLayers), [rows, shownLayers]);
   const drops = useMemo(
-    () => (isChange ? [] : netIncomeDrops(points.map((p) => ({ income: p.income, after: p[view] })))),
-    [isChange, points, view],
+    () => (isChange ? [] : netIncomeDrops(points.map((p) => ({ income: p.income, after: p[side] })))),
+    [isChange, points, side],
   );
   // The change is under 1% of net income at every salary
   const smallChange =
@@ -228,6 +234,8 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   // runs to the axis's domain, not its last tick (the domain can sit half a
   // step past it).
   const youAt = salary !== null ? valueAt(rows, salary, "total") : null;
+  // Both: your net income under current law too
+  const youBefore = isBoth && salary !== null ? valueAt(rows, salary, "before") : null;
   const changeReach = Math.max(
     Math.abs(stack.top),
     Math.abs(stack.bottom),
@@ -237,7 +245,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   );
   const yAxis = isChange
     ? divergingAxis([changeReach, -changeReach], { pad: Y_HEADROOM })
-    : zeroBasedAxis([...levelReach, youAt], { pad: Y_HEADROOM });
+    : zeroBasedAxis([...levelReach, youAt, ...(youBefore == null ? [] : [youBefore])], { pad: Y_HEADROOM });
   // Ticks out to both ends, so the top value is always labelled above
   // the highest point (+£110 reads against a £150 tick, not a £100 one)
   const yTicks = ticksToDomain(yAxis);
@@ -289,7 +297,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const hovered = hover !== null ? rows[hover] : null;
   // Without the parts: one line, coloured as before or after, or the
   // change's gain and loss
-  const sideColour = view === "before" ? BEFORE_COLOUR : AFTER_COLOUR;
+  const sideColour = side === "before" ? BEFORE_COLOUR : AFTER_COLOUR;
   const lineColour = netParts ? TOTAL_COLOUR : sideColour;
   const dotColour = (value) => (netParts ? TOTAL_COLOUR : isChange ? (value < 0 ? LOSS_COLOUR : AFTER_COLOUR) : sideColour);
   const totalItem = { label: TOTAL_NAME[view], color: TOTAL_COLOUR, type: "line" };
@@ -298,10 +306,12 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
       ? [...layerLegendItems(layers), totalItem]
       : isChange
         ? CHANGE_LEGEND_ITEMS
-        : [view === "before" ? LEGEND_ITEMS[0] : LEGEND_ITEMS[1]]),
+        : isBoth
+          ? LEGEND_ITEMS
+          : [view === "before" ? LEGEND_ITEMS[0] : LEGEND_ITEMS[1]]),
     ...(drops.length ? [DROP_ITEM] : []),
   ];
-  const sideWords = view === "before" ? "under current law" : "with the selected policies";
+  const sideWords = view === "before" ? "under current law" : isBoth ? "under current law and with the selected policies" : "with the selected policies";
   // One plain sentence: your household at your salary
   const youRounded = youValue == null ? null : Math.round(youValue / 10) * 10;
   // A change within £5 of itself at every salary: said in the sentence
@@ -316,7 +326,9 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
         ? youRounded === 0
           ? `${at}, the selected policies barely change your household's net income.`
           : `${at}, the selected policies ${youRounded > 0 ? "add" : "take"} about ${formatPounds(Math.abs(youRounded))} a year ${youRounded > 0 ? "to" : "from"} your household's net income${flatChange ? ", about the same at every salary" : ""}.`
-        : `${at}, your household's net income is about ${formatPounds(Math.round(youValue / 10) * 10)} a year ${sideWords}.`;
+        : isBoth && youBefore != null
+          ? `${at}, your household's net income is about ${formatPounds(Math.round(youBefore / 10) * 10)} a year under current law and ${formatPounds(Math.round(youValue / 10) * 10)} with the selected policies.`
+          : `${at}, your household's net income is about ${formatPounds(Math.round(youValue / 10) * 10)} a year ${sideWords}.`;
   const description = isChange
     ? `How much the selected policies add to or take from your household's net income at each salary${netParts ? ", by the tax or benefit that changes" : ""}, with partner income and everything else held fixed.`
     : `Your household's net income ${sideWords} as your salary varies${netParts ? ": income and benefits above zero, taxes below" : ""}, with partner income and everything else held fixed.`;
@@ -347,7 +359,13 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
         columns: [
           { key: "income", label: "Employment income (£)", decimals: 0 },
           ...layerColumns,
-          { key: "total", label: `${TOTAL_NAME[view]} (£)`, decimals: 2 },
+          ...(isBoth
+            ? [
+                { key: "before", label: "Net income under current law (£)", decimals: 2 },
+                { key: "after", label: "Net income with the policies (£)", decimals: 2 },
+                { key: "change", label: "Change in net income (£)", decimals: 2 },
+              ]
+            : [{ key: "total", label: `${TOTAL_NAME[view]} (£)`, decimals: 2 }]),
         ],
         rows,
       }),
@@ -369,7 +387,13 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             value: hovered[layer.key],
             color: layer.color,
           })),
-        { dataKey: "total", name: TOTAL_NAME[view], value: hovered.total, color: dotColour(hovered.total) },
+        ...(isBoth
+          ? [
+              { dataKey: "before", name: TOTAL_NAME.before, value: hovered.before, color: BEFORE_COLOUR },
+              { dataKey: "after", name: TOTAL_NAME.after, value: hovered.after, color: AFTER_COLOUR },
+              { dataKey: "change", name: TOTAL_NAME.change, value: hovered.change, color: CHART_COLOURS.ink },
+            ]
+          : [{ dataKey: "total", name: TOTAL_NAME[view], value: hovered.total, color: dotColour(hovered.total) }]),
       ];
   const tipLeft = hovered ? x(hovered.income) : 0;
   const tipSide = tipPlacement(tipLeft, width);
@@ -459,6 +483,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
                 <path d={areaPath(points, x, y, -1)} fill={LOSS_COLOUR} fillOpacity={0.6} stroke="none" />
               </>
             ) : totalShown && (
+              <>
               <path
                 className="earnings-total"
                 d={linePath(rows, x, y, "total")}
@@ -468,6 +493,18 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
                 strokeOpacity={highlighted && !highlighted.includes("total") ? 0.3 : 1}
                 strokeDasharray={!netParts && view === "before" ? BEFORE_DASH : undefined}
               />
+              {isBoth && (
+                // Current law dashed, over the policies' solid line so both show where they meet
+                <path
+                  className="earnings-total earnings-total-before"
+                  d={linePath(rows, x, y, "before")}
+                  fill="none"
+                  stroke={BEFORE_COLOUR}
+                  strokeWidth={2}
+                  strokeDasharray={BEFORE_DASH}
+                />
+              )}
+              </>
             )}
 
             {/* X axis */}
@@ -492,6 +529,9 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             {youX !== null && (
               <g className="earnings-you">
                 <line x1={youX} x2={youX} y1={top} y2={top + plotH} stroke={YOU_COLOUR} strokeWidth={1.25} strokeDasharray={REFERENCE_DASH} />
+                {youBefore !== null && (
+                  <circle cx={youX} cy={y(youBefore)} r={5} fill={BEFORE_COLOUR} stroke={CHART_COLOURS.surface} strokeWidth={2} />
+                )}
                 {youValue !== null && (
                   <circle
                     cx={youX}
@@ -516,7 +556,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
                   {/* "You: £18,010", as the marginal rate card's "You: 28%" */}
                   {youValue === null
                     ? "You"
-                    : `You: ${isChange ? `${youValue < 0 ? "−" : "+"}${formatPounds(Math.abs(Math.round(youValue / 10) * 10))}` : formatPounds(Math.round(youValue / 10) * 10)}`}
+                    : `You: ${isChange ? `${youValue < 0 ? "−" : "+"}${formatPounds(Math.abs(Math.round(youValue / 10) * 10))}` : isBoth && youBefore != null ? `${formatPounds(Math.round(youBefore / 10) * 10)} → ${formatPounds(Math.round(youValue / 10) * 10)}` : formatPounds(Math.round(youValue / 10) * 10)}`}
                 </text>
               </g>
             )}
@@ -539,6 +579,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             {hovered && (
               <g className="earnings-hover" pointerEvents="none">
                 <line x1={x(hovered.income)} x2={x(hovered.income)} y1={top} y2={top + plotH} stroke={CHART_COLOURS.noChange} strokeWidth={1} />
+                {isBoth && <circle cx={x(hovered.income)} cy={y(hovered.before)} r={3.5} fill={BEFORE_COLOUR} />}
                 <circle cx={x(hovered.income)} cy={y(hovered.total)} r={3.5} fill={dotColour(hovered.total)} />
               </g>
             )}

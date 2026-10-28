@@ -11,7 +11,6 @@
 
 import { useState } from "react";
 import SectionHeading from "../SectionHeading";
-import UnavailableNotice from "../publication/UnavailableNotice";
 import SourceLink from "../SourceLink";
 import SubTabs, { SubTabPanel, useSubTabParam } from "../SubTabs";
 import CurrentLawSection from "./CurrentLawSection";
@@ -19,39 +18,62 @@ import ForecastHeadlineSection from "./sections/ForecastHeadlineSection";
 import ForecastSeriesSection from "./sections/ForecastSeriesSection";
 import ViewLink from "../ViewLink";
 import { FORECAST_FEED_ANCHOR } from "../methodology/ForecastFeedMethod";
-import { forecastName } from "../../utils/livingStandards/forecast";
+import { forecastName, hasPost } from "../../utils/livingStandards/forecast";
 import { OutlookStatus, useOutlook } from "./useOutlook";
+import { EXTERNAL } from "../../utils/sources";
 import "./LivingStandards.css";
+
+/**
+ * The one forecast's name, from the data: its source's release ("OBR
+ * Economic and fiscal outlook, March 2026"), else its label without the
+ * Budget tag ("OBR March 2026").
+ */
+const forecastSourceName = (forecast) => forecast.pre_source?.release || forecastName(forecast.pre_label) || "OBR forecast";
 
 /** The OBR forecast behind the baseline: headline tiles, then the series. */
 function ForecastPanel({ forecast, data, onShowTab }) {
   // Charts or tables
   const [forecastView, setForecastView] = useState("chart");
-  // `obr-forecast` updates an independent baseline JSON. Its Budget-day
-  // extract has no receipt or release-index binding yet, so publication of
-  // that JSON alone cannot authorise the new forecast figures.
-  if (forecast?.post_published) {
-    return (
-      <UnavailableNotice reason="Budget-day forecast is unavailable until verified">
-        <p>
-          Incomes and poverty under current law, on the forecast they were built from, remain on this view&apos;s
-          Living standards and Poverty sub-tabs.
-        </p>
-      </UnavailableNotice>
-    );
-  }
+  // A later OBR forecast loaded by `obr-forecast` (post_published, its file
+  // and SHA-256 in post_source, the file's review row in
+  // data_inputs/public_data_review.csv) is drawn beside the earlier one,
+  // series by series, for comparison
+  const later = forecast.sections?.some((s) => s.series.some((series) => hasPost(forecast, series)));
   return (
     <>
-      {/* Named for the forecast, so it is not the sub-tab's label again */}
+      {/* Named for the forecast(s), so it is not the sub-tab's label again */}
       <SectionHeading
         icon="trend"
         id="forecast-changes"
-        title={`${forecastName(forecast.pre_label) || "OBR"} economic forecast`}
+        title={
+          later
+            ? `${forecastName(forecast.pre_label)} and ${forecastName(forecast.post_label).replace(/^OBR\s+/, "")} economic forecasts`
+            : `${forecastName(forecast.pre_label) || "OBR"} economic forecast`
+        }
         subtitle={
           <>
-            Calendar-year growth behind the baseline, from the <SourceLink source="obr_efo_current" />.{" "}
+            {later ? (
+              <>
+                Calendar-year growth in the OBR&apos;s <SourceLink source="obr_efo_march_2026">March 2026</SourceLink>{" "}
+                and <SourceLink source="obr_efo_october_2026">October 2026</SourceLink> forecasts. Budget figures use
+                October.
+              </>
+            ) : (
+              <>
+                Calendar-year growth behind the baseline, from the{" "}
+                {forecast.pre_source?.url ? (
+                  <a href={forecast.pre_source.url} {...EXTERNAL}>
+                    {forecastSourceName(forecast)}
+                    <span className="policy-sr-only"> (opens in a new tab)</span>
+                  </a>
+                ) : (
+                  forecastSourceName(forecast)
+                )}
+                .
+              </>
+            )}{" "}
             <ViewLink tab="methodology" hash={FORECAST_FEED_ANCHOR} onShowTab={onShowTab}>
-              How these forecasts feed our figures →
+              How these feed our figures →
             </ViewLink>
           </>
         }

@@ -136,13 +136,16 @@ describe("a later snapshot keeps the reader's selection", () => {
 
   // Review of 15439f4, finding 2: the default is every displayable measure,
   // not a list pinned at the first snapshot the reader saw, and a chosen
-  // selection survives a view without the policy pill.
+  // selection survives a view without the policy pill. The fixture has no
+  // combined run of its whole package, so the population tabs pick one
+  // policy at a time; the Household calculator keeps the multi-select
+  // selection these tests follow.
   // The year pill shares the count class, so read the policy pill's
   const selectedCount = () => Number(document.querySelector(".band-policy .policy-selector-count")?.textContent);
 
   it("adds a newly published measure to a default selection", async () => {
     const calls = [];
-    open("/", await serve({ beta: "staged" }), calls);
+    open("/?tab=household", await serve({ beta: "staged" }), calls);
     await waitFor(() => expect(selectedCount()).toBeGreaterThan(0));
     const before = selectedCount();
     expect(policies()).toBeNull();
@@ -154,25 +157,22 @@ describe("a later snapshot keeps the reader's selection", () => {
 
   it("drops a withdrawn measure from a default selection without blocking the figures", async () => {
     const calls = [];
-    open("/", await serve(), calls);
+    open("/?tab=household", await serve(), calls);
     await waitFor(() => expect(selectedCount()).toBeGreaterThan(0));
     const before = selectedCount();
     await publish(await serve({ beta: "withdrawn" }, 1), calls);
     await waitFor(() => expect(selectedCount()).toBe(before - 1));
     expect(policies()).toBeNull();
     expect(screen.queryByText("Some selected policies are unavailable")).toBeNull();
-    expect(screen.queryByText(/Select policies to analyse their impact/)).toBeNull();
   });
 
   it("keeps a chosen selection across a view without the policy pill and a later snapshot", async () => {
     const calls = [];
-    open("/?policies=alpha", await serve(), calls);
+    open("/?tab=household&policies=alpha", await serve(), calls);
     await waitFor(() => expect(selectedCount()).toBe(1));
     fireEvent.click(screen.getByRole("tab", { name: "Methodology" }));
-    expect(policies()).toBe("alpha");
     await publish(await serve({}, 1), calls);
-    expect(policies()).toBe("alpha");
-    fireEvent.click(screen.getByRole("tab", { name: "Population impact" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Household calculator" }));
     expect(selectedCount()).toBe(1);
     expect(policies()).toBe("alpha");
   });
@@ -180,7 +180,7 @@ describe("a later snapshot keeps the reader's selection", () => {
   it("writes a selection to the address only once the reader chooses one", async () => {
     const calls = [];
     // A view: the landing page keeps the bare address whatever is chosen
-    open("/?tab=dashboard", await serve(), calls);
+    open("/?tab=household", await serve(), calls);
     await waitFor(() => expect(selectedCount()).toBeGreaterThan(0));
     const all = selectedCount();
     expect(policies()).toBeNull();
@@ -190,25 +190,41 @@ describe("a later snapshot keeps the reader's selection", () => {
     expect(policies().split(",")).toHaveLength(all - 1);
   });
 
-  it("hands the selection back to the publication when the reader picks every measure", async () => {
+  // One policy at a time on the population tabs (no combined run of the
+  // whole package in the fixture)
+  const chosenName = () => document.querySelector(".band-policy .policy-selector-chosen")?.textContent;
+
+  it("opens the population tabs on one policy, the first in the catalogue's order, and names it in the address", async () => {
     const calls = [];
-    open("/?policies=", await serve({ beta: "staged" }), calls);
-    fireEvent.click(await screen.findByRole("button", { name: "All policies" }));
-    await waitFor(() => expect(selectedCount()).toBeGreaterThan(0));
-    const before = selectedCount();
-    expect(policies()).toBeNull();
-    await publish(await serve({}, 1), calls);
-    await waitFor(() => expect(selectedCount()).toBe(before + 1));
+    open("/?tab=dashboard", await serve(), calls);
+    await waitFor(() => expect(chosenName()).toBeTruthy());
+    expect(policies()?.split(",")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: /^Policies / }));
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Select all" })).toBeNull();
+    const radios = screen.getAllByRole("radio");
+    expect(radios.filter((radio) => radio.checked)).toHaveLength(1);
+    // Picking another selects only it
+    fireEvent.click(radios[1]);
+    await waitFor(() => expect(screen.getAllByRole("radio").filter((radio) => radio.checked)).toHaveLength(1));
+    expect(policies()?.split(",")).toHaveLength(1);
+    expect(screen.getAllByRole("radio")[1].checked).toBe(true);
   });
 
-  it("keeps an empty population selection empty", async () => {
+  it("keeps each tab's own choice: one policy for the population tabs, every policy for the Household calculator", async () => {
     const calls = [];
-    open("/?policies=", await serve(), calls);
-    expect(await screen.findByText(/Select policies to analyse their impact/)).toBeInTheDocument();
-    expect(policies()).toBe("");
-    await publish(await serve({}, 1), calls);
-    expect(screen.getByText(/Select policies to analyse their impact/)).toBeInTheDocument();
-    expect(policies()).toBe("");
+    open("/?tab=dashboard&policies=alpha,beta", await serve(), calls);
+    await waitFor(() => expect(chosenName()).toBeTruthy());
+    // A link naming several opens on the first of them
+    expect(policies()?.split(",")).toHaveLength(1);
+    const one = policies();
+    fireEvent.click(screen.getByRole("tab", { name: "Household calculator" }));
+    await waitFor(() => expect(selectedCount()).toBeGreaterThan(1));
+    fireEvent.click(screen.getByRole("tab", { name: "Population impact" }));
+    await waitFor(() => expect(policies()).toBe(one));
+    // The Policies tab shows every policy's card, whatever is chosen
+    fireEvent.click(screen.getByRole("tab", { name: "Policies" }));
+    await waitFor(() => expect(document.querySelectorAll(".policy-details-content [aria-label^='See its effect']").length).toBeGreaterThan(1));
   });
 });
 

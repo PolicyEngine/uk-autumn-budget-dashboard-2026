@@ -1,7 +1,5 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { measureModellingFacts, modellingFacts, MODELLED_NOT_SURVEY, MODELLING_NOTE, sentences } from "./measureModelling";
+import { measureModellingFacts, modellingFacts, MODELLING_NOTE, sentences } from "./measureModelling";
 
 describe("measure modelling, read from the published wording", () => {
   it("reads fact and limitation chips by wording alone", () => {
@@ -40,22 +38,5 @@ describe("measure modelling, read from the published wording", () => {
       expect(sentence).toMatch(/2025-26/);
     }
     expect(MODELLING_NOTE.note).not.toMatch(/\bthe model\b|PolicyEngine/i);
-  });
-});
-
-// The "Modelled, not survey values" chip and the Methodology paragraph read
-// one phrase from the published descriptions, so a regeneration that rewrites
-// it would quietly drop them. This fails instead. If no published measure
-// replaces survey values any more (none has a baseline_simulation_modifier),
-// delete this test; if one still does, put the phrase back in its description.
-describe("the published phrase for modelled values", () => {
-  it("finds the phrase in at least one published description", () => {
-    const { measures } = JSON.parse(
-      readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"),
-    );
-    const modelled = Object.entries(measures)
-      .filter(([, measure]) => MODELLED_NOT_SURVEY.test(measure?.description ?? ""))
-      .map(([id]) => id);
-    expect(modelled.length, "no published description says 'replacing those reported in the survey'").toBeGreaterThan(0);
   });
 });

@@ -17,14 +17,14 @@ function stateOf(row) {
   return row.tier === "approximate" ? "approximate" : "reported";
 }
 
-function Figure({ row, outcome }) {
+function Figure({ row, outcome, approximateNote = APPROXIMATE_NOTE }) {
   const state = stateOf(row);
   if (state === "no-data") return <span className="ctable-na">No data</span>;
   if (state === "withheld") return <span className="ctable-na">Not published</span>;
   return (
     <>
       {state === "approximate" && (
-        <Tip content={APPROXIMATE_NOTE}>
+        <Tip content={approximateNote}>
           <span className="ctable-approximate">
             <span aria-hidden="true">{APPROXIMATE_MARK} </span>
             <span className="visually-hidden">approximately </span>
@@ -58,7 +58,7 @@ const COLUMNS = [
  * @param {"gbp"|"pct"} props.metric - Which figure the value column shows
  * @param {string} [props.query] - The search box's text
  */
-export default function ConstituencyTable({ entries, metric, query = "" }) {
+export default function ConstituencyTable({ entries, metric, query = "", approximateNote = APPROXIMATE_NOTE }) {
   const [sort, setSort] = useState({ key: "value", dir: -1 });
   const { field, outcome } = RANK_METRICS[metric];
 
@@ -169,7 +169,7 @@ export default function ConstituencyTable({ entries, metric, query = "" }) {
                 </th>
                 <td className="ctable-col-region">{row.region}</td>
                 <td className="ctable-col-value">
-                  <Figure row={row.row} outcome={outcome} />
+                  <Figure row={row.row} outcome={outcome} approximateNote={approximateNote} />
                 </td>
               </tr>
             ))}
@@ -179,7 +179,7 @@ export default function ConstituencyTable({ entries, metric, query = "" }) {
       </div>
       {counts.approximate > 0 && (
         <p className="ctable-note">
-          {APPROXIMATE_MARK} {APPROXIMATE_NOTE}
+          {APPROXIMATE_MARK} {approximateNote}
         </p>
       )}
     </div>

@@ -85,19 +85,18 @@ it("gives every measure policyDetails was written for a tip as described now, or
   }
 });
 
-// The eight candidate measures of 27 October 2026, as the file the page
-// serves describes them (`uk-budget-data policy-table` copies reforms.py's
-// description verbatim): each entry must be written for exactly that text,
-// or its card falls back to the bare description.
+// The measures of the Budget 2026 package (28 October 2026), as the file
+// the page serves describes them (`uk-budget-data policy-table` copies
+// reforms.py's description verbatim): each entry must be written for
+// exactly that text, or its card falls back to the bare description.
 const CANDIDATES = [
   "fuel_duty_rise_deferral",
   "state_pension_income_tax_protection",
-  "warm_home_discount_top_up",
   "domestic_electricity_zero_vat",
-  "threshold_freeze_2031_32",
-  "plan_2_threshold_unfreeze",
-  "employer_nics_secondary_threshold_raise",
-  "unearned_income_rates_up",
+  "property_income_rates_up",
+  "carers_allowance_earnings_taper",
+  "household_energy_payment_2026",
+  "trading_allowance_raise",
 ];
 
 it("has an entry written for each candidate measure's published description, byte for byte", () => {
