@@ -50,6 +50,18 @@ describe("OBRDumbbellChart", () => {
     expect(row.querySelector(".obr-dumbbell-difference").textContent).toBe("—");
   });
 
+  it("says 'not comparable' for a year a reviewer classified so, with the reason in the tooltip", () => {
+    const reason = "Allowance ends 5 April 2030.";
+    const marked = rows.map((row) => (row.id === "salary_sacrifice_cap" ? { ...row, notComparable: reason } : row));
+    const { container } = chart({ rows: marked });
+    const row = rowEl(container, "salary_sacrifice_cap");
+    expect(row.querySelector(".obr-dumbbell-missing").textContent).toBe("Not comparable");
+    expect(row.querySelector(".obr-dumbbell-dot.obr")).toBeNull();
+    expect(container.querySelector("svg[role=img]").getAttribute("aria-label")).toContain("Salary sacrifice cap: PolicyEngine £2.8bn, official not comparable");
+    fireEvent.mouseEnter(row);
+    expect(document.body).toHaveTextContent(`Not comparable: ${reason}`);
+  });
+
   it("gives the difference, PolicyEngine minus official, in a column at the right", () => {
     const { container } = chart();
     expect(container.querySelector(".obr-dumbbell-column-head").textContent).toBe("Difference");

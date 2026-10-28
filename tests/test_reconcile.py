@@ -1883,9 +1883,7 @@ def test_named_years_drop_out_of_the_residual_and_responsiveness():
         2029,
     ]
     # Without the classification the zero after the end is inert
-    unmarked = run(
-        budgetary, sources, policy=policy, expected=expected
-    )
+    unmarked = run(budgetary, sources, policy=policy, expected=expected)
     assert unmarked["responsiveness"]["status"] == INERT
 
 
@@ -1943,9 +1941,10 @@ def test_named_years_leave_other_years_comparison_digest_alone():
     before = comparison_sha256("m", 2027, sources, [link()], POLICY)
     after = comparison_sha256("m", 2027, sources, [link(**AFTER_END)], POLICY)
     assert before == after
-    assert comparison_sha256(
-        "m", 2030, sources, [link(**AFTER_END)], POLICY
-    ) is None
+    assert (
+        comparison_sha256("m", 2030, sources, [link(**AFTER_END)], POLICY)
+        is None
+    )
 
 
 def test_load_mapping_reads_named_years(tmp_path):
@@ -1971,8 +1970,14 @@ def test_the_pension_tax_allowance_is_compared_before_the_end_only():
     inputs = Path(__file__).resolve().parents[1] / "data_inputs" / "treasury"
     measure = "state_pension_income_tax_protection"
     result = reconcile(
-        {2026: 0.0, 2027: -0.045, 2028: -0.09, 2029: -0.15, 2030: 0.0,
-         2031: 0.0},
+        {
+            2026: 0.0,
+            2027: -0.045,
+            2028: -0.09,
+            2029: -0.15,
+            2030: 0.0,
+            2031: 0.0,
+        },
         measure_id=measure,
         outputs_sha256=DIGEST,
         sources=load_sources(inputs / "sources"),

@@ -100,8 +100,9 @@ export function hasObrFigures(rows, selectedPolicies) {
 /**
  * One row per selected measure for a year, largest official costing first
  * (by size, either sign), measures with no official figure last:
- * { id, name, pe, obr, obrStatic, obrBehavioural }, null for a missing
- * figure. `name` is the measure's short name, as elsewhere on the page.
+ * { id, name, pe, obr, obrStatic, obrBehavioural, notComparable }, null
+ * for a missing figure; `notComparable` is the reviewer's reason where the
+ * official costing for the year is not comparable with ours. `name` is the measure's short name, as elsewhere on the page.
  */
 export function comparisonRows(sourceRows, selectedPolicies, year, showBehavioural, catalogue) {
   const byMeasure = new Map();
@@ -123,6 +124,7 @@ export function comparisonRows(sourceRows, selectedPolicies, year, showBehaviour
       obr: obrValue(yearData, showBehavioural),
       obrStatic: isValue(row.obr_static) ? row.obr_static : null,
       obrBehavioural: isValue(row.obr_behavioural) ? row.obr_behavioural : null,
+      notComparable: typeof row.not_comparable === "string" ? row.not_comparable : null,
     };
   });
   const size = (row) => (row.obr === null ? -1 : Math.abs(row.obr));
@@ -237,7 +239,13 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
     .map((row) => Number(row.year));
   const yearCovered = rows.some((row) => row.obr !== null);
   const lastOfficial = officialYears.length ? Math.max(...officialYears) : null;
-  const notCovered = `${yearLabel} is not in the official costings${lastOfficial !== null && lastOfficial < selectedYear ? `, which run to ${fiscalYear(lastOfficial)}` : ""}.`;
+  // A year a reviewer classified not comparable: said so, with the reason,
+  // never as a gap in the official costings
+  const notComparableRows = rows.filter((row) => row.notComparable !== null);
+  const notComparableNote = (row) => `${row.name}: the official costing for ${yearLabel} is not comparable with our estimate. ${row.notComparable}`;
+  const notCovered = notComparableRows.length > 0 && notComparableRows.length === rows.length
+    ? notComparableRows.map(notComparableNote).join(" ")
+    : `${yearLabel} is not in the official costings${lastOfficial !== null && lastOfficial < selectedYear ? `, which run to ${fiscalYear(lastOfficial)}` : ""}.`;
 
   const title = `How our estimates compare with the official costings, ${yearLabel}`;
   const sentence = yearCovered ? comparisonSentence(rows, obrKind) : notCovered;
@@ -307,14 +315,17 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   // as the household table's zero change. Under £1bn a figure is in £m,
   // so one that is not zero never reads as nothing
   const shownZero = (text) => text === "£0";
-  const cell = (value, decimals, kind) => {
+  const cell = (value, decimals, kind, notComparable = null) => {
+    if (notComparable !== null) {
+      return <td className={`value-cell ${kind} is-none is-not-comparable`} title={notComparable}>Not comparable</td>;
+    }
     if (!isValue(value)) return <td className={`value-cell ${kind} is-none`}>—</td>;
     const text = formatFigure(value, decimals);
     return <td className={`value-cell ${kind}${shownZero(text) ? " is-zero" : ""}`}>{text}</td>;
   };
   // What the note says under the table: the difference, then why a cell
   // has no figure, only where one is missing
-  const officialMissing = rows.some((row) => row.obrStatic === null || row.obrBehavioural === null);
+  const officialMissing = rows.some((row) => row.notComparable === null && (row.obrStatic === null || row.obrBehavioural === null));
   const peMissing = rows.some((row) => row.pe === null);
   // A row with no figure on the chosen basis is differenced on the other
   const otherBasis = rows.some((row) => row.pe !== null && row.obr !== null && (shownBehavioural ? row.obrBehavioural === null : row.obrStatic === null));
@@ -322,6 +333,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
     `Difference: PolicyEngine minus the official ${obrKind} costing${otherBasis ? ` (the ${shownBehavioural ? "static" : "post-behavioural"} one where the official costings give only that)` : ""}.`,
     officialMissing && `— where the official costings give no figure on that basis for the policy in ${yearLabel}.`,
     peMissing && `— under PolicyEngine where we publish no estimate for ${yearLabel}.`,
+    ...notComparableRows.map(notComparableNote),
   ].filter(Boolean);
 
   return (
@@ -383,8 +395,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
                     <tr key={row.id} className={`row-band${index % 2 === 0 ? " is-banded" : ""}`}>
                       <td className="policy-name-cell"><MeasureRowLabel measure={row.measure} name={row.name} /></td>
                       {cell(row.pe, decimals, "pe")}
-                      {cell(row.obrStatic, decimals, "obr")}
-                      {cell(row.obrBehavioural, decimals, "obr")}
+                      {cell(row.obrStatic, decimals, "obr", row.notComparable)}
+                      {cell(row.obrBehavioural, decimals, "obr", row.notComparable)}
                       {/* No effect on either side: the zero difference muted too */}
                       <td
                         className={`value-cell difference${

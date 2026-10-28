@@ -42,9 +42,9 @@ from uk_budget_data.publication.reconcile import (
     NOT_COMPARABLE,
     ReconciliationInputError,
     _comparator,
-    excluded_links,
     _one_mapping_each,
     _one_source_each,
+    excluded_links,
     load_mapping,
     load_sources,
 )
@@ -88,9 +88,7 @@ def official_costings(manifest: m.Manifest, sources, mapping) -> dict:
             }
             if any(value is not None for value in figures.values()):
                 years[str(year)] = figures
-        if any(
-            "not_comparable" not in figures for figures in years.values()
-        ):
+        if any("not_comparable" not in figures for figures in years.values()):
             measures[key] = {"years": years}
     return {
         "schema": SCHEMA,

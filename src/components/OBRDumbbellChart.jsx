@@ -338,7 +338,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
       parts.push(
         valueLabel(formatBn(pePart ? row.pe : row.obr), labelSide, cx, cy, pePart ? PE_LABEL_COLOUR : OBR_LABEL_COLOUR, "label", background),
         missingLabel(
-          pePart ? "Not in the official costings" : "PolicyEngine not yet published",
+          pePart ? (row.notComparable ? "Not comparable" : "Not in the official costings") : "PolicyEngine not yet published",
           otherSide,
           cx + (otherSide === "right" ? 2 : -2),
           cy,
@@ -346,7 +346,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
         ),
       );
     } else {
-      parts.push(missingLabel(pct && isValue(row.pe) ? "Not in the official costings" : "Not yet published", "right", plotLeft - labelGap, cy, "missing"));
+      parts.push(missingLabel(pct && isValue(row.pe) ? (row.notComparable ? "Not comparable" : "Not in the official costings") : "Not yet published", "right", plotLeft - labelGap, cy, "missing"));
     }
 
     // A disc in the row's background behind the ring keeps lines out of it;
@@ -379,7 +379,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
         label={`${row.name}, ${yearLabel}`}
         rows={[
           { key: "pe", name: "PolicyEngine (static)", text: isValue(row.pe) ? bn(row.pe) : "Not yet published", color: PE_COLOUR },
-          { key: "obr", name: `Official costing (${obrKind})`, text: isValue(row.obr) ? bn(row.obr) : "Not in the official costings", color: OBR_COLOUR },
+          { key: "obr", name: `Official costing (${obrKind})`, text: isValue(row.obr) ? bn(row.obr) : row.notComparable ? `Not comparable: ${row.notComparable}` : "Not in the official costings", color: OBR_COLOUR },
           ...(difference !== null
             ? [{ key: "difference", name: "Difference (PolicyEngine − official)", text: formatDifference(difference, decimals), color: GAP_COLOUR }]
             : []),
@@ -387,7 +387,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
         ]}
       />
     );
-    const summary = `${row.name}: PolicyEngine ${isValue(row.pe) ? bn(row.pe) : "not yet published"}, official ${isValue(row.obr) ? bn(row.obr) : "none"}`;
+    const summary = `${row.name}: PolicyEngine ${isValue(row.pe) ? bn(row.pe) : "not yet published"}, official ${isValue(row.obr) ? bn(row.obr) : row.notComparable ? "not comparable" : "none"}`;
 
     return (
       <g
@@ -450,7 +450,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
               aria-label={`${rows
                 .map((row) => {
                   const decimals = rowDecimals(row.pe, row.obr);
-                  return `${row.name}: PolicyEngine ${isValue(row.pe) ? formatBn(row.pe, decimals) : "not yet published"}, official ${isValue(row.obr) ? formatBn(row.obr, decimals) : "none"}`;
+                  return `${row.name}: PolicyEngine ${isValue(row.pe) ? formatBn(row.pe, decimals) : "not yet published"}, official ${isValue(row.obr) ? formatBn(row.obr, decimals) : row.notComparable ? "not comparable" : "none"}`;
                 })
                 .join("; ")}.`}
               style={{ fontFamily: "inherit", display: "block" }}

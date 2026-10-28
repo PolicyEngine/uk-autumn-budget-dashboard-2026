@@ -33,6 +33,7 @@ vi.mock("../utils/publication/officialCostings", async (importOriginal) => {
         year: Number(row.year),
         obr_static: number(row.obr_static_value),
         obr_behavioural: number(row.obr_post_behavioural_value),
+        ...(row.not_comparable ? { not_comparable: row.not_comparable } : {}),
       }));
     }),
   };
@@ -186,6 +187,51 @@ describe("the comparison at 2031-32", () => {
       "Difference: PolicyEngine minus the official static costing.",
       "— where the official costings give no figure on that basis for the policy in 2031-32.",
     ]);
+  });
+});
+
+// A year a reviewer classified not comparable (data_inputs/treasury
+// mapping.csv not_comparable_years): the Pension Tax Allowance after it ends
+describe("a year classified not comparable", () => {
+  const REASON = "Allowance ends 5 April 2030; the figures after it fall outside the static model.";
+  const COSTINGS = [
+    "reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value,not_comparable",
+    "two_child_limit,2 child limit repeal,2030,,-3.5,",
+    `two_child_limit,2 child limit repeal,2031,,,"${REASON}"`,
+  ].join("\n");
+  const costings = () => vi.stubGlobal(
+    "fetch",
+    geographyFetch({ "/data/official_costings.csv": COSTINGS, "/data/budgetary_impact.csv": BUDGETARY_IMPACT }),
+  );
+
+  it("says the year is not comparable, with the reason, not that it is missing", async () => {
+    costings();
+    const { container } = render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2031} />);
+    await screen.findByRole("heading", { name: /official costings, 2031-32/ });
+    expect(container.querySelector(".obr-not-covered").textContent).toBe(
+      `2 child limit repeal: the official costing for 2031-32 is not comparable with our estimate. ${REASON}`,
+    );
+    expect(container).not.toHaveTextContent("is not in the official costings");
+    show("Table");
+    const cells = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell");
+    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repealBenefits", "−£3.6bn", "Not comparable", "Not comparable", "—"]);
+    // The reason on hover, and in the note under the table
+    expect(cells[2]).toHaveAttribute("title", REASON);
+    expect(cells[3]).toHaveAttribute("title", REASON);
+    expect([...container.querySelectorAll(".comparison-table-note")].map((p) => p.textContent)).toEqual([
+      "Difference: PolicyEngine minus the official static costing.",
+      `2 child limit repeal: the official costing for 2031-32 is not comparable with our estimate. ${REASON}`,
+    ]);
+  });
+
+  it("compares the other years as usual", async () => {
+    costings();
+    const { container } = render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} />);
+    await screen.findByRole("heading", { name: /official costings, 2030-31/ });
+    expect(container).not.toHaveTextContent("Not comparable");
+    show("Table");
+    const cells = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell");
+    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repealBenefits", "−£3.4bn", "—", "−£3.5bn", "+£100m"]);
   });
 });
 
