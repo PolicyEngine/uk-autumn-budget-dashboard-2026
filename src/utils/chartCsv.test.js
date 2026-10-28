@@ -53,6 +53,8 @@ describe("chart CSV downloads", () => {
     expect(formatCsvNumber(-0.00001, 2)).toBe("0");
     expect(formatCsvNumber(12345.678, 0)).toBe("12346");
     expect(formatCsvNumber(undefined)).toBe("");
+    expect(formatCsvNumber("")).toBe("");
+    expect(formatCsvNumber(" ")).toBe("");
   });
 
   it("label fiscal years", () => {

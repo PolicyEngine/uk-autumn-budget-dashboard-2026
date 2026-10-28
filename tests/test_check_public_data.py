@@ -227,6 +227,64 @@ def test_a_receipt_with_thin_cells_in_its_tables_always_fails(repo, in_tables):
     assert run(repo).problems == expected
 
 
+@pytest.mark.parametrize("suffix", ["csv", "json"])
+@pytest.mark.parametrize("published", [True, False])
+def test_a_review_cannot_publish_a_receipted_withheld_cell(
+    repo, suffix, published
+):
+    base = "public/data/artifacts/m/0123456789abcdef"
+    floor = {
+        "thin_cells_in_tables": False,
+        "withheld_cells": [
+            {"table": "distributional_impact", "year": 2027, "groups": ["1"]},
+            {"table": "winners_losers", "year": 2027, "groups": ["1", "all"]},
+        ],
+    }
+    names = [f"{base}/receipt.json"]
+    write(
+        repo, names[0], json.dumps({"dashboard": {"disclosure_floor": floor}})
+    )
+    for table, column, labels in (
+        ("distributional_impact", "value", ["1st"]),
+        ("winners_losers", "avg_change", ["1", "all"]),
+    ):
+        rows = [
+            dict(
+                reform_id="m",
+                reform_name="M",
+                year=2027,
+                decile=label,
+                **{
+                    column: (
+                        0.0
+                        if published and table == "distributional_impact"
+                        else None
+                    )
+                },
+            )
+            for label in labels
+        ]
+        name = f"{base}/{table}.{suffix}"
+        if suffix == "json":
+            text = json.dumps(rows)
+        else:
+            from uk_budget_data.publication.tables import canonical_csv
+
+            text = canonical_csv(table, rows).decode()
+        write(repo, name, text)
+        names.append(name)
+    write_review(repo, [entry(repo, name) for name in names])
+    track(repo)
+    problems = run(repo).problems
+    assert problems == (
+        [
+            f"{base}/receipt.json: distributional_impact 2027 1 publishes a value in a withheld cell"
+        ]
+        if published
+        else []
+    )
+
+
 def test_record_level_identifiers_fail_in_a_pending_file(repo):
     name = "public/data/scatter.csv"
     write(repo, name, "reform_id,household_id\nx,1\n")

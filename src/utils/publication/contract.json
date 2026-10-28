@@ -1936,6 +1936,9 @@
         "year",
         "decile"
       ],
+      "nullable": [
+        "value"
+      ],
       "required": true
     },
     "household_scatter": {
@@ -2230,6 +2233,9 @@
         "reform_id",
         "year",
         "decile"
+      ],
+      "nullable": [
+        "avg_change"
       ],
       "required": true
     }

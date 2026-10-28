@@ -222,6 +222,9 @@ def capture(path: Path) -> Captured:
         else None
     ) or {}
     names = {spec.filename for spec in TABLES.values()} | set(listed)
+    names |= {
+        f"{name}.json" for name in ("distributional_impact", "winners_losers")
+    }
     files = {}
     for name in sorted(names):
         file = path / name
@@ -264,6 +267,9 @@ def captured_file_problems(captured: Captured) -> list[str]:
     for spec in TABLES.values():
         if spec.filename in captured.files and spec.filename not in listed:
             problems.append(f"{spec.filename} is present but not receipted")
+    for name in ("distributional_impact.json", "winners_losers.json"):
+        if name in captured.files and name not in listed:
+            problems.append(f"{name} is present but not receipted")
     return problems
 
 

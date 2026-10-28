@@ -97,7 +97,10 @@ from uk_budget_data.publication.reconcile import (
 )
 from uk_budget_data.publication.responsiveness import RESPONSIVE
 from uk_budget_data.publication.tables import TABLES
-from uk_budget_data.publication.validate import table_problems
+from uk_budget_data.publication.validate import (
+    table_problems,
+    withholding_problems,
+)
 
 TREASURY_INPUTS = Path("data_inputs/treasury")
 # TODO(W5): require household receipts once the deployed-route checker
@@ -571,19 +574,22 @@ def gate_problems(
 
 
 def _floor_problems(dashboard: dict, tables: dict, level: str) -> list[str]:
-    """Why an artifact may not hold ``level`` for the floor of survey
-    households. Its decile tables still hold cells under it (as generation
-    writes a run with one unless ``UK_BUDGET_THIN_DECILES=refuse``, recorded
-    by ``disclosure_floor.floor_record``): no level takes it, not even
-    staged, so ``publish review-rows`` deletes it before anything is
-    committed. Or, to be provisional or approved, its household tables were
-    never held to it: its receipt records no check, as for one generated
-    before the floor; or its record does not cover one of its tables the
-    floor now covers, as for one generated before the floor covered the
-    summary statistics (#285 review, finding 6). No acknowledgement lifts
-    any of these: such a cell rests on too few cases to publish."""
+    """Check the floor and the receipt's withholding at every figure level.
+
+    Published thin decile cells are refused even at staging. Withheld
+    decile rows must be present and blank, with their complementary all
+    row, and a summary statistic is empty exactly where the receipt
+    records it withheld (``_unrecorded_withheld``). Provisional and
+    approved household tables also need a recorded floor check that covers
+    every table the floor now covers, so artifacts made before the floor,
+    or before it covered the summary statistics (#285 review, finding 6),
+    must be regenerated. No acknowledgement lifts any of these: such a
+    cell rests on too few cases to publish.
+    """
     floor = dashboard.get("disclosure_floor")
-    problems = _unrecorded_withheld(floor, tables)
+    problems = withholding_problems(tables, floor) + _unrecorded_withheld(
+        floor, tables
+    )
     if floor is None:
         if level in (m.PROVISIONAL, m.APPROVED) and (
             tables.keys() & set(FLOOR_TABLES)
@@ -593,6 +599,8 @@ def _floor_problems(dashboard: dict, tables: dict, level: str) -> list[str]:
                 "against the floor of survey households, as for an artifact "
                 "generated before the floor: regenerate it"
             ]
+        return problems
+    if not isinstance(floor, dict):
         return problems
     if level in (m.PROVISIONAL, m.APPROVED):
         covered = floor.get("tables", FLOOR_TABLES_BEFORE_THE_LIST)
@@ -628,10 +636,11 @@ def _unrecorded_withheld(floor: Optional[dict], tables: dict) -> list[str]:
     Or a cell the record names as withheld that still holds a figure: that
     figure rests on 1 or 2 survey households, so it is never published,
     whatever the receipt says was done with it (#285 review, finding 1)."""
+    record = floor if isinstance(floor, dict) else {}
     named = {
         (cell.get("table"), cell.get("year"), group)
-        for cell in (floor or {}).get("thin_cells") or []
-        if cell.get("table") in METRICS_TABLES
+        for cell in record.get("thin_cells") or []
+        if isinstance(cell, dict) and cell.get("table") in METRICS_TABLES
         for group in cell.get("groups") or []
     }
     empty: set = set()
