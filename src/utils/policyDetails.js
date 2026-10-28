@@ -320,7 +320,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Adds 2 percentage points to each savings and property income rate from 2027-28: to 24%, 44% and 49% at the basic, higher and additional rates. Dividend rates are unchanged.",
     details:
-      "The 2-point rise is on top of the rises Budget 2025 legislated. Scottish taxpayers pay Scottish rates on property income, so only their savings rates change. Incomes are held fixed: no one is assumed to change how they hold savings or property.",
+      "The 2-point rise is on top of the rises Budget 2025 legislated. Scottish taxpayers pay Scottish rates on property income, so their property rates don't change. Finance cost relief follows the property basic rate, which the law as it stands sets for the whole UK, so Scottish landlords' relief also rises to 24% and they pay a little less tax. Incomes are held fixed: no one is assumed to change how they hold savings or property.",
     source: {
       label: "HMRC: changes to tax rates for property, savings and dividend income",
       href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
