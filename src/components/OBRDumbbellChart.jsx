@@ -219,7 +219,9 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
   const labelRoom = narrow ? 54 : 62;
   // The difference column at the right (on a phone, on the name line)
   // A chevron at the right of each row when rows select a policy
-  const chevron = onSelect ? 14 : 0;
+  // (not on a phone, where the panel is below and the difference shares
+  // the name's line: the room goes to the labels)
+  const chevron = onSelect && !narrow ? 14 : 0;
   const diffWidth = narrow ? 0 : 84 + BAND_PAD + chevron;
   const nameWidth = narrow
     ? 0
@@ -357,17 +359,21 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
     } else if (pePart || obrPart) {
       const value = pePart ? row.xPe : row.xObr;
       const cx = x(value);
-      const labelSide = cx > centre ? "left" : "right";
-      const otherSide = labelSide === "left" ? "right" : "left";
+      const valueText = formatBn(pePart ? row.pe : row.obr);
+      const missingText = pePart ? (row.notComparable ? "Not comparable" : "Not in the official costings") : "Ours not yet published";
+      // The figure on the side with more room, the words on the other;
+      // where the words would run past the chart's edge (a phone), the two
+      // swap sides, so "Not comparable" is never cut off
+      const room = (side, text) =>
+        side === "right" ? cx + labelGap + approxWidth(text, 12) <= width - BAND_PAD - diffWidth : cx - labelGap - approxWidth(text, 12) >= 0;
+      let labelSide = cx > centre ? "left" : "right";
+      let otherSide = labelSide === "left" ? "right" : "left";
+      if (!room(otherSide, missingText) && room(labelSide, missingText) && room(otherSide, valueText)) {
+        [labelSide, otherSide] = [otherSide, labelSide];
+      }
       parts.push(
-        valueLabel(formatBn(pePart ? row.pe : row.obr), labelSide, cx, cy, pePart ? PE_LABEL_COLOUR : OBR_LABEL_COLOUR, "label", background),
-        missingLabel(
-          pePart ? (row.notComparable ? "Not comparable" : "Not in the official costings") : "Ours not yet published",
-          otherSide,
-          cx + (otherSide === "right" ? 2 : -2),
-          cy,
-          "missing",
-        ),
+        valueLabel(valueText, labelSide, cx, cy, pePart ? PE_LABEL_COLOUR : OBR_LABEL_COLOUR, "label", background),
+        missingLabel(missingText, otherSide, cx + (otherSide === "right" ? 2 : -2), cy, "missing"),
       );
     } else {
       parts.push(missingLabel(pct && isValue(row.pe) ? (row.notComparable ? "Not comparable" : "Not in the official costings") : "Not yet published", "right", plotLeft - labelGap, cy, "missing"));
@@ -450,9 +456,9 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
         {/* On a phone the difference shares the name's line, where the zero
             line can run: a backing in the row's background keeps it clear */}
         {narrow && backing(width - BAND_PAD - chevron - approxWidth(differenceText, 12) - 2, nameY, approxWidth(differenceText, 12) + 2, background)}
-        {/* The chevron: points at the panel (right, or down on a phone,
-            where the panel is below) once the row is selected */}
-        {onSelect && !row.status && (
+        {/* The chevron: in the accent once the row is selected, pointing
+            at the panel */}
+        {chevron > 0 && !row.status && (
           <text
             className={`obr-dumbbell-chevron${selectedId === row.id ? " is-selected" : ""}`}
             x={width - BAND_PAD - 3}
@@ -462,7 +468,6 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
             fill={selectedId === row.id ? PE_COLOUR : TICK_STYLE.fill}
             fontSize={16}
             fontWeight={selectedId === row.id ? 700 : 400}
-            transform={narrow && selectedId === row.id ? `rotate(90 ${width - BAND_PAD - 3} ${narrow ? nameY : cy})` : undefined}
             aria-hidden="true"
             data-export="skip"
           >
