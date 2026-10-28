@@ -165,7 +165,7 @@ const COMPARISON_INFO = {
   shows:
     "PolicyEngine's estimate of each policy's effect on the public finances beside the official costing for the same year, in £ billion; positive values raise revenue or cut spending. Largest official costing first.",
   how: [
-    "PolicyEngine's figures are static, so the official static costing is the like-for-like comparison.",
+    "PolicyEngine's figures are static, so an official static costing is the like-for-like comparison. Budget 2026's costings give one figure per policy, which for most policies includes behavioural responses, so the card compares with that.",
     "On the % scale each official costing is 100%; a policy costed under £0.05bn has no %.",
     "Difference is PolicyEngine minus the official figure.",
   ],
@@ -176,6 +176,7 @@ const COMPARISON_INFO = {
   caveats: [
     "Effects outside households, or on incomes the survey covers thinly (such as the very top), are estimated less fully than in official costings built from administrative data.",
     "The two can also differ in the economic forecast, take-up and the parts of a policy each models.",
+    "Our figures are by tax year. The official ones are on a National Accounts basis, so a change in tax paid through Self Assessment can appear a year later in them than in ours.",
   ],
   sources: [
     { label: "PolicyEngine UK microsimulation" },
