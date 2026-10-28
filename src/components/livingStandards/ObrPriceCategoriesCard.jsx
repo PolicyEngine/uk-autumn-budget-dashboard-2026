@@ -108,7 +108,8 @@ export default function ObrPriceCategoriesCard({ view = "chart", onViewChange })
   const { loading, data, post, error, unavailable } = useObrPriceCategories();
   const narrow = useNarrowViewport();
   const [shown, setShown] = useState(ORDER);
-  const [forecastsShown, setForecastsShown] = useState(["pre", "post"]);
+  // October alone by default; March or both in the Options pill
+  const [forecastsShown, setForecastsShown] = useState(["post"]);
   const [hovered, setHovered] = useState(null);
 
   const base = { id: "forecast-obr-price-categories", title: OBR_PRICE_CATEGORIES_TITLE, icon: "tag" };

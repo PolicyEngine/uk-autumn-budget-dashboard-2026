@@ -118,7 +118,8 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange, yea
   const [shown, setShown] = useState(() => seriesList.map((s) => s.key));
   // With a later forecast: which forecasts are drawn (the card's Options
   // pill: both, the earlier or the later)
-  const [forecastsShown, setForecastsShown] = useState(["pre", "post"]);
+  // October alone by default; March or both in the Options pill
+  const [forecastsShown, setForecastsShown] = useState(["post"]);
   const [hovered, setHovered] = useState(null);
   const withPost = seriesList.filter((s) => hasPost(forecast, s));
   const both = withPost.length > 0;
