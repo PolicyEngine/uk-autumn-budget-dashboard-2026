@@ -447,8 +447,10 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
                 stroke="none"
                 activeDot={false}
                 isAnimationActive={false}
-                onMouseEnter={() => setFocus(part.name)}
-                onMouseLeave={() => setFocus(null)}
+                // No hover focus on the bands themselves: moving across the
+                // stacked bands flipped the focus on and off at every edge,
+                // so the colours flashed (Vahid, 28 Oct). The legend chips
+                // still focus a part
               />
             ))}
             {salary !== null && (
