@@ -511,8 +511,10 @@ def _electricity_vat_description() -> str:
             f"of 5% from 1 October 2026 to {end_text}: the zero rate to "
             "March 2027, not in the model's baseline, and its extension, "
             "which the Budget scores together. "
-            "Applied to electricity spending only, in Great Britain "
-            "(Northern Ireland keeps the 5%). 2026-27 carries the October "
+            "Applied to electricity spending only: in Great Britain to "
+            "March 2027, and UK-wide from April 2027, as the Budget expects "
+            "(Northern Ireland keeps the 5% until then). 2026-27 carries "
+            "the October "
             "to March share of a year's electricity use (about 57%), not a "
             f"share of its days; 2027-28 its {days} days of 366."
         )

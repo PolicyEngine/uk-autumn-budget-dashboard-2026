@@ -119,18 +119,18 @@ export const POLICY_DETAILS = [
     sentence: "taking VAT off household electricity",
     name: "Zero VAT on domestic electricity",
     description: "Zero-rate VAT on domestic electricity to July 2027",
-    writtenFor: "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027: the zero rate to March 2027, not in the model's baseline, and its extension, which the Budget scores together. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%). 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days; 2027-28 its 91 days of 366.",
+    writtenFor: "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027: the zero rate to March 2027, not in the model's baseline, and its extension, which the Budget scores together. Applied to electricity spending only: in Great Britain to March 2027, and UK-wide from April 2027, as the Budget expects (Northern Ireland keeps the 5% until then). 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days; 2027-28 its 91 days of 366.",
     summary:
       "Charges no VAT on household electricity bills in Great Britain, instead of 5%, from October 2026 to July 2027.",
     starts: "October 2026",
-    affects: "Households in Great Britain",
+    affects: "Households in Great Britain, and in Northern Ireland from April 2027",
     type: "VAT",
     inForce: { from: "2026-10", to: "2027-06" },
     ends: "July 2027",
     howCalculated:
       "Applies 0% VAT instead of 5% to each household's electricity spending in the survey.",
     details:
-      "The Budget scores the whole zero rate, from October 2026, as this Budget's measure; the model's baseline has none. Applied to electricity spending only, in Great Britain: Northern Ireland's households keep the 5%. 2026-27 carries the October to March share of a year's electricity use (about 57%); 2027-28 its days to 30 June.",
+      "The Budget scores the whole zero rate, from October 2026, as this Budget's measure; the model's baseline has none. Applied to electricity spending only: Great Britain's to March 2027, UK-wide from April 2027 as the Budget expects. 2026-27 carries the October to March share of a year's electricity use (about 57%); 2027-28 its days to 30 June.",
     source: {
       label: "Temporary zero rate of VAT for domestic electricity",
       href: "https://www.gov.uk/government/publications/temporary-zero-rate-of-vat-for-domestic-electricity-in-great-britain/temporary-zero-rate-of-vat-in-great-britain-for-domestic-electricity",

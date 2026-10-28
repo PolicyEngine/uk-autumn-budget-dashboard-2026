@@ -49,6 +49,9 @@ EXTENSION_SHARES = {
 # scores the Budget's extension only, as its costing does, with
 # rate_change_2026 = 0.0.
 PRE_BUDGET_ZERO_RATE_IN_MEASURE = True
+# Budget 2026 document: the zero rate is "expected to apply UK-wide from
+# April 2027", so 2027-28 (geography_2027) includes Northern Ireland;
+# 2026-27 is Great Britain's only.
 
 
 # Domestic electricity zero-rated (5% to 0%) from 1 April 2027 to
@@ -71,6 +74,7 @@ def zero_vat_on_domestic_electricity(
     rate_change_2026=-0.028342979605206865,  # -0.05 x WINTER_SHARE
     rate_change_2027=-0.012431693989071038,  # -0.05 x EXTENSION_SHARES
     geography="GB",
+    geography_2027="UK",
 ):
     sim = apply_vat_base_change(
         sim,
@@ -86,5 +90,5 @@ def zero_vat_on_domestic_electricity(
         rate_change=rate_change_2027,
         start_year=2027,
         end_year=2027,
-        geography=geography,
+        geography=geography_2027,
     )

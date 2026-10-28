@@ -288,15 +288,23 @@ def test_the_installed_engine_has_no_electricity_zero_rate():
         system.parameters.get_child("gov.hmrc.vat.domestic_electricity_rate")
 
 
-def test_northern_ireland_keeps_the_electricity_vat():
-    """The temporary zero rate is for domestic electricity in Great
-    Britain only."""
+def test_northern_ireland_keeps_the_electricity_vat_until_april_2027():
+    """The zero rate is Great Britain's to March 2027 and, as the Budget
+    expects, UK-wide from April 2027."""
+    result = calculate(
+        Answers(2026, region="NORTHERN_IRELAND", electricity_spending=1_040),
+        2026,
+        ["domestic_electricity_zero_vat"],
+    )
+    assert result["net_income"]["change"] == 0
     result = calculate(
         Answers(2027, region="NORTHERN_IRELAND", electricity_spending=1_040),
         2027,
         ["domestic_electricity_zero_vat"],
     )
-    assert result["net_income"]["change"] == 0
+    assert result["net_income"]["change"] == pytest.approx(
+        1_040 * 0.05 * 91 / 366 / 1.05, abs=0.01
+    )
 
 
 def test_no_electricity_spending_no_electricity_vat_change():

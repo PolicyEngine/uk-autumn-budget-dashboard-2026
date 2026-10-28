@@ -262,7 +262,7 @@
       ]
     },
     "domestic_electricity_zero_vat": {
-      "description": "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027: the zero rate to March 2027, not in the model's baseline, and its extension, which the Budget scores together. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%). 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days; 2027-28 its 91 days of 366.",
+      "description": "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027: the zero rate to March 2027, not in the model's baseline, and its extension, which the Budget scores together. Applied to electricity spending only: in Great Britain to March 2027, and UK-wide from April 2027, as the Budget expects (Northern Ireland keeps the 5% until then). 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days; 2027-28 its 91 days of 366.",
       "display": "switch",
       "rows": [
         {
