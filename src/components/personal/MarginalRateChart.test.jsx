@@ -233,7 +233,7 @@ describe("MarginalRateChart", () => {
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     const about = document.querySelector(".chart-more-info");
     expect(about).toHaveTextContent(
-      "For a pensioner, the selected policies give an income tax reduction that falls by £1 for every £3 of total income above the full new State Pension, so over that range income tax takes about a third more of each extra pound.",
+      "For a pensioner, the selected policies give an income tax reduction that falls by £1 for every £3 of total income above the full new State Pension, so over that range each extra pound carries about 33p more income tax.",
     );
     expect(about).not.toHaveTextContent(/only income is the State Pension|Any earnings take the whole allowance away|first pound earned/);
   });

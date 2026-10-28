@@ -571,7 +571,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
             method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
             caveats: [
               pensionAllowanceCliff &&
-                "For a pensioner, the selected policies give an income tax reduction that falls by £1 for every £3 of total income above the full new State Pension, so over that range income tax takes about a third more of each extra pound.",
+                "For a pensioner, the selected policies give an income tax reduction that falls by £1 for every £3 of total income above the full new State Pension, so over that range each extra pound carries about 33p more income tax.",
               // Change draws no parts and no edge markers, on an axis that
               // covers every change
               !isChange &&
