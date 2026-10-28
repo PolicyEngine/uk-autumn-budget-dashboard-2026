@@ -98,15 +98,10 @@ describe("the examples' precomputed results (public/data/household_presets.json)
     const pensioner = figures("pensioner-70", 2027);
     expect(Math.round(pensioner.ownPart)).toBe(Math.round(changes["pensioner-70"][2027].byPolicy.state_pension_income_tax_protection));
     expect(Math.round(pensioner.ownPart)).not.toBe(0);
-    // The threshold freeze, which no card features, changes nothing before
-    // 2031-32 and reaches the graduate then
-    expect(Math.round(changes["graduate-35k"][2027].byPolicy.threshold_freeze_2031_32)).toBe(0);
-    expect(Math.round(changes["graduate-35k"][2031].byPolicy.threshold_freeze_2031_32)).toBeLessThan(0);
-    // The carer's own measure gives most of its change, net of the
-    // Universal Credit its higher pay takes back (household API, 28 October
-    // 2026: +£241 of +£305 in 2027-28)
-    expect(figures("carer", 2027).top).toMatchObject({ own: true });
-    expect(Math.round(figures("carer", 2027).ownPart)).toBeGreaterThan(0);
+    // The middle earner's own measure (the threshold freeze) changes
+    // nothing before 2031-32
+    expect(figures("middle-earner", 2027).top.own).toBe(false);
+    expect(Math.round(figures("middle-earner", 2031).ownPart)).not.toBe(0);
     // The part-time worker's own measure gives most of its change
     expect(figures("part-time-worker", 2027).top).toMatchObject({ own: true });
     // A bar for each year a reader can choose

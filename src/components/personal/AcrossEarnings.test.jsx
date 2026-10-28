@@ -7,7 +7,7 @@ import { fireEvent, render, within } from "@testing-library/react";
 import { AcrossEarnings } from "./SingleYearResults";
 import { normaliseHouseholdImpact } from "../../utils/householdImpactApi";
 
-// A real answer with both cards' parts: the commuter's, 2027-28
+// A real answer with both cards' parts: the middle earner's, 2027-28
 const file = JSON.parse(readFileSync(join(fileURLToPath(import.meta.url), "..", "..", "..", "..", "public", "data", "household_presets.json"), "utf8"));
 const answer = (id, year = 2027) =>
   normaliseHouseholdImpact(file.entries.find((entry) => entry.preset_id === id && entry.year === year).response);
@@ -19,7 +19,7 @@ const pressed = (card, name) => within(card).getByRole("button", { name }).getAt
 
 describe("the two Across earnings cards", () => {
   it("each draw the same Show chips under their plot, one state for both", () => {
-    const data = answer("driver");
+    const data = answer("middle-earner");
     const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
     const [net, rate] = cards(container);
     // No box above the pair: each card's key is in its own legend row
@@ -71,7 +71,7 @@ describe("the two Across earnings cards", () => {
 
   it("drop the 'Click to show or hide' hint from both keys at the first click", () => {
     window.sessionStorage.removeItem("pe-series-toggle-hint-seen");
-    const data = answer("driver");
+    const data = answer("middle-earner");
     const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
     const [net, rate] = cards(container);
     expect(net.querySelector(".series-toggle-hint")).toHaveTextContent("Click to show or hide");
@@ -83,7 +83,7 @@ describe("the two Across earnings cards", () => {
   });
 
   it("say so when the answer has no breakdown by tax and benefit, rather than silently drawing one line", () => {
-    const data = answer("driver");
+    const data = answer("middle-earner");
     const bare = { ...data.sweep, netParts: null, parts: null };
     const { container } = render(<AcrossEarnings sweep={bare} salary={data.salaryUsed} yearLabel="2027-28" />);
     expect(container.querySelector(".across-earnings-no-parts")).toHaveTextContent(
