@@ -425,14 +425,16 @@ export default function HouseholdCards({
               <span className="household-card-description" id={`household-card-${example.id}-description`}>
                 {example.description}
               </span>
-              {/* One chip: the measure giving most of the year's change, with
-                  its part, in its colour; the example's own measure in the
-                  chip's title when another gives more */}
+              {/* One chip: the measure with the largest single effect in the
+                  year, with its part, in its colour; the example's own
+                  measure in the chip's title when another gives more. Not
+                  "most of the change": nothing checks it is half the change,
+                  or even its sign (W6 G1) */}
               {chip && (
                 <Tip
                   content={
                     !chip.own && featured && figures
-                      ? `This example features ${example.tag} (${signedMoney(figures.ownPart)} in ${fiscalYearTick(year)}); most of the change comes from ${chip.name} (${signedMoney(chip.part)}).`
+                      ? `This example features ${example.tag} (${signedMoney(figures.ownPart)} in ${fiscalYearTick(year)}); the largest single effect is ${chip.name} (${signedMoney(chip.part)}).`
                       : null
                   }
                 >
