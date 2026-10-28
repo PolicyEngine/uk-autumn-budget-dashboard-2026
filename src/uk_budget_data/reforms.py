@@ -70,10 +70,31 @@ LHA_FREEZE = "gov.dwp.LHA.freeze"
 # Northern Ireland's, which the Housing Executive sets as DWP does
 LHA_FREEZE_NI = "gov.dfc.LHA.freeze"
 # The employer (secondary) Class 1 threshold, weekly: £5,000 a year from
-# April 2025 is stored as 5,000 / 52.
-SECONDARY_THRESHOLD = (
+# April 2025 is stored as 5,000 / 52. policyengine-uk 2.151.0 (policyengine
+# 6.11.1) keeps it in the employer schedule; 2.132.6 (policyengine 6.10.2),
+# which #254's revert of the 6.11.1 adoption goes back to, keeps it as a
+# threshold of its own. Both store the same amounts and raise them by the
+# same September CPI rule from 2031-32, so the measure reads and changes
+# whichever the installed engine has.
+SECONDARY_THRESHOLD_IN_SCHEDULE = (
     "gov.hmrc.national_insurance.class_1.employer_scale[1].threshold"
 )
+SECONDARY_THRESHOLD_ON_ITS_OWN = (
+    "gov.hmrc.national_insurance.class_1.thresholds.secondary_threshold"
+)
+
+
+def installed_secondary_threshold() -> str:
+    """The secondary threshold's path in the installed policyengine-uk."""
+    from policyengine_uk.system import system
+
+    class_1 = system.parameters.gov.hmrc.national_insurance.class_1
+    if "employer_scale" in class_1.children:
+        return SECONDARY_THRESHOLD_IN_SCHEDULE
+    return SECONDARY_THRESHOLD_ON_ITS_OWN
+
+
+SECONDARY_THRESHOLD = installed_secondary_threshold()
 INCOME_TAX_RATES = "gov.hmrc.income_tax.rates"
 # The dividend schedule's four brackets (the fourth a technical top node
 # repeating the additional rate) and the savings and property rates.

@@ -860,6 +860,35 @@ def test_a_graduate_on_45000_pounds_repays_79_pounds_less():
     assert reformed == pytest.approx(1_325.97, abs=PENNY)
 
 
+# --- 10. Employer NI secondary threshold ------------------------------------
+
+
+def _has_parameter(path: str) -> bool:
+    try:
+        PARAMETERS.get_child(path)
+    except ValueError:
+        return False
+    return True
+
+
+def test_the_secondary_threshold_is_the_one_the_installed_engine_has():
+    """policyengine-uk 2.151.0 keeps it in the employer schedule, 2.132.6
+    on its own (#254): exactly one of the two exists, and the measure
+    reads and changes it. £5,000 a year in current law, stored weekly."""
+    paths = (
+        reforms.SECONDARY_THRESHOLD_IN_SCHEDULE,
+        reforms.SECONDARY_THRESHOLD_ON_ITS_OWN,
+    )
+    assert [_has_parameter(path) for path in paths].count(True) == 1
+    assert _has_parameter(reforms.SECONDARY_THRESHOLD)
+    node = PARAMETERS.get_child(reforms.SECONDARY_THRESHOLD)
+    assert node("2027-04-06") * 52 == pytest.approx(5_000, abs=PENNY)
+    changes = get_reform(
+        "employer_nics_secondary_threshold_raise"
+    ).parameter_changes
+    assert set(changes) == {reforms.SECONDARY_THRESHOLD}
+
+
 # The blocks of page source that may name more than one candidate measure,
 # until the publication carries their text (#185 on #104). None decides which
 # measures exist or how they are named, ordered or coloured, and each steps
