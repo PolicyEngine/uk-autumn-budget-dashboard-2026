@@ -524,3 +524,23 @@ def test_decile_shape(values, shape):
 def test_the_hump_reads_highest_in_the_ninth_decile_never_a_comparison_of_ends():
     text = br.shape_phrase([194, 268, 283, 355, 407, 512, 525, 594, 612, 87])
     assert text == "is highest in the ninth decile"
+
+
+def _js_text(rel):
+    return (Path(br.__file__).resolve().parent.parent / rel).read_text()
+
+
+def test_map_scale_matches_the_dashboard():
+    import re
+
+    theme = _js_text("src/utils/chartTheme.js")
+    colours = dict(re.findall(r'^\s+(\w+): "(#[0-9A-Fa-f]{6})",', theme, flags=re.M))
+    assert br.MAP_SCALE == {"loss": colours["loss"], "neutral": colours["grid"], "gain": colours["mapGain"]}
+    scale = _js_text("src/utils/geography/scale.js")
+    assert re.search(r"const STEPS = (\d+);", scale).group(1) == str(br.MAP_STEPS)
+    assert "relative_change: 0.01" in scale and br.MAP_EXTENT["relative_change"] == 0.01
+    assert br.scale_colour(0) == "#E5E7EB" and br.scale_colour(0.0004) != "#E5E7EB"
+    assert br.scale_colour(0.02) == "#14b8a6" and br.scale_colour(-5) == "#d97706"
+    # d3.interpolateRgb halfway, rounded as JS rounds
+    assert br.scale_colour(0.005) == br._interp_rgb("#E5E7EB", "#14B8A6", 0.5)
+    assert br.scale_colour(None) == "#E5E7EB"

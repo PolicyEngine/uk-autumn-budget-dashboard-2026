@@ -397,16 +397,93 @@ def pad_limits(values, lo_pad=0.22, hi_pad=0.22):
     return lo - (span * lo_pad if lo < 0 else 0), hi + (span * hi_pad if hi > 0 else 0)
 
 
-# The dashboard map's colour scale (src/utils/geography/scale.js and
-# chartTheme.js CHART_COLOURS: loss, grid, mapGain, noData).
+# The dashboard map's colour scale, ported from src/utils/geography/scale.js
+# (scaleColour): loss #D97706 through the grid grey #E5E7EB at no change to
+# mapGain #14B8A6, each half interpolated in RGB, in 100 steps, on a fixed
+# domain clamped at its ends (relative_change: -1% to +1%).
+MAP_SCALE = {"loss": "#D97706", "neutral": "#E5E7EB", "gain": "#14B8A6"}
+MAP_EXTENT = {"relative_change": 0.01, "average_change": 100}
+MAP_STEPS = 100
 MAP_EXTENT_PCT = 1.0
-MAP_NO_DATA = "#CBD5E1"
+MAP_HATCH_LINE, MAP_HATCH_BG = "#B8BDC5", "#F9FAFB"  # withheld seat
+MAP_DOTS = "#1F2937"  # approximate seat
+MAP_NO_ROW_FILL, MAP_NO_ROW_EDGE = "#FFFFFF", "#9CA3AF"  # an area with no row
 
 
-def _map_cmap():
-    from matplotlib.colors import LinearSegmentedColormap
+def _hex_rgb(h):
+    return [int(h[i:i + 2], 16) for i in (1, 3, 5)]
 
-    return LinearSegmentedColormap.from_list("dashboard_map", ["#D97706", "#E5E7EB", "#14B8A6"], N=201)
+
+def _js_round(x):
+    import math
+
+    return int(math.floor(x + 0.5))
+
+
+def _interp_rgb(a, b, t):
+    """d3.interpolateRgb (gamma 1), then d3.color(...).formatHex()."""
+    ca, cb = _hex_rgb(a), _hex_rgb(b)
+    return "#" + "".join(f"{max(0, min(255, _js_round(x + (y - x) * t))):02x}" for x, y in zip(ca, cb))
+
+
+def scale_colour(value, extent=MAP_EXTENT["relative_change"]):
+    """scale.js scaleColour: a value's colour, as #rrggbb, from -extent to +extent."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return MAP_SCALE["neutral"]
+    if number != number or abs(number) == float("inf") or not extent > 0:
+        return MAP_SCALE["neutral"]
+    t = max(-1.0, min(1.0, number / extent))
+    step = _js_round(abs(t) * MAP_STEPS) / MAP_STEPS
+    if step == 0:
+        return MAP_SCALE["neutral"]
+    if t < 0:
+        return _interp_rgb(MAP_SCALE["loss"], MAP_SCALE["neutral"], 1 - step)
+    return _interp_rgb(MAP_SCALE["neutral"], MAP_SCALE["gain"], step)
+
+
+def draw_seat_map(ax, geo, seats, extent=MAP_EXTENT["relative_change"]):
+    """One constituency map on the dashboard's scale. ``seats`` maps a seat's
+    code to its row: a withheld seat is hatched, an approximate one keeps its
+    colour under dots, a seat with no row is white with a grey outline."""
+    import matplotlib as mpl
+    from matplotlib.collections import PatchCollection
+    from matplotlib.patches import Polygon as MplPolygon
+
+    groups = {"value": ([], []), "approx": ([], []), "withheld": ([], []), "none": ([], [])}
+    for feature in geo["features"]:
+        code = feature["properties"]["GSScode"]
+        g = feature["geometry"]
+        rings = [g["coordinates"][0]] if g["type"] == "Polygon" else [p[0] for p in g["coordinates"]]
+        r = seats.get(code)
+        if r is None:
+            kind, face = "none", MAP_NO_ROW_FILL
+        elif r.get("value", "") == "" or r.get("tier") == "withheld":
+            kind, face = "withheld", MAP_HATCH_BG
+        else:
+            kind = "approx" if r.get("tier") == "approximate" else "value"
+            face = scale_colour(float(r["value"]), extent)
+        for ring in rings:
+            groups[kind][0].append(MplPolygon(ring[::3] if len(ring) > 60 else ring, closed=True))
+            groups[kind][1].append(face)
+    with mpl.rc_context({"hatch.linewidth": 0.35}):
+        ps, fs = groups["value"]
+        ax.add_collection(PatchCollection(ps, facecolor=fs, edgecolor="#FFFFFF", linewidth=0.05))
+        ps, fs = groups["approx"]
+        ax.add_collection(PatchCollection(ps, facecolor=fs, edgecolor=MAP_DOTS, linewidth=0, hatch=".."))
+        ps, fs = groups["withheld"]
+        ax.add_collection(PatchCollection(ps, facecolor=fs, edgecolor=MAP_HATCH_LINE, linewidth=0, hatch="//////"))
+        ps, fs = groups["none"]
+        ax.add_collection(PatchCollection(ps, facecolor=fs, edgecolor=MAP_NO_ROW_EDGE, linewidth=0.15))
+    ax.autoscale_view()
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+
+def map_gradient(n=201, extent=MAP_EXTENT["relative_change"]):
+    """The scale as a list of colours from -extent to +extent, for the key."""
+    return [scale_colour(-extent + 2 * extent * i / (n - 1), extent) for i in range(n)]
 
 
 def curve_spikes(values, factor=5.0, floor=250.0):
@@ -1567,20 +1644,7 @@ class Report:
             # The dashboard map's scale (src/utils/geography/scale.js): amber through
             # the light grey of no change to teal, continuous, fixed at -1% to +1%
             # (clamped at its ends), the same for every map; no data in slate grey.
-            norm, cmap = Normalize(-MAP_EXTENT_PCT, MAP_EXTENT_PCT, clip=True), _map_cmap()
-            patches, faces = [], []
-            for feature in geo["features"]:
-                code = feature["properties"]["GSScode"]
-                g = feature["geometry"]
-                rings = [g["coordinates"][0]] if g["type"] == "Polygon" else [p[0] for p in g["coordinates"]]
-                face = MAP_NO_DATA if code not in shown else cmap(norm(shown[code]))
-                for ring in rings:
-                    patches.append(MplPolygon(ring[::3] if len(ring) > 60 else ring, closed=True))
-                    faces.append(face)
-            ax.add_collection(PatchCollection(patches, facecolor=faces, edgecolor="#FFFFFF", linewidth=0.08))
-            ax.autoscale_view()
-            ax.set_aspect("equal")
-            ax.axis("off")
+            draw_seat_map(ax, geo, seats)
             title = label if k == key else self.name(k)
             ax.set_title(title, fontsize=8.6, color=INK)
             withheld = len(seats) - len(shown)
@@ -1591,7 +1655,10 @@ class Report:
         # One key for every map: the scale is fixed, the same for each (as on the dashboard)
         fig.tight_layout(w_pad=1.0, rect=(0, 0.1, 1, 1))
         cax = fig.add_axes([0.3, 0.05, 0.4, 0.022])
-        cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax, orientation="horizontal", ticks=[-MAP_EXTENT_PCT, 0, MAP_EXTENT_PCT])
+        from matplotlib.colors import ListedColormap
+
+        norm = Normalize(-MAP_EXTENT_PCT, MAP_EXTENT_PCT)
+        cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=ListedColormap(map_gradient())), cax=cax, orientation="horizontal", ticks=[-MAP_EXTENT_PCT, 0, MAP_EXTENT_PCT])
         cbar.ax.tick_params(labelsize=7.5, length=0)
         cbar.ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: "0%" if v == 0 else f"{'+' if v > 0 else MINUS}{abs(v):g}%"))
         cbar.ax.set_title("Change in household net income, % of income", fontsize=7.5, color=TEXT, pad=3)
@@ -1603,7 +1670,7 @@ class Report:
             "The change in household net income varies from constituency to constituency",
             f"Average change in household net income by Westminster constituency (2024 boundaries), % of net income, {fy(y)}",
             "Map of constituencies. " + plain + ".",
-            "Colour scale as on the dashboard map, from −1% to +1%, the same for every map here; seats beyond either end take its end colour. Slate grey: no data (withheld, where the estimate is too uncertain or could disclose survey records). " + plain + ". Every measure is published by constituency on the dashboard.",
+            "Colour scale as on the dashboard map, from −1% to +1%, the same for every map here; seats beyond either end take its end colour. Hatched: withheld (too few survey households); dotted: approximate; white with a grey outline: no data. " + plain + ". Every measure is published by constituency on the dashboard.",
             runs="combined" if key else "each",
             img=True,
         )
