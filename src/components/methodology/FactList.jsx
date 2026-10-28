@@ -41,6 +41,7 @@ const TERM_ICONS = {
   Static: Pause,
   Years: CalendarDays,
   "Budgetary impact": PoundSterling,
+  Budget: PoundSterling,
   Exceptions: CircleAlert,
   "Net change": Sigma,
   "OBR comparison": GitCompare,

@@ -469,7 +469,7 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id="definitions-compared"
             title="Definitions compared with the PolicyEngine app"
-            preview="Inequality · Income deciles · Winners and losers · Poverty"
+            preview="Inequality · Income deciles · Winners and losers · Poverty · Budget"
           >
             <FactList
               items={[
@@ -496,7 +496,11 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Poverty",
-                  "A child is a dependent child as HBAI defines one; the PolicyEngine app counts everyone aged 0 to 17.",
+                  "The headline poverty measure here is absolute, before housing costs; the app's is relative, before housing costs. A child is a dependent child as HBAI defines one; the PolicyEngine app counts everyone aged 0 to 17.",
+                ],
+                [
+                  "Budget",
+                  "Here a policy is costed by its change in the government's balance, which counts employer National Insurance and VAT receipts directly. The app costs it as the change in households' taxes less benefits, so its cost for the employer National Insurance threshold differs.",
                 ],
               ]}
             />

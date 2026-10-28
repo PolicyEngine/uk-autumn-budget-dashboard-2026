@@ -193,6 +193,10 @@ describe("the Poverty sub-tab's measures pair", () => {
     // move no one are in their rows, not listed again here
     fireEvent.click(within(measures).getByRole("button", { name: "About this chart" }));
     expect(within(measures).getByText(/so the bars need not add up to it/)).toBeInTheDocument();
+    // Why, linked to Limitations (critic W2, round 3)
+    expect(within(measures).getByRole("link", { name: "Policies added up" })).toHaveAttribute("href", "?tab=methodology#method-limitations");
+    // The policy's own effect is said once, in the sentence, not again here
+    expect(within(measures).queryByText("Each bar is one policy on its own.")).toBeNull();
     const about = measures.querySelector(".chart-more-info");
     expect(about).not.toHaveTextContent(/No effect on/);
     expect(about.querySelector("[data-zero-measure]")).toBeNull();

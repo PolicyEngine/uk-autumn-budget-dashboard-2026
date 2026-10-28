@@ -543,7 +543,7 @@ function HouseholdScatter({
   // Households keep their basis-year band in every year (the y axis does
   // not move with the year), so the title names no year; About this chart
   // and the tooltip give the basis year
-  const incomeTitle = "Household net income before the policies (£k)";
+  const incomeTitle = "Household net income under current law (£k)";
   // The key: in the sentence, with the logo in the SVG as on the decile
   // card; with the reader's household, a key row under the plot and the
   // logo below it. A note instead of a plot keeps the logo row.
