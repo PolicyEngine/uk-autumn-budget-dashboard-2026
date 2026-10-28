@@ -7,7 +7,7 @@
  * interpolated in RGB, symmetric round 0 (always the neutral grey) and
  * clamping at its ends. The domain is fixed in advance, never derived
  * from the published figures (as classify.js's breaks are), and the same
- * for every selection, year and policy: ±0.1% of income, or ±£50 a year
+ * for every selection, year and policy: ±0.05% of income, or ±£50 a year
  * (Vahid, 28 October: the stacked effects are a few hundredths of a per
  * cent, so the earlier ±1% left every seat grey).
  */
@@ -24,7 +24,7 @@ export const SCALE_COLOURS = Object.freeze({
 
 /** The fixed extent, in each outcome's units (a fraction, or £). */
 export const SCALE_EXTENT = Object.freeze({
-  relative_change: 0.001,
+  relative_change: 0.0005,
   average_change: 50,
 });
 
