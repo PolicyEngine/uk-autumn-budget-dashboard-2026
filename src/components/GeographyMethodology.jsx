@@ -1,6 +1,6 @@
 import { CATEGORY_BREAKS } from "../utils/geography/classify";
 import { formatFigure } from "../utils/geography/format";
-import { CalendarClock, EyeOff, Hash, Layers, Palette, Ruler, ShieldCheck, TriangleAlert } from "lucide-react";
+import { CalendarClock, EyeOff, Hash, Layers, Palette, Ruler, ShieldCheck, Target, TriangleAlert } from "lucide-react";
 import FactList from "./methodology/FactList";
 import { ExternalLink } from "./methodology/MethodUi";
 import "./GeographyMethodology.css";
@@ -15,7 +15,7 @@ const breaks = (outcome) => {
 };
 
 /**
- * How the figures by region and constituency are estimated and protected,
+ * How the figures by constituency are estimated and protected,
  * as a fact grid. Shown on the Methodology view; the map links to it.
  */
 function GeographyMethodology() {
@@ -87,15 +87,25 @@ function GeographyMethodology() {
             Palette,
           ],
           [
-            "Constituencies and regions",
+            "Local-area dataset",
             <>
               Constituency figures come from Microcosm&apos;s local-area
-              dataset, in which each household belongs to one constituency.
-              The data certificate covers only the national file, so read
-              them as estimates. They do not add up exactly to the regional
-              ones, which may come from a different dataset.
+              dataset, in which each household belongs to one constituency,
+              not from the national file behind the other figures. The data
+              certificate covers only the national file, so read them as
+              estimates.
             </>,
             Layers,
+          ],
+          [
+            "Local calibration",
+            {
+              points: [
+                "The local-area file is calibrated to local totals of council tax bands, electricity and gas use, employment and self-employment income, Universal Credit, age, tenure and rents.",
+                "Savings, property, pension and road-fuel incomes, and carers, are calibrated by region at most, so the map for a policy acting on them follows age, tenure and earnings, not observed local totals.",
+              ],
+            },
+            Target,
           ],
           [
             "Later years",
