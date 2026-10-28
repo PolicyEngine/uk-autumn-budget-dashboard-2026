@@ -360,7 +360,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Adds £100 to the income of each household in England whose council tax band is A, B, C or D, in 2026-27.",
     details:
-      "The Treasury's £2.6 billion (Table 6.1) also covers the Scottish, Welsh and Northern Ireland governments' Barnett share (about £410 million) and £100 million for councils in England for further targeted support; neither is modelled, as the model covers payments in England only.",
+      "The Treasury's £2.6 billion (Table 6.1) also covers the Scottish, Welsh and Northern Ireland governments' Barnett share (about £425 million) and £100 million for councils in England for further targeted support; neither is modelled, as the model covers payments in England only.",
     source: {
       label: "Budget 2026",
       href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
