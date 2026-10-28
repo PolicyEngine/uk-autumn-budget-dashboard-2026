@@ -23,7 +23,7 @@ import {
 } from "../../utils/chartTheme";
 import { DISPLAY_YEARS, NOT_YET_PUBLISHED, useDisplayYears } from "../../utils/displayYears";
 import { X_AXIS_HEIGHT, plotMargin } from "./chartRows";
-import { AGE_GROUPS, ALL_BAND, COMBINATION_NOT_PUBLISHED, PACKAGE_NET_ONLY, YOUNG_BAND } from "../../utils/ageImpact";
+import { AGE_GROUPS, ALL_BAND, COMBINATION_NOT_PUBLISHED, YOUNG_BAND, withheldNetOnly } from "../../utils/ageImpact";
 import {
   GROUP_STYLES,
   changeByYear,
@@ -535,6 +535,22 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   }, [rows, policies, selectedPolicies, shownYears, FOCUS, packageRun, bands]);
   // The package's net with no policy parts (a selected policy withholds its rows by age)
   const netOnly = focusSeries.some((point) => point.fromPackage && !point.partsShown);
+  // The policies that withhold them: a policy alone with no figure for the
+  // group in a published year, named in the caveat
+  const withheldNames = useMemo(
+    () =>
+      netOnly
+        ? policies
+            .filter((policy) => selectedPolicies.includes(policy.id) && policy.displayable !== false)
+            .filter((policy) =>
+              groupSeries(rows, policies, [policy.id], shownYears, FOCUS).some(
+                (point) => point.net === null && (rows ?? []).some((row) => row.year === Number(point.year)),
+              ),
+            )
+            .map((policy) => catalogue.byId.get(policy.id)?.label ?? policy.label ?? policy.name ?? policy.id)
+        : [],
+    [netOnly, rows, policies, selectedPolicies, shownYears, FOCUS, catalogue],
+  );
   const combinationYears = bands.filter((point) => point.combinationUnavailable).map((point) => point.year);
   // Not one year published for this combination: a notice, not empty axes
   const combinationEverywhere =
@@ -979,7 +995,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             how: ["Running total adds up the years from the first one shown."],
             caveats: [
               missingNote,
-              byMeasure && netOnly && PACKAGE_NET_ONLY,
+              byMeasure && netOnly && withheldNetOnly(withheldNames),
               unpublished.length > 0 &&
                 `Not yet published: ${unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.`,
             ],

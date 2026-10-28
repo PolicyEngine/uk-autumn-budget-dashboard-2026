@@ -72,6 +72,57 @@ export const PACKAGE_PARTS_CAVEAT =
 export const PACKAGE_NET_ONLY =
   "The net change is all the selected policies together. Each policy's part is not shown, as a selected policy has too few survey records by age.";
 
+/** "A", "A and B", "A, B and C". */
+export const listNames = (names) => (names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0]);
+const haveOrHas = (names) => (names.length > 1 ? "have" : "has");
+
+/**
+ * Why no policy's part is drawn when some are thin: the package's net is
+ * shown, so the other policies' parts beside it would give the thin
+ * policies' part back by difference (never revealed by subtraction).
+ */
+const BY_DIFFERENCE = "showing only the other policies would let theirs be worked out from the net change";
+
+/** Why Each policy is unavailable, as the short line under the Show choice. */
+export const withheldPartsNote = (names) =>
+  names.length
+    ? `not available, as ${listNames(names)} ${haveOrHas(names)} too few survey records at some ages, and ${BY_DIFFERENCE}`
+    : "not available for this selection";
+
+/**
+ * Why no policy's part is shown, naming the thin policies: About this
+ * chart's caveat. `by` is the breakdown ("by single year of age", "by age
+ * group").
+ */
+export const withheldPartsCaveat = (names, by = "by single year of age") =>
+  names.length
+    ? `Each policy's part is not shown, as ${listNames(names)} ${haveOrHas(names)} too few survey records ${by}, and ${BY_DIFFERENCE}. The bars show all the selected policies together.`
+    : PACKAGE_PARTS_CAVEAT;
+
+/** PACKAGE_NET_ONLY, naming the thin policies. */
+export const withheldNetOnly = (names) =>
+  names.length
+    ? `The net change is all the selected policies together. Each policy's part is not shown, as ${listNames(names)} ${haveOrHas(names)} too few survey records by age, and ${BY_DIFFERENCE}.`
+    : PACKAGE_NET_ONLY;
+
+/**
+ * The selected policies (shown ones only) with no usable row at one of
+ * `labels` (age_band values) in one of `years` that the rows cover: the
+ * policies that withhold their rows by age there.
+ */
+export function policiesWithoutRows(rows, policies, selected, years, labels) {
+  const covered = years.map(Number).filter((year) => (rows ?? []).some((row) => row.year === year));
+  const usable = new Set(
+    (rows ?? []).filter((row) => usableRow(row)).map((row) => `${row.reform_id}|${row.year}|${row.age_band}`),
+  );
+  return policies.filter(
+    (policy) =>
+      selected.includes(policy.id) &&
+      policy.displayable !== false &&
+      covered.some((year) => labels.some((label) => !usable.has(`${policy.id}|${year}|${label}`))),
+  );
+}
+
 const usableRow = (row) => Boolean(row) && row.sample_size >= MIN_SAMPLE_SIZE && Number.isFinite(row.mean_change);
 
 const seriesKeyOf = (policy) => policy.seriesKey ?? `measure:${policy.id}`;
