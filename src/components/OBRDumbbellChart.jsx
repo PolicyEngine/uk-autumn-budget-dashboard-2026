@@ -528,26 +528,41 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
               {/* The row bands, under the gridlines, the zero line and the
                   dots: every second row, and the hovered or focused one */}
               <g className="obr-dumbbell-bands" aria-hidden="true">
+                {/* Every row's band drawn (white where unbanded), so a
+                    change of selection fades the tints rather than
+                    swapping shapes in and out */}
                 {plotted.map((row, index) => {
                   const fill = rowBackground(row, index);
                   const selected = selectedId === row.id;
-                  return fill === CHART_COLOURS.surface ? null : (
-                    <g key={row.id}>
-                      <rect
-                        className={`obr-dumbbell-band${active === row.id || selected ? " is-active" : ""}${selected ? " is-selected" : ""}`}
-                        x={0}
-                        y={top + index * rowHeight + 1}
-                        width={width}
-                        height={rowHeight - 2}
-                        rx={ROW_RADIUS}
-                        fill={fill}
-                      />
-                      {selected && (
-                        <rect className="obr-dumbbell-accent" data-export="skip" x={0} y={top + index * rowHeight + 1} width={3} height={rowHeight - 2} fill={PE_COLOUR} />
-                      )}
-                    </g>
+                  return (
+                    <rect
+                      key={row.id}
+                      className={`obr-dumbbell-band${active === row.id || selected ? " is-active" : ""}${selected ? " is-selected" : ""}`}
+                      x={0}
+                      y={top + index * rowHeight + 1}
+                      width={width}
+                      height={rowHeight - 2}
+                      rx={ROW_RADIUS}
+                      fill={fill}
+                    />
                   );
                 })}
+                {/* One accent bar, slid to the selected row */}
+                {(() => {
+                  const index = plotted.findIndex((row) => row.id === selectedId);
+                  return index < 0 ? null : (
+                    <rect
+                      className="obr-dumbbell-accent"
+                      data-export="skip"
+                      x={0}
+                      y={0}
+                      width={3}
+                      height={rowHeight - 2}
+                      fill={PE_COLOUR}
+                      style={{ transform: `translateY(${top + index * rowHeight + 1}px)` }}
+                    />
+                  );
+                })()}
               </g>
               {axis.ticks.map((tick) => (
                 <g key={tick}>

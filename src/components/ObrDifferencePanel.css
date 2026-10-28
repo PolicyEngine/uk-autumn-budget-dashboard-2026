@@ -15,10 +15,28 @@
   }
 }
 
+/* Beside the chart the panel is the chart's height: placed in a cell that
+   stretches with the chart, it adds no height of its own, keeps its content
+   at the top, and scrolls inside when it is longer */
+@media (min-width: 900px) {
+  .obr-compare-layout {
+    align-items: stretch;
+  }
+
+  .obr-panel-cell {
+    position: relative;
+    min-height: 0;
+  }
+
+  .obr-panel-cell > .obr-panel {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+  }
+}
+
 .obr-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  box-sizing: border-box;
   padding: 16px;
   font-size: var(--fs-small);
   line-height: 1.4;
@@ -95,6 +113,39 @@
   width: 9px;
   height: 9px;
   border: 2px solid var(--c-obr);
+}
+
+.obr-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: obr-panel-in 180ms ease-out;
+}
+
+/* A new selection: the content fades in from 4px below */
+@keyframes obr-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.obr-connector path {
+  transition: d 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .obr-panel-body {
+    animation: none;
+  }
+
+  .obr-connector path {
+    transition: none;
+  }
 }
 
 .obr-panel p {

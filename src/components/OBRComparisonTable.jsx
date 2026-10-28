@@ -549,13 +549,16 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
       </SwapTransition>
 
       </div>
-        <ObrDifferencePanel row={selectedRow} year={selectedYear} yearLabel={yearLabel} obrKind={obrKind} />
+        <div className="obr-panel-cell">
+          <ObrDifferencePanel row={selectedRow} year={selectedYear} yearLabel={yearLabel} obrKind={obrKind} />
+        </div>
         {/* The selected row's callout line to the panel: across the gap,
             stepping to the panel's height where the panel is shorter */}
         {connector && !showTable && (
           <svg className="obr-connector" aria-hidden="true" style={{ left: connector.left, width: Math.max(connector.right - connector.left, 0) }}>
             <path
               d={`M0,${connector.rowY} H${(connector.right - connector.left) / 2} V${connector.panelY} H${connector.right - connector.left}`}
+              style={{ d: `path("M0,${connector.rowY} H${(connector.right - connector.left) / 2} V${connector.panelY} H${connector.right - connector.left}")` }}
               fill="none"
               stroke={CHART_COLOURS.gain}
               strokeWidth={1.5}
