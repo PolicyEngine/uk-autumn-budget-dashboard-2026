@@ -193,6 +193,39 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
         ),
     )
 
+    generate_parser.add_argument(
+        "--national",
+        action="store_true",
+        help=(
+            "The national results in one run: each measure in --reforms as "
+            "a receipted artifact, then their package (the combined run of "
+            "all of them), and income_distribution.csv, income_mobility.csv "
+            "and income_growth_with_measures.csv from the same simulations. "
+            "With --backend modal it is one Modal app, the dataset cached "
+            "on a Volume. Replaces --artifacts, --combined and the two "
+            "--only ... --published-package runs; those still work."
+        ),
+    )
+    generate_parser.add_argument(
+        "--combined-key",
+        default=None,
+        metavar="KEY",
+        help=(
+            "With --national: the package key you expect (combined--...); "
+            "the run stops if --reforms makes another"
+        ),
+    )
+    generate_parser.add_argument(
+        "--no-flat-files",
+        action="store_true",
+        help="With --national: make the artifacts only, not the flat files",
+    )
+    generate_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="With --national: print the plan and stop; nothing runs",
+    )
+
     add_generate_arguments(generate_parser)
     add_jobs_arguments(generate_parser, modal=True)
 
@@ -452,6 +485,16 @@ def run_generate(parsed: argparse.Namespace) -> int:
         legacy_geography_dir=legacy_geography_dir,
     )
 
+    if getattr(parsed, "national", False):
+        return run_national_command(parsed, config)
+    for flag in ("combined_key", "no_flat_files", "dry_run"):
+        if getattr(parsed, flag, None):
+            console.print(
+                f"[red]Error: --{flag.replace('_', '-')} goes with "
+                "--national[/red]"
+            )
+            return 1
+
     # Get reforms
     if parsed.reforms:
         reforms = get_reforms_from_ids(parsed.reforms)
@@ -611,6 +654,189 @@ def run_generate(parsed: argparse.Namespace) -> int:
     except Exception as e:
         console.print(f"\n[red]Unexpected error: {e}[/red]")
         raise
+
+
+def manifest_measures(path=None) -> list[str]:
+    """The measures the page shows from the publication manifest
+    (provisional or approved), sorted by id: the release's set, as
+    ``--published-package`` reads it. Raises ValueError when there is no
+    manifest or it shows none."""
+    from uk_budget_data.publication import manifest as publication_manifest
+    from uk_budget_data.publication.manifest import DISPLAYABLE
+
+    path = Path(path or publication_manifest.manifest_path())
+    if not path.is_file():
+        raise ValueError(f"no publication manifest at {path}")
+    manifest = publication_manifest.parse_manifest(
+        path.read_bytes(), str(path)
+    )
+    ids = sorted(
+        key
+        for key, entry in manifest.measures.items()
+        if entry.status in DISPLAYABLE
+    )
+    if not ids:
+        raise ValueError(f"{path} lists no measure for the page")
+    return ids
+
+
+def run_national_command(parsed: argparse.Namespace, config) -> int:
+    """``generate --national``: measures, package and the package files in
+    one run (``uk_budget_data.national``)."""
+    import sys
+
+    from uk_budget_data import national
+
+    clashes = [
+        flag
+        for flag, given in (
+            ("--only", parsed.only is not None),
+            ("--artifacts", parsed.artifacts),
+            ("--combined", bool(parsed.combined)),
+            ("--published-package", parsed.published_package),
+            ("--sequential", parsed.sequential),
+            ("--legacy-geography", parsed.legacy_geography),
+        )
+        if given
+    ]
+    if clashes:
+        console.print(
+            "[red]Error: --national makes the artifacts, the package and "
+            f"the flat files itself; leave out {', '.join(clashes)}[/red]"
+        )
+        return 1
+    if parsed.reforms:
+        ids = list(parsed.reforms)
+        source = "--reforms"
+    else:
+        try:
+            ids = manifest_measures(parsed.manifest)
+        except ValueError as error:
+            console.print(
+                f"[red]Error: {error}; pass --reforms with the release's "
+                "measures (never every registered measure)[/red]"
+            )
+            return 1
+        source = "the publication manifest's published measures"
+    unknown = [i for i in ids if get_reform(i) is None]
+    if unknown:
+        console.print(f"[red]Error: unknown reform ids: {unknown}[/red]")
+        return 1
+    reforms = [get_reform(i) for i in dict.fromkeys(ids)]
+    console.print(f"Measures from {source}", markup=False)
+    key = national.package_key(reforms)
+    if parsed.combined_key is not None and parsed.combined_key != key:
+        console.print(
+            f"[red]Error: --reforms make the package {key}, not "
+            f"{parsed.combined_key}[/red]"
+        )
+        return 1
+    backend = getattr(parsed, "backend", "local")
+    write_flat = not parsed.no_flat_files
+    for line in national.plan_lines(
+        reforms, backend, config.output_dir, parsed.artifacts_root, write_flat
+    ):
+        console.print(line, markup=False, highlight=False, soft_wrap=True)
+    if parsed.dry_run:
+        console.print("Dry run: nothing was run.")
+        return 0
+    if backend == "modal":
+        problem = modal_artifacts_problem(parsed.dataset)
+        if problem:
+            console.print(f"[red]Error: {problem}[/red]")
+            return 1
+    elif parsed.jobs not in ("1", 1):
+        console.print(
+            "[red]Error: --national --backend local runs one measure after "
+            "another; leave out --jobs[/red]"
+        )
+        return 1
+
+    def say(line):
+        console.print(line, markup=False, highlight=False, soft_wrap=True)
+
+    stash: dict = {}
+    arguments = dict(
+        artifacts_root=parsed.artifacts_root,
+        generator_argv=sys.argv,
+        write_flat=write_flat,
+        on_progress=say,
+    )
+    if backend == "modal":
+        from uk_budget_data.modal_runner import (
+            NationalModalRunner,
+            national_modal_session,
+        )
+
+        with national_modal_session(say=say) as remote:
+            runner = NationalModalRunner(stash, remote, say=say)
+            result = national.run_national(
+                reforms, config, runner, stash, **arguments
+            )
+    else:
+        result = national.run_national(
+            reforms,
+            config,
+            national.LocalNationalRunner(stash),
+            stash,
+            **arguments,
+        )
+    return report_national(result, reforms)
+
+
+def report_national(result, reforms) -> int:
+    """The national run's summary, as ``generate --artifacts`` prints its
+    own, then what became of the flat files. Exit 1 unless every artifact
+    and every flat file was written."""
+    from uk_budget_data.publication.commands import _rerun_steps
+
+    report = result.artifacts
+    console.print(
+        f"{len(report.written)} artifacts written, "
+        f"{len(report.refused)} refused"
+        + (
+            f", {len(report.failed)} failed in their Modal containers"
+            if report.failed
+            else ""
+        )
+        + (
+            f", {len(report.not_started)} combined runs not started"
+            if report.not_started
+            else ""
+        ),
+        markup=False,
+    )
+    for key, reason in report.refused.items():
+        console.print(f"REFUSED {key}: {reason}", markup=False)
+    for key, error in report.failed.items():
+        console.print(f"FAILED {key}: {error}", markup=False)
+    for key in report.not_started:
+        console.print(
+            f"NOT STARTED {key}: a measure failed in its container first",
+            markup=False,
+        )
+    if report.failed or report.not_started:
+        sets = [reforms] if result.package_key else []
+        for line in _rerun_steps(report, sets):
+            console.print(line, markup=False)
+    if result.flat_files:
+        for path in result.flat_files:
+            console.print(f"flat file written: {path}", markup=False)
+    else:
+        console.print(
+            f"Flat files NOT written: {result.flat_skipped}. Once the "
+            "package is staged, make them with `generate --only "
+            "income_distribution --published-package` and `--only "
+            "income_growth --published-package`.",
+            markup=False,
+        )
+    failed = report.refused or report.failed or report.not_started
+    return (
+        1
+        if failed
+        or (not result.flat_files and result.flat_skipped != "--no-flat-files")
+        else 0
+    )
 
 
 def run_income_curve(parsed: argparse.Namespace) -> int:
