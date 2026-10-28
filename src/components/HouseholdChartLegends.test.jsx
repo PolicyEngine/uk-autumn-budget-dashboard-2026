@@ -8,6 +8,7 @@ import ChartMoreInfo from "./ChartMoreInfo";
 import { legendMembership, noPovertyEffectReason, zeroReason, inForceIn, inForceShort, inForceText } from "../utils/legendMembership";
 import { POLICY_DETAILS } from "../utils/policyDetails";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
+import { MOCK_NATIONAL_ROWS, mockNationalCsv } from "../test/mockNationalTables";
 
 // The household decile charts must list every selected measure in their
 // legend, £0 ones too (greyed out, with the reason under the chart): a
@@ -27,9 +28,16 @@ vi.mock("recharts", async () => {
 
 const EMPLOYER_NI = "employer_ni_relief_under_25s";
 
-/** A published CSV under public/data, as rows of strings. */
+/**
+ * A published CSV under public/data, as rows of strings; the decile files,
+ * which are not public (#285 review), are MOCK synthetic tables
+ * (test/mockNationalTables.js).
+ */
 function publishedRows(file) {
-  const [header, ...lines] = readFileSync(path.join(process.cwd(), "public", "data", file), "utf8")
+  const text = Object.hasOwn(MOCK_NATIONAL_ROWS, file)
+    ? mockNationalCsv(file)
+    : readFileSync(path.join(process.cwd(), "public", "data", file), "utf8");
+  const [header, ...lines] = text
     .trim()
     .split("\n");
   const keys = header.split(",");
@@ -111,7 +119,7 @@ describe("legendMembership", () => {
 describe.each([
   ["relative", DistributionalChart, "distributional_impact.csv"],
   ["absolute", WaterfallChart, "winners_losers.csv"],
-])("%s impact by decile, published data", (_, Chart, file) => {
+])("%s impact by decile, MOCK national data", (_, Chart, file) => {
   const rows = publishedRows(file);
 
   it.each([2027, 2028, 2029, 2030, 2031])("lists all nine selected measures in %s", (year) => {

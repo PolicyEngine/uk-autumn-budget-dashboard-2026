@@ -11,6 +11,7 @@ import { outlookPopulation, roundPeople } from "../utils/povertyPeople";
 import { POLICY_DETAILS, shortNameOf } from "../utils/policyDetails";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { parseDashboardCsv } from "../utils/loadDashboard";
+import { mockNationalCsv } from "../test/mockNationalTables";
 
 const PUBLIC = join(__dirname, "..", "..", "public");
 const published = (file) => parseDashboardCsv(readFileSync(join(PUBLIC, "data", file), "utf8"));
@@ -21,7 +22,9 @@ const published = (file) => parseDashboardCsv(readFileSync(join(PUBLIC, "data", 
 const COMBINED = "autumn_budget_2026_combined";
 const YEARS = [2026, 2027, 2028, 2029, 2030, 2031];
 const budget = published("budgetary_impact.csv");
-const metrics = published("metrics.csv");
+// MOCK: synthetic national metrics (test/mockNationalTables.js); the flat
+// metrics.csv is not public (#285 review)
+const metrics = parseDashboardCsv(mockNationalCsv("metrics.csv"));
 const ALL = [...new Set(budget.map((row) => row.reform_id))].filter((id) => id !== COMBINED);
 const nameOf = (id) => budget.find((row) => row.reform_id === id).reform_name;
 const entry = (extra) => ({ status: "approved", years: YEARS, unsupported_years: [], ...extra });

@@ -1,10 +1,15 @@
 /**
- * The flat CSVs under public/data that the page reads, checked against the
- * columns and types the publication contract gives them (contract.json, from
- * uk_budget_data.publication.tables). The build checks only that each file
- * was reviewed and carries no record-level ids; a regenerated file with a
- * renamed column or a blank cell would otherwise reach the page and show as
- * zero or nothing.
+ * The flat CSVs, checked against the columns and types the publication
+ * contract gives them (contract.json, from uk_budget_data.publication.tables).
+ * The build checks only that each public file was reviewed and carries no
+ * record-level ids; a regenerated file with a renamed column or a blank cell
+ * would otherwise show as zero or nothing.
+ *
+ * budgetary_impact.csv and income_curve.csv are read from public/data. The
+ * national metrics, decile and age files are not public (#285 review: they
+ * were written before their writer was held to the floor of survey
+ * households), so the checks of their shape read MOCK synthetic tables in
+ * the same shape (test/mockNationalTables.js).
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -15,19 +20,28 @@ import { AGE_BANDS } from "../ageImpact";
 // The flat files' own combined run (not a manifest key)
 const COMBINED_REFORM_ID = "autumn_budget_2026_combined";
 import { csvField } from "../geography/exportTable";
+import { MOCK_NATIONAL_ROWS, mockNationalCsv } from "../../test/mockNationalTables";
 
 const DATA = join(dirname(fileURLToPath(import.meta.url)), "../../../public/data");
-const read = (file) => readFileSync(join(DATA, file), "utf8");
+// MOCK: the national files that are no longer public read synthetic tables
+const read = (file) => (Object.hasOwn(MOCK_NATIONAL_ROWS, file) ? mockNationalCsv(file) : readFileSync(join(DATA, file), "utf8"));
 
-// Every flat table a tab fetches, by its contract name.
+// Every flat table, by its contract name.
 const CONTRACT_TABLES = [
   ["budgetary_impact", "budgetary_impact.csv"], // Population: public finances, OBR table
-  ["distributional_impact", "distributional_impact.csv"], // Population: deciles
-  ["winners_losers", "winners_losers.csv"], // Population: deciles
-  ["metrics", "metrics.csv"], // Population: headline metrics
+  ["distributional_impact", "distributional_impact.csv"], // MOCK: deciles
+  ["winners_losers", "winners_losers.csv"], // MOCK: deciles
+  ["metrics", "metrics.csv"], // MOCK: headline metrics
   ["income_curve", "income_curve.csv"], // Population: example household
-  ["age_impact", "age_impact.csv"], // Young people
+  ["age_impact", "age_impact.csv"], // MOCK: by age
 ];
+
+it("the national metrics, decile and age files are not public", async () => {
+  const { existsSync } = await import("node:fs");
+  for (const file of Object.keys(MOCK_NATIONAL_ROWS)) {
+    expect(existsSync(join(DATA, file)), file).toBe(false);
+  }
+});
 
 // obr_comparison.csv has no contract entry: these are the columns
 // OBRComparisonTable reads, by position for the first three.
