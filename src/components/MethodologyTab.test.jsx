@@ -193,7 +193,7 @@ describe("MethodologyTab", () => {
     expect(card.textContent).not.toMatch(/\d{1,3}(,\d{3})+/);
   });
 
-  it("states the floor of 3 survey households for the deciles and ages, and that the age filter counts records", () => {
+  it("states the floor of 3 survey households for the deciles, ages, people affected and poverty, and that the age filter counts records", () => {
     const { container } = renderTab();
     const small = [...container.querySelectorAll(".method-fact")].find(
       (fact) => fact.querySelector("dt")?.textContent === "Small groups",
@@ -205,7 +205,7 @@ describe("MethodologyTab", () => {
     const text = container.textContent;
     expect(text).toContain("comes from only one or two survey households is not shown");
     expect(text).toContain("so this counts records, not households");
-    expect(text).toContain("In the age and decile tables, a figure resting on one or two survey households is not published, nor any figure in the same table that would give it back.");
+    expect(text).toContain("In the age and decile tables, for people affected and for each change in poverty, a figure resting on one or two survey households is not published, nor any figure in the same table that would give it back. A change in poverty rests on the households whose people cross the line.");
     expect(text).not.toContain("survey records is not shown");
   });
 
