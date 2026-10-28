@@ -157,6 +157,23 @@ describe("MarginalRateChart", () => {
     expect(tip()).toBeNull();
   });
 
+  it("clears the hover box when the finger lifts off a line that was redrawn and left the page (round 4)", () => {
+    const own = { before: step(0.4, 0.2, 0.02), after: step(0.4, 0.2, 0.02) };
+    render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);
+    const plot = document.querySelector(".mtr-plot");
+    plot.getBoundingClientRect = () => ({ left: 0, top: 0, right: 600, bottom: 400, width: 600, height: 400, x: 0, y: 0 });
+    const tip = () => document.querySelector(".mtr-tooltip");
+    // A stand-in for a recharts path under the finger
+    const line = document.createElement("span");
+    plot.appendChild(line);
+    fireEvent.touchStart(line, { touches: [{ clientX: 300, clientY: 200 }] });
+    expect(tip()).not.toBeNull();
+    // Redrawn: the element leaves the page, so its touchend cannot bubble to the plot
+    line.remove();
+    fireEvent.touchEnd(line, { touches: [], changedTouches: [{ clientX: 300, clientY: 200 }] });
+    expect(tip()).toBeNull();
+  });
+
   it("switches between before, after and the change, each with its own legend", () => {
     const own = { before: step(0.4, 0.2, 0.02), after: step(0.4, 0.2, 0.02) };
     render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);

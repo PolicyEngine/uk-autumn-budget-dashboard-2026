@@ -248,13 +248,27 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
     const top = pointer.y < pointer.height / 2 ? pointer.y + 12 : pointer.y - 12 - h;
     tip.style.top = `${Math.max(0, Math.min(top, pointer.height - h))}px`;
   }, [pointer]);
-  const onTouch = (event) => {
-    lastTouch.current = event.timeStamp;
-    onPointer(event);
-  };
   const onTouchDone = (event) => {
     lastTouch.current = event.timeStamp;
     clearPointer();
+  };
+  const onTouch = (event) => {
+    lastTouch.current = event.timeStamp;
+    onPointer(event);
+    // A touch ends on the element it began on. A line or layer under the
+    // finger is redrawn as the box shows, so that element can leave the page
+    // and its touchend never reaches the plot, leaving the box up (round 4).
+    // A listener on the element itself still hears it.
+    const target = event.type === "touchstart" ? event.target : null;
+    if (target?.addEventListener) {
+      const done = (end) => {
+        target.removeEventListener("touchend", done);
+        target.removeEventListener("touchcancel", done);
+        onTouchDone(end);
+      };
+      target.addEventListener("touchend", done);
+      target.addEventListener("touchcancel", done);
+    }
   };
   const onMouse = (event) => {
     if (lastTouch.current && event.timeStamp - lastTouch.current < 1000) return;
