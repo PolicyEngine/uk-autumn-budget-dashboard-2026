@@ -17,6 +17,8 @@ import { geographyFetch } from "../test/geographyFixture";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { parseDashboardCsv } from "../utils/loadDashboard";
 import { ALPHA, BETA, YEAR, measureCatalogueFixture } from "../test/measureCatalogueFixture";
+import { OBR_DEVIATION_STATEMENT } from "../utils/obrDeviationNotes";
+import { downloadFile } from "../utils/downloadFile";
 
 // The official costings as rows, from a CSV fixture; the loader's own checks
 // are tested in utils/publication/officialCostings.test.js
@@ -124,6 +126,79 @@ describe("the OBR comparison table", () => {
 });
 
 const plain = (text) => text?.replace(/\u2060/g, "");
+
+describe("why our estimates differ from the official costings", () => {
+  const NOTE = "Ours counts each tax year's liability; the official costing counts tax when it is paid.";
+  const stub = () =>
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({
+        "/data/official_costings.csv": OBR_COMPARISON,
+        "/data/budgetary_impact.csv": BUDGETARY_IMPACT,
+      }),
+    );
+
+  it("says the general reasons under the chart, then each policy's note in a list", async () => {
+    stub();
+    render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} notes={{ two_child_limit: NOTE }} />);
+    await screen.findByRole("radio", { name: "Show as chart" });
+    expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
+    const list = screen.getByRole("region", { name: "Why each policy differs" });
+    expect(within(list).getAllByRole("listitem").map((li) => plain(li.textContent))).toEqual([`2 child limit repeal: ${NOTE}`]);
+    // The statement and the list stay when the table replaces the chart
+    show("Table");
+    expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Why each policy differs" })).toBeInTheDocument();
+  });
+
+  it("shows a row's note in the chart's tooltip for that row", async () => {
+    stub();
+    const { container } = render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} notes={{ two_child_limit: NOTE }} />);
+    await screen.findByRole("radio", { name: "Show as chart" });
+    fireEvent.mouseEnter(container.querySelector('[data-policy="two_child_limit"]'));
+    expect(document.querySelector(".chart-tooltip-note")).toHaveTextContent(NOTE);
+  });
+
+  it("shows a row's note on its Difference cell in the table, on hover and on focus", async () => {
+    stub();
+    render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} notes={{ two_child_limit: NOTE }} />);
+    await screen.findByRole("radio", { name: "Show as chart" });
+    show("Table");
+    const difference = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell")[4];
+    // The figure itself is unchanged; the note is on hover, focus or a tap
+    expect(difference).toHaveTextContent(/^−£100m$/);
+    const anchor = difference.querySelector(".difference-note-anchor");
+    fireEvent.mouseEnter(anchor);
+    expect(screen.getByRole("tooltip")).toHaveTextContent(NOTE);
+    fireEvent.mouseLeave(anchor);
+    fireEvent.focus(anchor);
+    expect(screen.getByRole("tooltip")).toHaveTextContent(NOTE);
+  });
+
+  it("adds each note to the table's CSV download", async () => {
+    stub();
+    render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} notes={{ two_child_limit: NOTE }} />);
+    await screen.findByRole("radio", { name: "Show as chart" });
+    show("Table");
+    vi.mocked(downloadFile).mockClear();
+    fireEvent.click(document.querySelector(".chart-download-button:not([disabled])"));
+    fireEvent.click(screen.getByRole("button", { name: "CSV Data" }));
+    await waitFor(() => expect(downloadFile).toHaveBeenCalledTimes(1));
+    const [content] = vi.mocked(downloadFile).mock.calls[0];
+    expect(content).toContain("Why it differs");
+    expect(content).toContain(NOTE);
+  });
+
+  it("keeps the statement, with no list, tooltip or anchor, for a policy with no note", async () => {
+    stub();
+    render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2030} notes={{ other: NOTE, two_child_limit: "  " }} />);
+    await screen.findByRole("radio", { name: "Show as chart" });
+    expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Why each policy differs" })).toBeNull();
+    show("Table");
+    expect(document.querySelector(".difference-note-anchor")).toBeNull();
+  });
+});
 
 describe("a policy not in force in the year shown", () => {
   const catalogue = { measures: [{ id: "a" }, { id: "b" }, { id: "c" }], byId: new Map() };

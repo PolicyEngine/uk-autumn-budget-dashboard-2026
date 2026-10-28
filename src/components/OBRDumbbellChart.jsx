@@ -381,6 +381,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
     const tooltip = (
       <TooltipRows
         label={`${row.name}, ${yearLabel}`}
+        note={row.note ?? undefined}
         rows={[
           { key: "pe", name: "PolicyEngine (static)", text: isValue(row.pe) ? bn(row.pe) : "Not yet published", color: PE_COLOUR },
           { key: "obr", name: `Official costing (${obrKind})`, text: isValue(row.obr) ? bn(row.obr) : row.notComparable ? `Not comparable: ${row.notComparable}` : "Not in the official costings", color: OBR_COLOUR },

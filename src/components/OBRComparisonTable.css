@@ -106,6 +106,48 @@
   margin-top: 2px;
 }
 
+/* Why the estimates differ: the general statement, then each policy's
+   note, in view under the chart or table (a phone has no hover) */
+.obr-deviation {
+  margin-top: 16px;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}
+
+.obr-deviation-statement {
+  margin: 0;
+}
+
+.obr-deviation-title {
+  margin: 12px 0 4px;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--pe-gray-700);
+}
+
+.obr-deviation-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.obr-deviation-list li + li {
+  margin-top: 4px;
+}
+
+.obr-deviation-list strong {
+  font-weight: 600;
+  color: var(--pe-gray-700);
+}
+
+/* A Difference with a note: dotted, so it reads as having more to say */
+.difference-note-anchor {
+  cursor: help;
+  text-decoration: underline dotted;
+  text-decoration-color: var(--pe-gray-400);
+  text-underline-offset: 3px;
+}
+
 /* The card's plot area when the year is past the official costings */
 .obr-not-covered {
   margin: 0 0 20px;
