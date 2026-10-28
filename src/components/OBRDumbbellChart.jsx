@@ -4,6 +4,7 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import useElementWidth from "../hooks/useElementWidth";
 import { SvgMeasureLabel, SVG_LABEL_INDENT } from "./MeasureRowLabel";
+import { formatBnOrM, formatSignedBnOrM, shownBn } from "../utils/moneyFormat";
 import "./OBRDumbbellChart.css";
 
 /**
@@ -61,22 +62,15 @@ const halo = (background) => ({
 const MINUS = "−";
 const isValue = (value) => typeof value === "number" && Number.isFinite(value);
 
-const roundTo = (value, decimals) => Math.round(value * 10 ** decimals) / 10 ** decimals;
 
-/** −£3.1bn: one decimal (or `decimals`), a true minus, and never a "−£0.0bn". */
+/** −£3.1bn, or −£30m under £1bn (to the nearest £5m), £0 for a real zero (moneyFormat.js). */
 export function formatBn(value, decimals = 1) {
-  if (!isValue(value)) return "";
-  const rounded = roundTo(value, decimals);
-  const sign = rounded < 0 ? MINUS : "";
-  return `${sign}£${Math.abs(rounded).toFixed(decimals)}bn`;
+  return formatBnOrM(value, decimals);
 }
 
-/** +£0.3bn / −£0.3bn / £0.0bn: a difference, always signed. */
+/** +£0.3bn / −£25m / £0: a difference, always signed. */
 export function formatDifference(value, decimals = 1) {
-  if (!isValue(value)) return "—";
-  const rounded = roundTo(value, decimals);
-  if (rounded === 0) return `£${(0).toFixed(decimals)}bn`;
-  return `${rounded < 0 ? MINUS : "+"}£${Math.abs(rounded).toFixed(decimals)}bn`;
+  return formatSignedBnOrM(value, decimals);
 }
 
 /**
@@ -97,8 +91,8 @@ export function rowDecimals(pe, obr) {
  */
 export function shownDifference(pe, obr, decimals = 1) {
   if (!isValue(pe) || !isValue(obr)) return null;
-  const scale = 10 ** decimals;
-  return (Math.round(pe * scale) - Math.round(obr * scale)) / scale;
+  // Each as its label shows it (£5m steps under £1bn), to the nearest £1m
+  return Math.round((shownBn(pe, decimals) - shownBn(obr, decimals)) * 1000) / 1000;
 }
 
 /** PolicyEngine's estimate as a % of the official costing, or null. */

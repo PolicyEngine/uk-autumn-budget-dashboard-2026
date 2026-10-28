@@ -154,8 +154,8 @@ export function comparisonSentence(rows, obrKind) {
   const close = paired.filter((row) => gap(row) <= CLOSE_BN + 1e-9).length;
   const largest = paired.reduce((best, row) => (gap(row) > gap(best) ? row : best));
   const lead = close === paired.length
-    ? `For all ${paired.length} policies our static estimate is within £${CLOSE_BN}bn of ${costing}`
-    : `For ${close} of ${paired.length} policies our static estimate is within £${CLOSE_BN}bn of ${costing}`;
+    ? `For all ${paired.length} policies our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`
+    : `For ${close} of ${paired.length} policies our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`;
   if (formatBn(largest.pe) === formatBn(largest.obr)) return `${lead}.`;
   return `${lead}; the largest gap is ${largest.name} (${formatBn(largest.pe)} vs ${formatBn(largest.obr)}).`;
 }
@@ -166,7 +166,7 @@ const COMPARISON_INFO = {
     "PolicyEngine's estimate of each policy's effect on the public finances beside the official costing for the same year, in £ billion; positive values raise revenue or cut spending. Largest official costing first.",
   how: [
     "PolicyEngine's figures are static, so an official static costing is the like-for-like comparison. Budget 2026's costings give one figure per policy, which for most policies includes behavioural responses, so the card compares with that.",
-    "On the % scale each official costing is 100%; a policy costed under £0.05bn has no %.",
+    "On the % scale each official costing is 100%; a policy costed under £50m has no %.",
     "Difference is PolicyEngine minus the official figure.",
   ],
   definitions: [
@@ -303,9 +303,10 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
 
   // A row's figures at the chart's precision for that row (two decimals
   // where they round equal to £0.1bn but are apart). No figure: a muted
-  // dash, said why in the note; a figure that rounds to zero (no effect
-  // that year): muted, as the household table's zero change
-  const shownZero = (text) => /^£0\.0+bn$/.test(text);
+  // dash, said why in the note; a real zero (no effect that year): muted,
+  // as the household table's zero change. Under £1bn a figure is in £m,
+  // so one that is not zero never reads as nothing
+  const shownZero = (text) => text === "£0";
   const cell = (value, decimals, kind) => {
     if (!isValue(value)) return <td className={`value-cell ${kind} is-none`}>—</td>;
     const text = formatFigure(value, decimals);
@@ -318,7 +319,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   // A row with no figure on the chosen basis is differenced on the other
   const otherBasis = rows.some((row) => row.pe !== null && row.obr !== null && (shownBehavioural ? row.obrBehavioural === null : row.obrStatic === null));
   const tableNote = [
-    `Difference: PolicyEngine minus the official ${obrKind} costing, £bn${otherBasis ? ` (the ${shownBehavioural ? "static" : "post-behavioural"} one where the official costings give only that)` : ""}.`,
+    `Difference: PolicyEngine minus the official ${obrKind} costing${otherBasis ? ` (the ${shownBehavioural ? "static" : "post-behavioural"} one where the official costings give only that)` : ""}.`,
     officialMissing && `— where the official costings give no figure on that basis for the policy in ${yearLabel}.`,
     peMissing && `— under PolicyEngine where we publish no estimate for ${yearLabel}.`,
   ].filter(Boolean);
@@ -374,13 +375,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
               </thead>
               <tbody>
                 {rows.map((row, index) => {
-                  // The chart's precision, or two decimals where a figure
-                  // that is not zero would read £0.0bn (−£0.05bn is a cost,
-                  // not no effect)
-                  const tiny = [row.pe, row.obrStatic, row.obrBehavioural].some(
-                    (value) => isValue(value) && value !== 0 && shownZero(formatFigure(value, 1)),
-                  );
-                  const decimals = Math.max(rowDecimals(row.pe, row.obr), tiny ? 2 : 1);
+                  // The chart's precision (figures under £1bn are in £m)
+                  const decimals = rowDecimals(row.pe, row.obr);
                   const difference = shownDifference(row.pe, row.obr, decimals);
                   return (
                     // Every second row on the faint band, as the chart's rows

@@ -83,7 +83,7 @@ describe("the OBR comparison table", () => {
       "Policy", "PolicyEngine", "Official static", "Official post-behavioural", "Difference",
     ]);
     const cells = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell");
-    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repealBenefits", "−£3.4bn", "−£3.3bn", "−£3.5bn", "−£0.1bn"]);    // The table offers the same downloads as the chart
+    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repealBenefits", "−£3.4bn", "−£3.3bn", "−£3.5bn", "−£100m"]);    // The table offers the same downloads as the chart
     expect(expectStandardDownloads(document.body)).toBe(1);
   });
 
@@ -99,10 +99,10 @@ describe("the OBR comparison table", () => {
     await screen.findByRole("radio", { name: "Show as chart" });
     show("Table");
     const difference = () => within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell")[4];
-    expect(difference()).toHaveTextContent("−£0.1bn");
+    expect(difference()).toHaveTextContent("−£100m");
     fireEvent.click(screen.getByRole("button", { name: /Options/ }));
     fireEvent.click(screen.getByRole("radio", { name: "Post-behavioural" }));
-    expect(difference()).toHaveTextContent("+£0.1bn");
+    expect(difference()).toHaveTextContent("+£100m");
   });
 
   it("titles the card with the year and says in one sentence how the two compare", async () => {
@@ -126,14 +126,14 @@ const plain = (text) => text?.replace(/\u2060/g, "");
 
 describe("the comparison sentence", () => {
   const row = (name, pe, obr) => ({ id: name, name, pe, obr });
-  it("counts the measures within £0.2bn and names the largest gap", () => {
+  it("counts the measures within £200m and names the largest gap", () => {
     expect(plain(comparisonSentence([row("Employer NI relief", -6.2, -6.5), row("A", 1, 1.1), row("B", 0.4, 0.4), row("C", 0.1, null)], "static"))).toBe(
-      "For 2 of 3 policies our static estimate is within £0.2bn of the official static costing; the largest gap is Employer NI relief (−£6.2bn vs −£6.5bn).",
+      "For 2 of 3 policies our static estimate is within £200m of the official static costing; the largest gap is Employer NI relief (−£6.2bn vs −£6.5bn).",
     );
   });
   it("leaves out the gap when every measure rounds equal", () => {
     expect(plain(comparisonSentence([row("A", 1, 1.01), row("B", 2, 2)], "post-behavioural"))).toBe(
-      "For all 2 policies our static estimate is within £0.2bn of the official post-behavioural costing.",
+      "For all 2 policies our static estimate is within £200m of the official post-behavioural costing.",
     );
     expect(comparisonSentence([row("A", 1, null)], "static")).toBeNull();
   });
@@ -183,7 +183,7 @@ describe("the comparison at 2031-32", () => {
     // A dash is muted and the note says why
     expect(cells.slice(2).every((td) => td.classList.contains("is-none"))).toBe(true);
     expect([...container.querySelectorAll(".comparison-table-note")].map((p) => p.textContent)).toEqual([
-      "Difference: PolicyEngine minus the official static costing, £bn.",
+      "Difference: PolicyEngine minus the official static costing.",
       "— where the official costings give no figure on that basis for the policy in 2031-32.",
     ]);
   });
@@ -217,7 +217,7 @@ it("names the post-behavioural basis when the official costings give only that",
   expect(screen.queryByText("Official basis")).not.toBeInTheDocument();
   show("Table");
   expect(container.querySelector(".comparison-table-note").textContent).toBe(
-    "Difference: PolicyEngine minus the official post-behavioural costing, £bn.",
+    "Difference: PolicyEngine minus the official post-behavioural costing.",
   );
 });
 

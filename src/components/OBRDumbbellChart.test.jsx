@@ -53,8 +53,8 @@ describe("OBRDumbbellChart", () => {
   it("gives the difference, PolicyEngine minus official, in a column at the right", () => {
     const { container } = chart();
     expect(container.querySelector(".obr-dumbbell-column-head").textContent).toBe("Difference");
-    expect(rowEl(container, "two_child_limit").querySelector(".obr-dumbbell-difference").textContent).toBe("−£0.6bn");
-    expect(rowEl(container, "threshold_freeze").querySelector(".obr-dumbbell-difference").textContent).toBe("+£0.2bn");
+    expect(rowEl(container, "two_child_limit").querySelector(".obr-dumbbell-difference").textContent).toBe("−£600m");
+    expect(rowEl(container, "threshold_freeze").querySelector(".obr-dumbbell-difference").textContent).toBe("+£200m");
   });
 
   it("draws the connecting line in one neutral colour, with no difference bands", () => {
@@ -86,24 +86,32 @@ describe("OBRDumbbellChart", () => {
     expect(pe.getAttribute("cx")).toBe(obr.getAttribute("cx"));
     const circles = [...row.querySelectorAll("circle")];
     expect(circles.indexOf(obr)).toBeGreaterThan(circles.indexOf(pe));
-    expect(labels(container, "rail")).toEqual(["−£0.2bn, same"]);
-    expect(row.querySelector(".obr-dumbbell-difference").textContent).toBe("£0.0bn");
+    expect(labels(container, "rail")).toEqual(["−£200m, same"]);
+    expect(row.querySelector(".obr-dumbbell-difference").textContent).toBe("£0");
   });
 
-  it("gives a row two decimals where its figures round equal to £0.1bn but its dots are apart", () => {
-    const { container } = chart({ rows: [{ id: "loans", name: "Student loan threshold", pe: -0.53, obr: -0.55, obrStatic: -0.55, obrBehavioural: -0.55 }] });
-    expect(labels(container, "loans").sort()).toEqual(["−£0.53bn", "−£0.55bn"]);
-    expect(rowEl(container, "loans").querySelector(".obr-dumbbell-difference").textContent).toBe("+£0.02bn");
+  it("gives a row two decimals where its £bn figures round equal to £0.1bn but its dots are apart", () => {
+    const { container } = chart({ rows: [{ id: "loans", name: "Student loan threshold", pe: -2.53, obr: -2.55, obrStatic: -2.55, obrBehavioural: -2.55 }] });
+    expect(labels(container, "loans").sort()).toEqual(["−£2.53bn", "−£2.55bn"]);
+    expect(rowEl(container, "loans").querySelector(".obr-dumbbell-difference").textContent).toBe("+£20m");
+  });
+
+  it("shows figures under £1bn in £m, to the nearest £5m, so a small cost never reads as nothing", () => {
+    const { container } = chart({ rows: [{ id: "pta", name: "Pension Tax Allowance", pe: -0.031, obr: -0.03, obrStatic: -0.03, obrBehavioural: -0.03 }] });
+    expect(labels(container, "pta")).toEqual(["−£30m, same"]);
+    expect(rowEl(container, "pta").querySelector(".obr-dumbbell-difference").textContent).toBe("£0");
   });
 
   it("keeps 'same' where the figures are equal at two decimals too", () => {
-    expect(rowDecimals(-0.531, -0.529)).toBe(1);
-    expect(rowDecimals(-0.53, -0.55)).toBe(2);
+    expect(rowDecimals(-2.531, -2.529)).toBe(1);
+    expect(rowDecimals(-2.53, -2.55)).toBe(2);
+    // Under £1bn the £m labels already tell them apart
+    expect(rowDecimals(-0.53, -0.55)).toBe(1);
     expect(rowDecimals(-0.5, -0.4)).toBe(1);
     expect(rowDecimals(0, 0)).toBe(1);
-    const { container } = chart({ rows: [{ id: "near", name: "Near", pe: -0.531, obr: -0.529, obrStatic: -0.529, obrBehavioural: -0.529 }] });
-    expect(labels(container, "near")).toEqual(["−£0.5bn, same"]);
-    expect(rowEl(container, "near").querySelector(".obr-dumbbell-difference").textContent).toBe("£0.0bn");
+    const { container } = chart({ rows: [{ id: "near", name: "Near", pe: -2.531, obr: -2.529, obrStatic: -2.529, obrBehavioural: -2.529 }] });
+    expect(labels(container, "near")).toEqual(["−£2.5bn, same"]);
+    expect(rowEl(container, "near").querySelector(".obr-dumbbell-difference").textContent).toBe("£0");
   });
 
   it("bands every second row under the gridlines, and the hovered or focused row more strongly", () => {
@@ -139,7 +147,7 @@ describe("OBRDumbbellChart", () => {
     const { container } = chart({ rows: [...rows, small], scale: "pct" });
     const rings = [...container.querySelectorAll(".obr-dumbbell-dot.obr")].map((ring) => ring.getAttribute("cx"));
     expect(new Set(rings).size).toBe(1);
-    expect(rowEl(container, "tiny").querySelector(".obr-dumbbell-missing").textContent).toBe("Official costing £0.0bn: no % to show");
+    expect(rowEl(container, "tiny").querySelector(".obr-dumbbell-missing").textContent).toBe("Official costing £0: no % to show");
     // No dot: the only circles left are the label's own (its tile and icon)
     expect([...rowEl(container, "tiny").querySelectorAll("circle")].filter((circle) => !circle.closest(".mrl-svg")).length).toBe(0);
     expect(container).toHaveTextContent("100%");
@@ -150,20 +158,28 @@ describe("helpers", () => {
   it("formats £bn with a true minus and no negative zero", () => {
     expect(formatBn(-3.12)).toBe("−£3.1bn");
     expect(formatBn(12.35)).toBe("£12.4bn");
-    expect(formatBn(-0.01)).toBe("£0.0bn");
+    // Under £1bn in £m, to the nearest £5m; a real zero is £0
+    expect(formatBn(-0.01)).toBe("−£10m");
+    expect(formatBn(-0.031)).toBe("−£30m");
+    expect(formatBn(0.998)).toBe("£1.0bn");
+    expect(formatBn(-0.002)).toBe("−£2m");
+    expect(formatBn(0.0002)).toBe("under £1m");
+    expect(formatBn(0)).toBe("£0");
     expect(formatBn(NaN)).toBe("");
   });
 
   it("signs a difference", () => {
-    expect(formatDifference(0.31)).toBe("+£0.3bn");
-    expect(formatDifference(-0.31)).toBe("−£0.3bn");
-    expect(formatDifference(0.01)).toBe("£0.0bn");
+    expect(formatDifference(1.31)).toBe("+£1.3bn");
+    expect(formatDifference(-0.3)).toBe("−£300m");
+    expect(formatDifference(0.01)).toBe("+£10m");
+    expect(formatDifference(0)).toBe("£0");
     expect(formatDifference(null)).toBe("—");
   });
 
   it("takes the difference of the figures as shown", () => {
     expect(shownDifference(-6.16, -6.5)).toBeCloseTo(0.3);
-    expect(formatDifference(shownDifference(-0.16, -0.1))).toBe("−£0.1bn");
+    expect(formatDifference(shownDifference(-0.16, -0.1))).toBe("−£60m");
+    expect(formatDifference(shownDifference(-6.16, -6.5))).toBe("+£300m");
     expect(shownDifference(1, null)).toBeNull();
   });
 
