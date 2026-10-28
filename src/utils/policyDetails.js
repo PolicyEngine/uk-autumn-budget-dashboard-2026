@@ -76,7 +76,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Applies each day's duty rate to households' petrol and diesel spending, day-weighted to fiscal years.",
     details:
-      "No rises in January, March or April 2027; current law's rate and RPI rises return on 1 July 2027. After that it costs nothing. The end date is the Budget document's. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel for vans, lorries and business use of cars is not modelled, so the figure covers households' own fuel. The Treasury's figure also covers business fuel, but counts duty only, without VAT.",
+      "Held at 52.95p a litre to 30 June 2027: none of current law's rises in January, March or April 2027. From 1 July 2027 it is current law's 60.59p, which includes April 2027's RPI rise. RPI rises then resume each April from 2028. After that it costs nothing. The end date is the Budget document's. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel for vans, lorries and business use of cars is not modelled, so the figure covers households' own fuel. The Treasury's figure also covers business fuel, but counts duty only, without VAT.",
     source: {
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
@@ -103,7 +103,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Cuts eligible people's income tax, never below zero; it tapers by £1 per £3 above the full new State Pension.",
     details:
-      "Total income counts the State Pension and all other income, savings interest included. So a larger State Pension, with increments or additional State Pension, reduces the allowance too. The personal allowance is unchanged. People reaching State Pension age after 6 October in a tax year are not included: reach and cost slightly understated. Scottish taxpayers get the same allowance, at the 20% basic rate. Pension Credit, Housing Benefit and Council Tax Reduction count income after tax, so take back part of it. A claimant aged 75 or over who leaves Pension Credit loses the free TV licence. Universal Credit counts pension income before tax, so changes only where the allowance cuts tax on earnings.",
+      "Total income counts the State Pension and all other income, savings interest included. So a larger State Pension, with increments or additional State Pension, reduces the allowance too. The personal allowance is unchanged. People reaching State Pension age after 6 October in a tax year are not included: reach and cost slightly understated. Scottish taxpayers get the same allowance, at the 20% basic rate. Means-tested benefits can take back part of the allowance. Pension Credit, Housing Benefit and Council Tax Reduction count income after tax. A smaller award can end help that comes with it. Universal Credit counts pension income before tax, so changes only where the allowance cuts tax on earnings.",
     source: {
       label: "Pension Tax Allowance explainer",
       href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer",
