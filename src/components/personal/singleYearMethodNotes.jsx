@@ -44,6 +44,9 @@ export const EVERY_POLICY_NOTE = (
     // on the page when that measure changes or isn't published (#104)
     points={[
       "Fuel duty acts on the petrol and diesel spending you enter, and VAT on that and the electricity spending.",
+      "The trading allowance is worked out from the self-employment receipts and expenses you enter. The £100 energy payment depends on your Council Tax band, and is paid in England only.",
+      "Every couple is treated as married, as the calculator does not ask, so the Marriage Allowance can apply. An unmarried couple with one partner over State Pension age can see a different change in Universal Credit.",
+      "Carer's Allowance's own earnings limit stays at £204 a week, so a carer earning between £204 and a higher limit a policy sets gets no Carer's Allowance either way.",
       "A policy with no effect in the chosen year shows no change.",
     ]}
   />
