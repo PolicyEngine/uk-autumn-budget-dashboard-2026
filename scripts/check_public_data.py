@@ -247,9 +247,9 @@ def validate_layer_table(path: Path, name: str, report: Report) -> None:
 
 def thin_cells_in_tables(data: bytes) -> bool:
     """Whether an artifact's receipt records cells under the floor of
-    survey households still in its tables (``dashboard.disclosure_floor``,
-    as generation writes such a run unless UK_BUDGET_THIN_DECILES=refuse;
-    the gate never stages it)."""
+    survey households still in its tables (``dashboard.disclosure_floor``).
+    A whole-measure-thin run retains its figures and warning unless
+    UK_BUDGET_THIN_DECILES=refuse; the gate never stages it."""
     try:
         document = json.loads(data)
     except (ValueError, UnicodeError):
@@ -304,6 +304,22 @@ def check(root: Path, today: Optional[date] = None) -> Report:
                     f"{name}: its tables hold cells under the floor of "
                     "survey households"
                 )
+            if name.endswith("/receipt.json"):
+                from uk_budget_data.publication.validate import (
+                    withheld_file_problems,
+                )
+
+                try:
+                    document = json.loads(data)
+                    if isinstance(document, dict):
+                        report.problems.extend(
+                            f"{name}: {problem}"
+                            for problem in withheld_file_problems(
+                                path.parent, document
+                            )
+                        )
+                except (ValueError, UnicodeError):
+                    pass
             layer = is_layer_table(name, data)
             if layer:
                 validate_layer_table(path, name, report)

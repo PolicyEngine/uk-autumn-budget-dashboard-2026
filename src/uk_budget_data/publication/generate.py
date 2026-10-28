@@ -19,11 +19,12 @@ A measure or combined run the certified data
 cannot cost (its run records a data limit) is still processed, since the
 limits are observed while it runs, but its artifact is receipt-only: it is
 listed as not computable and binds no figure, so no table is written. A run
-whose decile tables have a cell resting on fewer than the floor of survey
-households (``disclosure_floor``) is written with a warning, and its
-receipt names the cells, so the gate never stages or shows it; under
-``UK_BUDGET_THIN_DECILES=refuse`` it is refused once its figures are made,
-before anything is written. The age table's thin cells are withheld.
+whose decile tables have a thin cell (``disclosure_floor``) withholds that
+decile's figures and the "all" row that could give them back. A combined
+run also withholds its members' withheld cells. When "all" itself is thin,
+the run keeps the warning and publication refusal; under
+``UK_BUDGET_THIN_DECILES=refuse`` it is refused before anything is written.
+The age table's thin cells are withheld under its existing rule.
 """
 
 import atexit
@@ -54,6 +55,7 @@ from uk_budget_data.publication.artifacts import (
     COMBINED_PREFIX,
     ArtifactError,
     ArtifactRef,
+    read_receipt,
     write_artifact,
 )
 from uk_budget_data.publication.manifest import load_manifest
@@ -336,7 +338,8 @@ class ArtifactRun:
     # A combined run's members read from the manifest, by id, with the
     # revision each is bound at (``receipt.approved_revision``).
     member_revisions: Optional[dict] = None
-    # Whether a thin decile cell refuses the run, or is written with a
+    member_withheld_cells: Optional[dict] = None
+    # Whether a thin "all" group refuses the run, or is written with a
     # warning (``disclosure_floor.refuses_thin_deciles``), as the process
     # that planned the runs reads it: a worker or a Modal container does not
     # share that process's environment. generate_artifacts always sets it; a
@@ -587,8 +590,10 @@ def _apply_disclosure_floor(
     subject: str, job: ArtifactRun, baseline, reformed, result: ReformResult
 ) -> tuple[list[str], Optional[dict]]:
     """Hold a run's household tables to the floor of survey households
-    (``disclosure_floor``): withhold the age table's thin cells, return a
-    warning naming a thin decile cell (or, when the run was planned under
+    (``disclosure_floor``): withhold thin decile cells and their totals,
+    including those withheld by a combined run's members, and withhold the
+    age table's thin cells. Return a warning when the whole measure is thin
+    (or, when the run was planned under
     ``UK_BUDGET_THIN_DECILES=refuse``, ``job.refuse_thin_deciles`` True,
     refuse the run), and make the binned scatter count survey households
     rather than records. Only for simulations built from a
@@ -606,9 +611,31 @@ def _apply_disclosure_floor(
     Returns the warnings and what the receipt records of the floor
     (``disclosure_floor.floor_record``). The gate shows no artifact whose
     receipt lacks it (#208 review, finding 9)."""
+
+    def withhold(found):
+        """Blank this run's own and inherited decile cells."""
+        inherited = {
+            cell: labels
+            for cell, labels in (
+                getattr(job, "member_withheld_cells", None) or {}
+            ).items()
+            if cell[1] in job.config.years
+        }
+        cells = disclosure_floor.withheld_decile_cells(found, inherited)
+        for table in disclosure_floor.DECILE_TABLES:
+            if hasattr(result, table):
+                setattr(
+                    result,
+                    table,
+                    disclosure_floor.withhold_decile_rows(
+                        getattr(result, table), table, cells
+                    ),
+                )
+        return cells
+
     if not all(_built_from_a_dataset(sim) for sim in (baseline, reformed)):
         return [], disclosure_floor.floor_record(
-            {}, not_checked_because=NO_DATASET
+            {}, withheld=withhold({}), not_checked_because=NO_DATASET
         )
     from uk_budget_data.pipeline import scatter_survey_households
 
@@ -621,7 +648,7 @@ def _apply_disclosure_floor(
                 f"be told apart ({error}); the data is not certified, so "
                 "the artifact can never be approved"
             ], disclosure_floor.floor_record(
-                {}, not_checked_because=str(error)
+                {}, withheld=withhold({}), not_checked_because=str(error)
             )
         raise ReceiptUnavailable(
             subject,
@@ -634,18 +661,19 @@ def _apply_disclosure_floor(
     deciles = {
         cell: labels
         for cell, labels in found.items()
-        if cell[0] in disclosure_floor.DECILE_TABLES
+        if cell[0] in disclosure_floor.DECILE_TABLES and "all" in labels
     }
     if deciles:
         reason = disclosure_floor.thin_cells_reason(deciles)
         if job.refuse_thin_deciles:
             raise ReceiptUnavailable(
-                subject, f"{reason}; a decile table cannot withhold one"
+                subject, f"{reason}; the whole measure rests on too few cases"
             )
         warnings.append(
             f"{reason}; recorded in its receipt, so it can be neither staged "
             "nor shown, and publish review-rows deletes it: never commit it"
         )
+    withheld = withhold(found)
     result.age_impact = disclosure_floor.withhold_thin_age_rows(
         result.age_impact, found
     )
@@ -655,7 +683,7 @@ def _apply_disclosure_floor(
     result.household_scatter = disclosure_floor.survey_scatter_rows(
         result.household_scatter, household_ids, survey
     )
-    return warnings, disclosure_floor.floor_record(found)
+    return warnings, disclosure_floor.floor_record(found, withheld=withheld)
 
 
 def _refuse_wealth_tax_base(
@@ -751,7 +779,7 @@ def generate_artifacts(
     its entry in the manifest beside ``artifacts_root``. A combined run
     whose members are in neither can be written but never staged.
 
-    Whether a thin decile cell refuses a run is read here, from
+    Whether a thin "all" group refuses a run is read here, from
     ``UK_BUDGET_THIN_DECILES``, and carried on every run, so a run sent to
     a worker or a Modal container does as this process says.
     """
@@ -761,6 +789,7 @@ def generate_artifacts(
     report = GenerationReport()
     manifest = load_manifest(artifacts_root.parent)
     written_outputs: dict[str, str] = {}
+    written_artifacts: dict[str, ArtifactRef] = {}
     revision = code_revision(repo_root)
     basis = load_basis(repo_root / BASIS_PATH)
     dataset_path = str(config.dataset_path) if config.dataset_path else None
@@ -778,32 +807,43 @@ def generate_artifacts(
     )
     checked_commits: dict = {}
 
-    def member_revisions(key: str, ids: list[str]) -> dict[str, CodeRevision]:
-        """Each member read from the manifest, bound at the commit its own
-        receipt was made at, so the combined run records the identity that
-        receipt holds and staging (which compares them exactly) accepts it.
-        A member written in this run was made at HEAD."""
+    def member_records(key: str, ids: list[str]) -> tuple[dict, dict]:
+        """Read members' revisions and withholding from their receipts.
+
+        A manifest member is bound at its receipt's commit so staging can
+        compare its identity exactly. A member written in this run was
+        made at HEAD and supplies its newly written receipt.
+        """
         revisions = {}
+        withheld = {}
         for member in ids:
-            if member in written_outputs or member not in manifest.measures:
-                continue
             try:
-                document = entry_receipt(
-                    "its manifest entry's receipt",
-                    member,
-                    manifest.measures[member],
-                    artifacts_root.parent,
+                if member in written_artifacts:
+                    document = read_receipt(written_artifacts[member].path)
+                elif member in manifest.measures:
+                    document = entry_receipt(
+                        "its manifest entry's receipt",
+                        member,
+                        manifest.measures[member],
+                        artifacts_root.parent,
+                    )
+                    revisions[member] = approved_revision(
+                        document, revision, checked_commits, repo_root
+                    )
+                else:
+                    continue
+                cells = disclosure_floor.recorded_withheld_cells(
+                    document["dashboard"].get("disclosure_floor") or {}
                 )
-                revisions[member] = approved_revision(
-                    document, revision, checked_commits, repo_root
-                )
+                for cell, labels in cells.items():
+                    withheld.setdefault(cell, []).extend(labels)
             except (ArtifactError, OSError, ValueError, KeyError) as error:
                 raise ReceiptUnavailable(
                     key,
                     f"member {member}: {error}; regenerate {member} and stage "
                     "it before its combined runs",
                 ) from error
-        return revisions
+        return revisions, disclosure_floor.withheld_decile_cells({}, withheld)
 
     def run_all(slots: list) -> None:
         """Run the jobs among ``slots`` (a job, or an outcome already
@@ -828,6 +868,7 @@ def generate_artifacts(
                     written_outputs[outcome.key] = (
                         outcome.reference.outputs_sha256
                     )
+                    written_artifacts[outcome.key] = outcome.reference
                 if outcome.refused is not None:
                     report.refused[outcome.key] = outcome.refused
                 for line in outcome.progress:
@@ -909,7 +950,7 @@ def generate_artifacts(
         )
 
         def prepare():
-            revisions = member_revisions(key, ids)
+            revisions, withheld = member_records(key, ids)
             combined = combine.combine_measures(ordered, config)
             # Before the consistency check builds its parameter snapshots.
             _refuse_wealth_tax_base(
@@ -934,6 +975,7 @@ def generate_artifacts(
             return (
                 combined,
                 revisions,
+                withheld,
                 _combined_run_identities(
                     combined,
                     ordered,
@@ -948,6 +990,7 @@ def generate_artifacts(
             (
                 combined,
                 revisions,
+                withheld,
                 (
                     baseline_identity,
                     reform_identity,
@@ -980,6 +1023,7 @@ def generate_artifacts(
                     composition=composition,
                     uses_config_baseline=uses_config,
                     member_revisions=revisions,
+                    member_withheld_cells=withheld,
                     modifier_templates=combined_templates_proof(
                         ordered, config, revision
                     ),
