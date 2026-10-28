@@ -346,7 +346,7 @@ body {
    of the page's flow and hidden above the window by default, so the band
    sits at the very top of the page with the tab rows under it, from the
    first paint. App.jsx shows it (data-site-nav-shown on <html>) when the pointer
-   reaches the top 8px of the window, or the reader tabs into it (never on a scroll up; on a touch-only
+   rests at the window's top edge (SITE_NAV_EDGE_PX for SITE_NAV_DWELL_MS, utils/pageScroll), or the reader tabs into it (never on a scroll up; on a touch-only
    device, only at the page's very top), keeps it 1.5s and while it is in
    use, and hides it on any scroll down by the reader or once the pointer
    or focus has left; it measures the nav into

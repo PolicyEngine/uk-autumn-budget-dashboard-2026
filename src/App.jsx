@@ -464,8 +464,8 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
 
   // The site nav is hidden above the window by default, so the title band
   // sits at the top of the page. Scrolling never brings it in: it slides in
-  // above the band when the pointer reaches the top 8px of the window
-  // (utils/pageScroll pointerWantsSiteNav), or when the reader tabs into it
+  // above the band when the pointer rests at the top edge of the window
+  // (SITE_NAV_EDGE_PX for SITE_NAV_DWELL_MS: utils/pageScroll pointerWantsSiteNav), or when the reader tabs into it
   // (globals.css: data-site-nav-shown on <html>, --site-nav-height; the
   // band and tab rows move down under it, so it never covers the Year and
   // Policies pills; the slide is instant under reduced motion). Once in, it stays
