@@ -316,7 +316,7 @@ describe("availability", () => {
     }))).toBe(CANDIDATE_PROVISIONAL_LABEL);
   });
 
-  it("calls them statement figures once the manifest is written on or after Budget day, though the basis stays pre-Budget", () => {
+  it("calls them Budget figures once the manifest is written on or after Budget day, though the basis stays pre-Budget", () => {
     for (const updated of ["2026-10-28T00:00:01+00:00", "2026-10-28T13:05:00+00:00", "2026-11-02T09:00:00+00:00"]) {
       const onTheDay = edited((copy) => {
         copy.updated_at = updated;
@@ -327,10 +327,14 @@ describe("availability", () => {
     }
   });
 
-  it("calls them statement figures once the forecast is rebased", () => {
+  it("calls them Budget figures once the forecast is rebased", () => {
     expect(provisionalLabel(edited((copy) => {
       copy.basis.forecast.status = "updated";
     }))).toBe(PROVISIONAL_LABEL);
+  });
+
+  it("says the Budget figures await the check against the official costings", () => {
+    expect(PROVISIONAL_LABEL).toBe("Provisional: not yet checked against the official costings");
   });
 
   it("calls nothing a candidate without both dates", () => {

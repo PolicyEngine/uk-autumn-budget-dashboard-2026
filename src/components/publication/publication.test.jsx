@@ -78,9 +78,7 @@ describe("CombinedStats (UI regression)", () => {
   it("labels a provisional measure's statistics", () => {
     renderStats(["gamma"], IN_DATA);
     expect(
-      screen.getByText(
-        "Provisional: statement figures, awaiting Treasury costing",
-      ),
+      screen.getByText(PROVISIONAL_LABEL),
     ).toBeInTheDocument();
   });
 });
@@ -253,9 +251,7 @@ describe("BinnedHouseholdScatter", () => {
       />,
     );
     expect(
-      screen.getByText(
-        "Provisional: statement figures, awaiting Treasury costing",
-      ),
+      screen.getByText(PROVISIONAL_LABEL),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Groups with fewer than 10 surveyed households/),
@@ -266,7 +262,7 @@ describe("BinnedHouseholdScatter", () => {
 describe("the provisional label follows the manifest's dates", () => {
   // The fixture manifest was last written before its own Budget date: its
   // provisional entries are candidates. Rewritten on Budget day, they are
-  // statement figures.
+  // the Budget's figures, awaiting the check against the official costings.
   const budgetDay = { ...manifest, updated_at: "2026-10-28T12:30:00+00:00" };
   const scatter = {
     status: "available",

@@ -23,11 +23,12 @@ import { METHOD_ANCHORS } from "./methodology/anchors";
 export const OBR_UNAVAILABLE = "The official costings have no figures for the selected policies.";
 
 /**
- * What the comparison's card says while the official costings are not
- * published, or the published file does not check against these results
- * (Vahid, 27 October: the card is always on Public finances).
+ * What the comparison's card says while the official costings file is not
+ * published here, or does not check against these results (Vahid, 27
+ * October: the card is always on Public finances). The Treasury published
+ * the costings with the Budget; the file follows once checked.
  */
-export const OBR_PENDING = "The official costings are published with the Budget documents on 28 October; this comparison fills in once we have added them.";
+export const OBR_PENDING = "The official costings were published with the Budget; this comparison fills in once we have checked them against our estimates.";
 
 /** The card's title without a year, while there are no figures to date. */
 export const OBR_CARD_TITLE = "How our estimates compare with the official costings";
@@ -178,7 +179,7 @@ const COMPARISON_INFO = {
   ],
   sources: [
     { label: "PolicyEngine UK microsimulation" },
-    { label: SOURCES.obr_budget_2026_costings.label.replace(/^the /, "The ") },
+    { label: SOURCES.obr_budget_2026_costings.label.replace(/^the /, "The "), href: SOURCES.obr_budget_2026_costings.url },
   ],
   method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the policies" },
 };
