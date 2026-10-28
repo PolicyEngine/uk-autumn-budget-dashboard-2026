@@ -185,7 +185,7 @@ export const HOUSEHOLD_EXAMPLES = [
     id: "landlord-saver",
     label: "A landlord with savings",
     short: "Landlord",
-    description: "£50,000 salary, rent from a flat, dividends, interest",
+    description: "£50,000 salary, rent from a flat, savings interest",
     icon: "briefcase",
     measure: "unearned_income_rates_up",
     tag: "Savings and property tax",
@@ -195,11 +195,12 @@ export const HOUSEHOLD_EXAMPLES = [
       current_salary: 50000,
       tenure: "OWNED_OUTRIGHT",
       property_income_per_year: 9000,
-      dividends_per_year: 3000,
+      // No dividends: the Budget raises the savings and property income
+      // rates, not the dividend rates (Budget 2026, 6.246 and 6.247)
       savings_interest_per_year: 2000,
       ...spendingInputs(8),
     },
-    note: "Aged 55, earns £50,000 and owns their home outright. Lets a flat for £9,000 a year after costs, and gets £3,000 of dividends and £2,000 of savings interest. Spends £1,120 a year on electricity and £1,350 on petrol and diesel, the average for households in the eighth tenth by gross income (ONS Family Spending, FYE 2025).",
+    note: "Aged 55, earns £50,000 and owns their home outright. Lets a flat for £9,000 a year after costs, and gets £2,000 of savings interest. Spends £1,120 a year on electricity and £1,350 on petrol and diesel, the average for households in the eighth tenth by gross income (ONS Family Spending, FYE 2025).",
     spendingSource: decileSpending(8).source,
   },
   {
