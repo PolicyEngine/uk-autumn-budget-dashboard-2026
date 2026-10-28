@@ -71,9 +71,11 @@
 }
 
 /* With an explainer too, a narrow card wraps the effect button onto its
-   own line, still at the right, rather than overflowing */
+   own line, still at the right, rather than overflowing; the links stay
+   together on the left rather than spread across the line */
 .policy-card-actions:has(.policy-card-explainer) {
   flex-wrap: wrap;
+  justify-content: flex-start;
   column-gap: 12px;
   row-gap: 0;
 }
