@@ -60,6 +60,8 @@ describe("marginal rate parts", () => {
     // The named parts (28%) pass the step's total (25%): Other would be −3%
     const [row] = breakdownRows([{ income: 0, to: 50000, before: 0.25, after: 0.25 }], { after: [step(0.2, 0, 0.08)] });
     expect(row[drawnKey("other")]).toBe(0);
+    // Flagged, so About this chart says it is not drawn
+    expect(row.otherUndrawn).toBe(true);
     expect(rateAxis([row.after, row[drawnKey("other")]]).domain[0]).toBe(0);
     // A negative named part is still drawn below zero
     const [mixed] = breakdownRows([{ income: 0, to: 50000, before: 0.2, after: 0.2 }], {
@@ -138,6 +140,9 @@ describe("MarginalRateChart", () => {
     fireEvent.touchMove(plot, { touches: [{ clientX: 400, clientY: 220 }] });
     expect(tip()).not.toBeNull();
     fireEvent.touchEnd(plot, { touches: [], changedTouches: [{ clientX: 400, clientY: 220 }] });
+    expect(tip()).toBeNull();
+    // The mouse move a browser makes up after a tap does not bring it back
+    fireEvent.mouseMove(plot, { clientX: 400, clientY: 220 });
     expect(tip()).toBeNull();
   });
 

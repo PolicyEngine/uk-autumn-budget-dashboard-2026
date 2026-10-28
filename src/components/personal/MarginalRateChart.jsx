@@ -231,7 +231,22 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
     sync?.setHover(null);
   };
   // The mouse, or a finger on a phone (round 3: no touch handler left the
-  // box stuck after a tap)
+  // box stuck after a tap). The box shows while the finger is down and
+  // clears when it lifts; the mouse events a browser makes up after a tap
+  // are ignored, as they would bring it back with no leave to clear it
+  const lastTouch = useRef(0);
+  const onTouch = (event) => {
+    lastTouch.current = event.timeStamp || Date.now();
+    onPointer(event);
+  };
+  const onTouchDone = (event) => {
+    lastTouch.current = event.timeStamp || Date.now();
+    clearPointer();
+  };
+  const onMouse = (event) => {
+    if (lastTouch.current && (event.timeStamp || Date.now()) - lastTouch.current < 1000) return;
+    onPointer(event);
+  };
   const onPointer = (event) => {
     const at = event.touches?.[0] ?? event.changedTouches?.[0] ?? event;
     const box = event.currentTarget.getBoundingClientRect();
@@ -340,12 +355,12 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
         className="chart-plot mtr-plot"
         data-view={view}
         style={{ position: "relative" }}
-        onMouseMove={onPointer}
+        onMouseMove={onMouse}
         onMouseLeave={clearPointer}
-        onTouchStart={onPointer}
-        onTouchMove={onPointer}
-        onTouchEnd={clearPointer}
-        onTouchCancel={clearPointer}
+        onTouchStart={onTouch}
+        onTouchMove={onTouch}
+        onTouchEnd={onTouchDone}
+        onTouchCancel={onTouchDone}
       >
         <ResponsiveContainer width="100%" height={earningsChartHeight(narrow)}>
           <ComposedChart
@@ -518,6 +533,11 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
               pensionAllowanceCliff &&
                 "For a pensioner whose only income is the State Pension, the selected policies add a tax-free allowance. Any earnings take the whole allowance away, so income tax jumps at the first pound earned.",
               "A part that lowers the rate (a benefit rising with pay) is drawn below 0%. A rate beyond the axis is marked at its edge, and the tooltip gives it in full.",
+              // Round 3: Other is floored at zero, so where it is negative
+              // the layers pass the total line
+              parts &&
+                rawRows.some((row) => row.otherUndrawn) &&
+                "Other, the part no named tax or benefit explains, is negative at some earnings for this household. The tooltip gives it, but it is not drawn below 0%, so there the layers reach above the total line.",
             ],
           }}
         />

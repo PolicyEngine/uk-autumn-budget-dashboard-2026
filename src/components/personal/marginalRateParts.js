@@ -63,7 +63,9 @@ export function breakdownRows(rates, parts, side = "after") {
     // is no layer
     const other = rate[side] - stacked;
     drawn[drawnKey("other")] = other < 1e-9 ? 0 : other;
-    return { income: rate.income, to: rate.to, ...step, ...drawn, before: rate.before, after: rate.after };
+    // A negative Other is real (the API's own part), so About this chart says it is not drawn
+    const otherUndrawn = other <= -NEGLIGIBLE;
+    return { income: rate.income, to: rate.to, ...step, ...drawn, otherUndrawn, before: rate.before, after: rate.after };
   });
   if (rows.length) rows.push({ ...rows[rows.length - 1], income: rows[rows.length - 1].to });
   return rows;
