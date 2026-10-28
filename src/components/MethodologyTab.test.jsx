@@ -311,6 +311,16 @@ describe("MethodologyTab", () => {
     expect(glued).toEqual([]);
   });
 
+  it("puts What we're improving in Limitations, open, above its folded topics", () => {
+    const { container } = renderTab();
+    const limitations = container.querySelector(`section#${METHOD_SECTIONS.limitations}`);
+    const note = within(limitations).getByRole("region", { name: "What we're improving" });
+    expect(note.closest(".disclosure-content, [hidden], .method-topic")).toBeNull();
+    expect(note.closest(".card")).not.toBe(limitations.querySelector(".method-topics"));
+    expect(note.compareDocumentPosition(limitations.querySelector(".method-topic")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(container.querySelectorAll("#method-improving")).toHaveLength(1);
+  });
+
   it("renders every section with its icon, so a missing icon name fails", () => {
     const { container } = renderTab();
     for (const { id } of METHOD_CONTENTS) {

@@ -16,6 +16,7 @@ import { EARLY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { OPEN_VIEW_EVENT } from "../utils/methodLink";
+import ImprovementsNote from "./methodology/ImprovementsNote";
 import { AnchorLink, ExternalLink, ReasonList, SourceLink, Tag, Topic } from "./methodology/MethodUi";
 import { glossaryAnchor } from "./methodology/glossary";
 import { Calculator, ChartColumn, Compass, Database, House, TrendingUp, TriangleAlert } from "lucide-react";
@@ -69,12 +70,14 @@ const yearRange = `${fiscalYearTick(EARLY_YEAR)} to ${fiscalYearTick(LAST_DISPLA
 /**
  * A section of the view, laid out as the other views' sections are: a
  * heading with its icon and a one-line summary, then its topics, each
- * folded until asked for.
+ * folded until asked for. `note`, where given, is a card of its own above
+ * the topics, open (Limitations' "What we're improving").
  */
-function MethodSection({ id, title, summary, children }) {
+function MethodSection({ id, title, summary, note = null, children }) {
   return (
     <section id={id} className="method-section" aria-label={title}>
       <SectionHeading id={`${id}-heading`} icon={SECTION_ICONS[id]} title={title} subtitle={summary} />
+      {note && <div className="card method-card">{note}</div>}
       {children && <div className="card method-card method-topics">{children}</div>}
     </section>
   );
@@ -818,6 +821,7 @@ function MethodologyTab({ onShowTab }) {
           id={METHOD_SECTIONS.limitations}
           title="Limitations"
           summary="Some charts add up separate policy runs, some inputs and the weights do not follow the October 2026 forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
+          note={<ImprovementsNote />}
         >
           <Topic title="Policies added up" preview="Revenue, decile and age charts · Household scatter · Winners and losers">
             <p className="method-more">

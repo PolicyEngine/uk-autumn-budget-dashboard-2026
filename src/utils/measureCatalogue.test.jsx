@@ -258,6 +258,10 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   //   manifest, which the Household calculator adds to one household's
   //   request only when its switch is on (Vahid and María, 28 October), and
 //   an example's calculatorOnly, the saver's, which turns it on.
+  // - IMPROVEMENTS_NOTE: "What we're improving", the next update's plans in
+  //   the words Max approved (28 October), word for word
+  //   (ImprovementsNote.test.jsx); prose only, it decides nothing about any
+  //   measure, and it goes when that update lands.
   // Before #185: MODELLING_NOTE, whose id test_reforms.py holds to a
   // registered measure, and singleYear.js's labels for the household API's
   // own programme line of the same name as the Warm Home Discount top-up.
@@ -271,6 +275,7 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
     "utils/singleYear.js": [/^\s*warm_home_discount_top_up: "[^"]*",$/gm],
     "utils/householdPolicyFields.js": [/export const POLICY_FIELDS = \{[\s\S]*?\n\};/],
     "utils/calculatorOnlyMeasures.js": [/export const SAVINGS_INCOME_RATES_ID = "[a-z_]+";/, /export const CALCULATOR_ONLY_MEASURES = \{[\s\S]*?\n\};/],
+    "components/methodology/improvementsText.js": [/export const IMPROVEMENTS_NOTE = \{[\s\S]*?\n\};/],
     "utils/obrDeviationNotes.js": [/export const OBR_DEVIATION_NOTES = \{[\s\S]*?\n\};/, /export const OBR_COMPARISON_BASES = \{[\s\S]*?\n\};/, /export const OBR_DIFFERENCE_POINTS = \{[\s\S]*?\n\};/, /export const OBR_PANEL_BASES = \{[\s\S]*?\n\};/, /export const NOT_COMPARABLE_SHORT = \{[\s\S]*?\n\};/],
   };
   const uncommented = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
