@@ -187,10 +187,10 @@ describe("Forecast changes with one forecast", () => {
 });
 
 describe("Forecast changes once the Budget forecast is published", () => {
-  it("draws both forecasts, March faded and October full, and says the model stays on March", async () => {
+  it("draws both forecasts, March faded and October full, and says the Budget figures use October", async () => {
     chartProps.length = 0;
     await renderForecast(publishedOutlook());
-    expect(screen.getByText(/Our microsimulation still projects incomes and prices with the March 2026 forecast\./)).toBeInTheDocument();
+    expect(screen.getByText(/The Budget figures use the October 2026 forecast\./)).toBeInTheDocument();
     const prices = card(/^Inflation measures$/);
     // The series chips, then the forecast chips
     const forecasts = within(within(prices).getByRole("group", { name: "Forecasts: show or hide" })).getAllByRole("button");

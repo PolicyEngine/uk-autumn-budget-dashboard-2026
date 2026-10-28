@@ -29,7 +29,7 @@ function ForecastPanel({ forecast, data, onShowTab }) {
   // A later OBR forecast loaded by `obr-forecast` (post_published, its file
   // and SHA-256 in post_source, the file's review row in
   // data_inputs/public_data_review.csv) is drawn beside the earlier one,
-  // series by series; the model's own uprating stays on the earlier one
+  // series by series, for comparison
   const later = forecast.sections?.some((s) => s.series.some((series) => hasPost(forecast, series)));
   return (
     <>
@@ -46,9 +46,9 @@ function ForecastPanel({ forecast, data, onShowTab }) {
           <>
             {later ? (
               <>
-                Calendar-year growth in the <SourceLink source="obr_efo_current" />, behind the baseline, and the{" "}
-                <SourceLink source="obr_efo_october_2026" />, published with the Budget. Our microsimulation still
-                projects incomes and prices with the March 2026 forecast.
+                Calendar-year growth in the <SourceLink source="obr_efo_march_2026" /> and the{" "}
+                <SourceLink source="obr_efo_october_2026" />, published with the Budget, shown for comparison. The
+                Budget figures use the October 2026 forecast.
               </>
             ) : (
               <>

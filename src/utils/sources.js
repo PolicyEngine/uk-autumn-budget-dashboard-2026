@@ -10,9 +10,9 @@ export const SOURCES = {
   },
   // The OBR forecast the page's projections follow: the microsimulation's
   // economic assumptions (policyengine-uk's gov.economic_assumptions), so
-  // every place that names it describes the model. It stays the March 2026
-  // EFO until a policyengine-uk release rebases those assumptions on a
-  // later forecast; a later forecast shown beside it has its own key.
+  // every place that names it describes the model. Point it at the October
+  // 2026 EFO with the change that moves the model onto it (#290); the
+  // Forecast changes sub-tab names each forecast by its own key below.
   obr_efo_current: {
     label: "OBR, Economic and fiscal outlook – March 2026",
     url: "https://obr.uk/efo/economic-and-fiscal-outlook-march-2026/",

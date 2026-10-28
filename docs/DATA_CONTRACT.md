@@ -55,7 +55,7 @@ Projection years: the income (`living_standards`), poverty (`poverty`) and inequ
 }
 ```
 
-Until the Budget forecast is published, `post` equals `pre` and `post_published` is `false`; the UI must say so visibly. Once it is loaded, the Forecast changes sub-tab draws both: `pre` (the March 2026 forecast, behind the microsimulation) faded and `post` (the October 2026 forecast) full, with "March 2026 forecast" and "October 2026 forecast" chips (28 October 2026).
+Until the Budget forecast is published, `post` equals `pre` and `post_published` is `false`; the UI must say so visibly. Once it is loaded, the Forecast changes sub-tab draws both: `pre` (the March 2026 forecast) faded and `post` (the October 2026 forecast) full, with "March 2026 forecast" and "October 2026 forecast" chips (28 October 2026).
 
 Both deflators (OBR CPI for BHC, CPI after housing costs for AHC) are rebased to 2027-28 = 1 (changed on 24 October 2026 from 2025-26 to 2026-27, and later that day to 2027-28).
 
