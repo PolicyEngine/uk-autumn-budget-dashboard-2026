@@ -23,7 +23,7 @@ from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
     WINTER_SHARE,
     zero_vat_on_domestic_electricity,
 )
-from uk_budget_data.forecast import forecast_parameters
+from uk_budget_data.forecast import forecast_parameters, with_forecast
 from uk_budget_data.models import DataConfig
 from uk_budget_data.publication.combine import combine_measures
 from uk_budget_data.reforms import (
@@ -366,8 +366,9 @@ def _national(answers, year, reforms):
     """Each measure's net incomes before and after, as
     ``personal_impact.household_simulations`` builds them (the baseline
     from ``baseline_scenario_for``, the reform from ``to_scenario``, each
-    through ``effective``), one simulation per distinct scenario, as the
-    personal impact calculator shares them (``scenario_key``)."""
+    through ``effective``, on the forecast, ``with_forecast``), one
+    simulation per distinct scenario, as the personal impact calculator
+    shares them (``scenario_key``)."""
     from policyengine_uk import Simulation
 
     people, benunit, household = household_impact.household_entities(
@@ -384,7 +385,7 @@ def _national(answers, year, reforms):
         if key not in nets:
             simulation = Simulation(
                 situation=situation,
-                scenario=personal_impact.effective(scenario),
+                scenario=with_forecast(personal_impact.effective(scenario)),
             )
             nets[key] = float(
                 simulation.calculate("household_net_income", year)[0]
