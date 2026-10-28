@@ -17,6 +17,9 @@ import json
 import sys
 from pathlib import Path
 
+from uk_budget_data.budget_measures import (
+    state_pension_only_income_tax_allowance as _sp_threshold,
+)
 from uk_budget_data.publication.artifacts import RECEIPT_FILE
 from uk_budget_data.publication.attestations import (
     ATTESTATIONS_ROOT,
@@ -49,10 +52,14 @@ if STATE_PENSION_PROTECTION_DESIGN == "total_income":
     REASONS[STATE_PENSION_ALLOWANCE_ID] = (
         "Checked budget_measures.state_pension_only_income_tax_allowance: "
         "from April 2027 it raises personal_allowance to the full new State "
-        "Pension, rounded up to the pound (the engine's weekly rate x 52), "
+        "Pension, rounded "
+        + ("down" if _sp_threshold.ROUND_DOWN else "up")
+        + " to the pound (the engine's weekly rate x 52), "
         "for people over State Pension age who receive a State Pension and "
         "whose total income (total_income, savings interest included, with "
-        "no other-income test) is at or below that allowance; above it the "
+        "no other-income test) is at or below the full new State Pension "
+        "rounded up to the pound (the allowance itself when rounded up); "
+        "above it the "
         "native allowance stands. It keeps the larger of that and the "
         "native allowance, keeps the native taper above £100,000 of "
         "adjusted net income and changes only personal_allowance. The "
