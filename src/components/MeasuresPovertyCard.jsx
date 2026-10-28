@@ -27,6 +27,7 @@ import { formatPp, outlookPopulation, roundPeople } from "../utils/povertyPeople
 import { CHART_COLOURS, MAGNITUDE_RAMPS, fiscalYearTick, fitTicks, magnitudeColours } from "../utils/chartTheme";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
+import { interactionName } from "../utils/interactionName";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { policyDetailsFor, shortNameOf } from "../utils/policyDetails";
 import { legendMembership, noPovertyEffectReason } from "../utils/legendMembership";
@@ -115,7 +116,7 @@ export function povertyWaterfall(measures, total, millions, idle = []) {
     // More than rounding: 500 people, or 0.0005pp without a population
     if (Math.abs(toX(gap)) >= (peopleMode ? 500 : 0.0005)) {
       const x = toX(gap);
-      steps.push({ id: "interaction", name: "Interaction", pp: gap, x, start: at, end: at + x, colour: CHART_COLOURS.noChange, kind: "interaction" });
+      steps.push({ id: "interaction", name: interactionName([...measures, ...idle].map((m) => m.id)), pp: gap, x, start: at, end: at + x, colour: CHART_COLOURS.noChange, kind: "interaction" });
     }
   }
   // At 0 to 0, so a row with no bar never widens the axis
@@ -314,7 +315,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
               "The package bar is all of them together.",
               <>
                 Policies can reach the same households, so their own effects need not add up to the package&apos;s
-                {interaction ? `: the interaction step is the gap (${main(interaction)}).` : "."}
+                {interaction ? `. The “${interaction.name}” step is the gap (${main(interaction)}).` : "."}
               </>,
             ],
             caveats: [

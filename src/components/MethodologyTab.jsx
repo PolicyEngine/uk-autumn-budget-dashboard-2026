@@ -715,6 +715,12 @@ function MethodologyTab({ onShowTab }) {
               shares better and worse off come from a run of the whole selection, so they include
               them, and show nothing for a selection with no such run.
             </p>
+            <p className="method-more">
+              When the Plan 2 student loan measure is selected, the gap between all policies together
+              and the sum of each on its own also includes a baseline difference. The Plan 2 measure
+              and the run of all policies together use modelled student loan repayments; the other
+              policies on their own use the repayments reported in the survey.
+            </p>
           </Topic>
           <Topic title="Economic assumptions" preview="One OBR forecast behind the assumptions and weights">
             <p className="method-more">

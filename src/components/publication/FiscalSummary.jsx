@@ -3,6 +3,7 @@ import {
   fiscalYearLabel,
   formatBillions,
 } from "../../utils/publication/format";
+import { interactionName } from "../../utils/interactionName";
 import "./publication.css";
 
 function Cell({ value, reason }) {
@@ -85,7 +86,7 @@ function FiscalSummary({ series, ids, measureNames = {}, manifest = null }) {
           )}
           {several && (
             <tr className="publication-row-interaction">
-              <th scope="row">Interaction</th>
+              <th scope="row">{interactionName(ids)}</th>
               {series.map((row) => (
                 <Cell
                   key={row.year}

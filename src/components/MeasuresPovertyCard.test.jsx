@@ -102,6 +102,17 @@ describe("measurePovertyRows and povertyWaterfall", () => {
     expect(steps.at(-1).start).toBe(0);
     expect(steps.at(-1).end).toBeCloseTo(5600);
     expect(zero.map((m) => m.id)).toEqual(["fuel_duty_rise_deferral", "employer_ni_relief_under_25s"]);
+    // The Plan 2 measure is selected, so the gap holds a baseline difference too
+    expect(steps.find((s) => s.kind === "interaction").name).toBe("Interaction and baseline difference");
+  });
+
+  it("calls the gap plain 'Interaction' without the Plan 2 measure", () => {
+    const two = [
+      { id: "a", name: "A", value: -0.01 },
+      { id: "b", name: "B", value: -0.02 },
+    ];
+    const { steps } = povertyWaterfall(two, -0.05, 70);
+    expect(steps.find((s) => s.kind === "interaction").name).toBe("Interaction");
   });
 
   it("falls back to percentage points without a population, and has no package for a part selection", () => {
