@@ -605,28 +605,37 @@ def _floor_problems(dashboard: dict, tables: dict, level: str) -> list[str]:
 
 
 def _unrecorded_withheld(floor: Optional[dict], tables: dict) -> list[str]:
-    """An empty cell in the summary statistics that the receipt's floor
-    record does not name as withheld: only the floor may leave one empty
-    (``disclosure_floor.thin_metrics``), so any other is a figure that
-    failed, never to be shown as "Not published"."""
+    """A summary statistic whose cell and the receipt's floor record
+    disagree. An empty cell the record does not name as withheld: only the
+    floor may leave one empty (``disclosure_floor.thin_metrics``), so any
+    other is a figure that failed, never to be shown as "Not published".
+    Or a cell the record names as withheld that still holds a figure: that
+    figure rests on 1 or 2 survey households, so it is never published,
+    whatever the receipt says was done with it (#285 review, finding 1)."""
     named = {
         (cell.get("table"), cell.get("year"), group)
         for cell in (floor or {}).get("thin_cells") or []
+        if cell.get("table") in METRICS_TABLES
         for group in cell.get("groups") or []
     }
-    empty = sorted(
-        {
-            (table, row["year"], column)
-            for table in METRICS_TABLES
-            for row in tables.get(table) or []
-            for column, value in row.items()
-            if value is None and (table, row["year"], column) not in named
-        }
-    )
+    empty: set = set()
+    held: set = set()
+    for table in METRICS_TABLES:
+        for row in tables.get(table) or []:
+            for column, value in row.items():
+                cell = (table, row["year"], column)
+                if value is None and cell not in named:
+                    empty.add(cell)
+                elif value is not None and cell in named:
+                    held.add(cell)
     return [
         f"{table} {year} {column}: empty, but its receipt does not record "
         "it withheld by the floor of survey households"
-        for table, year, column in empty
+        for table, year, column in sorted(empty)
+    ] + [
+        f"{table} {year} {column}: recorded withheld by the floor, but holds "
+        "a figure"
+        for table, year, column in sorted(held)
     ]
 
 

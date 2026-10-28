@@ -702,7 +702,11 @@ def _metrics_population(
     after = dict(before)
     for flag in flags or POVERTY_FLAGS:
         after[flag] = np.isin(survey, list(crossing))
-    person = {"household_id": household_id, "household_income_decile": decile}
+    person = {
+        "household_id": household_id,
+        "household_income_decile": decile,
+        "age": np.full(n, 40),
+    }
     household = {
         "household_id": household_id,
         "household_income_decile": decile,
@@ -1059,5 +1063,201 @@ def test_an_empty_cell_the_receipt_does_not_name_is_never_staged(monkeypatch):
             PublishError, match="metrics 2027 people_affected: empty"
         ):
             stage(manifest, reference.path, **arguments)
+    finally:
+        world.close()
+
+
+def _summary_row(year):
+    """A summary-statistics row as ``ReformResult.metrics`` carries it:
+    both tables' columns, each holding a figure."""
+    from uk_budget_data.publication.tables import TABLES
+
+    row = {"reform_id": "a", "reform_name": "A", "year": year}
+    for table in floor.METRICS_TABLES:
+        for name in TABLES[table].column_names:
+            row.setdefault(name, 0.5)
+    return row
+
+
+def _split(rows):
+    """The summary rows as the two tables the artifact writes."""
+    from uk_budget_data.publication.tables import TABLES
+
+    return {
+        table: [
+            {name: row[name] for name in TABLES[table].column_names}
+            for row in rows
+        ]
+        for table in floor.METRICS_TABLES
+    }
+
+
+def _named(record):
+    return {
+        (cell["table"], cell["year"], group)
+        for cell in record["thin_cells"]
+        if cell["table"] in floor.METRICS_TABLES
+        for group in cell["groups"]
+    }
+
+
+@pytest.mark.parametrize(
+    "population, expected",
+    [
+        (
+            {"crossing": (5,)},
+            {
+                ("metrics", c)
+                for c in ("poverty_change_pp", "poverty_change_pct")
+            }
+            | {
+                ("poverty_inequality", c)
+                for c in POVERTY_COLUMNS
+                if not c.startswith("child_")
+            },
+        ),
+        ({"changed": (5,)}, {("metrics", "people_affected")}),
+    ],
+    ids=["one-household-crosses", "one-household-affected"],
+)
+def test_the_floor_as_generation_runs_it_empties_what_it_records(
+    monkeypatch, population, expected
+):
+    """#285 review, finding 1: the floor as generation runs it, not
+    monkeypatched away, on full summary rows. One survey household crossing
+    the line (or affected) withholds those figures and no other: their
+    cells are None, the receipt names exactly them, and the gate takes the
+    tables at every level. The rows as they were before the floor, still
+    holding the figures, are refused under that receipt."""
+    from uk_budget_data import pipeline
+    from uk_budget_data.publication import generate
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.publish import _floor_problems
+
+    baseline, reformed, survey = _metrics_population(**population)
+    baseline.dataset = reformed.dataset = _Dataset()
+    monkeypatch.setattr(
+        pipeline, "scatter_survey_households", lambda sim, path: survey
+    )
+    before = [_summary_row(YEAR)]
+    result = SimpleNamespace(
+        household_scatter=[], age_impact=[], metrics=before
+    )
+    _, record = generate._apply_disclosure_floor(
+        "a", _job(refuse_thin_deciles=False), baseline, reformed, result
+    )
+    assert _named(record) == {
+        (table, YEAR, column) for table, column in expected
+    }
+    withheld = {column for _, column in expected}
+    (row,) = result.metrics
+    assert {c for c, value in row.items() if value is None} == withheld
+    dashboard = {"disclosure_floor": record}
+
+    def summary_problems(rows, level):
+        # The one household affected also leaves a decile cell thin, which
+        # the gate refuses on its own (test_a_warned_run_is_recorded_...)
+        return [
+            p
+            for p in _floor_problems(dashboard, _split(rows), level)
+            if p.startswith(floor.METRICS_TABLES)
+        ]
+
+    for level in (m.STAGED, m.PROVISIONAL, m.APPROVED):
+        assert summary_problems(result.metrics, level) == []
+        assert sorted(summary_problems(before, level)) == sorted(
+            f"{table} {YEAR} {column}: recorded withheld by the floor, but "
+            "holds a figure"
+            for table, column in expected
+        )
+
+
+def test_a_cell_the_receipt_withholds_that_holds_a_figure_is_refused():
+    """#285 review, finding 1: a figure the receipt names as withheld but
+    still in the table is refused at every level, as is an empty cell the
+    receipt does not name; one named and empty is not."""
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.publish import _floor_problems
+
+    record = floor.floor_record(
+        {
+            ("metrics", YEAR): ["people_affected"],
+            ("poverty_inequality", YEAR): [
+                "child_poverty_rel_bhc_change_pp",
+                "child_poverty_rel_bhc_change_pct",
+            ],
+        }
+    )
+    row = _summary_row(YEAR)
+    row["child_poverty_rel_bhc_change_pct"] = None
+    for level in (m.STAGED, m.PROVISIONAL, m.APPROVED):
+        assert _floor_problems(
+            {"disclosure_floor": record}, _split([row]), level
+        ) == [
+            f"metrics {YEAR} people_affected: recorded withheld by the "
+            "floor, but holds a figure",
+            f"poverty_inequality {YEAR} child_poverty_rel_bhc_change_pp: "
+            "recorded withheld by the floor, but holds a figure",
+        ]
+
+
+def test_a_receipt_that_withholds_a_figure_still_written_is_never_staged(
+    monkeypatch,
+):
+    """#285 review, finding 1: a run whose receipt names people affected as
+    withheld while its metrics table still holds the figure (as when the
+    line that empties it is lost) is refused at stage, at every level."""
+    from tests.publication_support import World
+    from tests.test_publication_flow import YEARS, fake_process, reform
+    from uk_budget_data.models import DataConfig
+    from uk_budget_data.publication import generate
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.publish import PublishError, stage
+
+    def floor_records_but_keeps(subject, job, baseline, reformed, result):
+        return [], floor.floor_record({("metrics", 2027): ["people_affected"]})
+
+    values = {"alpha": {2027: -1.0, 2028: -2.0}}
+    process = fake_process(values)
+
+    def holding_half(*args):
+        result = process(*args)
+        for row in result.metrics:
+            row["people_affected"] = 0.5
+        return result
+
+    monkeypatch.setattr(
+        generate, "_apply_disclosure_floor", floor_records_but_keeps
+    )
+    world = World()
+    try:
+        monkeypatch.setattr(
+            generate, "code_revision", lambda root: world.revision()
+        )
+        (reference,) = generate.generate_artifacts(
+            [reform("alpha")],
+            DataConfig(years=YEARS),
+            artifacts_root=world.artifacts,
+            generator_argv=["test"],
+            build=lambda dataset, scenario=None: world.sim(),
+            process=holding_half,
+        ).written
+        manifest = m.Manifest()
+        arguments = dict(data_root=world.data_root, inputs=world.inputs)
+        world.costing("alpha", values["alpha"])
+        world.reconcile(reference)
+        for provisional in (False, True):
+            with pytest.raises(
+                PublishError,
+                match="metrics 2027 people_affected: recorded withheld by "
+                "the floor, but holds a figure",
+            ):
+                stage(
+                    manifest,
+                    reference.path,
+                    provisional=provisional,
+                    **arguments,
+                )
+        assert "alpha" not in manifest.measures
     finally:
         world.close()
