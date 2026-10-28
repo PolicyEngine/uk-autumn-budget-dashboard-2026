@@ -343,6 +343,10 @@ export async function buildMapSvg(svgElement, options = {}) {
   // legend goes to its corner.
   const legend = clonedSvg.querySelector(`g.${MAP_LEGEND_CLASS}`);
   if (legend) {
+    // Hidden on screen (the page's key is HTML); drawn in the file
+    legend.removeAttribute("display");
+    legend.removeAttribute("aria-hidden");
+    legend.style.removeProperty("display");
     legend.setAttribute(
       "transform",
       `translate(${LEGEND_INSET}, ${LEGEND_INSET})`,

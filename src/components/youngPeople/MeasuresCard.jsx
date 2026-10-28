@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import MeasureRowLabel from "../MeasureRowLabel";
+import MeasureRowLabel, { measureCategory } from "../MeasureRowLabel";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import UnpublishedPlot from "../UnpublishedPlot";
 import NoBreakYear from "../NoBreakYear";
 import Note from "../Note";
-import { fiscalYearTick, CHART_COLOURS } from "../../utils/chartTheme";
+import { fiscalYearTick, CHART_COLOURS, fitTicks, magnitudeColours, noHouseholdChange } from "../../utils/chartTheme";
+import useElementWidth from "../../hooks/useElementWidth";
 import ControlBar from "../ControlBar";
 import { AGE_BANDS, ALL_BAND, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
 import { measureComparison, niceRange, pounds, signedPounds } from "./youngPeopleData";
@@ -14,6 +15,7 @@ import { pensionerMeasures } from "../pensioners/pensionersData";
 import { NoEffectList } from "../personal/PolicyBars";
 import { AGE_METHOD } from "../methodology/anchors";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
+import { noEffectRow } from "../../utils/legendMembership";
 import "./MeasureDumbbell.css";
 import TitleIcon from "../TitleIcon";
 
@@ -26,6 +28,7 @@ const MEASURES_INFO = {
 /** "Aged 16 to 24", "Aged under 16", "Aged 65 and over". */
 export const groupLabel = (band) => {
   if (band === "pensioners") return "Pensioners";
+  if (band === ALL_BAND) return "All ages";
   const label = AGE_BANDS.find((candidate) => candidate.key === band)?.label ?? band;
   return `Aged ${label.charAt(0).toLowerCase()}${label.slice(1)}`;
 };
@@ -43,22 +46,29 @@ const signed = (value) => (value < 0 ? `\u2212${pounds(-value)}` : `+${pounds(va
 export const money = (value) => (Math.round(value) < 0 ? `\u2212${pounds(-value)}` : pounds(value));
 
 /**
- * At most four intervals on the £ axis (−£200, −£100, £0, £100), so the
- * tick labels never run together in the card's narrow plot.
+ * At most four intervals on the £ axis (−£200, −£100, £0, £100); the
+ * dumbbell then labels only the ticks its measured plot has room for
+ * (chartTheme.fitTicks).
  */
 export const DUMBBELL_MAX_STEPS = 4;
 
 /**
  * Each policy as a row: a hollow ring for all ages and a filled dot for the
- * chosen group on one £ axis (zero line drawn), joined by a thin line
+ * chosen group (teal for a gain, amber for a loss, darker the larger) on one £ axis (zero line drawn), joined by a thin line
  * coloured by which is larger; the group's value and its gap to all ages at
  * the right. Hovering or focusing a row shows both values and the ratio.
  */
-export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, height, compareName = "All ages" }) {
+export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, yearLabel, height, compareName = "All ages", single = false }) {
   const { byId } = useMeasureCatalogue();
   const [active, setActive] = useState(null);
+  // The ticks whose labels fit the plot (always £0); gridlines at the same
+  const [plotRef, plotWidth] = useElementWidth();
+  const ticks = fitTicks(allTicks, domain, plotWidth, money);
   const [lo, hi] = domain;
   const pos = (value) => `${((value - lo) / (hi - lo)) * 100}%`;
+  // The group's dot by direction and size: a gain in the teal ramp, a loss
+  // in the amber, the largest darkest (magnitudeColours)
+  const dotColours = magnitudeColours(rows.map((row) => row.group));
   return (
     <div
       className="measure-dumbbell"
@@ -66,12 +76,14 @@ export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, hei
       aria-label={`Effect of each policy, ${yearLabel}`}
       style={height ? { "--md-height": `${height}px` } : undefined}
     >
-      {rows.map((row) => {
+      {rows.map((row, index) => {
         const gap = row.group - row.all;
-        const close = Math.abs(gap) < 1;
+        // With nothing to compare (all ages against all ages) the row has
+        // the dot and its value only
+        const close = single || Math.abs(gap) < 1;
         const tone = close ? "flat" : gap > 0 ? "more" : "less";
         const ratio =
-          row.all !== 0 && Math.sign(row.all) === Math.sign(row.group)
+          !single && row.all !== 0 && Math.sign(row.all) === Math.sign(row.group)
             ? Math.round((row.group / row.all - 1) * 100)
             : null;
         const ratioText =
@@ -85,17 +97,23 @@ export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, hei
         return (
           <div
             key={row.id}
-            className={`measure-dumbbell-row${active === row.id ? " is-active" : ""}`}
+            className={`measure-dumbbell-row row-band${index % 2 === 0 ? " is-banded" : ""}${active === row.id ? " is-active" : ""}`}
             role="row"
             tabIndex={0}
             onMouseEnter={() => setActive(row.id)}
             onMouseLeave={() => setActive(null)}
             onFocus={() => setActive(row.id)}
             onBlur={() => setActive(null)}
-            aria-label={`${row.name}: ${groupName} ${signedPounds(row.group)}, ${compareName.toLowerCase()} ${signedPounds(row.all)} a year`}
+            aria-label={
+              single
+                ? `${row.name}: ${groupName} ${signedPounds(row.group)} a year`
+                : `${row.name}: ${groupName} ${signedPounds(row.group)}, ${compareName.toLowerCase()} ${signedPounds(row.all)} a year`
+            }
           >
-            <span className="measure-dumbbell-name" role="rowheader" title={row.name}>
-              <MeasureRowLabel measure={byId.get(row.id) ?? { id: row.id, name: row.name }} />
+            {/* The row's one tip is its tooltip below (full name as its
+                heading): no title or name tip of its own */}
+            <span className="measure-dumbbell-name" role="rowheader">
+              <MeasureRowLabel measure={byId.get(row.id) ?? { id: row.id, name: row.name }} tip={false} />
             </span>
             <span className="measure-dumbbell-plot" role="cell" aria-hidden="true">
               {ticks.map((tick) => (
@@ -104,24 +122,28 @@ export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, hei
               {!close && (
                 <span className={`measure-dumbbell-link ${tone}`} style={{ left: pos(left), width: `calc(${pos(right)} - ${pos(left)})` }} />
               )}
-              <span className="measure-dumbbell-ring" style={{ left: pos(row.all) }} />
-              <span className="measure-dumbbell-dot" style={{ left: pos(row.group) }} />
+              {!single && <span className="measure-dumbbell-ring" style={{ left: pos(row.all) }} />}
+              <span className="measure-dumbbell-dot" style={{ left: pos(row.group), background: dotColours[index] }} />
             </span>
             <span className="measure-dumbbell-values" role="cell">
-              <strong>{money(row.group)}</strong>
-              <span className={`measure-dumbbell-gap ${tone}`}>
-                {close ? `≈ ${compareName.toLowerCase()}` : `${gap > 0 ? "▲" : "▼"} ${signed(gap)} vs ${compareName.toLowerCase()}`}
-              </span>
+              <strong className="row-band-value">{money(row.group)}</strong>
+              {!single && (
+                <span className={`measure-dumbbell-gap ${tone}`}>
+                  {close ? `≈ ${compareName.toLowerCase()}` : `${gap > 0 ? "▲" : "▼"} ${signed(gap)} vs ${compareName.toLowerCase()}`}
+                </span>
+              )}
             </span>
             {active === row.id && (
               <span className="measure-dumbbell-tip" role="tooltip">
                 <strong>
                   {row.name}, {yearLabel}
                 </strong>
+                {/* The category, which a compact row leaves out of its name */}
+                <span className="measure-dumbbell-tip-category">{measureCategory(byId.get(row.id) ?? { id: row.id, name: row.name })}</span>
                 <span>
                   {groupName}: {money(row.group)} a year
                 </span>
-                <span>{compareName}: {money(row.all)} a year</span>
+                {!single && <span>{compareName}: {money(row.all)} a year</span>}
                 {ratioText && <span>{ratioText}</span>}
               </span>
             )}
@@ -133,7 +155,7 @@ export function MeasureDumbbell({ rows, domain, ticks, groupName, yearLabel, hei
       <div className="measure-dumbbell-axis" aria-hidden="true">
         <div className="measure-dumbbell-row">
           <span className="measure-dumbbell-name" />
-          <span className="measure-dumbbell-plot">
+          <span className="measure-dumbbell-plot" ref={plotRef}>
             {ticks.map((tick) => (
               <span key={tick} className="measure-dumbbell-tick" style={{ left: pos(tick) }}>
                 {money(tick)}
@@ -177,9 +199,13 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
   // What the group is compared with: all ages, or another age band
   const [compareWith, setCompareWith] = useState(ALL_BAND);
   const compareKey = compareWith === band ? ALL_BAND : compareWith;
+  // All ages chosen as the group: nothing to compare it with
+  const single = band === compareKey;
   const compareName = compareKey === ALL_BAND ? "All ages" : AGE_BANDS.find((b) => b.key === compareKey)?.label ?? compareKey;
   const GROUPS = groupsFor(band).map((item) => (item.key === "all" ? { ...item, label: compareName } : item));
-  const description = measuresDescription(band).replace(/vs all ages\.$/, `vs ${compareName.toLowerCase()}.`);
+  const description = single
+    ? "Each policy's average change per person, all ages."
+    : measuresDescription(band).replace(/vs all ages\.$/, `vs ${compareName.toLowerCase()}.`);
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);
   const { shown, noEffect, suppressed } =
@@ -200,12 +226,11 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     legendItems: GROUPS.map((group) => ({ color: group.color, label: group.label, type: "rect" })),
   };
   const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
-  // No effect: in the card's About this chart, each with its colour. No reason
-  // per measure: a list of them by id would be a measure list of the page's
-  // own (the catalogue carries none)
+  // No effect: in the card's About this chart, each by its short name, and
+  // when it is in force where that is not this year
   const noEffectItems = noEffect.map((policy) => ({
     ...policy,
-    color: byId.get(policy.id)?.color,
+    ...noEffectRow(byId.get(policy.id) ?? policy, Number(selectedYear)),
   }));
   const csvText = () =>
     buildChartCsv({
@@ -225,6 +250,8 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
     name: `young-people-change-by-policy-${band.replace("+", "-plus")}-${selectedYear}`,
     exportOptions,
     csv: csvText,
+    // The dumbbell is drawn in HTML: its images are redrawn from the page
+    // (chartDownloads)
     published: published && shown.length > 0,
   };
 
@@ -254,6 +281,8 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
                     label: "Compare with",
                     value: compareKey,
                     onChange: setCompareWith,
+                    // All ages against all ages: the pill reads "All ages" once
+                    ...(single ? { omitAtDefault: ALL_BAND } : {}),
                     options: [
                       { value: ALL_BAND, label: "All ages" },
                       ...AGE_BANDS.filter((b) => b.key !== band).map((b) => ({ value: b.key, label: b.label })),
@@ -275,12 +304,13 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
             groupName={GROUPS[0].label.replace(/^Aged /, "")}
             compareName={compareName}
             yearLabel={yearLabel}
+            single={single}
             height={height}
           />
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
             <p>{noEffect.length === selectedPolicies.length && selectedPolicies.length > 0
-              ? `None of the selected policies changes household incomes in ${yearLabel}.`
+              ? noHouseholdChange(yearLabel)
               : `Results are unavailable for the selected policies in ${yearLabel}.`}</p>
           </div>
         )}
@@ -291,9 +321,11 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
             <span>
               <i className="dot" /> {GROUPS[0].label.replace(/^Aged /, "")}
             </span>
-            <span>
-              <i className="ring" /> {compareName}
-            </span>
+            {!single && (
+              <span>
+                <i className="ring" /> {compareName}
+              </span>
+            )}
           </span>
         )}
       </div>
@@ -304,8 +336,11 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
       {/* Notes and About this chart in the card's footer row, level across a pair */}
       {published && (
         <div className="chart-footer">
-          {notes.length > 0 && <Note>{notes.join(". ")}.</Note>}
-          <NoEffectList items={noEffectItems} title={`No effect in ${yearLabel}`} info={MEASURES_INFO} />
+          <NoEffectList
+            items={noEffectItems}
+            title={`No effect in ${yearLabel}`}
+            info={{ ...MEASURES_INFO, caveats: [...(MEASURES_INFO.caveats || []), ...notes.map((note) => `${note}.`)] }}
+          />
         </div>
       )}
     </div>

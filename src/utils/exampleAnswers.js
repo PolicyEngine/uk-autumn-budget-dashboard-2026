@@ -1,6 +1,6 @@
 /**
- * Every answer the Household impact form sends, at a fixed value, for the
- * example households (householdExamples.js and youngPersonPresets.js) to
+ * Every answer the Household calculator form sends, at a fixed value, for the
+ * example households (householdExamples.js) to
  * start from.
  *
  * The examples do not take the form's defaults (WIZARD_DEFAULTS) or any

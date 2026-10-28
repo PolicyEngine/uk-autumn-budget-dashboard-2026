@@ -5,8 +5,6 @@ import { CalendarDays } from "lucide-react";
 import PillChevron from "./PillChevron";
 import { SELECTABLE_YEARS, yearLabel } from "../utils/displayYears";
 
-// The years a reader can choose (from 2027-28; see utils/displayYears.js)
-const YEARS = SELECTABLE_YEARS;
 
 // Play shows each year for 2.25s: long enough for the charts' 850ms
 // tween (utils/chartMotion.js) to settle and the year to be read
@@ -14,11 +12,14 @@ export const PLAY_STEP_MS = 2250;
 
 /**
  * @param {Object} props
+ * @param {number[]} [props.years] - The years a reader can choose (the
+ *   selection's, utils/displayYears.js: 2026-27 only when a selected policy
+ *   has an effect in it)
  * @param {string} [props.inactiveReason] - Why the year does not change the
  *   view shown: the pill stays in place, faded, does not open; the reason
  *   is in its accessible name only (no visible tip)
  */
-function YearSlider({ selectedYear, onYearChange, inactiveReason }) {
+function YearSlider({ selectedYear, onYearChange, inactiveReason, years: YEARS = SELECTABLE_YEARS }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const intervalRef = useRef(null);
 
@@ -47,7 +48,7 @@ function YearSlider({ selectedYear, onYearChange, inactiveReason }) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isPlaying, onYearChange]);
+  }, [isPlaying, onYearChange, YEARS]);
 
   const currentIndex = YEARS.indexOf(selectedYear);
   const [open, setOpen] = useState(false);
@@ -151,10 +152,10 @@ function YearSlider({ selectedYear, onYearChange, inactiveReason }) {
         aria-pressed={isPlaying ? true : undefined}
         aria-label={
           inactiveReason
-            ? `Year, ${label(selectedYear)}: ${inactiveReason}`
+            ? `Year ${label(selectedYear)}: ${inactiveReason}`
             : isPlaying
-            ? `Playing, ${label(selectedYear)}: pause`
-            : `Year, ${label(selectedYear)}`
+            ? `Playing ${label(selectedYear)}: pause`
+            : `Year ${label(selectedYear)}`
         }
         onClick={handleToggle}
       >
@@ -163,6 +164,10 @@ function YearSlider({ selectedYear, onYearChange, inactiveReason }) {
         <CalendarDays className="band-control-icon" size={16} strokeWidth={2} aria-hidden="true" />
         <span className="band-control-text">
           <span className="band-control-label">{isPlaying ? "Playing" : "Year"}</span>
+          {/* A space read between the two (the flex row lays it out as
+              nothing), so the visible text reads "Year 2027-28" as the
+              name does (WCAG 2.5.3, label in name) */}
+          {" "}
           <span className="band-control-value year-picker-value">{label(selectedYear)}</span>
         </span>
         {isPlaying ? (
@@ -207,9 +212,6 @@ function YearSlider({ selectedYear, onYearChange, inactiveReason }) {
                 onClick={() => choose(index)}
                 onMouseEnter={() => setActiveIndex(index)}
               >
-                <span className="year-picker-check" aria-hidden="true">
-                  {index === currentIndex ? "✓" : ""}
-                </span>
                 {label(year)}
               </li>
             ))}

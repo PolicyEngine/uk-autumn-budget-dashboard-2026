@@ -28,6 +28,19 @@ describe("CHART_COLOURS", () => {
     expect(CHART_COLOURS.zeroLine).toBe(CHART_COLOURS.text);
   });
 
+  it("bands every second policy row in the neutral --pe-gray-50, fainter than the hover band and the gridlines", () => {
+    const gray50 = css.match(/--pe-gray-50:\s*(#[0-9a-fA-F]{6})/)[1].toLowerCase();
+    expect(CHART_COLOURS.rowBand.toLowerCase()).toBe(gray50);
+    const level = (hex) => [1, 3, 5].reduce((sum, i) => sum + parseInt(hex.slice(i, i + 2), 16), 0);
+    expect(level(CHART_COLOURS.rowBand)).toBeGreaterThan(level(CHART_COLOURS.hover));
+    expect(level(CHART_COLOURS.rowBand)).toBeGreaterThan(level(CHART_COLOURS.grid));
+  });
+
+  it("rounds a row band as --row-radius", async () => {
+    const { ROW_RADIUS } = await import("./chartTheme");
+    expect(css).toMatch(new RegExp(`--row-radius:\\s*${ROW_RADIUS}px;`));
+  });
+
   it("draws outturn as before and the projection as after (docs/COLOURS.md)", async () => {
     const { OUTTURN_COLOUR, PROJECTION_COLOUR } = await import("./livingStandards/baseline");
     expect(OUTTURN_COLOUR).toBe(CHART_COLOURS.before);
@@ -51,10 +64,10 @@ describe("POLICY_RAMPS", () => {
     ]),
   );
 
-  it("mirrors the --ramp-* tokens in globals.css, one for one", async () => {
-    const { POLICY_RAMPS } = await import("./chartTheme");
+  it("mirrors the --ramp-* tokens in globals.css, one for one (POLICY_RAMPS and MAGNITUDE_RAMPS)", async () => {
+    const { POLICY_RAMPS, MAGNITUDE_RAMPS } = await import("./chartTheme");
     const fromJs = Object.fromEntries(
-      Object.entries(POLICY_RAMPS).flatMap(([group, colours]) =>
+      Object.entries({ ...POLICY_RAMPS, ...MAGNITUDE_RAMPS }).flatMap(([group, colours]) =>
         colours.map((colour, index) => [`${group}-${index + 1}`, colour.toLowerCase()]),
       ),
     );
@@ -73,7 +86,7 @@ describe("POLICY_RAMPS", () => {
     }
   });
 
-  it("keeps the lightest cost step visible on a white card (a floor of 1.7:1, not 3:1: seven steps do not fit)", async () => {
+  it("keeps the lightest cost step visible on a white card (the 2025 dashboard's teal 300: a floor of 1.45:1, named in the legend and tooltip)", async () => {
     const { POLICY_RAMPS } = await import("./chartTheme");
     const linear = (channel) => {
       const c = channel / 255;
@@ -83,7 +96,60 @@ describe("POLICY_RAMPS", () => {
       const [r, g, b] = [1, 3, 5].map((i) => linear(parseInt(hex.slice(i, i + 2), 16)));
       return 1.05 / (0.2126 * r + 0.7152 * g + 0.0722 * b + 0.05);
     };
-    expect(contrast(POLICY_RAMPS.cost.at(-1))).toBeGreaterThanOrEqual(1.7);
+    expect(contrast(POLICY_RAMPS.cost.at(-1))).toBeGreaterThanOrEqual(1.45);
+  });
+});
+
+describe("MAGNITUDE_RAMPS and magnitudeColours", () => {
+  const linear = (channel) => {
+    const c = channel / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const relative = (hex) => {
+    const [r, g, b] = [1, 3, 5].map((i) => linear(parseInt(hex.slice(i, i + 2), 16)));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const contrast = (hex) => 1.05 / (relative(hex) + 0.05);
+
+  it("runs darkest to lightest, every step at least 2.5:1 on white (each row prints its value)", async () => {
+    const { MAGNITUDE_RAMPS } = await import("./chartTheme");
+    for (const ramp of Object.values(MAGNITUDE_RAMPS)) {
+      const levels = ramp.map(relative);
+      expect(levels).toEqual([...levels].sort((a, b) => a - b));
+      for (const colour of ramp) expect(contrast(colour), colour).toBeGreaterThanOrEqual(2.4);
+    }
+  });
+
+  it("colours by direction and shades by size: the largest darkest, ties alike, zero grey", async () => {
+    const { MAGNITUDE_RAMPS, magnitudeColours, CHART_COLOURS: C } = await import("./chartTheme");
+    const colours = magnitudeColours([5, -1, 2, 0, null, 2]);
+    expect(colours[0]).toBe(MAGNITUDE_RAMPS.gain[0]);
+    expect(colours[1]).toBe(MAGNITUDE_RAMPS.loss.at(-1));
+    expect(colours[2]).toBe(colours[5]);
+    expect(relative(colours[2])).toBeGreaterThan(relative(colours[0]));
+    expect(colours[3]).toBe(C.noChange);
+    expect(colours[4]).toBe(C.noChange);
+  });
+
+  it("takes the gain ramp for a fall where a fall is better", async () => {
+    const { MAGNITUDE_RAMPS, magnitudeColours } = await import("./chartTheme");
+    expect(magnitudeColours([-0.3, 0.1], { better: (v) => v < 0 })).toEqual([MAGNITUDE_RAMPS.gain[0], MAGNITUDE_RAMPS.loss.at(-1)]);
+  });
+
+  it("gives one value the darkest step", async () => {
+    const { MAGNITUDE_RAMPS, magnitudeColours } = await import("./chartTheme");
+    expect(magnitudeColours([-4])).toEqual([MAGNITUDE_RAMPS.loss[0]]);
+  });
+});
+
+describe("SERIES_COLOURS", () => {
+  it("mirrors the --series-* tokens in globals.css, one for one", async () => {
+    const { SERIES_COLOURS } = await import("./chartTheme");
+    const fromCss = [...css.matchAll(/--series-(\d+):\s*(#[0-9a-fA-F]{6})/g)].map(([, step, value]) => [
+      Number(step),
+      value.toLowerCase(),
+    ]);
+    expect(fromCss).toEqual(SERIES_COLOURS.map((colour, index) => [index + 1, colour.toLowerCase()]));
   });
 });
 
@@ -160,9 +226,13 @@ describe("symmetricAxis", () => {
 });
 
 describe("divergingAxis", () => {
-  it("is symmetric when values fall on both sides of 0", async () => {
-    const { divergingAxis, symmetricAxis } = await import("./chartTheme");
-    expect(divergingAxis([-7.7, 4.6])).toEqual(symmetricAxis([-7.7, 4.6]));
+  it("fits each side, never forced symmetric, when values fall on both sides of 0", async () => {
+    const { divergingAxis } = await import("./chartTheme");
+    expect(divergingAxis([-0.46, 0.13])).toEqual({ domain: [-0.5, 0.15], ticks: [-0.5, -0.4, -0.3, -0.2, -0.1, 0, 0.1] });
+    expect(divergingAxis([-7.7, 4.6])).toEqual({ domain: [-10, 5], ticks: [-10, -7.5, -5, -2.5, 0, 2.5, 5] });
+    // A symmetric input stays symmetric (the salary sweep's change axis)
+    const { domain } = divergingAxis([-120, 120]);
+    expect(domain[0]).toBe(-domain[1]);
   });
 
   it("runs from 0 when every value has one sign", async () => {

@@ -7,7 +7,7 @@ import { PovertyMeasuresRow, measurePovertyRows, povertyCardRows, povertyWaterfa
 import { povertyMetric } from "./SummaryMetricChart";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import { FLAT_EXTRA_COLUMNS } from "../utils/publication/csv";
-import { outlookPopulation } from "../utils/povertyPeople";
+import { outlookPopulation, roundPeople } from "../utils/povertyPeople";
 import { POLICY_DETAILS, shortNameOf } from "../utils/policyDetails";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { parseDashboardCsv } from "../utils/loadDashboard";
@@ -68,41 +68,59 @@ describe("measurePovertyRows and povertyWaterfall", () => {
   ];
 
   it("reads each measure's own change by its short name, the package from the combined run", () => {
-    const { members, measures, total } = measurePovertyRows(rows, catalogue, ALL, 2027, "poverty_change_pp");
+    const { members, measures, idle, total } = measurePovertyRows(rows, catalogue, ALL, 2027, "poverty_change_pp");
     expect(measures.map((m) => m.name)).toContain("Student loan threshold unfrozen");
     expect(total).toBe(-0.008);
-    // Employer NI changes no household's income: in More info, not a step
+    // Employer NI changes no household's income: a "No change" row, not a step
     expect(members.find((member) => member.id === "employer_ni_relief_under_25s").muted).toBe(true);
     expect(measures.some((m) => m.id === "employer_ni_relief_under_25s")).toBe(false);
+    expect(idle.find((m) => m.id === "employer_ni_relief_under_25s")).toMatchObject({ value: 0 });
   });
 
   it("steps by size in people out of poverty, closes the gap with an interaction step and ends at the package", () => {
-    const { measures, total } = measurePovertyRows(rows, catalogue, ALL, 2027, "poverty_change_pp");
+    const selected = ["state_pension_income_tax_protection", "plan_2_threshold_unfreeze", "fuel_duty_rise_deferral", "employer_ni_relief_under_25s"];
+    const { measures, idle, total } = measurePovertyRows(rows, catalogue, selected, 2027, "poverty_change_pp");
     // 70 million people: 0.001pp is 700 people
-    const { steps, zero, peopleMode } = povertyWaterfall(measures, total, 70);
+    const { steps, zero, peopleMode } = povertyWaterfall(measures, total ?? -0.008, 70, idle);
     expect(peopleMode).toBe(true);
+    // Every selected policy is a row: the steps by size, then the ones that
+    // move no one (no bar), then the package
     expect(steps.map((s) => [s.kind, s.id])).toEqual([
       ["measure", "plan_2_threshold_unfreeze"],
       ["measure", "state_pension_income_tax_protection"],
       ["interaction", "interaction"],
+      ["none", "fuel_duty_rise_deferral"],
+      ["none", "employer_ni_relief_under_25s"],
       ["total", "package"],
     ]);
+    // A "No change" row sits at 0 and never moves the steps after it
+    expect(steps.filter((s) => s.kind === "none").every((s) => s.x === 0 && s.start === 0 && s.end === 0)).toBe(true);
     // A fall in poverty steps right; each step starts where the last ended
     expect(steps[0].x).toBeCloseTo(3500);
     expect(steps[1].start).toBeCloseTo(3500);
     expect(steps[2].x).toBeCloseTo(700);
-    expect(steps[3].start).toBe(0);
-    expect(steps[3].end).toBeCloseTo(5600);
-    // Measures that move no one are one line, not rows
-    expect(zero.map((m) => m.id)).toEqual(["fuel_duty_rise_deferral"]);
+    expect(steps.at(-1).start).toBe(0);
+    expect(steps.at(-1).end).toBeCloseTo(5600);
+    expect(zero.map((m) => m.id)).toEqual(["fuel_duty_rise_deferral", "employer_ni_relief_under_25s"]);
   });
 
   it("falls back to percentage points without a population, and has no package for a part selection", () => {
-    const { measures } = measurePovertyRows(rows, catalogue, ["plan_2_threshold_unfreeze", "fuel_duty_rise_deferral"], 2027, "poverty_change_pp");
-    const { steps, peopleMode } = povertyWaterfall(measures, null, null);
+    const { measures, idle } = measurePovertyRows(rows, catalogue, ["plan_2_threshold_unfreeze", "fuel_duty_rise_deferral"], 2027, "poverty_change_pp");
+    const { steps, peopleMode } = povertyWaterfall(measures, null, null, idle);
     expect(peopleMode).toBe(false);
-    expect(steps.map((s) => s.kind)).toEqual(["measure"]);
+    expect(steps.map((s) => s.kind)).toEqual(["measure", "none"]);
     expect(steps[0].x).toBeCloseTo(0.005);
+  });
+
+  it("keeps a bar for a small non-zero change, and keeps exactly 0 as no change", () => {
+    const small = [
+      { id: "a", name: "A", value: -0.0001 },
+      { id: "b", name: "B", value: 0 },
+    ];
+    const { steps } = povertyWaterfall(small, null, 70);
+    expect(steps.map((s) => [s.id, s.kind])).toEqual([["a", "measure"], ["b", "none"]]);
+    // 0.0001pp of 70 million is 70 people: a step, not "No change"
+    expect(steps[0].x).toBeCloseTo(70);
   });
 });
 
@@ -117,7 +135,7 @@ describe("the Poverty sub-tab's measures pair", () => {
     const card = async (name) =>
       (await within(panel).findByRole("heading", { level: 3, name }, { timeout: 5000 })).closest(".charts-stack > div");
     const change = await card(/^Change in the poverty rate$/);
-    const measures = await card(/^Which measures move poverty/);
+    const measures = await card(/^Which policies move poverty/);
     expect(change.parentElement).toBe(measures.parentElement);
     // Which measures first, on top
     expect(measures.compareDocumentPosition(change) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -129,18 +147,33 @@ describe("the Poverty sub-tab's measures pair", () => {
       expect(within(c).getByRole("button", { name: /^Options:/ })).toHaveAccessibleName("Options: Absolute · Before housing costs · All people");
     }
     // The change in people, from the outlook's population
-    await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/^In 2027-28, the selected measures lift about [\d,]+ people out of absolute poverty \(before housing costs\), less than 0\.1 percentage points\.$/), { timeout: 5000 });
-    // A waterfall in people: short names, the package last; the measures
-    // that move no one are in More info, not under the chart
+    await waitFor(() => expect(change.querySelector(".chart-description")).toHaveTextContent(/^In 2027-28 the selected policies move about [\d,]+ people out of absolute poverty before housing costs, lowering the rate by about 0\.0075 percentage points\.$/), { timeout: 5000 });
+    // A waterfall in people: short names, the package last; every selected
+    // policy a row, the ones that move no one after the steps with "No
+    // change" and why, and no bar
     const rows = within(measures).getAllByRole("rowheader").map((r) => r.querySelector(".mrl-name")?.textContent ?? r.textContent);
     expect(rows[0]).toBe("Student loan threshold unfrozen");
-    expect(rows.at(-1)).toBe("All measures together");
-    expect(rows).not.toContain("Employer National Insurance relief, under-25s");
-    expect(measures.querySelector(".chart-legend .wf-none, .ls-chart-rows .wf-none")).toBeNull();
+    expect(rows.at(-1)).toBe("All policies together");
+    const shownIds = [...measures.querySelectorAll(".wf-measure, .wf-none")].length;
+    expect(shownIds).toBe(catalogue.displayable.filter((m) => ALL.includes(m.id)).length);
+    expect(rows).toContain("Employer National Insurance relief, under-25s");
+    const none = [...measures.querySelectorAll(".wf-none")];
+    expect(none.length).toBeGreaterThan(0);
+    for (const row of none) {
+      expect(row.querySelector(".wf-main")).toHaveTextContent(/^No change$/);
+      expect(row.querySelector(".wf-reason").textContent.length).toBeGreaterThan(0);
+      expect(row.querySelector(".wf-bar")).toBeNull();
+    }
+    const reasonFor = (name) => none.find((row) => row.textContent.includes(name))?.querySelector(".wf-reason")?.textContent;
+    expect(reasonFor("Business sale relief limit halved")).toBe("taxes capital gains, not incomes");
+    expect(reasonFor("Employer National Insurance relief, under-25s")).toBe("changes employers' costs; wages held fixed");
+    // The steps come first, then the no-change rows, then the total
+    const kinds = [...measures.querySelectorAll(".wf-measure, .wf-interaction, .wf-none, .wf-total")].map((r) => r.className.match(/wf-(measure|interaction|none|total)/)[1]);
+    expect(kinds.join(" ")).toMatch(/^(measure )+(interaction )?(none )+total$/);
     expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^about [\d,]+ fewer people$/);
     // A plain sentence, no "≈" or "pp"
     const headline = measures.querySelector(".chart-description");
-    expect(headline).toHaveTextContent(/^Unfreezing the student loan threshold does most, lifting about [\d,]+ people out of poverty; all the measures together lift about [\d,]+\.$/);
+    expect(headline).toHaveTextContent(/^All the policies together move about [\d,]+ people out of poverty; unfreezing the student loan threshold moves the most \(about [\d,]+\)\.$/);
     expect(headline.textContent).not.toMatch(/≈|pp/);
 
     // Chosen in one card's pill, followed by the other's
@@ -153,15 +186,15 @@ describe("the Poverty sub-tab's measures pair", () => {
     fireEvent.click(within(change).getByRole("button", { name: "About this chart" }));
     expect(change.querySelector(".chart-footer")).toHaveTextContent(/relative/i);
 
-    // About this chart: the £0 measures and that the parts need not add up
+    // About this chart: that the parts need not add up; the policies that
+    // move no one are in their rows, not listed again here
     fireEvent.click(within(measures).getByRole("button", { name: "About this chart" }));
     expect(within(measures).getByText(/need not add up to the package/)).toBeInTheDocument();
-    const none = measures.querySelector(".wf-none");
-    expect(none).toHaveTextContent(/^No effect on poverty: .*Business sale relief limit halved/);
-    expect(none).toHaveTextContent(/change prices/);
+    const about = measures.querySelector(".chart-more-info");
+    expect(about).not.toHaveTextContent(/No effect on/);
+    expect(about.querySelector("[data-zero-measure]")).toBeNull();
     // The card says each fact once: the people rule is in Methodology
-    expect(measures.querySelector(".chart-more-info")).not.toHaveTextContent(/nearest 1,000/);
-    expect(within(measures).getByText(/Employer NI relief for under-25s/)).toBeInTheDocument();
+    expect(about).not.toHaveTextContent(/nearest 1,000/);
   });
 });
 
@@ -176,7 +209,7 @@ describe("a published file with only the headline poverty column", () => {
         <PovertyMeasuresRow rows={narrow} policies={catalogue.measures} selectedPolicies={ALL} selectedYear={2027} />
       </MeasureCatalogueProvider>,
     );
-    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which measures move poverty/ }, { timeout: 5000 });
+    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which policies move poverty/ }, { timeout: 5000 });
     const card = heading.closest(".mp-card");
     // No choice to make, and the steps are the headline measure's
     expect(within(card).queryByRole("button", { name: /^Options:/ })).toBeNull();
@@ -197,11 +230,11 @@ describe("a measure whose artifact predates the poverty and inequality measures"
   const CHILD_REL_AHC = povertyMetric({ basis: "relative", housing: "ahc", group: "children" });
   const HEADLINE = povertyMetric({ basis: "absolute", housing: "bhc", group: "all" });
   const published2027 = (id) => metrics.find((row) => row.reform_id === id && row.year === "2027");
-  const NOTE = "Not every measure shown has the chosen poverty line published, so this shows the share of people in absolute poverty before housing costs.";
+  const NOTE = "Not every policy shown has the chosen poverty line published, so this shows the share of people in absolute poverty before housing costs.";
   const nameOf = (r) => r.querySelector(".mrl-name")?.textContent ?? r.textContent;
   const about = (millions) => {
     const n = Math.abs((Number(published2027(OLDER).poverty_change_pp) / 100) * millions * 1e6);
-    return n < 1000 ? "fewer than 1,000" : `about ${new Intl.NumberFormat("en-GB").format(Math.round(n / 1000) * 1000)}`;
+    return n < 1000 ? "under 1,000" : `about ${roundPeople(n)}`;
   };
 
   const renderCard = async (rows, selected) => {
@@ -211,7 +244,7 @@ describe("a measure whose artifact predates the poverty and inequality measures"
         <PovertyMeasuresRow rows={rows} policies={catalogue.measures} selectedPolicies={selected} selectedYear={2027} />
       </MeasureCatalogueProvider>,
     );
-    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which measures move poverty/ }, { timeout: 5000 });
+    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which policies move poverty/ }, { timeout: 5000 });
     const card = heading.closest(".mp-card");
     fireEvent.click(within(card).getByRole("button", { name: "About this chart" }));
     return card;
@@ -259,13 +292,13 @@ describe("a measure whose artifact predates the poverty and inequality measures"
     // not of the children chosen
     const population = outlookPopulation(JSON.parse(readFileSync(join(PUBLIC, "data", "living_standards_outlook.json"), "utf8")));
     expect(about(population(2027, "children"))).not.toBe(about(population(2027, "all")));
-    await waitFor(() => expect(card.querySelector(".chart-description")).toHaveTextContent(`lifting ${about(population(2027, "all"))} people out of poverty`), { timeout: 5000 });
+    await waitFor(() => expect(card.querySelector(".chart-description")).toHaveTextContent(`moves ${about(population(2027, "all"))} people out of poverty.`), { timeout: 5000 });
   });
 
   it("still says so of a measure whose run carries the measure as no change, with no note", async () => {
     const card = await renderCard(mixed, ["state_pension_income_tax_protection"]);
     expect(card.querySelector(".mp-fell-back")).toBeNull();
-    expect(card.querySelector(".wf-none")).toHaveTextContent(/^No effect on poverty: /);
+    expect(card.querySelector(".wf-none .wf-main")).toHaveTextContent(/^No change$/);
   });
 
   it("the chart beside it, each measure on its own, shows the headline rather than hide a run without the choice as no effect", async () => {

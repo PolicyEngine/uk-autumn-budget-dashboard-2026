@@ -1,4 +1,4 @@
-/* Household impact: where you sit in the UK income distribution */
+/* Household calculator: where you sit in the UK income distribution */
 
 .position-card.is-loading {
   min-height: 420px;
@@ -267,22 +267,6 @@
   vertical-align: middle;
 }
 
-.position-link {
-  margin: 0;
-  font-size: var(--fs-small);
-}
-
-.position-link a {
-  color: var(--c-gain-text);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.position-link a:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
 /* In a half-width card the comparison rows stack their label */
 .position-pair .position-compare-row {
   grid-template-columns: minmax(110px, 1.1fr) 1fr minmax(80px, auto);
@@ -361,16 +345,8 @@
   border-radius: 6px;
 }
 
-.position-plot-loading {
-  min-height: 300px;
-}
-
-/* The tiles' rows line up: the caption keeps three lines' room and the
-   footnote sits at the foot */
-.position-tiles .forecast-tile-sub {
-  min-height: calc(3 * 1.45em);
-}
-
+/* No forced room: each tile as tall as the tallest one's content (the
+   grid stretches them), the footnote at the foot so the three line up */
 .position-tiles .forecast-tile-meaning {
   margin-top: auto;
 }

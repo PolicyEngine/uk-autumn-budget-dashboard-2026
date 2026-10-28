@@ -1,18 +1,21 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import { signedMoney } from "../../utils/singleYear";
 import useElementWidth from "../../hooks/useElementWidth";
 import Disclosure from "../Disclosure";
-import InfoSections, { hasInfo, infoPreview } from "../InfoSections";
+import InfoSections, { hasInfo, infoPreview, nestedItem } from "../InfoSections";
 import { ABOUT_THIS_CHART } from "../ChartMoreInfo";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../FloatingTooltip";
-import { BAR_RADIUS, CHART_COLOURS } from "../../utils/chartTheme";
+import { BAR_RADIUS, CHART_COLOURS, ROW_RADIUS, magnitudeColours } from "../../utils/chartTheme";
 import TitleIcon from "../TitleIcon";
 
 const ZERO_LINE = CHART_COLOURS.text;
 const NAME_COLOUR = CHART_COLOURS.text;
+
+// The row band's inset: the name and the value sit this far in from its ends
+const BAND_PAD = 8;
 
 // Text width without a canvas: close enough for 12–13px system sans
 const approxWidth = (text, fontSize) => String(text).length * fontSize * 0.56;
@@ -23,6 +26,9 @@ const approxWidth = (text, fontSize) => String(text).length * fontSize * 0.56;
  * change at the right, and the interaction between them as a grey bar when
  * it is £1 or more. No total row: the total is the headline tile. The rows
  * are the rounded figures from policyRows, so they add up to that tile.
+ * Every second row sits on a faint band (--c-row-band), and the hovered or
+ * focused row on a stronger one (--c-hover) with its name in bold, as in
+ * the other per-policy row charts.
  *
  * @param {Object} props
  * @param {Array<{id, name, color, rounded}>} props.rows
@@ -45,17 +51,46 @@ export default function PolicyBars({ rows, noEffect, noEffectItems = [], underAP
     wrapperRef,
     `${yearLabel}:${rows.map((row) => `${row.id}=${row.rounded}`).join(",")}`,
   );
+  // The hovered or focused row, whose band is stronger
+  const [active, setActive] = useState(null);
+  const rowHandlers = (id, content) => {
+    const base = handlers(id, content);
+    return {
+      ...base,
+      onMouseEnter: (event) => {
+        setActive(id);
+        base.onMouseEnter(event);
+      },
+      onMouseLeave: () => {
+        setActive(null);
+        base.onMouseLeave();
+      },
+      onFocus: (event) => {
+        setActive(id);
+        base.onFocus(event);
+      },
+      onBlur: () => {
+        setActive(null);
+        base.onBlur();
+      },
+    };
+  };
 
   const fontSize = 13;
-  const valueRoom = Math.max(64, ...rows.map((row) => approxWidth(signedMoney(row.rounded), fontSize) + 12));
-  const rowHeight = 46;
+  const valueRoom = Math.max(64, ...rows.map((row) => approxWidth(signedMoney(row.rounded), fontSize) + 12)) + BAND_PAD;
+  const rowHeight = 50;
   const barHeight = 14;
   const top = 4;
   const height = top + rows.length * rowHeight + 4;
-  const plotLeft = 0;
+  const plotLeft = BAND_PAD;
   const plotRight = Math.max(width - valueRoom, 80);
 
   const values = rows.map((row) => row.rounded);
+  // Each policy's bar by direction and size, the largest darkest; the
+  // interaction keeps its grey
+  const policyRows = rows.filter((row) => row.id !== "interaction");
+  const shades = new Map(magnitudeColours(policyRows.map((row) => row.rounded)).map((colour, k) => [policyRows[k].id, colour]));
+  const fillOf = (row) => shades.get(row.id) ?? row.color;
   const lo = Math.min(0, ...values);
   const hi = Math.max(0, ...values);
   const span = hi - lo || 1;
@@ -111,17 +146,17 @@ export default function PolicyBars({ rows, noEffect, noEffectItems = [], underAP
             >
               {rows.map((row, index) => {
                 const y = top + index * rowHeight;
-                const barY = y + 22;
+                const barY = y + 25;
                 const x0 = Math.min(zero, x(row.rounded));
                 const w = Math.max(Math.abs(x(row.rounded) - zero), 1.5);
                 return (
                   <g
                     key={row.id}
-                    className="policy-bar has-tooltip"
+                    className={`policy-bar has-tooltip${active === row.id ? " is-active" : ""}`}
                     data-policy={row.id}
                     tabIndex={0}
                     aria-label={`${row.name}: ${signedMoney(row.rounded)} a year in ${yearLabel}`}
-                    {...handlers(
+                    {...rowHandlers(
                       row.id,
                       <TooltipRows
                         label={`${row.name}, ${yearLabel}`}
@@ -130,21 +165,30 @@ export default function PolicyBars({ rows, noEffect, noEffectItems = [], underAP
                             key: "change",
                             name: "Change in net income",
                             text: `${signedMoney(row.rounded)} a year`,
-                            color: row.color,
+                            color: fillOf(row),
                           },
                         ]}
                       />,
                     )}
                   >
-                    {/* The whole row answers the pointer, not just its bar */}
-                    <rect x={0} y={y} width={width} height={rowHeight} fill="transparent" />
-                    <text x={plotLeft} y={y + 13} fontSize={fontSize} fill={NAME_COLOUR}>
+                    {/* The row's band (every second row, and the hovered or
+                        focused one), which also answers the pointer */}
+                    <rect
+                      className="policy-bar-band"
+                      x={1}
+                      y={y + 1}
+                      width={width - 2}
+                      height={rowHeight - 2}
+                      rx={ROW_RADIUS}
+                      fill={active === row.id ? CHART_COLOURS.hover : index % 2 === 0 ? CHART_COLOURS.rowBand : "transparent"}
+                    />
+                    <text className="policy-bar-name" x={plotLeft} y={y + 16} fontSize={fontSize} fill={NAME_COLOUR}>
                       {row.name}
                     </text>
-                    <rect x={x0} y={barY} width={w} height={barHeight} rx={Math.min(BAR_RADIUS, barHeight / 2)} fill={row.color} />
+                    <rect x={x0} y={barY} width={w} height={barHeight} rx={Math.min(BAR_RADIUS, barHeight / 2)} fill={fillOf(row)} />
                     <text
                       className="policy-bar-value"
-                      x={width}
+                      x={width - BAND_PAD}
                       y={barY + barHeight / 2}
                       dy="0.35em"
                       textAnchor="end"
@@ -160,7 +204,7 @@ export default function PolicyBars({ rows, noEffect, noEffectItems = [], underAP
               })}
               {/* Zero, beside each bar only, so it never crosses a name */}
               {rows.map((row, index) => {
-                const barY = top + index * rowHeight + 22;
+                const barY = top + index * rowHeight + 25;
                 return (
                   <line
                     key={`zero-${row.id}`}
@@ -201,28 +245,24 @@ export default function PolicyBars({ rows, noEffect, noEffectItems = [], underAP
 }
 
 /**
- * A card's "About this chart" that also lists the measures that leave the
- * household (or the group) where it was, as one caveat: each on its own row
- * with its colour and, for an employer cost, why. `info` is the rest of the
- * card's About this chart (InfoSections).
+ * A card's "About this chart" that also lists the policies that leave the
+ * household (or the group) where it was, as one caveat: a lead line over
+ * one policy a bullet, with why where there is a reason (an employer
+ * cost). `info` is the rest of the card's About this chart (InfoSections).
  */
 export function NoEffectList({ items, title, info = {} }) {
-  const list = items.length > 0 && (
-    <div key="no-effect" className="no-effect">
-      <span className="no-effect-title">
-        {title} ({items.length})
-      </span>
-      <ul className="no-effect-list">
-        {items.map((item) => (
-          <li key={item.id} className="no-effect-item" data-policy={item.id}>
-            <span className="no-effect-dot" style={{ background: item.color }} aria-hidden="true" />
-            <span className="no-effect-name">{item.name}</span>
-            {item.reason && <span className="no-effect-reason">{item.reason}</span>}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+  const list =
+    items.length > 0 &&
+    nestedItem(
+      `${title}:`,
+      items.map((item) => (
+        <span key={item.id} className="no-effect-item" data-policy={item.id}>
+          {item.name}
+          {item.reason && <> — {item.reason.charAt(0).toLowerCase() + item.reason.slice(1).replace(/\.$/, "")}</>}
+        </span>
+      )),
+      "no-effect",
+    );
   const full = { ...info, caveats: [...(info.caveats || []), list] };
   if (!hasInfo(full)) return null;
   return (

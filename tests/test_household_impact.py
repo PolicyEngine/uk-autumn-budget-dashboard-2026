@@ -211,14 +211,14 @@ def test_a_modifier_that_isnt_module_level_is_refused():
     with pytest.raises(ValueError, match="module-level"):
         household_impact.modifier_name(lambda sim: sim)
     name = household_impact.modifier_name(
-        get_reform("road_fuel_vat_cut").simulation_modifier
+        get_reform("domestic_electricity_zero_vat").simulation_modifier
     )
     assert (
         name
-        == "uk_budget_data.budget_measures.road_fuel_vat_cut:road_fuel_vat_cut"
+        == "uk_budget_data.budget_measures.zero_vat_on_domestic_electricity:zero_vat_on_domestic_electricity"
     )
     assert household_impact.resolve_modifier(name) is (
-        get_reform("road_fuel_vat_cut").simulation_modifier
+        get_reform("domestic_electricity_zero_vat").simulation_modifier
     )
 
 
@@ -240,7 +240,7 @@ def test_a_single_holds_every_other_measure_at_current_law():
     sides = household_impact.measure_sides(
         [
             "threshold_freeze_2031_32",
-            "road_fuel_vat_cut",
+            "domestic_electricity_zero_vat",
             "plan_2_threshold_unfreeze",
         ]
     )
@@ -255,11 +255,13 @@ def test_a_single_holds_every_other_measure_at_current_law():
         "parameter_changes": freeze.parameter_changes,
         "modifiers": [student_loans],
     }
-    assert sides.singles["road_fuel_vat_cut"] == {
+    # Modifiers in order of measure id: the electricity measure's
+    # (domestic_...) before the Plan 2 measure's student loans
+    assert sides.singles["domestic_electricity_zero_vat"] == {
         "parameter_changes": {},
         "modifiers": [
+            "uk_budget_data.budget_measures.zero_vat_on_domestic_electricity:zero_vat_on_domestic_electricity",
             student_loans,
-            "uk_budget_data.budget_measures.road_fuel_vat_cut:road_fuel_vat_cut",
         ],
     }
 
@@ -459,7 +461,7 @@ def test_the_runs_it_asks_for(monkeypatch):
         }
 
     monkeypatch.setattr(household_impact, "run_scenario", run_scenario)
-    measures = ["threshold_freeze_2031_32", "road_fuel_vat_cut"]
+    measures = ["threshold_freeze_2031_32", "domestic_electricity_zero_vat"]
     sides = household_impact.measure_sides(measures)
 
     calculate(Answers(), measures)
@@ -563,7 +565,7 @@ def test_each_measure_matches_the_national_route(measure):
 def test_every_modelled_measure_together_matches_the_national_route(year):
     """Differential: the measures merged into one pair of sides give the
     national route's combined run, interactions included."""
-    measures = sorted([*MOVED_BY, "badr_lifetime_limit_cut"])
+    measures = sorted(MOVED_BY)
     answers = dataclasses.replace(EVERYTHING, salary_year=year)
     result = calculate(answers, measures, year)
     before, after = national_route(answers, measures, year)
@@ -587,9 +589,8 @@ def test_a_30k_single_renter_in_2028():
     """£30,000, single, renting, 2028-29:
 
     - threshold freeze to 2031-32: nothing in 2028, exactly £0.
-    - Business Asset Disposal Relief: no gains, exactly £0.
     """
-    measures = ["threshold_freeze_2031_32", "badr_lifetime_limit_cut"]
+    measures = ["threshold_freeze_2031_32"]
     result = calculate(SINGLE_RENTER, measures, 2028, include=("by_policy",))
     by_measure = changes_by_measure(result)
     for measure in measures:
@@ -860,7 +861,7 @@ def test_a_pensioner_gets_the_full_new_state_pension_not_pension_credit():
         savings_interest_income=2_000,
         dividend_income=1_000,
     )
-    result = calculate(answers, ["badr_lifetime_limit_cut"])
+    result = calculate(answers, ["threshold_freeze_2031_32"])
     full = household_impact.full_new_state_pension(YEAR)
     assert programme(result, "state_pension")["baseline"] == pytest.approx(
         full, abs=0.01
@@ -877,7 +878,7 @@ def test_a_pensioner_gets_the_full_new_state_pension_not_pension_credit():
     assert programme(result, "income_tax")["baseline"] > 0
     entered = calculate(
         Answers(**{**vars(answers), "state_pension": 9_000}),
-        ["badr_lifetime_limit_cut"],
+        ["threshold_freeze_2031_32"],
     )
     assert programme(entered, "state_pension")["baseline"] == (
         pytest.approx(9_000, abs=0.01)
@@ -1292,8 +1293,11 @@ def _rows_add_up(result):
 def test_a_private_pension_is_income_the_qa_pensioner_couple():
     """The QA's pensioner couple (70 and 68, the full new State Pension
     each) with a £10,000 private pension: £10,000 less £2,000 basic-rate
-    tax on top of their £25,907.11, as an independent policyengine-uk run
-    and the public API give: £33,907.11."""
+    tax on top of their £25,907.16, as an independent policyengine-uk
+    2.151.0 run gives: £33,907.16. (policyengine-uk 2.132.6 gave £33,907.11:
+    its expected_sdlt added the property sale rate, 0.045, to every
+    household's stamp duty as pounds. From 2.151.0 it is the household's
+    own stamp duty, nil here.)"""
     answers = household_impact.HouseholdAnswers(
         age=70,
         employment_income=0,
@@ -1308,7 +1312,7 @@ def test_a_private_pension_is_income_the_qa_pensioner_couple():
     result = household_impact.calculate_household_impact(
         answers, household_impact.measure_ids(), 2027, include=()
     )
-    assert result["net_income"]["baseline"] == pytest.approx(33_907.11)
+    assert result["net_income"]["baseline"] == pytest.approx(33_907.16)
     assert _programme(result, "private_pension_income")["baseline"] == 10_000
     assert _programme(result, "other_income")["baseline"] == 0
     _rows_add_up(result)
@@ -1664,12 +1668,10 @@ def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
 
     household_impact.clear_runs()
     monkeypatch.setattr(household_impact, "run_scenario", run_scenario)
-    # In 2029 the freeze (from 2031-32) and the employer NI relief (an
-    # employer cost) cannot move the household; Plan 2 can, for a Plan 2
-    # borrower.
+    # In 2029 the freeze (from 2031-32) cannot move the household; Plan 2
+    # can, for a Plan 2 borrower.
     measures = [
         "threshold_freeze_2031_32",
-        "employer_ni_relief_under_25s",
         "plan_2_threshold_unfreeze",
     ]
     sides = household_impact.measure_sides(measures)
@@ -1681,9 +1683,8 @@ def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
         sides.singles["plan_2_threshold_unfreeze"],
     ]
     by_id = changes_by_measure(result)
-    for id_ in ("threshold_freeze_2031_32", "employer_ni_relief_under_25s"):
-        assert by_id[id_]["change"] == 0
-        assert by_id[id_]["status"] == "not_affected"
+    assert by_id["threshold_freeze_2031_32"]["change"] == 0
+    assert by_id["threshold_freeze_2031_32"]["status"] == "not_affected"
     assert by_id["plan_2_threshold_unfreeze"]["status"] == "affected"
     household_impact.clear_runs()
 
@@ -1730,6 +1731,39 @@ def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
             True,
         ),
         ("domestic_electricity_zero_vat", {}, 2028, True),
+        ("carers_allowance_earnings_taper", {}, 2030, True),
+        (
+            "carers_allowance_earnings_taper",
+            {"employment_income": 11_000, "claims_universal_credit": True},
+            2031,
+            True,
+        ),
+        ("lha_unfreeze_2027", {"tenure": "RENT_PRIVATELY"}, 2026, True),
+        ("lha_unfreeze_2027", {"tenure": "RENT_PRIVATELY"}, 2027, False),
+        ("lha_unfreeze_2027", {"tenure": "RENT_FROM_COUNCIL"}, 2027, True),
+        ("lha_unfreeze_2027", {}, 2027, True),
+        ("employer_nics_secondary_threshold_raise", {}, 2026, True),
+        ("employer_nics_secondary_threshold_raise", {}, 2027, False),
+        (
+            "employer_nics_secondary_threshold_raise",
+            {"employment_income": 0},
+            2027,
+            True,
+        ),
+        (
+            "employer_nics_secondary_threshold_raise",
+            {
+                "employment_income": 0,
+                "has_partner": True,
+                "partner_employment_income": 20_000,
+            },
+            2027,
+            False,
+        ),
+        ("unearned_income_rates_up", {}, 2027, True),
+        ("unearned_income_rates_up", {"dividend_income": 1_000}, 2026, True),
+        ("unearned_income_rates_up", {"dividend_income": 1_000}, 2027, False),
+        ("unearned_income_rates_up", {"property_income": 500}, 2028, False),
         ("some_future_measure", {}, 2027, False),
     ],
 )
@@ -1740,40 +1774,46 @@ def test_provably_unaffected_rules(measure, answers, year, expected):
     )
 
 
+# The households the skip rules treat differently. Each (household, year)
+# is its own test, so CI can run them on separate workers: one test per year
+# ran all three households, 360-390 s each on CI, the suite's longest tests.
+SKIP_PARITY_HOUSEHOLDS = {
+    "default": dict(salary_year=2026),
+    "pensioner_petrol_no_electricity": dict(
+        salary_year=2026,
+        age=70,
+        private_pension_income=12_000,
+        petrol_spending=600,
+        electricity_spending=0,
+    ),
+    "plan_2_with_pensioner_partner_diesel": dict(
+        salary_year=2026,
+        age=24,
+        employment_income=32_000,
+        student_loan_plan="PLAN_2",
+        has_partner=True,
+        partner_age=67,
+        diesel_spending=400,
+    ),
+}
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize("year", [2027, 2029, 2031])
-def test_skips_give_the_same_answer_as_running_every_measure(year):
+@pytest.mark.parametrize("household", list(SKIP_PARITY_HOUSEHOLDS))
+def test_skips_give_the_same_answer_as_running_every_measure(household, year):
     """With the engine: the split by policy with skips is identical to the
     one running every measure, for households the rules treat differently
     (scratchpad verification ran 40 generated households x every year)."""
-    households = [
-        Answers(salary_year=2026),
-        Answers(
-            salary_year=2026,
-            age=70,
-            private_pension_income=12_000,
-            petrol_spending=600,
-            electricity_spending=0,
-        ),
-        Answers(
-            salary_year=2026,
-            age=24,
-            employment_income=32_000,
-            student_loan_plan="PLAN_2",
-            has_partner=True,
-            partner_age=67,
-            diesel_spending=400,
-        ),
-    ]
+    answers = Answers(**SKIP_PARITY_HOUSEHOLDS[household])
     measures = household_impact.measure_ids()
-    for answers in households:
-        household_impact.clear_runs()
-        full = calculate(
-            answers, measures, year, ("by_policy",), skip_unaffected=False
-        )
-        household_impact.clear_runs()
-        fast = calculate(answers, measures, year, ("by_policy",))
-        assert fast == full
+    household_impact.clear_runs()
+    full = calculate(
+        answers, measures, year, ("by_policy",), skip_unaffected=False
+    )
+    household_impact.clear_runs()
+    fast = calculate(answers, measures, year, ("by_policy",))
+    assert fast == full
     household_impact.clear_runs()
 
 

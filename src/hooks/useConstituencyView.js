@@ -3,8 +3,8 @@ import {
   useConstituencyBoundaries,
   useGeographyData,
 } from "./useGeographyData";
-import { hasReform, rowsFor } from "../utils/geography/rows";
-import { chooseReform, focusChoice } from "../utils/geography/selection";
+import { hasReform } from "../utils/geography/rows";
+import { SELECTION_NOT_PUBLISHED, chooseAreaPolicy, selectionPackageKey } from "../utils/geography/selection";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { viewState } from "../utils/geography/view";
 
@@ -21,14 +21,17 @@ import { viewState } from "../utils/geography/view";
  *
  * @returns {{view: Object, choice: Object, table: Object|null,
  *   regionalTable: Object|null, boundariesReady: boolean,
- *   features: Array|null, routing: Object, regionalHasChoice: boolean}}
+ *   features: Array|null, routing: Object, regionalHasChoice: boolean,
+ *   policyOptions: Array<{value: string, reform: string}>,
+ *   policyValue: string|null}}
  */
 export function useConstituencyView({
   selectedPolicies = [],
   policies = [],
   selectedYear,
   outcome,
-  focusId = null,
+  // The card's Policy option ("combined" or a policy id); null for the default
+  policyChoice = null,
 }) {
   const constituency = useGeographyData("constituency");
   const regional = useGeographyData("regional");
@@ -39,26 +42,27 @@ export function useConstituencyView({
     ...(constituency.table?.reforms ?? []),
     ...(regional.table?.reforms ?? []),
   ];
-  const { combinedId } = useMeasureCatalogue();
+  const { manifest } = useMeasureCatalogue();
   const policyIds = policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id);
-  // A selection with no single reform shows one measure at a time: the
-  // reader's, else the one with the largest mean change by constituency
-  const size = (id) => {
-    const values = rowsFor(constituency.table, { reform: id, year: selectedYear, outcome })
-      .map((row) => Math.abs(Number(row.value)))
-      .filter(Number.isFinite);
-    return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
-  };
-  const choice = focusChoice(
-    chooseReform({
-      selectedIds: selectedPolicies,
-      // The package is every measure the page can show, held ones excluded
-      policyIds,
-      reforms,
-      packageId: combinedId,
-    }),
-    { selectedIds: selectedPolicies, policyIds, reforms, focusId, size },
-  );
+  // The map shows a published run for the header's selection: the
+  // verified combined run of exactly the selected policies (the manifest's
+  // combined entry for the set, as the other charts take it), or one
+  // selected policy's own run, as the card's Policy option chooses
+  // (chooseAreaPolicy: combined by default when published, else the first
+  // selected policy with constituency rows). Figures are never summed. With
+  // no such run the card says so.
+  const {
+    choice,
+    options: policyOptions,
+    value: policyValue,
+  } = chooseAreaPolicy({
+    value: policyChoice,
+    selectedIds: selectedPolicies,
+    policyIds,
+    reforms,
+    packageKey: selectionPackageKey(manifest, selectedPolicies),
+    hasArea: (reform) => hasReform(constituency.table, reform),
+  });
   let view = viewState({
     data: constituency,
     choice,
@@ -70,10 +74,13 @@ export function useConstituencyView({
   // Whether the region view has this measure, so a notice can point to it.
   const regionalHasChoice =
     Boolean(choice.reform) && hasReform(regional.table, choice.reform);
-  if (view.kind === "notice" && view.missingReform && regionalHasChoice) {
+  if (view.kind === "notice" && view.missingReform && choice.kind === "package") {
+    // A combined run published by region only: the selection's notice
+    view = { ...view, reason: SELECTION_NOT_PUBLISHED };
+  } else if (view.kind === "notice" && view.missingReform && regionalHasChoice) {
     view = {
       ...view,
-      reason: "Results for this measure are published by region only.",
+      reason: "Results for this policy are published by region only.",
     };
   }
   if (view.kind === "rows" && boundaries.status !== "ready") {
@@ -95,5 +102,7 @@ export function useConstituencyView({
     boundariesReady: boundaries.status === "ready",
     routing,
     regionalHasChoice,
+    policyOptions,
+    policyValue,
   };
 }

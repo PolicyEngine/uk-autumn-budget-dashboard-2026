@@ -72,86 +72,139 @@
   }
 }
 
+/* The menu: wide enough for every short name on one line, its rows
+   scrolling inside it under a footer that stays in view */
 .policy-selector-dropdown {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(480px, calc(100vw - 32px));
+  /* Never taller than the screen below the sticky title row */
+  max-height: min(70vh, calc(100dvh - var(--nav-offset, 0px) - var(--title-row-height, 68px) - 24px));
+  overflow: hidden;
   background: var(--c-surface);
   border: 1px solid var(--pe-gray-200);
   border-radius: var(--pe-radius-md);
-  box-shadow: 0 4px 12px var(--shadow-strong);
-  width: 320px;
-  max-width: calc(100vw - 32px);
-  /* Never taller than the screen below the sticky title row */
-  max-height: min(500px, calc(100dvh - var(--title-row-height, 68px) - 24px));
-  overflow-y: auto;
+  box-shadow: 0 8px 24px var(--shadow-strong);
+}
+
+/* Only the phone's sheet has a title and a scrim */
+.policy-selector-sheet-title,
+.policy-selector-scrim {
+  display: none;
 }
 
 .policy-list {
-  padding: 6px 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
 }
 
-/* "Raises revenue", "Costs revenue": small labels over their policies */
-.policy-group + .policy-group {
-  margin-top: 4px;
-  padding-top: 4px;
+/* One row per policy on a grid: checkbox, icon and name over its
+   category, the info tip at the right; a hairline between rows */
+.policy-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 6px 0 12px;
+  border-radius: 6px;
+  transition: background-color var(--motion-fast) var(--ease-out);
+}
+
+.policy-item + .policy-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
   border-top: 1px solid var(--pe-gray-100);
 }
 
-.policy-group-label {
-  margin: 0;
-  padding: 6px 8px 2px;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  color: var(--pe-gray-500);
-}
-
-/* One compact row per policy: checkbox, colour, short name, info */
-.policy-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 36px;
-  padding: 0 4px 0 8px;
-  border-radius: 6px;
-  transition: background-color var(--motion-fast) var(--ease-out);
+/* The hairline gives way to a tinted or hovered row and the one after */
+.policy-item:hover::before,
+.policy-item:hover + .policy-item::before,
+.policy-item.is-selected::before,
+.policy-item.is-selected + .policy-item::before {
+  border-top-color: transparent;
 }
 
 .policy-item:hover {
   background: var(--pe-gray-50);
 }
 
+/* A chosen row: the ticked box and a faint teal tint */
+.policy-item.is-selected {
+  background: color-mix(in srgb, var(--pe-teal-50) 70%, transparent);
+}
+
+.policy-item.is-selected:hover {
+  background: var(--pe-teal-50);
+}
+
 .policy-item-label {
-  display: flex;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
   flex: 1;
   align-items: center;
-  gap: 10px;
+  column-gap: 14px;
   min-width: 0;
-  min-height: 36px;
+  padding: 10px 0;
   cursor: pointer;
 }
 
 .policy-item input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   margin: 0;
   accent-color: var(--pe-teal-700);
   cursor: pointer;
-  flex-shrink: 0;
 }
 
-.policy-swatch {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
+.policy-item input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--band-teal);
+  outline-offset: 2px;
 }
 
+.policy-item-label .mrl {
+  gap: 12px;
+}
+
+.policy-item-label .mrl-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.policy-item-label .mrl-text {
+  gap: 2px;
+  line-height: 1.3;
+}
+
+/* The short name on one line in the wide menu; it wraps (two lines at
+   most) only on a narrow screen */
 .policy-selector-name {
   min-width: 0;
   font-size: var(--fs-small);
   font-weight: 500;
   color: var(--pe-gray-800);
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.policy-item-label .mrl-caption {
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+}
+
+/* The info tip: a 32px target, centred on the row */
+.policy-item .info-tip {
+  width: 32px;
+  height: 32px;
 }
 
 @media (max-width: 768px) {
@@ -164,22 +217,50 @@
     margin-left: auto;
   }
 
+  /* A sheet from the foot of the screen, over a scrim */
+  .policy-selector-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: var(--scrim);
+  }
+
+  .policy-selector-scrim.popover-motion,
+  .policy-selector-dropdown.popover-motion {
+    transform-origin: bottom center;
+  }
+
   .policy-selector-dropdown {
+    position: fixed;
+    top: auto;
     left: 0;
     right: 0;
+    bottom: 0;
     width: auto;
-    max-width: none;
+    max-height: 85dvh;
+    border: 0;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 24px var(--shadow-strong);
+  }
+
+  .policy-selector-sheet-title {
+    display: block;
+    flex: none;
+    padding: 16px 20px 8px;
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--pe-gray-800);
+    border-bottom: 1px solid var(--pe-gray-200);
   }
 }
 
 /* Select all, clear and Done, kept in view at the list's foot */
 .policy-selector-actions {
-  position: sticky;
-  bottom: 0;
+  flex: none;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
   background: var(--pe-surface);
   border-top: 1px solid var(--pe-gray-200);
 }
@@ -189,10 +270,22 @@
   min-height: 40px;
   padding: 0 14px;
   font-family: inherit;
-  font-size: var(--fs-caption);
+  font-size: var(--fs-small);
   font-weight: 600;
-  border-radius: 999px;
+  border-radius: var(--pe-radius-md);
   cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out);
+}
+
+.policy-selector-action:hover:not(:disabled) {
+  border-color: var(--pe-teal-700);
+}
+
+.policy-selector-done:hover {
+  background: var(--c-highlight);
+  border-color: var(--c-highlight);
 }
 
 .policy-selector-action {

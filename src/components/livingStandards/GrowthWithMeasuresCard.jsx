@@ -5,28 +5,29 @@
 // Living standards sub-tab; its twin without the measures links here and
 // this links back.
 //
-// The run that stands for the selection is the one the household position
-// card uses (distributionRunFor): a single measure's own run, else the
-// package's, with a note when only part of the package is selected.
+// The run that stands for the selection is the one every card uses
+// (distributionRunOf): one policy's own run, else the published combined
+// run of exactly the selected policies, else the shared "not published
+// yet" notice.
 
 import { useEffect, useState } from "react";
 import ViewCard from "./ViewCard";
 import useQuintileGrowthView from "./sections/DecileGrowthSection";
 import { useOutlook } from "./useOutlook";
-import { COMBINED_REFORM_ID, distributionRunFor } from "../../utils/incomePosition";
+import { distributionRunOf, missingPackageNote } from "../../utils/incomePosition";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { GROWTH_WITH_MEASURES_FILE, changesNothing, parseGrowthWithMeasures } from "../../utils/livingStandards/growthWithMeasures";
 import { defaultRange, rangeYears, useYearRange } from "../../utils/livingStandards/yearRange";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
-export const WITH_MEASURES_TITLE = "Growth across the distribution, with the selected measures";
+export const WITH_MEASURES_TITLE = "Growth across the distribution, with the selected policies";
 export const WITH_MEASURES_ANCHOR = "growth-with-measures";
 
 // Shows: the measures' effect first (see GrowthWithMeasuresCard)
 const SHOWS = [
   { value: "difference", label: "Difference from current law" },
-  { value: "growth", label: "Growth with measures" },
+  { value: "growth", label: "Growth with policies" },
 ];
 
 // The file is read once per page
@@ -69,14 +70,9 @@ export function clearGrowthWithMeasuresCache() {
 export default function GrowthWithMeasuresCard({ selectedPolicies, twinLink, selectedYear = null }) {
   const { data } = useOutlook();
   const file = useGrowthFile();
-  // Every measure the catalogue publishes: the package's run is exact only
-  // when all of them are selected and it was run with exactly those
+  // The header's selection: one policy's run, or the combined run of exactly them
   const catalogue = useMeasureCatalogue();
-  const run = distributionRunFor(
-    selectedPolicies,
-    (catalogue?.displayable ?? []).map((measure) => measure.id),
-    catalogue?.combinedId ? (catalogue.manifest?.combined?.[catalogue.combinedId]?.measures ?? null) : null,
-  );
+  const run = distributionRunOf(selectedPolicies, catalogue);
   // The pills read their choices once, so the card waits for both files
   if (!data || file.status !== "ready") return null;
   return <LoadedCard data={data} rows={file.rows} run={run} twinLink={twinLink} selectedYear={selectedYear} />;
@@ -89,18 +85,8 @@ function LoadedCard({ data, rows, run, twinLink, selectedYear }) {
   const [range, setRange] = useYearRange(rangeYears(data), defaultRange(rangeYears(data)));
   const view = useQuintileGrowthView(data, range, setRange, { rows, reformId: run.reformId, mode: show }, selectedYear);
   const noEffect = changesNothing(rows, run.reformId);
-  const packageNote =
-    !run.exact && run.reformId === COMBINED_REFORM_ID
-      ? "With part of the package selected, this is the whole package (runs for part of it are not published)."
-      : null;
-  // The empty card has no About: the link and the run note show in its header
-  const subtitle = (
-    <>
-      {twinLink}
-      {packageNote ? ` ${packageNote}` : ""}
-    </>
-  );
-  if (noEffect || !view) {
+  const notPublished = missingPackageNote(run, rows, "Growth");
+  if (noEffect || notPublished || !view) {
     return (
       <div className="ls-card ls-card-empty" id={WITH_MEASURES_ANCHOR}>
         <div className="chart-header">
@@ -109,11 +95,11 @@ function LoadedCard({ data, rows, run, twinLink, selectedYear }) {
               <span className="title-text">{WITH_MEASURES_TITLE}</span>
             </h3>
             <div className="chart-description">
-              <p className="ls-card-subtitle">{subtitle}</p>
+              {twinLink && <p className="ls-card-subtitle">{twinLink}</p>}
               <p>
                 {noEffect
-                  ? "The selected measures do not change this income: it is household income as official income statistics (HBAI) count it, which leaves out fuel duty, VAT, employer National Insurance and capital gains, so growth is the same as without them."
-                  : "There are no results for this selection."}
+                  ? "The selected policies do not change this income: it is household income as official income statistics (HBAI) count it, which leaves out fuel duty, VAT, employer National Insurance and capital gains, so growth is the same as without them."
+                  : notPublished || "There are no results for this selection."}
               </p>
             </div>
           </div>
@@ -121,15 +107,14 @@ function LoadedCard({ data, rows, run, twinLink, selectedYear }) {
       </div>
     );
   }
-  // The link to its twin, and which run this is, sit in About this chart
+  // The link to its twin sits in About this chart
   return (
     <ViewCard
       id={WITH_MEASURES_ANCHOR}
       title={WITH_MEASURES_TITLE}
       moreNotes={[twinLink && <span key="twin">{twinLink}</span>]}
-      moreCaveats={[packageNote]}
       icon="bars"
-      name="Growth with measures view"
+      name="Growth with policies view"
       value={show}
       onChange={setShow}
       views={SHOWS.map((s) => ({ ...s, view }))}

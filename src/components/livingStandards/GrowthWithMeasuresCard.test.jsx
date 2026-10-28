@@ -4,12 +4,38 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import GrowthWithMeasuresCard, { WITH_MEASURES_TITLE, clearGrowthWithMeasuresCache } from "./GrowthWithMeasuresCard";
 import { clearOutlookCache } from "../../utils/livingStandards/outlook";
+import { MeasureCatalogueProvider } from "../../utils/measureCatalogue";
+import { selectionNotPublished } from "../../utils/geography/selection";
 
 const PUBLIC = join(__dirname, "..", "..", "..", "public", "data");
 const OUTLOOK = readFileSync(join(PUBLIC, "living_standards_outlook.json"), "utf8");
-const GROWTH = readFileSync(join(PUBLIC, "income_growth_with_measures.csv"), "utf8");
+// A frozen copy of the candidates' file (four of its runs), not public/data's:
+// Budget day's --published-package run rewrites that file with the announced
+// measures only, which would fail these tests on every publish PR (rehearsal
+// of 27 October)
+const FILE = readFileSync(join(__dirname, "..", "..", "test", "fixtures", "flat", "income_growth_with_measures.csv"), "utf8");
+let GROWTH = FILE;
+
+// The manifest's measures and its one combined run: exactly the pair
+// (#228). No run is published for the pair with road_fuel_vat_cut.
+const PAIR = ["plan_2_threshold_unfreeze", "threshold_freeze_2031_32"];
+const KEY = "combined--plan_2_threshold_unfreeze+threshold_freeze_2031_32";
+const approved = { status: "approved", outputs_sha256: "a".repeat(64) };
+const catalogue = {
+  displayable: [...PAIR, "road_fuel_vat_cut"].map((id) => ({ id })),
+  combinedId: null,
+  manifest: {
+    measures: Object.fromEntries([...PAIR, "road_fuel_vat_cut"].map((id) => [id, approved])),
+    combined: {
+      [KEY]: { status: "approved", measures: PAIR, member_outputs_sha256: Object.fromEntries(PAIR.map((id) => [id, "a".repeat(64)])) },
+    },
+  },
+};
+const notPublished = selectionNotPublished("Growth");
+const withCatalogue = ({ children }) => <MeasureCatalogueProvider catalogue={catalogue}>{children}</MeasureCatalogueProvider>;
 
 beforeEach(() => {
+  GROWTH = FILE;
   clearGrowthWithMeasuresCache();
   clearOutlookCache();
   vi.stubGlobal(
@@ -33,10 +59,10 @@ describe("Growth across the distribution, with the selected measures", () => {
     expect(await screen.findByText(WITH_MEASURES_TITLE)).toBeTruthy();
     // The header holds only the twin link; "with the measures" is in About
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
-    expect(screen.getByText(/with the measures less without them, in percentage points/)).toBeTruthy();
+    expect(screen.getByText(/with the policies less without them, in percentage points/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "twin" })).toBeTruthy();
     expect(screen.getAllByText(/Difference from current law/).length).toBeGreaterThan(0);
-    expect(document.querySelector(".chart-description").textContent).toMatch(/^The measures (barely )?change income growth/);
+    expect(document.querySelector(".chart-description").textContent).toMatch(/^The policies (barely )?change income growth/);
   });
 
   it("says so, with no chart, when the measure does not move HBAI income", async () => {
@@ -45,10 +71,35 @@ describe("Growth across the distribution, with the selected measures", () => {
     expect(screen.queryByText(/Difference from current law/)).toBeNull();
   });
 
-  it("stands two measures for the package, with a note", async () => {
-    render(<GrowthWithMeasuresCard selectedPolicies={["threshold_freeze_2031_32", "plan_2_threshold_unfreeze"]} twinLink={null} />);
+  it("several policies: the published combined run of exactly them, with no package note", async () => {
+    // The file's combined rows under the manifest's key, as generate
+    // --only income_growth --published-package writes them
+    GROWTH = FILE.replaceAll("autumn_budget_2026_combined,", `${KEY},`);
+    render(<GrowthWithMeasuresCard selectedPolicies={[...PAIR].reverse()} twinLink={null} />, { wrapper: withCatalogue });
     expect(await screen.findByText(WITH_MEASURES_TITLE)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
-    expect(screen.getByText(/this is the whole package/)).toBeTruthy();
+    expect(screen.queryByText(/whole package/)).toBeNull();
+    expect(screen.queryByText(notPublished)).toBeNull();
+  });
+
+  it("several policies with no combined run of exactly them: the not-published notice, never the whole package", async () => {
+    // The file holds the pair's run, but the selection is three policies
+    GROWTH = FILE.replaceAll("autumn_budget_2026_combined,", `${KEY},`);
+    render(<GrowthWithMeasuresCard selectedPolicies={[...PAIR, "road_fuel_vat_cut"]} twinLink={null} />, { wrapper: withCatalogue });
+    expect(await screen.findByText(notPublished)).toBeTruthy();
+    expect(screen.queryByText(/Difference from current law/)).toBeNull();
+    expect(screen.queryByText(/whole package/)).toBeNull();
+  });
+
+  it("refuses another package's rows: the registry's nine-measure run is not the selection's run (issue 228)", async () => {
+    // The file as committed: its package rows are autumn_budget_2026_combined
+    render(<GrowthWithMeasuresCard selectedPolicies={PAIR} twinLink={null} />, { wrapper: withCatalogue });
+    expect(await screen.findByText(notPublished)).toBeTruthy();
+    expect(screen.queryByText(/Difference from current law/)).toBeNull();
+  });
+
+  it("gives the same notice when no manifest is loaded", async () => {
+    render(<GrowthWithMeasuresCard selectedPolicies={PAIR} twinLink={null} />);
+    expect(await screen.findByText(notPublished)).toBeTruthy();
   });
 });

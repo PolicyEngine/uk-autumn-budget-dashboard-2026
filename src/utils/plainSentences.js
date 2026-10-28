@@ -1,43 +1,164 @@
 // One short plain sentence per chart card (Vahid, 26 October): the
-// finding with its number; definitions sit in each card's More info.
+// finding with its number; definitions sit in each card's About this chart.
 
 const gbp = (v) => `£${Math.round(Math.abs(v)).toLocaleString("en-GB")}`;
-const pounds10 = (v) => gbp(Math.round(v / 10) * 10);
 
-/** "gains £120 a year" / "loses £40 a year" / "sees no change". */
-function poundsVerb(v, unit) {
-  const r = Math.round(v / 10) * 10;
-  if (r === 0) return "sees almost no change";
-  return `${r > 0 ? "gains" : "loses"} about ${pounds10(v)}${unit}`;
+/** A decile end as the sentence rounds it: £10 steps, or 0.1% of net income. */
+function decileRounded(v, kind) {
+  return kind === "relative" ? Math.round(v * 10) / 10 : Math.round(v / 10) * 10;
 }
 
-/** "gains 0.7%" / "loses 0.2%" / "sees almost no change". */
-function percentVerb(v) {
-  const r = Math.round(v * 10) / 10;
-  if (r === 0) return "sees almost no change";
-  return `${r > 0 ? "gains" : "loses"} ${Math.abs(r).toFixed(1)}% of its net income`;
+/** "about £20" / "0.3%": the rounded size, without its sign. */
+function decileAmount(r, kind) {
+  return kind === "relative" ? `${Math.abs(r).toFixed(1)}%` : `about ${gbp(r)}`;
 }
+
+const DECILE_UNIT = { absolute: " a year", relative: " of net income" };
 
 /**
- * The decile pair's line: the lowest- and highest-income tenths, in £ a year
- * (absolute) or as a share of net income (relative); null without both ends.
+ * The decile pair's line (Vahid, 27 October: shorter): the lowest- and
+ * highest-income tenths, in £ a year (absolute) or as a share of net income
+ * (relative), with the later-year turn (laterDecileNote) as its second
+ * clause. The unit is said once, on the first figure; a verb the two ends
+ * share is said once too. Null without both ends.
+ *
+ * @param {Array<{netChange: number}>} data - Deciles, lowest first
+ * @param {"absolute"|"relative"} kind
+ * @param {string|null} [later] - laterDecileNote's clause, e.g. "in 2031-32 the highest loses"
  */
-export function decileSentence(data, kind) {
+export function decileSentence(data, kind, later = null) {
   const ends = [data?.[0]?.netChange, data?.[data.length - 1]?.netChange];
   if (ends.some((v) => v == null || !Number.isFinite(v))) return null;
-  const [low, high] = ends;
-  if (kind === "relative") {
-    return `On average the lowest-income tenth ${percentVerb(low)}, and the highest-income tenth ${percentVerb(high).replace(" of its net income", "")}.`;
+  const k = kind === "relative" ? "relative" : "absolute";
+  const [low, high] = ends.map((v) => decileRounded(v, k));
+  const unit = DECILE_UNIT[k];
+  let first;
+  if (low === 0 && high === 0) {
+    first = "The lowest- and highest-income tenths see almost no change";
+  } else if (low === high) {
+    first = `The lowest- and highest-income tenths each ${low > 0 ? "gain" : "lose"} ${decileAmount(low, k)}${unit}`;
+  } else if (low === 0) {
+    first = `The lowest-income tenth sees almost no change and the highest ${high > 0 ? "gains" : "loses"} ${decileAmount(high, k)}${unit}`;
+  } else {
+    const verb = low > 0 ? "gains" : "loses";
+    const highPart =
+      high === 0 ? "almost nothing" : `${Math.sign(high) === Math.sign(low) ? "" : `${high > 0 ? "gains" : "loses"} `}${decileAmount(high, k)}`;
+    first = `The lowest-income tenth ${verb} ${decileAmount(low, k)}${unit} and the highest ${highPart}`;
   }
-  return `On average the lowest-income tenth ${poundsVerb(low, " a year")}, and the highest-income tenth ${poundsVerb(high, "")}.`;
+  return later ? `${first}; ${later}.` : `${first}.`;
 }
 
 /** The revenue chart's line for the selected year; null without a figure. */
 export function revenueSentence(net, yearLabel) {
   if (net == null || !Number.isFinite(net)) return null;
   const bn = Math.abs(net) >= 0.95 ? `£${Math.abs(net).toFixed(1)} billion` : `£${Math.round(Math.abs(net) * 1000).toLocaleString("en-GB")} million`;
-  if (Math.abs(net) < 0.05) return `In ${yearLabel}, the selected measures roughly balance: they neither raise nor cost much revenue.`;
+  // Exactly nothing (a measure not in force that year) is not "roughly balance"
+  if (Math.abs(net) < 0.0005) return `In ${yearLabel}, the selected policies change no revenue.`;
+  if (Math.abs(net) < 0.05) return `In ${yearLabel}, the selected policies roughly balance: they neither raise nor cost much revenue.`;
   return net > 0
-    ? `In ${yearLabel}, the selected measures raise ${bn} for the government.`
-    : `In ${yearLabel}, the selected measures cost the government ${bn}.`;
+    ? `In ${yearLabel}, the selected policies raise ${bn} for the government.`
+    : `In ${yearLabel}, the selected policies cost the government ${bn}.`;
+}
+
+// "Later years differ" (ideas issue, 27 October): a short pointer when a
+// later year turns the selected year's picture round, as when a measure
+// that costs money now raises it at the end of the forecast. It names the
+// year and the direction only, never a figure: each later year's own
+// sentence says how much, when the reader moves the year.
+//
+// Only a real turn counts (second-pass review, 27 October): a gain becoming
+// a loss or the other way, or a clear effect appearing from almost no
+// change, as with the threshold freeze. The later effect must be clear,
+// so a measure ending or fading, or a creep from about £1 to £6, says
+// nothing.
+
+/** A clear decile effect: at least two of the sentence's rounding steps. */
+export const CLEAR_DECILE_CHANGE = { absolute: 20, relative: 0.2 };
+/** A clear revenue effect, £bn: twice the "roughly balance" band. */
+export const CLEAR_REVENUE_CHANGE = 0.1;
+
+const sign = (r) => (r > 0 ? "gain" : r < 0 ? "loss" : "none");
+
+/**
+ * The direction a later value turns to, or null when it is no turn: the
+ * later value must be clear, and either the opposite of the selected one
+ * or a change from almost none.
+ */
+function turnTo(wasRounded, nowRounded, clear) {
+  if (Math.abs(nowRounded) < clear - 1e-9) return null;
+  const was = sign(wasRounded);
+  const now = sign(nowRounded);
+  return was === "none" || was !== now ? now : null;
+}
+
+const TENTH_VERB = {
+  one: { gain: "gains", loss: "loses" },
+  both: { gain: "gain", loss: "lose" },
+};
+
+/**
+ * The decile pair's pointer: the first later year in which the lowest- or
+ * highest-income tenth turns from a gain to a clear loss, the other way,
+ * or from almost no change to a clear gain or loss (CLEAR_DECILE_CHANGE,
+ * on the values as the sentence rounds them). Returns the clause the
+ * decile sentence ends on, e.g. "in 2031-32 the highest loses"; with
+ * standalone, a sentence of its own that names the tenths in full, for a
+ * card with no decile line to hang it on (nothing changes this year).
+ *
+ * @param {{low: number, high: number}|null} selected - The ends in the selected year
+ * @param {Array<{yearLabel: string, low: number, high: number}>} later - Later years, in order
+ * @param {"absolute"|"relative"} kind
+ * @param {{standalone?: boolean}} [options]
+ * @returns {string|null}
+ */
+export function laterDecileNote(selected, later, kind, { standalone = false } = {}) {
+  const usable = (ends) => ends && [ends.low, ends.high].every((v) => v != null && Number.isFinite(v));
+  if (!usable(selected)) return null;
+  const clear = CLEAR_DECILE_CHANGE[kind === "relative" ? "relative" : "absolute"];
+  for (const ends of later ?? []) {
+    if (!usable(ends)) continue;
+    const low = turnTo(decileRounded(selected.low, kind), decileRounded(ends.low, kind), clear);
+    const high = turnTo(decileRounded(selected.high, kind), decileRounded(ends.high, kind), clear);
+    if (!low && !high) continue;
+    let what;
+    if (low && high && low === high) {
+      what = `both ${standalone ? "the lowest- and highest-income tenths " : ""}${TENTH_VERB.both[low]}`;
+    } else {
+      what = [
+        low && `the lowest${standalone ? "-income tenth" : ""} ${TENTH_VERB.one[low]}`,
+        high && `the highest${standalone ? "-income tenth" : ""} ${TENTH_VERB.one[high]}`,
+      ]
+        .filter(Boolean)
+        .join(" and ");
+    }
+    return standalone ? `Later years differ: in ${ends.yearLabel}, ${what}.` : `in ${ends.yearLabel} ${what}`;
+  }
+  return null;
+}
+
+const REVENUE_WORDS = {
+  gain: "raise revenue",
+  loss: "cost revenue",
+};
+
+/** Revenue within the revenue sentence's "roughly balance" band reads as none. */
+const revenueRounded = (net) => (Math.abs(net) < 0.05 ? 0 : net);
+
+/**
+ * The revenue chart's pointer: the first later year in which the selected
+ * measures turn from costing revenue to clearly raising it, the other way,
+ * or from roughly balancing to a clear effect (CLEAR_REVENUE_CHANGE).
+ *
+ * @param {number|null} net - The selected year's net effect (£bn)
+ * @param {Array<{yearLabel: string, net: number|null}>} later - Later years, in order
+ * @returns {string|null}
+ */
+export function laterRevenueNote(net, later) {
+  if (net == null || !Number.isFinite(net)) return null;
+  for (const point of later ?? []) {
+    if (point.net == null || !Number.isFinite(point.net)) continue;
+    const now = turnTo(revenueRounded(net), revenueRounded(point.net), CLEAR_REVENUE_CHANGE);
+    if (now) return `Later years differ: in ${point.yearLabel}, the selected policies ${REVENUE_WORDS[now]}.`;
+  }
+  return null;
 }

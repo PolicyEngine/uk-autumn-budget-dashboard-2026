@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 /**
  * What appears with the scroll-reveal animation: section headings and the
- * cards under them on Population impact, Household impact and Living
+ * cards under them on Population impact, Household calculator and Living
  * standards (not the band, the tabs or the intro). Methodology (#127) can
  * use <Reveal> once both are in.
  */

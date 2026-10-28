@@ -1,22 +1,12 @@
 import { useMemo, useRef, useState } from "react";
-import {
-  Bar,
-  CartesianGrid,
-  ComposedChart,
-  Customized,
-  Line,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, CartesianGrid, ComposedChart, Customized, Line, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Tooltip } from "../ViewportTooltip";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import ChartDownloadMenu from "../ChartDownloadMenu";
 import { TOOLTIP_PROPS } from "../ChartTooltip";
 import ControlBar from "../ControlBar";
-import { measureOpacity, useMeasureKey, netOpacity } from "../MeasureKey";
+import MeasureKey, { measureOpacity, useMeasureKey, netOpacity } from "../MeasureKey";
 import TitleIcon from "../TitleIcon";
 import ChartMoreInfo from "../ChartMoreInfo";
 import { BY_YEAR_METHOD } from "../methodology/anchors";
@@ -30,15 +20,17 @@ import {
   shortFiscalYearTick,
   CHART_COLOURS,
   REFERENCE_DASH,
+  PHONE_QUERY,
+  useViewportMatch,
 } from "../../utils/chartTheme";
-import { DISPLAY_YEARS } from "../../utils/displayYears";
+import { useDisplayYears } from "../../utils/displayYears";
 import { ALL_BAND } from "../../utils/ageImpact";
 import { legendMembership } from "../../utils/legendMembership";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { shortNameOf } from "../../utils/policyDetails";
 import { X_AXIS_HEIGHT, plotMargin } from "../youngPeople/chartRows";
 import { cumulate, groupMeasureSeries, niceRange, signedPounds, stepAnnotations } from "../youngPeople/youngPeopleData";
-import { EndLabels, StepLabels, TrendTooltip, YearShading, about, signed } from "../youngPeople/TrendCard";
+import { EndLabels, StepLabels, TrendTooltip, YearShading, about, signed, stackColumns, stepSentence } from "../youngPeople/TrendCard";
 import SeriesToggle from "../SeriesToggle";
 import { pensionerMeasureSeries } from "./pensionersData";
 
@@ -48,7 +40,7 @@ const FOCUS_COLOUR = CHART_COLOURS.gain;
 
 const VIEW_OPTIONS = [
   { value: "lines", label: "Lines", summary: "Lines" },
-  { value: "measures", label: "Measures, pensioners", summary: "By measure" },
+  { value: "measures", label: "Policies, pensioners", summary: "By policy" },
 ];
 const YEARS_OPTIONS = [
   { value: "each", label: "Each year", summary: "Each year" },
@@ -68,8 +60,11 @@ const LINES = [
  * measure with the net line, highlighted from the section's measure key.
  */
 export default function PensionerTrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, height }) {
+  const shownYears = useDisplayYears();
   const chartRef = useRef(null);
   const catalogue = useMeasureCatalogue();
+  // On a phone the step labels do not fit the plot: the sentence names them
+  const phone = useViewportMatch(PHONE_QUERY);
   const [view, setView] = useState("lines");
   const [years, setYears] = useState("each");
   const [hovered, setHovered] = useState(null);
@@ -79,12 +74,12 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
   const byMeasure = view === "measures";
 
   const focusSeries = useMemo(
-    () => pensionerMeasureSeries(rows, policies, selectedPolicies, DISPLAY_YEARS),
-    [rows, policies, selectedPolicies],
+    () => pensionerMeasureSeries(rows, policies, selectedPolicies, shownYears),
+    [rows, policies, selectedPolicies, shownYears],
   );
   const allSeries = useMemo(
-    () => groupMeasureSeries(rows, policies, selectedPolicies, DISPLAY_YEARS, ALL_BAND),
-    [rows, policies, selectedPolicies],
+    () => groupMeasureSeries(rows, policies, selectedPolicies, shownYears, ALL_BAND),
+    [rows, policies, selectedPolicies, shownYears],
   );
   const partKeys = [...new Set(focusSeries.flatMap((point) => point.parts.map((part) => part.key)))];
   const raw = focusSeries.map((point, i) => ({ ...point, [FOCUS]: point.net, [ALL_BAND]: allSeries[i]?.net ?? null }));
@@ -103,7 +98,7 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
     [focusSeries, catalogue, narrow],
   );
 
-  // The measures in the breakdown, for the section's key (MeasureKey)
+  // The measures in the breakdown, for the card's key (MeasureKey)
   const members = useMemo(
     () =>
       legendMembership(catalogue, selectedPolicies, (id) =>
@@ -127,8 +122,8 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
   const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values));
 
   const unpublished = focusSeries.filter((point) => point.net === null);
-  const first = fiscalYearTick(DISPLAY_YEARS[0]);
-  const last = fiscalYearTick(DISPLAY_YEARS[DISPLAY_YEARS.length - 1]);
+  const first = fiscalYearTick(shownYears[0]);
+  const last = fiscalYearTick(shownYears[shownYears.length - 1]);
   const title = `Change per pensioner by year, ${first} to ${last}`;
   const description = cumulative ? `Running total per pensioner from ${first}, £.` : "Average change per pensioner, £ a year.";
 
@@ -138,10 +133,17 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
       const shown = focusSeries.filter((point) => point.net !== null);
       if (!shown.length) return null;
       const total = shown.reduce((sum, point) => sum + point.net, 0);
+      if (Math.round(Math.abs(total)) === 0) {
+        return `Pensioners see almost no change in total from ${fiscalYearTick(shown[0].year)} to ${fiscalYearTick(shown[shown.length - 1].year)}.`;
+      }
       return `Pensioners ${total >= 0 ? "gain" : "lose"} ${about(total)} each in total from ${fiscalYearTick(shown[0].year)} to ${fiscalYearTick(shown[shown.length - 1].year)}.`;
     }
     if (!selected || selected.net === null) return null;
-    let text = `Pensioners ${selected.net >= 0 ? "gain" : "lose"} ${about(selected.net)} a year in ${fiscalYearTick(selected.year)}`;
+    // About £0 is no gain or loss: said as almost no change
+    let text =
+      Math.round(Math.abs(selected.net)) === 0
+        ? `Pensioners see almost no change in ${fiscalYearTick(selected.year)}`
+        : `Pensioners ${selected.net >= 0 ? "gain" : "lose"} ${about(selected.net)} a year in ${fiscalYearTick(selected.year)}`;
     // The biggest step after the selected year
     const later = notes.filter((note) => note.year > selected.year).sort((x, y) => Math.abs(y.step) - Math.abs(x.step))[0];
     if (later) {
@@ -152,6 +154,8 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
     }
     return `${text}.`;
   })();
+  // On a phone, the steps the plot cannot label, unless the headline names them
+  const stepsLine = phone && !cumulative ? stepSentence(notes, headline, (id) => inSentence(nameOf(id))) : null;
 
   const focusAt = (year) => {
     const point = data.find((p) => p.year === year);
@@ -172,7 +176,7 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
     csv: () =>
       buildChartCsv({
         title: `Average change in household net income per pensioner by year, ${first} to ${last}`,
-        units: `${cumulative ? "£ per person, running total from the first year" : "£ per person per year"}; each measure's own effect; pensioners are aged 66 and over in 2026-27 and 67 and over from 2027-28`,
+        units: `${cumulative ? "£ per person, running total from the first year" : "£ per person per year"}; each policy's own effect; pensioners are aged 66 and over in 2026-27 and 67 and over from 2027-28`,
         columns: [
           { key: "yearLabel", label: "Year" },
           ...partKeys.map((each) => ({ key: each, label: catalogue.bySeriesKey.get(each)?.label ?? each, decimals: 2 })),
@@ -196,6 +200,7 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
           </h3>
           <p className="chart-description">
             {headline ? <strong className="trend-headline">{headline}</strong> : null} {description}
+            {stepsLine ? ` ${stepsLine}` : null}
           </p>
         </div>
         <ChartDownloadMenu download={download} chartTitle={title} />
@@ -214,7 +219,7 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
           <ComposedChart data={data} margin={margin} stackOffset="sign" barCategoryGap="28%">
             <CartesianGrid {...GRID_PROPS} />
             <Customized
-              component={<YearShading selectedYear={Number(selectedYear)} unpublishedYears={unpublished.map((point) => point.year)} />}
+              component={<YearShading years={shownYears} selectedYear={Number(selectedYear)} unpublishedYears={unpublished.map((point) => point.year)} />}
             />
             <XAxis
               dataKey="year"
@@ -313,7 +318,19 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
             {!byMeasure && (
               <Customized component={<EndLabels data={data} lines={LINES.filter((line) => shown.includes(line.key))} hovered={hovered} onHover={setHovered} narrow={narrow} />} />
             )}
-            {!cumulative && notes.length > 0 && <Customized component={<StepLabels notes={notes} valueAt={focusAt} narrow={narrow} />} />}
+            {!cumulative && !phone && notes.length > 0 && (
+              <Customized
+                component={
+                  <StepLabels
+                    notes={notes}
+                    valueAt={focusAt}
+                    years={data.map((point) => point.year)}
+                    paths={byMeasure ? [data.map((point) => point.net ?? null)] : shown.map((each) => data.map((point) => point[each] ?? null))}
+                    columns={byMeasure ? stackColumns(data, partKeys) : []}
+                  />
+                }
+              />
+            )}
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -330,20 +347,27 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
             narrow={narrow}
           />
         )}
+        {/* By policy: the card's own measure key */}
+        {byMeasure && !key.shared && members.length > 0 && (
+          <MeasureKey members={members} netLabel="Net change" highlight={key.highlight} onHighlight={key.setHighlight} />
+        )}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={CHART_LOGO.href} alt="PolicyEngine" />
       </div>
       <div className="chart-footer">
-        {unpublished.length > 0 && (
-          <Note>Not shown: {unpublished.map((point) => fiscalYearTick(point.year)).join(", ")} (not yet published, or too few survey records).</Note>
-        )}
         <ChartMoreInfo
           members={byMeasure ? members : []}
           year={Number(selectedYear)}
           period={`in every year from ${first} to ${last}`}
-          info={{ method: BY_YEAR_METHOD }}
+          info={{
+            caveats: [
+              unpublished.length > 0 &&
+                `Not shown: ${unpublished.map((point) => fiscalYearTick(point.year)).join(", ")} (not yet published, or too few survey records).`,
+            ],
+            method: BY_YEAR_METHOD,
+          }}
         />
       </div>
     </div>

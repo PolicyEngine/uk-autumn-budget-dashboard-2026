@@ -12,11 +12,8 @@
  * the baseline curve and its position after off the reform curve, since
  * everyone else's income changes too.
  */
-// The whole package's run in the pipeline's own CSVs (reforms.py's
-// AUTUMN_BUDGET_2026_COMBINED_ID); policyConfig.js, which held it, is gone
-// on #104
-export const COMBINED_REFORM_ID = "autumn_budget_2026_combined";
 import { parseCsv } from "./publication/csv";
+import { selectionNotPublished, selectionPackageKey } from "./geography/selection";
 
 export const DISTRIBUTION_FILE = "income_distribution.csv";
 export const LOWEST_PERCENTILE = 1;
@@ -70,22 +67,47 @@ export function parseDistribution(text) {
   }));
 }
 
-const sameSet = (a, b) => a.length === b.length && a.every((id) => b.includes(id));
+/**
+ * Which published run stands for the header's selection, by the rule every
+ * card follows (utils/geography/selection.js): one policy is its own run;
+ * two or more are the published combined run of exactly those policies
+ * (selectionPackageKey, the manifest's verified combined entry for the
+ * set), or none (`reformId` null) when no such run is published. The whole
+ * package never stands in for part of it, and one policy's figures are
+ * never added to another's.
+ *
+ * The combined run's rows are read under the manifest's key
+ * (`combined--...`), never under a fixed id: the flat files' rows for any
+ * other package, such as the registry's nine-measure
+ * `autumn_budget_2026_combined`, are not taken for it (#228).
+ */
+export function distributionRunFor(selected, packageKey = null) {
+  const ids = [...new Set(selected ?? [])];
+  if (ids.length === 0) return { reformId: null, package: false };
+  if (ids.length === 1) return { reformId: ids[0], package: false };
+  return { reformId: packageKey || null, package: true };
+}
+
+/** distributionRunFor for a measure catalogue (utils/measureCatalogue.jsx). */
+export function distributionRunOf(selected, catalogue) {
+  return distributionRunFor(selected, selectionPackageKey(catalogue?.manifest ?? null, selected));
+}
+
+/** Whether a flat file's rows (each with `reformId` or `reform_id`) hold a run. */
+export function hasRun(rows, reformId) {
+  return Boolean(reformId) && Array.isArray(rows) && rows.some((row) => (row.reformId ?? row.reform_id) === reformId);
+}
 
 /**
- * Which published run stands for the selection: one measure is its own
- * run; two or more are the whole package's run, which is exact (`exact`)
- * only when every published measure is selected and the package was run
- * with exactly those (`packageIds`, the catalogue's package members, or
- * null when it publishes none), since runs for part of the package are not
- * published. After a measure is withdrawn the package's run still holds it,
- * so it is never exact then (#104 review).
+ * The card's notice in place of the selection's figures, or null: two or
+ * more policies are selected and the file has no rows for their combined
+ * run (none is published, or the file was not regenerated for it). The
+ * shared "<subject> results for this combination of policies are not
+ * published yet." notice the scatter, map and region cards show.
  */
-export function distributionRunFor(selected, allIds, packageIds = null) {
-  const ids = [...new Set(selected ?? [])];
-  if (ids.length === 1) return { reformId: ids[0], exact: true };
-  const exact = Boolean(packageIds) && allIds.length > 0 && sameSet(ids, allIds) && sameSet(packageIds, allIds);
-  return { reformId: COMBINED_REFORM_ID, exact };
+export function missingPackageNote(run, rows, subject) {
+  if (!run?.package || hasRun(rows, run.reformId)) return null;
+  return selectionNotPublished(subject);
 }
 
 /** One curve, sorted by percentile: [{ percentile, income }]. */
@@ -320,7 +342,7 @@ export function lowerCount(pos) {
 }
 
 /** What the number measures, said once and the same everywhere. */
-export const PLACE_MEANING = "have a lower household income than you, adjusted for household size";
+export const PLACE_MEANING = "live in a household with a lower income than yours, adjusted for household size";
 
 /**
  * The card's text: a one-sentence headline and three labelled chips (your

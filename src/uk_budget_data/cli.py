@@ -159,6 +159,40 @@ def parse_args(args: list[str] = None) -> argparse.Namespace:
         ),
     )
 
+    generate_parser.add_argument(
+        "--published-package",
+        action="store_true",
+        help=(
+            "With --only income_distribution or income_growth: run the "
+            "measures the publication manifest lists for the page "
+            "(provisional or approved) and its combined run of exactly "
+            "those, under the manifest's combined key, in place of every "
+            "registered measure and the registry's package. Run it after "
+            "the artifacts are staged. --combined ID... does the same for "
+            "a set given by hand."
+        ),
+    )
+    generate_parser.add_argument(
+        "--sequential",
+        action="store_true",
+        help=(
+            "With --only income_distribution or income_growth and "
+            "--backend modal: run each measure's years one after another "
+            "in one container, as before, in place of one container per "
+            "measure and year. The files are the same bytes either way. "
+            "A local run always runs a measure's years in one unit."
+        ),
+    )
+    generate_parser.add_argument(
+        "--manifest",
+        type=Path,
+        default=None,
+        help=(
+            "Publication manifest for --published-package (default: "
+            "public/data/manifest.json)"
+        ),
+    )
+
     add_generate_arguments(generate_parser)
     add_jobs_arguments(generate_parser, modal=True)
 
@@ -310,6 +344,89 @@ def print_reforms_list() -> None:
     )
 
 
+# The flat files the page reads a package's rows from, by the manifest's
+# combined key (#228): these take --combined and --published-package.
+PACKAGE_FLAT_FILES = ("income_distribution", "income_growth")
+
+
+def published_package(manifest) -> tuple[list[str], list[str]]:
+    """The measures the page shows from ``manifest`` and its package.
+
+    The measures are those with a displayable status (provisional or
+    approved), sorted by id. The package is the displayable combined run of
+    exactly those measures whose members' outputs are the ones it recorded,
+    as the page picks it (``combinedEntryFor`` in
+    ``src/utils/publication/select.js``); with one measure there is none.
+    Raises ValueError when there is nothing to show, or no such combined
+    run for two or more measures.
+    """
+    from uk_budget_data.publication.manifest import DISPLAYABLE
+
+    ids = sorted(
+        key
+        for key, entry in manifest.measures.items()
+        if entry.status in DISPLAYABLE
+    )
+    if not ids:
+        raise ValueError("the manifest lists no measure for the page")
+    if len(ids) == 1:
+        return ids, []
+    for key in sorted(manifest.combined):
+        entry = manifest.combined[key]
+        if (
+            entry.status in DISPLAYABLE
+            and sorted(entry.measures or []) == ids
+            and all(
+                (entry.member_outputs_sha256 or {}).get(member)
+                == manifest.measures[member].outputs_sha256
+                for member in ids
+            )
+        ):
+            return ids, sorted(entry.measures)
+    raise ValueError(
+        "the manifest has no displayable combined run of exactly its "
+        f"displayable measures ({', '.join(ids)}); generate and stage it "
+        "first"
+    )
+
+
+def package_selection(parsed: argparse.Namespace):
+    """``(reforms, combined_sets)`` for ``--only`` with ``--combined`` or
+    ``--published-package``, or None when neither is given. Raises
+    ValueError for unknown ids or a manifest without the package."""
+    published = getattr(parsed, "published_package", False)
+    if not published and not parsed.combined:
+        return None
+    if published and (parsed.combined or parsed.reforms):
+        raise ValueError(
+            "--published-package takes its measures from the manifest; "
+            "leave out --reforms and --combined"
+        )
+
+    def known(ids):
+        unknown = [i for i in ids if get_reform(i) is None]
+        if unknown:
+            raise ValueError(f"unknown reform ids: {', '.join(unknown)}")
+        return [get_reform(i) for i in dict.fromkeys(ids)]
+
+    if published:
+        from uk_budget_data.publication import manifest as publication_manifest
+
+        path = parsed.manifest or publication_manifest.manifest_path()
+        if not Path(path).is_file():
+            raise ValueError(f"no publication manifest at {path}")
+        manifest = publication_manifest.parse_manifest(
+            Path(path).read_bytes(), str(path)
+        )
+        ids, members = published_package(manifest)
+        return known(ids), ([known(members)] if members else [])
+    sets = [known(ids) for ids in parsed.combined]
+    for members in sets:
+        if len(members) < 2:
+            raise ValueError("a combined run needs two or more measures")
+    return (known(parsed.reforms) if parsed.reforms else None), sets
+
+
 def run_generate(parsed: argparse.Namespace) -> int:
     """Run the generate command."""
     # Handle --list-reforms
@@ -351,25 +468,97 @@ def run_generate(parsed: argparse.Namespace) -> int:
     console.print(f"Reforms: {len(reforms)}")
     console.print()
 
+    published = getattr(parsed, "published_package", False)
+    if published and parsed.only not in PACKAGE_FLAT_FILES:
+        console.print(
+            "[red]Error: --published-package goes with --only "
+            "income_distribution or --only income_growth[/red]"
+        )
+        return 1
     if parsed.only is not None:
-        if parsed.artifacts or parsed.combined or parsed.legacy_geography:
+        package_file = parsed.only in PACKAGE_FLAT_FILES
+        if (
+            parsed.artifacts
+            or parsed.legacy_geography
+            or (parsed.combined and not package_file)
+        ):
             console.print(
                 "[red]Error: --only writes one flat CSV; it does not combine "
-                "with --artifacts, --combined or --legacy-geography[/red]"
+                "with --artifacts or --legacy-geography, nor with "
+                "--combined except for income_distribution and "
+                "income_growth[/red]"
             )
             return 1
-        runner = runner_for(parsed, len(reforms), len(config.years))
+        combined_sets = None
+        if package_file:
+            try:
+                selection = package_selection(parsed)
+            except ValueError as error:
+                console.print(f"[red]Error: {error}[/red]")
+                return 1
+            if selection is not None:
+                reforms, combined_sets = selection
+                shown = [r.id for r in reforms or []] or sorted(
+                    {m.id for members in combined_sets for m in members}
+                )
+                console.print(
+                    f"Measures: {', '.join(shown)}; combined runs: "
+                    f"{len(combined_sets)}"
+                )
+            else:
+                # Refused, not warned: without them the package rows are the
+                # registry's autumn_budget_2026_combined, which the page
+                # never reads; it reads a package only under the manifest's
+                # combined key (#228).
+                console.print(
+                    f"[red]Error: --only {parsed.only} writes the package's "
+                    "rows into a public file: pass --published-package (the "
+                    "manifest's package) or --combined ID... (#228)[/red]"
+                )
+                return 1
+        # With --combined alone the measures are the sets' members
+        measures = (
+            len(reforms)
+            if reforms
+            else len(
+                {m.id for members in combined_sets or [] for m in members}
+            )
+        )
+        units = measures + len(combined_sets or [])
+        runner = runner_for(parsed, max(units, 1), len(config.years))
+        # On Modal, one container per measure and year: the
+        # years run side by side. Locally a measure's years stay in one
+        # unit: six builds per measure would be slower, not faster.
+        by_year = (
+            package_file
+            and getattr(parsed, "backend", "local") == "modal"
+            and not getattr(parsed, "sequential", False)
+        )
+        if package_file:
+            console.print(
+                "Years: one container per measure and year"
+                if by_year
+                else "Years: each measure's years in one unit"
+            )
         if parsed.only == "household_scatter":
             generate_household_scatter(
                 reforms=reforms, config=config, runner=runner
             )
         elif parsed.only == "income_distribution":
             generate_income_distribution(
-                reforms=reforms, config=config, runner=runner
+                reforms=reforms,
+                config=config,
+                runner=runner,
+                combined_sets=combined_sets,
+                by_year=by_year,
             )
         elif parsed.only == "income_growth":
             generate_income_growth(
-                reforms=reforms, config=config, runner=runner
+                reforms=reforms,
+                config=config,
+                runner=runner,
+                combined_sets=combined_sets,
+                by_year=by_year,
             )
         else:
             generate_age_impact(reforms=reforms, config=config, runner=runner)

@@ -1,17 +1,6 @@
 import { useMemo, useRef, useState } from "react";
-import {
-  Area,
-  CartesianGrid,
-  ComposedChart,
-  Customized,
-  Line,
-  ReferenceDot,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Area, CartesianGrid, ComposedChart, Customized, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Tooltip } from "../ViewportTooltip";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import {
@@ -54,9 +43,14 @@ const points = (value) => {
   return `${rounded > 0 ? "+" : rounded < 0 ? "−" : ""}${Math.abs(rounded)}pp`;
 };
 
-/** Symmetric ticks for a change in rate: ±4, 10, 20, 50 or 100 points (whole-point halves). */
+/**
+ * Symmetric ticks for a change in rate: ±4, 10, 20, 50 or 100 points
+ * (whole-point halves), with 10% headroom past the largest change so it is
+ * never drawn on the plot's edge.
+ */
 export function changeRateTicks(maxAbs) {
-  const top = [0.04, 0.1, 0.2, 0.5, 1].find((m) => m >= maxAbs) ?? Math.ceil(maxAbs);
+  const reach = maxAbs * 1.1;
+  const top = [0.04, 0.1, 0.2, 0.5, 1].find((m) => m >= reach) ?? Math.ceil(reach);
   return [-top, -top / 2, 0, top / 2, top];
 }
 
@@ -159,7 +153,10 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
     [hiddenKeys],
   );
   // The component a chip or the pointer is on (its parts come forward)
-  const [focusKey, setFocusKey] = useState(null);
+  const [ownFocusKey, setOwnFocusKey] = useState(null);
+  // Shared with the net income card when the pair has one Show control
+  const focusKey = sync?.setFocus ? sync.focus : ownFocusKey;
+  const setFocusKey = sync?.setFocus ?? setOwnFocusKey;
   const focusParts = focusKey ? (SWEEP_COMPONENTS.find((component) => component.key === focusKey)?.rate ?? [focusKey]) : null;
   const focus = focusParts?.[0] ?? null;
   const setFocus = setFocusKey;
@@ -187,7 +184,6 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
       change: row.after - row.before,
     }));
   }, [rates, breakdown, side]);
-  const yTicks = isChange ? changeRateTicks(Math.max(0, ...data.map((row) => Math.abs(row.change)))) : Y_TICKS;
   const title = `Marginal tax rate across earnings, ${yearLabel}`;
   const { domain: xDomain, ticks: xTicks } = sweepAxis(sweep.max);
   // The API's own rates at your salary, else the step that holds it
@@ -198,12 +194,17 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
       : salary !== null
         ? rateAt(rates, salary)
         : null;
+  // The change's axis covers your own change too (the API's rate at your
+  // salary can sit off the sweep's steps)
+  const yTicks = isChange
+    ? changeRateTicks(Math.max(0, ...data.map((row) => Math.abs(row.change)), yours ? Math.abs(yours.after - yours.before) : 0))
+    : Y_TICKS;
   // A State Pension household whose income tax rate rises sharply at the
-  // start of earnings after the policies: an extra allowance withdrawn £1
-  // for £1 (said in plain words in About this chart)
+  // start of earnings after the policies: an extra allowance that any other
+  // income takes away in full (said in plain words in About this chart)
   const firstNet = sweep.netParts?.after?.[0];
   const firstRates = breakdown ? { before: breakdown.before[0]?.income_tax ?? 0, after: breakdown.after[0]?.income_tax ?? 0 } : null;
-  const pensionAllowanceTaper =
+  const pensionAllowanceCliff =
     (firstNet?.state_pension ?? 0) > 0 &&
     ((own && own.afterRate - own.beforeRate >= 0.1) || (firstRates && firstRates.after - firstRates.before >= 0.05));
   const yourParts = breakdown?.own ? describeParts(breakdown.own.after) : "";
@@ -351,8 +352,9 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
                 strokeDasharray={REFERENCE_DASH}
                 label={{
                   value: yours ? `You: ${isChange ? points(yours.after - yours.before) : pct(yours[view])}` : "You",
-                  // Right of the line near £0, where the left would be cut off
-                  position: salary < xDomain[1] * 0.15 ? "insideTopLeft" : "insideTopRight",
+                  // Right of the line, as the net income card's "You", clear of
+                  // the y axis's top tick; left of it only near the right edge
+                  position: salary < xDomain[1] * 0.75 ? "insideTopLeft" : "insideTopRight",
                   fill: CHART_COLOURS.text,
                   fontSize: 13,
                   fontWeight: 600,
@@ -392,7 +394,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
         </ResponsiveContainer>
       </div>
       <div className="single-year-legend chart-legend">
-        {parts ? (
+        {parts && sync?.sharedLegend ? null : parts ? (
           // The parts and the total as chips, as the net income card's
           <SeriesToggle
             lead="Show:"
@@ -437,8 +439,8 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
             definitions: (parts ?? []).filter((part) => part.info).map((part) => ({ term: part.label, meaning: part.info })),
             method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
             caveats: [
-              pensionAllowanceTaper &&
-                "For a pensioner on the State Pension, the selected policies give an extra tax-free allowance that is withdrawn £1 for every £1 of other income. On the first few hundred pounds earned, each pound therefore makes £2 taxable: income tax takes about 40p in the pound instead of 20p, until the extra allowance is used up.",
+              pensionAllowanceCliff &&
+                "For a pensioner whose only income is the State Pension, the selected policies add a tax-free allowance. Any earnings take the whole allowance away, so income tax jumps at the first pound earned.",
               "The axis runs from 0% to 100%; a rate beyond either end is marked at the edge, and the tooltip gives it in full.",
             ],
           }}

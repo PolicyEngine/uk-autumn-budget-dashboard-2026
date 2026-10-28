@@ -1,18 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Customized,
-  LabelList,
-  ReferenceArea,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, Customized, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Tooltip } from "./ViewportTooltip";
 import { CHART_LOGO, PolicyEngineLogo } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import ChartDownloadMenu from "./ChartDownloadMenu";
@@ -35,14 +23,16 @@ import {
   axisWidth,
   chartMargin,
   fiscalYearTick,
+  fittedAxis,
   shortFiscalYearTick,
+  tickDecimals,
   useNarrowViewport,
 } from "../utils/chartTheme";
-import { DISPLAY_YEARS } from "../utils/displayYears";
+import { DISPLAY_YEARS, useDisplayYears } from "../utils/displayYears";
 import { wholeSelectionRun } from "../utils/ageImpact";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { chartMotion } from "../utils/chartMotion";
-import { formatPp, peopleInPovertyText, peopleShort } from "../utils/povertyPeople";
+import { formatPp, peopleInPovertyText, roundPeople } from "../utils/povertyPeople";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import { shortNameOf } from "../utils/policyDetails";
@@ -55,8 +45,10 @@ const VALUE_BAR_SHAPE = barShape(["value"]);
  * The summary statistics from metrics.csv that Population impact charts,
  * each by year. Neither adds up across measures, so each is read from one
  * run: the policy's own when one is selected, the combined run when all are.
- * A fall is good for households either way, so it is drawn in the gain
- * colour.
+ * A fall in poverty is drawn in the gain colour and a rise in the loss
+ * colour; the inequality measures (Gini, top shares, ratios) are drawn in
+ * one neutral colour (INEQUALITY_FILL), never gain or loss, since a change
+ * in inequality is not a gain or a loss for any one household.
  */
 export const SUMMARY_METRICS = {
   poverty: {
@@ -64,10 +56,11 @@ export const SUMMARY_METRICS = {
     title: "Change in the poverty rate",
     description:
       "Change in the share of people in absolute poverty before housing costs, each year, in percentage points.",
-    unit: "Change in poverty rate (percentage points)",
+    unit: "Change (pp)",
+    csvLabel: "Change in poverty rate (percentage points)",
     // The headline measure's people and line, for the sentence in people
     group: "all",
-    line: "absolute poverty (before housing costs)",
+    line: "absolute poverty before housing costs",
     icon: "users",
     // One formatter for every poverty card (formatPp): 3 decimals under 0.1pp
     decimals: 3,
@@ -87,7 +80,7 @@ export const SUMMARY_METRICS = {
     // gini_change is a fraction; shown as a percentage
     scale: 100,
     decimals: 2,
-    format: (value) => `${Math.abs(value).toFixed(2)}%`,
+    format: (value) => `${sigFigs(Math.abs(value), 3)}%`,
     csvUnits: "% change in the Gini coefficient (equivalised household net income)",
     file: "gini-change",
     noChange: "The selected policies do not change income inequality in any year shown.",
@@ -139,18 +132,55 @@ const POVERTY_LINES = {
 
 const HOUSING = { bhc: "before housing costs", ahc: "after housing costs" };
 
+// The inequality measures' bars: the dashboard's dark teal-slate
+// (--c-highlight), neither the gain teal nor the loss amber
+export const INEQUALITY_FILL = CHART_COLOURS.highlight;
+
 /**
- * A change's size in words, unsigned, in the metric's own unit: a rate or a
- * share in percentage points ("less than 0.1 percentage points", "0.3
- * percentage points"), a relative change (the Gini, the 90/10 ratio) in
- * per cent ("0.16%"), never one for the other.
+ * A size to `digits` significant digits, without trailing zeros or an
+ * exponent: 0.00832 → "0.0083", 0.16 → "0.16", 1.234 → "1.2" (2 digits).
  */
-const plainAmount = (metric, value) => {
+export function sigFigs(size, digits = 2) {
+  if (!Number.isFinite(size) || size === 0) return "0";
+  return Number(size.toPrecision(digits)).toLocaleString("en-GB", { maximumSignificantDigits: digits, useGrouping: false });
+}
+
+/** Whether a metric is in percentage points (a rate or share), not per cent. */
+const isPp = (metric) => /\(pp\)$/.test(metric.unit);
+
+/**
+ * A change's size in words, unsigned, in the metric's own unit, to two
+ * significant digits: a rate or a share in percentage points ("0.0083
+ * percentage points"), a relative change (the Gini, the 90/10 ratio) in per
+ * cent ("0.16%"), never one for the other. Null when it rounds to 0.00 (a
+ * change too small to name).
+ */
+export function plainAmount(metric, value) {
   const size = Math.abs(value);
-  const text = metric.format(size);
-  if (!/pp$/.test(text)) return text;
-  return size < 0.1 ? "less than 0.1 percentage points" : `${size.toFixed(1)} percentage points`;
-};
+  if (Number(size.toFixed(2)) === 0) return null;
+  return isPp(metric) ? `${sigFigs(size)} percentage points` : `${sigFigs(size)}%`;
+}
+
+/**
+ * The card's sentence for the selected year, plain and built from the data:
+ * "In 2029-30 the selected policies lower the top 10% income share by about
+ * 0.0083 percentage points." With people (poverty): "… move about 4,200
+ * people out of absolute poverty before housing costs, lowering the rate by
+ * about 0.012 percentage points." Almost no change when it rounds to 0.00.
+ */
+export function metricSentence(metric, yearText, value, count = null) {
+  const amount = plainAmount(metric, value);
+  const subject = subjectOf(metric);
+  const start = `In ${yearText} the selected policies`;
+  if (metric.line && count) {
+    const move = `${start} move ${count} ${value < 0 ? "out of" : "into"} ${metric.line}`;
+    return amount
+      ? `${move}, ${value < 0 ? "lowering" : "raising"} the rate by about ${amount}.`
+      : `${move}, almost no change in the rate.`;
+  }
+  if (!amount) return `${start} make almost no change to ${subject}.`;
+  return `${start} ${value < 0 ? "lower" : "raise"} ${subject} by about ${amount}.`;
+}
 
 /** What the sentence names: "income inequality (the Gini coefficient)", "the poverty rate". */
 const subjectOf = (metric) =>
@@ -177,15 +207,16 @@ export function povertyMetric({ basis, housing, group }) {
     noChange: `The selected policies do not change the ${children ? "child " : ""}poverty rate in any year shown.`,
     // "Change in absolute poverty (before housing costs), pp": the card's short subtitle
     short: `Change in ${basis} ${children ? "child " : ""}poverty (${housing.toUpperCase()}), pp`,
-    // What the long description adds, for More info
+    // What the long description adds, for About this chart
     detail:
       (basis === "relative" ? "The relative line is 60% of median income in the same year, so it moves with the policies' effect on the median. " : "") +
       (children ? "Children are dependent children as DWP counts them: under 16, or 16 to 19 in full-time non-advanced education." : ""),
     // "the share of children in relative poverty after housing costs"
     phrase: `the share of ${people} in ${basis === "absolute" ? "absolute poverty" : "relative poverty"} ${HOUSING[housing]}`,
-    // "absolute poverty (before housing costs)", for the card's sentence
-    line: `${basis} poverty (${HOUSING[housing]})`,
-    unit: `Change in ${children ? "child " : ""}poverty rate (percentage points)`,
+    // "absolute poverty before housing costs", for the card's sentence
+    line: `${basis} poverty ${HOUSING[housing]}`,
+    unit: "Change (pp)",
+    csvLabel: `Change in ${children ? "child " : ""}poverty rate (percentage points)`,
     group,
   };
 }
@@ -193,10 +224,12 @@ export function povertyMetric({ basis, housing, group }) {
 /**
  * A value axis fitted tight to the bars: the largest bar plus 8%, rounded
  * up to a step of 1, 2, 2.5 or 5 × 10^k (two steps a side), from zero when
- * every value has one sign and symmetric about zero when they go both ways.
+ * every value has one sign; fitted to each side (chartTheme.fittedAxis),
+ * never forced symmetric, when they go both ways.
  */
 export function tightAxis(values) {
   const finite = values.filter(Number.isFinite);
+  if (finite.some((v) => v > 0) && finite.some((v) => v < 0)) return fittedAxis(finite);
   const size = Math.max(...finite.map(Math.abs), 1e-9) * 1.08;
   const raw = size / 2;
   const power = 10 ** Math.floor(Math.log10(raw));
@@ -224,7 +257,7 @@ export const INEQUALITY_METRICS = {
     unit: "Change (pp)",
     scale: 1,
     decimals: 3,
-    format: (value) => `${Math.abs(value).toFixed(3)}pp`,
+    format: (value) => `${sigFigs(Math.abs(value), 3)}pp`,
     csvUnits: "percentage points; share of equivalised household net income received by the top 10% of people",
     file: "top-10-share-change",
   },
@@ -238,7 +271,7 @@ export const INEQUALITY_METRICS = {
     unit: "Change (pp)",
     scale: 1,
     decimals: 3,
-    format: (value) => `${Math.abs(value).toFixed(3)}pp`,
+    format: (value) => `${sigFigs(Math.abs(value), 3)}pp`,
     csvUnits: "percentage points; share of equivalised household net income received by the top 1% of people",
     file: "top-1-share-change",
   },
@@ -395,9 +428,9 @@ export function metricValue(row, key) {
  * @param {string|null} run - The run to read (wholeSelectionRun)
  * @param {{key: string, scale?: number}} metric
  */
-export function metricByYear(rows, run, metric) {
+export function metricByYear(rows, run, metric, years = DISPLAY_YEARS) {
   if (!run) return [];
-  return DISPLAY_YEARS.map((year) => {
+  return years.map((year) => {
     const row = (rows ?? []).find(
       (candidate) => candidate.reform_id === run && Number(candidate.year) === year,
     );
@@ -414,6 +447,7 @@ export function metricByYear(rows, run, metric) {
  * statistics are never added up across measures.
  */
 function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, selectedYear, population, choiceAbove = false }) {
+  const shownYears = useDisplayYears();
   const chartRef = useRef(null);
   // The whole selection's run: one measure's own, or the package's combined
   // run (the catalogue's, #104) when every displayable measure is selected
@@ -437,18 +471,18 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           name: shortNameOf(policy),
           fullName: policy.label ?? policy.name,
           colour: catalogue.byId?.get(policy.id)?.color ?? policy.color ?? CHART_COLOURS.noChange,
-          points: metricByYear(rows, policy.id, metric),
+          points: metricByYear(rows, policy.id, metric, shownYears),
         }))
     : null;
   const measureData = byMeasure
-    ? DISPLAY_YEARS.map((year, i) => ({
+    ? shownYears.map((year, i) => ({
         year,
         ...Object.fromEntries(byMeasure.map((m) => [m.id, m.points[i]?.value ?? null])),
       }))
     : null;
-  // Every year shown, from 2027-28 (FIRST_DISPLAY_YEAR)
-  const years = DISPLAY_YEARS;
-  const data = byMeasure ? [] : metricByYear(rows, run, metric).filter((point) => years.includes(point.year));
+  // Every year shown (2026-27 first while a selected policy has an effect in it)
+  const years = shownYears;
+  const data = byMeasure ? [] : metricByYear(rows, run, metric, years).filter((point) => years.includes(point.year));
   const shown = byMeasure
     ? byMeasure.flatMap((m) => m.points).filter((point) => point.value !== null)
     : data.filter((point) => point.value !== null);
@@ -456,28 +490,28 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
   // that moves no one across the poverty line): a note, not a plot of zeros
   const allZero =
     shown.length > 0 && shown.every((point) => Number(Math.abs(point.value).toFixed(metric.decimals)) === 0);
-  // Fitted to the data: from zero when every bar has one sign, symmetric
-  // when they go both ways, with round ticks (tightAxis)
+  // Fitted to the data: from zero when every bar has one sign, fitted to
+  // each side when they go both ways, with round ticks (tightAxis)
   const { domain, ticks } = tightAxis(shown.map((point) => point.value));
-  // As many decimals as the tick step needs (0.05 steps: two)
-  const step = ticks.length > 1 ? Math.round(Math.abs(ticks[1] - ticks[0]) * 1e6) / 1e6 : 1;
-  const decimals = (String(step).split(".")[1] ?? "").length;
-  const tick = (value) => (value === 0 ? "0" : value.toFixed(decimals));
+  // The fewest decimals at which every tick reads differently
+  // (tickDecimals) and exactly (0.025 steps: three, never "0.13"), each
+  // tick with its unit: "−0.02pp … 0pp", "0.1%"
+  const exact = ticks.length ? [0, 1, 2, 3, 4, 5, 6].find((d) => ticks.every((t) => Math.abs(Number(t.toFixed(d)) - t) < 1e-9)) ?? 6 : 0;
+  const decimals = Math.max(tickDecimals(ticks, 0, 6), exact);
+  const tickUnit = isPp(metric) ? "pp" : "%";
+  const tick = (value) => {
+    const text = Math.abs(value).toFixed(decimals);
+    return Number(text) === 0 ? `0${tickUnit}` : `${value < 0 ? "−" : ""}${text}${tickUnit}`;
+  };
   const selected = data.find((point) => point.year === selectedYear);
-  const selectedPeople =
-    selected?.value != null && metric.group && population
-      ? peopleShort(selected.value, population(selectedYear, metric.group), metric.group)
-      : null;
   // "about 5,000 people", "under 1,000 children": the selected year's people
   const selectedCount = (() => {
     const millions = selected?.value != null && metric.group && population ? population(selectedYear, metric.group) : null;
     if (!millions) return null;
     const people = Math.abs((selected.value / 100) * millions * 1e6);
     const who = metric.group === "children" ? "children" : "people";
-    return people < 1000 ? `under 1,000 ${who}` : `about ${(Math.round(people / 1000) * 1000).toLocaleString("en-GB")} ${who}`;
+    return people < 1000 ? `under 1,000 ${who}` : `about ${roundPeople(people)} ${who}`;
   })();
-  // Each bar's value, signed, at its end
-  const barLabel = (value) => (value == null || value === 0 ? "" : `${value > 0 ? "+" : "−"}${metric.format(value)}`);
   const height = narrow ? 300 : 340;
 
   const download = {
@@ -487,21 +521,21 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
     csv: () =>
       byMeasure
         ? buildChartCsv({
-            title: `${metric.title}, each measure on its own`,
+            title: `${metric.title}, each policy on its own`,
             units: metric.csvUnits,
             columns: [
               { key: "year", label: "Fiscal year" },
-              ...byMeasure.map((m) => ({ key: m.id, label: `${m.name}: ${metric.unit}`, decimals: 4 })),
+              ...byMeasure.map((m) => ({ key: m.id, label: `${m.name}: ${metric.csvLabel ?? metric.unit}`, decimals: 4 })),
             ],
             rows: measureData.map((point) => ({ ...point, year: fiscalYearTick(point.year) })),
-            notes: ["Each column is one measure simulated on its own; the columns are not added up."],
+            notes: ["Each column is one policy simulated on its own; the columns are not added up."],
           })
         : buildChartCsv({
             title: metric.title,
             units: metric.csvUnits,
             columns: [
               { key: "year", label: "Fiscal year" },
-              { key: "value", label: metric.unit, decimals: 4 },
+              { key: "value", label: metric.csvLabel ?? metric.unit, decimals: 4 },
             ],
             rows: shown.map((point) => ({ ...point, year: fiscalYearTick(point.year) })),
           }),
@@ -517,43 +551,25 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
             <span className="title-text">{metric.title}</span>
           </h3>
           {/* One short line: the selected year's figure; what the chart
-              measures is in More info */}
+              measures is in About this chart */}
           <p className="chart-description">
             {selected?.value != null ? (
-              <>
-                In {fiscalYearTick(selectedYear)}, the selected measures{" "}
-                {Math.round(selected.value * 1e6) === 0 ? (
-                  <>do not change {subjectOf(metric)}</>
-                ) : metric.line && selectedCount ? (
-                  // "lift about 5,000 people out of absolute poverty (before
-                  // housing costs), less than 0.1 percentage points"
-                  <>
-                    {selected.value < 0 ? "lift" : "push"} <strong>{selectedCount}</strong>{" "}
-                    {selected.value < 0 ? "out of" : "into"} {metric.line}, {plainAmount(metric, selected.value)}
-                  </>
-                ) : (
-                  <>
-                    {selected.value < 0 ? "reduce" : "increase"} {subjectOf(metric)} by{" "}
-                    <strong>{plainAmount(metric, selected.value)}</strong>
-                    {selectedPeople && <> ({selectedPeople.replace(/^≈/, "about ")})</>}
-                  </>
-                )}
-                .
-              </>
+              Math.round(selected.value * 1e6) === 0 ? (
+                `In ${fiscalYearTick(selectedYear)} the selected policies do not change ${subjectOf(metric)}.`
+              ) : (
+                metricSentence(metric, fiscalYearTick(selectedYear), selected.value, selectedCount)
+              )
             ) : byMeasure ? (
               (() => {
                 const top = yearEffects(byMeasure, selectedYear, metric.decimals).rows[0];
                 return top ? (
                   <>
-                    {fiscalYearTick(selectedYear)}, each measure on its own: biggest {top.name},{" "}
-                    <strong>
-                      {top.value > 0 ? "+" : "−"}
-                      {metric.format(top.value)}
-                    </strong>
-                    .
+                    {fiscalYearTick(selectedYear)}, each policy on its own: biggest {top.name},{" "}
+                    {top.value > 0 ? "+" : "−"}
+                    {metric.format(top.value)}.
                   </>
                 ) : (
-                  <>{metric.short ?? metric.description} Each selected measure on its own.</>
+                  <>{metric.short ?? metric.description} Each selected policy on its own.</>
                 );
               })()
             ) : (
@@ -561,7 +577,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
             )}
           </p>
         </div>
-        <ChartDownloadMenu download={download} chartTitle={metric.title} />
+        <ChartDownloadMenu download={download} chartTitle={metric.title} period={`${fiscalYearTick(years[0])} to ${fiscalYearTick(years[years.length - 1])}`} />
       </div>
       {/* The measure, as the cards beside it choose theirs: one pill per
           choice ("Inequality measure: Gini ▾") under the description, in
@@ -583,7 +599,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           <MeasureEffectsView byMeasure={byMeasure} metric={metric} selectedYear={selectedYear} view={effectView} narrow={narrow} years={years} />
         ) : !run && !byMeasure ? (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>No measure is selected that this chart covers</p>
+            <p>No policy is selected that this chart covers</p>
           </div>
         ) : shown.length === 0 ? (
           // On Budget day a run (the combined one last) can be named
@@ -636,35 +652,20 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                   />
                 }
               />
-              {/* The year chosen in the band above, shaded */}
-              <ReferenceArea x1={selectedYear} x2={selectedYear} fill={CHART_COLOURS.grid} fillOpacity={0.45} ifOverflow="hidden" />
               <Bar
                 dataKey="value"
                 name={metric.title}
-                fill={CHART_COLOURS.gain}
+                fill={metric.choices === "inequality" ? INEQUALITY_FILL : CHART_COLOURS.gain}
                 shape={VALUE_BAR_SHAPE}
                 {...chartMotion()}
               >
-                <LabelList
-                  dataKey="value"
-                  // On a phone only the chosen year's bar is labelled, so
-                  // neighbouring labels never meet
-                  content={({ x, y, width, height: h, value, index }) =>
-                    value == null || (narrow && data[index]?.year !== selectedYear) ? null : (
-                      <text
-                        x={x + width / 2}
-                        y={value < 0 ? Math.max(y, y + h) + 14 : Math.min(y, y + h) - 6}
-                        textAnchor="middle"
-                        fontSize={11}
-                        fill={CHART_COLOURS.text}
-                      >
-                        {barLabel(value)}
-                      </text>
-                    )
-                  }
-                />
                 {data.map((point) => {
-                  const colour = point.value > 0 ? CHART_COLOURS.loss : CHART_COLOURS.gain;
+                  const colour =
+                    metric.choices === "inequality"
+                      ? INEQUALITY_FILL
+                      : point.value > 0
+                        ? CHART_COLOURS.loss
+                        : CHART_COLOURS.gain;
                   return (
                     <Cell
                       key={point.year}
@@ -688,8 +689,8 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
             shows: metric.description,
             how: byMeasure
               ? [
-                  "No published run covers this selection together, so each bar is one measure simulated on its own.",
-                  "These changes can't be added up across measures.",
+                  "No published run covers this selection together, so each bar is one policy simulated on its own.",
+                  "These changes can't be added up across policies.",
                 ]
               : [],
             method: { anchor: METHOD_ANCHORS.poverty, label: "How we measure poverty and inequality" },

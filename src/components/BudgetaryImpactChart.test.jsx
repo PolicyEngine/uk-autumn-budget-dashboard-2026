@@ -44,6 +44,24 @@ describe("BudgetaryImpactChart", () => {
     ).toBeInTheDocument();
   });
 
+  it("says so in place of an empty plot when no selected measure moves revenue in any year shown", () => {
+    const zero = [YEAR, YEAR + 1].map((year) => ({
+      year,
+      ...Object.fromEntries(catalogue.displayable.map((measure) => [measure.seriesKey, 0])),
+      netImpact: 0,
+    }));
+    const { container } = render(
+      <MeasureCatalogueProvider catalogue={catalogue}><BudgetaryImpactChart data={zero} selectedYear={YEAR} selectedPolicies={[ALPHA]} /></MeasureCatalogueProvider>,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("None of the selected policies changes revenue in");
+    // Only the selection's reasons: an unselected measure is never named
+    expect(screen.getByRole("status")).not.toHaveTextContent(catalogue.byId.get(BETA).name);
+    expect(screen.queryByTestId("recharts-responsive-container")).not.toBeInTheDocument();
+    // Said once, and no empty key
+    expect(container.querySelector(".chart-description").textContent).not.toMatch(/roughly balance|no revenue/);
+    expect(container.querySelector(".revenue-key")).toBeNull();
+  });
+
   it("orders raisers before costs, each group by size (the catalogue's groups)", () => {
     const keyOf = (id) => catalogue.byId.get(id).seriesKey;
     const order = measureOrder(mockData, catalogue);
@@ -77,4 +95,61 @@ describe("BudgetaryImpactChart", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Clear the/ }));
     for (const chip of chips) expect(chip).toHaveAttribute("aria-pressed", "false");
   });
+
+  describe("2026-27", () => {
+    const ids = catalogue.displayable.map((measure) => measure.id);
+    const point = (year, value) => ({
+      year,
+      ...Object.fromEntries(catalogue.displayable.map((measure) => [measure.seriesKey, value])),
+      netImpact: value * catalogue.displayable.length,
+      unpublished: false,
+    });
+    const renderChart = (data) =>
+      render(
+        <MeasureCatalogueProvider catalogue={catalogue}>
+          <BudgetaryImpactChart data={data} selectedYear={YEAR} selectedPolicies={ids} />
+        </MeasureCatalogueProvider>,
+      );
+
+    it("is a bar like any other year when the data has it, with no note about it", () => {
+      const { container } = renderChart([point(2026, -1), point(YEAR, 2)]);
+      const ticks = [...container.querySelectorAll(".recharts-cartesian-axis-tick-value")].map((tick) => tick.textContent);
+      expect(ticks).toContain("2026-27");
+      fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
+      expect(container).not.toHaveTextContent(/before the years shown/i);
+    });
+
+    it("is absent when the data starts at 2027-28", () => {
+      const { container } = renderChart([point(YEAR, 2)]);
+      const ticks = [...container.querySelectorAll(".recharts-cartesian-axis-tick-value")].map((tick) => tick.textContent);
+      expect(ticks).not.toContain("2026-27");
+      expect(container).not.toHaveTextContent(/before the years shown/i);
+    });
+  });
+
+  it("points to a later year in which the measures turn from costing revenue to raising it", () => {
+    const point = (year, net) => ({
+      year,
+      ...Object.fromEntries(catalogue.displayable.map((measure) => [measure.seriesKey, net / 2])),
+      netImpact: net,
+    });
+    const data = [point(YEAR - 1, -8), point(YEAR, -6), point(YEAR + 1, 3)];
+    const view = render(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <BudgetaryImpactChart data={data} selectedYear={YEAR - 1} />
+      </MeasureCatalogueProvider>,
+    );
+    expect(view.container.querySelector(".later-years-note")).toHaveTextContent(
+      `Later years differ: in ${YEAR + 1}-${String(YEAR + 2).slice(-2)}, the selected policies raise revenue.`,
+    );
+    view.unmount();
+    // No turn after the year shown: no pointer
+    const last = render(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <BudgetaryImpactChart data={data} selectedYear={YEAR + 1} />
+      </MeasureCatalogueProvider>,
+    );
+    expect(last.container.querySelector(".later-years-note")).toBeNull();
+  });
 });
+

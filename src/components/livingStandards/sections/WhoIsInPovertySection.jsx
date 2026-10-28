@@ -1,16 +1,16 @@
-// Who is in poverty: one bar per group for the end year (teal, its value at
-// the bar's end), a dark tick at the start year's value, a change chip per
-// row, and a dashed line for the reference group (all people, or all
-// children), labelled once above the rows. Changes here are tenths of a
-// point, so a bar with a tick reads where two overlapping dots did not. Family type
-// and tenure come from poverty_by_group; children by number of children and
-// by lone parent or couple from child_poverty_by_family. Replaces the
-// Poverty by group and Child poverty by family cards.
-
+// Who is in poverty: a dumbbell per group, as the official costings chart
+// and Effect of each policy draw theirs (MeasureDumbbell.css): a filled dot
+// for the end year, a hollow ring for the start year, a thin neutral line
+// between them, each value beside its mark, the change chip on the right,
+// every second row on a faint band, and a dashed line for the reference
+// group (all people, or all children), labelled once above the rows. Family
+// type and tenure come from poverty_by_group; children by number of
+// children and by lone parent or couple from child_poverty_by_family.
+// Replaces the Poverty by group and Child poverty by family cards.
 import { useRef, useState } from "react";
 import LsCard from "../LsCard";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../../FloatingTooltip";
-import { CHART_COLOURS } from "../../../utils/chartTheme";
+import { CHART_COLOURS, fitTicks } from "../../../utils/chartTheme";
 import { CHART_LOGO } from "../../../utils/chartLogo";
 import { povertyMeasureOptions } from "../PovertyMeasurePills";
 import ControlBar from "../../ControlBar";
@@ -25,9 +25,11 @@ import {
   round1,
   signedChange,
 } from "../../../utils/livingStandards/outlook";
+import useElementWidth from "../../../hooks/useElementWidth";
 import { seriesCsv } from "../../../utils/livingStandards/csv";
 import { CSV_SOURCES, PeSource } from "../sources";
 import { METHOD_ANCHORS } from "../../methodology/anchors";
+import "../../youngPeople/MeasureDumbbell.css";
 
 const MEASURES = {
   relative_ahc: { label: "Relative poverty (AHC)", badge: "Relative (AHC)", noun: "relative poverty rate" },
@@ -46,7 +48,9 @@ const PLURAL = {
   couple_with_children: "Couples with children",
   single_no_children: "Single adults without children",
   couple_no_children: "Couples without children",
-  pensioner: "Pensioner families",
+  // People in the family, not the Pensioners tile's people over State
+  // Pension age: the two rates can differ
+  pensioner: "People in pensioner families",
 };
 
 /** Child breakdowns: row label and the sentence subject for each group. */
@@ -73,6 +77,46 @@ const CHILD_SPLITS = {
 // Region is in the file but not shown: it is not validated against official
 // regional figures (Northern Ireland comes out far above DfC's own figure).
 const GROUP_BREAKDOWNS = ["family_type", "tenure"];
+
+// Value labels: their width without a canvas (12px tabular figures), and
+// their distance from a mark's centre (the ring's radius and a gap)
+const labelWidth = (text) => text.length * 6.8;
+const LABEL_GAP = 11;
+// A label may run this far past the plot, into the column gap
+const LABEL_SPILL = 8;
+
+/**
+ * A row's value labels, as the official costings chart places them: each
+ * on the outer side of its mark (the lower value to the left, the higher
+ * to the right), one label where the two read the same, and both on one
+ * side ("21.4% → 21.9%") where an outer side has no room. `scale` maps a
+ * value to % of the plot; `width` is the plot's width in px (0 until
+ * measured: everything fits).
+ */
+export function valueLabels(r, scale, width) {
+  const px = (v) => (scale(v) / 100) * width;
+  const fitsRight = (v, text) => !width || px(v) + LABEL_GAP + labelWidth(text) <= width + LABEL_SPILL;
+  const fitsLeft = (v, text) => !width || px(v) - LABEL_GAP - labelWidth(text) >= -LABEL_SPILL;
+  const one = (v, text, kind) =>
+    fitsRight(v, text) ? { key: kind, at: v, side: "right", kind, text } : { key: kind, at: v, side: "left", kind, text };
+  if (r.a == null && r.z == null) return [];
+  if (r.a == null) return [one(r.z, formatPct(r.z), "to")];
+  if (r.z == null) return [one(r.a, formatPct(r.a), "from")];
+  const from = formatPct(r.a);
+  const to = formatPct(r.z);
+  if (from === to) return [one(r.z, to, "to")];
+  const rise = r.z > r.a;
+  const [lo, hi] = rise ? [r.a, r.z] : [r.z, r.a];
+  const [loText, hiText] = rise ? [from, to] : [to, from];
+  if (fitsLeft(lo, loText) && fitsRight(hi, hiText)) {
+    return [
+      { key: "lo", at: lo, side: "left", kind: rise ? "from" : "to", text: loText },
+      { key: "hi", at: hi, side: "right", kind: rise ? "to" : "from", text: hiText },
+    ];
+  }
+  const both = `${from} → ${to}`;
+  return [fitsRight(hi, both) ? { key: "both", at: hi, side: "right", kind: "both", text: both } : { key: "both", at: lo, side: "left", kind: "both", text: both }];
+}
 
 const at = (series, year) => (series || []).find((d) => d.year === year)?.rate;
 const pct = (v) => (v == null ? null : v * 100);
@@ -137,6 +181,8 @@ export default function WhoIsInPovertySection({ data }) {
   // a breakdown without it (the child ones) falls back to its first
   const [measureChoice, setMeasure] = usePovertyMeasure();
   const plotRef = useRef(null);
+  // The plot's width, so a value label that would run out of it moves
+  const [plotWidthRef, plotWidth] = useElementWidth();
   // Cleared when the breakdown or measure changes, so it never shows a row
   // that has gone
   const { tip, handlers } = useFloatingTooltip(plotRef, `${breakdownChoice}-${measureChoice}`);
@@ -155,7 +201,9 @@ export default function WhoIsInPovertySection({ data }) {
     .sort((x, y) => (y.z ?? y.a) - (x.z ?? x.a));
   const allValue = b.all(measure);
   const values = [...rows.flatMap((r) => [r.a, r.z]), allValue].filter((v) => v != null);
-  const axis = niceAxis(Math.max(...values));
+  const roundAxis = niceAxis(Math.max(...values));
+  // Only the ticks whose labels fit the measured plot (always 0%)
+  const axis = { ...roundAxis, ticks: fitTicks(roundAxis.ticks, roundAxis.domain, plotWidth, (t) => `${t}%`) };
   const [x0, x1] = axis.domain;
   const scale = (v) => ((v - x0) / (x1 - x0)) * 100;
   const pos = (v) => `${scale(v)}%`;
@@ -212,7 +260,6 @@ export default function WhoIsInPovertySection({ data }) {
       sourceText={CSV_SOURCES.pe}
       download={{
         filename: `${measure}-by-${breakdown}`,
-        image: false,
         csv: () =>
           seriesCsv({
             title: `${m.label}: ${b.label.toLowerCase()}`,
@@ -251,121 +298,128 @@ export default function WhoIsInPovertySection({ data }) {
         <div
           ref={plotRef}
           style={{ position: "relative" }}
-          className="ls-bars"
+          className="measure-dumbbell ls-poverty-dumbbell"
           role="table"
-          aria-label={`${m.label}: ${b.label.toLowerCase()}, ${fyDash(to)}, with ${fyDash(from)} marked`}
+          aria-label={`${m.label}: ${b.label.toLowerCase()}, ${fyDash(to)} beside ${fyDash(from)}`}
         >
-          {/* The reference group's value, said once above the rows */}
-          {allValue != null && (
-            <div className="ls-bar-row ls-bar-head" aria-hidden="true">
-              <span className="ls-bar-label" />
-              <span className="ls-bar-area">
-                <span className="ls-bar-all-label" style={{ left: pos(allValue) }}>
+          {/* The reference group's value, said once above the rows, and the
+              change column's heading */}
+          <div className="measure-dumbbell-row ls-dumbbell-head" aria-hidden="true">
+            <span className="measure-dumbbell-name" />
+            <span className="measure-dumbbell-plot">
+              {allValue != null && (
+                <span className="ls-dumbbell-all-label" style={{ left: pos(allValue) }}>
                   {b.reference} {formatPct(allValue)}
                 </span>
-              </span>
-              <span className="ls-bar-chip-cell" />
-            </div>
-          )}
-          {rows.map((r) => {
-            // A fall in poverty is good (teal); a rise is orange
-            const tone = flat(r.d) ? "flat" : r.d < 0 ? "good" : "bad";
-            const end = r.z ?? r.a;
-            // The value sits past the bar's end, or inside it near the axis end
-            const inside = scale(end) > 82;
+              )}
+            </span>
+            <span className="measure-dumbbell-values">Change</span>
+          </div>
+          {rows.map((r, index) => {
+            // A fall in poverty is good (the gain colour); a rise is the loss colour
+            const tone = flat(r.d) ? "" : r.d < 0 ? "more" : "less";
+            const labels = valueLabels(r, scale, plotWidth);
             return (
-              <div className="ls-bar-row" role="row" key={r.id}>
-                <span className="ls-bar-label" role="rowheader">
-                  {r.label}
+              <div
+                key={r.id}
+                className={`measure-dumbbell-row row-band has-tooltip${index % 2 === 0 ? " is-banded" : ""}`}
+                role="row"
+                tabIndex={0}
+                aria-label={`${r.label}: ${fyDash(to)} ${r.z == null ? "n/a" : formatPct(r.z)}, ${fyDash(from)} ${r.a == null ? "n/a" : formatPct(r.a)}`}
+                {...handlers(
+                  r.id,
+                  <TooltipRows
+                    label={`${r.label}: ${m.label.charAt(0).toLowerCase()}${m.label.slice(1)}`}
+                    rows={[
+                      {
+                        key: "to",
+                        name: fyDash(to),
+                        text: r.z == null ? "n/a" : formatPct(r.z),
+                        color: CHART_COLOURS.gain,
+                      },
+                      {
+                        key: "from",
+                        name: fyDash(from),
+                        text: r.a == null ? "n/a" : formatPct(r.a),
+                        color: CHART_COLOURS.before,
+                      },
+                      ...(r.d == null
+                        ? []
+                        : [
+                            {
+                              key: "change",
+                              name: "Change",
+                              text: flat(r.d) ? "No change" : signedChange(r.d, "pp"),
+                              color: flat(r.d) ? CHART_COLOURS.noChange : r.d < 0 ? CHART_COLOURS.gain : CHART_COLOURS.loss,
+                            },
+                          ]),
+                      ...(allValue == null
+                        ? []
+                        : [
+                            {
+                              key: "all",
+                              name: `${b.reference}, ${fyDash(to)}`,
+                              text: formatPct(allValue),
+                              color: CHART_COLOURS.reference,
+                            },
+                          ]),
+                    ]}
+                  />,
+                )}
+              >
+                <span className="measure-dumbbell-name" role="rowheader">
+                  <span className="measure-dumbbell-label">{r.label}</span>
                 </span>
-                <span
-                  className="ls-bar-area has-tooltip"
-                  role="cell"
-                  tabIndex={0}
-                  aria-label={`${fyDash(to)} ${r.z == null ? "n/a" : formatPct(r.z)}, ${fyDash(from)} ${r.a == null ? "n/a" : formatPct(r.a)}`}
-                  {...handlers(
-                    r.id,
-                    <TooltipRows
-                      label={`${r.label}: ${m.label.charAt(0).toLowerCase()}${m.label.slice(1)}`}
-                      rows={[
-                        {
-                          key: "to",
-                          name: fyDash(to),
-                          text: r.z == null ? "n/a" : formatPct(r.z),
-                          color: CHART_COLOURS.after,
-                        },
-                        {
-                          key: "from",
-                          name: fyDash(from),
-                          text: r.a == null ? "n/a" : formatPct(r.a),
-                          color: CHART_COLOURS.before,
-                        },
-                        ...(r.d == null
-                          ? []
-                          : [
-                              {
-                                key: "change",
-                                name: "Change",
-                                text: flat(r.d) ? "No change" : signedChange(r.d, "pp"),
-                                color: flat(r.d)
-                                  ? CHART_COLOURS.noChange
-                                  : r.d < 0
-                                    ? CHART_COLOURS.gain
-                                    : CHART_COLOURS.loss,
-                              },
-                            ]),
-                        ...(allValue == null
-                          ? []
-                          : [
-                              {
-                                key: "all",
-                                name: `${b.reference}, ${fyDash(to)}`,
-                                text: formatPct(allValue),
-                                color: CHART_COLOURS.reference,
-                              },
-                            ]),
-                      ]}
-                    />,
-                  )}
-                >
+                <span className="measure-dumbbell-plot" role="cell">
                   {axis.ticks.map((t) => (
-                    <span key={t} className="ls-bar-grid" style={{ left: pos(t) }} />
+                    <span key={t} className={`measure-dumbbell-grid${t === 0 ? " is-zero" : ""}`} style={{ left: pos(t) }} />
                   ))}
-                  {end != null && (
-                    <span className="ls-bar-fill" style={{ width: pos(end) }}>
-                      <span className={`ls-bar-value ${inside ? "inside" : ""}`}>{formatPct(end)}</span>
-                    </span>
+                  {allValue != null && <span className="ls-dumbbell-all" style={{ left: pos(allValue) }} />}
+                  {r.a != null && r.z != null && !flat(r.d) && (
+                    <span
+                      className="measure-dumbbell-link"
+                      style={{ left: pos(Math.min(r.a, r.z)), width: `${scale(Math.max(r.a, r.z)) - scale(Math.min(r.a, r.z))}%` }}
+                    />
                   )}
-                  {allValue != null && <span className="ls-bar-all" style={{ left: pos(allValue) }} />}
-                  {r.a != null && r.z != null && <span className="ls-bar-start" style={{ left: pos(r.a) }} />}
+                  {r.a != null && <span className="measure-dumbbell-ring" style={{ left: pos(r.a) }} />}
+                  {r.z != null && <span className="measure-dumbbell-dot" style={{ left: pos(r.z) }} />}
+                  {labels.map((l) => (
+                    <span key={l.key} className={`ls-dumbbell-value ${l.side} ${l.kind}`} style={{ left: pos(l.at) }}>
+                      {l.text}
+                    </span>
+                  ))}
                 </span>
-                <span className="ls-bar-chip-cell" role="cell">
-                  {r.d != null && <span className={`dot-chip ${tone}`}>{flat(r.d) ? "no change" : signedChange(r.d, "pp")}</span>}
+                <span className="measure-dumbbell-values" role="cell">
+                  {r.d != null && <span className={`measure-dumbbell-gap ${tone}`}>{flat(r.d) ? "no change" : signedChange(r.d, "pp")}</span>}
                 </span>
               </div>
             );
           })}
-          <div className="ls-bar-row ls-bar-axis" aria-hidden="true">
-            <span className="ls-bar-label" />
-            <span className="ls-bar-area">
-              {axis.ticks.map((t) => (
-                <span key={t} className="ls-bar-tick" style={{ left: pos(t) }}>
-                  {t}%
-                </span>
-              ))}
-            </span>
-            <span className="ls-bar-chip-cell" />
+          {/* The ticks, then the unit, as the dumbbell's own axis */}
+          <div className="measure-dumbbell-axis" aria-hidden="true">
+            <div className="measure-dumbbell-row">
+              <span className="measure-dumbbell-name" />
+              <span className="measure-dumbbell-plot" ref={plotWidthRef}>
+                {axis.ticks.map((t) => (
+                  <span key={t} className="measure-dumbbell-tick" style={{ left: pos(t) }}>
+                    {t}%
+                  </span>
+                ))}
+              </span>
+              <span className="measure-dumbbell-values" />
+            </div>
+            <p className="measure-dumbbell-unit">{b.children ? "Share of children in poverty" : "Share of people in poverty"}</p>
           </div>
           <FloatingTooltip tip={tip} />
         </div>
       </div>
       <div className="chart-legend">
-        <span className="dot-legend ls-bar-legend">
+        <span className="measure-dumbbell-legend">
           <span>
-            <i className="ls-key-bar" /> {fyDash(to)} rate
+            <i className="dot" /> {fyDash(to)}
           </span>
           <span>
-            <i className="ls-key-start" /> {fyDash(from)}
+            <i className="ring" /> {fyDash(from)}
           </span>
           {allValue != null && (
             <span>

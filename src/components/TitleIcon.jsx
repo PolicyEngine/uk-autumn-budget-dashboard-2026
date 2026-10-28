@@ -291,12 +291,32 @@ const ICONS = {
       <path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7Z" />
     </>
   ),
+  // Data: a database
+  database: (
+    <>
+      <ellipse cx="12" cy="5" rx="9" ry="3" />
+      <path d="M3 5v14a9 3 0 0 0 18 0V5" />
+      <path d="M3 12a9 3 0 0 0 18 0" />
+    </>
+  ),
+  // Limitations: a warning triangle
+  alert: (
+    <>
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+      <path d="M12 9v4M12 17h.01" />
+    </>
+  ),
 };
 
 /**
  * A chart card's title icon: a small tinted chip before the title text,
  * hidden from screen readers (the title says what the chart is).
  */
+/** An icon's paths alone (24×24), for drawing inside a chart's own SVG. */
+export function titleIconPaths(name) {
+  return ICONS[name] ?? ICONS.tag;
+}
+
 export default function TitleIcon({ name, bare = false, size = 16, className }) {
   const icon = ICONS[name];
   if (!icon) return null;

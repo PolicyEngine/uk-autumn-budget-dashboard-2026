@@ -13,8 +13,19 @@
   font-size: var(--fs-caption);
 }
 
+/* Each row a band across the three columns (a subgrid, so the columns
+   still line up row to row): .row-band in globals.css */
 .mev-row {
-  display: contents;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  margin: 0 -6px;
+  padding: 0 6px;
+  outline: none;
+}
+
+.mev-row:focus-visible {
+  box-shadow: 0 0 0 2px var(--c-gain);
 }
 
 .mev-row > * {
@@ -101,6 +112,12 @@
   background: color-mix(in srgb, var(--c-loss) var(--mev-strength), transparent);
 }
 
+/* Inequality: size only, no gain or loss colour */
+.mev-table.is-neutral td.is-fall,
+.mev-table.is-neutral td.is-rise {
+  background: color-mix(in srgb, var(--c-no-change) var(--mev-strength), transparent);
+}
+
 .mev-table td.is-none {
   color: var(--pe-gray-400);
 }
@@ -109,7 +126,28 @@
   font-weight: 700;
 }
 
-.mev-hidden,
+/* A measure with no change this year: no bar; "No change" and why, right
+   aligned across the track and value columns */
+.mev-row > .mev-value--none {
+  grid-column: 2 / 4;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  text-align: right;
+  white-space: normal;
+  line-height: 1.2;
+}
+
+.mev-none-main {
+  color: var(--pe-gray-500);
+  font-weight: 500;
+}
+
+.mev-reason {
+  color: var(--pe-gray-500);
+  font-size: var(--fs-micro);
+}
+
 .mev-empty {
   margin: 8px 0 0;
   color: var(--pe-gray-500);

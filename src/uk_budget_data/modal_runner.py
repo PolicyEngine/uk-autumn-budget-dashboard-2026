@@ -20,6 +20,7 @@ import os
 import shutil
 import tarfile
 import tempfile
+import time
 from dataclasses import replace
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Sequence
@@ -43,25 +44,116 @@ class ModalUnavailable(RuntimeError):
     """Raised when Modal cannot be used: not installed, or no credentials."""
 
 
+class ModalRunsFailed(RuntimeError):
+    """Raised once every artifact has come back, when some raised in their
+    containers. The others were written (``written``) and can be staged;
+    rerun only the failed ones (``failed``, key to error)."""
+
+    def __init__(self, failed: dict, written: list):
+        self.failed = dict(failed)
+        self.written = list(written)
+        lines = [
+            f"{len(self.failed)} of {len(self.failed) + len(self.written)} "
+            "Modal runs failed in their containers; the others were written "
+            "and can be staged as they are:"
+        ]
+        lines += [f"  FAILED {key}: {error}" for key, error in failed.items()]
+        lines += [f"  written {path}" for path in self.written]
+        lines.append(
+            "Stage the written ones, then rerun only the failed ones (a "
+            "measure with --reforms, a combined run with --combined and its "
+            "member ids): " + " ".join(self.failed)
+        )
+        super().__init__("\n".join(lines))
+
+
 def _import_modal():
     try:
         import modal
     except ImportError as error:
         raise ModalUnavailable(
             "--backend modal needs the modal package: run the command with "
-            "`uv run --with modal==1.6.2 uk-budget-data ...`"
+            "`uv run --with modal==1.6.2 python -m uk_budget_data.cli ...` "
+            "(the uk-budget-data script runs the project's own Python, "
+            "which has no modal)"
         ) from error
     return modal
 
 
+class Timed:
+    """``function``, its calls' wall times appended to ``times``. Only for
+    the progress line: it changes nothing a run computes or records."""
+
+    def __init__(self, function, times: list):
+        self.function = function
+        self.times = times
+
+    def __call__(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return self.function(*args, **kwargs)
+        finally:
+            self.times.append(time.perf_counter() - started)
+
+
+def phase_line(key: str, total: float, builds: list, processes: list) -> str:
+    """Where a container's time went. The first build also downloads and
+    checks the dataset in a fresh container, so the difference between the
+    two builds is roughly the download."""
+    built = sum(builds)
+    processed = sum(processes)
+    parts = [
+        (
+            "builds " + " + ".join(f"{s:.0f}" for s in builds) + " s"
+            if builds
+            else None
+        ),
+        f"tables {processed:.0f} s" if processes else None,
+        f"checks and receipt {max(total - built - processed, 0):.0f} s",
+    ]
+    return (
+        f"{key}: {total:.0f} s in its Modal container ("
+        + ", ".join(part for part in parts if part)
+        + ")"
+    )
+
+
+# Per-year units (``flat_units`` with ``by_year``: --only income_distribution
+# or income_growth on Modal) run one container per measure and year, so a
+# published package of seven measures and its combined run over six years
+# is 48 containers. At the artifacts' 16 at once they would run in three
+# waves and save little, so per-year units may run this many at once: two
+# such commands side by side fit in one wave each. The cap changes how many
+# run at once, not how much is simulated.
+YEAR_MAX_CONTAINERS = 64
+# One year in a fresh container is about 3 minutes (builds about 82 s, the
+# year's tables about 82 s, measured 26 October), so a container still
+# running after this has gone wrong: worst case 64 containers x 15 min at
+# about $0.35 a container-hour (2 CPU, 32 GiB) is about $5.60.
+YEAR_TIMEOUT_S = 15 * 60
+
+
+def _per_year(units: Sequence) -> bool:
+    return any(getattr(unit, "years", None) is not None for unit in units)
+
+
 def _modal_remote(units: Sequence) -> Iterable:
-    """Run the units in an ephemeral Modal app, one container each."""
+    """Run the units in an ephemeral Modal app, one container each.
+    Per-year units run under their own cap and timeout
+    (``YEAR_MAX_CONTAINERS``, ``YEAR_TIMEOUT_S``); the image, memory, CPU,
+    secret and no-retries are the same ``Generator``'s."""
     modal = _import_modal()
     from uk_budget_data import modal_generate
 
     try:
         with modal.enable_output(), modal_generate.app.run():
-            generator = modal_generate.Generator()
+            cls = modal_generate.Generator
+            if _per_year(units):
+                cls = cls.with_options(
+                    max_containers=YEAR_MAX_CONTAINERS,
+                    timeout=YEAR_TIMEOUT_S,
+                )
+            generator = cls()
             yield from generator.run.map(units, order_outputs=True)
     except modal.exception.NotFoundError as error:
         raise ModalUnavailable(f"{SECRET_MISSING} ({error})") from error
@@ -69,7 +161,14 @@ def _modal_remote(units: Sequence) -> Iterable:
 
 def _modal_remote_artifacts(jobs: Sequence, smoke: bool) -> Iterable:
     """Run the artifacts in an ephemeral Modal app, one container each:
-    the smoke app on the synthetic dataset, else the real one."""
+    the smoke app on the synthetic dataset, else the real one.
+
+    A container that raises comes back as its exception
+    (``return_exceptions``), in its place, and the others carry on: without
+    it the first failure ended the app, and every artifact not yet written
+    here was lost although its container had finished (paid for, and run
+    again). ``ModalRunner._map_artifacts`` writes the others and then
+    raises (``ModalRunsFailed``)."""
     modal = _import_modal()
     from uk_budget_data import modal_generate
 
@@ -81,7 +180,9 @@ def _modal_remote_artifacts(jobs: Sequence, smoke: bool) -> Iterable:
                 if smoke
                 else modal_generate.Generator()
             )
-            yield from generator.run_artifact.map(jobs, order_outputs=True)
+            yield from generator.run_artifact.map(
+                jobs, order_outputs=True, return_exceptions=True
+            )
     except modal.exception.NotFoundError as error:
         raise ModalUnavailable(f"{SECRET_MISSING} ({error})") from error
 
@@ -210,7 +311,14 @@ class ModalRunner:
                     "--backend modal runs on the bundle's dataset only: a "
                     "local --dataset is not in the container"
                 )
-        self.say(f"Modal: {len(units)} measures, one container each")
+        if _per_year(units):
+            measures = len(dict.fromkeys(_unit_id(unit) for unit in units))
+            self.say(
+                f"Modal: {len(units)} units ({measures} measures, one "
+                "container per measure and year)"
+            )
+        else:
+            self.say(f"Modal: {len(units)} measures, one container each")
         results = []
         for index, outcome in enumerate(self.remote(units)):
             if index >= len(units):
@@ -221,6 +329,13 @@ class ModalRunner:
                 raise ModalUnavailable(
                     f"Modal returned {outcome.reform_id} in place of "
                     f"{_unit_id(units[index])}"
+                )
+            expected = getattr(units[index], "years", None)
+            if getattr(outcome, "years", None) != expected:
+                raise ModalUnavailable(
+                    f"Modal returned {outcome.reform_id} for years "
+                    f"{getattr(outcome, 'years', None)} in place of "
+                    f"{expected}"
                 )
             results.append(outcome)
             on_result(index, outcome)
@@ -254,9 +369,36 @@ class ModalRunner:
             + (" (synthetic smoke test)" if smoke else "")
         )
         results = []
+        failed: dict[str, str] = {}
+        count = 0
         for index, returned in enumerate(self.remote_artifacts(jobs, smoke)):
             if index >= len(jobs):
                 raise ModalUnavailable("Modal returned more results than runs")
+            count += 1
+            if isinstance(returned, BaseException):
+                # One container failed (an error in the run, a timeout, out
+                # of memory): report it in its place, keep going, and raise
+                # once every other artifact is written. It is reported
+                # through on_result, as an outcome with no artifact and no
+                # refusal, so a caller reporting in order (generate's
+                # report_ready) moves past it to the artifacts after it.
+                from uk_budget_data.publication.generate import (
+                    ArtifactOutcome,
+                )
+
+                key = jobs[index].key
+                failed[key] = f"{type(returned).__name__}: {returned}"
+                on_result(
+                    index,
+                    ArtifactOutcome(
+                        key=key,
+                        progress=[
+                            f"{key}: FAILED in its Modal container: "
+                            f"{failed[key]}"
+                        ],
+                    ),
+                )
+                continue
             outcome, relative, files = returned
             if outcome.key != jobs[index].key:
                 raise ModalUnavailable(
@@ -268,9 +410,18 @@ class ModalRunner:
             )
             results.append(outcome)
             on_result(index, outcome)
-        if len(results) != len(jobs):
+        if count != len(jobs):
             raise ModalUnavailable(
-                f"Modal returned {len(results)} results for {len(jobs)} runs"
+                f"Modal returned {count} results for {len(jobs)} runs"
+            )
+        if failed:
+            raise ModalRunsFailed(
+                failed,
+                [
+                    str(outcome.reference.path)
+                    for outcome in results
+                    if outcome.reference is not None
+                ],
             )
         return results
 

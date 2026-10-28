@@ -32,11 +32,15 @@ function LandingBox({ tab, sub, icon, title, description, onOpen }) {
   );
 }
 
-/** The three ways in, in order: [tab, sub, icon, title, line]. */
-const BOXES = [
-  ["dashboard", "finances", "users", "The Budget and society", "Public finances, and who gains and loses"],
+/**
+ * The three ways in, in order: [tab, sub, icon, title, line]. While the
+ * measures are provisional, the policies box names them as modelled
+ * measures, not the Budget's contents.
+ */
+const boxes = (provisional) => [
+  ["dashboard", "finances", "users", "The Budget and society", "Costs and who gains or loses"],
   ["household", undefined, "house", "Your household", "See how your income changes"],
-  ["policies", undefined, "list", "What's in the Budget", "Every measure, and how we model it"],
+  ["policies", undefined, "list", provisional ? "The policies modelled" : "What's in the Budget", "Every policy, and how we model it"],
 ];
 
 /**
@@ -50,7 +54,7 @@ export function LandingIntro({ headingId, provisional, className = "landing-hero
       <h2 id={headingId} className="landing-heading">Autumn Budget 2026: fiscal and distributional analysis</h2>
       <p className="landing-intro">
         Estimates from <SourceLink source="policyengine_uk_model" />{" "}of how
-        Autumn Budget 2026 measures affect the public finances and household
+        Autumn Budget 2026 policies affect the public finances and household
         incomes across the income distribution, regions and age groups, set
         against the pre-measures forecast. Costings are our own; the economic
         forecast is the OBR&rsquo;s{" "}
@@ -88,9 +92,11 @@ function LandingRow({ tab, sub, icon, title, description, onOpen }) {
 
 /**
  * The three ways in: boxes side by side (the landing page), or a list of
- * rows (`list`, the overview drawer), labelled by `labelledBy`.
+ * rows (`list`, the overview drawer's "In this dashboard" card), labelled
+ * by `labelledBy`.
  */
-export function LandingBoxes({ onOpen, list = false, labelledBy }) {
+export function LandingBoxes({ onOpen, list = false, labelledBy, provisional = false }) {
+  const BOXES = boxes(provisional);
   if (list) {
     return (
       <ul className="landing-rows" aria-labelledby={labelledBy}>
@@ -117,12 +123,13 @@ export function LandingBoxes({ onOpen, list = false, labelledBy }) {
  * @param {Object} props
  * @param {(tab: string, sub?: string) => void} props.onOpen - Open a view (App's handleTabChange)
  * @param {React.ReactNode} [props.provisional] - The provisional notice, when it applies
+ * @param {boolean} [props.provisionalWording] - Whether the measures are provisional (the boxes' wording)
  */
-export default function LandingPage({ onOpen, provisional }) {
+export default function LandingPage({ onOpen, provisional, provisionalWording = false }) {
   return (
     <section className="landing" aria-labelledby="landing-heading">
       <LandingIntro headingId="landing-heading" provisional={provisional} />
-      <LandingBoxes onOpen={onOpen} />
+      <LandingBoxes onOpen={onOpen} provisional={provisionalWording} />
     </section>
   );
 }

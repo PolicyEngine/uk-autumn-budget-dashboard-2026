@@ -158,16 +158,14 @@ DECLARED = {
     # A payment, through the cost-of-living channel.
     "warm_home_discount_top_up": set(),
     "domestic_electricity_zero_vat": {"VAT"},
-    # Employer (secondary Class 1) contributions.
-    "employer_ni_relief_under_25s": {"National Insurance"},
     # From 2031-32 the engine sets the NI primary threshold and upper
     # earnings limit at the allowance and higher rate threshold, so holding
     # those holds them too.
     "threshold_freeze_2031_32": {"income tax", "National Insurance"},
-    "badr_lifetime_limit_cut": {"capital gains tax"},
-    "road_fuel_vat_cut": {"VAT"},
     # Student loan repayments are not a tax.
     "plan_2_threshold_unfreeze": set(),
+    "employer_nics_secondary_threshold_raise": {"National Insurance"},
+    "unearned_income_rates_up": {"income tax"},
 }
 # The combined measure moves what its members move.
 DECLARED[AUTUMN_BUDGET_2026_COMBINED_ID] = set().union(

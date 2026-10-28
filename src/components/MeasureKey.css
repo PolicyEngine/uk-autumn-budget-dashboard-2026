@@ -19,30 +19,22 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  align-items: center;
+  /* Chips in one row share a height even when a name wraps */
+  align-items: stretch;
   gap: 6px;
   min-width: 0;
   max-width: 100%;
 }
 
-/* The groups and their chip lists dissolve, so every chip (and each
-   group's small heading before its chips) flows in one wrapping line */
+/* The groups and their chip lists dissolve, so every chip flows in one
+   wrapping line */
 .measure-key-group,
 .measure-key-scroll > .measure-key-group > .measure-key-chips {
   display: contents;
 }
 
-.measure-key-heading {
-  margin-left: 6px;
-}
-
-.measure-key-heading:first-child {
-  margin-left: 0;
-}
-
-.measure-key-heading,
 .measure-key-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--pe-gray-500);
@@ -53,14 +45,23 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  align-items: stretch;
   gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.measure-key-chip-item,
-.measure-key-more-item {
+/* One chip style for every item in a key: the measures (badge, name,
+   category), the net line, "+N with no effect", "Clear" and the muted
+   measures all share the height, radius, solid border, padding and a
+   badge-sized slot on the left, so a row lines up on one centre line */
+.measure-key {
+  --mk-chip-h: 38px;
+  --mk-badge: 24px;
+}
+
+.measure-key-chip-item {
   display: flex;
 }
 
@@ -70,17 +71,24 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 26px;
-  padding: 0 10px 0 8px;
+  gap: 8px;
+  min-height: var(--mk-chip-h);
+  padding: 3px 12px 3px 6px;
   border: 1px solid var(--card-border);
-  border-radius: 999px;
+  border-radius: calc(var(--mk-chip-h) / 2);
   background: var(--c-surface);
   color: var(--c-text);
   font: inherit;
+  text-align: left;
   white-space: nowrap;
   cursor: default;
   transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+/* A measure's badge is the circle itself: the chip's padding matches the
+   others' slot, so badges and glyphs sit at the same inset */
+.measure-key-chip:has(.mrl) {
+  padding-left: 6px;
 }
 
 button.measure-key-chip {
@@ -89,38 +97,33 @@ button.measure-key-chip {
 
 button.measure-key-chip:hover,
 button.measure-key-chip:focus-visible,
-.measure-key-chip.is-active {
+.measure-key-chip.is-active,
+.measure-key-more[aria-expanded="true"] {
   border-color: var(--pe-gray-400);
   background: var(--c-hover);
 }
 
-button.measure-key-chip:focus-visible,
-.measure-key-more:focus-visible {
+button.measure-key-chip:focus-visible {
   outline: 2px solid var(--pe-accent);
   outline-offset: 1px;
 }
 
-.measure-key-chip.is-muted {
-  color: var(--pe-gray-500);
-  border-style: dashed;
+.measure-key-chip .mrl-text {
+  align-items: flex-start;
 }
 
-.measure-key-swatch {
+/* The badge-sized slot for a glyph (the net line, the chevron, Clear's
+   cross): the same size as a measure's icon circle */
+.measure-key-badge {
   flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  background: var(--swatch);
-}
-
-.measure-key-chip.is-muted .measure-key-swatch {
-  background: transparent;
-  box-shadow: inset 0 0 0 1px var(--swatch);
-}
-
-/* The net line's chip: a pill like the measures', chosen the same way */
-.measure-key-chip.is-net {
-  padding-left: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--mk-badge);
+  height: var(--mk-badge);
+  border-radius: 50%;
+  background: var(--pe-gray-100);
+  color: var(--pe-gray-600);
 }
 
 .measure-key-net-icon line {
@@ -132,49 +135,38 @@ button.measure-key-chip:focus-visible,
   fill: var(--c-net);
 }
 
-.measure-key-more {
-  height: 26px;
-  padding: 0 10px;
-  border: 1px dashed var(--pe-gray-300);
-  border-radius: 999px;
-  background: transparent;
+/* A measure with no effect in the year shown: the same chip, muted */
+.measure-key-chip.is-muted {
+  color: var(--pe-gray-500);
+}
+
+.measure-key-chip.is-muted .mrl-name {
   color: var(--pe-gray-600);
-  font: inherit;
-  white-space: nowrap;
-  cursor: pointer;
 }
 
-.measure-key-more:hover {
-  border-color: var(--pe-gray-400);
-  color: var(--c-text);
+/* "+N with no effect": a secondary chip, its text muted; the chevron
+   turns when the measures are open */
+.measure-key-more {
+  color: var(--pe-gray-600);
 }
 
-.measure-key-more[aria-expanded="true"] {
-  background: var(--pe-gray-100);
+.measure-key-more-chevron {
+  transition: transform 0.15s ease;
+}
+
+.measure-key-more[aria-expanded="true"] .measure-key-more-chevron {
+  transform: rotate(90deg);
 }
 
 /* "Clear": unpins every highlighted measure; shown while any is pinned */
 .measure-key-clear {
-  height: 26px;
-  padding: 0 10px;
-  border: 1px solid var(--pe-teal-100);
-  border-radius: 999px;
+  color: var(--c-gain-text);
+  font-weight: 600;
+}
+
+.measure-key-clear .measure-key-badge {
   background: var(--pe-teal-50);
   color: var(--c-gain-text);
-  font: inherit;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.measure-key-clear:hover,
-.measure-key-clear:focus-visible {
-  border-color: var(--c-gain);
-}
-
-.measure-key-clear:focus-visible {
-  outline: 2px solid var(--pe-accent);
-  outline-offset: 2px;
 }
 
 /* In a card: under the plot, as the legend was */
@@ -200,9 +192,10 @@ button.measure-key-chip:focus-visible,
   justify-content: flex-start;
 }
 
+/* The title sits level with the first row of chips, centred on it */
 .measure-key.is-section .measure-key-title {
   align-self: start;
-  line-height: 26px;
+  line-height: var(--mk-chip-h);
   padding-right: 16px;
   border-right: 1px solid var(--card-border);
 }
@@ -211,11 +204,12 @@ button.measure-key-chip:focus-visible,
   grid-column: 2;
 }
 
-/* On a phone the section key is one row of chips that scrolls sideways */
+/* On a phone: the title on its own line, the chips wrapping under it
+   (as the section line toggle, SeriesToggle.css) */
 @media (max-width: 640px) {
   .measure-key.is-section {
     grid-template-columns: minmax(0, 1fr);
-    padding: 10px 0 10px 12px;
+    padding: 10px 12px;
   }
 
   .measure-key.is-section .measure-key-title {
@@ -224,22 +218,14 @@ button.measure-key-chip:focus-visible,
     line-height: 1.3;
   }
 
-  .measure-key.is-section .measure-key-scroll {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding: 2px 12px 4px 0;
-    scrollbar-width: thin;
-    -webkit-overflow-scrolling: touch;
-  }
-
   .measure-key.is-section .measure-key-muted {
     grid-column: 1;
-    padding-right: 12px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .measure-key-chip {
+  .measure-key-chip,
+  .measure-key-more-chevron {
     transition: none;
   }
 }

@@ -10,7 +10,6 @@ import {
   fyDash,
   fyLabel,
   headlineSpan,
-  formatPounds,
   formatPoundsKAxis,
   formatPoundsWholeAxis,
   rowsPeriod,
@@ -20,6 +19,7 @@ import {
   NO_OFFICIAL_SERIES,
   chartEndYear,
   lineSeries,
+  OFFICIAL_VS_PE,
   mergeSeries,
   niceAxis,
   projectionStartYear,
@@ -114,7 +114,7 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     if (a != null && b != null && a !== 0) {
       const pct = ((b - a) / a) * 100;
       const verb = changeVerb(pct, "%");
-      const who = metric.startsWith("mean") ? "the average household's income" : "the typical household's income";
+      const who = metric.startsWith("mean") ? "mean income (adjusted for household size)" : "median income (adjusted for household size)";
       // Prices (real or cash) are said in About this chart
       const real = ", ";
       summary = verb ? (
@@ -161,6 +161,7 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     sourceText: CSV_SOURCES.hbai,
     info: {
       how: [
+        OFFICIAL_VS_PE,
         units && "Equivalised: incomes are adjusted for household size, shown as for a couple with no children.",
         adjustment === "real" ? `Real terms, in ${priceBase} prices.` : "Cash terms, not adjusted for prices.",
       ],
@@ -220,12 +221,10 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
         </div>
       ) : (
         <OverTimeChart
-          compare={range}
           data={chartData}
           series={series}
           yFormat={yFormat}
-          tooltipFormat={formatPounds}
-          valueFormat={poundsFull}
+          tooltipFormat={poundsFull}
           yLabel={yLabel}
         />
       ),

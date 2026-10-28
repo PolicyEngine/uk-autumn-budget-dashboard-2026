@@ -1,4 +1,5 @@
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
+import MeasureRowLabel from "./MeasureRowLabel";
 import "./ChartTooltip.css";
 
 /** A signed value with a true minus, for tooltips. */
@@ -31,7 +32,7 @@ function ChartTooltip({
   format,
   labelFormat = (value) => value,
   netKey,
-  netLabel = "Net impact",
+  netLabel = "Net change",
   grouped = true,
   single,
   showPlus = false,
@@ -40,7 +41,10 @@ function ChartTooltip({
   // poverty change is), or nothing
   note,
 }) {
-  const { bySeriesKey } = useMeasureCatalogue();
+  const { bySeriesKey, byId } = useMeasureCatalogue();
+  // A row that is a measure is named by the shared label (badge, name,
+  // category) in place of the swatch and name
+  const measureOf = (key) => bySeriesKey?.get(key) ?? byId?.get(key) ?? null;
   if (!active || !payload?.length) return null;
   // One value from the hovered point (e.g. the change in net income)
   const singleRows = single
@@ -71,7 +75,7 @@ function ChartTooltip({
       ? [
           ["Raise revenue", rows.filter((row) => row.direction === "revenue")],
           ["Cost revenue", rows.filter((row) => row.direction === "cost")],
-          ["Other measures", rows.filter((row) => row.direction !== "revenue" && row.direction !== "cost")],
+          ["Other policies", rows.filter((row) => row.direction !== "revenue" && row.direction !== "cost")],
         ].filter(([, sectionRows]) => sectionRows.length > 0)
       : [[null, rows]];
 
@@ -86,9 +90,17 @@ function ChartTooltip({
         <div key={heading ?? "rows"} className="chart-tooltip-section">
           {heading && <p className="chart-tooltip-heading">{heading}</p>}
           {sectionRows.map((row) => (
-            <div key={row.key} className="chart-tooltip-row">
-              <span className="chart-tooltip-swatch" style={{ background: row.color }} />
-              <span className="chart-tooltip-name">{row.name}</span>
+            <div key={row.key} className={measureOf(row.key) ? "chart-tooltip-row has-icon" : "chart-tooltip-row"}>
+              {measureOf(row.key) ? (
+                <span className="chart-tooltip-name">
+                  <MeasureRowLabel tip={false} measure={measureOf(row.key)} colour={row.color} name={row.name} />
+                </span>
+              ) : (
+                <>
+                  <span className="chart-tooltip-swatch" style={{ background: row.color }} />
+                  <span className="chart-tooltip-name">{row.name}</span>
+                </>
+              )}
               <span className="chart-tooltip-value">{row.text ?? valueText(row.value)}</span>
             </div>
           ))}
@@ -129,6 +141,7 @@ const TOUCH =
  * @param {string|null} [props.activeKey] - The hovered series, where the chart passes all of them
  */
 export function SegmentTooltip({ active, payload, labelOf, format, netKey, netLabel = "Net change", activeKey }) {
+  const { bySeriesKey, byId } = useMeasureCatalogue();
   if (!active || !payload?.length) return null;
   // A composed chart passes every series: show the one the pointer is on
   // (activeKey, from the bars' mouse events), nothing between segments
@@ -140,14 +153,25 @@ export function SegmentTooltip({ active, payload, labelOf, format, netKey, netLa
   const value = Number(entry.value);
   const text = (v) => (v < 0 ? `−${format(Math.abs(v))}` : `+${format(Math.abs(v))}`);
   const net = netKey ? Number(row[netKey]) : NaN;
+  const measure = bySeriesKey?.get(String(entry.dataKey)) ?? byId?.get(String(entry.dataKey)) ?? null;
   return (
     <div className="chart-tooltip">
       <p className="chart-tooltip-label">{labelOf(row)}</p>
-      <div className="chart-tooltip-row">
-        <span className="chart-tooltip-swatch" style={{ background: entry.color }} />
-        <span className="chart-tooltip-name">{entry.name}</span>
-        <span className="chart-tooltip-value">{text(value)}</span>
-      </div>
+      {measure ? (
+        // A measure's segment: the shared label (badge, name, category)
+        <div className="chart-tooltip-row has-icon">
+          <span className="chart-tooltip-name">
+            <MeasureRowLabel tip={false} measure={measure} colour={measure.color ?? entry.color} name={entry.name} />
+          </span>
+          <span className="chart-tooltip-value">{text(value)}</span>
+        </div>
+      ) : (
+        <div className="chart-tooltip-row">
+          <span className="chart-tooltip-swatch" style={{ background: entry.color }} />
+          <span className="chart-tooltip-name">{entry.name}</span>
+          <span className="chart-tooltip-value">{text(value)}</span>
+        </div>
+      )}
       {Number.isFinite(net) && (
         <div className="chart-tooltip-row chart-tooltip-net">
           <span className="chart-tooltip-swatch chart-tooltip-swatch-line" />

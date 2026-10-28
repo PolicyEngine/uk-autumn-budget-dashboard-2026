@@ -95,6 +95,22 @@
   box-shadow: 0 8px 24px var(--shadow-strong);
 }
 
+/* Kept in the window on a tablet or desktop (dialogPlacement in
+   ControlBar.jsx): above the pill when there is more room there, and
+   scrolling inside when taller than the room, as the phone sheet does */
+@media (min-width: 641px) {
+  .control-bar-dialog.is-above {
+    top: auto;
+    bottom: calc(100% + 8px);
+    transform-origin: bottom center;
+  }
+
+  .control-bar-dialog.is-scrolling {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 .control-bar-backdrop {
   display: none;
 }
@@ -178,6 +194,18 @@
   border-radius: 8px;
 }
 
+/* A longer list (the map's policies): one option per line, left-aligned */
+.control-bar-segments.is-stacked {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.control-bar-segments.is-stacked .control-bar-segment {
+  text-align: left;
+  white-space: normal;
+  padding-block: 4px;
+}
+
 .control-bar-segment {
   flex: 1 1 auto;
   min-height: 28px;
@@ -214,18 +242,26 @@
     display: block;
     position: fixed;
     inset: 0;
-    z-index: 999;
+    /* Over the sticky title band (1100) and tab rows, under the About
+       drawer (1300) and tips (1400): the sheet and its shade cover the
+       whole page, so no tab row hides the sheet's title */
+    z-index: 1250;
     background: color-mix(in srgb, var(--c-ink) 35%, transparent);
   }
 
   .control-bar-dialog {
     position: fixed;
+    z-index: 1260;
     top: auto;
     left: 0;
     right: 0;
     bottom: 0;
     width: auto;
     max-width: none;
+    /* A tall sheet (the growth card's six groups) scrolls inside the window */
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
     border-radius: 16px 16px 0 0;
   }
@@ -316,4 +352,12 @@
 .section-controls .pill-select-list {
   left: 0;
   right: auto;
+}
+
+/* Why an option is unavailable, under its control */
+.control-bar-note {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--pe-gray-500);
 }

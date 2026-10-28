@@ -6,11 +6,20 @@
  * the published files do not yet cover is shown as not yet published,
  * never as zero; it fills in once the pipeline is re-run. Moving the first
  * year is a one-line change here.
+ *
+ * 2026-27 (EARLY_YEAR) is shown as a normal year, in every chart, table and
+ * the year pill, only while a selected policy moves revenue in it (e.g. the
+ * Warm Home Discount top-up, winter 2026-27): yearsForSelection. Otherwise
+ * the years start at 2027-28. No note says either way.
  */
+import { createContext, useContext } from "react";
 import budgetYears from "../uk_budget_data/budget_years.json";
 
-/** The first fiscal year shown on Population and Household impact: 2027 is 2027-28 (Vahid, 26 October: no chart starts at 2026-27). */
+/** The first fiscal year always shown on Population and Household calculator: 2027 is 2027-28. */
 export const FIRST_DISPLAY_YEAR = 2027;
+
+/** The year before it (2026-27): shown only when the selection has an effect in it. */
+export const EARLY_YEAR = FIRST_DISPLAY_YEAR - 1;
 
 const CONFIG_YEARS = budgetYears.policy_years.filter(
   (year) => year >= FIRST_DISPLAY_YEAR,
@@ -35,9 +44,10 @@ export const displayYears = (years) => years.filter(isDisplayYear);
 export const DISPLAY_YEARS = Object.freeze([...CONFIG_YEARS]);
 
 /**
- * The years a reader can choose (the year pill, Play, Household impact):
- * the years shown, from 2027-28. An old link's ?year=2026 falls back to the
- * default (selectableYearOr).
+ * The years a reader can always choose (the year pill, Play, Household
+ * impact): from 2027-28. App adds 2026-27 to the pill while the selection
+ * has an effect in it (yearsForSelection); Household calculator's examples are
+ * published from 2027-28 only.
  */
 export const FIRST_SELECTABLE_YEAR = FIRST_DISPLAY_YEAR;
 
@@ -51,6 +61,30 @@ export const isSelectableYear = (year) => SELECTABLE_YEARS.includes(Number(year)
 /** A choosable year, or the default (e.g. an old link's 2026). */
 export const selectableYearOr = (year, fallback = DEFAULT_DISPLAY_YEAR) =>
   isSelectableYear(year) ? Number(year) : fallback;
+
+/**
+ * The years shown for a selection: 2026-27 first when a selected policy's
+ * published revenue figure for it is not zero, then 2027-28 on.
+ *
+ * @param {Array<Object>} budgetaryRows - Published revenue rows ({reform_id, year, value})
+ * @param {string[]} selectedPolicies - The selected measure ids
+ */
+export function yearsForSelection(budgetaryRows, selectedPolicies) {
+  if (!budgetYears.policy_years.includes(EARLY_YEAR)) return DISPLAY_YEARS;
+  const early = (budgetaryRows ?? []).some(
+    (row) =>
+      selectedPolicies.includes(row.reform_id) &&
+      Number(row.year) === EARLY_YEAR &&
+      Math.abs(Number(row.value)) > 0.0005,
+  );
+  return early ? Object.freeze([EARLY_YEAR, ...DISPLAY_YEARS]) : DISPLAY_YEARS;
+}
+
+/** The years shown for the band's selection (App provides it; DISPLAY_YEARS without a provider). */
+export const DisplayYearsContext = createContext(DISPLAY_YEARS);
+
+/** The years shown for the band's selection. */
+export const useDisplayYears = () => useContext(DisplayYearsContext);
 
 /** Label for a year the config lists but the published files do not cover. */
 export const NOT_YET_PUBLISHED = "Not yet published";

@@ -2,21 +2,24 @@ import { createContext, useCallback, useContext, useEffect, useId, useMemo, useS
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { shortNameOf } from "../utils/policyDetails";
 import { MUTED_SWATCH } from "../utils/legendMembership";
+import MeasureRowLabel from "./MeasureRowLabel";
 import "./MeasureKey.css";
 
 /**
  * The measure key: one compact row of chips for the measures a chart (or a
  * section of charts) colours by, in place of a long legend per card.
  *
- * - Each chip is a measure's colour and short name (its full name in the
- *   tooltip and accessible name), grouped "Raises revenue" then "Costs
- *   revenue", then the net line. The colour, group and order are the
+ * - Each chip is a measure's MeasureRowLabel: its category icon in its
+ *   colour, short name and category (its full name in the
+ *   tooltip and accessible name), in one unlabelled row: measures that
+ *   raise revenue, then those that cost it, then the net line. The colour,
+ *   group and order are the
  *   catalogue's (#104); the short name is policyDetails.js's, while it
  *   describes the published measure, else the published name.
  * - Measures with no effect in the year shown (`muted`, legendMembership)
  *   are folded into one "+N with no effect" chip that opens them; they stay
  *   in the key, so no measure silently disappears. Why each is £0 stays in
- *   the card's More info.
+ *   the card's About this chart.
  * - Clicking a chip pins it: the pinned measures stay full colour in every
  *   chart that reads the same key and the others fade. Clicking more chips
  *   adds them to the set; clicking a pinned chip takes it out, and "Clear"
@@ -134,8 +137,12 @@ export function useMeasureKey(members, netLabel) {
   return { shared: false, highlight: localHighlight, setHighlight: setLocalHighlight };
 }
 
-/** The key above a section's cards, from what they registered. */
-export function SectionMeasureKey({ label = "Measures" }) {
+/**
+ * The key above a section's cards, from what they registered; or, with
+ * placement "card", the same shared key drawn in one card's legend row
+ * (By age: under Average change by age, level with the chips beside it).
+ */
+export function SectionMeasureKey({ label = "Policies", placement = "section" }) {
   const shared = useContext(KeyContext);
   if (!shared || shared.members.length === 0) return null;
   return (
@@ -144,21 +151,21 @@ export function SectionMeasureKey({ label = "Measures" }) {
       netLabel={shared.netLabel}
       highlight={shared.highlight}
       onHighlight={shared.setHighlight}
-      placement="section"
-      label={label}
+      placement={placement}
+      label={placement === "section" ? label : undefined}
     />
   );
 }
 
 function Chip({ member, color, pinned, onHover, onPin }) {
   // The short name once, on the chip; the full name in its tooltip (title)
-  // and, on the button, as its accessible name. No second, hidden copy of
-  // the name, so the page's text reads each measure once.
+  // and, on the button, after the short one: an accessible name starts
+  // with the visible text (WCAG 2.5.3, label in name). No second, hidden
+  // copy of the name, so the page's text reads each measure once.
   const full = member.name;
   const face = (
     <>
-      <span className="measure-key-swatch" style={{ "--swatch": color }} aria-hidden="true" />
-      <span className="measure-key-label">{shortNameOf(member)}</span>
+      <MeasureRowLabel tip={false} measure={member} colour={color} name={shortNameOf(member)} nameClassName="measure-key-label" />
     </>
   );
   if (member.muted) {
@@ -174,7 +181,7 @@ function Chip({ member, color, pinned, onHover, onPin }) {
       <button
         type="button"
         className={`measure-key-chip${pinned ? " is-active" : ""}`}
-        aria-label={full}
+        aria-label={shortNameOf(member) === full ? full : `${shortNameOf(member)}: ${full}`}
         aria-pressed={pinned}
         onMouseEnter={() => onHover(keyOf(member))}
         onMouseLeave={() => onHover(null)}
@@ -195,7 +202,8 @@ function Chip({ member, color, pinned, onHover, onPin }) {
  * @param {Object} props
  * @param {Array<{id: string, key?: string, name: string, description?: string, muted?: boolean}>} props.members
  *   (legendMembership's)
- * @param {string} [props.netLabel] - The net line's label ("Net change")
+ * @param {string} [props.netLabel] - The net line's label ("Net change" on
+ *   every chart: each plots a change, in income or in the public finances)
  * @param {string|null} [props.highlight]
  * @param {(seriesKey: string|null) => void} [props.onHighlight]
  * @param {"section"|"card"} [props.placement]
@@ -232,10 +240,8 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
   const listId = useId();
   const active = members.filter((member) => !member.muted);
   const muted = members.filter((member) => member.muted);
-  const groups = [
-    ["Raises revenue", active.filter(raises)],
-    ["Costs revenue", active.filter((member) => !raises(member))],
-  ].filter(([, items]) => items.length > 0);
+  // One flat row, no group labels: raising measures first, then costing ones
+  const ordered = [...active.filter(raises), ...active.filter((member) => !raises(member))];
   return (
     <div
       className={`measure-key is-${placement}`}
@@ -244,11 +250,10 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
     >
       {label && <span className="measure-key-title">{label}</span>}
       <div className="measure-key-scroll">
-        {groups.map(([heading, items]) => (
-          <div key={heading} className="measure-key-group">
-            <span className="measure-key-heading">{heading}</span>
+        {ordered.length > 0 && (
+          <div className="measure-key-group">
             <ul className="measure-key-chips">
-              {items.map((member) => (
+              {ordered.map((member) => (
                 <Chip
                   key={member.id}
                   member={member}
@@ -260,7 +265,7 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
               ))}
             </ul>
           </div>
-        ))}
+        )}
         {(netLabel || muted.length > 0 || pinnedLive.length > 0) && (
           <div className="measure-key-group measure-key-extra">
             <ul className="measure-key-chips">
@@ -279,36 +284,50 @@ export function MeasureKey({ members, netLabel, highlight = null, onHighlight, p
                     onBlur={() => setHovered(null)}
                     onClick={() => pin(NET_KEY)}
                   >
-                    <svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true" className="measure-key-net-icon">
-                      <line x1="0" y1="5" x2="18" y2="5" />
-                      <circle cx="9" cy="5" r="3" />
-                    </svg>
+                    {/* The line glyph in a badge-sized slot, so the chip
+                        lines up with the measures' badges */}
+                    <span className="measure-key-badge is-net" aria-hidden="true">
+                      <svg width="16" height="10" viewBox="0 0 16 10" className="measure-key-net-icon">
+                        <line x1="1" y1="5" x2="15" y2="5" />
+                        <circle cx="8" cy="5" r="3" />
+                      </svg>
+                    </span>
                     <span className="measure-key-label">{netLabel}</span>
                   </button>
                 </li>
               )}
               {pinnedLive.length > 0 && (
-                <li className="measure-key-clear-item">
+                <li className="measure-key-chip-item">
                   <button
                     type="button"
-                    className="measure-key-clear"
+                    className="measure-key-chip measure-key-clear"
                     onClick={clear}
-                    aria-label={`Clear the ${pinnedLive.length === 1 ? "highlighted measure" : `${pinnedLive.length} highlighted measures`}`}
+                    aria-label={`Clear the ${pinnedLive.length === 1 ? "highlighted policy" : `${pinnedLive.length} highlighted policies`}`}
                   >
-                    Clear
+                    <span className="measure-key-badge" aria-hidden="true">
+                      <svg width="10" height="10" viewBox="0 0 10 10">
+                        <path d="M2.5 2.5 7.5 7.5M7.5 2.5 2.5 7.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      </svg>
+                    </span>
+                    <span className="measure-key-label">Clear</span>
                   </button>
                 </li>
               )}
               {muted.length > 0 && (
-                <li className="measure-key-more-item">
+                <li className="measure-key-chip-item">
                   <button
                     type="button"
-                    className="measure-key-more"
+                    className="measure-key-chip measure-key-more"
                     aria-expanded={open}
                     aria-controls={listId}
                     onClick={() => setOpen((isOpen) => !isOpen)}
                   >
-                    +{muted.length} with no effect
+                    <span className="measure-key-badge" aria-hidden="true">
+                      <svg className="measure-key-more-chevron" width="10" height="10" viewBox="0 0 10 10">
+                        <path d="M3.5 2 6.5 5 3.5 8" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                    <span className="measure-key-label">+{muted.length} with no effect</span>
                   </button>
                 </li>
               )}

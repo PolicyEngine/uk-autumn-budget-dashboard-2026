@@ -8,8 +8,10 @@
  * counts are rounded, so the cells need not cover every household.
  *
  * Cells are published per reform and never added up by the page: one
- * measure shows its own cells, every measure shows the package's, and any
- * other selection shows a notice (as the constituency map does).
+ * policy shows its own cells, several the published combined run of
+ * exactly those policies, and with no such run the card says the
+ * combination is not published yet (as the constituency map does). It
+ * never shows one policy in place of a selection.
  *
  * Every year's households are banded by their baseline income in one year,
  * the basis year (`income_basis_year`, 2027-28), not by that year's own
@@ -20,7 +22,7 @@
 
 import { fiscalYearLabel } from "./publication/format";
 import { buildChartCsv } from "./chartCsv";
-import { chooseReform, focusChoice } from "./geography/selection";
+import { chooseSelectionReform, selectionNotPublished } from "./geography/selection";
 import {
   bandLabel,
   changeBandLabel as describeChangeBand,
@@ -117,15 +119,19 @@ export function parseScatterCsv(text) {
 
 const notice = (reason, detail = null) => ({ kind: "notice", reason, detail });
 
+/** The scatter's notice when the selection's combined run is not published. */
+export const SCATTER_SELECTION_NOT_PUBLISHED = selectionNotPublished("Household");
+
 /**
- * What the scatter can show for a selection.
+ * What the scatter can show for the header's selection.
  *
  * @param {Object} options
  * @param {{status: "loading"|"ready"|"unavailable"|"error",
  *   rows: Array<Object>|null}} options.data
  * @param {Array<string>} options.selectedIds
  * @param {Array<string>} options.policyIds - Every measure the page offers.
- * @param {string|null} [options.packageId] - The package's combined run.
+ * @param {string|null} [options.packageKey] - The published combined run
+ *   of exactly the selected policies (selectionPackageKey), or null.
  * @param {number} options.year
  * @returns {{kind: "loading"} | {kind: "notice", reason: string,
  *   detail: string|null} | {kind: "points", reform: string,
@@ -133,47 +139,27 @@ const notice = (reason, detail = null) => ({ kind: "notice", reason, detail });
  *   `points` are the year's cells; `basisPoints` the basis year's, which
  *   set how many dots each income band gets in every year.
  */
-export function scatterView({ data, selectedIds, policyIds, year, packageId, focusId = null }) {
+export function scatterView({ data, selectedIds, policyIds, year, packageKey = null }) {
   if (data.status === "loading") return { kind: "loading" };
   if (data.status !== "ready") {
     return notice("Household results are not yet published.");
   }
   const reforms = [...new Set(data.rows.map((row) => row.reform_id))];
-  // Several measures and no single published reform: one at a time, the
-  // reader's or the one moving the most households' incomes the most
-  const size = (id) => {
-    let weight = 0;
-    let total = 0;
-    for (const row of data.rows) {
-      if (row.reform_id !== id || row.year !== year) continue;
-      const middle = changeBandMiddle(row.change_band, row.change_band_upper);
-      if (!Number.isFinite(middle)) continue;
-      weight += row.households;
-      total += Math.abs(middle) * row.households;
-    }
-    return weight ? total / weight : 0;
-  };
-  const choice = focusChoice(chooseReform({ selectedIds, policyIds, reforms, packageId }), {
+  const choice = chooseSelectionReform({
     selectedIds,
     policyIds,
     reforms,
-    focusId,
-    size,
+    packageKey,
+    reason: SCATTER_SELECTION_NOT_PUBLISHED,
   });
   if (choice.kind === "none") {
-    return notice("Select a measure to see household results.");
-  }
-  if (choice.kind === "pick") {
-    return notice("Household results are not yet published for the selected measures.");
+    return notice("Select a policy to see household results.");
   }
   if (choice.kind === "no-package") {
-    return notice(
-      "Household results for all the measures together are not published yet.",
-      "Select one measure to see its households. Groups of households are published for each measure on its own and cannot be added up across measures.",
-    );
+    return notice(choice.reason);
   }
   if (!reforms.includes(choice.reform)) {
-    return notice("Household results are not yet published for this measure.");
+    return notice("Household results are not yet published for this policy.");
   }
   const bins = SCATTER_BINS;
   const cellsIn = (wanted) =>
@@ -194,7 +180,7 @@ export function scatterView({ data, selectedIds, policyIds, year, packageId, foc
   const points = cellsIn(year);
   if (points.length === 0) {
     return notice(
-      `No household results are published for this measure in ${fiscalYearLabel(year)}.`,
+      `No household results are published for this policy in ${fiscalYearLabel(year)}.`,
     );
   }
   const basisYear = data.rows.find(
@@ -209,8 +195,6 @@ export function scatterView({ data, selectedIds, policyIds, year, packageId, foc
   return {
     kind: "points",
     reform: choice.reform,
-    // Several measures: the offered ones, for the card's Measure picker
-    focus: choice.focus ?? null,
     points,
     yearPoints: years.map(cellsIn).filter((cells) => cells.length > 0),
     basisYear,
@@ -295,9 +279,17 @@ export const CHANGE_AXIS_DOMAIN = [-5000, 5000];
 
 // Tick steps the fitted change axis may use, in £
 const CHANGE_STEPS = [10, 25, 50, 100, 250, 500, 1000, 2500];
-// The share of dots at each end the fit may leave outside the axis: they
-// are drawn at the edge rather than widening it for everyone
-const CHANGE_TRIM = 0.01;
+// Room past the farthest dot on each side, as a share of its reach, so no
+// dot is drawn on the axis edge
+const CHANGE_PAD = 0.05;
+// A side is cut short only when a few far changes would squash the rest:
+// its farthest dot is more than CHANGE_CAP_RATIO times the side's
+// CHANGE_CAP_QUANTILE percentile. It then stops at that percentile, and the
+// dots beyond are drawn as arrows at the edge (`clamped`).
+export const CHANGE_CAP_QUANTILE = 0.98;
+const CHANGE_CAP_RATIO = 2;
+// Fewer dots than this on a side: always show them all
+const CHANGE_CAP_MIN_DOTS = 20;
 
 function quantile(sorted, q) {
   if (sorted.length === 0) return 0;
@@ -305,33 +297,56 @@ function quantile(sorted, q) {
   return sorted[at];
 }
 
+/** How far one side of the axis reaches: from its dots' sizes, ascending. */
+function sideReach(sizes) {
+  if (sizes.length === 0) return { reach: 0, capped: false };
+  const farthest = sizes[sizes.length - 1];
+  const percentile = quantile(sizes, CHANGE_CAP_QUANTILE);
+  const squashed =
+    sizes.length >= CHANGE_CAP_MIN_DOTS && percentile > 0 && farthest > CHANGE_CAP_RATIO * percentile;
+  const reach = Math.min(squashed ? percentile : farthest, CHANGE_AXIS_DOMAIN[1]);
+  return { reach, capped: farthest > reach };
+}
+
 /**
- * The change axis fitted to the dots shown: from the 1st to the 99th
- * percentile of their changes, always including £0, rounded out to a tick
- * step chosen for about four to six ticks, and never wider than ±£5,000.
- * A side that would end at £0 gets half a step of room so dots at zero are
- * not cut. Dots beyond the axis (including the open-ended bands past
- * ±£5,000) are clamped to its edge by clampToAxis.
+ * The change axis fitted to the dots shown: each side reaches past its
+ * farthest dot by a little room (CHANGE_PAD), always including £0, rounded
+ * out to a tick step chosen for about four to six ticks, and never wider
+ * than ±£5,000, so no dot is drawn on the axis edge. Only when a few far
+ * changes would squash the rest does a side stop short, at the 98th
+ * percentile of that side's dots; clampToAxis then draws the dots beyond
+ * (and those in the open-ended bands past ±£5,000) as arrows at the edge.
+ * A side with no dots gets half a step of room, so dots at zero are not cut.
  *
  * @param {Array<{change: number, hidden?: boolean, edge?: string}>} dots
- * @returns {{domain: [number, number], ticks: number[]}}
+ * @returns {{domain: [number, number], ticks: number[],
+ *   capped: {low: boolean, high: boolean}}}
  */
 export function fitChangeAxis(dots) {
-  const changes = dots
-    .filter((dot) => !dot.hidden || dot.edge)
-    .map((dot) => (dot.edge ? (dot.edge === "upper" ? 1 : -1) * Infinity : dot.change))
-    .sort((a, b) => a - b);
-  const lowData = Math.max(CHANGE_AXIS_DOMAIN[0], Math.min(0, quantile(changes, CHANGE_TRIM)));
-  const highData = Math.min(CHANGE_AXIS_DOMAIN[1], Math.max(0, quantile(changes, 1 - CHANGE_TRIM)));
+  const shown = dots.filter((dot) => !dot.hidden || dot.edge);
+  const finite = shown.filter((dot) => !dot.edge).map((dot) => dot.change);
+  const losses = finite.filter((change) => change < 0).map((change) => -change).sort((a, b) => a - b);
+  const gains = finite.filter((change) => change > 0).sort((a, b) => a - b);
+  const low = sideReach(losses);
+  const high = sideReach(gains);
+  const lowEdge = shown.some((dot) => dot.edge === "lower");
+  const highEdge = shown.some((dot) => dot.edge === "upper");
+  // An open-ended band's dots lie past ±£5,000: with no other dots on that
+  // side, the side reaches its limit
+  const lowReach = lowEdge && low.reach === 0 ? CHANGE_AXIS_DOMAIN[1] : low.reach;
+  const highReach = highEdge && high.reach === 0 ? CHANGE_AXIS_DOMAIN[1] : high.reach;
+  const lowData = -Math.min(lowReach * (1 + CHANGE_PAD), CHANGE_AXIS_DOMAIN[1]);
+  const highData = Math.min(highReach * (1 + CHANGE_PAD), CHANGE_AXIS_DOMAIN[1]);
   const range = Math.max(highData - lowData, CHANGE_STEPS[0]);
   const step = CHANGE_STEPS.find((s) => range / s <= 5) ?? CHANGE_STEPS[CHANGE_STEPS.length - 1];
-  const low = Math.floor(lowData / step) * step;
-  const high = Math.ceil(highData / step) * step;
+  const lowTick = Math.max(CHANGE_AXIS_DOMAIN[0], Math.floor(lowData / step) * step);
+  const highTick = Math.min(CHANGE_AXIS_DOMAIN[1], Math.ceil(highData / step) * step);
   const ticks = [];
-  for (let t = low; t <= high + 1e-9; t += step) ticks.push(Math.round(t));
+  for (let t = lowTick; t <= highTick + 1e-9; t += step) ticks.push(Math.round(t));
   return {
-    domain: [low === 0 ? -step / 2 : low, high === 0 ? step / 2 : high],
+    domain: [lowTick === 0 ? -step / 2 : lowTick, highTick === 0 ? step / 2 : highTick],
     ticks,
+    capped: { low: low.capped || lowEdge, high: high.capped || highEdge },
   };
 }
 
@@ -347,8 +362,10 @@ export function fitChangeAxisAcrossYears(basisCells, yearCells) {
 
 /**
  * Dots beyond the fitted axis, and dots in the open-ended bands past
- * ±£5,000, placed at the axis edge and marked `clamped`, so every group
- * stays on the plot without one far change setting the scale for all.
+ * ±£5,000, placed at the axis edge and marked `clamped` (drawn as an arrow
+ * pointing out, and said so in the tooltip), so every group stays on the
+ * plot without one far change setting the scale for all. Every other dot
+ * sits strictly inside the axis.
  */
 export function clampToAxis(dots, [low, high]) {
   return dots.map((dot) => {

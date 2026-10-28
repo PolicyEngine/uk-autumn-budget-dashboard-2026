@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import fc from "fast-check";
 import {
-  COMBINED_REFORM_ID,
   curveOf,
   describePosition,
   distributionRunFor,
+  distributionRunOf,
+  hasRun,
+  missingPackageNote,
   equivalenceFactor,
   householdPosition,
   ordinal,
@@ -105,32 +106,63 @@ describe("householdPosition", () => {
 });
 
 describe("distributionRunFor", () => {
-  const all = ["a", "b", "c"];
-  it("uses a single measure's own run", () => {
-    expect(distributionRunFor(["b"], all, all)).toEqual({ reformId: "b", exact: true });
+  const KEY = "combined--a+b";
+  it("uses a single policy's own run", () => {
+    expect(distributionRunFor(["b"], null)).toEqual({ reformId: "b", package: false });
+    expect(distributionRunFor(["b", "b"], KEY)).toEqual({ reformId: "b", package: false });
   });
-  it("uses the package's run for every measure, exactly", () => {
-    expect(distributionRunFor(["c", "a", "b"], all, ["b", "c", "a"])).toEqual({ reformId: COMBINED_REFORM_ID, exact: true });
+  it("uses the combined run of exactly the selected policies, under the manifest's key", () => {
+    expect(distributionRunFor(["b", "a"], KEY)).toEqual({ reformId: KEY, package: true });
   });
-  it("maps part of the package to the package's run, flagged", () => {
-    expect(distributionRunFor(["a", "b"], all, all)).toEqual({ reformId: COMBINED_REFORM_ID, exact: false });
+  it("has no run for several policies with no combined run of them, and never falls back to a package (issue 228)", () => {
+    expect(distributionRunFor(["a", "c"], null)).toEqual({ reformId: null, package: true });
   });
-  it("never calls the package's run exact after a withdrawal: it still holds the withdrawn measure", () => {
-    // "d" withdrawn: three published, the package run with all four
-    expect(distributionRunFor(["a", "b", "c"], all, ["a", "b", "c", "d"])).toEqual({ reformId: COMBINED_REFORM_ID, exact: false });
-    // or no verified package at all
-    expect(distributionRunFor(["a", "b", "c"], all, null)).toEqual({ reformId: COMBINED_REFORM_ID, exact: false });
+  it("has no run with nothing selected", () => {
+    expect(distributionRunFor([], KEY)).toEqual({ reformId: null, package: false });
   });
-  it("is exact for two or more measures only when the selection, the published set and the package's members are one set", () => {
-    const id = fc.constantFrom("a", "b", "c", "d", "e");
-    fc.assert(
-      fc.property(fc.uniqueArray(id), fc.uniqueArray(id), fc.option(fc.uniqueArray(id), { nil: null }), (selected, published, members) => {
-        fc.pre(selected.length > 1);
-        const { exact } = distributionRunFor(selected, published, members);
-        const same = (x, y) => x.length === y.length && x.every((v) => y.includes(v));
-        expect(exact).toBe(published.length > 0 && members !== null && same(selected, published) && same(members, published));
-      }),
-    );
+});
+
+describe("distributionRunOf", () => {
+  // Measures a, b and c; a combined run of exactly a and b, and the full package
+  const approved = { status: "approved", outputs_sha256: "a".repeat(64) };
+  const hashes = (ids) => Object.fromEntries(ids.map((id) => [id, "a".repeat(64)]));
+  const AB = "combined--ab";
+  const ABC = "combined--abc";
+  const catalogue = {
+    combinedId: ABC,
+    manifest: {
+      measures: { a: approved, b: approved, c: approved },
+      combined: {
+        [AB]: { status: "approved", measures: ["a", "b"], member_outputs_sha256: hashes(["a", "b"]) },
+        [ABC]: { status: "approved", measures: ["a", "b", "c"], member_outputs_sha256: hashes(["a", "b", "c"]) },
+      },
+    },
+  };
+  it("one policy: its own run", () => {
+    expect(distributionRunOf(["c"], catalogue)).toEqual({ reformId: "c", package: false });
+  });
+  it("several: the published combined run of exactly them, never the whole package for part of it", () => {
+    expect(distributionRunOf(["b", "a"], catalogue)).toEqual({ reformId: AB, package: true });
+    expect(distributionRunOf(["a", "b", "c"], catalogue)).toEqual({ reformId: ABC, package: true });
+  });
+  it("several with no combined run of exactly them: no run", () => {
+    expect(distributionRunOf(["a", "c"], catalogue)).toEqual({ reformId: null, package: true });
+    expect(distributionRunOf(["a", "b"], undefined)).toEqual({ reformId: null, package: true });
+  });
+  it("finds the package in a file only under its own key: the registry's nine-measure rows are another package", () => {
+    const rows = [{ reformId: "autumn_budget_2026_combined" }, { reform_id: "a" }];
+    expect(hasRun(rows, AB)).toBe(false);
+    expect(hasRun(rows, "a")).toBe(true);
+    expect(hasRun([...rows, { reformId: AB }], AB)).toBe(true);
+    expect(hasRun(rows, null)).toBe(false);
+  });
+  it("gives the shared not-published notice when the selection's combined rows are missing", () => {
+    const rows = [{ reformId: "autumn_budget_2026_combined" }, { reform_id: "a" }];
+    const notice = "Growth results for this combination of policies are not published yet.";
+    expect(missingPackageNote({ reformId: AB, package: true }, rows, "Growth")).toBe(notice);
+    expect(missingPackageNote({ reformId: null, package: true }, rows, "Growth")).toBe(notice);
+    expect(missingPackageNote({ reformId: AB, package: true }, [...rows, { reformId: AB }], "Growth")).toBeNull();
+    expect(missingPackageNote({ reformId: "a", package: false }, rows, "Growth")).toBeNull();
   });
 });
 
@@ -228,12 +260,12 @@ describe("positionSummary", () => {
 
   it("says how many have a lower income in the middle, each fact once", () => {
     const s = positionSummary({ before: at(11.7), after: at(11.8) }, 87.84, 18778.1);
-    expect(s.headline).toBe("12 in 100 people in the UK have a lower household income than you, adjusted for household size.");
+    expect(s.headline).toBe("12 in 100 people in the UK live in a household with a lower income than yours, adjusted for household size.");
     const m = positionSummary({ before: at(29.2), after: at(29.6) }, 167.2, 25600);
     // 29 before, 30 after: the side is named
-    expect(m.headline).toBe("30 in 100 people in the UK have a lower household income than you, adjusted for household size, after the selected policies.");
+    expect(m.headline).toBe("30 in 100 people in the UK live in a household with a lower income than yours, adjusted for household size, after the selected policies.");
     expect(positionSummary({ before: at(29.2), after: at(29.6) }, 167.2, 25600, "before").headline).toBe(
-      "29 in 100 people in the UK have a lower household income than you, adjusted for household size, before the selected policies.",
+      "29 in 100 people in the UK live in a household with a lower income than yours, adjusted for household size, before the selected policies.",
     );
     expect(chip(m, "change")).toBe("+£167 a year");
     expect(chip(m, "share")).toBe("+0.65%");
@@ -243,22 +275,22 @@ describe("positionSummary", () => {
   it("says the top and the bottom the same way, with one rounding", () => {
     const top = { percentile: null, below: false, above: true, edge: 99 };
     const s = positionSummary({ before: top, after: top }, 87.84, 70000);
-    expect(s.headline).toBe("More than 99 in 100 people in the UK have a lower household income than you, adjusted for household size.");
+    expect(s.headline).toBe("More than 99 in 100 people in the UK live in a household with a lower income than yours, adjusted for household size.");
     expect(chip(s, "place")).toBe("unchanged (top 1%)");
     const bottom = { percentile: null, below: true, above: false, edge: 1 };
     const b = positionSummary({ before: bottom, after: at(1.4) }, -20, 5000);
     // The same whole percentile as the tile's "1st percentile" (not 2%)
-    expect(b.headline).toBe("1 in 100 people in the UK have a lower household income than you, adjusted for household size, after the selected policies.");
+    expect(b.headline).toBe("1 in 100 people in the UK live in a household with a lower income than yours, adjusted for household size, after the selected policies.");
     expect(chip(b, "change")).toBe("−£20 a year");
     expect(chip(b, "share")).toBe("−0.40%");
     expect(chip(b, "place")).toBe("bottom 1% → 1st percentile");
     const high = positionSummary({ before: at(96.2), after: at(96.2) }, 0, 90000);
-    expect(high.headline).toBe("96 in 100 people in the UK have a lower household income than you, adjusted for household size.");
+    expect(high.headline).toBe("96 in 100 people in the UK live in a household with a lower income than yours, adjusted for household size.");
     expect(chip(high, "change")).toBe("£0 a year");
     expect(chip(high, "place")).toBe("unchanged (96th percentile)");
     // 6.3: "6 in 100" and "6th percentile", never 7 beside 6th
     const six = positionSummary({ before: at(6.3), after: at(6.3) }, 10, 9000);
-    expect(six.headline).toBe("6 in 100 people in the UK have a lower household income than you, adjusted for household size.");
+    expect(six.headline).toBe("6 in 100 people in the UK live in a household with a lower income than yours, adjusted for household size.");
     expect(chip(six, "place")).toBe("unchanged (6th percentile)");
   });
 });

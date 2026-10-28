@@ -1,5 +1,5 @@
 /**
- * What Household impact shows, worked out from the API's answer
+ * What Household calculator shows, worked out from the API's answer
  * (normaliseHouseholdImpact): the per-policy rows, the programme table,
  * the "largest changes" sentence and the marginal tax rates. Pure
  * functions, so the page and its tests read the same numbers.
@@ -49,9 +49,9 @@ export const PROGRAMME_LABELS = {
   child_benefit_charge: "High Income Child Benefit Charge",
   national_insurance: "National Insurance",
   student_loan_repayments: "Student loan repayment",
-  council_tax: "Council tax",
+  council_tax: "Council Tax",
   fuel_duty: "Fuel duty",
-  vat_change: "VAT",
+  vat_change: "VAT change",
   tv_licence: "TV licence",
   pension_contributions: "Pension contributions from pay",
   other_taxes: "Other taxes",
@@ -87,7 +87,7 @@ export const PROGRAMME_LABELS = {
 const IN_SENTENCE = {
   income_tax: "income tax",
   student_loan_repayments: "student loan repayments",
-  council_tax: "council tax",
+  council_tax: "Council Tax",
   fuel_duty: "fuel duty",
   vat_change: "VAT",
   warm_home_discount_top_up: "the Warm Home Discount top-up",
@@ -122,6 +122,18 @@ const groupOf = (row) => OWN_GROUP[row.id] ?? row.group ?? "benefit";
 const programmeLabel = (row) =>
   PROGRAMME_LABELS[row.id] ?? row.label ?? row.id.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
 
+// Rows that are only the change the measures make, not an amount the
+// household pays: VAT on the spending entered (the form asks about no other
+// spending, so VAT itself is unknown). Before is a dash; after is the
+// change, signed as the other taxes (a cut is a positive amount).
+export const CHANGE_ONLY = new Set(["vat_change"]);
+
+// This page's note on a row, in place of the API's
+const PROGRAMME_NOTES = {
+  vat_change:
+    "Only the change the measures make to VAT on the electricity, petrol and diesel spending entered, not the VAT you pay, so a cut shows as a positive amount.",
+};
+
 /**
  * The table's rows, grouped: taxes as negative amounts, a row only where
  * before or after is not £0, the change as the effect on the household.
@@ -133,7 +145,8 @@ export function programmeGroups(programmes) {
     return {
       id: row.id,
       label: programmeLabel(row),
-      note: row.note ?? null,
+      note: PROGRAMME_NOTES[row.id] ?? row.note ?? null,
+      changeOnly: CHANGE_ONLY.has(row.id),
       before,
       after,
       change: typeof row.change === "number" ? sign * row.change : after - before,
@@ -508,13 +521,13 @@ export function areaName(brma) {
 
 /**
  * How the single-year calculation works, in one place: the Methodology
- * view's Household impact section shows these, as [term, text]; the
- * Household impact cards link there.
+ * view's Household calculator section shows these, as [term, text]; the
+ * Household calculator cards link there.
  */
 export const SINGLE_YEAR_METHOD = [
   [
-    "Engine and measures",
-    "The same engine (policyengine.py and policyengine-uk) and the same measures as the national figures, applied to one household's answers.",
+    "Engine and policies",
+    "The same engine (policyengine.py and policyengine-uk) and the same policies as the national figures, applied to one household's answers.",
   ],
   [
     "One year",

@@ -14,6 +14,7 @@ import {
   scatterCsv,
   scatterDots,
   scatterView,
+  SCATTER_SELECTION_NOT_PUBLISHED,
 } from "./householdScatter";
 
 const HEADER =
@@ -74,7 +75,14 @@ describe("parseScatterCsv", () => {
 
 describe("scatterView", () => {
   const view = (selectedIds, year = 2029, data = ready) =>
-    scatterView({ data, selectedIds, policyIds: POLICY_IDS, year, packageId: "all_combined" });
+    scatterView({
+      data,
+      selectedIds,
+      policyIds: POLICY_IDS,
+      year,
+      // The published combined run of exactly the selection (selectionPackageKey)
+      packageKey: new Set(selectedIds).size > 1 ? "all_combined" : null,
+    });
 
   it("shows one measure's cells for that measure and year, centred in their bands", () => {
     const result = view(["a"]);
@@ -93,39 +101,31 @@ describe("scatterView", () => {
     expect(open).toBe(5000);
   });
 
-  it("shows the package's cells when every measure is selected", () => {
+  it("shows the combined run's cells for several selected policies", () => {
     const result = view(["a", "b"]);
     expect(result.kind).toBe("points");
     expect(result.reform).toBe("all_combined");
     expect(result.points).toHaveLength(1);
+    expect(result).not.toHaveProperty("focus");
   });
 
-  it("never adds measures together", () => {
-    const result = scatterView({
-      data: ready,
-      selectedIds: ["a", "b"],
-      policyIds: ["a", "b", "c"],
-      year: 2029,
-    });
-    // One selected measure at a time, its own cells, never a sum: the
-    // picker offers the selected measures the data carries
-    expect(result.kind).toBe("points");
-    expect(["a", "b"]).toContain(result.reform);
-    expect(result.focus.options.every((id) => ["a", "b"].includes(id))).toBe(true);
-    const own = scatterView({ data: ready, selectedIds: [result.reform], policyIds: ["a", "b", "c"], year: 2029 });
-    expect(result.points).toEqual(own.points);
-    // The reader's choice is kept
-    const chosen = scatterView({ data: ready, selectedIds: ["a", "b"], policyIds: ["a", "b", "c"], year: 2029, focusId: result.focus.options.at(-1) });
-    expect(chosen.reform).toBe(result.focus.options.at(-1));
+  it("says the combination is not published, never showing one policy in its place", () => {
+    for (const packageKey of [null, "combined--not-in-the-file"]) {
+      const result = scatterView({ data: ready, selectedIds: ["a", "b"], policyIds: ["a", "b", "c"], year: 2029, packageKey });
+      expect(result).toEqual({ kind: "notice", reason: SCATTER_SELECTION_NOT_PUBLISHED, detail: null });
+    }
+    expect(SCATTER_SELECTION_NOT_PUBLISHED).toBe(
+      "Household results for this combination of policies are not published yet.",
+    );
   });
 
   it("says when nothing is published", () => {
     expect(view(["a"], 2029, { status: "unavailable", rows: null }).reason).toBe(
       "Household results are not yet published.",
     );
-    expect(view(["b"]).reason).toMatch(/not yet published for this measure/);
+    expect(view(["b"]).reason).toMatch(/not yet published for this policy/);
     expect(view(["a"], 2031).reason).toMatch(/2031-32/);
-    expect(view([]).reason).toMatch(/Select a measure/);
+    expect(view([]).reason).toMatch(/Select a policy/);
     expect(view(["a"], 2029, { status: "loading", rows: null }).kind).toBe("loading");
   });
 });
@@ -345,14 +345,53 @@ describe("fitChangeAxis and clampToAxis", () => {
     expect(ticks.length).toBeLessThanOrEqual(6);
   });
 
-  it("leaves a stray change out of the fit and clamps it hollow to the edge", () => {
+  it("leaves a stray change out of the fit and marks it capped at the edge", () => {
     const dots = [...Array.from({ length: 300 }, (_, i) => dot(i % 200)), dot(4500)];
-    const { domain } = fitChangeAxis(dots);
+    const { domain, capped } = fitChangeAxis(dots);
     expect(domain[1]).toBeLessThan(4500);
+    expect(capped).toEqual({ low: false, high: true });
     const clamped = clampToAxis(dots, domain);
     const far = clamped[clamped.length - 1];
     expect(far.clamped).toBe(true);
     expect(far.change).toBe(domain[1]);
+  });
+
+  // Every dot drawn on an axis edge must be one marked capped (an arrow)
+  const onEdgeUnmarked = (dots) => {
+    const { domain } = fitChangeAxis(dots);
+    return clampToAxis(dots, domain).filter(
+      (placed) => !placed.hidden && (placed.change <= domain[0] || placed.change >= domain[1]) && !placed.clamped,
+    );
+  };
+
+  it("reaches past the largest losses and gains, so no dot piles up at −£500", () => {
+    // Most households gain up to £1,400; a loss side spread to −£1,900, as
+    // in the review screenshot where losses sat in a column at −£500
+    const gains = Array.from({ length: 400 }, (_, i) => dot(5 + (i * 1395) / 399));
+    const losses = Array.from({ length: 80 }, (_, i) => dot(-5 - (i * 1895) / 79));
+    const dots = [...gains, ...losses];
+    const { domain, ticks, capped } = fitChangeAxis(dots);
+    expect(domain[0]).toBeLessThan(-1900);
+    expect(domain[1]).toBeGreaterThan(1400);
+    expect(capped).toEqual({ low: false, high: false });
+    expect(ticks).toContain(0);
+    expect(ticks[0]).toBe(domain[0]);
+    expect(ticks.at(-1)).toBe(domain[1]);
+    const placed = clampToAxis(dots, domain);
+    expect(placed.some((p) => p.clamped)).toBe(false);
+    expect(placed.filter((p) => p.change <= -500).length).toBeGreaterThan(20);
+    expect(onEdgeUnmarked(dots)).toEqual([]);
+  });
+
+  it("draws no dot on an axis edge unless it is marked capped", () => {
+    const cases = [
+      Array.from({ length: 200 }, (_, i) => dot(20 + i)),
+      Array.from({ length: 200 }, (_, i) => dot(-(i + 1) * 7)),
+      [...Array.from({ length: 300 }, (_, i) => dot((i % 200) - 60)), dot(4500), dot(-4000)],
+      [dot(250), dot(-250), dot(1000)],
+      [...Array.from({ length: 50 }, (_, i) => dot(i * 10)), dot(0, { hidden: true, edge: "upper" })],
+    ];
+    for (const dots of cases) expect(onEdgeUnmarked(dots)).toEqual([]);
   });
 
   it("puts dots in the open-ended bands at the edge, shown", () => {

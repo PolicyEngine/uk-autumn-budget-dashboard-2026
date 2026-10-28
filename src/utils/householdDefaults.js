@@ -1,5 +1,5 @@
 /**
- * The Household impact form's defaults, with their sources. Every field has
+ * The Household calculator form's defaults, with their sources. Every field has
  * one, so the results show before anything is changed.
  *
  * Salary: ONS, Annual Survey of Hours and Earnings (ASHE) 2026 provisional,
@@ -24,7 +24,7 @@
 /** ASHE 2026 provisional median, all employee jobs, rounded. */
 export const DEFAULT_SALARY = 34200;
 export const SALARY_SOURCE =
-  "£34,200 is the UK median salary in April 2026 (ONS Annual Survey of Hours and Earnings, provisional).";
+  "£34,200 is the UK median salary in April 2026 (Source: ONS Annual Survey of Hours and Earnings, provisional).";
 
 /** Average monthly private rent by region (ONS PIPR, September 2026). */
 export const REGIONAL_RENT = {

@@ -1,4 +1,4 @@
-/* The year picker on the teal title band: a pill like the policy selector
+/* The year picker on the teal title band: a box like the policy selector
    (it shares .policy-selector-toggle), opening a short list with Play at
    the top. While playing, the pill shows the year and a pause control. */
 .year-picker {
@@ -76,11 +76,6 @@
 
 .year-picker-option[aria-selected="true"] {
   font-weight: 600;
-  color: var(--pe-teal-700);
-}
-
-.year-picker-check {
-  width: 14px;
   color: var(--pe-teal-700);
 }
 

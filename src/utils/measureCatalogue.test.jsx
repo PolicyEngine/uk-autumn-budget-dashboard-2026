@@ -3,7 +3,7 @@ import fc from "fast-check";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildMeasureCatalogue, NEUTRAL_COLOR, isCatalogueRowDisplayable } from "./measureCatalogue";
+import { buildMeasureCatalogue, catalogueProvisional, NEUTRAL_COLOR, isCatalogueRowDisplayable } from "./measureCatalogue";
 import { hexToOklab, MEASURE_RAMPS, measureRamp } from "./chartTheme";
 import { budgetChartData, parseDashboardCsv } from "./loadDashboard";
 import { ALPHA, BETA, COMBINED, HELD, measureCatalogueFixture } from "../test/measureCatalogueFixture";
@@ -243,7 +243,10 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   //   published name is used for any other id;
   // - SPENDING_MEASURES: those whose gain scales with fuel and electricity
   //   spending, for one line of text; one not published has no part, so the
-  //   line can only show less often.
+  //   line can only show less often;
+  // - POLICY_FIELDS: the answers each measure reads, so the household form
+  //   asks them up front; a measure not selected or not published has no
+  //   row in use, so the form only asks fewer questions up front.
   // Before #185: MODELLING_NOTE, whose id test_reforms.py holds to a
   // registered measure, and singleYear.js's labels for the household API's
   // own programme line of the same name as the Warm Home Discount top-up.
@@ -252,11 +255,11 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   const allowed = {
     "utils/policyDetails.js": [/export const POLICY_DETAILS = \[[\s\S]*?\n\];/],
     "utils/householdExamples.js": [/^\s*(?:measure|measures|tag): .*$/gm],
-    "utils/youngPersonPresets.js": [/^\s*(?:measure|measures|tag): .*$/gm],
     "components/personal/HouseholdCards.jsx": [/const SOURCE_NAMES = \{[\s\S]*?\n\};/],
     "components/personal/SingleYearResults.jsx": [/export const SPENDING_MEASURES = \[.*\];/],
     "utils/measureModelling.js": [/export const MODELLING_NOTE = \{[\s\S]*?\n\};/],
     "utils/singleYear.js": [/^\s*warm_home_discount_top_up: "[^"]*",$/gm],
+    "utils/householdPolicyFields.js": [/export const POLICY_FIELDS = \{[\s\S]*?\n\};/],
   };
   const uncommented = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   const outsideAllowed = (path, text) => (allowed[relative(root, path)] ?? []).reduce((rest, block) => rest.replace(block, ""), text);
@@ -274,4 +277,17 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   }
   walk(root);
   expect(matches).toEqual([]);
+});
+
+describe("catalogueProvisional", () => {
+  const catalogue = (statuses) => ({
+    manifest: { measures: Object.fromEntries(Object.entries(statuses).map(([id, status]) => [id, { status }])) },
+    displayable: Object.keys(statuses).map((id) => ({ id })),
+  });
+
+  it("is true while any shown measure is provisional, and false once all are approved", () => {
+    expect(catalogueProvisional(catalogue({ a: "approved", b: "provisional" }))).toBe(true);
+    expect(catalogueProvisional(catalogue({ a: "approved", b: "approved" }))).toBe(false);
+    expect(catalogueProvisional({ manifest: null, displayable: [] })).toBe(false);
+  });
 });

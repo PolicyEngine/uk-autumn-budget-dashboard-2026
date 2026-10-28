@@ -162,3 +162,11 @@ describe("the two Across earnings cards in step", () => {
     );
   });
 });
+
+describe("changeRateTicks headroom", () => {
+  it("never puts the largest change on the plot's edge", async () => {
+    const { changeRateTicks } = await import("./MarginalRateChart");
+    expect(changeRateTicks(0.1).at(-1)).toBe(0.2);
+    expect(changeRateTicks(0.03).at(-1)).toBe(0.04);
+  });
+});

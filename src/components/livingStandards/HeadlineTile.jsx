@@ -4,8 +4,9 @@
 // figure and what it is, a small trend, and one line on what it means.
 //
 // The trend (TileTrend) is one series: a line over a light area, named
-// above ("OBR forecast", "PolicyEngine projection"), with its first and
-// last values labelled and the year the big figure comes from ringed. Its
+// above ("OBR forecast", "PolicyEngine projection"), with the year the big
+// figure comes from ringed; no values are printed on it (the big figure
+// and the line below state them, the hover gives each year's). Its
 // y range is fitted to the tile's own values but at least `minSpan` wide,
 // so a tenth of a point stays near-flat. Hover, or focus it and use the
 // arrow keys, for each year's value ("2028: 2.0%").
@@ -83,13 +84,6 @@ export function TileTrend({ rows, name, format, seriesLabel, highlight, dashed =
             <circle key={p.label} className="tile-trend-dot" cx={x(i)} cy={y(p.value)} r={1.8} />
           ))}
           {hero >= 0 && <circle className="tile-trend-hero" cx={x(hero)} cy={y(points[hero].value)} r={4.5} />}
-          {/* The first and last values, beside their points */}
-          <text className="tile-trend-value" x={x(0)} y={y(points[0].value) - 7} textAnchor="start">
-            {hero === 0 ? "" : format(points[0].value)}
-          </text>
-          <text className="tile-trend-value" x={x(last)} y={y(points[last].value) - 7} textAnchor="end">
-            {format(points[last].value)}
-          </text>
           {row && (
             <g>
               <line className="tile-trend-guide" x1={x(active)} x2={x(active)} y1={PAD_TOP - 4} y2={H} />
