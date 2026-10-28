@@ -71,6 +71,7 @@ def is_candidate_manifest(manifest: dict) -> bool:
 
 
 DEFAULT_YEAR = 2027
+COL_W = 6.85  # the text column, A4 less 18mm margins, in inches
 GAIN, GAIN_TEXT = "#319795", "#0F766E"
 LOSS, LOSS_TEXT = "#D97706", "#B45309"
 INK, TEXT, MUTED, GRID, AXIS = "#1F2937", "#374151", "#4B5563", "#E5E7EB", "#9CA3AF"
@@ -85,6 +86,8 @@ AGE_BANDS = [
 ]
 DECILES = [str(i) for i in range(1, 11)]
 REL_DECILES = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"]
+WITHHELD = "withheld"
+WITHHELD_NOTE = "Withheld: too few survey households."
 NOT_SHOWN_REASONS = {
     "staged": "awaiting review",
     "stale": "superseded by a model or data change; awaiting a new run",
@@ -325,6 +328,7 @@ def setup_matplotlib():
             "axes.spines.top": False,
             "axes.spines.right": False,
             "axes.unicode_minus": True,
+            "legend.labelcolor": INK,
         }
     )
     return plt
@@ -332,7 +336,9 @@ def setup_matplotlib():
 
 def svg_of(plt, fig) -> str:
     buffer = io.StringIO()
-    fig.savefig(buffer, format="svg", bbox_inches="tight", transparent=True)
+    # Charts are drawn at the column width (COL_W) with constrained layout and
+    # not cropped, so stretching them to the column keeps text at its set size.
+    fig.savefig(buffer, format="svg", transparent=True)
     plt.close(fig)
     text = buffer.getvalue()
     text = text[text.index("<svg"):]
@@ -536,7 +542,8 @@ class Report:
         self.notes.append((self.n_fn, text))
         return f'<sup class="fn"><a href="#fn{self.n_fn}">{self.n_fn}</a></sup>'
 
-    def figure(self, chart, title, subtitle, alt, notes, runs="combined", img=False):
+    def figure(self, chart, title, subtitle, alt, notes, runs="combined", img=False, after=""):
+        """A numbered figure; ``after`` is its reading paragraph, kept on the same page."""
         self.n_fig += 1
         body = (
             f'<img src="{chart}" alt="{esc(alt)}">'
@@ -545,19 +552,19 @@ class Report:
         )
         note = f'<p class="fnote"><span class="lab">Notes:</span> {esc(notes)}</p>' if notes else ""
         return (
-            f'<figure id="figure-{self.n_fig}"><figcaption><span class="fnum">Figure {self.n_fig}</span> '
+            f'<figure id="figure-{self.n_fig}" aria-label="Figure {self.n_fig}: {esc(title)}"><figcaption><span class="fnum">Figure {self.n_fig}</span> '
             f'<span class="ftitle">{esc(title)}</span><span class="fsub">{esc(subtitle)}</span></figcaption>'
-            f'{body}{note}<p class="fsrc"><span class="lab">Source:</span> {esc(self.source(runs))}</p></figure>'
+            f'{body}{note}<p class="fsrc"><span class="lab">Source:</span> {esc(self.source(runs))}</p>{after}</figure>'
         )
 
-    def table(self, title, subtitle, head, rows, notes="", runs="combined", cls="", keep=True):
+    def table(self, title, subtitle, head, rows, notes="", runs="combined", cls="", keep=True, after=""):
         self.n_tab += 1
         note = f'<p class="fnote"><span class="lab">Notes:</span> {notes}</p>' if notes else ""
         src = f'<p class="fsrc"><span class="lab">Source:</span> {esc(self.source(runs))}</p>' if runs else ""
         return (
             f'<div class="tblock{" keep" if keep else ""}"><table class="{cls}"><caption><span class="fnum">Table {self.n_tab}</span> '
             f'<span class="ftitle">{esc(title)}</span><span class="fsub">{esc(subtitle)}</span></caption>'
-            f'<thead><tr>{head}</tr></thead><tbody>{"".join(rows)}</tbody></table>{note}{src}</div>'
+            f'<thead><tr>{head}</tr></thead><tbody>{"".join(rows)}</tbody></table>{note}{src}{after}</div>'
         )
 
     def section(self, sid, title, intro, blocks, annex=None):
@@ -611,8 +618,8 @@ class Report:
     def cover(self):
         pub, m = self.pub, self.pub.manifest
         ident = (m.get("execution") or {}).get("identity") or {}
-        versions = " · ".join(
-            f"{ident[k]['name']} {ident[k]['version']}" for k in ("wrapper", "model") if k in ident
+        versions = "".join(
+            f"<span>{esc(ident[k]['name'])} {esc(ident[k]['version'])}</span>" for k in ("wrapper", "model") if k in ident
         )
         n = len(pub.measures)
         updated_text = long_date(m.get("updated_at", ""))
@@ -634,7 +641,7 @@ class Report:
   <dl class="cover-meta">
     <div><dt>Budget</dt><dd>{esc(long_date(budget_date))}</dd></div>
     <div><dt>Publication</dt><dd>Revision {esc(m.get('revision', ''))}, {esc(updated_text)}</dd></div>
-    <div><dt>Model</dt><dd>{esc(versions)}</dd></div>
+    <div><dt>Model</dt><dd>{versions}</dd></div>
   </dl>
 </section>"""
 
@@ -646,13 +653,14 @@ class Report:
         return '<p class="logo-text">PolicyEngine</p>'
 
     def key_findings(self):
-        """4 to 6 findings, each from traced figures, each fact stated once."""
+        """4 to 7 findings, each from traced figures, each fact stated once."""
         c, y, S = self.pub.combined, self.year, "summary"
         items = []
         if c is None:
             box = self.no_combined(full=True)
         else:
             T = self.together
+            years = self.years
             # Public finances
             rev = float(c.row("budgetary_impact", year=y)["value"])
             rev_words = self.t.fig(rev, "bn_words", c.path("budgetary_impact"), "value", {"reform_id": c.key, "year": y}, section=S)
@@ -662,13 +670,20 @@ class Report:
                 lead = f"{T} {self.verb('cost', 'costs')} the government {rev_words} in {fy(y)}."
             else:
                 lead = f"{T} {self.verb('raise', 'raises')} {rev_words} for the government in {fy(y)}."
-            vals = [(yy, float(c.row("budgetary_impact", year=yy)["value"])) for yy in self.years if c.row("budgetary_impact", year=yy) is not None]
-            if len(vals) == len(self.years) and len(self.years) > 1:
+            vals = [(yy, float(c.row("budgetary_impact", year=yy)["value"])) for yy in years if c.row("budgetary_impact", year=yy) is not None]
+            if len(vals) == len(years) and len(years) > 1:
                 total = sum(v for _, v in vals)
-                ttext = self.t.fig(total, "bn_words", c.path("budgetary_impact"), "value", {"reform_id": c.key, "year": self.years}, "sum", S)
-                lead += f" Over {fy(self.years[0])} to {fy(self.years[-1])} {self.verb('they', 'it')} {'cost' if total < 0 else 'raise'}{'' if self.plural else 's'} {ttext} in total."
+                ttext = self.t.fig(total, "bn_words", c.path("budgetary_impact"), "value", {"reform_id": c.key, "year": years}, "sum", S)
+                costs = [yy for yy, v in vals if v <= -ZERO_BN]
+                raises = [yy for yy, v in vals if v >= ZERO_BN]
+                verb = ("cost" if total < 0 else "raise") + ("" if self.plural else "s")
+                lead += f" Over {fy(years[0])} to {fy(years[-1])} {self.verb('they', 'it')} {verb} {ttext}"
+                if costs and raises:
+                    lead += f" net: {self._span(costs)} {self.verb('they', 'it')} {'cost' if self.plural else 'costs'} revenue, and {self._span(raises)} {self.verb('they', 'it')} {'raise' if self.plural else 'raises'} it (Section {self._sec_of('revenue')})."
+                else:
+                    lead += " in total."
             items.append(("Public finances.", lead))
-            # Largest measure on its own
+            # Largest measure on its own, in the report year and over the period
             if not self.single:
                 best = None
                 for k in self.order:
@@ -676,11 +691,23 @@ class Report:
                     r = e.row("budgetary_impact", year=y)
                     if r is not None and y in e.years and (best is None or abs(float(r["value"])) > abs(best[1])):
                         best = (k, float(r["value"]))
+                totals = {}
+                for k in self.order:
+                    e = self.pub.measures[k]
+                    rs = [e.row("budgetary_impact", year=yy) for yy in years]
+                    if all(r is not None for r in rs) and all(yy in e.years for yy in years):
+                        totals[k] = sum(float(r["value"]) for r in rs)
+                best_t = max(totals.items(), key=lambda kv: abs(kv[1])) if totals and len(years) > 1 else None
                 if best is not None and abs(best[1]) >= ZERO_BN:
                     e = self.pub.measures[best[0]]
                     v, txt = self.budget(e, y, "bn_words", S)
-                    items.append(("Largest measure.", f"On its own, {esc(e.name)} has the largest effect on revenue in {fy(y)}: it {'costs' if v < 0 else 'raises'} {txt}."))
-            # Households
+                    s = f"On its own, {esc(e.name)} has the largest effect on revenue in {fy(y)}: it {'costs' if v < 0 else 'raises'} {txt}."
+                    if best_t is not None and best_t[0] != best[0] and abs(best_t[1]) >= ZERO_BN:
+                        et = self.pub.measures[best_t[0]]
+                        tt = self.t.fig(best_t[1], "bn_words", et.path("budgetary_impact"), "value", {"reform_id": et.key, "year": years}, "sum", S)
+                        s += f" Over {fy(years[0])} to {fy(years[-1])}, {esc(et.name)} has the largest effect: it {'costs' if best_t[1] < 0 else 'raises'} {tt} in total."
+                    items.append(("Largest measure.", s))
+            # Households, in the report year and, where it differs, the last year
             hh, hh_text = self.cell(c, "winners_losers", "avg_change", {"year": y, "decile": "all"}, "gbp", S)
             if hh is not None:
                 if abs(hh) < 0.5:
@@ -688,6 +715,9 @@ class Report:
                 else:
                     s = f"Average household net income {'rises' if hh > 0 else 'falls'} by {hh_text.lstrip('+' + MINUS)} a year in {fy(y)}."
                 items.append(("Household incomes.", s))
+            later = self._later_years(c, hh, S)
+            if later:
+                items.append(("Later years.", later))
             # Distribution
             lo, lo_text = self.cell(c, "distributional_impact", "value", {"year": y, "decile": "1st"}, "pct2", S)
             hi, hi_text = self.cell(c, "distributional_impact", "value", {"year": y, "decile": "10th"}, "pct2", S)
@@ -698,51 +728,86 @@ class Report:
             if b is not None:
                 wphrase = "fewer than 0.05%" if w is not None and abs(w) < 0.05 else wt
                 items.append(("Gainers and losers.", f"{bt} of people live in households that are better off and {wphrase} in households that are worse off."))
-            # Poverty
-            p, pt = self.cell(c, "poverty_inequality", "poverty_abs_bhc_change_pp", {"year": y}, "pp2", S)
-            k, kt = self.cell(c, "poverty_inequality", "child_poverty_abs_bhc_change_pp", {"year": y}, "pp2", S)
-            if p is not None:
-                s = f"Absolute poverty before housing costs changes by {pt} for all people"
-                if k is not None:
-                    s += f" and {kt} for children"
+            # Poverty: below half a hundredth of a point, say unchanged rather than print 0.00pp
+            pr = c.row("poverty_inequality", year=y)
+            if pr is not None and pr.get("poverty_abs_bhc_change_pp", "") != "":
+                p = float(pr["poverty_abs_bhc_change_pp"])
+                kraw = pr.get("child_poverty_abs_bhc_change_pp", "")
+                k = float(kraw) if kraw != "" else None
                 if abs(p) < ZERO_PP and (k is None or abs(k) < ZERO_PP):
-                    s += ", less than 0.005 percentage points either way"
-                items.append(("Poverty.", s + "."))
-            box = "<ol>" + "".join(f"<li><b>{h}</b> {t}</li>" for h, t in items[:6]) + "</ol>"
+                    who = "for all people and for children" if k is not None else "for all people"
+                    s = f"Absolute poverty before housing costs is unchanged in {fy(y)} {who} (a change of less than 0.005 percentage points)."
+                else:
+                    _, pt = self.cell(c, "poverty_inequality", "poverty_abs_bhc_change_pp", {"year": y}, "pp2", S)
+                    s = f"Absolute poverty before housing costs changes by {pt} for all people"
+                    if k is not None:
+                        _, kt = self.cell(c, "poverty_inequality", "child_poverty_abs_bhc_change_pp", {"year": y}, "pp2", S)
+                        s += f" and {kt} for children"
+                    s += f" in {fy(y)}."
+                items.append(("Poverty.", s))
+            box = "<ol>" + "".join(f"<li><b>{h}</b> {t}</li>" for h, t in items[:7]) + "</ol>"
         return f"""
 <section id="summary" aria-labelledby="kf-title">
   <div class="kf">
     <h2 id="kf-title">Key findings</h2>
-    <p class="kf-sub">Figures for {fy(y)} unless stated.</p>
     {box}
   </div>
-  {self.scope()}
 </section>"""
 
+    @staticmethod
+    def _span(ys):
+        """Years in words: 'from 2026-27 to 2030-31' when consecutive, else listed."""
+        if len(ys) == 1 or all(b - a == 1 for a, b in zip(ys, ys[1:])):
+            return year_span(ys)
+        return "in " + ", ".join(fy(v) for v in ys[:-1]) + " and " + fy(ys[-1])
+
+    def _later_years(self, c, hh, S):
+        """The last year, when the average change in household income there
+        differs in sign from the report year's, with the measure behind it."""
+        last = self.years[-1]
+        if last == self.year or hh is None:
+            return ""
+        r = c.row("winners_losers", year=last, decile="all")
+        if r is None or r.get("avg_change", "") == "":
+            return ""
+        hl = float(r["avg_change"])
+        if abs(hl) < 0.5 or (abs(hh) >= 0.5 and (hl > 0) == (hh > 0)):
+            return ""
+        _, hl_text = self.cell(c, "winners_losers", "avg_change", {"year": last, "decile": "all"}, "gbp", S)
+        when = ""
+        if not self.single:
+            best = None
+            for k in self.order:
+                e = self.pub.measures[k]
+                rl = e.row("winners_losers", year=last, decile="all")
+                ry = e.row("winners_losers", year=self.year, decile="all")
+                if rl is None or rl.get("avg_change", "") == "":
+                    continue
+                v = float(rl["avg_change"])
+                new = ry is None or ry.get("avg_change", "") == "" or abs(float(ry["avg_change"])) < 0.5
+                if (v > 0) == (hl > 0) and abs(v) >= 0.5 and new and (best is None or abs(v) > best[0]):
+                    best = (abs(v), k)
+            if best is not None:
+                when = f", when {esc(self.name(best[1]))} takes effect,"
+        return f"By {fy(last)}{when} average household net income {'rises' if hl > 0 else 'falls'} by {hl_text.lstrip('+' + MINUS)} a year (Section {self._sec_of('deciles')})."
+
     def scope(self):
-        """What the report compares, under the key findings: the summary page."""
-        n, y = len(self.pub.measures), self.year
+        """What the report compares: the first block of the introduction."""
+        n = len(self.pub.measures)
         c = self.pub.combined
         together = (
-            "Figures for the measures together come from one simulation of all of them, never from adding up each measure's own figures."
+            " Figures for the measures together come from one simulation of all of them, never from adding up each measure's own figures."
             if c is not None and not self.single
             else ""
         )
-        return f"""<div class="scope">
-<h3>What this report compares</h3>
-<p>Each figure compares two simulations of the same UK households: current law, and current law with the {count_words(n)} measure{'s' if n != 1 else ''} in this report (Annex A). The difference is the effect of the measure{'s' if n != 1 else ''}. {together}</p>
-<p>The figures cover {fy(self.years[0])} to {fy(self.years[-1])}; results by household are for {fy(y)}, the default year on the dashboard. They are static: people are assumed not to change what they earn, spend, save or claim in response. Annex B sets out the method and what the figures leave out.</p>
-</div>"""
+        return f"""<div class="keep"><h3>What the report compares</h3>
+<p>Each figure compares two simulations of the same UK households: current law, and current law with the {count_words(n)} measure{'s' if n != 1 else ''} in Table 1. The difference is the effect of the measure{'s' if n != 1 else ''}.{together}</p>
+<p>The figures cover {fy(self.years[0])} to {fy(self.years[-1])}; results by household are for {fy(self.year)} unless stated. They are static: people are assumed not to change what they earn, spend, save or claim in response. Annex A sets out the method and what the figures leave out.</p></div>"""
 
     def introduction(self):
-        """What PolicyEngine is, what the report models, and how to read it."""
-        n = len(self.pub.measures)
-        names = [esc(self.name(k)) for k in self.order]
-        listed = "".join(f"<li>{nm}</li>" for nm in names)
+        """What PolicyEngine is, what the report compares, how to read it, and the measures."""
         blocks = [
-            f"""<div class="keep"><h3>What the report models</h3>
-<p>The {count_words(n)} measure{'s' if n != 1 else ''} below, each as described in Annex A. Measures not listed here are not modelled.</p>
-<ul class="measures-list">{listed}</ul></div>""",
+            self.scope(),
             f"""<div class="keep"><h3>How to read the figures</h3>
 <ul>
 <li><b>Public finances.</b> The change in government revenue, £ billion a year. Below zero a measure costs the government; above zero it raises revenue.</li>
@@ -752,6 +817,7 @@ class Report:
 <li><b>Provisional.</b> While any figure is provisional, every page says so; provisional figures can change before they are approved.</li>
 </ul>
 <p>The interactive version, including a calculator for a household's own circumstances, is at policyengine.org/uk/autumn-budget-2026.</p></div>""",
+            self.measures_table(),
         ]
         intro = """<p>PolicyEngine is an open-source microsimulation model of the UK tax and benefit system. It applies the rules of each tax and benefit to a representative survey of UK households, weighted to official totals, once under current law and once with the measures, and reports the difference for the government and for households. The code and data behind every figure are public.</p>"""
         return self.section("introduction", "Introduction", intro, blocks)
@@ -768,23 +834,33 @@ class Report:
         return f"{'gains' if v > 0 else 'loses'} {text.lstrip('+' + MINUS)}"
 
     def contents(self):
-        rows = "".join(f'<li><a href="#{a}"><span class="n">{esc(n)}</span>{esc(t)}</a></li>' for a, n, t in self._toc)
-        return f'<nav class="toc" aria-label="Contents"><h3>Contents</h3><ol>{rows}</ol></nav>'
+        toc = [("summary", "", "Key findings")] + self._toc
+        rows = "".join(f'<li><a href="#{a}"><span class="n">{esc(n)}</span>{esc(t)}</a></li>' for a, n, t in toc)
+        return f'<nav class="toc" aria-label="Contents"><h2>Contents</h2><ol>{rows}</ol></nav>'
 
     # ---- charts
     def _bar_chart(self, labels, vals, texts, colours, height=2.3, size=7.6, ylabel=None):
+        """Vertical bars at the column width. A value of None is a withheld
+        cell: no bar, labelled "withheld", left out of the axis range."""
         plt = self.plt
-        fig, ax = plt.subplots(figsize=(6.6, height))
-        bars = ax.bar(labels, vals, color=colours, width=0.6)
+        fig, ax = plt.subplots(figsize=(COL_W, height), layout="constrained")
+        shown = [0.0 if v is None else v for v in vals]
+        colours = ["none" if v is None else col for v, col in zip(vals, colours)]
+        texts = [WITHHELD if v is None else t for v, t in zip(vals, texts)]
+        bars = ax.bar(labels, shown, color=colours, width=0.6)
         ax.axhline(0, color=ZERO, linewidth=0.8)
-        label_bars(ax, bars, texts, vals, size=size)
-        ax.set_ylim(*pad_limits(vals, 0.3, 0.3))
+        label_bars(ax, bars, texts, shown, size=size)
+        ax.set_ylim(*pad_limits([v for v in vals if v is not None] or [0.0], 0.3, 0.3))
         if ylabel:
             ax.set_ylabel(ylabel, fontsize=7.6)
         minus_ticks(ax)
         style_axes(ax)
         ax.tick_params(axis="x", length=0)
         return svg_of(plt, fig)
+
+    @staticmethod
+    def _withheld_note(vals):
+        return WITHHELD_NOTE if any(v is None for v in vals) else ""
 
     # ---- sections
     def revenue(self):
@@ -793,12 +869,10 @@ class Report:
         T = self.together
         blocks = []
         intro = (
-            "<p>The change in government revenue each year as PolicyEngine costs the measures: static, with no change in behaviour"
-            + self.fn("People do not change what they earn, spend, save or claim in response to the measures, so these are not post-behavioural costings.")
-            + f". Below zero the measures cost the government; above zero they raise revenue. Measures are listed with those that raise revenue first, then those that cost it, each by size.</p>"
-            + '<p class="key"><span class="sw" style="background:%s"></span>Raises revenue (households pay more)<span class="sw" style="background:%s"></span>Costs revenue (households pay less or receive more)</p>'
-            % (LOSS, GAIN)
+            "<p>The change in government revenue each year. Below zero the measures cost the government; above zero they raise revenue. "
+            "Measures are in the order of Table 1.</p>"
         )
+        colour_note = "Teal: costs revenue (households pay less or receive more); orange: raises revenue (households pay more)."
         if c is not None:
             vals, labels, years = [], [], []
             for y in self.years:
@@ -821,8 +895,8 @@ class Report:
                 parts = [parts[0]] + [p.replace("revenue ", "it ", 1) for p in parts[1:]]
             title = f"{T} " + (", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else parts[0])
             alt = "; ".join(f"{fy(y)}: {t}" for y, t in zip(years, labels))
-            blocks.append(self.figure(chart, title, "Change in government revenue by year, £ billion, UK", alt, "" if self.single else "The combined run includes how the measures interact."))
-            blocks.append(self.explain(self._revenue_drivers(years, vals)))
+            blocks.append(self.figure(chart, title, "Change in government revenue by year, £ billion, UK", alt, colour_note,
+                                      after=self.explain(self._revenue_drivers(years, vals))))
         else:
             blocks.append(self.no_combined())
 
@@ -838,7 +912,7 @@ class Report:
             vals.append(v)
             labels.append(text)
         if keys:
-            fig, ax = plt.subplots(figsize=(6.6, 0.36 * len(keys) + 0.6))
+            fig, ax = plt.subplots(figsize=(COL_W, 0.36 * len(keys) + 0.6), layout="constrained")
             names = [self.name(k) for k in keys][::-1]
             bars = ax.barh(names, vals[::-1], color=[tone(v, invert=True) for v in vals[::-1]], height=0.6)
             ax.axvline(0, color=ZERO, linewidth=0.8)
@@ -853,17 +927,19 @@ class Report:
                 title = f"No measure on its own changes revenue by £5 million or more in {fy(y)}"
             else:
                 title = f"On its own, {self.name(keys[big])} has the largest effect on revenue in {fy(y)}"
-            blocks.append(self.figure(svg_of(plt, fig), title, f"Change in government revenue by measure, £ billion, UK, {fy(y)}", alt, "Each measure run on its own against current law. The measures' own effects need not add up to the combined run's, which includes how they interact.", runs="each"))
             idle = [self.name(k) for k, v in zip(keys, vals) if abs(v) < ZERO_BN]
+            after = ""
             if idle:
-                blocks.append(self.explain(
+                after = self.explain(
                     f"{self._names(idle)} {'has' if len(idle) == 1 else 'have'} no effect on revenue in {fy(y)}; "
-                    "Table 1 shows the years in which each measure changes revenue."
-                ))
+                    f"Table {self.n_tab + 1} shows the years in which each measure changes revenue."
+                )
+            blocks.append(self.figure(svg_of(plt, fig), title, f"Change in government revenue by measure, £ billion, UK, {fy(y)}", alt, f"Each measure on its own against current law; colours as in Figure {self.n_fig}." if c is not None else "Each measure on its own against current law. " + colour_note, runs="each", after=after))
 
         # Table: every year, and the period total
         head = '<th scope="col">Measure</th>' + "".join(f'<th scope="col" class="num">{fy(y)}</th>' for y in self.years) + '<th scope="col" class="num">Total</th>'
         rows = []
+        any_na = False
         for k in self.order:
             e = pub.measures[k]
             cells = []
@@ -879,6 +955,7 @@ class Report:
             else:
                 # A total over fewer years than the column says would mislead
                 total, ttext = None, "n/a"
+                any_na = True
             rows.append(f'<tr><th scope="row">{esc(e.name)}</th>{"".join(cells)}<td class="num total-col {self._cls(total)}">{ttext}</td></tr>')
         if c is not None and not self.single:
             cells, vs = [], []
@@ -887,6 +964,8 @@ class Report:
                 cells.append(f'<td class="num">{text}</td>')
                 if v is not None:
                     vs.append(v)
+                else:
+                    any_na = True
             total = sum(vs)
             ttext = self.t.fig(total, "bn2_plain", c.path("budgetary_impact"), "value", {"reform_id": c.key, "year": self.years}, "sum", S + "-table")
             rows.append(f'<tr class="total"><th scope="row">All measures together</th>{"".join(cells)}<td class="num total-col">{ttext}</td></tr>')
@@ -896,7 +975,8 @@ class Report:
                 f"£ billion, UK, {fy(self.years[0])} to {fy(self.years[-1])}",
                 head,
                 rows,
-                f"Negative values cost revenue. Total: {fy(self.years[0])} to {fy(self.years[-1])}, shown only when every year has a figure. n/a: no supported figure."
+                f"Negative values cost revenue. Total: {fy(self.years[0])} to {fy(self.years[-1])}, shown only when every year has a figure."
+                + (" n/a: no supported figure." if any_na else "")
                 + ("" if self.single or c is None else " The last row is the combined run, not the sum of the rows above."),
                 runs="combined" if self.single else ("both" if c is not None else "each"),
             )
@@ -904,7 +984,9 @@ class Report:
         return self.section("revenue", "Public finances", intro, blocks)
 
     def _revenue_drivers(self, years, vals):
-        """Name the measures behind each year whose sign differs from the report year's."""
+        """For each year whose sign differs from the report year's, name the
+        measure(s) behind it, and say why the sign changes only when each
+        measure's own figures show it."""
         if self.single or self.pub.combined is None or self.year not in years:
             return ""
         base = vals[years.index(self.year)]
@@ -912,20 +994,40 @@ class Report:
         for yy, v in zip(years, vals):
             if abs(v) < ZERO_BN or abs(base) < ZERO_BN or (v > 0) == (base > 0):
                 continue
-            same = []
+            same, other = [], 0.0
             for k in self.order:
                 e = self.pub.measures[k]
                 r = e.row("budgetary_impact", year=yy)
-                if r is not None and yy in e.years and abs(float(r["value"])) >= ZERO_BN and (float(r["value"]) > 0) == (v > 0):
-                    same.append((abs(float(r["value"])), self.name(k)))
+                if r is None or yy not in e.years:
+                    continue
+                x = float(r["value"])
+                if abs(x) >= ZERO_BN and (x > 0) == (v > 0):
+                    same.append((abs(x), k))
+                else:
+                    other += x
             if not same:
                 continue
             same.sort(reverse=True)
-            word = "raises" if v > 0 else "costs"
+            word, opp = ("raise", "cost") if v > 0 else ("cost", "raise")
+            outweighs = sum(a for a, _ in same) > abs(other)
             if len(same) == 1:
-                out.append(f"In {fy(yy)} the sign changes because {same[0][1]}, on its own, is the only measure that {word} revenue that year")
+                k = same[0][1]
+                e = self.pub.measures[k]
+                only = all(
+                    (r := e.row("budgetary_impact", year=z)) is None or abs(float(r["value"])) < ZERO_BN
+                    for z in years if z != yy
+                )
+                who = esc(self.name(k)) + (", which changes revenue only that year," if only else "")
+                if outweighs:
+                    out.append(f"In {fy(yy)} the measures together {word} revenue: {who} {word}s more on its own than the other measures {opp}")
+                else:
+                    out.append(f"In {fy(yy)} the measures together {word} revenue; on its own, {who} is the only measure that {word}s revenue that year")
             else:
-                out.append(f"In {fy(yy)} the sign changes: {same[0][1]} is the largest of the measures that {word.rstrip('s')} revenue that year")
+                lead = esc(self.name(same[0][1]))
+                if outweighs:
+                    out.append(f"In {fy(yy)} the measures together {word} revenue: on their own, the measures that {word} it, led by {lead}, {word} more than the others {opp}")
+                else:
+                    out.append(f"In {fy(yy)} the measures together {word} revenue; {lead} is the largest of the measures that {word} it that year")
         return (". ".join(out) + ".") if out else ""
 
     @staticmethod
@@ -941,76 +1043,74 @@ class Report:
         losses = [i for i, v in enumerate(vals) if v is not None and v <= -0.5]
         if not sig:
             return f"No published figures by {unit_word}"
-        if len(gains) == len(vals):
+        every = f"every {unit_word}" if len(sig) == len(vals) else f"every {unit_word} with a published figure"
+        if len(gains) == len(sig):
             i = max(gains, key=lambda i: vals[i])
-            return f"{who} in every {unit_word} gain on average, most in cash terms {names[i]}"
-        if len(losses) == len(vals):
+            return f"{who} in {every} gain on average, most in cash terms {names[i]}"
+        if len(losses) == len(sig):
             i = min(losses, key=lambda i: vals[i])
-            return f"{who} in every {unit_word} lose on average, most in cash terms {names[i]}"
+            return f"{who} in {every} lose on average, most in cash terms {names[i]}"
         return f"On average, {who.lower()} gain in {count_words(len(gains))} {unit_word}s and lose in {count_words(len(losses))}"
 
     def deciles(self):
         c, y, S = self.pub.combined, self.year, "deciles"
         intro = (
-            f"<p>The change in household net income in {fy(y)}, with households ranked into ten equal groups (deciles) by their equivalised net income before the measures"
-            + self.fn("Equivalised: adjusted for household size and composition, so that incomes of different households can be compared. Each decile holds a tenth of households.")
-            + ". Averages are over all households in each decile, including those with no change.</p>"
+            f"<p>The change in household net income in {fy(y)} by income decile (see how to read the figures, Section 1). "
+            "Averages are over all households in each decile, including those with no change.</p>"
         )
         blocks = []
         if c is None:
             blocks.append(self.no_combined())
         else:
+            blocks.append(self._by_year(c))
             abs_vals, abs_labels, rel_vals, rel_labels = [], [], [], []
             for d, rd in zip(DECILES, REL_DECILES):
                 v, text = self.cell(c, "winners_losers", "avg_change", {"year": y, "decile": d}, "gbp", S)
-                abs_vals.append(v or 0.0)
-                abs_labels.append(text)
+                abs_vals.append(v)
+                abs_labels.append(WITHHELD if v is None else text)
                 v, text = self.cell(c, "distributional_impact", "value", {"year": y, "decile": rd}, "pct2", S)
-                rel_vals.append(v or 0.0)
-                rel_labels.append(text)
+                rel_vals.append(v)
+                rel_labels.append(WITHHELD if v is None else text)
             names = [f"in {decile_phrase(i)}" for i in range(1, 11)]
             title = self._spread_title(abs_vals, names, "decile", "Households")
-            chart = self._bar_chart(DECILES, abs_vals, abs_labels, [tone(v) for v in abs_vals], height=2.2, size=7.2)
+            chart = self._bar_chart(DECILES, abs_vals, abs_labels, [tone(v or 0.0) for v in abs_vals], height=2.2, size=7.2)
             alt = "; ".join(f"decile {d}: {a}" for d, a in zip(DECILES, abs_labels))
-            blocks.append(self.figure(chart, title, f"Average change in household net income by income decile, £ a year, UK, {fy(y)}", alt, "Decile 1 is the lowest-income tenth of households, 10 the highest-income tenth."))
-            i = max(range(10), key=lambda i: abs(rel_vals[i]))
-            if all(abs(v) < 0.005 for v in rel_vals):
+            blocks.append(self.figure(chart, title, f"Average change in household net income by income decile, £ a year, UK, {fy(y)}", alt, self._withheld_note(abs_vals)))
+            f_abs = self.n_fig
+            rel_sig = [(i, v) for i, v in enumerate(rel_vals) if v is not None]
+            if not rel_sig or all(abs(v) < 0.005 for _, v in rel_sig):
                 rtitle = "As a share of net income, no decile's income changes by 0.005% or more"
             else:
-                rtitle = f"As a share of net income, {decile_phrase(i + 1)} {'gains' if rel_vals[i] > 0 else 'loses'} most"
-            chart = self._bar_chart(DECILES, rel_vals, rel_labels, [tone(v) for v in rel_vals], height=2.2, size=7.2)
+                i, vi = max(rel_sig, key=lambda iv: abs(iv[1]))
+                rtitle = f"As a share of net income, {decile_phrase(i + 1)} {'gains' if vi > 0 else 'loses'} most"
+            chart = self._bar_chart(DECILES, rel_vals, rel_labels, [tone(v or 0.0) for v in rel_vals], height=2.2, size=7.2)
             alt = "; ".join(f"decile {d}: {r}" for d, r in zip(DECILES, rel_labels))
-            blocks.append(self.figure(chart, rtitle, f"Average change in household net income by income decile, % of net income, UK, {fy(y)}", alt, "Decile 1 is the lowest-income tenth of households, 10 the highest-income tenth."))
-            if abs_vals[9] > abs_vals[0] > 0 and rel_vals[0] > rel_vals[9] > 0:
-                blocks.append(self.explain(
-                    "Figures 3 and 4 read together: the cash gain is larger for higher-income households, "
-                    "but smaller relative to their income, so as a share of income the measures do more for lower-income households."
-                ))
-            elif abs_vals[0] > abs_vals[9] > 0:
-                blocks.append(self.explain("The cash gain is larger for lower-income households than for higher-income ones."))
+            a0, a9, r0, r9 = abs_vals[0], abs_vals[9], rel_vals[0], rel_vals[9]
+            read = ""
+            if None not in (a0, a9, r0, r9):
+                if a9 > a0 > 0 and r0 > r9 > 0:
+                    read = (
+                        f"Figures {f_abs} and {f_abs + 1} read together: the cash gain is larger for higher-income households, "
+                        "but smaller relative to their income, so the gain is a larger share of income for lower-income households."
+                    )
+                elif a0 > a9 > 0:
+                    read = "The cash gain is larger for lower-income households than for higher-income ones."
+            blocks.append(self.figure(chart, rtitle, f"Average change in household net income by income decile, % of net income, UK, {fy(y)}", alt, self._withheld_note(rel_vals), after=self.explain(read)))
 
         # Each measure by decile (one measure: the charts above are its own)
         if not self.single:
             head = '<th scope="col">Measure</th>' + "".join(f'<th scope="col" class="num">{d}</th>' for d in DECILES)
             rows = []
+            withheld = False
             for k in self.order:
                 e = self.pub.measures[k]
                 cells = []
                 for d in DECILES:
                     v, text = self.cell(e, "winners_losers", "avg_change", {"year": y, "decile": d}, "gbp", S + "-table")
+                    if v is None:
+                        text, withheld = WITHHELD, True
                     cells.append(f'<td class="num {self._tone_cls(v)}">{text}</td>')
                 rows.append(f'<tr><th scope="row">{esc(e.name)}</th>{"".join(cells)}</tr>')
-            blocks.append(
-                self.table(
-                    "Each measure on its own: average change in household net income by income decile",
-                    f"£ a year, UK, {fy(y)}",
-                    head,
-                    rows,
-                    "Decile 1 is the lowest-income tenth of households, 10 the highest. £0: no change on average, or less than 50p.",
-                    runs="each",
-                    cls="compact",
-                )
-            )
             tops = []
             for d in DECILES:
                 best = None
@@ -1020,9 +1120,68 @@ class Report:
                         best = (abs(float(r["avg_change"])), k)
                 if best is not None and best[0] >= 0.5:
                     tops.append(best[1])
-            if tops and len(set(tops)) == 1 and len(tops) == len(DECILES):
-                blocks.append(self.explain(f"On its own, {esc(self.name(tops[0]))} changes average income by most in every decile, so it sets the shape of Figure 3."))
+            read = ""
+            if c is not None and tops and len(set(tops)) == 1 and len(tops) == len(DECILES):
+                read = f"On its own, {esc(self.name(tops[0]))} changes average income by most in every decile, so it sets the shape of Figure {f_abs}."
+            blocks.append(
+                self.table(
+                    "Each measure on its own: average change in household net income by income decile",
+                    f"£ a year, UK, {fy(y)}",
+                    head,
+                    rows,
+                    "£0: no change on average, or less than 50p." + (" " + WITHHELD_NOTE if withheld else ""),
+                    runs="each",
+                    cls="compact",
+                    after=self.explain(read),
+                )
+            )
         return self.section("deciles", "Households by income decile", intro, blocks)
+
+    def _by_year(self, c):
+        """The measures together: the average change for all households in
+        each year, so a measure that takes effect outside the report year
+        shows here, with the measure behind each year of opposite sign."""
+        S = "deciles-years"
+        vals, cells = [], []
+        for yy in self.years:
+            v, t = self.cell(c, "winners_losers", "avg_change", {"year": yy, "decile": "all"}, "gbp", S)
+            vals.append(v)
+            cells.append(f'<td class="num {self._tone_cls(v)}">{WITHHELD if v is None else t}</td>')
+        head = '<th scope="col"></th>' + "".join(f'<th scope="col" class="num">{fy(yy)}</th>' for yy in self.years)
+        read = ""
+        known = [(yy, v) for yy, v in zip(self.years, vals) if v is not None]
+        runs = sign_runs([yy for yy, _ in known], [v for _, v in known], 0.5)
+        if len(runs) > 1:
+            word = {1: "rises", -1: "falls", 0: "is unchanged"}
+            parts = [f"{word[s]} {self._span(ys)}" for s, ys in runs]
+            read = "Average household net income " + ", ".join(parts[:-1]) + " and " + parts[-1] + "."
+            if not self.single:
+                notes = []
+                for s, ys in runs:
+                    if s == 0 or self.year in ys:
+                        continue
+                    yy = ys[-1]
+                    best = None
+                    for k in self.order:
+                        r = self.pub.measures[k].row("winners_losers", year=yy, decile="all")
+                        if r is None or r.get("avg_change", "") == "":
+                            continue
+                        x = float(r["avg_change"])
+                        if (x > 0) == (s > 0) and abs(x) >= 0.5 and (best is None or abs(x) > best[0]):
+                            best = (abs(x), k)
+                    if best is not None:
+                        notes.append(f"in {fy(yy)}, {esc(self.name(best[1]))} has the largest such effect on its own")
+                if notes:
+                    read += " " + "; ".join(notes)[0].upper() + "; ".join(notes)[1:] + "."
+        return self.table(
+            f"{self.together}: average change in household net income by year",
+            f"£ a year, all households, UK, {fy(self.years[0])} to {fy(self.years[-1])}",
+            head,
+            [f'<tr><th scope="row">All households</th>{"".join(cells)}</tr>'],
+            self._withheld_note(vals),
+            cls="compact",
+            after=self.explain(read),
+        )
 
     @staticmethod
     def _tone_cls(v):
@@ -1031,83 +1190,88 @@ class Report:
         return "gain" if v > 0 else "loss"
 
     def winners(self):
-        y, S, plt = self.year, "winners", self.plt
+        y, S = self.year, "winners"
         entries = ([self.pub.combined] if self.pub.combined is not None and self.pub.combined.combined else []) + [
             self.pub.measures[k] for k in self.order
         ]
-        names, better, same, worse, lb, ls, lw = [], [], [], [], [], [], []
+        rows, complete, withheld = [], [], False
         for e in entries:
             b, bt = self.cell(e, "age_impact", "pct_better_off", {"year": y, "age_band": "all"}, "pct1_plain", S)
             u, ut = self.cell(e, "age_impact", "pct_unchanged", {"year": y, "age_band": "all"}, "pct1_plain", S)
             w, wt = self.cell(e, "age_impact", "pct_worse_off", {"year": y, "age_band": "all"}, "pct1_plain", S)
-            if b is None:
+            name = "All measures together" if e.combined else e.name
+            if b is None and u is None and w is None:
                 continue
-            names.append("All measures together" if e.combined else e.name)
-            better.append(b)
-            same.append(u)
-            worse.append(w)
-            lb.append(bt)
-            ls.append(ut)
-            lw.append(wt)
+            if None in (b, u, w):
+                # One share withheld would reveal itself from the other two: withhold the row
+                withheld = True
+                rows.append(f'<tr><th scope="row">{esc(name)}</th>' + f'<td class="num">{WITHHELD}</td>' * 3 + "</tr>")
+                continue
+            rows.append(f'<tr><th scope="row">{esc(name)}</th><td class="num">{bt}</td><td class="num">{ut}</td><td class="num">{wt}</td></tr>')
+            complete.append((e, b, w))
         intro = f"<p>The share of people living in households whose net income rises, does not change, or falls in {fy(y)}. A household counts as better off when its net income rises by more than 0.01% (£3 a year on £30,000), worse off when it falls by more than that, and unchanged otherwise. People are counted by the household they live in.</p>"
         blocks = []
-        if names:
-            n = len(names)
-            fig, ax = plt.subplots(figsize=(6.6, 0.3 * n + 0.75))
-            ys = list(range(n))[::-1]
-            ax.barh(ys, better, color=GAIN, height=0.62, label="Better off")
-            ax.barh(ys, same, left=better, color="#E5E7EB", height=0.62, label="No change")
-            ax.barh(ys, worse, left=[b + s for b, s in zip(better, same)], color=LOSS, height=0.62, label="Worse off")
-            ax.set_yticks(ys, names)
-            ax.tick_params(axis="y", length=0, labelsize=8.1, labelcolor=INK)
-            ax.set_xlim(0, 100)
-            ax.legend(frameon=False, fontsize=7.8, ncol=3, loc="lower left", bbox_to_anchor=(0, 1.0))
-            style_axes(ax, "x")
-            alt = "; ".join(f"{nm}: {b} better off, {s} no change, {w} worse off" for nm, b, s, w in zip(names, lb, ls, lw))
-            first = "the measures together" if (entries[0].combined) else names[0]
-            b0, w0 = better[0], worse[0]
-            if b0 > 50:
-                title = f"Most people live in households that are better off under {first}"
-            elif w0 > 50:
-                title = f"Most people live in households that are worse off under {first}"
-            elif b0 > w0:
-                title = f"More people are better off than worse off under {first}"
-            elif w0 > b0:
-                title = f"More people are worse off than better off under {first}"
-            else:
-                title = f"As many people are better off as worse off under {first}"
-            title = title[0].upper() + title[1:]
-            blocks.append(self.figure(svg_of(plt, fig), title, f"People better off, unchanged and worse off, % of people, UK, {fy(y)}", alt, ("" if self.single else "The first bar is the measures together; the others each measure on its own.") + " The values are in the table below.", runs="both"))
-            rows = [
-                f'<tr><th scope="row">{esc(nm)}</th><td class="num">{b}</td><td class="num">{s}</td><td class="num">{w}</td></tr>'
-                for nm, b, s, w in zip(names, lb, ls, lw)
-            ]
-            blocks.append(
-                self.table(
-                    "People better off, unchanged and worse off",
-                    f"% of people, UK, {fy(y)}",
-                    '<th scope="col">Measure</th><th scope="col" class="num">Better off</th><th scope="col" class="num">No change</th><th scope="col" class="num">Worse off</th>',
-                    rows,
-                    runs="both",
-                )
-            )
-            off = 1 if entries and entries[0].combined else 0
-            own = list(zip(better, worse, names))[off:]
-            idle = [nm for b, w, nm in own if b < 0.05 and w < 0.05]
-            reach = max(((b, nm) for b, _, nm in own), default=None)
+        if rows:
+            first = complete[0] if complete else None
+            title = "People better off, unchanged and worse off"
+            if first is not None:
+                b0, w0 = first[1], first[2]
+                who = "the measures together" if first[0].combined else first[0].name
+                if b0 > 50:
+                    title = f"Most people live in households that are better off under {who}"
+                elif w0 > 50:
+                    title = f"Most people live in households that are worse off under {who}"
+                elif b0 > w0:
+                    title = f"More people are better off than worse off under {who}"
+                elif w0 > b0:
+                    title = f"More people are worse off than better off under {who}"
+                else:
+                    title = f"As many people are better off as worse off under {who}"
+            own = [(e, b, w) for e, b, w in complete if not e.combined]
+            none_ = [e for e, b, w in own if b == 0 and w == 0]
+            few = [e for e, b, w in own if b < 0.05 and w < 0.05 and not (b == 0 and w == 0)]
+            reach = max(((b, e.name) for e, b, _ in own), default=None)
             parts = []
             if reach is not None and reach[0] >= 0.05 and len(own) > 1:
                 parts.append(f"Of the measures on their own, {esc(reach[1])} makes the most people better off")
-            if idle:
-                parts.append(f"{esc(self._names(idle))} {'changes' if len(idle) == 1 else 'change'} no household's income by more than 0.01% in {fy(y)}")
+            if none_:
+                parts.append(f"{esc(self._names([e.name for e in none_]))} {'changes' if len(none_) == 1 else 'change'} no household's income by more than 0.01% in {fy(y)}")
+            if few:
+                parts.append(f"{esc(self._names([e.name for e in few]))} {'makes' if len(few) == 1 else 'make'} fewer than 0.05% of people better or worse off in {fy(y)}")
+            why = [self._active_years(e) for e in none_ + few]
+            why = [w for w in why if w]
+            read = ""
             if parts:
-                blocks.append(self.explain("; ".join(parts) + "."))
+                read = "; ".join(parts) + ("" if not why else " (" + "; ".join(why) + ")") + "."
+                read = read[0].upper() + read[1:]
+            blocks.append(
+                self.table(
+                    title[0].upper() + title[1:],
+                    f"% of people, UK, {fy(y)}",
+                    '<th scope="col">Measure</th><th scope="col" class="num">Better off</th><th scope="col" class="num">No change</th><th scope="col" class="num">Worse off</th>',
+                    rows,
+                    ("" if self.single else "The first row is the measures together; the others each measure on its own.") + (" " + WITHHELD_NOTE if withheld else ""),
+                    runs="both",
+                    after=self.explain(read),
+                )
+            )
         else:
             blocks.append(self.unavailable("No published figures for this year."))
         return self.section("winners", "Gainers and losers", intro, blocks)
 
+    def _active_years(self, e):
+        """'X changes revenue only in 2026-27', from the measure's own budgetary impact."""
+        ys = []
+        for yy in self.years:
+            r = e.row("budgetary_impact", year=yy)
+            if r is not None and yy in e.years and abs(float(r["value"])) >= ZERO_BN:
+                ys.append(yy)
+        if not ys or self.year in ys:
+            return ""
+        return f"{esc(e.name)} changes revenue only {self._span(ys)}"
+
     def poverty(self):
-        c, y, S, plt = self.pub.combined, self.year, "poverty", self.plt
+        c, y, S = self.pub.combined, self.year, "poverty"
         T = self.together
         intro = (
             "<p>Absolute poverty: below 60% of the 2024-25 median income, held fixed in real terms. Relative poverty: below 60% of the median in the same year, so the line moves with the measures. "
@@ -1128,42 +1292,32 @@ class Report:
                 years.append(yy)
                 a_vals.append(v)
                 a_labels.append(t)
-                k_vals.append(kv or 0.0)
-                k_labels.append(kt)
-            fig, ax = plt.subplots(figsize=(6.6, 2.1))
-            xs = list(range(len(years)))
-            w = 0.38
-            ax.bar([x - w / 2 for x in xs], a_vals, width=w, color=HIGHLIGHT, label="All people")
-            ax.bar([x + w / 2 for x in xs], k_vals, width=w, color="#81E6D9", label="Children")
-            ax.axhline(0, color=ZERO, linewidth=0.8)
-            ax.set_xticks(xs, [fy(yy) for yy in years])
-            ax.tick_params(axis="x", length=0)
-            ax.set_ylim(*pad_limits(a_vals + k_vals, 0.35, 0.35))
-            ax.legend(frameon=False, fontsize=7.8, ncol=2, loc="lower left", bbox_to_anchor=(0, 1.0))
-            minus_ticks(ax)
-            style_axes(ax)
-            alt = "; ".join(f"{fy(yy)}: all people {a}, children {k}" for yy, a, k in zip(years, a_labels, k_labels))
-            if all(abs(v) < ZERO_PP for v in a_vals):
-                title = f"{T} {self.verb('leave', 'leaves')} absolute poverty unchanged to two decimal places in every year"
-            else:
-                i = max(range(len(years)), key=lambda i: abs(a_vals[i]))
-                title = f"{T} {self.verb('change', 'changes')} absolute poverty most in {fy(years[i])}, when it {'rises' if a_vals[i] > 0 else 'falls'}"
-            blocks.append(self.figure(svg_of(plt, fig), title, "Change in absolute poverty before housing costs by year, percentage points, UK", alt, "Below zero, fewer people in poverty. The values are in the table below."))
-            if a_vals and max(abs(v) for v in a_vals + k_vals) < 0.1:
-                blocks.append(self.explain(
-                    f"Every change in absolute poverty before housing costs, for all people and for children, is smaller than a tenth of a percentage point in every year from {fy(years[0])} to {fy(years[-1])}."
-                ))
+                k_vals.append(kv)
+                k_labels.append(WITHHELD if kv is None else kt)
             head = '<th scope="col">People</th>' + "".join(f'<th scope="col" class="num">{fy(yy)}</th>' for yy in years)
+            sig = a_vals + [v for v in k_vals if v is not None]
+            read = ""
+            if sig and max(abs(v) for v in sig) < 0.1:
+                read = f"Every change in absolute poverty before housing costs, for all people and for children, is smaller than a tenth of a percentage point in every year from {fy(years[0])} to {fy(years[-1])}."
+            if a_vals and all(abs(v) < ZERO_PP for v in a_vals):
+                title = f"{T} {self.verb('leave', 'leaves')} absolute poverty before housing costs unchanged to two decimal places in every year"
+            elif a_vals:
+                i = max(range(len(years)), key=lambda i: abs(a_vals[i]))
+                title = f"{T} {self.verb('change', 'changes')} absolute poverty before housing costs most in {fy(years[i])}, when it {'rises' if a_vals[i] > 0 else 'falls'}"
+            else:
+                title = f"{T}: change in absolute poverty before housing costs by year"
             blocks.append(
                 self.table(
-                    f"{T}: change in absolute poverty before housing costs by year",
+                    title,
                     "Percentage points, UK",
                     head,
                     [
                         f'<tr><th scope="row">All people</th>{"".join(f"<td class=num>{t}</td>" for t in a_labels)}</tr>',
                         f'<tr><th scope="row">Children</th>{"".join(f"<td class=num>{t}</td>" for t in k_labels)}</tr>',
                     ],
+                    "Below zero, fewer people in poverty." + (" " + WITHHELD_NOTE if None in k_vals else ""),
                     cls="compact",
+                    after=self.explain(read),
                 )
             )
             rows = []
@@ -1222,41 +1376,44 @@ class Report:
         c, y, S = self.pub.combined, self.year, "age"
         intro = (
             f"<p>The change in the net income of the households people live in, by the person's age, in {fy(y)}. Household income is shared by everyone in the household"
-            + self.fn('"65 and over" is an age band, not the same group as people over State Pension age.')
+            + self.fn('"65 and over" is an age band, not the same group as people over State Pension age; the dashboard\'s pensioners view shows that group.')
             + ".</p>"
         )
         if c is None:
             return self.section("age", "By age", intro, [self.no_combined()])
         mv, ml, rows = [], [], []
+        withheld = False
         for band, label in AGE_BANDS:
             v, t = self.cell(c, "age_impact", "mean_change", {"year": y, "age_band": band}, "gbp", S)
-            mv.append(v or 0.0)
-            ml.append(t)
-            _, b = self.cell(c, "age_impact", "pct_better_off", {"year": y, "age_band": band}, "pct1_plain", S)
-            _, u = self.cell(c, "age_impact", "pct_unchanged", {"year": y, "age_band": band}, "pct1_plain", S)
-            _, w = self.cell(c, "age_impact", "pct_worse_off", {"year": y, "age_band": band}, "pct1_plain", S)
+            mv.append(v)
+            ml.append(WITHHELD if v is None else t)
+            bv, b = self.cell(c, "age_impact", "pct_better_off", {"year": y, "age_band": band}, "pct1_plain", S)
+            uv, u = self.cell(c, "age_impact", "pct_unchanged", {"year": y, "age_band": band}, "pct1_plain", S)
+            wv, w = self.cell(c, "age_impact", "pct_worse_off", {"year": y, "age_band": band}, "pct1_plain", S)
+            if None in (bv, uv, wv):
+                b = u = w = WITHHELD
+                withheld = True
             rows.append(f'<tr><th scope="row">{esc(label)}</th><td class="num">{b}</td><td class="num">{u}</td><td class="num">{w}</td></tr>')
         labels = [label for _, label in AGE_BANDS]
-        chart = self._bar_chart(labels, mv, ml, [tone(v) for v in mv], height=1.75)
+        chart = self._bar_chart(labels, mv, ml, [tone(v or 0.0) for v in mv], height=1.5)
         alt = "; ".join(f"{lab}: {m}" for lab, m in zip(labels, ml))
         names = [f"for people aged {lab.lower()}" if lab[0].isdigit() else f"for people {lab.lower()}" for lab in labels]
-        names = [n.replace("aged 65 and over", "aged 65 and over") for n in names]
         title = self._spread_title(mv, names, "age group", "People")
-        lo = min(range(len(mv)), key=lambda i: mv[i])
+        sig = [i for i, v in enumerate(mv) if v is not None]
         why = ""
-        if all(v >= 0.5 for v in mv):
+        if sig and all(mv[i] >= 0.5 for i in sig):
+            lo = min(sig, key=lambda i: mv[i])
             why = self.explain(f"People {'aged ' if labels[lo][0].isdigit() else ''}{esc(labels[lo].lower())} gain least on average. Each person is given their whole household's change, so the figures reflect the households people of each age live in.")
         blocks = [
-            self.figure(chart, title, f"Average change in household net income by age, £ a year per person, UK, {fy(y)}", alt, "Per person, by the person's age; each person is given their household's change."),
+            self.figure(chart, title, f"Average change in the net income of people's households, by age, £ a year, UK, {fy(y)}", alt, self._withheld_note(mv), after=why),
             self.table(
                 f"{self.together}: people better off, unchanged and worse off by age",
                 f"% of people, UK, {fy(y)}",
                 '<th scope="col">Age</th><th scope="col" class="num">Better off</th><th scope="col" class="num">No change</th><th scope="col" class="num">Worse off</th>',
                 rows,
+                WITHHELD_NOTE if withheld else "",
             ),
         ]
-        if why:
-            blocks.insert(1, why)
         return self.section("age", "By age", intro, blocks)
 
     def areas_published(self):
@@ -1395,16 +1552,19 @@ class Report:
         intro = f"<p>How {who} the net income of {count_words(n)} example household{'s' if n != 1 else ''} in {fy(y)}, at different incomes. {intro_base}</p>"
         cols = 3 if n > 4 else n
         nrows = (n + cols - 1) // cols
-        fig, axes = plt.subplots(nrows, cols, figsize=(6.7, 1.3 * nrows), squeeze=False)
+        # One vertical scale for every chart, so the households can be compared by eye
+        fig, axes = plt.subplots(nrows, cols, figsize=(COL_W, 1.45 * nrows), squeeze=False, sharey=True, layout="constrained")
         shares = (0.2, 0.4, 0.8)
         table_rows = []
         signs = []
         per_h = {}
+        all_ch = [0.0]
         for i, h in enumerate(ids):
             ax = axes[i // cols][i % cols]
             hr = sorted((r for r in rows if r["household"] == h), key=lambda r: float(r["income"]))
             xs = [float(r["income"]) / 1000 for r in hr]
             ch = [float(r["reform_net_income"]) - float(r["baseline_net_income"]) for r in hr]
+            all_ch += ch
             ax.plot(xs, ch, color=HIGHLIGHT, linewidth=1.4)
             ax.axhline(0, color=ZERO, linewidth=0.7)
             ax.fill_between(xs, ch, 0, where=[v >= 0 for v in ch], color=GAIN, alpha=0.18, linewidth=0)
@@ -1413,9 +1573,6 @@ class Report:
             ax.set_title(d.get("label", h), fontsize=8, loc="left", color=INK)
             ax.set_xlabel(f"{d.get('x_label', 'Income')}, £k", fontsize=7)
             ax.tick_params(labelsize=6.8)
-            lo, hi = min(ch + [0]), max(ch + [0])
-            span = (hi - lo) or 10
-            ax.set_ylim(lo - span * 0.15, hi + span * 0.15)
             minus_ticks(ax)
             style_axes(ax)
             cells = []
@@ -1432,18 +1589,35 @@ class Report:
                 cells.append(f'<td class="num {self._tone_cls(v)}">{text}<div class="at">at £{float(r["income"]):,.0f}</div></td>')
                 per_h.setdefault(h, []).append(round(v))
             table_rows.append(f'<tr><th scope="row">{esc(d.get("label", h))}<div class="def">{esc(self._definition(d))}</div></th>{"".join(cells)}</tr>')
+        lo, hi = min(all_ch), max(all_ch)
+        span = (hi - lo) or 10
+        axes[0][0].set_ylim(lo - span * 0.15, hi + span * 0.15)
         for j in range(n, nrows * cols):
             axes[j // cols][j % cols].axis("off")
-        fig.supylabel("£ a year", fontsize=7.4, color=MUTED)
-        fig.tight_layout(h_pad=1.0, w_pad=1.0)
         if signs and all(v >= 0.5 for v in signs):
-            title = f"Every example household is better off at each of the three incomes in the table"
+            title = "Every example household is better off at each of the three incomes in the table"
         elif signs and all(v <= -0.5 for v in signs):
-            title = f"Every example household is worse off at each of the three incomes in the table"
+            title = "Every example household is worse off at each of the three incomes in the table"
         else:
             title = "How the change in net income varies with income differs from household to household"
+        read = ""
+        flat = [h for h, vs in per_h.items() if len(vs) == 3 and len(set(vs)) == 1]
+        if per_h:
+            label = lambda h: esc(defs.get(h, {}).get("label", h))  # noqa: E731
+            varies = [h for h in per_h if h not in flat]
+            if len(flat) == len(per_h):
+                read = "For every example household the change is the same at all three incomes: across the range of incomes shown, it does not vary with income."
+            elif flat:
+                if len(varies) == 1:
+                    other = label(varies[0])
+                    other = f"for the {other[0].lower() + other[1:]} it varies"
+                else:
+                    other = "for the others it varies"
+                read = f"The change is the same at all three incomes for {count_words(len(flat))} of the {count_words(len(per_h))} households ({self._names([label(h) for h in flat])}); {other} with income, as its chart shows." if len(varies) == 1 else f"The change is the same at all three incomes for {count_words(len(flat))} of the {count_words(len(per_h))} households ({self._names([label(h) for h in flat])}); {other} with income, as the charts show."
+            else:
+                read = "For every example household the change varies with income, as the charts show."
         blocks = [
-            self.figure(svg_of(plt, fig), title, f"Change in net income by income, {count_words(n)} example household{'s' if n != 1 else ''}, £ a year, {fy(y)}", "Line charts of the change in each household's net income as its income varies; the table below gives the values at three incomes.", "The horizontal axis is the income named under each chart, before tax; each chart has its own scale. Households as defined on the dashboard."),
+            self.figure(svg_of(plt, fig), title, f"Change in net income by income, {count_words(n)} example household{'s' if n != 1 else ''}, £ a year, {fy(y)}", "Line charts of the change in each household's net income as its income varies; the table below gives the values at three incomes.", "The horizontal axis is the income named under each chart, before tax; all charts share one vertical scale. Households as defined on the dashboard.", after=self.explain(read)),
             self.table(
                 f"{self.together}: change in net income at three incomes",
                 f"£ a year, {fy(y)}",
@@ -1454,27 +1628,28 @@ class Report:
                 keep=False,
             ),
         ]
-        flat = [h for h, vs in per_h.items() if len(vs) == 3 and len(set(vs)) == 1]
-        if per_h:
-            flat_names = [esc(defs.get(h, {}).get("label", h)) for h in flat]
-            if len(flat) == len(per_h):
-                txt = "For every example household the change is the same at all three incomes: across the range of incomes shown, it does not vary with income."
-            elif flat:
-                txt = f"The change is the same at all three incomes for {count_words(len(flat))} of the {count_words(len(per_h))} households ({self._names(flat_names)}); for the others it varies with income, as the charts show."
-            else:
-                txt = "For every example household the change varies with income, as the charts show."
-            blocks.append(self.explain(txt))
         return self.section("households", "Example households", intro, blocks)
 
     @staticmethod
     def _definition(d):
-        """The household as defined, without clauses about measures the dashboard can select."""
-        clauses = [cl for cl in d.get("definition", "").split("; ") if "when selected" not in cl]
-        text = "; ".join(clauses).strip()
-        return text if text.endswith(".") else text + "."
+        """The household as defined, without what it says about measures the
+        dashboard can select. A clause that joins the household's own facts
+        to such a measure with ", and " keeps the facts before it."""
+        kept = []
+        for cl in d.get("definition", "").split("; "):
+            if "when selected" not in cl:
+                kept.append(cl)
+                continue
+            head = cl[: cl.index("when selected")]
+            if ", and " in head:
+                kept.append(head[: head.rindex(", and ")])
+        text = "; ".join(kept).strip().rstrip(".")
+        return text + "."
 
-    def measures_section(self):
-        rows = []
+    def measures_table(self):
+        """Table 1: the measures as modelled, in the order used throughout,
+        then any modelled but left out, in the report's own words."""
+        rows, statuses = [], set()
         for k in self.order:
             e = self.pub.measures[k]
             status = "Provisional" if e.status == "provisional" else "Approved"
@@ -1482,29 +1657,46 @@ class Report:
             if e.unsupported:
                 extra = f' <span class="muted">No figures for {", ".join(fy(y) for y in e.unsupported)}.</span>'
             rec = (e.entry.get("reconciliation") or {}).get("summary_status")
-            rec_text = {"pass": "Matches the Treasury costing within tolerance", "awaiting_source": "Treasury costing not yet published"}.get(rec, (rec or "").replace("_", " ").capitalize())
-            rows.append(
-                f'<tr><th scope="row">{esc(e.name)}</th><td>{esc(e.description)}{extra}</td><td>{status}{"<br><span class=muted>" + esc(rec_text) + "</span>" if rec_text else ""}</td></tr>'
-            )
-        blocks = [
+            rec_text = {"pass": "matches the Treasury costing within tolerance", "awaiting_source": "Treasury costing not yet published"}.get(rec, (rec or "").replace("_", " "))
+            statuses.add((status, rec_text))
+            rows.append((e.name, f"{esc(e.description)}{extra}", status, rec_text))
+        same = len(statuses) == 1
+        if same:
+            head = '<th scope="col">Measure</th><th scope="col">What it does, as modelled</th>'
+            body = [f'<tr><th scope="row">{esc(nm)}</th><td>{d}</td></tr>' for nm, d, _, _ in rows]
+            status, rec_text = next(iter(statuses))
+            notes = f"Status of every measure: {status.lower()}" + (f"; {esc(rec_text)}." if rec_text else ".")
+        else:
+            head = '<th scope="col">Measure</th><th scope="col">What it does, as modelled</th><th scope="col">Status</th>'
+            body = [
+                f'<tr><th scope="row">{esc(nm)}</th><td>{d}</td><td>{s}{"<br><span class=muted>" + esc(r[0].upper() + r[1:]) + "</span>" if r else ""}</td></tr>'
+                for nm, d, s, r in rows
+            ]
+            notes = ""
+        n = len(self.order)
+        out = [
+            f'<h3>The measures</h3><p>The {count_words(n)} measure{"s" if n != 1 else ""} in this report. Measures not listed here are not in this report.</p>',
             self.table(
                 "The measures in this report",
-                "As modelled, in the order used throughout",
-                '<th scope="col">Measure</th><th scope="col">What it does, as modelled</th><th scope="col">Status</th>',
-                rows,
+                "As modelled; those that raise revenue first, then those that cost it, each by size over the years published. This order is used throughout.",
+                head,
+                body,
+                notes,
                 runs=None,
-                cls="measures",
+                cls="measures" + (" nostatus" if same else ""),
                 keep=False,
-            )
+            ),
         ]
         if self.pub.not_shown:
-            items = "".join(
-                f"<li><b>{esc(e.get('name') or k)}</b>: {esc(e.get('reason') or NOT_SHOWN_REASONS.get(e['status'], e['status']))}</li>"
-                for k, e in self.pub.not_shown
-            )
-            blocks.append(f'<div class="keep"><h3>Measures in the release but not shown</h3><ul>{items}</ul></div>')
-        intro = "<p>Each measure as modelled. Measures that raise revenue come first, then those that cost it, each by size over the years published.</p>"
-        return self.section("measures", "The measures", intro, blocks, annex="A")
+            items = []
+            for k, e in self.pub.not_shown:
+                reason = NOT_SHOWN_REASONS.get(e["status"], e["status"].replace("_", " "))
+                when = re.search(r"\b(\d{1,2} (?:January|February|March|April|May|June|July|August|September|October|November|December) \d{4})\b", e.get("reason") or "")
+                if when and e["status"] == "withdrawn":
+                    reason += f" on {when.group(1)}"
+                items.append(f"<li><b>{esc(e.get('name') or k)}</b>: {esc(reason)}</li>")
+            out.append(f'<div class="keep"><h3>Modelled but not in this report</h3><ul>{"".join(items)}</ul></div>')
+        return "".join(out)
 
     def method(self):
         m = self.pub.manifest
@@ -1513,9 +1705,6 @@ class Report:
         basis = m.get("basis") or {}
         fc = basis.get("forecast") or {}
         versions = ", ".join(f"{ident[k]['name']} {ident[k]['version']}" for k in ("wrapper", "model", "core") if k in ident)
-        status_note = (
-            f'<p class="status-inline" role="note">{esc(self.pub.provisional_label)}</p>' if self.pub.provisional else ""
-        )
         forecast = (
             "The economic assumptions are the model's pre-Budget ones; they have not yet been rebased on the Budget's OBR forecast."
             if fc.get("status") == "pre_budget"
@@ -1536,19 +1725,18 @@ class Report:
                 commit += " with uncommitted changes"
         except Exception:
             pass
-        intro = status_note + f"""<h3>Model and data</h3>
+        intro = f"""<h3>Model and data</h3>
 <p>Model: {esc(versions)}, on the {esc(data.get('dataset', ''))} dataset (build {esc(data.get('build_id', ''))}). {self._runs_sentence()}, for {fy(self.years[0])} to {fy(self.years[-1])}. {forecast}</p>"""
         blocks = [
             f"""<div class="keep"><h3>What the figures leave out</h3>
 <ul>
-<li><b>Static costings.</b> People do not change what they earn, spend, save or claim in response to the measures, so the figures are not the OBR's post-behavioural costings.</li>
-<li><b>Measures on their own and together.</b> Each measure's figures are against current law; the combined run includes how the measures interact, so its figures need not equal the sum of the measures'.</li>
+<li><b>Static costings.</b> The figures are not the OBR's post-behavioural costings (see the glossary).</li>
 <li><b>Survey data.</b> Incomes and spending come from household survey data calibrated to official totals; estimates for small groups and small areas are uncertain, and cells with too few survey households are withheld.</li>
 <li><b>Living standards outlook.</b> The dashboard's outlook for household incomes rests on a separate baseline forecast that is not one of this publication's receipted artifacts, so this report does not reproduce it.</li>
 {areas}
 </ul></div>""",
             f"""<div class="keep"><h3>Provenance</h3>
-<p>Publication manifest revision {esc(m.get('revision', ''))}, updated {esc(long_date(m.get('updated_at', '')))}. Each artifact's files were checked against its receipt when this report was built. The first 16 characters of each digest are below.</p>
+<p>Publication manifest revision {esc(m.get('revision', ''))}, updated {esc(long_date(m.get('updated_at', '')))}. Each artifact's files were checked against its receipt when this report was built.</p>
 """
             + self.table(
                 "Artifacts behind this report",
@@ -1561,7 +1749,7 @@ class Report:
             )
             + "</div>",
         ]
-        return self.section("method", "Methodology and caveats", intro, blocks, annex="B")
+        return self.section("method", "Methodology and caveats", intro, blocks, annex="A")
 
     def glossary(self):
         terms = [
@@ -1579,7 +1767,7 @@ class Report:
             ("90/10 ratio", "The income of the household at the 90th percentile divided by that at the 10th."),
         ]
         rows = "".join(f"<div><dt>{esc(t)}</dt><dd>{esc(d)}</dd></div>" for t, d in terms)
-        return self.section("glossary", "Glossary", "", [f'<dl class="glossary">{rows}</dl>'], annex="C")
+        return self.section("glossary", "Glossary", "", [f'<dl class="glossary">{rows}</dl>'], annex="B")
 
     def _runs_sentence(self):
         if self.single:
@@ -1588,6 +1776,10 @@ class Report:
             return "Each measure is simulated on its own against current law; no combined run covers exactly these measures"
         return "Each measure is simulated on its own against current law, and all of them together in one combined run"
 
+    def _header_right(self) -> str:
+        budget_date = (self.pub.manifest.get("budget") or {}).get("date", "")
+        return f"Budget {long_date(budget_date)}" if budget_date else "PolicyEngine UK"
+
     def page_css(self) -> str:
         """Running header and footer, as @page margin boxes (Chrome 131 and later)."""
         font = 'font-family: Inter, "Helvetica Neue", Arial, sans-serif; font-size: 7pt; color: #4B5563;'
@@ -1595,7 +1787,7 @@ class Report:
         return f"""
 @page {{
   @top-left {{ content: {css_string(self.title)}; {font} font-weight: 600; color: #285E61; vertical-align: bottom; padding-bottom: 3mm; }}
-  @top-right {{ content: {css_string(f"Figures for {fy(self.year)}")}; {font} vertical-align: bottom; padding-bottom: 3mm; }}
+  @top-right {{ content: {css_string(self._header_right())}; {font} vertical-align: bottom; padding-bottom: 3mm; }}
   @bottom-left {{ content: {css_string(left_foot)}; {font} vertical-align: top; padding-top: 3mm; }}
   @bottom-right {{ content: "Page " counter(page) " of " counter(pages); {font} vertical-align: top; padding-top: 3mm; }}
 }}
@@ -1612,7 +1804,7 @@ class Report:
         present = [sid for sid in later if sid != "areas" or self.areas_published()]
         self._secnums = {sid: str(i + 2) for i, sid in enumerate(present)}
         sections = [self.introduction(), self.revenue(), self.deciles(), self.winners(), self.poverty(), self.age(), self.areas(), self.households()]
-        annexes = [self.measures_section(), self.method(), self.glossary()]
+        annexes = [self.method(), self.glossary()]
         for s in sections + annexes:
             if not s:
                 continue

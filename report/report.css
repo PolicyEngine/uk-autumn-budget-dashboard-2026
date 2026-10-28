@@ -22,7 +22,7 @@ b { font-weight: 600; }
 
 /* Provisional: a watermark on every page, and the dashboard's label */
 .watermark { position: fixed; top: 45%; left: 0; right: 0; text-align: center; transform: rotate(-30deg);
-  font-size: 66pt; font-weight: 700; color: #B45309; opacity: 0.07; letter-spacing: 0.04em; pointer-events: none; z-index: 10; text-transform: uppercase; }
+  font-size: 54pt; font-weight: 700; color: #B45309; opacity: 0.07; letter-spacing: 0; pointer-events: none; z-index: 10; text-transform: uppercase; }
 .status-banner, .status-inline { background: #FFF7E6; color: #7A5A1F; border-left: 1.2mm solid #D97706; padding: 2.5mm 3.5mm; font-weight: 600; font-size: 9pt; }
 .status-banner { display: inline-block; margin: 10mm 0 0; }
 .status-inline { margin: 0 0 4mm; }
@@ -39,6 +39,7 @@ b { font-weight: 600; }
   display: grid; grid-template-columns: 1fr 1.6fr 1.6fr; gap: 4mm; font-size: 8.5pt; }
 .cover-meta dt { color: #4B5563; font-size: 7.2pt; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
 .cover-meta dd { margin: 0.8mm 0 0; color: #1F2937; }
+.cover-meta dd span { display: block; white-space: nowrap; }
 
 /* Key findings box and contents */
 .kf { background: #EAF5F4; border-top: 1.6mm solid #285E61; padding: 5mm 6mm 3mm; margin: 0 0 6mm; break-inside: avoid; }
@@ -50,13 +51,14 @@ b { font-weight: 600; }
 .kf li b { color: #285E61; }
 .kf .notice { background: #FFFFFF; }
 nav.toc { break-inside: avoid; margin: 0; position: absolute; left: 22mm; right: 22mm; bottom: 42mm; }
-nav.toc h3 { margin: 0 0 1.5mm; letter-spacing: 0.02em; font-size: 9pt; color: #0F766E; }
+nav.toc h2 { margin: 0 0 1.5mm; letter-spacing: 0.02em; font-size: 9pt; color: #0F766E; line-height: 1.5; }
 nav.toc ol { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 10mm; }
 nav.toc li { border-bottom: 1px solid #E5E7EB; padding: 1.3mm 0; font-size: 9pt; break-inside: avoid; }
 nav.toc .n { display: inline-block; min-width: 15mm; color: #285E61; font-weight: 600; font-variant-numeric: tabular-nums; }
 
-/* Sections flow; annexes start on a new page */
+/* Sections flow; the first annex starts on a new page */
 section.sec, section.annex { margin: 0 0 4mm; }
+section.sec + section.annex { break-before: page; }
 section.sec { padding-top: 4mm; border-top: 1.4px solid #285E61; margin-top: 4mm; }
 #summary + section.sec { margin-top: 0; }
 section.annex { padding-top: 2mm; }
@@ -80,7 +82,9 @@ figcaption, caption { text-align: left; caption-side: top; padding: 0 0 2mm; }
 
 /* Tables: light rules, right-aligned tabular figures */
 .tblock { margin: 3mm 0 5mm; }
-table { width: 100%; border-collapse: collapse; font-size: 8.2pt; margin: 0; font-variant-numeric: tabular-nums; }
+table { width: 100%; border-collapse: collapse; font-size: 8.2pt; margin: 0; }
+/* Tabular figures on numbers only: in Inter they also widen the hyphen in text ("2031 - 32"). */
+tbody td.num { font-variant-numeric: tabular-nums; }
 thead { display: table-header-group; }
 tr { break-inside: avoid; }
 th, td { padding: 1.2mm 1.6mm; vertical-align: top; border-bottom: 0.6px solid #E5E7EB; }
@@ -99,6 +103,8 @@ table.households .at { font-size: 7pt; color: #4B5563; font-weight: 400; }
 table.measures th[scope="row"] { width: 34mm; }
 table.measures td { font-size: 7.9pt; }
 table.measures td:last-child { width: 30mm; }
+table.measures.nostatus th[scope="row"] { width: 52mm; }
+table.measures.nostatus td:last-child { width: auto; }
 .note { font-size: 7.6pt; color: #4B5563; }
 .notice { border-left: 1.2mm solid #9CA3AF; background: #F9FAFB; padding: 3.5mm 5mm; color: #374151; margin: 3mm 0; break-inside: avoid; }
 .notice p { margin: 0; }
@@ -122,4 +128,5 @@ dl.glossary dd { margin: 0; }
 .scope p { margin: 0 0 2.4mm; }
 /* A paragraph after a figure or table saying how to read it */
 .explain { margin: -1mm 0 4.5mm; font-size: 9.4pt; }
-ul.measures-list { columns: 2; column-gap: 8mm; }
+figure .explain, .tblock .explain { margin: 2.5mm 0 0; }
+.withheld-note { font-style: normal; }

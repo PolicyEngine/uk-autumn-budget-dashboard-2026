@@ -163,10 +163,15 @@ def test_key_findings_box_running_header_and_annexes(tmp_path):
     html = build(publication(tmp_path), tmp_path / "out")
     kf = html[html.index('<div class="kf">'):]
     kf = kf[: kf.index("</ol>")]
-    assert 4 <= kf.count("<li>") <= 6
+    assert 4 <= kf.count("<li>") <= 7
     assert "@top-left" in html and "counter(pages)" in html
-    for annex in ("Annex A", "Annex B", "Annex C"):
+    # the running header names the Budget date, not one year: several sections cover several years
+    import re
+
+    assert re.search(r'@top-right \{ content: "Budget 28 October 2026"', html)
+    for annex in ("Annex A", "Annex B"):
         assert f'<p class="secnum">{annex}</p>' in html
+    assert '<p class="secnum">Annex C</p>' not in html
     # areas are not published here: no empty section, the method annex says so
     assert 'id="areas"' not in html
     assert "not yet published in this release" in html
@@ -176,17 +181,19 @@ def test_summary_scope_introduction_and_section_numbers(tmp_path):
     import re
 
     html = build(publication(tmp_path), tmp_path / "out")
-    # The summary page: key findings, then what the report compares
+    # The summary page holds the key findings only
     summary = html[html.index('<section id="summary"'):]
     summary = summary[: summary.index("</section>")]
-    assert "What this report compares" in summary
-    # The introduction is section 1 and lists every measure shown, by name
+    assert "What the report compares" not in summary
+    # The introduction is section 1: what the report compares, and Table 1, every measure shown
     intro = html[html.index('<section class="sec" id="introduction">'):]
     intro = intro[: intro.index("</section>")]
     assert '<p class="secnum">1</p><h2>Introduction</h2>' in intro
+    assert "What the report compares" in intro
+    assert '<span class="fnum">Table 1</span> <span class="ftitle">The measures in this report' in intro
     for name in re.findall(r'<tr><th scope="row">([^<]+)</th><td class="num total-col', html):
         if name != "All measures together":
-            assert f"<li>{name}</li>" in intro
+            assert f'<tr><th scope="row">{name}</th>' in intro
     # Its pointer to the poverty section uses that section's number
     num = re.search(r'<p class="secnum">(\d+)</p><h2>Poverty and inequality</h2>', html).group(1)
     assert f"Section {num}." in intro
@@ -220,14 +227,16 @@ def test_a_stale_member_means_no_combined_figures(tmp_path):
 
 def test_unsupported_year_is_n_a_and_the_total_is_not_printed(tmp_path):
     html = build(publication(tmp_path, unsupported={"m01": [2028]}), tmp_path / "out")
-    row = html[html.index('<th scope="row">Measure 1</th>'):]
+    rev = html[html.index('id="revenue"'):]
+    row = rev[rev.index('<th scope="row">Measure 1</th>'):]
     row = row[: row.index("</tr>")]
     assert row.count("n/a") == 2  # the 2028-29 cell and the total
 
 
 def test_a_measure_missing_a_year_is_n_a_not_zero(tmp_path):
     html = build(publication(tmp_path, skip={"m02": 2028}), tmp_path / "out")
-    row = html[html.index('<th scope="row">Measure 2</th>'):]
+    rev = html[html.index('id="revenue"'):]
+    row = rev[rev.index('<th scope="row">Measure 2</th>'):]
     assert "n/a" in row[: row.index("</tr>")]
 
 
@@ -287,7 +296,7 @@ def test_candidate_rule(manifest, candidate):
 
 def test_staged_measure_is_listed_not_shown(tmp_path):
     html = build(publication(tmp_path, statuses={"m02": "staged"}, combined=False), tmp_path / "out")
-    assert "Measures in the release but not shown" in html
+    assert "Modelled but not in this report" in html
     assert "awaiting review" in html
 
 
@@ -387,3 +396,58 @@ def test_pdf_outline_keeps_the_space_at_a_wrapped_title(tmp_path):
         browser.close()
     titles = [o.title for o in pypdf.PdfReader(str(pdf)).outline if not isinstance(o, list)]
     assert titles[0] == "Autumn Budget 2026: the measures modelled"
+
+
+def test_household_definition_keeps_facts_joined_to_a_selectable_measure():
+    d = {"definition": "A couple aged 70 and 68 who own their home outright; they spend £1,040 a year on electricity, and the State Pension income tax protection, when selected, lowers their income tax from 2027-28."}
+    text = br.Report._definition(d)
+    assert "£1,040 a year on electricity" in text
+    assert "when selected" not in text and "protection" not in text
+    d = {"definition": "A lone parent; while they receive Universal Credit, the Warm Home Discount top-up, when selected, adds £100 in 2026-27."}
+    assert br.Report._definition(d) == "A lone parent."
+
+
+def test_pensioner_definition_in_the_contract_keeps_its_electricity():
+    contract = json.loads(br.CONTRACT.read_text())
+    for h in contract["income_curve_households"]:
+        if "electricity" in h["definition"]:
+            assert "electricity" in br.Report._definition(h), h["id"]
+
+
+def test_withheld_cells_are_not_plotted_or_ranked_as_zero(tmp_path):
+    data = publication(tmp_path)
+    m = json.loads((data / "manifest.json").read_text())
+    key = next(iter(m["combined"]))
+    d = data / m["combined"][key]["artifact"]
+    path = d / "age_impact.csv"
+    rows = [r for r in csv.DictReader(open(path)) if not (r["age_band"] == "65+" and r["year"] == "2027")]
+    _write(path, rows)
+    receipt = json.loads((d / "receipt.json").read_text())
+    receipt["dashboard"]["files"]["age_impact.csv"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    (d / "receipt.json").write_text(json.dumps(receipt))
+    html = build(data, tmp_path / "out")
+    age = html[html.index('id="age"'):]
+    age = age[: age.index("</section>")]
+    assert "withheld" in age and br.WITHHELD_NOTE in age
+    assert "65 and over gain least" not in age
+    assert "every age group with a published figure" in age
+
+
+def test_later_year_of_opposite_sign_is_a_key_finding(tmp_path):
+    data = publication(tmp_path)
+    m = json.loads((data / "manifest.json").read_text())
+    key = next(iter(m["combined"]))
+    d = data / m["combined"][key]["artifact"]
+    path = d / "winners_losers.csv"
+    rows = list(csv.DictReader(open(path)))
+    for r in rows:
+        if r["year"] == "2028":
+            r["avg_change"] = str(-abs(float(r["avg_change"])) - 50)
+    _write(path, rows)
+    receipt = json.loads((d / "receipt.json").read_text())
+    receipt["dashboard"]["files"]["winners_losers.csv"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    (d / "receipt.json").write_text(json.dumps(receipt))
+    html = build(data, tmp_path / "out")
+    kf = html[html.index('<div class="kf">'):]
+    kf = kf[: kf.index("</ol>")]
+    assert "Later years." in kf and "By 2028-29" in kf and "falls by" in kf
