@@ -647,12 +647,15 @@ describe("the selected policies' questions", () => {
       "Step 3: Spending",
       "Step 4: Savings and investments",
       "Step 5: Council Tax",
+      "Step 6: Benefits and loans",
     ]);
     expect(asked("You")).toEqual(["current_age", "current_salary", "region"]);
     expect(asked("Household")).toEqual(["has_partner", "children_count", "tenure", "rent_from", "monthly_rent"]);
     expect(asked("Spending")).toEqual(["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"]);
     expect(asked("Savings and investments")).toEqual(["savings_interest_per_year", "property_income_per_year"]);
     expect(asked("Council Tax")).toEqual(["council_tax_band"]);
+    // The Carer's Allowance taper asks about caring (hours once "Yes")
+    expect(asked("Benefits and loans")).toEqual(["is_carer"]);
     // No policy icons in the headings: the chevron alone (Vahid, Budget day)
     for (const title of ["You", "Spending", "Savings and investments", "Council Tax"]) expect(usedBy(title)).toBeNull();
     // No chips between the boxes, no tab stop in a heading, no tick
@@ -670,6 +673,7 @@ describe("the selected policies' questions", () => {
     expect(groupToggle("Pension and student loan")).toHaveTextContent("No pension income");
     expect(groupToggle("Council tax and benefits")).toHaveTextContent("Universal Credit");
     expect(groupToggle("Council tax and benefits")).not.toHaveTextContent("Council Tax band D");
+    expect(groupToggle("Council tax and benefits")).not.toHaveTextContent("carer");
     openMore();
     for (const id of fields()) expect(document.querySelectorAll(`[data-row="${id}"]`)).toHaveLength(1);
     // The tab order follows the groups: every box of a group before the next's
@@ -682,11 +686,11 @@ describe("the selected policies' questions", () => {
   it("adds Pensions from State Pension age", () => {
     form(ALL_SEVEN);
     fireEvent.change(box("Age"), { target: { value: "70" } });
-    expect(groups().at(-1)).toBe("Step 6: Pensions");
+    expect(groups().at(-1)).toBe("Step 7: Pensions");
     openSteps();
     expect(asked("Pensions")).toEqual(["state_pension_per_year", "private_pension_per_year"]);
     fireEvent.change(box("Age"), { target: { value: "40" } });
-    expect(groups()).not.toContain("Step 6: Pensions");
+    expect(groups()).not.toContain("Step 7: Pensions");
   });
 
   it("follows the selection: one policy, its group alone, numbered next", () => {
@@ -763,7 +767,7 @@ describe("the selected policies' questions", () => {
   });
 
   it("keeps caring in More details when no selected policy reads it", () => {
-    form(["plan_2_threshold_unfreeze"]);
+    form(["trading_allowance_raise"]);
     expect(groupToggle("Council tax and benefits")).toHaveTextContent(
       "Council Tax band D · claims Universal Credit if entitled · not a carer",
     );

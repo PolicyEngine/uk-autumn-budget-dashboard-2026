@@ -25,8 +25,7 @@ def Answers(**values):
 
 # A single carer on Universal Credit, renting, with part-time pay entered
 # for 2026 and grown with average earnings: under the £204 weekly
-# earnings limit in 2027-28 (about £197 a week of net earnings), above it
-# by 2031-32 (about £217), where the taper pays part of the allowance
+# earnings limit in 2027-28 (about £197 a week of net earnings)
 CARER = dict(
     age=50,
     employment_income=10_000,
@@ -185,12 +184,18 @@ def test_a_carer_under_the_earnings_limit_gets_carers_allowance_and_the_element(
 
 
 def test_a_carer_over_the_earnings_limit_gets_part_of_the_allowance_from_the_taper():
-    """2031-32: about £217 a week of net earnings, over the £204 limit, so
-    no allowance in current law and the weekly rate less the excess with
-    the taper. Universal Credit counts the allowance pound for pound, and
-    the allowance is taxable, so net income moves by less than it."""
+    """2031-32, with £13,000 entered for 2026: about £272 a week of net
+    earnings, over current law's £204 limit (no allowance) and over the
+    taper's own limit (16 hours at the National Living Wage, grown with
+    average earnings) by less than the weekly rate, so the taper pays the
+    rate less the excess. Universal Credit counts the allowance pound for
+    pound, and the allowance is taxable, so net income moves by less
+    than it."""
     result = household_impact.calculate_household_impact(
-        Answers(**CARER), [TAPER], 2031, include=("by_policy",)
+        Answers(**{**CARER, "employment_income": 13_000}),
+        [TAPER],
+        2031,
+        include=("by_policy",),
     )
     rows = _rows(result)
     allowance = rows["carers_allowance"]
