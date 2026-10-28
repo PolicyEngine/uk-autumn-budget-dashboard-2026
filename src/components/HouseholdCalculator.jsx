@@ -543,7 +543,7 @@ function StepGroup({ group, number, last, open, onToggle, summary, children }) {
  * how many answers differ from the typical ones while closed, with "Reset
  * to typical" beside it once any do.
  */
-function DetailsGroup({ id, title, icon, open, onToggle, summary, changed, onReset, children }) {
+function DetailsGroup({ id, title, open, onToggle, summary, changed, onReset, children }) {
   const collapse = useCollapse(open);
   const panelId = `${id}-panel`;
   const titleId = `${id}-title`;
@@ -558,16 +558,26 @@ function DetailsGroup({ id, title, icon, open, onToggle, summary, changed, onRes
             aria-controls={panelId}
             onClick={onToggle}
           >
-            <TitleIcon name={icon} bare size={14} className="household-label-icon" />
-            <span className="household-detail-title" id={titleId}>
-              {title}
+            {/* The numbered steps' number column, empty, so the titles line up */}
+            <span className="household-detail-lead" aria-hidden="true" />
+            <span className="household-detail-text">
+              <span className="household-detail-title" id={titleId}>
+                {title}
+              </span>
+              {!open && (
+                <span className="household-detail-summary">
+                  {summary}
+                  {changed > 0 && (
+                    <>
+                      {" "}
+                      <span className="household-detail-changed">{changed === 1 ? "1 changed" : `${changed} changed`}</span>
+                    </>
+                  )}
+                </span>
+              )}
             </span>
-            {!open && <span className="household-detail-summary">{summary}</span>}
-            {changed > 0 && (
-              <span className="household-detail-changed">{changed === 1 ? "1 changed" : `${changed} changed`}</span>
-            )}
             <svg
-              className="household-more-chevron"
+              className="household-more-chevron household-step-chevron"
               width="16"
               height="16"
               viewBox="0 0 24 24"
@@ -1172,19 +1182,14 @@ function HouseholdCalculator({
     const labelId = `household-section-${index}`;
     return (
       <section key={section.title} className="household-group household-more" aria-labelledby={labelId}>
-        {/* The form's own header in small: a tinted icon, the title with an
-            "Optional" tag, and one muted line under it */}
+        {/* A light label over its rows: "More details · Optional". The rows
+            under it look as the numbered steps do while closed (Vahid,
+            Budget day: one list, not two designs) */}
         <div className="household-more-head">
-          <TitleIcon name={section.icon} size={14} className="title-icon household-more-icon" />
-          <div className="household-more-text">
-            <div className="household-more-title">
-              <h3 className="household-more-heading" id={labelId}>
-                {section.title}
-              </h3>
-              <span className="household-more-tag">Optional</span>
-            </div>
-            <p className="household-more-note">Each starts at a typical value for a household like yours.</p>
-          </div>
+          <h3 className="household-more-heading" id={labelId}>
+            {section.title}
+          </h3>
+          <span className="household-more-tag">Optional</span>
         </div>
         <div className="household-details">
           {section.groups.map((group) => {
@@ -1196,7 +1201,6 @@ function HouseholdCalculator({
                 key={group.title}
                 id={`${labelId}-${slug}`}
                 title={group.title}
-                icon={group.icon}
                 open={Boolean(moreOpen[group.title])}
                 onToggle={() => setMoreOpen((prev) => ({ ...prev, [group.title]: !prev[group.title] }))}
                 summary={groupSummary(group.title, { answer, applies: appliesInDetails, inputs, presetId })}

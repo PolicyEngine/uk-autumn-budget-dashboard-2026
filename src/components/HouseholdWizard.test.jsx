@@ -100,13 +100,16 @@ describe("the personal impact form", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Your household" })).toBeInTheDocument();
     // No spaced capitals: the essentials in one grid, then More details
     expect(screen.queryByRole("heading", { level: 3, name: "You" })).not.toBeInTheDocument();
-    // More details' header: its title alone as the heading, an "Optional"
-    // tag beside it and one line under it, in the section it names
+    // More details: a light label ("More details · Optional") over rows
+    // that look as the closed steps do: no icons, no header of its own
     const more = screen.getByRole("region", { name: "More details" });
     expect(within(more).getByRole("heading", { level: 3, name: "More details" })).toBeInTheDocument();
     expect(within(more).getByText("Optional")).toHaveClass("household-more-tag");
-    expect(within(more).getByText("Each starts at a typical value for a household like yours.")).toBeInTheDocument();
-    expect(screen.queryByText(/^Optional: each starts/)).not.toBeInTheDocument();
+    expect(more.querySelector(".household-more-icon, .household-label-icon")).toBeNull();
+    for (const row of more.querySelectorAll(".household-detail-toggle")) {
+      expect(row.querySelector(".household-detail-title")).toBeInTheDocument();
+      expect(row.querySelector(".household-step-chevron")).toBeInTheDocument();
+    }
     // More details: four groups, each closed at first and saying what it holds
     for (const title of DETAIL_GROUPS) expect(groupToggle(title)).toHaveAttribute("aria-expanded", "false");
     expect(groupToggle("Other income")).toHaveTextContent("None");
