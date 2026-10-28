@@ -178,7 +178,7 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
     how: [
       releaseKind === "area_coded_national"
         ? "Households in the national dataset (the enhanced Family Resources Survey) are reweighted to each constituency with 2025 constituency weights, scaled to each later year."
-        : "Each household in PolicyEngine's local-area dataset belongs to one constituency; a constituency's figure is the weighted average of its households.",
+        : "Each household in PolicyEngine's local-area dataset belongs to one constituency; a constituency's figure is computed from its own households only.",
       "Each figure has a 90% interval from 1,000 bootstrap resamples of survey households.",
       // Colour scale, unclassified, dotted and hatched: said once, in the key's tip
       "The key's \u201cHow to read the key\u201d tip gives the colour scale's range, and when a constituency is unclassified, approximate (dotted) or not published (hatched).",

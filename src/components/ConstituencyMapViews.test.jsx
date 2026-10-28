@@ -220,7 +220,7 @@ describe("constituencyInfo", () => {
     const national = constituencyInfo({ ...base, releaseKind: "area_coded_national" });
     expect(local.how[0]).toMatch(/local-area dataset/);
     // The figure is the constituency's, averaged over its households
-    expect(local.how[0]).toMatch(/a constituency's figure is the weighted average of its households\.$/);
+    expect(local.how[0]).toMatch(/a constituency's figure is computed from its own households only\.$/);
     expect(national.how[0]).toMatch(/enhanced Family Resources Survey/);
     const how = local.how.join(" ");
     expect(how).toMatch(/90% interval from 1,000 bootstrap resamples/);
