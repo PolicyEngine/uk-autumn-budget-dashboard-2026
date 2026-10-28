@@ -13,6 +13,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from tests.publication_support import DATASET_NAME, SMALL_DATASET_NAME
+from uk_budget_data.calculators import DIRECT_EFFECT_VARIABLES
 from uk_budget_data.publication import disclosure_floor as floor
 from uk_budget_data.publication.receipt import ReceiptUnavailable
 from uk_budget_data.publication.tables import (
@@ -50,24 +51,35 @@ POVERTY_FLAGS = (
 )
 
 
+def _own_incomes(n):
+    """Each person's own taxes and earnings (DIRECT_EFFECT_VARIABLES), the
+    same on both sides unless a test moves them: nobody directly
+    affected."""
+    return {variable: np.zeros(n) for variable in DIRECT_EFFECT_VARIABLES}
+
+
 def _no_poverty(n):
     """Person flags for the metrics floor: no one in poverty on either
-    side, and no child."""
+    side, and no child; and nobody's own taxes or earnings move."""
     return {
         **{flag: np.zeros(n, dtype=bool) for flag in POVERTY_FLAGS},
         "is_hbai_dependent_child": np.zeros(n, dtype=bool),
+        **_own_incomes(n),
     }
 
 
-def _population(changed_survey, records_each=3):
+def _population(changed_survey, records_each=3, gains=None):
     """Ten deciles of 20 survey households, each built into
     ``records_each`` records of one adult aged 40. The households in
-    ``changed_survey`` gain £100."""
+    ``changed_survey`` gain £100; ``gains`` maps others to their own gain
+    or loss, £ a year."""
     survey = np.repeat(np.arange(200), records_each)
     household_id = np.arange(len(survey)) + 1_000
     decile = survey // 20 + 1
     base = np.full(len(survey), 20_000.0)
     gain = np.where(np.isin(survey, list(changed_survey)), 100.0, 0.0)
+    for household, amount in (gains or {}).items():
+        gain[survey == household] = amount
     person = {
         "household_id": household_id,
         "age": np.full(len(survey), 40),
@@ -327,6 +339,7 @@ def _ages(changed):
         "household_id": household_id,
         "age": age,
         "household_income_decile": decile,
+        **_own_incomes(len(survey)),
     }
 
     def simulation(net):
@@ -347,6 +360,186 @@ def test_a_thin_single_age_in_a_band_that_is_not_thin_is_found_alone():
     baseline, reformed, survey = _ages(set(range(12)) | {50, 51})
     found = floor.thin_cells(baseline, reformed, [YEAR], survey)
     assert found[("age_impact", YEAR)] == ["40"]
+
+
+# The age table's columns each rest on their own people (#285 review,
+# findings 2 and 5): a 50p change on £20,000 moves the household (the
+# means), but under the 0.01% share that counts it better or worse off.
+PENNIES = 0.5
+
+
+def _age_thin(baseline, reformed, survey):
+    return floor.thin_cells(baseline, reformed, [YEAR], survey).get(
+        (floor.AGE_TABLE, YEAR), []
+    )
+
+
+def test_the_age_table_never_gives_back_a_withheld_people_affected():
+    """Finding 2: two survey households pass the 0.01% rule and nine more
+    move by pennies. Eleven households changed, so no decile is thin, but
+    people affected rests on two, and the age table's "all" row gives it
+    back (its better and worse off add up to it). So "all" is thin, no age
+    row is left, and people affected is withheld with it."""
+    baseline, reformed, survey = _population(
+        {0, 1}, gains={n: PENNIES for n in range(2, 11)}
+    )
+    found = floor.thin_cells(baseline, reformed, [YEAR], survey)
+    assert not set(floor.DECILE_TABLES) & {table for table, _ in found}
+    thin = found[(floor.AGE_TABLE, YEAR)]
+    assert floor.AGE_BAND_ALL in thin
+    assert floor.withheld_age_labels(thin, ["35-49", "all", "40"]) is None
+    assert floor.thin_metrics(baseline, reformed, [YEAR], survey) == {
+        ("metrics", YEAR): ["people_affected"]
+    }
+
+
+def test_three_households_past_the_share_keep_the_age_rows():
+    baseline, reformed, survey = _population(
+        {0, 1, 2}, gains={n: PENNIES for n in range(3, 11)}
+    )
+    assert _age_thin(baseline, reformed, survey) == []
+    assert floor.thin_metrics(baseline, reformed, [YEAR], survey) == {}
+
+
+@pytest.mark.parametrize("losers", [1, 2])
+def test_a_share_worse_off_resting_on_one_or_two_households_is_thin(losers):
+    """Finding 2: pct_worse_off is a cell of its own (the page draws it).
+    Eighteen survey households in the first decile gain, and one or two
+    lose: nothing else is thin, but the age rows' share worse off rests on
+    the losers."""
+    gains = {n: -100.0 for n in range(18, 18 + losers)}
+    baseline, reformed, survey = _population(range(18), gains=gains)
+    assert floor.thin_metrics(baseline, reformed, [YEAR], survey) == {}
+    found = floor.thin_cells(baseline, reformed, [YEAR], survey)
+    assert list(found) == [(floor.AGE_TABLE, YEAR)]
+    assert floor.AGE_BAND_ALL in found[(floor.AGE_TABLE, YEAR)]
+
+
+@pytest.mark.parametrize(
+    "not_affected, thin",
+    [(0, False), (1, True), (2, True), (3, False)],
+    ids=["none", "one", "two", "three"],
+)
+def test_people_affected_goes_when_one_or_two_households_are_not(
+    not_affected, thin
+):
+    """Finding 5: when only 1 or 2 survey households with a decile are not
+    affected, people affected is 100 less their share; and the age rows'
+    pct_unchanged is their share. Everyone affected (100%) is exact."""
+    unaffected = set(range(200 - not_affected, 200))
+    baseline, reformed, survey = _population(set(range(200)) - unaffected)
+    found = floor.thin_metrics(baseline, reformed, [YEAR], survey)
+    assert found == ({("metrics", YEAR): ["people_affected"]} if thin else {})
+    assert (floor.AGE_BAND_ALL in _age_thin(baseline, reformed, survey)) == (
+        thin
+    )
+
+
+def test_households_with_no_decile_are_not_counted_as_not_affected():
+    """Finding 5: people affected is a share of those with a decile, so a
+    household without one is neither affected nor its complement."""
+    baseline, reformed, survey = _population(set(range(198)))
+    for simulation in (baseline, reformed):
+        for table in ("household", "person"):
+            decile = simulation.arrays[table]["household_income_decile"]
+            decile[np.isin(survey, [198, 199])] = 0
+    assert floor.thin_metrics(baseline, reformed, [YEAR], survey) == {}
+
+
+@pytest.mark.parametrize("direct", [1, 2, 198, 199])
+def test_people_directly_affected_is_held_to_the_floor(direct):
+    """Finding 2's third set: people_directly_affected, a column of the
+    artifact's age table, counts people whose own taxes or earnings move by
+    £1 or more. Every household gains £100 (so nothing else is thin), and
+    the people of 1 or 2 survey households, or of all but 1 or 2 (which
+    ``people`` less it gives back), pay £5 more income tax."""
+    baseline, reformed, survey = _population(set(range(200)))
+    moved = dict(reformed.arrays["person"])
+    moved["income_tax"] = np.where(survey < direct, 5.0, 0.0)
+    reformed.arrays = {**reformed.arrays, "person": moved}
+    assert floor.thin_metrics(baseline, reformed, [YEAR], survey) == {}
+    assert floor.AGE_BAND_ALL in _age_thin(baseline, reformed, survey)
+
+
+def test_a_direct_change_under_a_pound_is_not_direct():
+    baseline, reformed, survey = _population(set(range(200)))
+    moved = dict(reformed.arrays["person"])
+    moved["employment_income"] = np.where(survey < 2, 0.5, 0.0)
+    reformed.arrays = {**reformed.arrays, "person": moved}
+    assert _age_thin(baseline, reformed, survey) == []
+
+
+@given(
+    base=st.floats(-1e6, 1e7, allow_nan=False),
+    change=st.floats(-1e5, 1e5, allow_nan=False),
+)
+def test_better_and_worse_off_add_up_to_people_affected(base, change):
+    """The age table's better and worse off are disjoint and together are
+    exactly the households people_affected counts, so the "all" row's
+    pct_better_off + pct_worse_off is people affected."""
+    from uk_budget_data.calculators import (
+        household_income_changed,
+        income_change_direction,
+    )
+
+    better, worse = income_change_direction([base], [base + change])
+    assert not (better & worse).any()
+    assert (
+        (better | worse) == household_income_changed([base], [base + change])
+    ).all()
+
+
+@given(data=st.data())
+def test_a_withheld_people_affected_takes_the_age_tables_all_row(data):
+    """For any population: people affected is withheld exactly when 1 or 2
+    survey households with a decile are affected, or are not; and whenever
+    it is, the age table's "all" row is thin, so no age row gives it
+    back."""
+    n = data.draw(st.integers(1, 12))
+
+    def draw(values):
+        return np.array(
+            data.draw(
+                st.lists(st.sampled_from(values), min_size=n, max_size=n)
+            )
+        )
+
+    survey = draw(range(6))
+    base = draw([0.0, 50.0, 20_000.0])
+    net = base + draw([0.0, 0.005, PENNIES, 1.0, 100.0, -100.0])
+    decile = draw([0, 1, 5])
+    household_id = np.arange(n) + 1_000
+    person = {
+        "household_id": household_id,
+        "age": np.full(n, 40),
+        "household_income_decile": decile,
+        **_own_incomes(n),
+    }
+
+    def simulation(income):
+        return _Simulation(
+            {
+                "household_id": household_id,
+                "household_net_income": income,
+                "household_income_decile": decile,
+            },
+            {**person, **_no_poverty(n)},
+        )
+
+    baseline, reformed = simulation(base), simulation(net)
+    found = floor.thin_metrics(baseline, reformed, [YEAR], survey)
+    withheld = "people_affected" in found.get(("metrics", YEAR), [])
+    from uk_budget_data.calculators import household_income_changed
+
+    affected = household_income_changed(base, net)
+    valid = decile >= 1
+
+    def thin(members):
+        return 0 < len(set(survey[members].tolist())) < FLOOR
+
+    assert withheld == (thin(valid & affected) or thin(valid & ~affected))
+    if withheld:
+        assert floor.AGE_BAND_ALL in _age_thin(baseline, reformed, survey)
 
 
 def test_warn_mode_writes_a_thin_decile_run_with_a_warning(monkeypatch):
@@ -893,9 +1086,15 @@ def test_a_poverty_column_is_withheld_exactly_when_thin(survey, data):
             assert (f"child_poverty_{measure}_change_{unit}" in withheld) == (
                 expected_child
             )
-    assert (("metrics", YEAR) in found) == expected_everyone
+    headline = set(found.get(("metrics", YEAR), []))
+    assert ("poverty_change_pp" in headline) == expected_everyone
+    # Nobody's income moves, so everyone is not affected: people affected
+    # (0) rests on them all, thin only in a population of 1 or 2 survey
+    # households (finding 5)
+    households = len(set(survey.tolist()))
+    assert ("people_affected" in headline) == (0 < households < FLOOR)
     if not crossing.any():
-        assert found == {}
+        assert ("poverty_inequality", YEAR) not in found
     if count(child) == 0:
         assert not any(c.startswith("child_") for c in withheld)
 

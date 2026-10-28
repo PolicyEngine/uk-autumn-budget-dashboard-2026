@@ -1010,7 +1010,7 @@ SINGLE_AGE_TOP = 90
 SINGLE_AGE_MIN_RECORDS = 100
 # A change smaller than this share of household net income counts as no
 # change: the test MetricsCalculator uses for people affected.
-AGE_CHANGE_THRESHOLD = 0.0001
+AGE_CHANGE_THRESHOLD = AFFECTED_RELATIVE_CHANGE
 # A change in a person's own taxes or earnings smaller than this, in £ a
 # year, does not make them directly affected.
 DIRECT_EFFECT_MIN_GBP = 1.0
@@ -1021,6 +1021,43 @@ DIRECT_EFFECT_VARIABLES = (
     "student_loan_repayment",
     "employment_income",
 )
+
+
+def income_change_direction(
+    baseline_income, reform_income
+) -> tuple[np.ndarray, np.ndarray]:
+    """Who is better off and who worse off, as AgeImpactCalculator counts
+    them: net income up, or down, by more than AGE_CHANGE_THRESHOLD of the
+    baseline's, floored at £1. Together they are those
+    ``household_income_changed`` counts as affected. Also the disclosure
+    floor's definitions for the age table (``disclosure_floor.thin_cells``).
+    """
+    baseline_income = np.asarray(baseline_income, dtype=float)
+    change = np.asarray(reform_income, dtype=float) - baseline_income
+    relative = change / np.maximum(baseline_income, 1)
+    return relative > AGE_CHANGE_THRESHOLD, relative < -AGE_CHANGE_THRESHOLD
+
+
+def own_income_change(baseline, reformed, year: int) -> np.ndarray:
+    """Each person's largest absolute change, £ a year, in their own
+    DIRECT_EFFECT_VARIABLES: they are directly affected when it is
+    DIRECT_EFFECT_MIN_GBP or more (AgeImpactCalculator). Also the
+    disclosure floor's definition for the age table
+    (``disclosure_floor.thin_cells``)."""
+
+    def person(sim, variable):
+        return np.asarray(
+            sim.calculate(variable, period=year, map_to="person").values,
+            dtype=float,
+        )
+
+    own_change = np.zeros_like(person(baseline, "age"))
+    for variable in DIRECT_EFFECT_VARIABLES:
+        own_change = np.maximum(
+            own_change,
+            np.abs(person(reformed, variable) - person(baseline, variable)),
+        )
+    return own_change
 
 
 def age_band_of(age: np.ndarray) -> np.ndarray:
@@ -1080,14 +1117,6 @@ class AgeImpactCalculator(BaseCalculator):
                 dtype=float,
             )
 
-        own_change = np.zeros_like(person(baseline, "age"))
-        for variable in DIRECT_EFFECT_VARIABLES:
-            own_change = np.maximum(
-                own_change,
-                np.abs(
-                    person(reformed, variable) - person(baseline, variable)
-                ),
-            )
         frame = pd.DataFrame(
             {
                 "age": person(baseline, "age"),
@@ -1101,7 +1130,7 @@ class AgeImpactCalculator(BaseCalculator):
                 "reform_equivalised": person(
                     reformed, "equiv_household_net_income"
                 ),
-                "own_change": own_change,
+                "own_change": own_income_change(baseline, reformed, year),
             }
         )
         return self.calculate_from_dataframe(
@@ -1124,9 +1153,10 @@ class AgeImpactCalculator(BaseCalculator):
         """
         frame = frame[frame["decile"] >= 1]
         change = (frame["reform_income"] - frame["baseline_income"]).to_numpy()
-        relative = change / np.maximum(frame["baseline_income"].to_numpy(), 1)
-        better = relative > AGE_CHANGE_THRESHOLD
-        worse = relative < -AGE_CHANGE_THRESHOLD
+        better, worse = income_change_direction(
+            frame["baseline_income"].to_numpy(),
+            frame["reform_income"].to_numpy(),
+        )
         equivalised = (
             frame["reform_equivalised"] - frame["baseline_equivalised"]
         ).to_numpy()
