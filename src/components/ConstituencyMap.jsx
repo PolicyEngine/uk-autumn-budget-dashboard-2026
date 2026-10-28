@@ -88,7 +88,7 @@ const CHART_TITLE = "Constituency impacts";
 // The Policy option for all the selected policies before their map is
 // published: listed, never chosen
 const COMBINED_PENDING = "combined-pending";
-export const ONE_POLICY_NOTE = "The map shows one policy at a time until the map for all selected policies is published.";
+export const ONE_POLICY_NOTE = "Until the map for all selected policies is published, it shows one policy at a time.";
 
 // The card's three views, and the URL parameter that opens the second or
 // third. The hex map is the default: every constituency the same size, so
@@ -1183,9 +1183,14 @@ export default function ConstituencyMap({
                 Average change in household net income by constituency.
               </p>
             ) : (
-              sentence && <p className="chart-description">{sentence}</p>
+              // One paragraph: the figures, then (several policies, no map
+              // for all of them yet) that it shows one at a time
+              (sentence || combinedPending) && (
+                <p className="chart-description">
+                  {[sentence, combinedPending && ONE_POLICY_NOTE].filter(Boolean).join(" ")}
+                </p>
+              )
             )}
-            {!notRouted && combinedPending && <p className="map-one-policy">{ONE_POLICY_NOTE}</p>}
           </div>
           {downloadsReady ? (
             <ChartDownloadMenu

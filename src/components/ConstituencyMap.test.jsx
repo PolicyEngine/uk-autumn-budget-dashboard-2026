@@ -883,7 +883,11 @@ describe("exportMapAsSvg", () => {
       await waitFor(() =>
         expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: Rail fares freeze$/),
       );
-      expect(screen.getByText(ONE_POLICY_NOTE)).toBeInTheDocument();
+      // One paragraph under the title: the figures, then one policy at a time
+      const description = container.querySelector(".chart-header .chart-description");
+      expect(description.textContent).toMatch(/^Households .*\. Until the map for all selected policies is published, it shows one policy at a time\.$/);
+      expect(description.textContent.endsWith(ONE_POLICY_NOTE)).toBe(true);
+      expect(container.querySelectorAll(".chart-header .chart-description")).toHaveLength(1);
       fireEvent.click(screen.getByRole("button", { name: /^Policy:/ }));
       const list = screen.getByRole("listbox", { name: "Policy" });
       expect(within(list).getAllByRole("option").map((option) => option.textContent)).toEqual(["All selected policies", "Rail fares freeze"]);

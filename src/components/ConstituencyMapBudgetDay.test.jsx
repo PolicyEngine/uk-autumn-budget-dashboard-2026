@@ -147,9 +147,11 @@ describe("ConstituencyMap on Budget day", () => {
       expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: Rail fares freeze$/),
     );
     expect(screen.getByRole("button", { name: "Policy: Rail fares freeze" })).toBeInTheDocument();
-    expect(
-      screen.getByText("No constituency shows a change large enough to publish for this policy in 2029-30."),
-    ).toBeInTheDocument();
+    // The figures' line and the one-policy-at-a-time note, in one paragraph
+    expect(container.querySelector(".chart-header .chart-description").textContent).toBe(
+      "No constituency shows a change large enough to publish for this policy in 2029-30. " +
+        "Until the map for all selected policies is published, it shows one policy at a time.",
+    );
   });
 
   it("draws a measure that moves no seat as no change and withheld, never as a figure", async () => {
@@ -175,11 +177,9 @@ describe("ConstituencyMap on Budget day", () => {
     const categories = [...container.querySelectorAll("path.constituency-path[data-category]")]
       .map((path) => path.getAttribute("data-category"))
       .filter(Boolean);
-    expect(categories.every((category) => category === "no_change")).toBe(true);    // One line under the map says why every seat is grey or hatched
+    expect(categories.every((category) => category === "no_change")).toBe(true);    // One line under the map says why every seat is grey or No data
     expect(
-      screen.getByText(
-        "No constituency shows a change large enough to publish for this policy in 2029-30.",
-      ),
+      screen.getByText(/^No constituency shows a change large enough to publish for this policy in 2029-30\./),
     ).toBeInTheDocument();
   });
 

@@ -106,7 +106,8 @@ export function constituencySentence(states, { outcome, yearLabel, several = fal
   const gains = published.filter((row) => signOf(row.value, outcome) === "gain");
   const losses = published.filter((row) => signOf(row.value, outcome) === "loss");
   const flat = published.length - gains.length - losses.length;
-  const notPublished = withheld > 0 ? `; ${seatsWord(withheld)} ${withheld === 1 ? "is" : "are"} not published` : "";
+  // "; 71 are not published": the noun is said once, on the first count
+  const notPublished = withheld > 0 ? `; ${withheld.toLocaleString("en-GB")} ${withheld === 1 ? "is" : "are"} not published` : "";
   const oneWay = flat === 0 && (gains.length === 0 || losses.length === 0);
   if (oneWay) {
     const moving = gains.length > 0 ? gains : losses;

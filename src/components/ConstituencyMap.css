@@ -906,11 +906,3 @@
   border: 1px solid var(--card-border);
   border-left: 3px solid var(--pe-gray-400);
 }
-
-/* With several policies and no map for all of them yet (AH1) */
-.map-one-policy {
-  margin: 4px 0 0;
-  color: var(--pe-gray-600);
-  font-size: 13px;
-  line-height: 1.4;
-}
