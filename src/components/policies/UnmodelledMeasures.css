@@ -184,3 +184,18 @@
   font-size: var(--fs-small);
   color: var(--pe-gray-500);
 }
+
+/* The groups, by who a measure touches: a small label above each grid,
+   in At a glance's style */
+.umm-group + .umm-group {
+  margin-top: 28px;
+}
+
+.umm-group-title {
+  margin: 0 0 10px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pe-gray-500);
+}

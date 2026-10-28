@@ -6,6 +6,7 @@ import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import { EXTERNAL } from "../../utils/sources";
 import {
   COSTING_YEARS,
+  UNMODELLED_GROUPS,
   UNMODELLED_MEASURES,
 } from "../../utils/unmodelledMeasures";
 import "./UnmodelledMeasures.css";
@@ -146,6 +147,18 @@ export function unmodelledCard(measure) {
  * and subtitle, then one card per measure from utils/unmodelledMeasures.js,
  * with the government's own figures only.
  */
+/**
+ * The measures in their groups (UNMODELLED_GROUPS), in order, each group
+ * keeping the list's order; a measure with no known group goes last,
+ * unlabelled.
+ */
+export function groupsOf(measures) {
+  const known = new Set(UNMODELLED_GROUPS.map(({ id }) => id));
+  const groups = UNMODELLED_GROUPS.map(({ id, label }) => ({ id, label, items: measures.filter((m) => m.group === id) }));
+  groups.push({ id: "other", label: null, items: measures.filter((m) => !known.has(m.group)) });
+  return groups.filter(({ items }) => items.length > 0);
+}
+
 export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES }) {
   const [open, setOpen] = useState(false);
   const id = useId();
@@ -182,14 +195,22 @@ export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES }) {
         </div>
       </div>
       <div id={`${id}-cards`} className="report-section policy-details-content" hidden={!open}>
-        {open && (
-          <ul className="policy-cards umm-list">
-            {measures.map((measure) => {
-              const { policy, parameters } = unmodelledCard(measure);
-              return <PolicyCard key={measure.id} policy={policy} parameters={parameters} />;
-            })}
-          </ul>
-        )}
+        {open &&
+          groupsOf(measures).map(({ id: group, label, items }) => (
+            <div key={group} className="umm-group">
+              {label && (
+                <p className="umm-group-title" id={`${id}-${group}`}>
+                  {label}
+                </p>
+              )}
+              <ul className="policy-cards umm-list" aria-labelledby={label ? `${id}-${group}` : undefined}>
+                {items.map((measure) => {
+                  const { policy, parameters } = unmodelledCard(measure);
+                  return <PolicyCard key={measure.id} policy={policy} parameters={parameters} />;
+                })}
+              </ul>
+            </div>
+          ))}
       </div>
     </section>
   );

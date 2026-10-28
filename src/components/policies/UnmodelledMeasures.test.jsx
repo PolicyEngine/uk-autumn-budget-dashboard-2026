@@ -6,6 +6,7 @@ import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import {
   BUDGET_DOCUMENT,
   COSTING_YEARS,
+  UNMODELLED_GROUPS,
   UNMODELLED_MEASURES,
 } from "../../utils/unmodelledMeasures";
 
@@ -226,6 +227,22 @@ describe("UnmodelledMeasures", () => {
       expect(link).toHaveAttribute("href", seeAlso.href);
       expect(link).toHaveAttribute("target", "_blank");
     }
+  });
+
+  it("shows the cards in their groups, by who a measure touches, each under its label", () => {
+    render(<UnmodelledMeasures />);
+    open();
+    const groups = [...document.querySelectorAll(".umm-group")];
+    expect(groups.map((group) => group.querySelector(".umm-group-title").textContent)).toEqual(UNMODELLED_GROUPS.map(({ label }) => label));
+    for (const [index, group] of groups.entries()) {
+      const ids = [...group.querySelectorAll(".policy-card")].map((card) => card.id.replace(/^unmodelled-/, ""));
+      expect(ids).toEqual(UNMODELLED_MEASURES.filter((m) => m.group === UNMODELLED_GROUPS[index].id).map((m) => m.id));
+    }
+    expect(UNMODELLED_MEASURES.every((m) => UNMODELLED_GROUPS.some(({ id }) => id === m.group))).toBe(true);
+  });
+
+  it("keeps names short: 10 words at most", () => {
+    for (const measure of UNMODELLED_MEASURES) expect(measure.name.split(/\s+/).length, measure.id).toBeLessThanOrEqual(10);
   });
 
   it("shows nothing for an empty list", () => {
