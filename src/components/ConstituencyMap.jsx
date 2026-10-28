@@ -178,7 +178,7 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
     how: [
       releaseKind === "area_coded_national"
         ? "Households in the national dataset (the enhanced Family Resources Survey) are reweighted to each constituency with 2025 constituency weights, scaled to each later year."
-        : "Each survey household in PolicyEngine's local-area dataset belongs to one constituency; its figure is their weighted average.",
+        : "Each household in PolicyEngine's local-area dataset belongs to one constituency; a constituency's figure is the weighted average of its households.",
       "Each figure has a 90% interval from 1,000 bootstrap resamples of survey households.",
       // Colour scale, unclassified, dotted and hatched: said once, in the key's tip
       "The key's \u201cHow to read the key\u201d tip gives the colour scale's range, and when a constituency is unclassified, approximate (dotted) or not published (hatched).",
@@ -187,7 +187,7 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
       { ref: "netIncome" },
       { term: "Hex map", meaning: "One equal hexagon per seat, placed roughly where it lies; shapes are not geographic." },
       { term: "Map", meaning: "Each seat's real boundary, so large rural seats dominate." },
-      { term: "Too uncertain", meaning: "The 90% range spans more than two categories, so the area is not classified." },
+      { term: "Too uncertain", meaning: "The 90% interval is too wide to tell the size of the change, so the area is not classified." },
     ],
     caveats: [
       "Survey weights are held fixed in the resampling, so the intervals understate the uncertainty.",

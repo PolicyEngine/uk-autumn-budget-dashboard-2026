@@ -219,6 +219,8 @@ describe("constituencyInfo", () => {
     const local = constituencyInfo({ ...base, releaseKind: "local_area" });
     const national = constituencyInfo({ ...base, releaseKind: "area_coded_national" });
     expect(local.how[0]).toMatch(/local-area dataset/);
+    // The figure is the constituency's, averaged over its households
+    expect(local.how[0]).toMatch(/a constituency's figure is the weighted average of its households\.$/);
     expect(national.how[0]).toMatch(/enhanced Family Resources Survey/);
     const how = local.how.join(" ");
     expect(how).toMatch(/90% interval from 1,000 bootstrap resamples/);
@@ -228,6 +230,11 @@ describe("constituencyInfo", () => {
     expect(how).not.toMatch(/either way|30 effective|10 survey households/);
     expect(how).toMatch(/How to read the key/);
     expect(local.definitions.map((d) => d.term ?? d.ref)).toContain("Hex map");
+    // Too uncertain in the interval's words, with no categories the
+    // continuous scale does not show
+    const uncertain = local.definitions.find((d) => d.term === "Too uncertain");
+    expect(uncertain.meaning).toMatch(/^The 90% interval is too wide to tell the size of the change/);
+    expect(uncertain.meaning).not.toMatch(/categor|range/);
     // A release that routes nothing by area: what it shows, no method
     expect(constituencyInfo({ ...base, notRouted: true }).how).toBeUndefined();
   });
