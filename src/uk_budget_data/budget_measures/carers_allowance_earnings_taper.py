@@ -3,8 +3,8 @@ earnings limit, in place of the cliff edge
 (``carers_allowance_earnings_taper``). Hand-written.
 
 One modifier in a module of its own: see the package docstring.
-Registered in ``reforms.py`` as an individual candidate measure; it is not
-one of the combined package's components.
+Registered in ``reforms.py`` and one of the combined package's components
+(``AUTUMN_BUDGET_2026_COMBINED_COMPONENTS``).
 """
 
 import math
@@ -130,9 +130,7 @@ def carers_allowance_earnings_taper(
             if year in obr_wages:
                 wage = obr_wages[year]
             else:
-                index = parameters(
-                    period
-                ).gov.economic_assumptions.indices.obr
+                index = parameters(period).gov.economic_assumptions.indices.obr
                 base = parameters(
                     "2027-04-06"
                 ).gov.economic_assumptions.indices.obr

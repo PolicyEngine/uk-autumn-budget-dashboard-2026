@@ -266,7 +266,7 @@ def test_current_law_fuel_duty_blends_as_the_engine_does():
 
 def test_the_fuel_duty_path_by_hand():
     """Budget 2026: the 5p cut extended to 1 July 2027. 52.95p to
-    30 June 2027, then current law's 59.75p (FUEL_DUTY_FROZEN_UNTIL)."""
+    30 June 2027, then current law's 60.59p (FUEL_DUTY_FROZEN_UNTIL)."""
     rates = fuel_duty_deferral_rates()
     # 2026-27: 52.95p all year
     assert rates["2026"] == 0.5295

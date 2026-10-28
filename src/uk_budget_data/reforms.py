@@ -708,21 +708,18 @@ def _create_plan_2_threshold_unfreeze() -> Reform:
 # a new IT system". The limit is 16 hours at the National Living Wage, £204
 # a week in 2026-27.
 #
-# Budget day, from the policy costings document (each a default argument
-# of budget_measures/carers_allowance_earnings_taper.py; changing one
-# changes the module's receipt, so it needs a fresh two-person
-# attestation):
-# - TODO start: ``start_year=2030`` applies the taper to the whole of
-#   2030-31. A start partway through 2030-31 needs a part-year weight the
-#   modifier does not have yet; if the costing gives a month, either keep
-#   the whole year and say so in the description, or start in 2031.
-# - TODO limit: ``earnings_limit=None`` reads the engine's limit, £204 in
-#   every year (policyengine-uk 2.151.0 does not uprate it). If the limit
-#   follows 16 x the National Living Wage, it rises each year; one weekly
-#   amount (``earnings_limit=``) applies to every year.
-# - TODO rate: ``taper_rate=1.0`` (the statement's 100%).
-# - Registration: not registered (#263, cells under the disclosure floor
-#   of 10 on main; #271 lowers it to 3 and is open, not merged).
+# Budget day, from the Budget document (6.13, 6.128) and the policy
+# costings (p. 16); each is a default argument of
+# budget_measures/carers_allowance_earnings_taper.py, and changing one
+# changes the module's receipt, so it needs a fresh two-person attestation:
+# - start: ``start_year=2030`` with ``first_year_share=0.5``, half of
+#   2030-31's effect, as the start date "within the 2030-31 financial year"
+#   is still to be confirmed.
+# - limit: 16 hours at the National Living Wage, rounded up to the pound:
+#   the OBR's wage for each April (EFO October 2026, Table 1.13), £212 at
+#   April 2027's £13.21, £228 in 2030-31 and £234 in 2031-32.
+# - rate: ``taper_rate=1.0`` (100%).
+# - Registered and in the package (AUTUMN_BUDGET_2026_COMBINED_COMPONENTS).
 def _create_carers_allowance_earnings_taper() -> Reform:
     return Reform(
         id=CARERS_ALLOWANCE_TAPER_ID,
@@ -730,11 +727,13 @@ def _create_carers_allowance_earnings_taper() -> Reform:
         description=(
             "In England and Wales, Carer's Allowance no longer stops when "
             "weekly net earnings pass the Weekly Earnings Limit, 16 hours at "
-            "the National Living Wage (£211.36 a week at April 2027's £13.21): it is "
+            "the National Living Wage (£212 a week at April 2027's £13.21, "
+            "rounded up to the pound): it is "
             "reduced by £1 for each £1 of earnings above the limit, a 100% "
             "taper, to nothing once earnings exceed the limit by the full "
-            "weekly rate. The taper starts within 2030-31; the model applies "
-            "it to the whole of that year. Carers at or below the limit, and "
+            "weekly rate. The taper starts within 2030-31, on a date still to "
+            "come, so the model counts half of that year. "
+            "Carers at or below the limit, and "
             "Scotland's Carer Support Payment, are unchanged. Claims by "
             "carers "
             "the limit kept out follow the data's take-up draw (60%). For "
@@ -904,14 +903,11 @@ def _create_household_energy_payment_2026() -> Reform:
 # TRADING ALLOWANCE FROM £1,000 TO £3,000
 # =============================================================================
 
-# Announced in the speech (28 October 2026, 13:14): "a new trading
-# allowance, raising the amount people can earn from a new venture tax-free
-# from £1,000 to £3,000". Budget day, from the documents: TRADING_ALLOWANCE_
-# RAISED and TRADING_ALLOWANCE_FROM (2027 = from 6 April 2027; TODO). The
-# parameter is not uprated, so writing every year from the first is the
-# whole change. "New venture" may limit it to new businesses; the data
-# cannot tell new from old, so every self-employed person gets it. The
-# property allowance (£1,000) was not mentioned and is unchanged.
+# Budget 2026 (6.254; policy costings p. 23; Table 6.1 row 15): the
+# trading allowance rises from £1,000 to £3,000 from 6 April 2027
+# (TRADING_ALLOWANCE_RAISED, TRADING_ALLOWANCE_FROM), with no new-venture
+# limit. The parameter is not uprated, so writing every year from the
+# first is the whole change. The property allowance (£1,000) is unchanged.
 TRADING_ALLOWANCE_RAISED = 3_000
 TRADING_ALLOWANCE_FROM = 2027
 
@@ -925,9 +921,10 @@ def _create_trading_allowance_raise() -> Reform:
             "trading allowance, which relieves trading receipts in place "
             "of actual expenses, rises from £1,000 to "
             f"£{TRADING_ALLOWANCE_RAISED:,}, for income tax and Class 4 "
-            "National Insurance. Without gross receipts in the data, a profit within the "
-            "allowance is treated as fully relieved, so the cost may be "
-            "overstated."
+            "National Insurance. Without gross receipts in the data, the "
+            "model relieves a profit up to £3,000 in full and gives no "
+            "relief above it, so the cost may be overstated for some people "
+            "and understated for others."
         ),
         parameter_changes=threshold_change(
             TRADING_ALLOWANCE,

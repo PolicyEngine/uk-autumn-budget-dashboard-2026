@@ -261,7 +261,7 @@ export const POLICY_DETAILS = [
     sentence: "tapering Carer's Allowance above the earnings limit",
     name: "Carer's Allowance earnings taper",
     description: "Withdraw Carer's Allowance £1 for £1 above the earnings limit",
-    writtenFor: "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (£211.36 a week at April 2027's £13.21): it is reduced by £1 for each £1 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The taper starts within 2030-31; the model applies it to the whole of that year. Carers at or below the limit, and Scotland's Carer Support Payment, are unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
+    writtenFor: "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (£212 a week at April 2027's £13.21, rounded up to the pound): it is reduced by £1 for each £1 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The taper starts within 2030-31, on a date still to come, so the model counts half of that year. Carers at or below the limit, and Scotland's Carer Support Payment, are unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
     summary:
       "Replaces the Carer's Allowance cliff edge at the weekly earnings limit with a taper of £1 for each £1 earned above it, in England and Wales from 2030-31.",
     starts: "2030-31",
@@ -271,7 +271,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Applies the taper to each carer's weekly net earnings in the survey, with the limit at 16 hours at the National Living Wage.",
     details:
-      "The taper starts within 2030-31; the model applies it to the whole of that year. Scotland's Carer Support Payment is unchanged. Universal Credit counts Carer's Allowance in full as unearned income, and the allowance is taxable, so a carer on Universal Credit gains nothing and can lose the income tax on it. Carers the limit kept out claim at the data's 60% take-up.",
+      "The taper starts within 2030-31, on a date still to come, so the model counts half of that year. Scotland's Carer Support Payment is unchanged. Universal Credit counts Carer's Allowance in full as unearned income, and the allowance is taxable, so a carer on Universal Credit gains nothing and can lose the income tax on it. Carers the limit kept out claim at the data's 60% take-up.",
     source: {
       label: "Carer's Allowance",
       href: "https://www.gov.uk/carers-allowance",
@@ -360,7 +360,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Adds £100 to the income of each household in England whose council tax band is A, B, C or D, in 2026-27.",
     details:
-      "The Treasury's £2.6 billion (Table 6.1) also covers the Scottish, Welsh and Northern Ireland governments' Barnett share (about £425 million) and £100 million for councils in England for further targeted support; neither is modelled, as the model covers payments in England only.",
+      "The Treasury's cost (Table 6.1) also covers the Scottish, Welsh and Northern Ireland governments' Barnett share (about £425 million) and £100 million for councils in England for further targeted support; neither is modelled, as the model covers payments in England only.",
     source: {
       label: "Budget 2026",
       href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
@@ -378,17 +378,17 @@ export const POLICY_DETAILS = [
     sentence: "raising the trading allowance",
     name: "Trading allowance raised to £3,000",
     description: "Raise the trading allowance from £1,000 to £3,000",
-    writtenFor: "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from £1,000 to £3,000, for income tax and Class 4 National Insurance. Without gross receipts in the data, a profit within the allowance is treated as fully relieved, so the cost may be overstated.",
+    writtenFor: "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from £1,000 to £3,000, for income tax and Class 4 National Insurance. Without gross receipts in the data, the model relieves a profit up to £3,000 in full and gives no relief above it, so the cost may be overstated for some people and understated for others.",
     summary:
       "Raises the trading allowance, which lets people earn from trading without tax, from £1,000 to £3,000 from April 2027.",
     starts: "April 2027",
-    affects: "Self-employed people with small trading incomes",
+    affects: "Sole traders with small trading incomes or with expenses under £3,000, and people with miscellaneous income",
     type: "Income tax",
     inForce: { from: "2027-04" },
     howCalculated:
       "Raises the trading allowance parameter to £3,000 from 2027-28, for income tax and Class 4 National Insurance.",
     details:
-      "Without gross receipts, a profit within the allowance is treated as fully relieved, so the cost may be overstated. The Treasury's costing starts in 2028-29, when self-assessment payments fall due; the model's static figure starts in 2027-28.",
+      "The Treasury's costing starts in 2028-29, when self-assessment payments fall due; the model's static figure starts in 2027-28.",
     source: {
       label: "Budget 2026",
       href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
