@@ -13,7 +13,12 @@ Each figure is ``reconcile._comparator`` for that measure, year and basis,
 so the page shows exactly the comparator the gate used: several mapped
 rows summed, with their reviewed scale and year offset, and nothing while
 any mapped row is still blank. Measures every row of which a reviewer
-classified ``not_comparable`` are left out.
+classified ``not_comparable`` are left out. A year in which a reviewer
+classified every mapped row not comparable (``not_comparable_years`` in
+``mapping.csv``) has no figure on either basis and says why::
+
+    "2030": {"static_costing": null, "post_behavioural": null,
+             "not_comparable": {"reason": "..."}}
 
 The file names the manifest's release and Budget, and only the manifest's
 measure keys. The page refuses it for any other Budget, and joins it only
@@ -37,6 +42,7 @@ from uk_budget_data.publication.reconcile import (
     NOT_COMPARABLE,
     ReconciliationInputError,
     _comparator,
+    excluded_links,
     _one_mapping_each,
     _one_source_each,
     load_mapping,
@@ -52,7 +58,8 @@ def official_costings(manifest: m.Manifest, sources, mapping) -> dict:
     """The official costing of each manifest measure, by year and basis.
 
     A year with no complete comparator on a basis is null on that basis; a
-    measure with no figure at all is left out.
+    year a reviewer classified not comparable is null on both, with the
+    reason; a measure with neither is left out.
     """
     _one_source_each(sources)
     _one_mapping_each(mapping)
@@ -64,13 +71,26 @@ def official_costings(manifest: m.Manifest, sources, mapping) -> dict:
         entry = manifest.measures[key]
         years = {}
         for year in sorted(entry.years):
+            out = excluded_links(links, year)
+            if len(out) == len(links):
+                years[str(year)] = {
+                    **{basis: None for basis in BASES},
+                    "not_comparable": {
+                        "reason": "; ".join(
+                            dict.fromkeys(link.reason for link in out)
+                        )
+                    },
+                }
+                continue
             figures = {
                 basis: _comparator(key, year, basis, sources, mapping).value_bn
                 for basis in BASES
             }
             if any(value is not None for value in figures.values()):
                 years[str(year)] = figures
-        if years:
+        if any(
+            "not_comparable" not in figures for figures in years.values()
+        ):
             measures[key] = {"years": years}
     return {
         "schema": SCHEMA,

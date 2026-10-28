@@ -1812,3 +1812,177 @@ def test_the_committed_policy_gates_budget_2026_on_post_behavioural():
     # The returned policy serialises (reconciliation.json)
     result = run({2027: 1.0}, [post(2027, 1.0)], policy=policy)
     json.dumps(result)
+
+
+# --------------------------------------------------------------------------
+# Years classified not comparable (mapping.csv not_comparable_years)
+# --------------------------------------------------------------------------
+
+AFTER_END = dict(
+    not_comparable_years=("2030-31", "2031-32"),
+    reason="Allowance ends 5 April 2030; timing after the end",
+    reviewer="vahid-ahmadi",
+)
+
+
+def test_named_years_need_a_reason_and_a_reviewer():
+    with pytest.raises(ReconciliationInputError, match="reason"):
+        link(not_comparable_years=("2030-31",), reviewer="R")
+    with pytest.raises(ReconciliationInputError, match="reviewer"):
+        link(not_comparable_years=("2030-31",), reason="Timing")
+    link(**AFTER_END)
+
+
+@pytest.mark.parametrize(
+    "years", [("2030",), ("2030-2031",), (2030,), "2030-31", ("2030-31",) * 2]
+)
+def test_named_years_must_be_fiscal_years_named_once(years):
+    with pytest.raises(ReconciliationInputError):
+        link(not_comparable_years=years, reason="Timing", reviewer="R")
+
+
+def test_named_years_on_a_row_out_every_year_are_refused():
+    with pytest.raises(ReconciliationInputError, match="every year"):
+        link(status=NOT_COMPARABLE, **AFTER_END)
+
+
+def test_named_years_drop_out_of_the_residual_and_responsiveness():
+    """The Pension Tax Allowance case: the Treasury prints +£50m and -£15m
+    after the allowance ends, which the static model scores at £0. Those
+    years are not compared and carry no expectation; the years before are
+    compared and checked as usual."""
+    sources = [
+        source(2027, -0.045, "post_behavioural"),
+        source(2028, -0.09, "post_behavioural"),
+        source(2029, -0.15, "post_behavioural"),
+        source(2030, 0.05, "post_behavioural"),
+        source(2031, -0.015, "post_behavioural"),
+    ]
+    budgetary = {2027: -0.045, 2028: -0.09, 2029: -0.15, 2030: 0.0, 2031: 0.0}
+    policy = Policy(comparator_basis="post_behavioural")
+    expected = [ExpectedEffect("m", "negative", 2027, 2029, reviewer="R")]
+    result = run(
+        budgetary,
+        sources,
+        mapping=[link(**AFTER_END)],
+        policy=policy,
+        expected=expected,
+    )
+    rows = {row["year"]: row for row in result["rows"]}
+    for year in (2030, 2031):
+        assert rows[year]["status"] == NOT_COMPARABLE
+        assert rows[year]["reason"] == AFTER_END["reason"]
+        assert rows[year]["reviewer"] == "vahid-ahmadi"
+        assert "residual_bn" not in rows[year]
+    assert [rows[y]["status"] for y in (2027, 2028, 2029)] == [PASS] * 3
+    assert result["summary"]["status"] == PASS
+    assert result["responsiveness"]["status"] == RESPONSIVE
+    assert [r["year"] for r in result["responsiveness"]["rows"]] == [
+        2027,
+        2028,
+        2029,
+    ]
+    # Without the classification the zero after the end is inert
+    unmarked = run(
+        budgetary, sources, policy=policy, expected=expected
+    )
+    assert unmarked["responsiveness"]["status"] == INERT
+
+
+def test_named_years_never_waive_a_declared_effect():
+    """policy.yaml: no exception can waive responsiveness where an effect
+    is declared. A year classified not comparable but declared is still
+    checked, so a zero there is still inert."""
+    result = run(
+        {2030: 0.0},
+        [source(2030, -1.0)],
+        mapping=[link(**AFTER_END)],
+        expected=[ExpectedEffect("m", "negative", 2030, reviewer="R")],
+    )
+    assert result["rows"][0]["status"] == NOT_COMPARABLE
+    assert result["responsiveness"]["status"] == INERT
+    assert result["responsiveness"]["rows"][0]["expectation_from"] == (
+        "declared"
+    )
+
+
+def test_named_years_follow_the_rows_year_offset():
+    """The named years are the Treasury's: with an offset of one, model
+    year 2029 reads fiscal year 2030-31."""
+    result = run(
+        {2029: 0.0, 2030: 0.0},
+        [source(2030, 0.05), source(2031, 0.0)],
+        mapping=[link(year_offset=1, **AFTER_END)],
+    )
+    assert [row["status"] for row in result["rows"]] == [NOT_COMPARABLE] * 2
+
+
+def test_a_year_one_of_several_rows_leaves_is_compared_on_the_rest():
+    sources = [source(2026, 0.0, row_id="1"), source(2026, 0.015, row_id="2")]
+    mapping = [
+        link(row_id="1"),
+        link(
+            row_id="2",
+            not_comparable_years=("2026-27",),
+            reason="Before the start",
+            reviewer="R",
+        ),
+    ]
+    result = run({2026: 0.0}, sources, mapping=mapping)
+    row = result["rows"][0]
+    assert row["status"] == PASS
+    assert row["comparator"]["value_bn"] == 0.0
+    assert row["excluded"] == [{"row_id": "2", "reason": "Before the start"}]
+    assert result["responsiveness"]["status"] == UNDECLARED
+
+
+def test_named_years_leave_other_years_comparison_digest_alone():
+    """An exception approved for a compared year keeps its digest when
+    other years are classified not comparable."""
+    sources = [source(2027, -1.0), source(2030, 0.05)]
+    before = comparison_sha256("m", 2027, sources, [link()], POLICY)
+    after = comparison_sha256("m", 2027, sources, [link(**AFTER_END)], POLICY)
+    assert before == after
+    assert comparison_sha256(
+        "m", 2030, sources, [link(**AFTER_END)], POLICY
+    ) is None
+
+
+def test_load_mapping_reads_named_years(tmp_path):
+    path = tmp_path / "mapping.csv"
+    path.write_text(
+        "measure_id,source_id,row_id,scale,year_offset,status,reason,"
+        "reviewer,not_comparable_years\n"
+        'm,S,1,1,0,,"Timing, after the end",R,2030-31;2031-32\n'
+        "n,S,2,1,0,,,,\n"
+    )
+    first, second = load_mapping(path)
+    assert first.not_comparable_years == ("2030-31", "2031-32")
+    assert first.reason == "Timing, after the end"
+    assert second.not_comparable_years == ()
+
+
+def test_the_pension_tax_allowance_is_compared_before_the_end_only():
+    """The checked-in inputs: Table 6.1 row 52 compared in 2027-28 to
+    2029-30, not in 2030-31 and 2031-32, and the static model's zero after
+    the end is no longer inert."""
+    from pathlib import Path
+
+    inputs = Path(__file__).resolve().parents[1] / "data_inputs" / "treasury"
+    measure = "state_pension_income_tax_protection"
+    result = reconcile(
+        {2026: 0.0, 2027: -0.045, 2028: -0.09, 2029: -0.15, 2030: 0.0,
+         2031: 0.0},
+        measure_id=measure,
+        outputs_sha256=DIGEST,
+        sources=load_sources(inputs / "sources"),
+        mapping=load_mapping(inputs / "mapping.csv"),
+        exceptions=[],
+        policy=load_policy(inputs / "policy.yaml"),
+        expected=[e for e in load_expected(inputs / "expected_effects.csv")],
+        years=range(2026, 2032),
+    )
+    status = {row["year"]: row["status"] for row in result["rows"]}
+    assert status[2030] == status[2031] == NOT_COMPARABLE
+    assert {status[y] for y in (2026, 2027, 2028, 2029)} == {PASS}
+    assert result["responsiveness"]["status"] == RESPONSIVE
