@@ -221,7 +221,7 @@ describe("MethodologyTab", () => {
     const text = container.textContent;
     expect(text).toContain("comes from only one or two survey households is not shown");
     expect(text).toContain("so this counts records, not households");
-    expect(text).toContain("In the age and decile tables, for people affected and for each change in poverty, a figure resting on one or two survey households is not published, nor any figure in the same table that would give it back. A change in poverty rests on the households whose people cross the line.");
+    expect(text).toContain("In the age and decile tables, for people affected and for each change in poverty, a figure resting on one or two survey households is not published, nor any figure in the same table that would give it back. A change in poverty rests on the households whose people cross the line. A share better or worse off rests on the households it counts, so where people affected is not published, neither is the age table's row for everyone.");
     expect(text).not.toContain("survey records is not shown");
   });
 
