@@ -45,7 +45,8 @@ export const drawnKey = (name) => `${name}Drawn`;
  * each part as drawn. A part can be negative (a benefit that rises with
  * pay): it is drawn below zero (the chart stacks by sign), so the chart
  * shows what the tooltip gives (Pavel's review, HH8). "Other" is the total
- * less the named parts, so the parts still add up to the total. The last
+ * less the named parts, never below zero, so the layers reach the total
+ * line except where the named parts alone pass it. The last
  * step is repeated at the sweep's end so it is drawn to there.
  */
 export function breakdownRows(rates, parts, side = "after") {
@@ -55,9 +56,13 @@ export function breakdownRows(rates, parts, side = "after") {
     const step = parts[side][i] ?? {};
     const drawn = Object.fromEntries(named.map((name) => [drawnKey(name), step[name] ?? 0]));
     const stacked = Object.values(drawn).reduce((sum, value) => sum + value, 0);
-    // Rounding dust is no layer
+    // Never below zero: a negative remainder (the named parts adding up to
+    // more than the step's total, from the sweep's coarse steps) would be a
+    // grey sliver under 0% that names nothing, and would stretch the axis
+    // (round 3). The total line still gives the rate itself. Rounding dust
+    // is no layer
     const other = rate[side] - stacked;
-    drawn[drawnKey("other")] = Math.abs(other) < 1e-9 ? 0 : other;
+    drawn[drawnKey("other")] = other < 1e-9 ? 0 : other;
     return { income: rate.income, to: rate.to, ...step, ...drawn, before: rate.before, after: rate.after };
   });
   if (rows.length) rows.push({ ...rows[rows.length - 1], income: rows[rows.length - 1].to });

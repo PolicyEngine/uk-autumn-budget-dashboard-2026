@@ -226,19 +226,25 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
     ? changeRateTicks(Math.max(0, ...data.map((row) => Math.abs(row.change)), yours ? Math.abs(yours.after - yours.before) : 0))
     : rateBounds.ticks;
   const yAxisWidth = axisWidth(yTicks, isChange ? points : pct);
+  const clearPointer = () => {
+    setPointer(null);
+    sync?.setHover(null);
+  };
+  // The mouse, or a finger on a phone (round 3: no touch handler left the
+  // box stuck after a tap)
   const onPointer = (event) => {
+    const at = event.touches?.[0] ?? event.changedTouches?.[0] ?? event;
     const box = event.currentTarget.getBoundingClientRect();
     const plotW = box.width - yAxisWidth - RIGHT_MARGIN;
-    const px = event.clientX - box.left - yAxisWidth;
+    const px = at.clientX - box.left - yAxisWidth;
     if (plotW <= 0 || px < 0 || px > plotW) {
-      setPointer(null);
-      sync?.setHover(null);
+      clearPointer();
       return;
     }
     const income = xDomain[0] + (px / plotW) * (xDomain[1] - xDomain[0]);
     const row = stepAt(data, income);
     if (!row) return;
-    setPointer({ income, row, x: event.clientX - box.left, y: event.clientY - box.top, width: box.width });
+    setPointer({ income, row, x: at.clientX - box.left, y: at.clientY - box.top, width: box.width, height: box.height });
     sync?.setHover({ income, card: "rate" });
   };
   // A State Pension household whose income tax rate rises sharply at the
@@ -335,10 +341,11 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
         data-view={view}
         style={{ position: "relative" }}
         onMouseMove={onPointer}
-        onMouseLeave={() => {
-          setPointer(null);
-          sync?.setHover(null);
-        }}
+        onMouseLeave={clearPointer}
+        onTouchStart={onPointer}
+        onTouchMove={onPointer}
+        onTouchEnd={clearPointer}
+        onTouchCancel={clearPointer}
       >
         <ResponsiveContainer width="100%" height={earningsChartHeight(narrow)}>
           <ComposedChart
@@ -448,9 +455,13 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
             className="mtr-tooltip"
             style={{
               position: "absolute",
-              top: 8,
               zIndex: 20,
               pointerEvents: "none",
+              // Beside the pointer, below it in the top half and above it in
+              // the bottom half, so it never sits over the top of the plot
+              // (the 100% tick, the "You" label) while the pointer is lower
+              // down (round 3)
+              ...(pointer.y < pointer.height / 2 ? { top: pointer.y + 12 } : { bottom: pointer.height - pointer.y + 12 }),
               ...(pointer.x > pointer.width / 2 ? { right: pointer.width - pointer.x + 12 } : { left: pointer.x + 12 }),
             }}
           >

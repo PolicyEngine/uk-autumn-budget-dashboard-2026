@@ -56,6 +56,19 @@ describe("marginal rate parts", () => {
     expect(drawnSum(row)).toBeCloseTo(0.28, 6);
   });
 
+  it("never draws Other below zero: a negative remainder is no layer, and the axis stays at 0% (round 3)", () => {
+    // The named parts (28%) pass the step's total (25%): Other would be −3%
+    const [row] = breakdownRows([{ income: 0, to: 50000, before: 0.25, after: 0.25 }], { after: [step(0.2, 0, 0.08)] });
+    expect(row[drawnKey("other")]).toBe(0);
+    expect(rateAxis([row.after, row[drawnKey("other")]]).domain[0]).toBe(0);
+    // A negative named part is still drawn below zero
+    const [mixed] = breakdownRows([{ income: 0, to: 50000, before: 0.2, after: 0.2 }], {
+      after: [{ ...step(0.2, 0, 0.08), universal_credit: -0.1 }],
+    });
+    expect(mixed[drawnKey("universal_credit")]).toBe(-0.1);
+    expect(mixed[drawnKey("other")]).toBeCloseTo(0.02, 9);
+  });
+
   it("widens the rate axis below 0% for a negative rate or part, within −100% to 200% (HH8)", () => {
     expect(rateAxis([0.2, 0.6])).toEqual({ domain: [0, 1], ticks: [0, 0.2, 0.4, 0.6, 0.8, 1] });
     expect(rateAxis([-0.05, 0.6]).domain).toEqual([-0.2, 1]);
@@ -101,6 +114,31 @@ describe("MarginalRateChart", () => {
     expect(screen.getByText(/made up of income tax 40%, the personal allowance taper 20%, National Insurance 2%/)).toBeInTheDocument();
     // The PA taper's note, which the legend had behind an "i", is a definition
     expect(document.querySelector(".chart-more-info")).toHaveTextContent(/Personal allowance taper/);
+  });
+
+  it("places the hover box beside the pointer, never over the top of the plot when the pointer is low, and follows a finger (round 3)", () => {
+    const own = { before: step(0.4, 0.2, 0.02), after: step(0.4, 0.2, 0.02) };
+    render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);
+    const plot = document.querySelector(".mtr-plot");
+    plot.getBoundingClientRect = () => ({ left: 0, top: 0, right: 600, bottom: 400, width: 600, height: 400, x: 0, y: 0 });
+    const tip = () => document.querySelector(".mtr-tooltip");
+    // Low in the plot: anchored above the pointer, not pinned to the top
+    fireEvent.mouseMove(plot, { clientX: 200, clientY: 300 });
+    expect(tip()).not.toBeNull();
+    expect(tip().style.top).toBe("");
+    expect(tip().style.bottom).toBe("112px");
+    // High in the plot: below the pointer
+    fireEvent.mouseMove(plot, { clientX: 200, clientY: 50 });
+    expect(tip().style.top).toBe("62px");
+    fireEvent.mouseLeave(plot);
+    expect(tip()).toBeNull();
+    // A tap shows it and lifting the finger clears it
+    fireEvent.touchStart(plot, { touches: [{ clientX: 300, clientY: 200 }] });
+    expect(tip()).not.toBeNull();
+    fireEvent.touchMove(plot, { touches: [{ clientX: 400, clientY: 220 }] });
+    expect(tip()).not.toBeNull();
+    fireEvent.touchEnd(plot, { touches: [], changedTouches: [{ clientX: 400, clientY: 220 }] });
+    expect(tip()).toBeNull();
   });
 
   it("switches between before, after and the change, each with its own legend", () => {
