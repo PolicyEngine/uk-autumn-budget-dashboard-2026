@@ -133,9 +133,15 @@
   white-space: nowrap;
 }
 
-/* The OBR breakdown: a tax's name to a row, wider than "Row 38" */
+/* The OBR breakdown: a tax's name to a row, wider than "Row 38", on two
+   lines where it must be ("Onshore corporation tax") */
 .umm-list .umm-costing.is-certified:has(tbody th:not(.is-hidden)) thead th:first-child {
-  width: 7.5em;
+  width: 9em;
+}
+
+.umm-costing.is-certified tbody th {
+  white-space: normal;
+  line-height: 1.25;
 }
 
 /* The OBR breakdown's total, under its heads */

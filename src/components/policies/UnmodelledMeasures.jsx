@@ -78,7 +78,7 @@ function Costing({ measure }) {
           <thead>
             <tr>
               <th scope="col">
-                <span className="policy-sr-only">Row</span>
+                <span className="policy-sr-only">{measure.certified ? "Tax" : "Row"}</span>
               </th>
               {COSTING_YEARS.map((year) => (
                 <th key={year} scope="col">
