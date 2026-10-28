@@ -500,7 +500,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Budget",
-                  "Here a policy is costed by its change in the government's balance, which counts employer National Insurance and VAT receipts directly. The app costs it as the change in households' taxes less benefits, so its cost for the employer National Insurance threshold differs.",
+                  "Here a policy is costed by its change in the government's balance, as set out under Public finances. The app costs it as the change in households' taxes less benefits, so its cost for the employer National Insurance threshold differs.",
                 ],
               ]}
             />
