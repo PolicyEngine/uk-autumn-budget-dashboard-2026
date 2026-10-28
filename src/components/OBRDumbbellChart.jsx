@@ -178,6 +178,8 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
 
   // Where each mark sits: £bn, or % of the official costing
   const plotted = rows.map((row) => {
+    // Not in force this year on either side: no marks, the row says why
+    if (row.status) return { ...row, xPe: null, xObr: null, extent: [] };
     if (!pct) {
       return { ...row, xPe: row.pe, xObr: row.obr, extent: [row.pe, row.obrStatic, row.obrBehavioural].filter(isValue) };
     }
@@ -290,9 +292,11 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
     const difference = shownDifference(row.pe, row.obr, decimals);
     const background = rowBackground(row, index);
     const bn = (value) => formatBn(value, decimals);
-    const differenceText = difference === null ? "—" : formatDifference(difference, decimals);
+    const differenceText = row.status ? "" : difference === null ? "—" : formatDifference(difference, decimals);
 
-    if (pePart && obrPart) {
+    if (row.status) {
+      parts.push(missingLabel(row.status, "right", plotLeft - labelGap, cy, "status"));
+    } else if (pePart && obrPart) {
       const xPe = x(row.xPe);
       const xObr = x(row.xObr);
       // A unit line moved and stretched by a transform, so it slides with
@@ -387,7 +391,9 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
         ]}
       />
     );
-    const summary = `${row.name}: PolicyEngine ${isValue(row.pe) ? bn(row.pe) : "not yet published"}, official ${isValue(row.obr) ? bn(row.obr) : row.notComparable ? "not comparable" : "none"}`;
+    const summary = row.status
+      ? `${row.name}: ${row.status}`
+      : `${row.name}: PolicyEngine ${isValue(row.pe) ? bn(row.pe) : "not yet published"}, official ${isValue(row.obr) ? bn(row.obr) : row.notComparable ? "not comparable" : "none"}`;
 
     return (
       <g
@@ -449,6 +455,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
               role="img"
               aria-label={`${rows
                 .map((row) => {
+                  if (row.status) return `${row.name}: ${row.status}`;
                   const decimals = rowDecimals(row.pe, row.obr);
                   return `${row.name}: PolicyEngine ${isValue(row.pe) ? formatBn(row.pe, decimals) : "not yet published"}, official ${isValue(row.obr) ? formatBn(row.obr, decimals) : row.notComparable ? "not comparable" : "none"}`;
                 })

@@ -197,3 +197,10 @@
     margin-left: 0;
   }
 }
+
+/* A row whose policy is not in force this year ("Starts 2030-31"): one
+   muted line across the figures, from the PolicyEngine column's edge */
+.comparison-table .status-cell {
+  text-align: left;
+  font-style: italic;
+}

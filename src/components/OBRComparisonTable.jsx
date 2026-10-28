@@ -15,6 +15,7 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv, fiscalYear } from "../utils/chartCsv";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import { shortNameOf } from "../utils/policyDetails";
+import { loadPolicyParameters, measureWindows, outOfForceText } from "../utils/policyParameters";
 import { loadOfficialCostings, OfficialCostingsPendingError } from "../utils/publication/officialCostings";
 import { SOURCES } from "../utils/sources";
 import { METHOD_ANCHORS } from "./methodology/anchors";
@@ -37,6 +38,21 @@ export const OBR_CARD_TITLE = "How our estimates compare with the official costi
 export const CLOSE_BN = 0.2;
 
 const isValue = (value) => typeof value === "number" && Number.isFinite(value);
+
+/** Each measure's scored years (policy_parameters.json), once loaded; {} until then or without the file. */
+function useMeasureWindows() {
+  const [windows, setWindows] = useState({});
+  useEffect(() => {
+    let live = true;
+    loadPolicyParameters().then((document) => {
+      if (live) setWindows(measureWindows(document));
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return windows;
+}
 
 /**
  * The official costings' and PolicyEngine's figures by measure and year, for
@@ -100,11 +116,17 @@ export function hasObrFigures(rows, selectedPolicies) {
 /**
  * One row per selected measure for a year, largest official costing first
  * (by size, either sign), measures with no official figure last:
- * { id, name, pe, obr, obrStatic, obrBehavioural, notComparable }, null
- * for a missing figure; `notComparable` is the reviewer's reason where the
- * official costing for the year is not comparable with ours. `name` is the measure's short name, as elsewhere on the page.
+ * { id, name, pe, obr, obrStatic, obrBehavioural, notComparable, status },
+ * null for a missing figure; `notComparable` is the reviewer's reason where
+ * the official costing for the year is not comparable with ours. `name` is
+ * the measure's short name, as elsewhere on the page. `status` ("Starts
+ * 2030-31", "Ended 2029-30", "2026-27 only") is set where the measure is
+ * not in force that year (its scored years in `windows`, from
+ * policy_parameters.json: measureWindows) and neither side has an effect,
+ * so the row says why in place of "£0, same"; a measure in force with a
+ * genuine zero keeps its £0.
  */
-export function comparisonRows(sourceRows, selectedPolicies, year, showBehavioural, catalogue) {
+export function comparisonRows(sourceRows, selectedPolicies, year, showBehavioural, catalogue, windows = {}) {
   const byMeasure = new Map();
   for (const row of sourceRows) {
     if (!selectedPolicies.includes(row.reform_id) || Number(row.year) !== Number(year)) continue;
@@ -126,6 +148,10 @@ export function comparisonRows(sourceRows, selectedPolicies, year, showBehaviour
       obrBehavioural: isValue(row.obr_behavioural) ? row.obr_behavioural : null,
       notComparable: typeof row.not_comparable === "string" ? row.not_comparable : null,
     };
+  }).map((row) => {
+    const none = (value) => value === null || value === 0;
+    const quiet = none(row.pe) && none(row.obrStatic) && none(row.obrBehavioural);
+    return { ...row, status: quiet ? outOfForceText(windows[row.id], Number(year), fiscalYear) : null };
   });
   const size = (row) => (row.obr === null ? -1 : Math.abs(row.obr));
   return rows
@@ -196,6 +222,7 @@ const COMPARISON_INFO = {
  */
 function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, data }) {
   const catalogue = useMeasureCatalogue();
+  const windows = useMeasureWindows();
   const fetched = useObrComparisonData(!data);
   const comparisonData = data ?? fetched;
   // Static by default: like for like with PolicyEngine's static estimates
@@ -224,7 +251,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   }
 
   const yearLabel = fiscalYear(selectedYear);
-  const rows = comparisonRows(selectedRows, selectedPolicies, selectedYear, showBehavioural, catalogue);
+  const rows = comparisonRows(selectedRows, selectedPolicies, selectedYear, showBehavioural, catalogue, windows);
   // The basis the figures shown are on: the other one when the official
   // costings give none on the chosen basis this year (Budget 2026 publishes
   // one Exchequer impact per measure, post-behavioural), so no line calls
@@ -390,6 +417,15 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
                   // The chart's precision (figures under £1bn are in £m)
                   const decimals = rowDecimals(row.pe, row.obr);
                   const difference = shownDifference(row.pe, row.obr, decimals);
+                  if (row.status) {
+                    // Not in force this year on either side: why, across the figures
+                    return (
+                      <tr key={row.id} className={`row-band${index % 2 === 0 ? " is-banded" : ""}`}>
+                        <td className="policy-name-cell"><MeasureRowLabel measure={row.measure} name={row.name} /></td>
+                        <td className="value-cell status-cell is-zero" colSpan={4}>{row.status}</td>
+                      </tr>
+                    );
+                  }
                   return (
                     // Every second row on the faint band, as the chart's rows
                     <tr key={row.id} className={`row-band${index % 2 === 0 ? " is-banded" : ""}`}>

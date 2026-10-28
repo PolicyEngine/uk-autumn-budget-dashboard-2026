@@ -168,3 +168,33 @@ export function loadPolicyParameters({ fetchImpl = globalThis.fetch, base = proc
 export function resetPolicyParameters() {
   cached = undefined;
 }
+
+/**
+ * Each measure's scored years, from the file: { id: { first, last } }, the
+ * first and last fiscal year (its start) in which any of its parameters
+ * differs from current law. A measure with no changed year is left out.
+ */
+export function measureWindows(document) {
+  const windows = {};
+  for (const [id, entry] of Object.entries(document?.measures ?? {})) {
+    const years = (entry?.rows ?? [])
+      .flatMap((row) => row?.points ?? [])
+      .filter((point) => differs(point))
+      .map((point) => (Number.isFinite(point.year) ? point.year : Number(String(point.key ?? "").slice(0, 4))))
+      .filter(Number.isFinite);
+    if (years.length) windows[id] = { first: Math.min(...years), last: Math.max(...years) };
+  }
+  return windows;
+}
+
+/**
+ * What a measure is in `year` when it is not in force then: "Starts
+ * 2030-31" before its first year, "Ended 2029-30" after its last, "2026-27
+ * only" for a one-year measure; null in its years or without a window.
+ * `label` writes a year (start year) as "2030-31".
+ */
+export function outOfForceText(window, year, label) {
+  if (!window || !Number.isFinite(year) || (year >= window.first && year <= window.last)) return null;
+  if (window.first === window.last) return `${label(window.first)} only`;
+  return year < window.first ? `Starts ${label(window.first)}` : `Ended ${label(window.last)}`;
+}

@@ -6,7 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import OBRComparisonTable, { OBR_CARD_TITLE, OBR_PENDING, OBR_UNAVAILABLE, ObrComparisonCard, comparisonSentence } from "./OBRComparisonTable";
+import OBRComparisonTable, { OBR_CARD_TITLE, OBR_PENDING, OBR_UNAVAILABLE, ObrComparisonCard, comparisonRows, comparisonSentence } from "./OBRComparisonTable";
 
 // The chart/table choice: two icon buttons (ViewToggle)
 const viewRadio = (label) => screen.getByRole("radio", { name: `Show as ${label.toLowerCase()}` });
@@ -124,6 +124,25 @@ describe("the OBR comparison table", () => {
 });
 
 const plain = (text) => text?.replace(/\u2060/g, "");
+
+describe("a policy not in force in the year shown", () => {
+  const catalogue = { measures: [{ id: "a" }, { id: "b" }, { id: "c" }], byId: new Map() };
+  const windows = { a: { first: 2030, last: 2031 }, b: { first: 2026, last: 2026 }, c: { first: 2027, last: 2029 } };
+  const source = (year, pe, obr) =>
+    ["a", "b", "c"].map((id) => ({ reform_id: id, reform_name: id, year, policyengine_value: pe, obr_static: null, obr_behavioural: obr }));
+  const statuses = (year, pe, obr) =>
+    Object.fromEntries(comparisonRows(source(year, pe, obr), ["a", "b", "c"], year, true, catalogue, windows).map((row) => [row.id, row.status]));
+
+  it("says when it starts, ends or its one year, where neither side has an effect", () => {
+    expect(statuses(2027, 0, null)).toEqual({ a: "Starts 2030-31", b: "2026-27 only", c: null });
+    expect(statuses(2030, 0, 0)).toEqual({ a: null, b: "2026-27 only", c: "Ended 2029-30" });
+  });
+
+  it("keeps the figures where either side has an effect, or the policy is in force", () => {
+    expect(statuses(2027, -0.03, null)).toEqual({ a: null, b: null, c: null });
+    expect(statuses(2027, 0, -0.05)).toEqual({ a: null, b: null, c: null });
+  });
+});
 
 describe("the comparison sentence", () => {
   const row = (name, pe, obr) => ({ id: name, name, pe, obr });
