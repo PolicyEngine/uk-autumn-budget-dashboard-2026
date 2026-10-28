@@ -13,18 +13,18 @@
  * 2026. The Warm Home Discount top-up had no example: it is paid in
  * 2026-27, before the examples' first year.
  *
- * Budget day (28 October 2026, #287): examples whose measure the Budget
- * left out give their place to the measures it confirmed. The pensioner on
+ * Budget day (28 October 2026, #287): examples whose measure is not in the
+ * Budget give their place to announced measures. The pensioner on
  * the full new State Pension takes the part-time worker's (the employer NI
  * threshold): with a little private pension, their income is just above
  * the full new State Pension, where the Pension Tax Allowance tapers away
  * (£1 for every £3 above it: HM Treasury's explainer), beside the pensioner
  * at 70, whose income is below it. The carer takes the graduate's (the Plan
  * 2 threshold): they earn a little above Carer's Allowance's weekly
- * earnings limit, so receive none of it before the Budget's taper, which
+ * earnings limit, so are not entitled to it before the Budget's taper, which
  * begins within 2030-31; their partner's earnings leave the couple no
  * Universal Credit, which would otherwise offset the allowance. One still
- * features a measure the Budget left out (the threshold freeze to
+ * features a measure not in the Budget (the threshold freeze to
  * 2031-32): the catalogue no longer publishes it, so its card shows no tag
  * or accent (featuresPublished) and keeps its household, whose results
  * come from the announced measures.
@@ -132,7 +132,7 @@ export const HOUSEHOLD_EXAMPLES = [
       // £910 a week
       ...spendingInputs(5),
     },
-    note: "Aged 50, lives with their partner, aged 52, and owns their home with a mortgage. Cares for their mother, who lives nearby and gets Attendance Allowance, for 35 hours a week, and works about 18 hours a week at the 2026 National Living Wage (£12.71 an hour, GOV.UK): £12,000 a year, about £27 a week more than a carer can earn in 2026-27 and still receive Carer's Allowance (£204, DWP). Their partner earns £34,200, the UK median salary (ONS ASHE 2026, provisional). Spends £1,060 a year on electricity and £970 on petrol and diesel, the average for households in the fifth tenth by gross income (ONS Family Spending, FYE 2025).",
+    note: "Aged 50, lives with their partner, aged 52, and owns their home with a mortgage. Cares for their mother, who lives nearby and gets Attendance Allowance, for 35 hours a week, and works about 18 hours a week at the 2026 National Living Wage (£12.71 an hour, GOV.UK): £12,000 a year, about £27 a week more than the £204 a week a carer can earn in 2026-27 and still receive Carer's Allowance (DWP). Their partner earns £34,200, the UK median salary (ONS ASHE 2026, provisional). The couple is due no Universal Credit. Spends £1,060 a year on electricity and £970 on petrol and diesel, the average for households in the fifth tenth by gross income (ONS Family Spending, FYE 2025).",
     spendingSource: decileSpending(5).source,
   },
   {
