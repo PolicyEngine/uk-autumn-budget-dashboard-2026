@@ -180,7 +180,7 @@ describe("why our estimates differ from the official costings", () => {
     const taxNics = (year) => line(15, "Income tax", year) + line(15, "NICs", year);
     const trading = (year) => our("trading_allowance_raise", year);
     const shown = FROM_2028.map((year) => `£${m(taxNics(year))}m`);
-    expect(note("trading_allowance_raise")).toContain(`Table 1.1: ${shown.slice(0, 3).join(", ")} and ${shown[3]}), our estimate falls ${pounds(FROM_2028.map((year) => taxNics(year) - trading(year)), "m")} a year below them from 2028-29 (${span(FROM_2028.map((year) => (1 - trading(year) / taxNics(year)) * 100), "%")})`);
+    expect(note("trading_allowance_raise")).toContain(`Table 1.1: ${shown.slice(0, 3).join(", ")} and ${shown[3]}), our estimate falls ${pounds(FROM_2028.map((year) => m(taxNics(year)) - m(trading(year))), "m")} a year below them from 2028-29 (${span(FROM_2028.map((year) => (1 - trading(year) / taxNics(year)) * 100), "%")})`);
     // The other lines: the total (a cost, like the two lines) beyond Income tax and NICs
     expect(FROM_2028.map((year) => m(total(15, year) - taxNics(year)))).toEqual([2, 2, 2, 2]);
     expect(note("trading_allowance_raise")).toContain("lines, about £2m a year");
