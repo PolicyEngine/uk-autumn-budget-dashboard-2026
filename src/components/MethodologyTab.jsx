@@ -593,7 +593,7 @@ function MethodologyTab({ onShowTab }) {
                     ),
                     more: [
                       `A band or age with fewer than ${MIN_SAMPLE_SIZE} records in the dataset is not shown. Microcosm builds several records from one survey household, so this counts records, not households.`,
-                      "A figure resting on one or two survey households is not published, nor any figure that would give it back.",
+                      "In the age and decile tables, a figure resting on one or two survey households is not published, nor any figure in the same table that would give it back.",
                       <>
                         Each person counts their whole household&apos;s change in net income, not
                         equivalised, and averages are <Term id="perPerson">per person</Term>.

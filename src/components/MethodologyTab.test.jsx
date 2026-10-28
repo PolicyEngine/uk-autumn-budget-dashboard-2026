@@ -205,7 +205,7 @@ describe("MethodologyTab", () => {
     const text = container.textContent;
     expect(text).toContain("comes from only one or two survey households is not shown");
     expect(text).toContain("so this counts records, not households");
-    expect(text).toContain("A figure resting on one or two survey households is not published, nor any figure that would give it back.");
+    expect(text).toContain("In the age and decile tables, a figure resting on one or two survey households is not published, nor any figure in the same table that would give it back.");
     expect(text).not.toContain("survey records is not shown");
   });
 
