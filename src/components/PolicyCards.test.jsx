@@ -219,7 +219,7 @@ describe("how it is modelled (measureModelling.js)", () => {
     render(<PolicyCards policies={[policy]} selectedPolicies={[policy.id]} />);
     const details = open();
     const caveats = details.querySelector(".info-caveats");
-    expect(caveats).toHaveTextContent("vans, lorries and business use of cars is not modelled");
+    expect(caveats).toHaveTextContent("The model leaves out fuel for vans, lorries and business use of cars");
     expect(details.textContent.match(/lorries/g)).toHaveLength(1);
     cleanup();
   });
