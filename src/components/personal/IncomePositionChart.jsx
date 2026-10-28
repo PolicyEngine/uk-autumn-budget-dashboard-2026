@@ -995,7 +995,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
                   "Your percentile ranks your income against everyone's under the same policies: both under current law, or both with the policies.",
                 ],
                 caveats: [
-                  "Where the changes are small next to incomes, the two curves overlap almost exactly.",
+                  "Where the changes are small next to incomes, the curve barely moves between Current law and With the policies.",
                 ],
                 method: { anchor: METHOD_ANCHORS.incomePosition, label: "How your income percentile is worked out" },
               }}
@@ -1063,7 +1063,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
                 how: [
                   "Tenths rank people by household income under current law, adjusted for household size. Each bar is the average change in that tenth.",
                 ],
-                caveats: ["The decile charts rank by HBAI income, without VAT and fuel duty, so the two medians differ slightly."],
+                caveats: ["The bars rank people by HBAI income, which leaves out fuel duty and VAT changes. Your tenth here counts them, so near a boundary the two can differ."],
                 method: { anchor: METHOD_ANCHORS.incomePosition, label: "How your income percentile is worked out" },
               }}
             />
@@ -1117,7 +1117,9 @@ export function ResultTiles({ totals, changeValue, changeNote, household, year, 
   );
 
   const share = totals.before > 0 ? (totals.change / totals.before) * 100 : null;
-  const decile = position ? decileOf(position.after) : null;
+  // Your tenth ranked before the policies, as the card below and the
+  // decile bars rank it (HH3), so the tile and the card name one tenth
+  const decile = position ? (decileOf(position.before) ?? decileOf(position.after)) : null;
   const tenthAverage = decile !== null ? percents?.[decile] : undefined;
 
   let place = null;
