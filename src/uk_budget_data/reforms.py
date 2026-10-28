@@ -22,6 +22,9 @@ Year Y is fiscal year Y-(Y+1).
 from datetime import date
 from typing import Optional
 
+from uk_budget_data.budget_measures import (
+    state_pension_only_income_tax_allowance as _sp_threshold,
+)
 from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
     carers_allowance_earnings_taper,
 )
@@ -328,7 +331,16 @@ def _create_fuel_duty_rise_deferral() -> Reform:
 # disregard_savings_interest=True. "tapered", the design modelled before
 # that, gives the allowance to everyone over State Pension age and
 # withdraws it £1 for £1 of income above it.
+#
+# Budget day: two switches. The design here (``total_income``, or
+# ``tapered``: everyone over State Pension age, withdrawn £1 for £1 above
+# it), and the rounding of the threshold, ``ROUND_DOWN`` in
+# budget_measures/state_pension_only_income_tax_allowance.py (up: £13,037
+# in 2027-28; down: £13,036, as the Times reports). The description
+# follows the rounding.
 STATE_PENSION_PROTECTION_DESIGN = "total_income"
+_SP_ROUNDING = "down" if _sp_threshold.ROUND_DOWN else "up"
+_SP_THRESHOLD_2027 = state_pension_only_income_tax_allowance.__defaults__[0]
 STATE_PENSION_PROTECTION_DESIGNS = {
     "total_income": (
         state_pension_only_income_tax_allowance,
@@ -336,7 +348,8 @@ STATE_PENSION_PROTECTION_DESIGNS = {
         "age whose total income (the State Pension, with any increments "
         "or additional State Pension, plus all other income, savings "
         "interest included) is at or below the full new State Pension "
-        "(rounded up to the pound: £13,037 in 2027-28, rising with it) get "
+        f"(rounded {_SP_ROUNDING} to the pound: £{_SP_THRESHOLD_2027:,} in "
+        "2027-28, rising with it) get "
         "an income tax allowance of that amount, so pay no income tax. "
         "Above it there is no allowance: £1 of income over the threshold "
         "takes the whole allowance away.",
