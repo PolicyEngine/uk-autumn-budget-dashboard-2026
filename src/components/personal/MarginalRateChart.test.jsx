@@ -1,5 +1,5 @@
 import { chooseOption, optionsLabel } from "../../test/optionsPills";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import MarginalRateChart, { RateTooltip } from "./MarginalRateChart";
 import { breakdownRows, describeParts, drawnKey, partsInUse, rateAxis, RATE_PARTS, stepAt } from "./marginalRateParts";
@@ -125,13 +125,24 @@ describe("MarginalRateChart", () => {
     plot.getBoundingClientRect = () => ({ left: 0, top: 0, right: 600, bottom: 400, width: 600, height: 400, x: 0, y: 0 });
     const tip = () => document.querySelector(".mtr-tooltip");
     // Low in the plot: anchored above the pointer, not pinned to the top
+    // (jsdom draws nothing, so the box is given a height of 100px)
+    const height = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(100);
     fireEvent.mouseMove(plot, { clientX: 200, clientY: 300 });
     expect(tip()).not.toBeNull();
-    expect(tip().style.top).toBe("");
-    expect(tip().style.bottom).toBe("112px");
+    expect(tip().style.top).toBe("188px");
     // High in the plot: below the pointer
     fireEvent.mouseMove(plot, { clientX: 200, clientY: 50 });
     expect(tip().style.top).toBe("62px");
+    // Never above the plot's box, nor below it
+    fireEvent.mouseMove(plot, { clientX: 200, clientY: 210 });
+    expect(tip().style.top).toBe("98px");
+    fireEvent.mouseMove(plot, { clientX: 200, clientY: 199 });
+    expect(tip().style.top).toBe("211px");
+    // A box taller than the room above the pointer (a phone) is held at the top
+    height.mockReturnValue(250);
+    fireEvent.mouseMove(plot, { clientX: 200, clientY: 220 });
+    expect(tip().style.top).toBe("0px");
+    height.mockRestore();
     fireEvent.mouseLeave(plot);
     expect(tip()).toBeNull();
     // A tap shows it and lifting the finger clears it

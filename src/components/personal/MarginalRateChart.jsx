@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import NoBreakYear from "../NoBreakYear";
 import { Area, CartesianGrid, ComposedChart, Customized, Line, ReferenceDot, ReferenceLine, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { CHART_LOGO } from "../../utils/chartLogo";
@@ -235,16 +235,29 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
   // clears when it lifts; the mouse events a browser makes up after a tap
   // are ignored, as they would bring it back with no leave to clear it
   const lastTouch = useRef(0);
+  // The box's height is known only once drawn, so it is placed here, before
+  // paint: beside the pointer, below it in the top half and above it in the
+  // bottom half, so it never sits over the top of the plot (the 100% tick,
+  // the "You" label) while the pointer is lower down (round 3); held inside
+  // the plot's box when taller than the room (a phone)
+  const tipRef = useRef(null);
+  useLayoutEffect(() => {
+    const tip = tipRef.current;
+    if (!tip || !pointer) return;
+    const h = tip.offsetHeight;
+    const top = pointer.y < pointer.height / 2 ? pointer.y + 12 : pointer.y - 12 - h;
+    tip.style.top = `${Math.max(0, Math.min(top, pointer.height - h))}px`;
+  }, [pointer]);
   const onTouch = (event) => {
-    lastTouch.current = event.timeStamp || Date.now();
+    lastTouch.current = event.timeStamp;
     onPointer(event);
   };
   const onTouchDone = (event) => {
-    lastTouch.current = event.timeStamp || Date.now();
+    lastTouch.current = event.timeStamp;
     clearPointer();
   };
   const onMouse = (event) => {
-    if (lastTouch.current && (event.timeStamp || Date.now()) - lastTouch.current < 1000) return;
+    if (lastTouch.current && event.timeStamp - lastTouch.current < 1000) return;
     onPointer(event);
   };
   const onPointer = (event) => {
@@ -467,16 +480,13 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
         </ResponsiveContainer>
         {pointer && (
           <div
+            ref={tipRef}
             className="mtr-tooltip"
             style={{
               position: "absolute",
               zIndex: 20,
               pointerEvents: "none",
-              // Beside the pointer, below it in the top half and above it in
-              // the bottom half, so it never sits over the top of the plot
-              // (the 100% tick, the "You" label) while the pointer is lower
-              // down (round 3)
-              ...(pointer.y < pointer.height / 2 ? { top: pointer.y + 12 } : { bottom: pointer.height - pointer.y + 12 }),
+              // Its top is set before paint (tipRef, above)
               ...(pointer.x > pointer.width / 2 ? { right: pointer.width - pointer.x + 12 } : { left: pointer.x + 12 }),
             }}
           >
