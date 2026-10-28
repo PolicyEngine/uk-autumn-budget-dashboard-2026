@@ -38,7 +38,7 @@
  * - budgetRows: the measure's rows in the Budget's Table 6.1 (as
  *   data_inputs/treasury/mapping.csv maps them), which link each card to
  *   the Budget's costing;
- * - example: { title, text, items?, source }: a worked example, or the reach the
+ * - example: { title, text, items?, source: { label, href? } }: a worked example, or the reach the
  *   Budget states, every figure from its source (a cited document or a
  *   verified household calculation), shown under "What changes": one short line, and any further points as
  *   a short list (`items`), never a long paragraph;
@@ -449,7 +449,7 @@ export const POLICY_DETAILS = [
     example: {
       title: "Example",
       text: "An employee on £30,000 with £3,000 of side income and no expenses pays £400 less income tax in 2027-28.",
-      source: { label: "PolicyEngine household calculations, policyengine-uk 2.151.0 (review on PR 290)", href: "https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/290" },
+      source: { label: "PolicyEngine household calculation, policyengine-uk 2.151.0" },
     },
   },
 ];

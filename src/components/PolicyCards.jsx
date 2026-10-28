@@ -412,10 +412,14 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
               )}
               {policy.example.source && (
                 <p className="policy-card-example-source">
-                  <a href={policy.example.source.href} target="_blank" rel="noopener noreferrer">
-                    {policy.example.source.label}
-                    <span className="policy-sr-only"> (opens in a new tab)</span>
-                  </a>
+                  {policy.example.source.href ? (
+                    <a href={policy.example.source.href} target="_blank" rel="noopener noreferrer">
+                      {policy.example.source.label}
+                      <span className="policy-sr-only"> (opens in a new tab)</span>
+                    </a>
+                  ) : (
+                    policy.example.source.label
+                  )}
                 </p>
               )}
             </section>
