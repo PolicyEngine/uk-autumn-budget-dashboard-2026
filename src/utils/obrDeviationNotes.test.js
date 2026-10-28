@@ -10,18 +10,29 @@ import { POLICY_DETAILS } from "./policyDetails";
 const COMPARED = parseDashboardCsv(readFileSync("data_inputs/treasury/mapping.csv", "utf8"))
   .filter((row) => row.source_id === "AB2026-T6.1")
   .map((row) => row.measure_id);
+// Every measure the registry defines (reforms.py), as the measure guard
+// reads it (measureCatalogue.test.jsx), the combined package aside
+const REGISTERED = [
+  ...readFileSync("src/uk_budget_data/reforms.py", "utf8").matchAll(/^(?!AUTUMN_BUDGET_2026_COMBINED)[A-Z0-9_]+_ID = "([a-z0-9_]+)"$/gm),
+].map((match) => match[1]);
 
 describe("why our estimates differ from the official costings", () => {
-  it("compares the eight Table 6.1 measures", () => {
-    expect(COMPARED).toHaveLength(8);
+  it("reads the Table 6.1 measures from the mapping, each once", () => {
+    expect(COMPARED.length).toBeGreaterThan(0);
+    expect(new Set(COMPARED).size).toBe(COMPARED.length);
   });
 
   it("explains every compared measure", () => {
     expect(missingDeviationNotes(COMPARED)).toEqual([]);
   });
 
-  it("explains no measure the comparison does not cost", () => {
-    expect(Object.keys(OBR_DEVIATION_NOTES).filter((id) => !COMPARED.includes(id))).toEqual([]);
+  // A note may wait for a measure the registry defines but the comparison
+  // does not yet cost (one left out of a release keeps its note); an id that
+  // is no measure at all is a typo
+  it("keeps notes only for measures the registry defines", () => {
+    expect(REGISTERED.length).toBeGreaterThan(0);
+    expect(COMPARED.filter((id) => !REGISTERED.includes(id))).toEqual([]);
+    expect(Object.keys(OBR_DEVIATION_NOTES).filter((id) => !REGISTERED.includes(id))).toEqual([]);
   });
 
   it("writes each note and the statement as whole sentences", () => {
@@ -48,7 +59,7 @@ describe("why our estimates differ from the official costings", () => {
   });
 
   it("shows every note for its measure as its card entry was written for", () => {
-    for (const id of COMPARED) {
+    for (const id of new Set([...COMPARED, ...Object.keys(OBR_DEVIATION_NOTES)])) {
       const entry = POLICY_DETAILS.find((candidate) => candidate.id === id);
       expect(entry, id).toBeDefined();
       expect(deviationNoteFor({ id, description: entry.writtenFor }), id).toBe(OBR_DEVIATION_NOTES[id]);
