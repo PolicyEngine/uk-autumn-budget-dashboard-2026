@@ -101,9 +101,9 @@ export default function GrowthWithMeasuresCard({ selectedPolicies, twinLink, sel
 }
 
 function LoadedCard({ data, rows, run, twinLink, selectedYear }) {
-  // The difference reads best: a measure moves growth by hundredths of a
-  // point, too little to see beside growth of a percent or two
-  const [show, setShow] = useState("difference");
+  // Opens on growth with the policies (%), as Vahid asked; the effect in
+  // pp is one choice away
+  const [show, setShow] = useState("growth");
   const [range, setRange] = useYearRange(rangeYears(data), defaultRange(rangeYears(data)));
   // One object per run and choice, so the view's own memos hold
   const measures = useMemo(() => ({ rows, reformId: run.reformId, mode: show }), [rows, run.reformId, show]);
