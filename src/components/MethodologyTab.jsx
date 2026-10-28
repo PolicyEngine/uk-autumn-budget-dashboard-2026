@@ -415,7 +415,14 @@ function MethodologyTab({ onShowTab }) {
                   },
                 ],
                 ["Absolute change", "The average change in household net income per household, in £ a year."],
-                ["Relative change", "The decile's total change as a percentage of its total baseline net income."],
+                [
+                  "Relative change",
+                  <>
+                    The decile&apos;s total change as a percentage of its total baseline net income
+                    (the income under{" "}
+                    <AnchorLink id={METHOD_ANCHORS.poverty}>Inequality</AnchorLink>).
+                  </>,
+                ],
               ]}
             />
           </Topic>
@@ -450,7 +457,10 @@ function MethodologyTab({ onShowTab }) {
                   "Inequality",
                   <>
                     The relative change in the <Term id="gini">Gini coefficient</Term> of{" "}
-                    <Term id="equivalised">equivalised</Term> household net income, people weighted.
+                    <Term id="equivalised">equivalised</Term> household net income, people weighted.{" "}
+                    This income includes public services in kind, such as the NHS and schools, and is
+                    after fuel duty and other duties, counting any change in VAT, so the VAT and fuel
+                    duty policies change it.
                   </>,
                 ],
                 [
@@ -689,7 +699,12 @@ function MethodologyTab({ onShowTab }) {
               items={[
                 [
                   "Income",
-                  "Household net income after taxes (VAT and fuel duty included) and with benefits, divided by your household's size on the HBAI scale. Public spending in kind, such as the NHS and schools, is left out for everyone.",
+                  <>
+                    Household net income after taxes (fuel duty and any change in VAT included) and
+                    with benefits, divided by your household&apos;s size on the HBAI scale. Unlike the
+                    income under <AnchorLink id={METHOD_ANCHORS.poverty}>Inequality</AnchorLink>, it
+                    leaves out public services in kind.
+                  </>,
                 ],
                 [
                   "Tenths",
@@ -758,6 +773,16 @@ function MethodologyTab({ onShowTab }) {
               <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>{" "}and the
               winners and losers charts come from a run of the whole selection, so they include
               them, and show nothing for a selection with no such run.
+            </p>
+            <p className="method-more">
+              Some policies replace values reported in the survey with modelled ones, and their
+              descriptions say so. That policy's own run and the run of all policies together use the
+              modelled values, while the other policies on their own use the survey's. So the effects
+              of each policy on its own need not add up to all policies together.
+              Modelled values can depend on pay, as student loan repayments do. A
+              policy that raises pay keeps the survey's values in its own run, and they do not rise
+              with the higher pay, so on its own its cost is higher, and its fall in poverty larger,
+              than in the run of all policies together.
             </p>
           </Topic>
           <Topic title="Economic assumptions" preview="One OBR forecast behind the assumptions and weights">
