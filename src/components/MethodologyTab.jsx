@@ -57,6 +57,10 @@ export const METHOD_CONTENTS = [
 
 const SECTION_ICONS = Object.fromEntries(METHOD_CONTENTS.map(({ id, titleIcon }) => [id, titleIcon]));
 
+// The Limitations topic on the forecast, linked from the Data and Model
+// sections
+const ECONOMIC_ASSUMPTIONS = "method-economic-assumptions";
+
 const pounds = (value) => `£${Math.round(value).toLocaleString("en-GB")}`;
 const SCATTER_CHANGE_MAX = SCATTER_BINS.change_edges[SCATTER_BINS.change_edges.length - 1];
 const SCATTER_CHANGE_EDGE_LIST = SCATTER_BINS.change_edges.filter((edge) => edge > 0).map(pounds);
@@ -233,7 +237,7 @@ function MethodologyTab({ onShowTab }) {
                       </>
                     ),
                     more: [
-                      "The totals include HMRC income and tax statistics, DWP benefit caseloads, OBR forecasts and ONS population estimates.",
+                      "The totals include HMRC income and tax statistics, DWP benefit caseloads, OBR forecasts published before the October 2026 one, and ONS population estimates.",
                       "The local-area file is calibrated to constituency and local-authority totals as well.",
                     ],
                   },
@@ -241,11 +245,14 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Projection",
                   <>
-                    Incomes and prices are projected to each year shown with{" "}
-                    <SourceLink id="policyengine_uk">policyengine-uk</SourceLink>&apos;s economic
-                    assumptions: over the forecast period, the <SourceLink id="obr_efo_current" />;
-                    after it, the OBR&apos;s long-run assumptions (
+                    Incomes and prices are projected to each year shown with the growth rates of
+                    the <SourceLink id="obr_efo_current" />, applied over{" "}
+                    <SourceLink id="policyengine_uk">policyengine-uk</SourceLink>&apos;s own
+                    assumptions (the OBR&apos;s March 2026 forecast); after the forecast period,
+                    the OBR&apos;s long-run assumptions (
                     <SourceLink id="obr_fiscal_risks">Fiscal risks and sustainability</SourceLink>).
+                    Some series keep the March path (
+                    <AnchorLink id={ECONOMIC_ASSUMPTIONS}>economic assumptions</AnchorLink>).
                   </>,
                 ],
                 [
@@ -265,6 +272,24 @@ function MethodologyTab({ onShowTab }) {
               <SourceLink id="uk_data_pipeline">Read how Microcosm UK is built today, stage by stage</SourceLink>.
               The page describes the current pipeline, which may be newer than this dashboard&apos;s data.
             </p>
+          </Topic>
+          {/* Sign-off covers every public file, so it sits here rather than
+              under the household scatter (scripts/check_public_data.py) */}
+          <Topic title="Published files" preview="Sign-off">
+            <FactList
+              items={[
+                [
+                  "Sign-off",
+                  {
+                    value:
+                      "Each public data file is listed with a named reviewer and a digest of the exact bytes they reviewed. A changed file fails the publication checks until it is reviewed again.",
+                    more: [
+                      "A file awaiting sign-off can be published as pending, for at most 14 days after its entry; after that it fails the checks until it is signed off.",
+                    ],
+                  },
+                ],
+              ]}
+            />
           </Topic>
         </MethodSection>
 
@@ -292,10 +317,29 @@ function MethodologyTab({ onShowTab }) {
                     through <SourceLink id="policyengine_py_release">policyengine.py</SourceLink>{" "}on
                     the <AnchorLink id={METHOD_SECTIONS.data}>data above</AnchorLink>. Measures are
                     written as parameter changes where possible, or built from tested measure
-                    templates.
+                    templates. Three of the policies here are written by hand, and are published
+                    only after two reviewers have checked the exact run.
                   </>,
                 ],
-                ["Baseline", "Current law."],
+                [
+                  "Baseline",
+                  {
+                    value: "Current law.",
+                    more: [
+                      "It has no zero rate of VAT on domestic electricity, so the zero rate in force from 1 October 2026 to 31 March 2027 counts as part of the Budget's zero rate, as Table 6.1 counts it.",
+                      <>
+                        Fuel duty is 60.59p a litre from April 2027 (
+                        <AnchorLink id={ECONOMIC_ASSUMPTIONS}>economic assumptions</AnchorLink>).
+                      </>,
+                      "The model holds the National Living Wage at £12.71 an hour from April 2026. It sets Universal Credit's minimum income floor, the benefit cap's earnings exemption and the childcare earnings tests.",
+                      "It holds Carer's Allowance's own earnings limit at £204 a week, so a carer earning between £204 and the higher limit the Budget's Carer's Allowance change sets gets no Carer's Allowance in either run.",
+                      <>
+                        Benefit rates, including the Pension Credit guarantee, rise as described
+                        under <AnchorLink id={FORECAST_FEED_ANCHOR}>how the forecast feeds the baseline</AnchorLink>.
+                      </>,
+                    ],
+                  },
+                ],
                 [
                   "Static",
                   <>
@@ -325,7 +369,9 @@ function MethodologyTab({ onShowTab }) {
             <p className="method-more">
               Some Budget policies act on something the model or its survey data do not hold, such as
               prices, ISAs or business mileage, or have rules not yet published, so they cannot be
-              costed household by household.{" "}
+              costed household by household. The rise in income tax rates on savings income is
+              modelled but held back from this release, because the data miss ISA interest and some
+              other savings income.{" "}
               <ViewLink tab="policies" hash="budget-measures-not-modelled" onShowTab={onShowTab}>
                 Budget policies we do not model
               </ViewLink>
@@ -366,7 +412,8 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Net change",
                   <>
-                    With several policies selected, the net line adds their separate effects (see{" "}
+                    With several policies selected, the net line is their run together when one is
+                    published for that selection, and otherwise adds their separate effects (see{" "}
                     <AnchorLink id={METHOD_SECTIONS.limitations}>limitations</AnchorLink>).
                   </>,
                 ],
@@ -377,18 +424,21 @@ function MethodologyTab({ onShowTab }) {
                       <>
                         Budget 2026 publishes one costing per measure, after behavioural responses
                         (Table 6.1 of the{" "}
-                        <SourceLink id="obr_budget_2026_costings">official costings</SourceLink>). Ours is
-                        static, so where the costing includes behaviour the comparison allows a wider
-                        margin.
+                        <SourceLink id="budget_documents">Budget document</SourceLink>; the{" "}
+                        <SourceLink id="obr_budget_2026_costings">policy costings document</SourceLink>{" "}
+                        prints the same figures measure by measure). Ours is static, so where the
+                        costing includes behaviour the comparison allows a wider margin.
                       </>
                     ),
                     more: [
                       "Before a policy is published, each year's figure must be within the larger of 25% of the official one and £50m where the costing includes behaviour, and within the larger of 10% and £50m where it assumes no behavioural response or the policy is a payment rather than a tax. A reviewer can accept a larger gap only with a written reason.",
-                      "A reviewer can mark a year not comparable, such as a year after a policy ends; the card then says so, with the reason, and shows no difference.",
+                      "Ours count each tax year's liability. The official figures are on a National Accounts basis, so a change in tax paid through Self Assessment appears about a year later in theirs.",
+                      "A reviewer can mark a year not comparable, such as a year after a policy ends or an early year of a Self Assessment change; the card then says so, with the reason, and shows no difference.",
                       <>
                         Our fuel duty figures cover households&apos; own fuel only (
                         <AnchorLink id="method-business-fuel">business fuel use</AnchorLink>), a narrower
-                        base than the official costing&apos;s.
+                        base than the official costing&apos;s. They also include the VAT on the duty,
+                        which the official figure, for fuel duty receipts, leaves out.
                       </>,
                     ],
                   },
@@ -455,7 +505,7 @@ function MethodologyTab({ onShowTab }) {
                     ),
                     more: [
                       <>
-                        The poverty line is measured on <SourceLink id="dwp_hbai">HBAI</SourceLink>{" "}
+                        Poverty is measured on <SourceLink id="dwp_hbai">HBAI</SourceLink>{" "}
                         income, which is before indirect taxes, so the VAT and fuel duty policies do
                         not change it.
                       </>,
@@ -528,7 +578,7 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id={METHOD_ANCHORS.scatter}
             title="Household scatter"
-            preview="Bands · Gain, loss, no change · Disclosure · Sign-off"
+            preview="Bands · Gain, loss, no change · Disclosure"
           >
             <p className="method-more">The spread of changes behind the averages, as groups of households.</p>
             <FactList
@@ -567,25 +617,18 @@ function MethodologyTab({ onShowTab }) {
                     more: ["Groups come from one simulation of the selection and are never added up."],
                   },
                 ],
-                [
-                  "Sign-off",
-                  {
-                    value: "A named reviewer signs off every public data file before it is published.",
-                    more: ["A file awaiting sign-off is marked pending, and a pending file expires after 14 days at most."],
-                  },
-                ],
               ]}
             />
           </Topic>
           <Topic
             id={METHOD_SECTIONS.geography}
             title="Figures by area"
-            preview="Disclosure checks · 90% intervals · Map colours"
+            preview="Disclosure checks · 90% intervals · Map colours · Local calibration"
           >
             <p className="method-more">
-              Regional and constituency figures come from the same survey. Each is published only
-              after disclosure checks, with a 90% interval, and the map colours a constituency only
-              when its interval is narrow enough to place it.
+              Constituency figures come from the same survey as the national ones. Each is
+              published only after disclosure checks, with a 90% interval, and the map colours a
+              constituency only when its interval is narrow enough to place it.
             </p>
             <GeographyMethodology />
           </Topic>
@@ -655,7 +698,7 @@ function MethodologyTab({ onShowTab }) {
                     ),
                     more: [
                       `A band or age with fewer than ${MIN_SAMPLE_SIZE} records in the dataset is not shown. Microcosm builds several records from one survey household, so this counts records, not households.`,
-                      "In the age and decile tables, a figure resting on one or two survey households is not published, nor any figure in the same table that would give it back.",
+                      "When an age band or single year of age rests on one or two survey households, it is not published: a single year takes the other single years of its band with it, and a band takes every row but all ages.",
                       <>
                         Each person counts their whole household&apos;s change in net income, not
                         equivalised, and averages are <Term id="perPerson">per person</Term>.
@@ -774,16 +817,17 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.limitations}
           title="Limitations"
-          summary="The revenue and decile charts add up separate policy runs, assumptions follow one OBR forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
+          summary="Some charts add up separate policy runs, some inputs and the weights do not follow the October 2026 forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
         >
           <Topic title="Policies added up" preview="Revenue, decile and age charts · Household scatter · Winners and losers">
             <p className="method-more">
               Each policy is simulated on its own, and the full package of policies together in one
-              run. Where several are selected, the revenue and decile charts add up the policies&apos;
-              separate effects, so they leave out interactions between policies (
-              <Term id="ownRuns">policies run on their own</Term>). The average-change age charts
-              read the package&apos;s run when the selection is the full package, and otherwise add
-              up the separate effects. The{" "}
+              run. Where several are selected, the decile charts add up the policies&apos; separate
+              effects, so they leave out interactions between policies (
+              <Term id="ownRuns">policies run on their own</Term>). The revenue chart&apos;s net line
+              is the run of the selected policies together when one is published, and otherwise adds
+              up the separate effects. The average-change age charts read the package&apos;s run when
+              the selection is the full package, and otherwise add up the separate effects. The{" "}
               <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>, the winners
               and losers charts, the headline poverty and inequality figures and the{" "}
               <AnchorLink id={METHOD_SECTIONS.geography}>figures by area</AnchorLink>{" "}come from a
@@ -791,14 +835,33 @@ function MethodologyTab({ onShowTab }) {
               selection with no such run.
             </p>
           </Topic>
-          <Topic title="Economic assumptions" preview="One OBR forecast behind the assumptions and weights">
+          <Topic
+            id={ECONOMIC_ASSUMPTIONS}
+            title="Economic assumptions"
+            preview="The October 2026 forecast · What keeps the March path · Weights · Fuel duty"
+          >
             <p className="method-more">
               The Budget figures grow prices, earnings, rents, mortgage interest, other incomes and
-              council tax at the rates of the{" "}
-              <SourceLink id="obr_efo_current" />, in the baseline and the reform alike; only the fuel
-              volumes behind fuel duty keep policyengine-uk&apos;s March 2026 path, and the weights keep
-              the certified dataset's calibration. Current law&apos;s fuel duty is the OBR&apos;s 60.59p a litre from April 2027,
-              then rises each April with that forecast&apos;s RPI.
+              council tax at the rates of the <SourceLink id="obr_efo_current" />, in the baseline
+              and the reform alike, applied over policyengine-uk&apos;s March 2026 rates, with these exceptions:
+            </p>
+            <ul className="method-list">
+              <li>The fuel volumes behind fuel duty, and the population, keep the March 2026 path.</li>
+              <li>
+                2025 keeps policyengine-uk&apos;s figures, not the October forecast&apos;s revisions:
+                average earnings growth stays at 5.3%, against October&apos;s 4.1%.
+              </li>
+              <li>Mortgage interest keeps policyengine-uk&apos;s growth from 2030, where the OBR&apos;s table stops.</li>
+              <li>
+                CPI after housing costs and social rents are PolicyEngine&apos;s own derivations from
+                the October figures, not OBR series.
+              </li>
+              <li>The weights keep the certified dataset&apos;s calibration, made to earlier OBR forecasts.</li>
+            </ul>
+            <p className="method-more">
+              Current law&apos;s fuel duty is 60.59p a litre from April 2027, then rises each April
+              with that forecast&apos;s RPI. The OBR gives 60.59p from 1 July 2027; HMRC has set no
+              April rate, so applying it from April is our assumption.
             </p>
           </Topic>
           <Topic id="method-business-fuel" title="Business fuel use" preview="Fuel duty on households' own purchases only">
@@ -809,13 +872,27 @@ function MethodologyTab({ onShowTab }) {
               full costing.
             </p>
           </Topic>
-          <Topic title="Survey coverage" preview="Where under-recorded incomes affect a policy">
+          <Topic title="Survey coverage" preview="Where the survey data move a policy's figures">
+            <p className="method-more">
+              Surveys under-record some incomes and hold few households in some groups. Known effects
+              on the policies here:
+            </p>
+            <ul className="method-list">
+              <li>
+                The data hold more pensioners just above the personal allowance than the official
+                costing implies, so our cost of the tax reduction for pensioners is about a quarter
+                higher from 2028-29.
+              </li>
+              <li>The data hold more carers just above the Carer&apos;s Allowance earnings limit than the official costing implies.</li>
+              <li>The data hold few small traders, the people the trading allowance reaches.</li>
+              <li>Electricity spending is grown with CPI, not the energy price cap; the electricity VAT zero rate scales with it.</li>
+            </ul>
             <p className="method-more">
               The{" "}
               <ViewLink tab="policies" onShowTab={onShowTab}>
                 policy notes
               </ViewLink>{" "}
-              say where this affects a policy.
+              give each policy&apos;s other modelling limits.
             </p>
           </Topic>
         </MethodSection>

@@ -228,6 +228,17 @@ describe("MethodologyTab", () => {
     expect(card.textContent).not.toMatch(/\d{1,3}(,\d{3})+/);
   });
 
+  it("says under Data, not the household scatter, that public files are signed off, and that a pending file can publish", () => {
+    const { container } = renderTab();
+    const data = container.querySelector(`#${METHOD_SECTIONS.data}`);
+    const card = within(data).getByRole("button", { name: "Published files" }).closest(".method-topic");
+    expect(card).toHaveTextContent("Each public data file is listed with a named reviewer");
+    expect(card).toHaveTextContent("can be published as pending, for at most 14 days");
+    const scatter = document.getElementById(METHOD_ANCHORS.scatter);
+    expect(scatter).not.toHaveTextContent("Sign-off");
+    expect(container).not.toHaveTextContent("signs off every public data file before it is published");
+  });
+
   it("states the floor of 3 survey households for the deciles and ages, and that the age filter counts records", () => {
     const { container } = renderTab();
     const small = [...container.querySelectorAll(".method-fact")].find(
@@ -242,7 +253,9 @@ describe("MethodologyTab", () => {
     expect(text).not.toContain("any figures that would give them back");
     expect(text).toContain("The rest of the measure is shown.");
     expect(text).toContain("so this counts records, not households");
-    expect(text).toContain("In the age and decile tables, a figure resting on one or two survey households is not published, nor any figure in the same table that would give it back.");
+    // The age sentence says what is withheld, as the deciles' does
+    expect(text).toContain("When an age band or single year of age rests on one or two survey households, it is not published: a single year takes the other single years of its band with it, and a band takes every row but all ages.");
+    expect(text).not.toContain("would give it back");
     expect(text).not.toContain("survey records is not shown");
   });
 
