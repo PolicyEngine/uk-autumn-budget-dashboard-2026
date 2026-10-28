@@ -121,7 +121,8 @@ export function constituencySentence(states, { outcome, yearLabel, several = fal
   const parts = [
     gains.length > 0 && ["gain", gains.length],
     losses.length > 0 && ["lose", losses.length],
-    flat > 0 && ["see no change", flat],
+    // "Little change", as the map's key (round 3); here under 50p either way
+    flat > 0 && ["see little change", flat],
   ].filter(Boolean);
   // "gain on average in 600 constituencies and lose in 40": "on average"
   // and the noun once, on the first count

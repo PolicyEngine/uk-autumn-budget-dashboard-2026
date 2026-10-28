@@ -3,8 +3,10 @@
  *
  * Colour shows only the size of the change. Gains are teal and losses
  * amber, as across the dashboard, each with a lighter step for a small
- * change and a darker one for a large change. Little change is a mid grey;
- * too uncertain to classify is a light grey.
+ * change and a darker one for a large change. Little or no change is the
+ * light grey of the continuous scale's £0; too uncertain to classify is a
+ * mid grey, in both views (Pavel's review, MAP1: the two views had the two
+ * greys the other way round).
  *
  * Status is shown by texture, never by colour, so the two cannot be read
  * for each other: a reported figure is solid, an approximate one keeps its
@@ -18,10 +20,10 @@ import { CHART_COLOURS } from "../chartTheme";
 export const CATEGORY_COLOURS = Object.freeze({
   large_loss: CHART_COLOURS.loss,
   small_loss: CHART_COLOURS.lossLight,
-  little_change: CHART_COLOURS.noChange,
+  little_change: CHART_COLOURS.grid,
   small_gain: CHART_COLOURS.gainLight,
   large_gain: CHART_COLOURS.gain,
-  [TOO_UNCERTAIN]: CHART_COLOURS.grid,
+  [TOO_UNCERTAIN]: CHART_COLOURS.noChange,
 });
 
 /** Text colours with enough contrast on white for each direction. */

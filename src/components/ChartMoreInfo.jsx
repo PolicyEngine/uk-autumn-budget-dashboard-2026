@@ -8,6 +8,7 @@ import useMeasureRevenue from "../hooks/useMeasureRevenue";
 import { inForceShort, zeroReason } from "../utils/legendMembership";
 import { policyDetailsFor, shortNameOf } from "../utils/policyDetails";
 import { openPopulationSub, populationSubHref } from "../utils/populationSub";
+import { PolicyLink } from "../utils/methodLink";
 
 const fiscalYear = (year) => `${year}-${String(year + 1).slice(-2)}`;
 
@@ -41,8 +42,9 @@ function EmployerReason({ id, year }) {
 /**
  * The selected policies that are £0 for households in the year shown, as
  * one caveat in a card's "About this chart" (nestedItem): a lead line, then
- * one policy a bullet, its short name and why: "Threshold freeze — from
- * April 2031". One policy reads as one line.
+ * one policy a bullet, its short name (a link to its card on the Policies
+ * tab) and why: "Threshold freeze: from April 2031". One policy reads as one
+ * line.
  */
 export function zeroMeasuresItem({ zero, year, period }) {
   return nestedItem(
@@ -51,7 +53,7 @@ export function zeroMeasuresItem({ zero, year, period }) {
       const reason = zeroReason(member, year);
       return (
         <span key={member.id} data-zero-measure={member.id}>
-          {shortNameOf(member)} —{" "}
+          <PolicyLink id={member.id}>{shortNameOf(member)}</PolicyLink>:{" "}
           {reason.kind === "employer" ? (
             <EmployerReason id={member.id} year={year} />
           ) : reason.kind === "not_in_force" ? (

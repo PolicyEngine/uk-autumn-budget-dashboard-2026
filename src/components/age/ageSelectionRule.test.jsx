@@ -4,7 +4,7 @@ import AgeSection from "../AgeSection";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
 import { COMBINATION_NOT_PUBLISHED, PACKAGE_NET_ONLY, PACKAGE_PARTS_CAVEAT, singleAgeSelection } from "../../utils/ageImpact";
 import { singleAgeBars } from "../youngPeople/youngPeopleData";
-import { windowTicks, withheldPartsCaveat } from "./SingleAgeCard";
+import { agesText, windowTicks, withheldPartsCaveat, withheldPartsNote } from "./SingleAgeCard";
 import { ALPHA, BETA, COMBINED, YEAR, measureCatalogueFixture } from "../../test/measureCatalogueFixture";
 
 // By age's selection rule, on a publication where one single (BETA)
@@ -234,13 +234,17 @@ describe("Average change by age by single year of age (the default view)", () =>
     expect(within(card).getAllByTestId("series").map((node) => node.dataset.key).sort()).toEqual([`measure:${ALPHA}`, `measure:${BETA}`]);
   });
 
-  it("offers no By policy when a member withholds its single years, and names it in Caveats", async () => {
+  it("keeps Each policy in Show but unavailable, with its reason, when a member withholds its single years", async () => {
     const { container } = await renderAge(withSingleAges(withheldFixture(), BETA), [ALPHA, BETA]);
     const card = singleCard(container);
     // The package's own net at every age, never its parts
     expect(ageRows(card).every((point) => point.netChange === 50 && (point[`measure:${ALPHA}`] ?? null) === null)).toBe(true);
     fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
-    expect(within(card).queryByRole("radio", { name: "Each policy" })).toBeNull();
+    // The option stays (Pavel's review, AGE2): disabled, its reason beside it
+    const each = within(card).getByRole("radio", { name: "Each policy" });
+    expect(each).toBeDisabled();
+    expect(within(card).getByRole("radio", { name: "Net change" })).toHaveAttribute("aria-checked", "true");
+    expect(within(card).getByText(`Each policy: ${withheldPartsNote(["Mock beta contribution"])}`)).toBeInTheDocument();
     expect(within(card).getByRole("radio", { name: "Age groups" })).toBeInTheDocument();
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
     expect(await within(card).findByText(withheldPartsCaveat(["Mock beta contribution"]))).toBeInTheDocument();
@@ -261,5 +265,15 @@ describe("The single-year age axis", () => {
 
   it("drops a five-year tick too close to the group's ends", () => {
     expect(windowTicks([6, 34], [16, 24], false)).toEqual(["6", "10", "16", "20", "24", "30", "34"]);
+  });
+
+  it("covers only the group's own ages (16 to 24 is 16 to 24, not 6 to 34)", () => {
+    expect(windowTicks([16, 24], [], false)).toEqual(["16", "20", "24"]);
+    expect(agesText([16, 24])).toBe("16 to 24");
+    expect(agesText([67, 90])).toBe("67 to 90 and over");
+  });
+
+  it("says why Each policy is unavailable, naming the thin policies", () => {
+    expect(withheldPartsNote(["A", "B"])).toBe("not available, as A and B have too few survey records at some ages");
   });
 });

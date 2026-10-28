@@ -35,6 +35,7 @@ import {
 } from "../utils/chartTheme";
 import {
   AGE_BANDS,
+  ALL_BAND,
   YOUNG_BAND,
   isPublished,
   COMBINATION_NOT_PUBLISHED,
@@ -42,7 +43,9 @@ import {
   meanChangeByBand,
   singleAgeSelection,
   sharesByGroup,
+  SINGLE_AGE_TOP,
 } from "../utils/ageImpact";
+import { groupAges } from "../utils/ageGroups";
 import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST, fitRange, sharesBySingleAge, singleAgeBars } from "./youngPeople/youngPeopleData";
 import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
 import "./YoungPeopleSection.css";
@@ -71,9 +74,9 @@ const YOUNG_FILL = CHART_COLOURS.highlightBand;
 const YOUNG_SWATCH = CHART_COLOURS.highlightBand;
 // Better off, unchanged, worse off: the page's teal and amber, grey between
 const OUTCOMES = [
-  { key: "pct_better_off", label: "Better off", color: CHART_COLOURS.gain },
-  { key: "pct_unchanged", label: "Unchanged", color: CHART_COLOURS.noChange },
-  { key: "pct_worse_off", label: "Worse off", color: CHART_COLOURS.loss },
+  { key: "pct_better_off", label: "Gain", color: CHART_COLOURS.gain },
+  { key: "pct_unchanged", label: "No change", color: CHART_COLOURS.noChange },
+  { key: "pct_worse_off", label: "Loss", color: CHART_COLOURS.loss },
 ];
 
 // The dashboard's bar style (chartTheme barShape): the 100% share bars
@@ -85,11 +88,12 @@ const MEAN_DESCRIPTION =
 const SINGLE_AGE_DESCRIPTION =
   `Average change per person, £ a year, by single year of age (${SINGLE_AGE_FIRST} to ${SINGLE_AGE_LAST}); bars add each policy's own effect.`;
 const SHARES_DESCRIPTION =
-  "Share of people better or worse off (a change over 0.01%), by age group.";
-const SHARES_SINGLE_DESCRIPTION =
-  "Share of people better or worse off (a change over 0.01%), by single year of age (10 to 40).";
+  "Share of people who gain or lose (a change over 0.01%), by age group.";
+/** The single-age view's description, for the chosen group's own ages. */
+const sharesSingleDescription = ([first, last]) =>
+  `Share of people who gain or lose (a change over 0.01%), at each age from ${first} to ${last >= SINGLE_AGE_TOP ? "90 and over" : last}.`;
 
-/** The two views of "Average change by age" (and Pensioners' Better and worse off). */
+/** The two views of "Average change by age" (and Pensioners' Winners and losers). */
 export const AGE_VIEWS = [
   { value: "band", label: "By age group" },
   { value: "single", label: "By single year of age" },
@@ -250,27 +254,23 @@ function SingleAgeTick({ x, y, payload }) {
  * wide screen, every second one on a narrow one, 16 and 24 always, in bold
  * teal across the young band.
  */
-function SingleAgeRowTick({ x, y, payload, narrow }) {
+function SingleAgeRowTick({ x, y, payload, narrow, dense = false }) {
   const age = Number(payload.value);
-  const young = age >= 16 && age <= 24;
-  if (narrow && age % 2 === 1 && !YOUNG_ENDS.has(payload.value)) return null;
+  // All ages: every ten years (and 90+); a short window: every age, every
+  // other on a phone
+  if (dense ? age % 10 !== 0 && payload.value !== "90+" : narrow && age % 2 === 1) return null;
   return (
-    <text
-      x={x}
-      y={y}
-      dy={4}
-      textAnchor="end"
-      fontSize={TICK_STYLE.fontSize}
-      fill={young ? CHART_COLOURS.highlight : TICK_STYLE.fill}
-      fontWeight={young ? 600 : 400}
-    >
+    <text x={x} y={y} dy={4} textAnchor="end" fontSize={TICK_STYLE.fontSize} fill={TICK_STYLE.fill}>
       {payload.value}
     </text>
   );
 }
 
-// 13px bars 4px apart, plus the axis
-const singleSharesHeight = (rows) => rows * 17 + X_AXIS_HEIGHT + 24;
+// Over this many ages (all ages: 91), bars are thinner and ages are
+// labelled every ten years
+const SHARES_DENSE_ROWS = 40;
+// 13px bars 4px apart (7px, 2px apart when dense), plus the axis
+const singleSharesHeight = (rows) => rows * (rows > SHARES_DENSE_ROWS ? 7 : 17) + X_AXIS_HEIGHT + 24;
 
 /** "Age 22: +£X a year", the swatch in the bar's colour. */
 /** An age's net change, then each policy's own part of it, largest first. */
@@ -309,7 +309,7 @@ const PACKAGE_DESCRIPTION = "Average change per person, £ a year, with all the 
  * withheld policy's rows).
  */
 export const PACKAGE_VIEWS = [
-  { value: "package", label: "Whole package" },
+  { value: "package", label: "All selected policies" },
   { value: "policy", label: "By policy" },
 ];
 
@@ -697,7 +697,11 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
 
 export function SharesCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, combinedId, group = YOUNG_BAND, extraOptions = [] }) {
   const chartRef = useRef(null);
-  // By age group or by single year of age, as "Average change by age"
+  // By age group or by single year of age. Opens on the age groups, with
+  // the chosen group marked (as main did); single years of the chosen
+  // group are in Options. The reader's choice holds when the age group
+  // changes, as on the other age cards (Pavel's review, AGE11; round 3:
+  // a nine-row single-age chart left the card half empty by default)
   const [view, setView] = useState("band");
   // With no run for the whole selection: one row per measure, for one age
   // group (16 to 24 first)
@@ -714,12 +718,19 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
   const perMeasure = sharesByMeasure(sharesByGroup, rows, policies, selectedPolicies, selectedYear, combinedId, groupKey);
   const groupLabel = perMeasure?.groups.find((group) => group.key === groupKey)?.label ?? "";
   const single = !perMeasure && view === "single";
+  const singleAges = groupAges(group, selectedYear);
   const description = perMeasure
-    ? `Share of people aged ${groupLabel.replace(/^Aged? /i, "")} better or worse off (a change over 0.01%), each selected policy on its own.`
+    ? `Share of people aged ${groupLabel.replace(/^Aged? /i, "")} who gain or lose (a change over 0.01%), each selected policy on its own.`
     : single
-      ? SHARES_SINGLE_DESCRIPTION
+      ? sharesSingleDescription(singleAges)
       : SHARES_DESCRIPTION;
-  const shares = perMeasure ? null : (single ? sharesBySingleAge : sharesByGroup)(rows, policies, selectedPolicies, selectedYear, combinedId);
+  // The single-age view covers the chosen group's own ages, read from the
+  // whole selection's run only (never singles added up)
+  const shares = perMeasure
+    ? null
+    : single
+      ? sharesBySingleAge(rows, policies, selectedPolicies, selectedYear, combinedId, singleAges)
+      : sharesByGroup(rows, policies, selectedPolicies, selectedYear, combinedId);
   const filtered = perMeasure ? filterShareRows(perMeasure.rows, { hide, order, direction }) : null;
   const data = perMeasure
     ? filtered.rows.map((row) => visibleSegments({ group: row.name, key: row.id, ...pick(row.row) }, OUTCOME_KEYS))
@@ -732,8 +743,8 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
     : [];
   const thin = shares ? shares.groups.filter((group) => group.suppressed) : [];
 
-  const title = `Better and worse off, ${yearLabel}`;
-  const exportName = `young-people-better-worse-off-${single ? "single-age-" : ""}${selectedYear}`;
+  const title = `Winners and losers, ${yearLabel}`;
+  const exportName = `age-winners-losers-${single ? "single-age-" : ""}${selectedYear}`;
   const exportOptions = {
     title,
     description,
@@ -748,8 +759,8 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
   const csvText = () =>
     buildChartCsv({
       title: perMeasure
-        ? `People aged ${groupLabel} better off, unchanged and worse off, by policy on its own, ${yearLabel}`
-        : `People better off, unchanged and worse off by ${single ? "single year of age" : "age group"}, ${yearLabel}`,
+        ? `Winners, losers and no change, people aged ${groupLabel}, by policy on its own, ${yearLabel}`
+        : `Winners, losers and no change by ${single ? "single year of age" : "age group"}, ${yearLabel}`,
       units: "% of people in the group; a change of more than 0.01% of household net income",
       columns: [
         { key: "group", label: perMeasure ? "Policy" : single ? "Age" : "Age group" },
@@ -817,19 +828,18 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
         {!published ? (
           <UnpublishedPlot height={height} yearLabel={yearLabel} />
         ) : data.length && single ? (
-          // One 100% bar per age, ages down the side as in the age-group
-          // view, 16 to 24 shaded; the split is in the tooltip at this
-          // density
+          // One 100% bar per age of the chosen group, ages down the side as
+          // in the age-group view; the split is in the tooltip at this
+          // density. A long window (all ages) packs its bars tighter.
           <ResponsiveContainer width="100%" height={singleSharesHeight(data.length)}>
             <BarChart
               data={data}
               layout="vertical"
               margin={plotMargin(narrow)}
-              barCategoryGap={4}
-              barSize={10}
+              barCategoryGap={data.length > SHARES_DENSE_ROWS ? 2 : 4}
+              barSize={data.length > SHARES_DENSE_ROWS ? 5 : 10}
             >
               <CartesianGrid {...GRID_PROPS} vertical horizontal={false} />
-              <ReferenceArea y1="16" y2="24" fill={YOUNG_FILL} fillOpacity={0.6} radius={6} ifOverflow="visible" />
               <XAxis
                 type="number"
                 domain={[0, 100]}
@@ -844,7 +854,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
               <YAxis
                 type="category"
                 dataKey="group"
-                tick={<SingleAgeRowTick narrow={narrow} />}
+                tick={<SingleAgeRowTick narrow={narrow} dense={data.length > SHARES_DENSE_ROWS} />}
                 width={36}
                 axisLine={false}
                 tickLine={false}
@@ -903,8 +913,8 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
           info={{
             how: perMeasure
               ? [
-                  "No published run covers this selection together, so each row is one policy simulated on its own.",
-                  "The rows' shares can't be added up across policies.",
+                  // Each row's policy on its own is in the description (round 3)
+                  "No published run covers this selection together, so the rows' shares can't be added up across policies.",
                 ]
               : ["Shares come from one run of the whole selection, so they include how the policies interact."],
             caveats: [
@@ -971,10 +981,10 @@ function YoungPeopleSection({ selectedPolicies, selectedYear, policies }) {
           <SectionHeading
             id="young-people-who-gains"
             icon="userPlus"
-            title="Who is better or worse off, and from what"
-            subtitle="Which policies drive the change for young people, and how many people are better or worse off."
+            title="Winners and losers, and which policies drive them"
+            subtitle="How many young people gain or lose, and from which policies."
           />
-          <section className="report-section young-people-section" aria-label="Who is better or worse off, and from what">
+          <section className="report-section young-people-section" aria-label="Winners and losers, and which policies drive them">
             <div className="charts-grid">
               <MeasuresCard {...props} height={narrow ? 460 : 400} />
               <SharesCard {...props} height={narrow ? 340 : 400} />

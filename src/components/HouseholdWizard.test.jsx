@@ -392,14 +392,26 @@ describe("the personal impact form", () => {
     }
   });
 
+  it("Edit these answers opens Your household from the example, and Reset answers goes back to the typical ones (HH10, HH12)", () => {
+    render(<HouseholdCalculator />);
+    applyExample("A graduate on £35,000");
+    fireEvent.click(screen.getByRole("button", { name: "Edit these answers" }));
+    expect(isChosen(yoursCard())).toBe(true);
+    expect(value("Age")).toBe(27);
+    fireEvent.click(screen.getAllByRole("button", { name: "Reset answers" })[0]);
+    expect(value("Age")).toBe(30);
+    expect(document.querySelector(".household-start-from")).toBeNull();
+    expect(document.querySelector(".household-example-summary")).toBeNull();
+  });
+
   it("fills the form from an example card, still editable", () => {
     render(<HouseholdCalculator />);
     applyExample("A graduate on £35,000");
-    // Chosen: the card is marked; no note or "Change these answers" under
-    // the cards (the card says what the example is)
+    // Chosen: the card is marked, and its answers are one line under the
+    // cards with a way into them (Pavel's review, HH10)
     expect(isChosen(exampleItem("A graduate on £35,000"))).toBe(true);
-    expect(screen.queryByText(/repays a Plan 2 student loan/)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Change these answers" })).not.toBeInTheDocument();
+    expect(screen.getByText(/repays a Plan 2 student loan/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit these answers" })).toBeInTheDocument();
     // Your household, chosen from it: the example's answers, named at the
     // top of the form; the example is no longer the one chosen
     fireEvent.click(yoursCard());
@@ -683,6 +695,33 @@ describe("the selected policies' questions", () => {
       for (const title of DETAIL_GROUPS) expect(groupToggle(title)).toBeInTheDocument();
       unmount();
       resetSavedWizard();
+    }
+  });
+
+  it("lets Calculate start a new request when the answers change while the last one runs (HH11)", async () => {
+    const API = "https://api.test/api/household-impact";
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
+    // The household API never answers: the first request stays loading
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url) => (route(url) === API ? new Promise(() => {}) : Promise.resolve(new Response("{}", { status: 404 })))),
+    );
+    // With the measures' approved definitions, or the calculator asks
+    // nothing (useHouseholdImpact)
+    const expectedDefinitions = Object.fromEntries(ALL_EIGHT.map((id) => [id, approvedDefinition(id)]));
+    try {
+      form(ALL_EIGHT, { year: 2027, expectedDefinitions });
+      fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
+      await waitFor(() => expect(screen.getByRole("button", { name: /Calculating/ })).toBeDisabled());
+      // Edited while it runs: Calculate is pressable again, and the results
+      // area says the answers have changed rather than going blank
+      fireEvent.change(box("Age"), { target: { value: "41" } });
+      fireEvent.blur(box("Age"));
+      await waitFor(() => expect(screen.getByRole("button", { name: /^Calculate/ })).not.toBeDisabled());
+      expect(screen.getByText("Your answers have changed. Press Calculate to see the new result.")).toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
     }
   });
 

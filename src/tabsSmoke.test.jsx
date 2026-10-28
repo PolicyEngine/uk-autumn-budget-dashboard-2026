@@ -282,7 +282,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
   // (?tab=outlook&sub=…), each linking to its twin
   it.each([
     ["living", "Living standards", /^Change in income inequality/, "Living standards under current law", ["Incomes over time", "Growth across the distribution", "Inequality over time \\(current law\\)"]],
-    ["poverty", "Poverty", /^Change in the poverty rate/, "Poverty under current law", ["Poverty over time", "Who is in poverty"]],
+    ["poverty", "Poverty", /^Change in the poverty rate/, "Poverty under current law", ["Poverty over time", "Change in poverty by group"]],
   ])("?sub=%s shows the measures, its twin on the Pre-measures forecast current law", async (sub, label, measures, currentLaw, cards) => {
     window.history.replaceState({}, "", `/?sub=${sub}`);
     render(<App />);

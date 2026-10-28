@@ -226,7 +226,7 @@ describe("young people cards", () => {
     // The age group is the card's one Options pill
     fireEvent.click(screen.getByRole("button", { name: /^Options: 16 to 24/ }));
     fireEvent.click(within(screen.getByRole("radiogroup", { name: "Compare" })).getByRole("radio", { name: /65 and over/ }));
-    expect(screen.getByText(/65 and over vs all ages/)).toBeInTheDocument();
+    expect(screen.getByText("Average change per person from each policy, for people aged 65 and over and people of all ages.")).toBeInTheDocument();
   });
 
   it("describes missing age-group rows as unavailable", () => {
@@ -245,7 +245,7 @@ describe("young people cards", () => {
 
   it("takes its focus from By age's group: the compare option and the dumbbell follow it", () => {
     const { unmount } = render(<TrendCard {...props} selectedYear={2029} group="25-34" />);
-    expect(screen.getByRole("button", { name: /^Options: 25 to 34 vs all/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Options: With all ages/ })).toBeInTheDocument();
     unmount();
     render(<MeasuresCard {...props} selectedYear={2028} group="pensioners" />);
     expect(screen.getByRole("button", { name: /^Options: Pensioners/ })).toBeInTheDocument();
@@ -282,6 +282,30 @@ describe("young people cards", () => {
     expect(card.querySelector(".chart-footer")).toHaveTextContent(
       `Not drawn in ${yearList(DISPLAY_YEARS)}, as a selected policy has too few survey records by age: every age group except all ages.`,
     );
+  });
+
+  it("offers no Compare with all ages chosen, so nothing reads 'All ages vs all ages' (AGE6)", () => {
+    render(<TrendCard {...props} selectedYear={2029} group="all" />);
+    const card = document.querySelector(".young-people-trend");
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    expect(within(card).queryByRole("radio", { name: /vs all ages|and all ages/ })).toBeNull();
+    expect(within(card).queryByText("Compare")).toBeNull();
+  });
+
+  it("keeps Running total when the age group changes (AGE11)", () => {
+    const { rerender } = render(<TrendCard {...props} selectedYear={2029} group="16-24" />);
+    const card = () => document.querySelector(".young-people-trend");
+    fireEvent.click(within(card()).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(card()).getByRole("radio", { name: "Running total" }));
+    rerender(<TrendCard {...props} selectedYear={2029} group="25-34" />);
+    expect(within(card()).getByRole("button", { name: /^Options: With all ages.*Running total/ })).toBeInTheDocument();
+  });
+
+  it("says what the chart shows in About this chart (AGE7)", () => {
+    render(<TrendCard {...props} selectedYear={2029} />);
+    const card = document.querySelector(".young-people-trend");
+    fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
+    expect(card).toHaveTextContent("Average change per person in each age group, each year, with all ages for comparison.");
   });
 
   it("draws every year shown, whatever year is selected", () => {
