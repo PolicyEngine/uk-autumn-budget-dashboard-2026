@@ -1,7 +1,7 @@
 import { chooseOption, optionsLabel } from "../../test/optionsPills";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import MarginalRateChart, { RateTooltip } from "./MarginalRateChart";
+import MarginalRateChart, { RateTooltip, rateExportDescription } from "./MarginalRateChart";
 import { breakdownRows, describeParts, drawnKey, partsInUse, rateAxis, RATE_PARTS, stepAt } from "./marginalRateParts";
 
 // Three steps: basic rate, higher rate, then the allowance taper
@@ -113,7 +113,8 @@ describe("MarginalRateChart", () => {
     // One sentence: the rate, then the rate as money; its parts in More info
     expect(screen.getByText(/^At £110,000 your marginal tax rate is 62%, so of your next/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
-    expect(screen.getByText(/made up of income tax 40%, the personal allowance taper 20%, National Insurance 2%/)).toBeInTheDocument();
+    // The parts are always the rate with the policies (own.after), so it says so
+    expect(screen.getByText(/your marginal rate with the policies is made up of income tax 40%, the personal allowance taper 20%, National Insurance 2%/)).toBeInTheDocument();
     // The PA taper's note, which the legend had behind an "i", is a definition
     expect(document.querySelector(".chart-more-info")).toHaveTextContent(/Personal allowance taper/);
   });
@@ -185,6 +186,56 @@ describe("MarginalRateChart", () => {
     expect(screen.getByText("Change in marginal rate")).toBeInTheDocument();
     expect(screen.queryByText("Personal allowance taper")).not.toBeInTheDocument();
     expect(document.querySelector('[data-view="change"]')).not.toBeNull();
+  });
+
+  it("says in About this chart what the view draws: the change in points, no parts or edge markers in Change (W6 G1)", () => {
+    const own = { before: step(0.4, 0.2, 0.02), after: step(0.4, 0.2, 0.02) };
+    render(<MarginalRateChart sweep={sweep({ before: STEPS, after: STEPS, own })} salary={110000} yearLabel="2027-28" />);
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    const about = () => document.querySelector(".chart-more-info");
+    expect(about()).toHaveTextContent("Each layer is one tax's or benefit taper's part of the rate; the line is the total rate.");
+    expect(about()).toHaveTextContent(/A part that lowers the rate .* is drawn below 0%/);
+    chooseOption(document.body, "Change");
+    expect(about()).toHaveTextContent("The line is the change in the total rate, in percentage points.");
+    expect(about()).not.toHaveTextContent(/the line is the total rate|The line is the total rate\./);
+    expect(about()).not.toHaveTextContent(/drawn below 0%|marked at its edge/);
+  });
+
+  it("describes the downloaded image by the view drawn: one total, and that side's parts (W6 G1)", () => {
+    expect(rateExportDescription("before", true, "2027-28")).toBe(
+      "Share of each extra pound of salary lost to taxes and withdrawn benefits in 2027-28 under current law, by part.",
+    );
+    expect(rateExportDescription("after", false, "2027-28")).toBe(
+      "Share of each extra pound of salary lost to taxes and withdrawn benefits in 2027-28 with the policies.",
+    );
+    expect(rateExportDescription("change", false, "2027-28")).toBe(
+      "The change the selected policies make to the share of each extra pound of salary lost to taxes and withdrawn benefits in 2027-28, in percentage points.",
+    );
+    for (const view of ["before", "after", "change"]) {
+      expect(rateExportDescription(view, true, "2027-28")).not.toMatch(/under current law and with/);
+    }
+  });
+
+  it("describes the modelled State Pension allowance, not the sole-income design, for a pensioner with earnings (W6 G1)", () => {
+    // State Pension and £1,000 of salary: the rate jumps from 20% to 60%
+    // over the next £200, which sets the caveat off
+    render(
+      <MarginalRateChart
+        sweep={{
+          ...sweep({ before: STEPS, after: STEPS, own: { before: step(0.2, 0, 0), after: step(0.6, 0, 0) } }),
+          own: { income: 1000, beforeRate: 0.2, afterRate: 0.6 },
+          netParts: { names: ["state_pension"], before: [{ state_pension: 11000 }], after: [{ state_pension: 11000 }] },
+        }}
+        salary={1000}
+        yearLabel="2027-28"
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
+    const about = document.querySelector(".chart-more-info");
+    expect(about).toHaveTextContent(
+      "For a pensioner whose total income is at or below the full new State Pension, the selected policies raise the tax-free allowance to that amount. Once total income passes it, the usual personal allowance applies again, so income tax jumps there.",
+    );
+    expect(about).not.toHaveTextContent(/only income is the State Pension|Any earnings take the whole allowance away|first pound earned/);
   });
 
   it("gives in its tooltip only what the view draws", () => {

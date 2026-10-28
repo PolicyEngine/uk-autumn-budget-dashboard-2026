@@ -78,9 +78,10 @@ describe("the two Across earnings cards", () => {
     expect(rate.querySelector(".chart-description").textContent).toMatch(/^With no earnings, your marginal tax rate on your first £200 would be 16% under current law and 0% with the policies/);
     expect(net.querySelector(".earnings-you")).not.toBeNull();
     fireEvent.click(within(rate).getByRole("button", { name: "About this chart" }));
-    // The cliff caveat is for a pensioner on the State Pension alone; this
-    // one has a workplace pension too
-    expect(rate.querySelector(".chart-more-info")).not.toHaveTextContent(/Any earnings take the whole allowance away/);
+    // The allowance caveat flags a rate that rises at the start of earnings
+    // with the policies; here they lower it there (16% to 0%), so none
+    expect(rate.querySelector(".chart-more-info")).not.toHaveTextContent(/at or below the full new State Pension/);
+    expect(rate.querySelector(".chart-more-info")).not.toHaveTextContent(/usual personal allowance applies again/);
   });
 });
 
