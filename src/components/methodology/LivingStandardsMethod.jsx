@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import FactList from "./FactList";
 import { TriangleAlert } from "lucide-react";
 import { ExternalLink, SourceLink, Tag, Topic } from "./MethodUi";
-import { describeDataset, fyDash, fyLabel, loadOutlook, periodLabel, splitSource } from "../../utils/livingStandards/outlook";
+import { describeDataset, fyDash, fyLabel, loadOutlook, outlookForecastSource, periodLabel, splitSource } from "../../utils/livingStandards/outlook";
 import { HBAI_URL, plainWords, scrubNote } from "../livingStandards/sources";
 import { METHOD_ANCHORS } from "./anchors";
 
@@ -168,7 +168,7 @@ export default function LivingStandardsMethod() {
                 value: (
                   <>
                     <ExternalLink href={hbai.url || HBAI_URL}>DWP HBAI</ExternalLink>
-                    ; <SourceLink id="obr_efo_current" />
+                    ; <SourceLink id={outlookForecastSource(meta)} />
                   </>
                 ),
                 more: notes.map((n) => linkNote(text(n))),

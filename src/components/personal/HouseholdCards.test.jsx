@@ -174,7 +174,7 @@ describe("an example card's chip tooltip (W6 G1)", () => {
     // measure −£260, a gain of £320 from another: the largest, but not
     // most of a loss
     const own = "unearned_income_rates_up";
-    const other = "employer_nics_secondary_threshold_raise";
+    const other = "fuel_duty_rise_deferral";
     const catalogue = publishing([own, other]);
     const presets = { "landlord-saver": { 2029: { change: -90, before: 40000, after: 39910, byPolicy: { [own]: -260, [other]: 320 } } } };
     render(
@@ -187,7 +187,7 @@ describe("an example card's chip tooltip (W6 G1)", () => {
     expect(tag).toHaveTextContent("+£320");
     fireEvent.mouseEnter(tag);
     const tip = document.getElementById(tag.getAttribute("aria-describedby"));
-    expect(tip).toHaveTextContent(/^This example features Unearned income rates \(−£260 in 2029-30\); the largest single effect is .+ \(\+£320\)\.$/);
+    expect(tip).toHaveTextContent(/^This example features Savings and property tax \(−£260 in 2029-30\); the largest single effect is .+ \(\+£320\)\.$/);
     expect(tip).not.toHaveTextContent(/most of the change/);
   });
 });

@@ -571,7 +571,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
             method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
             caveats: [
               pensionAllowanceCliff &&
-                "For a pensioner whose total income is at or below the full new State Pension, the selected policies raise the tax-free allowance to that amount. Once total income passes it, the usual personal allowance applies again, so income tax jumps there.",
+                "For a pensioner, the selected policies give an income tax reduction that falls by £1 for every £3 of total income above the full new State Pension, so over that range each extra £1 of income costs about 53p in income tax: 20p at the basic rate (19p at the starter rate in Scotland) plus 33p of the reduction withdrawn.",
               // Change draws no parts and no edge markers, on an axis that
               // covers every change
               !isChange &&

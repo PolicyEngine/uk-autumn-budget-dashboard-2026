@@ -263,7 +263,7 @@ describe("the in-force timeline", () => {
 
   it("counts a temporary measure's months", () => {
     expect(durationLabel(detailsById.road_fuel_vat_cut)).toBe("6 months");
-    expect(durationLabel(detailsById.domestic_electricity_zero_vat)).toBe("18 months");
+    expect(durationLabel(detailsById.domestic_electricity_zero_vat)).toBe("9 months");
     expect(durationLabel(detailsById.warm_home_discount_top_up)).toBe("One winter");
     expect(timelineDescription(detailsById.road_fuel_vat_cut)).toBe(
       "In force from December 2026 to May 2027 (6 months).",
@@ -439,7 +439,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       ["warm_home_discount_top_up", "£150£250+£100"],
       ["domestic_electricity_zero_vat", "5%0%−5 points"],
       ["threshold_freeze_2031_32", "£12,830£12,570−£260"],
-      ["unearned_income_rates_up", "10.75%12.75%+2 points"],
+      ["unearned_income_rates_up", "22%24%+2 points"],
     ];
     for (const [id, values] of cases) {
       if (!file.measures[id]) continue;
@@ -451,18 +451,18 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     }
   });
 
-  it("gives each of the eight candidate measures, as the real file describes it, its summary, timing, category, what changes and caveats", () => {
-    const eight = [
-      ["fuel_duty_rise_deferral", "Fuel duty rises deferred", "Fuel duty", "January 2027"],
-      ["state_pension_income_tax_protection", "State Pension income tax protection", "Income tax", "April 2027"],
-      ["warm_home_discount_top_up", "Warm Home Discount top-up", "Energy", "Winter 2026-27"],
+  it("gives each of the seven announced measures, as the real file describes it, its summary, timing, category, what changes and caveats", () => {
+    const seven = [
+      ["fuel_duty_rise_deferral", "Fuel duty cut extended", "Fuel duty", "January 2027"],
+      ["state_pension_income_tax_protection", "Pension Tax Allowance", "Income tax", "April 2027"],
       ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "VAT", "October 2026"],
-      ["threshold_freeze_2031_32", "Threshold freeze to 2031-32", "Income tax", "April 2031"],
-      ["plan_2_threshold_unfreeze", "Plan 2 student loan threshold unfrozen", "Student loans", "April 2027"],
-      ["employer_nics_secondary_threshold_raise", "Employer NI threshold raised", "National Insurance", "April 2027"],
-      ["unearned_income_rates_up", "Dividend, savings and property income tax up", "Income tax", "April 2027"],
+      ["unearned_income_rates_up", "Savings and property income tax rates up", "Income tax", "April 2027"],
+      ["carers_allowance_earnings_taper", "Carer's Allowance earnings taper", "Benefits", "2030-31"],
+      ["household_energy_payment_2026", "Household Energy Payment", "Energy", "January 2027"],
+      ["trading_allowance_raise", "Trading allowance raised to £3,000", "Income tax", "April 2027"],
     ];
-    for (const [id, name, category, starts] of eight) {
+    expect(Object.keys(file.measures)).toEqual(seven.map(([id]) => id));
+    for (const [id, name, category, starts] of seven) {
       // The published description (reforms.py's, as the file carries it),
       // not the entry's own copy: a drift between the two fails here
       const measure = { ...published(id, name), description: file.measures[id].description };
@@ -498,14 +498,14 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(screen.queryByRole("table")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Show the dates" }));
     const dates = screen.getByRole("table");
-    // From 1 January 2027 on: the timeline's first day equals current law,
-    // so is left out; 1 January, 1 March and 1 April 2027, then each April
-    // to 2031
-    expect(within(dates).getAllByRole("row")).toHaveLength(8);
+    // Only the dates the measure changes: the timeline's first day and
+    // every date from 1 July 2027 equal current law, so are left out;
+    // 1 January, 1 March and 1 April 2027
+    expect(within(dates).getAllByRole("row")).toHaveLength(4);
     expect(within(dates).getAllByRole("row")[1]).toHaveTextContent("1 January 202755.95p52.95p−3p");
     fireEvent.click(screen.getByRole("button", { name: "Show the yearly averages" }));
     const averages = screen.getByRole("table", { name: /As modelled/ });
-    expect(within(averages).getAllByRole("row")[1]).toHaveTextContent("2026-2753.95p52.95p−1p");
+    expect(within(averages).getAllByRole("row")[1]).toHaveTextContent("2026-2753.96p52.95p−1.01p");
   });
 
   it("shows nothing for a measure described otherwise than when the file was built, with no empty slot", () => {
@@ -537,7 +537,7 @@ describe("the card's frame", () => {
   });
 
   it("keeps every card's sections in one order, whatever it has", () => {
-    const ids = ["warm_home_discount_top_up", "fuel_duty_rise_deferral", "threshold_freeze_2031_32", "plan_2_threshold_unfreeze"];
+    const ids = ["household_energy_payment_2026", "fuel_duty_rise_deferral", "state_pension_income_tax_protection", "trading_allowance_raise"];
     const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
     const bare = { ...published("domestic_electricity_zero_vat", "Zero VAT"), description: "An older run's wording." };
     render(

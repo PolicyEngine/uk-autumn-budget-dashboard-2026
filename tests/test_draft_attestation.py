@@ -26,7 +26,7 @@ def _load_script():
 
 
 def test_every_hand_written_measure_has_a_drafted_reason():
-    assert reforms.STATE_PENSION_PROTECTION_DESIGN == "total_income"
+    assert reforms.STATE_PENSION_PROTECTION_DESIGN == "tax_reduction"
     assert set(HAND_WRITTEN) <= set(_load_script().REASONS)
 
 
@@ -81,13 +81,13 @@ def test_the_eight_package_reason_names_its_two_hand_written_members(
 
     members = list(reforms.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
     key = combined_key(members)
-    # Nine on Budget day, with the Carer's Allowance taper
-    assert key == "combined--47727b6baf58047f"
+    # Seven on Budget day
+    assert key == "combined--4e3e325c74977848"
     record = drafted(key, members)
     assert record["measure_id"] == key
     assert (
         "hand-written carers_allowance_earnings_taper and "
-        "plan_2_threshold_unfreeze and " in record["reason"]
+        "household_energy_payment_2026 and " in record["reason"]
     )
     assert reforms.STATE_PENSION_ALLOWANCE_ID in record["reason"]
     assert reforms.EMPLOYER_NI_ID not in record["reason"]
@@ -100,5 +100,5 @@ def test_the_state_pension_draft_leaves_the_signatures_empty(drafted):
         [reforms.STATE_PENSION_ALLOWANCE_ID],
     )
     assert record["measure_id"] == reforms.STATE_PENSION_ALLOWANCE_ID
-    assert "state_pension_only_income_tax_allowance" in record["reason"]
+    assert "budget_measures.pension_tax_allowance" in record["reason"]
     assert record["checker"] == record["second"] == record["released_at"] == ""

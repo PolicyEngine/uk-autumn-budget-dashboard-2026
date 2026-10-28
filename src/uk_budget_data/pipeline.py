@@ -56,11 +56,12 @@ def build_microsimulation(dataset_path: Optional[str], scenario=None):
             certified dataset (requires HUGGING_FACE_TOKEN).
         scenario: Scenario to apply, or None for current law.
     """
-    kwargs = {} if scenario is None else {"scenario": scenario}
+    from uk_budget_data.forecast import with_forecast
+
     return pe.uk.managed_microsimulation(
         dataset=dataset_path,
         allow_unmanaged=dataset_path is not None,
-        **kwargs,
+        scenario=with_forecast(scenario),
     )
 
 

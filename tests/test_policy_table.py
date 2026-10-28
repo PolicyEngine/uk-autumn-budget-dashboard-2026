@@ -5,10 +5,13 @@ import math
 from pathlib import Path
 
 import pytest
-from policyengine_uk.system import system
 
 from uk_budget_data import reforms as registry
+from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
+    WINTER_SHARE,
+)
 from uk_budget_data.cli import main
+from uk_budget_data.forecast import forecast_parameters
 from uk_budget_data.policy_table import (
     OUTPUT_FILE,
     YEAR_WEIGHTS,
@@ -20,7 +23,8 @@ from uk_budget_data.policy_table import (
 PUBLISHED = (
     Path(__file__).resolve().parents[1] / "public" / "data" / OUTPUT_FILE
 )
-PARAMETERS = system.parameters
+# Current law on the OBR October 2026 forecast, as every run builds it.
+PARAMETERS = forecast_parameters()
 
 
 @pytest.fixture(scope="module")
@@ -41,6 +45,13 @@ def withdrawn_rows(measure_id):
     factory = {
         registry.FUEL_VAT_ID: registry._create_road_fuel_vat_cut,
         registry.LHA_UNFREEZE_ID: registry._create_lha_unfreeze_2027,
+        # Withdrawn on Budget day
+        registry.WARM_HOME_DISCOUNT_ID: registry._create_warm_home_discount_top_up,
+        registry.THRESHOLD_FREEZE_ID: registry._create_threshold_freeze_2031_32,
+        registry.PLAN_2_ID: registry._create_plan_2_threshold_unfreeze,
+        registry.EMPLOYER_NI_THRESHOLD_ID: (
+            registry._create_employer_nics_secondary_threshold_raise
+        ),
     }
     reform = factory[measure_id]()
     return {row["label"]: row for row in BUILDERS[measure_id](reform)}
@@ -92,12 +103,13 @@ def test_every_candidate_has_a_table_with_its_published_description(document):
 
 def test_fuel_duty_by_date(document):
     dated = by_key(rows(document, "fuel_duty_rise_deferral")["Fuel duty"])
-    # 52.95p held to 31 July 2027, then current law's 59.75p and its RPI
+    # 52.95p held to 30 June 2027, then current law's 60.59p (the OBR's
+    # rate, EFO October 2026 paragraph 3.19) and its RPI
     assert dated["2027-01-01"] == (55.95, 52.95)
     assert dated["2027-03-01"] == (57.95, 52.95)
-    assert dated["2027-04-01"] == (59.75, 52.95)
-    assert dated["2027-08-01"] == (59.75, 59.75)
-    assert dated["2028-04-01"] == (61.54, 61.54)
+    assert dated["2027-04-01"] == (60.59, 52.95)
+    assert dated["2027-07-01"] == (60.59, 60.59)
+    assert dated["2028-04-01"] == (63.2, 63.2)
     assert "2032-04-01" not in dated  # after the timeline
     assert dated["2026-04-01"] == (52.95, 52.95)  # the timeline's first day
 
@@ -126,26 +138,30 @@ def test_fuel_duty_averages_are_the_engine_and_the_measure(document):
         )
 
 
-def test_the_state_pension_allowance_is_the_full_state_pension_rounded_up(
-    document,
-):
+def test_the_pension_tax_allowance_is_the_largest_reduction(document):
+    """Budget 2026: up to £94 in 2027-28, rising with the full new State
+    Pension (OBR October 2026 forecast: £182, £250), to 2029-30."""
     row = by_key(
         rows(document, "state_pension_income_tax_protection")[
-            "Income tax allowance over State Pension age"
+            "Pension Tax Allowance, the largest tax reduction"
         ]
     )
-    assert row["2026"] == (12_570, 12_570)
-    for year in range(2027, 2032):
-        weekly = PARAMETERS.gov.dwp.state_pension.new_state_pension.amount(
-            f"{year}-04-06"
+    assert row["2026"] == (0, 0)
+    assert row["2027"] == (0, 94)
+    weekly = PARAMETERS.gov.dwp.state_pension.new_state_pension.amount
+    for year in (2028, 2029):
+        full = round(
+            math.floor(weekly(f"{year}-04-06") / 0.05 + 1e-9) * 0.05 * 52, 2
         )
-        assert row[str(year)][1] == math.ceil(weekly * 52)
-    assert row["2027"] == (12_570, 13_037)
-    assert row["2031"] == (12_830, 14_391)
+        assert row[str(year)] == (
+            0,
+            math.ceil(round(0.2 * (full - 12_570), 6)),
+        )
+    assert row["2030"] == (0, 0)
 
 
 def test_warm_home_discount(document):
-    row = rows(document, "warm_home_discount_top_up")["Warm Home Discount"]
+    row = withdrawn_rows(registry.WARM_HOME_DISCOUNT_ID)["Warm Home Discount"]
     assert by_key(row) == {"2026": (150, 250)}
     assert row["source"]["before"]["kind"] == "documented"
 
@@ -156,7 +172,7 @@ def test_vat_rates_while_in_force(document):
         "points"
     ]
     assert (point["label"], point["before"], point["after"]) == (
-        "April 2027 to July 2027",
+        "October 2026 to June 2027",
         0.05,
         0.0,
     )
@@ -175,21 +191,21 @@ def test_in_force_dates_that_do_not_fit_the_constants_fail():
         in_force_rate_change(registry.FUEL_VAT_ID, {2026: -0.05, 2027: -0.05})
 
 
-def test_electricity_is_the_extension_weighted_by_its_days(document):
-    """Announced: the zero rate extended from 31 March 2027 to July 2027.
-    The measure is the extension alone, weighted by its days in 2027-28
-    (122 of 366 to 31 July), as the road fuel cut is."""
+def test_electricity_2026_carries_the_winter_share(document):
+    """Budget 2026 scores the whole zero rate, 1 October 2026 to 30 June
+    2027: 2026-27 weighted by the October to March share of a year's use,
+    2027-28 by its 91 days of 366."""
     yearly = rows(document, "domestic_electricity_zero_vat")[
         "VAT on domestic electricity in Great Britain, averaged over the year"
     ]
     averages = by_key(yearly)
-    assert averages["2026"] == (0.05, 0.05)
-    assert averages["2027"] == (0.05, round(0.05 - 0.05 * 122 / 366, 6))
-    assert "weighted by the days it is in force" in yearly["note"]
+    assert averages["2026"] == (0.05, round(0.05 - 0.05 * WINTER_SHARE, 6))
+    assert averages["2027"] == (0.05, round(0.05 - 0.05 * 91 / 366, 6))
+    assert "2026-27 by the October to March share" in yearly["note"]
     (point,) = rows(document, "domestic_electricity_zero_vat")[
         "VAT on domestic electricity in Great Britain"
     ]["points"]
-    assert point["label"] == "April 2027 to July 2027"
+    assert point["label"] == "October 2026 to June 2027"
 
 
 def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
@@ -205,7 +221,7 @@ def test_the_table_covers_the_eight_package_measures_only(document):
         registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
     )
     # Nine on Budget day: the Carer's Allowance taper is registered again
-    assert len(document["measures"]) == 9
+    assert len(document["measures"]) == 7
     assert registry.CARERS_ALLOWANCE_TAPER_ID in document["measures"]
     assert registry.LHA_UNFREEZE_ID not in document["measures"]
     assert registry.FUEL_VAT_ID not in document["measures"]
@@ -214,7 +230,7 @@ def test_the_table_covers_the_eight_package_measures_only(document):
 
 
 def test_threshold_freeze(document):
-    table = rows(document, "threshold_freeze_2031_32")
+    table = withdrawn_rows(registry.THRESHOLD_FREEZE_ID)
     assert by_key(table["Personal allowance"])["2031"] == (12_830, 12_570)
     assert by_key(table["Higher rate threshold"])["2031"] == (51_330, 50_270)
     assert by_key(table["Basic rate band"])["2031"] == (38_500, 37_700)
@@ -227,12 +243,10 @@ def test_threshold_freeze(document):
 
 def test_plan_2(document):
     plan_2 = by_key(
-        rows(document, "plan_2_threshold_unfreeze")[
-            "Plan 2 repayment threshold"
-        ]
+        withdrawn_rows(registry.PLAN_2_ID)["Plan 2 repayment threshold"]
     )
     assert plan_2["2026"] == (29_385, 29_385)
-    assert plan_2["2027"] == (29_385, 30_267)
+    assert plan_2["2027"] == (29_385, 30_648)
     assert {
         year: after for year, (_, after) in plan_2.items() if year != "2026"
     } == {
@@ -248,13 +262,11 @@ def test_each_measure_gets_the_display_its_shape_calls_for(document):
     } == {
         "fuel_duty_rise_deferral": "schedule",
         "state_pension_income_tax_protection": "path",
-        "warm_home_discount_top_up": "switch",
         "domestic_electricity_zero_vat": "switch",
-        "threshold_freeze_2031_32": "table",
-        "plan_2_threshold_unfreeze": "path",
-        "employer_nics_secondary_threshold_raise": "path",
-        "unearned_income_rates_up": "before-after",
+        "unearned_income_rates_up": "path",
         "carers_allowance_earnings_taper": "path",
+        "household_energy_payment_2026": "switch",
+        "trading_allowance_raise": "before-after",
     }
 
 
@@ -274,7 +286,7 @@ def test_lha_unfreeze():
 
 def test_employer_ni_threshold(document):
     row = by_key(
-        rows(document, "employer_nics_secondary_threshold_raise")[
+        withdrawn_rows(registry.EMPLOYER_NI_THRESHOLD_ID)[
             "Employer National Insurance threshold"
         ]
     )
@@ -288,9 +300,6 @@ def test_employer_ni_threshold(document):
 def test_unearned_income_rates(document):
     table = rows(document, "unearned_income_rates_up")
     expected = {
-        "Dividend ordinary rate": (0.1075, 0.1275),
-        "Dividend upper rate": (0.3575, 0.3775),
-        "Dividend additional rate": (0.3935, 0.4135),
         "Savings basic rate": (0.22, 0.24),
         "Savings higher rate": (0.42, 0.44),
         "Savings additional rate": (0.47, 0.49),
@@ -322,3 +331,27 @@ def test_the_display_follows_the_shape_not_the_measure():
     assert display_for([row(yearly([(1, 1), (1, 2), (1, 3)]))]) == "path"
     assert display_for([row(yearly([(1, 1), (2, 1)]))]) == "path"
     assert display_for([row(yearly([(1, 1), (2, 1)]))] * 3) == "table"
+
+
+def test_current_law_thresholds_are_the_engine_alone(document):
+    """The Frozen thresholds card reads current law from its own block,
+    whichever measures the package holds."""
+    table = {row["label"]: row for row in document["current_law"]["rows"]}
+    assert list(table) == [
+        "Personal allowance",
+        "Higher rate threshold",
+        "Plan 2 repayment threshold",
+    ]
+    for row in table.values():
+        assert all(p["before"] == p["after"] for p in row["points"])
+    allowance = by_key(table["Personal allowance"])
+    for year in range(2026, 2031):
+        assert allowance[str(year)] == (12_570, 12_570)
+        assert by_key(table["Higher rate threshold"])[str(year)] == (
+            50_270,
+            50_270,
+        )
+    assert by_key(table["Plan 2 repayment threshold"])["2026"] == (
+        29_385,
+        29_385,
+    )

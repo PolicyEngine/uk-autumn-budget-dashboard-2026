@@ -8,12 +8,13 @@
  * (exampleAnswers.js, never the form's defaults) and shows its result at
  * once; every value stays editable.
  *
- * The eight were chosen for the candidate measures (PR #261), and each
- * checked against the household test API running candidates-ten on 27
- * October 2026 (include by_policy), so that the measure its card features
- * changes its net income in a year the page offers: 2027-28, or 2031-32
- * for the threshold freeze. The Warm Home Discount top-up has no example:
- * it is paid in 2026-27, before the examples' first year.
+ * The eight were chosen for the candidate measures before the Budget
+ * (PR #261) and checked against the household test API on 27 October
+ * 2026. Three feature a measure the Budget left out (the employer NI
+ * threshold, the Plan 2 threshold unfreeze and the threshold freeze to
+ * 2031-32): the catalogue no longer publishes it, so those cards show no
+ * tag or accent (featuresPublished) and keep their households, whose
+ * results come from the announced measures.
  * The description and note describe the household, never a measure: which
  * measures change its income is the calculation's answer, and the published
  * measures can change, so a name there could name one the page no longer
@@ -41,7 +42,7 @@ export const HOUSEHOLD_EXAMPLES = [
     description: "Aged 70, £11,500 State Pension plus £1,300 private",
     icon: "armchair",
     measure: "state_pension_income_tax_protection",
-    tag: "State Pension protection",
+    tag: "Pension Tax Allowance",
     inputs: {
       ...RESET,
       current_age: 70,
@@ -152,7 +153,7 @@ export const HOUSEHOLD_EXAMPLES = [
     description: "£50,000 salary, rent from a flat, dividends, interest",
     icon: "briefcase",
     measure: "unearned_income_rates_up",
-    tag: "Unearned income rates",
+    tag: "Savings and property tax",
     inputs: {
       ...RESET,
       current_age: 55,

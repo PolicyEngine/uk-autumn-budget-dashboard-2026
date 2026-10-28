@@ -23,11 +23,12 @@ import { METHOD_ANCHORS } from "./methodology/anchors";
 export const OBR_UNAVAILABLE = "The official costings have no figures for the selected policies.";
 
 /**
- * What the comparison's card says while the official costings are not
- * published, or the published file does not check against these results
- * (Vahid, 27 October: the card is always on Public finances).
+ * What the comparison's card says while the official costings file is not
+ * published here, or does not check against these results (Vahid, 27
+ * October: the card is always on Public finances). The Treasury published
+ * the costings with the Budget; the file follows once checked.
  */
-export const OBR_PENDING = "The official costings are published with the Budget documents on 28 October; this comparison fills in once we have added them.";
+export const OBR_PENDING = "The official costings were published with the Budget; this comparison fills in once we have checked them against our estimates.";
 
 /** The card's title without a year, while there are no figures to date. */
 export const OBR_CARD_TITLE = "How our estimates compare with the official costings";
@@ -178,7 +179,7 @@ const COMPARISON_INFO = {
   ],
   sources: [
     { label: "PolicyEngine UK microsimulation" },
-    { label: SOURCES.obr_budget_2026_costings.label.replace(/^the /, "The ") },
+    { label: SOURCES.obr_budget_2026_costings.label.replace(/^the /, "The "), href: SOURCES.obr_budget_2026_costings.url },
   ],
   method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the policies" },
 };
@@ -219,9 +220,15 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
     );
   }
 
-  const obrKind = showBehavioural ? "post-behavioural" : "static";
   const yearLabel = fiscalYear(selectedYear);
   const rows = comparisonRows(selectedRows, selectedPolicies, selectedYear, showBehavioural, catalogue);
+  // The basis the figures shown are on: the other one when the official
+  // costings give none on the chosen basis this year (Budget 2026 publishes
+  // one Exchequer impact per measure, post-behavioural), so no line calls
+  // a post-behavioural figure static
+  const onBasis = (behavioural) => rows.some((row) => (behavioural ? row.obrBehavioural : row.obrStatic) !== null);
+  const shownBehavioural = !onBasis(showBehavioural) && onBasis(!showBehavioural) ? !showBehavioural : showBehavioural;
+  const obrKind = shownBehavioural ? "post-behavioural" : "static";
   const hasBothTypes = selectedRows.some((row) => row.obr_static !== null && row.obr_behavioural !== null);
   // The last year the official costings cover, for a year past it
   const officialYears = selectedRows
@@ -308,9 +315,9 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   const officialMissing = rows.some((row) => row.obrStatic === null || row.obrBehavioural === null);
   const peMissing = rows.some((row) => row.pe === null);
   // A row with no figure on the chosen basis is differenced on the other
-  const otherBasis = rows.some((row) => row.pe !== null && row.obr !== null && (showBehavioural ? row.obrBehavioural === null : row.obrStatic === null));
+  const otherBasis = rows.some((row) => row.pe !== null && row.obr !== null && (shownBehavioural ? row.obrBehavioural === null : row.obrStatic === null));
   const tableNote = [
-    `Difference: PolicyEngine minus the official ${obrKind} costing, £bn${otherBasis ? ` (the ${showBehavioural ? "static" : "post-behavioural"} one where the official costings give only that)` : ""}.`,
+    `Difference: PolicyEngine minus the official ${obrKind} costing, £bn${otherBasis ? ` (the ${shownBehavioural ? "static" : "post-behavioural"} one where the official costings give only that)` : ""}.`,
     officialMissing && `— where the official costings give no figure on that basis for the policy in ${yearLabel}.`,
     peMissing && `— under PolicyEngine where we publish no estimate for ${yearLabel}.`,
   ].filter(Boolean);

@@ -29,15 +29,18 @@ changes only with a new policyengine-uk release.
 """
 
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 from uk_budget_data.living_standards.obr import (
     CARRIED_YEARS,
+    NOT_IN_PDF_TABLE_A1,
     OBR_SERIES,
     ForecastTableError,
     read_forecast,
+    read_pdf_table_a1,
     sha256_file,
 )
 
@@ -55,6 +58,12 @@ PRE_SOURCE = {
     ),
 }
 
+# meta.notes' line from the build while no later forecast is loaded
+STALE_POST_NOTE = (
+    "Until a later OBR forecast is loaded, the post series repeat the "
+    "March 2026 forecast."
+)
+
 SOCIAL_RENT_FIXED_YEAR = 2026  # set by September 2025 CPI outturn
 
 
@@ -66,16 +75,22 @@ def _pre(series: dict) -> dict[int, float]:
     return {int(p["year"]): p["value"] for p in series["pre"]}
 
 
-def compute_post(forecast: dict, parsed: dict) -> dict:
+def compute_post(
+    forecast: dict, parsed: dict, absent: Optional[dict] = None
+) -> dict:
     """Post values (fractions by year) and source per series key.
 
-    Raises ForecastTableError naming every series and year it lacks, beyond
-    the gaps CARRIED_YEARS allows.
+    ``absent`` maps a series key the source does not carry to why (the
+    EFO PDF's Table A.1 has no CPIH, for example): that series gets
+    ``values: None`` and the reason as its source. Any other series must be
+    read. Raises ForecastTableError naming every series and year it lacks,
+    beyond the gaps CARRIED_YEARS allows.
     """
+    absent = absent or {}
     by_key = _series_by_key(forecast)
-    missing_keys = [k for k in by_key if k not in parsed] + [
-        k for k in (s.key for s in OBR_SERIES) if k not in by_key
-    ]
+    missing_keys = [
+        k for k in by_key if k not in parsed and k not in absent
+    ] + [k for k in (s.key for s in OBR_SERIES) if k not in by_key]
     derived = {"cpi_ahc", "social_rent"}
     missing_keys = [k for k in missing_keys if k not in derived]
     if missing_keys:
@@ -86,6 +101,9 @@ def compute_post(forecast: dict, parsed: dict) -> dict:
     out, gaps = {}, []
     for key, series in by_key.items():
         if key in derived:
+            continue
+        if key in absent and key not in parsed:
+            out[key] = {"values": None, "source": absent[key], "carried": []}
             continue
         pre = _pre(series)
         values = {}
@@ -158,6 +176,32 @@ def compute_post(forecast: dict, parsed: dict) -> dict:
     return out
 
 
+def check_pre_is_march(forecast: dict, efo: Path) -> None:
+    """Refuse a forecast block whose pre series are not the March 2026 EFO.
+
+    ``efo`` is the committed March 2026 economy tables
+    (data_inputs/living_standards/, obr.EFO_FILE_NAME). Every OBR series
+    must read back exactly from it; the two PolicyEngine-derived series and
+    the years CARRIED_YEARS allows are not in it. So a build that took
+    ``pre`` from a patched forecast (with_forecast's October 2026 CPI, for
+    example) fails here instead of drawing October as March.
+    """
+    years = sorted(
+        {int(p["year"]) for s in _series_by_key(forecast).values() for p in s["pre"]}
+    )
+    computed = compute_post(forecast, read_forecast(efo, [years[0] - 1, *years]))
+    wrong = [
+        key
+        for key, series in _series_by_key(forecast).items()
+        if key in computed and computed[key]["values"] != _pre(series)
+    ]
+    if wrong:
+        raise ForecastTableError(
+            "The pre-Budget series are not the OBR March 2026 forecast: "
+            + ", ".join(sorted(wrong))
+        )
+
+
 def load_post(efo: Path, label: str, url: str = OBR_FORECAST_URL) -> dict:
     """Read the EFO into the post document saved in data_inputs."""
     return {
@@ -188,14 +232,24 @@ def apply_post(outlook: dict, post: Optional[dict]) -> dict:
             s.pop("post_source", None)
         return outlook
     forecast["post_published"] = True
+    # The build's note that post repeats pre stops being true
+    notes = outlook.get("meta", {}).get("notes")
+    if notes and STALE_POST_NOTE in notes:
+        outlook["meta"]["notes"] = [n for n in notes if n != STALE_POST_NOTE]
     forecast["post_label"] = post["label"]
     forecast["post_source"] = dict(post["source"])
     for key, s in by_key.items():
         series = post["series"][key]
-        s["post"] = [
-            {"year": p["year"], "value": series["values"][p["year"]]}
-            for p in s["pre"]
-        ]
+        # A series the loaded forecast does not carry: no post line, and
+        # post_source says why
+        s["post"] = (
+            None
+            if series["values"] is None
+            else [
+                {"year": p["year"], "value": series["values"][p["year"]]}
+                for p in s["pre"]
+            ]
+        )
         s["post_source"] = series["source"]
     return outlook
 
@@ -214,14 +268,70 @@ def read_post_document(efo: Path, outlook: dict, label: str, url: str):
     parsed = read_forecast(efo, [years[0] - 1, *years])
     computed = compute_post(forecast, parsed)
     doc = load_post(efo, label, url)
-    doc["series"] = {
+    doc["series"] = _doc_series(computed)
+    return doc
+
+
+def _years(outlook: dict) -> list[int]:
+    return sorted(
+        {
+            int(p["year"])
+            for s in _series_by_key(outlook["forecast"]).values()
+            for p in s["pre"]
+        }
+    )
+
+
+def _doc_series(computed: dict) -> dict:
+    return {
         key: {
-            "values": {str(y): v for y, v in c["values"].items()},
+            "values": (
+                None
+                if c["values"] is None
+                else {str(y): v for y, v in c["values"].items()}
+            ),
             "source": c["source"],
             "carried": [str(y) for y in c["carried"]],
         }
         for key, c in computed.items()
     }
+
+
+def read_post_document_from_pdf(
+    pdf: Path, text: Path, outlook: dict, label: str, url: str
+) -> dict:
+    """The post document from the EFO PDF's Table A.1, before the tables.
+
+    ``text`` is the PDF's text extract (one cell a line, pages marked
+    ``=====PAGE n``), committed beside the PDF. Table A.1 carries CPI, RPI,
+    average weekly earnings and house prices; the series it lacks
+    (NOT_IN_PDF_TABLE_A1) get no post line until ``--efo`` loads the
+    detailed forecast tables, which replace this document.
+    """
+    years = _years(outlook)
+    parsed, page = read_pdf_table_a1(
+        Path(text).read_text(), [years[0] - 1, *years]
+    )
+    absent = {
+        key: (
+            f"{label}: not in the EFO PDF's Table A.1; the OBR's {name} "
+            "forecast is in the detailed forecast tables (economy), not yet "
+            "loaded"
+        )
+        for key, name in NOT_IN_PDF_TABLE_A1.items()
+    }
+    computed = compute_post(outlook["forecast"], parsed, absent)
+    doc = load_post(pdf, label, url)
+    when = re.search(r"[A-Z][a-z]+ \d{4}", label)
+    doc["source"]["release"] = (
+        "OBR Economic and fiscal outlook"
+        + (f", {when.group(0)}" if when else "")
+        + ": Table A.1, Economy forecast"
+    )
+    doc["source"]["table"] = f"Table A.1: Economy forecast, PDF page {page}"
+    doc["source"]["text_extract"] = Path(text).name
+    doc["source"]["text_extract_sha256"] = sha256_file(Path(text))
+    doc["series"] = _doc_series(computed)
     return doc
 
 

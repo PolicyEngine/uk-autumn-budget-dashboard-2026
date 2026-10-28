@@ -31,6 +31,7 @@ from __future__ import annotations
 import importlib.metadata
 import inspect
 import json
+import math
 import re
 from datetime import date, timedelta
 from pathlib import Path
@@ -45,6 +46,12 @@ from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
 )
 from uk_budget_data.budget_measures.employer_ni_relief_ages_21_to_24 import (
     employer_ni_relief_ages_21_to_24,
+)
+from uk_budget_data.budget_measures.household_energy_payment_2026 import (
+    household_energy_payment_2026,
+)
+from uk_budget_data.budget_measures.pension_tax_allowance import (
+    pension_tax_allowance,
 )
 from uk_budget_data.budget_measures.road_fuel_vat_cut import (
     ROAD_FUEL_VAT_RATE,
@@ -92,9 +99,11 @@ MONTHS = (
 
 
 def _parameters():
-    from policyengine_uk.system import system
+    """Current law on the OBR October 2026 forecast, as every run builds
+    it (``uk_budget_data.forecast``)."""
+    from uk_budget_data.forecast import forecast_parameters
 
-    return system.parameters
+    return forecast_parameters()
 
 
 def engine_value(path: str, year: int) -> float:
@@ -412,9 +421,61 @@ def _fuel_duty(reform) -> list[dict]:
     ]
 
 
+def _pension_tax_allowance(reform) -> list[dict]:
+    values = constants(pension_tax_allowance)
+    weekly_path = "gov.dwp.state_pension.new_state_pension.amount"
+    allowance_path = registry.PERSONAL_ALLOWANCE
+    step = values["weekly_rounding"]
+
+    def largest(year):
+        if not values["first_year"] <= year <= values["last_year"]:
+            return 0
+        weekly = (
+            math.floor(engine_value(weekly_path, year) / step + 1e-9) * step
+        )
+        full = round(weekly * 52, 2)
+        return math.ceil(
+            round(
+                values["basic_rate"]
+                * (full - engine_value(allowance_path, year)),
+                6,
+            )
+        )
+
+    return [
+        _row(
+            "Pension Tax Allowance, the largest tax reduction",
+            POUNDS,
+            _yearly(lambda year: 0, largest),
+            _source(
+                {
+                    "kind": "documented",
+                    "where": "no such reduction under current law",
+                },
+                {
+                    "kind": "modifier_constant",
+                    "where": "20% of the full new State Pension "
+                    f"(policyengine-uk {weekly_path} x 52, rounded down to "
+                    f"5p a week) above the personal allowance "
+                    f"({allowance_path}), rounded up; "
+                    + _modifier_source(
+                        pension_tax_allowance, "first_year, last_year"
+                    )["where"],
+                },
+            ),
+            unit_words="£ of income tax a year",
+            note="For people over State Pension age; reduced by £1 for "
+            f"every £{values['taper_divisor']} of total income above the "
+            "full new State Pension",
+        )
+    ]
+
+
 def _state_pension_allowance(reform) -> list[dict]:
     path = registry.PERSONAL_ALLOWANCE
     modifier = reform.simulation_modifier
+    if modifier is pension_tax_allowance:
+        return _pension_tax_allowance(reform)
     if modifier not in (
         state_pension_income_tax_allowance,
         state_pension_only_income_tax_allowance,
@@ -728,9 +789,22 @@ def _carers_allowance_taper(reform) -> list[dict]:
         raise ValueError("the table reads the engine's earnings limit")
     limit = "gov.dwp.carers_allowance.earnings_limit"
     rate = "gov.dwp.carers_allowance.rate"
+    earnings = "gov.economic_assumptions.indices.obr.average_earnings"
     modifier = _modifier_source(
-        carers_allowance_earnings_taper, "start_year, taper_rate"
+        carers_allowance_earnings_taper,
+        "start_year, taper_rate, limit_hours, national_living_wage_2027",
     )
+
+    def budget_limit(y):
+        # 16 hours at the National Living Wage (£13.21 in 2027-28), moved
+        # on with average earnings, as the modifier computes it
+        return (
+            values["limit_hours"]
+            * values["national_living_wage_2027"]
+            * engine_value(earnings, y)
+            / engine_value(earnings, 2027)
+        )
+
     return [
         _row(
             "Weekly earnings at which Carer's Allowance stops",
@@ -738,7 +812,7 @@ def _carers_allowance_taper(reform) -> list[dict]:
             _yearly(
                 lambda y: engine_value(limit, y),
                 lambda y: (
-                    engine_value(limit, y) + engine_value(rate, y) / taper
+                    round(budget_limit(y) + engine_value(rate, y) / taper, 2)
                     if y >= start
                     else engine_value(limit, y)
                 ),
@@ -747,8 +821,9 @@ def _carers_allowance_taper(reform) -> list[dict]:
                 {
                     "kind": "engine_parameter",
                     "where": f"the earnings limit ({limit}); with the "
-                    f"measure, the limit plus the weekly rate ({rate}) "
-                    "divided by the taper rate",
+                    "measure, 16 hours at the National Living Wage "
+                    f"(moved on with {earnings}) plus the weekly rate "
+                    f"({rate}) divided by the taper rate",
                 },
                 modifier,
             ),
@@ -812,11 +887,60 @@ def _employer_ni_threshold(reform) -> list[dict]:
     ]
 
 
+def _household_energy_payment(reform) -> list[dict]:
+    values = constants(household_energy_payment_2026)
+    year = values["year"]
+    bands = ", ".join(values["bands"])
+    where = "England" if values["country"] == "ENGLAND" else values["country"]
+    return [
+        _row(
+            "Household energy payment",
+            POUNDS,
+            [
+                _point(
+                    year,
+                    f"Winter {_fiscal_label(year)}",
+                    year,
+                    0,
+                    values["amount"],
+                )
+            ],
+            _source(
+                {
+                    "kind": "documented",
+                    "where": "no such payment under current law",
+                },
+                _modifier_source(household_energy_payment_2026, "amount"),
+            ),
+            unit_words="£ a household, once",
+            note=f"Paid to households in {where} in council tax bands "
+            f"{bands}",
+        )
+    ]
+
+
+def _trading_allowance(reform) -> list[dict]:
+    path = registry.TRADING_ALLOWANCE
+    return [
+        _row(
+            "Trading allowance",
+            POUNDS,
+            _yearly(
+                lambda y: engine_value(path, y),
+                _engine_or_change(reform, path),
+            ),
+            _source(
+                _engine_source(path),
+                _change_source(path, "_create_trading_allowance_raise()"),
+            ),
+            unit_words="£ of trading receipts a year",
+            note="Relieves trading receipts in place of actual expenses",
+        )
+    ]
+
+
 def _unearned_income_rates(reform) -> list[dict]:
     labels = {
-        "dividends[0].rate": "Dividend ordinary rate",
-        "dividends[1].rate": "Dividend upper rate",
-        "dividends[2].rate": "Dividend additional rate",
         "savings.basic": "Savings basic rate",
         "savings.higher": "Savings higher rate",
         "savings.additional": "Savings additional rate",
@@ -837,7 +961,7 @@ def _unearned_income_rates(reform) -> list[dict]:
                     _engine_or_change(reform, path),
                 ),
                 _source(_engine_source(path), _change_source(path, function)),
-                primary=suffix == "dividends[0].rate",
+                primary=suffix == "savings.basic",
             )
         )
     return rows
@@ -857,6 +981,8 @@ BUILDERS = {
     registry.LHA_UNFREEZE_ID: _lha_unfreeze,
     registry.EMPLOYER_NI_THRESHOLD_ID: _employer_ni_threshold,
     registry.UNEARNED_INCOME_RATES_ID: _unearned_income_rates,
+    registry.HOUSEHOLD_ENERGY_PAYMENT_ID: _household_energy_payment,
+    registry.TRADING_ALLOWANCE_ID: _trading_allowance,
 }
 
 
@@ -923,8 +1049,58 @@ def display_for(rows: list[dict]) -> str:
     return PATH
 
 
+def current_law() -> dict:
+    """Thresholds under current law alone, whatever the package holds: the
+    Living standards "Frozen thresholds against pay" card reads them. Each
+    row's points carry the engine's value as both before and after."""
+    allowance, band = registry.PERSONAL_ALLOWANCE, registry.BASIC_RATE_BAND
+    plan_2 = registry.PLAN_2_THRESHOLD
+
+    def unchanged(value: Callable[[int], float]) -> list[dict]:
+        return _yearly(value, value)
+
+    def source(where: dict) -> dict:
+        return _source(where, where)
+
+    return {
+        "rows": [
+            _row(
+                "Personal allowance",
+                POUNDS,
+                unchanged(lambda y: engine_value(allowance, y)),
+                source(_engine_source(allowance)),
+            ),
+            _row(
+                "Higher rate threshold",
+                POUNDS,
+                unchanged(
+                    lambda y: engine_value(allowance, y)
+                    + engine_value(band, y)
+                ),
+                source(
+                    {
+                        "kind": "engine_parameter",
+                        "where": f"personal allowance plus basic rate band "
+                        f"({allowance} + {band})",
+                    }
+                ),
+                primary=False,
+                note="The personal allowance plus the basic rate band",
+            ),
+            _row(
+                "Plan 2 repayment threshold",
+                POUNDS,
+                unchanged(lambda y: engine_value(plan_2, y)),
+                source(_engine_source(plan_2)),
+                primary=False,
+            ),
+        ]
+    }
+
+
 def build() -> dict:
-    """Every candidate measure's table, in the registry's order."""
+    """Every candidate measure's table, in the registry's order, and the
+    current-law thresholds (``current_law``)."""
     measures = {}
     for measure_id in registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS:
         reform = registry.get_reform(measure_id)
@@ -947,6 +1123,7 @@ def build() -> dict:
         },
         "years": list(POLICY_YEARS),
         "measures": measures,
+        "current_law": current_law(),
     }
 
 

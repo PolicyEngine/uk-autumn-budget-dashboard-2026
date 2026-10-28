@@ -345,7 +345,7 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id={METHOD_ANCHORS.publicFinances}
             title="Public finances"
-            preview="Budgetary impact · Exceptions · Net change · OBR comparison"
+            preview="Budgetary impact · Net change · OBR comparison"
           >
             <p className="method-more">
               The{" "}
@@ -358,17 +358,7 @@ function MethodologyTab({ onShowTab }) {
                   "Budgetary impact",
                   {
                     value: "Taxes collected less benefits and other spending, in £ billion a year.",
-                    more: [
-                      "It includes employer National Insurance and VAT receipts.",
-                      "The employer National Insurance threshold's cost is net of the extra income tax and National Insurance on the higher pay it leads to.",
-                    ],
-                  },
-                ],
-                [
-                  "Exceptions",
-                  {
-                    value: "A policy whose published description says it is costed another way follows that description.",
-                    more: ["For example, from a Treasury cost estimate or from the change in loan repayments."],
+                    more: ["It includes employer National Insurance and VAT receipts."],
                   },
                 ],
                 [
@@ -511,7 +501,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Budget",
-                  "Here a policy is costed by its change in the government's balance, as set out under Public finances. The app costs it as the change in households' taxes less benefits, so its cost for the employer National Insurance threshold differs.",
+                  "Here a policy is costed by its change in the government's balance, as set out under Public finances. The app costs it as the change in households' taxes less benefits.",
                 ],
               ]}
             />
@@ -778,22 +768,14 @@ function MethodologyTab({ onShowTab }) {
               winners and losers charts come from a run of the whole selection, so they include
               interactions, and show nothing for a selection with no such run.
             </p>
-            <p className="method-more">
-              Some policies replace values reported in the survey with modelled ones, and their
-              descriptions say so. That policy's own run and the run of all policies together use the
-              modelled values, while the other policies on their own use the survey's. So the effects
-              of each policy on its own need not add up to all policies together.
-              Modelled values can depend on pay, as student loan repayments do. A
-              policy that raises pay keeps the survey's values in its own run, and they do not rise
-              with the higher pay, so on its own its cost is higher, and its fall in poverty larger,
-              than in the run of all policies together.
-            </p>
           </Topic>
           <Topic title="Economic assumptions" preview="One OBR forecast behind the assumptions and weights">
             <p className="method-more">
-              The economic assumptions and the weights follow the{" "}
-              <SourceLink id="obr_efo_current" />. Rebasing them on a new forecast is a separate
-              step.
+              The Budget figures grow CPI, RPI, earnings and house prices at the rates of the{" "}
+              <SourceLink id="obr_efo_current" />, in the baseline and the reform alike; other series
+              keep policyengine-uk&apos;s March 2026 path, and the weights keep the certified dataset's
+              calibration. Current law&apos;s fuel duty is the OBR&apos;s 60.59p a litre from April 2027,
+              then rises each April with that forecast&apos;s RPI.
             </p>
           </Topic>
           <Topic title="Business fuel use" preview="Fuel duty on households' own purchases only">

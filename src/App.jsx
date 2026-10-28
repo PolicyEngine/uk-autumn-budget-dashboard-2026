@@ -28,7 +28,7 @@ import UnavailableNotice, { RemoveUnavailable } from "./components/publication/U
 import ViewSkeleton, { BootSkeleton } from "./components/publication/ViewSkeleton";
 import { bootView } from "./utils/bootView";
 import UpdateToast from "./components/publication/UpdateToast";
-import { provisionalLabel } from "./utils/publication/manifest";
+import { provisionalNotice } from "./utils/publication/manifest";
 import { DownloadContext, policiesLabel } from "./utils/downloadContext";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
@@ -922,6 +922,9 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   // A caveat on the results while any shown measure is provisional: one
   // small badge on the landing page, nowhere above the views
   const provisional = catalogueProvisional(catalogue);
+  // The notice shown for it: the candidate label before the Budget, none
+  // for Budget-day statement figures
+  const notice = provisional ? provisionalNotice(catalogue.manifest) : "";
 
   // What a downloaded chart says it shows (ChartDownloadMenu's frame): the
   // band's policies on the views it drives, the provisional label while
@@ -930,9 +933,9 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     VIEW_BY_KEY[value]?.policies
       ? {
           policies: policiesLabel(selectedPolicies, POLICIES),
-          provisional: provisional ? provisionalLabel(catalogue.manifest) : null,
+          provisional: notice || null,
         }
-      : { policies: value === "outlook" ? "Current law (before the Budget policies)" : null, provisional: null };
+      : { policies: value === "outlook" ? "Current law, without the Budget measures" : null, provisional: null };
 
   // Which policies the charts show, when not all (under Population
   // impact's sub-tabs)
@@ -1224,9 +1227,9 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
           <LandingPage
             onOpen={handleTabChange}
             provisionalWording={provisional}
-            provisional={provisional && (
-              <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
-            )}
+            provisional={notice ? (
+              <p className="publication-provisional" role="status">{notice}</p>
+            ) : null}
           />
         )}
         {/* Behind the landing page, a silhouette of Public finances, drawn
@@ -1273,7 +1276,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
             <SectionHeading
               icon="fileText"
               title="Policies"
-              subtitle={`${provisional ? `${provisionalLabel(catalogue.manifest)}. ` : ""}What each policy changes, when, and how it is modelled.`}
+              subtitle={`${notice ? `${notice}. ` : ""}What each policy changes, when, and how it is modelled.`}
             />
             <section id="policy-details" className="report-section policy-details-content">
               <PolicyCards
@@ -1315,9 +1318,9 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
               onOpen={handleTabChange}
               returnFocus={aboutTabRef}
               provisionalWording={provisional}
-              provisional={provisional && (
-                <p className="publication-provisional" role="status">{provisionalLabel(catalogue.manifest)}</p>
-              )}
+              provisional={notice ? (
+                <p className="publication-provisional" role="status">{notice}</p>
+              ) : null}
             />
           </>
         )}

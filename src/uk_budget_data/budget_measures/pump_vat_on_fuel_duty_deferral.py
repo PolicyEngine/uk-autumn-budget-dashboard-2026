@@ -22,10 +22,10 @@ ROAD_FUEL_VAT_RATE = 0.2
 # (tests/test_reforms.py checks them against both).
 def pump_vat_on_fuel_duty_deferral(
     sim,
-    petrol_2026=-0.001595718988385064,
-    diesel_2026=-0.0014109595145776778,
-    petrol_2027=-0.0034592224969469095,
-    diesel_2027=-0.003058698261181936,
+    petrol_2026=-0.001614030517759974,
+    diesel_2026=-0.0014271508532695523,
+    petrol_2027=-0.002856737419901369,
+    diesel_2027=-0.002525971598131577,
     petrol_2028=0.0,
     diesel_2028=0.0,
     petrol_2029=0.0,

@@ -56,6 +56,10 @@ def _carer(pay, region="LONDON", age=40, **inputs):
 
 def _both(situation, variable, year=YEAR, **arguments):
     arguments.setdefault("start_year", YEAR)
+    # The hand-computed cases use the engine's £204 limit and a whole
+    # first year; the Budget's limit and part year are tested below.
+    arguments.setdefault("national_living_wage_2027", None)
+    arguments.setdefault("first_year_share", 1.0)
     baseline = Simulation(situation=situation)
     reformed = Simulation(situation=situation)
     carers_allowance_earnings_taper(reformed, **arguments)
@@ -228,6 +232,48 @@ def test_registered_on_budget_day():
     assert CARERS_ALLOWANCE_TAPER_ID in list_reform_ids()
     assert CARERS_ALLOWANCE_TAPER_ID in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
     assert measure.simulation_modifier is carers_allowance_earnings_taper
-    assert measure.description.startswith("Candidate measure.")
+    assert not measure.description.startswith("Candidate measure.")
     combined = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID)
     assert measure.name in combined.description
+
+
+def test_the_budget_limit_is_16_hours_at_the_national_living_wage():
+    """Budget 2026: the Weekly Earnings Limit is 16 x the National Living
+    Wage, £211.36 at £13.21 in 2027-28, moved on with average earnings.
+    In 2030-31 (half a year by default) a carer just over that limit gets
+    half of (the weekly rate less the excess) x 52, against nothing
+    today."""
+    from policyengine_uk.system import system
+
+    year = 2030
+    index = system.parameters.gov.economic_assumptions.indices.obr
+    limit = (
+        211.36
+        * index.average_earnings(f"{year}-04-06")
+        / index.average_earnings("2027-04-06")
+    )
+    rate = system.parameters.gov.dwp.carers_allowance.rate(f"{year}-04-06")
+    situation = _carer(round((limit + 20) * 52, 2))
+    for person in situation["people"].values():
+        for key in person:
+            person[key] = {year: list(person[key].values())[0]}
+    situation["households"]["h"]["region"] = {year: "LONDON"}
+    baseline = Simulation(situation=situation)
+    reformed = Simulation(situation=situation)
+    carers_allowance_earnings_taper(reformed)
+    before = baseline.calculate("carers_allowance", year)[0]
+    after = reformed.calculate("carers_allowance", year)[0]
+    # Earnings for the limit are net of PAYE and NI on the pay
+    weekly = reformed.calculate("carers_allowance_earnings", year)[0] / 52
+    excess = weekly - limit
+    assert 0 < excess < rate
+    assert before == 0
+    assert after == pytest.approx(0.5 * (rate - excess) * 52, abs=1)
+
+
+def test_northern_ireland_keeps_the_cliff():
+    """England and Wales only (Budget 2026, 6.13)."""
+    _, after = _both(
+        _carer(11_000, region="NORTHERN_IRELAND"), "carers_allowance"
+    )
+    assert after == 0

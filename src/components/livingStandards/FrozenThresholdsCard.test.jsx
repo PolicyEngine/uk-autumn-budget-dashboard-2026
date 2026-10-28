@@ -57,8 +57,14 @@ describe("Frozen thresholds against pay: data", () => {
     // Frozen: 100 / the earnings index
     expect(last.personal_allowance).toBeCloseTo((100 * 100) / earnings, 9);
     expect(last.higher_rate).toBe(last.personal_allowance);
-    // Plan 2 is uprated from April 2030 under current law
-    expect(last.plan_2).toBeCloseTo((100 * ((100 * 30060.868375) / 29385)) / earnings, 9);
+    // Plan 2 is uprated from April 2030 under current law (RPI, as the
+    // engine projects it: read from the file's current_law block)
+    const plan2 = Object.fromEntries(
+      PARAMETERS.current_law.rows.find((r) => r.label === "Plan 2 repayment threshold").points.map((p) => [p.year, p.before]),
+    );
+    expect(plan2[2026]).toBe(29385);
+    expect(plan2[2030]).toBeGreaterThan(29385);
+    expect(last.plan_2).toBeCloseTo((100 * ((100 * plan2[2030]) / plan2[2026])) / earnings, 9);
   });
 
   it("draws one line for the two income tax thresholds only while they are equal", () => {
@@ -79,8 +85,10 @@ describe("Frozen thresholds against pay: data", () => {
   });
 
   it("is null without a threshold entry", () => {
-    const { threshold_freeze_2031_32: _, ...measures } = PARAMETERS.measures;
-    expect(thresholdRows({ ...PARAMETERS, measures }, OUTLOOK)).toBeNull();
+    const { current_law: _, ...withoutCurrentLaw } = PARAMETERS;
+    expect(thresholdRows(withoutCurrentLaw, OUTLOOK)).toBeNull();
+    // Measures' rows are never read for current law
+    expect(thresholdRows({ ...withoutCurrentLaw, measures: { x: { rows: PARAMETERS.current_law.rows } } }, OUTLOOK)).toBeNull();
     expect(thresholdRows(PARAMETERS, null)).toBeNull();
   });
 
@@ -100,10 +108,11 @@ describe("Frozen thresholds against pay: card", () => {
     for (const name of ["Personal allowance and higher rate threshold", "Plan 2 student loan threshold", "Keeps pace with pay"]) {
       expect(screen.getAllByText(name).length).toBeGreaterThan(0);
     }
-    // The pound values live on Policies: the card links there, not repeats them
+    // Index values only: no pound values, and no pointer to Policies, which
+    // lists no threshold now that no measure changes one
     fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
     expect(document.body.textContent).not.toMatch(/£12,570|£50,270|£29,385/);
-    expect(screen.getByRole("link", { name: "Policies" }).getAttribute("href")).toBe("?tab=policies");
+    expect(screen.queryByRole("link", { name: "Policies" })).toBeNull();
   });
 
   it("keys the lines by its chips alone: no end labels, no legend", async () => {
@@ -125,11 +134,12 @@ describe("Frozen thresholds against pay: card", () => {
     expect([...last.cells].map((c) => c.textContent)).toEqual(["2030-31", "109.4", "91.4", "93.5"]);
   });
 
-  it("says the 2031-32 freeze year is not shown", async () => {
+  it("says 2031-32, when current law uprates the thresholds again, is not shown", async () => {
     render(<FrozenThresholdsCard data={OUTLOOK} />);
     await screen.findByText(/^By 2030-31/);
     fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
-    expect(document.body.textContent).toMatch(/earnings forecast ends in 2030, so the chart ends in 2030-31; 2031-32/);
+    expect(document.body.textContent).toMatch(/earnings forecast ends in 2030, so the chart ends in 2030-31; 2031-32, when current law uprates the thresholds again, is not shown\./);
+    expect(document.body.textContent).not.toMatch(/candidate measure/);
   });
 
   it("holds its place when the thresholds file is missing", async () => {

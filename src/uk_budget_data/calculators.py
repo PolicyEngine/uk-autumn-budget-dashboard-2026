@@ -584,7 +584,11 @@ class IncomeCurveCalculator(BaseCalculator):
             state_pension_weekly=full_new_state_pension(years),
             points=self.num_points,
         )
-        sim = Simulation(situation=situation, scenario=effective(scenario))
+        from uk_budget_data.forecast import with_forecast
+
+        sim = Simulation(
+            situation=situation, scenario=with_forecast(effective(scenario))
+        )
         built = AsBuilt(sim)
         curves = {}
         for year in years:

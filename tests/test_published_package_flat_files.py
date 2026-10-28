@@ -35,13 +35,11 @@ FIXTURE = (
 SEVEN = [
     "carers_allowance_earnings_taper",
     "domestic_electricity_zero_vat",
-    "employer_nics_secondary_threshold_raise",
     "fuel_duty_rise_deferral",
-    "plan_2_threshold_unfreeze",
+    "household_energy_payment_2026",
     "state_pension_income_tax_protection",
-    "threshold_freeze_2031_32",
+    "trading_allowance_raise",
     "unearned_income_rates_up",
-    "warm_home_discount_top_up",
 ]
 
 
@@ -75,7 +73,7 @@ class CapturingRunner:
 def test_the_seven_compose_to_the_package_key():
     # The key tonight's combined run and the area run use (#222)
     package = portable_combined([get_reform(i) for i in SEVEN])
-    assert package.id == "combined--47727b6baf58047f"
+    assert package.id == "combined--4e3e325c74977848"
     assert package.id == combined_key(SEVEN)
 
 

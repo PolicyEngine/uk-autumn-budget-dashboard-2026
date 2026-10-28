@@ -22,11 +22,21 @@ def carers_allowance_earnings_taper(
     redraw_newly_entitled_take_up=False,
     newly_entitled_take_up=0.6,
     take_up_draw_salt=5,
+    limit_hours=16,
+    national_living_wage_2027=13.21,
+    first_year_share=0.5,
 ):
     """No cliff edge at the Carer's Allowance earnings limit: from
     ``start_year`` a carer whose weekly net earnings are above the limit
     keeps the allowance less ``taper_rate`` x the excess, floored at 0.
     Hand-written: no template changes an entitlement test.
+
+    Budget 2026 (6.13; costings p. 16): a 100% taper above the Weekly
+    Earnings Limit, 16 hours at the National Living Wage (``limit_hours``
+    x ``national_living_wage_2027``, £13.21 from April 2027, moved on with
+    the run's average earnings index), in England and Wales, beginning
+    within 2030-31 (``first_year_share`` of 2030-31's change, 0.5 until
+    the start date is confirmed).
 
     The announcement (27 October 2026, the eve of the Budget; Brit Brief,
     citing the government's release; nation.cymru): "only £1 of support
@@ -83,7 +93,26 @@ def carers_allowance_earnings_taper(
         if year < start_year:
             return current
         ca = parameters(period).gov.dwp.carers_allowance
-        limit = ca.earnings_limit if earnings_limit is None else earnings_limit
+        if earnings_limit is None and national_living_wage_2027 is None:
+            # The engine's own limit (£204, not uprated)
+            limit = ca.earnings_limit
+        elif earnings_limit is None:
+            # The Weekly Earnings Limit is 16 hours at the National Living
+            # Wage (Budget 2026, 6.13; costings p. 16): £13.21 from April
+            # 2027, carried forward with the run's average earnings index
+            # (the engine has no National Living Wage forecast).
+            index = parameters(period).gov.economic_assumptions.indices.obr
+            base = parameters(
+                "2027-04-06"
+            ).gov.economic_assumptions.indices.obr
+            limit = (
+                limit_hours
+                * national_living_wage_2027
+                * index.average_earnings
+                / base.average_earnings
+            )
+        else:
+            limit = earnings_limit
         weekly = person("carers_allowance_earnings", period) / 52
         # The native test disregards a fraction of a penny; the tolerance
         # keeps an exact number of pence from being knocked down.
@@ -93,6 +122,9 @@ def carers_allowance_earnings_taper(
 
         country = person.household("country", period).decode_to_str()
         csp_replaces_ca = (country == "SCOTLAND") & (year >= 2025)
+        # The taper is for England and Wales (Budget 2026, 6.13): Northern
+        # Ireland keeps the native amount too.
+        csp_replaces_ca = csp_replaces_ca | (country == "NORTHERN_IRELAND")
         reported = person("carers_allowance_reported", period) > 0
         meets_hours = person("care_hours", period) >= ca.min_hours
         would_claim = person("would_claim_carers_allowance", period)
@@ -121,9 +153,16 @@ def carers_allowance_earnings_taper(
         )
         tapered = eligible * weekly_award * 52
         if earnings_limit is None:
-            # At or below the engine's limit the native amount stands.
-            return np.where(excess > 0, tapered, current)
-        return tapered
+            # At or below the limit the native amount stands.
+            new = np.where(excess > 0, tapered, current)
+        else:
+            new = tapered
+        if year == start_year:
+            # The taper begins "within 2030-31" (Budget 2026; Table 6.1
+            # costs -40 then -80): the first year carries a share of a
+            # year's change. TODO: the start date, when DWP confirms it.
+            return current + first_year_share * (new - current)
+        return new
 
     _replace_formula(sim, "carers_allowance_pre_overlap", formula)
     return sim

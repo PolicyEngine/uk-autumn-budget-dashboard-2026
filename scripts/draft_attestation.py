@@ -36,6 +36,14 @@ from uk_budget_data.reforms import (
 # Allowance earnings taper, withdrawn that day, was registered again on
 # Budget day (HCWS421).
 REASONS = {
+    "household_energy_payment_2026": (
+        "Checked budget_measures.household_energy_payment_2026: in 2026-27 "
+        "only it adds the payment to ebr_council_tax_rebate for households "
+        "in England whose council tax band is A, B, C or D, leaving every "
+        "other household and year at the native amount. The receipt's "
+        "outputs were compared with the hand-computed households in "
+        "tests/test_reforms.py."
+    ),
     "carers_allowance_earnings_taper": (
         "Checked budget_measures.carers_allowance_earnings_taper: from "
         "2030-31 it replaces carers_allowance_pre_overlap for carers whose "
@@ -60,7 +68,18 @@ REASONS = {
 # The State Pension allowance is hand-written in its total-income design
 # (state_pension_only_income_tax_allowance); the tapered design is a
 # registered template and is not held.
-if STATE_PENSION_PROTECTION_DESIGN == "total_income":
+if STATE_PENSION_PROTECTION_DESIGN == "tax_reduction":
+    REASONS[STATE_PENSION_ALLOWANCE_ID] = (
+        "Checked budget_measures.pension_tax_allowance: from 2027-28 to "
+        "2029-30 it reduces income_tax, never below zero, for people over "
+        "State Pension age by the year's allowance (20% of the full new "
+        "State Pension above £12,570, rounded up) less £1 for every £3 of "
+        "total_income above the full new State Pension; other years and "
+        "people keep the native liability. The receipt's outputs were "
+        "compared with the explainer's cases in "
+        "tests/test_pension_tax_allowance.py."
+    )
+elif STATE_PENSION_PROTECTION_DESIGN == "total_income":
     REASONS[STATE_PENSION_ALLOWANCE_ID] = (
         "Checked budget_measures.state_pension_only_income_tax_allowance: "
         "from April 2027 it raises personal_allowance to the full new State "

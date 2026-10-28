@@ -151,7 +151,7 @@ export default function ObrPriceCategoriesCard({ view = "chart", onViewChange })
         { term: "Financial year", meaning: "April to March, as the OBR publishes this table; the inflation measures beside it are by calendar year." },
       ],
       caveats: [
-        "This is the OBR's March 2026 forecast, made before the Autumn Budget 2026, so it leaves out the candidate VAT, fuel duty and energy bill measures, which act directly on these prices.",
+        "This is the OBR's March 2026 forecast, made before the Autumn Budget 2026, so it leaves out the Budget's changes to fuel duty and VAT, which act directly on these prices.",
         "The OBR publishes no all-items CPI in this table; CPI and the other inflation measures are in the inflation measures card, by calendar year.",
       ],
       sources: [{ label: `${src.publisher}, ${src.workbook}, ${src.table}: ${src.table_title}`, href: src.url, date: ukDay(src.release_date) }],
