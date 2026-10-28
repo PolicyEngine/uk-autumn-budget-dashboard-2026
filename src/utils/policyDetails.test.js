@@ -94,7 +94,6 @@ const CANDIDATES = [
   "state_pension_income_tax_protection",
   "domestic_electricity_zero_vat",
   "property_income_rates_up",
-  "savings_income_rates_up",
   "carers_allowance_earnings_taper",
   "household_energy_payment_2026",
   "trading_allowance_raise",
