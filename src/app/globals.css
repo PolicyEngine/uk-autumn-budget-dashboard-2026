@@ -1880,7 +1880,7 @@ html[data-site-nav-shown] {
 .site-footer-inner {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px 40px;
+  padding: 16px 40px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -1918,23 +1918,39 @@ html[data-site-nav-shown] {
 
 @media (max-width: 1024px) {
   .site-footer-inner {
-    padding: 20px 24px;
+    padding: 16px 24px;
   }
 }
 
+/* Tablet and phone: the logo and the copyright share the first line, the
+   links follow in one tight wrapping row. Each link keeps a 28px-tall tap
+   row (WCAG 2.5.8 asks for 24px) from its own height, not from extra gaps,
+   so the band stays short. */
 @media (max-width: 768px) {
   .site-footer-inner {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 20px 16px;
+    padding: 12px 16px 8px;
+    gap: 4px 12px;
   }
 
-  .site-footer-links {
-    gap: 6px 16px;
+  .site-footer-logo img {
+    height: 18px;
   }
 
   .site-footer-copy {
-    margin: 0;
+    order: 2;
+  }
+
+  .site-footer-links {
+    order: 3;
+    flex-basis: 100%;
+    gap: 0 14px;
+  }
+
+  .site-footer-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    font-size: var(--fs-caption);
   }
 }
 
