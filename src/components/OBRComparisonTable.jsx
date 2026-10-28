@@ -206,7 +206,7 @@ const COMPARISON_INFO = {
   caveats: [
     "Effects outside households, or on incomes the survey covers thinly (such as the very top), are estimated less fully than in official costings built from administrative data.",
     "The two can also differ in the economic forecast, take-up and the parts of a policy each models.",
-    "Our figures are by tax year. The official ones count tax when it is paid, so a change in tax paid through Self Assessment, such as the trading allowance, appears about a year later in them than in ours.",
+    "Our figures are by tax year. The official costings are on a National Accounts basis, in which tax paid through Self Assessment can fall in a later year: a change in it, such as the trading allowance, can appear about a year later in them than in ours.",
   ],
   sources: [
     { label: "PolicyEngine UK microsimulation" },

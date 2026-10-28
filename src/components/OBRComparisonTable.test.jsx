@@ -133,7 +133,7 @@ describe("why our estimates differ from the official costings", () => {
   // note fits (deviationNoteFor); invented figures
   const ID = "savings_income_rates_up";
   const ENTRY = POLICY_DETAILS.find((entry) => entry.id === ID);
-  const NOTE = "Ours counts each tax year's liability; the official costing counts tax when it is paid.";
+  const NOTE = "Most of the gap is in the 2029-30 base; timing affects only the first two years.";
   const renderNoted = ({ description = ENTRY.writtenFor, notes = { [ID]: NOTE } } = {}) => {
     const impact = ["reform_id,reform_name,year,value", `${ID},${ENTRY.name},2030,0.3`].join("\n");
     vi.stubGlobal(

@@ -24,7 +24,7 @@ import { policyDetailsFor } from "./policyDetails";
  * its entry, and its note, are rewritten.
  */
 export const OBR_DEVIATION_STATEMENT =
-  "Our estimates differ from the official costings for four main reasons: when tax is counted (we score each tax year's liability; official costings count tax when it is paid), coverage (we use household survey data, so effects outside households, and on incomes the survey records thinly, are estimated less fully in ours), behaviour (ours are static; most official costings include responses) and scope (the parts of a policy each models). Each policy's note below says which apply.";
+  "Our estimates differ from the official costings for four main reasons: when tax is counted (we score each tax year's liability; the official costings are on a National Accounts basis, in which tax paid through Self Assessment can fall in a later year), coverage (we use household survey data, so effects outside households, and on incomes the survey records thinly, are estimated less fully in ours), behaviour (ours are static; most official costings include responses) and scope (the parts of a policy each models). Each policy's note below says which apply.";
 
 export const OBR_DEVIATION_NOTES = {
   household_energy_payment_2026:

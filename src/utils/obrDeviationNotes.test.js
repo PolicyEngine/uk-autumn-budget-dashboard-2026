@@ -35,6 +35,10 @@ describe("why our estimates differ from the official costings", () => {
     for (const reason of ["when tax is counted", "coverage", "behaviour", "scope"]) {
       expect(OBR_DEVIATION_STATEMENT).toContain(reason);
     }
+    // The official costings' basis as sourced (National Accounts), not
+    // "when tax is paid"
+    expect(OBR_DEVIATION_STATEMENT).toContain("National Accounts basis");
+    expect(OBR_DEVIATION_STATEMENT).not.toMatch(/when (?:it|tax) is paid/);
   });
 
   it("finds a missing, empty or blank note, in the order given", () => {
