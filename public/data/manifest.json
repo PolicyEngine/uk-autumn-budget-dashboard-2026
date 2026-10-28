@@ -16,7 +16,60 @@
     "date": "2026-10-28",
     "id": "uk-autumn-budget-2026"
   },
-  "combined": {},
+  "combined": {
+    "combined--f91fe847275730cb": {
+      "approval": {
+        "artifact_sha256": "4faed20984703c7d149a09b10e03d891130d06f4981764e856e3ff9f8077cef0",
+        "at": "2026-10-28T18:58:19.461552+00:00",
+        "by": "vahid-ahmadi",
+        "outputs_sha256": "da5ba9c7a41f2ffdc97dfd9896eb357e3b22feaff54ded9264a8dd44569d1650"
+      },
+      "artifact": "artifacts/combined--f91fe847275730cb/4faed20984703c7d",
+      "artifact_sha256": "4faed20984703c7d149a09b10e03d891130d06f4981764e856e3ff9f8077cef0",
+      "attestation": {
+        "checker": "vahid-ahmadi",
+        "measure_id": "combined--f91fe847275730cb",
+        "reason": "Checked that this combined run composes its members as published, with no change to any member's modifier: it holds the hand-written carers_allowance_earnings_taper and household_energy_payment_2026 and state_pension_income_tax_protection, each released by its own attestation for its own receipt.",
+        "receipt_sha256": "5871477963d688af9955ab3c2c46ee4efc4bedf2f7aeaa51c4dd5462e2fa6353",
+        "released_at": "2026-10-28T18:39:42+00:00",
+        "second": "juaristi22"
+      },
+      "data_limits": [],
+      "description": "One simulation of: carers_allowance_earnings_taper, domestic_electricity_zero_vat, fuel_duty_rise_deferral, household_energy_payment_2026, property_income_rates_up, state_pension_income_tax_protection, trading_allowance_raise",
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "measures": [
+        "carers_allowance_earnings_taper",
+        "domestic_electricity_zero_vat",
+        "fuel_duty_rise_deferral",
+        "household_energy_payment_2026",
+        "property_income_rates_up",
+        "state_pension_income_tax_protection",
+        "trading_allowance_raise"
+      ],
+      "member_outputs_sha256": {
+        "carers_allowance_earnings_taper": "161037a4ca464ce6cafdd41f1a0901455c010d88b8ae2ed646f05a2ec36312bc",
+        "domestic_electricity_zero_vat": "86bbb52bc9100cd479e56d7baaf785aeee74027e2e59d50bb0ade667977ee0a2",
+        "fuel_duty_rise_deferral": "4e624ac4047411f2c5abd2e4282465e415cf892309f9aa364ffee5d842b3f079",
+        "household_energy_payment_2026": "18fb3a856326d708284266c5dd240b81e9e9ab4c427c493a062cfe6ae0997215",
+        "property_income_rates_up": "6748d5ee971f1b8428186ca778b4bd01ee1320c4e9f7cc67f34b5fc398330d47",
+        "state_pension_income_tax_protection": "bc98a27c3d80a54f3b56ef1ebffe5ca3085077be0d3626b887eab822042776e5",
+        "trading_allowance_raise": "1192055fc58d352149cc8bad067655a7d03fb1cfaa6e5eb5ef9ac88d2a856ccc"
+      },
+      "name": "Combined: Carer's Allowance earnings taper, Zero VAT on domestic electricity, Fuel duty cut extended, Household Energy Payment, Property income tax rates up, Pension Tax Allowance, Trading allowance raised to \u00a33,000",
+      "outputs_sha256": "da5ba9c7a41f2ffdc97dfd9896eb357e3b22feaff54ded9264a8dd44569d1650",
+      "receipt_sha256": "cfcf475b7080c197c94a08bf81eabb27bc5d9b57616d3a29fab64f3816c10258",
+      "status": "approved",
+      "unsupported_years": [],
+      "years": [
+        2026,
+        2027,
+        2028,
+        2029,
+        2030,
+        2031
+      ]
+    }
+  },
   "execution": {
     "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
     "identity": {
@@ -297,8 +350,8 @@
     }
   },
   "release": "uk-autumn-budget-2026",
-  "revision": 14,
+  "revision": 16,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [],
-  "updated_at": "2026-10-28T18:29:07.541727+00:00"
+  "updated_at": "2026-10-28T18:58:19.462580+00:00"
 }
