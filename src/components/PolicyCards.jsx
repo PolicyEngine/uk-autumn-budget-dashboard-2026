@@ -486,7 +486,9 @@ export function PolicyCard({ policy, onShowEffect, parameters }) {
             </Tip>
           )}
           {/* PolicyEngine's post on the measure, a page of policyengine.org:
-              a link rather than embedded, which reads better on a phone */}
+              a link rather than embedded, which reads better on a phone.
+              "Our explainer", as a card's source can be another explainer
+              (gov.uk's, on the Pension Tax Allowance's) */}
           {policy.explainer && (
             <Tip content={policy.explainer.label}>
             <a
@@ -495,7 +497,7 @@ export function PolicyCard({ policy, onShowEffect, parameters }) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              Explainer
+              Our explainer
               <span className="policy-sr-only">: {policy.explainer.label}</span>
               <ExternalLink size={14} aria-hidden="true" />
               <span className="policy-sr-only"> (opens in a new tab)</span>

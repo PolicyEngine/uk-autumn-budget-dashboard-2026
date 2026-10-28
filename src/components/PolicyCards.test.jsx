@@ -622,7 +622,7 @@ describe("the card's frame", () => {
 });
 
 describe("the explainer link (policyDetails.js `explainer`)", () => {
-  const explainerLink = (container) => within(container).queryByRole("link", { name: /^Explainer/ });
+  const explainerLink = (container) => within(container).queryByRole("link", { name: /^Our explainer/ });
 
   it("links a card with an explainer to its post, in a new tab, after the source and costing", () => {
     const id = "fuel_duty_rise_deferral";
@@ -630,7 +630,7 @@ describe("the explainer link (policyDetails.js `explainer`)", () => {
     render(<PolicyCards policies={[{ ...published(id, "Fuel duty cut extended"), explainer: post }]} selectedPolicies={[id]} onShowEffect={() => {}} />);
     const card = screen.getByRole("listitem");
     const link = explainerLink(card);
-    expect(link).toHaveAccessibleName(/^Explainer: The fuel duty cut extension\s*\(opens in a new tab\)$/);
+    expect(link).toHaveAccessibleName(/^Our explainer: The fuel duty cut extension\s*\(opens in a new tab\)$/);
     expect(link).toHaveAttribute("href", "https://www.policyengine.org/uk/research/fuel-duty-cut-extension");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");

@@ -33,8 +33,8 @@
  * - caveats: further caveats, in sentences, where the details state none;
  * - source: a public page on the policy, where one exists;
  * - explainer: { label, href }: PolicyEngine's post on the measure, its
- *   title and its page under EXPLAINER_BASE, for the card's "Explainer"
- *   link. Added only once the post is live (its page answers 200), so a
+ *   title and its page under EXPLAINER_BASE, for the card's "Our
+ *   explainer" link. Added only once the post is live (its page answers 200), so a
  *   card never links to a missing page;
  * - budgetRows: the measure's rows in the Budget's Table 6.1 (as
  *   data_inputs/treasury/mapping.csv maps them), which order the cards and
