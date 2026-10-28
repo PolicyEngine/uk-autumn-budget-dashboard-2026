@@ -103,6 +103,20 @@ export function pointerOnPlot(px, py, { plotW, plotH, xMax, yLo, yHi }) {
 }
 
 /**
+ * Where the hover box goes beside the guide at `guideX` in a plot `width`
+ * wide: to its right, or past 60% of the width to its left, 12px off; and
+ * never with less than `room` px to the plot's edge on its open side. On a
+ * phone the box beside a guide near the middle was squeezed into the
+ * little room left, its names a word a line (phone check, 28 Oct): it now
+ * moves in, over the guide if it must.
+ */
+export function tipPlacement(guideX, width, room = 220) {
+  const onLeft = guideX > width * 0.6;
+  const most = Math.max(0, width - Math.min(room, width));
+  return onLeft ? { right: Math.min(width - guideX + 12, most) } : { left: Math.min(guideX + 12, most) };
+}
+
+/**
  * Across earnings, one card with three views chosen above the plot, as the
  * marginal rate card beside it: "Before" and "After" the selected policies,
  * net income as the salary varies, and "Change", what the policies add or
@@ -358,7 +372,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
         { dataKey: "total", name: TOTAL_NAME[view], value: hovered.total, color: dotColour(hovered.total) },
       ];
   const tipLeft = hovered ? x(hovered.income) : 0;
-  const tipOnLeft = tipLeft > width * 0.6;
+  const tipSide = tipPlacement(tipLeft, width);
 
   return (
     <div className="card single-year-card">
@@ -546,8 +560,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             <div
               className="earnings-tooltip"
               style={{
-                left: tipOnLeft ? undefined : tipLeft + 12,
-                right: tipOnLeft ? width - tipLeft + 12 : undefined,
+                ...tipSide,
                 top: top + 8,
               }}
             >
