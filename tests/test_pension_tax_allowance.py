@@ -77,3 +77,28 @@ def test_outside_2027_to_2029_nothing_changes(year):
 def test_the_measure_is_the_tax_reduction():
     measure = reforms.get_reform(reforms.STATE_PENSION_ALLOWANCE_ID)
     assert measure.simulation_modifier is pension_tax_allowance
+
+
+def test_isa_interest_is_left_out_of_total_income():
+    """Total income counts savings, dividends and property income, not
+    ISA interest (Max's brief): £5,000 of ISA interest on top of the full
+    new State Pension leaves the whole reduction."""
+    situation = _pensioner(13_036.40)
+    situation["people"]["p"]["individual_savings_account_interest_income"] = {
+        YEAR: 5_000
+    }
+    baseline, reformed = _income_tax(situation)
+    assert baseline == pytest.approx(93.28, abs=0.01)
+    assert reformed == pytest.approx(0, abs=0.01)
+
+
+@pytest.mark.parametrize(
+    "income", ["savings_interest_income", "dividend_income", "property_income"]
+)
+def test_savings_dividends_and_property_count_in_total_income(income):
+    """£2,000 of other income on a £12,000 State Pension is £963.60 above
+    the full new State Pension: the reduction is gone."""
+    situation = _pensioner(12_000)
+    situation["people"]["p"][income] = {YEAR: 2_000}
+    baseline, reformed = _income_tax(situation)
+    assert reformed == pytest.approx(baseline, abs=0.01)
