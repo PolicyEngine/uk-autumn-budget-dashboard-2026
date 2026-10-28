@@ -23,6 +23,11 @@
   font-weight: 600;
 }
 
+/* Rows that select a policy for the panel: a pointer, and the hover tint */
+.obr-dumbbell-row[role="button"] {
+  cursor: pointer;
+}
+
 .obr-dumbbell-row:focus {
   outline: none;
 }

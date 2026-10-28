@@ -179,6 +179,21 @@ describe("why our estimates differ from the official costings", () => {
     expect(screen.getByRole("complementary", { name: /^Why ours differs/ })).toBeInTheDocument();
   });
 
+  it("makes rows read as clickable, and the chart and panel one figure with one mark (Vahid, 28 Oct)", async () => {
+    const { container } = renderNoted();
+    await screen.findByRole("radio", { name: "Show as chart" });
+    expect(container.querySelector(".obr-dumbbell-hint")).toHaveTextContent("Select a policy to see why it differs");
+    const row = container.querySelector(`[data-policy="${ID}"]`);
+    // The selected row: its accent bar and a chevron in the accent colour
+    expect(container.querySelector(".obr-dumbbell-accent")).toBeTruthy();
+    expect(row.querySelector(".obr-dumbbell-chevron")).toHaveClass("is-selected");
+    // The mark once, under the panel, not under the chart
+    expect(container.querySelector(".obr-dumbbell-logo")).toBeNull();
+    expect(container.querySelectorAll(".obr-figure-logo svg")).toHaveLength(1);
+    const layout = container.querySelector(".obr-compare-layout");
+    expect(layout.nextElementSibling).toHaveClass("obr-figure-logo");
+  });
+
   it("selects a row for the panel by click, focus or the arrow keys, and marks it", async () => {
     const { container } = renderNoted();
     await screen.findByRole("radio", { name: "Show as chart" });

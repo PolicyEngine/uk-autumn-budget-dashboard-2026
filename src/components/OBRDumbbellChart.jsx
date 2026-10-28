@@ -140,7 +140,7 @@ export function dumbbellLegendItems(obrKind) {
   ];
 }
 
-function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", chartRef, tooltipKey, selectedId = null, onSelect }) {
+function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", chartRef, tooltipKey, selectedId = null, onSelect, showLogo = true }) {
   const [wrapperRef, measuredWidth] = useElementWidth();
   const narrow = useNarrowViewport();
   // Until the plot is measured, a typical width for the screen
@@ -188,8 +188,10 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
     };
   };
   // A row's background: its band, the hover band, or the card
+  // The selected row (whose policy the panel explains) a stronger tint than
+  // a hovered one, with an accent bar at its left edge
   const rowBackground = (row, index) =>
-    active === row.id || selectedId === row.id ? CHART_COLOURS.hover : index % 2 === 0 ? CHART_COLOURS.rowBand : CHART_COLOURS.surface;
+    selectedId === row.id ? CHART_COLOURS.highlightBand : active === row.id ? CHART_COLOURS.hover : index % 2 === 0 ? CHART_COLOURS.rowBand : CHART_COLOURS.surface;
   const pct = scale === "pct";
 
   // Where each mark sits: £bn, or % of the official costing
@@ -216,7 +218,9 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
   const labelGap = OBR_RADIUS + 5;
   const labelRoom = narrow ? 54 : 62;
   // The difference column at the right (on a phone, on the name line)
-  const diffWidth = narrow ? 0 : 84 + BAND_PAD;
+  // A chevron at the right of each row when rows select a policy
+  const chevron = onSelect ? 14 : 0;
+  const diffWidth = narrow ? 0 : 84 + BAND_PAD + chevron;
   const nameWidth = narrow
     ? 0
     : Math.min(Math.max(...rows.map((row) => approxWidth(row.name, fontSize)), 80) + 16 + BAND_PAD + SVG_LABEL_INDENT.full, width * 0.38);
@@ -445,10 +449,29 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
         {parts}
         {/* On a phone the difference shares the name's line, where the zero
             line can run: a backing in the row's background keeps it clear */}
-        {narrow && backing(width - BAND_PAD - approxWidth(differenceText, 12) - 2, nameY, approxWidth(differenceText, 12) + 2, background)}
+        {narrow && backing(width - BAND_PAD - chevron - approxWidth(differenceText, 12) - 2, nameY, approxWidth(differenceText, 12) + 2, background)}
+        {/* The chevron: points at the panel (right, or down on a phone,
+            where the panel is below) once the row is selected */}
+        {onSelect && !row.status && (
+          <text
+            className={`obr-dumbbell-chevron${selectedId === row.id ? " is-selected" : ""}`}
+            x={width - BAND_PAD - 3}
+            y={narrow ? nameY : cy}
+            dy="0.35em"
+            textAnchor="middle"
+            fill={selectedId === row.id ? PE_COLOUR : TICK_STYLE.fill}
+            fontSize={16}
+            fontWeight={selectedId === row.id ? 700 : 400}
+            transform={narrow && selectedId === row.id ? `rotate(90 ${width - BAND_PAD - 3} ${narrow ? nameY : cy})` : undefined}
+            aria-hidden="true"
+            data-export="skip"
+          >
+            ›
+          </text>
+        )}
         <text
           className="obr-dumbbell-difference"
-          x={width - BAND_PAD}
+          x={width - BAND_PAD - chevron}
           y={narrow ? nameY : cy}
           dy="0.35em"
           textAnchor="end"
@@ -484,9 +507,14 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
               style={{ fontFamily: "inherit", display: "block" }}
             >
               {/* The difference column's heading */}
-              <text className="obr-dumbbell-column-head" x={width - BAND_PAD} y={10} textAnchor="end" fill={TICK_STYLE.fill} fontSize={11}>
+              <text className="obr-dumbbell-column-head" x={width - BAND_PAD - chevron} y={10} textAnchor="end" fill={TICK_STYLE.fill} fontSize={11}>
                 Difference
               </text>
+              {onSelect && (
+                <text className="obr-dumbbell-hint" data-export="skip" x={BAND_PAD} y={10} fill={TICK_STYLE.fill} fontSize={11}>
+                  Select a policy to see why it differs
+                </text>
+              )}
               {pct && (
                 <text x={x(100)} y={10} textAnchor="middle" fill={TICK_STYLE.fill} fontSize={11}>
                   Official costing = 100%
@@ -497,17 +525,22 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
               <g className="obr-dumbbell-bands" aria-hidden="true">
                 {plotted.map((row, index) => {
                   const fill = rowBackground(row, index);
+                  const selected = selectedId === row.id;
                   return fill === CHART_COLOURS.surface ? null : (
-                    <rect
-                      key={row.id}
-                      className={`obr-dumbbell-band${active === row.id || selectedId === row.id ? " is-active" : ""}`}
-                      x={0}
-                      y={top + index * rowHeight + 1}
-                      width={width}
-                      height={rowHeight - 2}
-                      rx={ROW_RADIUS}
-                      fill={fill}
-                    />
+                    <g key={row.id}>
+                      <rect
+                        className={`obr-dumbbell-band${active === row.id || selected ? " is-active" : ""}${selected ? " is-selected" : ""}`}
+                        x={0}
+                        y={top + index * rowHeight + 1}
+                        width={width}
+                        height={rowHeight - 2}
+                        rx={ROW_RADIUS}
+                        fill={fill}
+                      />
+                      {selected && (
+                        <rect className="obr-dumbbell-accent" data-export="skip" x={0} y={top + index * rowHeight + 1} width={3} height={rowHeight - 2} fill={PE_COLOUR} />
+                      )}
+                    </g>
                   );
                 })}
               </g>
@@ -555,9 +588,9 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
               Official costing ({obrKind})
             </li>
           </ul>
-          <svg className="obr-dumbbell-logo" width={CHART_LOGO.width} height={CHART_LOGO.height} role="img" aria-label="PolicyEngine">
+          {showLogo && <svg className="obr-dumbbell-logo" width={CHART_LOGO.width} height={CHART_LOGO.height} role="img" aria-label="PolicyEngine">
             <image href={CHART_LOGO.href} width={CHART_LOGO.width} height={CHART_LOGO.height} />
-          </svg>
+          </svg>}
         </div>
       )}
     </div>

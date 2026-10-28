@@ -46,11 +46,11 @@ export default function ObrDifferencePanel({ row, year, yearLabel, obrKind }) {
       ) : (
         <dl className="obr-panel-figures">
           <div>
-            <dt>Ours</dt>
+            <dt><span className="obr-panel-key is-ours" aria-hidden="true" />Ours</dt>
             <dd className="is-ours">{formatBn(row.pe, decimals)}</dd>
           </div>
           <div>
-            <dt title={`Official costing (${obrKind})`}>Official</dt>
+            <dt title={`Official costing (${obrKind})`}><span className="obr-panel-key is-official" aria-hidden="true" />Official</dt>
             <dd>{formatBn(row.obr, decimals)}</dd>
           </div>
           <div>

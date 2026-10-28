@@ -19,7 +19,7 @@ import { policyDetailsFor } from "./policyDetails";
  * the statement alone until they are rewritten.
  */
 export const OBR_DEVIATION_STATEMENT =
-  "Gaps come from timing, coverage, behaviour and scope: select a policy to see why.";
+  "Gaps come from timing, coverage, behaviour and scope.";
 
 /** The four kinds of reason a gap can have, each a chip in the panel. */
 export const REASON_TYPES = ["Timing", "Coverage", "Behaviour", "Scope"];
