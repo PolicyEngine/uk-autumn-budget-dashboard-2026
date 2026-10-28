@@ -433,6 +433,76 @@ export function isWithheld(row, key) {
 }
 
 /**
+ * The hover's line under a year's figure: for a year the floor of survey
+ * households withheld, that it is not published (#285 review, finding 7:
+ * no bar is drawn, so the hover is all there is); otherwise the people a
+ * poverty change is (`peopleText(year, value)`), or nothing.
+ */
+export function summaryTooltipNote(point, peopleText) {
+  if (point?.withheld) return `${NOT_PUBLISHED}: too few survey households`;
+  return point?.value ? peopleText(point.year, point.value) : null;
+}
+
+/**
+ * The hover for a summary chart's year. A withheld year has no bar, so
+ * its entry is null and Recharts would drop it (filterNull): the chart
+ * keeps nulls and this says the year is not published. A year not yet
+ * published has no hover, as before.
+ */
+export function SummaryTooltip(props) {
+  const point = props.payload?.[0]?.payload;
+  if (point && point.value === null && !point.withheld) return null;
+  return <ChartTooltip {...props} />;
+}
+
+/**
+ * "Not published" drawn at each withheld year on the chart, at the zero
+ * line (above it where there is room, else below), so a year with no bar
+ * never reads as no change. On one line where the year's band is wide
+ * enough, otherwise on two. Use with Recharts' <Customized component={<WithheldYearLabels points={…} />} />.
+ */
+export function WithheldYearLabels({ xAxisMap, yAxisMap, points }) {
+  const xAxis = xAxisMap && Object.values(xAxisMap)[0];
+  const yAxis = yAxisMap && Object.values(yAxisMap)[0];
+  if (!xAxis?.scale || !yAxis?.scale) return null;
+  const width = xAxis.scale.bandwidth ? xAxis.scale.bandwidth() : 0;
+  const zero = yAxis.scale(0);
+  if (!Number.isFinite(zero)) return null;
+  const lines = width >= 84 ? [NOT_PUBLISHED] : ["Not", "published"];
+  const lineHeight = 13;
+  const above = zero - 6 - (lines.length - 1) * lineHeight >= yAxis.y + 10;
+  const first = above ? zero - 6 - (lines.length - 1) * lineHeight : zero + 14;
+  return (
+    <g className="withheld-year-labels">
+      {(points ?? [])
+        .filter((point) => point.withheld)
+        .map((point) => {
+          const start = xAxis.scale(point.year);
+          if (start === undefined || Number.isNaN(start)) return null;
+          return (
+            <text
+              key={point.year}
+              className="withheld-year-label"
+              data-year={point.year}
+              x={start + width / 2}
+              y={first}
+              textAnchor="middle"
+              fontSize={11}
+              fill={CHART_COLOURS.tick}
+            >
+              {lines.map((line, i) => (
+                <tspan key={line} x={start + width / 2} dy={i === 0 ? 0 : lineHeight}>
+                  {line}
+                </tspan>
+              ))}
+            </text>
+          );
+        })}
+    </g>
+  );
+}
+
+/**
  * One point per shown year: the metric for the whole selection's run, or
  * null where that run has no row for the year, or a row without the metric
  * (not yet published). {withheld} marks a null the floor of survey
@@ -673,14 +743,16 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
               <Tooltip
                 {...TOOLTIP_PROPS}
                 cursor={HOVER_CURSOR}
+                // A withheld year's null is kept, so its hover says so
+                filterNull={false}
                 content={
-                  <ChartTooltip
+                  <SummaryTooltip
                     format={metric.format}
                     labelFormat={fiscalYearTick}
                     showPlus
                     showZero
                     grouped={false}
-                    note={(point) => (point?.value ? peopleText(point.year, point.value) : null)}
+                    note={(point) => summaryTooltipNote(point, peopleText)}
                   />
                 }
               />
@@ -708,6 +780,8 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                 })}
               </Bar>
               <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
+              {/* A withheld year has no bar: say so where it would be */}
+              <Customized component={<WithheldYearLabels points={data} />} />
               <Customized component={<ChartUnitLabel text={metric.unit} />} />
               <Customized component={PolicyEngineLogo} />
             </BarChart>

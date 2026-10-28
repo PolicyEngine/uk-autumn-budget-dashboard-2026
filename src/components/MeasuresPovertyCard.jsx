@@ -49,11 +49,15 @@ import "./MeasuresPovertyCard.css";
  * figure the floor of survey households withheld (isWithheld) is null with
  * {withheld} true, and is not missing; {totalWithheld} says the same of the
  * package's. A withheld people affected still changes incomes: it rests on
- * a household or two, so the measure is never muted for it.
+ * a household or two, so the measure is never muted for it; nor for a
+ * withheld `key`, even where people affected is 0.
  */
 export function measurePovertyRows(rows, catalogue, selectedPolicies, year, key) {
   const rowFor = (id) => (rows ?? []).find((row) => row.reform_id === id && Number(row.year) === year);
-  const affects = (id) => isWithheld(rowFor(id), "people_affected") || Number(rowFor(id)?.people_affected) > 0;
+  // A withheld figure is never "No change" (#285 review, finding 8): one
+  // or two people crossed, through a penny or a move in the relative line
+  const affects = (id) =>
+    isWithheld(rowFor(id), "people_affected") || isWithheld(rowFor(id), key) || Number(rowFor(id)?.people_affected) > 0;
   const members = legendMembership(catalogue, selectedPolicies, affects);
   const measures = members
     .filter((member) => !member.muted)

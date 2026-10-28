@@ -413,6 +413,44 @@ describe("a figure the floor of survey households withheld", () => {
     expect(read.idle.some((m) => m.id === WITHHELD)).toBe(false);
   });
 
+  it("never calls a withheld figure No change, even with no one affected (finding 8)", () => {
+    // People affected is exactly 0, but one or two people crossed the line
+    // (a penny change, or the relative line moving): the figure is withheld
+    const rows = withheld(["poverty_change_pp"]).map((row) =>
+      row.reform_id === WITHHELD && row.year === "2027" ? { ...row, people_affected: "0" } : row,
+    );
+    const read = measurePovertyRows(rows, catalogue, ALL, 2027, "poverty_change_pp");
+    expect(read.members.find((m) => m.id === WITHHELD).muted).toBe(false);
+    expect(read.idle.some((m) => m.id === WITHHELD)).toBe(false);
+    expect(read.measures.find((m) => m.id === WITHHELD)).toMatchObject({ value: null, withheld: true });
+    const { steps } = povertyWaterfall(read.measures, read.total, 70, read.idle, read.totalWithheld);
+    expect(steps.filter((s) => s.id === WITHHELD).map((s) => s.kind)).toEqual(["withheld"]);
+    // A measure whose figure is published as 0 with no one affected is
+    // still No change
+    const zero = rows.map((row) =>
+      row.reform_id === WITHHELD && row.year === "2027" ? { ...row, poverty_change_pp: "0" } : row,
+    );
+    const idle = measurePovertyRows(zero, catalogue, ALL, 2027, "poverty_change_pp");
+    expect(idle.idle.some((m) => m.id === WITHHELD)).toBe(true);
+  });
+
+  it("says Not published, not No change, in the row of a withheld figure with no one affected", async () => {
+    window.history.replaceState({}, "", "/?sub=poverty");
+    const rows = withheld(["poverty_change_pp", "poverty_change_pct"]).map((row) =>
+      row.reform_id === WITHHELD && row.year === "2027" ? { ...row, people_affected: "0" } : row,
+    );
+    render(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <PovertyMeasuresRow rows={rows} policies={catalogue.measures} selectedPolicies={ALL} selectedYear={2027} />
+      </MeasureCatalogueProvider>,
+    );
+    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which policies move poverty/ }, { timeout: 5000 });
+    const row = within(heading.closest(".mp-card"))
+      .getAllByRole("row")
+      .find((r) => r.querySelector(".mrl-name")?.textContent === NAME);
+    expect(row.querySelector(".wf-main").textContent).toBe("Not published");
+  });
+
   it("makes the package a withheld row when its figure is withheld", () => {
     const rows = metrics.map((row) => (row.reform_id === COMBINED && row.year === "2027" ? { ...row, poverty_change_pp: null } : row));
     const read = measurePovertyRows(rows, catalogue, ALL, 2027, "poverty_change_pp");
