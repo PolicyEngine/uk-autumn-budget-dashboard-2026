@@ -618,7 +618,7 @@ export const SINGLE_YEAR_METHOD = [
   ],
   [
     "State Pension",
-    "Asked from State Pension age and prefilled with the full new State Pension for the chosen year, as policyengine-uk sets it; a figure you enter replaces it.",
+    "Asked from State Pension age and prefilled with the full new State Pension for the chosen year, uprated on the OBR's October 2026 forecast; a figure you enter replaces it.",
   ],
   [
     "Examples",
