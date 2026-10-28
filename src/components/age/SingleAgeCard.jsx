@@ -192,13 +192,18 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
     return niceRange(Math.min(...values), Math.max(...values), { maxSteps: 5 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, policies, selectedPolicies, group, byMeasure, stacked, year, packageRun]);
+  // With no policy parts (the package's own net, or a combination not
+  // published by age) the parts are empty, not zero: no policy is then
+  // listed as having no effect, as Age groups does (MeanChangeCard)
   const members = useMemo(
     () =>
-      legendMembership(catalogue, selectedPolicies, (id) =>
-        data.some((point) => point.parts.some((part) => part.id === id && Math.abs(part.value) > 0)),
-      ),
+      partsOffered
+        ? legendMembership(catalogue, selectedPolicies, (id) =>
+            data.some((point) => point.parts.some((part) => part.id === id && Math.abs(part.value) > 0)),
+          )
+        : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rows, policies, selectedPolicies, year, group, packageRun],
+    [rows, policies, selectedPolicies, year, group, packageRun, partsOffered],
   );
   const key = useMeasureKey(stacked ? members : [], stacked ? "Net change" : undefined);
   const missing = data.filter((point) => point.netChange === null);

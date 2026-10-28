@@ -254,6 +254,17 @@ describe("Average change by age by single year of age (the default view)", () =>
     expect(within(card).getAllByTestId("series").map((node) => node.dataset.key)).toEqual(["netChange"]);
   });
 
+  it("lists no policy as having no effect when it draws the package's net alone", async () => {
+    // The bars show the package's gains, so no policy is "no change for the
+    // households shown" (Vahid, 28 October: 16 to 24 in 2031-32 listed all 8)
+    const { container } = await renderAge(withSingleAges(withheldFixture(), BETA), [ALPHA, BETA]);
+    const card = singleCard(container);
+    fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
+    await within(card).findByText(withheldPartsCaveat(["Mock beta contribution"]));
+    expect(card.querySelectorAll("[data-zero-measure]")).toHaveLength(0);
+    expect(within(card).queryByText(/No effect on household incomes/)).toBeNull();
+  });
+
   it("names the withheld policy in Change by year's Policies view, drawing no parts", async () => {
     const { container } = await renderAge(withheldFixture(), [ALPHA, BETA]);
     const trend = container.querySelector(".young-people-trend");
