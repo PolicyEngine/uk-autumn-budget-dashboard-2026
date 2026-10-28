@@ -395,7 +395,7 @@ describe("the personal impact form", () => {
     }
   });
 
-  it("scrolls an example to its answers' line above its result, so a phone shows who the household is (phone check)", async () => {
+  it("scrolls an example to its result's heading, not to the Edit these answers line above it (phone check)", async () => {
     const scrollTo = vi.fn();
     const original = window.scrollTo;
     window.scrollTo = scrollTo;
@@ -409,8 +409,8 @@ describe("the personal impact form", () => {
       });
       applyExample("A graduate on £35,000");
       await waitFor(() => expect(scrollTo).toHaveBeenCalled());
-      expect(scrollTo.mock.calls[0][0]).toMatchObject({ top: 700 - 16 });
-      // Focus still goes to the result
+      expect(scrollTo.mock.calls[0][0]).toMatchObject({ top: 840 - 16 });
+      // Focus goes to the result
       expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" }));
     } finally {
       window.scrollTo = original;
@@ -433,11 +433,12 @@ describe("the personal impact form", () => {
   it("fills the form from an example card, still editable", () => {
     render(<HouseholdCalculator />);
     applyExample("A graduate on £35,000");
-    // Chosen: the card is marked, and its answers are one line under the
-    // cards with a way into them (Pavel's review, HH10)
+    // Chosen: the card is marked, with one short way into its answers
+    // under the cards (Pavel's review, HH10), and no description of the
+    // household there (Vahid, 28 October)
     expect(isChosen(exampleItem("A graduate on £35,000"))).toBe(true);
-    expect(screen.getByText(/repays a Plan 2 student loan/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Edit these answers" })).toBeInTheDocument();
+    expect(screen.queryByText(/repays a Plan 2 student loan/)).not.toBeInTheDocument();
+    expect(document.querySelector(".household-example-summary").textContent).toBe("Edit these answers");
     // Your household, chosen from it: the example's answers, named at the
     // top of the form; the example is no longer the one chosen
     fireEvent.click(yoursCard());

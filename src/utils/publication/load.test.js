@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import { loadArtifact, loadPublication, unverifiedMembers } from "./load";
 import { receiptDefinition } from "./definitions";
 import { fiscalSeries } from "./select";
+import { artifactSha256, jcsSha256, sha256Hex } from "./digest";
+import { parseCsv } from "./csv";
 import {
   BASE_PATH,
   FIXTURE_ROOT,
@@ -26,7 +28,52 @@ describe("loadArtifact's definition", () => {
   });
 });
 
+async function withheldArtifact(publishWithheld = false) {
+  const entry = structuredClone(manifest.measures.alpha);
+  const receipt = fixtureJson(`${alpha}/receipt.json`);
+  const overrides = {};
+  receipt.dashboard.disclosure_floor = {
+    survey_households: 3, checked: true, thin_cells_in_tables: false,
+    thin_cells: [],
+    withheld_cells: [
+      { table: "distributional_impact", year: IN_DATA, groups: ["1"] },
+      { table: "winners_losers", year: IN_DATA, groups: ["1", "all"] },
+    ],
+  };
+  for (const table of ["distributional_impact", "winners_losers"]) {
+    const [header, ...rows] = parseCsv(fixtureText(`${alpha}/${table}.csv`));
+    const year = header.indexOf("year");
+    const decile = header.indexOf("decile");
+    const value = header.indexOf(table === "distributional_impact" ? "value" : "avg_change");
+    for (const row of rows) {
+      if (Number(row[year]) === IN_DATA && ["1st", "1", "all"].includes(row[decile])) row[value] = publishWithheld && table === "distributional_impact" ? "0.0" : "";
+    }
+    const text = [header, ...rows].map((row) => row.join(",")).join("\n") + "\n";
+    const file = `${table}.csv`;
+    overrides[`${alpha}/${file}`] = text;
+    receipt.dashboard.files[file] = await sha256Hex(text);
+  }
+  receipt.dashboard.digests.outputs_sha256 = await jcsSha256(receipt.dashboard.files);
+  entry.outputs_sha256 = receipt.dashboard.digests.outputs_sha256;
+  entry.artifact_sha256 = await artifactSha256(receipt);
+  overrides[`${alpha}/receipt.json`] = JSON.stringify(receipt);
+  return { entry, receipt, fetchImpl: fixtureFetch({ overrides }) };
+}
+
 describe("loadPublication", () => {
+  it("loads a receipt-bound blank decile as null, with its all row blank", async () => {
+    const { entry, fetchImpl } = await withheldArtifact();
+    const loaded = await loadArtifact(BASE_PATH, "alpha", entry, { fetchImpl });
+    expect(loaded.distributional_impact.find((row) => row.year === IN_DATA && row.decile === "1st").value).toBeNull();
+    expect(loaded.winners_losers.find((row) => row.year === IN_DATA && row.decile === "all").avg_change).toBeNull();
+    expect(loaded.budgetary_impact[0].value).toBe(-1.1);
+  });
+
+  it("refuses an authenticated value when its receipt says it is withheld", async () => {
+    const { entry, fetchImpl } = await withheldArtifact(true);
+    await expect(loadArtifact(BASE_PATH, "alpha", entry, { fetchImpl })).rejects.toThrow(/publishes a value in a withheld cell/);
+  });
+
   it("loads and verifies the selection's artifacts and its combined run", async () => {
     const fetchImpl = fixtureFetch();
     const result = await loadPublication(BASE_PATH, ["beta", "alpha"], {

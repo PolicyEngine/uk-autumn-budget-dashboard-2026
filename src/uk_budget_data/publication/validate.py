@@ -9,7 +9,9 @@ households in every year, as the validator requires. Types, finiteness and
 duplicate keys are already enforced when a table is read.
 """
 
+import json
 from collections import defaultdict
+from pathlib import Path
 from typing import Mapping, Optional
 
 from uk_budget_data.example_households import (
@@ -21,6 +23,8 @@ from uk_budget_data.publication.tables import (
     SCATTER_BINS,
     SCATTER_SAMPLE_SIZE,
     TABLES,
+    normalise,
+    parse_csv,
 )
 
 ROWS_PER_YEAR = {
@@ -54,6 +58,128 @@ SCATTER_CHANGE_BANDS = frozenset(
 )
 
 
+def withholding_problems(
+    tables: Mapping[str, list[dict]],
+    floor: Optional[dict],
+    *,
+    partial: bool = False,
+) -> list[str]:
+    """Check that decile blanks and the receipt's withheld labels agree.
+
+    Labels in the receipt are numeric, including for the distributional
+    table's ordinal labels. Every value in a withheld row must be blank,
+    and a blank without a recorded withholding is refused. ``partial``
+    checks only the tables supplied, for a browser's deferred table load.
+    """
+    from uk_budget_data.publication.disclosure_floor import (
+        DECILE_TABLES,
+        decile_label,
+    )
+
+    problems = []
+    withheld = set()
+    if floor is not None and not isinstance(floor, dict):
+        return ["disclosure_floor is not a record"]
+    records = (floor or {}).get("withheld_cells", [])
+    if not isinstance(records, list):
+        return ["disclosure_floor.withheld_cells is not a list"]
+    for cell in records:
+        if (
+            not isinstance(cell, dict)
+            or set(cell) != {"table", "year", "groups"}
+            or cell["table"] not in DECILE_TABLES
+            or type(cell["year"]) is not int
+            or not isinstance(cell["groups"], list)
+            or not cell["groups"]
+            or any(
+                not isinstance(group, str)
+                or group not in ({str(n) for n in range(1, 11)} | {"all"})
+                or (group == "all" and cell["table"] != "winners_losers")
+                for group in cell["groups"]
+            )
+        ):
+            problems.append(
+                "disclosure_floor.withheld_cells has an invalid cell"
+            )
+            continue
+        for group in cell["groups"]:
+            key = (cell["table"], cell["year"], group)
+            if key in withheld:
+                problems.append(
+                    "disclosure_floor.withheld_cells repeats a cell"
+                )
+            withheld.add(key)
+    years = {year for _, year, group in withheld if group != "all"}
+    for year in sorted(years):
+        if ("winners_losers", year, "all") not in withheld:
+            problems.append(f"winners_losers {year} all must be withheld too")
+    seen = set()
+    for name in DECILE_TABLES:
+        for row in tables.get(name, []):
+            key = (name, row["year"], decile_label(row["decile"]))
+            seen.add(key)
+            values = [row[column] for column in TABLES[name].nullable]
+            if key in withheld and any(value is not None for value in values):
+                problems.append(
+                    f"{name} {row['year']} {key[2]} publishes a value in a withheld cell"
+                )
+            elif key not in withheld and any(
+                value is None for value in values
+            ):
+                problems.append(
+                    f"{name} {row['year']} {key[2]} is blank without a recorded withholding"
+                )
+    for name, year, group in sorted(withheld - seen):
+        if not partial or name in tables:
+            problems.append(f"{name} {year} {group}: withheld row is missing")
+    return problems
+
+
+def withheld_file_problems(path: Path, document: dict) -> list[str]:
+    """Check both CSV and JSON decile files beside a public receipt.
+
+    Public file checks inspect the files even if their review and receipt
+    digests match: an authenticated value must still obey its withholding.
+    """
+    from uk_budget_data.publication.disclosure_floor import DECILE_TABLES
+
+    dashboard = document.get("dashboard")
+    floor = (
+        dashboard.get("disclosure_floor")
+        if isinstance(dashboard, dict)
+        else None
+    )
+    problems = []
+    tables = {}
+    for name in DECILE_TABLES:
+        for suffix in ("csv", "json"):
+            file = path / f"{name}.{suffix}"
+            if not file.exists():
+                continue
+            if file.is_symlink():
+                problems.append(f"{file.name}: symbolic link")
+                continue
+            try:
+                rows = (
+                    parse_csv(name, file.read_bytes())
+                    if suffix == "csv"
+                    else normalise(name, json.loads(file.read_bytes()))
+                )
+                tables[name] = rows
+                problems.extend(
+                    withholding_problems({name: rows}, floor, partial=True)
+                )
+            except (
+                ValueError,
+                TypeError,
+                KeyError,
+                OSError,
+            ) as error:
+                problems.append(f"{file.name}: {error}")
+    problems.extend(withholding_problems(tables, floor))
+    return list(dict.fromkeys(problems))
+
+
 # How each table expresses a change, for the before-start check.
 NO_EFFECT_TOLERANCE = 1e-4
 
@@ -66,6 +192,24 @@ def _effect(table: str, row: Mapping) -> Optional[float]:
     if table in ("budgetary_impact", "distributional_impact"):
         return row["value"]
     return None
+
+
+EFFECT_TABLES = (
+    "income_curve",
+    "winners_losers",
+    "budgetary_impact",
+    "distributional_impact",
+)
+
+
+def _effect_before_start(table: str, row: Mapping) -> bool:
+    """Whether a row shows an effect, for the check on years before a
+    measure starts. A withheld cell (None) counts as one: a decile is
+    withheld only because some household's income changed in it."""
+    if table not in EFFECT_TABLES:
+        return False
+    value = _effect(table, row)
+    return value is None or abs(value) > NO_EFFECT_TOLERANCE
 
 
 def _income_curve_problems(
@@ -160,10 +304,7 @@ def table_problems(
             if (
                 effective_from_year is not None
                 and year < effective_from_year
-                and any(
-                    abs(_effect(name, row) or 0.0) > NO_EFFECT_TOLERANCE
-                    for row in matching
-                )
+                and any(_effect_before_start(name, row) for row in matching)
             ):
                 problems.append(
                     f"{name}: an effect in {year}, before the measure "

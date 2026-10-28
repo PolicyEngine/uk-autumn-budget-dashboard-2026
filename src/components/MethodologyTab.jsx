@@ -12,7 +12,6 @@ import MethodContents, { revealAnchor } from "./methodology/MethodContents";
 import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
 import { SCATTER_BINS } from "../utils/publication/scatter";
 import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE } from "../utils/ageImpact";
-import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST } from "./youngPeople/youngPeopleData";
 import { EARLY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
@@ -256,6 +255,7 @@ function MethodologyTab({ onShowTab }) {
                   <>
                     A figure for a small group rests on few survey households, so the page leaves
                     out or marks such figures: see the{" "}
+                    <AnchorLink id={METHOD_ANCHORS.byIncome}>income deciles</AnchorLink>,{" "}
                     <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>,{" "}
                     <AnchorLink id={METHOD_SECTIONS.geography}>figures by area</AnchorLink> and{" "}
                     <AnchorLink id={METHOD_SECTIONS.young}>results by age</AnchorLink>.
@@ -412,6 +412,7 @@ function MethodologyTab({ onShowTab }) {
                       </>,
                       "Negative incomes count as zero for the ranking.",
                       "Households without a decile are left out.",
+                      "When a decile's change comes from only one or two survey households, its figures are not published, and nor is that year's winners and losers figure for all households; a package also leaves out the cells its members withhold. That is the minimum the UK Data Service requires for survey data it supplies under its End User Licence. The rest of the measure is shown.",
                     ],
                   },
                 ],
@@ -621,13 +622,13 @@ function MethodologyTab({ onShowTab }) {
                     ],
                   },
                 ],
-                ["Single year of age", `One bar per year of age from ${SINGLE_AGE_FIRST} to ${SINGLE_AGE_LAST}.`],
+                ["Single year of age", "One bar per year of age across the chosen age group; 90 and over is one bar."],
                 [
                   "Change by year",
                   {
-                    lead: "The Young people and Pensioners charts by year:",
+                    lead: "The Change by year chart on By age:",
                     points: [
-                      "Each point is a whole fiscal year, the sum of each selected policy's own effect; the curve between points never goes past them.",
+                      "Each point is a whole fiscal year: all the selected policies run together when that run is published, otherwise the sum of each policy's own effect; the curve between points never goes past them.",
                       "A label names the policy behind each of the largest year-on-year steps.",
                       "Breakdown by policy stacks each policy's own change, with the net change as the line; the running total adds each year's change from the first year.",
                       "No share of income is shown: the results by age carry no income to divide by.",
@@ -644,7 +645,8 @@ function MethodologyTab({ onShowTab }) {
                       </>
                     ),
                     more: [
-                      `A band or age with fewer than ${MIN_SAMPLE_SIZE} survey records is not shown.`,
+                      `A band or age with fewer than ${MIN_SAMPLE_SIZE} records in the dataset is not shown. Microcosm builds several records from one survey household, so this counts records, not households.`,
+                      "In the age and decile tables, a figure resting on one or two survey households is not published, nor any figure in the same table that would give it back.",
                       <>
                         Each person counts their whole household&apos;s change in net income, not
                         equivalised, and averages are <Term id="perPerson">per person</Term>.
@@ -767,12 +769,14 @@ function MethodologyTab({ onShowTab }) {
         >
           <Topic title="Policies added up" preview="Revenue, decile and age charts · Household scatter · Winners and losers">
             <p className="method-more">
-              Each policy is also simulated on its own. Where several are selected, the revenue,
-              decile and age charts add up their separate effects, so they leave out interactions
-              between policies (<Term id="ownRuns">policies run on their own</Term>); the{" "}
+              Each policy is also simulated on its own. Where several are selected, the revenue
+              and decile charts add up their separate effects, so they leave out interactions
+              between policies (<Term id="ownRuns">policies run on their own</Term>); the
+              average-change age charts do so only when no run of the whole selection is
+              published; the{" "}
               <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>{" "}and the
               winners and losers charts come from a run of the whole selection, so they include
-              them, and show nothing for a selection with no such run.
+              interactions, and show nothing for a selection with no such run.
             </p>
             <p className="method-more">
               Some policies replace values reported in the survey with modelled ones, and their

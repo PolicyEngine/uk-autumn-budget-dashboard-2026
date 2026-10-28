@@ -34,8 +34,9 @@ import "../../youngPeople/MeasureDumbbell.css";
 const MEASURES = {
   relative_ahc: { label: "Relative poverty (AHC)", badge: "Relative (AHC)", noun: "relative poverty rate" },
   absolute_ahc: { label: "Absolute poverty (AHC)", badge: "Absolute (AHC)", noun: "absolute poverty rate" },
-  relative_bhc: { label: "Relative poverty (BHC)", badge: "Relative (BHC)", noun: "relative poverty rate (BHC)" },
-  absolute_bhc: { label: "Absolute poverty (BHC)", badge: "Absolute (BHC)", noun: "absolute poverty rate (BHC)" },
+  // The card's sentence in plain words, as the Options pill says it
+  relative_bhc: { label: "Relative poverty (BHC)", badge: "Relative (BHC)", noun: "relative poverty rate before housing costs" },
+  absolute_bhc: { label: "Absolute poverty (BHC)", badge: "Absolute (BHC)", noun: "absolute poverty rate before housing costs" },
 };
 
 /** Row labels as plural, sentence-case nouns. */
@@ -44,8 +45,10 @@ const PLURAL = {
   mortgage: "Mortgage holders",
   social_rent: "Social renters",
   private_rent: "Private renters",
-  lone_parent: "Lone parents",
-  couple_with_children: "Couples with children",
+  // Everyone in the family, children included (projections.py family_type
+  // labels each person), not only the parents
+  lone_parent: "People in lone-parent families",
+  couple_with_children: "People in couple families with children",
   single_no_children: "Single adults without children",
   couple_no_children: "Couples without children",
   // People in the family, not the Pensioners tile's people over State
@@ -219,7 +222,7 @@ export default function WhoIsInPovertySection({ data }) {
   const flat = (d) => d == null || round1(d) === 0;
 
   const top = rows[0];
-  const noun = b.children ? m.noun.replace(/ poverty rate$/, " child poverty rate") : m.noun;
+  const noun = b.children ? m.noun.replace(/ poverty rate\b/, " child poverty rate") : m.noun;
   // One plain sentence on the card; the poverty line and family types are
   // defined in About this chart
   const change =
@@ -241,8 +244,8 @@ export default function WhoIsInPovertySection({ data }) {
     : (pbg?.notes || []).filter((n) => !/^Region/.test(n));
   // The poverty line and housing costs of the measure shown
   const line = measure.startsWith("absolute")
-    ? "a fixed line (60% of the 2024-25 median income) held constant in real terms"
-    : "60% of current median income";
+    ? "60% of the 2024-25 median income, held fixed in real terms"
+    : "60% of each year's median income";
   const housing = measure.endsWith("ahc") ? "after housing costs" : "before housing costs";
   const about = b.children
     ? `Share of children in households below ${line}, ${housing}. Families are benefit units; the dashed line is all children.`
@@ -270,7 +273,7 @@ export default function WhoIsInPovertySection({ data }) {
           `The line is ${line}, ${housing}.`,
           b.children
             ? "Families are benefit units; the dashed line is all children."
-            : "Family type is at benefit-unit level; a pensioner family has someone at or above State Pension age.",
+            : "Each family type counts everyone in the family, children included; a pensioner family has someone at or above State Pension age.",
         ],
         method: { anchor: METHOD_ANCHORS.lsNotes, label: "Notes on the poverty data" },
       }}

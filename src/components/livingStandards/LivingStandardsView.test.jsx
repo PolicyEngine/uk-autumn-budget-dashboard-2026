@@ -168,6 +168,12 @@ describe("the Pre-measures forecast view", () => {
     fireEvent.keyDown(within(inequality).getByRole("dialog"), { key: "Escape" });
     // One short line on the card; the basis and years in About this chart
     expect(inequality.querySelector(".chart-description").textContent).toMatch(/^Under current law, income inequality, measured by the Gini coefficient, (rises|falls|stays)/);
+    // The incomes sentence says real or cash, so a figure quoted alone is
+    // not read as cash (W6 G1)
+    expect(incomes.querySelector(".chart-description").textContent).toMatch(/^Under current law, real median income \(adjusted for household size\) /);
+    choose(incomes, "Prices", "Cash terms");
+    fireEvent.keyDown(within(incomes).getByRole("dialog"), { key: "Escape" });
+    expect(incomes.querySelector(".chart-description").textContent).toMatch(/^Under current law, median income in cash terms \(adjusted for household size\) /);
     expect(living.querySelectorAll(".ls-card")).toHaveLength(3);
     // Nothing with the measures here
     expect(living).not.toHaveTextContent(/With the selected policies/);
@@ -357,17 +363,21 @@ describe("the Pre-measures forecast view", () => {
     const who = (await heading(/^Change in poverty by group/)).closest(".ls-card");
     // One short line on the card; the full sentence in About this chart
     expect(who.querySelector(".chart-description").textContent).toMatch(/^Under current law, [a-z].* have the highest .*: \d+\.\d% in \d{4}-\d{2}/);
+    // In plain words, as the Options pill says it (W6 G1), and family rows
+    // name everyone in the family, not only the parents
+    expect(who.querySelector(".chart-description").textContent).toMatch(/ have the highest absolute poverty rate before housing costs: /);
+    expect(within(who).getByRole("rowheader", { name: "People in lone-parent families" })).toBeInTheDocument();
     fireEvent.click(within(who).getByRole("button", { name: "About this chart" }));
     // It opens on Poverty over time's measure; relative after housing costs
     // from here
     expect(optionsSummary(who)).toMatch(/· Absolute · Before housing costs$/);
     choose(who, "Poverty line", "Relative");
     fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
-    const couplesRow = () => within(who).getByRole("rowheader", { name: "Couples with children" }).closest(".measure-dumbbell-row");
-    // Couples with children, relative before housing costs: 14.5% in both
+    const couplesRow = () => within(who).getByRole("rowheader", { name: "People in couple families with children" }).closest(".measure-dumbbell-row");
+    // People in couple families with children, relative before housing costs: 14.5% in both
     // years, said once beside the marks
     let couples = couplesRow();
-    expect(couples).toHaveTextContent("Couples with children14.5%no change");
+    expect(couples).toHaveTextContent("People in couple families with children14.5%no change");
     expect(couples.querySelector(".measure-dumbbell-ring")).not.toBeNull();
     expect(couples.querySelector(".measure-dumbbell-dot")).not.toBeNull();
     // Its tooltip, on hover or keyboard focus: both years, the change and
@@ -376,7 +386,7 @@ describe("the Pre-measures forecast view", () => {
     fireEvent.focus(area);
     // Drawn in the window (ViewportTooltip), outside the card
     let tip = screen.getByRole("tooltip");
-    expect(tip).toHaveTextContent("Couples with children: relative poverty (BHC)");
+    expect(tip).toHaveTextContent("People in couple families with children: relative poverty (BHC)");
     expect(tip).toHaveTextContent("2027-2814.5%");
     expect(tip).toHaveTextContent("ChangeNo change");
     expect(tip).toHaveTextContent(/All people, \d{4}-\d{2}/);
@@ -388,13 +398,13 @@ describe("the Pre-measures forecast view", () => {
     couples = couplesRow();
     // Each value beside its mark: the start year left of its ring, the end
     // year right of its dot
-    expect(couples).toHaveTextContent("Couples with children20.1%20.5%+0.4pp");
+    expect(couples).toHaveTextContent("People in couple families with children20.1%20.5%+0.4pp");
     expect(couples.querySelector(".ls-dumbbell-value.from.left")).toHaveTextContent("20.1%");
     expect(couples.querySelector(".ls-dumbbell-value.to.right")).toHaveTextContent("20.5%");
     area = couples;
     fireEvent.focus(area);
     tip = screen.getByRole("tooltip");
-    expect(tip).toHaveTextContent("Couples with children: relative poverty (AHC)");
+    expect(tip).toHaveTextContent("People in couple families with children: relative poverty (AHC)");
     expect(tip).toHaveTextContent("2027-2820.1%");
     expect(tip).toHaveTextContent("Change+0.4pp");
     fireEvent.blur(area);

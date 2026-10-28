@@ -350,7 +350,11 @@ def publisher(modules, monkeypatch):
             },
         },
         "responsiveness": {"RESPONSIVE": "responsive"},
-        "validate": {"table_problems": Mock()},
+        "validate": {
+            "table_problems": Mock(),
+            # The floor's withholding check (#279): nothing withheld here
+            "withholding_problems": Mock(return_value=[]),
+        },
     }
     for name, attributes in dependencies.items():
         monkeypatch.setitem(

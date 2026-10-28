@@ -135,7 +135,7 @@ describe("the page's figures are the household API's own (real answers, 2027-28)
       const rate = Math.round(own.reform_marginal_rate * 100);
       const salary = pounds(own.employment_income);
       expect(
-        await screen.findByText((text) => text.startsWith(`At ${salary} your marginal tax rate is `) && text.includes(`${rate}%`)),
+        await screen.findByText((text) => text.startsWith(`At ${salary} your marginal tax rate `) && text.includes(`${rate}%`)),
       ).toBeInTheDocument();
     });
   }

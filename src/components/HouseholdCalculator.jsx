@@ -921,14 +921,11 @@ function HouseholdCalculator({
   }, [formOpen]);
 
   const resultsRef = useRef(null);
-  // The chosen example's answers, just above its result
-  const exampleSummaryRef = useRef(null);
-  // After an example card: bring its answers and result (or its progress)
-  // into view below the sticky bars, every time, unless their top is
-  // already in the top third of the screen, and move focus to the result.
-  // The scroll stops at the answers' line, not the result's heading, so a
-  // phone shows who the household is before what it gets (Pavel's review:
-  // rotating through the examples, their details were scrolled past). The region mounts
+  // After an example card: bring its result (or its progress) into view
+  // below the sticky bars, every time, unless its top is already in the
+  // top third of the screen, and move focus to it. The region opens with
+  // the "Your result" heading, so a phone lands on that heading (the
+  // example's own description is gone: Vahid, 28 October). The region mounts
   // before what is under it has any height (the detail sections render a
   // frame or two later), so a single scroll is cut short at the page's
   // end as it was then: while the page grows, the scroll is asked again.
@@ -937,10 +934,9 @@ function HouseholdCalculator({
     if (!scrollToResult.current || submitted === null) return undefined;
     scrollToResult.current = false;
     let frame = requestAnimationFrame(() => {
-      const results = resultsRef.current;
-      if (!results) return;
-      results.focus({ preventScroll: true });
-      const target = exampleSummaryRef.current?.isConnected ? exampleSummaryRef.current : results;
+      const target = resultsRef.current;
+      if (!target) return;
+      target.focus({ preventScroll: true });
       const offset = stickyBottom() + STICKY_GAP;
       const { top } = target.getBoundingClientRect();
       if (top >= offset - 1 && top <= window.innerHeight / 3) return;
@@ -1347,11 +1343,11 @@ function HouseholdCalculator({
         chosen={presetId !== null || formOpen || submitted !== null}
         yoursSelected={yoursSelected}
       />
-      {/* The chosen example's answers in one line, with a way into them
-          (Pavel's review, HH10: they were only in a closed disclosure) */}
+      {/* A way into the chosen example's answers, one short line under the
+          chips (Pavel's review, HH10; its description dropped, Vahid,
+          28 October) */}
       {activePreset && !formOpen && (
-        <p ref={exampleSummaryRef} className="household-example-summary" data-example={activePreset.id}>
-          <strong>{activePreset.short ?? activePreset.label}:</strong> {activePreset.note}{" "}
+        <p className="household-example-summary" data-example={activePreset.id}>
           <button type="button" className="link-button" onClick={chooseYours}>
             Edit these answers
           </button>

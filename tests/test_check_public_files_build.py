@@ -312,3 +312,60 @@ def test_the_build_check_refuses_a_receipt_with_thin_cells(tree, in_tables):
         else []
     )
     assert run(tree) == expected
+
+
+@needs_node
+@pytest.mark.parametrize("suffix", ["csv", "json"])
+@pytest.mark.parametrize("published", [True, False])
+def test_the_build_check_checks_withheld_cells_even_after_review(
+    tree, suffix, published
+):
+    base = "public/data/artifacts/m/0123456789abcdef"
+    floor = {
+        "thin_cells_in_tables": False,
+        "withheld_cells": [
+            {"table": "distributional_impact", "year": 2027, "groups": ["1"]},
+            {"table": "winners_losers", "year": 2027, "groups": ["1", "all"]},
+        ],
+    }
+    names = [f"{base}/receipt.json"]
+    write(
+        tree, names[0], json.dumps({"dashboard": {"disclosure_floor": floor}})
+    )
+    for table, column, labels in (
+        ("distributional_impact", "value", ["1st"]),
+        ("winners_losers", "avg_change", ["1", "all"]),
+    ):
+        rows = [
+            dict(
+                reform_id="m",
+                reform_name="M",
+                year=2027,
+                decile=label,
+                **{
+                    column: (
+                        0.0
+                        if published and table == "distributional_impact"
+                        else None
+                    )
+                },
+            )
+            for label in labels
+        ]
+        name = f"{base}/{table}.{suffix}"
+        if suffix == "json":
+            text = json.dumps(rows)
+        else:
+            from uk_budget_data.publication.tables import canonical_csv
+
+            text = canonical_csv(table, rows).decode()
+        write(tree, name, text)
+        names.append(name)
+    review(tree, [(name, "national_table", "") for name in names])
+    assert run(tree) == (
+        [
+            f"{base}/receipt.json: distributional_impact 2027 1 publishes a value in a withheld cell"
+        ]
+        if published
+        else []
+    )

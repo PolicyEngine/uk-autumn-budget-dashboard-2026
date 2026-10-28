@@ -9,11 +9,16 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from tests.publication_support import DATASET_NAME, SMALL_DATASET_NAME
 from uk_budget_data.publication import disclosure_floor as floor
 from uk_budget_data.publication.receipt import ReceiptUnavailable
-from uk_budget_data.publication.tables import bin_scatter
+from uk_budget_data.publication.tables import (
+    SCATTER_MIN_HOUSEHOLDS,
+    bin_scatter,
+)
 
 FLOOR = floor.SURVEY_HOUSEHOLD_FLOOR
 YEAR = 2027
@@ -71,12 +76,11 @@ def _population(changed_survey, records_each=3):
 
 
 def test_thin_groups_count_survey_households_not_records():
-    survey = np.array(
-        [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2] + list(range(3, 13))
-    )
+    # "few": eight records, at least FLOOR, from two survey households.
+    survey = np.array([0, 0, 0, 0, 1, 1, 1, 1] + list(range(2, 12)))
     groups = {
-        "few": np.arange(len(survey)) < 12,
-        "enough": np.arange(len(survey)) >= 12,
+        "few": np.arange(len(survey)) < 8,
+        "enough": np.arange(len(survey)) >= 8,
     }
     changed = np.ones(len(survey), dtype=bool)
     assert floor.thin_groups(groups, changed, survey) == ["few"]
@@ -84,7 +88,7 @@ def test_thin_groups_count_survey_households_not_records():
     assert floor.thin_groups(groups, ~changed, survey) == []
 
 
-def test_a_decile_moved_by_two_survey_households_is_refused():
+def test_a_measure_moved_by_two_survey_households_is_thin_including_all():
     # Survey households 80 and 81 are in decile 5; their six records change.
     baseline, reformed, survey = _population({80, 81})
     found = floor.thin_cells(baseline, reformed, [YEAR], survey)
@@ -95,9 +99,44 @@ def test_a_decile_moved_by_two_survey_households_is_refused():
 
 
 def test_enough_survey_households_in_every_changed_group_pass():
-    # Ten survey households in decile 5, none elsewhere.
+    # FLOOR survey households in decile 5, none elsewhere.
     baseline, reformed, survey = _population(set(range(80, 80 + FLOOR)))
     assert floor.thin_cells(baseline, reformed, [YEAR], survey) == {}
+
+
+def test_the_floor_is_the_licence_minimum_threshold():
+    """CD171 v18 section 5.2.1: no cell "based on only one or two cases".
+    The 10 it advises against secondary disclosure is not required, and
+    the binned scatter keeps it."""
+    assert FLOOR == 3
+    assert SCATTER_MIN_HOUSEHOLDS == 10
+
+
+@given(
+    survey=st.lists(st.integers(0, 6), min_size=1, max_size=40),
+    data=st.data(),
+)
+def test_a_group_is_thin_exactly_when_one_or_two_households_changed(
+    survey, data
+):
+    """For every grouping and change: a group is thin if and only if the
+    rows that changed in it come from 1 to FLOOR - 1 survey households,
+    however many records each household has."""
+    n = len(survey)
+    survey = np.array(survey)
+    changed = np.array(
+        data.draw(st.lists(st.booleans(), min_size=n, max_size=n))
+    )
+    labels = np.array(
+        data.draw(st.lists(st.sampled_from("abc"), min_size=n, max_size=n))
+    )
+    groups = {label: labels == label for label in "abc"}
+    # Real groups overlap: "all" holds every decile, as a band its ages.
+    groups["all"] = np.ones(n, dtype=bool)
+    thin = floor.thin_groups(groups, changed, survey)
+    for label, members in groups.items():
+        households = len(set(survey[members & changed].tolist()))
+        assert (label in thin) == (0 < households < FLOOR)
 
 
 def test_the_reason_names_tables_years_and_groups_but_no_figure():
@@ -150,7 +189,7 @@ def _job(refuse_thin_deciles=True, dataset_path=None):
     )
 
 
-def test_generation_refuses_a_run_with_a_thin_cell(monkeypatch):
+def test_generation_refuses_a_run_with_a_thin_all(monkeypatch):
     """Refused as the run says, even where it runs under "warn" (#208
     review, finding 3: the mode travels with the run)."""
     from uk_budget_data import pipeline
@@ -163,10 +202,59 @@ def test_generation_refuses_a_run_with_a_thin_cell(monkeypatch):
         pipeline, "scatter_survey_households", lambda sim, path: survey
     )
     result = SimpleNamespace(household_scatter=[])
-    with pytest.raises(ReceiptUnavailable, match="fewer than 10 survey"):
+    with pytest.raises(ReceiptUnavailable, match=f"fewer than {FLOOR} survey"):
         generate._apply_disclosure_floor(
             "a", _job(refuse_thin_deciles=True), baseline, reformed, result
         )
+
+
+@pytest.mark.parametrize("refuse", [False, True])
+def test_generation_withholds_one_thin_decile_and_the_complement(
+    refuse, monkeypatch
+):
+    """A narrow decile leaves the measure and its other deciles publishable."""
+    from uk_budget_data import pipeline
+    from uk_budget_data.publication import generate
+
+    baseline, reformed, survey = _population({0, 1, 2, 80, 81})
+    baseline.dataset = reformed.dataset = _Dataset()
+    monkeypatch.setattr(
+        pipeline, "scatter_survey_households", lambda sim, path: survey
+    )
+    identifiers = {"reform_id": "a", "reform_name": "A", "year": YEAR}
+    result = SimpleNamespace(
+        distributional_impact=[
+            {**identifiers, "decile": label, "value": 1.0}
+            for label in ("1st", "5th")
+        ],
+        winners_losers=[
+            {**identifiers, "decile": label, "avg_change": 100.0, "extra": 2.0}
+            for label in ("1", "5", "all")
+        ],
+        age_impact=[],
+        household_scatter=[],
+    )
+    warnings, record = generate._apply_disclosure_floor(
+        "a", _job(refuse_thin_deciles=refuse), baseline, reformed, result
+    )
+    assert warnings == []
+    assert result.distributional_impact[0]["value"] == 1.0
+    assert result.distributional_impact[1] == {
+        **identifiers,
+        "decile": "5th",
+        "value": None,
+    }
+    assert [row["avg_change"] for row in result.winners_losers] == [
+        100.0,
+        None,
+        None,
+    ]
+    assert [row["extra"] for row in result.winners_losers] == [2.0, None, None]
+    assert record["thin_cells_in_tables"] is False
+    assert record["withheld_cells"] == [
+        {"table": "distributional_impact", "year": YEAR, "groups": ["5"]},
+        {"table": "winners_losers", "year": YEAR, "groups": ["5", "all"]},
+    ]
 
 
 def test_generation_names_survey_households_in_the_scatter(monkeypatch):
@@ -186,6 +274,35 @@ def test_generation_names_survey_households_in_the_scatter(monkeypatch):
         0,
         1,
     ]
+
+
+def test_a_package_inherits_only_withheld_years_it_generates():
+    """Members can cover more years than the requested package."""
+    from uk_budget_data.publication import generate
+
+    baseline, reformed, _ = _population(set())
+    job = _job()
+    job.member_withheld_cells = {
+        ("distributional_impact", YEAR): ["5"],
+        ("distributional_impact", YEAR + 1): ["7"],
+        ("winners_losers", YEAR + 1): ["7", "all"],
+    }
+    result = SimpleNamespace(
+        distributional_impact=[{"year": YEAR, "decile": "5th", "value": 1.0}],
+        winners_losers=[{"year": YEAR, "decile": "all", "avg_change": 100.0}],
+        age_impact=[],
+        household_scatter=[],
+    )
+    warnings, record = generate._apply_disclosure_floor(
+        "combined--a+b", job, baseline, reformed, result
+    )
+    assert warnings == []
+    assert record["withheld_cells"] == [
+        {"table": "distributional_impact", "year": YEAR, "groups": ["5"]},
+        {"table": "winners_losers", "year": YEAR, "groups": ["all"]},
+    ]
+    assert result.distributional_impact[0]["value"] is None
+    assert result.winners_losers[0]["avg_change"] is None
 
 
 def _age_row(year, band):
@@ -501,7 +618,9 @@ def test_stand_in_simulations_are_recorded_as_not_checked():
         "a", job, baseline, reformed, result
     ) == (
         [],
-        floor.floor_record({}, not_checked_because=generate.NO_DATASET),
+        floor.floor_record(
+            {}, withheld={}, not_checked_because=generate.NO_DATASET
+        ),
     )
 
 
@@ -557,6 +676,20 @@ def test_the_record_names_cells_never_figures_and_flags_decile_ones():
     assert withheld["thin_cells_in_tables"] is False
 
 
+def test_a_thin_all_remains_refused_even_with_inherited_blanks():
+    """A package's inherited blanks never clear a whole-measure refusal."""
+    found = {("winners_losers", YEAR): ["1", "all"]}
+    inherited = {
+        ("distributional_impact", YEAR): ["1"],
+        ("winners_losers", YEAR): ["1", "all"],
+    }
+    withheld = floor.withheld_decile_cells(found, inherited)
+    assert (
+        floor.floor_record(found, withheld=withheld)["thin_cells_in_tables"]
+        is True
+    )
+
+
 def test_a_warned_run_is_recorded_and_never_staged(monkeypatch):
     """#208 review, findings 4 and 11: a run written with a thin decile
     cell names the cells in its receipt, and the gate takes it at no level,
@@ -601,7 +734,7 @@ def test_a_warned_run_is_recorded_and_never_staged(monkeypatch):
         for provisional in (False, True):
             with pytest.raises(
                 PublishError,
-                match="fewer than 10 survey households: "
+                match=f"fewer than {FLOOR} survey households: "
                 "distributional_impact 2027",
             ):
                 stage(

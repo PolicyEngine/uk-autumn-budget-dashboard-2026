@@ -148,11 +148,11 @@ export function SegmentTooltip({ active, payload, labelOf, format, netKey, netLa
   const entry = activeKey === undefined
     ? payload.find((item) => item.dataKey !== netKey) ?? payload[0]
     : payload.find((item) => item.dataKey === activeKey);
-  if (!entry) return null;
+  if (!entry || entry.value == null) return null;
   const row = entry.payload ?? {};
   const value = Number(entry.value);
   const text = (v) => (v < 0 ? `−${format(Math.abs(v))}` : `+${format(Math.abs(v))}`);
-  const net = netKey ? Number(row[netKey]) : NaN;
+  const net = netKey && row[netKey] != null ? Number(row[netKey]) : NaN;
   const measure = bySeriesKey?.get(String(entry.dataKey)) ?? byId?.get(String(entry.dataKey)) ?? null;
   return (
     <div className="chart-tooltip">

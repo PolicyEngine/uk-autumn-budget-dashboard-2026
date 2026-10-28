@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, u
 import usePresence, { leavingProps, popoverClass } from "../hooks/usePresence";
 import useSegmentThumb from "../hooks/useSegmentThumb";
 import PillChevron from "./PillChevron";
+import { InfoTip } from "./Tip";
 import "./ControlBar.css";
 
 /**
@@ -21,6 +22,8 @@ import "./ControlBar.css";
  *   options: Array<{value: string, label: string, badge?: string, disabled?: boolean, title?: string}>}
  *   | {label: string, summary: string, control: React.ReactNode}>} [props.options] - A
  *   group with `control` shows that control in place of segments (the years compared)
+ *   A segmented group whose options carry a `description` gets an ⓘ beside its
+ *   label: the shared InfoTip (hover, keyboard focus, tap), one line per option
  *   A group with `stacked` lists its options one per line (a list of policies)
  * @param {string} [props.name] - What the options are for, for the dialog's name
  */
@@ -270,6 +273,27 @@ function CustomGroup({ group }) {
 }
 
 /**
+ * What each option of a group means, behind an ⓘ beside the group's label:
+ * the dashboard's InfoTip, so it opens on hover, keyboard focus and a tap
+ * (a phone has no hover). Nothing when no option has a description.
+ */
+function OptionsInfo({ group }) {
+  const described = group.options.filter((option) => option.description);
+  if (!described.length) return null;
+  return (
+    <InfoTip
+      wide
+      label={`What the ${group.label} options mean`}
+      content={described.map((option) => (
+        <span key={option.value} className="control-bar-tip-line">
+          <strong>{option.label}:</strong> {option.description}
+        </span>
+      ))}
+    />
+  );
+}
+
+/**
  * One choice as a segmented toggle: a radio group whose options sit side
  * by side; the arrow keys move between them and choose, as radios do.
  */
@@ -292,9 +316,12 @@ export function Segmented({ group, inSummary: summarised = true }) {
   return (
     // data-in-summary: whether the pill's label carries this choice
     <div className="control-bar-group" data-in-summary={summarised}>
-      <span id={labelId} className="control-bar-group-label">
-        {group.label}
-      </span>
+      <div className="control-bar-group-head">
+        <span id={labelId} className="control-bar-group-label">
+          {group.label}
+        </span>
+        <OptionsInfo group={group} />
+      </div>
       <div
         ref={thumbContainer}
         className={`control-bar-segments${group.stacked ? " is-stacked" : ""}${thumbReady ? " has-thumb" : ""}`}

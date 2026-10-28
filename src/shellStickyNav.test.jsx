@@ -36,7 +36,12 @@ describe("the ui-kit shell's sticky site nav", () => {
 
   it("is fixed and hidden above the window by default, and the bars sit under it once shown", () => {
     const sheet = css();
-    expect(sheet).not.toMatch(/position:\s*relative\s*!important/);
+    // In the flow (relative) only on a touch-only device, where it scrolls
+    // away with the page and never covers the top of a view (Budget day)
+    const touch = sheet.indexOf("@media (hover: none) and (pointer: coarse) {\n  html[data-site-nav-shown]");
+    expect(touch).toBeGreaterThan(-1);
+    expect(sheet.indexOf("position: relative !important")).toBeGreaterThan(touch);
+    expect(sheet.slice(touch, touch + 200)).toMatch(/--nav-offset: 0px;/);
     expect(sheet).toMatch(/position: fixed !important;\s*top: 0 !important;/);
     expect(sheet).toContain(`:root:not([data-site-nav-shown]) ${SELECTOR} {\n  transform: translateY(-100%);`);
     expect(sheet).toMatch(/:root \{\s*--nav-offset: 0px;\s*\}/);
@@ -50,7 +55,10 @@ describe("the ui-kit shell's sticky site nav", () => {
     expect(sheet).toMatch(/\.view-tabs-bar \{\s*position: sticky;\s*top: calc\(var\(--nav-offset\) \+ var\(--title-row-height\)\);/);
     expect(sheet).toContain("--sticky-offset: calc(var(--nav-offset) + var(--title-row-height) + var(--view-tabs-height) + var(--sub-band-height));");
     expect(sheet).toMatch(/transition: transform var\(--motion-slide\) var\(--ease-out\)/);
-    expect(sheet).not.toContain("data-band-hidden");
+    // The band tucks away only on a phone on its side
+    const landscape = sheet.indexOf("@media (orientation: landscape) and (max-height: 500px) {");
+    expect(landscape).toBeGreaterThan(-1);
+    expect(sheet.indexOf(".app[data-band-hidden]")).toBeGreaterThan(landscape);
     expect(sheet).not.toContain("data-site-nav-hidden");
   });
 });

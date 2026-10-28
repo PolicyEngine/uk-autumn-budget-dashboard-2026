@@ -19,6 +19,7 @@ import {
   RECEIPT_FILE,
 } from "./manifest";
 import { combinedEntryFor, uniqueIds } from "./select";
+import { withholdingProblems } from "./withholding";
 
 /** The tables the national charts and headline statistics read. */
 export const DEFAULT_TABLES = [
@@ -202,6 +203,8 @@ export async function loadArtifact(
       loaded[tableForFile(fileName)] = parsedTable(table, digest, bytes);
     }),
   );
+  const withholding = withholdingProblems(loaded, receipt.dashboard.disclosure_floor, { partial: true });
+  if (withholding.length) throw new Error(withholding.join("; "));
   // The charts choose between the poverty and inequality measures in
   // metrics' rows, as in the flat metrics.csv
   if (loaded.metrics && loaded.poverty_inequality) {

@@ -157,6 +157,22 @@
   gap: 6px;
 }
 
+/* A group's label, with its ⓘ (OptionsInfo) when its options are explained */
+.control-bar-group-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* One option's meaning per line in the ⓘ's tip */
+.control-bar-tip-line {
+  display: block;
+}
+
+.control-bar-tip-line + .control-bar-tip-line {
+  margin-top: 6px;
+}
+
 .control-bar-group-label {
   font-size: var(--fs-micro);
   font-weight: 600;

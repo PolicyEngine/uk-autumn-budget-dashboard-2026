@@ -7,7 +7,11 @@ import DistributionalChart from "./DistributionalChart";
 import WaterfallChart from "./WaterfallChart";
 import YoungPeopleSection from "./YoungPeopleSection";
 import GroupedLegend from "./GroupedLegend";
-import ChartTooltip from "./ChartTooltip";
+import ChartTooltip, { SegmentTooltip } from "./ChartTooltip";
+import WithheldDecileTick from "./WithheldDecileTick";
+import { WITHHELD_DECILE_MESSAGE } from "../utils/decileWithholding";
+import { decileCsv } from "../utils/chartCsv";
+import { decileMembership } from "../utils/legendMembership";
 import PolicySelector from "./PolicySelector";
 import { MeasureKeyProvider } from "./MeasureKey";
 import { LOGO_ROOM as SCATTER_LOGO_ROOM } from "./HouseholdScatter";
@@ -172,6 +176,58 @@ describe("published measure catalogue in population views", () => {
     expect(screen.getByRole("status")).toHaveTextContent("The net change is unavailable");
     const points = chartRows(container);
     expect(points.every((point) => point[`measure:${BETA}`] === null && point.netChange === null)).toBe(true);
+  });
+
+  it.each([
+    ["relative", DistributionalChart, "distributional", "value", "1st"],
+    ["absolute", WaterfallChart, "winnersLosers", "avg_change", "1"],
+  ])("renders a withheld %s decile, keeps the other deciles, and downloads its blank", (kind, Chart, source, valueKey, decile) => {
+    const fixture = measureCatalogueFixture({ held: false });
+    const rows = fixture[source].map((row) => row.reform_id === ALPHA && row.decile === decile ? { ...row, [valueKey]: null } : row);
+    const catalogue = catalogueFor(fixture);
+    const { container } = render(withCatalogue(catalogue,
+      <Chart rawData={rows} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
+    ));
+    expect(screen.getByText(WITHHELD_DECILE_MESSAGE)).toBeVisible();
+    expect(screen.queryByRole("status")).toBeNull();
+    const points = chartRows(container);
+    expect(points[0]).toMatchObject({ withheld: true, [`measure:${ALPHA}`]: null, netChange: null });
+    expect(points[1].netChange).toBeTypeOf("number");
+    expect(container.querySelector(".chart-description")).not.toHaveTextContent("almost no change");
+    const csv = decileCsv(points, catalogue.displayable, { kind, year: YEAR }).split("\r\n");
+    const fields = csv[3].split(",");
+    const alphaColumn = catalogue.displayable.findIndex((policy) => policy.id === ALPHA) + 1;
+    expect(fields[alphaColumn]).toBe("");
+    expect(fields.at(-1)).toBe("");
+    expect(csv[4].split(",").at(-1)).not.toBe("");
+  });
+
+  it("marks the withheld decile at its axis position with its reason", () => {
+    render(<svg><WithheldDecileTick x={12} y={20} payload={{ value: "3rd" }} withheldDeciles={new Set(["3rd"])} /></svg>);
+    expect(screen.getByText("3 *")).toBeInTheDocument();
+    expect(screen.getByText(WITHHELD_DECILE_MESSAGE).tagName).toBe("title");
+  });
+
+  it("keeps a measure with only withheld changes active in the decile legend", () => {
+    const fixture = measureCatalogueFixture({ held: false });
+    const rows = fixture.distributional.map((row) => ({ ...row, value: row.decile === "1st" ? null : 0 }));
+    const members = decileMembership(catalogueFor(fixture), rows, "value", [ALPHA], YEAR);
+    expect(members).toHaveLength(1);
+    expect(members[0].muted).toBe(false);
+  });
+
+  it("does not turn a withheld net value into zero in a published segment's tooltip", () => {
+    const catalogue = catalogueFor(measureCatalogueFixture());
+    render(withCatalogue(catalogue, <SegmentTooltip
+      active
+      payload={[{ dataKey: `measure:${ALPHA}`, value: 20, payload: { decile: "1", netChange: null } }]}
+      labelOf={(row) => `Decile ${row.decile}`}
+      format={(value) => `£${value}`}
+      netKey="netChange"
+    />));
+    expect(screen.getByText("+£20")).toBeInTheDocument();
+    expect(screen.queryByText("Net change")).toBeNull();
+    expect(screen.queryByText("+£0")).toBeNull();
   });
 
   it.each([

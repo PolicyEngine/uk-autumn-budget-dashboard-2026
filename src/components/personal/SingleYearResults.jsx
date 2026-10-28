@@ -482,7 +482,7 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
  * based on, each note behind an "i". The figure is one element, so it
  * reads (and copies) once.
  */
-function ResultCard({ totals, yearLabel, policyCount, items, caution = false, bars = null, splitFailed = false, requestHousehold = null, year, selected = [] }) {
+function ResultCard({ totals, yearLabel, policyCount, items, caution = false, bars = null, splitFailed = false, requestHousehold = null, year, selected = [], catalogue = [] }) {
   const shown = Math.round(useCountUp(totals.change, { fromZero: true }));
   const counting = shown !== totals.change;
   return (
@@ -515,7 +515,11 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
           steps={bars ? bars.rows : null}
           yearLabel={yearLabel}
           splitFailed={splitFailed}
-          typeOf={(id) => policyDetailsFor(selected.find((policy) => policy.id === id))?.type ?? null}
+          // A measure's type from the catalogue's measures (objects), as the
+          // table's VAT row reads it: `selected` is the selected ids only, so
+          // looking measures up there found none and the fuel duty note never
+          // showed (chart and table audit, 28 October)
+          typeOf={(id) => policyDetailsFor(catalogue.find((policy) => policy.id === id))?.type ?? null}
         />
       </div>
       <AboutResult items={items} caution={caution} bars={bars} totals={totals} />
@@ -603,6 +607,7 @@ export function SingleYearHeadline({
             requestHousehold={requestHousehold}
             year={data.year ?? year}
             selected={selected}
+            catalogue={policies}
             bars={data.byPolicy ? policyRows(data.byPolicy, totals.change, policies, data.year ?? year) : null}
             splitFailed={!data.byPolicy && result.detailStatus === "error"}
           />
