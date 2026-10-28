@@ -728,4 +728,23 @@ describe("the explainer link (policyDetails.js `explainer`)", () => {
       cleanup();
     }
   });
+
+  it("links each post only to the measure it explains, and none to savings until the release adds savings", () => {
+    // The live posts, each on its own measure. The property post is property
+    // only (Max's ruling); the savings post stays unlinked until savings is
+    // in the release.
+    const linked = Object.fromEntries(
+      POLICY_DETAILS.filter((entry) => entry.explainer).map((entry) => [entry.id, entry.explainer.href.slice(EXPLAINER_BASE.length)]),
+    );
+    expect(linked).toEqual({
+      fuel_duty_rise_deferral: "fuel-duty-cut-extension",
+      state_pension_income_tax_protection: "pension-tax-allowance",
+      domestic_electricity_zero_vat: "budget-2026-energy-bills",
+      carers_allowance_earnings_taper: "carers-allowance-taper",
+      property_income_rates_up: "uk-autumn-budget-2026-property-income-tax",
+      household_energy_payment_2026: "budget-2026-energy-bills",
+      trading_allowance_raise: "uk-autumn-budget-2026-trading-allowance",
+    });
+    expect(POLICY_DETAILS.find((entry) => entry.id === "savings_income_rates_up").explainer).toBeUndefined();
+  });
 });

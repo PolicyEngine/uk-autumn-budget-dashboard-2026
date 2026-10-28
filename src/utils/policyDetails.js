@@ -308,6 +308,10 @@ export const POLICY_DETAILS = [
       label: "Carer's Allowance",
       href: "https://www.gov.uk/carers-allowance",
     },
+    explainer: {
+      label: "The Carer's Allowance earnings taper in the Autumn Budget 2026",
+      href: "https://www.policyengine.org/uk/research/carers-allowance-taper",
+    },
     // The What changes block's own words for the file's row (whose label
     // and units stay as policy_parameters.json publishes them)
     changeLabel: { label: "Earnings limit", unitWords: "£ a week" },
@@ -375,6 +379,10 @@ export const POLICY_DETAILS = [
     source: {
       label: "HMRC: changes to tax rates for property, savings and dividend income",
       href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
+    },
+    explainer: {
+      label: "Autumn Budget 2026: higher tax on property income",
+      href: "https://www.policyengine.org/uk/research/uk-autumn-budget-2026-property-income-tax",
     },
     budgetRows: [61],
   },
@@ -465,6 +473,10 @@ export const POLICY_DETAILS = [
     source: {
       label: "Budget 2026",
       href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
+    },
+    explainer: {
+      label: "Autumn Budget 2026: raising the trading allowance",
+      href: "https://www.policyengine.org/uk/research/uk-autumn-budget-2026-trading-allowance",
     },
     budgetRows: [15],
     example: {
