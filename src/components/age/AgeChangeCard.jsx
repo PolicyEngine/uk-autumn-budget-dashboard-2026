@@ -10,9 +10,9 @@ const VIEW_OPTIONS = [
 /**
  * By age's "Average change by age": one card, two views in its Options
  * pill, single years of age by default. Age groups: the bands, the chosen one highlighted, each measure's
- * part stacked. Single year of age: the chosen group's ages and ten either
- * side, the group shaded, the five-year average and State Pension age, with
- * each measure stacked as an option.
+ * part stacked. Single year of age: the chosen group's own ages, the
+ * five-year average and State Pension age, with each measure stacked as an
+ * option.
  */
 export default function AgeChangeCard({ extraOptions = [], ...props }) {
   const [view, setView] = useState("single");

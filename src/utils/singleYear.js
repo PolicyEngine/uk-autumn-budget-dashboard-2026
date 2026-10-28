@@ -13,7 +13,8 @@ import {
 } from "../components/personal/singleYearMethodNotes";
 import { consistentRound } from "./householdImpactApi";
 import { CHART_COLOURS } from "./chartTheme";
-import { shortNameOf } from "./policyDetails";
+import { policyDetailsFor, shortNameOf } from "./policyDetails";
+import { inForceIn } from "./legendMembership";
 
 export const MINUS = "−";
 
@@ -196,8 +197,58 @@ export function programmeNotes(groups) {
     .map((row) => ({ id: row.id, label: row.label, note: row.note }));
 }
 
+/**
+ * The table's VAT row by what moves it (Pavel's review, HH5): "VAT change on fuel
+ * duty" when the only selected policy moving this household that touches
+ * prices at the pump is the fuel duty one (the VAT charged on duty), else
+ * "VAT change". `steps` are policyRows(...).rows; `typeOf` gives a measure's type.
+ */
+export function vatRowLabel(steps, typeOf) {
+  const types = movingTypes(steps, typeOf);
+  return !types.includes("VAT") && types.includes("Fuel duty") ? "VAT change on fuel duty" : "VAT change";
+}
+
+// The types of the selected policies that move this household
+function movingTypes(steps, typeOf) {
+  const moving = (steps ?? []).filter((step) => step.id !== "interaction" && Math.round(step.rounded ?? step.change ?? 0) !== 0);
+  return moving.map((step) => typeOf?.(step.id) ?? null);
+}
+
+/**
+ * Whether a fuel duty policy moves this household, by the policy's type as
+ * the table's VAT row reads it (vatRowLabel), never its display name: the
+ * waterfall's VAT note and the table's row name agree (round 3).
+ */
+export function movesFuelDuty(steps, typeOf) {
+  return movingTypes(steps, typeOf).includes("Fuel duty");
+}
+
 /** The interaction row shows only from this size (£), so bars add up. */
 export const INTERACTION_THRESHOLD = 1;
+
+/**
+ * Why a measure out of force in `year` has no effect on the household, for
+ * its No effect row: the Warm Home Discount top-up is paid in winter
+ * 2026-27, and the calculator starts in 2027-28 (Pavel's review, CF2; #274
+ * item 37). Null when it is in force.
+ */
+export function outOfForceReason(measure, year) {
+  const policy = policyDetailsFor(measure);
+  if (!policy?.inForce || year === null || year === undefined || inForceIn(policy, Number(year))) return null;
+  const { from, to } = policy.inForce;
+  const fy = (month) => {
+    const [y, m] = month.split("-").map(Number);
+    const start = m >= 4 ? y : y - 1;
+    return `${start}-${String(start + 1).slice(-2)}`;
+  };
+  if (to && fy(from) === fy(to)) {
+    const winter = Number(from.split("-")[1]) >= 10 || Number(from.split("-")[1]) <= 3;
+    return `${winter ? "Winter " : ""}${fy(from)} only; the calculator starts in 2027-28`;
+  }
+  const [y, m] = from.split("-").map(Number);
+  const month = new Date(Date.UTC(y, m - 1, 1)).toLocaleString("en-GB", { month: "long", timeZone: "UTC" });
+  return to && to < `${year}-04` ? `In force until ${fy(to)}` : `From ${month} ${y}`;
+}
 
 /**
  * The per-policy rows (the API's single-measure method): each measure's own
@@ -213,7 +264,7 @@ export const INTERACTION_THRESHOLD = 1;
  * @param {number} total - The headline change, as the tile shows it
  * @param {Array<{id: string, name: string}>} policies - The dashboard's names, by id
  */
-export function policyRows(byPolicy, total, policies) {
+export function policyRows(byPolicy, total, policies, year = null) {
   const nameOf = (row) =>
     policies.find((policy) => policy.id === row.id)?.name ?? row.name ?? row.id.replace(/_/g, " ");
   // A short name for tight labels (policyDetails.js's, while it describes
@@ -266,7 +317,10 @@ export function policyRows(byPolicy, total, policies) {
         name: nameOf(row),
         label: labelOf(row),
         color: policies.find((policy) => policy.id === row.id)?.color ?? CHART_COLOURS.noChange,
-        reason: row.noteKind === "employer_cost" ? row.note : null,
+        reason:
+          row.noteKind === "employer_cost"
+            ? row.note
+            : outOfForceReason(policies.find((policy) => policy.id === row.id), year),
       })),
     // Notes on a measure's figure: an employer cost always, "if received"
     // where the household gets the amount
@@ -491,7 +545,7 @@ export function keepClause(before, after, { first = false } = {}) {
   const lead = `of your ${first ? "first" : "next"} ${money(unit)} of earnings, you`;
   const [was, now] = [kept(before), kept(after)];
   if (was === now) return `${lead} ${say(was)}`;
-  return `${lead} ${say(was)} before and ${say(now)} after`;
+  return `${lead} ${say(was)} under current law and ${say(now)} with them`;
 }
 
 /**

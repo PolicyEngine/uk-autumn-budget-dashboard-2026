@@ -782,12 +782,14 @@ function HouseholdCalculator({
     submitted !== null &&
     requestKey(buildHouseholdRequest(inputs, { year, policies: householdPolicies })) !==
       requestKey(buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }));
-  // Busy while the headline is calculated, and while the slower parts are
-  // for these same answers; changed answers can be sent once the headline
-  // is back, without waiting for the split by policy and the sweep
+  // Busy while the result for these same answers is calculated (headline,
+  // then the split by policy and the sweep). Changed answers can always be
+  // sent: a press while the old request runs starts the new one rather than
+  // being swallowed (Pavel's review, HH11)
   const running =
     submitted !== null &&
-    (householdResult.status === "loading" || (!changed && householdResult.detailStatus === "loading"));
+    !changed &&
+    (householdResult.status === "loading" || householdResult.detailStatus === "loading");
 
   // Once a household has been calculated, the title bar's year or policies
   // rerun it, with the same answers, without a second Calculate. Not while
@@ -892,6 +894,18 @@ function HouseholdCalculator({
     });
     return () => cancelAnimationFrame(frame);
   }, [submitted]);
+
+  // Back to the typical answers, with no example and no result (HH12)
+  const resetAnswers = () => {
+    setInputs({ ...WIZARD_DEFAULTS });
+    setPresetId(null);
+    setStartFrom(null);
+    setSubmitted(null);
+    savedWizard.inputs = {};
+    savedWizard.presetId = null;
+    savedWizard.startFrom = null;
+    savedWizard.submitted = null;
+  };
 
   const calculate = (event) => {
     event?.preventDefault();
@@ -1246,6 +1260,13 @@ function HouseholdCalculator({
     </button>
   );
 
+  // Reset answers: a text button beside Calculate, no confirmation (HH12)
+  const resetButton = (
+    <button type="button" className="reset-answers-button" onClick={resetAnswers}>
+      Reset answers
+    </button>
+  );
+
   return (
     <div className="household-calculator">
       <HouseholdCards
@@ -1264,6 +1285,16 @@ function HouseholdCalculator({
         chosen={presetId !== null || formOpen || submitted !== null}
         yoursSelected={yoursSelected}
       />
+      {/* The chosen example's answers in one line, with a way into them
+          (Pavel's review, HH10: they were only in a closed disclosure) */}
+      {activePreset && !formOpen && (
+        <p className="household-example-summary" data-example={activePreset.id}>
+          <strong>{activePreset.short ?? activePreset.label}:</strong> {activePreset.note}{" "}
+          <button type="button" className="link-button" onClick={chooseYours}>
+            Edit these answers
+          </button>
+        </p>
+      )}
       <div className="household-layout">
         {/* The whole form in one card, opened from "Your household": a
             header, then the questions in sections */}
@@ -1286,12 +1317,22 @@ function HouseholdCalculator({
             </div>
             {/* Always there: with an example's answers unedited it
                 calculates them again; on a phone, at the form's foot */}
-            {!narrow && <div className="household-header-actions">{calculateButton}</div>}
+            {!narrow && (
+              <div className="household-header-actions">
+                {resetButton}
+                {calculateButton}
+              </div>
+            )}
           </div>
           {FORM_SECTIONS.map(renderSection)}
           {/* On a phone, Calculate waits at the screen's foot while the
               form is in view, after the questions in the tab order */}
-          {narrow && <div className="household-form-footer">{calculateButton}</div>}
+          {narrow && (
+            <div className="household-form-footer">
+              {resetButton}
+              {calculateButton}
+            </div>
+          )}
         </form>
         </div>
         </div>
@@ -1300,6 +1341,13 @@ function HouseholdCalculator({
         {/* Only once there is something to show: a result, its progress
             or the note to select a policy; before that the cards say
             what to do */}
+        {/* Answers edited since the result: say so where the result was,
+            so a reader never sees the page go blank (HH11) */}
+        {!noneSelected && submitted !== null && changed && (
+          <p className="household-results-stale" role="status">
+            Your answers have changed. Press Calculate to see the new result.
+          </p>
+        )}
         {(noneSelected || (submitted !== null && !changed)) && (
         <div className="household-results" role="region" aria-label="Results" ref={resultsRef} tabIndex={-1}>
           {selectionUnavailable ? (

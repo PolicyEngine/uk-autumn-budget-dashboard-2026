@@ -22,6 +22,7 @@ import IncomePositionChart, { ResultTiles } from "./IncomePositionChart";
 import MarginalRateChart from "./MarginalRateChart";
 import "./SingleYear.css";
 import { scrollBelowBars } from "../../utils/pageScroll";
+import { policyDetailsFor } from "../../utils/policyDetails";
 
 /** True once `active` has held for `delay` ms (no flash of a loading line). */
 function useDelayed(active, delay = 300) {
@@ -510,6 +511,7 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
           steps={bars ? bars.rows : null}
           yearLabel={yearLabel}
           splitFailed={splitFailed}
+          typeOf={(id) => policyDetailsFor(selected.find((policy) => policy.id === id))?.type ?? null}
         />
       </div>
       <AboutResult items={items} caution={caution} bars={bars} totals={totals} />
@@ -597,7 +599,7 @@ export function SingleYearHeadline({
             requestHousehold={requestHousehold}
             year={data.year ?? year}
             selected={selected}
-            bars={data.byPolicy ? policyRows(data.byPolicy, totals.change, policies) : null}
+            bars={data.byPolicy ? policyRows(data.byPolicy, totals.change, policies, data.year ?? year) : null}
             splitFailed={!data.byPolicy && result.detailStatus === "error"}
           />
         </div>
@@ -655,7 +657,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
   // The figures' own year (see SingleYearHeadline)
   const yearLabel = fiscalYearTick(data.year ?? year);
   const totals = headlineTotals(data.net);
-  const bars = data.byPolicy ? policyRows(data.byPolicy, totals.change, policies) : null;
+  const bars = data.byPolicy ? policyRows(data.byPolicy, totals.change, policies, data.year ?? year) : null;
   const detailFailed = detailStatus === "error";
 
   // While newer inputs load, every section shows the last figures greyed,
@@ -672,6 +674,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
           policies={selected ?? []}
           yearLabel={yearLabel}
           you={you}
+          policySteps={bars?.rows ?? null}
         />
       )}
 

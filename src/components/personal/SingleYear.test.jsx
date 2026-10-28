@@ -334,7 +334,7 @@ describe("the household calculation, from the fixture", () => {
     expect(tiles.map((tile) => tile.querySelector(".forecast-tile-name").textContent)).toEqual([
       "Your change",
       "Share of your income",
-      "Your place (percentile)",
+      "Income percentile",
     ]);
     expect(tiles[0]).toHaveTextContent(`In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies`);
     expect(changeValue()).toBe("+£3,765");
@@ -345,11 +345,11 @@ describe("the household calculation, from the fixture", () => {
     expect(card.querySelector(".result-value")).toBeNull();
     // The figure once, for copying and screen readers alike
     expect(card.textContent.match(/£3,765/g)).toHaveLength(1);
-    expect(tiles[0].querySelector(".forecast-tile-sub")).toHaveTextContent("a year, after the selected policies");
+    expect(tiles[0].querySelector(".forecast-tile-sub")).toHaveTextContent("a year, with the selected policies");
     // Its share, and the waterfall from net income before to after
     expect(tiles[1].querySelector(".forecast-tile-value")).toHaveTextContent("+5.76%");
     const ends = [...card.querySelectorAll(".waterfall-row.is-total")].map((row) => row.textContent);
-    expect(ends).toEqual(["Net income before£65,371", "Net income after£69,136"]);
+    expect(ends).toEqual(["Current law£65,371", "With the policies£69,136"]);
     expect(panel.querySelectorAll(".result-card")).toHaveLength(1);
     // The change is said once: no sentence repeating it
     expect(panel).not.toHaveTextContent("The selected policies would");
@@ -448,7 +448,7 @@ describe("the household calculation, from the fixture", () => {
     expect(topNames).toEqual(["Market income", "Taxes", "Benefits", "Net income"]);
     // Open at first: the programmes show under their groups
     expect(rowNames()).toContain("Income tax");
-    for (const name of ["Before", "After", "Change"]) {
+    for (const name of ["Current law", "With the policies", "Change"]) {
       expect(within(table).getByRole("columnheader", { name })).toBeInTheDocument();
     }
     // Net income: the bold total row, with its change (the rows add up to it)
@@ -517,9 +517,9 @@ describe("the household calculation, from the fixture", () => {
     expect(earnings.querySelector(".chart-controls .control-bar-button")).not.toBeNull();
     expect(rate.querySelector(".chart-controls .control-bar-button")).not.toBeNull();
     // After first, as the marginal rate card, marking you
-    expect(optionsLabel(earnings)).toBe("After");
+    expect(optionsLabel(earnings)).toBe("With the policies");
     expect(earnings.querySelector(".earnings-you")).toHaveTextContent("You");
-    expect(within(earnings).getByText("After the selected policies")).toBeInTheDocument();
+    expect(within(earnings).getByText("With the selected policies")).toBeInTheDocument();
     // Change: the gain and loss key, still marking you
     chooseOption(earnings, "Change");
     expect(earnings.querySelector("svg.earnings-svg").dataset.view).toBe("change");
@@ -1099,16 +1099,16 @@ describe("the fixture", () => {
 describe("keepSentence: the marginal rate as money", () => {
   it("keeps of the next £1,000, before and after, once when they round the same", () => {
     expect(keepSentence(0.62, 0.62)).toBe("Of your next £1,000 of earnings, you keep £380.");
-    expect(keepSentence(0.62, 0.65)).toBe("Of your next £1,000 of earnings, you keep £380 before and keep £350 after.");
+    expect(keepSentence(0.62, 0.65)).toBe("Of your next £1,000 of earnings, you keep £380 under current law and keep £350 with them.");
   });
 
   it("says a loss as a loss", () => {
-    expect(keepSentence(1.05, 0.55)).toBe("Of your next £1,000 of earnings, you would lose £50 before and keep £450 after.");
+    expect(keepSentence(1.05, 0.55)).toBe("Of your next £1,000 of earnings, you would lose £50 under current law and keep £450 with them.");
   });
 
   it("turns to the next £200 at a cliff, where £1,000 would overstate it", () => {
     // Net income falls £2,140 over the next £200 before, £32 kept after
-    expect(keepSentence(11.7, 0.84)).toBe("Of your next £200 of earnings, you would lose £2,140 before and keep £32 after.");
+    expect(keepSentence(11.7, 0.84)).toBe("Of your next £200 of earnings, you would lose £2,140 under current law and keep £32 with them.");
     expect(keepSentence(11.7, 11.7)).toBe("Of your next £200 of earnings, you would lose £2,140.");
   });
 
@@ -1150,8 +1150,8 @@ describe("the Across earnings cards together", () => {
     await waitFor(() => expect(container.querySelector(".single-year-chart-pair .earnings-svg")).not.toBeNull(), { timeout: 5000 });
     const pair = container.querySelector(".single-year-chart-pair");
     const [netCard, rateCard] = pair.querySelectorAll(".single-year-card");
-    chooseOption(netCard, "Before");
-    expect(optionsLabel(rateCard)).toBe("Before");
+    chooseOption(netCard, "Current law");
+    expect(optionsLabel(rateCard)).toBe("Current law");
     // Where both cards have their parts, a chip toggled on one is toggled
     // on the other, and both keys list the same components in order
     const rateChip = within(rateCard).queryByRole("button", { name: "Income tax" });
@@ -1211,7 +1211,7 @@ describe("the breakdown's rows", () => {
     { id: "state_pension", group: "benefit", label: "State Pension", before: 12000, after: 12000 },
     { id: "council_tax", group: "tax", label: "Council Tax", before: 2000, after: 2000 },
     { id: "tv_licence", group: "tax", label: "TV licence", before: 175, after: 175 },
-    { id: "vat_change", group: "tax", label: "VAT", before: 0, after: -1 },
+    { id: "vat_change", group: "tax", label: "VAT change", before: 0, after: -1 },
   ];
   const totals = { before: 9825, after: 9826, change: 1 };
 
@@ -1219,7 +1219,8 @@ describe("the breakdown's rows", () => {
     const { default: ProgrammeTable } = await import("./ProgrammeTable");
     render(<ProgrammeTable programmes={programmes} totals={totals} yearLabel="2029-30" />);
     const table = screen.getByRole("table");
-    const vat = within(table).getByRole("row", { name: /VAT change/ });
+    // Named by what moves it: VAT on fuel duty when only fuel duty does (HH5)
+    const vat = within(table).getByRole("row", { name: /^VAT/ });
     // No before; the cut a positive amount after, as a smaller tax
     expect(vat).toHaveTextContent("—+£1+£1");
     expect(within(table).getByRole("row", { name: /Council Tax/ })).toHaveTextContent("−£2,000−£2,000—");
@@ -1292,10 +1293,21 @@ describe("the waterfall's one line", () => {
         totals={{ before: 18000, after: 18300, change: 300 }}
         steps={[step("State Pension protection", 225), step("Fuel duty deferral", 75)]}
         yearLabel="2029-30"
+        typeOf={(id) => (id === "Fuel duty deferral" ? "Fuel duty" : null)}
       />,
     );
     expect(container.querySelector(".waterfall-sentence")).toBeNull();
-    expect(container.querySelector(".waterfall-header").textContent).toBe("How each policy changes your income" + container.querySelector(".visually-hidden").textContent);
+    // The title, the one line naming it against the table (HH5), then the
+    // sentence, read out but not shown
+    expect(container.querySelector(".waterfall-header").textContent).toBe(
+      "How each policy changes your income" + container.querySelector(".waterfall-sub").textContent + container.querySelector(".visually-hidden").textContent,
+    );
+    expect(container.querySelector(".waterfall-sub")).toHaveTextContent("By policy. The table below splits the same change by tax and benefit.");
+    // The fuel duty policy moves this household: the VAT line, with no
+    // claim that the policy is a freeze (HH5)
+    expect(container.querySelector(".waterfall-sub")).toHaveTextContent(
+      "The fuel duty policy also changes the VAT on fuel, so part of its effect shows in the table's VAT row.",
+    );
     const chart = container.querySelector("ol.waterfall-rows");
     const described = document.getElementById(chart.getAttribute("aria-describedby"));
     expect(described).toHaveClass("visually-hidden");
@@ -1319,7 +1331,40 @@ describe("the waterfall's one line", () => {
       "Largest gain",
       "Largest loss",
     ]);
+    // No fuel duty policy: no VAT line
+    expect(mixed.container.querySelector(".waterfall-sub")).not.toHaveTextContent(/fuel/);
     mixed.unmount();
+
+    // A fuel duty policy that does not move this household: no VAT line
+    const still = render(
+      <NetIncomeWaterfall
+        totals={{ before: 18000, after: 18204, change: 204 }}
+        steps={[step("Zero VAT on electricity", 204), step("Fuel duty frozen", 0)]}
+        yearLabel="2027-28"
+        typeOf={(id) => (id === "Fuel duty frozen" ? "Fuel duty" : "VAT")}
+      />,
+    );
+    expect(still.container.querySelector(".waterfall-sub")).not.toHaveTextContent(/fuel/);
+    still.unmount();
+
+    // Found by the policy's type, as the table's VAT row, not by its name
+    // (round 3): a renamed fuel duty policy keeps the line, and a name
+    // that merely says "fuel duty" does not add it
+    const renamed = render(
+      <NetIncomeWaterfall
+        totals={{ before: 18000, after: 18075, change: 75 }}
+        steps={[step("Pump prices held", 75)]}
+        yearLabel="2027-28"
+        typeOf={(id) => (id === "Pump prices held" ? "Fuel duty" : null)}
+      />,
+    );
+    expect(renamed.container.querySelector(".waterfall-sub")).toHaveTextContent(/VAT on fuel/);
+    renamed.unmount();
+    const named = render(
+      <NetIncomeWaterfall totals={{ before: 18000, after: 18075, change: 75 }} steps={[step("Fuel duty deferral", 75)]} yearLabel="2027-28" />,
+    );
+    expect(named.container.querySelector(".waterfall-sub")).not.toHaveTextContent(/fuel/);
+    named.unmount();
 
     // One policy: no chip, the sentence still the text alternative
     const one = render(

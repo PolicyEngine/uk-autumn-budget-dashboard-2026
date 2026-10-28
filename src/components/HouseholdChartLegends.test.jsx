@@ -142,7 +142,7 @@ describe.each([
     // One disclosure per card: no second style
     expect(container.querySelectorAll(".disclosure")).toHaveLength(1);
     const employer = container.querySelector(`[data-zero-measure="${EMPLOYER_NI}"]`);
-    expect(employer.textContent).toMatch(/^Employer National Insurance relief, under-25s — employers pay less National Insurance.*wages are held fixed in the model$/);
+    expect(employer.textContent).toMatch(/^Employer National Insurance relief, under-25s: employers pay less National Insurance.*wages are held fixed in the model$/);
     // One bullet per policy, under the lead
     expect(employer.closest("ul").classList.contains("info-sublist")).toBe(true);
     expect(employer.closest("ul").children).toHaveLength(3);
@@ -152,8 +152,13 @@ describe.each([
     );
     // The Warm Home Discount top-up is paid in 2026-27 only; the threshold
     // freeze is from 2031: when each is in force, short
-    expect(container.querySelector('[data-zero-measure="warm_home_discount_top_up"]')).toHaveTextContent("Warm Home Discount top-up — winter 2026-27");
-    expect(container.querySelector('[data-zero-measure="threshold_freeze_2031_32"]')).toHaveTextContent("Threshold freeze — from April 2031");
+    expect(container.querySelector('[data-zero-measure="warm_home_discount_top_up"]')).toHaveTextContent("Warm Home Discount top-up: winter 2026-27");
+    expect(container.querySelector('[data-zero-measure="threshold_freeze_2031_32"]')).toHaveTextContent("Threshold freeze: from April 2031");
+    // Each name links to its card on the Policies tab (Pavel's review, AH4)
+    expect(within(container.querySelector('[data-zero-measure="threshold_freeze_2031_32"]')).getByRole("link", { name: "Threshold freeze" })).toHaveAttribute(
+      "href",
+      "?tab=policies#policy-threshold_freeze_2031_32",
+    );
     // A measure with an effect is neither greyed out nor in the note
     expect(container.querySelector('[data-zero-measure="fuel_duty_rise_deferral"]')).toBeNull();
     expect(keyChips(container).find((node) => node.title === "Fuel duty rises deferred").className).not.toContain("is-muted");
@@ -172,7 +177,7 @@ describe("ChartMoreInfo", () => {
   it("says one £0 policy on one line, and lists only the £0 ones", () => {
     const { container } = render(<ChartMoreInfo members={members} year={2028} />);
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
-    expect(container.querySelector(".zero-measures")).toHaveTextContent(/^No effect on household incomes in 2028-29: Employer NI relief for under-25s — employers pay less/);
+    expect(container.querySelector(".zero-measures")).toHaveTextContent(/^No effect on household incomes in 2028-29: Employer NI relief for under-25s: employers pay less/);
     expect(container.querySelector(".info-sublist")).toBeNull();
     expect([...container.querySelectorAll("[data-zero-measure]")].map((node) => node.dataset.zeroMeasure)).toEqual([
       EMPLOYER_NI,

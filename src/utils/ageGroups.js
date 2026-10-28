@@ -58,15 +58,12 @@ export function groupAges(key, year) {
 }
 
 /**
- * The single-year-of-age chart's window for a group: its ages and ten
- * years either side (55 to 90 and over for pensioners and 65 and over; every
- * age for all ages), within 0 to 90 and over.
+ * The single-year-of-age chart's window for a group: the group's own ages
+ * and nothing either side (every age for all ages; State Pension age to 90
+ * and over for pensioners).
  */
 export function ageWindow(key, year) {
-  if (key === ALL_BAND) return [0, SINGLE_AGE_TOP];
-  if (key === PENSIONERS || key === "65+") return [55, SINGLE_AGE_TOP];
-  const [first, last] = groupAges(key, year);
-  return [Math.max(0, first - 10), Math.min(SINGLE_AGE_TOP, last + 10)];
+  return groupAges(key, year);
 }
 
 /**

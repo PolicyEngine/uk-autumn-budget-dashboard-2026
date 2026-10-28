@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render as renderReact, screen, within } from "@testing-library/react";
-import YoungPeopleSection, { YOUNG_PEOPLE_ANCHOR, bandAxis } from "./YoungPeopleSection";
+import { fireEvent, render as renderReact, screen, waitFor, within } from "@testing-library/react";
+import YoungPeopleSection, { SharesCard, YOUNG_PEOPLE_ANCHOR, bandAxis } from "./YoungPeopleSection";
 import {
   meanChangeByBand,
   meanChangeBySingleAge,
@@ -208,15 +208,43 @@ describe("YoungPeopleSection", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/young people aged 16 to 24 in the UK/)).not.toBeInTheDocument();
     expect(screen.queryByText(/directly affected/)).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: /Better and worse off, 2029-30/ })).toBeInTheDocument();
-    // Two Recharts charts; Effect of each policy is a dot plot of rows, and
-    // Better and worse off the shared rows chart: age groups, 16 to 24 in
-    // bold (no background band), ▲/▼ in two fixed columns
+    expect(screen.getByRole("heading", { level: 3, name: /Winners and losers, 2029-30/ })).toBeInTheDocument();
+    // Winners and losers opens on the age groups, the chosen one marked
+    // (round 3); single years are in Options
+    expect(screen.queryByText(/at each age from 16 to 24\./)).toBeNull();
+    // By age group: the shared rows chart, 16 to 24 in bold (no background
+    // band), ▲/▼ in two fixed columns
+    const shares = await waitFor(() => {
+      const found = document.querySelector(".young-people-shares .msc");
+      expect(found).not.toBeNull();
+      return found;
+    });
+    // Two Recharts charts; Effect of each policy is a dot plot of rows
     expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(2);
-    const shares = document.querySelector(".young-people-shares .msc");
     expect(shares.querySelectorAll("[role='rowheader']").length).toBeGreaterThan(1);
     expect(shares.querySelector(".msc-label.is-focus")).toHaveTextContent(/16 to 24/);
     expect(shares.querySelectorAll("[role='columnheader']")).toHaveLength(2);
+  });
+
+  it("keeps Winners and losers' view when the age group changes (AGE11, round 3)", async () => {
+    const rows = ["16-24", "25-34", "all"].map((band) => ({
+      reform_id: COMBINED_REFORM_ID, year: 2029, age_band: band, sample_size: 5000, people: 1_000_000,
+      pct_better_off: 4, pct_worse_off: 10, pct_unchanged: 86,
+    }));
+    const props = { rows, policies: POLICIES, selectedPolicies: ALL, selectedYear: 2029, combinedId: COMBINED_REFORM_ID, narrow: false, height: 400 };
+    const wrapper = ({ children }) => <MeasureCatalogueProvider catalogue={catalogue}>{children}</MeasureCatalogueProvider>;
+    const { container, rerender } = renderReact(<SharesCard {...props} group="16-24" />, { wrapper });
+    const choose = (name) => {
+      fireEvent.click(within(container).getByRole("button", { name: /^Options:/ }));
+      fireEvent.click(within(within(container).getByRole("radiogroup", { name: "Show" })).getByRole("radio", { name }));
+    };
+    // Opens on the age groups
+    expect(within(container).queryByText(/at each age from/)).toBeNull();
+    choose(/By single year of age/);
+    expect(within(container).getByText(/at each age from 16 to 24\./)).toBeInTheDocument();
+    // A new group keeps single years, now of that group
+    rerender(<SharesCard {...props} group="25-34" />);
+    expect(within(container).getByText(/at each age from 25 to 34\./)).toBeInTheDocument();
   });
 
   it("switches average change by age to single years of age", async () => {

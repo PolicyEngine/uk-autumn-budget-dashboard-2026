@@ -1,4 +1,4 @@
-// Better and worse off, one row per measure (each measure's own published
+// Winners and losers, one row per measure (each measure's own published
 // shares; never added up): the measure's name, wrapped to two lines and
 // never clipped, a 100% bar (better off, unchanged, worse off) and the
 // ▲ better off and ▼ worse off shares in two fixed right-aligned columns.
@@ -16,9 +16,9 @@ import { formatShare, shareDecimals, visibleSegments } from "../utils/shareForma
 import "./MeasureSharesChart.css";
 
 const OUTCOMES = [
-  { key: "pct_better_off", label: "Better off", color: CHART_COLOURS.gain },
-  { key: "pct_unchanged", label: "Unchanged", color: CHART_COLOURS.noChange },
-  { key: "pct_worse_off", label: "Worse off", color: CHART_COLOURS.loss },
+  { key: "pct_better_off", label: "Gain", color: CHART_COLOURS.gain },
+  { key: "pct_unchanged", label: "No change", color: CHART_COLOURS.noChange },
+  { key: "pct_worse_off", label: "Loss", color: CHART_COLOURS.loss },
 ];
 const KEYS = OUTCOMES.map((outcome) => outcome.key);
 
@@ -36,15 +36,15 @@ export default function MeasureSharesChart({ rows, groupLabel, yearLabel, emphas
   const worseDecimals = shareDecimals(rows.map(({ row }) => row.pct_worse_off ?? 0));
   return (
     <div className="msc-wrap">
-    <div ref={ref} className="msc" role="table" aria-label={`Better and worse off, ${groupLabel}, each policy on its own, ${yearLabel}`}>
+    <div ref={ref} className="msc" role="table" aria-label={`Winners and losers, ${groupLabel}, each policy on its own, ${yearLabel}`}>
       <div className="msc-row msc-head" role="row">
         <span className="msc-label" />
         <span className="msc-bar-cell" />
         <span className="msc-num" role="columnheader">
-          <span className="msc-up">▲</span> Better
+          <span className="msc-up">▲</span> Gain
         </span>
         <span className="msc-num" role="columnheader">
-          <span className="msc-down">▼</span> Worse
+          <span className="msc-down">▼</span> Loss
         </span>
       </div>
       {rows.map(({ id, name, fullName, row }, index) => {
