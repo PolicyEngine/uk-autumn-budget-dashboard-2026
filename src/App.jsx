@@ -266,18 +266,54 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   // the rest of the address, below.
   const readRequested = () => typeof window === "undefined" || !catalogue.manifest ? null : new URLSearchParams(window.location.search).get("policies");
   const requested = fromBuild ? null : readRequested();
-  const [chosenPolicies, setChosenPolicies] = useState(() => requestedPolicies(requested));
-  const [selectionChosen, setSelectionChosen] = useState(requested !== null);
+  // One policy at a time while the publication has no combined run of the
+  // whole package (no published run adds the measures up), on the
+  // population tabs only: the picker is single-select there, the default
+  // the first measure in the catalogue's order, and a link naming several
+  // opens on the first of them. Once a combined run is published it is
+  // multi-select again, by itself. The Household calculator keeps its own
+  // selection, every policy by default.
+  const singleSelect = Boolean(catalogue.manifest) && catalogue.displayable.length > 1 && !catalogue.combinedId;
+  // A link's ?policies= is the open tab's own choice while single-select:
+  // on Population impact (or the landing page) the one policy, and the
+  // household keeps every policy; on the Household calculator the
+  // household's; on a tab the policies do not change, both
+  const linkTab = () => (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("tab"));
+  const linkSetsHousehold = (link) => link !== null && (!singleSelect || (linkTab() !== null && linkTab() !== "dashboard"));
+  const linkSetsOne = (link) => link !== null && singleSelect && linkTab() !== "household";
+  const [chosenPolicies, setChosenPolicies] = useState(() => (linkSetsHousehold(requested) ? requestedPolicies(requested) : []));
+  const [selectionChosen, setSelectionChosen] = useState(() => linkSetsHousehold(requested));
+  // The population tabs' one policy while single-select (below): its own
+  // choice, so the Household calculator's selection is kept beside it
+  const [chosenOne, setChosenOne] = useState(() => (linkSetsOne(requested) ? requestedPolicies(requested) : []));
   // The default is derived, never stored: an artifact that verifies later
   // under the same manifest joins it, as on a fresh load (review of
   // 3d52cff, finding 1). A newer manifest remounts the view instead.
+  // Every displayable measure: the default, and the Policies tab's cards
+  // whatever is chosen
   const defaultPolicies = useMemo(() => catalogue.displayable.map((measure) => measure.id), [catalogue]);
+  const allPolicyIds = defaultPolicies;
   // A withdrawn measure in a link or a kept selection drops out silently;
-  // the address writer below then rewrites ?policies= without it
-  const selectedPolicies = useMemo(() => {
+  // the address writer below then rewrites ?policies= without it.
+  // The Household calculator's selection: every policy by default, any
+  // several (the household API runs them together, no combined run needed)
+  const householdPolicies = useMemo(() => {
     const chosen = selectionChosen ? chosenPolicies : defaultPolicies;
     return catalogue.withdrawn?.size ? chosen.filter((id) => !catalogue.withdrawn.has(id)) : chosen;
   }, [selectionChosen, chosenPolicies, defaultPolicies, catalogue]);
+  // The population tabs' selection: the same, or while single-select one
+  // policy, its own choice (the first a link names, in the catalogue's
+  // order), else the first in the catalogue's order
+  const selectedPolicies = useMemo(() => {
+    if (!singleSelect) return householdPolicies;
+    const kept = catalogue.withdrawn?.size ? chosenOne.filter((id) => !catalogue.withdrawn.has(id)) : chosenOne;
+    const first = catalogue.displayable.find((measure) => kept.includes(measure.id));
+    if (first) return [first.id];
+    // A link naming only an unavailable policy keeps it, so the page says
+    // it is unavailable rather than swapping in another
+    if (kept.length) return [kept[0]];
+    return catalogue.displayable.length ? [catalogue.displayable[0].id] : [];
+  }, [singleSelect, householdPolicies, chosenOne, catalogue]);
   // Once the first view has painted, every other view's tables load and
   // verify while the page is idle, so a tab switch need not wait
   useEffect(() => {
@@ -381,8 +417,11 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     if (fromBuild) {
       const linked = readRequested();
       if (linked !== null) {
-        setChosenPolicies(requestedPolicies(linked));
-        setSelectionChosen(true);
+        if (linkSetsOne(linked)) setChosenOne(requestedPolicies(linked));
+        if (linkSetsHousehold(linked)) {
+          setChosenPolicies(requestedPolicies(linked));
+          setSelectionChosen(true);
+        }
       }
     }
     setLocationReady(true);
@@ -403,7 +442,16 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       // displayable, a newly published one included.
       // (not on the landing page, whose address is the bare one; the
       // selection comes back to the address with the next view)
-      if (selectionChosen && !landing) params.set("policies", selectedPolicies.join(","));
+      // The open tab's own selection. One policy at a time on the population
+      // tabs: the address always names it, so a shared link opens on it
+      const onHousehold = activeTab === "household";
+      // Single-select: Population impact always names its one policy; the
+      // Household calculator its chosen selection; another tab the
+      // household's chosen selection, else a chosen one policy
+      if (landing) params.delete("policies");
+      else if (singleSelect && activeTab === "dashboard") params.set("policies", selectedPolicies.join(","));
+      else if (selectionChosen) params.set("policies", householdPolicies.join(","));
+      else if (singleSelect && !onHousehold && chosenOne.length > 0) params.set("policies", selectedPolicies.join(","));
       else params.delete("policies");
     }
     // The year chosen in the header, so a shared link opens on it; the
@@ -411,7 +459,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     if (!landing && distributionalYear !== DEFAULT_DISPLAY_YEAR) params.set("year", String(distributionalYear));
     else params.delete("year");
     window.history.replaceState({}, "", `${window.location.pathname}${params.size ? `?${params}` : ""}${window.location.hash}`);
-  }, [selectedPolicies, selectionChosen, activeTab, landing, locationReady, unavailable, distributionalYear]);
+  }, [selectedPolicies, householdPolicies, selectionChosen, singleSelect, chosenOne, activeTab, landing, locationReady, unavailable, distributionalYear]);
 
   // The years shown: 2026-27 first only while a selected policy has an
   // effect in it (yearsForSelection)
@@ -431,7 +479,12 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
 
   const handlePolicyToggle = (policyId) => {
     if (!catalogue.byId.get(policyId)?.displayable) return;
-    setChosenPolicies(selectedPolicies.includes(policyId) ? selectedPolicies.filter((id) => id !== policyId) : [...selectedPolicies, policyId]);
+    // One at a time on the population tabs: picking a policy selects only it
+    if (singleSelect && activeTab !== "household") {
+      setChosenOne([policyId]);
+      return;
+    }
+    setChosenPolicies(householdPolicies.includes(policyId) ? householdPolicies.filter((id) => id !== policyId) : [...householdPolicies, policyId]);
     setSelectionChosen(true);
   };
   // Select all and Clear: the whole selection in one update (a run of
@@ -447,7 +500,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   };
   // Only on the reader's request: an unavailable measure leaves the selection
   const removeFromSelection = (ids) => {
-    setChosenPolicies(selectedPolicies.filter((id) => !ids.includes(id)));
+    setChosenPolicies(householdPolicies.filter((id) => !ids.includes(id)));
     setSelectionChosen(true);
   };
 
@@ -858,8 +911,12 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   // A Policies card's "See its effect": Population impact with only that
   // measure selected (the address then carries ?policies=<id>)
   const handleShowEffect = (policyId) => {
-    setChosenPolicies([policyId]);
-    setSelectionChosen(true);
+    // One at a time: the population tabs' own choice, the household's kept
+    if (singleSelect) setChosenOne([policyId]);
+    else {
+      setChosenPolicies([policyId]);
+      setSelectionChosen(true);
+    }
     // Open on a year the measure moves revenue in: one in force in a single
     // later year opened on 2027-28 showed only empty charts, and the
     // household energy payment (winter 2026-27) opens on 2026-27
@@ -933,7 +990,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   const downloadContext = (value) =>
     VIEW_BY_KEY[value]?.policies
       ? {
-          policies: policiesLabel(selectedPolicies, POLICIES),
+          policies: policiesLabel(value === "household" ? householdPolicies : selectedPolicies, POLICIES),
           provisional: notice || null,
         }
       : { policies: value === "outlook" ? "Current law, without the Budget measures" : null, provisional: null };
@@ -1131,7 +1188,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
                     Where would yours be?{" "}
                     <a
                       className="twin-link"
-                      href={`?${new URLSearchParams({ tab: "household", ...(selectionChosen ? { policies: selectedPolicies.join(",") } : {}) })}`}
+                      href={`?${new URLSearchParams({ tab: "household", ...(selectionChosen ? { policies: householdPolicies.join(",") } : {}) })}`}
                       onClick={(event) => {
                         event.preventDefault();
                         handleTabChange("household");
@@ -1190,9 +1247,10 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
           <div className={`band-policy${policiesShown ? "" : " is-inactive"}`}>
             <PolicySelector
               policies={POLICIES}
-              selectedPolicies={selectedPolicies}
+              selectedPolicies={householdView ? householdPolicies : selectedPolicies}
               onPolicyToggle={handlePolicyToggle}
               onPoliciesSet={handlePoliciesSet}
+              single={singleSelect && !householdView}
               loading={Boolean(unavailable?.loading)}
               noneReason={unavailable?.reason}
               inactiveReason={policiesShown ? undefined : POLICIES_INACTIVE}
@@ -1282,7 +1340,10 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
             <section id="policy-details" className="report-section policy-details-content">
               <PolicyCards
                 policies={POLICIES}
-                selectedPolicies={defaultPolicies}
+                // Every modelled policy, whatever the header has chosen: the
+                // selection drives the results tabs only ("See its effect"
+                // picks one from here)
+                selectedPolicies={allPolicyIds}
                 onShowEffect={handleShowEffect}
               />
             </section>
@@ -1293,7 +1354,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
           <MethodologyTab onShowTab={handleTabChange} />
         ) : value === "household" ? (
           <PersonalImpactTab
-            selectedPolicies={selectedPolicies}
+            selectedPolicies={householdPolicies}
             policies={POLICIES}
             year={householdYear}
             onRemoveUnavailable={removeFromSelection}
