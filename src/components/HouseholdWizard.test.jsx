@@ -863,4 +863,42 @@ describe("the selected policies' questions", () => {
       vi.unstubAllEnvs();
     }
   });
+  it("adds the savings income tax rise to this household's request only when its switch is on", async () => {
+    const API = "https://api.test/api/household-impact";
+    const bodies = [];
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        if (url === API) bodies.push(JSON.parse(init.body));
+        return new Response("{}", { status: 404 });
+      }),
+    );
+    // The header's selection: the published measures, savings not among them
+    const published = ALL_SEVEN.filter((id) => id !== "savings_income_rates_up");
+    try {
+      form(published, { year: 2027 });
+      const toggle = screen.getByRole("checkbox", { name: /Also include: Savings income tax up \(not in the national results\)/ });
+      // Off at first: the request is the selection itself (the presets' key)
+      expect(toggle).not.toBeChecked();
+      // Savings interest waits under Other questions while it is off
+      openMore();
+      fireEvent.change(box("Savings interest"), { target: { value: "12000" } });
+      fireEvent.blur(box("Savings interest"));
+      fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
+      const headline = () => bodies.filter((body) => body.household.savings_interest_income === 12000 && body.include.length === 0);
+      await waitFor(() => expect(headline()).toHaveLength(1));
+      expect(headline()[0].policies).toEqual(published);
+      // On: the calculation runs again, with it after the selected ones
+      fireEvent.click(toggle);
+      expect(toggle).toBeChecked();
+      await waitFor(() => expect(headline()).toHaveLength(2));
+      expect(headline()[1].policies).toEqual([...published, "savings_income_rates_up"]);
+      // The example cards' figures stay with the published measures
+      expect(bodies.filter((body) => body.household.savings_interest_income !== 12000).every((body) => !body.policies.includes("savings_income_rates_up"))).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
 });

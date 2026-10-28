@@ -31,6 +31,7 @@ export { WIZARD_DEFAULTS };
 import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
 import ConstituencyField from "./personal/ConstituencyField";
 import { policyQuestions } from "../utils/householdPolicyFields";
+import { CALCULATOR_ONLY_MEASURES, SAVINGS_INCOME_RATES_ID, withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
@@ -552,11 +553,11 @@ function useNarrow(query) {
 }
 
 // The form's last state, kept for the session so switching tabs keeps it
-const savedWizard = { inputs: null, presetId: null, formOpen: false, optionalOpen: {}, stepOpen: {}, submitted: null, startFrom: null };
+const savedWizard = { inputs: null, presetId: null, formOpen: false, optionalOpen: {}, stepOpen: {}, submitted: null, startFrom: null, extras: [] };
 
 /** Forget the form's saved state (a new session; for tests). */
 export function resetSavedWizard() {
-  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, optionalOpen: {}, stepOpen: {}, submitted: null, startFrom: null });
+  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, optionalOpen: {}, stepOpen: {}, submitted: null, startFrom: null, extras: [] });
 }
 
 // The form's panel, opened by the "Your household" card
@@ -599,6 +600,9 @@ function HouseholdCalculator({
   // The answers, year and policies last sent with Calculate: nothing is
   // asked before it, and a result stays tied to what it was asked with
   const [submitted, setSubmitted] = useState(() => savedWizard.submitted);
+  // Calculator-only measures turned on (utils/calculatorOnlyMeasures.js):
+  // not in the header's selector or the national results; off at first
+  const [extras, setExtras] = useState(() => savedWizard.extras ?? []);
   const selectionKey = selectedPolicies.join(",");
   const narrow = useNarrow(PHONE_QUERY);
 
@@ -620,7 +624,8 @@ function HouseholdCalculator({
     savedWizard.optionalOpen = optionalOpen;
     savedWizard.stepOpen = stepOpen;
     savedWizard.submitted = submitted;
-  }, [inputs, presetId, startFrom, formOpen, optionalOpen, stepOpen, submitted]);
+    savedWizard.extras = extras;
+  }, [inputs, presetId, startFrom, formOpen, optionalOpen, stepOpen, submitted, extras]);
 
   // The examples' precomputed answers, loaded once and added to the
   // session cache; `seeded` tells a request already waiting to look again
@@ -668,6 +673,16 @@ function HouseholdCalculator({
     [selectionKey],
   );
   const noneSelected = householdPolicies.length === 0;
+  // What the household's own request asks for: the selected measures, then
+  // any calculator-only one turned on. With none on it is the selection
+  // itself, so the examples' precomputed answers (keyed to exactly the
+  // published measures) still answer at once
+  const extrasKey = extras.join(",");
+  const requestPolicies = useMemo(
+    () => withCalculatorOnly(householdPolicies, extrasKey ? extrasKey.split(",") : []),
+    [householdPolicies, extrasKey],
+  );
+  const requestKeyPolicies = requestPolicies.join(",");
   // The cards' figures are for every measure: shown only while every
   // measure is selected
   const allSelected =
@@ -704,7 +719,7 @@ function HouseholdCalculator({
     if (householdPolicies.length > 0) {
       // Another household: its own result or a clean loading state, never
       // the previous card's (useHouseholdImpact's `household`)
-      setSubmitted({ inputs: next, year, policies: householdPolicies, at: Date.now(), household: preset.id });
+      setSubmitted({ inputs: next, year, policies: requestPolicies, at: Date.now(), household: preset.id });
     }
   };
   // The results for the answers sent with Calculate, never the ones being
@@ -713,7 +728,7 @@ function HouseholdCalculator({
   const householdResult = useHouseholdImpact({
     inputs: submitted?.inputs ?? inputs,
     year: submitted?.year ?? year,
-    policies: submitted?.policies ?? householdPolicies,
+    policies: submitted?.policies ?? requestPolicies,
     enabled: submitted !== null,
     publicationKey,
     expectedEngine,
@@ -729,7 +744,7 @@ function HouseholdCalculator({
   // The answers, year or policies differ from those of the result shown
   const changed =
     submitted !== null &&
-    requestKey(buildHouseholdRequest(inputs, { year, policies: householdPolicies })) !==
+    requestKey(buildHouseholdRequest(inputs, { year, policies: requestPolicies })) !==
       requestKey(buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }));
   // Busy while the result for these same answers is calculated (headline,
   // then the split by policy and the sweep). Changed answers can always be
@@ -752,14 +767,15 @@ function HouseholdCalculator({
       requestKey(buildHouseholdRequest(submitted.inputs, { year: 0, policies: [] }));
   useEffect(() => {
     if (!active || submitted === null || answersEdited || householdPolicies.length === 0) return;
-    const samePolicies = submitted.policies.join(",") === selectionKey;
+    const samePolicies = submitted.policies.join(",") === requestKeyPolicies;
     if (submitted.year === year && samePolicies) return;
     // The same household again: its last result stays, greyed, until the
     // new one arrives (unlike a switch to another card)
-    setSubmitted({ ...submitted, year, policies: householdPolicies, at: Date.now() });
-    // Only the bar's year and policies (and coming back to the view) rerun it
+    setSubmitted({ ...submitted, year, policies: requestPolicies, at: Date.now() });
+    // Only the bar's year and policies, the calculator-only switch (and
+    // coming back to the view) rerun it
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, selectionKey, active]);
+  }, [year, requestKeyPolicies, active]);
 
   // "Your household" is chosen as the examples are, and opens the form.
   // From an example it starts from that example's answers (named at the
@@ -862,7 +878,7 @@ function HouseholdCalculator({
     event?.preventDefault();
     // One calculation at a time; nothing to ask without a policy
     if (running || noneSelected) return;
-    setSubmitted({ inputs, year, policies: householdPolicies, at: Date.now(), household: presetId ?? "yours" });
+    setSubmitted({ inputs, year, policies: requestPolicies, at: Date.now(), household: presetId ?? "yours" });
     // On a phone the results start screens below the button: bring the
     // waiting message into view, so pressing Calculate visibly does something
     requestAnimationFrame(() => {
@@ -884,7 +900,7 @@ function HouseholdCalculator({
   // The answers the selected policies read (utils/householdPolicyFields.js),
   // first in their step, in the table's order; the step's other answers
   // wait under "Other questions"
-  const policyAsks = noneSelected ? [] : policyQuestions(householdPolicies, { inputs, year, applies: fieldApplies });
+  const policyAsks = noneSelected ? [] : policyQuestions(requestPolicies, { inputs, year, applies: fieldApplies });
 
   // The children's ages, kept as the text the household request reads
   // ("5, 3")
@@ -1109,7 +1125,9 @@ function HouseholdCalculator({
       : null;
   const basisIncome = useBasisIncome({
     inputs: submitted?.inputs ?? null,
-    policies: submitted?.policies ?? [],
+    // Baseline income, the same with or without a calculator-only measure:
+    // asked with the published ones, so the examples' answers serve it
+    policies: withoutCalculatorOnly(submitted?.policies ?? []),
     presetPolicies,
     publicationKey,
     expectedEngine,
@@ -1132,7 +1150,9 @@ function HouseholdCalculator({
         note:
           placed.notModelled.length > 0
             ? `Your change leaves out ${placed.notModelled.length === 1 ? "one policy" : `${placed.notModelled.length} policies`} not modelled for one household; the dots include ${placed.notModelled.length === 1 ? "it" : "them"}.`
-            : null,
+            : submitted.policies.length !== withoutCalculatorOnly(submitted.policies).length
+              ? "Your change includes the savings income tax rise, which the dots leave out."
+              : null,
       }
     : null;
 
@@ -1195,6 +1215,25 @@ function HouseholdCalculator({
           </button>
         </p>
       )}
+      {/* Calculator-only measures: off at first, sent with this household's
+          request only (utils/calculatorOnlyMeasures.js) */}
+      <div className="household-extra-measures">
+        <label className="household-extra-toggle">
+          <input
+            type="checkbox"
+            checked={extras.includes(SAVINGS_INCOME_RATES_ID)}
+            disabled={noneSelected}
+            onChange={(event) =>
+              setExtras((prev) =>
+                event.target.checked ? [...prev.filter((id) => id !== SAVINGS_INCOME_RATES_ID), SAVINGS_INCOME_RATES_ID] : prev.filter((id) => id !== SAVINGS_INCOME_RATES_ID),
+              )
+            }
+          />
+          <span>
+            Also include: <strong>{CALCULATOR_ONLY_MEASURES[SAVINGS_INCOME_RATES_ID].name}</strong> (not in the national results)
+          </span>
+        </label>
+      </div>
       <div className="household-layout">
         {/* The whole form in one card, opened from "Your household": a
             header, then the questions in sections */}
@@ -1290,7 +1329,9 @@ function HouseholdCalculator({
             year={submitted.year}
             policies={policies}
             household={buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }).household}
-            selected={submitted.policies}
+            // The position chart's dots are the national results, which
+            // leave the calculator-only measures out
+            selected={withoutCalculatorOnly(submitted.policies)}
             you={you}
             changed={changed}
             startedAt={submitted.at}

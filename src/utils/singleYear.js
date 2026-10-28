@@ -12,6 +12,7 @@ import {
   WHO_IS_A_CHILD_NOTE,
 } from "../components/personal/singleYearMethodNotes";
 import { consistentRound } from "./householdImpactApi";
+import { CALCULATOR_ONLY_MEASURES, isCalculatorOnly } from "./calculatorOnlyMeasures";
 import { CHART_COLOURS } from "./chartTheme";
 import { policyDetailsFor, shortNameOf } from "./policyDetails";
 import { inForceIn } from "./legendMembership";
@@ -268,7 +269,10 @@ export function outOfForceReason(measure, year) {
  */
 export function policyRows(byPolicy, total, policies, year = null) {
   const nameOf = (row) =>
-    policies.find((policy) => policy.id === row.id)?.name ?? row.name ?? row.id.replace(/_/g, " ");
+    policies.find((policy) => policy.id === row.id)?.name ??
+    CALCULATOR_ONLY_MEASURES[row.id]?.name ??
+    row.name ??
+    row.id.replace(/_/g, " ");
   // A short name for tight labels (policyDetails.js's, while it describes
   // the published measure), else the name
   const labelOf = (row) => {
@@ -331,7 +335,14 @@ export function policyRows(byPolicy, total, policies, year = null) {
         (row) =>
           row.note && (row.noteKind === "employer_cost" || (row.noteKind === "if_received" && row.change !== 0)),
       )
-      .map((row) => ({ id: row.id, name: nameOf(row), kind: row.noteKind, text: row.note })),
+      .map((row) => ({ id: row.id, name: nameOf(row), kind: row.noteKind, text: row.note }))
+      // A calculator-only measure (calculatorOnlyMeasures.js): why it is
+      // not in the national results
+      .concat(
+        byPolicy.measures
+          .filter((row) => isCalculatorOnly(row.id))
+          .map((row) => ({ id: row.id, name: nameOf(row), kind: "calculator_only", text: CALCULATOR_ONLY_MEASURES[row.id].note })),
+      ),
     underAPound: rows.filter((row) => row.rounded === 0 && row.id !== "interaction").map((row) => row.name),
   };
 }
