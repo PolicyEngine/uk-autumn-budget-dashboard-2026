@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { parseGeographyTable } from "./parse";
 import {
+  CATEGORY_COLOURS,
   NO_DATA_FILL,
-  approximateFill,
 } from "./palette";
 import { TOO_UNCERTAIN } from "./classify";
 import { cardLines, constituencySentence, describeSeat, drawnAsNoData, movesNoSeat, seatCard, noSeatMovedNote, seatStates, seatStyle, seatSummary } from "./seats";
@@ -37,7 +37,7 @@ describe("seat states", () => {
     });
   });
 
-  it("draw withheld, too uncertain and missing seats as No data, approximate ones dotted", () => {
+  it("draw withheld, too uncertain and missing seats as No data, approximate ones in plain colour", () => {
     // One No data swatch on the map (Vahid, 28 October): a withheld seat is
     // never coloured, with or without the continuous scale
     expect(seatStyle(states.get("Z14000003")).fill).toBe(NO_DATA_FILL);
@@ -47,11 +47,12 @@ describe("seat states", () => {
     expect(["Z14000003", "Z14000004", "Z14000006"].every((code) => drawnAsNoData(states.get(code)))).toBe(true);
     expect(drawnAsNoData(states.get("Z14000001"))).toBe(false);
     expect(drawnAsNoData(states.get("Z14000002"))).toBe(false);
-    // Status is a texture, never a change of colour.
+    // No texture: an approximate seat is plain colour (Vahid, 28 October)
     expect(seatStyle(states.get("Z14000002"))).toMatchObject({
-      fill: approximateFill("small_gain"),
+      fill: CATEGORY_COLOURS.small_gain,
       fillOpacity: 1,
     });
+    expect(seatStyle(states.get("Z14000002"), () => CHART_COLOURS.gain).fill).toBe(CHART_COLOURS.gain);
     expect(seatStyle(states.get("Z14000006")).fill).toBe(NO_DATA_FILL);
     expect(seatStyle(undefined).fill).toBe(NO_DATA_FILL);
   });

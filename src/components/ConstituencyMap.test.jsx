@@ -15,9 +15,6 @@ import { resetGeographyCache } from "../hooks/useGeographyData";
 import {
   NO_DATA_FILL,
   NO_DATA_STROKE,
-  approximateColourFill,
-  approximateColourPatternId,
-  approximatePatternId,
 } from "../utils/geography/palette";
 import { SCALE_COLOURS, scaleColour } from "../utils/geography/scale";
 import {
@@ -127,24 +124,19 @@ describe("ConstituencyMap", () => {
     expect(seat(container, "Z14000006").getAttribute("fill")).toBe(NO_DATA_FILL);
   });
 
-  it("colours seats on the 2025 dashboard's continuous scale, and dots an approximate seat's colour", async () => {
+  it("colours seats on the 2025 dashboard's continuous scale, an approximate seat plain like the rest", async () => {
     const { container } = await renderMap();
     const fill = (code) => seat(container, code).getAttribute("fill");
     const opacity = (code) => seat(container, code).getAttribute("fill-opacity");
     // +1.12% is past the scale's +1% end: clamped to its teal
     expect(fill("Z14000001")).toBe(SCALE_COLOURS.gain.toLowerCase());
     expect(opacity("Z14000001")).toBe("1");
-    // Status is a texture over the seat's own colour, not a lighter
-    // colour that could be read as a smaller change.
-    const approximate = scaleColour("0.0068", 0.01);
-    expect(fill("Z14000002")).toBe(approximateColourFill(approximate));
+    // No texture on any seat (Vahid, 28 October): an approximate seat is
+    // its own colour, full strength; its card says it is approximate
+    expect(fill("Z14000002")).toBe(scaleColour("0.0068", 0.01));
     expect(opacity("Z14000002")).toBe("1");
-    const dots = container.querySelector(
-      `svg > defs > pattern#${approximateColourPatternId(approximate)}`,
-    );
-    expect(dots.querySelector("rect").getAttribute("fill")).toBe(approximate);
-    expect(dots.querySelector("circle")).not.toBeNull();
-    expect(dots.id).not.toMatch(/[\d:]/);
+    const fills = [...container.querySelectorAll("path.constituency-path")].map((path) => path.getAttribute("fill"));
+    expect(fills.some((value) => value.startsWith("url("))).toBe(false);
     // Too uncertain to place on the scale: the No data swatch, not a grey
     // that reads as a size of change
     expect(fill("Z14000004")).toBe(NO_DATA_FILL);
@@ -187,20 +179,15 @@ describe("ConstituencyMap", () => {
       "0%",
       "+1%",
       "No data: not published, or too few survey households",
-      "Approximate: dotted, few survey households",
     ]) {
       expect(text).toContain(entry);
     }
     expect(text).not.toMatch(/Too uncertain|Little change|hatched/);
     expect(legend.querySelector(`rect[fill="${NO_DATA_FILL}"]`)).not.toBeNull();
-    // Status swatches carry texture over a gain and a loss colour, so none
-    // reads as a size of change.
-    expect(
-      legend.querySelectorAll(`rect[fill="url(#${approximatePatternId("large_gain")})"]`),
-    ).toHaveLength(1);
+    expect(text).not.toMatch(/Approximate|dotted/);
     expect(legend.querySelector('rect[fill="url(#map-legend-gradient)"]')).not.toBeNull();
-    // No explanation of deliberate noise, and no red dot on any seat: the
-    // only circles are the dots inside the approximate textures.
+    // No explanation of deliberate noise, and no dot on any seat: the only
+    // circles are inside the (unused) texture definitions.
     expect(text).not.toMatch(/noise/i);
     const circles = [...container.querySelectorAll('svg[role="img"] circle')];
     expect(circles.every((circle) => circle.closest("pattern"))).toBe(true);
@@ -326,15 +313,14 @@ describe("ConstituencyMap", () => {
     expect(card.querySelector(".seat-card-policies")).toBeNull();
   });
 
-  it("gives an approximate seat one muted line with its households and interval", async () => {
+  it("gives an approximate seat one muted line saying so, with its interval", async () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000002"));
     const card = tooltip(container);
     expect(within(card).getByRole("heading")).toHaveTextContent("Harbour, Mill and Quay");
-    expect(card.querySelector(".seat-card-note")).toHaveTextContent(
-      "Estimate from 10–29 survey households; 90% interval 0.12% to 1.24%",
+    expect(card.querySelector(".seat-card-note").textContent).toBe(
+      "Approximate: based on fewer than 30 survey households; 90% interval 0.12% to 1.24%",
     );
-    expect(card).not.toHaveTextContent("Approximate:");
   });
 
   it("gives a seat whose interval includes zero its interval, not a verdict", async () => {
@@ -421,7 +407,7 @@ describe("ConstituencyMap", () => {
     showChangeAs("£ per household");
     await waitFor(() =>
       expect(seat(container, "Z14000002").getAttribute("fill")).toBe(
-        approximateColourFill(scaleColour("150", 100)),
+        scaleColour("150", 100),
       ),
     );
     fireEvent.click(seat(container, "Z14000005"));
@@ -610,12 +596,10 @@ describe("ConstituencyMap", () => {
     expect(root.querySelector("g.map-legend").textContent).toContain(
       "No data: not published, or too few survey households",
     );
-    // The exported file carries the dot textures its approximate seats use.
-    expect(
-      root.querySelector(
-        `:scope > svg > defs > pattern#${approximatePatternId("small_gain")}`,
-      ),
-    ).not.toBeNull();
+    // No seat in the file carries a texture either
+    const filePaths = [...root.querySelectorAll("path[data-code]")];
+    expect(filePaths.length).toBeGreaterThan(0);
+    expect(filePaths.some((path) => (path.getAttribute("fill") ?? "").startsWith("url("))).toBe(false);
     expect(root.querySelector("g.map-zoom-layer").hasAttribute("transform")).toBe(
       false,
     );

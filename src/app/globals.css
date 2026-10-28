@@ -257,6 +257,7 @@ code {
   --c-pension-contributions: #cbd5e1; /* gray-300 */
   --c-gain-light: #81e6d9; /* a small gain on the map; a light teal series (ui-kit teal-200) */
   --c-map-gain: #14b8a6; /* the constituency map scale's gain end, as on the 2025 dashboard */
+  --c-no-data: #cbd5e1; /* a constituency with no data on the map: a cool slate, apart from the scale's 0 grey (--c-grid) */
   --c-loss-light: #fbbf24; /* a small loss on the map */
   --c-ink: #1f2937; /* the map's approximate-figure dots */
   /* Notices: data pending or provisional */

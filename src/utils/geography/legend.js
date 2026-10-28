@@ -13,7 +13,6 @@ import {
   CATEGORY_COLOURS,
   HATCH_COLOURS,
   NO_DATA_FILL,
-  NO_DATA_STROKE,
   WITHHELD_PATTERN_ID,
   approximateColourPatternId,
   approximatePatternId,
@@ -134,17 +133,12 @@ const GRADIENT_ID = "map-legend-gradient";
 
 /**
  * The legend's entries after the scale, as the page's key: one No data
- * swatch (not published, or too uncertain to place on the scale), then the
- * approximate dots over a gain and a loss colour, so they cannot be read
- * as a size of change. Little change is on the scale, at its 0.
+ * swatch (not published, or too uncertain to place on the scale). Little
+ * change is on the scale, at its 0; approximate figures are plain colour.
  */
 export function legendEntries() {
   return [
-    { fill: NO_DATA_FILL, stroke: NO_DATA_STROKE, label: "No data: not published, or too few survey households" },
-    {
-      halves: [`url(#${approximatePatternId("large_gain")})`, `url(#${approximatePatternId("large_loss")})`],
-      label: "Approximate: dotted, few survey households",
-    },
+    { fill: NO_DATA_FILL, label: "No data: not published, or too few survey households" },
   ];
 }
 

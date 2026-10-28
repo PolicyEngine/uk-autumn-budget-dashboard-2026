@@ -225,11 +225,12 @@ describe("constituencyInfo", () => {
     expect(national.how[0]).toMatch(/enhanced Family Resources Survey/);
     const how = local.how.join(" ");
     expect(how).toMatch(/90% interval from 1,000 bootstrap resamples/);
-    // No data and the dotted rule (10 households, 30 effective) are said
+    // No data and the approximate rule (10 households, 30) are said
     // here, once: the key has only the scale and a No data chip
     expect(how).toMatch(/^.*No data: the figure is not published/);
     expect(how).toMatch(/under 10 survey households/);
-    expect(how).toMatch(/Dotted constituencies are approximate: .*under 30 effective survey households/);
+    expect(how).toMatch(/Some figures are approximate, based on fewer than 30 survey households/);
+    expect(how).not.toMatch(/dotted/i);
     expect(how).not.toMatch(/either way|hatched/);
     expect(local.definitions.map((d) => d.term ?? d.ref)).toEqual(expect.arrayContaining(["Hex map", "No data"]));
     expect(local.definitions.map((d) => d.term ?? d.ref)).not.toContain("Too uncertain");

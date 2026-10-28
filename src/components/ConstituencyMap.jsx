@@ -39,13 +39,11 @@ import {
   MAP_LEGEND_CLASS,
   appendStatusPatterns,
   drawMapLegend,
-  ensureApproximateColourDots,
   placeMapLegend,
 } from "../utils/geography/legend";
 import {
   DIRECTION_TEXT_COLOURS,
   NO_DATA_FILL,
-  NO_DATA_STROKE,
 } from "../utils/geography/palette";
 import {
   SCALE_GRADIENT,
@@ -152,8 +150,8 @@ const exportDescription = (label, outcome) =>
   `${label}. Each constituency is coloured by the size of its average ` +
   `change in household net income, in ${OUTCOME_LABELS[outcome]}. Blank ` +
   "ones have no data: not published, to protect survey respondents' " +
-  "confidentiality, or too few survey households to estimate. Dotted ones " +
-  "are approximate, resting on few survey households.";
+  "confidentiality, or too few survey households to estimate. Some " +
+  "figures are approximate, based on fewer than 30 survey households.";
 
 /**
  * The card's "About this chart". Each rule is the generator's: the
@@ -179,7 +177,7 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
       "Each figure has a 90% interval from 1,000 bootstrap resamples of survey households.",
       // No data and approximate: said here once; the key has the No data swatch only
       "No data: the figure is not published, to protect survey respondents' confidentiality (under 10 survey households, or one or two would make up too much of it), or there are too few survey households to estimate it (its 90% interval spans more than two of the map's size bands); hover a constituency for its interval.",
-      "Dotted constituencies are approximate: their figures rest on under 30 effective survey households, so read them as a rough guide.",
+      "Some figures are approximate, based on fewer than 30 survey households, so read them as a rough guide: they are coloured like the rest, and the constituency's card says so.",
     ],
     definitions: [
       { ref: "netIncome" },
@@ -311,12 +309,12 @@ export function seatGeometry(features, mode) {
 // The map key's one entry that highlights seats on hover: No data, beside
 // the colour scale (Vahid, 28 October). Little change is on the scale, at
 // its 0; not published, no row and too uncertain to place on the scale
-// share the No data swatch (drawnAsNoData). Approximate figures keep their
-// dots on the map, explained in About this chart, with no chip.
+// share the No data swatch (drawnAsNoData). Approximate figures are plain
+// colour; the card and About this chart say so, with no chip.
 export const NO_DATA_KEY = "no-data";
 export const NO_DATA_DETAIL = "No data: not published, or too few survey households to estimate";
 const STATUS_ENTRIES = [
-  { key: NO_DATA_KEY, label: "No data", detail: NO_DATA_DETAIL, fill: NO_DATA_FILL, stroke: NO_DATA_STROKE },
+  { key: NO_DATA_KEY, label: "No data", detail: NO_DATA_DETAIL, fill: NO_DATA_FILL },
 ];
 
 /** Whether a seat's state matches a key entry (NO_DATA_KEY, "cat:small_gain", "kind:approximate"). */
@@ -549,7 +547,7 @@ const CARD_GAP = 10;
 /**
  * Constituency results as the disclosure layer published them, for one
  * measure or the whole package, one outcome and one year. Seats are
- * coloured on the scale, dotted when approximate, and drawn as no data
+ * coloured on the scale (approximate ones too), and drawn as no data
  * when withheld, too uncertain to place on the scale, or with no row. Nothing is summed across measures. It draws only on a
  * release that says it routes results by area: on one that routes none it
  * says so, and when it can't read the release's routing it says its results
@@ -822,11 +820,9 @@ export default function ConstituencyMap({
     const seats = map.layer.selectAll("path.constituency-path");
     const extent = colourExtent(outcome);
     const colourOf = (value) => scaleColour(value, extent);
-    const defs = map.svg.select("defs");
     seats.each(function (feature) {
       const node = d3.select(this);
       const style = seatStyle(states.get(seatCode(feature)), colourOf);
-      if (style.dots) ensureApproximateColourDots(defs, style.dots);
       const previous = node.attr("fill");
       node.interrupt();
       node.attr("fill-opacity", style.fillOpacity);
