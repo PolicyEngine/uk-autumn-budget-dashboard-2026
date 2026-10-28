@@ -5,7 +5,7 @@ import { HOUSEHOLD_EXAMPLES } from "./householdExamples";
 import { SELECTABLE_YEARS } from "./displayYears";
 import { buildHouseholdRequest, isRenting, requestKey } from "./householdImpactApi";
 import { cardFigures } from "../components/personal/HouseholdCards";
-import { presetCacheEntries, presetChanges, presetInputs, presetRequests } from "./householdPresets";
+import { presetCacheEntries, presetChanges, presetInputs, presetPolicies, presetRequests } from "./householdPresets";
 
 const file = JSON.parse(readFileSync("public/data/household_presets.json", "utf8"));
 // The receipts' engine when it is the file's: the page uses the answers then
@@ -28,7 +28,8 @@ describe("the examples' precomputed results (public/data/household_presets.json)
   it("answer the page's own requests: re-run the precompute if an example or the form changes", () => {
     for (const entry of file.entries) {
       const preset = HOUSEHOLD_EXAMPLES.find((example) => example.id === entry.preset_id);
-      const asked = buildHouseholdRequest(presetInputs(preset), { year: entry.year, policies: file.policies });
+      // The saver's with the calculator-only savings rise it turns on
+      const asked = buildHouseholdRequest(presetInputs(preset), { year: entry.year, policies: presetPolicies(preset, file.policies) });
       expect(requestKey(entry.request), entry.preset_id).toBe(requestKey(asked));
     }
     expect(presetCacheEntries(file, published)).toHaveLength(file.entries.length);
@@ -38,7 +39,7 @@ describe("the examples' precomputed results (public/data/household_presets.json)
     const keys = new Set(file.entries.map((entry) => requestKey(entry.request)));
     for (const example of HOUSEHOLD_EXAMPLES) {
       for (const year of SELECTABLE_YEARS) {
-        const asked = buildHouseholdRequest(presetInputs(example), { year, policies: file.policies });
+        const asked = buildHouseholdRequest(presetInputs(example), { year, policies: presetPolicies(example, file.policies) });
         expect(keys.has(requestKey(asked)), `${example.id} ${year}: re-run the precompute`).toBe(true);
       }
     }
@@ -83,7 +84,8 @@ describe("the examples' precomputed results (public/data/household_presets.json)
       expect(change).toBe(entry.response.net_income.change);
       // Each measure's own part (alone, so the parts need not add up to
       // the change when measures interact)
-      expect(Object.keys(byPolicy).sort()).toEqual([...file.policies].sort());
+      const preset = HOUSEHOLD_EXAMPLES.find((example) => example.id === entry.preset_id);
+      expect(Object.keys(byPolicy).sort()).toEqual(presetPolicies(preset, file.policies).sort());
     }
     // An entry whose example has changed gives no figure
     const [first] = file.entries;

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { withCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { SELECTABLE_YEARS } from "../utils/displayYears";
 import {
   HEADLINE_INCLUDE,
@@ -196,12 +197,15 @@ export default function useExampleFigures({
       const asks = [];
       for (const y of years) {
         for (const example of examples) {
-          const key = exampleKey(example.inputs, { year: y, policies: used, publicationKey });
+          // An example that turns on a calculator-only measure (the saver)
+          // is asked with it, as choosing it asks
+          const own = withCalculatorOnly(used, example.calculatorOnly ?? []);
+          const key = exampleKey(example.inputs, { year: y, policies: own, publicationKey });
           const net = peekHouseholdImpact(key, expectedEngine)?.net ?? readStoredHeadline(key, expectedEngine)?.net ?? null;
           if (net) put(example.id, y, net);
           else {
             pending.add(`${example.id}:${y}`);
-            asks.push({ example, year: y, key });
+            asks.push({ example, year: y, key, own });
           }
         }
       }
@@ -214,10 +218,10 @@ export default function useExampleFigures({
     // One cell: its headline, checked, cached and stored. A refusal of
     // measures the API does not know is thrown for the caller; any other
     // failure leaves the cell to "Calculated when chosen"
-    const ask = async ({ example, year: y, key }) => {
+    const ask = async ({ example, year: y, key, own }) => {
       const cell = `${example.id}:${y}`;
       try {
-        const body = buildHouseholdRequest(example.inputs, { year: y, policies: used, include: HEADLINE_INCLUDE });
+        const body = buildHouseholdRequest(example.inputs, { year: y, policies: own, include: HEADLINE_INCLUDE });
         const raw = await post(body, { signal });
         if (signal.aborted) return;
         const data = normaliseHouseholdImpact(raw);
