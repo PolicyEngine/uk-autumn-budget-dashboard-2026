@@ -64,10 +64,10 @@ def distribution_answer(unit):
 
 
 def test_units_are_measure_major_and_year_minor(tmp_path):
-    reforms = [get_reform("threshold_freeze_2031_32")]
+    reforms = [get_reform("trading_allowance_raise")]
     sets = [
         [
-            get_reform("threshold_freeze_2031_32"),
+            get_reform("trading_allowance_raise"),
             get_reform("domestic_electricity_zero_vat"),
         ]
     ]
@@ -85,10 +85,10 @@ def test_units_are_measure_major_and_year_minor(tmp_path):
 
 
 def test_merged_files_are_the_whole_units_bytes(tmp_path):
-    reforms = [get_reform("threshold_freeze_2031_32")]
+    reforms = [get_reform("trading_allowance_raise")]
     sets = [
         [
-            get_reform("threshold_freeze_2031_32"),
+            get_reform("trading_allowance_raise"),
             get_reform("domestic_electricity_zero_vat"),
         ]
     ]
@@ -111,7 +111,7 @@ def test_merged_files_are_the_whole_units_bytes(tmp_path):
 
 
 def test_messages_are_said_once_per_measure(capsys, tmp_path):
-    reforms = [get_reform("threshold_freeze_2031_32")]
+    reforms = [get_reform("trading_allowance_raise")]
     pipeline.flat_units(
         reforms,
         DataConfig(output_dir=tmp_path, years=YEARS),
@@ -121,8 +121,8 @@ def test_messages_are_said_once_per_measure(capsys, tmp_path):
         by_year=True,
     )
     said = capsys.readouterr().out
-    assert said.count("limit of threshold_freeze_2031_32") == 1
-    assert said.count("done threshold_freeze_2031_32") == 1
+    assert said.count("limit of trading_allowance_raise") == 1
+    assert said.count("done trading_allowance_raise") == 1
 
 
 def per_year_growth(all_cells_base, all_cells_reform, years):
@@ -187,7 +187,7 @@ def test_a_missing_or_misplaced_year_is_refused():
 def test_only_the_two_package_files_split_by_year(tmp_path):
     with pytest.raises(ValueError, match="by_year"):
         pipeline.flat_units(
-            [get_reform("threshold_freeze_2031_32")],
+            [get_reform("trading_allowance_raise")],
             DataConfig(output_dir=tmp_path),
             None,
             pipeline.AGE,
@@ -247,7 +247,7 @@ def test_the_cli_splits_by_year_on_modal_unless_sequential(
 
     for name in ("generate_income_distribution", "generate_income_growth"):
         monkeypatch.setattr(cli, name, record(name))
-    ids = ["threshold_freeze_2031_32", "domestic_electricity_zero_vat"]
+    ids = ["trading_allowance_raise", "domestic_electricity_zero_vat"]
     for only in ("income_distribution", "income_growth"):
         parsed = cli.parse_args(
             [
@@ -290,11 +290,11 @@ def test_per_year_units_write_the_same_bytes_on_the_engine(
         "distribution_points",
         functools.partial(calculators.distribution_points, min_households=5),
     )
-    reforms = [get_reform("threshold_freeze_2031_32")]
+    reforms = [get_reform("trading_allowance_raise")]
     sets = [
         [
-            get_reform("threshold_freeze_2031_32"),
-            get_reform("plan_2_threshold_unfreeze"),
+            get_reform("trading_allowance_raise"),
+            get_reform("unearned_income_rates_up"),
         ]
     ]
     years = [2026, 2027, 2028]
