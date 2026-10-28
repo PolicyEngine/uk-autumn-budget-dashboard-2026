@@ -399,3 +399,20 @@ describe("the change-by-year helpers", () => {
     expect(cumulate(series, ["net"]).map((point) => point.net)).toEqual([60, 130, -10, null]);
   });
 });
+
+describe("Change by year's hover", () => {
+  it("lists every line shown, not only the chosen group and all ages", async () => {
+    const { render } = await import("@testing-library/react");
+    const { TrendTooltip } = await import("./TrendCard");
+    const lines = [
+      { key: "16-24", label: "16 to 24", colour: "#000" },
+      { key: "all", label: "All ages", colour: "#111" },
+      { key: "65+", label: "65 and over", colour: "#222" },
+    ];
+    const row = { year: 2029, "16-24": -5, all: -6, "65+": 1 };
+    const { container } = render(
+      <TrendTooltip active payload={[{ payload: row }]} label={2029} focusSeries={[{ year: 2029 }]} allValue={() => -6} groupValue={() => -5} groupLabel="16 to 24" nameOf={(id) => id} cumulative={false} selectedYear={2027} lines={lines} />,
+    );
+    expect([...container.querySelectorAll(".chart-tooltip-name")].map((n) => n.textContent)).toEqual(["16 to 24", "All ages", "65 and over"]);
+  });
+});
