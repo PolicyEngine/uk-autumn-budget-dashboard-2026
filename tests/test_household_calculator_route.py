@@ -17,6 +17,10 @@ reads a period's parameters on its first day (policyengine-core
 
 It now builds the simulation with ``Scenario(parameter_changes=...)``, as
 the national run does, so these tests compare the two routes directly.
+Both routes build every simulation on the OBR October 2026 forecast
+(``forecast.with_forecast``: ``pipeline.build_microsimulation`` nationally,
+``personal_impact.create_simulation`` for households), so the national
+route here is built on it too.
 """
 
 import pytest
@@ -24,6 +28,7 @@ from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
 from uk_budget_data import personal_impact
+from uk_budget_data.forecast import forecast_scenario, with_forecast
 from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 
 # A year each candidate measure the calculator shows is in force.
@@ -74,8 +79,11 @@ EXTRA_PEOPLE = {
         "student_loan_balance": 60_000,
         "student_loan_repayments": 500,
     },
-    # £11,000 / 52 = £211.53 a week, above the £204 earnings limit
-    "carer": {"age": 45, "employment_income": 11_000, "care_hours": 35},
+    # About £249 a week of net earnings: above the taper's 2030-31 limit,
+    # £228 (16 x the OBR's £14.23 National Living Wage, rounded up), and
+    # inside the taper. Between the engine's £204 and £228 the native
+    # amount stands on both sides, so a carer there does not move.
+    "carer": {"age": 45, "employment_income": 13_000, "care_hours": 35},
     # A private renter on Universal Credit (EXTRA_HOMES), whose rent is
     # above the frozen Local Housing Allowance rate
     "renter": {"age": 30, "employment_income": 8_000},
@@ -166,15 +174,14 @@ def household_route(reform, year, variable="household_net_income"):
 
 
 def national_route(reform, year, variable="household_net_income"):
-    """The same measure through the national run's Scenario."""
+    """The same measure through the national run's Scenario, on the
+    forecast as the national run builds it (``build_microsimulation``)."""
     probe = situation(year)
     base = reform.to_baseline_scenario()
-    baseline = (
-        Simulation(situation=probe, scenario=base)
-        if base is not None
-        else Simulation(situation=probe)
+    baseline = Simulation(situation=probe, scenario=with_forecast(base))
+    reformed = Simulation(
+        situation=probe, scenario=with_forecast(reform.to_scenario())
     )
-    reformed = Simulation(situation=probe, scenario=reform.to_scenario())
     return [
         r - b
         for r, b in zip(
@@ -226,7 +233,8 @@ def _national(probe, changes, modifier):
         parameter_changes=changes,
         simulation_modifier=modifier,
     ).to_scenario()
-    return Simulation(situation=probe, scenario=scenario)
+    # On the forecast, as the national run builds it
+    return Simulation(situation=probe, scenario=with_forecast(scenario))
 
 
 def _impact(build, reform, year, variable="household_net_income"):
@@ -402,8 +410,9 @@ def test_a_duty_kept_on_its_statutory_dates_reaches_households():
 
 
 def test_no_change_builds_the_plain_simulation():
+    """No change: the forecast alone, as current law is built nationally."""
     probe = situation(2027)
-    plain = Simulation(situation=probe)
+    plain = Simulation(situation=probe, scenario=forecast_scenario())
     built = personal_impact.create_simulation(probe, 2027)
     assert _net(built, 2027) == _net(plain, 2027)
 
@@ -673,9 +682,9 @@ def test_an_empty_scenario_computes_what_none_does(probe):
 
 def test_household_simulations_build_without_an_empty_scenario(monkeypatch):
     """Most registered measures keep current law on the reform side as
-    parameter_changes={}: that side is built with no scenario, the other
-    with its own. That an empty scenario computes what none does is
-    checked above."""
+    parameter_changes={}: that side is built on the forecast alone, the
+    other on the forecast with its own changes. That an empty scenario
+    computes what none does is checked above."""
     from uk_budget_data.models import DataConfig, Reform
 
     seen = []
@@ -695,7 +704,9 @@ def test_household_simulations_build_without_an_empty_scenario(monkeypatch):
     baseline, reformed = personal_impact.household_simulations(
         PENSIONER, reform, DataConfig()
     )
-    assert seen[0] is not None and seen[1] is None
+    forecast = forecast_scenario().parameter_changes
+    assert seen[0].parameter_changes != forecast
+    assert seen[1].parameter_changes == forecast
     # Current law on the reform side; the pre-Budget allowance on the other.
     assert float(reformed.calculate("income_tax", 2027)[0]) == 3_486
     assert float(baseline.calculate("income_tax", 2027)[0]) == 2_000
@@ -703,7 +714,8 @@ def test_household_simulations_build_without_an_empty_scenario(monkeypatch):
 
 def test_an_empty_baseline_is_built_without_a_scenario(monkeypatch):
     """The baseline side drops an empty scenario too: an explicit empty
-    baseline (its own, so the configured one is not used) is current law."""
+    baseline (its own, so the configured one is not used) is current law,
+    on the forecast alone."""
     from uk_budget_data.models import DataConfig, Reform
 
     seen = []
@@ -725,6 +737,8 @@ def test_an_empty_baseline_is_built_without_a_scenario(monkeypatch):
         reform,
         DataConfig(baseline_parameter_changes=_allowance(15_000)),
     )
-    assert seen[0] is None and seen[1] is not None
+    forecast = forecast_scenario().parameter_changes
+    assert seen[0].parameter_changes == forecast
+    assert seen[1].parameter_changes != forecast
     assert float(baseline.calculate("income_tax", 2027)[0]) == 3_486
     assert float(reformed.calculate("income_tax", 2027)[0]) == 2_000

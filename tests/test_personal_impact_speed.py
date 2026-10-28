@@ -14,6 +14,7 @@ from hypothesis import strategies as st
 from policyengine_uk.utils.scenario import Scenario
 
 from uk_budget_data import personal_impact
+from uk_budget_data.forecast import with_forecast
 from uk_budget_data.models import DataConfig
 from uk_budget_data.personal_impact import (
     HouseholdInput,
@@ -122,7 +123,9 @@ def test_scenarios_that_do_the_same_share_a_key():
 
 
 @pytest.mark.slow
-def test_the_calculator_gives_the_per_year_routes_answers(monkeypatch):
+def test_the_calculator_gives_the_per_year_routes_answers(
+    monkeypatch, pre_budget_registry
+):
     """Differential: every figure the calculator returns equals the one the
     per-year route gives (two simulations for each measure and year, built
     by ``household_simulations``), exactly. The household's child leaves
@@ -132,9 +135,11 @@ def test_the_calculator_gives_the_per_year_routes_answers(monkeypatch):
     six households is in the PR."""
     # 2026 is merged into 2025's situation; the child has left by 2029.
     years = [2025, 2026, 2029]
-    # The Warm Home Discount top-up (a modifier) moves this Universal Credit
-    # household in 2026; the Plan 2 measure has parameter changes and
-    # modifiers on both sides; the threshold freeze is parameters only.
+    # Withdrawn on Budget day, kept as fixtures of the machinery
+    # (``pre_budget_registry``): the Warm Home Discount top-up (a modifier)
+    # moves this Universal Credit household in 2026; the Plan 2 measure has
+    # parameter changes and modifiers on both sides (no released measure
+    # has its own baseline); the threshold freeze is parameters only.
     policy_ids = [
         "warm_home_discount_top_up",
         "plan_2_threshold_unfreeze",
@@ -154,8 +159,12 @@ def test_the_calculator_gives_the_per_year_routes_answers(monkeypatch):
     for year in years:
         situation = build_situation(household, year)
         reported = results["years"][year]["baseline"]
+        # Current law on the forecast, as every simulation is built
         assert reported == calculate_household_metrics(
-            personal_impact.Simulation(situation=situation), year
+            personal_impact.Simulation(
+                situation=situation, scenario=with_forecast(None)
+            ),
+            year,
         )
         for policy_id in policy_ids:
             baseline, reformed = household_simulations(

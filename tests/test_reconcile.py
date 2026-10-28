@@ -1803,13 +1803,19 @@ def test_the_committed_policy_gates_budget_2026_on_post_behavioural():
         "state_pension_income_tax_protection" not in policy.includes_behaviour
     )
     assert "household_energy_payment_2026" not in policy.includes_behaviour
-    # The committed exceptions load: Household Energy Payment 2026-27 only
-    (entry,) = load_exceptions(root / "data_inputs/treasury/exceptions.yaml")
-    assert (entry.measure_id, entry.fiscal_year) == (
-        "household_energy_payment_2026",
-        "2026-27",
-    )
-    assert entry.explanation_class == "devolved"
+    # The committed exceptions load: the six accepted on Budget day
+    # (00a369d2) for the 7-measure release
+    entries = load_exceptions(root / "data_inputs/treasury/exceptions.yaml")
+    assert [
+        (e.measure_id, e.fiscal_year, e.explanation_class) for e in entries
+    ] == [
+        ("household_energy_payment_2026", "2026-27", "devolved"),
+        ("fuel_duty_rise_deferral", "2026-27", "coverage_business"),
+        ("fuel_duty_rise_deferral", "2027-28", "coverage_business"),
+        ("trading_allowance_raise", "2028-29", "timing_fiscal_calendar"),
+        ("trading_allowance_raise", "2030-31", "behavioural"),
+        ("trading_allowance_raise", "2031-32", "behavioural"),
+    ]
     # The returned policy serialises (reconciliation.json)
     result = run({2027: 1.0}, [post(2027, 1.0)], policy=policy)
     json.dumps(result)

@@ -164,7 +164,7 @@ def test_the_package_is_the_seven_announced_measures():
     # The area run's package alias stands for that key
     assert manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     description = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID).description
-    assert description.startswith("All eight announced measures")
+    assert description.startswith("All seven announced measures")
 
 
 def test_the_withdrawn_measures_are_not_registered():
