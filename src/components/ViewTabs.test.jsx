@@ -110,4 +110,24 @@ describe("the view tab bar's scrolling row", () => {
     );
     expect(container.querySelector(".view-tabs").scrollLeft).toBe(0);
   });
+
+  // Hidden on the landing page, the bar has no geometry; once a view opens
+  // it shows, and the sub-tab row's --view-tab-x must come from the row as
+  // it now sits (pulled a tab's padding into the margin, globals.css), not
+  // from the hidden bar. Nothing leads the row, so only the bar showing
+  // can measure it again.
+  it("measures the chosen tab's place again once the bar shows", () => {
+    layOut();
+    let rowLeft = 0;
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function () {
+      const left = this.classList?.contains("view-tabs") ? rowLeft : 0;
+      return { left, right: left, top: 0, bottom: 0, width: 0, height: 0, x: left, y: 0, toJSON() {} };
+    });
+    const props = { tabs: TABS, value: "dashboard", onChange: () => {}, tabId: (value) => `tab-${value}`, panelId: (value) => `panel-${value}` };
+    const { rerender } = render(<ViewTabs {...props} hidden />);
+    expect(document.documentElement.style.getPropertyValue("--view-tab-x")).toBe("0px");
+    rowLeft = -12;
+    rerender(<ViewTabs {...props} hidden={false} />);
+    expect(document.documentElement.style.getPropertyValue("--view-tab-x")).toBe("-12px");
+  });
 });

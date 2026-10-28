@@ -93,7 +93,9 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false, hidden
     // (after About, which is pulled a tab's padding into the margin to
     // line its icon up with PolicyEngine's mark, HomeButton.css)
     document.documentElement.style.setProperty("--view-tab-x", `${Math.round(lead + Math.max(0, indicator.x - scrollLeft))}px`);
-  }, [indicator.x, leading]);
+    // (again once the bar shows: hidden, on the landing page, it has no
+    // geometry)
+  }, [indicator.x, leading, barHidden]);
 
   useEffect(() => {
     window.addEventListener("resize", measure);

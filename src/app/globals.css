@@ -639,6 +639,14 @@ html[data-site-nav-shown] {
   display: none;
 }
 
+/* In the bar, the row is pulled a tab's padding into the margin, so the
+   first tab's icon starts on the left edge of PolicyEngine's mark in the
+   band above (.title-mark) and of the page content; the sub-tab row
+   follows it (--view-tab-x, ViewTabs.jsx) */
+.view-tabs-bar > .view-tabs {
+  margin-left: calc(-1 * var(--tab-pad-x, 12px));
+}
+
 /* Tabs out of sight at either end of a scrolling row fade out there */
 .view-tabs.fade-end {
   mask-image: linear-gradient(to right, black calc(100% - 40px), transparent);

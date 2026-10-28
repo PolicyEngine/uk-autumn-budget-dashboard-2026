@@ -372,10 +372,11 @@
 
 /* Under the copy of the bar, the row starts under the chosen view tab, as
    --view-tab-x puts the real one (ViewTabs.jsx), with no code: first an
-   unseen copy of About and the tabs before the chosen one, laid out as the
-   bar lays them out (HomeButton.css: About pulled a tab's padding into the
-   margin, three tab gaps on to the first tab; a tab gap between tabs). It
-   gives way, as the scrolled bar's tabs do, to an unseen copy of the
+   unseen copy of the tabs before the chosen one, laid out as the bar lays
+   them out (a tab gap between tabs and one after the last; none when the
+   first tab is the chosen one). The ghost and the row then step back a
+   tab's padding, as the bar's row is pulled into the margin (globals.css),
+   so the step holds when the lead is empty too. It gives way, as the scrolled bar's tabs do, to an unseen copy of the
    chosen tab and the 24px after it (none after the last tab), in the
    row's own column; the band and the bar have one padding (globals.css
    --bar-pad-x), so both rows end together. The row takes no --view-tab-x,
@@ -397,20 +398,20 @@
   display: flex;
   gap: var(--tab-gap, 8px);
   height: 0;
-  margin: 0 var(--tab-gap, 8px) 0 calc(-1 * var(--tab-pad-x, 12px));
+  margin: 0 var(--tab-gap, 8px) 0 0;
   overflow: hidden;
   visibility: hidden;
 }
 
-/* About's three gaps: the lead's own gap and two more */
-.skeleton-tab-lead .edge-about {
-  margin-right: calc(2 * var(--tab-gap, 8px));
+.skeleton-tab-lead:empty {
+  margin-right: 0;
 }
 
 .skeleton-tab-ghost {
   grid-area: 1 / 2;
   display: flex;
   height: 0;
+  margin-left: calc(-1 * var(--tab-pad-x, 12px));
   padding-right: 24px;
   overflow: hidden;
   visibility: hidden;
@@ -426,7 +427,7 @@
   width: auto;
   min-width: 0;
   max-width: none;
-  margin-left: 0;
+  margin-left: calc(-1 * var(--tab-pad-x, 12px));
   contain: inline-size;
 }
 
@@ -435,6 +436,10 @@
   .skeleton-tab-lead,
   .skeleton-tab-ghost {
     display: none;
+  }
+
+  .skeleton-sub-tabs.has-tab-lead .sub-tabs {
+    margin-left: 0;
   }
 }
 
