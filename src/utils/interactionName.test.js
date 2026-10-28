@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { PLAN_2_ID, interactionName } from "./interactionName";
+import { interactionName } from "./interactionName";
+
+const MODELLED = { description: "Repayments are modelled, replacing those reported in the survey, and the revenue figure is the change in modelled repayments." };
+const PLAIN = { description: "Duty rises with RPI." };
 
 describe("interactionName", () => {
-  it("names the baseline difference when the Plan 2 measure is selected", () => {
-    expect(interactionName(["fuel_duty_rise_deferral", PLAN_2_ID])).toBe("Interaction and baseline difference");
+  it("names the baseline difference when a selected measure replaces survey values", () => {
+    expect(interactionName([PLAIN, MODELLED])).toBe("Interaction and baseline difference");
   });
 
-  it("stays 'Interaction' without the Plan 2 measure", () => {
-    expect(interactionName(["fuel_duty_rise_deferral", "warm_home_discount_top_up"])).toBe("Interaction");
+  it("stays 'Interaction' otherwise", () => {
+    expect(interactionName([PLAIN, {}])).toBe("Interaction");
     expect(interactionName(undefined)).toBe("Interaction");
   });
 });

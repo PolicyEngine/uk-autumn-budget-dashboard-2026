@@ -206,6 +206,14 @@ describe("the Poverty sub-tab's measures pair", () => {
     expect(about.querySelector("[data-zero-measure]")).toBeNull();
     // The card says each fact once: the people rule is in Methodology
     expect(about).not.toHaveTextContent(/nearest 1,000/);
+    // Every policy is selected, the student loan one among them, so a gap
+    // step, when the data have one, is named for the baseline difference
+    // and links to Methodology (the local files' gap is below rounding)
+    const gap = measures.querySelector(".wf-interaction .wf-label");
+    if (gap) {
+      expect(gap).toHaveTextContent(/baseline difference/);
+      expect(within(about).getByRole("link", { name: "Policies added up" })).toHaveAttribute("href", "?tab=methodology#method-limitations");
+    }
   });
 });
 

@@ -59,11 +59,12 @@ export const GLOSSARY = {
   ownRuns: {
     term: "Policies run on their own",
     meaning:
-      "Each policy simulated alone against current law; adding these up leaves out how policies interact.",
+      "Each policy simulated alone against current law; adding these up leaves out how policies interact, and a policy that uses modelled values in place of the survey's changes the baseline too.",
   },
   static: {
     term: "Static estimates",
-    meaning: "People do not change their behaviour in response to a policy: work, spending and wages stay as they were.",
+    meaning:
+      "People do not change their behaviour in response to a policy: work, spending and wages stay as they were, unless a policy's description says it passes an employer saving on as pay.",
   },
   benefitUnit: {
     term: "Benefit unit",

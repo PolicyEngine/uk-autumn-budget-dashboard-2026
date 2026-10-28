@@ -716,10 +716,11 @@ function MethodologyTab({ onShowTab }) {
               them, and show nothing for a selection with no such run.
             </p>
             <p className="method-more">
-              When the Plan 2 student loan measure is selected, the gap between all policies together
-              and the sum of each on its own also includes a baseline difference. The Plan 2 measure
-              and the run of all policies together use modelled student loan repayments; the other
-              policies on their own use the repayments reported in the survey.
+              Some policies replace values reported in the survey with modelled ones, and their
+              descriptions say so. When one is selected, the gap between all policies together and
+              the sum of each on its own also includes a baseline difference: that policy and the run
+              of all policies together use the modelled values, and the other policies on their own
+              use the survey's.
             </p>
           </Topic>
           <Topic title="Economic assumptions" preview="One OBR forecast behind the assumptions and weights">

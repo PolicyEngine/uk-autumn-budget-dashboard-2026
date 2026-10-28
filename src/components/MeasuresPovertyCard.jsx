@@ -20,6 +20,7 @@ import LsCard from "./livingStandards/LsCard";
 import ControlBar from "./ControlBar";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
+import { MethodLink } from "../utils/methodLink";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import SummaryMetricChart, { SUMMARY_METRICS, hasColumn, metricValue, povertyMetric, usePovertyChoice } from "./SummaryMetricChart";
 import { useOutlook } from "./livingStandards/useOutlook";
@@ -57,7 +58,7 @@ export function measurePovertyRows(rows, catalogue, selectedPolicies, year, key)
     }));
   const idle = members
     .filter((member) => member.muted)
-    .map((member) => ({ id: member.id, name: shortNameOf(member), value: 0, colour: catalogue.byId.get(member.id)?.color ?? CHART_COLOURS.noChange }));
+    .map((member) => ({ id: member.id, name: shortNameOf(member), description: member.description, value: 0, colour: catalogue.byId.get(member.id)?.color ?? CHART_COLOURS.noChange }));
   const combinedId = catalogue.combinedId;
   const run = wholeSelectionRun(catalogue.displayable, selectedPolicies, combinedId);
   const packageRow = combinedId && run === combinedId ? rowFor(run) : undefined;
@@ -116,7 +117,7 @@ export function povertyWaterfall(measures, total, millions, idle = []) {
     // More than rounding: 500 people, or 0.0005pp without a population
     if (Math.abs(toX(gap)) >= (peopleMode ? 500 : 0.0005)) {
       const x = toX(gap);
-      steps.push({ id: "interaction", name: interactionName([...measures, ...idle].map((m) => m.id)), pp: gap, x, start: at, end: at + x, colour: CHART_COLOURS.noChange, kind: "interaction" });
+      steps.push({ id: "interaction", name: interactionName([...measures, ...idle]), pp: gap, x, start: at, end: at + x, colour: CHART_COLOURS.noChange, kind: "interaction" });
     }
   }
   // At 0 to 0, so a row with no bar never widens the axis
@@ -317,6 +318,12 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
                 Policies can reach the same households, so their own effects need not add up to the package&apos;s
                 {interaction ? `. The “${interaction.name}” step is the gap (${main(interaction)}).` : "."}
               </>,
+              interaction && interaction.name !== "Interaction" && (
+                <>
+                  Why it includes a baseline difference:{" "}
+                  <MethodLink anchor={METHOD_ANCHORS.limitations}>Policies added up</MethodLink>.
+                </>
+              ),
             ],
             caveats: [
               read.fellBack && (
