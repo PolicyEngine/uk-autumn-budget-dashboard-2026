@@ -147,8 +147,15 @@ def test_the_pension_tax_allowance_is_the_largest_reduction(document):
     )
     assert row["2026"] == (0, 0)
     assert row["2027"] == (0, 94)
-    assert row["2028"] == (0, 159)
-    assert row["2029"] == (0, 226)
+    weekly = PARAMETERS.gov.dwp.state_pension.new_state_pension.amount
+    for year in (2028, 2029):
+        full = round(
+            math.floor(weekly(f"{year}-04-06") / 0.05 + 1e-9) * 0.05 * 52, 2
+        )
+        assert row[str(year)] == (
+            0,
+            math.ceil(round(0.2 * (full - 12_570), 6)),
+        )
     assert row["2030"] == (0, 0)
 
 

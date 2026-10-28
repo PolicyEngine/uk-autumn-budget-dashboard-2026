@@ -789,9 +789,22 @@ def _carers_allowance_taper(reform) -> list[dict]:
         raise ValueError("the table reads the engine's earnings limit")
     limit = "gov.dwp.carers_allowance.earnings_limit"
     rate = "gov.dwp.carers_allowance.rate"
+    earnings = "gov.economic_assumptions.indices.obr.average_earnings"
     modifier = _modifier_source(
-        carers_allowance_earnings_taper, "start_year, taper_rate"
+        carers_allowance_earnings_taper,
+        "start_year, taper_rate, limit_hours, national_living_wage_2027",
     )
+
+    def budget_limit(y):
+        # 16 hours at the National Living Wage (£13.21 in 2027-28), moved
+        # on with average earnings, as the modifier computes it
+        return (
+            values["limit_hours"]
+            * values["national_living_wage_2027"]
+            * engine_value(earnings, y)
+            / engine_value(earnings, 2027)
+        )
+
     return [
         _row(
             "Weekly earnings at which Carer's Allowance stops",
@@ -799,7 +812,7 @@ def _carers_allowance_taper(reform) -> list[dict]:
             _yearly(
                 lambda y: engine_value(limit, y),
                 lambda y: (
-                    engine_value(limit, y) + engine_value(rate, y) / taper
+                    round(budget_limit(y) + engine_value(rate, y) / taper, 2)
                     if y >= start
                     else engine_value(limit, y)
                 ),
@@ -808,8 +821,9 @@ def _carers_allowance_taper(reform) -> list[dict]:
                 {
                     "kind": "engine_parameter",
                     "where": f"the earnings limit ({limit}); with the "
-                    f"measure, the limit plus the weekly rate ({rate}) "
-                    "divided by the taper rate",
+                    "measure, 16 hours at the National Living Wage "
+                    f"(moved on with {earnings}) plus the weekly rate "
+                    f"({rate}) divided by the taper rate",
                 },
                 modifier,
             ),

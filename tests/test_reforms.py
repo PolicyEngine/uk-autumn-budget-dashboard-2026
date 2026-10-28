@@ -1039,12 +1039,13 @@ FIRST_YEARS = {
         {"employment_income": 30_000, "savings_interest_income": 5_000},
         {},
     ),
-    # £11,000 of pay, about £211 a week, over the £204 limit: no allowance
+    # £12,500 of pay, about £240 a week, over the Budget's limit (16 hours
+    # at the National Living Wage, about £226 in 2030-31): no allowance
     # under current law, a tapered one from 2030-31
     "carers_allowance_earnings_taper": (
         2030,
         "carers_allowance",
-        {"employment_income": 11_000, "care_hours": 35},
+        {"employment_income": 12_500, "care_hours": 35},
         {},
     ),
     # £2,500 of trading profit on top of £30,000 of pay: relieved at 20%

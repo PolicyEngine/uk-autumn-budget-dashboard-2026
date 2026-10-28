@@ -730,24 +730,24 @@
               "label": "2030-31",
               "year": 2030,
               "before": 204.0,
-              "after": 300.44426
+              "after": 322.95
             },
             {
               "key": "2031",
               "label": "2031-32",
               "year": 2031,
               "before": 204.0,
-              "after": 302.37293
+              "after": 330.76
             }
           ],
           "source": {
             "before": {
               "kind": "engine_parameter",
-              "where": "the earnings limit (gov.dwp.carers_allowance.earnings_limit); with the measure, the limit plus the weekly rate (gov.dwp.carers_allowance.rate) divided by the taper rate"
+              "where": "the earnings limit (gov.dwp.carers_allowance.earnings_limit); with the measure, 16 hours at the National Living Wage (moved on with gov.economic_assumptions.indices.obr.average_earnings) plus the weekly rate (gov.dwp.carers_allowance.rate) divided by the taper rate"
             },
             "after": {
               "kind": "modifier_constant",
-              "where": "budget_measures/carers_allowance_earnings_taper.py carers_allowance_earnings_taper(start_year, taper_rate)"
+              "where": "budget_measures/carers_allowance_earnings_taper.py carers_allowance_earnings_taper(start_year, taper_rate, limit_hours, national_living_wage_2027)"
             }
           },
           "note": "Current law stops the allowance at £1 over the earnings limit (£204 a week, not uprated in the engine); with the measure it falls by £1 for each £1 above the limit"
