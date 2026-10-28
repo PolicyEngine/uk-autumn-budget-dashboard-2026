@@ -879,11 +879,9 @@ function MethodologyTab({ onShowTab }) {
             </p>
             <ul className="method-list">
               <li>
-                The data hold more pensioners just above the personal allowance than the official
-                costing implies, so our cost of the tax reduction for pensioners is about a quarter
-                higher from 2028-29.
+                More pensioners gain from the tax reduction for pensioners in our data than in the
+                Treasury&apos;s costing: about 670,000 in 2027-28, against 500,000.
               </li>
-              <li>The data hold more carers just above the Carer&apos;s Allowance earnings limit than the official costing implies.</li>
               <li>The data hold few small traders, the people the trading allowance reaches.</li>
               <li>Electricity spending is grown with CPI, not the energy price cap; the electricity VAT zero rate scales with it.</li>
             </ul>
