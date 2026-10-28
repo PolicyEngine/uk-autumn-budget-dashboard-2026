@@ -1,125 +1,8 @@
 /* The Budget measures this dashboard does not model (UnmodelledMeasures.jsx):
-   a section of its own under the modelled cards, its heading like theirs,
-   each measure a Policies card (PolicyCards.jsx, globals.css). */
+   a section under the modelled cards, its heading like theirs, the
+   measures as compact cards, two to a row (one on a phone), in groups. */
 .umm {
   margin-top: 40px;
-}
-
-/* The Treasury costing, opened in a card's foot: the table fits the
-   card's own width, two to a row or one on a phone */
-.umm-costing-body {
-  container-type: inline-size;
-  padding-top: 6px;
-}
-
-/* Table 6.1's rows: years across, £ million; scrolls inside its box, never the page */
-.umm-costing-scroll {
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-.umm-costing {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--fs-caption);
-  font-variant-numeric: tabular-nums;
-}
-
-.umm-costing caption {
-  padding-bottom: 2px;
-  font-size: var(--fs-micro);
-  text-align: left;
-  color: var(--pe-gray-500);
-}
-
-.umm-costing th,
-.umm-costing td {
-  padding: 3px 8px;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.umm-costing th:first-child,
-.umm-costing td:first-child {
-  padding-left: 0;
-}
-
-.umm-costing thead th {
-  font-weight: 600;
-  color: var(--pe-gray-600);
-  border-bottom: 1px solid var(--c-grid);
-}
-
-.umm-costing tbody th {
-  font-weight: 500;
-  text-align: left;
-  color: var(--pe-gray-600);
-}
-
-.umm-costing tbody td {
-  color: var(--pe-gray-800);
-}
-
-.umm-year-short {
-  display: none;
-}
-
-.umm-costing-note {
-  margin: 4px 0 0;
-  font-size: var(--fs-caption);
-  color: var(--pe-gray-600);
-}
-
-.umm-link {
-  color: var(--pe-teal-700);
-  text-decoration: underline;
-  text-decoration-color: var(--pe-teal-200);
-  text-underline-offset: 3px;
-}
-
-.umm-link:hover {
-  text-decoration-color: currentColor;
-}
-
-/* The icon stays with the last word when the label wraps */
-.umm-link-end {
-  white-space: nowrap;
-}
-
-.umm-link svg {
-  display: inline;
-  margin-left: 4px;
-  vertical-align: -1px;
-}
-
-/* A narrow measure (two to a row, or a phone): the years as "26-27", still
-   read in full by screen readers */
-@container (max-width: 480px) {
-  .umm-year-full {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-  }
-
-  .umm-year-short {
-    display: inline;
-  }
-
-  .umm-costing {
-    font-size: var(--fs-micro);
-  }
-
-  .umm-costing thead th {
-    font-weight: 500;
-  }
-
-  .umm-costing th,
-  .umm-costing td {
-    padding: 3px 2px;
-  }
 }
 
 /* The section's heading as a button: the title's own size and weight
@@ -166,27 +49,7 @@
   cursor: pointer;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .umm-chevron {
-    transition: none;
-  }
-}
-
-/* The Treasury costing, on the card: the six years, or one muted line */
-.umm-costing-section {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.umm-no-costing {
-  margin: 0;
-  font-size: var(--fs-small);
-  color: var(--pe-gray-500);
-}
-
-/* The groups, by who a measure touches: a small label above each grid,
-   in At a glance's style */
+/* The groups, by who a measure touches: a small label above each grid */
 .umm-group + .umm-group {
   margin-top: 28px;
 }
@@ -198,4 +61,272 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--pe-gray-500);
+}
+
+/* Two cards to a row, each as tall as its row; one on a phone */
+.umm-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.umm-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 18px 20px 14px;
+  background: var(--pe-surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--pe-radius-lg);
+  box-shadow: 0 1px 2px var(--shadow-faint);
+  container-type: inline-size;
+}
+
+.umm-card .policy-card-topline {
+  margin-bottom: 0;
+}
+
+.umm-card-name {
+  margin: 0;
+  font-size: var(--fs-body-lg);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--pe-gray-900);
+}
+
+.umm-card-changes {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-700);
+}
+
+/* The headline: the values before and after, big */
+.umm-headline {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.umm-headline-values {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.umm-before {
+  color: var(--pe-gray-400);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.umm-after {
+  color: var(--pe-gray-900);
+}
+
+.umm-arrow {
+  flex: none;
+  color: var(--pe-gray-400);
+}
+
+.umm-headline-label,
+.umm-meta {
+  margin: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+  color: var(--pe-gray-500);
+}
+
+/* For a household, and why it is not in our figures: a line each */
+.umm-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+.umm-lines dt {
+  display: inline;
+  font-weight: 600;
+  color: var(--pe-gray-700);
+}
+
+.umm-lines dd {
+  display: inline;
+  margin: 0 0 0 4px;
+  color: var(--pe-gray-600);
+}
+
+/* The Treasury's six years as one strip of small cells */
+.umm-costing-section {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--c-grid);
+}
+
+.umm-costing-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.umm-costing {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 3px 0;
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+  table-layout: fixed;
+}
+
+.umm-costing caption {
+  padding: 0 3px 4px;
+  font-size: var(--fs-micro);
+  text-align: left;
+  color: var(--pe-gray-500);
+}
+
+.umm-costing thead th {
+  padding: 2px 0 0;
+  font-weight: 500;
+  text-align: center;
+  color: var(--pe-gray-500);
+  background: var(--pe-gray-50);
+  border-radius: 6px 6px 0 0;
+}
+
+.umm-costing tbody td {
+  padding: 1px 0 4px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--pe-gray-800);
+  background: var(--pe-gray-50);
+  border-radius: 0 0 6px 6px;
+}
+
+/* The row's name, only where there are several */
+.umm-costing thead th:first-child,
+.umm-costing tbody th {
+  width: 0;
+  padding: 0;
+  background: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.umm-costing tbody th:not(.is-hidden) {
+  width: auto;
+  padding-right: 4px;
+  font-weight: 500;
+  text-align: left;
+  color: var(--pe-gray-500);
+}
+
+.umm-list .umm-costing:has(tbody th:not(.is-hidden)) thead th:first-child {
+  width: 3.6em;
+}
+
+.umm-costing tbody tr + tr td {
+  border-radius: 0;
+}
+
+.umm-costing tbody th.is-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+/* Years as "26-27"; screen readers hear them in full */
+.umm-year-full {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.umm-costing-note {
+  margin: 4px 0 0;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+}
+
+.umm-no-costing {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-500);
+}
+
+.umm-strip-label {
+  margin-right: 6px;
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+/* Sources, closed at the foot of each card */
+.umm-sources {
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-600);
+}
+
+.umm-sources summary {
+  width: fit-content;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--pe-teal-700);
+}
+
+.umm-sources ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  line-height: 1.5;
+}
+
+.umm-link {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.umm-link:hover {
+  text-decoration-color: currentColor;
+}
+
+/* The icon stays with the last word when the label wraps */
+.umm-link-end {
+  white-space: nowrap;
+}
+
+.umm-link svg {
+  display: inline;
+  margin-left: 4px;
+  vertical-align: -1px;
+}
+
+@media (max-width: 768px) {
+  .umm-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .umm-chevron {
+    transition: none;
+  }
 }
