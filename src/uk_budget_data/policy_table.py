@@ -31,6 +31,7 @@ from __future__ import annotations
 import importlib.metadata
 import inspect
 import json
+import math
 import re
 from datetime import date, timedelta
 from pathlib import Path
@@ -422,24 +423,45 @@ def _fuel_duty(reform) -> list[dict]:
 
 def _pension_tax_allowance(reform) -> list[dict]:
     values = constants(pension_tax_allowance)
-    allowance = {
-        int(name.removeprefix("allowance_")): value
-        for name, value in values.items()
-        if name.startswith("allowance_")
-    }
+    weekly_path = "gov.dwp.state_pension.new_state_pension.amount"
+    allowance_path = registry.PERSONAL_ALLOWANCE
+    step = values["weekly_rounding"]
+
+    def largest(year):
+        if not values["first_year"] <= year <= values["last_year"]:
+            return 0
+        weekly = (
+            math.floor(engine_value(weekly_path, year) / step + 1e-9) * step
+        )
+        full = round(weekly * 52, 2)
+        return math.ceil(
+            round(
+                values["basic_rate"]
+                * (full - engine_value(allowance_path, year)),
+                6,
+            )
+        )
+
     return [
         _row(
             "Pension Tax Allowance, the largest tax reduction",
             POUNDS,
-            _yearly(lambda year: 0, lambda year: allowance.get(year, 0)),
+            _yearly(lambda year: 0, largest),
             _source(
                 {
                     "kind": "documented",
                     "where": "no such reduction under current law",
                 },
-                _modifier_source(
-                    pension_tax_allowance, "allowance_2027 to 2029"
-                ),
+                {
+                    "kind": "modifier_constant",
+                    "where": "20% of the full new State Pension "
+                    f"(policyengine-uk {weekly_path} x 52, rounded down to "
+                    f"5p a week) above the personal allowance "
+                    f"({allowance_path}), rounded up; "
+                    + _modifier_source(
+                        pension_tax_allowance, "first_year, last_year"
+                    )["where"],
+                },
             ),
             unit_words="£ of income tax a year",
             note="For people over State Pension age; reduced by £1 for "

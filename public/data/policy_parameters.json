@@ -222,7 +222,7 @@
             },
             "after": {
               "kind": "modifier_constant",
-              "where": "budget_measures/pension_tax_allowance.py pension_tax_allowance(allowance_2027 to 2029)"
+              "where": "20% of the full new State Pension (policyengine-uk gov.dwp.state_pension.new_state_pension.amount x 52, rounded down to 5p a week) above the personal allowance (gov.hmrc.income_tax.allowances.personal_allowance.amount), rounded up; budget_measures/pension_tax_allowance.py pension_tax_allowance(first_year, last_year)"
             }
           },
           "note": "For people over State Pension age; reduced by £1 for every £3 of total income above the full new State Pension"
