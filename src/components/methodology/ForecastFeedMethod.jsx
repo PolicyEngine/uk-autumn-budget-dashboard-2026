@@ -47,7 +47,10 @@ export default function ForecastFeedMethod() {
         <SourceLink id={source} />, so its incomes and poverty figures start from that forecast.
       </p>
       <ul className="method-list">
-        <li>Each rate is the growth in a calendar year&apos;s average on the year before.</li>
+        <li>
+          Each rate is the growth in a calendar year&apos;s average on the year before, except Council Tax&apos;s,
+          which is the growth in a fiscal year&apos;s Council Tax receipts.
+        </li>
         {lastCalendar ? (
           <li>
             A financial year takes the growth of the calendar year it starts in, so the forecast&apos;s last calendar
@@ -61,7 +64,12 @@ export default function ForecastFeedMethod() {
             the path to the OBR&apos;s long-run ones{endNote ? ` (${endNote})` : ""}.
           </li>
         )}
-        <li>Benefit rates in the baseline follow a lagged CPI index built from this forecast.</li>
+        <li>
+          Most benefit rates in the baseline rise each April with the previous September&apos;s CPI on this
+          forecast. The State Pension follows the triple lock, and the Universal Credit standard allowance
+          adds the above-inflation rises legislated to 2029-30. The model raises the Pension Credit guarantee
+          with CPI too, though the law reviews it against earnings.
+        </li>
       </ul>
       {series.length > 0 && (
         <>
