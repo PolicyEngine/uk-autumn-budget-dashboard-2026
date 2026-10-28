@@ -179,8 +179,19 @@ UNIT_WORDS = {
 
 
 def _row(
-    label, unit, points, source, *, primary=True, note=None, unit_words=None
+    label,
+    unit,
+    points,
+    source,
+    *,
+    primary=True,
+    note=None,
+    unit_words=None,
+    card_note=None,
 ) -> dict:
+    """One parameter's points. ``note`` qualifies the row where the page
+    lists it; ``card_note``, on a measure's main row, is a line the
+    Policies card shows under its values."""
     row = {
         "label": label,
         "unit": unit,
@@ -193,6 +204,8 @@ def _row(
     }
     if note:
         row["note"] = note
+    if card_note:
+        row["card_note"] = card_note
     return row
 
 
@@ -313,6 +326,7 @@ def _vat_rows(
     names: str,
     divided: str = DAYS_DIVIDED,
     note: str = DAYS_NOTE,
+    card_note: Optional[str] = None,
 ) -> list[dict]:
     first, last = VAT_WINDOWS[measure_id]
     cut = in_force_rate_change(measure_id, changes)
@@ -338,6 +352,7 @@ def _vat_rows(
                 )
             ],
             _source(base_source, derived),
+            card_note=card_note,
         ),
         _row(
             f"{label}, averaged over the year",
@@ -592,6 +607,25 @@ def _documented_amount(text: str, before: str, after: str) -> float:
     return float(match.group(1).replace(",", ""))
 
 
+def _electricity_where(values: dict) -> str:
+    """Where the zero rate applies, from the modifier's geographies (#290,
+    Max, 19:32): Great Britain from October 2026, and Northern Ireland from
+    April 2027 only as the Budget expects (RB 6.210), while HMRC's VAT
+    Notice 701/19 keeps it at 5% there."""
+    first, _ = VAT_WINDOWS[registry.ELECTRICITY_VAT_ID]
+    if (values["geography"], values["geography_2027"]) != ("GB", "UK"):
+        raise ValueError(
+            "the electricity card's note knows Great Britain, then the UK "
+            "from April 2027, only"
+        )
+    return (
+        f"0% instead of 5% in Great Britain from {_day_label(first)}. The "
+        "Budget expects the zero rate to "
+        "apply in Northern Ireland too from April 2027, and the model "
+        "counts it there from then."
+    )
+
+
 def _electricity_vat(reform) -> list[dict]:
     values = constants(zero_vat_on_domestic_electricity)
     changes = {
@@ -600,14 +634,24 @@ def _electricity_vat(reform) -> list[dict]:
         if name.startswith("rate_change_")
     }
     path = "gov.hmrc.vat.reduced_rate"
+    card_note = _electricity_where(values)
+    if _electricity.PRE_BUDGET_ZERO_RATE_IN_MEASURE:
+        # The October to March zero rate was already law (SI 2026/987): the
+        # 5% is the scoring baseline, as Table 6.1 scores it (#290, Max)
+        card_note += (
+            " The October to March zero rate was already law (SI 2026/987); "
+            "like the Treasury's costing, the model scores the whole period "
+            "against 5%."
+        )
     return _vat_rows(
         registry.ELECTRICITY_VAT_ID,
         zero_vat_on_domestic_electricity,
         engine_value(path, POLICY_YEARS[0]),
         _engine_source(path),
-        "VAT on domestic electricity in Great Britain",
+        "VAT on domestic electricity",
         changes,
         "rate_change_2026, rate_change_2027",
+        card_note=card_note,
         # 2026-27 by its share of a year's use (YEAR_WEIGHTS), while the
         # pre-Budget zero rate is in the measure; else by days
         **(
@@ -785,55 +829,85 @@ def _plan_2(reform) -> list[dict]:
     ]
 
 
+def carers_allowance_limit(year: int) -> float:
+    """The measure's Weekly Earnings Limit, £ a week, as the modifier
+    computes it: 16 hours at the OBR's National Living Wage for that April
+    (``national_living_wage_by_april``), else £13.21 from April 2027 moved
+    on with average earnings, rounded up to the pound."""
+    values = constants(carers_allowance_earnings_taper)
+    wages = dict(values["national_living_wage_by_april"])
+    if year in wages:
+        wage = wages[year]
+    else:
+        earnings = "gov.economic_assumptions.indices.obr.average_earnings"
+        wage = (
+            values["national_living_wage_2027"]
+            * engine_value(earnings, year)
+            / engine_value(earnings, 2027)
+        )
+    return float(math.ceil(round(values["limit_hours"] * wage, 6)))
+
+
 def _carers_allowance_taper(reform) -> list[dict]:
+    """The cliff the measure removes (#290, Anthony, 19:20): the allowance
+    £1 a week over the earnings limit, nothing under current law and the
+    weekly rate less £1 with the taper. The measure does not move the limit
+    itself, so no row shows it as a change; the card's note gives the limit
+    and where the tapered allowance runs out."""
     values = constants(carers_allowance_earnings_taper)
     start, taper = values["start_year"], values["taper_rate"]
     if values["earnings_limit"] is not None:
-        raise ValueError("the table reads the engine's earnings limit")
-    limit = "gov.dwp.carers_allowance.earnings_limit"
+        raise ValueError("the table reads the measure's own earnings limit")
     rate = "gov.dwp.carers_allowance.rate"
-    earnings = "gov.economic_assumptions.indices.obr.average_earnings"
     modifier = _modifier_source(
         carers_allowance_earnings_taper,
-        "start_year, taper_rate, limit_hours, national_living_wage_2027",
+        "start_year, taper_rate, limit_hours, national_living_wage_by_april",
     )
 
-    def budget_limit(y):
-        # 16 hours at the National Living Wage (£13.21 in 2027-28), moved
-        # on with average earnings, as the modifier computes it
-        return (
-            values["limit_hours"]
-            * values["national_living_wage_2027"]
-            * engine_value(earnings, y)
-            / engine_value(earnings, 2027)
+    def over_by_a_pound(y):
+        if y < start:
+            return 0.0
+        return round(max(engine_value(rate, y) - taper * 1, 0.0), 2)
+
+    def runs_out(y):
+        return carers_allowance_limit(y) + engine_value(rate, y) / taper
+
+    shown = [y for y in POLICY_YEARS if y >= start]
+
+    def by_year(amount):
+        parts = [f"£{amount(y):,.0f}" for y in shown]
+        parts[0] += " a week"
+        return " and ".join(
+            f"{part} in {_fiscal_label(y)}" for part, y in zip(parts, shown)
         )
 
+    limits, ends = by_year(carers_allowance_limit), by_year(runs_out)
     return [
         _row(
-            "Weekly earnings at which Carer's Allowance stops",
+            "Carer's Allowance at £1 a week over the earnings limit",
             POUNDS,
-            _yearly(
-                lambda y: engine_value(limit, y),
-                lambda y: (
-                    round(budget_limit(y) + engine_value(rate, y) / taper, 2)
-                    if y >= start
-                    else engine_value(limit, y)
-                ),
-            ),
+            _yearly(lambda y: 0.0, over_by_a_pound),
             _source(
                 {
-                    "kind": "engine_parameter",
-                    "where": f"the earnings limit ({limit}); with the "
-                    "measure, 16 hours at the National Living Wage "
-                    f"(moved on with {earnings}) plus the weekly rate "
-                    f"({rate}) divided by the taper rate",
+                    "kind": "documented",
+                    "where": "current law pays no Carer's Allowance above "
+                    "the earnings limit (gov.dwp.carers_allowance."
+                    "earnings_limit)",
                 },
-                modifier,
+                {
+                    "kind": "modifier_constant",
+                    "where": f"the weekly rate ({rate}) less taper_rate x "
+                    "£1; " + modifier["where"],
+                },
             ),
-            unit_words="£ of net earnings a week",
-            note="Current law stops the allowance at £1 over the earnings "
-            "limit (£204 a week, not uprated in the engine); with the "
-            "measure it falls by £1 for each £1 above the limit",
+            unit_words="£ a week",
+            card_note=(
+                "The earnings limit is 16 hours at the National Living "
+                f"Wage, rounded up to the pound: {limits}. Current law "
+                "stops the allowance at £1 over it. With the measure it "
+                f"falls by £1 for each £1 above the limit, and runs out at "
+                f"{ends}."
+            ),
         ),
     ]
 

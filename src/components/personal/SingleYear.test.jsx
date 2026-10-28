@@ -1162,9 +1162,9 @@ describe("the assumed-spending caution", () => {
 
   it("calls spending assumed at the prefilled averages or an example's figure, not once the reader enters their own", () => {
     expect(spendingAssumed(WIZARD_DEFAULTS, null)).toBe("average");
-    expect(spendingAssumed(WIZARD_DEFAULTS, "driver")).toBe("average");
+    expect(spendingAssumed(WIZARD_DEFAULTS, "saver")).toBe("average");
     const own = { ...WIZARD_DEFAULTS, petrol_spending_per_year: 2600 };
-    expect(spendingAssumed(own, "driver")).toBe("example");
+    expect(spendingAssumed(own, "saver")).toBe("example");
     expect(spendingAssumed(own, null)).toBeNull();
   });
 });

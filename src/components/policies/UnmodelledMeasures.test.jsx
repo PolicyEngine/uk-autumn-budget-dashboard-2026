@@ -167,17 +167,10 @@ describe("UnmodelledMeasures", () => {
     });
   });
 
-  it("shows the values before and after in the What changes block where the entry gives them", () => {
+  it("draws no Current law and With the policy tiles on any card (Vahid, 28 Oct)", () => {
     render(<UnmodelledMeasures />);
     open();
-    for (const item of cards()) {
-      const id = item.id.replace(/^unmodelled-/, "");
-      const parameters = UNMODELLED_CARDS[id]?.parameters;
-      expect(item.querySelectorAll(".pchg-tile").length, id).toBe(parameters ? (parameters.display === "pairs" ? 2 * parameters.rows.length : 2) : 0);
-    }
-    const wage = document.getElementById("unmodelled-national-living-wage");
-    expect(wage.querySelector(".pchg-tile.is-before")).toHaveTextContent("£12.71");
-    expect(wage.querySelector(".pchg-tile.is-after")).toHaveTextContent("£13.21+£0.50");
+    for (const item of cards()) expect(item.querySelector(".pchg-tile, .pchg-ba"), item.id).toBeNull();
   });
 
   it("shows a measure's Table 6.1 rows by year, in £ million, on the card", () => {
@@ -384,11 +377,13 @@ describe("UnmodelledMeasures", () => {
       expect(item.querySelector(".policy-card-end").textContent.length, item.id).toBeLessThanOrEqual(20);
       expect(item.querySelector(".policy-card-summary").textContent.trim(), item.id).not.toMatch(/\.\s+[A-Z]/);
     }
-    // Two changes, two pairs of tiles
+    // Two changes: both in the table behind "Show every change", no tiles
     for (const id of ["mileage-rates", "company-car-tax"]) {
-      expect(document.getElementById(`unmodelled-${id}`).querySelectorAll(".pchg-ba"), id).toHaveLength(2);
+      const card = document.getElementById(`unmodelled-${id}`);
+      fireEvent.click(within(card).getByRole("button", { name: "Show every change" }));
+      expect(card.querySelectorAll(".pchg table tbody tr").length, id).toBeGreaterThanOrEqual(2);
     }
-    expect(document.getElementById("unmodelled-mileage-rates").querySelector(".pchg-ba")).toHaveTextContent("First 10,000 business milesCurrent law45pWith the policy55p+10p");
+    expect(document.querySelectorAll("#unmodelled-mileage-rates .pchg table tr")[1]).toHaveTextContent(/^First 10,000 business miles.*45p55p\+10p$/);
   });
 
   it("shows nothing for an empty list", () => {

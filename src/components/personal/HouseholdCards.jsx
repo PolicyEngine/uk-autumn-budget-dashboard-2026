@@ -13,6 +13,7 @@ import {
   HardHat,
   House,
   KeyRound,
+  PiggyBank,
   UsersRound,
 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -21,7 +22,8 @@ import useDataFile from "../../hooks/useDataFile";
 import { buildHouseholdRequest } from "../../utils/householdImpactApi";
 import { presetInputs } from "../../utils/householdPresets";
 import { DISTRIBUTION_FILE, curveOf, distributionRunOf, householdPosition, ordinal, parseDistribution } from "../../utils/incomePosition";
-import { catalogueProvisional, useMeasureCatalogue } from "../../utils/measureCatalogue";
+import { NEUTRAL_COLOR, catalogueProvisional, useMeasureCatalogue } from "../../utils/measureCatalogue";
+import { CALCULATOR_ONLY_MEASURES, isCalculatorOnly } from "../../utils/calculatorOnlyMeasures";
 import { fiscalYearTick, shortFiscalYearTick } from "../../utils/chartTheme";
 import { SELECTABLE_YEARS, isDisplayYear } from "../../utils/displayYears";
 import { MINUS, money } from "../../utils/singleYear";
@@ -40,7 +42,17 @@ export const EXAMPLE_ICONS = {
   baby: Baby,
   glasses: Glasses,
   handHeart: HandHeart,
+  piggyBank: PiggyBank,
 };
+
+/**
+ * A measure as the cards show it: the catalogue's, or a calculator-only
+ * one's (calculatorOnlyMeasures.js), which the catalogue never lists but a
+ * card that turns it on features.
+ */
+const measureOf = (id, catalogue) =>
+  catalogue?.byId.get(id) ??
+  (isCalculatorOnly(id) ? { ...CALCULATOR_ONLY_MEASURES[id], label: CALCULATOR_ONLY_MEASURES[id].name, color: NEUTRAL_COLOR, displayable: true } : undefined);
 
 /**
  * Whether the catalogue publishes every measure an example features: its
@@ -48,12 +60,13 @@ export const EXAMPLE_ICONS = {
  * never named on a card, alone or beside another (#104).
  */
 export function featuresPublished(example, catalogue) {
-  return (example.measures ?? [example.measure]).every((id) => catalogue.byId.get(id)?.displayable === true);
+  return (example.measures ?? [example.measure]).every((id) => measureOf(id, catalogue)?.displayable === true);
 }
 
 // A measure's short name, as Policies names it (policyDetails.js), else
 // its published name
 const sourceName = (id, catalogue) => {
+  if (!catalogue?.byId.get(id) && isCalculatorOnly(id)) return CALCULATOR_ONLY_MEASURES[id].name;
   const measure = catalogue?.byId.get(id);
   return measure ? shortNameOf(measure) : id;
 };
@@ -388,7 +401,7 @@ export default function HouseholdCards({
             <div
               key={example.id}
               className={`household-card ${pressed ? "is-selected" : ""}`.trim()}
-              style={{ "--card-accent": featured ? catalogue.byId.get(example.measure).color : undefined, "--i": index + 1 }}
+              style={{ "--card-accent": featured ? measureOf(example.measure, catalogue)?.color : undefined, "--i": index + 1 }}
             >
               <span className="household-card-icon" aria-hidden="true">
                 <Icon size={22} strokeWidth={1.8} />
@@ -453,7 +466,7 @@ export default function HouseholdCards({
                     <span
                       key={chip.id}
                       className={`household-card-tag${chip.from ? " is-later" : ""}`}
-                      style={{ "--chip-accent": catalogue.byId.get(chip.id)?.color }}
+                      style={{ "--chip-accent": measureOf(chip.id, catalogue)?.color }}
                     >
                       <span className="household-card-dot" aria-hidden="true" />
                       <span className="household-card-tag-name">{chip.name}</span>
@@ -543,7 +556,7 @@ function YourHouseholdCard({ selected, formOpen, formId, change, onClick }) {
 function HouseholdStrip({ examples, value, presets, yoursChange, yoursSelected, formId, year, shown, onYours, onChoose }) {
   const catalogue = useMeasureCatalogue();
   // A chip's accent only while the catalogue publishes its measures (#104)
-  const accentOf = (example) => (featuresPublished(example, catalogue) ? catalogue.byId.get(example.measure).color : null);
+  const accentOf = (example) => (featuresPublished(example, catalogue) ? (measureOf(example.measure, catalogue)?.color ?? null) : null);
   const items = [
     { id: null, label: "Your household", short: "Your household", Icon: House, change: yoursChange, accent: null },
     ...examples.map((example) => ({

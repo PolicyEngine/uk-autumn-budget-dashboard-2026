@@ -234,7 +234,7 @@
       "display": "switch",
       "rows": [
         {
-          "label": "VAT on domestic electricity in Great Britain",
+          "label": "VAT on domestic electricity",
           "unit": "percent",
           "unit_words": null,
           "primary": true,
@@ -256,10 +256,11 @@
               "kind": "modifier_constant",
               "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027), rate_change_2026 divided by that module's WINTER_SHARE (the October to March share of a year's electricity use) and rate_change_2027 by its SPRING_SHARE (the April to June share), October 2026 to June 2027 (the dates in the measure's description)"
             }
-          }
+          },
+          "card_note": "0% instead of 5% in Great Britain from 1 October 2026. The Budget expects the zero rate to apply in Northern Ireland too from April 2027, and the model counts it there from then. The October to March zero rate was already law (SI 2026/987); like the Treasury's costing, the model scores the whole period against 5%."
         },
         {
-          "label": "VAT on domestic electricity in Great Britain, averaged over the year",
+          "label": "VAT on domestic electricity, averaged over the year",
           "unit": "percent",
           "unit_words": null,
           "primary": false,
@@ -507,256 +508,70 @@
         }
       ]
     },
-    "savings_income_rates_up": {
-      "description": "From 6 April 2027 the income tax rates on savings income rise to 24%, 44% and 49% at the basic, higher and additional rates across the UK: 2 percentage points above current law, which already includes Budget 2025's rises. Dividend rates are unchanged. Incomes are held fixed, with no behavioural response.",
-      "display": "path",
-      "rows": [
-        {
-          "label": "Savings basic rate",
-          "unit": "percent",
-          "unit_words": null,
-          "primary": true,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 0.2,
-              "after": 0.2
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.22,
-              "after": 0.24
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.22,
-              "after": 0.24
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.22,
-              "after": 0.24
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.22,
-              "after": 0.24
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.22,
-              "after": 0.24
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.savings.basic, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py savings_income_rates_up(): gov.hmrc.income_tax.rates.savings.basic; current law elsewhere"
-            }
-          }
-        },
-        {
-          "label": "Savings higher rate",
-          "unit": "percent",
-          "unit_words": null,
-          "primary": false,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 0.4,
-              "after": 0.4
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.42,
-              "after": 0.44
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.42,
-              "after": 0.44
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.42,
-              "after": 0.44
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.42,
-              "after": 0.44
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.42,
-              "after": 0.44
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.savings.higher, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py savings_income_rates_up(): gov.hmrc.income_tax.rates.savings.higher; current law elsewhere"
-            }
-          }
-        },
-        {
-          "label": "Savings additional rate",
-          "unit": "percent",
-          "unit_words": null,
-          "primary": false,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 0.45,
-              "after": 0.45
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.47,
-              "after": 0.49
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.47,
-              "after": 0.49
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.47,
-              "after": 0.49
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.47,
-              "after": 0.49
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.47,
-              "after": 0.49
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.savings.additional, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py savings_income_rates_up(): gov.hmrc.income_tax.rates.savings.additional; current law elsewhere"
-            }
-          }
-        }
-      ]
-    },
     "carers_allowance_earnings_taper": {
       "description": "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (£212 a week at April 2027's £13.21, rounded up to the pound): it is reduced by £1 for each £1 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The taper starts within 2030-31, on a date still to come, so the model counts half of that year. Carers at or below the limit, and Scotland's Carer Support Payment, are unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
       "display": "path",
       "rows": [
         {
-          "label": "Weekly earnings at which Carer's Allowance stops",
+          "label": "Carer's Allowance at £1 a week over the earnings limit",
           "unit": "gbp",
-          "unit_words": "£ of net earnings a week",
+          "unit_words": "£ a week",
           "primary": true,
           "points": [
             {
               "key": "2026",
               "label": "2026-27",
               "year": 2026,
-              "before": 204.0,
-              "after": 204.0
+              "before": 0.0,
+              "after": 0.0
             },
             {
               "key": "2027",
               "label": "2027-28",
               "year": 2027,
-              "before": 204.0,
-              "after": 204.0
+              "before": 0.0,
+              "after": 0.0
             },
             {
               "key": "2028",
               "label": "2028-29",
               "year": 2028,
-              "before": 204.0,
-              "after": 204.0
+              "before": 0.0,
+              "after": 0.0
             },
             {
               "key": "2029",
               "label": "2029-30",
               "year": 2029,
-              "before": 204.0,
-              "after": 204.0
+              "before": 0.0,
+              "after": 0.0
             },
             {
               "key": "2030",
               "label": "2030-31",
               "year": 2030,
-              "before": 204.0,
-              "after": 322.75
+              "before": 0.0,
+              "after": 95.44
             },
             {
               "key": "2031",
               "label": "2031-32",
               "year": 2031,
-              "before": 204.0,
-              "after": 330.56
+              "before": 0.0,
+              "after": 97.37
             }
           ],
           "source": {
             "before": {
-              "kind": "engine_parameter",
-              "where": "the earnings limit (gov.dwp.carers_allowance.earnings_limit); with the measure, 16 hours at the National Living Wage (moved on with gov.economic_assumptions.indices.obr.average_earnings) plus the weekly rate (gov.dwp.carers_allowance.rate) divided by the taper rate"
+              "kind": "documented",
+              "where": "current law pays no Carer's Allowance above the earnings limit (gov.dwp.carers_allowance.earnings_limit)"
             },
             "after": {
               "kind": "modifier_constant",
-              "where": "budget_measures/carers_allowance_earnings_taper.py carers_allowance_earnings_taper(start_year, taper_rate, limit_hours, national_living_wage_2027)"
+              "where": "the weekly rate (gov.dwp.carers_allowance.rate) less taper_rate x £1; budget_measures/carers_allowance_earnings_taper.py carers_allowance_earnings_taper(start_year, taper_rate, limit_hours, national_living_wage_by_april)"
             }
           },
-          "note": "Current law stops the allowance at £1 over the earnings limit (£204 a week, not uprated in the engine); with the measure it falls by £1 for each £1 above the limit"
+          "card_note": "The earnings limit is 16 hours at the National Living Wage, rounded up to the pound: £228 a week in 2030-31 and £234 in 2031-32. Current law stops the allowance at £1 over it. With the measure it falls by £1 for each £1 above the limit, and runs out at £324 a week in 2030-31 and £332 in 2031-32."
         }
       ]
     },

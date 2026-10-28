@@ -2577,7 +2577,7 @@
   .household-field select,
   .household-field input[type="text"],
   .household-field input[type="number"],
-  .constituency-box input {
+  .council-box input {
     font-size: 16px;
   }
 }
@@ -2600,11 +2600,11 @@
     min-height: 44px;
   }
 
-  .constituency-box input {
+  .council-box input {
     height: 44px;
   }
 
-  .constituency-toggle {
+  .council-toggle {
     width: 44px;
     height: 44px;
   }
@@ -2817,4 +2817,34 @@
   .household-step-optional {
     padding-left: 0;
   }
+}
+
+/* Calculator-only measures: one switch under the example cards, apart from
+   the header's policy selector */
+.household-extra-measures {
+  margin: 12px 0 0;
+}
+
+.household-extra-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--pe-gray-700);
+  cursor: pointer;
+}
+
+.household-extra-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--pe-teal-600);
+  cursor: pointer;
+}
+
+.household-extra-toggle input:disabled,
+.household-extra-toggle input:disabled + span {
+  cursor: not-allowed;
+  opacity: 0.6;
 }

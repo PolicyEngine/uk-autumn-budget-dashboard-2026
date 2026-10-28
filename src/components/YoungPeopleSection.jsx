@@ -86,9 +86,9 @@ const OUTCOMES = [
 const SHARE_BAR_SHAPE = barShape(OUTCOMES.map((outcome) => outcome.key), { layout: "vertical", roundBase: true });
 
 const MEAN_DESCRIPTION =
-  "Average change per person, £ a year, by age group; bars add each policy's own effect.";
+  "Average change in household income per person, £ a year, by age group; bars add each policy's own effect.";
 const SINGLE_AGE_DESCRIPTION =
-  `Average change per person, £ a year, by single year of age (${SINGLE_AGE_FIRST} to ${SINGLE_AGE_LAST}); bars add each policy's own effect.`;
+  `Average change in household income per person, £ a year, by single year of age (${SINGLE_AGE_FIRST} to ${SINGLE_AGE_LAST}); bars add each policy's own effect.`;
 const SHARES_DESCRIPTION =
   "Share of people who gain or lose (a change over 0.01%), by age group.";
 /** The single-age view's description, for the chosen group's own ages. */
@@ -110,7 +110,7 @@ const YOUNG_ENDS = new Set(["16", "24"]);
 const SIGN_COLOURS = { gain: CHART_COLOURS.gain, loss: CHART_COLOURS.loss, zero: CHART_COLOURS.noChange };
 const signColour = (value) =>
   Math.abs(value) < 1 ? SIGN_COLOURS.zero : value > 0 ? SIGN_COLOURS.gain : SIGN_COLOURS.loss;
-const UNIT = "Average change per person (£ a year)";
+const UNIT = "Average change in household income, per person (£ a year)";
 
 const pounds = (value) => `£${Math.round(value).toLocaleString("en-GB")}`;
 const signedPounds = (value) =>
@@ -302,7 +302,7 @@ function SingleAgeTooltip({ active, payload, yearLabel }) {
   );
 }
 
-const PACKAGE_DESCRIPTION = "Average change per person, £ a year, with all the selected policies.";
+const PACKAGE_DESCRIPTION = "Average change in household income per person, £ a year, with all the selected policies.";
 
 /**
  * A published package's two views: its own bars (the default), or each

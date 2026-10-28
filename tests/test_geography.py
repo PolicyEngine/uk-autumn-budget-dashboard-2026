@@ -968,8 +968,14 @@ def test_the_combined_reform_names_every_other_budget_measure():
 
     ids = [reform.id for reform in get_autumn_budget_2026_reforms()]
     assert AUTUMN_BUDGET_2026_COMBINED_ID in ids
+    # Every registered measure but the package itself and the savings rates
+    # rise, which stays registered (the household calculator offers it) but
+    # is held back from the release and the package (María, #290 6478987456)
+    held_back = {"savings_income_rates_up"}
     assert sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == sorted(
-        i for i in ids if i != AUTUMN_BUDGET_2026_COMBINED_ID
+        i
+        for i in ids
+        if i != AUTUMN_BUDGET_2026_COMBINED_ID and i not in held_back
     )
     assert g.PACKAGES == {
         AUTUMN_BUDGET_2026_COMBINED_ID: AUTUMN_BUDGET_2026_COMBINED_COMPONENTS

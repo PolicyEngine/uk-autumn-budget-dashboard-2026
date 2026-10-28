@@ -142,6 +142,80 @@ export function segmentsFor(row) {
     .map((segment) => ({ ...segment, from: yearOfMonth(segment.start), to: yearOfMonth(segment.end - 1e-6) }));
 }
 
+// --- Periods ---------------------------------------------------------------
+
+const previousDay = (isoDate) => {
+  const day = new Date(`${isoDate}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() - 1);
+  return day.toISOString().slice(0, 10);
+};
+
+/**
+ * A period in words, from its first day to its last: "1 January to 28
+ * February 2027", "1 to 31 March 2027", "1 July 2027 to 31 March 2028";
+ * "To 31 December 2026" where it opens the timeline (no `first`).
+ */
+export function periodLabel(first, last) {
+  const parts = (iso) => {
+    const [year, month, day] = iso.split("-").map(Number);
+    return { year, month: MONTH_NAMES[month - 1], day };
+  };
+  const b = parts(last);
+  const end = `${b.day} ${b.month} ${b.year}`;
+  if (!first) return `To ${end}`;
+  const a = parts(first);
+  if (a.year !== b.year) return `${a.day} ${a.month} ${a.year} to ${end}`;
+  if (a.month !== b.month) return `${a.day} ${a.month} to ${end}`;
+  return `${a.day} to ${end}`;
+}
+
+/**
+ * A dated schedule as periods (PR 290, Anthony, 19:37): each period the
+ * measure differs from current law, with the period either side where it
+ * does not, so the table shows when the rate holds and when it returns to
+ * current law. Each period runs to the day before the next date; the
+ * timeline's first day opens the first ("To ..."). Rates actually in
+ * force, never averages.
+ */
+export function schedulePeriods(row) {
+  const points = [...(row?.points ?? [])].filter(isDated).sort((a, b) => a.key.localeCompare(b.key));
+  const changed = points.map(differs);
+  const first = changed.indexOf(true);
+  if (first < 0) return [];
+  const last = changed.lastIndexOf(true);
+  const from = Math.max(first - 1, 0);
+  const to = Math.min(last + 1, points.length - 1);
+  return points.slice(from, to + 1).map((point, offset) => {
+    const i = from + offset;
+    const next = points[i + 1];
+    const opensTimeline = i === 0;
+    const label = next
+      ? periodLabel(opensTimeline ? null : point.key, previousDay(next.key))
+      : `From ${point.label}`;
+    return { ...point, label };
+  });
+}
+
+/**
+ * The lines of a measure's changes, one per parameter where its change is
+ * the same in every period it applies (PR 290, Anthony, 19:36: a rate the
+ * same from 2027-28 to 2031-32 is said once), else one per period.
+ */
+export function changeLines(rows) {
+  return rows.flatMap((row) => {
+    const points = row.points ?? [];
+    const moved = points.filter(differs);
+    if (!moved.length) return [];
+    const unbroken = points.indexOf(moved[moved.length - 1]) - points.indexOf(moved[0]) === moved.length - 1;
+    const once = unbroken && moved.every((point) => same(point.before, moved[0].before) && same(point.after, moved[0].after));
+    if (once && moved.length > 1) {
+      const span = `${moved[0].label} to ${moved[moved.length - 1].label}`;
+      return [{ ...moved[0], key: `${row.label}|${moved[0].key}`, label: row.label, unit: row.unit, period: span }];
+    }
+    return moved.map((point) => ({ ...point, key: `${row.label}|${point.key}`, label: row.label, unit: row.unit, period: point.label }));
+  });
+}
+
 // --- Words -----------------------------------------------------------------
 
 /** A step in words, for the plot's tooltip and its text alternative. */

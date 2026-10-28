@@ -164,17 +164,19 @@ export const POLICY_DETAILS = [
     summary:
       "Charges no VAT on household electricity bills, instead of 5%, from October 2026 to July 2027.",
     starts: "Oct 2026",
-    affects: "Households in Great Britain, and in Northern Ireland from April 2027",
+    affects: "Households in Great Britain, and expected in Northern Ireland from April 2027",
     type: "VAT",
     inForce: { from: "2026-10", to: "2027-06" },
     ends: "Jul 2027",
     howCalculated:
       "Applies 0% VAT instead of 5% to each household's electricity spending in the survey.",
     details:
-      "The baseline has no zero rate, so the whole period from October 2026 counts, as the Treasury costs it. Shares of a year's electricity use: October to March for 2026-27 (about 57%), April to June for 2027-28 (about 22%). Both from DESNZ Energy Trends.",
+      "Shares of a year's electricity use: October to March for 2026-27 (about 57%), April to June for 2027-28 (about 22%). Both from DESNZ Energy Trends.",
+    // HMRC's VAT Notice 701/19, which sets out the zero rate's dates and
+    // where it applies (#290, Max, 6480086305)
     source: {
-      label: "Temporary zero rate of VAT for domestic electricity",
-      href: "https://www.gov.uk/government/publications/temporary-zero-rate-of-vat-for-domestic-electricity-in-great-britain/temporary-zero-rate-of-vat-in-great-britain-for-domestic-electricity",
+      label: "VAT on fuel and power (VAT Notice 701/19)",
+      href: "https://www.gov.uk/guidance/vat-on-fuel-and-power-notice-70119",
     },
     explainer: {
       label: "Analysis of the Autumn Budget 2026 energy bill measures",
@@ -312,9 +314,6 @@ export const POLICY_DETAILS = [
       label: "The Carer's Allowance earnings taper in the Autumn Budget 2026",
       href: "https://www.policyengine.org/uk/research/carers-allowance-taper",
     },
-    // The What changes block's own words for the file's row (whose label
-    // and units stay as policy_parameters.json publishes them)
-    changeLabel: { label: "Earnings limit", unitWords: "£ a week" },
     budgetRows: [7],
   },
   {

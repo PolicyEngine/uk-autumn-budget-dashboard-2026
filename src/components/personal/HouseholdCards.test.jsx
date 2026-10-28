@@ -6,8 +6,9 @@ import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/mea
 import { fixtureJson } from "../../test/publicationFixture";
 
 // #104 review (m23, P2): a card names the measures it features only while
-// the catalogue publishes every one of them. The driver's card features the
-// fuel duty measure.
+// the catalogue publishes every one of them. The landlord's card features the
+// property income measure; the saver's, the calculator-only savings rise,
+// which the catalogue never lists.
 const baseEntry = fixtureJson("manifest.json").measures.alpha;
 const NAMES = {
   fuel_duty_rise_deferral: "Fuel duty cut extended",
@@ -26,22 +27,26 @@ const publishing = (ids) =>
     tablesByKey: Object.fromEntries(ids.map((id) => [id, {}])),
   });
 
-const driverTag = (catalogue) => {
+const tagOf = (label, catalogue) => {
   render(
     <MeasureCatalogueProvider catalogue={catalogue}>
       <HouseholdCards examples={HOUSEHOLD_EXAMPLES} value={null} formOpen={false} formId="f" onYours={() => {}} onChoose={() => {}} presets={null} yoursChange={null} year={2029} chosen={false} yoursSelected={false} />
     </MeasureCatalogueProvider>,
   );
-  const driver = screen.getByRole("button", { name: /^A driver with a long commute/ });
-  return driver.closest(".household-card").querySelector(".household-card-tag")?.textContent ?? null;
+  const button = screen.getByRole("button", { name: new RegExp(`^${label}`) });
+  return button.closest(".household-card").querySelector(".household-card-tag")?.textContent ?? null;
 };
 
-it("names the fuel measure on the driver's card while it is published", () => {
-  expect(driverTag(publishing(["fuel_duty_rise_deferral"]))).toMatch(/fuel duty/i);
+it("names the property measure on the landlord's card while it is published", () => {
+  expect(tagOf("A landlord with savings", publishing(["property_income_rates_up"]))).toMatch(/property income/i);
 });
 
 it("names none while it is withdrawn (on Budget day, say)", () => {
-  expect(driverTag(publishing(["state_pension_income_tax_protection"]))).toBeNull();
+  expect(tagOf("A landlord with savings", publishing(["state_pension_income_tax_protection"]))).toBeNull();
+});
+
+it("names the savings rise on the saver's card, though the catalogue does not list it", () => {
+  expect(tagOf("A saver with interest income", publishing(["fuel_duty_rise_deferral"]))).toBe("Savings income tax up");
 });
 
 describe("a card's year bars", () => {

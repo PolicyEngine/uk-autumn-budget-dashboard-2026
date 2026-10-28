@@ -310,3 +310,16 @@ describe("changeRateTicks headroom", () => {
     expect(changeRateTicks(0.03).at(-1)).toBe(0.04);
   });
 });
+
+describe("the Both view (Vahid, 28 Oct)", () => {
+  it("describes both totals in its export, and lists both and the change in its tooltip", () => {
+    expect(rateExportDescription("both", true, "2027-28")).toBe(
+      "Share of each extra pound of salary lost to taxes and withdrawn benefits in 2027-28, under current law and with the policies.",
+    );
+    const { container } = render(
+      <RateTooltip active yearLabel="2027-28" parts={null} view="both" payload={[{ payload: { income: 30000, beforeRaw: 0.2, afterRaw: 0, change: -0.2 } }]} />,
+    );
+    const rows = [...container.querySelectorAll(".chart-tooltip-row")].map((row) => row.textContent);
+    expect(rows).toEqual(["Total rate under current law20%", "Total rate with the policies0%", "Change−20pp"]);
+  });
+});

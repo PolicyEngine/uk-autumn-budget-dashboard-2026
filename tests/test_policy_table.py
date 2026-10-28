@@ -57,6 +57,10 @@ def withdrawn_rows(measure_id):
         registry.UNEARNED_INCOME_RATES_ID: (
             registry._create_unearned_income_rates_up
         ),
+        # Held back from the release (e151a865; María, 28 October)
+        registry.SAVINGS_INCOME_RATES_ID: (
+            registry._create_savings_income_rates_up
+        ),
     }
     reform = factory[measure_id]()
     return {row["label"]: row for row in BUILDERS[measure_id](reform)}
@@ -173,9 +177,7 @@ def test_warm_home_discount(document):
 
 def test_vat_rates_while_in_force(document):
     electricity = rows(document, "domestic_electricity_zero_vat")
-    (point,) = electricity["VAT on domestic electricity in Great Britain"][
-        "points"
-    ]
+    (point,) = electricity["VAT on domestic electricity"]["points"]
     assert (point["label"], point["before"], point["after"]) == (
         "October 2026 to June 2027",
         0.05,
@@ -201,16 +203,36 @@ def test_electricity_2026_carries_the_winter_share(document):
     2027: 2026-27 weighted by the October to March share of a year's use,
     2027-28 by the April to June share."""
     yearly = rows(document, "domestic_electricity_zero_vat")[
-        "VAT on domestic electricity in Great Britain, averaged over the year"
+        "VAT on domestic electricity, averaged over the year"
     ]
     averages = by_key(yearly)
     assert averages["2026"] == (0.05, round(0.05 - 0.05 * WINTER_SHARE, 6))
     assert averages["2027"] == (0.05, round(0.05 - 0.05 * SPRING_SHARE, 6))
     assert "2026-27 by the October to March share" in yearly["note"]
     (point,) = rows(document, "domestic_electricity_zero_vat")[
-        "VAT on domestic electricity in Great Britain"
+        "VAT on domestic electricity"
     ]["points"]
     assert point["label"] == "October 2026 to June 2027"
+
+
+def test_electricity_says_where_and_what_it_is_scored_against(document):
+    """#290 (Max, 19:32): Great Britain from October 2026, Northern Ireland
+    from April 2027 only as the Budget expects; and current law's 5% for
+    October to March is the scoring baseline, the zero rate already being
+    law (SI 2026/987)."""
+    note = rows(document, "domestic_electricity_zero_vat")[
+        "VAT on domestic electricity"
+    ]["card_note"]
+    assert note.startswith(
+        "0% instead of 5% in Great Britain from 1 October 2026."
+    )
+    assert (
+        "expects the zero rate to apply in Northern Ireland too from April 2027"
+        in note
+    )
+    assert "SI 2026/987" in note
+    assert "scores the whole period against 5%" in note
+    assert "UK-wide from April" not in note
 
 
 def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
@@ -219,15 +241,17 @@ def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
         in_force_rate_change(registry.FUEL_VAT_ID, {2028: -0.025})
 
 
-def test_the_table_covers_the_eight_package_measures_only(document):
+def test_the_table_covers_the_seven_package_measures_only(document):
     # BADR, employer NI relief and the road fuel VAT cut are withdrawn
     # (27 October 2026)
     assert list(document["measures"]) == list(
         registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
     )
-    # Eight on Budget day: the savings and property rates split in two
-    # (Table 6.1 rows 61 and 62)
-    assert len(document["measures"]) == 8
+    # Seven on Budget day: the savings and property rates split in two
+    # (Table 6.1 rows 61 and 62), and the savings rates held back until the
+    # corrected savings data are in (e151a865)
+    assert len(document["measures"]) == 7
+    assert registry.SAVINGS_INCOME_RATES_ID not in document["measures"]
     assert registry.UNEARNED_INCOME_RATES_ID not in document["measures"]
     assert registry.CARERS_ALLOWANCE_TAPER_ID in document["measures"]
     assert registry.LHA_UNFREEZE_ID not in document["measures"]
@@ -274,7 +298,6 @@ def test_each_measure_gets_the_display_its_shape_calls_for(document):
         "state_pension_income_tax_protection": "path",
         "domestic_electricity_zero_vat": "switch",
         "property_income_rates_up": "path",
-        "savings_income_rates_up": "path",
         "carers_allowance_earnings_taper": "path",
         "household_energy_payment_2026": "switch",
         "trading_allowance_raise": "before-after",
@@ -327,7 +350,11 @@ RATES_UP = {
 )
 def test_property_and_savings_income_rates(document, measure_id, income):
     # Each measure shows its own income's three rates, and only those
-    table = rows(document, measure_id)
+    table = (
+        rows(document, measure_id)
+        if measure_id in document["measures"]
+        else withdrawn_rows(measure_id)
+    )
     expected = {
         label: values
         for label, values in RATES_UP.items()
@@ -391,3 +418,44 @@ def test_current_law_thresholds_are_the_engine_alone(document):
         29_385,
         29_385,
     )
+
+
+def test_carers_allowance_shows_the_cliff_it_removes(document):
+    """#290 (Anthony, 19:20): the measure does not move the earnings limit,
+    so the card shows the allowance £1 over it, nothing in current law and
+    the weekly rate less £1 with the taper, and the note gives the limit
+    (16 hours at the OBR's National Living Wage, rounded up to the pound,
+    as efcda9c5) and where the allowance runs out."""
+    from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
+        OBR_NATIONAL_LIVING_WAGE_BY_APRIL,
+    )
+    from uk_budget_data.policy_table import carers_allowance_limit
+
+    table = rows(document, registry.CARERS_ALLOWANCE_TAPER_ID)
+    assert list(table) == [
+        "Carer's Allowance at £1 a week over the earnings limit"
+    ]
+    row = table["Carer's Allowance at £1 a week over the earnings limit"]
+    assert row["primary"] and row["unit_words"] == "£ a week"
+    rate = PARAMETERS.gov.dwp.carers_allowance.rate
+    wages = dict(OBR_NATIONAL_LIVING_WAGE_BY_APRIL)
+    points = by_key(row)
+    for year in range(2026, 2030):
+        assert points[str(year)] == (0, 0)
+    for year in (2030, 2031):
+        weekly = rate(f"{year}-04-06")
+        assert points[str(year)] == (0, round(weekly - 1, 2))
+        limit = math.ceil(round(16 * wages[year], 6))
+        assert carers_allowance_limit(year) == limit
+    assert (carers_allowance_limit(2030), carers_allowance_limit(2031)) == (
+        228,
+        234,
+    )
+    note = row["card_note"]
+    assert "£228 a week in 2030-31 and £234 in 2031-32" in note
+    ends = [
+        f"£{228 + rate('2030-04-06'):,.0f} a week in 2030-31",
+        f"£{234 + rate('2031-04-06'):,.0f} in 2031-32",
+    ]
+    assert f"runs out at {ends[0]} and {ends[1]}" in note
+    assert "Earnings limit" not in row["label"]

@@ -129,12 +129,12 @@ describe("ConstituencyMap", () => {
     const { container } = await renderMap();
     const fill = (code) => seat(container, code).getAttribute("fill");
     const opacity = (code) => seat(container, code).getAttribute("fill-opacity");
-    // +1.12% is past the fixed scale's +0.1% end: clamped to its teal
+    // +1.12% is past the fixed scale's +0.05% end: clamped to its teal
     expect(fill("Z14000001")).toBe(SCALE_COLOURS.gain.toLowerCase());
     expect(opacity("Z14000001")).toBe("1");
     // No texture on any seat (Vahid, 28 October): an approximate seat is
     // its own colour, full strength; its card says it is approximate
-    expect(fill("Z14000002")).toBe(scaleColour("0.0068", 0.001));
+    expect(fill("Z14000002")).toBe(scaleColour("0.0068", 0.0005));
     expect(opacity("Z14000002")).toBe("1");
     const fills = [...container.querySelectorAll("path.constituency-path")].map((path) => path.getAttribute("fill"));
     expect(fills.some((value) => value.startsWith("url("))).toBe(false);
@@ -143,7 +143,7 @@ describe("ConstituencyMap", () => {
     expect(fill("Z14000004")).toBe(NO_DATA_FILL);
     expect(fill("Z14000005")).toBe(SCALE_COLOURS.loss.toLowerCase());
     expect(fill("Z14000007")).toBe(SCALE_COLOURS.neutral);
-    expect(fill("Z14000008")).toBe(scaleColour("0.0004", 0.001));
+    expect(fill("Z14000008")).toBe(scaleColour("0.0004", 0.0005));
   });
 
   it("a hovered seat shows its average and relative change in a floating card", async () => {
@@ -176,9 +176,9 @@ describe("ConstituencyMap", () => {
     expect(legend).not.toBeNull();
     const text = legend.textContent;
     for (const entry of [
-      "\u22120.1%",
+      "\u22120.05%",
       "0%",
-      "+0.1%",
+      "+0.05%",
       "No data: not published, or too few survey households",
     ]) {
       expect(text).toContain(entry);
@@ -210,7 +210,7 @@ describe("ConstituencyMap", () => {
     const key = screen.getByRole("group", { name: "Key" });
     expect(map.contains(key)).toBe(false);
     expect(key).toHaveTextContent("Change in household net income, % of income");
-    expect(key.querySelector(".map-key-labels").textContent).toBe("\u22120.1%0%+0.1%");
+    expect(key.querySelector(".map-key-labels").textContent).toBe("\u22120.05%0%+0.05%");
     expect(key).not.toHaveTextContent("Loss");
     expect(key).not.toHaveTextContent("Gain");
     // No category ranges (the scale's own ends, ±0.1%, are its labels)

@@ -44,6 +44,7 @@ export const EVERY_POLICY_NOTE = (
     // on the page when that measure changes or isn't published (#104)
     points={[
       "Fuel duty acts on the petrol and diesel spending you enter, and VAT on that and the electricity spending.",
+      "Every couple is treated as married, as the calculator does not ask, so the Marriage Allowance can apply. An unmarried couple with one partner over State Pension age can see a different change in Universal Credit.",
       "A policy with no effect in the chosen year shows no change.",
     ]}
   />
@@ -84,7 +85,7 @@ export const MARGINAL_RATE_NOTE = (
     points={[
       "The rate stated for you is over the next £200 of your salary, the step the Child Benefit charge moves in; the chart's steps are between neighbouring points of the earnings sweep, so near a threshold they can average across it.",
       "“Of your next £1,000” is that rate applied to £1,000. Where earning the next £200 lowers net income by more than £200 (a cliff, such as losing childcare support above £100,000), the sentence is about that £200 instead.",
-      "Known limits: Council Tax Reduction is counted only where the model has the local scheme, so rates are understated for people who get it elsewhere. Each person has one student loan plan, so an undergraduate and postgraduate loan together is not modelled.",
+      "Known limits: Council Tax Reduction is counted only where the model has the local scheme, so rates are understated for people who get it elsewhere.",
     ]}
   />
 );
