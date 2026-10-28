@@ -133,7 +133,7 @@ export const POLICY_DETAILS = [
     sentence: "taking VAT off household electricity",
     name: "Zero VAT on domestic electricity",
     description: "Zero-rate VAT on domestic electricity to July 2027",
-    writtenFor: "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027: in Great Britain to March 2027 and across the UK from April 2027. The model's baseline has no zero rate, so the measure covers the whole period, as the Treasury costs it. It applies to electricity spending only. 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days; 2027-28 its 91 days of 366.",
+    writtenFor: "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027: in Great Britain to March 2027 and across the UK from April 2027. The model's baseline has no zero rate, so the measure covers the whole period, as the Treasury costs it. It applies to electricity spending only. Each year carries its share of a year's electricity use, not a share of its days (DESNZ Energy Trends Table 5.5): 2026-27 the October to March share (about 57%), 2027-28 the April to June share (about 22%).",
     summary:
       "Charges no VAT on household electricity bills, instead of 5%, from October 2026 to July 2027.",
     starts: "October 2026",
@@ -144,7 +144,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Applies 0% VAT instead of 5% to each household's electricity spending in the survey.",
     details:
-      "The model's baseline has no zero rate, so the whole period from October 2026 counts as this Budget's measure, as the Treasury costs it. 2026-27 carries the October to March share of a year's electricity use (about 57%); 2027-28 its days to 30 June.",
+      "The model's baseline has no zero rate, so the whole period from October 2026 counts as this Budget's measure, as the Treasury costs it. 2026-27 carries the October to March share of a year's electricity use (about 57%), and 2027-28 the April to June share (about 22%), from DESNZ Energy Trends.",
     source: {
       label: "Temporary zero rate of VAT for domestic electricity",
       href: "https://www.gov.uk/government/publications/temporary-zero-rate-of-vat-for-domestic-electricity-in-great-britain/temporary-zero-rate-of-vat-in-great-britain-for-domestic-electricity",

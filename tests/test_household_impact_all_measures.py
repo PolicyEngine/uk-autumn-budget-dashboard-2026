@@ -20,6 +20,7 @@ from policyengine_uk.system import system
 
 from uk_budget_data import household_impact, personal_impact
 from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
+    SPRING_SHARE,
     WINTER_SHARE,
     zero_vat_on_domestic_electricity,
 )
@@ -260,8 +261,8 @@ def test_electricity_spending_defaults_to_the_ons_average():
     "year, spending, weight",
     [
         (2026, 1_040, WINTER_SHARE),
-        (2027, 1_040, 91 / 366),
-        (2027, 2_000, 91 / 366),
+        (2027, 1_040, SPRING_SHARE),
+        (2027, 2_000, SPRING_SHARE),
     ],
 )
 def test_electricity_vat_is_5_percent_of_the_bill_for_its_period(
@@ -269,7 +270,7 @@ def test_electricity_vat_is_5_percent_of_the_bill_for_its_period(
 ):
     """5% VAT on VAT-inclusive spending is spending x 0.05 / 1.05; zero
     rated from 1 October 2026 (the October to March share of 2026-27's
-    use) to 30 June 2027 (91 days of 2027-28's 366)."""
+    use) to 30 June 2027 (the April to June share of 2027-28's use)."""
     assert zero_vat_on_domestic_electricity.__defaults__[0] == (
         pytest.approx(-0.05 * WINTER_SHARE)
     )
@@ -310,7 +311,7 @@ def test_northern_ireland_keeps_the_electricity_vat_until_april_2027():
         ["domestic_electricity_zero_vat"],
     )
     assert result["net_income"]["change"] == pytest.approx(
-        1_040 * 0.05 * 91 / 366 / 1.05, abs=0.01
+        1_040 * 0.05 * SPRING_SHARE / 1.05, abs=0.01
     )
 
 

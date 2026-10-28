@@ -533,9 +533,10 @@ def _electricity_vat_description() -> str:
             "Britain to March 2027 and across the UK from April 2027. The "
             "model's baseline has no zero rate, so the measure covers the "
             "whole period, as the Treasury costs it. It applies to "
-            "electricity spending only. 2026-27 carries the October to "
-            "March share of a year's electricity use (about 57%), not a "
-            f"share of its days; 2027-28 its {days} days of 366."
+            "electricity spending only. Each year carries its share of a "
+            "year's electricity use, not a share of its days (DESNZ Energy "
+            "Trends Table 5.5): 2026-27 the October to March share (about "
+            "57%), 2027-28 the April to June share (about 22%)."
         )
     return (
         "The zero rate of VAT on domestic electricity, "

@@ -67,6 +67,7 @@ from uk_budget_data.budget_measures.warm_home_discount_top_up import (
     warm_home_discount_top_up,
 )
 from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
+    SPRING_SHARE,
     WINTER_SHARE,
     zero_vat_on_domestic_electricity,
 )
@@ -256,9 +257,10 @@ VAT_WINDOWS = {
 # A year a modifier weights by something other than its days in force:
 # electricity's 2026-27 carries the October to March share of a year's use
 # (WINTER_SHARE in its module), not 182 of 365 days, as the zero-rated
-# months are the higher-use half of the year.
+# months are the higher-use half of the year; its 2027-28 the April to June
+# share (SPRING_SHARE), not 91 of 366 days.
 YEAR_WEIGHTS = (
-    {registry.ELECTRICITY_VAT_ID: {2026: WINTER_SHARE}}
+    {registry.ELECTRICITY_VAT_ID: {2026: WINTER_SHARE, 2027: SPRING_SHARE}}
     if _electricity.PRE_BUDGET_ZERO_RATE_IN_MEASURE
     else {}
 )
@@ -613,13 +615,14 @@ def _electricity_vat(reform) -> list[dict]:
                 divided=(
                     "rate_change_2026 divided by that module's WINTER_SHARE "
                     "(the October to March share of a year's electricity "
-                    "use) and rate_change_2027 by its share of the fiscal "
-                    "year's days in force"
+                    "use) and rate_change_2027 by its SPRING_SHARE (the "
+                    "April to June share)"
                 ),
                 note=(
                     "As modelled: the cut weighted in 2026-27 by the "
-                    "October to March share of a year's electricity use, "
-                    "not by its days in force"
+                    "October to March share of a year's electricity use "
+                    "and in 2027-28 by the April to June share, not by "
+                    "their days in force"
                 ),
             )
             if _electricity.PRE_BUDGET_ZERO_RATE_IN_MEASURE

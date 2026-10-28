@@ -8,6 +8,7 @@ import pytest
 
 from uk_budget_data import reforms as registry
 from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
+    SPRING_SHARE,
     WINTER_SHARE,
 )
 from uk_budget_data.cli import main
@@ -194,13 +195,13 @@ def test_in_force_dates_that_do_not_fit_the_constants_fail():
 def test_electricity_2026_carries_the_winter_share(document):
     """Budget 2026 scores the whole zero rate, 1 October 2026 to 30 June
     2027: 2026-27 weighted by the October to March share of a year's use,
-    2027-28 by its 91 days of 366."""
+    2027-28 by the April to June share."""
     yearly = rows(document, "domestic_electricity_zero_vat")[
         "VAT on domestic electricity in Great Britain, averaged over the year"
     ]
     averages = by_key(yearly)
     assert averages["2026"] == (0.05, round(0.05 - 0.05 * WINTER_SHARE, 6))
-    assert averages["2027"] == (0.05, round(0.05 - 0.05 * 91 / 366, 6))
+    assert averages["2027"] == (0.05, round(0.05 - 0.05 * SPRING_SHARE, 6))
     assert "2026-27 by the October to March share" in yearly["note"]
     (point,) = rows(document, "domestic_electricity_zero_vat")[
         "VAT on domestic electricity in Great Britain"
