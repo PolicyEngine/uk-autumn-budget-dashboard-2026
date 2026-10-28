@@ -1293,6 +1293,7 @@ describe("the waterfall's one line", () => {
         totals={{ before: 18000, after: 18300, change: 300 }}
         steps={[step("State Pension protection", 225), step("Fuel duty deferral", 75)]}
         yearLabel="2029-30"
+        typeOf={(id) => (id === "Fuel duty deferral" ? "Fuel duty" : null)}
       />,
     );
     expect(container.querySelector(".waterfall-sentence")).toBeNull();
@@ -1340,10 +1341,30 @@ describe("the waterfall's one line", () => {
         totals={{ before: 18000, after: 18204, change: 204 }}
         steps={[step("Zero VAT on electricity", 204), step("Fuel duty frozen", 0)]}
         yearLabel="2027-28"
+        typeOf={(id) => (id === "Fuel duty frozen" ? "Fuel duty" : "VAT")}
       />,
     );
     expect(still.container.querySelector(".waterfall-sub")).not.toHaveTextContent(/fuel/);
     still.unmount();
+
+    // Found by the policy's type, as the table's VAT row, not by its name
+    // (round 3): a renamed fuel duty policy keeps the line, and a name
+    // that merely says "fuel duty" does not add it
+    const renamed = render(
+      <NetIncomeWaterfall
+        totals={{ before: 18000, after: 18075, change: 75 }}
+        steps={[step("Pump prices held", 75)]}
+        yearLabel="2027-28"
+        typeOf={(id) => (id === "Pump prices held" ? "Fuel duty" : null)}
+      />,
+    );
+    expect(renamed.container.querySelector(".waterfall-sub")).toHaveTextContent(/VAT on fuel/);
+    renamed.unmount();
+    const named = render(
+      <NetIncomeWaterfall totals={{ before: 18000, after: 18075, change: 75 }} steps={[step("Fuel duty deferral", 75)]} yearLabel="2027-28" />,
+    );
+    expect(named.container.querySelector(".waterfall-sub")).not.toHaveTextContent(/fuel/);
+    named.unmount();
 
     // One policy: no chip, the sentence still the text alternative
     const one = render(

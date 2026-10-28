@@ -291,8 +291,6 @@ export default function ProgrammeTable({
             <TitleIcon name="layers" />
             <span className="title-text">{title}</span>
           </h3>
-          {/* Named against the waterfall above: that is by policy, this by
-              tax and benefit; both add up to the same change (HH5) */}
           {!showTabs && <p className="chart-description">{sentence}</p>}
         </div>
         <ChartDownloadMenu formats={formats} chartTitle={policyTitle} ariaLabel={`Download table: ${policyTitle}`} />

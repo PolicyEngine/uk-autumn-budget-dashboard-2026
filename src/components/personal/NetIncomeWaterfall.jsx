@@ -1,4 +1,4 @@
-import { money, signedMoney } from "../../utils/singleYear";
+import { money, movesFuelDuty, signedMoney } from "../../utils/singleYear";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "../FloatingTooltip";
 import TitleIcon from "../TitleIcon";
 import { magnitudeColours } from "../../utils/chartTheme";
@@ -100,8 +100,10 @@ export function waterfallScaleStart(totals, steps) {
  * @param {string} props.yearLabel - "2029-30"
  * @param {boolean} [props.splitFailed] - The split by policy failed: one step
  *   for all of them, with no "Splitting…" line (the error is shown below)
+ * @param {(id: string) => string|null} [props.typeOf] - A policy's type
+ *   (policyDetails.js), as the table's VAT row reads it
  */
-export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFailed = false }) {
+export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFailed = false, typeOf = null }) {
   const wrapperRef = useRef(null);
   const sentenceId = useId();
   const pending = steps === null;
@@ -114,10 +116,9 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
   const hi = Math.max(...rows.map((row) => row.to));
   const pct = (value) => ((value - start) / Math.max(hi - start, 1)) * 100;
   const largest = largestSteps(steps);
-  // Only when the fuel duty policy moves this household
-  const fuelDuty = (steps ?? []).some(
-    (step) => /fuel duty/i.test(`${step.name ?? ""} ${step.label ?? ""}`) && Math.round(step.rounded ?? 0) !== 0,
-  );
+  // Only when the fuel duty policy moves this household, found by its type
+  // as the table's VAT row finds it, not by its name (round 3)
+  const fuelDuty = movesFuelDuty(steps, typeOf);
   // Each policy's bar by direction and size, the largest darkest; the
   // interaction step keeps its plain direction colour
   const policySteps = rows.filter((row) => !row.total && row.id !== "interaction");

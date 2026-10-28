@@ -22,6 +22,7 @@ import IncomePositionChart, { ResultTiles } from "./IncomePositionChart";
 import MarginalRateChart from "./MarginalRateChart";
 import "./SingleYear.css";
 import { scrollBelowBars } from "../../utils/pageScroll";
+import { policyDetailsFor } from "../../utils/policyDetails";
 
 /** True once `active` has held for `delay` ms (no flash of a loading line). */
 function useDelayed(active, delay = 300) {
@@ -510,6 +511,7 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
           steps={bars ? bars.rows : null}
           yearLabel={yearLabel}
           splitFailed={splitFailed}
+          typeOf={(id) => policyDetailsFor(selected.find((policy) => policy.id === id))?.type ?? null}
         />
       </div>
       <AboutResult items={items} caution={caution} bars={bars} totals={totals} />

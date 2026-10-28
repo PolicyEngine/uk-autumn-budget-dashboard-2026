@@ -204,28 +204,28 @@ export function programmeNotes(groups) {
  * "VAT change". `steps` are policyRows(...).rows; `typeOf` gives a measure's type.
  */
 export function vatRowLabel(steps, typeOf) {
-  const moving = (steps ?? []).filter((step) => step.id !== "interaction" && Math.round(step.rounded ?? step.change ?? 0) !== 0);
-  const types = moving.map((step) => typeOf(step.id));
+  const types = movingTypes(steps, typeOf);
   return !types.includes("VAT") && types.includes("Fuel duty") ? "VAT change on fuel duty" : "VAT change";
+}
+
+// The types of the selected policies that move this household
+function movingTypes(steps, typeOf) {
+  const moving = (steps ?? []).filter((step) => step.id !== "interaction" && Math.round(step.rounded ?? step.change ?? 0) !== 0);
+  return moving.map((step) => typeOf?.(step.id) ?? null);
+}
+
+/**
+ * Whether a fuel duty policy moves this household, by the policy's type as
+ * the table's VAT row reads it (vatRowLabel), never its display name: the
+ * waterfall's VAT note and the table's row name agree (round 3).
+ */
+export function movesFuelDuty(steps, typeOf) {
+  return movingTypes(steps, typeOf).includes("Fuel duty");
 }
 
 /** The interaction row shows only from this size (£), so bars add up. */
 export const INTERACTION_THRESHOLD = 1;
 
-/**
- * The per-policy rows (the API's single-measure method): each measure's own
- * change, that measure alone at its Budget setting with the other selected
- * measures at current law. Where the combined change differs from the
- * sum of those by £1 or more, the difference is a row of its own,
- * "Interaction between policies", so the bars add up to the change. In
- * whole pounds that add up to the headline tile (largest remainder), sorted
- * by size. Measures that do not move the household at all are listed by
- * name, and measures worth under £1 separately.
- *
- * @param {{measures: Array<{id, name, change, status}>, residual: number}} byPolicy
- * @param {number} total - The headline change, as the tile shows it
- * @param {Array<{id: string, name: string}>} policies - The dashboard's names, by id
- */
 /**
  * Why a measure out of force in `year` has no effect on the household, for
  * its No effect row: the Warm Home Discount top-up is paid in winter
@@ -250,6 +250,20 @@ export function outOfForceReason(measure, year) {
   return to && to < `${year}-04` ? `In force until ${fy(to)}` : `From ${month} ${y}`;
 }
 
+/**
+ * The per-policy rows (the API's single-measure method): each measure's own
+ * change, that measure alone at its Budget setting with the other selected
+ * measures at current law. Where the combined change differs from the
+ * sum of those by £1 or more, the difference is a row of its own,
+ * "Interaction between policies", so the bars add up to the change. In
+ * whole pounds that add up to the headline tile (largest remainder), sorted
+ * by size. Measures that do not move the household at all are listed by
+ * name, and measures worth under £1 separately.
+ *
+ * @param {{measures: Array<{id, name, change, status}>, residual: number}} byPolicy
+ * @param {number} total - The headline change, as the tile shows it
+ * @param {Array<{id: string, name: string}>} policies - The dashboard's names, by id
+ */
 export function policyRows(byPolicy, total, policies, year = null) {
   const nameOf = (row) =>
     policies.find((policy) => policy.id === row.id)?.name ?? row.name ?? row.id.replace(/_/g, " ");
