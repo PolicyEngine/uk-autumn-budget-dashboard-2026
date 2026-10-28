@@ -2,7 +2,7 @@
   "measure_id": "household_energy_payment_2026",
   "receipt_sha256": "a2d04be4a38d368fbcaf5c4709966c65ef91b90e4f69f9899f26ffb149a8bb6d",
   "reason": "Checked budget_measures.household_energy_payment_2026: in 2026-27 only it adds the payment to ebr_council_tax_rebate for households in England whose council tax band is A, B, C or D, leaving every other household and year at the native amount. The receipt's outputs were compared with the hand-computed households in tests/test_reforms.py.",
-  "checker": "",
+  "checker": "vahid-ahmadi",
   "second": "juaristi22",
   "released_at": "2026-10-28T17:15:49+00:00"
 }

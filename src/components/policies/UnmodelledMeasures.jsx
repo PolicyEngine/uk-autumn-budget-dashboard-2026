@@ -1,16 +1,19 @@
 import { useId, useState } from "react";
-import { ChevronDown, ExternalLink, Landmark } from "lucide-react";
+import { ArrowRight, ChevronDown, ExternalLink } from "lucide-react";
 import TitleIcon from "../TitleIcon";
-import { PolicyCard } from "../PolicyCards";
+import { measureCategoryOf } from "../../utils/measureCategory";
+import { differs, formatValue } from "../../utils/policyParameters";
 import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import { EXTERNAL } from "../../utils/sources";
 import {
   COSTING_YEARS,
+  UNMODELLED_GROUPS,
   UNMODELLED_MEASURES,
 } from "../../utils/unmodelledMeasures";
 import "./UnmodelledMeasures.css";
 
 export const UNMODELLED_TITLE = "Budget policies we do not model";
+export const COSTING_CAPTION = "Treasury costing, £m (Table 6.1; + is a gain to the Exchequer)";
 export const UNMODELLED_SUBTITLE = "What each policy changes, who it reaches and why we leave it out.";
 
 // £ million as Table 6.1 prints it: a sign on every figure but zero, with a true minus
@@ -45,10 +48,12 @@ function Costing({ measure }) {
     <>
       <div className="umm-costing-scroll">
         <table className="umm-costing">
-          <caption>£ million, Budget 2026 Table 6.1; positive = gain to the Exchequer</caption>
+          <caption>{COSTING_CAPTION}</caption>
           <thead>
             <tr>
-              <th scope="col">Row</th>
+              <th scope="col">
+                <span className="policy-sr-only">Row</span>
+              </th>
               {COSTING_YEARS.map((year) => (
                 <th key={year} scope="col">
                   <span className="umm-year-full">{year}</span>
@@ -62,7 +67,10 @@ function Costing({ measure }) {
           <tbody>
             {measure.costings.map(({ row, values }) => (
               <tr key={row}>
-                <th scope="row">{row}</th>
+                {/* Named only where there are several rows; screen readers always hear it */}
+                <th scope="row" className={measure.costings.length > 1 ? undefined : "is-hidden"}>
+                  Row {row}
+                </th>
                 {values.map((value, index) => (
                   <td key={COSTING_YEARS[index]}>{formatMillions(value)}</td>
                 ))}
@@ -82,70 +90,127 @@ function Costing({ measure }) {
   );
 }
 
+/** "1 April 2027." → "1 April 2027", for the card's one meta line. */
+const clause = (text) => String(text ?? "").trim().replace(/\.$/, "");
+
 /**
- * One measure as a Policies card (PolicyCards.jsx's PolicyCard): its
- * category, name, At a glance (Starts, Ends, who it reaches and the
- * timeline), What changes (the entry's words, and the values before and
- * after where it gives them: utils/unmodelledCards.js), for a household,
- * then why it is left out, the Treasury costing, its sources and a link to
- * its Table 6.1 rows. The text is the entry's own.
+ * A measure's values before and after, from its layout
+ * (utils/unmodelledCards.js), or [] where the entry gives none: the main
+ * one first, as the card's headline.
  */
-export function unmodelledCard(measure) {
-  const layout = UNMODELLED_CARDS[measure.id] ?? {};
-  const { parameters, ...card } = layout;
-  const total = measure.costings.reduce((sum, { values }) => sum + values.reduce((a, b) => a + b, 0), 0);
-  return {
-    policy: {
-      ...card,
-      id: measure.id,
-      anchorId: `unmodelled-${measure.id}`,
-      name: measure.name,
-      label: measure.name,
-      starts: measure.starts,
-      affects: measure.reaches,
-      affectsWide: true,
-      changesText: measure.changes,
-      direction: total < 0 ? "cost" : total > 0 ? "revenue" : "neutral",
-      example: { title: "For a household", text: measure.household },
-      // The reason, then PolicyEngine's own work that models it, where there is some
-      notModelled: measure.seeAlso ? (
-        <>
-          {measure.notModelled} {measure.seeAlso.before}
-          <SourceLink href={measure.seeAlso.href}>{measure.seeAlso.label}</SourceLink>
-          {measure.seeAlso.after}
-        </>
-      ) : (
-        measure.notModelled
-      ),
-      sources: measure.sources,
-      timeline: false,
-      // The Treasury's six years on the card itself, or one muted line
-      footExtra: (
-        <section className="umm-costing-section" aria-label={`Treasury costing: ${measure.name}`}>
-          <p className="policy-card-example-title">
-            <Landmark size={14} aria-hidden="true" />
-            Treasury costing
-          </p>
-          {measure.costings.length ? (
-            <div className="umm-costing-body">
-              <Costing measure={measure} />
-            </div>
-          ) : (
-            <p className="umm-no-costing">No Table 6.1 row</p>
-          )}
-        </section>
-      ),
-    },
-    parameters: parameters ?? null,
-  };
+export function headlineValues(measure) {
+  const rows = UNMODELLED_CARDS[measure.id]?.parameters?.rows ?? [];
+  return rows
+    .map((row) => {
+      const point = row.points.find(differs);
+      return point ? { label: row.label, primary: row.primary, unit: row.unit, before: point.before, after: point.after } : null;
+    })
+    .filter(Boolean)
+    .sort((x, y) => Number(y.primary) - Number(x.primary));
 }
 
 /**
- * The Budget measures this dashboard does not model, under the modelled
- * cards on the Policies tab: a section like theirs, with its own heading
- * and subtitle, then one card per measure from utils/unmodelledMeasures.js,
- * with the government's own figures only.
+ * One measure as a compact card: its category and name, what changes,
+ * the values before and after as the headline, when and whom in one line,
+ * for a household and why it is not in our figures in a line each, the
+ * Treasury's six years as a strip, and its sources behind a disclosure.
+ * The words are the entry's own (utils/unmodelledMeasures.js).
  */
+function UnmodelledCard({ measure }) {
+  const layout = UNMODELLED_CARDS[measure.id] ?? {};
+  const category = measureCategoryOf({ category: layout.category, name: measure.name, id: measure.id });
+  const values = headlineValues(measure);
+  const [main, ...more] = values;
+  const meta = [`From ${clause(measure.starts)}`, layout.ends ? `Ends ${layout.ends}` : "Continues", clause(measure.reaches)];
+  return (
+    <li className="umm-card" id={`unmodelled-${measure.id}`}>
+      <div className="policy-card-topline">
+        <p className="policy-card-type">
+          <span className="mrl-icon" aria-hidden="true" style={{ "--mrl-colour": "var(--pe-gray-500)" }}>
+            <TitleIcon name={category.icon} bare size={13} />
+          </span>
+          {category.label}
+        </p>
+      </div>
+      <h3 className="umm-card-name">{measure.name}</h3>
+      <p className="umm-card-changes">{measure.changes}</p>
+      {main && (
+        <div className="umm-headline">
+          <p className="umm-headline-values" aria-label={`${main.label}: ${formatValue(main.before, main.unit)} becomes ${formatValue(main.after, main.unit)}`}>
+            <span className="umm-before">{formatValue(main.before, main.unit)}</span>
+            <ArrowRight size={18} aria-hidden="true" className="umm-arrow" />
+            <span className="umm-after">{formatValue(main.after, main.unit)}</span>
+          </p>
+          <p className="umm-headline-label">
+            {main.label}
+            {more.map((row) => (
+              <span key={row.label}>
+                {" · "}
+                {row.label}: {formatValue(row.before, row.unit)} → {formatValue(row.after, row.unit)}
+              </span>
+            ))}
+          </p>
+        </div>
+      )}
+      <p className="umm-meta">{meta.join(" · ")}</p>
+      <dl className="umm-lines">
+        <div>
+          <dt>For a household:</dt>
+          <dd>{measure.household}</dd>
+        </div>
+        <div>
+          <dt>{WHY_LABEL}</dt>
+          <dd>
+            {measure.notModelled}
+            {measure.seeAlso && (
+              <>
+                {" "}
+                {measure.seeAlso.before}
+                <SourceLink href={measure.seeAlso.href}>{measure.seeAlso.label}</SourceLink>
+                {measure.seeAlso.after}
+              </>
+            )}
+          </dd>
+        </div>
+      </dl>
+      <section className="umm-costing-section" aria-label={`Treasury costing: ${measure.name}`}>
+        {measure.costings.length ? (
+          <Costing measure={measure} />
+        ) : (
+          <p className="umm-no-costing">
+            <span className="umm-strip-label">Treasury costing</span> No Table 6.1 row
+          </p>
+        )}
+      </section>
+      <details className="umm-sources">
+        <summary>{measure.sources.length > 1 ? "Sources" : "Source"}</summary>
+        <ul>
+          {measure.sources.map((source) => (
+            <li key={source.label}>
+              <SourceLink href={source.href}>{source.label}</SourceLink>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </li>
+  );
+}
+
+/** The label of a card's reason, as one short line. */
+export const WHY_LABEL = "Not in our figures because:";
+
+/**
+ * The measures in their groups (UNMODELLED_GROUPS), in order, each group
+ * keeping the list's order; a measure with no known group goes last,
+ * unlabelled.
+ */
+export function groupsOf(measures) {
+  const known = new Set(UNMODELLED_GROUPS.map(({ id }) => id));
+  const groups = UNMODELLED_GROUPS.map(({ id, label }) => ({ id, label, items: measures.filter((m) => m.group === id) }));
+  groups.push({ id: "other", label: null, items: measures.filter((m) => !known.has(m.group)) });
+  return groups.filter(({ items }) => items.length > 0);
+}
+
 export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES }) {
   const [open, setOpen] = useState(false);
   const id = useId();
@@ -182,14 +247,21 @@ export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES }) {
         </div>
       </div>
       <div id={`${id}-cards`} className="report-section policy-details-content" hidden={!open}>
-        {open && (
-          <ul className="policy-cards umm-list">
-            {measures.map((measure) => {
-              const { policy, parameters } = unmodelledCard(measure);
-              return <PolicyCard key={measure.id} policy={policy} parameters={parameters} />;
-            })}
-          </ul>
-        )}
+        {open &&
+          groupsOf(measures).map(({ id: group, label, items }) => (
+            <div key={group} className="umm-group">
+              {label && (
+                <p className="umm-group-title" id={`${id}-${group}`}>
+                  {label}
+                </p>
+              )}
+              <ul className="umm-list" aria-labelledby={label ? `${id}-${group}` : undefined}>
+                {items.map((measure) => (
+                  <UnmodelledCard key={measure.id} measure={measure} />
+                ))}
+              </ul>
+            </div>
+          ))}
       </div>
     </section>
   );

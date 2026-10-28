@@ -9,11 +9,18 @@ import { fixtureJson } from "../../test/publicationFixture";
 // the catalogue publishes every one of them. The driver's card features the
 // fuel duty measure.
 const baseEntry = fixtureJson("manifest.json").measures.alpha;
+const NAMES = {
+  fuel_duty_rise_deferral: "Fuel duty cut extended",
+  property_income_rates_up: "Property income tax up",
+  savings_income_rates_up: "Savings income tax up",
+  carers_allowance_earnings_taper: "Carer's Allowance taper",
+};
 const publishing = (ids) =>
   buildMeasureCatalogue({
     manifest: {
       ...fixtureJson("manifest.json"),
-      measures: Object.fromEntries(ids.map((id) => [id, { ...baseEntry, name: id, years: [2029], unsupported_years: [] }])),
+      // Named as published: a chip names its measure by its short name
+      measures: Object.fromEntries(ids.map((id) => [id, { ...baseEntry, name: NAMES[id] ?? id, years: [2029], unsupported_years: [] }])),
       combined: {},
     },
     tablesByKey: Object.fromEntries(ids.map((id) => [id, {}])),
@@ -169,7 +176,7 @@ describe("the chosen household", () => {
 });
 
 describe("an example card's chip tooltip (W6 G1)", () => {
-  it("names the largest single effect, never 'most of the change' when it pulls the other way", () => {
+  it("features its own measures, each with its part, and names a larger single effect in the tip, never 'most of the change'", () => {
     // Illustrative figures: a loss of £90 overall, the example's own
     // measures −£260 together (property −£200, savings −£60), a gain of
     // £320 from another: the largest, but not most of a loss
@@ -183,11 +190,38 @@ describe("an example card's chip tooltip (W6 G1)", () => {
       </MeasureCatalogueProvider>,
     );
     const card = screen.getByRole("button", { name: /^A landlord with savings/ }).closest(".household-card");
-    const tag = card.querySelector(".household-card-tag");
-    expect(tag).toHaveTextContent("+£320");
+    // Property and savings, each with its own part, never cut short
+    expect([...card.querySelectorAll(".household-card-tag")].map((tag) => tag.textContent)).toEqual(["Property income tax up−£200", "Savings income tax up−£60"]);
+    const tag = card.querySelector(".household-card-tags");
     fireEvent.mouseEnter(tag);
     const tip = document.getElementById(tag.getAttribute("aria-describedby"));
-    expect(tip).toHaveTextContent(/^This example features Savings and property tax \(−£260 in 2029-30\); the largest single effect is .+ \(\+£320\)\.$/);
+    expect(tip).toHaveTextContent(/^This example features Property income tax up and Savings income tax up \(−£260 in 2029-30\); the largest single effect is .+ \(\+£320\)\.$/);
     expect(tip).not.toHaveTextContent(/most of the change/);
+  });
+});
+
+describe("the carer's card before its measure starts", () => {
+  it("features the taper, muted, with the year it starts, not another measure", () => {
+    const [taper, other] = ["carers_allowance_earnings_taper", "fuel_duty_rise_deferral"];
+    const catalogue = publishing([taper, other]);
+    const presets = {
+      carer: {
+        2027: { change: 13, before: 20000, after: 20013, byPolicy: { [taper]: 0, [other]: 13 } },
+        2030: { change: 1578, before: 20000, after: 21578, byPolicy: { [taper]: 1565, [other]: 13 } },
+      },
+    };
+    const cardFor = (year) => {
+      const { unmount } = render(
+        <MeasureCatalogueProvider catalogue={catalogue}>
+          <HouseholdCards examples={HOUSEHOLD_EXAMPLES} value={null} formOpen={false} formId="f" onYours={() => {}} onChoose={() => {}} presets={presets} yoursChange={null} year={year} chosen={false} yoursSelected={false} />
+        </MeasureCatalogueProvider>,
+      );
+      const card = screen.getByRole("button", { name: /^A carer/ }).closest(".household-card");
+      const tags = [...card.querySelectorAll(".household-card-tag")].map((tag) => [tag.textContent, tag.classList.contains("is-later")]);
+      unmount();
+      return tags;
+    };
+    expect(cardFor(2027)).toEqual([["Carer's Allowance taperfrom 2030-31", true]]);
+    expect(cardFor(2030)).toEqual([["Carer's Allowance taper+£1,565", false]]);
   });
 });
