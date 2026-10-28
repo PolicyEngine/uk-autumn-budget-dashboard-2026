@@ -201,7 +201,11 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     peopleMode ? (t === 0 ? "0" : `${t < 0 ? "−" : ""}${thousands.format(Math.abs(t))}`) : t === 0 ? "0" : formatPp(-t).replace("pp", "");
 
   const ends = steps.flatMap((s) => [s.start, s.end]).concat(0);
-  const allTicks = niceTicks(Math.min(...ends), Math.max(...ends));
+  // A sliver the other side of 0 (under 2% of the longest bar) does not
+  // open a whole tick step there: its bar still shows at 0
+  const [lo, hi] = [Math.min(...ends), Math.max(...ends)];
+  const sliver = (v, other) => Math.abs(v) < 0.02 * Math.abs(other);
+  const allTicks = niceTicks(sliver(lo, hi) ? 0 : lo, sliver(hi, lo) ? 0 : hi);
   const [x0, x1] = [allTicks[0], allTicks.at(-1)];
   // Every round tick has a gridline (0, 2,000, 4,000, 6,000); WfTicks
   // labels those that fit the track
