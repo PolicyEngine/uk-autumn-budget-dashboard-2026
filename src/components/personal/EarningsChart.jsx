@@ -611,10 +611,18 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
           info={{
             shows: description,
             how: [
-              "Your household is calculated again at each salary from £0 up, with partner income and everything else held fixed.",
+              // "Held fixed" is said once, in What it shows above
+              "Your household is calculated again at each salary from £0 up.",
+              // By view: in Change each layer is after minus before and the
+              // line the change (layerRows); with no parts, Change draws two
+              // shaded areas and no line (W6 G1)
               netParts
-                ? "Each layer is one tax or benefit's part of net income; income and benefits are above zero, taxes below, and the line is net income."
-                : "The line is your household's net income.",
+                ? isChange
+                  ? "Each layer is one tax or benefit's part of the change: above zero where it adds to net income, below where it takes away. The line is the change in net income."
+                  : "Each layer is one tax or benefit's part of net income, and the line is net income."
+                : isChange
+                  ? "The shaded area is the change: above zero a gain, below a loss."
+                  : "The line is your household's net income.",
               "The dashed line marks your salary.",
             ],
             method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
