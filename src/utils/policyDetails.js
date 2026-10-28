@@ -76,7 +76,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Applies each day's duty rate to households' petrol and diesel spending, day-weighted to fiscal years.",
     details:
-      "Held at 52.95p a litre to 30 June 2027: none of current law's rises in January, March or April 2027. From 1 July 2027 it is current law's 60.59p, which includes April 2027's RPI rise. RPI rises then resume each April from 2028. After that it costs nothing. The end date is the Budget document's. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel for vans, lorries and business use of cars is not modelled, so the figure covers households' own fuel. The Treasury's figure also covers business fuel, but counts duty only, without VAT.",
+      "Held at 52.95p a litre to 30 June 2027: none of current law's rises in January, March or April 2027. From 1 July 2027 it is current law's 60.59p, which includes April 2027's RPI rise. RPI rises then resume each April from 2028. After that it costs nothing. The end date is the Budget document's. Includes the VAT on the lower pump price, with fuel spending held fixed. Fuel for vans, lorries and business use of cars is not modelled, so the figure covers households' own fuel. The official figure, the government's estimate, also covers business fuel, but counts duty only, without VAT.",
     source: {
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
@@ -103,7 +103,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Cuts eligible people's income tax, never below zero; it tapers by £1 per £3 above the full new State Pension.",
     details:
-      "Total income counts the State Pension and all other income, savings interest included. So a larger State Pension, with increments or additional State Pension, reduces the allowance too. The personal allowance is unchanged. People reaching State Pension age after 6 October in a tax year are not included: reach and cost slightly understated. Scottish taxpayers get the same allowance, at the 20% basic rate. Means-tested benefits can take back part of the allowance. Pension Credit, Housing Benefit and Council Tax Reduction count income after tax. A smaller award can end help that comes with it. Universal Credit counts pension income before tax, so changes only where the allowance cuts tax on earnings.",
+      "Total income counts the State Pension and all other income, savings interest included. So a larger State Pension, with increments or additional State Pension, reduces the allowance too. The personal allowance is unchanged. The model leaves out people reaching State Pension age after 6 October in a tax year, so it slightly understates reach and cost. Scottish taxpayers get the same allowance, at the 20% basic rate. Means-tested benefits can take back part of the allowance. Pension Credit, Housing Benefit and Council Tax Reduction count income after tax. A smaller award can end help that comes with it. Universal Credit counts pension income before tax, so changes only where the allowance cuts tax on earnings.",
     source: {
       label: "Pension Tax Allowance explainer",
       href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer",
@@ -199,13 +199,13 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Holds the personal allowance at £12,570 and the basic rate band at £37,700 in 2031-32, instead of £12,830 and £38,500.",
     details:
-      "The National Insurance primary threshold and upper earnings limit, which the model ties to the personal allowance and higher rate threshold from 2031-32, stay frozen too; the employer threshold is not held.",
+      "The National Insurance primary threshold and upper earnings limit, which the model ties to the personal allowance and higher rate threshold from 2031-32, stay frozen too; the employer threshold does not.",
     source: {
       label: "Finance Act 2026, section 10 (thresholds frozen to 2030-31)",
       href: "https://www.legislation.gov.uk/ukpga/2026/11/section/10",
     },
     caveats: [
-      "The extra year of the freeze is an assumption made before the Budget. Incomes are held fixed, with no behavioural response.",
+      "The extra year of the freeze is an assumption made before the Budget. The model holds incomes fixed, with no behavioural response.",
     ],
   },
   {
@@ -221,7 +221,7 @@ export const POLICY_DETAILS = [
     type: "Capital gains tax",
     inForce: { from: "2027-04" },
     details:
-      "The £500,000 limit is an assumption made before the Budget. The model applies the limit to each year's gains, as if none had been used before. The figure is the extra tax on each year's disposals, most of which is paid in the January after the tax year ends.",
+      "The £500,000 limit is an assumption made before the Budget. The model applies the limit to each year's gains, as if earlier gains had used none of it. The figure is the extra tax on each year's disposals, most of which taxpayers pay in the January after the tax year ends.",
     source: {
       label: "Business Asset Disposal Relief",
       href: "https://www.gov.uk/business-asset-disposal-relief",
@@ -244,7 +244,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Applies 15% VAT instead of 20% to households' petrol and diesel spending, day-weighted to fiscal years.",
     details:
-      "Assumes the cut is passed through in full to pump prices and fuel spending is unchanged. The rate and dates are assumptions made before the Budget.",
+      "Assumes the cut passes through in full to pump prices and fuel spending is unchanged. The rate and dates are assumptions made before the Budget.",
     source: {
       label: "VAT rates on different goods and services",
       href: "https://www.gov.uk/guidance/rates-of-vat-on-different-goods-and-services",
@@ -309,7 +309,7 @@ export const POLICY_DETAILS = [
     type: "Benefit",
     inForce: { from: "2027-04" },
     details:
-      "Rents are policyengine-uk's own projection of each area's rents, so the size of the re-set is modelled, not published. Only private renters claiming Universal Credit or Housing Benefit with rent above the frozen rate gain. The benefit cap still applies, so a household at the cap gains less or nothing. Northern Ireland's rates, which follow Great Britain's, are unfrozen too.",
+      "Rents are policyengine-uk's own projection of each area's rents, so the size of the re-set is a modelled estimate, not a published figure. Only private renters claiming Universal Credit or Housing Benefit with rent above the frozen rate gain. The benefit cap still applies, so a household at the cap gains less or nothing. Northern Ireland's rates, which follow Great Britain's, are unfrozen too.",
     source: {
       label: "Local Housing Allowance rates (SI 2013/2978, article 4)",
       href: "https://www.legislation.gov.uk/uksi/2013/2978/article/4/made",
@@ -331,7 +331,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Sets the employer threshold at £9,100 a year (£175 a week) from 2027-28, rising with CPI from 2031-32 as current law's does; the 15% rate is unchanged.",
     details:
-      "The £9,100 threshold is an assumption made before the Budget. policyengine-uk holds each employer's total cost of employment fixed, so the National Insurance saved is paid to employees as higher wages in the same year, and income tax and employee National Insurance are then due on it.",
+      "The £9,100 threshold is an assumption made before the Budget. policyengine-uk holds each employer's total cost of employment fixed, so employers pass the National Insurance they save to employees as higher wages in the same year, and income tax and employee National Insurance are then due on it.",
     source: {
       label: "National Insurance Contributions (Secondary Class 1 Contributions) Act 2025, section 2",
       href: "https://www.legislation.gov.uk/ukpga/2025/11/section/2",
@@ -354,7 +354,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Adds 2 points to each property income rate from 2027-28: 24%, 44% and 49% at basic, higher and additional.",
     details:
-      "The 2-point rise is on top of the rises Budget 2025 legislated. Scottish taxpayers pay Scottish rates on property income, so their rates don't change. Finance cost relief follows the UK property basic rate, so Scottish landlords' relief also rises to 24%. They pay slightly less tax. Incomes are held fixed: no one changes how they hold property.",
+      "The 2-point rise comes on top of the rises Budget 2025 legislated. Scottish taxpayers pay Scottish rates on property income, so their rates don't change. Finance cost relief follows the UK property basic rate, so Scottish landlords' relief also rises to 24%. They pay slightly less tax. With incomes held fixed, no one changes how they hold property.",
     source: {
       label: "HMRC: changes to tax rates for property, savings and dividend income",
       href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
@@ -378,7 +378,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Adds 2 points to each savings income rate from 2027-28: 24%, 44% and 49%. Dividend rates are unchanged.",
     details:
-      "The 2-point rise is on top of the rises Budget 2025 legislated. It applies across the UK: savings income is taxed at UK rates, Scotland included. Incomes are held fixed: no one changes how they hold savings.",
+      "The 2-point rise comes on top of the rises Budget 2025 legislated. It applies across the UK: Scottish taxpayers also pay UK rates on savings income. With incomes held fixed, no one changes how they hold savings.",
     source: {
       label: "HMRC: changes to tax rates for property, savings and dividend income",
       href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
@@ -407,7 +407,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Adds £100 to the income of each household in England whose council tax band is A, B, C or D, in 2026-27.",
     details:
-      "The Treasury's cost also covers the devolved governments' Barnett share (about £425 million), which the model leaves out. It also covers £100 million for councils in England for targeted support, also not modelled.",
+      "The official costing also covers the devolved governments' Barnett share (about £425 million), which the model leaves out. It also covers £100 million for councils in England for targeted support, which the model leaves out too.",
     source: {
       label: "Budget 2026",
       href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
