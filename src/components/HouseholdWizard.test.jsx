@@ -391,6 +391,29 @@ describe("the personal impact form", () => {
     }
   });
 
+  it("scrolls an example to its answers' line above its result, so a phone shows who the household is (phone check)", async () => {
+    const scrollTo = vi.fn();
+    const original = window.scrollTo;
+    window.scrollTo = scrollTo;
+    try {
+      render(<HouseholdCalculator selectedPolicies={["road_fuel_vat_cut"]} />);
+      const rect = Element.prototype.getBoundingClientRect;
+      vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function () {
+        if (this.classList?.contains("household-example-summary")) return { top: 700, bottom: 820, height: 120 };
+        if (this.classList?.contains("household-results")) return { top: 840, bottom: 2000, height: 1160 };
+        return rect.call(this);
+      });
+      applyExample("A graduate on £35,000");
+      await waitFor(() => expect(scrollTo).toHaveBeenCalled());
+      expect(scrollTo.mock.calls[0][0]).toMatchObject({ top: 700 - 16 });
+      // Focus still goes to the result
+      expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" }));
+    } finally {
+      window.scrollTo = original;
+      vi.restoreAllMocks();
+    }
+  });
+
   it("Edit these answers opens Your household from the example, and Reset answers goes back to the typical ones (HH10, HH12)", () => {
     render(<HouseholdCalculator />);
     applyExample("A graduate on £35,000");
