@@ -19,11 +19,15 @@
  * threshold): with a little private pension, their income is just above
  * the full new State Pension, where the Pension Tax Allowance tapers away
  * (£1 for every £3 above it: HM Treasury's explainer), beside the pensioner
- * at 70, whose income is below it. Two still feature a measure the Budget
- * left out (the Plan 2 threshold unfreeze and the threshold freeze to
- * 2031-32): the catalogue no longer publishes it, so those cards show no
- * tag or accent (featuresPublished) and keep their households, whose
- * results come from the announced measures.
+ * at 70, whose income is below it. The carer takes the graduate's (the Plan
+ * 2 threshold): they earn a little above Carer's Allowance's weekly
+ * earnings limit, so receive none of it before the Budget's taper, which
+ * begins within 2030-31; their partner's earnings leave the couple no
+ * Universal Credit, which would otherwise offset the allowance. One still
+ * features a measure the Budget left out (the threshold freeze to
+ * 2031-32): the catalogue no longer publishes it, so its card shows no tag
+ * or accent (featuresPublished) and keeps its household, whose results
+ * come from the announced measures.
  * The description and note describe the household, never a measure: which
  * measures change its income is the calculation's answer, and the published
  * measures can change, so a name there could name one the page no longer
@@ -94,25 +98,41 @@ export const HOUSEHOLD_EXAMPLES = [
     spendingSource: decileSpending(1).source,
   },
   {
-    id: "graduate-35k",
-    label: "A graduate on £35,000",
-    short: "Graduate",
-    description: "Aged 27, Plan 2 student loan, renting",
-    icon: "graduate",
-    measure: "plan_2_threshold_unfreeze",
-    tag: "Student loan threshold",
+    id: "carer",
+    label: "A carer working part time",
+    short: "Carer",
+    description: "Aged 50, cares 35 hours a week, earns £12,000",
+    icon: "handHeart",
+    measure: "carers_allowance_earnings_taper",
+    // The year it starts on the chip, as the threshold freeze's had: the
+    // calculator's years start in 2027-28, and the taper "within 2030-31"
+    // (Budget 2026, 6.13)
+    tag: "Carer's taper, 2030-31",
     inputs: {
       ...RESET,
-      current_age: 27,
-      current_salary: 35000,
-      student_loan_plan: "PLAN_2",
-      tenure: "RENT_PRIVATELY",
-      // Fixed: the North West's average private rent (ONS, September 2026)
-      monthly_rent: 975,
-      ...spendingInputs(4),
+      current_age: 50,
+      // About 18 hours a week at the National Living Wage from April 2026
+      // (£12.71 an hour, GOV.UK): a little above the 16 hours at the
+      // National Living Wage that Carer's Allowance's weekly earnings
+      // limit is set at (£204 a week in 2026-27, DWP), so about £27 a
+      // week above it in 2026-27
+      current_salary: 12000,
+      has_partner: true,
+      partner_age: 52,
+      // The UK median salary in April 2026, the form's default (ONS ASHE
+      // 2026 provisional, householdDefaults.js): with it the couple is due
+      // no Universal Credit
+      partner_salary: 34200,
+      tenure: "OWNED_WITH_MORTGAGE",
+      // At least 35 hours a week for someone who gets a qualifying
+      // disability benefit: Carer's Allowance's caring condition (DWP)
+      cares_for_someone: true,
+      // Its tenth by gross income: the couple's £47,300 a year in 2027-28,
+      // £910 a week
+      ...spendingInputs(5),
     },
-    note: "Aged 27, earns £35,000 and repays a Plan 2 student loan; rents privately at £975 a month, the North West's average. Spends £1,010 a year on electricity and £910 on petrol and diesel, the average for households in the fourth tenth by gross income (ONS Family Spending, FYE 2025).",
-    spendingSource: decileSpending(4).source,
+    note: "Aged 50, lives with their partner, aged 52, and owns their home with a mortgage. Cares for their mother, who lives nearby and gets Attendance Allowance, for 35 hours a week, and works about 18 hours a week at the 2026 National Living Wage (£12.71 an hour, GOV.UK): £12,000 a year, about £27 a week more than a carer can earn in 2026-27 and still receive Carer's Allowance (£204, DWP). Their partner earns £34,200, the UK median salary (ONS ASHE 2026, provisional). Spends £1,060 a year on electricity and £970 on petrol and diesel, the average for households in the fifth tenth by gross income (ONS Family Spending, FYE 2025).",
+    spendingSource: decileSpending(5).source,
   },
   {
     id: "driver",

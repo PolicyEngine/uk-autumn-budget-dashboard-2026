@@ -32,6 +32,7 @@ export const EXAMPLE_ANSWERS = Object.freeze({
   children_ages: "",
   children_in_education: [],
   claims_universal_credit: true,
+  cares_for_someone: false,
   council_tax_band: "D",
   salary_sacrifice_per_year: 0,
   // ONS Family Spending FYE 2025 averages, as the form's defaults

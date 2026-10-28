@@ -15,6 +15,11 @@ describe("the questions the selected policies read", () => {
     expect(ids).toEqual(["savings_interest_per_year", "property_income_per_year"]);
   });
 
+  it("asks whether they care for someone for the Carer's Allowance taper", () => {
+    const ids = policyQuestions(["carers_allowance_earnings_taper"], { inputs: {}, year: 2030 }).map((q) => q.id);
+    expect(ids).toEqual(["cares_for_someone"]);
+  });
+
   it("has no rows for the measures the Budget left out", () => {
     for (const id of ["warm_home_discount_top_up", "plan_2_threshold_unfreeze", "threshold_freeze_2031_32", "employer_nics_secondary_threshold_raise"]) {
       expect(POLICY_FIELDS[id], id).toBeUndefined();

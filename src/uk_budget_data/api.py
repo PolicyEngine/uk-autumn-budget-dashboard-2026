@@ -447,6 +447,17 @@ class HouseholdAnswersRequest(BaseModel):
         le=100_000,
         description="The partner's State Pension, as state_pension",
     )
+    care_hours: float = Field(
+        default=0,
+        ge=0,
+        le=168,
+        description=(
+            "Hours a week caring for someone who gets a qualifying "
+            "disability benefit, as policyengine-uk's care_hours: 35 or "
+            "more meets Carer's Allowance's caring condition. Left out: "
+            "not a carer"
+        ),
+    )
 
     def answers(self) -> household_impact.HouseholdAnswers:
         values = self.model_dump()

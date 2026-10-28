@@ -750,6 +750,10 @@ class HouseholdAnswers:
     # Pension age; None is the full new State Pension (``state_pensions``)
     state_pension: Optional[float] = None
     partner_state_pension: Optional[float] = None
+    # Hours a week the head cares for someone who gets a qualifying
+    # disability benefit (policyengine-uk's ``care_hours``, which Carer's
+    # Allowance tests against its 35 hours); 0, not a carer
+    care_hours: float = 0
 
 
 # policyengine-uk's age-derived education stage
@@ -1002,6 +1006,8 @@ def household_entities(
     ]
     if pension is not None:
         people[0]["state_pension_reported"] = pension
+    if answers.care_hours:
+        people[0]["care_hours"] = answers.care_hours
     if answers.has_partner:
         people.append(
             {
@@ -1755,7 +1761,7 @@ SKIP_REASONS = {
     "fuel_duty_rise_deferral": "no petrol or diesel spending",
     "road_fuel_vat_cut": "no petrol or diesel spending, or after 2027-28",
     "domestic_electricity_zero_vat": "no electricity spending, or after 2027-28",
-    "carers_allowance_earnings_taper": "no caring hours are asked for",
+    "carers_allowance_earnings_taper": "no one cares for someone",
     "lha_unfreeze_2027": "not renting privately, or before 2027-28",
     "employer_nics_secondary_threshold_raise": (
         "no employment income, or before 2027-28"
@@ -1795,10 +1801,10 @@ def provably_unaffected(
     if measure_id == "domestic_electricity_zero_vat":
         return not answers.electricity_spending or year >= 2028
     if measure_id == "carers_allowance_earnings_taper":
-        # The questions carry no caring hours (care_hours stays 0) and no
-        # reported Carer's Allowance, so no one meets its conditions, in
+        # Only the head's caring is asked, and no reported Carer's
+        # Allowance: without caring hours no one meets its conditions, in
         # any year, under current law or the taper.
-        return True
+        return not answers.care_hours
     if measure_id == "lha_unfreeze_2027":
         # Local Housing Allowance caps private rents only.
         return year < 2027 or answers.tenure != "RENT_PRIVATELY"

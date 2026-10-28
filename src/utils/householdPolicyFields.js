@@ -49,10 +49,12 @@ export const POLICY_FIELDS = {
     fields: ["council_tax_band"],
     when: (inputs) => !["SCOTLAND", "WALES", "NORTHERN_IRELAND"].includes(inputs.region),
   },
+  // Carer's Allowance taper: whether they care for someone 35 hours a
+  // week or more (the salary, which the essentials ask, sets the taper)
+  carers_allowance_earnings_taper: { fields: ["cares_for_someone"] },
   // The trading allowance reads self-employment income, which neither the
   // form nor the household API takes, so it has no row: the calculator
-  // cannot show it for a household. The Carer's Allowance taper's answers
-  // are added with its inputs.
+  // cannot show it for a household.
 };
 
 /**

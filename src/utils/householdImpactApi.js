@@ -67,6 +67,9 @@ export const RETRY_POLICY = Object.freeze({
 /** The year the wizard's salary is entered for; the server grows it. */
 export const SALARY_YEAR = 2026;
 
+/** The caring hours a week sent for a carer: Carer's Allowance's condition (DWP). */
+export const CARE_HOURS = 35;
+
 /** The requests of a calculation: the headline, then the detail parts. */
 export const HEADLINE_INCLUDE = [];
 export const SWEEP_INCLUDE = ["sweep"];
@@ -104,6 +107,7 @@ export const FIELD_LABELS = {
   in_education: "In full-time education",
   state_pension: "State Pension",
   partner_state_pension: "Partner's State Pension",
+  care_hours: "Caring",
 };
 
 /**
@@ -307,6 +311,8 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       atStatePensionAge(inputs.partner_age, year)
         ? { partner_state_pension: inputs.partner_state_pension_per_year }
         : {}),
+      // Caring only when yes, so a household that does none asks as before
+      ...(inputs.cares_for_someone ? { care_hours: CARE_HOURS } : {}),
     },
     include: [...include],
   };

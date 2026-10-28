@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import {
+  CARE_HOURS,
   EngineMismatchError,
   STAGE_ENGINE_PACKAGES,
   StageMismatchError,
@@ -153,6 +154,14 @@ describe("buildHouseholdRequest", () => {
     );
     expect(young.household).not.toHaveProperty("state_pension");
     expect(young.household).not.toHaveProperty("partner_state_pension");
+  });
+
+  it("sends caring as 35 hours a week, only for a carer, so a household that does none asks as before", () => {
+    const options = { year: 2030, policies: ["carers_allowance_earnings_taper"] };
+    expect(buildHouseholdRequest(WIZARD_DEFAULTS, options).household).not.toHaveProperty("care_hours");
+    const carer = buildHouseholdRequest({ ...WIZARD_DEFAULTS, cares_for_someone: true }, options);
+    expect(carer.household.care_hours).toBe(CARE_HOURS);
+    expect(CARE_HOURS).toBe(35);
   });
 });
 

@@ -240,6 +240,42 @@ def test_the_route_passes_gas_spending_to_gas_consumption():
     assert household["gas_consumption"] == 1_050
 
 
+# --- Carer's Allowance taper ------------------------------------------------------
+
+
+def test_the_route_passes_caring_hours_to_the_head_only_when_given():
+    people, _, _ = household_impact.household_entities(Answers(2030))
+    assert "care_hours" not in people[0]
+    people, _, _ = household_impact.household_entities(
+        Answers(2030, care_hours=35, has_partner=True)
+    )
+    assert people[0]["care_hours"] == 35
+    assert "care_hours" not in people[1]
+
+
+def test_a_carer_above_the_earnings_limit_gets_the_taper_from_2031():
+    """The carer example's household (householdExamples.js): above the
+    earnings limit, so no allowance under current law, and part of it with
+    the taper in a full year of it; nothing before it starts."""
+    carer = dict(
+        salary_year=2026,
+        age=50,
+        employment_income=12_000,
+        has_partner=True,
+        partner_age=52,
+        partner_employment_income=34_200,
+        care_hours=35,
+    )
+    taper = ["carers_allowance_earnings_taper"]
+    before = calculate(Answers(2029, **carer), 2029, taper)
+    assert before["net_income"]["change"] == 0
+    result = calculate(Answers(2031, **carer), 2031, taper)
+    assert result["net_income"]["change"] > 1_000
+    benefits = programme(result, "other_benefits")
+    assert benefits["baseline"] == 0
+    assert benefits["reform"] > 0
+
+
 # --- zero VAT on domestic electricity --------------------------------------------
 
 

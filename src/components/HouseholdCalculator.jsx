@@ -86,6 +86,12 @@ export const FORM_GROUPS = [
     quiet: ["claims_universal_credit"],
   },
   {
+    key: "caring",
+    title: "Caring",
+    hint: "Unpaid care for someone who gets a disability benefit.",
+    fields: ["cares_for_someone"],
+  },
+  {
     key: "pensions",
     title: "Pensions",
     hint: "Paid to you before tax; the State Pension starts at the full new rate.",
@@ -124,7 +130,7 @@ export const FORM_SECTIONS = [
         icon: "cart",
         fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year", "monthly_childcare"],
       },
-      { title: "Council tax and benefits", icon: "building", fields: ["council_tax_band", "claims_universal_credit"] },
+      { title: "Council tax and benefits", icon: "building", fields: ["council_tax_band", "claims_universal_credit", "cares_for_someone"] },
     ],
   },
 ];
@@ -222,6 +228,16 @@ const CHOICE_CONFIGS = {
       { value: false, label: "No" },
     ],
     hint: "Yes counts the Universal Credit your answers entitle you to.",
+    hintAs: "tooltip",
+  },
+  // Carer's Allowance's caring condition, sent as 35 caring hours a week
+  // (buildHouseholdRequest)
+  cares_for_someone: {
+    label: "Caring",
+    question: "Do you care for someone for 35 hours a week or more?",
+    layout: "segmented",
+    options: YES_NO,
+    hint: "Someone who gets a disability benefit such as Personal Independence Payment (daily living), Attendance Allowance or Disability Living Allowance (middle or highest care rate), as Carer's Allowance requires (Source: GOV.UK).",
     hintAs: "tooltip",
   },
 };
@@ -419,6 +435,7 @@ export function groupSummary(title, { answer, applies, inputs, presetId }) {
   if (applies("claims_universal_credit")) {
     parts.push(inputs.claims_universal_credit ? "claims Universal Credit if entitled" : "does not claim Universal Credit");
   }
+  if (applies("cares_for_someone") && inputs.cares_for_someone) parts.push("cares for someone 35 hours a week or more");
   return sentence(parts);
 }
 

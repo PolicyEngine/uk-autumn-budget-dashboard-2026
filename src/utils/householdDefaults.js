@@ -78,6 +78,8 @@ export const WIZARD_DEFAULTS = {
   children_in_education: [],
   // Entitlement: the household claims what it is due
   claims_universal_credit: true,
+  // Not a carer, until answered
+  cares_for_someone: false,
   council_tax_band: "D",
   salary_sacrifice_per_year: 0,
   petrol_spending_per_year: DEFAULT_SPENDING.petrol,

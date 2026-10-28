@@ -1738,6 +1738,13 @@ def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
             2031,
             True,
         ),
+        ("carers_allowance_earnings_taper", {"care_hours": 35}, 2027, False),
+        (
+            "carers_allowance_earnings_taper",
+            {"employment_income": 12_000, "care_hours": 35},
+            2031,
+            False,
+        ),
         ("lha_unfreeze_2027", {"tenure": "RENT_PRIVATELY"}, 2026, True),
         ("lha_unfreeze_2027", {"tenure": "RENT_PRIVATELY"}, 2027, False),
         ("lha_unfreeze_2027", {"tenure": "RENT_FROM_COUNCIL"}, 2027, True),
