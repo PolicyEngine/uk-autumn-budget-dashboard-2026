@@ -307,8 +307,9 @@ function Reveal({ show, hide, children }) {
 /**
  * A card's "What changes", in one form for every measure (#260): the main
  * parameter's current law and the policy as two tiles with the change,
- * then, only where the change varies over the years, the step plot of the
- * two over April 2026 to March 2032 (on dates the rates change, for a
+ * then, where the change varies over the years or is a `switch` (a change
+ * for a while only: a window, or one winter), the step plot of the two
+ * over April 2026 to March 2032 (on dates the rates change, for a
  * `schedule`). Everything else sits behind a button: the years or dates as
  * a table, the yearly averages, or every parameter that changes when there
  * are several. Each fact once: lines where the measure equals current law
@@ -321,8 +322,10 @@ export default function PolicyChange({ entry, direction, onHighlight, name }) {
   const first = main?.points?.find(differs);
   if (!main || !first) return null;
   const schedule = entry.display === "schedule";
-  const plotted = variesByPeriod(main);
-  const segments = plotted ? segmentsFor(main) : [];
+  const varies = variesByPeriod(main);
+  // A switch is plotted too: it is on for a while, then off again
+  const segments = varies || entry.display === "switch" ? segmentsFor(main) : [];
+  const plotted = segments.some(differs);
   // A schedule's or a window's averages over each fiscal year, where the
   // main row is not already by year
   const byYear = main.points.every((point) => /^\d{4}-\d{2}$/.test(point.label));
@@ -343,7 +346,7 @@ export default function PolicyChange({ entry, direction, onHighlight, name }) {
           What changes
         </p>
       </div>
-      <BeforeAfter row={main} point={first} tone={tone} when={plotted ? (schedule ? `from ${first.label}` : first.label) : null} />
+      <BeforeAfter row={main} point={first} tone={tone} when={varies ? (schedule ? `from ${first.label}` : first.label) : null} />
       {plotted && (
         <>
           <div className="pchg-head is-plot">
@@ -359,9 +362,10 @@ export default function PolicyChange({ entry, direction, onHighlight, name }) {
           />
         </>
       )}
-      {(plotted || yearly?.points.some(differs) || others.length > 0) && (
+      {(varies || yearly?.points.some(differs) || others.length > 0) && (
         <div className="pchg-reveals">
-          {plotted && (
+          {/* One changed period is the tiles already: no table of it */}
+          {varies && (
             <Reveal show={schedule ? "Show the dates" : "Show the years"} hide={schedule ? "Hide the dates" : "Hide the years"}>
               <ChangeTable lines={main.points.filter(differs)} unit={main.unit} tone={tone} first={schedule ? "From" : "Year"} />
             </Reveal>

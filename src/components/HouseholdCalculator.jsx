@@ -30,7 +30,6 @@ import { DEFAULT_SPENDING, SALARY_SOURCE, WIZARD_DEFAULTS, regionalRent } from "
 export { WIZARD_DEFAULTS };
 import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
 import ConstituencyField from "./personal/ConstituencyField";
-import PolicyIcons from "./personal/PolicyBadge";
 import { policyQuestions } from "../utils/householdPolicyFields";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
@@ -418,42 +417,53 @@ export function groupSummary(title, { answer, applies, inputs, presetId }) {
 }
 
 /**
- * A numbered group's line for its closed heading, once any of its answers
- * differs from where it started: "Petrol £420 · Diesel £230 · Electricity
- * £910". Amounts above zero, and choices changed; null when none differs.
+ * A numbered group's line while it is closed, standing in for its boxes:
+ * what its answers are now. Amounts as "Petrol £1,300 · Diesel £1,300 ·
+ * Electricity £1,010 a year" (those above zero; "None" when none is),
+ * Universal Credit as "yes" or "no" and the loan plan by name. `changed`
+ * is whether any answer differs from where it started (WIZARD_DEFAULTS,
+ * or a prefill); `typical` whether it shows amounts all left there.
  */
 export function stepSummary(fields, { answer, applies, changed, inputs }) {
   const shown = fields.filter(applies);
-  if (!shown.some(changed)) return null;
-  const parts = [];
+  const amounts = [];
+  const choices = [];
   for (const id of shown) {
     if (NUMBER_CONFIGS[id]) {
-      if (answer(id) > 0) parts.push(`${NUMBER_CONFIGS[id].label} ${pounds(answer(id))}`);
+      if (answer(id) > 0) amounts.push(`${NUMBER_CONFIGS[id].label} ${pounds(answer(id))}`);
     } else if (id === "claims_universal_credit") {
-      if (changed(id)) parts.push(inputs[id] ? "Claims Universal Credit" : "Does not claim Universal Credit");
-    } else if (CHOICE_CONFIGS[id] && changed(id)) {
+      choices.push(`Universal Credit: ${inputs[id] ? "yes" : "no"}`);
+    } else if (id === "student_loan_plan") {
+      const chosen = CHOICE_CONFIGS[id].options.find((option) => option.value === inputs[id]);
+      choices.push(!chosen || chosen.value === "NONE" ? "No student loan" : `${chosen.label} student loan`);
+    } else if (CHOICE_CONFIGS[id]) {
       const config = CHOICE_CONFIGS[id];
       const chosen = config.options.find((option) => option.value === inputs[id]);
-      if (chosen) parts.push(id === "student_loan_plan" ? (chosen.value === "NONE" ? "No student loan" : `${chosen.label} student loan`) : `${config.label} ${chosen.label}`);
+      if (chosen) choices.push(`${config.label}: ${chosen.label}`);
     }
   }
-  return parts.length > 0 ? parts.join(" · ") : null;
+  const numbers = shown.filter((id) => NUMBER_CONFIGS[id]);
+  const yearly = amounts.length > 0 && numbers.every((id) => id.endsWith("_per_year"));
+  const money = amounts.length > 0 ? `${amounts.join(" · ")}${yearly ? " a year" : ""}` : numbers.length > 0 ? "None" : null;
+  const text = [money, ...choices].filter(Boolean).join(" · ");
+  const anyChanged = shown.some(changed);
+  return { text, changed: anyChanged, typical: !anyChanged && amounts.length > 0 };
 }
 
 /**
- * One numbered group: its heading (the number, title, one muted line and
- * the policies it is asked for as tiny icons) is a button that opens and
- * closes its boxes, with a chevron at the right. Closed, it keeps the
- * heading and its line, and under them what its answers are once any
- * differs from where it started.
+ * One numbered group: its heading (the number, title and one muted line)
+ * is a button that opens and closes its boxes, with a chevron at the
+ * right. Closed, the muted line gives way to what its answers are now
+ * (stepSummary), marked "Changed" once any differs from where it started;
+ * a tap anywhere on it opens the group.
  */
-function StepGroup({ group, number, last, open, onToggle, summary, measures, children }) {
+function StepGroup({ group, number, last, open, onToggle, summary, children }) {
   const collapse = useCollapse(open);
   const headId = `household-step-${group.key}`;
   const hintId = `${headId}-hint`;
   const summaryId = `${headId}-summary`;
   const panelId = `${headId}-panel`;
-  const showSummary = !open && summary;
+  const showSummary = !open && Boolean(summary?.text);
   return (
     <section
       className={`household-group household-step ${open ? "is-open" : ""}`.trim()}
@@ -469,7 +479,7 @@ function StepGroup({ group, number, last, open, onToggle, summary, measures, chi
           aria-expanded={open}
           aria-controls={panelId}
           aria-labelledby={headId}
-          aria-describedby={showSummary ? `${hintId} ${summaryId}` : hintId}
+          aria-describedby={showSummary ? summaryId : hintId}
           onClick={onToggle}
         >
           <span className="household-step-number" aria-hidden="true">
@@ -479,18 +489,27 @@ function StepGroup({ group, number, last, open, onToggle, summary, measures, chi
             <span className="household-step-title" id={headId}>
               <span className="visually-hidden">{`Step ${number}:`}</span> {group.title}
             </span>
-            <span className="household-step-hint" id={hintId}>
-              {group.hint}
-            </span>
-            {showSummary && (
-              <span className="household-step-summary" id={summaryId}>
-                {summary}
+            {showSummary ? (
+              <span className="household-step-summary" id={summaryId} data-changed={summary.changed || undefined}>
+                {summary.text}
+                {summary.typical && (
+                  <>
+                    {" "}
+                    <span className="household-step-summary-note">(typical values)</span>
+                  </>
+                )}
+                {summary.changed && (
+                  <>
+                    {" "}
+                    <span className="household-step-changed">Changed</span>
+                  </>
+                )}
+              </span>
+            ) : (
+              <span className="household-step-hint" id={hintId}>
+                {group.hint}
               </span>
             )}
-          </span>
-          {/* A tap on the icons shows their names, and leaves the group as it is */}
-          <span className="household-step-icons" onClick={(event) => event.stopPropagation()}>
-            <PolicyIcons measures={measures} />
           </span>
           <svg
             className="household-more-chevron household-step-chevron"
@@ -524,7 +543,7 @@ function StepGroup({ group, number, last, open, onToggle, summary, measures, chi
  * how many answers differ from the typical ones while closed, with "Reset
  * to typical" beside it once any do.
  */
-function DetailsGroup({ id, title, icon, open, onToggle, summary, changed, onReset, children }) {
+function DetailsGroup({ id, title, open, onToggle, summary, changed, onReset, children }) {
   const collapse = useCollapse(open);
   const panelId = `${id}-panel`;
   const titleId = `${id}-title`;
@@ -539,16 +558,26 @@ function DetailsGroup({ id, title, icon, open, onToggle, summary, changed, onRes
             aria-controls={panelId}
             onClick={onToggle}
           >
-            <TitleIcon name={icon} bare size={14} className="household-label-icon" />
-            <span className="household-detail-title" id={titleId}>
-              {title}
+            {/* The numbered steps' number column, empty, so the titles line up */}
+            <span className="household-detail-lead" aria-hidden="true" />
+            <span className="household-detail-text">
+              <span className="household-detail-title" id={titleId}>
+                {title}
+              </span>
+              {!open && (
+                <span className="household-detail-summary">
+                  {summary}
+                  {changed > 0 && (
+                    <>
+                      {" "}
+                      <span className="household-detail-changed">{changed === 1 ? "1 changed" : `${changed} changed`}</span>
+                    </>
+                  )}
+                </span>
+              )}
             </span>
-            {!open && <span className="household-detail-summary">{summary}</span>}
-            {changed > 0 && (
-              <span className="household-detail-changed">{changed === 1 ? "1 changed" : `${changed} changed`}</span>
-            )}
             <svg
-              className="household-more-chevron"
+              className="household-more-chevron household-step-chevron"
               width="16"
               height="16"
               viewBox="0 0 24 24"
@@ -782,12 +811,14 @@ function HouseholdCalculator({
     submitted !== null &&
     requestKey(buildHouseholdRequest(inputs, { year, policies: householdPolicies })) !==
       requestKey(buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }));
-  // Busy while the headline is calculated, and while the slower parts are
-  // for these same answers; changed answers can be sent once the headline
-  // is back, without waiting for the split by policy and the sweep
+  // Busy while the result for these same answers is calculated (headline,
+  // then the split by policy and the sweep). Changed answers can always be
+  // sent: a press while the old request runs starts the new one rather than
+  // being swallowed (Pavel's review, HH11)
   const running =
     submitted !== null &&
-    (householdResult.status === "loading" || (!changed && householdResult.detailStatus === "loading"));
+    !changed &&
+    (householdResult.status === "loading" || householdResult.detailStatus === "loading");
 
   // Once a household has been calculated, the title bar's year or policies
   // rerun it, with the same answers, without a second Calculate. Not while
@@ -858,7 +889,9 @@ function HouseholdCalculator({
   const resultsRef = useRef(null);
   // After an example card: bring its result (or its progress) into view
   // below the sticky bars, every time, unless its top is already in the
-  // top third of the screen, and move focus to it. The region mounts
+  // top third of the screen, and move focus to it. The region opens with
+  // the "Your result" heading, so a phone lands on that heading (the
+  // example's own description is gone: Vahid, 28 October). The region mounts
   // before what is under it has any height (the detail sections render a
   // frame or two later), so a single scroll is cut short at the page's
   // end as it was then: while the page grows, the scroll is asked again.
@@ -892,6 +925,18 @@ function HouseholdCalculator({
     });
     return () => cancelAnimationFrame(frame);
   }, [submitted]);
+
+  // Back to the typical answers, with no example and no result (HH12)
+  const resetAnswers = () => {
+    setInputs({ ...WIZARD_DEFAULTS });
+    setPresetId(null);
+    setStartFrom(null);
+    setSubmitted(null);
+    savedWizard.inputs = {};
+    savedWizard.presetId = null;
+    savedWizard.startFrom = null;
+    savedWizard.submitted = null;
+  };
 
   const calculate = (event) => {
     event?.preventDefault();
@@ -1100,21 +1145,19 @@ function HouseholdCalculator({
   };
 
   // The numbered groups: You and Household always, each other one with
-  // the answers in it the selected policies read, its policies as tiny
-  // icons at the end of its heading
-  const measureFor = (policyId) => policies.find((policy) => policy.id === policyId) ?? { id: policyId, name: policyId };
+  // the answers in it the selected policies read
   const shownGroups = FORM_GROUPS.map((group) => {
     const fields = group.always ? group.fields : group.fields.filter((id) => askedUpFront.has(id));
     const used = new Set(policyAsks.filter((question) => fields.includes(question.id)).flatMap((question) => question.policies));
     return { ...group, fields, policies: householdPolicies.filter((policyId) => used.has(policyId)) };
   }).filter((group) => group.always || group.fields.length > 0);
-  // Whether a numbered group starts open: You and Household always; any
-  // other while a selected policy reads one of its answers, or while one
-  // of its answers differs from where it started. Opened or closed by
-  // hand, it stays so for the session. Closing one only hides its boxes:
+  // Whether a numbered group starts open: You and Household only. The
+  // others start closed, each saying what its answers are (an example's
+  // too: it does not open them), so the form reads calmly at first sight
+  // (Vahid, Budget day). Opened or closed by hand, it stays so for the
+  // session. Closing one only hides its boxes:
   // the answers stay as they are, and the calculation reads them all
-  const stepStartsOpen = (group) =>
-    Boolean(group.always) || group.policies.length > 0 || group.fields.filter(fieldApplies).some(changedFromTypical);
+  const stepStartsOpen = (group) => Boolean(group.always);
   const isStepOpen = (group) => stepOpen[group.key] ?? stepStartsOpen(group);
   const renderGroup = (group, index) => (
     <StepGroup
@@ -1125,7 +1168,6 @@ function HouseholdCalculator({
       open={isStepOpen(group)}
       onToggle={() => setStepOpen((prev) => ({ ...prev, [group.key]: !isStepOpen(group) }))}
       summary={stepSummary(group.fields, { answer, applies: fieldApplies, changed: changedFromTypical, inputs })}
-      measures={group.policies.map(measureFor)}
     >
       {group.fields.map((id) => renderField(id, { quiet: group.quiet?.includes(id) }))}
     </StepGroup>
@@ -1136,19 +1178,14 @@ function HouseholdCalculator({
     const labelId = `household-section-${index}`;
     return (
       <section key={section.title} className="household-group household-more" aria-labelledby={labelId}>
-        {/* The form's own header in small: a tinted icon, the title with an
-            "Optional" tag, and one muted line under it */}
+        {/* A light label over its rows: "More details · Optional". The rows
+            under it look as the numbered steps do while closed (Vahid,
+            Budget day: one list, not two designs) */}
         <div className="household-more-head">
-          <TitleIcon name={section.icon} size={14} className="title-icon household-more-icon" />
-          <div className="household-more-text">
-            <div className="household-more-title">
-              <h3 className="household-more-heading" id={labelId}>
-                {section.title}
-              </h3>
-              <span className="household-more-tag">Optional</span>
-            </div>
-            <p className="household-more-note">Each starts at a typical value for a household like yours.</p>
-          </div>
+          <h3 className="household-more-heading" id={labelId}>
+            {section.title}
+          </h3>
+          <span className="household-more-tag">Optional</span>
         </div>
         <div className="household-details">
           {section.groups.map((group) => {
@@ -1160,7 +1197,6 @@ function HouseholdCalculator({
                 key={group.title}
                 id={`${labelId}-${slug}`}
                 title={group.title}
-                icon={group.icon}
                 open={Boolean(moreOpen[group.title])}
                 onToggle={() => setMoreOpen((prev) => ({ ...prev, [group.title]: !prev[group.title] }))}
                 summary={groupSummary(group.title, { answer, applies: appliesInDetails, inputs, presetId })}
@@ -1246,6 +1282,13 @@ function HouseholdCalculator({
     </button>
   );
 
+  // Reset answers: a text button beside Calculate, no confirmation (HH12)
+  const resetButton = (
+    <button type="button" className="reset-answers-button" onClick={resetAnswers}>
+      Reset answers
+    </button>
+  );
+
   return (
     <div className="household-calculator">
       <HouseholdCards
@@ -1264,6 +1307,16 @@ function HouseholdCalculator({
         chosen={presetId !== null || formOpen || submitted !== null}
         yoursSelected={yoursSelected}
       />
+      {/* A way into the chosen example's answers, one short line under the
+          chips (Pavel's review, HH10; its description dropped, Vahid,
+          28 October) */}
+      {activePreset && !formOpen && (
+        <p className="household-example-summary" data-example={activePreset.id}>
+          <button type="button" className="link-button" onClick={chooseYours}>
+            Edit these answers
+          </button>
+        </p>
+      )}
       <div className="household-layout">
         {/* The whole form in one card, opened from "Your household": a
             header, then the questions in sections */}
@@ -1286,12 +1339,22 @@ function HouseholdCalculator({
             </div>
             {/* Always there: with an example's answers unedited it
                 calculates them again; on a phone, at the form's foot */}
-            {!narrow && <div className="household-header-actions">{calculateButton}</div>}
+            {!narrow && (
+              <div className="household-header-actions">
+                {resetButton}
+                {calculateButton}
+              </div>
+            )}
           </div>
           {FORM_SECTIONS.map(renderSection)}
           {/* On a phone, Calculate waits at the screen's foot while the
               form is in view, after the questions in the tab order */}
-          {narrow && <div className="household-form-footer">{calculateButton}</div>}
+          {narrow && (
+            <div className="household-form-footer">
+              {resetButton}
+              {calculateButton}
+            </div>
+          )}
         </form>
         </div>
         </div>
@@ -1300,6 +1363,13 @@ function HouseholdCalculator({
         {/* Only once there is something to show: a result, its progress
             or the note to select a policy; before that the cards say
             what to do */}
+        {/* Answers edited since the result: say so where the result was,
+            so a reader never sees the page go blank (HH11) */}
+        {!noneSelected && submitted !== null && changed && (
+          <p className="household-results-stale" role="status">
+            Your answers have changed. Press Calculate to see the new result.
+          </p>
+        )}
         {(noneSelected || (submitted !== null && !changed)) && (
         <div className="household-results" role="region" aria-label="Results" ref={resultsRef} tabIndex={-1}>
           {selectionUnavailable ? (

@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import NoBreakYear from "../NoBreakYear";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
 import {
@@ -39,11 +40,11 @@ const DROP_FILL = CHART_COLOURS.mutedFill;
 // Over the stacked layers the total is drawn in ink, as on the marginal
 // rate card
 const TOTAL_COLOUR = CHART_COLOURS.ink;
-const TOTAL_NAME = { before: "Net income before", after: "Net income after", change: "Change in net income" };
+const TOTAL_NAME = { before: "Net income under current law", after: "Net income with the policies", change: "Change in net income" };
 
 export const LEGEND_ITEMS = [
-  { label: "Before the selected policies", color: BEFORE_COLOUR, type: "line", dash: BEFORE_DASH },
-  { label: "After the selected policies", color: AFTER_COLOUR, type: "line" },
+  { label: "Under current law", color: BEFORE_COLOUR, type: "line", dash: BEFORE_DASH },
+  { label: "With the selected policies", color: AFTER_COLOUR, type: "line" },
 ];
 const DROP_ITEM = { label: "Net income falls as salary rises", color: CHART_COLOURS.grid };
 // The change card's key, as the population charts colour a gain and a loss
@@ -86,6 +87,33 @@ function valueAt(points, income, key) {
     }
   }
   return points[points.length - 1][key];
+}
+
+/**
+ * The salary and £ value under the pointer, from its offset within the plot
+ * area (px from the plot's left, py from its top). Pavel's review (HH7): the
+ * margin was taken off twice, so the hover trailed the pointer and the
+ * right end of the axis could not be reached.
+ */
+export function pointerOnPlot(px, py, { plotW, plotH, xMax, yLo, yHi }) {
+  return {
+    income: (px / plotW) * xMax,
+    value: yLo + ((plotH - py) / plotH) * (yHi - yLo),
+  };
+}
+
+/**
+ * Where the hover box goes beside the guide at `guideX` in a plot `width`
+ * wide: to its right, or past 60% of the width to its left, 12px off; and
+ * never with less than `room` px to the plot's edge on its open side. On a
+ * phone the box beside a guide near the middle was squeezed into the
+ * little room left, its names a word a line (phone check, 28 Oct): it now
+ * moves in, over the guide if it must.
+ */
+export function tipPlacement(guideX, width, room = 220) {
+  const onLeft = guideX > width * 0.6;
+  const most = Math.max(0, width - Math.min(room, width));
+  return onLeft ? { right: Math.min(width - guideX + 12, most) } : { left: Math.min(guideX + 12, most) };
 }
 
 /**
@@ -229,10 +257,10 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
   const youValue = youAt;
 
   const onMove = (event) => {
+    // The hover rect is the plot itself (x = left, y = top), so the pointer
+    // is already relative to the plot: no margin to take off again
     const rect = event.currentTarget.getBoundingClientRect();
-    const px = event.clientX - rect.left;
-    const py = event.clientY - rect.top;
-    const income = ((px - left) / plotW) * xMax;
+    const { income, value } = pointerOnPlot(event.clientX - rect.left, event.clientY - rect.top, { plotW, plotH, xMax, yLo, yHi });
     let best = 0;
     rows.forEach((p, i) => {
       if (Math.abs(p.income - income) < Math.abs(rows[best].income - income)) best = i;
@@ -241,7 +269,6 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
     sync?.setHover({ income: rows[best].income, card: "net" });
     // The layer under the pointer, if any: its band at this salary holds
     // the pointer's value
-    const value = yLo + ((top + plotH - py) / plotH) * (yHi - yLo);
     const under = shownLayers.find((layer) => {
       const band = stack.bands[layer.key]?.[best];
       return band && value >= Math.min(band.lo, band.hi) && value <= Math.max(band.lo, band.hi) && Math.abs(band.hi - band.lo) > 0;
@@ -274,7 +301,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
         : [view === "before" ? LEGEND_ITEMS[0] : LEGEND_ITEMS[1]]),
     ...(drops.length ? [DROP_ITEM] : []),
   ];
-  const sideWords = view === "before" ? "before the selected policies" : "after the selected policies";
+  const sideWords = view === "before" ? "under current law" : "with the selected policies";
   // One plain sentence: your household at your salary
   const youRounded = youValue == null ? null : Math.round(youValue / 10) * 10;
   // A change within £5 of itself at every salary: said in the sentence
@@ -345,7 +372,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
         { dataKey: "total", name: TOTAL_NAME[view], value: hovered.total, color: dotColour(hovered.total) },
       ];
   const tipLeft = hovered ? x(hovered.income) : 0;
-  const tipOnLeft = tipLeft > width * 0.6;
+  const tipSide = tipPlacement(tipLeft, width);
 
   return (
     <div className="card single-year-card">
@@ -533,8 +560,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
             <div
               className="earnings-tooltip"
               style={{
-                left: tipOnLeft ? undefined : tipLeft + 12,
-                right: tipOnLeft ? width - tipLeft + 12 : undefined,
+                ...tipSide,
                 top: top + 8,
               }}
             >
@@ -543,7 +569,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
                 payload={tooltipPayload}
                 label={hovered.income}
                 format={formatPounds}
-                labelFormat={(v) => (layerTip ? `At ${formatPoundsShort(v)}` : `${X_LABEL} ${formatPounds(v)}, ${yearLabel}`)}
+                labelFormat={(v) => (layerTip ? `At ${formatPoundsShort(v)}` : <NoBreakYear text={`${X_LABEL} ${formatPounds(v)}, ${yearLabel}`} />)}
                 grouped={false}
                 netKey={netParts && !layerTip ? "total" : undefined}
                 netLabel={TOTAL_NAME[view]}
@@ -554,15 +580,10 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
         </div>
       </div>
       <div className="single-year-legend chart-legend">
-        {netParts && sync?.sharedLegend ? (
-          // The Show control is above the pair; only this card's own key
-          // item (the shaded bands) stays here
-          drops.length > 0 && (
-            <span className="series-toggle-extra">
-              <span className="series-toggle-band" style={{ background: DROP_FILL }} aria-hidden="true" />
-              {DROP_ITEM.label}
-            </span>
-          )
+        {netParts && sync?.legend ? (
+          // The key shared with the marginal rate card (the same chips and
+          // state), with this card's own shaded bands after them
+          sync.legend(drops.length ? [{ key: "drop", label: DROP_ITEM.label, fill: DROP_FILL }] : [])
         ) : netParts ? (
           // The layers and the total as chips: show or hide each, hover to
           // bring one forward

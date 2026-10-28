@@ -344,6 +344,19 @@ export function lowerCount(pos) {
 /** What the number measures, said once and the same everywhere. */
 export const PLACE_MEANING = "live in a household with a lower income than yours, adjusted for household size";
 
+/** The income percentile's one definition, in the tile's tip (Pavel's review, HH1). */
+export const PERCENTILE_DEFINITION = "Percentile: the share of people with a lower household income, adjusted for household size.";
+
+/** "44th percentile", or "the top 2%" / "the bottom 2%" off the published range. */
+export function percentileWords(pos) {
+  if (pos.below) return `the bottom ${pos.edge ?? LOWEST_PERCENTILE}%`;
+  if (pos.above) return `the top ${100 - (pos.edge ?? HIGHEST_PERCENTILE)}%`;
+  if (pos.percentile === null) return null;
+  const n = Math.round(pos.percentile);
+  const suffix = n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th";
+  return `${n}${suffix} percentile`;
+}
+
 /**
  * The card's text: a one-sentence headline and three labelled chips (your
  * change, its share of your net income, your place before and after).
@@ -354,12 +367,11 @@ export const PLACE_MEANING = "live in a household with a lower income than yours
  */
 export function positionSummary(position, change, netBefore, side = "after") {
   const shown = side === "before" ? position.before : position.after;
-  const differs = lowerCount(position.before) !== lowerCount(position.after);
-  const count = lowerCount(shown);
-  const capital = count ? count.charAt(0).toUpperCase() + count.slice(1) : null;
-  const headline = count
-    ? `${capital} in 100 people in the UK ${PLACE_MEANING}${differs ? `, ${side === "before" ? "before" : "after"} the selected policies` : ""}.`
-    : "Your place in the UK income distribution is not available.";
+  // A short caption, not the "N in 100 people…" sentence (HH1): the
+  // definition is in the tile's tip, once
+  const headline = lowerCount(shown)
+    ? `Among people in the UK, ${side === "before" ? "under current law" : "with the selected policies"}`
+    : "Your income percentile is not available.";
   const after = position.after;
   const before = placeLabel(position.before);
   const now = placeLabel(after);
@@ -374,7 +386,7 @@ export function positionSummary(position, change, netBefore, side = "after") {
     },
     {
       key: "place",
-      label: "Your place",
+      label: "Income percentile",
       value: moved
         ? `${before.replace(" percentile", "")} → ${now}`
         : `unchanged (${now})`,

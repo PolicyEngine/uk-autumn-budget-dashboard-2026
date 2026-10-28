@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { groupSubject } from "../../utils/ageGroups";
 import MeasureRowLabel, { measureCategory } from "../MeasureRowLabel";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
@@ -170,10 +171,9 @@ export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, year
   );
 }
 
-export const measuresDescription = (band) => {
-  const label = groupLabel(band).replace(/^Aged /, "");
-  return `Each policy's average change per person: ${label} vs all ages.`;
-};
+/** "Average change per person from each policy, for 16 to 24-year-olds and people of all ages." */
+export const measuresDescription = (band, compareKey = ALL_BAND) =>
+  `Average change per person from each policy, for ${groupSubject(band).toLowerCase()} and ${groupSubject(compareKey).toLowerCase()}.`;
 
 const BAND_OPTIONS = [
   ...AGE_BANDS.map((band) => ({ value: band.key, label: band.label })),
@@ -204,8 +204,8 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
   const compareName = compareKey === ALL_BAND ? "All ages" : AGE_BANDS.find((b) => b.key === compareKey)?.label ?? compareKey;
   const GROUPS = groupsFor(band).map((item) => (item.key === "all" ? { ...item, label: compareName } : item));
   const description = single
-    ? "Each policy's average change per person, all ages."
-    : measuresDescription(band).replace(/vs all ages\.$/, `vs ${compareName.toLowerCase()}.`);
+    ? "Average change per person from each policy, for people of all ages."
+    : measuresDescription(band, compareKey);
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);
   const { shown, noEffect, suppressed } =

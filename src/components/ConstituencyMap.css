@@ -168,7 +168,7 @@
 /* The SVG's viewBox is the box round every seat, so the map fills its
    column at its own shape, whole. Its own legend is for the exported file
    only: on screen the key sits beside or under the map. */
-.map-canvas svg {
+.map-canvas > svg {
   background: var(--c-surface);
   border-radius: 4px;
   width: 100%;
@@ -210,6 +210,14 @@
   font-weight: 500;
   color: var(--pe-gray-500);
   text-align: center;
+}
+
+/* The ⓘ at the end of the title's last line, centred on the text */
+.map-key-title-end .info-tip {
+  width: 16px;
+  height: 16px;
+  margin-left: 3px;
+  vertical-align: -4px;
 }
 
 .map-key-count {
@@ -325,7 +333,32 @@
 .map-content.is-legend-side {
   flex-direction: row;
   align-items: center;
-  gap: 16px;
+  justify-content: flex-start;
+  gap: 24px;
+}
+
+/* The key keeps to the card's right edge; the map is as wide as its own
+   shape at the height it has, centred in the space left (auto margins),
+   with no blank band either side of the drawing (Vahid, 28 October). The
+   zoom buttons sit in a strip above the drawing at its top-right corner,
+   so they never cover Shetland or the seats at the top. */
+.map-content.is-legend-side > .map-canvas {
+  flex: 0 1 auto;
+  width: auto;
+  margin-inline: auto;
+  padding-top: 32px;
+}
+
+.map-content.is-legend-side .map-canvas > svg {
+  width: auto;
+  max-width: 100%;
+  height: min(540px, 66vh);
+  max-height: none;
+}
+
+.map-content.is-legend-side .map-controls-container {
+  top: 0;
+  right: 0;
 }
 
 .map-content.is-legend-side > .map-key {
@@ -834,7 +867,7 @@
    view (top and bottom 10). On a wide screen it keeps one height, so
    switching views never moves the card or the scatter beside it. */
 .constituency-body {
-  padding-top: 16px;
+  padding-top: 8px;
   container: constituency-body / inline-size;
 }
 
@@ -848,7 +881,8 @@
 
 @media (min-width: 1025px) {
   .constituency-body {
-    height: 440px;
+    --map-body-height: clamp(480px, 72vh, 620px);
+    height: var(--map-body-height);
     box-sizing: border-box;
     /* Never clip: a narrow card's longer names scroll within it */
     overflow-y: auto;
@@ -866,9 +900,16 @@
     min-height: 0;
   }
 
-  .constituency-body .map-canvas svg {
+  .constituency-body .map-canvas > svg {
     height: 100%;
     max-height: 100%;
+  }
+
+  /* Beside the key: the body's height less its top padding and the zoom
+     strip */
+  .constituency-body .map-content.is-legend-side .map-canvas > svg {
+    height: calc(var(--map-body-height) - 8px - 32px);
+    max-height: none;
   }
 
   .constituency-body .rankings-panel {

@@ -258,23 +258,25 @@ export function fitRange(min, max) {
 }
 
 /**
- * Better off, unchanged and worse off for each single year of age,
- * SINGLE_AGE_FIRST to SINGLE_AGE_LAST, from the whole selection's run (as
+ * Gain, no change and lose for each single year of age, `ages` (the chosen
+ * group's [first, last]; SINGLE_AGE_FIRST to SINGLE_AGE_LAST unless given),
+ * from the whole selection's run only, never singles added up (as
  * for the age groups, `combinedId` the catalogue's package run):
  * `{ run, groups: [{ key, label, row, suppressed }] }`, or null when the
  * selection has no such run or the year no rows. An age
  * with fewer than MIN_SAMPLE_SIZE survey records is suppressed.
  */
-export function sharesBySingleAge(rows, policies, selected, year, combinedId = null) {
+export function sharesBySingleAge(rows, policies, selected, year, combinedId = null, ages = [SINGLE_AGE_FIRST, SINGLE_AGE_LAST]) {
   const run = wholeSelectionRun(policies, selected, combinedId);
   if (!run) return null;
   const yearRows = (rows ?? []).filter((row) => row.year === Number(year) && row.reform_id === run);
   if (!yearRows.length) return null;
   const groups = [];
-  for (let age = SINGLE_AGE_FIRST; age <= SINGLE_AGE_LAST; age += 1) {
-    const row = yearRows.find((candidate) => candidate.age_band === singleAgeKey(age)) ?? null;
+  const byAge = new Map(yearRows.map((candidate) => [candidate.age_band, candidate]));
+  for (let age = ages[0]; age <= ages[1]; age += 1) {
+    const row = byAge.get(singleAgeKey(age)) ?? null;
     const usable = row && row.sample_size >= MIN_SAMPLE_SIZE ? row : null;
-    groups.push({ key: String(age), label: String(age), age, row: usable, suppressed: !usable });
+    groups.push({ key: String(age), label: singleAgeKey(age), age, row: usable, suppressed: !usable });
   }
   return { run, groups };
 }

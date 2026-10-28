@@ -128,6 +128,7 @@ describe("FiscalSummary", () => {
     expect(screen.getByText("-£2.20bn")).toBeInTheDocument();
     expect(screen.getByText("-£2.75bn")).toBeInTheDocument();
     expect(screen.getByText("£0.55bn")).toBeInTheDocument();
+    expect(screen.getByText("Interaction")).toBeInTheDocument();
     // The year beyond the data: every figure unavailable, with the reason,
     // never £0.00bn.
     expect(screen.queryByText("£0.00bn")).not.toBeInTheDocument();

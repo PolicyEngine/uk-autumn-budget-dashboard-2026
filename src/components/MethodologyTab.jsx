@@ -359,7 +359,10 @@ function MethodologyTab({ onShowTab }) {
                   "Budgetary impact",
                   {
                     value: "Taxes collected less benefits and other spending, in £ billion a year.",
-                    more: ["Each policy's figure is net of every tax and spending change it causes."],
+                    more: [
+                      "It includes employer National Insurance and VAT receipts.",
+                      "The employer National Insurance threshold's cost is net of the extra income tax and National Insurance on the higher pay it leads to.",
+                    ],
                   },
                 ],
                 [
@@ -415,7 +418,14 @@ function MethodologyTab({ onShowTab }) {
                   },
                 ],
                 ["Absolute change", "The average change in household net income per household, in £ a year."],
-                ["Relative change", "The decile's total change as a percentage of its total baseline net income."],
+                [
+                  "Relative change",
+                  <>
+                    The decile&apos;s total change as a percentage of its total baseline net income
+                    (the income under{" "}
+                    <AnchorLink id={METHOD_ANCHORS.poverty}>Inequality</AnchorLink>).
+                  </>,
+                ],
               ]}
             />
           </Topic>
@@ -450,7 +460,10 @@ function MethodologyTab({ onShowTab }) {
                   "Inequality",
                   <>
                     The relative change in the <Term id="gini">Gini coefficient</Term> of{" "}
-                    <Term id="equivalised">equivalised</Term> household net income, people weighted.
+                    <Term id="equivalised">equivalised</Term> household net income, people weighted.{" "}
+                    This income includes public services in kind, such as the NHS and schools, and is
+                    after fuel duty and other duties, counting any change in VAT, so the VAT and fuel
+                    duty policies change it.
                   </>,
                 ],
                 [
@@ -459,6 +472,47 @@ function MethodologyTab({ onShowTab }) {
                     Neither adds up across policies, so each is read from one run: a policy&apos;s{" "}
                     <Term id="ownRuns">own</Term>, or the combined run when every policy is selected.
                   </>,
+                ],
+              ]}
+            />
+          </Topic>
+          {/* Pavel's review MT1 to MT4: where this dashboard's definitions
+              differ from the PolicyEngine app's */}
+          <Topic
+            id="definitions-compared"
+            title="Definitions compared with the PolicyEngine app"
+            preview="Inequality · Income deciles · Winners and losers · Poverty · Budget"
+          >
+            <FactList
+              items={[
+                [
+                  "Inequality",
+                  "The app uses HBAI income and counts each household once. Here inequality counts each person and uses the income described under Poverty and inequality.",
+                ],
+                [
+                  "Income deciles",
+                  "The app ranks households by household net income, not adjusted for household size, so its deciles differ.",
+                ],
+                [
+                  "Winners and losers",
+                  {
+                    value: "Each chart has its own no-change threshold. None uses the app's 0.1% and 5% bands.",
+                    more: [
+                      <>
+                        By age: as under <AnchorLink id={METHOD_SECTIONS.young}>Results by age</AnchorLink>.
+                      </>,
+                      "Figures by area: under 50p (or 0.005% of income) either way is no change. The map's Little change is under £10 (or 0.1%) either way.",
+                      "Household scatter: under £1 either way is no change.",
+                    ],
+                  },
+                ],
+                [
+                  "Poverty",
+                  "The headline poverty measure here is absolute, before housing costs; the app's is relative, before housing costs. A child is a dependent child as HBAI defines one; the PolicyEngine app counts everyone aged 0 to 17.",
+                ],
+                [
+                  "Budget",
+                  "Here a policy is costed by its change in the government's balance, as set out under Public finances. The app costs it as the change in households' taxes less benefits, so its cost for the employer National Insurance threshold differs.",
                 ],
               ]}
             />
@@ -537,7 +591,7 @@ function MethodologyTab({ onShowTab }) {
               <ViewLink tab="dashboard" sub="age" age="16-24" hash="young-people" onShowTab={onShowTab}>
                 results by age
               </ViewLink>{" "}
-              count who is better or worse off in each age band and single year of age.
+              count winners and losers in each age band and single year of age.
             </p>
             <FactList
               items={[
@@ -609,9 +663,9 @@ function MethodologyTab({ onShowTab }) {
                   </>,
                 ],
                 [
-                  "Better or worse off",
+                  "Winners and losers",
                   {
-                    value: "Household net income rises or falls by more than 0.01%; otherwise unchanged.",
+                    value: "Household net income rises or falls by more than 0.01%; otherwise no change.",
                     more: ["The 0.01% is of baseline net income, with a baseline below £1 counted as £1."],
                   },
                 ],
@@ -642,14 +696,19 @@ function MethodologyTab({ onShowTab }) {
           </Topic>
           <Topic
             id={METHOD_ANCHORS.incomePosition}
-            title="Your place in the UK"
+            title="Where your income sits"
             preview="Income · Tenths · Distribution · Who moves · Among all households"
           >
             <FactList
               items={[
                 [
                   "Income",
-                  "Household net income after taxes (VAT and fuel duty included) and with benefits, divided by your household's size on the HBAI scale. Public spending in kind, such as the NHS and schools, is left out for everyone.",
+                  <>
+                    Household net income after taxes (fuel duty and any change in VAT included) and
+                    with benefits, divided by your household&apos;s size on the HBAI scale. Unlike the
+                    income under <AnchorLink id={METHOD_ANCHORS.poverty}>Inequality</AnchorLink>, it
+                    leaves out public services in kind.
+                  </>,
                 ],
                 [
                   "Tenths",
@@ -709,14 +768,24 @@ function MethodologyTab({ onShowTab }) {
           title="Limitations"
           summary="Most charts add up policies run separately, the economic assumptions follow one OBR forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
         >
-          <Topic title="Policies added up" preview="Revenue, decile and age charts · Household scatter · Shares better and worse off">
+          <Topic title="Policies added up" preview="Revenue, decile and age charts · Household scatter · Winners and losers">
             <p className="method-more">
               Each policy is also simulated on its own. Where several are selected, the revenue,
               decile and age charts add up their separate effects, so they leave out interactions
               between policies (<Term id="ownRuns">policies run on their own</Term>); the{" "}
               <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>{" "}and the
-              shares better and worse off come from a run of the whole selection, so they include
+              winners and losers charts come from a run of the whole selection, so they include
               them, and show nothing for a selection with no such run.
+            </p>
+            <p className="method-more">
+              Some policies replace values reported in the survey with modelled ones, and their
+              descriptions say so. That policy's own run and the run of all policies together use the
+              modelled values, while the other policies on their own use the survey's. So the effects
+              of each policy on its own need not add up to all policies together.
+              Modelled values can depend on pay, as student loan repayments do. A
+              policy that raises pay keeps the survey's values in its own run, and they do not rise
+              with the higher pay, so on its own its cost is higher, and its fall in poverty larger,
+              than in the run of all policies together.
             </p>
           </Topic>
           <Topic title="Economic assumptions" preview="One OBR forecast behind the assumptions and weights">

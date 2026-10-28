@@ -12,6 +12,39 @@ export function openMethodology(anchor) {
   window.dispatchEvent(new CustomEvent(OPEN_VIEW_EVENT, { detail: { tab: "methodology", anchor } }));
 }
 
+/** A policy's card on the Policies tab (PolicyCards.jsx gives each card this id). */
+export const policyCardAnchor = (id) => `policy-${id}`;
+// Built from the page's own query, so a new tab keeps the year and the
+// selection; only the tab (and no sub-tab) changes
+export const policyCardHref = (id) => {
+  const params = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
+  params.delete("sub");
+  params.delete("tab");
+  const rest = params.toString();
+  return `?tab=policies${rest ? `&${rest}` : ""}#${policyCardAnchor(id)}`;
+};
+
+export function openPolicyCard(id) {
+  window.dispatchEvent(new CustomEvent(OPEN_VIEW_EVENT, { detail: { tab: "policies", anchor: policyCardAnchor(id) } }));
+}
+
+/** A policy's name as a link to its card on the Policies tab, switched to in place. */
+export function PolicyLink({ id, children }) {
+  return (
+    <a
+      className="method-link"
+      href={policyCardHref(id)}
+      onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+        event.preventDefault();
+        openPolicyCard(id);
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
 export function MethodLink({ anchor, children }) {
   return (
     <a

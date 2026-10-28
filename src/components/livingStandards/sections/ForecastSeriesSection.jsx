@@ -219,7 +219,6 @@ function ForecastGroupCard({ card, seriesList, forecast, view, onViewChange, yea
         yLabel="Annual growth (%)"
         yDomain={axis.domain}
         yTicks={axis.ticks}
-        endLabels={allLines.length > 1}
         legend={false}
         focusKey={hovered}
         keyContent={chips || null}

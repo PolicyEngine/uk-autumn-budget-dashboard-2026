@@ -1,6 +1,6 @@
 import { Fragment, useRef, useState } from "react";
 import { buildChartCsv } from "../../utils/chartCsv";
-import { useNarrowViewport } from "../../utils/chartTheme";
+import { CHART_COLOURS, useNarrowViewport } from "../../utils/chartTheme";
 import {
   groupTotals,
   money,
@@ -19,6 +19,8 @@ import MeasureRowLabel from "../MeasureRowLabel";
 import Tip from "../Tip";
 import { usePolicyParameters } from "../PolicyChange";
 import { parameterChange, policyTabs } from "../../utils/policyBreakdown";
+import { vatRowLabel } from "../../utils/singleYear";
+import { policyDetailsFor } from "../../utils/policyDetails";
 import { formatValue } from "../../utils/policyParameters";
 
 // A row's note from the API, without any internal constant's name in
@@ -128,7 +130,11 @@ export default function ProgrammeTable({
   parameterTables,
 }) {
   const narrow = useNarrowViewport();
-  const groups = groupTotals(roundProgrammeGroups(programmeGroups(programmes), totals, bars));
+  // The VAT row named by what moves it: VAT on fuel duty when only the fuel
+  // duty policy does (HH5)
+  const vatLabel = vatRowLabel(split?.rows, (id) => policyDetailsFor(policies.find((policy) => policy.id === id))?.type);
+  const relabel = (rows) => rows?.map((row) => ({ ...row, ...(row.id === "vat_change" ? { label: vatLabel } : {}), ...(row.rows ? { rows: relabel(row.rows) } : {}), ...(row.children ? { children: relabel(row.children) } : {}) }));
+  const groups = relabel(groupTotals(roundProgrammeGroups(programmeGroups(programmes), totals, bars)));
   // One tab per selected policy that changes this household, from the
   // split by policy once it is in (policyBreakdown.js)
   const parameters = usePolicyParameters(parameterTables);
@@ -181,8 +187,8 @@ export default function ProgrammeTable({
           columns: [
             { key: "group", label: "Group" },
             { key: "item", label: "Item" },
-            { key: "before", label: "Before (£)", decimals: 0 },
-            { key: "after", label: "After (£)", decimals: 0 },
+            { key: "before", label: "Current law (£)", decimals: 0 },
+            { key: "after", label: "With the policies (£)", decimals: 0 },
             { key: "change", label: "Change (£)", decimals: 0 },
           ],
           rows: [
@@ -219,8 +225,8 @@ export default function ProgrammeTable({
               columns: [
                 { key: "section", label: "Section" },
                 { key: "item", label: "Item" },
-                { key: "before", label: "Before" },
-                { key: "after", label: "After" },
+                { key: "before", label: "Current law" },
+                { key: "after", label: "With the policies" },
                 { key: "change", label: "Change" },
               ],
               rows: policyCsvRows(activePolicy),
@@ -314,7 +320,7 @@ export default function ProgrammeTable({
           aria-pressed={showBoth}
           onClick={() => setShowBoth((value) => !value)}
         >
-          {showBoth ? "Hide before and after" : "Show before and after"}
+          {showBoth ? "Show change only" : "Show all columns"}
         </button>
       )}
       {activePolicy ? (
@@ -341,12 +347,12 @@ export default function ProgrammeTable({
               </th>
               {wide && (
                 <th scope="col" className="num">
-                  Before
+                  Current law
                 </th>
               )}
               {wide && (
                 <th scope="col" className="num">
-                  After
+                  With the policies
                 </th>
               )}
               <th scope="col" className="num">
@@ -529,6 +535,23 @@ function PolicyTable({ tab, wide, setTable, title }) {
 }
 
 /**
+ * The Summary tab's label in the policy tabs' badge style (MeasureRowLabel,
+ * compact): a list icon in a tinted circle of the same size, then its name.
+ */
+function SummaryTabLabel({ label }) {
+  return (
+    <span className="mrl mrl--compact breakdown-tab-summary" style={{ "--mrl-colour": CHART_COLOURS.highlight }}>
+      <span className="mrl-icon mrl-icon--compact" aria-hidden="true">
+        <TitleIcon name="list" bare size={11} />
+      </span>
+      <span className="mrl-text">
+        <span className="mrl-name breakdown-tab-text">{label}</span>
+      </span>
+    </span>
+  );
+}
+
+/**
  * The card's tabs: Summary, then one per policy that changes the household
  * (the policy's badge label: its tinted icon and short name), and the rest
  * folded into a muted "+N with no effect for you". A WAI-ARIA tablist with
@@ -574,7 +597,7 @@ function BreakdownTabs({ tabs, value, onChange, noEffect, note = null }) {
               className={`breakdown-tab${selected ? " is-selected" : ""}`}
               onClick={() => onChange(tab.id)}
             >
-              {tab.measure ? <MeasureRowLabel measure={tab.measure} compact tip={false} /> : <span className="breakdown-tab-text">{tab.label}</span>}
+              {tab.measure ? <MeasureRowLabel measure={tab.measure} compact tip={false} /> : <SummaryTabLabel label={tab.label} />}
             </button>
           );
         })}

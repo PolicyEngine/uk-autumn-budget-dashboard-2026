@@ -1,4 +1,4 @@
-// Who is in poverty: a dumbbell per group, as the official costings chart
+// Change in poverty by group (was "Who is in poverty"): a dumbbell per group, as the official costings chart
 // and Effect of each policy draw theirs (MeasureDumbbell.css): a filled dot
 // for the end year, a hollow ring for the start year, a thin neutral line
 // between them, each value beside its mark, the change chip on the right,
@@ -169,6 +169,11 @@ function breakdownsFor(data, from, to) {
   return out;
 }
 
+// A title for what it shows, the change (Pavel's review, PM1); the years are
+// in the card's period and sentence, as on every card here
+export const TITLE = "Change in poverty by group";
+export const FELL_BACK_NOTE = "Child figures are after housing costs only.";
+
 export default function WhoIsInPovertySection({ data }) {
   const pbg = data.poverty_by_group;
   const years = pbg?.years ?? [];
@@ -183,15 +188,19 @@ export default function WhoIsInPovertySection({ data }) {
   const plotRef = useRef(null);
   // The plot's width, so a value label that would run out of it moves
   const [plotWidthRef, plotWidth] = useElementWidth();
-  // Cleared when the breakdown or measure changes, so it never shows a row
-  // that has gone
-  const { tip, handlers } = useFloatingTooltip(plotRef, `${breakdownChoice}-${measureChoice}`);
+  // Cleared when the breakdown, the measure drawn or the years change, so it
+  // never shows a row or figure that has gone (Pavel's review, PM3)
+  const { tip, handlers } = useFloatingTooltip(plotRef, `${breakdownChoice}-${measureChoice}-${from}-${to}`);
   if (!ids.length) return null;
   const breakdown = breakdowns[breakdownChoice] ? breakdownChoice : ids[0];
   const b = breakdowns[breakdown];
   // A measure the breakdown lacks falls back to its first
   const measure = b.measures.includes(measureChoice) ? measureChoice : b.measures[0];
   const m = MEASURES[measure];
+  // The reader chose a measure this breakdown lacks (before housing costs on
+  // a child breakdown): said on the card, and the pill shows the one drawn
+  // (Pavel's review, PM2)
+  const fellBack = measure !== measureChoice;
 
   const rows = b
     .rows(measure)
@@ -241,11 +250,19 @@ export default function WhoIsInPovertySection({ data }) {
 
   return (
     <LsCard
-      title="Who is in poverty"
+      title={TITLE}
       icon="users"
       period={periodLabel(from, to)}
       about={about}
-      summary={short}
+      summary={
+        fellBack ? (
+          <>
+            {short} <span className="ls-fell-back">{FELL_BACK_NOTE}</span>
+          </>
+        ) : (
+          short
+        )
+      }
       notes={groupNotes}
       source={<PeSource />}
       info={{
@@ -280,7 +297,7 @@ export default function WhoIsInPovertySection({ data }) {
         // The card's one Options pill: the years compared, the breakdown,
         // then the poverty measure
         <ControlBar
-          name="Who is in poverty"
+          name={TITLE}
           options={[
             yearsOption(years, [from, to], setRange),
             {

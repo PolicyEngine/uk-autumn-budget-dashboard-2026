@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { SOURCES } from "./sources";
 
@@ -28,5 +30,11 @@ describe("the dashboard's sources", () => {
 
   it("each have a label", () => {
     for (const source of Object.values(SOURCES)) expect(source.label.length).toBeGreaterThan(0);
+  });
+
+  it("link the policyengine.py release the published run used", () => {
+    const { engine } = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
+    expect(SOURCES.policyengine_py_release.label).toBe(`policyengine.py ${engine.policyengine}`);
+    expect(SOURCES.policyengine_py_release.url).toBe(`https://github.com/PolicyEngine/policyengine.py/releases/tag/${engine.policyengine}`);
   });
 });

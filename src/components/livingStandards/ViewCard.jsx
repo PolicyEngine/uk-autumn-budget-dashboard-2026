@@ -10,7 +10,8 @@ import ControlBar from "../ControlBar";
  * own. The row is one line high whatever the view, so the card does not
  * jump when the view changes.
  *
- * views: [{ value, label, view }], where a null view is left out.
+ * views: [{ value, label, description?, view }], where a null view is left
+ * out; a description explains that view behind an ⓘ beside "Show".
  */
 export default function ViewCard({ id, title, subtitle, icon, views, value, onChange, moreNotes = [], moreCaveats = [] }) {
   const available = views.filter((v) => v.view);
@@ -50,7 +51,8 @@ export default function ViewCard({ id, title, subtitle, icon, views, value, onCh
               label: "Show",
               value: current.value,
               onChange,
-              options: available.map((v) => ({ value: v.value, label: v.label })),
+              // A view's description, if any, is behind the ⓘ beside "Show"
+              options: available.map((v) => ({ value: v.value, label: v.label, description: v.description })),
             },
             ...(view.controls?.options ?? []).filter((group) => group && !group.control),
           ]}

@@ -119,6 +119,22 @@ describe("MethodologyTab", () => {
     expect(card).toHaveTextContent("roughly half of fuel duty receipts");
   });
 
+  it("says under Policies added up which way a policy that raises pay is off on its own, naming no measure", () => {
+    const { container } = renderTab();
+    const limitations = container.querySelector(`#${METHOD_SECTIONS.limitations}`);
+    const card = within(limitations).getByRole("button", { name: "Policies added up" }).closest(".method-topic");
+    expect(card).toHaveTextContent("its cost is higher, and its fall in poverty larger, than in the run of all policies together");
+  });
+
+  it("counts a change in VAT in the inequality income, not VAT itself, and says in-kind services once", () => {
+    const { container } = renderTab();
+    const text = container.textContent;
+    expect(text).toContain("after fuel duty and other duties, counting any change in VAT");
+    expect(text).toContain("fuel duty and any change in VAT included");
+    expect(text).not.toMatch(/after indirect taxes/);
+    expect(text.match(/such as the NHS and schools/g)).toHaveLength(1);
+  });
+
   it("lists the measures the model cannot cost", () => {
     renderTab();
     const card = screen.getByRole("button", { name: "Not modelled" }).closest(".method-topic");

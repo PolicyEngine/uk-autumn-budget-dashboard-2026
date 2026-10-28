@@ -10,6 +10,7 @@
 .sub-tabs-band {
   position: sticky;
   top: calc(var(--nav-offset) + var(--title-row-height) + var(--view-tabs-height));
+  transition: top var(--motion-slide) var(--ease-out);
   /* Under the view tabs, above the charts */
   z-index: 1085;
   /* The tab panel's top padding is the band's place: it sits flush under

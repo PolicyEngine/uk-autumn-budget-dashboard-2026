@@ -116,6 +116,28 @@ export function placeLabel({ own, x0, w, lines, boxes, top, bottom }) {
   return preferred;
 }
 
+/** The years the card's sentence compares, shaded behind the lines (LS6). */
+function SpanShade({ xAxisMap, yAxisMap, span }) {
+  const xAxis = xAxisMap && Object.values(xAxisMap)[0];
+  const yAxis = yAxisMap && Object.values(yAxisMap)[0];
+  if (!xAxis?.scale || !yAxis) return null;
+  const a = xAxis.scale(span[0]);
+  const b = xAxis.scale(span[1]);
+  if (![a, b].every(Number.isFinite)) return null;
+  const half = (xAxis.scale.bandwidth?.() ?? 0) / 2;
+  return (
+    <rect
+      className="over-time-span"
+      x={Math.min(a, b) + half - 6}
+      y={yAxis.y}
+      width={Math.abs(b - a) + 12}
+      height={yAxis.height}
+      fill={CHART_COLOURS.highlightBand}
+      pointerEvents="none"
+    />
+  );
+}
+
 /** "2029-30, PolicyEngine: £42,900", one line per series at the year. */
 function OverTimeTooltip({ active, payload, label, format }) {
   if (!active || !payload?.length) return null;
@@ -192,6 +214,9 @@ export default function OverTimeChart({
   yFormat,
   tooltipFormat,
   yLabel,
+  // The years the card's sentence compares, [from, to], shaded so the
+  // Years choice shows on the plot (Pavel's review, LS6)
+  span = null,
 }) {
   const narrow = useNarrowViewport();
   const [ref, width] = useElementWidth();
@@ -205,12 +230,17 @@ export default function OverTimeChart({
   const every = !narrow && (!plotWidth || plotWidth / years.length >= TICK_WIDTH);
   const ticks = every ? years : years.filter((_, i) => (years.length - 1 - i) % 2 === 0);
   const visible = series.filter((s) => !s.hidden);
+  // The span's years as the axis has them: 2027 for "2027-28" or 2027
+  const startOf = (y) => parseInt(String(y), 10);
+  const yearOf = (y) => years.find((each) => startOf(each) === startOf(y));
+  const spanX = span && yearOf(span[0]) !== undefined && yearOf(span[1]) !== undefined ? [yearOf(span[0]), yearOf(span[1])] : null;
 
   return (
     <ChartRows plotRef={ref} legendItems={lineLegendItems(visible)} height={narrow ? 230 : 320} legend={false}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={MARGIN}>
           <CartesianGrid {...GRID_PROPS} />
+          {spanX && <Customized component={<SpanShade span={spanX} />} />}
           <XAxis
             dataKey="year"
             tick={TICK_STYLE}

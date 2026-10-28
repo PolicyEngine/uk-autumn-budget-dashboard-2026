@@ -23,7 +23,7 @@ import {
 } from "../../utils/chartTheme";
 import { DISPLAY_YEARS, NOT_YET_PUBLISHED, useDisplayYears } from "../../utils/displayYears";
 import { X_AXIS_HEIGHT, plotMargin } from "./chartRows";
-import { AGE_GROUPS, ALL_BAND, COMBINATION_NOT_PUBLISHED, PACKAGE_NET_ONLY, YOUNG_BAND } from "../../utils/ageImpact";
+import { AGE_GROUPS, ALL_BAND, COMBINATION_NOT_PUBLISHED, YOUNG_BAND, withheldNetOnly } from "../../utils/ageImpact";
 import {
   GROUP_STYLES,
   changeByYear,
@@ -72,8 +72,8 @@ const SELECTED_FILL = CHART_COLOURS.highlightBand;
 
 
 const compareOptions = (label) => [
-  { value: "focus", label: `${label} vs all ages`, summary: `${label} vs all` },
-  { value: "groups", label: "All age groups", summary: "All groups" },
+  { value: "focus", label: `${label} and all ages`, summary: "With all ages" },
+  { value: "groups", label: "Every age group", summary: "Every group" },
 ];
 const viewOptions = (label) => [
   { value: "lines", label: "Lines", summary: "Lines" },
@@ -182,53 +182,6 @@ export function xOf(xAxis, year) {
   return start + (xAxis.scale.bandwidth?.() ?? 0) / 2;
 }
 
-/**
- * Each line's name at its last point, in its colour, nudged apart so no
- * two overlap; hovering a name brings its line forward, as hovering the
- * line does.
- */
-export function EndLabels({ xAxisMap, yAxisMap, data, lines, hovered, onHover, narrow }) {
-  const xAxis = xAxisMap && Object.values(xAxisMap)[0];
-  const yAxis = yAxisMap && Object.values(yAxisMap)[0];
-  if (!xAxis?.scale || !yAxis?.scale) return null;
-  const labels = [];
-  // In the focus view only the lines in colour are named; a grey context
-  // line is named while it is hovered
-  for (const line of lines.filter((each) => each.strong || each.key === hovered)) {
-    const last = [...data].reverse().find((point) => point[line.key] !== null && point[line.key] !== undefined);
-    if (!last) continue;
-    const x = xOf(xAxis, last.year);
-    if (x === null) continue;
-    labels.push({ ...line, x: x + 8, y: yAxis.scale(last[line.key]) });
-  }
-  // Top to bottom, at least 13px apart
-  labels.sort((a, b) => a.y - b.y);
-  const GAP = 13;
-  for (let i = 1; i < labels.length; i += 1) {
-    if (labels[i].y - labels[i - 1].y < GAP) labels[i].y = labels[i - 1].y + GAP;
-  }
-  return (
-    <g className="trend-end-labels">
-      {labels.map((label) => (
-        <text
-          key={label.key}
-          x={label.x}
-          y={label.y}
-          dy="0.35em"
-          fontSize={narrow ? 11 : 12}
-          fontWeight={label.strong || hovered === label.key ? 600 : 400}
-          fill={hovered === label.key ? label.hoverColour ?? label.colour : label.textColour ?? label.colour}
-          style={{ cursor: "default" }}
-          onMouseEnter={() => onHover(label.key)}
-          onMouseLeave={() => onHover(null)}
-        >
-          {narrow ? label.short : label.label}
-        </text>
-      ))}
-    </g>
-  );
-}
-
 const STEP_FONT = 12;
 const STEP_BOX_HEIGHT = STEP_FONT + 8;
 // The gap between a box and the plot's top gridline or its x axis, so a
@@ -265,8 +218,8 @@ function stepBoxHits(box, { segments, columns, zero, grid = [] }) {
 /**
  * Where each step's label goes: in a box just inside the plot's top or
  * bottom edge (STEP_INSET clear of the top gridline and the x axis), over
- * its year and kept inside the plot (clear of the line names in the right
- * margin), with a leader down or up to the point. The place is the one
+ * its year and kept inside the plot, with a leader down or up to the
+ * point. The place is the one
  * that crosses fewest of the lines, bars, gridlines and £0 line: a rise's
  * label at the top, a fall's at the foot when both are clear, then the
  * other edge, then the box slid along the edge (its leader still inside
@@ -486,17 +439,29 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const catalogue = useMeasureCatalogue();
   // On a phone the step labels do not fit the plot: the sentence names them
   const phone = useViewportMatch(PHONE_QUERY);
-  const [compare, setCompare] = useState("focus");
+  // Compare, Breakdown and Years hold when the shared Age group changes
+  // (the card is not remounted); only the line chips start again
+  const [chosenCompare, setCompare] = useState("focus");
+  // All ages has nothing to compare with all ages: every group's lines
+  const compare = group === ALL_BAND ? "groups" : chosenCompare;
   const [view, setView] = useState("lines");
   const [years, setYears] = useState("each");
   const [hovered, setHovered] = useState(null);
   // All age groups: which lines are drawn (SeriesToggle), every one at first
   const [shownGroups, setShownGroups] = useState(() => SERIES_LIST.map((series) => series.key));
+  const [chipsGroup, setChipsGroup] = useState(group);
   const groupsView = compare === "groups" && view === "lines";
   // The focus view: 16 to 24, all ages and the other groups (one chip for
   // all of them), every one at first
   // Every group on at first: 16 to 24 and all ages strong, the others faint
   const [shownFocus, setShownFocus] = useState(() => SERIES_LIST.map((series) => series.key));
+  if (chipsGroup !== group) {
+    // A new group: every line on again (pensioners add a line of their own)
+    setChipsGroup(group);
+    setShownGroups(SERIES_LIST.map((series) => series.key));
+    setShownFocus(SERIES_LIST.map((series) => series.key));
+    setHovered(null);
+  }
   const focusView = compare === "focus" && view === "lines";
   /** Whether a line is drawn in the view shown. */
   const isShown = (key) =>
@@ -523,6 +488,22 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   }, [rows, policies, selectedPolicies, shownYears, FOCUS, packageRun, bands]);
   // The package's net with no policy parts (a selected policy withholds its rows by age)
   const netOnly = focusSeries.some((point) => point.fromPackage && !point.partsShown);
+  // The policies that withhold them: a policy alone with no figure for the
+  // group in a published year, named in the caveat
+  const withheldNames = useMemo(
+    () =>
+      netOnly
+        ? policies
+            .filter((policy) => selectedPolicies.includes(policy.id) && policy.displayable !== false)
+            .filter((policy) =>
+              groupSeries(rows, policies, [policy.id], shownYears, FOCUS).some(
+                (point) => point.net === null && (rows ?? []).some((row) => row.year === Number(point.year)),
+              ),
+            )
+            .map((policy) => catalogue.byId.get(policy.id)?.label ?? policy.label ?? policy.name ?? policy.id)
+        : [],
+    [netOnly, rows, policies, selectedPolicies, shownYears, FOCUS, catalogue],
+  );
   const combinationYears = bands.filter((point) => point.combinationUnavailable).map((point) => point.year);
   // Not one year published for this combination: a notice, not empty axes
   const combinationEverywhere =
@@ -643,7 +624,9 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         label: series.label,
         short: series.short,
         colour: series.key === ALL_BAND ? CHART_COLOURS.reference : colourOf(series),
-        dash: series.dash,
+        // Each line keeps the dash its chip shows in the other view, so
+        // near-alike teals still tell apart; the focus stays solid
+        dash: series.key === FOCUS ? undefined : series.key === ALL_BAND ? REFERENCE_DASH : CONTEXT_DASH[series.key],
         width: series.key === FOCUS ? 3 : 1.75,
         strong: series.key === FOCUS,
       }));
@@ -741,7 +724,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     published: raw.some((point) => point.published),
   };
   const yWidth = axisWidth(ticks, signedPounds);
-  const margin = plotMargin(narrow, { right: byMeasure || groupsView ? 16 : narrow ? 44 : 84 });
+  const margin = plotMargin(narrow, { right: 16 });
 
   return (
     <div className="young-people-trend">
@@ -765,7 +748,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
           name={title}
           options={[
             ...extraOptions,
-            { label: "Compare", value: compare, onChange: setCompare, options: compareOptions(FOCUS_LABEL) },
+            group !== ALL_BAND && { label: "Compare", value: compare, onChange: setCompare, options: compareOptions(FOCUS_LABEL) },
             { label: "Breakdown", value: view, onChange: setView, options: viewOptions(FOCUS_LABEL) },
             { label: "Years", value: years, onChange: setYears, options: YEARS_OPTIONS },
           ]}
@@ -886,13 +869,6 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                   onMouseLeave={() => setHovered(null)}
                 />
               ))}
-            {!byMeasure && !groupsView && (
-              <Customized
-                component={
-                  <EndLabels data={lineData} lines={lines.filter((line) => isShown(line.key))} hovered={hovered} onHover={setHovered} narrow={narrow} />
-                }
-              />
-            )}
             {!cumulative && !phone && notes.length > 0 && (
               <Customized
                 component={
@@ -961,9 +937,11 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
           members={members}
           year={Number(selectedYear)}
           info={{
+            shows: "Average change per person in each age group, each year, with all ages for comparison.",
+            how: ["Running total adds up the years from the first one shown."],
             caveats: [
               missingNote,
-              byMeasure && netOnly && PACKAGE_NET_ONLY,
+              byMeasure && netOnly && withheldNetOnly(withheldNames),
               unpublished.length > 0 &&
                 `Not yet published: ${unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.`,
             ],

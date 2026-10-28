@@ -903,6 +903,12 @@
   margin: 0 0 10px;
 }
 
+.waterfall-sub {
+  margin: 2px 0 0;
+  color: var(--pe-gray-600);
+  font-size: var(--fs-caption, 13px);
+}
+
 .waterfall-title {
   margin: 0;
 }
@@ -1357,13 +1363,14 @@
 }
 
 
-/* Across earnings: the boxed Show control (SeriesToggle placement
-   "section") sits as far above the pair as By age's Measures key does
-   above its cards: its own 16px plus the section's 20px gap */
-.across-earnings-show {
-  /* Its own box, so the bar's 16px does not collapse into this 20px */
-  display: flow-root;
-  margin-bottom: 20px;
+/* Across earnings: each card's Show chips (one state for both) under its
+   plot. On a touch screen, a 44px tap area round each chip, as the
+   household form's controls (HouseholdCalculator.css), drawn by the
+   invisible layer globals.css gives the chips, so nothing moves */
+@media (pointer: coarse) {
+  .single-year-chart-pair .series-toggle-chip::before {
+    inset: min(0px, calc((100% - 44px) / 2)) 0;
+  }
 }
 
 /* Said above the pair when the answer has no breakdown by tax and benefit */
