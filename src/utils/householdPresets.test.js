@@ -104,10 +104,12 @@ describe("the examples' precomputed results (public/data/household_presets.json)
     expect(figures("carer", 2027).top.own).toBe(false);
     expect(Math.round(figures("carer", 2031).ownPart)).not.toBe(0);
     expect(figures("carer", 2031).top).toMatchObject({ own: true });
-    // The middle earner's own measure (the threshold freeze) is not in the
-    // Budget: no part, and its chip names another measure
-    expect(Math.round(figures("middle-earner", 2031).ownPart)).toBe(0);
-    expect(figures("middle-earner", 2027).top.own).toBe(false);
+    // The household from the post on the savings and property income
+    // rates: £150 a year more income tax, as in the post, and its own
+    // measure gives most of its change
+    expect(Math.round(figures("landlord-45k", 2027).ownPart)).toBe(-150);
+    expect(Math.round(figures("landlord-45k", 2031).ownPart)).toBe(-150);
+    expect(figures("landlord-45k", 2027).top).toMatchObject({ own: true });
     // The pensioner on the full State Pension: its own measure gives most
     // of its change
     expect(figures("pensioner-full-state-pension", 2027).top).toMatchObject({ own: true });
