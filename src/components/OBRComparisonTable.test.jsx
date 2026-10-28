@@ -246,6 +246,80 @@ describe("why our estimates differ from the official costings", () => {
   });
 });
 
+// #297's third mark
+describe("ours on the official costing's basis", () => {
+  // A real measure, so its catalogue entry fits; invented figures, on the
+  // chart's £5m steps: ours -£25m net, -£40m on the official basis,
+  // official -£45m
+  const ID = "carers_allowance_earnings_taper";
+  const ENTRY = POLICY_DETAILS.find((entry) => entry.id === ID);
+  const LABEL = "PolicyEngine, on the official costing's basis";
+  const renderBasis = ({ basis = [`${ID},${ENTRY.name},2030,-0.04`] } = {}) => {
+    const impact = ["reform_id,reform_name,year,value", `${ID},${ENTRY.name},2030,-0.025`].join("\n");
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({
+        "/data/official_costings.csv": ["reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value", `${ID},${ENTRY.name},2030,-0.045,-0.045`].join("\n"),
+        "/data/budgetary_impact.csv": impact,
+      }),
+    );
+    const rows = parseDashboardCsv(impact);
+    const officialBasis = basis.length ? parseDashboardCsv(["reform_id,reform_name,year,value", ...basis].join("\n")) : undefined;
+    const manifest = { measures: { [ID]: { name: ENTRY.name, description: ENTRY.writtenFor, status: "approved", years: DISPLAY_YEARS, unsupported_years: [] } }, combined: {} };
+    const tables = { budgetary_impact: rows, ...(officialBasis ? { official_basis: officialBasis } : {}) };
+    const catalogue = buildMeasureCatalogue({ manifest, budgetary: rows, tablesByKey: { [ID]: tables } });
+    return renderReact(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <OBRComparisonTable selectedPolicies={[ID]} selectedYear={2030} notes={{}} bases={{}} />
+      </MeasureCatalogueProvider>,
+    );
+  };
+
+  it("draws it as a small teal ring on the row, named in the legend, beside our dot and the official ring", async () => {
+    const { container } = renderBasis();
+    await screen.findByRole("radio", { name: "Show as chart" });
+    const row = container.querySelector(`[data-policy="${ID}"]`);
+    expect(row.querySelectorAll(".obr-dumbbell-dot.pe, .obr-dumbbell-dot.basis, .obr-dumbbell-dot.obr")).toHaveLength(3);
+    expect(row.querySelector(".obr-dumbbell-dot.basis")).toHaveAttribute("fill", "none");
+    expect(within(screen.getByRole("list", { name: "Legend" })).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+      "PolicyEngine (static)",
+      LABEL,
+      "Official costing (static)",
+    ]);
+    expect(row.getAttribute("aria-label")).toContain("PolicyEngine −£25m (on the official costing's basis −£40m), official −£45m");
+  });
+
+  it("shows all three in the tooltip and the table, and adds it to the CSV", async () => {
+    const { container } = renderBasis();
+    await screen.findByRole("radio", { name: "Show as chart" });
+    fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
+    const tooltip = document.querySelector(".chart-tooltip");
+    expect(tooltip).toHaveTextContent("PolicyEngine (static)−£25m");
+    expect(tooltip).toHaveTextContent(`${LABEL}−£40m`);
+    expect(tooltip).toHaveTextContent("Official costing (static)−£45m");
+    show("Table");
+    expect(screen.getByRole("columnheader", { name: LABEL })).toBeInTheDocument();
+    const cells = within(screen.getAllByRole("row")[1]).getAllByRole("cell").map((cell) => plain(cell.textContent));
+    expect(cells.slice(1, 3)).toEqual(["−£25m", "−£40m"]);
+    vi.mocked(downloadFile).mockClear();
+    fireEvent.click(document.querySelector(".chart-download-button:not([disabled])"));
+    fireEvent.click(screen.getByRole("button", { name: "CSV Data" }));
+    await waitFor(() => expect(downloadFile).toHaveBeenCalledTimes(1));
+    const [content] = vi.mocked(downloadFile).mock.calls[0];
+    expect(content).toContain("PolicyEngine on the official costing's basis, static (£bn)");
+    expect(content).toContain("-0.04");
+  });
+
+  it("keeps two marks, and no column, for a measure with no official basis", async () => {
+    const { container } = renderBasis({ basis: [] });
+    await screen.findByRole("radio", { name: "Show as chart" });
+    expect(container.querySelector(".obr-dumbbell-dot.basis")).toBeNull();
+    expect(screen.getByRole("list", { name: "Legend" })).not.toHaveTextContent(LABEL);
+    show("Table");
+    expect(screen.queryByRole("columnheader", { name: LABEL })).toBeNull();
+  });
+});
+
 describe("a policy not in force in the year shown", () => {
   const catalogue = { measures: [{ id: "a" }, { id: "b" }, { id: "c" }], byId: new Map() };
   const windows = { a: { first: 2030, last: 2031 }, b: { first: 2026, last: 2026 }, c: { first: 2027, last: 2029 } };

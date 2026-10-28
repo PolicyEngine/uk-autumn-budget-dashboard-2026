@@ -29,6 +29,7 @@ from uk_budget_data.publication.reconcile import (
     load_policy,
     load_sources,
     main,
+    official_bases,
     reconcile,
     within_allowance,
 )
@@ -1992,3 +1993,80 @@ def test_the_pension_tax_allowance_is_compared_before_the_end_only():
     assert status[2030] == status[2031] == NOT_COMPARABLE
     assert {status[y] for y in (2026, 2027, 2028, 2029)} == {PASS}
     assert result["responsiveness"]["status"] == RESPONSIVE
+
+
+# #297: the variables an official costing covers, where it covers fewer
+# taxes and benefits than our net figure
+
+
+def test_load_mapping_reads_the_official_basis(tmp_path):
+    path = tmp_path / "mapping.csv"
+    path.write_text(
+        "measure_id,source_id,row_id,scale,year_offset,status,reason,"
+        "reviewer,not_comparable_years,official_basis\n"
+        "m,S,1,1,0,,,,,carers_allowance; universal_credit\n"
+        "n,S,2,1,0,,,,,\n"
+    )
+    first, second = load_mapping(path)
+    assert first.official_basis == ("carers_allowance", "universal_credit")
+    assert second.official_basis == ()
+    assert official_bases([first, second]) == {
+        "m": ("carers_allowance", "universal_credit")
+    }
+
+
+def test_a_mapping_without_the_column_names_no_official_basis(tmp_path):
+    path = tmp_path / "mapping.csv"
+    path.write_text("measure_id,source_id,row_id\nm,S,1\n")
+    (row,) = load_mapping(path)
+    assert row.official_basis == ()
+    assert official_bases([row]) == {}
+
+
+@pytest.mark.parametrize(
+    "basis",
+    ["income_tax", ("Income tax",), ("income_tax", "income_tax"), ("",)],
+)
+def test_an_official_basis_names_distinct_engine_variables(basis):
+    with pytest.raises(ReconciliationInputError, match="official_basis"):
+        link(official_basis=basis)
+
+
+def test_a_measures_rows_name_one_official_basis():
+    rows = [
+        link(row_id="1", official_basis=("income_tax",)),
+        link(row_id="2"),
+        link(row_id="3", official_basis=("income_tax",)),
+    ]
+    assert official_bases(rows) == {"m": ("income_tax",)}
+    with pytest.raises(ReconciliationInputError, match="different official"):
+        official_bases(
+            [*rows, link(row_id="4", official_basis=("national_insurance",))]
+        )
+
+
+def test_the_official_basis_never_moves_the_gate():
+    """It is shown beside the measure's figure, never compared: the gate's
+    fingerprint is the same with or without it."""
+    sources = [source(2027, -0.04)]
+    plain = comparison_sha256("m", 2027, sources, [link()], POLICY)
+    named = comparison_sha256(
+        "m", 2027, sources, [link(official_basis=("income_tax",))], POLICY
+    )
+    assert plain == named
+
+
+def test_the_checked_in_official_bases():
+    """#297: the Carer's Allowance taper's costing is Carer's Allowance and
+    Universal Credit spending (policy costings p. 16), the Pension Tax
+    Allowance's income tax only (p. 63); no other measure has one."""
+    from pathlib import Path
+
+    inputs = Path(__file__).resolve().parents[1] / "data_inputs" / "treasury"
+    assert official_bases(load_mapping(inputs / "mapping.csv")) == {
+        "carers_allowance_earnings_taper": (
+            "carers_allowance",
+            "universal_credit",
+        ),
+        "state_pension_income_tax_protection": ("income_tax",),
+    }

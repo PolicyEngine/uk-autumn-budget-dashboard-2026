@@ -136,6 +136,79 @@ class BudgetaryImpactCalculator(BaseCalculator):
         return results
 
 
+def exchequer_signs(variables) -> dict[str, int]:
+    """Each variable's sign on the Exchequer's balance, as ``gov_balance``
+    adds it up: +1 for a tax (policyengine-uk's ``GOV_TAX_VARIABLES``, which
+    ``gov_tax`` sums), -1 for spending (``GOV_SPENDING_VARIABLES``, which
+    ``gov_spending`` sums). A variable in neither list, or in both, is
+    refused: its change has no one sign on the balance."""
+    from policyengine_uk.variables.gov.gov_spending import (
+        GOV_SPENDING_VARIABLES,
+    )
+    from policyengine_uk.variables.gov.gov_tax import GOV_TAX_VARIABLES
+
+    signs = {}
+    for name in variables:
+        tax = name in GOV_TAX_VARIABLES
+        spending = name in GOV_SPENDING_VARIABLES
+        if tax == spending:
+            raise ValueError(
+                f"{name} is {'in both' if tax else 'in neither'} of "
+                "policyengine-uk's gov_tax and gov_spending, so its change "
+                "has no Exchequer sign"
+            )
+        signs[name] = 1 if tax else -1
+    return signs
+
+
+@dataclass
+class OfficialBasisCalculator(BaseCalculator):
+    """A measure's figure on its official costing's basis (#297).
+
+    Where the official costing covers fewer taxes and benefits than our net
+    figure (``budgetary_impact``, the change in ``gov_balance``), the change
+    in just those (mapping.csv's ``official_basis``), from the same two
+    simulations, in £bn with the same sign: + is a gain to the Exchequer.
+    No rows for a measure with no official basis.
+    """
+
+    years: list[int] = field(default_factory=lambda: list(POLICY_YEARS))
+
+    def calculate(
+        self,
+        baseline,
+        reformed,
+        reform_id: str,
+        reform_name: str,
+        variables=(),
+    ) -> list[dict]:
+        if not variables:
+            return []
+        signs = exchequer_signs(variables)
+        results = []
+        for year in self.years:
+            impact = (
+                sum(
+                    sign
+                    * (
+                        reformed.calculate(name, period=year)
+                        - baseline.calculate(name, period=year)
+                    ).sum()
+                    for name, sign in signs.items()
+                )
+                / 1e9
+            )
+            results.append(
+                {
+                    "reform_id": reform_id,
+                    "reform_name": reform_name,
+                    "year": year,
+                    "value": float(impact),
+                }
+            )
+        return results
+
+
 @dataclass
 class DistributionalImpactCalculator(BaseCalculator):
     """Calculates distributional impact by income decile."""

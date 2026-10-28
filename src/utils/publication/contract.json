@@ -2107,6 +2107,32 @@
       ],
       "required": true
     },
+    "official_basis": {
+      "columns": [
+        [
+          "reform_id",
+          "str"
+        ],
+        [
+          "reform_name",
+          "str"
+        ],
+        [
+          "year",
+          "int"
+        ],
+        [
+          "value",
+          "float"
+        ]
+      ],
+      "file": "official_basis.csv",
+      "key": [
+        "reform_id",
+        "year"
+      ],
+      "required": false
+    },
     "poverty_inequality": {
       "columns": [
         [
