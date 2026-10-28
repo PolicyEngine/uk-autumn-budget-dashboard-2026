@@ -98,14 +98,15 @@ export const FORM_GROUPS = [
   },
   {
     key: "pensions",
-    title: "Pensions",
-    hint: "Pensions paid to you before tax, and pension paid by salary sacrifice.",
+    title: "Pensions and student loan",
+    hint: "Pensions paid to you before tax, pension paid by salary sacrifice, and any student loan.",
     fields: [
       "state_pension_per_year",
       "private_pension_per_year",
       "partner_state_pension_per_year",
       "partner_private_pension_per_year",
       "salary_sacrifice_per_year",
+      "student_loan_plan",
     ],
   },
 ];
@@ -173,6 +174,18 @@ const CHOICE_CONFIGS = {
       { value: "RENT_PRIVATELY", label: "Private landlord" },
       { value: "RENT_FROM_COUNCIL", label: "Council" },
       { value: "RENT_FROM_HA", label: "Housing association" },
+    ],
+  },
+  student_loan_plan: {
+    label: "Student loan plan",
+    layout: "grid",
+    options: [
+      { value: "NONE", label: "No loan" },
+      { value: "PLAN_1", label: "Plan 1", hint: "Started before Sept 2012, or Northern Ireland" },
+      { value: "PLAN_2", label: "Plan 2", hint: "England or Wales, Sept 2012 to July 2023" },
+      { value: "PLAN_4", label: "Plan 4", hint: "Scotland" },
+      { value: "PLAN_5", label: "Plan 5", hint: "England, from Aug 2023" },
+      { value: "POSTGRADUATE", label: "Postgraduate", hint: "Master's or doctoral loan" },
     ],
   },
   council_tax_band: {
@@ -405,6 +418,9 @@ export function stepSummary(fields, { answer, applies, changed, inputs, children
     if (!changed(id)) continue;
     if (id === "claims_universal_credit") {
       parts.push(inputs[id] ? "Claims Universal Credit" : "Does not claim Universal Credit");
+    } else if (id === "student_loan_plan") {
+      const chosen = CHOICE_CONFIGS[id].options.find((option) => option.value === inputs[id]);
+      parts.push(!chosen || chosen.value === "NONE" ? "No student loan" : `${chosen.label} student loan`);
     } else if (id === "council_tax_band") {
       parts.push(`Band ${inputs[id]}`);
     } else if (id === "tenure" || id === "rent_from") {
