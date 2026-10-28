@@ -352,7 +352,7 @@ describe("ConstituencyMap", () => {
     expect(within(card).getByRole("heading")).toHaveTextContent("Westmoor");
     const lines = [...card.querySelectorAll("p")].map((line) => line.textContent);
     expect(lines).toEqual([
-      "Not published: too few survey households",
+      "Not published, to protect survey respondents' confidentiality",
       "Regional figure for London, not an estimate for this constituency: +0.71% (0.52% to 0.94%)",
     ]);
   });
@@ -619,7 +619,7 @@ describe("ConstituencyMap", () => {
       .map((line) => line.textContent)
       .join(" ");
     expect(card).toBe(
-      "Westmoor Not published: too few survey households Regional figure for London, not an estimate " +
+      "Westmoor Not published, to protect survey respondents' confidentiality Regional figure for London, not an estimate " +
         "for this constituency: +0.71% (0.52% to 0.94%)",
     );
     expect(svgText).not.toMatch(/NaN|undefined/);

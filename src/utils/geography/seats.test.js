@@ -60,7 +60,7 @@ describe("seat states", () => {
     };
     const withheld = { kind: "withheld", row: null, category: null };
     const { lines } = describeSeat({ feature, state: withheld, regional, ...options });
-    expect(lines).toEqual([{ kind: "note", text: "Not published: too few survey households" }]);
+    expect(lines).toEqual([{ kind: "note", text: "Not published, to protect survey respondents' confidentiality" }]);
   });
 
   it("label the regional figure as the region's, approximate where it is", () => {
@@ -200,7 +200,7 @@ describe("the card's sentence", () => {
     // Under half a pound reads as no change, as on the seat cards
     const rows = [row("A", "10.0"), row("B", "20.0"), row("C", "-5.0"), row("D", "0.3"), withheld];
     expect(constituencySentence(seats(rows), options)).toBe(
-      "Households gain on average in 2 constituencies, lose in 1 and see little change in 1; 1 constituency is not published.",
+      "Households gain on average in 2 constituencies, lose in 1 and see almost no change in 1; 1 constituency is not published.",
     );
     expect(constituencySentence(seats([row("A", "10.0"), row("C", "-5.0")]), options)).toBe(
       "Households gain on average in 1 constituency and lose in 1.",

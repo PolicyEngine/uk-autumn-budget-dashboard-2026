@@ -121,8 +121,10 @@ export function constituencySentence(states, { outcome, yearLabel, several = fal
   const parts = [
     gains.length > 0 && ["gain", gains.length],
     losses.length > 0 && ["lose", losses.length],
-    // "Little change", as the map's key (round 3); here under 50p either way
-    flat > 0 && ["see little change", flat],
+    // Under 50p either way (signOf), as the page's "almost no change" for a
+    // figure that rounds to £0; not the key's "Little change" (under £10),
+    // which counts other seats (W6 G1)
+    flat > 0 && ["see almost no change", flat],
   ].filter(Boolean);
   // "gain on average in 600 constituencies and lose in 40": "on average"
   // and the noun once, on the first count
@@ -181,8 +183,13 @@ export function seatSummary(state) {
   return state.kind === "approximate" ? `${summary} (approximate)` : summary;
 }
 
-/** The card's line for a seat with no published figure. */
-export const WITHHELD_SEAT_NOTE = "Not published: too few survey households";
+/**
+ * The card's line for a seat with no published figure. Not "too few survey
+ * households": a seat is also withheld under the dominance rule, or so that
+ * subtraction cannot recover a withheld one (geography.py), so the reason
+ * given is the one that covers every case, as the map key's tip says.
+ */
+export const WITHHELD_SEAT_NOTE = "Not published, to protect survey respondents' confidentiality";
 /** A By policy row for a measure withheld in this seat, and its tooltip. */
 export const WITHHELD_MEASURE_NOTE = "Not published";
 export const WITHHELD_MEASURE_TITLE =
