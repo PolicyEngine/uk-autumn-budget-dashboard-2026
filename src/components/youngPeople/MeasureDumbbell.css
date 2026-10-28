@@ -2,8 +2,10 @@
    (the chosen group) on one £ axis, the group's value and gap at the right.
    One type scale with its pair (Better and worse off): row labels and
    values at the caption size, the gap line and axis ticks at 12px, as
-   every Recharts axis (TICK_STYLE). The value column is as wide as the
-   pair's split column (112px), so both cards' numbers end on one edge. */
+   every Recharts axis (TICK_STYLE). In a wide card each row is one line
+   (name, plot, value and gap); in a narrower one (half a pair, under
+   720px) the name and value share a line over the plot (the compact
+   rules near the end). */
 .measure-dumbbell {
   --md-label: 200px;
   --md-values: 112px;
@@ -15,24 +17,13 @@
   font-size: var(--fs-caption);
 }
 
-/* In a pair of cards the dumbbell fills the shared plot row: its rows
-   share the height evenly (as the Better and worse off rows beside it, so
-   the two cards keep one row pitch), the axis stays at the bottom, and no
-   gap opens above the legend. */
+/* In a pair of cards the dumbbell starts level with its neighbour's plot
+   (the pair's shared plot row) and keeps its rows' own height: neither
+   card stretches its rows to the other's. */
 @media (min-width: 1025px) {
-  .charts-grid:has(> div + div) .chart-plot:has(> .measure-dumbbell) {
-    display: flex;
-    flex-direction: column;
-  }
-
   .charts-grid:has(> div + div) .measure-dumbbell {
-    flex: 1 1 auto;
     box-sizing: border-box;
     padding: 0 0 6px;
-  }
-
-  .charts-grid:has(> div + div) .measure-dumbbell > .measure-dumbbell-row {
-    flex: 1 1 auto;
   }
 }
 
@@ -157,7 +148,7 @@
   container-type: inline-size;
 }
 
-@container (min-width: 600px) {
+@container (min-width: 720px) {
   .measure-dumbbell-row {
     grid-template-columns: var(--md-label) minmax(0, 1fr) 172px;
   }
@@ -275,10 +266,11 @@
   border-radius: 50%;
 }
 
+/* The dot's key: half gain, half loss, as the dots take either */
 .measure-dumbbell-legend i.dot {
   width: 9px;
   height: 9px;
-  background: var(--c-gain);
+  background: linear-gradient(90deg, var(--c-gain) 50%, var(--c-loss) 50%);
 }
 
 .measure-dumbbell-legend i.ring {
@@ -349,4 +341,125 @@
   .charts-grid:has(> div + div) > div:not(:has(> .chart-controls)) > .chart-plot:has(> .measure-dumbbell) {
     grid-row: 3 / span 2;
   }
+}
+
+/* Half a pair or narrower (a plot under 720px, phones too): one compact
+   row per policy. Line 1 is the badge and name (two lines at most; the
+   category is in the row's tooltip) with the value and its gap at the
+   right; line 2 is the plot across the row's full width, so the plot and
+   the axis below it use the card's width. Who is in poverty keeps its own
+   columns (LivingStandards.css). */
+@container (max-width: 719px) {
+  /* (A container query styles what is inside the dumbbell, not the
+     dumbbell itself: the columns are set on each row) */
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name values"
+      "plot plot";
+    row-gap: 0;
+  }
+
+  .measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row {
+    min-height: 0;
+    padding: 5px 10px;
+  }
+
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-name {
+    grid-area: name;
+  }
+
+  /* The value and its gap on the name's line, at the right */
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-values {
+    grid-area: values;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 6px;
+    padding-left: 0;
+  }
+
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-plot {
+    grid-area: plot;
+    min-height: 18px;
+  }
+
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .mrl-caption {
+    display: none;
+  }
+
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .mrl-name {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  /* The axis: the plot's full width, no name or value */
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-axis .measure-dumbbell-row {
+    grid-template-areas: "plot plot";
+    padding: 0 10px;
+  }
+
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-axis .measure-dumbbell-name,
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-axis .measure-dumbbell-values {
+    display: none;
+  }
+
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-axis .measure-dumbbell-plot {
+    min-height: 22px;
+  }
+
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-unit {
+    padding: 0 10px;
+  }
+
+  .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-tip {
+    left: 10px;
+  }
+}
+
+/* A calm dumbbell (not Who is in poverty, which has its own marks): no
+   gridlines inside the rows but the £0 line, no alternating bands but a
+   hairline between rows, smaller
+   marks on a thin connector, and the gap as quiet coloured text beside
+   the bold value rather than a pill */
+.measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row .measure-dumbbell-grid:not(.is-zero) {
+  display: none;
+}
+
+.measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row.is-banded:not(:hover, :focus-within, .is-active) {
+  background: transparent;
+}
+
+.measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row + .measure-dumbbell-row {
+  margin-top: 4px;
+}
+
+.measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row + .measure-dumbbell-row::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  right: 6px;
+  left: 6px;
+  border-top: 1px solid var(--pe-gray-100);
+}
+
+.measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-ring {
+  width: 12px;
+  height: 12px;
+  border-width: 1.5px;
+}
+
+.measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-link {
+  height: 1.5px;
+  margin-top: -0.75px;
+}
+
+.measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-gap {
+  padding: 0;
+  background: transparent;
 }

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import HouseholdCalculator, { FORM_SECTIONS, WIZARD_DEFAULTS, resetSavedWizard } from "./HouseholdCalculator";
 import { DEFAULT_SALARY, DEFAULT_SPENDING, REGIONAL_RENT } from "../utils/householdDefaults";
 import { parseAmount } from "./personal/FormControls";
+import { buildHouseholdRequest } from "../utils/householdImpactApi";
 
 beforeEach(() => {
   resetSavedWizard();
@@ -340,13 +341,13 @@ describe("the personal impact form", () => {
     expect(within(cards()).getByRole("group", { name: "Example households" })).toBeInTheDocument();
     expect(buttons.map((item) => item.querySelector(".household-card-name").textContent)).toEqual([
       "Your household",
-      "A 22-year-old renting",
-      "A 19-year-old apprentice",
-      "A pensioner on the State Pension",
-      "A family on Universal Credit",
+      "A pensioner with a small private pension",
+      "A part-time worker on £13,000",
       "A graduate on £35,000",
       "A driver with a long commute",
-      "A higher earner on £110,000",
+      "A family with high electricity use",
+      "A landlord with savings",
+      "A middle earner on £45,000",
       "A lone parent working part time",
     ]);
     const examples = buttons.slice(1);
@@ -392,34 +393,34 @@ describe("the personal impact form", () => {
 
   it("fills the form from an example card, still editable", () => {
     render(<HouseholdCalculator />);
-    applyExample("A 22-year-old renting");
+    applyExample("A graduate on £35,000");
     // Chosen: the card is marked; no note or "Change these answers" under
     // the cards (the card says what the example is)
-    expect(isChosen(exampleItem("A 22-year-old renting"))).toBe(true);
-    expect(screen.queryByText(/Rents privately at £900 a month/)).not.toBeInTheDocument();
+    expect(isChosen(exampleItem("A graduate on £35,000"))).toBe(true);
+    expect(screen.queryByText(/repays a Plan 2 student loan/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Change these answers" })).not.toBeInTheDocument();
     // Your household, chosen from it: the example's answers, named at the
     // top of the form; the example is no longer the one chosen
     fireEvent.click(yoursCard());
     expect(isChosen(yoursCard())).toBe(true);
-    expect(isChosen(exampleItem("A 22-year-old renting"))).toBe(false);
-    expect(screen.getByText("Renter, 22", { selector: ".household-start-from strong" })).toBeInTheDocument();
-    expect(value("Age")).toBe(22);
-    expect(value("Salary in 2026")).toBe(25000);
+    expect(isChosen(exampleItem("A graduate on £35,000"))).toBe(false);
+    expect(screen.getByText("Graduate", { selector: ".household-start-from strong" })).toBeInTheDocument();
+    expect(value("Age")).toBe(27);
+    expect(value("Salary in 2026")).toBe(35000);
     fireEvent.change(box("Salary in 2026"), { target: { value: "26000" } });
     expect(isChosen(yoursCard())).toBe(true);
     // Another example: the note goes
-    applyExample("A 19-year-old apprentice");
+    applyExample("A part-time worker on £13,000");
     expect(document.querySelector(".household-start-from")).toBeNull();
   });
 
   it("opens the form with an example's answers from Your household, Calculate there to change one and calculate again", () => {
     render(<HouseholdCalculator selectedPolicies={["road_fuel_vat_cut"]} />);
-    applyExample("A pensioner on the State Pension");
+    applyExample("A pensioner with a small private pension");
     fireEvent.click(yoursCard());
     expect(formIsOpen()).toBe(true);
     expect(isChosen(yoursCard())).toBe(true);
-    expect(isChosen(exampleItem("A pensioner on the State Pension"))).toBe(false);
+    expect(isChosen(exampleItem("A pensioner with a small private pension"))).toBe(false);
     expect(screen.getByText(/Starting from:/)).toHaveTextContent("Starting from: Pensioner. Change anything, then Calculate.");
     expect(value("Age")).toBe(70);
     // Calculate is there, as for your own answers
@@ -428,7 +429,7 @@ describe("the personal impact form", () => {
 
   it("closes the form again from Your household once it is chosen", () => {
     render(<HouseholdCalculator selectedPolicies={["road_fuel_vat_cut"]} />);
-    applyExample("A pensioner on the State Pension");
+    applyExample("A pensioner with a small private pension");
     fireEvent.click(yoursCard());
     expect(formIsOpen()).toBe(true);
     fireEvent.click(yoursCard());
@@ -443,7 +444,7 @@ describe("the personal impact form", () => {
     // Nothing chosen: the full grid, no strip, no toggle
     expect(within(cards()).queryByRole("listbox")).not.toBeInTheDocument();
     expect(within(cards()).queryByRole("button", { name: "Show all households" })).not.toBeInTheDocument();
-    applyExample("A 22-year-old renting");
+    applyExample("A pensioner with a small private pension");
     // Folded: the grid's cards are hidden; Your household first, then
     // eight example chips below it
     const strip = within(cards()).getByRole("listbox", { name: "Households" });
@@ -451,36 +452,36 @@ describe("the personal impact form", () => {
     expect(within(strip).getAllByRole("option")).toHaveLength(9);
     expect(within(strip).getAllByRole("option")[0]).toHaveTextContent("Your household");
     expect(chips.map((chip) => chip.textContent)).toEqual([
-      "Renter, 22",
-      "Apprentice",
       "Pensioner",
-      "Universal Credit family",
+      "Part-time worker",
       "Graduate",
       "Commuter",
-      "High earner",
+      "Universal Credit family",
+      "Landlord",
+      "Middle earner",
       "Lone parent",
     ]);
     // The full name on hover, the short one cut if it runs out of room
-    expect(chips[0]).toHaveAttribute("title", "A 22-year-old renting");
+    expect(chips[0]).toHaveAttribute("title", "A pensioner with a small private pension");
     expect(chips[0]).toHaveAttribute("aria-selected", "true");
     expect(chips[0]).toHaveAttribute("tabindex", "0");
-    expect(within(cards()).queryByRole("button", { name: /^A 19-year-old apprentice/ })).not.toBeInTheDocument();
+    expect(within(cards()).queryByRole("button", { name: /^A part-time worker/ })).not.toBeInTheDocument();
     expect(yoursCard()).toHaveClass("household-chip");
     expect(yoursCard()).toHaveAttribute("aria-selected", "false");
     // Another chip: switches, still folded
     fireEvent.click(chips[2]);
-    expect(isChosen(exampleItem("A pensioner on the State Pension"))).toBe(true);
+    expect(isChosen(exampleItem("A graduate on £35,000"))).toBe(true);
     expect(within(cards()).getByRole("listbox", { name: "Households" })).toBeInTheDocument();
     // The arrow keys move between chips; Enter chooses
-    const pensioner = exampleItem("A pensioner on the State Pension");
-    fireEvent.keyDown(pensioner, { key: "ArrowRight" });
-    expect(document.activeElement).toBe(exampleItem("A family on Universal Credit"));
+    const graduate = exampleItem("A graduate on £35,000");
+    fireEvent.keyDown(graduate, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(exampleItem("A driver with a long commute"));
     fireEvent.keyDown(document.activeElement, { key: "ArrowRight" });
     fireEvent.keyDown(document.activeElement, { key: "ArrowRight" });
     fireEvent.keyDown(document.activeElement, { key: "ArrowRight" });
-    expect(document.activeElement).toBe(exampleItem("A higher earner on £110,000"));
+    expect(document.activeElement).toBe(exampleItem("A middle earner on £45,000"));
     fireEvent.keyDown(document.activeElement, { key: "Enter" });
-    expect(isChosen(exampleItem("A higher earner on £110,000"))).toBe(true);
+    expect(isChosen(exampleItem("A middle earner on £45,000"))).toBe(true);
     // End: the last example; Home and Enter: Your household, chosen with
     // its tick, the form open
     fireEvent.keyDown(document.activeElement, { key: "End" });
@@ -489,7 +490,7 @@ describe("the personal impact form", () => {
     expect(document.activeElement).toBe(yoursCard());
     fireEvent.keyDown(document.activeElement, { key: "Enter" });
     expect(yoursCard()).toHaveAttribute("aria-selected", "true");
-    expect(isChosen(exampleItem("A higher earner on £110,000"))).toBe(false);
+    expect(isChosen(exampleItem("A middle earner on £45,000"))).toBe(false);
     expect(formIsOpen()).toBe(true);
     // Show all households: the grid again; a card there folds it
     const toggle = within(cards()).getByRole("button", { name: "Show all households" });
@@ -512,9 +513,8 @@ describe("the personal impact form", () => {
 
   it("fills the household answers from each example", () => {
     const cases = [
-      ["A 22-year-old renting", { plan: "No loan", rent: 900 }],
-      ["A 19-year-old apprentice", { plan: "No loan", rent: 600 }],
-      ["A graduate on £35,000", { plan: "Plan 2", rent: REGIONAL_RENT.NORTH_WEST }],
+      ["A graduate on £35,000", { plan: "Plan 2", rent: REGIONAL_RENT.NORTH_WEST, children: "0" }],
+      ["A lone parent working part time", { plan: "No loan", rent: REGIONAL_RENT.NORTH_WEST, children: "1" }],
     ];
     for (const [label, expected] of cases) {
       resetSavedWizard();
@@ -528,7 +528,7 @@ describe("the personal impact form", () => {
       expect(chosen("Rent from")).toBe("Private landlord");
       expect(value("Rent")).toBe(expected.rent);
       expect(chosen("Partner")).toBe("No");
-      expect(chosen("Children")).toBe("0");
+      expect(chosen("Children")).toBe(expected.children);
       openMore();
       expect(chosen("Student loan plan")).toBe(expected.plan);
       unmount();
@@ -561,5 +561,156 @@ describe("the personal impact form", () => {
     const panel = document.getElementById(groupToggle("Spending").getAttribute("aria-controls"));
     expect(panel).not.toHaveClass("collapse");
     expect(panel.querySelector(".collapse")).toBeNull();
+  });
+});
+
+describe("the selected policies' questions", () => {
+  // Tonight's eight measures, by id and published name
+  const EIGHT = [
+    { id: "fuel_duty_rise_deferral", name: "Fuel duty rises deferred" },
+    { id: "domestic_electricity_zero_vat", name: "Zero VAT on domestic electricity" },
+    { id: "warm_home_discount_top_up", name: "Warm Home Discount top-up" },
+    { id: "threshold_freeze_2031_32", name: "Threshold freeze to 2031-32" },
+    { id: "plan_2_threshold_unfreeze", name: "Plan 2 student loan threshold unfrozen" },
+    { id: "employer_nics_secondary_threshold_raise", name: "Employer NI threshold raised" },
+    { id: "unearned_income_rates_up", name: "Dividend, savings and property income tax up" },
+    { id: "state_pension_income_tax_protection", name: "State Pension income tax protection" },
+  ];
+  const ALL_EIGHT = EIGHT.map((policy) => policy.id);
+  const STEP_ORDER = ["you", "household", "spending", "savings", "benefits", "pensions"];
+  /** The numbered groups shown, by heading ("Step 1: You"). */
+  const groups = () => [...document.querySelectorAll(".household-step-title")].map((heading) => heading.textContent);
+  /** A numbered group, by its title. */
+  const group = (title) => screen.getByRole("group", { name: new RegExp(`^Step \\d+: ${title}$`) });
+  /** A group's questions, in order. */
+  const asked = (title) => [...group(title).querySelectorAll(".household-field")].map((row) => row.dataset.row);
+  /** The policies a group's heading names (its icons' accessible name). */
+  const usedBy = (title) => within(group(title)).queryByRole("img", { name: /^Used by / })?.getAttribute("aria-label") ?? null;
+  const form = (selected, props = {}) => renderForm(<HouseholdCalculator selectedPolicies={selected} policies={EIGHT} {...props} />);
+
+  it("numbers the groups the selected policies need, after You and Household, each naming its policies by icon", () => {
+    form(ALL_EIGHT);
+    expect(groups()).toEqual([
+      "Step 1: You",
+      "Step 2: Household",
+      "Step 3: Spending",
+      "Step 4: Savings and investments",
+      "Step 5: Benefits and loans",
+    ]);
+    expect(asked("You")).toEqual(["current_age", "current_salary", "region"]);
+    expect(asked("Household")).toEqual(["has_partner", "children_count", "tenure", "rent_from", "monthly_rent"]);
+    expect(asked("Spending")).toEqual(["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"]);
+    expect(asked("Savings and investments")).toEqual(["dividends_per_year", "savings_interest_per_year", "property_income_per_year"]);
+    expect(asked("Benefits and loans")).toEqual(["claims_universal_credit", "student_loan_plan"]);
+    expect(usedBy("You")).toBeNull();
+    expect(usedBy("Spending")).toBe("Used by Fuel duty rises deferred, Zero VAT on domestic electricity");
+    expect(usedBy("Savings and investments")).toBe("Used by Dividend, savings and property income tax up");
+    expect(usedBy("Benefits and loans")).toBe("Used by Warm Home Discount top-up, Plan 2 student loan threshold unfrozen");
+    // No chips between the boxes, no tab stop in a heading, no tick
+    expect(document.querySelector(".policy-badge")).toBeNull();
+    expect(document.querySelector(".household-step-head [tabindex]")).toBeNull();
+    expect(document.querySelector(".household-form")).not.toHaveTextContent("✓");
+    // The group's line says what the spending boxes start at, once
+    expect(group("Spending")).toHaveTextContent("Prefilled with the average household's spending");
+    expect(document.getElementById("hint-petrol_spending_per_year")).toBeNull();
+    // Asked once: More details keeps only the rest, and its rows say only
+    // what they still hold
+    expect(screen.queryByRole("button", { name: /^Other income/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Spending/ })).not.toBeInTheDocument();
+    expect(groupToggle("Pension and student loan")).toHaveTextContent("No pension income");
+    expect(groupToggle("Pension and student loan")).not.toHaveTextContent(/student loan$/);
+    expect(groupToggle("Council tax and benefits")).toHaveTextContent("Council Tax band D");
+    expect(groupToggle("Council tax and benefits")).not.toHaveTextContent("Universal Credit");
+    openMore();
+    for (const id of fields()) expect(document.querySelectorAll(`[data-row="${id}"]`)).toHaveLength(1);
+    // The tab order follows the groups: every box of a group before the next's
+    const order = [...document.querySelectorAll(".household-step input, .household-step select")].map(
+      (input) => input.closest(".household-step").dataset.step,
+    );
+    expect(order).toEqual([...order].sort((a, b) => STEP_ORDER.indexOf(a) - STEP_ORDER.indexOf(b)));
+  });
+
+  it("adds Pensions from State Pension age", () => {
+    form(ALL_EIGHT);
+    fireEvent.change(box("Age"), { target: { value: "70" } });
+    expect(groups().at(-1)).toBe("Step 6: Pensions");
+    expect(asked("Pensions")).toEqual(["state_pension_per_year", "private_pension_per_year"]);
+    expect(usedBy("Pensions")).toBe("Used by State Pension income tax protection");
+    fireEvent.change(box("Age"), { target: { value: "40" } });
+    expect(groups()).not.toContain("Step 6: Pensions");
+  });
+
+  it("follows the selection: one policy, its group alone, numbered next", () => {
+    form(["plan_2_threshold_unfreeze"]);
+    expect(groups()).toEqual(["Step 1: You", "Step 2: Household", "Step 3: Benefits and loans"]);
+    expect(asked("Benefits and loans")).toEqual(["student_loan_plan"]);
+    expect(groupToggle("Spending")).toHaveTextContent(/^Spending/);
+    expect(groupToggle("Council tax and benefits")).toHaveTextContent("Universal Credit");
+    expect(groupToggle("Pension and student loan")).not.toHaveTextContent("student loan ·");
+  });
+
+  it("opens and closes each numbered group from its heading, keeping its answers", () => {
+    form(ALL_EIGHT);
+    const toggle = (title) => within(group(title)).getByRole("button", { name: new RegExp(`^Step \\d+: ${title}$`) });
+    // Open at first: each group's policies read its answers
+    for (const title of ["You", "Household", "Spending", "Savings and investments", "Benefits and loans"]) {
+      expect(toggle(title)).toHaveAttribute("aria-expanded", "true");
+    }
+    fireEvent.change(box("Petrol"), { target: { value: "500" } });
+    fireEvent.click(toggle("Spending"));
+    expect(toggle("Spending")).toHaveAttribute("aria-expanded", "false");
+    // Closed: the heading and its line, and what its answers are
+    expect(group("Spending")).toHaveTextContent("Prefilled with the average household's spending");
+    expect(group("Spending").querySelector(".household-step-summary")).toHaveTextContent(
+      "Petrol £500 · Diesel £340 · Electricity £1,040",
+    );
+    // A group whose answers are all as they started says nothing more
+    fireEvent.click(toggle("Savings and investments"));
+    expect(group("Savings and investments").querySelector(".household-step-summary")).toBeNull();
+    // Opened again by keyboard (a button), the answer is as it was
+    fireEvent.click(toggle("Spending"));
+    expect(toggle("Spending")).toHaveAttribute("aria-expanded", "true");
+    expect(group("Spending").querySelector(".household-step-summary")).toBeNull();
+    expect(box("Petrol")).toHaveValue("500");
+    expect(document.querySelector(".household-form")).not.toHaveTextContent("✓");
+  });
+
+  it("shows only You and Household when no selected policy reads anything more", () => {
+    for (const selected of [[], ["threshold_freeze_2031_32"], ["employer_nics_secondary_threshold_raise", "threshold_freeze_2031_32"], ["unknown_measure"]]) {
+      const { unmount } = form(selected);
+      expect(groups()).toEqual(["Step 1: You", "Step 2: Household"]);
+      for (const title of DETAIL_GROUPS) expect(groupToggle(title)).toBeInTheDocument();
+      unmount();
+      resetSavedWizard();
+    }
+  });
+
+  it("sends the same request for the same answers, wherever they are asked", async () => {
+    const API = "https://api.test/api/household-impact";
+    const bodies = [];
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        if (url === API) bodies.push(JSON.parse(init.body));
+        return new Response("{}", { status: 404 });
+      }),
+    );
+    try {
+      form(ALL_EIGHT, { year: 2027 });
+      fireEvent.change(box("Petrol"), { target: { value: "900" } });
+      fireEvent.blur(box("Petrol"));
+      choose("Student loan plan", "Plan 2");
+      fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
+      // Your household's headline (the example cards ask for theirs too)
+      const yours = () => bodies.find((body) => body.household.petrol_spending === 900 && body.include.length === 0);
+      await waitFor(() => expect(yours()).toBeDefined());
+      const answers = { ...WIZARD_DEFAULTS, petrol_spending_per_year: 900, student_loan_plan: "PLAN_2" };
+      expect(yours()).toEqual(buildHouseholdRequest(answers, { year: 2027, policies: ALL_EIGHT }));
+      expect(yours().household).toMatchObject({ petrol_spending: 900, student_loan_plan: "PLAN_2", diesel_spending: DEFAULT_SPENDING.diesel });
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
   });
 });

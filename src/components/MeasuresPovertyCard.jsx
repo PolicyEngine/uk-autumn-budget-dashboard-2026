@@ -13,6 +13,7 @@
 // beside it (usePovertyChoice, ?poverty=).
 
 import { useRef } from "react";
+import useElementWidth from "../hooks/useElementWidth";
 import CountUpText from "./CountUpText";
 import MeasureRowLabel from "./MeasureRowLabel";
 import LsCard from "./livingStandards/LsCard";
@@ -23,7 +24,7 @@ import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTool
 import SummaryMetricChart, { SUMMARY_METRICS, hasColumn, metricValue, povertyMetric, usePovertyChoice } from "./SummaryMetricChart";
 import { useOutlook } from "./livingStandards/useOutlook";
 import { formatPp, outlookPopulation, roundPeople } from "../utils/povertyPeople";
-import { CHART_COLOURS, fiscalYearTick } from "../utils/chartTheme";
+import { CHART_COLOURS, MAGNITUDE_RAMPS, fiscalYearTick, fitTicks, magnitudeColours } from "../utils/chartTheme";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { buildChartCsv } from "../utils/chartCsv";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
@@ -141,6 +142,31 @@ function niceTicks(lo, hi) {
   return ticks;
 }
 
+/**
+ * The track's tick labels: the round ticks whose labels fit its measured
+ * width (chartTheme.fitTicks: 0 always, fewer on a phone), the first
+ * starting and the last ending at its tick, inside the track. Its own
+ * component, so the track is measured from when it mounts.
+ */
+function WfTicks({ ticks, domain, format }) {
+  const [ref, width] = useElementWidth();
+  const [x0, x1] = domain;
+  const shown = fitTicks(ticks, domain, width, format, { inside: true });
+  return (
+    <span className="wf-track" ref={ref}>
+      {shown.map((t) => (
+        <span
+          key={t}
+          className={`wf-tick${t === x0 ? " is-start" : t === x1 ? " is-end" : ""}`}
+          style={{ left: `${x1 === x0 ? 50 : ((t - x0) / (x1 - x0)) * 100}%` }}
+        >
+          {format(t)}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, selectedYear, population, choiceAbove = false }) {
   const plotRef = useRef(null);
   const catalogue = useMeasureCatalogue();
@@ -182,22 +208,22 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   const ends = steps.flatMap((s) => [s.start, s.end]).concat(0);
   const allTicks = niceTicks(Math.min(...ends), Math.max(...ends));
   const [x0, x1] = [allTicks[0], allTicks.at(-1)];
-  // Every round tick (0, 2,000, 4,000, 6,000); on a phone only the ends
-  // keep their labels (MeasuresPovertyCard.css)
+  // Every round tick has a gridline (0, 2,000, 4,000, 6,000); WfTicks
+  // labels those that fit the track
   const ticks = allTicks;
-  // Bars by direction only: fewer in poverty in the gain colour, more in the
-  // loss colour, the total a darker shade of the same; each measure's own
-  // colour is the dot by its name
+  // Bars by direction and size: fewer in poverty in the gain ramp, more in
+  // the loss ramp, the largest step the darkest and smaller ones lighter
+  // (magnitudeColours); the total the darkest step of its direction. Each
+  // measure's own colour is the dot by its name
+  const shades = new Map();
+  const measureShades = magnitudeColours(steps.filter((s) => s.kind === "measure").map((s) => s.x));
+  steps.filter((s) => s.kind === "measure").forEach((s, k) => shades.set(s.id, measureShades[k]));
   const fillOf = (step) =>
     step.kind === "interaction"
       ? CHART_COLOURS.noChange
       : step.kind === "total"
-        ? step.x >= 0
-          ? CHART_COLOURS.gainText
-          : CHART_COLOURS.lossText
-        : step.x >= 0
-          ? CHART_COLOURS.gain
-          : CHART_COLOURS.loss;
+        ? MAGNITUDE_RAMPS[step.x >= 0 ? "gain" : "loss"][0]
+        : shades.get(step.id) ?? CHART_COLOURS.noChange;
   const pos = (v) => (x1 === x0 ? 50 : ((v - x0) / (x1 - x0)) * 100);
 
   // Why a "No change" row moves no one: "changes prices, not incomes"
@@ -364,13 +390,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
           })}
           <div className="wf-row wf-axis" aria-hidden="true">
             <span className="wf-label" />
-            <span className="wf-track">
-              {ticks.map((t) => (
-                <span key={t} className="wf-tick" style={{ left: `${pos(t)}%` }}>
-                  {tickText(t)}
-                </span>
-              ))}
-            </span>
+            <WfTicks ticks={ticks} domain={[x0, x1]} format={tickText} />
             <span className="wf-value" />
           </div>
           <div className="wf-row wf-caption" aria-hidden="true">

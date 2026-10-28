@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Suspense } from "react";
 import PolicySelector from "./components/PolicySelector";
-import { MeasureKeyProvider, SectionMeasureKey } from "./components/MeasureKey";
 import YearSlider from "./components/YearSlider";
 import LandingPage from "./components/LandingPage";
 import LandingBackdrop from "./components/landing/LandingBackdrop";
@@ -33,7 +32,7 @@ import { provisionalLabel } from "./utils/publication/manifest";
 import { DownloadContext, policiesLabel } from "./utils/downloadContext";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
-import { createSiteNavIntent, isProgrammaticScroll, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
+import { createSiteNavIntent, isProgrammaticScroll, isTouchOnly, pointerWantsSiteNav, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
 
 // Each view's code (the chart library, the map's and the household
 // calculator's) loads when a view first opens, or while the page is idle,
@@ -111,7 +110,7 @@ function viewFallback(value) {
 // (current law) on the Pre-measures forecast.
 export const VIEWS = [
   { value: "dashboard", label: "Population impact", year: true, policies: true },
-  { value: "household", label: "Household impact", year: true, policies: true },
+  { value: "household", label: "Household calculator", year: true, policies: true },
   { value: "outlook", label: "Pre-measures forecast", year: false, policies: false },
   { value: "policies", label: "Policies", year: false, policies: false },
   { value: "methodology", label: "Methodology", year: false, policies: false },
@@ -199,13 +198,13 @@ export function viewFromLocation({ search, hash }) {
 
 
 // The ui-kit shell's sticky site nav, as globals.css selects it to hide it
-// until the reader scrolls up (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
+// until the pointer reaches the window's top (@policyengine/ui-kit 0.12.0). Kept in step with globals.css.
 export const SHELL_STICKY_NAV_SELECTOR =
   '.min-h-screen.flex.flex-col > div:first-child[style*="sticky"]';
 // Once shown, the site nav stays this long (unless the reader scrolls down),
 // and hides this long after the pointer or focus leaves it.
-export const SITE_NAV_MIN_MS = 3000;
-export const SITE_NAV_LEAVE_MS = 1500;
+export const SITE_NAV_MIN_MS = 1500;
+export const SITE_NAV_LEAVE_MS = 750;
 
 /** Take the open sub-tab (?sub=) out of the address, or put `sub` there. */
 function dropSubTab(sub, extra = {}) {
@@ -464,18 +463,18 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   }, []);
 
   // The site nav is hidden above the window by default, so the title band
-  // sits at the top of the page. It slides in above the band when the
-  // reader scrolls up (SITE_NAV_SHOW_UP_PX or more in one run, by their own
-  // wheel, trackpad, touch, keys or scrollbar: utils/pageScroll
-  // createSiteNavIntent), points at the top 8px of the window, or tabs into
-  // it (globals.css: data-site-nav-shown on <html>, --site-nav-height; the
-  // slide is instant under reduced motion). The page moving by itself (tab
-  // rows going compact, charts loading, scroll anchoring, the page's own
-  // scrolls) never shows it. Once in, it stays SITE_NAV_MIN_MS, and while
-  // the pointer or focus is in it or one of its menus is open, then hides
-  // SITE_NAV_LEAVE_MS after they leave. Any scroll down by the reader hides
-  // it at once (unless it is in use), and within its own height of the
-  // page's top it is always hidden.
+  // sits at the top of the page. Scrolling never brings it in: it slides in
+  // above the band when the pointer reaches the top 8px of the window or
+  // leaves the window through its top edge (an exit-intent reveal: utils/
+  // pageScroll pointerWantsSiteNav), or when the reader tabs into it
+  // (globals.css: data-site-nav-shown on <html>, --site-nav-height; the
+  // slide is instant under reduced motion). Once in, it stays
+  // SITE_NAV_MIN_MS, and while the pointer or focus is in it or one of its
+  // menus is open, then hides SITE_NAV_LEAVE_MS after they leave. Any
+  // scroll down by the reader hides it at once (unless it is in use), and
+  // within its own height of the page's top it is hidden. A touch-only
+  // device has no pointer to bring it in with: there it shows only while
+  // the page is at its very top (createSiteNavIntent).
   useEffect(() => {
     const root = document.documentElement;
     const nav = document.querySelector(SHELL_STICKY_NAV_SELECTOR);
@@ -491,12 +490,15 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     let timer = 0;
     let pointerIn = false;
     let touchY = null;
+    // Touch-only, at the page's very top: shown for as long as it stays there
+    let pinned = false;
     const isShown = () => root.hasAttribute("data-site-nav-shown");
     // The ui-kit menus (About, country) put a full-window overlay with
     // role="presentation" inside the nav while they are open
     const holds = () =>
       !!nav &&
       (pointerIn ||
+        pinned ||
         nav.contains(document.activeElement) ||
         !!nav.querySelector('[role="presentation"]'));
     const clear = () => {
@@ -532,12 +534,15 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       frame = 0;
       const y = window.scrollY;
       // A scroll the page made (utils/pageScroll) is not the reader's: it
-      // never brings the nav in over what it lined up under the bars.
-      // At the page's top the nav is always hidden, so the top looks as it
-      // does on load (unless the pointer or focus is in it), whoever scrolled
+      // never hides the nav. Near the page's top the nav is hidden, so the
+      // top looks as it does on load (unless the pointer or focus is in
+      // it), whoever scrolled; on a touch-only device it is in only at the
+      // very top
       const top = nav?.offsetHeight || 0;
       const programmatic = isProgrammaticScroll(y);
-      follow(intent.scroll(y, performance.now(), { programmatic, top }));
+      const touchOnly = isTouchOnly();
+      pinned = touchOnly && y <= 0;
+      follow(intent.scroll(y, performance.now(), { programmatic, top, touchOnly }));
     };
     const onScroll = () => {
       if (!frame) frame = window.requestAnimationFrame(check);
@@ -572,12 +577,14 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     };
     const onPointerUp = () => intent.input("drag", "release", performance.now());
     const onPointer = (event) => {
+      // A tap's emulated mouse events do not count on a touch-only device
+      if (isTouchOnly()) return;
       const over =
         !!nav &&
         isShown() &&
         ((event.target instanceof Node && nav.contains(event.target)) ||
           event.clientY <= nav.offsetHeight);
-      if (event.clientY <= 8) {
+      if (pointerWantsSiteNav(event.clientY)) {
         pointerIn = true;
         show();
       } else if (over) {
@@ -586,6 +593,15 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       } else if (pointerIn) {
         pointerIn = false;
         hideAfter(SITE_NAV_LEAVE_MS);
+      }
+    };
+    // The pointer leaving the window through its top edge (toward the
+    // browser's tabs and address bar)
+    const onPointerOut = (event) => {
+      if (event.relatedTarget || isTouchOnly()) return;
+      if (pointerWantsSiteNav(event.clientY, { left: true })) {
+        pointerIn = true;
+        show();
       }
     };
     const onFocusIn = () => show();
@@ -602,8 +618,11 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
     window.addEventListener("pointerup", onPointerUp, { passive: true });
     window.addEventListener("mousemove", onPointer, { passive: true });
+    document.addEventListener("mouseout", onPointerOut, { passive: true });
     nav?.addEventListener("focusin", onFocusIn);
     nav?.addEventListener("focusout", onFocusOut);
+    // On a touch-only device the nav is in at the page's top from the start
+    check();
     return () => {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("wheel", onWheel);
@@ -613,6 +632,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("mousemove", onPointer);
+      document.removeEventListener("mouseout", onPointerOut);
       nav?.removeEventListener("focusin", onFocusIn);
       nav?.removeEventListener("focusout", onFocusOut);
       if (frame) window.cancelAnimationFrame(frame);
@@ -806,7 +826,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   }, [activeTab, landing]);
 
   // An explicit URL selection is never silently narrowed into another
-  // selection. Household impact applies its own year-aware gate; Population
+  // selection. Household calculator applies its own year-aware gate; Population
   // impact with an unavailable member has no complete set of Budget figures.
   // Each opened view stays mounted, so the check is per view, not for the
   // open one only.
@@ -830,7 +850,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   // Both pills show on the landing page: the band stays the same from the
   // start, and they drive the view behind it
   const yearShown = landing || yearPillShown(activeTab);
-  // Household impact's examples are published from 2027-28 only, so its
+  // Household calculator's examples are published from 2027-28 only, so its
   // year pill offers those years and a band year of 2026-27 shows 2027-28
   const householdView = !landing && activeTab === "household";
   const householdYear = SELECTABLE_YEARS.includes(distributionalYear) ? distributionalYear : DEFAULT_DISPLAY_YEAR;
@@ -987,7 +1007,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
             <BudgetaryImpactChart data={results.budgetData} selectedYear={distributionalYear} selectedPolicies={selectedPolicies} />
           </section>
           {/* The official costings beside our estimates: a card of its own,
-              once the official costings cover a selected measure */}
+              which says when it fills in until they are published */}
           <ObrComparisonCard
             selectedPolicies={selectedPolicies}
             selectedYear={distributionalYear}
@@ -1001,12 +1021,10 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
         {/* Two sections: by area (the constituency map) and by income (the
             decile card beside the scatter of binned groups; the
             per-household scatter stays withdrawn, as it showed survey
-            households one by one). One measure key above them all
-            (MeasureKey): the decile cards colour by measure and register
-            with it. Results by region are hidden for now (RegionView is
+            households one by one). No key above the sections: the
+            header shows the selection and each chart draws its own key.
+            Results by region are hidden for now (RegionView is
             kept, not rendered). */}
-        <MeasureKeyProvider>
-          <SectionMeasureKey />
           <SectionHeading
             id="by-area"
             icon="compass"
@@ -1052,14 +1070,13 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
                         handleTabChange("household");
                       }}
                     >
-                      Work it out on Household impact →
+                      Work it out on Household calculator →
                     </a>
                   </>
                 }
               />
             </div>
           </section>
-        </MeasureKeyProvider>
       </div>
     );
   };
@@ -1088,10 +1105,10 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
           </div>
 
           {/* The year applies to every chart on Population impact (both
-              sub-tabs) and to Household impact, and
+              sub-tabs) and to Household calculator, and
               the revenue chart highlights it; it lives in the band so it can
               be changed from anywhere. The policy pill
-              applies to those views and Household impact. A pill that does
+              applies to those views and Household calculator. A pill that does
               not apply stays in its place, faded, and does not open; its
               reason is in its accessible name only. Both are on every view, so the band never moves. */}
           <div className={`band-year${yearShown ? "" : " is-inactive"}`}>
@@ -1277,7 +1294,7 @@ function App({ boot = null }) {
   const [checkedBy, setCheckedBy] = useState(fromBuild ? "build" : "page");
   const current = useRef(fromBuild);
   const confirmer = useRef(null);
-  // Stable for the page's life: each Household impact request waits on it
+  // Stable for the page's life: each Household calculator request waits on it
   const confirmPublication = useCallback(
     (snapshot) => (confirmer.current ? confirmer.current(snapshot) : Promise.resolve(false)),
     [],

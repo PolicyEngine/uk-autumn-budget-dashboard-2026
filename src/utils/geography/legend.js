@@ -24,7 +24,8 @@ import { SCALE_COLOURS, scaleLabels } from "./scale";
 import { CHART_COLOURS } from "../chartTheme";
 
 const FONT = "system-ui, -apple-system, sans-serif";
-const HATCH_SIZE = 4;
+const HATCH_SIZE = 5;
+const HATCH_STROKE_WIDTH = 1;
 const DOT_SIZE = 4;
 
 /** The legend's class, so exports and tests can find it. */
@@ -73,7 +74,7 @@ export function appendWithheldHatch(defs) {
     .attr("x2", HATCH_SIZE / 2)
     .attr("y2", HATCH_SIZE)
     .attr("stroke", HATCH_COLOURS.line)
-    .attr("stroke-width", 1.5);
+    .attr("stroke-width", HATCH_STROKE_WIDTH);
   return pattern;
 }
 

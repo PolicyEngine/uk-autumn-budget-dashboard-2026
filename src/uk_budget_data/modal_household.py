@@ -11,7 +11,7 @@ data and no Hugging Face token, so the data licence question does not arise.
 Cost (Modal's published rates, 25 October 2026: $0.0473 per core-hour,
 $0.008 per GiB-hour): the deploy itself keeps no container warm
 (``MIN_CONTAINERS`` 0); the warm schedule below then keeps some warm until
-4 November. A container lives ``SCALEDOWN_SECONDS`` after its last call.
+17 November. A container lives ``SCALEDOWN_SECONDS`` after its last call.
 Keeping containers warm is a decision with a price (see the runbook).
 
     uv run --with modal modal deploy src/uk_budget_data/modal_household.py
@@ -37,13 +37,18 @@ A test app (same code, no warm schedule, scales to zero):
         uv run --with modal modal deploy src/uk_budget_data/modal_household.py
     uv run --with modal modal app stop -y uk-budget-household-speedtest
 
-Warm schedule (approved by Vahid, 25 October 2026, about $35-40 in all):
-``warm_schedule`` runs every 10 minutes and sets how many ``Household``
-containers stay warm from ``WARM_WINDOWS`` (UK time): 2 by default, 12 for
-the Monday 26 October rehearsal (09:00-18:00) and Budget day (Wednesday
-28 October, 08:00 to midnight), 6 on Tuesday 27 and Thursday 29 October
-(08:00-20:00), with the web endpoint kept at 1 only in those windows, and 0 from 4 November 00:00 (the hard stop). To switch it all off
-at once: ``modal app stop uk-budget-household``.
+Warm schedule (approved by Vahid, 27 October 2026, about $108 in all):
+``warm_schedule`` runs every 10 minutes and sets how many ``Household`` and
+``Web`` containers stay warm from ``household_warm.WARM_WINDOWS`` (UK time):
+12 + 1 from 07:00 to midnight on Budget day (Wednesday 28 October),
+Thursday and Friday, 2 + 1 overnight; 6 + 1 from 07:00 to 23:00 on
+Saturday 31 October to Monday 2 November, 1 + 1 overnight; 2 + 1 from
+07:00 to 23:00 on Tuesday 3 to Tuesday 17 November; otherwise 0 + 1 (a
+warm Web, the workers starting cold behind the page's retry); and 0 + 0
+from 18 November 00:00 (``WARM_UNTIL``, the hard stop). The schedule is
+the deployed code's: a change here reaches the production app only when it
+is redeployed. To switch it all off at once:
+``modal app stop uk-budget-household``.
 """
 
 import os
@@ -69,7 +74,7 @@ TIMEOUT_SECONDS = 300
 # visitors are served at once: a ceiling on what a burst can cost, not a
 # price while idle. 40, approved by Vahid for the 26-28 October 2026 Budget
 # window (the live app was raised to 40 at runtime on 26 October; a deploy
-# applies this value, so it must match). Back to 12 after 4 November.
+# applies this value, so it must match). Back to 12 after 17 November.
 MAX_CONTAINERS = int(os.environ.get("HOUSEHOLD_MODAL_MAX_CONTAINERS", "40"))
 # 0: nothing runs, and nothing is paid, while no one asks. Raise only for a
 # set window (the webinar), knowing the price.
@@ -93,6 +98,10 @@ DEPLOY_SETTINGS = {
     "HOUSEHOLD_MODAL_SNAPSHOT": "1" if SNAPSHOT else "0",
     "HOUSEHOLD_MODAL_CPU": str(CPU),
     "HOUSEHOLD_MODAL_WEB_INPUTS": str(WEB_INPUTS),
+    # The Web's deadline for a household answer (household_deadline)
+    "HOUSEHOLD_MODAL_DEADLINE_SECONDS": os.environ.get(
+        "HOUSEHOLD_MODAL_DEADLINE_SECONDS", "100"
+    ),
 }
 
 from uk_budget_data.household_runs import (  # noqa: E402
@@ -285,7 +294,13 @@ class Web:
     # https://policyengine--uk-budget-household-web.us-east.modal.run
     @modal.asgi_app(label=f"{APP_NAME}-web")
     def web(self):
-        return self.api
+        # A household request not answered by DEADLINE_SECONDS (100 s) is
+        # answered 503 with Retry-After, before Modal's 150 s web limit
+        # turns it into an empty answer for the page; its runs carry on
+        # and are kept for the retry (household_deadline)
+        from uk_budget_data.household_deadline import StartingUpDeadline
+
+        return StartingUpDeadline(self.api)
 
 
 def warm_schedule():

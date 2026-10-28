@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import PolicySelector from "./PolicySelector";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { measureCatalogueFixture } from "../test/measureCatalogueFixture";
+import { measureSummary, shortNameOf } from "../utils/policyDetails";
 
 afterEach(cleanup);
 
@@ -82,5 +83,59 @@ describe("PolicySelector Select all and Clear", () => {
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(pill).toHaveAttribute("aria-expanded", "false");
     expect(selection()).toEqual(allIds);
+  });
+});
+
+describe("PolicySelector info tips", () => {
+  it("gives every published measure an info tip, with or without a policyDetails entry", () => {
+    render(<Harness initial={allIds} />);
+    open();
+    expect(boxes()).toHaveLength(catalogue.displayable.length);
+    for (const measure of catalogue.displayable) {
+      expect(screen.getByRole("button", { name: `About ${shortNameOf(measure)}` })).toBeTruthy();
+    }
+  });
+
+  it("shows each summary whole in a wide tip, with no ellipsis", () => {
+    render(<Harness initial={allIds} />);
+    open();
+    for (const measure of catalogue.displayable) {
+      fireEvent.mouseEnter(screen.getByRole("button", { name: `About ${shortNameOf(measure)}` }));
+      const tip = screen.getByRole("tooltip");
+      expect(tip.textContent).toBe(measureSummary(measure));
+      expect(tip.textContent).not.toMatch(/…$/);
+      expect(tip).toHaveClass("is-wide");
+      fireEvent.mouseLeave(screen.getByRole("button", { name: `About ${shortNameOf(measure)}` }));
+    }
+  });
+});
+
+describe("PolicySelector keyboard", () => {
+  it("moves between rows with the arrows, Home and End, and marks a chosen row", () => {
+    render(<Harness initial={[allIds[0]]} />);
+    open();
+    const list = boxes();
+    list[0].focus();
+    fireEvent.keyDown(list[0], { key: "ArrowDown" });
+    expect(list[1]).toHaveFocus();
+    fireEvent.keyDown(list[1], { key: "ArrowUp" });
+    expect(list[0]).toHaveFocus();
+    fireEvent.keyDown(list[0], { key: "End" });
+    expect(list[list.length - 1]).toHaveFocus();
+    fireEvent.keyDown(list[list.length - 1], { key: "ArrowDown" });
+    expect(list[list.length - 1]).toHaveFocus();
+    fireEvent.keyDown(list[list.length - 1], { key: "Home" });
+    expect(list[0]).toHaveFocus();
+    const rows = list.map((box) => box.closest(".policy-item"));
+    expect(rows.filter((row) => row.classList.contains("is-selected"))).toHaveLength(1);
+  });
+
+  it("Escape closes the menu and returns focus to the pill", () => {
+    render(<Harness initial={allIds} />);
+    const pill = open();
+    boxes()[0].focus();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(pill).toHaveAttribute("aria-expanded", "false");
+    expect(pill).toHaveFocus();
   });
 });

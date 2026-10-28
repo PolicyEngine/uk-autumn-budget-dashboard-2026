@@ -4,7 +4,8 @@
 // zero line, sorted by size, the value at the bar's end; then every selected
 // measure with no change that year, as a row with no bar, "No change" and
 // why (noPovertyEffectReason), so no selected measure goes missing; a small
-// non-zero change keeps its bar ("under 0.001pp"). "Year by year": a compact table of
+// non-zero change keeps its bar ("under 0.001pp"), coloured by direction and
+// shaded by size, the largest darkest. "Year by year": a compact table of
 // measures by years, each cell shaded by size and sign (for poverty, a fall
 // in the gain colour and a rise in the loss colour; for inequality, one
 // neutral colour, as a change in inequality is no household's gain or loss)
@@ -13,7 +14,10 @@
 import { CHART_LOGO } from "../utils/chartLogo";
 import MeasureRowLabel from "./MeasureRowLabel";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
-import { fiscalYearTick, shortFiscalYearTick } from "../utils/chartTheme";
+import { CHART_COLOURS, fiscalYearTick, magnitudeColours, shortFiscalYearTick } from "../utils/chartTheme";
+
+// An inequality bar: the neutral teal-slate (SummaryMetricChart's INEQUALITY_FILL)
+const INEQUALITY_BAR = CHART_COLOURS.highlight;
 import { useDisplayYears } from "../utils/displayYears";
 import { noPovertyEffectReason } from "../utils/legendMembership";
 import "./MeasureEffectsView.css";
@@ -63,6 +67,16 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
     1e-12,
     ...rows.flatMap((m) => (view === "years" ? m.points.map((p) => Math.abs(p.value ?? 0)) : [Math.abs(m.value)])),
   );
+  // Each bar by direction and size: for poverty, a fall in the gain ramp
+  // and a rise in the loss ramp, the largest the darkest (magnitudeColours);
+  // for inequality, one neutral colour (no household's gain or loss). The
+  // measure's own colour is the dot by its name
+  const barColours =
+    view === "years"
+      ? []
+      : metric.choices === "inequality"
+        ? rows.map(() => INEQUALITY_BAR)
+        : magnitudeColours(rows.map((m) => m.value), { better: (v) => v < 0 });
   const anyNegative = view !== "years" && rows.some((m) => m.value < 0);
   const anyPositive = view !== "years" && rows.some((m) => m.value > 0);
   // The zero line: at the left when every bar goes one way, centred when both
@@ -91,7 +105,7 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
             <tbody>
               {rows.map((m) => (
                 <tr key={m.id}>
-                  <th scope="row" title={m.fullName ?? m.name}>
+                  <th scope="row">
                     <MeasureRowLabel measure={byId?.get(m.id) ?? { id: m.id, name: m.fullName ?? m.name, color: m.colour }} name={m.name} colour={m.colour} />
                   </th>
                   {years.map((year) => {
@@ -126,12 +140,12 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
                 tabIndex={0}
                 aria-label={`${m.fullName ?? m.name}: ${signed(m.value)}`}
               >
-                <span className="mev-label" role="rowheader" title={m.fullName ?? m.name}>
+                <span className="mev-label" role="rowheader">
                   <MeasureRowLabel measure={byId?.get(m.id) ?? { id: m.id, name: m.fullName ?? m.name, color: m.colour }} name={m.name} colour={m.colour} />
                 </span>
                 <span className="mev-track" role="cell">
                   <span className="mev-zero" style={{ left: `${zero}%` }} />
-                  <span className="mev-bar" style={{ left: `${left}%`, width: `${Math.max(width, 0.6)}%`, background: m.colour }} />
+                  <span className="mev-bar" style={{ left: `${left}%`, width: `${Math.max(width, 0.6)}%`, background: barColours[index] }} />
                 </span>
                 <span className="mev-value row-band-value" role="cell">
                   {signed(m.value)}
@@ -147,7 +161,7 @@ export default function MeasureEffectsView({ byMeasure, metric, selectedYear, vi
               tabIndex={0}
               aria-label={`${m.fullName ?? m.name}: ${m.value === null ? "not published" : `no change, ${reasonOf(m)}`}`}
             >
-              <span className="mev-label" role="rowheader" title={m.fullName ?? m.name}>
+              <span className="mev-label" role="rowheader">
                 <MeasureRowLabel measure={byId?.get(m.id) ?? { id: m.id, name: m.fullName ?? m.name, color: m.colour }} name={m.name} colour={m.colour} />
               </span>
               {/* No bar: "No change" and why, across the track and value columns */}

@@ -301,7 +301,7 @@ describe("the Pre-measures forecast view", () => {
     for (const card of [incomes, inequality, growth, poverty, who]) {
       expect(optionsSummary(card)).toMatch(/^Options: 2028-29 → 2030-31 · /);
     }
-    expect(optionsSummary(incomes)).toBe("Options: 2028-29 → 2030-31 · Median · Before housing costs · Real · Outturn and projection");
+    expect(optionsSummary(incomes)).toBe("Options: 2028-29 → 2030-31 · Median · Before housing costs · Real · Official and PolicyEngine");
     for (const card of [incomes, inequality, poverty]) {
       // The sentence compares the chosen years
       expect(card).toHaveTextContent(/2028-29/);
@@ -327,7 +327,7 @@ describe("the Pre-measures forecast view", () => {
     // One Options pill: the view first ("Show": Rate or Depth), then the
     // same default as Population impact: absolute, before housing costs, all people
     expect(within(poverty).queryByRole("button", { name: /^Poverty view:/ })).toBeNull();
-    expect(optionsSummary(poverty)).toBe("Options: 2027-28 → 2031-32 · Rate · Absolute · Before housing costs · All people · Outturn and projection");
+    expect(optionsSummary(poverty)).toBe("Options: 2027-28 → 2031-32 · Rate · Absolute · Before housing costs · All people · Official and PolicyEngine");
     // The Options dialog: a radio group per choice, focus inside, Escape closes
     const optionsButton = within(poverty).getByRole("button", { name: /^Options:/ });
     expect(optionsButton).toHaveAttribute("aria-expanded", "false");
@@ -351,8 +351,8 @@ describe("the Pre-measures forecast view", () => {
     fireEvent.keyDown(within(poverty).getByRole("dialog"), { key: "Escape" });
     expect(poverty.querySelector(".chart-description").textContent).toMatch(/^Under current law, [\d.]+% of people are in very deep poverty in \d{4}-\d{2}, /);
 
-    // Who is in poverty: a bar per group for the end year with a tick at the
-    // start year, for every breakdown, with its reference group
+    // Who is in poverty: a dumbbell per group, a dot for the end year and a
+    // ring for the start year, for every breakdown, with its reference group
     const who = (await heading(/^Who is in poverty/)).closest(".ls-card");
     // One short line on the card; the full sentence in About this chart
     expect(who.querySelector(".chart-description").textContent).toMatch(/^Under current law, [a-z].* have the highest .*: \d+\.\d% in \d{4}-\d{2}/);
@@ -361,28 +361,49 @@ describe("the Pre-measures forecast view", () => {
     // from here
     expect(optionsSummary(who)).toMatch(/· Absolute · Before housing costs$/);
     choose(who, "Poverty line", "Relative");
-    choose(who, "Housing costs", "After housing costs");
     fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
-    // Couples with children: 19.8% in both years, said once on the bar
-    const couples = within(who).getByRole("rowheader", { name: "Couples with children" }).closest(".ls-bar-row");
-    expect(couples).toHaveTextContent("Couples with children19.8%no change");
-    expect(couples.querySelector(".ls-bar-start")).not.toBeNull();
+    const couplesRow = () => within(who).getByRole("rowheader", { name: "Couples with children" }).closest(".measure-dumbbell-row");
+    // Couples with children, relative before housing costs: 13.7% in 2027-28,
+    // 13.8% in 2031-32 (policyengine-uk 2.132.6's outlook)
+    let couples = couplesRow();
+    // Each value beside its mark: the start year left of its ring, the end
+    // year right of its dot
+    expect(couples).toHaveTextContent("Couples with children13.7%13.8%+0.1pp");
+    expect(couples.querySelector(".measure-dumbbell-ring")).not.toBeNull();
+    expect(couples.querySelector(".measure-dumbbell-dot")).not.toBeNull();
+    expect(couples.querySelector(".ls-dumbbell-value.from.left")).toHaveTextContent("13.7%");
+    expect(couples.querySelector(".ls-dumbbell-value.to.right")).toHaveTextContent("13.8%");
     // Its tooltip, on hover or keyboard focus: both years, the change and
     // the reference group
-    const area = couples.querySelector(".ls-bar-area");
+    let area = couples;
     fireEvent.focus(area);
     // Drawn in the window (ViewportTooltip), outside the card
-    const tip = screen.getByRole("tooltip");
-    expect(tip).toHaveTextContent("Couples with children: relative poverty (AHC)");
-    expect(tip).toHaveTextContent("2027-2819.8%");
-    expect(tip).toHaveTextContent("ChangeNo change");
+    let tip = screen.getByRole("tooltip");
+    expect(tip).toHaveTextContent("Couples with children: relative poverty (BHC)");
+    expect(tip).toHaveTextContent("2027-2813.7%");
+    expect(tip).toHaveTextContent("Change+0.1pp");
     expect(tip).toHaveTextContent(/All people, \d{4}-\d{2}/);
     fireEvent.blur(area);
     expect(screen.queryByRole("tooltip")).toBeNull();
+    // After housing costs, from here: 19.8% in both years, said once beside
+    // the marks
+    choose(who, "Housing costs", "After housing costs");
+    fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
+    couples = couplesRow();
+    expect(couples).toHaveTextContent("Couples with children19.8%no change");
+    expect(couples.querySelector(".measure-dumbbell-ring")).not.toBeNull();
+    expect(couples.querySelector(".measure-dumbbell-dot")).not.toBeNull();
+    area = couples;
+    fireEvent.focus(area);
+    tip = screen.getByRole("tooltip");
+    expect(tip).toHaveTextContent("Couples with children: relative poverty (AHC)");
+    expect(tip).toHaveTextContent("2027-2819.8%");
+    expect(tip).toHaveTextContent("ChangeNo change");
+    fireEvent.blur(area);
     expect(within(who).getByText(/^All people/)).toBeInTheDocument();
     for (const option of ["Tenure", "Children by number of children", "Children: lone parent vs couple"]) {
       choose(who, "Breakdown", option);
-      expect(who.querySelector(".ls-bars")).not.toBeNull();
+      expect(who.querySelector(".ls-poverty-dumbbell")).not.toBeNull();
     }
     expect(within(who).getByText(/^All children/)).toBeInTheDocument();
     // Children's breakdowns are after housing costs only: Before is listed, disabled

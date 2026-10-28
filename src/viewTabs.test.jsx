@@ -44,7 +44,7 @@ describe("the view tabs", () => {
     const { container } = await renderApp();
     expect(tabs().map((tab) => tab.textContent)).toEqual([
       "Population impact",
-      "Household impact",
+      "Household calculator",
       "Pre-measures forecast",
       "Policies",
       "Methodology",
@@ -79,7 +79,7 @@ describe("the view tabs", () => {
     const { container } = await renderApp();
     const expected = {
       dashboard: [true, true],
-      // The year drives Household impact's household calculation
+      // The year drives Household calculator's household calculation
       household: [true, true],
       outlook: [false, false],
       policies: [false, false],
@@ -120,7 +120,7 @@ describe("the view tabs", () => {
     });
   });
 
-  it("show the year pill on Household impact, whatever an old ?sub= link says", async () => {
+  it("show the year pill on Household calculator, whatever an old ?sub= link says", async () => {
     window.history.replaceState({}, "", "/?tab=personal&sub=multi");
     const { container } = await renderApp();
     expect(shown(band(container).querySelector(".band-year"))).toBe(true);
@@ -148,9 +148,9 @@ describe("the view tabs", () => {
 
   it("open the view an old or new link names", async () => {
     for (const [url, label] of [
-      ["/?tab=household", "Household impact"],
+      ["/?tab=household", "Household calculator"],
       // An old link: the view it named, at its new address
-      ["/?tab=personal", "Household impact"],
+      ["/?tab=personal", "Household calculator"],
       ["/?tab=outlook", "Pre-measures forecast"],
       // An old link: Pre-measures forecast was Living standards
       ["/?tab=living", "Pre-measures forecast"],
@@ -369,14 +369,14 @@ describe("the view tabs", () => {
       "Data",
       "Model and policies",
       "Population impact",
-      "Household impact",
+      "Household calculator",
       "Pre-measures forecast",
       "Limitations",
     ]) {
       expect(within(panel).getByRole("heading", { level: 2, name })).toBeInTheDocument();
     }
     // Figures by area and results by age are folded topics of Population
-    // impact; the household calculation is one of Household impact
+    // impact; the household calculation is one of Household calculator
     const population = within(panel).getByRole("heading", { level: 2, name: "Population impact" }).closest(".method-section");
     for (const name of ["Figures by area", "Results by age"]) {
       expect(within(population).getByRole("button", { name })).toBeInTheDocument();

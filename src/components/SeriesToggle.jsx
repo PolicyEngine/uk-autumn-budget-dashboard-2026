@@ -22,6 +22,16 @@ function markHintSeen() {
 }
 
 /**
+ * A chip's tip: its own (`tip`: why a disabled one has nothing, or what an
+ * enabled one is), and on the last one on, that it stays on.
+ */
+export function chipTip(s, last) {
+  if (s.disabled) return s.tip ?? null;
+  if (last) return s.tip ? `${s.tip} At least one line stays on.` : `${s.label}: at least one line stays on`;
+  return s.tip ?? null;
+}
+
+/**
  * Line toggle chips for a multi-line chart: "Show lines:" then one chip per
  * line that shows or hides it. A chip that is on is tinted in its line's
  * colour (fill and border, no tick), with its swatch; one that is off is outlined and
@@ -39,7 +49,8 @@ function markHintSeen() {
  * @param {Object} props
  * @param {Array<{key: string, label: string, colour: string, dash?: string, short?: string, shape?: "line"|"block", disabled?: boolean, tip?: string}>} props.series
  *   (`shape: "block"` for a filled layer: a square swatch; `disabled` for one
- *   with nothing to draw, kept so two keys line up, with `tip` saying why)
+ *   with nothing to draw, kept so two keys line up, with `tip` saying why;
+ *   on an enabled chip, `tip` is shown on hover and focus too)
  * @param {string[]} props.shown - The keys of the lines drawn
  * @param {(keys: string[]) => void} props.onChange - The next keys drawn, in `series` order
  * @param {(key: string|null) => void} [props.onHover]
@@ -119,7 +130,7 @@ export default function SeriesToggle({
           const active = on.has(s.key);
           const last = active && on.size === 1;
           return (
-            <Tip key={s.key} content={s.disabled ? s.tip ?? null : last ? `${s.label}: at least one line stays on` : null}>
+            <Tip key={s.key} content={chipTip(s, last)}>
             <button
               type="button"
               className={`series-toggle-chip${active ? " is-on" : ""}${s.disabled ? " is-disabled" : ""}`}
@@ -158,6 +169,7 @@ export default function SeriesToggle({
           );
         })}
         {collapseDisabled && foldedCount > 0 && (
+          <Tip content={expanded ? null : `${foldedCount === 1 ? "One component has" : `${foldedCount} components have`} no effect on ${placement === "section" ? "either chart" : "this chart"} for you: open to list them.`}>
           <button
             type="button"
             className="series-toggle-chip series-toggle-more"
@@ -169,6 +181,7 @@ export default function SeriesToggle({
             </svg>
             {expanded ? `Hide the ${foldedCount} with no effect` : `${foldedCount} more with no effect for you`}
           </button>
+          </Tip>
         )}
         {extras.map((item) => (
           <span key={item.key} className="series-toggle-extra">

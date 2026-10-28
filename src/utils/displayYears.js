@@ -15,7 +15,7 @@
 import { createContext, useContext } from "react";
 import budgetYears from "../uk_budget_data/budget_years.json";
 
-/** The first fiscal year always shown on Population and Household impact: 2027 is 2027-28. */
+/** The first fiscal year always shown on Population and Household calculator: 2027 is 2027-28. */
 export const FIRST_DISPLAY_YEAR = 2027;
 
 /** The year before it (2026-27): shown only when the selection has an effect in it. */
@@ -46,7 +46,7 @@ export const DISPLAY_YEARS = Object.freeze([...CONFIG_YEARS]);
 /**
  * The years a reader can always choose (the year pill, Play, Household
  * impact): from 2027-28. App adds 2026-27 to the pill while the selection
- * has an effect in it (yearsForSelection); Household impact's examples are
+ * has an effect in it (yearsForSelection); Household calculator's examples are
  * published from 2027-28 only.
  */
 export const FIRST_SELECTABLE_YEAR = FIRST_DISPLAY_YEAR;

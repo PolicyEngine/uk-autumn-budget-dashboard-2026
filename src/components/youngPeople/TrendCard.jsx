@@ -7,7 +7,7 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import { TOOLTIP_PROPS } from "../ChartTooltip";
 import ControlBar from "../ControlBar";
 import SeriesToggle from "../SeriesToggle";
-import { measureOpacity, useMeasureKey, netOpacity } from "../MeasureKey";
+import MeasureKey, { measureOpacity, useMeasureKey, netOpacity } from "../MeasureKey";
 import {
   GRID_PROPS,
   TICK_STYLE,
@@ -23,13 +23,13 @@ import {
 } from "../../utils/chartTheme";
 import { DISPLAY_YEARS, NOT_YET_PUBLISHED, useDisplayYears } from "../../utils/displayYears";
 import { X_AXIS_HEIGHT, plotMargin } from "./chartRows";
-import { AGE_GROUPS, ALL_BAND, YOUNG_BAND } from "../../utils/ageImpact";
+import { AGE_GROUPS, ALL_BAND, COMBINATION_NOT_PUBLISHED, PACKAGE_NET_ONLY, YOUNG_BAND } from "../../utils/ageImpact";
 import {
   GROUP_STYLES,
   changeByYear,
   cumulate,
   groupMeasureSeries,
-  niceRange,
+  fitRange,
   pounds,
   signedPounds,
   stepAnnotations,
@@ -38,10 +38,12 @@ import {
 import { chartTransition } from "../../utils/chartMotion";
 import { PENSIONERS, groupLabel, groupSeries, groupSubject } from "../../utils/ageGroups";
 import { legendMembership } from "../../utils/legendMembership";
+import { selectionPackageKey } from "../../utils/geography/selection";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { shortNameOf } from "../../utils/policyDetails";
 import TitleIcon from "../TitleIcon";
 import ChartMoreInfo from "../ChartMoreInfo";
+import Note from "../Note";
 import { BY_YEAR_METHOD } from "../methodology/anchors";
 
 /** Every age group's line, 16 to 24 first. */
@@ -81,6 +83,29 @@ const YEARS_OPTIONS = [
   { value: "each", label: "Each year", summary: "Each year" },
   { value: "total", label: "Running total", summary: "Running total" },
 ];
+
+/** "2027-28 to 2031-32" for a run of years, else "2027-28, 2029-30 and 2031-32". */
+export const yearList = (years) => {
+  if (years.length > 1 && years.every((year, i) => i === 0 || year === years[i - 1] + 1)) {
+    return `${fiscalYearTick(years[0])} to ${fiscalYearTick(years[years.length - 1])}`;
+  }
+  const labels = years.map(fiscalYearTick);
+  return labels.length > 1 ? `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}` : labels[0] ?? "";
+};
+
+/**
+ * Why some age groups' lines stop: a selected policy publishes all ages
+ * but not those groups in some years (its age bands withheld, as too few
+ * survey records), so their sum is unavailable there. Null when every
+ * group is complete in every published year.
+ */
+export function missingGroupsNote(points, labelOf) {
+  const gaps = points.filter((point) => point.published && point.missing?.length > 0);
+  if (!gaps.length) return null;
+  const keys = [...new Set(gaps.flatMap((point) => point.missing))];
+  const groups = keys.length >= AGE_GROUPS.length - 1 ? "every age group except all ages" : keys.map(labelOf).join(", ");
+  return `Not drawn in ${yearList(gaps.map((point) => point.year))}, as a selected policy has too few survey records by age: ${groups}.`;
+}
 
 /** "+£120", "−£180": a change with a true minus. */
 export const signed = (value) => {
@@ -483,11 +508,28 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
   const cumulative = years === "total";
   const byMeasure = view === "measures";
 
-  const bands = useMemo(() => changeByYear(rows, policies, selectedPolicies, shownYears), [rows, policies, selectedPolicies, shownYears]);
-  const focusSeries = useMemo(
-    () => groupSeries(rows, policies, selectedPolicies, shownYears, FOCUS),
-    [rows, policies, selectedPolicies, shownYears, FOCUS],
+  // The published combined run of exactly the selection, read as is
+  const packageRun = selectionPackageKey(catalogue?.manifest, selectedPolicies);
+  const bands = useMemo(
+    () => changeByYear(rows, policies, selectedPolicies, shownYears, packageRun),
+    [rows, policies, selectedPolicies, shownYears, packageRun],
   );
+  const focusSeries = useMemo(() => {
+    const series = groupSeries(rows, policies, selectedPolicies, shownYears, FOCUS, packageRun);
+    // A year the combination is not published by age: no figure for the group either
+    return series.map((point, i) =>
+      bands[i]?.combinationUnavailable ? { year: point.year, published: false, net: null, parts: [] } : point,
+    );
+  }, [rows, policies, selectedPolicies, shownYears, FOCUS, packageRun, bands]);
+  // The package's net with no policy parts (a selected policy withholds its rows by age)
+  const netOnly = focusSeries.some((point) => point.fromPackage && !point.partsShown);
+  const combinationYears = bands.filter((point) => point.combinationUnavailable).map((point) => point.year);
+  // Not one year published for this combination: a notice, not empty axes
+  const combinationEverywhere =
+    combinationYears.length > 0 && bands.every((point) => !point.published || point.combinationUnavailable);
+  const combinationNote = !combinationEverywhere && combinationYears.length
+    ? `${COMBINATION_NOT_PUBLISHED.replace(" yet.", "")} for ${yearList(combinationYears)}.`
+    : null;
   // Pensioners' line from their own series; the bands from the age rows
   const raw = group === PENSIONERS ? bands.map((point, i) => ({ ...point, [PENSIONERS]: focusSeries[i]?.net ?? null })) : bands;
   const groupKeys = SERIES_LIST.map((series) => series.key);
@@ -514,7 +556,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     [focusSeries, catalogue, narrow],
   );
 
-  // The measures in the breakdown, for the section's key (MeasureKey)
+  // The measures in the breakdown, for the card's key (MeasureKey)
   const members = useMemo(
     () =>
       byMeasure
@@ -539,11 +581,15 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         // All age groups: fitted to the lines shown
         .flatMap((point) => groupKeys.filter(isShown).map((each) => point[each]))
         .filter((v) => v !== null && v !== undefined);
-  const { domain, ticks } = niceRange(Math.min(0, ...values), Math.max(0, ...values));
+  // Fitted to what is drawn, a little room either side
+  const { domain, ticks } = fitRange(Math.min(0, ...values), Math.max(0, ...values));
 
   const unpublished = raw.filter((point) => !point.published);
   const suppressed = raw.filter((point) => point.published && point.suppressed.length > 0);
   const labelOf = (each) => SERIES.find((series) => series.key === each)?.label ?? each;
+  // A selected policy with all ages but no age bands in some years: said,
+  // never a line that silently stops
+  const missingNote = byMeasure ? null : missingGroupsNote(raw, labelOf);
   const first = fiscalYearTick(shownYears[0]);
   const last = fiscalYearTick(shownYears[shownYears.length - 1]);
   const title = `Change by year, ${first} to ${last}`;
@@ -627,6 +673,18 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     ...lines.filter((line) => line.key === FOCUS),
   ];
 
+  // A faint context line has no dots, so a value with no neighbour (its
+  // line stopping either side) gets one, or it would not be drawn at all
+  const loneDot = (line) => {
+    const present = (i) => data[i]?.[line.key] !== null && data[i]?.[line.key] !== undefined;
+    return function LoneDot({ cx, cy, index }) {
+      if (!present(index) || present(index - 1) || present(index + 1) || cx === undefined || cy === undefined) {
+        return <g key={`lone-${line.key}-${index}`} />;
+      }
+      return <circle key={`lone-${line.key}-${index}`} cx={cx} cy={cy} r={2.5} fill={line.colour} stroke={CHART_COLOURS.surface} strokeWidth={1} />;
+    };
+  };
+
   const lineValue = (each) => (year) => {
     const point = lineData.find((p) => p.year === year);
     return point?.[each] ?? null;
@@ -663,6 +721,8 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             ...suppressed.map(
               (point) => `${fiscalYearTick(point.year)}, too few survey records: ${point.suppressed.map(labelOf).join(", ")}`,
             ),
+            ...(missingNote ? [missingNote] : []),
+            ...(combinationNote ? [combinationNote] : []),
           ],
         });
   const download = {
@@ -712,6 +772,11 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         />
       </div>
       <div ref={chartRef} className="chart-plot young-people-plot">
+        {combinationEverywhere ? (
+          <div className="plot-empty" style={{ minHeight: height }} role="status">
+            <p>{COMBINATION_NOT_PUBLISHED}</p>
+          </div>
+        ) : (
         <ResponsiveContainer width="100%" height={height}>
           <ComposedChart data={data} margin={margin} stackOffset="sign" barCategoryGap="28%">
             <CartesianGrid {...GRID_PROPS} />
@@ -796,7 +861,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
                     groupsView && hovered && hovered !== line.key ? 0.22 : line.context && hovered !== line.key ? CONTEXT_OPACITY : 1
                   }
                   strokeDasharray={line.dash}
-                  dot={line.strong || compare === "groups" ? { r: line.key === FOCUS ? 4 : 2.5, fill: line.colour, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, opacity: groupsView && hovered && hovered !== line.key ? 0.22 : 1 } : false}
+                  dot={line.strong || compare === "groups" ? { r: line.key === FOCUS ? 4 : 2.5, fill: line.colour, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, opacity: groupsView && hovered && hovered !== line.key ? 0.22 : 1 } : loneDot(line)}
                   activeDot={line.strong ? { r: 5 } : false}
                   isAnimationActive={false}
                   onMouseEnter={() => setHovered(line.key)}
@@ -848,6 +913,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             )}
           </ComposedChart>
         </ResponsiveContainer>
+        )}
       </div>
       <div className="chart-legend">
         {/* The key, which also shows or hides each line: all age groups one
@@ -879,6 +945,10 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
             narrow={narrow}
           />
         )}
+        {/* By policy: the card's own measure key */}
+        {byMeasure && !key.shared && members.length > 0 && (
+          <MeasureKey members={members} netLabel="Net change" highlight={key.highlight} onHighlight={key.setHighlight} />
+        )}
       </div>
       <div className="chart-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -886,11 +956,14 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
       </div>
       {/* The same foot as the card beside it, so the pair ends level */}
       <div className="chart-footer">
+        {combinationNote && <Note>{combinationNote}</Note>}
         <ChartMoreInfo
           members={members}
           year={Number(selectedYear)}
           info={{
             caveats: [
+              missingNote,
+              byMeasure && netOnly && PACKAGE_NET_ONLY,
               unpublished.length > 0 &&
                 `Not yet published: ${unpublished.map((point) => fiscalYearTick(point.year)).join(", ")}.`,
             ],

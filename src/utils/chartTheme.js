@@ -52,7 +52,7 @@ export const CHART_COLOURS = {
   reference: "#6B7280",
   highlight: "#285E61",
   highlightBand: "#EAF5F4",
-  tenthBand: "#DDE6F3",
+  tenthBand: "#E0F2FE",
   hover: "#EEF6F6",
   rowBand: "#F9FAFB",
   obr: "#9CA3AF",
@@ -66,37 +66,37 @@ export const CHART_COLOURS = {
   text: "#374151",
   surface: "#FFFFFF",
   mutedFill: "#F3F4F6",
-  diffSmall: "#10B981",
-  diffMedium: "#FBBF24",
-  diffLarge: "#EF4444",
-  ageChildren: "#8DB8E3",
-  ageYoungAdults: "#5A8FCB",
-  ageAdults: "#3165A8",
-  ageOlder: "#7C5CB8",
-  agePension: "#2E1F5E",
-  marketIncome: "#4A7BA7",
-  pensionContributions: "#B8875A",
+  hatchLine: "#B8BDC5",
+  // Age bands, each its own line (ui-kit blues and teals; 16 to 24 is gain)
+  ageChildren: "#4FD1C5",
+  ageYoungAdults: "#0EA5E9",
+  ageAdults: "#026AA2",
+  ageOlder: "#285E61",
+  agePension: "#1D4044",
+  marketIncome: "#94A3B8",
+  pensionContributions: "#CBD5E1",
   gainLight: "#81E6D9",
   mapGain: "#14B8A6",
   lossLight: "#FBBF24",
   ink: "#1F2937",
   noticeBg: "#FFF7E6",
   noticeText: "#7A5A1F",
-  mtrIncomeTax: "#5FB3A8",
-  mtrChildBenefit: "#4FD1C5",
-  mtrAllowanceTaper: "#285E61",
-  mtrNationalInsurance: "#A7E3DA",
-  mtrStudentLoan: "#E8B66A",
-  mtrUniversalCredit: "#2F855A",
-  mtrOtherBenefits: "#9AE6B4",
-  mtrOther: "#D1D5DB",
-  // The net income card's layers the marginal rate card has not: benefits
-  // in greens, the household's other taxes in purples
-  netStatePension: "#22543D",
-  netWarmHomeDiscount: "#68D391",
-  netCouncilTax: "#8E7CC3",
-  netFuelDuty: "#553C9A",
-  netVat: "#B794F4",
+  // A household's income, stacked: benefits in teals, taxes and
+  // deductions in ambers (the 2025 dashboard's families), earnings and the
+  // rest in slate greys
+  mtrIncomeTax: "#B45309",
+  mtrChildBenefit: "#14B8A6",
+  mtrAllowanceTaper: "#78350F",
+  mtrNationalInsurance: "#D97706",
+  mtrStudentLoan: "#FBBF24",
+  mtrUniversalCredit: "#0D9488",
+  mtrOtherBenefits: "#5EEAD4",
+  mtrOther: "#E2E8F0",
+  netStatePension: "#0F766E",
+  netWarmHomeDiscount: "#2DD4BF",
+  netCouncilTax: "#92400E",
+  netFuelDuty: "#F59E0B",
+  netVat: "#FDE68A",
 };
 
 /**
@@ -108,19 +108,46 @@ export const CHART_COLOURS = {
  * equal). The catalogue samples them for any number of measures (measureRamp, below).
  */
 export const POLICY_RAMPS = {
-  // Amber 900, 700, 500
-  raise: ["#78350F", "#B45309", "#F59E0B"],
-  // Teals, dark blue-teal to mint: the hue turns as the steps lighten, so
-  // the dark end stays apart (seven steps do not fit at 3:1 on white; the
-  // lightest is 1.75:1)
-  cost: ["#0D4359", "#016768", "#088075", "#00997F", "#28B084", "#4AC685", "#75D987"],
+  // As on the 2025 Autumn Budget dashboard (PolicyEngine/uk-autumn-budget-
+  // dashboard, src/utils/policyConfig.js, POLICY_COLORS): amber 900 to 400
+  raise: ["#78350F", "#92400E", "#B45309", "#D97706", "#F59E0B", "#FBBF24"],
+  // …and teal 600 to 300 (the lighter steps are under 3:1 on white; every
+  // measure is named in the legend and the tooltip)
+  cost: ["#0D9488", "#14B8A6", "#2DD4BF", "#5EEAD4"],
 };
+
+/**
+ * Size by intensity: one ramp per direction, darkest to lightest, from the
+ * 2025 dashboard's teals and ambers. In a chart with one row or bar per
+ * policy, colour says the direction (a gain, such as fewer people in
+ * poverty, in teal; a loss in amber) and intensity the size: the largest
+ * effect is the darkest step and smaller ones are lighter
+ * (magnitudeColours, below). Every row prints its value, so the lightest
+ * teal (2.5:1 on white) is never the only cue. The JS mirror of the
+ * --ramp-gain-* and --ramp-loss-* tokens in src/app/globals.css.
+ */
+export const MAGNITUDE_RAMPS = Object.freeze({
+  // Teal 700, 600, 500
+  gain: Object.freeze(["#0F766E", "#0D9488", "#14B8A6"]),
+  // Amber 900, 700, 600: the loss family
+  loss: Object.freeze(["#78350F", "#B45309", "#D97706"]),
+});
+
+/**
+ * Lines that are categories with no meaning of their own (a forecast's
+ * series), in this order: the ui-kit chart colours. Each such chart also
+ * names its lines directly and draws them in different dashes, since no
+ * five brand colours stay apart for every reader. The JS mirror of the
+ * --series-* tokens in src/app/globals.css.
+ */
+export const SERIES_COLOURS = Object.freeze(["#319795", "#026AA2", "#0EA5E9", "#285E61", "#64748B"]);
 
 /**
  * How the measure catalogue (measureCatalogue.jsx, #104) colours the
  * published measures: each direction's measures, ranked by budgetary size
- * (largest first), take evenly spaced steps along that direction's ramp
- * above, darkest first, so any number of measures get distinct shades.
+ * (largest first), take that direction's ramp steps in order, darkest
+ * first, as on the 2025 dashboard; with more measures than steps, evenly
+ * spaced steps along the ramp, so any number of measures get distinct shades.
  * Revenue-raising measures take the raise ramp (ambers), those that cost
  * revenue the cost ramp (teals), and a measure with no published costing
  * the no-change grey. With more than `alternateAbove` measures in one
@@ -184,6 +211,9 @@ function oklabToHex([L, a0, b0]) {
 export function measureRamp(direction, n) {
   const ramp = MEASURE_RAMPS[direction];
   if (!ramp?.stops) return Array.from({ length: n }, () => MEASURE_RAMPS.neutral);
+  // No more measures than steps: the steps themselves, darkest first, as
+  // on the 2025 dashboard
+  if (n <= ramp.stops.length) return ramp.stops.slice(0, n).map((stop) => stop.toUpperCase());
   const labs = ramp.stops.map(hexToOklab);
   const lengths = labs.slice(1).map((lab, i) => Math.hypot(...lab.map((v, k) => v - labs[i][k])));
   const total = lengths.reduce((sum, length) => sum + length, 0);
@@ -203,6 +233,54 @@ export function measureRamp(direction, n) {
       [a, b] = [chroma * Math.cos(hue), chroma * Math.sin(hue)];
     }
     return oklabToHex([L, a, b]);
+  });
+}
+
+/**
+ * The colour a fraction `t` of the way along a ramp of hex stops (0 its
+ * first stop, 1 its last), interpolated in OKLab by distance along it.
+ */
+export function rampAt(stops, t) {
+  if (stops.length === 1) return stops[0].toUpperCase();
+  const labs = stops.map(hexToOklab);
+  const lengths = labs.slice(1).map((lab, i) => Math.hypot(...lab.map((v, k) => v - labs[i][k])));
+  const total = lengths.reduce((sum, length) => sum + length, 0);
+  let along = Math.max(0, Math.min(1, t)) * total;
+  let k = 0;
+  while (k < lengths.length - 1 && along > lengths[k]) {
+    along -= lengths[k];
+    k += 1;
+  }
+  const f = lengths[k] ? Math.min(1, along / lengths[k]) : 0;
+  return oklabToHex(labs[k].map((v, j) => v + (labs[k + 1][j] - v) * f));
+}
+
+/**
+ * One colour per value for a chart with one row or bar per policy: the
+ * direction picks the ramp (MAGNITUDE_RAMPS.gain for a value that is
+ * `better`, by default a rise; .loss otherwise) and the size picks the
+ * step. The values are ranked by absolute size across both directions, so
+ * the largest effect is the darkest step of its ramp, the smallest the
+ * lightest, and equal sizes share a step. A zero, missing or non-finite
+ * value takes the no-change grey.
+ *
+ * @param {Array<number|null>} values
+ * @param {{better?: (value: number) => boolean}} [options] - Which side is
+ *   the gain: `(v) => v < 0` for poverty, where a fall is better
+ * @returns {string[]} one colour per value, in the order given
+ */
+export function magnitudeColours(values, { better = (value) => value > 0 } = {}) {
+  const sizes = values.map((value) => {
+    const number = Number(value);
+    return value == null || !Number.isFinite(number) ? 0 : Math.abs(number);
+  });
+  const distinct = [...new Set(sizes.filter((size) => size > 0))].sort((a, b) => b - a);
+  const last = Math.max(distinct.length - 1, 1);
+  return values.map((value, index) => {
+    if (sizes[index] === 0) return CHART_COLOURS.noChange;
+    const t = distinct.length === 1 ? 0 : distinct.indexOf(sizes[index]) / last;
+    const ramp = MAGNITUDE_RAMPS[better(Number(value)) ? "gain" : "loss"];
+    return t === 0 ? ramp[0] : t === 1 ? ramp[ramp.length - 1] : rampAt(ramp, t);
   });
 }
 
@@ -576,6 +654,109 @@ export function sweepAxis(max) {
   const ticks = [];
   for (let value = 0; value <= top + 1e-9; value += step) ticks.push(value);
   return { domain: [0, top], ticks };
+}
+
+/** Text width without a canvas: close enough for 12–13px system sans. */
+export const approxTextWidth = (text, fontSize = 12) => String(text).length * fontSize * 0.56;
+
+// One canvas for measuring tick labels in the page's own font
+let measureContext;
+/**
+ * A label's width in px in the page's font, measured on a canvas in a
+ * browser ("−£250" is wider than its five characters suggest); the
+ * estimate (approxTextWidth) on the server and in tests.
+ */
+export function tickTextWidth(text, fontSize = 12) {
+  if (typeof document === "undefined" || /jsdom/i.test(globalThis.navigator?.userAgent ?? "")) {
+    return approxTextWidth(text, fontSize);
+  }
+  if (measureContext === undefined) measureContext = document.createElement("canvas").getContext("2d") ?? null;
+  if (!measureContext) return approxTextWidth(text, fontSize);
+  measureContext.font = `${fontSize}px ${getComputedStyle(document.body).fontFamily}`;
+  return measureContext.measureText(String(text)).width;
+}
+
+// Round multipliers (1, 2 or 5 x 10^n; 2.5 is never a whole number of
+// steps): a thinned axis labels every second, fifth or tenth tick
+const isRound = (value) => {
+  const mantissa = value / 10 ** Math.floor(Math.log10(value) + 1e-9);
+  return [1, 2, 2.5, 5, 10].some((m) => Math.abs(mantissa - m) < 1e-6);
+};
+
+/**
+ * The tick labels that fit a plot `plotWidth` px wide: from the round
+ * `ticks` (an even step over `domain`), every tick if the labels clear one
+ * another by `minGap` px, otherwise every second, fifth … (a round step,
+ * 0 always kept), so "−£200 £0 £200 £400 £600 £800" in a narrow plot
+ * becomes "−£200 £0 £400 £800". An end of the domain off the coarser step
+ * keeps its label only where it, too, clears its neighbour; on an axis
+ * either side of 0, both ends and 0 are always labelled where the three
+ * fit, a tick of the step that would touch an end giving way. Labels are
+ * centred on their tick, or, with `inside`, the first starts at its tick
+ * and the last ends at its tick. `keep` (0 unless given, as 100 on a % of
+ * the official costing axis) is always labelled where it is a tick.
+ * Unmeasured (plotWidth 0), every tick.
+ *
+ * @param {number[]} ticks - Round ticks at one step, ascending
+ * @param {[number, number]} domain - The axis's ends
+ * @param {number} plotWidth - The plot's width in px
+ * @param {(tick: number) => string} format - A tick's label
+ * @returns {number[]} The ticks to label (and draw a gridline at)
+ */
+export function fitTicks(ticks, domain, plotWidth, format, { minGap = 12, fontSize = 12, inside = false, keep = 0 } = {}) {
+  if (!plotWidth || ticks.length < 2) return ticks;
+  const [lo, hi] = domain;
+  const x = (value) => ((value - lo) / (hi - lo || 1)) * plotWidth;
+  const width = (value) => tickTextWidth(format(value), fontSize);
+  // A label's [left, right] in px
+  const extent = (value, index, count) => {
+    const w = width(value);
+    if (inside && index === 0 && value === ticks[0]) return [x(value), x(value) + w];
+    if (inside && index === count - 1 && value === ticks[ticks.length - 1]) return [x(value) - w, x(value)];
+    return [x(value) - w / 2, x(value) + w / 2];
+  };
+  const fits = (list) =>
+    list.every((value, i) => i === 0 || extent(value, i, list.length)[0] - extent(list[i - 1], i - 1, list.length)[1] >= minGap);
+  const step = ticks[1] - ticks[0];
+  const anchor = ticks.find((tick) => Math.abs(tick - keep) < 1e-9) ?? ticks[0];
+  // The domain's ends, where they clear their neighbours
+  const withEnds = (kept) => {
+    let labelled = kept;
+    for (const end of [ticks[0], ticks[ticks.length - 1]]) {
+      if (labelled.includes(end)) continue;
+      const withEnd = [...labelled, end].sort((a, b) => a - b);
+      if (fits(withEnd)) labelled = withEnd;
+    }
+    return labelled;
+  };
+  const multiples = (m) =>
+    ticks.filter((tick) => {
+      const k = (tick - anchor) / (step * m);
+      return Math.abs(k - Math.round(k)) < 1e-6;
+    });
+  // An axis either side of 0: both ends and 0 always labelled where the
+  // three fit, so the reader sees how far each side runs; a tick of the
+  // step that would touch an end gives way to it
+  const first = ticks[0];
+  const last = ticks[ticks.length - 1];
+  const fixed = [...new Set([first, anchor, last])].sort((a, b) => a - b);
+  if (first < 0 && last > 0 && fits(fixed)) {
+    for (let m = 1; m < ticks.length; m += 1) {
+      if (!isRound(m)) continue;
+      const near = (tick, end) => Math.abs(tick - end) < step * m - 1e-9;
+      const kept = multiples(m).filter((tick) => fixed.includes(tick) || ![first, last].some((end) => near(tick, end)) || fits([...fixed, tick].sort((a, b) => a - b)));
+      const labelled = [...new Set([...fixed, ...kept])].sort((a, b) => a - b);
+      if (fits(labelled)) return labelled;
+    }
+    return fixed;
+  }
+  for (let m = 1; m < ticks.length; m += 1) {
+    if (!isRound(m)) continue;
+    const kept = multiples(m);
+    if (fits(kept)) return withEnds(kept);
+  }
+  // No round step fits: the kept tick, and an end if it clears it
+  return withEnds([anchor]);
 }
 
 // Width a full fiscal-year tick ("2027-28") needs at 12px, with a gap

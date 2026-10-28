@@ -51,7 +51,7 @@ export default function MeasureSharesChart({ rows, groupLabel, yearLabel, emphas
         const drawn = visibleSegments(Object.fromEntries(KEYS.map((key) => [key, row[key] ?? 0])), KEYS);
         return (
           <div className={`msc-row row-band${index % 2 === 0 ? " is-banded" : ""}${id === emphasis ? " is-focus" : ""}`} role="row" key={id}>
-            <span className={`msc-label${id === emphasis ? " is-focus" : ""}`} role="rowheader" title={fullName ?? name}>
+            <span className={`msc-label${id === emphasis ? " is-focus" : ""}`} role="rowheader" aria-label={fullName ?? name}>
               {byId?.get(id) ? <MeasureRowLabel measure={byId.get(id)} name={name} /> : name}
             </span>
             <span

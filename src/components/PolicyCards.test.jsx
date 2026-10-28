@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import PolicyCards, {
   BUDGET_DAY_MONTH,
+  CARD_SECTIONS,
   TIMELINE_START_YEAR,
   TIMELINE_YEARS,
   durationLabel,
@@ -97,13 +98,12 @@ describe("PolicyCards", () => {
     const id = "badr_lifetime_limit_cut";
     render(<PolicyCards policies={[published(id, "Business Asset Disposal Relief restricted", "revenue")]} selectedPolicies={[id]} />);
     const card = screen.getByRole("listitem");
-    expect(card).not.toHaveTextContent("Ends");
-    expect(card.querySelector(".policy-card-ends")).toBeEmptyDOMElement();
+    // At a glance says it once: Ends, Continues; the timeline only draws it
+    expect(card.querySelector(".policy-card-ends")).toHaveTextContent(/^Ends\s*Continues$/);
     expect(card).not.toHaveTextContent("Temporary");
     const timeline = within(card).getByRole("img", { name: "In force from April 2027; no end date." });
-    expect(timeline).toHaveTextContent("Continues");
+    expect(timeline).not.toHaveTextContent("Continues");
     expect(timeline).toHaveTextContent("Budget");
-    expect(timeline.textContent).not.toMatch(/BudgetContinues/);
     expect(timeline.querySelectorAll(".ptl-span")).toHaveLength(1);
   });
 
@@ -149,11 +149,11 @@ describe("PolicyCards", () => {
     expect(within(card).getByRole("button", { name: /^See its effect/ })).toBeTruthy();
   });
 
-  it("shows fuel duty's two-step restore as diamonds", () => {
+  it("shows the fuel duty freeze with no restore steps", () => {
     const id = "fuel_duty_rise_deferral";
     render(<PolicyCards policies={[published(id, "Fuel duty rises deferred")]} selectedPolicies={[id]} />);
-    const timeline = screen.getByRole("img", { name: /^In force from January 2027;/ });
-    expect(timeline.querySelectorAll(".ptl-diamond")).toHaveLength(2);
+    const timeline = screen.getByRole("img", { name: /^In force from January 2027/ });
+    expect(timeline.querySelectorAll(".ptl-diamond")).toHaveLength(0);
   });
 
   it("has no revenue filter: every selected card shows, whatever the address says", () => {
@@ -324,10 +324,10 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(within(block).getAllByRole("row")).toHaveLength(6);
   });
 
-  it("puts the block between the card's summary and its timing", () => {
+  it("puts the block after At a glance, before the footer", () => {
     const order = [...card(rising, { ...alpha, starts: "April 2027" }).children].map((child) => child.classList[0]);
-    expect(order.indexOf("policy-card-spec")).toBe(order.indexOf("policy-card-summary") + 1);
-    expect(order.indexOf("policy-card-when")).toBe(order.indexOf("policy-card-spec") + 1);
+    expect(order.indexOf("policy-card-when")).toBe(order.indexOf("policy-card-summary") + 1);
+    expect(order.indexOf("policy-card-spec")).toBe(order.indexOf("policy-card-when") + 1);
   });
 
   it("marks a picked step on the card's timeline, and says it in words", () => {
@@ -363,12 +363,18 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(block.querySelector("svg.pchg-svg, table")).toBeNull();
   });
 
-  it("table: only the parameters and year that differ", () => {
+  it("table: the main parameter as tiles, then only the parameters and year that differ, when asked", () => {
     const three = tables("table", ["A", "B", "C"].map((label, i) => ({
       label, unit: "gbp", unit_words: "£ a year", primary: i < 2, source,
       points: yearly(() => 100 * (i + 1), (y) => (y === 2031 ? 100 * (i + 1) - 10 : 100 * (i + 1))),
     })));
-    const table = within(card(three)).getByRole("table");
+    const block = within(card(three)).getByRole("region", { name: /^What changes/ });
+    expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A$/);
+    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy£90−£10");
+    expect(block.querySelector(".pchg-svg")).toBeNull();
+    expect(within(block).queryByRole("table")).toBeNull();
+    fireEvent.click(within(block).getByRole("button", { name: "Show every change" }));
+    const table = within(block).getByRole("table");
     expect(within(table).getAllByRole("row").map((row) => row.textContent)).toEqual([
       "2031-32Current lawWith the policyChange", "A£100£90−£10", "B£200£190−£10", "C£300£290−£10",
     ]);
@@ -387,27 +393,81 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(item.querySelector(".ptl-chip")).toHaveTextContent(/^18 months$/);
   });
 
-  it("draws the real file's seven measures each their own way", () => {
-    const cases = [
-      ["fuel_duty_rise_deferral", "Fuel duty rises deferred", "cost", ".pchg-svg"],
-      ["state_pension_income_tax_protection", "State Pension income tax protection", "cost", ".pchg-svg"],
-      ["plan_2_threshold_unfreeze", "Plan 2 student loan threshold unfrozen", "cost", ".pchg-svg"],
-      ["threshold_freeze_2031_32", "Threshold freeze to 2031-32", "revenue", ".pchg-table"],
-      ["warm_home_discount_top_up", "Warm Home Discount top-up", "cost", ".pchg-ba", "£150£250+£100"],
-      ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "cost", ".pchg-ba", "5%0%−5 points"],
-      ["road_fuel_vat_cut", "VAT cut on road fuel", "cost", ".pchg-ba", "20%15%−5 points"],
-    ];
-    for (const [id, name, direction, selector, values] of cases) {
-      render(<PolicyCards policies={[published(id, name, direction)]} selectedPolicies={[id]} parameterTables={file} />);
+  it("draws every measure in the real file in one form: tiles with the change, a plot only where it varies by year", () => {
+    for (const [id, entry] of Object.entries(file.measures)) {
+      render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
       // The card (its modelling note has list items of its own)
-      const item = document.querySelector(".policy-card");
-      expect(item.querySelector(selector), id).toBeTruthy();
-      if (values) {
-        const tiles = [...item.querySelectorAll(".pchg-tile-value, .pchg-tile .pchg-chip")].map((node) => node.textContent).join("");
-        expect(tiles, id).toBe(values);
-      }
+      const block = document.querySelector(".policy-card .pchg");
+      expect(block, id).toBeTruthy();
+      expect([...block.children].map((child) => child.classList[0]).slice(0, 2), id).toEqual(["pchg-head", "pchg-ba"]);
+      expect(block.querySelectorAll(".pchg-tile"), id).toHaveLength(2);
+      expect(block.querySelector(".pchg-tile.is-after .pchg-chip"), id).toBeTruthy();
+      const main = entry.rows.find((row) => row.primary) ?? entry.rows[0];
+      const changes = new Set(main.points.filter((p) => p.before !== p.after).map((p) => `${p.before}|${p.after}`));
+      expect(Boolean(block.querySelector(".pchg-svg")), id).toBe(changes.size > 1);
+      // Every table behind a button
+      expect(block.querySelector("table"), id).toBeNull();
       cleanup();
     }
+  });
+
+  it("shows the real file's single changes as their two values", () => {
+    const cases = [
+      ["warm_home_discount_top_up", "£150£250+£100"],
+      ["domestic_electricity_zero_vat", "5%0%−5 points"],
+      ["threshold_freeze_2031_32", "£12,830£12,570−£260"],
+      ["unearned_income_rates_up", "10.75%12.75%+2 points"],
+    ];
+    for (const [id, values] of cases) {
+      if (!file.measures[id]) continue;
+      render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
+      const item = document.querySelector(".policy-card");
+      const tiles = [...item.querySelectorAll(".pchg-tile-value, .pchg-tile .pchg-chip")].map((node) => node.textContent).join("");
+      expect(tiles, id).toBe(values);
+      cleanup();
+    }
+  });
+
+  it("gives each of the eight candidate measures, as the real file describes it, its summary, timing, category, what changes and caveats", () => {
+    const eight = [
+      ["fuel_duty_rise_deferral", "Fuel duty rises deferred", "Fuel duty", "January 2027"],
+      ["state_pension_income_tax_protection", "State Pension income tax protection", "Income tax", "April 2027"],
+      ["warm_home_discount_top_up", "Warm Home Discount top-up", "Energy", "Winter 2026-27"],
+      ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "VAT", "October 2026"],
+      ["threshold_freeze_2031_32", "Threshold freeze to 2031-32", "Income tax", "April 2031"],
+      ["plan_2_threshold_unfreeze", "Plan 2 student loan threshold unfrozen", "Student loans", "April 2027"],
+      ["employer_nics_secondary_threshold_raise", "Employer NI threshold raised", "National Insurance", "April 2027"],
+      ["unearned_income_rates_up", "Dividend, savings and property income tax up", "Income tax", "April 2027"],
+    ];
+    for (const [id, name, category, starts] of eight) {
+      // The published description (reforms.py's, as the file carries it),
+      // not the entry's own copy: a drift between the two fails here
+      const measure = { ...published(id, name), description: file.measures[id].description };
+      render(<PolicyCards policies={[measure]} selectedPolicies={[id]} parameterTables={file} />);
+      const item = document.querySelector(".policy-card");
+      expect(item.querySelector(".policy-card-summary"), id).toHaveTextContent(detailsById[id].summary);
+      expect(item.querySelector(".policy-card-summary.is-full"), id).toBeNull();
+      expect(item.querySelector(".policy-card-topline"), id).toHaveTextContent(new RegExp(`^${category}$`));
+      expect(item.querySelector(".policy-card-start"), id).toHaveTextContent(starts);
+      expect(within(item).getByRole("region", { name: /^What changes/ }), id).toBeTruthy();
+      expect(item.querySelector(".policy-card-details"), id).toBeTruthy();
+      cleanup();
+    }
+  });
+
+  it("names the incidence, benefit cap and Budget 2025 caveats on the three new measures", () => {
+    expect(detailsById.employer_nics_secondary_threshold_raise.details).toMatch(/total cost of employment fixed.*higher wages/);
+    expect(detailsById.lha_unfreeze_2027.details).toMatch(/benefit cap still applies/);
+    expect(detailsById.unearned_income_rates_up.details).toMatch(/on top of the rises Budget 2025 legislated/);
+    for (const id of ["lha_unfreeze_2027", "employer_nics_secondary_threshold_raise", "unearned_income_rates_up"]) {
+      expect(detailsById[id].source.href, id).toMatch(/^https:\/\/www\.(gov|legislation\.gov)\.uk\//);
+    }
+  });
+
+  it("says which year the tiles show only where the change varies by year", () => {
+    const block = within(card(rising)).getByRole("region", { name: /^What changes/ });
+    expect(block.querySelector(".pchg-ba-label")).toHaveTextContent(/^A threshold, 2027-28$/);
+    expect(block.querySelector(".pchg-tile.is-after")).toHaveTextContent("With the policy£1,100+£100");
   });
 
   it("leads fuel duty with its plot: the dates and the yearly averages only when asked", () => {
@@ -415,8 +475,10 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(screen.queryByRole("table")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Show the dates" }));
     const dates = screen.getByRole("table");
-    // From 1 January 2027 on: the timeline's first day equals current law, so is left out
-    expect(within(dates).getAllByRole("row")).toHaveLength(10);
+    // From 1 January 2027 on: the timeline's first day equals current law,
+    // so is left out; 1 January, 1 March and 1 April 2027, then each April
+    // to 2031
+    expect(within(dates).getAllByRole("row")).toHaveLength(8);
     expect(within(dates).getAllByRole("row")[1]).toHaveTextContent("1 January 202755.95p52.95p−3p");
     fireEvent.click(screen.getByRole("button", { name: "Show the yearly averages" }));
     const averages = screen.getByRole("table", { name: /As modelled/ });
@@ -449,5 +511,44 @@ describe("the card's frame", () => {
     const arrow = screen.getByRole("listitem").querySelector(".ptl-arrow");
     fireEvent.mouseEnter(arrow);
     expect(document.getElementById(arrow.getAttribute("aria-describedby"))).toHaveTextContent("No end date");
+  });
+
+  it("keeps every card's sections in one order, whatever it has", () => {
+    const ids = ["warm_home_discount_top_up", "fuel_duty_rise_deferral", "threshold_freeze_2031_32", "plan_2_threshold_unfreeze"];
+    const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
+    const bare = { ...published("domestic_electricity_zero_vat", "Zero VAT"), description: "An older run's wording." };
+    render(
+      <PolicyCards
+        policies={[...ids.map((id) => published(id, id)), bare]}
+        selectedPolicies={[...ids, bare.id]}
+        parameterTables={file}
+        onShowEffect={() => {}}
+      />,
+    );
+    const selector = CARD_SECTIONS.map((name) => `.${name}`).join(", ");
+    for (const item of document.querySelectorAll(".policy-cards > .policy-card")) {
+      const found = [...item.querySelectorAll(selector)].map((node) => CARD_SECTIONS.find((name) => node.classList.contains(name)));
+      const ranks = found.map((name) => CARD_SECTIONS.indexOf(name));
+      expect(ranks, found.join(" ")).toEqual([...ranks].sort((a, b) => a - b));
+      // Each section once, and the title, summary and effect on every card
+      expect(new Set(found).size).toBe(found.length);
+      for (const name of ["policy-card-name", "policy-card-summary", "policy-card-effect"]) expect(found).toContain(name);
+      // The footer last, so it can sit at the bottom
+      expect(item.lastElementChild).toHaveClass("policy-card-foot");
+    }
+    // A card with details has every section
+    const full = [...document.querySelectorAll(".policy-cards > .policy-card")].find((item) => !item.classList.contains("is-bare"));
+    for (const name of CARD_SECTIONS) expect(full.querySelector(`.${name}`), name).toBeTruthy();
+  });
+
+  it("makes cards in a row one height, their sections in line and the footer at the bottom", () => {
+    const css = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
+    const rule = (selector) => css.match(new RegExp(`\\n${selector.replace(/[.]/g, "\\.")} \\{([^}]*)\\}`))?.[1] ?? "";
+    expect(rule(".policy-cards")).toMatch(/display: grid;/);
+    expect(rule(".policy-cards")).toMatch(/align-items: stretch;/);
+    expect(rule(".policy-card")).toMatch(/display: grid;[\s\S]*grid-row: span 5;[\s\S]*grid-template-rows: subgrid;/);
+    expect(rule(".policy-card-foot")).toMatch(/align-self: end;/);
+    expect(css).toMatch(/\.policy-card > \.policy-card-foot \{ grid-row: 5; \}/);
+    expect(css).not.toMatch(/\.policy-card\.is-bare \{[^}]*align-self/);
   });
 });

@@ -1,6 +1,6 @@
 /**
  * The 650 Westminster constituencies (July 2024 boundaries) and the region
- * each lies in, for the Household impact form's constituency picker.
+ * each lies in, for the Household calculator form's constituency picker.
  *
  * The household API takes a region, not a constituency: the picked seat
  * sets the region the form sends, and nothing else, so a request is the same

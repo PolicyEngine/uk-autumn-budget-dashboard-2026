@@ -1,6 +1,6 @@
-"""An income tax allowance of the full new State Pension for people whose
-only income is the State Pension: the default design of
-``state_pension_income_tax_protection``. Hand-written.
+"""An income tax allowance of the full new State Pension for people over
+State Pension age whose total income is at most that allowance: the
+default design of ``state_pension_income_tax_protection``. Hand-written.
 
 One modifier in a module of its own: see the package docstring.
 """
@@ -17,42 +17,47 @@ def state_pension_only_income_tax_allowance(
     allowance_2029=13697,
     allowance_2030=14040,
     allowance_2031=14391,
-    other_income_limit=0,
-    disregard_savings_interest=True,
+    other_income_limit=None,
+    total_income_at_most_allowance=True,
+    disregard_savings_interest=False,
 ):
     """A personal allowance of the full new State Pension, from April 2027,
-    for people over State Pension age whose only income is the State
-    Pension. Hand-written: the allowance template withdraws against total
-    income above a threshold, and cannot test what the income is.
+    for people over State Pension age whose total income is at most that
+    allowance. Hand-written: the allowance template withdraws against total
+    income above a threshold, and cannot take the whole allowance away.
 
-    The design reported on 26 October 2026 (BBC; The Times): "a new tax
-    allowance for low-income pensioners" of £13,036, the full new State
-    Pension, rising with it, for pensioners "wholly reliant on the State
-    Pension"; those with private pensions still pay income tax. Each year's
-    allowance is the engine's full new State Pension (weekly rate x 52)
-    rounded up to the pound, so someone whose only income is the full new
-    State Pension has no taxable income.
+    The design: the reporting of 26 October 2026 (BBC; The Times) gave "a
+    new tax allowance for low-income pensioners" of £13,036, the full new
+    State Pension, rising with it, for pensioners "wholly reliant on the
+    State Pension"; the Telegraph then reported that "officials have
+    broadened it" to pensioners with other income, "provided their total
+    income stays below the threshold" (GB News, 27 October 2026). Each
+    year's allowance is the engine's full new State Pension (weekly rate x
+    52) rounded up to the pound.
 
     A person qualifies if over State Pension age, receiving a State
-    Pension, with other income of at most ``other_income_limit``. Other
-    income is total income (Income Tax Act 2007 s. 23) less the State
-    Pension, and less savings interest while ``disregard_savings_interest``
-    is set: with the allowance at the full State Pension, the starting rate
-    for savings and the personal savings allowance already leave such a
-    person's interest untaxed, and HMRC does not see most of it. A
-    qualifying person whose State Pension is above the full new rate
-    (increments, protected payments) is taxed on the excess.
+    Pension, and, while ``total_income_at_most_allowance`` is set, with
+    total income (Income Tax Act 2007 s. 23: the State Pension, with any
+    increments, protected payment or additional State Pension, plus every
+    other income) at or below the year's allowance. Such a person has no
+    taxable income, so pays no income tax. Above it there is no allowance:
+    £1 of income above the threshold takes the whole allowance away, and a
+    State Pension above the full new rate (increments, the old basic State
+    Pension with SERPS) is itself above it. Savings interest counts unless
+    ``disregard_savings_interest`` is set (the reported test is on total
+    income).
 
-    The test is a cliff: £1 of other income above the limit takes the whole
-    allowance away. The alternatives switch by argument: a large
-    ``other_income_limit`` gives the allowance to everyone over State
-    Pension age with a State Pension, whatever their other income.
+    The alternatives switch by argument: ``other_income_limit`` adds a test
+    on income other than the State Pension (0, with the total-income test
+    off and savings interest disregarded, is the sole-income design
+    reported on 26 October); with both tests off, everyone over State
+    Pension age with a State Pension gets the allowance.
 
     The allowance keeps the native taper above £100,000 of adjusted net
-    income, as the standard allowance does. Only ``personal_allowance``
-    changes, and only for those who qualify:
-    an eligible person keeps the larger of the allowance and the previous
-    formula's, so it composes with other allowance measures.
+    income, as the standard allowance does (it binds only when the tests
+    are off). Only ``personal_allowance`` changes, and only for those who
+    qualify: an eligible person keeps the larger of the allowance and the
+    previous formula's, so it composes with other allowance measures.
     """
     native = sim.tax_benefit_system.get_variable("personal_allowance")
     allowances = {
@@ -69,14 +74,14 @@ def state_pension_only_income_tax_allowance(
         if year not in allowances:
             return current
         state_pension = person("state_pension", period)
-        other = person("total_income", period) - state_pension
+        total = person("total_income", period)
         if disregard_savings_interest:
-            other = other - person("savings_interest_income", period)
-        eligible = (
-            person("is_SP_age", period)
-            & (state_pension > 0)
-            & (other <= other_income_limit)
-        )
+            total = total - person("savings_interest_income", period)
+        eligible = person("is_SP_age", period) & (state_pension > 0)
+        if other_income_limit is not None:
+            eligible = eligible & (total - state_pension <= other_income_limit)
+        if total_income_at_most_allowance:
+            eligible = eligible & (total <= allowances[year])
         # The native £100,000 taper still applies, which matters only when
         # a large limit opens the allowance to higher incomes.
         pa = parameters(
