@@ -152,13 +152,13 @@ Object.assign(SOURCES, {
     label: "HM Treasury, Budget 2026",
     url: "https://www.gov.uk/government/publications/budget-2026-document",
   },
-  // HM Treasury's policy costings, certified by the OBR: the figures the
-  // reconciliation gate compares (public/data/official_costings.json). The
-  // gov.uk page of the Budget's supporting documents, which holds the
-  // Policy costings PDF (28 October 2026)
+  // HM Treasury's Budget 2026 policy costings, certified by the OBR,
+  // published 28 October 2026 (the policy costings PDF from gov.uk's
+  // supporting documents page): the figures the reconciliation gate compares
+  // (public/data/official_costings.json, from Table 6.1)
   obr_budget_2026_costings: {
     label: "the official Autumn Budget 2026 costings (HM Treasury, certified by the OBR)",
-    url: "https://www.gov.uk/government/publications/supporting-documents-for-budget-2026",
+    url: "https://assets.publishing.service.gov.uk/media/6ae1883fe4367e5c8b0467df/AB26_Policy_Costing.pdf",
   },
   ons_ashe: {
     label: "ONS, Annual Survey of Hours and Earnings",
