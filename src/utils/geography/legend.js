@@ -6,7 +6,7 @@
  * from a stylesheet, so the exported file renders on its own.
  */
 
-import { CATEGORIES, CATEGORY_LABELS, TOO_UNCERTAIN } from "./classify";
+import { CATEGORIES, TOO_UNCERTAIN } from "./classify";
 import { OUTCOME_LABELS } from "./format";
 import {
   APPROXIMATE_DOT_COLOUR,
@@ -14,9 +14,7 @@ import {
   HATCH_COLOURS,
   NO_DATA_FILL,
   NO_DATA_STROKE,
-  WITHHELD_FILL,
   WITHHELD_PATTERN_ID,
-  UNCERTAIN_FILL,
   approximateColourPatternId,
   approximatePatternId,
 } from "./palette";
@@ -135,20 +133,18 @@ const BAR_HEIGHT = 10;
 const GRADIENT_ID = "map-legend-gradient";
 
 /**
- * The legend's status entries, after the scale: too uncertain, then the
- * textures, each over a gain and a loss colour, so they cannot be read as
- * a size of change.
+ * The legend's entries after the scale, as the page's key: one No data
+ * swatch (not published, or too uncertain to place on the scale), then the
+ * approximate dots over a gain and a loss colour, so they cannot be read
+ * as a size of change. Little change is on the scale, at its 0.
  */
 export function legendEntries() {
   return [
-    { fill: CATEGORY_COLOURS.little_change, stroke: NO_DATA_STROKE, label: CATEGORY_LABELS.little_change },
-    { fill: UNCERTAIN_FILL, label: CATEGORY_LABELS[TOO_UNCERTAIN] },
+    { fill: NO_DATA_FILL, stroke: NO_DATA_STROKE, label: "No data: not published, or too few survey households" },
     {
       halves: [`url(#${approximatePatternId("large_gain")})`, `url(#${approximatePatternId("large_loss")})`],
       label: "Approximate: dotted, few survey households",
     },
-    { fill: WITHHELD_FILL, label: "Not published: hatched, confidentiality" },
-    { fill: NO_DATA_FILL, stroke: NO_DATA_STROKE, label: "No data: blank" },
   ];
 }
 

@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import { parseGeographyTable } from "./parse";
 import {
   NO_DATA_FILL,
-  WITHHELD_FILL,
   approximateFill,
 } from "./palette";
-import { cardLines, constituencySentence, describeSeat, movesNoSeat, seatCard, noSeatMovedNote, seatStates, seatStyle, seatSummary } from "./seats";
+import { TOO_UNCERTAIN } from "./classify";
+import { cardLines, constituencySentence, describeSeat, drawnAsNoData, movesNoSeat, seatCard, noSeatMovedNote, seatStates, seatStyle, seatSummary } from "./seats";
 import { geographyFixture } from "../../test/geographyFixture";
+import { CHART_COLOURS } from "../chartTheme";
 
 const constituency = parseGeographyTable(geographyFixture("constituency.csv"), {
   level: "constituency",
@@ -36,8 +37,16 @@ describe("seat states", () => {
     });
   });
 
-  it("draw withheld seats hatched, approximate ones dotted, missing ones as no data", () => {
-    expect(seatStyle(states.get("Z14000003")).fill).toBe(WITHHELD_FILL);
+  it("draw withheld, too uncertain and missing seats as No data, approximate ones dotted", () => {
+    // One No data swatch on the map (Vahid, 28 October): a withheld seat is
+    // never coloured, with or without the continuous scale
+    expect(seatStyle(states.get("Z14000003")).fill).toBe(NO_DATA_FILL);
+    expect(seatStyle(states.get("Z14000003"), () => CHART_COLOURS.gain).fill).toBe(NO_DATA_FILL);
+    expect(states.get("Z14000004").category).toBe(TOO_UNCERTAIN);
+    expect(seatStyle(states.get("Z14000004"), () => CHART_COLOURS.gain).fill).toBe(NO_DATA_FILL);
+    expect(["Z14000003", "Z14000004", "Z14000006"].every((code) => drawnAsNoData(states.get(code)))).toBe(true);
+    expect(drawnAsNoData(states.get("Z14000001"))).toBe(false);
+    expect(drawnAsNoData(states.get("Z14000002"))).toBe(false);
     // Status is a texture, never a change of colour.
     expect(seatStyle(states.get("Z14000002"))).toMatchObject({
       fill: approximateFill("small_gain"),
@@ -60,7 +69,7 @@ describe("seat states", () => {
     };
     const withheld = { kind: "withheld", row: null, category: null };
     const { lines } = describeSeat({ feature, state: withheld, regional, ...options });
-    expect(lines).toEqual([{ kind: "note", text: "Not published: too few survey households" }]);
+    expect(lines).toEqual([{ kind: "note", text: "No data: not published, too few survey households" }]);
   });
 
   it("label the regional figure as the region's, approximate where it is", () => {

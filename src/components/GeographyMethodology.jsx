@@ -68,8 +68,8 @@ function GeographyMethodology() {
             "Not published",
             <>
               Some figures are not published, to protect the confidentiality
-              of survey respondents. The map hatches these constituencies, and
-              the tables mark them.
+              of survey respondents. The map shows these constituencies as no
+              data, and the tables mark them.
             </>,
             EyeOff,
           ],
@@ -81,7 +81,7 @@ function GeographyMethodology() {
                 `little change: under ${percent.small} of income (${pounds.small} a year) either way;`,
                 `small change: up to ${percent.large} (${pounds.large});`,
                 "large change: more.",
-                "A constituency is coloured only when its interval lies within one category or two neighbouring ones; otherwise it is too uncertain to classify.",
+                "A constituency is coloured only when its interval lies within one category or two neighbouring ones; otherwise it is too uncertain to classify, and the map shows it as no data.",
               ],
             },
             Palette,

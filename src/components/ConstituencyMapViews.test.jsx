@@ -119,13 +119,16 @@ describe("ConstituencyMap views", () => {
   it("highlights the seats a key entry covers, and says how many", async () => {
     const { container } = await renderMap();
     const key = screen.getByRole("group", { name: "Key" });
-    const segment = key.querySelector('[data-key="kind:withheld"]');
+    // The one No data chip: not published, no row, or too uncertain
+    const segment = key.querySelector('[data-key="no-data"]');
     fireEvent.mouseEnter(segment);
     const dimmed = CODES.filter((code) => seatPath(container, code).getAttribute("data-dim") === "true");
     const lit = CODES.filter((code) => !dimmed.includes(code));
     expect(lit.length).toBeGreaterThan(0);
     expect(dimmed.length).toBeGreaterThan(0);
     expect(within(key).getByText(`${lit.length} ${lit.length === 1 ? "seat" : "seats"}`)).toBeInTheDocument();
+    // Withheld, too uncertain and no row alike
+    expect(lit).toEqual(expect.arrayContaining(["Z14000003", "Z14000004", "Z14000006"]));
     fireEvent.mouseLeave(segment);
     expect(container.querySelector('path[data-dim="true"]')).toBeNull();
   });
@@ -222,12 +225,14 @@ describe("constituencyInfo", () => {
     expect(national.how[0]).toMatch(/enhanced Family Resources Survey/);
     const how = local.how.join(" ");
     expect(how).toMatch(/90% interval from 1,000 bootstrap resamples/);
-    // The breaks and the dotted / hatched rules (30 effective, 10
-    // households) are said once, in the key's tip: About this chart points there
-    expect(how).toMatch(/approximate \(dotted\) or not published \(hatched\)/);
-    expect(how).not.toMatch(/either way|30 effective|10 survey households/);
-    expect(how).toMatch(/How to read the key/);
-    expect(local.definitions.map((d) => d.term ?? d.ref)).toContain("Hex map");
+    // No data and the dotted rule (10 households, 30 effective) are said
+    // here, once: the key has only the scale and a No data chip
+    expect(how).toMatch(/^.*No data: the figure is not published/);
+    expect(how).toMatch(/under 10 survey households/);
+    expect(how).toMatch(/Dotted constituencies are approximate: .*under 30 effective survey households/);
+    expect(how).not.toMatch(/either way|hatched/);
+    expect(local.definitions.map((d) => d.term ?? d.ref)).toEqual(expect.arrayContaining(["Hex map", "No data"]));
+    expect(local.definitions.map((d) => d.term ?? d.ref)).not.toContain("Too uncertain");
     // A release that routes nothing by area: what it shows, no method
     expect(constituencyInfo({ ...base, notRouted: true }).how).toBeUndefined();
   });

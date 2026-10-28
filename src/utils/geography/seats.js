@@ -4,10 +4,14 @@
  *
  * A seat's state comes only from its own published row:
  *
- * - `reported` or `approximate`: the row's category colour, solid when
- *   reported and under a dot texture when approximate;
- * - `withheld`: hatched, with no figure;
+ * - `reported` or `approximate`: the row's colour, solid when reported and
+ *   under a dot texture when approximate;
+ * - `withheld`: drawn as No data, with no figure;
  * - `no-data`: no row at all, drawn as such and never given a value.
+ *
+ * A seat too uncertain to place on the scale is drawn as No data too, so
+ * the key is the colour scale and one No data swatch (Vahid, 28 October);
+ * its card still gives its figure and interval.
  */
 
 import { TOO_UNCERTAIN, classifyRow } from "./classify";
@@ -17,8 +21,6 @@ import {
   CATEGORY_COLOURS,
   NO_DATA_FILL,
   NO_DATA_STROKE,
-  UNCERTAIN_FILL,
-  WITHHELD_FILL,
   approximateColourFill,
   approximateFill,
 } from "./palette";
@@ -136,20 +138,33 @@ export function constituencySentence(states, { outcome, yearLabel, several = fal
 const PLAIN_STROKE = Object.freeze({ stroke: CHART_COLOURS.surface, strokeWidth: 0.05 });
 
 /**
- * How a seat is drawn. `fill` is an attribute value: a colour, a dotted
- * pattern's url() for an approximate seat, or the hatch's for a withheld
- * one. With `colourOf` (a value to a #rrggbb colour, the map's continuous
- * scale) a seat takes its figure's colour, and an approximate seat's
- * `dots` names the colour its dot texture needs; a seat too uncertain to
- * classify is mid grey. Without it, its category's colour.
+ * Whether the map draws a seat as No data: no row, not published (the
+ * disclosure guard: never a colour, which on a map reads as a value), or
+ * too uncertain to place on the scale.
+ */
+export function drawnAsNoData(state) {
+  return !state || state.kind === "no-data" || state.kind === "withheld" || state.category === TOO_UNCERTAIN;
+}
+
+const NO_DATA_STYLE = Object.freeze({
+  fill: NO_DATA_FILL,
+  fillOpacity: 1,
+  stroke: NO_DATA_STROKE,
+  strokeWidth: 0.3,
+});
+
+/**
+ * How a seat is drawn. `fill` is an attribute value: a colour, or a dotted
+ * pattern's url() for an approximate seat; a seat drawn as No data
+ * (drawnAsNoData) is blank and outlined. With `colourOf` (a value to a
+ * #rrggbb colour, the map's continuous scale) a seat takes its figure's
+ * colour, and an approximate seat's `dots` names the colour its dot
+ * texture needs. Without it, its category's colour.
  */
 export function seatStyle(state, colourOf) {
-  const colour = () => {
-    if (!colourOf) return null;
-    if (state.category === TOO_UNCERTAIN) return UNCERTAIN_FILL;
-    return colourOf(state.row?.value);
-  };
-  switch (state?.kind) {
+  if (drawnAsNoData(state)) return { ...NO_DATA_STYLE };
+  const colour = () => (colourOf ? colourOf(state.row?.value) : null);
+  switch (state.kind) {
     case "reported":
       return { fill: colour() ?? CATEGORY_COLOURS[state.category], fillOpacity: 1, ...PLAIN_STROKE };
     case "approximate": {
@@ -161,15 +176,8 @@ export function seatStyle(state, colourOf) {
         ...PLAIN_STROKE,
       };
     }
-    case "withheld":
-      return { fill: WITHHELD_FILL, fillOpacity: 1, ...PLAIN_STROKE };
     default:
-      return {
-        fill: NO_DATA_FILL,
-        fillOpacity: 1,
-        stroke: NO_DATA_STROKE,
-        strokeWidth: 0.3,
-      };
+      return { ...NO_DATA_STYLE };
   }
 }
 
@@ -182,7 +190,9 @@ export function seatSummary(state) {
 }
 
 /** The card's line for a seat with no published figure. */
-export const WITHHELD_SEAT_NOTE = "Not published: too few survey households";
+export const WITHHELD_SEAT_NOTE = "No data: not published, too few survey households";
+/** The card's line for a seat drawn as No data for a figure too uncertain to place on the scale. */
+export const UNCERTAIN_SEAT_NOTE = "No data on the map: too uncertain to place on the scale";
 /** A By policy row for a measure withheld in this seat, and its tooltip. */
 export const WITHHELD_MEASURE_NOTE = "Not published";
 export const WITHHELD_MEASURE_TITLE =
@@ -348,7 +358,12 @@ export function seatCard({ feature, state, table, regional, reform, year, outcom
     policiesHeading: listed ? (shownMeasure ? OTHER_POLICIES_HEADING : PACKAGE_PARTS_HEADING) : null,
     byPolicy: listed ? byPolicy : [],
     unchanged: listed ? unchanged : [],
-    note: disclosureNote(state.row),
+    note:
+      state.category === TOO_UNCERTAIN
+        ? `${UNCERTAIN_SEAT_NOTE}; ${
+            disclosureNote(state.row) ?? `90% interval ${formatInterval(state.row.outcome, state.row.lo, state.row.hi)}`
+          }`
+        : disclosureNote(state.row),
   };
 }
 

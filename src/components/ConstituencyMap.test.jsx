@@ -14,8 +14,7 @@ import { exportMapAsSvg } from "../utils/exportMapAsSvg";
 import { resetGeographyCache } from "../hooks/useGeographyData";
 import {
   NO_DATA_FILL,
-  UNCERTAIN_FILL,
-  WITHHELD_FILL,
+  NO_DATA_STROKE,
   approximateColourFill,
   approximateColourPatternId,
   approximatePatternId,
@@ -116,13 +115,16 @@ describe("ConstituencyMap", () => {
     );
   });
 
-  it("hatches withheld seats and never colours them", async () => {
+  it("draws withheld seats as No data and never colours them", async () => {
     const { container } = await renderMap();
     const withheld = seat(container, "Z14000003");
-    expect(withheld.getAttribute("fill")).toBe(WITHHELD_FILL);
-    expect(withheld.getAttribute("fill")).toBe("url(#withheld-hatch)");
+    // One No data swatch for not published, no row and too uncertain
+    // (Vahid, 28 October): blank, outlined, never a colour on the scale
+    expect(withheld.getAttribute("fill")).toBe(NO_DATA_FILL);
+    expect(withheld.getAttribute("stroke")).toBe(NO_DATA_STROKE);
     expect(withheld.getAttribute("data-state")).toBe("withheld");
     expect(withheld.style.fill).toBe("");
+    expect(seat(container, "Z14000006").getAttribute("fill")).toBe(NO_DATA_FILL);
   });
 
   it("colours seats on the 2025 dashboard's continuous scale, and dots an approximate seat's colour", async () => {
@@ -143,7 +145,9 @@ describe("ConstituencyMap", () => {
     expect(dots.querySelector("rect").getAttribute("fill")).toBe(approximate);
     expect(dots.querySelector("circle")).not.toBeNull();
     expect(dots.id).not.toMatch(/[\d:]/);
-    expect(fill("Z14000004")).toBe(UNCERTAIN_FILL);
+    // Too uncertain to place on the scale: the No data swatch, not a grey
+    // that reads as a size of change
+    expect(fill("Z14000004")).toBe(NO_DATA_FILL);
     expect(fill("Z14000005")).toBe(SCALE_COLOURS.loss.toLowerCase());
     expect(fill("Z14000007")).toBe(SCALE_COLOURS.neutral);
     expect(fill("Z14000008")).toBe(scaleColour("0.0004", 0.01));
@@ -182,14 +186,13 @@ describe("ConstituencyMap", () => {
       "\u22121%",
       "0%",
       "+1%",
-      "Too uncertain to classify",
+      "No data: not published, or too few survey households",
       "Approximate: dotted, few survey households",
-      "Not published: hatched, confidentiality",
-      "No data: blank",
     ]) {
       expect(text).toContain(entry);
     }
-    expect(legend.querySelector(`rect[fill="${WITHHELD_FILL}"]`)).not.toBeNull();
+    expect(text).not.toMatch(/Too uncertain|Little change|hatched/);
+    expect(legend.querySelector(`rect[fill="${NO_DATA_FILL}"]`)).not.toBeNull();
     // Status swatches carry texture over a gain and a loss colour, so none
     // reads as a size of change.
     expect(
@@ -214,8 +217,8 @@ describe("ConstituencyMap", () => {
     const { container } = await renderMap();
     const map = container.querySelector('svg[role="img"]');
     // On screen the key is HTML, outside the map's SVG: a gradient from
-    // loss to gain labelled at its ends and 0, then chips for too
-    // uncertain and the three status textures
+    // loss to gain labelled at its ends and 0, then one No data chip
+    // (Vahid, 28 October: the colour scale plus No data)
     const key = screen.getByRole("group", { name: "Key" });
     expect(map.contains(key)).toBe(false);
     expect(key).toHaveTextContent("Change in household net income, % of income");
@@ -223,15 +226,13 @@ describe("ConstituencyMap", () => {
     expect(key).not.toHaveTextContent("Loss");
     expect(key).not.toHaveTextContent("Gain");
     expect(key).not.toHaveTextContent("0.1%");
-    expect(key.querySelectorAll("button[data-key]")).toHaveLength(5);
-    expect(key).toHaveTextContent("Too uncertain");
-    // Little change has its own entry, in the light grey of £0; too uncertain is
-    // mid grey, in both views (Pavel's review, MAP1)
-    expect(key).toHaveTextContent("Little change");
+    expect([...key.querySelectorAll("button[data-key]")].map((chip) => chip.textContent)).toEqual(["No data"]);
+    // Little change is the scale's 0; approximate is said in About this chart
+    expect(key).not.toHaveTextContent("Too uncertain");
+    expect(key).not.toHaveTextContent("Little change");
     expect(key).not.toHaveTextContent("Shown by pattern:");
-    expect(key).toHaveTextContent("Approximate");
-    expect(key).toHaveTextContent("Not published");
-    expect(key).toHaveTextContent("No data");
+    expect(key).not.toHaveTextContent("Approximate");
+    expect(key).not.toHaveTextContent("Not published");
     expect(key).not.toHaveTextContent("Reported");
     // The SVG carries no logo of its own; the card's logo row does
     expect(map.querySelector("image")).toBeNull();
@@ -341,6 +342,8 @@ describe("ConstituencyMap", () => {
     fireEvent.click(seat(container, "Z14000004"));
     const card = tooltip(container);
     expect(card.querySelector(".seat-card-note")).toHaveTextContent("90% interval −0.9% to 1.7%");
+    // Drawn as No data on the map, its card says why, and keeps its figure
+    expect(card.querySelector(".seat-card-note")).toHaveTextContent(/^No data on the map: too uncertain to place on the scale; /);
     expect(card).not.toHaveTextContent("The interval includes zero");
     expect(card).not.toHaveTextContent("Map category");
   });
@@ -352,7 +355,7 @@ describe("ConstituencyMap", () => {
     expect(within(card).getByRole("heading")).toHaveTextContent("Westmoor");
     const lines = [...card.querySelectorAll("p")].map((line) => line.textContent);
     expect(lines).toEqual([
-      "Not published: too few survey households",
+      "No data: not published, too few survey households",
       "Regional figure for London, not an estimate for this constituency: +0.71% (0.52% to 0.94%)",
     ]);
   });
@@ -427,7 +430,7 @@ describe("ConstituencyMap", () => {
     expect(tooltip(container)).not.toHaveTextContent("90% interval");
   });
 
-  it("follows the year, keeping hatched seats hatched", async () => {
+  it("follows the year, keeping withheld seats as No data", async () => {
     const { container, rerender } = await renderMap();
     rerender(
       <ConstituencyMap selectedPolicies={ALL} selectedYear={2030} policies={POLICIES} />,
@@ -438,7 +441,8 @@ describe("ConstituencyMap", () => {
       ),
     );
     expect(seat(container, "Z14000002").getAttribute("data-state")).toBe("no-data");
-    expect(seat(container, "Z14000003").getAttribute("fill")).toBe(WITHHELD_FILL);
+    expect(seat(container, "Z14000003").getAttribute("data-state")).toBe("withheld");
+    expect(seat(container, "Z14000003").getAttribute("fill")).toBe(NO_DATA_FILL);
     expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("2030-31");
   });
 
@@ -590,7 +594,7 @@ describe("ConstituencyMap", () => {
     expect(header.split(",")[0]).toBe("area_code");
   });
 
-  it("exports the hatch, the legend and the selected seat's card", async () => {
+  it("exports the No data seats, the legend and the selected seat's card", async () => {
     const { container } = await renderMap();
     fireEvent.click(seat(container, "Z14000003"));
     fireEvent.click(screen.getByRole("button", { name: "Download chart: Constituency impacts, 2029-30" }));
@@ -600,12 +604,11 @@ describe("ConstituencyMap", () => {
     expect(filename).toBe("constituency-impacts-2029-30");
     const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
     const root = doc.documentElement;
-    expect(root.querySelector(":scope > svg > defs > pattern#withheld-hatch")).not.toBeNull();
     expect(
       root.querySelector('path[data-code="Z14000003"]').getAttribute("fill"),
-    ).toBe("url(#withheld-hatch)");
+    ).toBe(NO_DATA_FILL);
     expect(root.querySelector("g.map-legend").textContent).toContain(
-      "Not published: hatched, confidentiality",
+      "No data: not published, or too few survey households",
     );
     // The exported file carries the dot textures its approximate seats use.
     expect(
@@ -621,7 +624,7 @@ describe("ConstituencyMap", () => {
       .map((line) => line.textContent)
       .join(" ");
     expect(card).toBe(
-      "Westmoor Not published: too few survey households Regional figure for London, not an estimate " +
+      "Westmoor No data: not published, too few survey households Regional figure for London, not an estimate " +
         "for this constituency: +0.71% (0.52% to 0.94%)",
     );
     expect(svgText).not.toMatch(/NaN|undefined/);
