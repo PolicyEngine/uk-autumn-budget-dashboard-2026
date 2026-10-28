@@ -50,7 +50,7 @@ export const UNMODELLED_MEASURES = [
     name: "National Living Wage and National Minimum Wage up 3.9%",
     starts: "1 April 2027",
     changes:
-      "The National Living Wage rises from £12.71 to £13.21 an hour. The rate for 18 to 20-year-olds rises to £11.27, the rate for 16 and 17-year-olds and eligible apprentices to £8.31, and the accommodation offset to £11.53 a day. Employers pay the new rates.",
+      "The National Living Wage rises from £12.71 to £13.21 an hour, with rises in the younger and apprentice rates too. Employers pay the new rates.",
     reaches: "Around 2.3 million workers, a provisional government estimate.",
     household:
       "£910 a year more before tax for a full-time worker on the National Living Wage (Budget); less after tax and, on Universal Credit, a lower award.",
@@ -65,9 +65,9 @@ export const UNMODELLED_MEASURES = [
     name: "Universal Credit surplus earnings threshold kept at £2,500",
     starts: "1 April 2027, for one year",
     changes:
-      "The surplus earnings threshold for Universal Credit claimants in Great Britain stays at £2,500 for a further year, to the end of March 2028, rather than falling to £300 as legislated.",
+      "The Universal Credit surplus earnings threshold in Great Britain stays at £2,500 to March 2028, rather than falling to £300 as legislated.",
     reaches:
-      "Universal Credit claimants whose pay in a month is high enough to end their award, and who claim again within six months.",
+      "Universal Credit claimants reclaiming within six months of high monthly pay ending their award.",
     household:
       "With the threshold at £2,500, not £300, earnings up to £2,500 above where an award stops, such as a one-off bonus, are not carried into a new claim.",
     costings: [{ row: 8, values: [0, -140, 0, 0, 0, 0] }],
@@ -80,7 +80,7 @@ export const UNMODELLED_MEASURES = [
     name: "Parental Allowance for fathers, partners and adopters",
     starts: "April 2029",
     changes:
-      "Parental pay is extended to eligible self-employed fathers, partners and adopters in Great Britain, who cannot claim it today. It also covers people who do not qualify for statutory paternity or adoption pay because they started work recently, are recently unemployed or have a broken or irregular pattern of work, if they have enough work and earnings history.",
+      "Parental pay is extended to eligible self-employed fathers, partners and adopters in Great Britain, and to some with recent or irregular work, who cannot claim it today.",
     reaches: "Over 150,000 parents a year, on the government's estimate.",
     household:
       "A self-employed father or partner could receive two weeks of pay after a birth, currently worth up to £194 a week, on the Treasury's description.",
@@ -100,7 +100,7 @@ export const UNMODELLED_MEASURES = [
     name: "Tax-free mileage rates raised",
     starts: "6 April 2026 and 6 April 2027",
     changes:
-      "For employees and self-employed people who use their own car or van for work, the tax-free rate for the first 10,000 business miles is 55p a mile, up from 45p: a temporary rate from 6 April 2026, now made permanent. Above 10,000 miles it rises from 25p to 35p a mile from 6 April 2027.",
+      "The tax-free 55p a mile for the first 10,000 business miles in a worker's own car or van is made permanent; above 10,000 it rises from 25p to 35p.",
     reaches: "Around 2 million employees and 1 million self-employed people, on the government's estimate.",
     household:
       "Less income tax for people driving their own vehicle for work: £120 a year for 6,000 business miles, up to £300 for 15,000 (Treasury, basic rate, 2027-28).",
@@ -113,7 +113,7 @@ export const UNMODELLED_MEASURES = [
     name: "Single bus fares capped at £2 in England outside London",
     starts: "1 January 2027, for one year",
     changes:
-      "Single fares on participating bus services in England outside London are capped at £2 for one year from 1 January 2027. Until then most single fares there are capped at £3.",
+      "Single fares on participating bus services in England outside London are capped at £2 for one year from 1 January 2027; most are capped at £3 until then.",
     reaches: "Bus passengers in England outside London, on participating services.",
     household:
       "For a household that pays single fares above £2 on participating services, the same journeys cost less; its income does not change.",
@@ -139,7 +139,7 @@ export const UNMODELLED_MEASURES = [
     name: "Gas standing charges to be abolished",
     starts: "By the end of 2027, or as soon as possible after",
     changes:
-      "The government has asked Ofgem to abolish standing charges on domestic gas bills in Great Britain. The Budget puts the standing charge at £108 a year on average for a typical billpayer. Suppliers are to recover the costs through gas unit rates instead, and the government will set out targeted mitigation. Electricity standing charges are to be reformed, with details in 2027.",
+      "Ofgem is asked to abolish standing charges on domestic gas bills in Great Britain, £108 a year on average; suppliers recover the costs through unit rates instead.",
     reaches: "Around 23 million homes, on the government's estimate.",
     household:
       "Before mitigation, bills fall for light users and rise for heavy ones; the Treasury puts about 60% of account-holding households at £45 a year less, with no figure for others.",
@@ -161,9 +161,9 @@ export const UNMODELLED_MEASURES = [
     name: "Cash ISA limit kept at £20,000",
     starts: "6 April 2027",
     changes:
-      "A planned cut in the annual cash ISA limit, to £12,000 for savers under 65 from 6 April 2027, does not go ahead: the limit stays at £20,000 for everyone.",
+      "A planned cut in the cash ISA limit to £12,000 for savers under 65 does not go ahead: the limit stays at £20,000.",
     reaches:
-      "Savers under 65 who would pay more than £12,000 a year into cash ISAs. On HMRC's figures, 22% of cash ISA subscribers under 65 paid in more than £12,000 in 2022-23.",
+      "Cash ISA savers under 65; 22% of them paid in over £12,000 in 2022-23.",
     household:
       "Interest in a cash ISA is free of income tax. Savers under 65 can keep paying up to £20,000 a year into one, rather than £12,000.",
     costings: [{ row: 11, values: [0, -5, -20, -35, -50, -70] }],
@@ -182,9 +182,9 @@ export const UNMODELLED_MEASURES = [
     name: "First Time Buyer ISA, and a lower Lifetime ISA withdrawal charge",
     starts: "29 October 2026 (charge) and 6 April 2029 (new ISA)",
     changes:
-      "From 6 April 2029 a First Time Buyer ISA replaces the Lifetime ISA for new savers. It takes up to £4,000 a year and pays a 25% government bonus, capped at £20,000, when the savings go towards a first home worth up to £450,000; it has no upper age limit. From 29 October 2026, Lifetime ISA holders buying a first home above the £450,000 cap pay a 20% withdrawal charge rather than 25%.",
+      "From April 2029 a First Time Buyer ISA with a 25% bonus replaces the Lifetime ISA. From October 2026, the Lifetime ISA charge on homes over £450,000 falls to 20%.",
     reaches:
-      "People saving for a first home. Existing Lifetime ISA holders can keep paying into and using their accounts, with the lower charge on homes above £450,000.",
+      "People saving for a first home, including existing Lifetime ISA holders.",
     household:
       "The bonus adds to a buyer's deposit, not their income, and is paid when the savings are withdrawn for the purchase.",
     costings: [
@@ -199,7 +199,7 @@ export const UNMODELLED_MEASURES = [
     name: "Adjusted Triple Lock for the State Pension",
     starts: "April 2030",
     changes:
-      "The State Pension rises each year by the highest of 2.5%, inflation, or the increase needed to keep its value relative to earnings at the level reached in April 2029. Until then it rises by the highest of 2.5%, inflation or earnings growth.",
+      "The State Pension rises by the highest of 2.5%, inflation, or the rise that keeps its value relative to earnings at its April 2029 level.",
     reaches: "Current and future State Pension recipients, from April 2030.",
     household:
       "The pension rises by at least the higher of 2.5% and inflation; above its April 2029 level relative to earnings, it rises less than earnings when earnings outpace both.",
@@ -221,7 +221,7 @@ export const UNMODELLED_MEASURES = [
     name: "Company car tax rates up 1 percentage point in 2030-31",
     starts: "6 April 2030",
     changes:
-      "The appropriate percentages for company cars in 2030-31 are 1 percentage point above those for 2029-30 in every band: 10% rather than 9% for zero-emission cars and 20% rather than 19% for cars emitting 1 to 50g CO2/km, up to a maximum of 40%.",
+      "Company car tax percentages for 2030-31 are 1 percentage point above 2029-30's in every band, up to a maximum of 40%.",
     reaches: "Employees with a company car.",
     household:
       "An employee pays more income tax on the same company car: the share of its list price that is taxed rises by 1 percentage point.",
@@ -234,9 +234,9 @@ export const UNMODELLED_MEASURES = [
     name: "Business Asset Disposal Relief lifetime limit cut to £500,000",
     starts: "6 April 2027",
     changes:
-      "The lifetime limit on gains that qualify for Business Asset Disposal Relief, which charges Capital Gains Tax at 18% on qualifying disposals, falls from £1 million to £500,000.",
+      "The lifetime limit on gains taxed at Business Asset Disposal Relief's 18% falls from £1 million to £500,000.",
     reaches:
-      "People selling all or part of a qualifying business. The government says three-quarters of claimants will receive the relief on their entire gain; for the others, gains above £500,000 are taxed at the main rates.",
+      "People selling a qualifying business; three-quarters of claimants keep the relief on their whole gain.",
     household:
       "Lifetime qualifying gains above £500,000 pay the main Capital Gains Tax rates (18% or 24%) rather than the relief's 18%.",
     costings: [{ row: 60, values: [5, 60, 180, 255, 280, 305] }],
@@ -252,7 +252,7 @@ export const UNMODELLED_MEASURES = [
     name: "Machine Games Duty up from 20% to 25% on higher-stake machines",
     starts: "1 April 2027",
     changes:
-      "The duty on machine games with stakes over £1 or prizes over £100 rises from 20% to 25%. From 1 April 2028, machine suppliers become liable for the duty on machines they own under profit-sharing arrangements.",
+      "The duty on machine games with stakes over £1 or prizes over £100 rises from 20% to 25%; suppliers become liable on some machines from April 2028.",
     reaches: "Venues with higher-stake machines, which the Budget says are commonly found in adult gaming centres.",
     household:
       "The duty is charged on the businesses that run the machines; any effect on households comes through the stakes and prizes offered, or as owners and staff.",
@@ -265,8 +265,8 @@ export const UNMODELLED_MEASURES = [
     name: "Online marketplaces to collect the tax on UK sellers' sales",
     starts: "1 October 2027",
     changes:
-      "Online marketplaces become responsible for collecting VAT on sales by UK VAT-registered businesses, and by any other UK business with sales of at least £90,000 a year on the platform. The rules do not apply to personal sales, second-hand goods or sales between businesses.",
-    reaches: "UK businesses selling through online marketplaces that are VAT-registered or sell at least £90,000 a year on a platform.",
+      "Online marketplaces collect VAT on sales by UK VAT-registered sellers and those selling £90,000 a year or more on the platform, but not on personal or second-hand sales.",
+    reaches: "UK businesses selling through online marketplaces above the VAT or £90,000 threshold.",
     household:
       "The VAT rate does not change: the marketplace collects the VAT these sellers owe. Personal sales and second-hand goods are outside the rules.",
     costings: [{ row: 46, values: [0, 165, 320, 270, 250, 265] }],
@@ -279,7 +279,7 @@ export const UNMODELLED_MEASURES = [
     name: "Business rates relief for pubs, social clubs and live music venues up to 35%",
     starts: "1 April 2027",
     changes:
-      "Business rates relief for pubs, social clubs and live music venues in England rises by 20 percentage points, from 15% to 35%. Live music venues with a rateable value of £1 million or more keep the 15% relief.",
+      "Business rates relief for pubs, social clubs and most live music venues in England rises from 15% to 35%.",
     reaches: "Pubs, social clubs and all but the very largest live music venues in England.",
     household:
       "Business rates are paid by businesses on their property, not by households. The Budget puts the relief at an average of over £3,000 per pub next year.",
@@ -293,7 +293,7 @@ export const UNMODELLED_MEASURES = [
     name: "Your First Home equity loan scheme",
     starts: "April 2027",
     changes:
-      "A new £4.7 billion scheme gives first-time buyers in England government equity loans of up to 20%, with a deposit of 2.5% (15% at most) and a five-year interest-free period. Income caps are £110,000 a household outside London and £140,000 inside it. Price caps follow local median prices, with £650,000 in inner London and £500,000 in outer London.",
+      "A £4.7 billion scheme gives first-time buyers in England government equity loans of up to 20%, with a 2.5% deposit and five years interest-free.",
     reaches: "Around 70,000 first-time buyers, on the government's estimate.",
     household:
       "A smaller deposit and a government loan of up to 20%, interest-free for five years; the Budget says the typical buyer saves hundreds of pounds a month.",
@@ -312,7 +312,7 @@ export const UNMODELLED_MEASURES = [
     name: "Bank Corporation Tax Surcharge up from 3% to 6% for 15 months",
     starts: "1 January 2027, for 15 months",
     changes:
-      "The surcharge on banks' profits rises from 3% to 6% from 1 January 2027 to 31 March 2028, and returns to 3% from 1 April 2028. It helps fund the £100 energy payment to households and the zero rate of VAT on household electricity.",
+      "The surcharge on banks' profits rises from 3% to 6% from 1 January 2027 to 31 March 2028, helping fund the £100 energy payment and zero-rated electricity.",
     reaches: "Banks that pay the surcharge.",
     household: "The surcharge is a tax on banks' profits, not on households.",
     costings: [{ row: 55, values: [305, 950, 220, 0, 0, 0] }],

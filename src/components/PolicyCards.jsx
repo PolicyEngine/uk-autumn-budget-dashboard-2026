@@ -355,7 +355,7 @@ export function PolicyCard({ policy, onShowEffect, parameters }) {
         </dl>
         </>
         )}
-        {policy.inForce && (
+        {policy.inForce && policy.timeline !== false && (
           <PolicyTimeline policy={policy} highlight={highlight} />
         )}
       </div>
@@ -453,6 +453,7 @@ export function PolicyCard({ policy, onShowEffect, parameters }) {
             ))}
           </p>
         )}
+        {(policy.source || policy.budgetRows?.length > 0 || onShowEffect) && (
         <div className="policy-card-actions">
           {policy.source && (
             <Tip content={policy.source.label}>
@@ -496,6 +497,7 @@ export function PolicyCard({ policy, onShowEffect, parameters }) {
             </button>
           )}
         </div>
+        )}
       </div>
     </li>
   );
