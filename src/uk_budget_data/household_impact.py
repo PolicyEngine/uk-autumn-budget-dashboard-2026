@@ -1328,9 +1328,11 @@ def run_scenario(
     and out, so it can run in a worker process."""
     from policyengine_uk import Simulation
 
+    from uk_budget_data.forecast import with_forecast
+
     simulation = Simulation(
         situation=household_situation(people, benunit, household, year, axes),
-        scenario=side_scenario(side),
+        scenario=with_forecast(side_scenario(side)),
     )
 
     def rate_part_values():

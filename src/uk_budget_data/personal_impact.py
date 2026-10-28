@@ -22,6 +22,7 @@ from typing import Callable, Optional
 from policyengine_uk import Simulation
 from policyengine_uk.utils.scenario import Scenario
 
+from uk_budget_data.forecast import with_forecast
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.reforms import (
     get_autumn_budget_2026_reforms,
@@ -278,7 +279,7 @@ def create_simulation(
         scenario["simulation_modifier"] = simulation_modifier
     return Simulation(
         situation=situation,
-        scenario=Scenario(**scenario) if scenario else None,
+        scenario=with_forecast(Scenario(**scenario) if scenario else None),
     )
 
 
@@ -310,12 +311,13 @@ def household_simulations(
     return (
         Simulation(
             situation=situation,
-            scenario=effective(
-                reform.baseline_scenario_for(config, uses_config)
+            scenario=with_forecast(
+                effective(reform.baseline_scenario_for(config, uses_config))
             ),
         ),
         Simulation(
-            situation=situation, scenario=effective(reform.to_scenario())
+            situation=situation,
+            scenario=with_forecast(effective(reform.to_scenario())),
         ),
     )
 
@@ -405,7 +407,7 @@ def simulate_years(situation: dict, years: list[int], scenario) -> dict:
     """One simulation's metrics for each of ``years``: built once, and each
     year read from it as built (``AsBuilt``). Runs in a worker process when
     the calculator has more than one."""
-    sim = Simulation(situation=situation, scenario=scenario)
+    sim = Simulation(situation=situation, scenario=with_forecast(scenario))
     built = AsBuilt(sim)
     metrics = {}
     for year in years:

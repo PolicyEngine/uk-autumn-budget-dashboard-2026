@@ -1,0 +1,193 @@
+"""The OBR October 2026 forecast every simulation is built on.
+
+Checks the stored values against the EFO tables they cite, and that the
+forecast reaches the baseline and the reform alike. Household simulations
+only: no microsimulation.
+"""
+
+import pytest
+from policyengine_uk import Simulation
+from policyengine_uk.utils.scenario import Scenario
+
+from uk_budget_data.forecast import (
+    forecast_parameter_changes,
+    forecast_record,
+    with_forecast,
+)
+
+OBR = "gov.economic_assumptions.yoy_growth.obr."
+INPUTS = "gov.economic_assumptions.statutory_uprating_inputs."
+YEARS = range(2026, 2032)
+
+# EFO October 2026, Table A.1 (page 180), calendar years 2026 to 2031.
+TABLE_A1 = {
+    "consumer_price_index": [3.1, 3.4, 2.1, 2.1, 2.0, 2.0],
+    "rpi": [3.6, 4.3, 3.0, 3.0, 2.3, 2.2],
+    "average_earnings": [3.7, 3.0, 2.2, 2.3, 2.5, 2.6],
+    "house_prices": [2.1, 2.4, 2.8, 2.8, 2.7, 2.7],
+}
+# Table A.2 (page 181): change since March, 2026 to 2030.
+TABLE_A2 = {
+    "consumer_price_index": [0.8, 1.5, 0.1, 0.1, 0.0],
+    "rpi": [0.5, 1.3, 0.3, 0.1, 0.0],
+    "average_earnings": [0.4, 0.6, 0.1, 0.1, 0.1],
+    "house_prices": [-0.3, -0.5, 0.1, 0.2, 0.3],
+}
+# Table A.3 (page 181): the triple-lock guarantee, 2026-27 to 2031-32,
+# the highest of Q2 earnings growth, Q3 CPI and 2.5%, in that calendar year.
+TRIPLE_LOCK = {
+    2026: 3.9,
+    2027: 3.4,
+    2028: 2.5,
+    2029: 2.5,
+    2030: 2.5,
+    2031: 2.6,
+}
+
+H = {
+    "people": {"p": {"age": {2026: 70}}},
+    "benunits": {"b": {"members": ["p"]}},
+    "households": {"h": {"members": ["p"]}},
+}
+
+
+@pytest.fixture(scope="module")
+def current_law():
+    return Simulation(situation=H).tax_benefit_system.parameters
+
+
+@pytest.fixture(scope="module")
+def october():
+    return Simulation(
+        situation=H, scenario=with_forecast(None)
+    ).tax_benefit_system.parameters
+
+
+def test_stored_values_are_table_a1():
+    changes = forecast_parameter_changes()
+    for series, row in TABLE_A1.items():
+        stored = changes[OBR + series]
+        assert [
+            stored[f"{y}-01-01.{y}-12-31"] for y in YEARS
+        ] == pytest.approx([v / 100 for v in row]), series
+
+
+def test_engine_march_values_are_the_same_rows(current_law):
+    """October minus the change since March gives the engine's value: the
+    rows chosen are the rows the engine stores (to 0.1pp rounding)."""
+    for series, change in TABLE_A2.items():
+        engine = current_law.get_child(OBR + series)
+        for i, year in enumerate(range(2026, 2031)):
+            march = TABLE_A1[series][i] - change[i]
+            assert engine(f"{year}-01-01") * 100 == pytest.approx(
+                march, abs=0.11
+            ), (series, year)
+
+
+def test_the_forecast_reaches_the_growth_rates(october):
+    for series, row in TABLE_A1.items():
+        for year, value in zip(YEARS, row):
+            assert october.get_child(OBR + series)(
+                f"{year}-01-01"
+            ) == pytest.approx(value / 100), (series, year)
+
+
+def test_published_statutory_inputs_are_kept(october, current_law):
+    for name, instant in (
+        ("cpi_september", "2026-09-01"),
+        ("awe_total_pay_may_july", "2026-07-01"),
+    ):
+        assert october.get_child(INPUTS + name)(
+            instant
+        ) == current_law.get_child(INPUTS + name)(instant)
+    assert october.get_child(INPUTS + "cpi_september")("2026-09-01") == 0.035
+    assert (
+        october.get_child(INPUTS + "awe_total_pay_may_july")("2026-07-01")
+        == 0.039
+    )
+
+
+def test_triple_lock_matches_table_a3(october):
+    def published(rate):
+        return round(rate * 1000) / 10
+
+    for year, guarantee in TRIPLE_LOCK.items():
+        cpi = published(
+            october.get_child(INPUTS + "cpi_september")(f"{year}-09-01")
+        )
+        awe = published(
+            october.get_child(INPUTS + "awe_total_pay_may_july")(
+                f"{year}-07-01"
+            )
+        )
+        assert max(cpi, awe, 2.5) == pytest.approx(guarantee), year
+
+
+def test_state_pension_follows_the_triple_lock(october):
+    amount = october.gov.dwp.state_pension.new_state_pension.amount
+    for year in range(2027, 2032):
+        ratio = amount(f"{year + 1}-06-01") / amount(f"{year}-06-01")
+        assert ratio == pytest.approx(
+            1 + TRIPLE_LOCK[year] / 100, abs=1e-4
+        ), year
+
+
+def test_baseline_and_reform_get_the_same_forecast():
+    """A measure that changes nothing gives the same parameters on both
+    sides, and both are October's, not the engine's March."""
+    baseline = Simulation(situation=H, scenario=with_forecast(None))
+    reform = Simulation(
+        situation=H, scenario=with_forecast(Scenario(parameter_changes={}))
+    )
+    path = INPUTS + "cpi_september"
+    for year in range(2027, 2031):
+        instant = f"{year}-09-01"
+        assert baseline.tax_benefit_system.parameters.get_child(path)(
+            instant
+        ) == reform.tax_benefit_system.parameters.get_child(path)(instant)
+    for year in (2027, 2028, 2029):
+        assert baseline.calculate(
+            "state_pension", year
+        ).sum() == pytest.approx(reform.calculate("state_pension", year).sum())
+
+
+def test_a_measure_wins_over_the_forecast():
+    changed = with_forecast(
+        Scenario(
+            parameter_changes={OBR + "rpi": {"2030-01-01.2030-12-31": 0.05}}
+        )
+    )
+    assert (
+        changed.parameter_changes[OBR + "rpi"]["2030-01-01.2030-12-31"] == 0.05
+    )
+    assert (
+        changed.parameter_changes[OBR + "rpi"]["2027-01-01.2027-12-31"]
+        == 0.043
+    )
+
+
+def test_every_simulation_route_uses_the_forecast(monkeypatch):
+    """The national builder passes the forecast on every side, current law
+    included."""
+    from uk_budget_data import pipeline
+
+    seen = []
+    monkeypatch.setattr(
+        pipeline.pe.uk,
+        "managed_microsimulation",
+        lambda **kwargs: seen.append(kwargs["scenario"]),
+    )
+    pipeline.build_microsimulation(None, None)
+    pipeline.build_microsimulation(None, Scenario(parameter_changes={}))
+    for scenario in seen:
+        assert scenario.parameter_changes[OBR + "consumer_price_index"] == (
+            forecast_parameter_changes()[OBR + "consumer_price_index"]
+        )
+        assert scenario.applied_before_data_load
+
+
+def test_record_names_its_source():
+    record = forecast_record()
+    assert record["vintage"] == "OBR EFO October 2026"
+    for entry in record["parameter_changes"].values():
+        assert entry["source"].startswith("Table A.")
