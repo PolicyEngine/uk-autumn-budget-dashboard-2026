@@ -24,7 +24,6 @@ import {
   parseDistribution,
   positionSummary,
   percentileOn,
-  lowerCount,
   missingPackageNote,
   PERCENTILE_DEFINITION,
   percentileWords,
