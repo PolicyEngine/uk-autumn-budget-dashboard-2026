@@ -455,6 +455,7 @@ describe("ConstituencyMap", () => {
     expect(
       await screen.findByText("Constituency results for this combination of policies are not published yet."),
     ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Policy:/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
     expect(screen.queryByRole("radiogroup", { name: "Policy" })).toBeNull();
     expect(screen.getByRole("radiogroup", { name: "View" })).toBeInTheDocument();
@@ -466,6 +467,7 @@ describe("ConstituencyMap", () => {
     // The fixture's rows are the package's (the manifest's combined entry
     // of exactly the selected policies), so the seats are drawn from it
     expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: selected policies$/);
+    expect(screen.queryByRole("button", { name: /^Policy:/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
     expect(screen.queryByRole("radiogroup", { name: "Policy" })).toBeNull();
   });
@@ -846,24 +848,28 @@ describe("exportMapAsSvg", () => {
     it("lists the combined run, then each selected policy with its own results, combined by default", async () => {
       vi.stubGlobal("fetch", geographyFetch({ "/data/constituency.csv": withSingles() }));
       const { container } = await renderMap();
-      const pill = screen.getByRole("button", { name: /^Options:/ });
-      expect(pill).toHaveTextContent(/^All selected · /);
+      // The policy is its own pill beside Options (Vahid, 28 October),
+      // never folded into the Options summary
+      const pill = screen.getByRole("button", { name: "Policy: All selected policies" });
+      expect(screen.getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^% of income · Hex map$/);
       expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: selected policies$/);
       fireEvent.click(pill);
-      const group = screen.getByRole("radiogroup", { name: "Policy" });
-      expect([...group.querySelectorAll('[role="radio"]')].map((radio) => radio.textContent)).toEqual([
+      const list = screen.getByRole("listbox", { name: "Policy" });
+      expect(within(list).getAllByRole("option").map((option) => option.textContent)).toEqual([
         "All selected policies",
         "2 child limit repeal",
         "Rail fares freeze",
       ]);
-      expect(screen.getByRole("radio", { name: "All selected policies" })).toHaveAttribute("aria-checked", "true");
+      expect(within(list).getByRole("option", { name: "All selected policies" })).toHaveAttribute("aria-selected", "true");
       // Selected is fill and weight, never a tick
-      expect(group.textContent).not.toMatch(/\u2713|\u2714/);
-      fireEvent.click(screen.getByRole("radio", { name: "2 child limit repeal" }));
+      expect(list.textContent).not.toMatch(/\u2713|\u2714/);
+      fireEvent.click(within(list).getByRole("option", { name: "2 child limit repeal" }));
       await waitFor(() =>
         expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: 2 child limit repeal$/),
       );
-      expect(screen.getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^2 child limit repeal · /);
+      expect(screen.getByRole("button", { name: "Policy: 2 child limit repeal" })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+      expect(screen.queryByRole("radiogroup", { name: "Policy" })).toBeNull();
     });
 
     it("offers only the selected policies, with All selected policies listed but unavailable until its map is published (AH1)", async () => {
@@ -875,13 +881,12 @@ describe("exportMapAsSvg", () => {
         expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: Rail fares freeze$/),
       );
       expect(screen.getByText(ONE_POLICY_NOTE)).toBeInTheDocument();
-      fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
-      const group = screen.getByRole("radiogroup", { name: "Policy" });
-      expect([...group.querySelectorAll('[role="radio"]')].map((radio) => radio.textContent)).toEqual(["All selected policies", "Rail fares freeze"]);
-      expect(screen.getByRole("radio", { name: "All selected policies" })).toBeDisabled();
-      expect(screen.getByText("All selected policies: published later on Budget day")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /^Policy:/ }));
+      const list = screen.getByRole("listbox", { name: "Policy" });
+      expect(within(list).getAllByRole("option").map((option) => option.textContent)).toEqual(["All selected policies", "Rail fares freeze"]);
+      expect(within(list).getByRole("option", { name: "All selected policies" })).toHaveAttribute("aria-disabled", "true");
       // Never the singles summed: the map stays on the one policy's own run
-      expect(screen.getByRole("radio", { name: "Rail fares freeze" })).toHaveAttribute("aria-checked", "true");
+      expect(within(list).getByRole("option", { name: "Rail fares freeze" })).toHaveAttribute("aria-selected", "true");
     });
 
     it("places the key beside the map from 640px, and under it on a phone", async () => {

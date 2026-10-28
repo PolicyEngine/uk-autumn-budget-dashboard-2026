@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render as renderReact, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render as renderReact, screen, waitFor, within } from "@testing-library/react";
 import ConstituencyMap from "./ConstituencyMap";
 import { resetGeographyCache } from "../hooks/useGeographyData";
 import { geographyFetch, geographyFixture } from "../test/geographyFixture";
@@ -117,10 +117,10 @@ describe("ConstituencyMap on Budget day", () => {
     );
     expect(screen.queryByText(/combination of policies are not published/)).toBeNull();
     expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: 2 child limit repeal$/);
-    expect(screen.getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^2 child limit repeal · /);
+    expect(screen.getByRole("button", { name: "Policy: 2 child limit repeal" })).toBeInTheDocument();
   });
 
-  it("offers each selected policy with results in the Options pill, and follows the choice", async () => {
+  it("offers each selected policy with results in the Policy pill, and follows the choice", async () => {
     vi.stubGlobal(
       "fetch",
       geographyFetch({ "/data/constituency.csv": budgetDayTable(), "/data/regional.csv": 404 }),
@@ -131,22 +131,22 @@ describe("ConstituencyMap on Budget day", () => {
     await waitFor(() =>
       expect(container.querySelectorAll("path.constituency-path[data-state]")).toHaveLength(8),
     );
-    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
-    const group = screen.getByRole("radiogroup", { name: "Policy" });
+    fireEvent.click(screen.getByRole("button", { name: /^Policy:/ }));
+    const list = screen.getByRole("listbox", { name: "Policy" });
     // No combined run is published (listed first, unavailable: AH1), and
     // fuel duty has no constituency rows
-    expect([...group.querySelectorAll('[role="radio"]')].map((radio) => radio.textContent)).toEqual([
+    expect(within(list).getAllByRole("option").map((option) => option.textContent)).toEqual([
       "All selected policies",
       "2 child limit repeal",
       "Rail fares freeze",
     ]);
-    expect(screen.getByRole("radio", { name: "All selected policies" })).toBeDisabled();
-    expect(screen.getByRole("radio", { name: "2 child limit repeal" })).toHaveAttribute("aria-checked", "true");
-    fireEvent.click(screen.getByRole("radio", { name: "Rail fares freeze" }));
+    expect(within(list).getByRole("option", { name: "All selected policies" })).toHaveAttribute("aria-disabled", "true");
+    expect(within(list).getByRole("option", { name: "2 child limit repeal" })).toHaveAttribute("aria-selected", "true");
+    fireEvent.click(within(list).getByRole("option", { name: "Rail fares freeze" }));
     await waitFor(() =>
       expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: Rail fares freeze$/),
     );
-    expect(screen.getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^Rail fares freeze · /);
+    expect(screen.getByRole("button", { name: "Policy: Rail fares freeze" })).toBeInTheDocument();
     expect(
       screen.getByText("No constituency shows a change large enough to publish for this policy in 2029-30."),
     ).toBeInTheDocument();

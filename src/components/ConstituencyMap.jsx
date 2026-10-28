@@ -86,6 +86,7 @@ import { CHART_COLOURS } from "../utils/chartTheme";
 import { FloatingTooltip } from "./FloatingTooltip";
 import TitleIcon from "./TitleIcon";
 import Tip, { InfoTip } from "./Tip";
+import PillSelect from "./PillSelect";
 
 const CHART_TITLE = "Constituency impacts";
 // The Policy option for all the selected policies before their map is
@@ -1128,32 +1129,36 @@ export default function ConstituencyMap({
       </UnavailableNotice>
     ) : null;
 
-  // The card's choices, in its one Options pill: which published run of
-  // the header's selection (when there is more than one), how the change
-  // is shown, and the view
+  // The card's choices. Which published run of the header's selection
+  // (when there is more than one) is its own Policy pill beside Options
+  // (Vahid, 28 October), so the policy shown is never folded into a
+  // summary; Options keeps how the change is shown and the view.
   // Several policies selected and no map for all of them yet (it runs last
   // on Budget day): All selected policies is listed first, unavailable, and
   // the card shows one policy at a time. Singles are never summed (Pavel's
   // review, AH1; #274 item 12)
   const combinedPending =
     selectedPolicies.length > 1 && policyOptions.length > 0 && !policyOptions.some((option) => option.value === COMBINED_CHOICE);
-  const optionGroups = [
-    (policyOptions.length > 1 || combinedPending) && {
-      label: "Policy",
-      value: policyValue,
-      onChange: setPolicyChoice,
-      stacked: true,
-      options: [
+  const policyPill = (policyOptions.length > 1 || combinedPending) && (
+    <PillSelect
+      variant="light"
+      name="Policy"
+      prefix="Policy"
+      value={policyValue}
+      onChange={setPolicyChoice}
+      options={[
         ...(combinedPending
-          ? [{ value: COMBINED_PENDING, label: "All selected policies", disabled: true, title: "published later on Budget day" }]
+          ? [{ value: COMBINED_PENDING, label: "All selected policies", disabled: true, title: "Published later on Budget day" }]
           : []),
         ...policyOptions.map((option) =>
           option.value === COMBINED_CHOICE
-            ? { value: option.value, label: "All selected policies", summary: "All selected" }
+            ? { value: option.value, label: "All selected policies" }
             : { value: option.value, label: policyName(option.value) },
         ),
-      ],
-    },
+      ]}
+    />
+  );
+  const optionGroups = [
     {
       label: "Show the change as",
       value: outcome,
@@ -1219,11 +1224,14 @@ export default function ConstituencyMap({
       {/* Rows shared with the card beside it: controls, plot, legend,
           then the logo. */}
       <div className="chart-controls">
-        {/* The same row in every view: the Options pill (measure, how the
-            change is shown, and the view) and the search box, which picks
-            a seat on a map and filters the table */}
+        {/* The same row in every view: the Policy pill (when there is a
+            choice), the Options pill (how the change is shown, and the
+            view) and the search box, which picks a seat on a map and
+            filters the table */}
         <div className="map-top-bar">
-          <ControlBar name={CHART_TITLE} options={optionGroups} />
+          <ControlBar name={CHART_TITLE} options={optionGroups}>
+            {policyPill}
+          </ControlBar>
           <div className="map-search-section">
             <div className="search-container">
               <input
