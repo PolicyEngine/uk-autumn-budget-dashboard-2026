@@ -10,6 +10,8 @@ import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import UnavailableNotice from "./publication/UnavailableNotice";
+import WithheldDecileTick from "./WithheldDecileTick";
+import { isWithheldDecileValue, WITHHELD_DECILE_MESSAGE } from "../utils/decileWithholding";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
   barShape,
@@ -99,6 +101,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       const dataPoint = { decile };
       let netChange = 0;
       let incomplete = hasUnavailableSelection;
+      let unavailable = hasUnavailableSelection;
+      let withheld = false;
       POLICIES.forEach((policy) => {
         const isSelected = selectedPolicies.includes(policy.id);
         const dataRow = waterfallSelectedYear.find(
@@ -106,12 +110,18 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
         );
         const parsedValue = dataRow ? Number.parseFloat(dataRow.avg_change) : NaN;
         const value = isSelected && Number.isFinite(parsedValue) ? parsedValue : null;
-        if (isSelected && value === null) incomplete = true;
+        if (isSelected && value === null) {
+          incomplete = true;
+          if (dataRow && isWithheldDecileValue(dataRow.avg_change)) withheld = true;
+          else unavailable = true;
+        }
         dataPoint[policy.seriesKey] = value;
         if (value !== null) netChange += value;
       });
       dataPoint.netChange = incomplete ? null : netChange;
       dataPoint.incomplete = incomplete;
+      dataPoint.unavailable = unavailable;
+      dataPoint.withheld = withheld;
       return dataPoint;
     });
   }, [rawData, selectedPolicies, selectedYear, POLICIES, hasUnavailableSelection, catalogue]);
@@ -175,7 +185,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
             (row) => row.reform_id === policy.id && row.decile === decile,
           );
           const parsedValue = isSelected && dataRow ? Number.parseFloat(dataRow.avg_change) : NaN;
-          const value = Number.isFinite(parsedValue) ? parsedValue : 0;
+          if (!Number.isFinite(parsedValue)) return;
+          const value = parsedValue;
           if (value > 0) positiveSum += value;
           else negativeSum += value;
         });
@@ -191,6 +202,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
 
   const { domain: yAxisDomain, ticks: yAxisTicks } = calculateYAxisDomain();
   const hasIncompleteResults = data.some((point) => point.incomplete);
+  const hasUnavailableResults = data.some((point) => point.unavailable);
+  const withheldDeciles = new Set(data.filter((point) => point.withheld).map((point) => point.decile));
 
   if (!rawData || rawData.length === 0) {
     return (
@@ -290,8 +303,13 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
       {controls && <div className="chart-controls ls-controls">{controls}</div>}
 
       <div ref={chartRef} className="chart-plot">
-        {published && hasIncompleteResults && (
+        {published && hasUnavailableResults && (
           <UnavailableNotice reason="Some selected policies have no published results for this chart. The net change is unavailable." />
+        )}
+        {published && withheldDeciles.size > 0 && (
+          <p className="chart-description">
+            * Income deciles {[...withheldDeciles].map((decile) => String(decile).replace(/st|nd|rd|th/g, "")).join(", ")}: <span>{WITHHELD_DECILE_MESSAGE}</span>.
+          </p>
         )}
         {nothingChanges ? (
           // Only measures that change no household's income this year (an
@@ -312,7 +330,7 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
               <CartesianGrid {...GRID_PROPS} />
               <XAxis
                 dataKey="decile"
-                tick={TICK_STYLE}
+                tick={<WithheldDecileTick withheldDeciles={withheldDeciles} />}
                 axisLine={AXIS_LINE}
                 tickLine={false}
                 interval={0}
