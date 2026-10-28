@@ -441,9 +441,9 @@ def test_a_withheld_cell_before_the_start_year_is_an_effect(world):
         ]
 
     assert before_start() == []
-    next(
-        row for row in tables["distributional_impact"] if row["year"] < 2028
-    )["value"] = None
+    next(row for row in tables["distributional_impact"] if row["year"] < 2028)[
+        "value"
+    ] = None
     assert [p.split(":")[0] for p in before_start()] == [
         "distributional_impact"
     ]
