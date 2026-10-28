@@ -23,7 +23,7 @@ function winners(id, first) {
 const DECILES = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"];
 const relative = (id, value) => DECILES.map((decile) => ({ reform_id: id, reform_name: id, year: 2027, decile, value }));
 
-function catalogue() {
+function catalogue({ withheld = false } = {}) {
   const entry = manifestFixture.measures.alpha;
   const measures = Object.fromEntries(PAIR.map((id) => [id, { ...entry, name: id, status: "provisional", years: YEARS, unsupported_years: [] }]));
   return buildMeasureCatalogue({
@@ -43,7 +43,10 @@ function catalogue() {
     tablesByKey: {
       alpha: { winners_losers: winners("alpha", 40), distributional_impact: relative("alpha", 1) },
       beta: { winners_losers: winners("beta", 33), distributional_impact: relative("beta", 1) },
-      [KEY]: { winners_losers: winners(KEY, 1000), distributional_impact: relative(KEY, 0.5) },
+      [KEY]: {
+        winners_losers: winners(KEY, 1000).map((row) => withheld && ["1", "all"].includes(row.decile) ? { ...row, avg_change: null } : row),
+        distributional_impact: relative(KEY, 0.5).map((row) => withheld && row.decile === "1st" ? { ...row, value: null } : row),
+      },
     },
   });
 }
@@ -69,12 +72,12 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-async function renderChart() {
+async function renderChart(options) {
   // A fresh module each time: useDataFile keeps each file for the page
   const { default: IncomePositionChart } = await import("./IncomePositionChart");
   const { MeasureCatalogueProvider: Provider } = await import("../../utils/measureCatalogue");
   return render(
-    <Provider catalogue={catalogue()}>
+    <Provider catalogue={catalogue(options)}>
       <IncomePositionChart net={{ before: 20000, after: 20100 }} household={{ has_partner: false, children: [] }} year={2027} policies={PAIR} yearLabel="2027-28" />
     </Provider>,
   );
@@ -120,6 +123,23 @@ describe("Where you sit, for the published package (issue 228)", () => {
     // The combined run's 0.50% in each tenth; alpha's 1% plus beta's 1% would be 2%
     expect(alt).toMatch(/1: \+0\.50%/);
     expect(alt).not.toMatch(/2\.00%/);
+  });
+
+  it("leaves a withheld tenth unbarred and labels the withheld UK average", async () => {
+    served = { "income_distribution.csv": distribution(KEY), "income_mobility.csv": "" };
+    const { container } = await renderChart({ withheld: true });
+    await screen.findByText(/Your place in the distribution/);
+    const reason = "Not published: fewer than 3 survey households";
+    const alt = container.querySelector('[role="img"][aria-label^="Average change by tenth"]').getAttribute("aria-label");
+    expect(alt).toContain(`1: ${reason}`);
+    expect(alt).toContain("2: +0.50%");
+    const firstTick = [...container.querySelectorAll(".position-gains text")].find((text) => text.textContent.startsWith("1 *"));
+    expect(firstTick).toBeTruthy();
+    expect(firstTick.parentElement.querySelectorAll("rect")).toHaveLength(0);
+    expect(firstTick.querySelector("title")).toHaveTextContent(reason);
+    fireEvent.click(screen.getByRole("button", { name: /Options: After · By income tenth/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "Households like you" }));
+    expect(screen.getByText("Average UK household").closest(".position-compare-row")).toHaveTextContent(reason);
   });
 
   it("keys the Spread view under the plot: your tenth's band, the curve, you and the median lines", async () => {
