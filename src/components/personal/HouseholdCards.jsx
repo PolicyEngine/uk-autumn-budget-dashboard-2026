@@ -6,8 +6,10 @@ import {
   BriefcaseBusiness,
   Car,
   ChevronDown,
+  Glasses,
   LayoutGrid,
   GraduationCap,
+  HandHeart,
   HardHat,
   House,
   KeyRound,
@@ -35,6 +37,8 @@ export const EXAMPLE_ICONS = {
   car: Car,
   briefcase: BriefcaseBusiness,
   baby: Baby,
+  glasses: Glasses,
+  handHeart: HandHeart,
 };
 
 /**
@@ -51,7 +55,7 @@ const SOURCE_NAMES = {
   domestic_electricity_zero_vat: "zero VAT on electricity",
   fuel_duty_rise_deferral: "the fuel duty deferral",
   road_fuel_vat_cut: "the VAT cut on road fuel",
-  state_pension_income_tax_protection: "State Pension tax protection",
+  state_pension_income_tax_protection: "the Pension Tax Allowance",
   plan_2_threshold_unfreeze: "the Plan 2 threshold unfreeze",
   threshold_freeze_2031_32: "the threshold freeze",
   warm_home_discount_top_up: "the Warm Home Discount top-up",

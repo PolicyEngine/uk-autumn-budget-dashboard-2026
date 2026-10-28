@@ -102,10 +102,11 @@ describe("the examples' precomputed results (public/data/household_presets.json)
     // nothing before 2031-32
     expect(figures("middle-earner", 2027).top.own).toBe(false);
     expect(Math.round(figures("middle-earner", 2031).ownPart)).not.toBe(0);
-    // The part-time worker's own measure gives most of its change
-    expect(figures("part-time-worker", 2027).top).toMatchObject({ own: true });
+    // The pensioner on the full State Pension: its own measure gives most
+    // of its change
+    expect(figures("pensioner-full-state-pension", 2027).top).toMatchObject({ own: true });
     // A bar for each year a reader can choose
-    expect(figures("part-time-worker", 2027).series.map((point) => point.year)).toEqual([...SELECTABLE_YEARS]);
+    expect(figures("pensioner-full-state-pension", 2027).series.map((point) => point.year)).toEqual([...SELECTABLE_YEARS]);
   });
 });
 
