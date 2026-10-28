@@ -104,6 +104,10 @@ export const POLICY_DETAILS = [
       label: "Pension Tax Allowance explainer",
       href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer",
     },
+    explainer: {
+      label: "The Pension Tax Allowance in the Autumn Budget 2026",
+      href: "https://www.policyengine.org/uk/research/pension-tax-allowance",
+    },
     budgetRows: [52],
     example: {
       title: "Example",
