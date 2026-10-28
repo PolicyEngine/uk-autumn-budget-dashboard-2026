@@ -257,8 +257,14 @@ def test_the_fuel_duty_path_by_hand():
     assert rates["2027"] == pytest.approx(
         (117 * 0.5295 + 244 * 0.5975 + 5 * 0.6154) / 366, abs=1e-6
     )
-    # Later years are current law's own: not written
-    assert set(rates) == {"2026", "2027"}
+    # Later years are current law's own, written for every scored year
+    # (the parameter is uprated: policyengine-uk #2430)
+    assert set(rates) == {str(year) for year in POLICY_YEARS}
+    for year in POLICY_YEARS:
+        if year > 2027:
+            assert rates[str(year)] == PARAMETERS.get_child(FUEL_DUTY)(
+                f"{year}-04-30"
+            )
 
 
 def test_after_the_extension_fuel_duty_is_current_laws():
@@ -283,7 +289,7 @@ def test_the_pump_vat_defaults_are_20_percent_of_the_duty_change():
     ]
     for name, value in zip(names, defaults):
         fuel, year = name.split("_")
-        if year not in rates:
+        if int(year) not in reforms.fuel_duty_extension_years():
             # A year the measure leaves on current law
             assert value == 0.0, name
             continue

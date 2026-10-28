@@ -283,13 +283,27 @@ def fuel_duty_deferral_rates() -> dict[str, float]:
         ).items()
     }
     if FUEL_DUTY_FROZEN_UNTIL is not None:
-        last = date.fromisoformat(FUEL_DUTY_FROZEN_UNTIL)
-        # The fiscal year (from 6 April) of the last frozen day
-        last_year = (
-            last.year if (last.month, last.day) > (4, 6) else last.year - 1
-        )
-        rates = {y: r for y, r in rates.items() if int(y) <= last_year}
+        # After the extension, current law's own rates, written for every
+        # scored year: the parameter is uprated, so a bounded change would
+        # return to the old path (policyengine-uk #2430; scored_years).
+        from policyengine_uk.system import system
+
+        node = system.parameters.get_child(FUEL_DUTY)
+        for y in list(rates):
+            if int(y) not in fuel_duty_extension_years():
+                rates[y] = node(f"{y}-04-30")
     return rates
+
+
+def fuel_duty_extension_years() -> list[int]:
+    """The fiscal years (from 6 April) the 5p cut's extension touches."""
+    last = date.fromordinal(
+        date.fromisoformat(FUEL_DUTY_FROZEN_UNTIL).toordinal() - 1
+    )
+    last_year = (
+        last.year if (last.month, last.day) >= (4, 6) else last.year - 1
+    )
+    return [y for y in DEFAULT_YEARS if y <= last_year]
 
 
 def pump_vat_on_fuel_duty_deferral_defaults() -> dict[str, float]:
@@ -308,7 +322,8 @@ def pump_vat_on_fuel_duty_deferral_defaults() -> dict[str, float]:
             0.24
             * (rates[str(year)] - current[str(year)])
             / getattr(prices, fuel)(f"{year}-04-30")
-            if str(year) in rates
+            if FUEL_DUTY_FROZEN_UNTIL is None
+            or year in fuel_duty_extension_years()
             else 0.0
         )
         for year in POLICY_YEARS
