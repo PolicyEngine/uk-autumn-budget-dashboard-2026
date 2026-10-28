@@ -535,8 +535,10 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
           </div>
         ) : single ? (
           // As tall as the plot row in a pair (globals.css), else `height`;
-          // By age, with its key in the legend row, `height` as the chart beside it
-          <ResponsiveContainer width="100%" height={keyInLegend ? height : "100%"} minHeight={height}>
+          // By age, with its key in the legend row, `height` as the chart beside it.
+          // Under the unavailable notice, `height` too: at 100% it would take
+          // the plot's height, notice included, and grow without end
+          <ResponsiveContainer width="100%" height={keyInLegend || incomplete ? height : "100%"} minHeight={height}>
             <ComposedChart data={singleDrawn} margin={plotMargin(narrow)} barCategoryGap="14%" stackOffset="sign">
               <CartesianGrid {...GRID_PROPS} />
               <ReferenceArea x1="16" x2="24" fill={YOUNG_FILL} ifOverflow="visible" />
@@ -584,8 +586,10 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
           </ResponsiveContainer>
         ) : (
           // As tall as the plot row in a pair (globals.css), else `height`;
-          // By age, with its key in the legend row, `height` as the chart beside it
-          <ResponsiveContainer width="100%" height={keyInLegend ? height : "100%"} minHeight={height}>
+          // By age, with its key in the legend row, `height` as the chart beside it.
+          // Under the unavailable notice, `height` too: at 100% it would take
+          // the plot's height, notice included, and grow without end
+          <ResponsiveContainer width="100%" height={keyInLegend || incomplete ? height : "100%"} minHeight={height}>
             <ComposedChart data={data} margin={plotMargin(narrow)} stackOffset="sign">
               <CartesianGrid {...GRID_PROPS} />
               {youngLabel && <ReferenceArea x1={youngLabel} x2={youngLabel} fill={YOUNG_FILL} ifOverflow="visible" />}

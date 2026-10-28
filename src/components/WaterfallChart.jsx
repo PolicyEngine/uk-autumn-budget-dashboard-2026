@@ -278,8 +278,6 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
     image: activePolicies.length > 0,
   };
 
-  // A note shown above the plot, inside it
-  const hasPlotNote = published && (hasUnavailableResults || withheldDeciles.size > 0);
   return (
     <div className="waterfall-chart">
       <div className="chart-header">
@@ -329,13 +327,14 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
             <p>{noHouseholdChange(formatYearRange(selectedYear))}</p>
           </div>
         ) : published ? (
-          // As tall as the plot rows in a pair (globals.css), else plotHeight.
-          // With a note above it in the plot (a withheld decile, results
-          // unavailable), its own fixed height: at 100% it would take the
-          // plot's height, note included, and grow by the note's height on
-          // every measure, without end (#290, Anthony, 6479887743: All
-          // households, 2030-31, where a decile is withheld)
-          <ResponsiveContainer width="100%" height={hasPlotNote ? plotHeight : "100%"} minHeight={plotHeight}>
+          // Its own fixed height, never 100%: the withheld-deciles note's
+          // line is always above it in the plot (hidden in a year with none
+          // withheld), so at 100% it would take the plot's height, note
+          // included, and grow by the note's height on every measure,
+          // without end, and the household scatter beside it with it
+          // (#290, 6479887743, in 2030-31; then every year once the line was
+          // always kept: 2,312px to 52,629px in 20s at 1440px, 28 Oct)
+          <ResponsiveContainer width="100%" height={plotHeight}>
             <ComposedChart
               data={data}
               margin={{ ...chartMargin(narrow), bottom: key.shared ? LOGO_ROOM : 0 }}
