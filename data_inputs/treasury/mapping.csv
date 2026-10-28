@@ -1,1 +1,9 @@
 measure_id,source_id,row_id,scale,year_offset,status,reason,reviewer
+household_energy_payment_2026,AB2026-T6.1,1,1,0,,,
+domestic_electricity_zero_vat,AB2026-T6.1,2,1,0,,,
+fuel_duty_rise_deferral,AB2026-T6.1,3,1,0,,,
+carers_allowance_earnings_taper,AB2026-T6.1,7,1,0,,,
+trading_allowance_raise,AB2026-T6.1,15,1,0,,,
+state_pension_income_tax_protection,AB2026-T6.1,52,1,0,,,
+unearned_income_rates_up,AB2026-T6.1,61,1,0,,,
+unearned_income_rates_up,AB2026-T6.1,62,1,0,,,

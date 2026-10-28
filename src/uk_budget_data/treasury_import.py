@@ -130,6 +130,30 @@ def _year_label(value) -> str:
     return _text(value).translate(_DASHES)
 
 
+# A working column the Treasury hides in the published sheet, headed for
+# example "Fiscal Head check (hide)" in Budget 2026's Table 6.1. Its cells
+# ("RDEL", "SUBTOTAL", "Tax/TME") are no part of a measure's description.
+_HIDDEN_HEADER = re.compile(r"\(\s*hide\s*\)", re.IGNORECASE)
+
+
+def hidden_columns(header: tuple, head_column: int) -> set[int]:
+    """The columns the header marks "(hide)", all left of the Head column.
+
+    A hidden column among the figures is refused rather than dropped: its
+    cells could be a year the totals check never sees.
+    """
+    hidden = {
+        column
+        for column, cell in enumerate(header)
+        if _HIDDEN_HEADER.search(_text(cell))
+    }
+    if any(column >= head_column for column in hidden):
+        raise ScorecardError(
+            "a column marked '(hide)' at or right of the 'Head' column"
+        )
+    return hidden
+
+
 def _find_header(rows: list[tuple]) -> tuple[int, dict[int, str], int]:
     """Locate the header row, its fiscal-year columns and the head column."""
     for index, row in enumerate(rows):
@@ -315,6 +339,25 @@ def _mentions_a_total(label: str) -> bool:
     return bool(_TOTAL_WORD.search(_total_key(label)))
 
 
+def _total_only_in_description(label: str) -> bool:
+    """Whether a measure label uses the word total only in its description.
+
+    A Treasury measure is printed "Heading: description" ("Pension Tax
+    Allowance: Remove the income tax liability for pensioners with total
+    income up to ..."). Where the heading before the first colon has words
+    and no total, a total in the description is the policy's wording, not a
+    subtotal. Every other label that mentions a total is still refused,
+    including "Subtotal: ..." and "Net total ...".
+    """
+    heading, colon, description = label.partition(":")
+    return (
+        bool(colon)
+        and bool(re.search(r"[^\W\d_]", heading))
+        and not _mentions_a_total(heading)
+        and _mentions_a_total(description)
+    )
+
+
 def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
     """Parse a scorecard from its cell values, row by row.
 
@@ -325,6 +368,15 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
     be a heading, a note or a total, and the importer does not guess.
     """
     header_index, year_columns, head_column = _find_header(rows)
+    hidden = hidden_columns(rows[header_index], head_column)
+    if hidden:
+        rows = rows[: header_index + 1] + [
+            tuple(
+                None if column in hidden else cell
+                for column, cell in enumerate(row)
+            )
+            for row in rows[header_index + 1 :]
+        ]
     fiscal_years = [year_columns[c] for c in sorted(year_columns)]
     first_year_column = min(year_columns)
     measures: list[Measure] = []
@@ -388,10 +440,19 @@ def parse_rows(rows: list[tuple], sheet: str = "") -> Scorecard:
             raise ScorecardError(
                 f"a total label in the Head column in {row!r}; check this row"
             )
+        # On a numbered row headed Tax or Spend, a total word only in the
+        # description after "Heading:" is the measure's own wording.
+        numbered_measure = head in {"tax", "spend"} and any(
+            re.fullmatch(r"\d+[a-z]?", cell) for cell in label_cells
+        )
         if (
             total is None
             and carries_figures
-            and any(_mentions_a_total(cell) for cell in label_cells)
+            and any(
+                _mentions_a_total(cell)
+                and not (numbered_measure and _total_only_in_description(cell))
+                for cell in label_cells
+            )
         ):
             raise ScorecardError(
                 f"an unrecognised total in {row!r}; check this row"
@@ -590,6 +651,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--source-id", required=True)
     parser.add_argument("--document", required=True)
     parser.add_argument("--sheet", default=None)
+    parser.add_argument(
+        "--table",
+        default="4.1",
+        help="the table number the rows cite (default: 4.1)",
+    )
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument(
         "--static-template",
@@ -604,7 +670,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     except ScorecardError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
-    rows = source_rows(scorecard, args.source_id, args.document)
+    rows = source_rows(
+        scorecard, args.source_id, args.document, table=args.table
+    )
     write_csv(rows, args.out)
     if args.static_template:
         write_csv(

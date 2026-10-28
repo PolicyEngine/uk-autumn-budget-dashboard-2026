@@ -1313,7 +1313,7 @@
                 "value": 0.02
               }
             ],
-            "post_source": "Table A.1: Economy forecast (PDF page 183), row 'CPI' (calendar year, per cent, 1 d.p.)"
+            "post_source": "Table 1.7 Inflation, CPI (calendar year)"
           },
           {
             "key": "cpih",
@@ -1338,8 +1338,25 @@
                 "value": 0.0212
               }
             ],
-            "post": null,
-            "post_source": "OBR October 2026 (Autumn Budget): not in the EFO PDF's Table A.1; the OBR's CPIH forecast is in the detailed forecast tables (economy), not yet loaded"
+            "post": [
+              {
+                "year": "2027",
+                "value": 0.033
+              },
+              {
+                "year": "2028",
+                "value": 0.0214
+              },
+              {
+                "year": "2029",
+                "value": 0.0217
+              },
+              {
+                "year": "2030",
+                "value": 0.0214
+              }
+            ],
+            "post_source": "Table 1.7 Inflation, CPIH (calendar year)"
           },
           {
             "key": "cpi_ahc",
@@ -1425,7 +1442,7 @@
                 "value": 0.023
               }
             ],
-            "post_source": "Table A.1: Economy forecast (PDF page 183), row 'RPI' (calendar year, per cent, 1 d.p.)"
+            "post_source": "Table 1.7 Inflation, RPI (calendar year)"
           }
         ]
       },
@@ -1473,7 +1490,7 @@
                 "value": 0.025
               }
             ],
-            "post_source": "Table A.1: Economy forecast (PDF page 183), row 'Average weekly earnings' (calendar year, per cent, 1 d.p.)"
+            "post_source": "Table 1.6 Labour market, Average weekly earnings growth (per cent) (calendar year)"
           },
           {
             "key": "non_labour_income",
@@ -1498,8 +1515,25 @@
                 "value": 0.0317
               }
             ],
-            "post": null,
-            "post_source": "OBR October 2026 (Autumn Budget): not in the EFO PDF's Table A.1; the OBR's non-labour income forecast is in the detailed forecast tables (economy), not yet loaded"
+            "post": [
+              {
+                "year": "2027",
+                "value": 0.0468
+              },
+              {
+                "year": "2028",
+                "value": 0.0419
+              },
+              {
+                "year": "2029",
+                "value": 0.0409
+              },
+              {
+                "year": "2030",
+                "value": 0.0382
+              }
+            ],
+            "post_source": "Table 1.12 Household disposable income (\u00a3 billion current prices, seasonally adjusted), Non-labour income (growth in the calendar-year level)"
           }
         ]
       },
@@ -1547,7 +1581,7 @@
                 "value": 0.027
               }
             ],
-            "post_source": "Table A.1: Economy forecast (PDF page 183), row 'House prices' (calendar year, per cent, 1 d.p.)"
+            "post_source": "Table 1.16 Housing market, House price index (per cent change on a year earlier) (calendar year)"
           },
           {
             "key": "rent",
@@ -1572,8 +1606,25 @@
                 "value": 0.0258
               }
             ],
-            "post": null,
-            "post_source": "OBR October 2026 (Autumn Budget): not in the EFO PDF's Table A.1; the OBR's actual rents for housing forecast is in the detailed forecast tables (economy), not yet loaded"
+            "post": [
+              {
+                "year": "2027",
+                "value": 0.0316
+              },
+              {
+                "year": "2028",
+                "value": 0.0268
+              },
+              {
+                "year": "2029",
+                "value": 0.0261
+              },
+              {
+                "year": "2030",
+                "value": 0.0254
+              }
+            ],
+            "post_source": "Table 1.7 Inflation, Actual rents for housing (calendar year)"
           },
           {
             "key": "social_rent",
@@ -1641,8 +1692,25 @@
                 "value": 0.0553
               }
             ],
-            "post": null,
-            "post_source": "OBR October 2026 (Autumn Budget): not in the EFO PDF's Table A.1; the OBR's mortgage interest payments forecast is in the detailed forecast tables (economy), not yet loaded"
+            "post": [
+              {
+                "year": "2027",
+                "value": 0.1156
+              },
+              {
+                "year": "2028",
+                "value": 0.0668
+              },
+              {
+                "year": "2029",
+                "value": 0.0475
+              },
+              {
+                "year": "2030",
+                "value": 0.0553
+              }
+            ],
+            "post_source": "Table 1.7 Inflation, Mortgage interest payments (calendar year); 2030 kept at the pre-Budget value: the OBR does not forecast mortgage interest payments that far"
           }
         ]
       }
@@ -1653,13 +1721,10 @@
       "via": "policyengine-uk parameters gov.economic_assumptions.yoy_growth.obr.*"
     },
     "post_source": {
-      "release": "OBR Economic and fiscal outlook, October 2026: Table A.1, Economy forecast",
-      "file": "OBR-Economic-and-Fiscal-Outlook-October-2026.pdf",
-      "file_sha256": "9e0e9c340e35e603066f3124a614fcd68feadb3d5d10d1f76fb536e150e6225e",
-      "url": "https://obr.uk/download/economic-and-fiscal-outlook-october-2026/",
-      "table": "Table A.1: Economy forecast, PDF page 183",
-      "text_extract": "OBR-Economic-and-Fiscal-Outlook-October-2026.txt",
-      "text_extract_sha256": "099637cb5c1d37949881c8b2c74beaecbbc371c3cacaaf482b6455ae491a1c17"
+      "release": "OBR October 2026 (Autumn Budget)",
+      "file": "efo-october-2026-detailed-forecast-tables-economy.xlsx",
+      "file_sha256": "96795d1747bb5a4978c7fb768689d5fd31f568e5223db8a94b1bd92ba7f6c118",
+      "url": "https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/"
     }
   },
   "income_by_decile": {

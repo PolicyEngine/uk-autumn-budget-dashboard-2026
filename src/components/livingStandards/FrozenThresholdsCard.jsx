@@ -156,7 +156,11 @@ export default function FrozenThresholdsCard({ view = "chart", onViewChange }) {
         { label: `${obrName}: average earnings growth (calendar years, Table A.1)`, href: obr.url },
         {
           label: `policyengine-uk${engine ? ` ${engine}` : ""} parameters`,
-          href: SOURCES.policyengine_uk_parameters.url,
+          // The parameters at the release the outlook was built with (tags are
+          // the bare version); the main branch when it is not recorded
+          href: engine
+            ? `https://github.com/PolicyEngine/policyengine-uk/tree/${engine}/policyengine_uk/parameters`
+            : SOURCES.policyengine_uk_parameters.url,
           note: "gov.hmrc.income_tax.allowances.personal_allowance.amount, gov.hmrc.income_tax.rates.uk[1].threshold, gov.hmrc.student_loans.thresholds.plan_2",
         },
       ],

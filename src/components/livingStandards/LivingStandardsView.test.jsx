@@ -196,7 +196,7 @@ describe("the Pre-measures forecast view", () => {
     fireEvent.click(within(incomes).getByRole("button", { name: "About this chart" }));
     expect(within(incomes).queryByText(/is past the OBR March 2026 forecast/)).toBeNull();
     const about = incomes.querySelector(".disclosure-content");
-    expect(within(about).getByRole("link", { name: "DWP, Households Below Average Income" })).toBeInTheDocument();
+    expect(within(about).getByRole("link", { name: /^DWP, Households Below Average Income ?\(opens in a new tab\)$/ })).toBeInTheDocument();
     expect(about.querySelector(".info-sections").lastElementChild).toHaveClass("info-method");
     expect(within(about).getByRole("link", { name: /How the OBR forecast feeds these incomes/ })).toHaveAttribute(
       "href",
