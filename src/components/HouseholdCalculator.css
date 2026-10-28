@@ -2776,3 +2776,13 @@
     padding-left: 0;
   }
 }
+
+/* A step's "Other questions": the answers no selected policy reads, under
+   the ones it does, collapsed until opened */
+.household-step-optional {
+  margin-top: 12px;
+}
+
+.household-step-optional > .household-grid {
+  margin-top: 12px;
+}

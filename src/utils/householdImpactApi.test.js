@@ -79,6 +79,20 @@ describe("buildHouseholdRequest", () => {
     expect(empty.household.care_hours_per_week).toBe(35);
   });
 
+  it("sends self-employment receipts and expenses only when answered", () => {
+    const options = { year: 2027, policies: ["trading_allowance_raise"] };
+    const none = buildHouseholdRequest(WIZARD_DEFAULTS, options);
+    expect(none.household).not.toHaveProperty("self_employment_receipts");
+    expect(none.household).not.toHaveProperty("self_employment_expenses");
+    const { self_employment_receipts_per_year: _r, self_employment_expenses_per_year: _e, ...older } = WIZARD_DEFAULTS;
+    expect(requestKey(buildHouseholdRequest(older, options))).toBe(requestKey(none));
+    // Max's household (#290): £30,000 of pay and £3,000 of receipts
+    const side = buildHouseholdRequest({ ...WIZARD_DEFAULTS, current_salary: 30000, self_employment_receipts_per_year: 3000 }, options);
+    expect(side.household).toMatchObject({ employment_income: 30000, self_employment_receipts: 3000, self_employment_expenses: 0 });
+    const expenses = buildHouseholdRequest({ ...WIZARD_DEFAULTS, self_employment_expenses_per_year: 400 }, options);
+    expect(expenses.household).toMatchObject({ self_employment_receipts: 0, self_employment_expenses: 400 });
+  });
+
   it("sends rent only for renters and childcare only with children", () => {
     const owner = buildHouseholdRequest(
       { ...WIZARD_DEFAULTS, tenure: "OWNED_OUTRIGHT", monthly_rent: 900, monthly_childcare: 400 },

@@ -90,6 +90,10 @@ export const WIZARD_DEFAULTS = {
   dividends_per_year: 0,
   savings_interest_per_year: 0,
   property_income_per_year: 0,
+  // Self-employment or side income: receipts (turnover) and allowable
+  // expenses, £ a year; none until answered
+  self_employment_receipts_per_year: 0,
+  self_employment_expenses_per_year: 0,
   // Private and workplace pensions in payment, £ a year
   private_pension_per_year: 0,
   partner_private_pension_per_year: 0,

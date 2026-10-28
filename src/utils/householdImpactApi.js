@@ -104,6 +104,8 @@ export const FIELD_LABELS = {
   in_education: "In full-time education",
   state_pension: "State Pension",
   partner_state_pension: "Partner's State Pension",
+  self_employment_receipts: "Self-employment or side income",
+  self_employment_expenses: "Its allowable expenses",
   is_carer: "Carer",
   care_hours_per_week: "Hours of care",
 };
@@ -312,6 +314,13 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       // Caring only for a carer: anyone else's request is as it was before
       // the form asked, so its key (and a precomputed answer) still matches
       ...(inputs.is_carer ? { is_carer: true, care_hours_per_week: careHours(inputs) } : {}),
+      // Self-employment only when answered, likewise
+      ...(selfEmployed(inputs)
+        ? {
+            self_employment_receipts: inputs.self_employment_receipts_per_year || 0,
+            self_employment_expenses: inputs.self_employment_expenses_per_year || 0,
+          }
+        : {}),
     },
     include: [...include],
   };
@@ -328,6 +337,10 @@ export const careHours = (inputs) =>
   typeof inputs.care_hours_per_week === "number" && Number.isFinite(inputs.care_hours_per_week)
     ? inputs.care_hours_per_week
     : DEFAULT_CARE_HOURS;
+
+/** Whether the answers give self-employment receipts or expenses. */
+export const selfEmployed = (inputs) =>
+  Boolean(inputs.self_employment_receipts_per_year) || Boolean(inputs.self_employment_expenses_per_year);
 
 /** The Carer's Allowance minimum hours of care a week, the form's default. */
 export const DEFAULT_CARE_HOURS = 35;

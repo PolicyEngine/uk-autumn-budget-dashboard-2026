@@ -37,13 +37,17 @@ import "./HouseholdCalculator.css";
 import { STICKY_GAP, scrollBelowBars, stickyBottom } from "../utils/pageScroll";
 
 
-// The form's numbered groups, read top to bottom: You and Household
-// always; each of the others only with the answers in it that a selected
-// policy reads (utils/householdPolicyFields.js), numbered as shown. Each
-// has a short heading and one line under it; `quiet` fields leave their
-// own note to that line. `children` stands for each child's answers
-// (their age and, from 16, their education); `rent_from` is the landlord,
-// the renting half of the tenure.
+// The form's seven numbered steps, read top to bottom, and nothing after
+// them (Vahid, Budget day: the separate More details block is gone). You
+// and Household open at first; the others start closed, each saying in one
+// line only the answers that differ from the typical ones. In a step, the
+// answers a selected policy reads (utils/householdPolicyFields.js) come
+// first, in the table's order; the step's other answers wait, collapsed,
+// under "Other questions". A step no selected policy reads shows all its
+// answers when opened. `quiet` fields leave their own note to the step's
+// line. `children` stands for each child's answers (their age and, from
+// 16, their education); `rent_from` is the landlord, the renting half of
+// the tenure.
 export const FORM_GROUPS = [
   {
     key: "you",
@@ -63,14 +67,20 @@ export const FORM_GROUPS = [
     key: "spending",
     title: "Spending",
     hint: "Prefilled with the average household's spending (Source: ONS Family Spending, 2024-25).",
-    fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"],
+    fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year", "monthly_childcare"],
     quiet: ["petrol_spending_per_year", "diesel_spending_per_year"],
   },
   {
     key: "savings",
-    title: "Savings and investments",
-    hint: "Your own income from them, before tax.",
-    fields: ["dividends_per_year", "savings_interest_per_year", "property_income_per_year"],
+    title: "Savings and other income",
+    hint: "Your own income from savings, investments, property and self-employment, before tax.",
+    fields: [
+      "savings_interest_per_year",
+      "dividends_per_year",
+      "property_income_per_year",
+      "self_employment_receipts_per_year",
+      "self_employment_expenses_per_year",
+    ],
   },
   {
     key: "home",
@@ -82,53 +92,20 @@ export const FORM_GROUPS = [
     key: "benefits",
     title: "Benefits and loans",
     hint: "Yes to Universal Credit counts what your answers entitle you to.",
-    fields: ["claims_universal_credit", "is_carer", "care_hours_per_week", "student_loan_plan"],
+    fields: ["claims_universal_credit", "is_carer", "care_hours_per_week"],
     quiet: ["claims_universal_credit"],
   },
   {
     key: "pensions",
-    title: "Pensions",
-    hint: "Paid to you before tax; the State Pension starts at the full new rate.",
-    fields: ["state_pension_per_year", "private_pension_per_year", "partner_state_pension_per_year", "partner_private_pension_per_year"],
-  },
-];
-
-// The form: one card. The numbered groups first (FORM_GROUPS; the
-// essentials are You and Household); then More details, four groups that
-// each open on their own and, closed, say what they hold.
-export const FORM_SECTIONS = [
-  {
-    title: "About your household",
-    fields: FORM_GROUPS.filter((group) => group.always).flatMap((group) => group.fields),
-  },
-  {
-    title: "More details",
-    icon: "sliders",
-    collapsible: true,
-    groups: [
-      { title: "Other income", icon: "coins", fields: ["savings_interest_per_year", "dividends_per_year", "property_income_per_year"] },
-      {
-        title: "Pension and student loan",
-        icon: "piggy",
-        fields: [
-          "private_pension_per_year",
-          "partner_private_pension_per_year",
-          "state_pension_per_year",
-          "partner_state_pension_per_year",
-          "salary_sacrifice_per_year",
-          "student_loan_plan",
-        ],
-      },
-      {
-        title: "Spending",
-        icon: "cart",
-        fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year", "monthly_childcare"],
-      },
-      {
-        title: "Council tax and benefits",
-        icon: "building",
-        fields: ["council_tax_band", "claims_universal_credit", "is_carer", "care_hours_per_week"],
-      },
+    title: "Pensions and student loan",
+    hint: "Pensions paid to you before tax, pension paid by salary sacrifice, and any student loan.",
+    fields: [
+      "state_pension_per_year",
+      "private_pension_per_year",
+      "partner_state_pension_per_year",
+      "partner_private_pension_per_year",
+      "salary_sacrifice_per_year",
+      "student_loan_plan",
     ],
   },
 ];
@@ -310,6 +287,26 @@ const NUMBER_CONFIGS = {
     suffix: "a year",
     hint: "Including VAT. Prefilled with the average household's spending, £20.00 a week (Source: ONS Family Spending, 2024-25).",
   },
+  self_employment_receipts_per_year: {
+    label: "Self-employment or side income",
+    min: 0,
+    max: 500000,
+    step: 100,
+    money: true,
+    suffix: "a year",
+    hint: "Receipts (turnover) before expenses, from self-employment or side work such as selling or renting out things.",
+    hintAs: "tooltip",
+  },
+  self_employment_expenses_per_year: {
+    label: "Its allowable expenses",
+    min: 0,
+    max: 500000,
+    step: 100,
+    money: true,
+    suffix: "a year",
+    hint: "The calculation deducts these, or the trading allowance instead when that is larger.",
+    hintAs: "tooltip",
+  },
   care_hours_per_week: {
     label: "Hours of care",
     min: 0,
@@ -390,112 +387,67 @@ export function spendingAssumed(answers, presetId) {
 }
 
 const pounds = (value) => `£${d3.format(",.0f")(value)}`;
-// Hours of care, the one number the form asks that is not an amount
-const NOT_AMOUNTS = new Set(["care_hours_per_week"]);
 const careSummary = (hours) => `${d3.format(",.0f")(hours)} ${hours === 1 ? "hour" : "hours"} a week`;
-const sentence = (parts) => {
-  const text = parts.join(" · ");
-  return text.charAt(0).toUpperCase() + text.slice(1);
-};
 
 /**
- * What a More details group holds, in one line, for its closed row:
- * "Petrol £620 · diesel £340 · electricity £1,040 a year (UK average)".
- * `applies(id)`: whether the group asks that field (not when it does not
- * apply, nor when the selected policies' questions ask it up front).
+ * A numbered step's line while it is closed: only the answers that differ
+ * from where they started (WIZARD_DEFAULTS, or a prefill), shortest
+ * first-hand wording: "Petrol £500 a year · Band C · Carer, 35 hours a
+ * week". Empty when every answer is typical (the step's hint shows then).
+ * `answer(id)` is an answer as the calculation reads it, `changed(id)`
+ * whether it differs, `childrenCount` the number of children.
  */
-export function groupSummary(title, { answer, applies, inputs, presetId }) {
-  const amounts = (ids) =>
-    ids.filter((id) => applies(id) && answer(id) > 0).map((id) => `${NUMBER_CONFIGS[id].label.toLowerCase()} ${pounds(answer(id))}`);
-  if (title === "Other income") {
-    return sentence(amounts(["savings_interest_per_year", "dividends_per_year", "property_income_per_year"])) || "None";
-  }
-  if (title === "Pension and student loan") {
-    const parts = amounts([
-      "private_pension_per_year",
-      "partner_private_pension_per_year",
-      "state_pension_per_year",
-      "partner_state_pension_per_year",
-      "salary_sacrifice_per_year",
-    ]).map((part) => part.replace(/^your state pension/, "State Pension").replace(/state pension/, "State Pension"));
-    const pensions = ["private_pension_per_year", "state_pension_per_year"];
-    if (parts.length === 0 && pensions.some((id) => applies(id))) parts.push("no pension income");
-    if (applies("student_loan_plan")) {
-      const plan = CHOICE_CONFIGS.student_loan_plan.options.find((option) => option.value === inputs.student_loan_plan);
-      parts.push(!plan || plan.value === "NONE" ? "no student loan" : `${plan.label} student loan`);
-    }
-    return sentence(parts) || "None";
-  }
-  if (title === "Spending") {
-    const fuel = ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"]
-      .filter(applies)
-      .map((id) => `${NUMBER_CONFIGS[id].label.toLowerCase()} ${pounds(answer(id))}`);
-    const parts = [];
-    if (fuel.length > 0) {
-      let text = `${sentence(fuel)} a year`;
-      if (spendingAssumed(inputs, presetId) === "average") text += " (UK average)";
-      parts.push(text);
-    }
-    if (applies("monthly_childcare") && answer("monthly_childcare") > 0) parts.push(`childcare ${pounds(answer("monthly_childcare"))} a month`);
-    return sentence(parts) || "None";
-  }
+export function stepSummary(fields, { answer, applies, changed, inputs, childrenCount = 0 }) {
   const parts = [];
-  if (applies("council_tax_band")) parts.push(`Council Tax band ${inputs.council_tax_band}`);
-  if (applies("claims_universal_credit")) {
-    parts.push(inputs.claims_universal_credit ? "claims Universal Credit if entitled" : "does not claim Universal Credit");
-  }
-  if (applies("is_carer")) parts.push(inputs.is_carer ? `carer, ${careSummary(answer("care_hours_per_week"))}` : "not a carer");
-  return sentence(parts);
-}
-
-/**
- * A numbered group's line while it is closed, standing in for its boxes:
- * what its answers are now. Amounts as "Petrol £1,300 · Diesel £1,300 ·
- * Electricity £1,010 a year" (those above zero; "None" when none is),
- * Universal Credit as "yes" or "no", a carer as "Carer: yes, 35 hours a
- * week" or "Carer: no", and the loan plan by name. `changed`
- * is whether any answer differs from where it started (WIZARD_DEFAULTS,
- * or a prefill); `typical` whether it shows amounts all left there.
- */
-export function stepSummary(fields, { answer, applies, changed, inputs }) {
-  const shown = fields.filter(applies);
-  const amounts = [];
-  const choices = [];
-  for (const id of shown) {
-    if (id === "care_hours_per_week") {
-      // Said with the carer answer
+  for (const id of fields.filter(applies)) {
+    if (id === "children") continue;
+    if (id === "children_count") {
+      if (childrenCount > 0) parts.push(childrenCount === 1 ? "1 child" : `${childrenCount} children`);
       continue;
-    } else if (id === "is_carer") {
-      choices.push(`Carer: ${inputs.is_carer ? `yes, ${careSummary(answer("care_hours_per_week"))}` : "no"}`);
-    } else if (NUMBER_CONFIGS[id]) {
-      if (answer(id) > 0) amounts.push(`${NUMBER_CONFIGS[id].label} ${pounds(answer(id))}`);
-    } else if (id === "claims_universal_credit") {
-      choices.push(`Universal Credit: ${inputs[id] ? "yes" : "no"}`);
+    }
+    if (id === "region") {
+      if (inputs.constituency) parts.push(inputs.constituency);
+      continue;
+    }
+    if (id === "care_hours_per_week") continue;
+    if (id === "is_carer") {
+      if (inputs.is_carer) parts.push(`Carer, ${careSummary(answer("care_hours_per_week"))}`);
+      continue;
+    }
+    if (!changed(id)) continue;
+    if (id === "claims_universal_credit") {
+      parts.push(inputs[id] ? "Claims Universal Credit" : "Does not claim Universal Credit");
     } else if (id === "student_loan_plan") {
       const chosen = CHOICE_CONFIGS[id].options.find((option) => option.value === inputs[id]);
-      choices.push(!chosen || chosen.value === "NONE" ? "No student loan" : `${chosen.label} student loan`);
+      parts.push(!chosen || chosen.value === "NONE" ? "No student loan" : `${chosen.label} student loan`);
+    } else if (id === "council_tax_band") {
+      parts.push(`Band ${inputs[id]}`);
+    } else if (id === "tenure" || id === "rent_from") {
+      const chosen = CHOICE_CONFIGS[id].options.find((option) => option.value === (id === "tenure" && isRenting(inputs.tenure) ? RENTING : inputs.tenure));
+      if (chosen) parts.push(chosen.label);
+    } else if (NUMBER_CONFIGS[id]) {
+      const config = NUMBER_CONFIGS[id];
+      const value = config.money ? pounds(answer(id)) : d3.format(",.0f")(answer(id));
+      parts.push(`${config.label} ${value}${config.suffix ? ` ${config.suffix}` : ""}`);
     } else if (CHOICE_CONFIGS[id]) {
       const config = CHOICE_CONFIGS[id];
       const chosen = config.options.find((option) => option.value === inputs[id]);
-      if (chosen) choices.push(`${config.label}: ${chosen.label}`);
+      if (chosen) parts.push(`${config.label}: ${chosen.label}`);
     }
   }
-  const numbers = shown.filter((id) => NUMBER_CONFIGS[id] && !NOT_AMOUNTS.has(id));
-  const yearly = amounts.length > 0 && numbers.every((id) => id.endsWith("_per_year"));
-  const money = amounts.length > 0 ? `${amounts.join(" · ")}${yearly ? " a year" : ""}` : numbers.length > 0 ? "None" : null;
-  const text = [money, ...choices].filter(Boolean).join(" · ");
-  const anyChanged = shown.some(changed);
-  return { text, changed: anyChanged, typical: !anyChanged && amounts.length > 0 };
+  return { text: parts.join(" · "), changed: parts.length > 0 };
 }
 
 /**
  * One numbered group: its heading (the number, title and one muted line)
  * is a button that opens and closes its boxes, with a chevron at the
- * right. Closed, the muted line gives way to what its answers are now
- * (stepSummary), marked "Changed" once any differs from where it started;
- * a tap anywhere on it opens the group.
+ * right. Closed, the muted line gives way to the answers that differ from
+ * the typical ones (stepSummary); a tap anywhere on it opens the group.
+ * `optional`: the step's answers no selected policy reads, when some
+ * other answer in it is read, collapsed under "Other questions" until
+ * opened (`optionalOpen`).
  */
-function StepGroup({ group, number, last, open, onToggle, summary, children }) {
+function StepGroup({ group, number, last, open, onToggle, summary, children, optional = null, optionalOpen = false, onOptionalToggle }) {
   const collapse = useCollapse(open);
   const headId = `household-step-${group.key}`;
   const hintId = `${headId}-hint`;
@@ -530,18 +482,6 @@ function StepGroup({ group, number, last, open, onToggle, summary, children }) {
             {showSummary ? (
               <span className="household-step-summary" id={summaryId} data-changed={summary.changed || undefined}>
                 {summary.text}
-                {summary.typical && (
-                  <>
-                    {" "}
-                    <span className="household-step-summary-note">(typical values)</span>
-                  </>
-                )}
-                {summary.changed && (
-                  <>
-                    {" "}
-                    <span className="household-step-changed">Changed</span>
-                  </>
-                )}
               </span>
             ) : (
               <span className="household-step-hint" id={hintId}>
@@ -569,86 +509,28 @@ function StepGroup({ group, number, last, open, onToggle, summary, children }) {
         <div id={panelId} className={`expander-body household-step-body ${collapse.expanded ? "is-expanded" : ""}`}>
           <div className="expander-inner">
             <div className="household-grid household-grid-step">{children}</div>
+            {optional && (
+              <div className="household-step-optional">
+                <button
+                  type="button"
+                  className="text-button household-step-optional-toggle"
+                  aria-expanded={optionalOpen}
+                  aria-controls={`${panelId}-optional`}
+                  onClick={onOptionalToggle}
+                >
+                  {optionalOpen ? "Fewer questions" : "Other questions"}
+                </button>
+                {optionalOpen && (
+                  <div id={`${panelId}-optional`} className="household-grid household-grid-step" role="group" aria-label={`${group.title}: other questions`}>
+                    {optional}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
     </section>
-  );
-}
-
-/**
- * One More details group: a row that opens it, saying what it holds and
- * how many answers differ from the typical ones while closed, with "Reset
- * to typical" beside it once any do.
- */
-function DetailsGroup({ id, title, open, onToggle, summary, changed, onReset, children }) {
-  const collapse = useCollapse(open);
-  const panelId = `${id}-panel`;
-  const titleId = `${id}-title`;
-  return (
-    <div className={`household-detail ${open ? "is-open" : ""}`.trim()}>
-      <div className="household-detail-head">
-        <h4 className="household-detail-heading">
-          <button
-            type="button"
-            className="household-detail-toggle"
-            aria-expanded={open}
-            aria-controls={panelId}
-            onClick={onToggle}
-          >
-            {/* The numbered steps' number column, empty, so the titles line up */}
-            <span className="household-detail-lead" aria-hidden="true" />
-            <span className="household-detail-text">
-              <span className="household-detail-title" id={titleId}>
-                {title}
-              </span>
-              {!open && (
-                <span className="household-detail-summary">
-                  {summary}
-                  {changed > 0 && (
-                    <>
-                      {" "}
-                      <span className="household-detail-changed">{changed === 1 ? "1 changed" : `${changed} changed`}</span>
-                    </>
-                  )}
-                </span>
-              )}
-            </span>
-            <svg
-              className="household-more-chevron household-step-chevron"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
-        </h4>
-        {changed > 0 && (
-          <button type="button" className="text-button household-detail-reset" aria-label={`Reset ${title} to typical`} onClick={onReset}>
-            Reset to typical
-          </button>
-        )}
-      </div>
-      {collapse.mounted && (
-        <div
-          id={panelId}
-          role="group"
-          aria-labelledby={titleId}
-          className={`expander-body ${collapse.expanded ? "is-expanded" : ""}`}
-        >
-          <div className="expander-inner">
-            <div className="household-detail-panel">{children}</div>
-          </div>
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -670,11 +552,11 @@ function useNarrow(query) {
 }
 
 // The form's last state, kept for the session so switching tabs keeps it
-const savedWizard = { inputs: null, presetId: null, formOpen: false, moreOpen: {}, stepOpen: {}, submitted: null, startFrom: null };
+const savedWizard = { inputs: null, presetId: null, formOpen: false, optionalOpen: {}, stepOpen: {}, submitted: null, startFrom: null };
 
 /** Forget the form's saved state (a new session; for tests). */
 export function resetSavedWizard() {
-  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, moreOpen: {}, stepOpen: {}, submitted: null, startFrom: null });
+  Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, optionalOpen: {}, stepOpen: {}, submitted: null, startFrom: null });
 }
 
 // The form's panel, opened by the "Your household" card
@@ -708,9 +590,9 @@ function HouseholdCalculator({
   // The example Your household started from, named at the top of the form
   const [startFrom, setStartFrom] = useState(() => savedWizard.startFrom);
   const form = useCollapse(formOpen);
-  // More details' groups open, by title: closed at first; kept between tab
-  // switches for the session
-  const [moreOpen, setMoreOpen] = useState(() => savedWizard.moreOpen);
+  // Each step's "Other questions" open, by step key: closed at first;
+  // kept between tab switches for the session
+  const [optionalOpen, setOptionalOpen] = useState(() => savedWizard.optionalOpen);
   // The numbered groups opened or closed by hand, by key; a group not in
   // it is open or closed as stepStartsOpen says. Kept for the session
   const [stepOpen, setStepOpen] = useState(() => savedWizard.stepOpen);
@@ -729,16 +611,16 @@ function HouseholdCalculator({
 
   const childrenCount = parseChildrenAges(inputs.children_ages).length;
 
-  // Remember the inputs and which More details groups are open for this session
+  // Remember the inputs and which steps and Other questions are open for this session
   useEffect(() => {
     savedWizard.inputs = inputs;
     savedWizard.presetId = presetId;
     savedWizard.startFrom = startFrom;
     savedWizard.formOpen = formOpen;
-    savedWizard.moreOpen = moreOpen;
+    savedWizard.optionalOpen = optionalOpen;
     savedWizard.stepOpen = stepOpen;
     savedWizard.submitted = submitted;
-  }, [inputs, presetId, startFrom, formOpen, moreOpen, stepOpen, submitted]);
+  }, [inputs, presetId, startFrom, formOpen, optionalOpen, stepOpen, submitted]);
 
   // The examples' precomputed answers, loaded once and added to the
   // session cache; `seeded` tells a request already waiting to look again
@@ -1000,11 +882,9 @@ function HouseholdCalculator({
   // Whether a field applies to the answers so far (rent only when renting)
   const fieldApplies = (id) => !FIELD_APPLIES[id] || FIELD_APPLIES[id](inputs, childrenCount, year);
   // The answers the selected policies read (utils/householdPolicyFields.js),
-  // asked up front, each with its policies; More details keeps the rest
+  // first in their step, in the table's order; the step's other answers
+  // wait under "Other questions"
   const policyAsks = noneSelected ? [] : policyQuestions(householdPolicies, { inputs, year, applies: fieldApplies });
-  const askedUpFront = new Set(policyAsks.map((question) => question.id));
-  const inDetails = (id) => !askedUpFront.has(id);
-  const appliesInDetails = (id) => inDetails(id) && fieldApplies(id);
 
   // The children's ages, kept as the text the household request reads
   // ("5, 3")
@@ -1167,86 +1047,46 @@ function HouseholdCalculator({
     </div>
   );
 
-  const renderGrid = (fields, className = "") => (
-    <div className={`household-grid ${className}`.trim()}>{fields.map((id) => renderField(id))}</div>
-  );
-
   // An answer as the calculation reads it (a prefilled field's prefill)
   const answer = (id) => inputs[id] ?? PREFILLED[id]?.(year, inputs) ?? 0;
   // Whether an answer differs from where it started (WIZARD_DEFAULTS)
   const changedFromTypical = (id) => (PREFILLED[id] ? inputs[id] !== null && inputs[id] !== undefined : inputs[id] !== WIZARD_DEFAULTS[id]);
-  // A group's answers back to where they started (those it asks)
-  const resetGroup = (group) => {
-    setPresetId(null);
-    const fields = group.fields.filter(inDetails);
-    setInputs((prev) => ({ ...prev, ...Object.fromEntries(fields.map((id) => [id, WIZARD_DEFAULTS[id]])) }));
-  };
 
-  // The numbered groups: You and Household always, each other one with
-  // the answers in it the selected policies read
+  // The seven steps, each with the answers a selected policy reads first
+  // (in policyQuestions' order) and, when there are any, its other answers
+  // under "Other questions"; a step no selected policy reads shows them all
+  const policyOrder = policyAsks.map((question) => question.id);
   const shownGroups = FORM_GROUPS.map((group) => {
-    const fields = group.always ? group.fields : group.fields.filter((id) => askedUpFront.has(id));
-    const used = new Set(policyAsks.filter((question) => fields.includes(question.id)).flatMap((question) => question.policies));
-    return { ...group, fields, policies: householdPolicies.filter((policyId) => used.has(policyId)) };
-  }).filter((group) => group.always || group.fields.length > 0);
+    if (group.always) return { ...group, primary: group.fields, optional: [] };
+    const asked = policyOrder.filter((id) => group.fields.includes(id));
+    if (asked.length === 0) return { ...group, primary: group.fields, optional: [] };
+    return { ...group, primary: asked, optional: group.fields.filter((id) => !asked.includes(id)) };
+  });
   // Whether a numbered group starts open: You and Household only. The
-  // others start closed, each saying what its answers are (an example's
-  // too: it does not open them), so the form reads calmly at first sight
-  // (Vahid, Budget day). Opened or closed by hand, it stays so for the
-  // session. Closing one only hides its boxes:
-  // the answers stay as they are, and the calculation reads them all
+  // others start closed, each saying which answers differ from the typical
+  // ones (an example's too: it does not open them), so the form reads
+  // calmly at first sight (Vahid, Budget day). Opened or closed by hand, it
+  // stays so for the session. Closing one only hides its boxes: the
+  // answers stay as they are, and the calculation reads them all
   const stepStartsOpen = (group) => Boolean(group.always);
   const isStepOpen = (group) => stepOpen[group.key] ?? stepStartsOpen(group);
-  const renderGroup = (group, index) => (
-    <StepGroup
-      key={group.key}
-      group={group}
-      number={index + 1}
-      last={index === shownGroups.length - 1}
-      open={isStepOpen(group)}
-      onToggle={() => setStepOpen((prev) => ({ ...prev, [group.key]: !isStepOpen(group) }))}
-      summary={stepSummary(group.fields, { answer, applies: fieldApplies, changed: changedFromTypical, inputs })}
-    >
-      {group.fields.map((id) => renderField(id, { quiet: group.quiet?.includes(id) }))}
-    </StepGroup>
-  );
-
-  const renderSection = (section, index) => {
-    if (!section.collapsible) return shownGroups.map(renderGroup);
-    const labelId = `household-section-${index}`;
+  const renderGroup = (group, index) => {
+    const optional = group.optional.filter(fieldApplies);
     return (
-      <section key={section.title} className="household-group household-more" aria-labelledby={labelId}>
-        {/* A light label over its rows: "More details · Optional". The rows
-            under it look as the numbered steps do while closed (Vahid,
-            Budget day: one list, not two designs) */}
-        <div className="household-more-head">
-          <h3 className="household-more-heading" id={labelId}>
-            {section.title}
-          </h3>
-          <span className="household-more-tag">Optional</span>
-        </div>
-        <div className="household-details">
-          {section.groups.map((group) => {
-            const shown = group.fields.filter(appliesInDetails);
-            if (shown.length === 0) return null;
-            const slug = group.title.toLowerCase().replace(/[^a-z]+/g, "-");
-            return (
-              <DetailsGroup
-                key={group.title}
-                id={`${labelId}-${slug}`}
-                title={group.title}
-                open={Boolean(moreOpen[group.title])}
-                onToggle={() => setMoreOpen((prev) => ({ ...prev, [group.title]: !prev[group.title] }))}
-                summary={groupSummary(group.title, { answer, applies: appliesInDetails, inputs, presetId })}
-                changed={shown.filter(changedFromTypical).length}
-                onReset={() => resetGroup(group)}
-              >
-                {renderGrid(group.fields.filter(inDetails), "household-grid-details")}
-              </DetailsGroup>
-            );
-          })}
-        </div>
-      </section>
+      <StepGroup
+        key={group.key}
+        group={group}
+        number={index + 1}
+        last={index === shownGroups.length - 1}
+        open={isStepOpen(group)}
+        onToggle={() => setStepOpen((prev) => ({ ...prev, [group.key]: !isStepOpen(group) }))}
+        summary={stepSummary(group.fields, { answer, applies: fieldApplies, changed: changedFromTypical, inputs, childrenCount })}
+        optional={optional.length > 0 ? optional.map((id) => renderField(id, { quiet: group.quiet?.includes(id) })) : null}
+        optionalOpen={Boolean(optionalOpen[group.key])}
+        onOptionalToggle={() => setOptionalOpen((prev) => ({ ...prev, [group.key]: !prev[group.key] }))}
+      >
+        {group.primary.map((id) => renderField(id, { quiet: group.quiet?.includes(id) }))}
+      </StepGroup>
     );
   };
 
@@ -1384,7 +1224,7 @@ function HouseholdCalculator({
               </div>
             )}
           </div>
-          {FORM_SECTIONS.map(renderSection)}
+          {shownGroups.map(renderGroup)}
           {/* On a phone, Calculate waits at the screen's foot while the
               form is in view, after the questions in the tab order */}
           {narrow && (

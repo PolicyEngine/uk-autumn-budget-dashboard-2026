@@ -390,7 +390,7 @@ describe("the household calculation, from the fixture", () => {
     // Not entered by the reader: marked as assumed, with what it does
     expect(box("Spending a year").querySelector("dt")).toHaveTextContent("Spending a year (assumed, ONS average)");
     expect(tipOf("Spending a year")).toBe(
-      "Fuel and electricity policies scale with what you spend; change these in More details to match your household.",
+      "Fuel and electricity policies scale with what you spend; change these in the Spending step to match your household.",
     );
     // Whose result it is, in one line under the figure
     // No chip row of household facts: the details are in About this result
@@ -1063,7 +1063,7 @@ describe("an unavailable household calculation", () => {
     expect(panel).not.toHaveTextContent("£0");
     expect(screen.queryByText(HEADLINE)).toBeNull();
     expect(screen.queryByRole("region", { name: "Your household's results" })).toBeNull();
-    expect(screen.getByRole("heading", { name: /^More details/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Step 3: Spending$/ })).toBeInTheDocument();
     expect(household.length).toBeGreaterThan(0);
   });
 });

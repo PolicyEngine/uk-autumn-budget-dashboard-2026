@@ -3,7 +3,8 @@ import { atStatePensionAge } from "./householdImpactApi";
 /**
  * Which of the Household calculator's answers each policy reads, by
  * measure id, so the form asks those up front ("Questions that matter for
- * the selected policies") and leaves the rest under More details.
+ * the selected policies") first in their step and leaves the rest under its
+ * "Other questions".
  *
  * One row per measure: `fields` are the form's field ids (as in
  * HouseholdCalculator's FORM_SECTIONS); `when(inputs, year, field)`
@@ -53,9 +54,12 @@ export const POLICY_FIELDS = {
   // hours a week (the allowance needs 35); the hours only for a carer
   // (HouseholdCalculator's FIELD_APPLIES)
   carers_allowance_earnings_taper: { fields: ["is_carer", "care_hours_per_week"] },
-  // The trading allowance reads self-employment income, which neither the
-  // form nor the household API takes, so it has no row: the calculator
-  // cannot show it for a household.
+  // Trading allowance £1,000 to £3,000: self-employment or side income,
+  // its receipts and allowable expenses (the allowance replaces the
+  // expenses when larger)
+  trading_allowance_raise: {
+    fields: ["self_employment_receipts_per_year", "self_employment_expenses_per_year"],
+  },
 };
 
 /**
