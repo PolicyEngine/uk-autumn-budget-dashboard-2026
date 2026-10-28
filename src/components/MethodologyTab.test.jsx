@@ -209,6 +209,22 @@ describe("MethodologyTab", () => {
     expect(card.textContent).not.toMatch(/\d{1,3}(,\d{3})+/);
   });
 
+  it("states the floor of 3 survey households for the deciles and ages, and that the age filter counts records", () => {
+    const { container } = renderTab();
+    const small = [...container.querySelectorAll(".method-fact")].find(
+      (fact) => fact.querySelector("dt")?.textContent === "Small groups",
+    );
+    expect(within(small).getByRole("link", { name: "income deciles", hidden: true })).toHaveAttribute(
+      "href",
+      `#${METHOD_ANCHORS.byIncome}`,
+    );
+    const text = container.textContent;
+    expect(text).toContain("comes from only one or two survey households is not shown");
+    expect(text).toContain("so this counts records, not households");
+    expect(text).toContain("In the age and decile tables, a figure resting on one or two survey households is not published, nor any figure in the same table that would give it back.");
+    expect(text).not.toContain("survey records is not shown");
+  });
+
   it("links every external source in a new tab, saying so, and every shared term to its definition", () => {
     const { container } = renderTab();
     const external = [...container.querySelectorAll('a[href^="http"]')];

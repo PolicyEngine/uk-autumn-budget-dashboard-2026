@@ -43,7 +43,7 @@ export const AGE_BAND_SOURCE = {
   url: "https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/employmentunemploymentandeconomicinactivitybyagegroupseasonallyadjusteda05sa",
 };
 
-/** A band with fewer survey records than this is not shown. */
+/** A band with fewer records in the dataset than this is not shown (records, not survey households: the age table's sample_size). */
 export const MIN_SAMPLE_SIZE = 100;
 
 const forYear = (rows, year) => rows.filter((row) => row.year === Number(year));

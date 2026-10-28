@@ -5,8 +5,13 @@ age table (``age_impact``) average each household's change over a group. A
 group whose change comes from fewer than SURVEY_HOUSEHOLD_FLOOR survey
 households rests on too few cases to publish, however many households the
 group holds: its average is those households' change over a group size
-anyone can estimate (UK Data Service, CD171 section 5.2.1; 10 is the
-working floor, as for the binned scatter). Microcosm builds several records
+anyone can estimate. The floor is the UK Data Service's minimum threshold
+for Safeguarded data, which the End User Licence binds us to (CD171
+version 18, section 5.2.1: never report a cell "based on only one or two
+cases"). The same section advises, but does not require, 10 against
+secondary disclosure, and the FRS adds no condition of its own
+(microcosm#1278); the binned scatter, the income mobility shares and the
+results by area keep 10. Microcosm builds several records
 from one survey household, so the floor counts the survey households behind
 the changed records (``pipeline.scatter_survey_households``), as the binned
 scatter and the results by area do.
@@ -37,16 +42,17 @@ from uk_budget_data.calculators import (
     age_band_of,
     single_age_of,
 )
-from uk_budget_data.publication.tables import SCATTER_MIN_HOUSEHOLDS
 
-SURVEY_HOUSEHOLD_FLOOR = SCATTER_MIN_HOUSEHOLDS
+SURVEY_HOUSEHOLD_FLOOR = 3
 # A household whose net income moves by less than this, £ a year, has not
 # changed: the difference is rounding in the engine.
 CHANGE_TOLERANCE = 0.01
 DECILE_TABLES = ("distributional_impact", "winners_losers")
 AGE_TABLE = "age_impact"
-# The tables the floor holds: the decile and age tables, and the binned
-# scatter, whose rows name their survey household once it has run.
+# The tables a receipt's floor record covers: the decile and age tables,
+# held to SURVEY_HOUSEHOLD_FLOOR, and the binned scatter, whose rows name
+# their survey household once it has run and which ``tables.bin_scatter``
+# holds to its own SCATTER_MIN_HOUSEHOLDS.
 FLOOR_TABLES = (*DECILE_TABLES, AGE_TABLE, "household_scatter_binned")
 # Groups no row shows but the rows give back by difference (``age_groups``):
 # a band's people whose age has no row of its own, labelled with the band
@@ -185,7 +191,9 @@ def floor_record(
     (``dashboard.disclosure_floor``): the cells found thin, by table, year
     and group label, never a figure, and whether any is still in the tables
     (a decile table's, unless the run was refused), which the publication
-    gate and the public data check refuse. A run on data whose survey
+    gate and the public data check refuse. ``survey_households`` is the
+    decile and age tables' floor, SURVEY_HOUSEHOLD_FLOOR; the binned
+    scatter's is SCATTER_MIN_HOUSEHOLDS. A run on data whose survey
     households cannot be told apart records that it was not checked, and
     why."""
     cells = [
