@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fireEvent,
@@ -131,6 +132,28 @@ describe("ConstituencyMap views", () => {
     expect(lit).toEqual(expect.arrayContaining(["Z14000003", "Z14000004", "Z14000006"]));
     fireEvent.mouseLeave(segment);
     expect(container.querySelector('path[data-dim="true"]')).toBeNull();
+  });
+
+  it("shows the hovered chip's seat count out of the flow, so nothing moves", async () => {
+    // Vahid, 28 October: hovering the key "changes the position". The count
+    // used to appear as a new line in the key's head, so the key (centred
+    // beside the map) jumped and the chip slid from under the pointer.
+    // It now hangs off the chip's right, absolutely placed, always mounted.
+    await renderMap();
+    const key = screen.getByRole("group", { name: "Key" });
+    const count = key.querySelector(".map-key-count");
+    expect(count).not.toBeNull();
+    expect(count.textContent).toBe("");
+    expect(key.querySelector(".map-key-head .map-key-count")).toBeNull();
+    expect(count.parentElement).toHaveClass("map-key-statuses");
+    fireEvent.mouseEnter(key.querySelector('[data-key="no-data"]'));
+    expect(key.querySelector(".map-key-count")).toBe(count);
+    expect(count.textContent).toMatch(/^\d+ seats?$/);
+    const css = readFileSync("src/components/ConstituencyMap.css", "utf8");
+    const rule = (selector) => css.match(new RegExp(`(^|\\n)${selector.replace(".", "\\.")} \\{([^}]*)\\}`))?.[2] ?? "";
+    expect(rule(".map-key-count")).toMatch(/position: absolute;/);
+    expect(rule(".map-key-statuses")).toMatch(/position: relative;/);
+    expect(css).not.toMatch(/\.map-key-count:empty/);
   });
 
   it("opens the Table view from a link made for the old Rankings view", async () => {

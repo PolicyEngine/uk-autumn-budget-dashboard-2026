@@ -86,7 +86,6 @@ const CHART_TITLE = "Constituency impacts";
 // The Policy option for all the selected policies before their map is
 // published: listed, never chosen
 const COMBINED_PENDING = "combined-pending";
-export const ONE_POLICY_NOTE = "Until the map for all selected policies is published, it shows one policy at a time.";
 
 // The card's three views, and the URL parameter that opens the second or
 // third. The hex map is the default: every constituency the same size, so
@@ -370,7 +369,8 @@ const seatCount = (n) => `${n.toLocaleString("en-GB")} ${n === 1 ? "seat" : "sea
  * gradient stands upright, gain at the top, with a tick at each label, and
  * the chip is under it; on a phone ("below") it is the horizontal row
  * under the map. Hovering or focusing the chip highlights the seats it
- * covers (`onHighlight`) and gives their number.
+ * covers (`onHighlight`) and gives their number beside the chip, out of
+ * the flow, so hovering never moves anything.
  */
 function MapKey({ outcome, extent, counts, highlight, onHighlight, placement = "below" }) {
   const [low, zero, high] = scaleLabels(outcome, extent);
@@ -421,9 +421,6 @@ function MapKey({ outcome, extent, counts, highlight, onHighlight, placement = "
             />
           </span>
         </p>
-        <span className="map-key-count" aria-live="polite">
-          {hovered !== null && hovered !== undefined ? seatCount(hovered) : ""}
-        </span>
       </div>
       <div className="map-key-scale">
         <div
@@ -449,6 +446,12 @@ function MapKey({ outcome, extent, counts, highlight, onHighlight, placement = "
             <span>{entry.label}</span>
           </button>
         ))}
+        {/* The hovered entry's seat count, beside the chip and out of the
+            flow, so it appearing never moves the key, the chip under the
+            pointer or the map (Vahid, 28 October: "it changes the position") */}
+        <span className="map-key-count" aria-live="polite">
+          {hovered !== null && hovered !== undefined ? seatCount(hovered) : ""}
+        </span>
       </div>
     </div>
   );
@@ -1179,13 +1182,11 @@ export default function ConstituencyMap({
                 Average change in household net income by constituency.
               </p>
             ) : (
-              // One paragraph: the figures, then (several policies, no map
-              // for all of them yet) that it shows one at a time
-              (sentence || combinedPending) && (
-                <p className="chart-description">
-                  {[sentence, combinedPending && ONE_POLICY_NOTE].filter(Boolean).join(" ")}
-                </p>
-              )
+              // One paragraph: the figures only. That the map shows one
+              // policy until all of them are published is said by the
+              // Policy pill's greyed-out All selected policies (Vahid,
+              // 28 October)
+              sentence && <p className="chart-description">{sentence}</p>
             )}
           </div>
           {downloadsReady ? (
