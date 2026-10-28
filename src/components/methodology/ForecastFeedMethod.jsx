@@ -4,7 +4,7 @@
 // each series sets, read from the outlook (forecast.sections[].series[].parameter).
 
 import { useEffect, useState } from "react";
-import { loadOutlook } from "../../utils/livingStandards/outlook";
+import { fyLabel, loadOutlook, outlookForecastSource } from "../../utils/livingStandards/outlook";
 import { seriesName } from "../../utils/livingStandards/forecastWords";
 import { ExternalLink, SourceLink } from "./MethodUi";
 
@@ -19,34 +19,48 @@ export const FORECAST_FEED_ANCHOR = "method-forecast-feed";
 export default function ForecastFeedMethod() {
   const [forecast, setForecast] = useState(null);
   const [engine, setEngine] = useState(null);
-  const [endNote, setEndNote] = useState(null);
+  const [meta, setMeta] = useState(null);
   useEffect(() => {
     let live = true;
     loadOutlook().then((r) => {
       if (live && r.data?.forecast) setForecast(r.data.forecast);
       if (live && r.data?.meta?.policyengine_uk) setEngine(r.data.meta.policyengine_uk);
-      // "(CPI 2.0%, earnings growth 3.3%)": the long-run assumptions, said
-      // here once; the incomes and inequality charts link here
-      if (live) setEndNote(r.data?.meta?.headline_end_year_note?.match(/\(([^)]*)\)\.?$/)?.[1] ?? null);
+      if (live && r.data?.meta) setMeta(r.data.meta);
     });
     return () => {
       live = false;
     };
   }, []);
   const series = (forecast?.sections || []).flatMap((s) => s.series).filter((s) => s.parameter);
+  const source = outlookForecastSource(meta);
+  const note = meta?.headline_end_year_note ?? "";
+  // On the October 2026 forecast: its last calendar year ("calendar 2031"),
+  // so the projections' last year is inside it
+  const lastCalendar = source === "obr_efo_october_2026" ? note.match(/calendar (\d{4})/)?.[1] ?? null : null;
+  // On March 2026: "(CPI 2.0%, earnings growth 3.3%)", the long-run
+  // assumptions 2031-32 uses, said here once
+  const endNote = lastCalendar ? null : note.match(/\(([^)]*)\)\.?$/)?.[1] ?? null;
   return (
     <>
       <p className="method-lead">
-        The baseline grows wages, benefits, prices and rents at the rates of the{" "}
-        <SourceLink id="obr_efo_march_2026" />, so the incomes and poverty figures start from that forecast.
+        The pre-measures forecast grows wages, benefits, prices and rents at the rates of the{" "}
+        <SourceLink id={source} />, so its incomes and poverty figures start from that forecast.
       </p>
       <ul className="method-list">
         <li>Each rate is the growth in a calendar year&apos;s average on the year before.</li>
-        <li>
-          A financial year takes the growth of the calendar year it starts in. 2031-32 is past the OBR forecast and
-          uses <SourceLink id="policyengine_uk">policyengine-uk</SourceLink>&apos;s assumptions for that year, on
-          the path to the OBR&apos;s long-run ones{endNote ? ` (${endNote})` : ""}.
-        </li>
+        {lastCalendar ? (
+          <li>
+            A financial year takes the growth of the calendar year it starts in, so the forecast&apos;s last calendar
+            year, {lastCalendar}, covers {fyLabel(Number(lastCalendar))}; later years use{" "}
+            <SourceLink id="policyengine_uk">policyengine-uk</SourceLink>&apos;s long-run assumptions.
+          </li>
+        ) : (
+          <li>
+            A financial year takes the growth of the calendar year it starts in. 2031-32 is past the OBR forecast and
+            uses <SourceLink id="policyengine_uk">policyengine-uk</SourceLink>&apos;s assumptions for that year, on
+            the path to the OBR&apos;s long-run ones{endNote ? ` (${endNote})` : ""}.
+          </li>
+        )}
         <li>Benefit rates in the baseline follow a lagged CPI index built from this forecast.</li>
       </ul>
       {series.length > 0 && (
