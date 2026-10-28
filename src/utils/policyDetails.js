@@ -83,7 +83,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Reduces each eligible person's modelled income tax, never below zero; the reduction falls by £1 for every £3 of total income above the full new State Pension.",
     details:
-      "Total income counts the State Pension and all other income, savings interest included, so a larger State Pension (with increments or additional State Pension) reduces the allowance too. The personal allowance is unchanged.",
+      "Total income counts the State Pension and all other income, savings interest included, so a larger State Pension (with increments or additional State Pension) reduces the allowance too. The personal allowance is unchanged. People who reach State Pension age after 6 October in a tax year are not included, though the allowance covers them, so its reach and cost are slightly understated.",
     source: {
       label: "Pension Tax Allowance explainer",
       href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer",
@@ -344,7 +344,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Adds £100 to the income of each household in England whose council tax band is A, B, C or D, in 2026-27.",
     details:
-      "The Scottish, Welsh and Northern Ireland governments receive a Barnett share of the funding instead, and councils in England get £100 million for further targeted support; neither is modelled.",
+      "The Treasury's £2.6 billion (Table 6.1) also covers the Scottish, Welsh and Northern Ireland governments' Barnett share (about £410 million) and £100 million for councils in England for further targeted support; neither is modelled, as the model covers payments in England only.",
     source: {
       label: "Budget 2026",
       href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
