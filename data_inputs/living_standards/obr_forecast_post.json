@@ -6,7 +6,7 @@
     "file_sha256": "96795d1747bb5a4978c7fb768689d5fd31f568e5223db8a94b1bd92ba7f6c118",
     "url": "https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/"
   },
-  "read_at": "2026-10-28T15:08:13+00:00",
+  "read_at": "2026-10-28T15:09:49+00:00",
   "series": {
     "cpi": {
       "values": {
@@ -92,12 +92,12 @@
     },
     "cpi_ahc": {
       "values": {
-        "2027": 0.0328,
-        "2028": 0.0204,
-        "2029": 0.0204,
-        "2030": 0.0192
+        "2027": 0.0343,
+        "2028": 0.0202,
+        "2029": 0.0203,
+        "2030": 0.0193
       },
-      "source": "PolicyEngine approximation: the pre-Budget CPI after housing costs moved by the change in OBR CPI for the same year (not an OBR series)",
+      "source": "PolicyEngine derivation, as the model runs on it (uk_budget_data.forecast): policyengine-uk's create_ahc_deflator on the OBR's CPI and actual rents (Table 1.7) and Ofwat water bills (not an OBR series)",
       "carried": []
     },
     "social_rent": {

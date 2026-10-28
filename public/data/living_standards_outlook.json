@@ -1384,22 +1384,22 @@
             "post": [
               {
                 "year": "2027",
-                "value": 0.0328
+                "value": 0.0343
               },
               {
                 "year": "2028",
-                "value": 0.0204
+                "value": 0.0202
               },
               {
                 "year": "2029",
-                "value": 0.0204
+                "value": 0.0203
               },
               {
                 "year": "2030",
-                "value": 0.0192
+                "value": 0.0193
               }
             ],
-            "post_source": "PolicyEngine approximation: the pre-Budget CPI after housing costs moved by the change in OBR CPI for the same year (not an OBR series)"
+            "post_source": "PolicyEngine derivation, as the model runs on it (uk_budget_data.forecast): policyengine-uk's create_ahc_deflator on the OBR's CPI and actual rents (Table 1.7) and Ofwat water bills (not an OBR series)"
           },
           {
             "key": "rpi",

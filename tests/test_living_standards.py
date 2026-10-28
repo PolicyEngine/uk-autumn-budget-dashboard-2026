@@ -840,10 +840,13 @@ def test_the_post_document_and_derived_series(tmp_path):
     assert (
         "kept at the pre-Budget value" in series["mortgage_interest"]["source"]
     )
-    # CPI after housing costs moves with CPI in the same year.
-    cpi_change = series["cpi"]["values"]["2027"] - pre["cpi"]["2027"]
-    assert series["cpi_ahc"]["values"]["2027"] == pytest.approx(
-        pre["cpi_ahc"]["2027"] + cpi_change
+    # CPI after housing costs is the series the model runs on (one figure
+    # for chart and model), not derived from this test workbook.
+    from uk_budget_data.forecast import OBR, forecast_parameter_changes
+
+    model = forecast_parameter_changes()[OBR + "consumer_price_index_ahc"]
+    assert series["cpi_ahc"]["values"]["2027"] == (
+        model["2027-01-01.2027-12-31"]
     )
     # Social rent: CPI for the year before (rounded) + 1 point. 2027 takes
     # the published September 2026 CPI (3.5%), not the EFO's 2026 CPI.
@@ -891,7 +894,10 @@ def test_the_reader_reproduces_the_pre_budget_series_from_march_2026():
     parsed = read_forecast(INPUTS / EFO_FILE_NAME, YEARS)
     # The March forecast predates September 2026's CPI outturn.
     computed = compute_post(
-        outlook["forecast"], parsed, published_september_cpi={}
+        outlook["forecast"],
+        parsed,
+        published_september_cpi={},
+        model_cpi_ahc={},
     )
     for sec in outlook["forecast"]["sections"]:
         for s in sec["series"]:

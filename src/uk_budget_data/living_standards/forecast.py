@@ -84,6 +84,7 @@ def compute_post(
     parsed: dict,
     absent: Optional[dict] = None,
     published_september_cpi: Optional[dict] = None,
+    model_cpi_ahc: Optional[dict] = None,
 ) -> dict:
     """Post values (fractions by year) and source per series key.
 
@@ -94,11 +95,16 @@ def compute_post(
     beyond the gaps CARRIED_YEARS allows. ``published_september_cpi``
     (default PUBLISHED_SEPTEMBER_CPI) sets social rent where the September
     CPI behind it is published; the March check passes {}, since the March
-    forecast was made before it.
+    forecast was made before it. ``model_cpi_ahc`` (default: the CPI after
+    housing costs the model runs on, uk_budget_data.forecast) gives that
+    series by year where it has a value, so the chart and the model state
+    one figure; the March check passes {}.
     """
     absent = absent or {}
     if published_september_cpi is None:
         published_september_cpi = PUBLISHED_SEPTEMBER_CPI
+    if model_cpi_ahc is None:
+        model_cpi_ahc = _model_cpi_ahc()
     by_key = _series_by_key(forecast)
     missing_keys = [
         k for k in by_key if k not in parsed and k not in absent
@@ -147,17 +153,24 @@ def compute_post(
     cpi_post = out["cpi"]["values"]
     if "cpi_ahc" in by_key:
         pre = _pre(by_key["cpi_ahc"])
-        out["cpi_ahc"] = {
-            "values": {
+        if model_cpi_ahc and all(y in model_cpi_ahc for y in pre):
+            values = {y: model_cpi_ahc[y] for y in pre}
+            source = (
+                "PolicyEngine derivation, as the model runs on it "
+                "(uk_budget_data.forecast): policyengine-uk's "
+                "create_ahc_deflator on the OBR's CPI and actual rents "
+                "(Table 1.7) and Ofwat water bills (not an OBR series)"
+            )
+        else:
+            values = {
                 y: round(pre[y] + (cpi_post[y] - cpi_pre[y]), 4) for y in pre
-            },
-            "source": (
-                "PolicyEngine approximation: the pre-Budget CPI after housing "
-                "costs moved by the change in OBR CPI for the same year (not "
-                "an OBR series)"
-            ),
-            "carried": [],
-        }
+            }
+            source = (
+                "PolicyEngine approximation: the pre-Budget CPI after "
+                "housing costs moved by the change in OBR CPI for the same "
+                "year (not an OBR series)"
+            )
+        out["cpi_ahc"] = {"values": values, "source": source, "carried": []}
     if "social_rent" in by_key:
         pre = _pre(by_key["social_rent"])
         values = {}
@@ -189,6 +202,16 @@ def compute_post(
     return out
 
 
+def _model_cpi_ahc() -> dict:
+    """CPI after housing costs by calendar year, as the model runs on it."""
+    from uk_budget_data.forecast import OBR, forecast_parameter_changes
+
+    series = forecast_parameter_changes().get(
+        OBR + "consumer_price_index_ahc", {}
+    )
+    return {int(key[:4]): value for key, value in series.items()}
+
+
 def check_pre_is_march(forecast: dict, efo: Path) -> None:
     """Refuse a forecast block whose pre series are not the March 2026 EFO.
 
@@ -210,6 +233,7 @@ def check_pre_is_march(forecast: dict, efo: Path) -> None:
         forecast,
         read_forecast(efo, [years[0] - 1, *years]),
         published_september_cpi={},
+        model_cpi_ahc={},
     )
     wrong = [
         key
