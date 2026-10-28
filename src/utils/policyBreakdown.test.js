@@ -352,3 +352,62 @@ describe("policy tabs on the household API's answers", () => {
   });
 
 });
+
+describe("a tax reduction (the Pension Tax Allowance's design)", () => {
+  // HM Treasury's 2027-28 case: total income £13,186.40, £150 above the
+  // full new State Pension, so the £94 reduction is cut by £50 to £44
+  const ID = "pension_measure";
+  const reductionParameters = {
+    schema: "uk-budget-dashboard/policy-parameters/v1",
+    measures: {
+      [ID]: {
+        description: "Reduction (test)",
+        display: "path",
+        rows: [
+          {
+            label: "Pension Tax Allowance, the largest tax reduction",
+            unit: "gbp",
+            unit_words: "£ of income tax a year",
+            primary: true,
+            points: [{ key: "2027", year: 2027, before: 0, after: 94 }],
+            note: "For people over State Pension age; reduced by £1 for every £3 of total income above the full new State Pension",
+          },
+        ],
+      },
+    },
+  };
+  const tabFor = (taxBefore, taxAfter) => {
+    const change = taxBefore - taxAfter;
+    const bars = policyRows({ measures: [{ id: ID, name: "Pension measure", change, status: "affected" }], residual: 0 }, change, [
+      { id: ID, name: "Pension measure", description: "Reduction (test)", color: "var(--x)" },
+    ]);
+    const programmes = [
+      { id: "income_tax", label: "Income Tax", before: taxBefore, after: taxAfter, change: taxAfter - taxBefore, group: "tax" },
+      { id: "state_pension", label: "State Pension", before: 13186.4, after: 13186.4, change: 0, group: "income" },
+    ];
+    const net = { before: 13186.4 - taxBefore, after: 13186.4 - taxAfter, change };
+    const groups = groupTotals(roundProgrammeGroups(programmeGroups(programmes), net, bars.all));
+    const policies = [{ id: ID, name: "Pension measure", description: "Reduction (test)", color: "var(--x)" }];
+    return policyTabs({ bars, groups, policies, parameters: reductionParameters, year: 2027, household: {}, salaryUsed: 0 }).tabs[0];
+  };
+
+  it("shows income tax without it, the largest reduction, the taper and income tax with it", () => {
+    const tab = tabFor(123.28, 79.28);
+    const rows = Object.fromEntries(tab.household.map((row) => [row.id, row]));
+    expect(rows.tax_without_reduction).toMatchObject({ kind: "input", before: 123.28 });
+    expect(rows.tax_reduction_largest).toMatchObject({ label: "Pension Tax Allowance, the largest tax reduction", before: 0, after: 94 });
+    expect(rows.tax_reduction_taper.label).toBe("Withdrawn by the taper (£1 for every £3 of total income above the full new State Pension)");
+    expect(rows.tax_reduction_taper.after).toBeCloseTo(-50, 6);
+    expect(tab.household.filter((row) => row.kind === "part").map((row) => [row.id, row.before, row.after, row.change])).toEqual([
+      ["income_tax_total", -123, -79, 44],
+    ]);
+  });
+
+  it("says when the reduction is more than the income tax due", () => {
+    // £12,970: £80 of tax, all of it taken off
+    const tab = tabFor(80, 0);
+    const rows = Object.fromEntries(tab.household.map((row) => [row.id, row]));
+    expect(rows.tax_reduction_unused).toMatchObject({ label: "Not used: more than the income tax due", after: -14 });
+    expect(rows.tax_reduction_taper).toBeUndefined();
+  });
+});
