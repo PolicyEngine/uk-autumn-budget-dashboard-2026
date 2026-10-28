@@ -46,6 +46,7 @@ and never download it. Locally (``--backend local``) the same steps run
 one after another in this process.
 """
 
+import time
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Callable, Optional
@@ -137,12 +138,13 @@ def flat_tables_for(job, built: list, tables=NATIONAL_TABLES):
     return outcome
 
 
-def run_national_job(job, tables=NATIONAL_TABLES):
+def run_national_job(job, tables=NATIONAL_TABLES, row_times=None):
     """One artifact, then its package-file rows from the same simulations.
 
     Returns ``(ArtifactOutcome, FlatOutcome or None)``. The artifact is
     ``run_artifact``'s, unchanged; a run that wrote no artifact (refused)
-    reads no rows."""
+    reads no rows. ``row_times``, if given, gets the seconds the rows
+    took (for the container's progress line)."""
     from uk_budget_data.publication.generate import run_artifact
 
     built: list = []
@@ -151,7 +153,10 @@ def run_national_job(job, tables=NATIONAL_TABLES):
     )
     if outcome.reference is None:
         return outcome, None
+    started = time.perf_counter()
     flat = flat_tables_for(job, built, tables)
+    if row_times is not None:
+        row_times.append(time.perf_counter() - started)
     del built
     return outcome, flat
 

@@ -157,14 +157,17 @@ def run_artifact_here(job, allow_bundle: bool, flat_tables=None):
         process=Timed(job.process, processes),
     )
     flat = None
+    rows: list = []
     if flat_tables is None:
         outcome = run_artifact(here)
     else:
         from uk_budget_data.national import run_national_job
 
-        outcome, flat = run_national_job(here, flat_tables)
+        outcome, flat = run_national_job(here, flat_tables, rows)
     outcome.progress.append(
-        phase_line(job.key, time.perf_counter() - started, builds, processes)
+        phase_line(
+            job.key, time.perf_counter() - started, builds, processes, rows
+        )
     )
     extra = () if flat_tables is None else (flat,)
     if outcome.reference is None:

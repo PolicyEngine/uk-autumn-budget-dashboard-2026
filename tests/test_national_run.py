@@ -663,7 +663,7 @@ def test_rows_read_after_the_artifact_are_the_flat_paths_bytes(
     from uk_budget_data import calculators, synthetic_dataset
     from uk_budget_data.reforms import get_reform
 
-    dataset = synthetic_dataset.write(tmp_path / "synthetic.h5", 600, 2026)
+    dataset = synthetic_dataset.write(tmp_path / "synthetic.h5", 1500, 2026)
 
     def own_ids(simulation, dataset_path):
         return np.asarray(simulation.calculate("household_id", 2026).values)
@@ -735,3 +735,15 @@ def test_rows_read_after_the_artifact_are_the_flat_paths_bytes(
         whole = (old_dir / name).read_bytes()
         assert whole.count(b"\n") > 5, name
         assert (new_dir / name).read_bytes() == whole, name
+
+
+def test_the_container_line_splits_out_the_rows_time():
+    from uk_budget_data.modal_runner import phase_line
+
+    line = phase_line("alpha", 400, [30, 50], [260], [45])
+    assert line == (
+        "alpha: 400 s in its Modal container (builds 30 + 50 s, tables "
+        "260 s, checks and receipt 15 s, package-file rows 45 s)"
+    )
+    # The artifacts' own line is unchanged.
+    assert "rows" not in phase_line("alpha", 400, [30, 50], [260])

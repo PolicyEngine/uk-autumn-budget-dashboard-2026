@@ -97,12 +97,16 @@ class Timed:
             self.times.append(time.perf_counter() - started)
 
 
-def phase_line(key: str, total: float, builds: list, processes: list) -> str:
+def phase_line(
+    key: str, total: float, builds: list, processes: list, rows=()
+) -> str:
     """Where a container's time went. The first build also downloads and
     checks the dataset in a fresh container, so the difference between the
     two builds is roughly the download."""
     built = sum(builds)
     processed = sum(processes)
+    # The national run's package-file rows (``generate --national``).
+    read = sum(rows)
     parts = [
         (
             "builds " + " + ".join(f"{s:.0f}" for s in builds) + " s"
@@ -110,7 +114,8 @@ def phase_line(key: str, total: float, builds: list, processes: list) -> str:
             else None
         ),
         f"tables {processed:.0f} s" if processes else None,
-        f"checks and receipt {max(total - built - processed, 0):.0f} s",
+        f"checks and receipt {max(total - built - processed - read, 0):.0f} s",
+        f"package-file rows {read:.0f} s" if rows else None,
     ]
     return (
         f"{key}: {total:.0f} s in its Modal container ("
