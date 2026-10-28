@@ -31,6 +31,7 @@ from tests.publication_support import (
     make_tables,
 )
 from uk_budget_data import geography as g
+from uk_budget_data import sign_off
 from uk_budget_data.models import DataConfig, Reform, ReformResult
 from uk_budget_data.publication import attestations as a
 from uk_budget_data.publication import manifest as m
@@ -131,6 +132,9 @@ def approved(tmp_path_factory):
     )
     world = World()
     patch = pytest.MonkeyPatch()
+    # The attestation commits are the commits after an approval that this
+    # module is about, so sign-off is on, as on Budget day.
+    patch.setattr(sign_off, "REQUIRED", True)
     attestations = repo / "data_inputs" / "publication" / "attestations"
     patch.setattr(a, "ATTESTATIONS_ROOT", attestations)
     patch.setattr(a, "ATTESTATION_REPOSITORY", repo)
@@ -390,6 +394,9 @@ def documented(tmp_path_factory):
     )
     world = World()
     patch = pytest.MonkeyPatch()
+    # The attestation commits are the commits after an approval that this
+    # module is about, so sign-off is on, as on Budget day.
+    patch.setattr(sign_off, "REQUIRED", True)
     attestations = repo / "data_inputs" / "publication" / "attestations"
     patch.setattr(a, "ATTESTATIONS_ROOT", attestations)
     patch.setattr(a, "ATTESTATION_REPOSITORY", repo)
