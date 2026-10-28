@@ -171,27 +171,28 @@ def static_capital_gains() -> dict[str, dict[str, any]]:
 
 
 # =============================================================================
-# 1. FUEL DUTY: FROZEN AT 52.95P THROUGH 2027-28
+# 1. FUEL DUTY: THE 5P CUT EXTENDED TO 1 JULY 2027
 # =============================================================================
 
-# Current law in policyengine-uk 2.132.6 (petrol_and_diesel.yaml), by the
-# date each rate takes effect: 52.95p to 31 December 2026, 55.95p from
-# 1 January 2027, 57.95p from 1 March 2027, then RPI each April. The 2032
-# step is the engine's own uprating (2031's rate by 2031 RPI growth).
-# From April 2027, RPI uprating on the OBR October 2026 forecast, the same
-# path the baseline is built on (uk_budget_data.forecast.fuel_duty_rpi_steps).
+# Current law, by the date each rate takes effect: 52.95p to 31 December
+# 2026, 55.95p from 1 January 2027, 57.95p from 1 March 2027 (as in
+# policyengine-uk 2.151.0's petrol_and_diesel.yaml; HMRC's amended rates
+# note, SI 2026/164 as amended by SI 2026/555), then 60.59p from 1 April
+# 2027 (the OBR's July rate, EFO October 2026 paragraph 3.19, taken in
+# April in current law; HMRC set no April rate) and RPI each April after,
+# on the OBR October 2026 forecast, the same path the baseline is built on
+# (uk_budget_data.forecast.fuel_duty_rpi_steps).
 FUEL_DUTY_CURRENT_LAW = (
     ("2026-03-23", 0.5295),
     ("2027-01-01", 0.5595),
     FUEL_DUTY_STATUTORY,
     *fuel_duty_rpi_steps(),
 )
-# The candidate (Vahid, 27 October 2026): no 1 January 2027 rise, so the
-# 5p cut continues and 52.95p is frozen through 2027-28 (to 31 March
-# 2028), with neither the March 2027 step nor the April 2027 RPI rise; RPI
-# uprating resumes in April 2028 from 52.95p. So from April 2028 each rate
-# is current law's scaled by 52.95 / 59.75, the 5p and a year's RPI below
-# it.
+# The pre-Budget candidate (27 October 2026), kept only for
+# FUEL_DUTY_FROZEN_UNTIL = None: 52.95p frozen through 2027-28 (to 31 March
+# 2028), RPI uprating resuming in April 2028 from 52.95p, each later rate
+# current law's scaled by 52.95p over current law's April 2027 rate.
+# Budget day replaced it with FUEL_DUTY_FROZEN_UNTIL below.
 #
 # Budget day: the two numbers to set from the Budget document.
 # - FUEL_DUTY_FROZEN: the frozen rate, £ a litre. 0.5295 keeps the 5p cut
@@ -211,8 +212,9 @@ FUEL_DUTY_FROZEN_THROUGH = 2027
 # Announced in the speech (28 October 2026, 12:54): "a further extension
 # of the 5p fuel duty cut until next July". FUEL_DUTY_FROZEN_UNTIL, when
 # set, is the first day back on current law: 52.95p to the day before,
-# then current law's rate in force that day (59.75p, with the January,
-# March and April 2027 steps all taken at once) and its RPI rises after.
+# then current law's rate in force that day (60.59p: the 5p and the
+# deferred RPI rise together, EFO October 2026 paragraph 3.19) and its RPI
+# rises after.
 # Budget 2026 document: "Extend the 5p fuel duty cut and freeze ... to
 # 1 July 2027" (Table row 3: -575, -780, then 0), so "2027-07-01".
 # None gives the 27 October candidate (FUEL_DUTY_FROZEN_THROUGH, with RPI
@@ -224,8 +226,9 @@ FUEL_DUTY_RPI_FROM = f"{FUEL_DUTY_FROZEN_THROUGH + 1}-04-01"
 
 def _fuel_duty_scale_base() -> float:
     """Current law's rate just before uprating resumes, which the frozen
-    rate stands in for (59.75p, its April 2027 rate, for a freeze through
-    2027-28); later rates are current law's scaled by frozen / this."""
+    rate stands in for (60.59p, its April 2027 rate, for a freeze through
+    2027-28); later rates are current law's scaled by frozen / this. Used
+    only by the pre-Budget candidate (FUEL_DUTY_FROZEN_UNTIL = None)."""
     before = [
         rate for day, rate in FUEL_DUTY_CURRENT_LAW if day < FUEL_DUTY_RPI_FROM
     ]
