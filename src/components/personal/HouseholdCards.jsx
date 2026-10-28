@@ -8,7 +8,7 @@ import {
   ChevronDown,
   LayoutGrid,
   GraduationCap,
-  HardHat,
+  HandHeart,
   House,
   KeyRound,
   UsersRound,
@@ -28,7 +28,7 @@ import Tip from "../Tip";
 /** Each example's icon, by the name it gives (householdExamples.js). */
 export const EXAMPLE_ICONS = {
   key: KeyRound,
-  hardHat: HardHat,
+  handHeart: HandHeart,
   armchair: Armchair,
   family: UsersRound,
   graduate: GraduationCap,
