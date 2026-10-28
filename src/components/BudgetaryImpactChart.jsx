@@ -144,11 +144,11 @@ export function revenueInfo(data) {
   return {
     how: fromPackage
       ? [
-          "Each bar is one policy on its own against current law; the net line is all the policies run together.",
+          "Each bar is one policy on its own against current law; the net line is all the policies run together, so it captures the interactions between them.",
           gapM !== null &&
             (gapM < 1
-              ? "The net line and the bars added up agree within £1m a year."
-              : `The net line and the bars added up differ by up to £${Math.round(gapM).toLocaleString("en-GB")}m a year: interactions between the policies.`),
+              ? "Here the interactions come to under £1m a year: the net line and the bars added up agree within £1m."
+              : `Here the interactions come to up to £${Math.round(gapM).toLocaleString("en-GB")}m a year: the gap between the net line and the bars added up.`),
         ].filter(Boolean)
       : [
           "Each bar is one policy on its own against current law; the net line adds up the bars.",
@@ -365,7 +365,19 @@ function BudgetaryImpactChart({ data, selectedYear, selectedPolicies = [] }) {
               stroke={CHART_COLOURS.net}
               strokeWidth={1.75}
               dot={{ fill: CHART_COLOURS.net, stroke: CHART_COLOURS.surface, strokeWidth: 1.5, r: DOT_RADIUS }}
-              name="netImpact"
+              // Hoverable: the line and its dots give the tooltip the net
+              // change for the year
+              activeDot={{
+                r: DOT_RADIUS + 2,
+                fill: CHART_COLOURS.net,
+                stroke: CHART_COLOURS.surface,
+                strokeWidth: 1.5,
+                onMouseEnter: () => setHoveredMeasure("netImpact"),
+                onMouseLeave: () => setHoveredMeasure(null),
+              }}
+              onMouseEnter={() => setHoveredMeasure("netImpact")}
+              onMouseLeave={() => setHoveredMeasure(null)}
+              name="Net change"
               {...chartMotion()}
               hide={activePolicies.length <= 1}
             />

@@ -181,9 +181,12 @@ export function comparisonSentence(rows, obrKind) {
   const gap = (row) => Math.abs(shownDifference(row.pe, row.obr));
   const close = paired.filter((row) => gap(row) <= CLOSE_BN + 1e-9).length;
   const largest = paired.reduce((best, row) => (gap(row) > gap(best) ? row : best));
+  // Counted among the policies with an official figure this year, said
+  // so, as the chart also draws policies without one
+  const withFigure = paired.length === rows.length ? `${paired.length} policies` : `${paired.length} policies with an official figure this year`;
   const lead = close === paired.length
-    ? `For all ${paired.length} policies our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`
-    : `For ${close} of ${paired.length} policies our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`;
+    ? `For all ${withFigure} our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`
+    : `For ${close} of the ${withFigure} our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`;
   if (formatBn(largest.pe) === formatBn(largest.obr)) return `${lead}.`;
   return `${lead}; the largest gap is ${largest.name} (${formatBn(largest.pe)} vs ${formatBn(largest.obr)}).`;
 }
@@ -191,10 +194,10 @@ export function comparisonSentence(rows, obrKind) {
 // About this chart: what the two bases are, why the figures differ, sources
 const COMPARISON_INFO = {
   shows:
-    "PolicyEngine's estimate of each policy's effect on the public finances beside the official costing for the same year, in £ billion; positive values raise revenue or cut spending. Largest official costing first.",
+    "PolicyEngine's estimate of each policy's effect on the public finances beside the official costing for the same year, in £m under £1bn and £bn above; positive values raise revenue or cut spending. Largest official costing first.",
   how: [
     "PolicyEngine's figures are static, so an official static costing is the like-for-like comparison. Budget 2026's costings give one figure per policy, which for most policies includes behavioural responses, so the card compares with that.",
-    "On the % scale each official costing is 100%; a policy costed under £50m has no %.",
+    "Shown as a share of the official figure, each official costing is 100% and our figure is its share of it; a policy costed under £50m has no share.",
     "Difference is PolicyEngine minus the official figure.",
   ],
   definitions: [
@@ -307,7 +310,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
     image: showTable || yearCovered,
     exportOptions: {
       title,
-      description: `Each row shows a policy's budgetary impact in ${yearLabel}, in £ billion: PolicyEngine's static estimate and the official ${obrKind} costing, with the difference (PolicyEngine minus official) at the right. Positive values raise revenue or reduce spending.`,
+      description: `Each row shows a policy's budgetary impact in ${yearLabel}, in £m under £1bn and £bn above: PolicyEngine's static estimate and the official ${obrKind} costing, with the difference (PolicyEngine minus official) at the right. Positive values raise revenue or reduce spending.`,
       legendItems: dumbbellLegendItems(obrKind),
       logo: CHART_LOGO,
       svgSelector: showTable ? undefined : "svg",
@@ -331,7 +334,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
       onChange: setScale,
       options: [
         { value: "bn", label: "£bn" },
-        { value: "pct", label: "% of official costing" },
+        { value: "pct", label: "Our figure as a share of the official one" },
       ],
     },
   ].filter(Boolean);
