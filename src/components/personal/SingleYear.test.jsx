@@ -1325,17 +1325,17 @@ describe("the waterfall's one line", () => {
       />,
     );
     expect(container.querySelector(".waterfall-sentence")).toBeNull();
-    // The title, the one line naming it against the table (HH5), then the
-    // sentence, read out but not shown
+    // The title, the fuel duty VAT line (HH5), then the sentence, read out
+    // but not shown
     expect(container.querySelector(".waterfall-header").textContent).toBe(
       "How each policy changes your income" + container.querySelector(".waterfall-sub").textContent + container.querySelector(".visually-hidden").textContent,
     );
-    expect(container.querySelector(".waterfall-sub")).toHaveTextContent("By policy. The table below splits the same change by tax and benefit.");
-    // The fuel duty policy moves this household: the VAT line, with no
-    // claim that the policy is a freeze (HH5)
-    expect(container.querySelector(".waterfall-sub")).toHaveTextContent(
+    // The fuel duty policy moves this household: the VAT line alone, with
+    // no claim that the policy is a freeze (HH5)
+    expect(container.querySelector(".waterfall-sub").textContent).toBe(
       "The fuel duty policy also changes the VAT on fuel, so part of its effect shows in the table's VAT row.",
     );
+    expect(container.querySelector(".waterfall-header")).not.toHaveTextContent(/By policy/);
     const chart = container.querySelector("ol.waterfall-rows");
     const described = document.getElementById(chart.getAttribute("aria-describedby"));
     expect(described).toHaveClass("visually-hidden");
@@ -1360,7 +1360,7 @@ describe("the waterfall's one line", () => {
       "Largest loss",
     ]);
     // No fuel duty policy: no VAT line
-    expect(mixed.container.querySelector(".waterfall-sub")).not.toHaveTextContent(/fuel/);
+    expect(mixed.container.querySelector(".waterfall-sub")).toBeNull();
     mixed.unmount();
 
     // A fuel duty policy that does not move this household: no VAT line
@@ -1372,7 +1372,7 @@ describe("the waterfall's one line", () => {
         typeOf={(id) => (id === "Fuel duty frozen" ? "Fuel duty" : "VAT")}
       />,
     );
-    expect(still.container.querySelector(".waterfall-sub")).not.toHaveTextContent(/fuel/);
+    expect(still.container.querySelector(".waterfall-sub")).toBeNull();
     still.unmount();
 
     // Found by the policy's type, as the table's VAT row, not by its name
@@ -1391,7 +1391,7 @@ describe("the waterfall's one line", () => {
     const named = render(
       <NetIncomeWaterfall totals={{ before: 18000, after: 18075, change: 75 }} steps={[step("Fuel duty deferral", 75)]} yearLabel="2027-28" />,
     );
-    expect(named.container.querySelector(".waterfall-sub")).not.toHaveTextContent(/fuel/);
+    expect(named.container.querySelector(".waterfall-sub")).toBeNull();
     named.unmount();
 
     // One policy: no chip, the sentence still the text alternative
