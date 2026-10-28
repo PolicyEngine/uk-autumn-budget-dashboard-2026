@@ -25,9 +25,9 @@ export const WITH_MEASURES_TITLE = "Growth across the distribution, with the sel
 export const WITH_MEASURES_ANCHOR = "growth-with-measures";
 
 // Shows: the measures' effect first (see GrowthWithMeasuresCard); each
-// label says what is plotted (Pavel's review, LS3)
+// label says what is plotted (Pavel's review, LS3); short enough for one line in the Options pill at 390px (round 3)
 export const SHOWS = [
-  { value: "difference", label: "Effect of the policies (percentage points)" },
+  { value: "difference", label: "Effect (pp)" },
   { value: "growth", label: "Growth with the policies (%)" },
 ];
 

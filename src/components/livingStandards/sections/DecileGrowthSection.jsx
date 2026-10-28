@@ -44,9 +44,17 @@ export function trendWords(bottom, top) {
   return top > bottom ? "grow at the top and fall at the bottom" : "grow at the bottom and fall at the top";
 }
 
-// The policies' change, in words (rounded means, as shown)
-export function changeWords(bottom, top) {
-  if (nearZero(bottom, top)) return "barely change income growth at either end on average";
+// A single year's effect this large (pp) is no "barely", whatever the
+// average (round 3: −0.1pp on average with −0.35pp in one year)
+export const BARELY_PP = 0.2;
+
+// The policies' change, in words (rounded means, as shown). `largest` is
+// the largest single value behind the means: past BARELY_PP, a near-zero
+// average is not "barely"
+export function changeWords(bottom, top, largest = 0) {
+  if (nearZero(bottom, top)) {
+    return largest < BARELY_PP ? "barely change income growth at either end" : "change average income growth little at either end";
+  }
   if (Math.abs(top - bottom) < 0.15) return "change income growth about equally at both ends";
   return top > bottom ? "change income growth more at the top" : "change income growth more at the bottom";
 }
@@ -305,7 +313,12 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const highMean = round1(mean(highVals));
   const num = (v) => signed(v, "").replace(/^0\.0$/, "0");
   const per = annual ? " a year" : "";
-  const unitWord = diff ? " points" : "%";
+  // The effect in pp, as the axis and tooltip give it (round 3)
+  const unitWord = diff ? "pp" : "%";
+  // The years behind the average, named (round 3)
+  const span = annual
+    ? `on average over ${fyDash(annualYears[0].year)} to ${fyDash(end.year)}`
+    : `from ${fyDash(first.year)} to ${fyDash(end.year)}`;
   // The two groups compared, named (LS1): "(lowest tenth: +0.4% a year;
   // top tenth: +0.2%)"
   const bottomName = skip ? `${ordinal(skip + 1)} ${g.share}` : `lowest ${g.share}`;
@@ -317,10 +330,13 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   );
   const largest = Math.max(...[...lowVals, ...highVals].map((v) => Math.abs(v)));
   const summary = diff ? (
-    largest < 0.25 ? (
-      <>The policies barely change income growth at either end, under {formatOneDp(Math.max(0.1, Math.ceil(largest * 10 + 1e-9) / 10))} points{per}.</>
+    largest < BARELY_PP ? (
+      <>The policies barely change income growth at either end {span}, by under {formatOneDp(Math.max(0.1, Math.ceil(largest * 10 + 1e-9) / 10))}pp{per}.</>
     ) : (
-      <>The policies {changeWords(lowMean, highMean)} {ends}.</>
+      <>
+        The policies {changeWords(lowMean, highMean, largest)} {span} {ends}
+        {nearZero(lowMean, highMean) ? ", though single years move more" : ""}.
+      </>
     )
   ) : (
     // In the growth view the rows are current law plus the policies (LS1)
@@ -336,7 +352,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   };
   const rangesNote = `Bottom is the ${low}, top the highest-income ${g.share}${who}. ${
     annual ? `Each year from ${fyDash(annualYears[0].year)} to ${fyDash(end.year)}` : `From ${fyDash(first.year)} to ${fyDash(end.year)}`
-  }, ${diff ? "the policies change their growth by" : "their real income changes by"} ${between(lowVals)}${diff ? " points" : "%"}${per} and ${between(highVals)}${diff ? " points" : "%"} respectively.`;
+  }, ${diff ? "the policies change their growth by" : "their real income changes by"} ${between(lowVals)}${unitWord}${per} and ${between(highVals)}${unitWord} respectively.`;
 
   // Under the key only the short decile-1 (AHC) caution; the vigintile
   // note is in About this chart, with the key starting at vigintile 2
@@ -394,7 +410,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
       how: [
         measures && "The effect of the policies is growth with them less growth under current law.",
         `Bottom is the ${low}; top the highest-income ${g.share}${who}.`,
-        `${annual ? `Each year from ${fyDash(annualYears[0].year)} to ${fyDash(end.year)}` : `From ${fyDash(first.year)} to ${fyDash(end.year)}`}, ${diff ? "the policies change their growth by" : "their real income changes by"} ${between(lowVals)}${diff ? " points" : "%"}${per} and ${between(highVals)}${diff ? " points" : "%"} respectively.`,
+        `${annual ? `Each year from ${fyDash(annualYears[0].year)} to ${fyDash(end.year)}` : `From ${fyDash(first.year)} to ${fyDash(end.year)}`}, ${diff ? "the policies change their growth by" : "their real income changes by"} ${between(lowVals)}${unitWord}${per} and ${between(highVals)}${unitWord} respectively.`,
         popNote.trim(),
       ],
       caveats: [
