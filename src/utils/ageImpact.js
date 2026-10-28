@@ -64,10 +64,6 @@ export function packageRunFor(rows, packageRun, year) {
 /** The notice for several policies whose results by age are not published together. */
 export const COMBINATION_NOT_PUBLISHED = "Results by age for this combination of policies are not published yet.";
 
-/** About this chart's caveat when a package's chart shows no policy parts. */
-export const PACKAGE_PARTS_CAVEAT =
-  "Each policy's part is not shown, as a selected policy has too few survey records by age. The bars show all the selected policies together.";
-
 /** Why a package's chart has its net but no policy parts. */
 export const PACKAGE_NET_ONLY =
   "The net change is all the selected policies together. Each policy's part is not shown, as a selected policy has too few survey records by age.";
@@ -83,21 +79,18 @@ const haveOrHas = (names) => (names.length > 1 ? "have" : "has");
  */
 const BY_DIFFERENCE = "showing only the other policies would let the withheld policies' part be worked out from the net change";
 
-/** Why Each policy is unavailable, as the short line under the Show choice. */
-export const withheldPartsNote = (names) =>
-  names.length
-    ? `not available, as ${listNames(names)} ${haveOrHas(names)} too few survey records at some ages, and ${BY_DIFFERENCE}`
-    : "not available for this selection";
-
 /**
- * Why no policy's part is shown, naming the thin policies: About this
- * chart's caveat. `by` is the breakdown ("by single year of age", "by age
- * group").
+ * Why no policy's part is shown, naming the thin policies: one sentence in
+ * About this chart's caveats (the Show choice is then not offered at all).
+ * `where` is the breakdown ("at some ages", "in some age groups").
  */
-export const withheldPartsCaveat = (names, by = "by single year of age") =>
+export const withheldPartsCaveat = (names, where = "at some ages") =>
   names.length
-    ? `Each policy's part is not shown, as ${listNames(names)} ${haveOrHas(names)} too few survey records ${by}, and ${BY_DIFFERENCE}. The bars show all the selected policies together.`
-    : PACKAGE_PARTS_CAVEAT;
+    ? `The split by policy is not shown for this selection: ${listNames(names)} ${haveOrHas(names)} too few survey records ${where}, so the other policies' parts would reveal ${names.length > 1 ? "theirs" : "its part"}.`
+    : `The split by policy is not shown for this selection: a selected policy has too few survey records ${where}, so the other policies' parts would reveal its part.`;
+
+/** About this chart's caveat when a package's chart shows no policy parts. */
+export const PACKAGE_PARTS_CAVEAT = withheldPartsCaveat([]);
 
 /** PACKAGE_NET_ONLY, naming the thin policies. */
 export const withheldNetOnly = (names) =>

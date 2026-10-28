@@ -477,3 +477,34 @@ describe("a figure the floor of survey households withheld", () => {
     expect(row.querySelector(".wf-bar")).toBeNull();
   });
 });
+
+describe("About this chart and the sentence follow the selection (W6 G1)", () => {
+  const renderMeasures = async (selected) => {
+    render(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <PovertyMeasuresRow rows={metrics} policies={catalogue.measures} selectedPolicies={selected} selectedYear={2027} />
+      </MeasureCatalogueProvider>,
+    );
+    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which policies move poverty/ }, { timeout: 5000 });
+    const card = heading.closest(".mp-card");
+    fireEvent.click(within(card).getByRole("button", { name: "About this chart" }));
+    return card;
+  };
+
+  it("describes the last bar only when it is drawn", async () => {
+    // Two policies, not every one: no run of the whole selection, so no
+    // "All selected policies together" bar and no line about it
+    const card = await renderMeasures(["plan_2_threshold_unfreeze", "state_pension_income_tax_protection"]);
+    expect(card.querySelector(".wf-total")).toBeNull();
+    expect(within(card).queryByText(TOGETHER)).toBeNull();
+    expect(card.querySelector(".chart-more-info")).not.toHaveTextContent(/The last bar/);
+    expect(within(card).queryByRole("link", { name: "Policies added up" })).toBeNull();
+  });
+
+  it("names the poverty line, not 'this line', when no selected policy moves anyone", async () => {
+    const card = await renderMeasures(["fuel_duty_rise_deferral"]);
+    expect(card.querySelector(".chart-description")).toHaveTextContent(
+      /^No selected policy on its own moves anyone across the poverty line in 2027-28\.$/,
+    );
+  });
+});

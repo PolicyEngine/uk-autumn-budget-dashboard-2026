@@ -7,7 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import ConstituencyMap, { ONE_POLICY_NOTE, legendPlacement } from "./ConstituencyMap";
+import ConstituencyMap, { legendPlacement } from "./ConstituencyMap";
 import { CHART_COLOURS } from "../utils/chartTheme";
 import { downloadFile, downloadSvg } from "../utils/downloadFile";
 import { exportMapAsSvg } from "../utils/exportMapAsSvg";
@@ -341,7 +341,7 @@ describe("ConstituencyMap", () => {
     expect(within(card).getByRole("heading")).toHaveTextContent("Westmoor");
     const lines = [...card.querySelectorAll("p")].map((line) => line.textContent);
     expect(lines).toEqual([
-      "No data: not published, too few survey households",
+      "No data: not published, to protect survey respondents' confidentiality",
       "Regional figure for London, not an estimate for this constituency: +0.71% (0.52% to 0.94%)",
     ]);
   });
@@ -608,7 +608,7 @@ describe("ConstituencyMap", () => {
       .map((line) => line.textContent)
       .join(" ");
     expect(card).toBe(
-      "Westmoor No data: not published, too few survey households Regional figure for London, not an estimate " +
+      "Westmoor No data: not published, to protect survey respondents' confidentiality Regional figure for London, not an estimate " +
         "for this constituency: +0.71% (0.52% to 0.94%)",
     );
     expect(svgText).not.toMatch(/NaN|undefined/);
@@ -867,10 +867,11 @@ describe("exportMapAsSvg", () => {
       await waitFor(() =>
         expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: Rail fares freeze$/),
       );
-      // One paragraph under the title: the figures, then one policy at a time
+      // One paragraph under the title: the figures only; the greyed-out
+      // option below says the map shows one policy at a time
       const description = container.querySelector(".chart-header .chart-description");
-      expect(description.textContent).toMatch(/^Households .*\. Until the map for all selected policies is published, it shows one policy at a time\.$/);
-      expect(description.textContent.endsWith(ONE_POLICY_NOTE)).toBe(true);
+      expect(description.textContent).toMatch(/^Households [^.]*\.$/);
+      expect(description.textContent).not.toMatch(/one policy at a time/);
       expect(container.querySelectorAll(".chart-header .chart-description")).toHaveLength(1);
       fireEvent.click(screen.getByRole("button", { name: /^Policy:/ }));
       const list = screen.getByRole("listbox", { name: "Policy" });

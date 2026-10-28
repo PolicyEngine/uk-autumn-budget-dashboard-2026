@@ -79,8 +79,9 @@ export const HATCH_COLOURS = Object.freeze({
 
 /**
  * An area with no data (no row, not published, or too uncertain to place
- * on the scale): a faded cool slate that does not draw the eye, kept apart
- * from the scale's 0 (the warmer light grey of no change), with the same
+ * on the scale): a faint cool grey that does not draw the eye, lighter
+ * than the scale's 0 (the light grey of no change) and so than every
+ * colour on the scale, yet still apart from the white card, with the same
  * thin white border as every other area (Vahid, 28 October).
  */
 export const NO_DATA_FILL = CHART_COLOURS.noData;

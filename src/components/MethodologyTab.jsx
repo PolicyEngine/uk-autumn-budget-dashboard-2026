@@ -12,7 +12,6 @@ import MethodContents, { revealAnchor } from "./methodology/MethodContents";
 import { NOT_MODELLED, unavailableMeasures } from "./methodology/measures";
 import { SCATTER_BINS } from "../utils/publication/scatter";
 import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE } from "../utils/ageImpact";
-import { SINGLE_AGE_FIRST, SINGLE_AGE_LAST } from "./youngPeople/youngPeopleData";
 import { EARLY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
@@ -623,13 +622,13 @@ function MethodologyTab({ onShowTab }) {
                     ],
                   },
                 ],
-                ["Single year of age", `One bar per year of age from ${SINGLE_AGE_FIRST} to ${SINGLE_AGE_LAST}.`],
+                ["Single year of age", "One bar per year of age across the chosen age group; 90 and over is one bar."],
                 [
                   "Change by year",
                   {
-                    lead: "The Young people and Pensioners charts by year:",
+                    lead: "The Change by year chart on By age:",
                     points: [
-                      "Each point is a whole fiscal year, the sum of each selected policy's own effect; the curve between points never goes past them.",
+                      "Each point is a whole fiscal year: all the selected policies run together when that run is published, otherwise the sum of each policy's own effect; the curve between points never goes past them.",
                       "A label names the policy behind each of the largest year-on-year steps.",
                       "Breakdown by policy stacks each policy's own change, with the net change as the line; the running total adds each year's change from the first year.",
                       "No share of income is shown: the results by age carry no income to divide by.",
@@ -770,12 +769,14 @@ function MethodologyTab({ onShowTab }) {
         >
           <Topic title="Policies added up" preview="Revenue, decile and age charts · Household scatter · Winners and losers">
             <p className="method-more">
-              Each policy is also simulated on its own. Where several are selected, the revenue,
-              decile and age charts add up their separate effects, so they leave out interactions
-              between policies (<Term id="ownRuns">policies run on their own</Term>); the{" "}
+              Each policy is also simulated on its own. Where several are selected, the revenue
+              and decile charts add up their separate effects, so they leave out interactions
+              between policies (<Term id="ownRuns">policies run on their own</Term>); the
+              average-change age charts do so only when no run of the whole selection is
+              published; the{" "}
               <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>{" "}and the
               winners and losers charts come from a run of the whole selection, so they include
-              them, and show nothing for a selection with no such run.
+              interactions, and show nothing for a selection with no such run.
             </p>
             <p className="method-more">
               Some policies replace values reported in the survey with modelled ones, and their

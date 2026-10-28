@@ -666,7 +666,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                     {metric.format(top.value)}.
                   </>
                 ) : (
-                  <>{metric.short ?? metric.description} Each selected policy on its own.</>
+                  <>{fiscalYearTick(selectedYear)}, each policy on its own.</>
                 );
               })()
             ) : (

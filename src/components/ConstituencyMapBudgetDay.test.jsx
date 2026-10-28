@@ -147,10 +147,10 @@ describe("ConstituencyMap on Budget day", () => {
       expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: Rail fares freeze$/),
     );
     expect(screen.getByRole("button", { name: "Policy: Rail fares freeze" })).toBeInTheDocument();
-    // The figures' line and the one-policy-at-a-time note, in one paragraph
+    // The figures' line only: the greyed-out All selected policies says
+    // the map shows one policy at a time
     expect(container.querySelector(".chart-header .chart-description").textContent).toBe(
-      "No constituency shows a change large enough to publish for this policy in 2029-30. " +
-        "Until the map for all selected policies is published, it shows one policy at a time.",
+      "No constituency shows a change large enough to publish for this policy in 2029-30.",
     );
   });
 

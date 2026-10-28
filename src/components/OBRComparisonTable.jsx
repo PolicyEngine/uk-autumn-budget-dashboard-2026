@@ -27,7 +27,7 @@ export const OBR_UNAVAILABLE = "The official costings have no figures for the se
  * published, or the published file does not check against these results
  * (Vahid, 27 October: the card is always on Public finances).
  */
-export const OBR_PENDING = "The official costings are published with the Budget documents on 28 October; this comparison fills in once they are.";
+export const OBR_PENDING = "The official costings are published with the Budget documents on 28 October; this comparison fills in once we have added them.";
 
 /** The card's title without a year, while there are no figures to date. */
 export const OBR_CARD_TITLE = "How our estimates compare with the official costings";
@@ -164,7 +164,7 @@ const COMPARISON_INFO = {
   shows:
     "PolicyEngine's estimate of each policy's effect on the public finances beside the official costing for the same year, in £ billion; positive values raise revenue or cut spending. Largest official costing first.",
   how: [
-    "PolicyEngine's figures are static, so they sit beside the official static costing.",
+    "PolicyEngine's figures are static, so the official static costing is the like-for-like comparison.",
     "On the % scale each official costing is 100%; a policy costed under £0.05bn has no %.",
     "Difference is PolicyEngine minus the official figure.",
   ],

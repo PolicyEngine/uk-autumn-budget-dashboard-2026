@@ -81,49 +81,59 @@ export const noSeatMovedNote = ({ yearLabel, several = false }) =>
 const OUTCOME_UNIT = { average_change: " a year", relative_change: " of income" };
 const seatsWord = (n) => `${n.toLocaleString("en-GB")} constituenc${n === 1 ? "y" : "ies"}`;
 
+// "Little change" is said only when it covers this share of the map's
+// seats or more (Vahid, 28 October: "577 lose; 71 have no data")
+const LITTLE_CHANGE_SHARE = 0.1;
+
 /**
  * The card's one plain sentence under its title (Vahid, 27 October: "add a
  * subtitle like other boxes"), from the published rows the map colours, in
  * the outcome it shows: where households gain or lose on average, and the
- * range when every seat with a figure moves one way. Seats not published
- * are counted, never explained (the map key says why). Null with no rows.
+ * range when every seat with a figure moves one way. Seats the map draws as
+ * No data (not published, no row, too uncertain) are counted as "no data",
+ * as the key names them, never explained (the key says why) and never
+ * counted as a gain or loss. Little change is said only when it covers a
+ * tenth of the seats or more. Null with no rows.
  *
  * @param {Map<string, {kind: string, row: Object|null}>|null} states - seatStates
  * @param {{outcome: string, yearLabel: string, several?: boolean}} options
  */
 export function constituencySentence(states, { outcome, yearLabel, several = false }) {
-  const rows = [...(states?.values() ?? [])].map((state) => state?.row).filter(Boolean);
-  if (rows.length === 0) return null;
-  const published = rows.filter((row) => row.tier !== "withheld");
-  const withheld = rows.length - published.length;
+  const all = [...(states?.values() ?? [])];
+  if (!all.some((state) => state?.row)) return null;
   if (movesNoSeat(states)) {
-    if (withheld > 0) return noSeatMovedNote({ yearLabel, several });
+    if (all.some((state) => state?.row?.tier === "withheld")) return noSeatMovedNote({ yearLabel, several });
     return `${several ? "These policies do" : "This policy does"} not change household incomes in any constituency in ${yearLabel}.`;
   }
+  const placed = all.filter((state) => !drawnAsNoData(state)).map((state) => state.row);
+  const noData = all.length - placed.length;
   // Signed as the seat cards colour them: a negligible figure is no change
-  const gains = published.filter((row) => signOf(row.value, outcome) === "gain");
-  const losses = published.filter((row) => signOf(row.value, outcome) === "loss");
-  const flat = published.length - gains.length - losses.length;
-  // "; 71 are not published": the noun is said once, on the first count
-  const notPublished = withheld > 0 ? `; ${withheld.toLocaleString("en-GB")} ${withheld === 1 ? "is" : "are"} not published` : "";
+  const gains = placed.filter((row) => signOf(row.value, outcome) === "gain");
+  const losses = placed.filter((row) => signOf(row.value, outcome) === "loss");
+  const flat = placed.length - gains.length - losses.length;
+  // "; 71 have no data": the noun is said once, on the first count
+  const noDataPart = noData > 0 ? `; ${noData.toLocaleString("en-GB")} ${noData === 1 ? "has" : "have"} no data` : "";
   const oneWay = flat === 0 && (gains.length === 0 || losses.length === 0);
   if (oneWay) {
     const moving = gains.length > 0 ? gains : losses;
     const sorted = [...moving].sort((a, b) => compareDecimal(absDecimal(a.value), absDecimal(b.value)));
     const [least, most] = [sorted[0], sorted[sorted.length - 1]];
     const size = (row) => formatFigure(outcome, row.value.replace(/^-/, ""), { signed: false });
-    const all = withheld > 0 ? `all ${seatsWord(published.length)} with a published figure` : `all ${seatsWord(published.length)}`;
+    const every = noData > 0 ? `all ${seatsWord(placed.length)} with data` : `all ${seatsWord(placed.length)}`;
     const range =
       moving.length > 1 && compareDecimal(least.value, most.value) !== 0
         ? `, from ${size(least)}${OUTCOME_UNIT[outcome]} in ${least.areaName} to ${size(most)} in ${most.areaName}`
         : `, by ${size(most)}${OUTCOME_UNIT[outcome]}`;
-    return `Households ${gains.length > 0 ? "gain" : "lose"} on average in ${all}${range}.`;
+    return `Households ${gains.length > 0 ? "gain" : "lose"} on average in ${every}${range}.`;
   }
+  const sayFlat = flat > 0 && (flat >= LITTLE_CHANGE_SHARE * all.length || (gains.length === 0 && losses.length === 0));
   const parts = [
     gains.length > 0 && ["gain", gains.length],
     losses.length > 0 && ["lose", losses.length],
-    // "Little change", as the map's key (round 3); here under 50p either way
-    flat > 0 && ["see little change", flat],
+    // Under 50p either way (signOf), as the page's "almost no change" for a
+    // figure that rounds to £0; not the map's "Little change" (under £10),
+    // which counts other seats (W6 G1)
+    sayFlat && ["see almost no change", flat],
   ].filter(Boolean);
   // "gain on average in 600 constituencies and lose in 40": "on average"
   // and the noun once, on the first count
@@ -131,7 +141,7 @@ export function constituencySentence(states, { outcome, yearLabel, several = fal
     i === 0 ? `${verb} on average in ${seatsWord(n)}` : `${verb} in ${n.toLocaleString("en-GB")}`,
   );
   const joined = said.length > 1 ? `${said.slice(0, -1).join(", ")} and ${said[said.length - 1]}` : said[0];
-  return `Households ${joined}${notPublished}.`;
+  return `Households ${joined}${noDataPart}.`;
 }
 
 const PLAIN_STROKE = Object.freeze({ stroke: CHART_COLOURS.surface, strokeWidth: 0.05 });
@@ -182,8 +192,13 @@ export function seatSummary(state) {
   return state.kind === "approximate" ? `${summary} (approximate)` : summary;
 }
 
-/** The card's line for a seat with no published figure. */
-export const WITHHELD_SEAT_NOTE = "No data: not published, too few survey households";
+/**
+ * The card's line for a seat with no published figure. Not "too few survey
+ * households": a seat is also withheld under the dominance rule, or so that
+ * subtraction cannot recover a withheld one (geography.py), so the reason
+ * given is the one that covers every case, as the map key's tip says.
+ */
+export const WITHHELD_SEAT_NOTE = "No data: not published, to protect survey respondents' confidentiality";
 /** The card's line for a seat drawn as No data for a figure too uncertain to place on the scale. */
 export const UNCERTAIN_SEAT_NOTE = "No data on the map: too uncertain to place on the scale";
 /** A By policy row for a measure withheld in this seat, and its tooltip. */

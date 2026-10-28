@@ -18,7 +18,7 @@ import { HOUSEHOLD_ABOUT_ID, METHOD_ANCHORS } from "../methodology/anchors";
 import MeasureRowLabel from "../MeasureRowLabel";
 import Tip from "../Tip";
 import { usePolicyParameters } from "../PolicyChange";
-import { parameterChange, policyTabs } from "../../utils/policyBreakdown";
+import { parameterChange, policyBridge, policyTabs } from "../../utils/policyBreakdown";
 import { vatRowLabel } from "../../utils/singleYear";
 import { policyDetailsFor } from "../../utils/policyDetails";
 import { formatValue } from "../../utils/policyParameters";
@@ -147,7 +147,13 @@ export default function ProgrammeTable({
     household,
     salaryUsed,
   });
-  const [tab, setTab] = useState("summary");
+  // The chart's split by policy, with the rows each policy moves: the
+  // first tab once the split is in, so the table under the chart opens on
+  // the chart's own figures (chart and table audit, 28 October)
+  const bridge = split ? policyBridge({ split, tabs: policyTabList, groups, totals }) : null;
+  const [chosen, setTab] = useState(null);
+  const tab = chosen ?? "summary";
+  const byPolicy = tab === "by_policy" && bridge !== null;
   // The tab row whenever the page asks for the split by policy: until it is
   // in (or if it fails), Summary alone with a quiet note why
   const showTabs = policyTabList.length > 0 || splitStatus !== null || noEffect.length > 0;
@@ -210,9 +216,37 @@ export default function ProgrammeTable({
         "text/csv;charset=utf-8",
       ),
   };
-  const policyTitle = activePolicy ? `${title}: ${activePolicy.name}` : title;
+  const policyTitle = activePolicy ? `${title}: ${activePolicy.name}` : byPolicy ? `${title}: by policy` : title;
   const policyFile = activePolicy ? `household-${activePolicy.id.replace(/_/g, "-")}-${yearLabel}` : "";
-  const formats = activePolicy
+  const bridgeFile = `household-change-by-policy-${yearLabel}`;
+  const bridgeFormats = bridge && {
+    ...htmlImageFormats(() => table, bridgeFile),
+    csv: () =>
+      downloadFile(
+        buildChartCsv({
+          title: policyTitle,
+          units: "£ a year; the change in the household's net income, by policy, and the tax and benefit rows each policy moves",
+          source: "PolicyEngine UK household calculation, UK Autumn Budget 2026 dashboard",
+          columns: [
+            { key: "policy", label: "Policy" },
+            { key: "item", label: "Item" },
+            { key: "change", label: "Change (£)", decimals: 0 },
+          ],
+          rows: [
+            ...bridge.rows.flatMap((step) => [
+              { policy: step.name, item: "Change in net income", change: step.rounded },
+              ...step.parts.map((part) => ({ policy: step.name, item: part.label, change: part.change })),
+            ]),
+            { policy: "All selected policies", item: "Change in net income", change: bridge.total },
+          ],
+        }),
+        `${bridgeFile}.csv`,
+        "text/csv;charset=utf-8",
+      ),
+  };
+  const formats = byPolicy
+    ? bridgeFormats
+    : activePolicy
     ? {
         ...htmlImageFormats(() => table, policyFile),
         csv: () =>
@@ -298,7 +332,8 @@ export default function ProgrammeTable({
       {showTabs && (
         <BreakdownTabs
           tabs={policyTabList}
-          value={activePolicy ? activePolicy.id : "summary"}
+          byPolicy={bridge !== null}
+          value={activePolicy ? activePolicy.id : byPolicy ? "by_policy" : "summary"}
           onChange={setTab}
           noEffect={noEffect}
           note={pendingNote}
@@ -307,13 +342,19 @@ export default function ProgrammeTable({
       {/* Each tab's one line: the Summary's sentence, or the policy's
           one-line summary (policyDetails.js; none for a measure it does
           not describe) */}
-      {showTabs && !activePolicy && <p className="chart-description breakdown-tab-line">{sentence}</p>}
+      {showTabs && !activePolicy && !byPolicy && <p className="chart-description breakdown-tab-line">{sentence}</p>}
+      {byPolicy && (
+        <p className="chart-description breakdown-tab-line">
+          Each policy&apos;s change, as in the chart above, and the taxes and benefits it moves. Summary adds up the same
+          changes row by row.
+        </p>
+      )}
       {activePolicy?.how && (
         <p className="chart-description breakdown-tab-line">
           <span className="breakdown-how">How it works:</span> {activePolicy.how}
         </p>
       )}
-      {narrow && (
+      {narrow && !byPolicy && (
         <button
           type="button"
           className="light-pill-button breakdown-columns-toggle"
@@ -323,7 +364,11 @@ export default function ProgrammeTable({
           {showBoth ? "Show change only" : "Show all columns"}
         </button>
       )}
-      {activePolicy ? (
+      {byPolicy ? (
+        <div className="programme-table-wrap" role="tabpanel" id="breakdown-panel-by_policy" aria-labelledby="breakdown-tab-by_policy">
+          <BridgeTable bridge={bridge} setTable={setTable} title={policyTitle} />
+        </div>
+      ) : activePolicy ? (
         <div
           className="programme-table-wrap"
           role="tabpanel"
@@ -535,14 +580,56 @@ function PolicyTable({ tab, wide, setTable, title }) {
 }
 
 /**
+ * The By policy tab: each of the chart's steps with its change in net
+ * income (the chart's whole pounds), the tax and benefit rows it moves
+ * under it, then the total, the chart's end minus its start.
+ */
+function BridgeTable({ bridge, setTable, title }) {
+  return (
+    <table ref={setTable} className="programme-table breakdown-table bridge-table is-change-only" aria-label={title}>
+      <thead>
+        <tr>
+          <th scope="col">
+            <span className="visually-hidden">Policy</span>
+          </th>
+          <th scope="col" className="num">
+            Change
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {bridge.rows.map((step) => (
+          <Fragment key={step.id}>
+            <tr className="programme-row depth-0 is-group" data-policy={step.id}>
+              <th scope="row">{leaf(step.label ?? step.name)}</th>
+              <td className={`num change ${changeClass(step.rounded)}`}>{step.rounded === 0 ? "£0" : changeText(step.rounded)}</td>
+            </tr>
+            {step.parts.map((part) => (
+              <tr key={`${step.id}/${part.id}`} className="programme-row depth-1" data-part={part.id}>
+                <th scope="row">{leaf(part.label)}</th>
+                <td className={`num change ${changeClass(part.change)}`}>{changeText(part.change)}</td>
+              </tr>
+            ))}
+          </Fragment>
+        ))}
+        <tr className="breakdown-net-row">
+          <th scope="row">{leaf("Change in net income")}</th>
+          <td className={`num change ${changeClass(bridge.total)}`}>{changeText(bridge.total)}</td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+/**
  * The Summary tab's label in the policy tabs' badge style (MeasureRowLabel,
  * compact): a list icon in a tinted circle of the same size, then its name.
  */
-function SummaryTabLabel({ label }) {
+function SummaryTabLabel({ label, icon = "list" }) {
   return (
     <span className="mrl mrl--compact breakdown-tab-summary" style={{ "--mrl-colour": CHART_COLOURS.highlight }}>
       <span className="mrl-icon mrl-icon--compact" aria-hidden="true">
-        <TitleIcon name="list" bare size={11} />
+        <TitleIcon name={icon} bare size={11} />
       </span>
       <span className="mrl-text">
         <span className="mrl-name breakdown-tab-text">{label}</span>
@@ -559,9 +646,13 @@ function SummaryTabLabel({ label }) {
  * and show it; only the chosen tab is in the Tab order. On a phone the row
  * scrolls sideways.
  */
-function BreakdownTabs({ tabs, value, onChange, noEffect, note = null }) {
+function BreakdownTabs({ tabs, value, onChange, noEffect, note = null, byPolicy = false }) {
   const refs = useRef({});
-  const all = [{ id: "summary", label: "Summary" }, ...tabs];
+  const all = [
+    { id: "summary", label: "Summary" },
+    ...(byPolicy ? [{ id: "by_policy", label: "By policy" }] : []),
+    ...tabs,
+  ];
   const onKeyDown = (event) => {
     const current = all.findIndex((tab) => tab.id === value);
     const last = all.length - 1;
@@ -597,7 +688,7 @@ function BreakdownTabs({ tabs, value, onChange, noEffect, note = null }) {
               className={`breakdown-tab${selected ? " is-selected" : ""}`}
               onClick={() => onChange(tab.id)}
             >
-              {tab.measure ? <MeasureRowLabel measure={tab.measure} compact tip={false} /> : <SummaryTabLabel label={tab.label} />}
+              {tab.measure ? <MeasureRowLabel measure={tab.measure} compact tip={false} /> : <SummaryTabLabel label={tab.label} icon={tab.id === "by_policy" ? "bars" : "list"} />}
             </button>
           );
         })}

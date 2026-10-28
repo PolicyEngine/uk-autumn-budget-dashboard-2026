@@ -292,7 +292,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     // Withheld is never "moves no one": too few survey households to say
     <>{NOT_PUBLISHED} for {year}: too few survey households are behind these figures.</>
   ) : (
-    <>No policy on its own moves anyone across this line in {year}.</>
+    <>No selected policy on its own moves anyone across the poverty line in {year}.</>
   );
 
   return (
@@ -331,11 +331,15 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
           info={{
             how: [
               // The policy's own effect is said once, in the sentence above
-              // (round 3); why the bars need not add up, linked (critic W2)
-              <>
-                The last bar is all the selected policies together, from its own run, so the bars need not add up to it.{" "}
-                <MethodLink anchor={METHOD_ANCHORS.limitations}>Policies added up</MethodLink> explains why.
-              </>,
+              // (round 3); why the bars need not add up, linked (critic W2).
+              // Only when the last bar is drawn: every offered policy
+              // selected, with the combined run published (W6 G1)
+              totalStep && (
+                <>
+                  The last bar is all the selected policies modelled together, so the bars need not add up to it.{" "}
+                  <MethodLink anchor={METHOD_ANCHORS.limitations}>Policies added up</MethodLink> explains why.
+                </>
+              ),
             ],
             caveats: [
               read.fellBack && (

@@ -88,6 +88,26 @@ describe("SummaryMetricChart", () => {
     expect(document.querySelectorAll(".mev-table tbody tr")).toHaveLength(2);
   });
 
+  it("names the year, as a sentence, when no selected policy moves the figure that year", () => {
+    // W6 G1: a subset whose own changes are exactly 0 has no biggest bar;
+    // the subtitle was "<metric short>, pp Each selected policy on its own."
+    render(
+      <SummaryMetricChart
+        metric={SUMMARY_METRICS.poverty}
+        rows={[
+          { reform_id: "fuel_duty_rise_deferral", year: "2027", poverty_change_pp: "0" },
+          { reform_id: "road_fuel_vat_cut", year: "2027", poverty_change_pp: "0" },
+        ]}
+        policies={POLICIES}
+        selectedPolicies={["fuel_duty_rise_deferral", "road_fuel_vat_cut"]}
+        selectedYear={2027}
+      />,
+    );
+    const subtitle = document.querySelector(".chart-description");
+    expect(subtitle).toHaveTextContent(/^2027-28, each policy on its own\.$/);
+    expect(document.querySelectorAll(".mev-row--none")).toHaveLength(2);
+  });
+
   it("says a run is not yet published rather than drawing zeros", () => {
     render(
       <SummaryMetricChart

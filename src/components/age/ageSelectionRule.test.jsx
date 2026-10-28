@@ -4,7 +4,7 @@ import AgeSection from "../AgeSection";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
 import { COMBINATION_NOT_PUBLISHED, PACKAGE_NET_ONLY, PACKAGE_PARTS_CAVEAT, policiesWithoutRows, singleAgeSelection, withheldNetOnly } from "../../utils/ageImpact";
 import { singleAgeBars } from "../youngPeople/youngPeopleData";
-import { agesText, windowTicks, withheldPartsCaveat, withheldPartsNote } from "./SingleAgeCard";
+import { agesText, windowTicks, withheldPartsCaveat } from "./SingleAgeCard";
 import { ALPHA, BETA, COMBINED, YEAR, measureCatalogueFixture } from "../../test/measureCatalogueFixture";
 
 // By age's selection rule, on a publication where one single (BETA)
@@ -140,7 +140,7 @@ describe("By age's selection rule with a single that withholds its age bands", (
     expect(card.querySelector(".chart-footer .note, .chart-footer [class*='note']")).toBeNull();
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
     // The caveat names the policy that withholds its rows by age group
-    expect(await within(card).findByText(withheldPartsCaveat(["Mock beta contribution"], "by age group"))).toBeInTheDocument();
+    expect(await within(card).findByText(withheldPartsCaveat(["Mock beta contribution"], "in some age groups"))).toBeInTheDocument();
     const pill = within(card).queryByRole("button", { name: /^Options:/ });
     if (pill) {
       fireEvent.click(pill);
@@ -235,17 +235,19 @@ describe("Average change by age by single year of age (the default view)", () =>
     expect(within(card).getAllByTestId("series").map((node) => node.dataset.key).sort()).toEqual([`measure:${ALPHA}`, `measure:${BETA}`]);
   });
 
-  it("keeps Each policy in Show but unavailable, with its reason, when a member withholds its single years", async () => {
+  it("drops the Show choice when a member withholds its single years, giving the reason in About this chart", async () => {
     const { container } = await renderAge(withSingleAges(withheldFixture(), BETA), [ALPHA, BETA]);
     const card = singleCard(container);
     // The package's own net at every age, never its parts
     expect(ageRows(card).every((point) => point.netChange === 50 && (point[`measure:${ALPHA}`] ?? null) === null)).toBe(true);
-    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
-    // The option stays (Pavel's review, AGE2): disabled, its reason beside it
-    const each = within(card).getByRole("radio", { name: "Each policy" });
-    expect(each).toBeDisabled();
-    expect(within(card).getByRole("radio", { name: "Net change" })).toHaveAttribute("aria-checked", "true");
-    expect(within(card).getByText(`Each policy: ${withheldPartsNote(["Mock beta contribution"])}`)).toBeInTheDocument();
+    // One usable option reads as broken (team feedback, 28 October): no Show
+    // group, and the pill does not say "Net change" when there is no choice
+    const pill = within(card).getByRole("button", { name: /^Options:/ });
+    expect(pill.getAttribute("aria-label") ?? pill.textContent).not.toMatch(/Net change/);
+    fireEvent.click(pill);
+    expect(within(card).queryByRole("radio", { name: "Each policy" })).toBeNull();
+    expect(within(card).queryByRole("radio", { name: "Net change" })).toBeNull();
+    expect(within(card).queryByText(/^Each policy:/)).toBeNull();
     expect(within(card).getByRole("radio", { name: "Age groups" })).toBeInTheDocument();
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
     expect(await within(card).findByText(withheldPartsCaveat(["Mock beta contribution"]))).toBeInTheDocument();
@@ -278,8 +280,8 @@ describe("Average change by age by single year of age (the default view)", () =>
 
 describe("The single-year age axis", () => {
   it("names every withheld policy in one list", () => {
-    expect(withheldPartsCaveat(["A", "B", "C"])).toMatch(/as A, B and C have too few survey records by single year of age/);
-    expect(withheldPartsCaveat(["A"])).toMatch(/as A has too few/);
+    expect(withheldPartsCaveat(["A", "B", "C"])).toMatch(/: A, B and C have too few survey records at some ages, so the other policies' parts would reveal theirs\.$/);
+    expect(withheldPartsCaveat(["A"])).toMatch(/: A has too few/);
   });
 
   it("ticks every five years to 90+ on a wide screen and every ten on a phone, with no State Pension age tick", () => {
@@ -298,12 +300,13 @@ describe("The single-year age axis", () => {
     expect(agesText([67, 90])).toBe("67 to 90 and over");
   });
 
-  it("says why Each policy is unavailable, naming the thin policies and why the others are not shown either", () => {
-    expect(withheldPartsNote(["A", "B"])).toBe(
-      "not available, as A and B have too few survey records at some ages, and showing only the other policies would let the withheld policies' part be worked out from the net change",
+  it("says in one sentence why the split by policy is not shown, naming the thin policies", () => {
+    expect(withheldPartsCaveat(["A"])).toBe(
+      "The split by policy is not shown for this selection: A has too few survey records at some ages, so the other policies' parts would reveal its part.",
     );
-    expect(withheldPartsCaveat(["A"], "by age group")).toMatch(/as A has too few survey records by age group, and showing only the other policies/);
+    expect(withheldPartsCaveat(["A"], "in some age groups")).toMatch(/A has too few survey records in some age groups, so/);
     expect(withheldPartsCaveat([])).toBe(PACKAGE_PARTS_CAVEAT);
+    expect(PACKAGE_PARTS_CAVEAT).toMatch(/a selected policy has too few survey records at some ages/);
     expect(withheldNetOnly(["A"])).toMatch(/as A has too few survey records by age, and showing only the other policies/);
     expect(withheldNetOnly([])).toBe(PACKAGE_NET_ONLY);
   });

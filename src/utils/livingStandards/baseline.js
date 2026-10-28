@@ -41,11 +41,13 @@ export const VIEW_OPTIONS = [
 ];
 
 /**
- * About this chart's line on the two series. The teal line is not a
- * forecast: it is the model for every year drawn, outturn years included.
+ * About this chart's line on the two series. The teal line is the model,
+ * not a forecast; it starts at the latest outturn year (projectionStartYear,
+ * and the generator's JOIN_START), so it overlaps official figures in that
+ * one year only.
  */
 export const OFFICIAL_VS_PE =
-  "Official figures are DWP Households Below Average Income outturn. The teal line is PolicyEngine's microsimulation for every year shown, including years official figures already cover, where the two can differ.";
+  "Official figures are DWP Households Below Average Income outturn. The teal line is PolicyEngine's microsimulation. It starts in the latest year with official figures, where the two can differ.";
 
 /** SVG dash patterns, so lines differ by pattern as well as colour. */
 export const DASH = {
