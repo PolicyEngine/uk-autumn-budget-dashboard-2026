@@ -9,6 +9,7 @@ import {
   formatValue,
   loadPolicyParameters,
   mainRow,
+  schedulePeriods,
   segmentsFor,
 } from "../utils/policyParameters";
 
@@ -188,7 +189,7 @@ export function variesByPeriod(row) {
   return pairs.size > 1;
 }
 
-/** Values side by side: only the lines where the measure differs. */
+/** Values side by side: the lines given (a schedule's periods include one either side of the change). */
 function ChangeTable({ lines, unit, tone, caption, first }) {
   return (
     <table className="pchg-table">
@@ -208,7 +209,7 @@ function ChangeTable({ lines, unit, tone, caption, first }) {
             <td>{formatValue(line.before, line.unit ?? unit)}</td>
             <td className="pchg-table-after">{formatValue(line.after, line.unit ?? unit)}</td>
             <td>
-              <span className={`pchg-chip is-${tone}`}>{formatChange(line.before, line.after, line.unit ?? unit)}</span>
+              <span className={`pchg-chip is-${differs(line) ? tone : "neutral"}`}>{formatChange(line.before, line.after, line.unit ?? unit)}</span>
             </td>
           </tr>
         ))}
@@ -252,9 +253,9 @@ function Reveal({ show, hide, children }) {
 
 /**
  * What a measure's "What changes" block shows, or null when it shows
- * nothing: a plot where the value moves over the years, the years or dates
- * behind a button, every changing parameter behind a button where there
- * are several, and the main row's card_note. No "Current law → With the
+ * nothing: a plot where the value moves over the years, the years or a
+ * schedule's periods behind a button, every changing parameter behind a
+ * button where there are several, and the main row's card_note. No "Current law → With the
  * policy" tiles (Vahid, 28 Oct, on #290): a single change of value is said
  * in the card's own words, so a block with nothing else is left out.
  */
@@ -269,7 +270,9 @@ export function changeView(entry, lead) {
   const segments = varies ? segmentsFor(main) : [];
   const plotted = segments.some(differs);
   // A schedule's or a window's averages over each fiscal year, where the
-  // main row is not already by year
+  // main row is not already by year: never shown, as they read as a rate
+  // no one pays (PR 290, Anthony, 19:25 and 19:37); the card's details say
+  // how the years are weighted
   const byYear = main.points.every((point) => /^\d{4}-\d{2}$/.test(point.label));
   const yearly = byYear ? null : entry.rows.find((row) => !row.primary && row.unit === main.unit) ?? null;
   // Every changing line of every parameter, when the measure moves more than one
@@ -278,11 +281,10 @@ export function changeView(entry, lead) {
   );
   const others = entry.rows.filter((row) => row !== main && row !== yearly && row.points.some(differs));
   const periods = [...new Set(lines.map((line) => line.period))];
-  const averages = Boolean(yearly?.points.some(differs));
   const everyChange = others.length > 0;
   const note = main.card_note ?? null;
-  if (!lead && !note && !plotted && !varies && !averages && !everyChange) return null;
-  return { main, schedule, varies, segments, plotted, yearly, averages, lines, others, everyChange, periods, note };
+  if (!lead && !note && !plotted && !varies && !everyChange) return null;
+  return { main, schedule, varies, segments, plotted, lines, others, everyChange, periods, note };
 }
 
 export default function PolicyChange({ entry, direction, onHighlight, name, lead }) {
@@ -290,7 +292,7 @@ export default function PolicyChange({ entry, direction, onHighlight, name, lead
   const tone = TONES[direction] ?? "neutral";
   const view = changeView(entry, lead);
   if (!view) return null;
-  const { main, schedule, varies, segments, plotted, yearly, averages, lines, everyChange, periods, note } = view;
+  const { main, schedule, varies, segments, plotted, lines, everyChange, periods, note } = view;
   return (
     // Named with its measure: each card's section says "What changes", and
     // regions on one page need different names (axe landmark-unique)
@@ -319,16 +321,16 @@ export default function PolicyChange({ entry, direction, onHighlight, name, lead
           />
         </>
       )}
-      {(varies || averages || everyChange) && (
+      {(varies || everyChange) && (
         <div className="pchg-reveals">
           {varies && (
-            <Reveal show={schedule ? "Show the dates" : "Show the years"} hide={schedule ? "Hide the dates" : "Hide the years"}>
-              <ChangeTable lines={main.points.filter(differs)} unit={main.unit} tone={tone} first={schedule ? "From" : "Year"} />
-            </Reveal>
-          )}
-          {averages && (
-            <Reveal show="Show the yearly averages" hide="Hide the yearly averages">
-              <ChangeTable lines={yearly.points.filter(differs)} unit={yearly.unit} tone={tone} first="Year" caption={yearly.note} />
+            <Reveal show={schedule ? "Show the periods" : "Show the years"} hide={schedule ? "Hide the periods" : "Hide the years"}>
+              <ChangeTable
+                lines={schedule ? schedulePeriods(main) : main.points.filter(differs)}
+                unit={main.unit}
+                tone={tone}
+                first={schedule ? "Period" : "Year"}
+              />
             </Reveal>
           )}
           {everyChange && (

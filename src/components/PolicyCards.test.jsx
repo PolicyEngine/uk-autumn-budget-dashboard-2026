@@ -454,19 +454,35 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     }
   });
 
-  it("leads fuel duty with its plot: the dates and the yearly averages only when asked", () => {
+  it("leads fuel duty with its plot, its periods when asked and no yearly averages (PR 290, Anthony, 19:37)", () => {
     render(<PolicyCards policies={[published("fuel_duty_rise_deferral", "Fuel duty rises deferred")]} selectedPolicies={["fuel_duty_rise_deferral"]} parameterTables={file} />);
     expect(screen.queryByRole("table")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Show the dates" }));
-    const dates = screen.getByRole("table");
-    // Only the dates the measure changes: the timeline's first day and
-    // every date from 1 July 2027 equal current law, so are left out;
-    // 1 January, 1 March and 1 April 2027
-    expect(within(dates).getAllByRole("row")).toHaveLength(4);
-    expect(within(dates).getAllByRole("row")[1]).toHaveTextContent("1 January 202755.95p52.95p−3p");
-    fireEvent.click(screen.getByRole("button", { name: "Show the yearly averages" }));
-    const averages = screen.getByRole("table", { name: /As modelled/ });
-    expect(within(averages).getAllByRole("row")[1]).toHaveTextContent("2026-2753.96p52.95p−1.01p");
+    fireEvent.click(screen.getByRole("button", { name: "Show the periods" }));
+    const periods = screen.getByRole("table");
+    // The rates in force, never averages: current law's period before the
+    // change, the three it differs, and the return to current law
+    expect(within(periods).getAllByRole("row").map((row) => row.textContent)).toEqual([
+      "PeriodCurrent lawWith the policyChange",
+      "To 31 December 202652.95p52.95pno change",
+      "1 January to 28 February 202755.95p52.95p−3p",
+      "1 to 31 March 202757.95p52.95p−5p",
+      "1 April to 30 June 202760.59p52.95p−7.64p",
+      "1 July 2027 to 31 March 202860.59p60.59pno change",
+    ]);
+    expect(screen.queryByRole("button", { name: /yearly averages/ })).toBeNull();
+    expect(document.querySelector(".policy-card")).not.toHaveTextContent("averaged over the year");
+  });
+
+  it("shows the electricity zero rate without its yearly averages, saying where it applies and what it is scored against (PR 290, Anthony 19:25, Max 19:32)", () => {
+    const id = "domestic_electricity_zero_vat";
+    render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
+    const block = screen.getByRole("region", { name: /^What changes/ });
+    const note = block.querySelector(".pchg-note");
+    expect(note).toHaveTextContent("0% instead of 5% in Great Britain from 1 October 2026.");
+    expect(note).toHaveTextContent("expects the zero rate to apply in Northern Ireland too from 1 April 2027");
+    expect(note).toHaveTextContent("already law (SI 2026/987)");
+    expect(within(block).queryByRole("button")).toBeNull();
+    expect(block).not.toHaveTextContent(/2\.17%|3\.89%|in Great Britain,/);
   });
 
   it("shows nothing for a measure described otherwise than when the file was built, with no empty slot", () => {

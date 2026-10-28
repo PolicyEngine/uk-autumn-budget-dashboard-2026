@@ -326,6 +326,7 @@ def _vat_rows(
     names: str,
     divided: str = DAYS_DIVIDED,
     note: str = DAYS_NOTE,
+    card_note: Optional[str] = None,
 ) -> list[dict]:
     first, last = VAT_WINDOWS[measure_id]
     cut = in_force_rate_change(measure_id, changes)
@@ -351,6 +352,7 @@ def _vat_rows(
                 )
             ],
             _source(base_source, derived),
+            card_note=card_note,
         ),
         _row(
             f"{label}, averaged over the year",
@@ -605,6 +607,25 @@ def _documented_amount(text: str, before: str, after: str) -> float:
     return float(match.group(1).replace(",", ""))
 
 
+def _electricity_where(values: dict) -> str:
+    """Where the zero rate applies, from the modifier's geographies (#290,
+    Max, 19:32): Great Britain from October 2026, and Northern Ireland from
+    April 2027 only as the Budget expects (RB 6.210), while HMRC's VAT
+    Notice 701/19 keeps it at 5% there."""
+    first, _ = VAT_WINDOWS[registry.ELECTRICITY_VAT_ID]
+    if (values["geography"], values["geography_2027"]) != ("GB", "UK"):
+        raise ValueError(
+            "the electricity card's note knows Great Britain, then the UK "
+            "from April 2027, only"
+        )
+    return (
+        f"0% instead of 5% in Great Britain from {_day_label(first)}. The "
+        "Budget expects the zero rate to "
+        "apply in Northern Ireland too from 1 April 2027, and the model "
+        "counts it there from then."
+    )
+
+
 def _electricity_vat(reform) -> list[dict]:
     values = constants(zero_vat_on_domestic_electricity)
     changes = {
@@ -613,14 +634,24 @@ def _electricity_vat(reform) -> list[dict]:
         if name.startswith("rate_change_")
     }
     path = "gov.hmrc.vat.reduced_rate"
+    card_note = _electricity_where(values)
+    if _electricity.PRE_BUDGET_ZERO_RATE_IN_MEASURE:
+        # The October to March zero rate was already law (SI 2026/987): the
+        # 5% is the scoring baseline, as Table 6.1 scores it (#290, Max)
+        card_note += (
+            " The October to March zero rate was already law (SI 2026/987); "
+            "like the Treasury's costing, the model scores the whole period "
+            "against 5%."
+        )
     return _vat_rows(
         registry.ELECTRICITY_VAT_ID,
         zero_vat_on_domestic_electricity,
         engine_value(path, POLICY_YEARS[0]),
         _engine_source(path),
-        "VAT on domestic electricity in Great Britain",
+        "VAT on domestic electricity",
         changes,
         "rate_change_2026, rate_change_2027",
+        card_note=card_note,
         # 2026-27 by its share of a year's use (YEAR_WEIGHTS), while the
         # pre-Budget zero rate is in the measure; else by days
         **(

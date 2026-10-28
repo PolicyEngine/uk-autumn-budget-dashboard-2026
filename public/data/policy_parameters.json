@@ -234,7 +234,7 @@
       "display": "switch",
       "rows": [
         {
-          "label": "VAT on domestic electricity in Great Britain",
+          "label": "VAT on domestic electricity",
           "unit": "percent",
           "unit_words": null,
           "primary": true,
@@ -256,10 +256,11 @@
               "kind": "modifier_constant",
               "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027), rate_change_2026 divided by that module's WINTER_SHARE (the October to March share of a year's electricity use) and rate_change_2027 by its SPRING_SHARE (the April to June share), October 2026 to June 2027 (the dates in the measure's description)"
             }
-          }
+          },
+          "card_note": "0% instead of 5% in Great Britain from 1 October 2026. The Budget expects the zero rate to apply in Northern Ireland too from 1 April 2027, and the model counts it there from then. The October to March zero rate was already law (SI 2026/987); like the Treasury's costing, the model scores the whole period against 5%."
         },
         {
-          "label": "VAT on domestic electricity in Great Britain, averaged over the year",
+          "label": "VAT on domestic electricity, averaged over the year",
           "unit": "percent",
           "unit_words": null,
           "primary": false,

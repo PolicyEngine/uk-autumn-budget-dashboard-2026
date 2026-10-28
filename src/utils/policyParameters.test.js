@@ -11,7 +11,9 @@ import {
   monthOf,
   outOfForceText,
   parameterTableFor,
+  periodLabel,
   resetPolicyParameters,
+  schedulePeriods,
   segmentsFor,
 } from "./policyParameters";
 
@@ -39,11 +41,31 @@ describe("policy_parameters.json, as the page reads it", () => {
 
   it("draws a VAT window as current law either side of it", () => {
     // October 2026 to June 2027: months 6 to 15 of the 72 from April 2026
-    const segments = segmentsFor(rowsOf("domestic_electricity_zero_vat")["VAT on domestic electricity in Great Britain"]);
+    const segments = segmentsFor(rowsOf("domestic_electricity_zero_vat")["VAT on domestic electricity"]);
     expect(segments.map((s) => [s.start, s.end, s.after])).toEqual([[0, 6, 0.05], [6, 15, 0], [15, 72, 0.05]]);
     expect(segments[1]).toMatchObject({ from: 2026, to: 2027 });
   });
 
+  it("writes fuel duty's schedule as the periods each rate is in force, with current law either side (PR 290, Anthony, 19:37)", () => {
+    const periods = schedulePeriods(rowsOf("fuel_duty_rise_deferral")["Fuel duty"]);
+    expect(periods.map((p) => [p.label, p.before, p.after])).toEqual([
+      ["To 31 December 2026", 52.95, 52.95],
+      ["1 January to 28 February 2027", 55.95, 52.95],
+      ["1 to 31 March 2027", 57.95, 52.95],
+      ["1 April to 30 June 2027", 60.59, 52.95],
+      ["1 July 2027 to 31 March 2028", 60.59, 60.59],
+    ]);
+  });
+
+});
+
+describe("periods", () => {
+  it("names a period from its first day to its last", () => {
+    expect(periodLabel("2027-01-01", "2027-02-28")).toBe("1 January to 28 February 2027");
+    expect(periodLabel("2027-03-01", "2027-03-31")).toBe("1 to 31 March 2027");
+    expect(periodLabel("2027-07-01", "2028-03-31")).toBe("1 July 2027 to 31 March 2028");
+    expect(periodLabel(null, "2026-12-31")).toBe("To 31 December 2026");
+  });
 });
 
 describe("words", () => {
