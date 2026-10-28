@@ -93,10 +93,10 @@ describe("why our estimates differ from the official costings", () => {
     const note = (id) => OBR_DEVIATION_NOTES[id];
     const text = (id) => OBR_DIFFERENCE_POINTS[id].map((point) => point.text ?? Object.values(point.byYear).join(" ")).join(" ");
     expect(note("household_energy_payment_2026")).toMatch(/^Our £1,969 million in 2026-27 falls 25% short of the government's costing of £2,627 million, certified by the OBR/);
-    expect(note("domestic_electricity_zero_vat")).toMatch(/^Our cost is £106m \(14%\) above the VAT receipts in the government's costing, certified by the OBR, in 2026-27 \(£840m against £734m\) and £58m \(19%\)/);
+    expect(note("domestic_electricity_zero_vat")).toMatch(/^Our cost exceeds the VAT receipts in the government's costing, certified by the OBR, by £106m \(14%\) in 2026-27 \(£840m against £734m\) and by £58m \(19%\)/);
     expect(note("domestic_electricity_zero_vat")).not.toMatch(/within about 4%/);
     expect(note("trading_allowance_raise")).toContain("Income tax and NICs lines of the government's costing, certified by the OBR (its Table 1.1: £221m, £165m, £171m and £178m)");
-    expect(note("property_income_rates_up")).toMatch(/9% to 11% above the income tax line of the government's costing, certified by the OBR[^]*\+£429m against \+£394m in 2029-30/);
+    expect(note("property_income_rates_up")).toMatch(/ours exceeds the income tax line of the government's costing, certified by the OBR, by 9% to 11%: \+£429m against \+£394m in 2029-30/);
     expect(note("savings_income_rates_up")).toMatch(/68% to 69% of the income tax line of the government's costing, certified by the OBR[^]*\+£307m against \+£443m in 2029-30/);
     // Fuel duty's is the one costing the OBR could not certify (EFO October 2026, chapter 3)
     expect(note("fuel_duty_rise_deferral")).toMatch(/£272 million below the official figure in 2026-27 \(£301 million against £574 million\)[^]*the government's estimate, which the OBR used but could not certify/);
@@ -123,6 +123,14 @@ describe("why our estimates differ from the official costings", () => {
     expect(note("trading_allowance_raise")).toContain(`(£${t61(15, "2028-29")}m, £${t61(15, "2029-30")}m, £${t61(15, "2030-31")}m and £${t61(15, "2031-32")}m from 2028-29)`);
     expect(note("property_income_rates_up")).toContain(`The Table 6.1 total shown here, +£${t61(61, "2029-30")}m in 2029-30`);
     expect(note("savings_income_rates_up")).toContain(`The Table 6.1 total shown here, +£${t61(62, "2029-30")}m in 2029-30`);
+  });
+
+  // Max, 28 Oct: "'is above' -> 'exceeds'"; "above" as a preposition stays
+  it("says exceeds, never is above", () => {
+    const strings = (value) => (typeof value === "string" ? [value] : Object.values(value ?? {}).flatMap(strings));
+    const all = strings([OBR_DEVIATION_STATEMENT, OBR_DIFFERENCE_POINTS, NOT_COMPARABLE_SHORT, OBR_DEVIATION_NOTES, OBR_COMPARISON_BASES, OBR_PANEL_BASES]);
+    expect(all.length).toBeGreaterThan(40);
+    for (const line of all) expect(line).not.toMatch(/\b(?:is|are|was|were|be|been)\b[^.;:,]{0,40}\babove\b/);
   });
 
   it("writes every point and basis side as a short fragment, tagged with one of the four reasons, \"ours\" never PolicyEngine's (Vahid, 28 Oct)", () => {
