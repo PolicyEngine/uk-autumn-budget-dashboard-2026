@@ -54,7 +54,7 @@ export const SERIES = AGE_GROUPS.map((group) => ({
   ...GROUP_STYLES[group.key],
 }));
 
-export const TREND_DESCRIPTION = "Average change per person, £ a year.";
+export const TREND_DESCRIPTION = "Average change in household income per person, £ a year.";
 const cumulativeDescription = (first) => `Running total per person from ${fiscalYearTick(first)}, £.`;
 
 
@@ -959,7 +959,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
           members={members}
           year={Number(selectedYear)}
           info={{
-            shows: "Average change per person in each age group, each year, with all ages for comparison.",
+            shows: "Average change in household income per person in each age group, each year, with all ages for comparison.",
             how: ["Running total adds up the years from the first one shown."],
             caveats: [
               missingNote,
