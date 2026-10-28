@@ -1396,14 +1396,22 @@ class Report:
             else:
                 runs.append((k, [yy]))
         if runs:
-            main = max(runs, key=lambda r: len(r[1]))
-            others = [r for r in runs if r is not main]
-            s = f"The largest effect of any single measure comes from {self.the(main[0])} {self._span(main[1])}"
-            if len(main[1]) > 1 and len(runs) == 1:
-                s = f"The largest effect of any single measure comes from {self.the(main[0])} in every year"
-            if others:
-                s += "; " + "; ".join(f"{self._span(ys)} it comes from {self.the(k)}" for k, ys in others)
-            out.append(s + ".")
+            if ("largest", self.year) in self.kf_said:
+                # Key finding 1 names the report year's largest measure: say only the other years
+                main = next(r for r in runs if self.year in r[1])
+                others = [r for r in runs if r is not main and r[0] != main[0]]
+                if others:
+                    s = "; ".join(f"{self._span(ys)} the largest effect of any single measure comes from {self.the(k)}" for k, ys in others)
+                    out.append(s[0].upper() + s[1:] + f"; in every other year it comes from {self.the(main[0])}.")
+            else:
+                main = max(runs, key=lambda r: len(r[1]))
+                others = [r for r in runs if r is not main]
+                s = f"The largest effect of any single measure comes from {self.the(main[0])} {self._span(main[1])}"
+                if len(main[1]) > 1 and len(runs) == 1:
+                    s = f"The largest effect of any single measure comes from {self.the(main[0])} in every year"
+                if others:
+                    s += "; " + "; ".join(f"{self._span(ys)} it comes from {self.the(k)}" for k, ys in others)
+                out.append(s + ".")
         only = []
         for k in self.order:
             e = self.pub.measures[k]
