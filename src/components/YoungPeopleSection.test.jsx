@@ -208,9 +208,9 @@ describe("YoungPeopleSection", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/young people aged 16 to 24 in the UK/)).not.toBeInTheDocument();
     expect(screen.queryByText(/directly affected/)).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: /Better and worse off, 2029-30/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: /Winners and losers, 2029-30/ })).toBeInTheDocument();
     // Two Recharts charts; Effect of each policy is a dot plot of rows, and
-    // Better and worse off the shared rows chart: age groups, 16 to 24 in
+    // Winners and losers the shared rows chart: age groups, 16 to 24 in
     // bold (no background band), ▲/▼ in two fixed columns
     expect(screen.getAllByTestId("recharts-responsive-container")).toHaveLength(2);
     const shares = document.querySelector(".young-people-shares .msc");

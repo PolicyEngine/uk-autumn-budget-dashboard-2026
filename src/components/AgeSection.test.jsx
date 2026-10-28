@@ -67,7 +67,7 @@ describe("By age's cards share one age group", async () => {
     window.history.replaceState({}, "", "/?sub=age&age=all");
     render(<AgeSection selectedPolicies={[]} selectedYear={2027} policies={[]} />);
     const pills = screen.getAllByRole("button", { name: /^Options:/ });
-    // Average change by age, Change by year, Effect of each policy, Better and worse off
+    // Average change by age, Change by year, Effect of each policy, Winners and losers
     expect(pills[2].getAttribute("aria-label")).toBe("Options: All ages");
   });
 });

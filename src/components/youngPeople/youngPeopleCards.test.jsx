@@ -226,7 +226,7 @@ describe("young people cards", () => {
     // The age group is the card's one Options pill
     fireEvent.click(screen.getByRole("button", { name: /^Options: 16 to 24/ }));
     fireEvent.click(within(screen.getByRole("radiogroup", { name: "Compare" })).getByRole("radio", { name: /65 and over/ }));
-    expect(screen.getByText(/65 and over vs all ages/)).toBeInTheDocument();
+    expect(screen.getByText("How much each policy changes income for people aged 65 and over, beside all ages.")).toBeInTheDocument();
   });
 
   it("describes missing age-group rows as unavailable", () => {

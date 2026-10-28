@@ -78,9 +78,9 @@ const AGE_UNIT = "Average change per person (£ a year)";
 // The pensioners' ages and the selected year: the page's highlight tint
 const HIGHLIGHT_FILL = CHART_COLOURS.highlightBand;
 const OUTCOMES = [
-  { key: "pct_better_off", label: "Better off", color: CHART_COLOURS.gain },
-  { key: "pct_unchanged", label: "Unchanged", color: CHART_COLOURS.noChange },
-  { key: "pct_worse_off", label: "Worse off", color: CHART_COLOURS.loss },
+  { key: "pct_better_off", label: "Gain", color: CHART_COLOURS.gain },
+  { key: "pct_unchanged", label: "No change", color: CHART_COLOURS.noChange },
+  { key: "pct_worse_off", label: "Lose", color: CHART_COLOURS.loss },
 ];
 const OUTCOME_KEYS = OUTCOMES.map((outcome) => outcome.key);
 const CSV_UNITS =
@@ -412,7 +412,7 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
     maxSteps: DUMBBELL_MAX_STEPS,
   });
   const title = `Effect of each policy, ${yearLabel}`;
-  const description = "Each policy's average change per person: pensioners vs all ages.";
+  const description = "How much each policy changes income for pensioners, beside all ages.";
   const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
   // As in MeasuresCard: each by its short name, and when it is in force
   // where that is not this year
@@ -620,15 +620,15 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
         )
     : [];
   const thin = shares ? shares.groups.filter((group) => group.suppressed) : [];
-  const title = `Better and worse off, ${yearLabel}`;
+  const title = `Winners and losers, ${yearLabel}`;
   const description = perMeasure
-    ? `Share of people better or worse off (a change over 0.01%), ${groupLabel.toLowerCase()}, each selected policy on its own.`
+    ? `Share of people who gain or lose (a change over 0.01%), ${groupLabel.toLowerCase()}, each selected policy on its own.`
     : single
-    ? `Share of people better or worse off (a change over 0.01%), by single year of age from State Pension age (${from}) to 90 and over, then all pensioners.`
-    : "Share of people better or worse off (a change over 0.01%): pensioners, people under State Pension age and all ages.";
+    ? `Share of people who gain or lose (a change over 0.01%), at each age from State Pension age (${from}) to 90 and over, then all pensioners.`
+    : "Share of people who gain or lose (a change over 0.01%): pensioners, people under State Pension age and all ages.";
   const download = {
     chartRef,
-    name: `pensioners-better-worse-off-${single ? "single-age-" : ""}${year}`,
+    name: `pensioners-winners-losers-${single ? "single-age-" : ""}${year}`,
     exportOptions: {
       title,
       description,
@@ -639,10 +639,10 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
     csv: () =>
       buildChartCsv({
         title: perMeasure
-          ? `People better off, unchanged and worse off, ${groupLabel.toLowerCase()}, each policy on its own, ${yearLabel}`
+          ? `People who gain, see no change and lose, ${groupLabel.toLowerCase()}, each policy on its own, ${yearLabel}`
           : single
-          ? `People better off, unchanged and worse off by single year of age, pensioners, ${yearLabel}`
-          : `People better off, unchanged and worse off, pensioners and others, ${yearLabel}`,
+          ? `People who gain, see no change and lose by single year of age, pensioners, ${yearLabel}`
+          : `People who gain, see no change and lose, pensioners and others, ${yearLabel}`,
         units: `% of people in the group; a change of more than 0.01% of household net income; pensioners are aged ${pensionerAge(year)} and over`,
         columns: [
           { key: "group", label: perMeasure ? "Policy" : single ? "Age" : "Group" },
@@ -839,10 +839,10 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
       <SectionHeading
         id="pensioners-who-gains"
         icon="userPlus"
-        title="Who is better or worse off, and from what"
-        subtitle="Which policies drive the change for pensioners, and how many are better or worse off."
+        title="Winners and losers, and which policies drive them"
+        subtitle="How many pensioners gain or lose, and which policies drive the change."
       />
-      <section className="report-section young-people-section" aria-label="Who is better or worse off, and from what">
+      <section className="report-section young-people-section" aria-label="Winners and losers, and which policies drive them">
         <div className="charts-grid">
           <MeasuresCard {...props} height={narrow ? 460 : 400} />
           <PensionerSharesCard {...props} height={narrow ? 260 : 400} />

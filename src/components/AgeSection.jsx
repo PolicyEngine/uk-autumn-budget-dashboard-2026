@@ -33,7 +33,7 @@ function writeGroup(group) {
  * address as ?age=) drives every card, its focus, comparisons and
  * sentences. The cards: average change by age group, change by year,
  * change by single year of age, the effect of each policy on the group
- * against all ages, and the shares better and worse off.
+ * against all ages, and the shares who gain and lose (winners and losers).
  */
 export default function AgeSection({ selectedPolicies, selectedYear, policies }) {
   const narrow = useNarrowViewport();
@@ -108,10 +108,10 @@ export default function AgeSection({ selectedPolicies, selectedYear, policies })
       <SectionHeading
         id="age-who-gains"
         icon="userPlus"
-        title="Who is better or worse off, and from what"
-        subtitle={`Which policies drive the change for ${subject.toLowerCase()}, and how many are better or worse off.`}
+        title="Winners and losers, and which policies drive them"
+        subtitle={`How many ${subject.toLowerCase()} gain or lose, and which policies drive the change.`}
       />
-      <section className="report-section young-people-section" aria-label="Who is better or worse off, and from what">
+      <section className="report-section young-people-section" aria-label="Winners and losers, and which policies drive them">
         <div className="charts-grid">
           <MeasuresCard {...props} height={narrow ? 460 : 400} />
           {group === PENSIONERS ? (

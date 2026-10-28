@@ -101,7 +101,7 @@ describe.skipIf(!STAGED)("By age on the staged publication", () => {
       </MeasureCatalogueProvider>,
     );
     await screen.findByRole("heading", { name: /Average change by age/ });
-    for (const title of [/Average change by age/, /Change by year/, /Effect of each policy/, /Better and worse off/]) {
+    for (const title of [/Average change by age/, /Change by year/, /Effect of each policy/, /Winners and losers/]) {
       expect(screen.getByRole("heading", { level: 3, name: title })).toBeInTheDocument();
     }
     expect(errors).not.toHaveBeenCalled();
