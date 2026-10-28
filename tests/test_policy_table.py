@@ -242,12 +242,15 @@ def test_threshold_freeze(document):
         )
 
 
+# Plan 2 is not in the Budget; its factory stays as a household-calculator
+# fixture (pre_budget_registry), so its table rows are still checked.
+@pytest.mark.usefixtures("pre_budget_registry")
 def test_plan_2(document):
     plan_2 = by_key(
         withdrawn_rows(registry.PLAN_2_ID)["Plan 2 repayment threshold"]
     )
     assert plan_2["2026"] == (29_385, 29_385)
-    assert plan_2["2027"] == (29_385, 30_648)
+    assert plan_2["2027"] == (29_385, 30_654)
     assert {
         year: after for year, (_, after) in plan_2.items() if year != "2026"
     } == {

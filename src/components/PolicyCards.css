@@ -66,3 +66,20 @@
 .policy-card-actions .policy-card-effect {
   margin-left: auto;
 }
+
+.policy-card-example-items {
+  margin: 0;
+  padding-left: 18px;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}
+
+/* Every card's summary in full, wrapping as it needs: never cut to two
+   lines with "…" (globals.css clamps it; this file loads after it) */
+.policy-card > .policy-card-summary {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
+}

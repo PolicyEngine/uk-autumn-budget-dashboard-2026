@@ -126,8 +126,9 @@
   align-items: center;
   align-self: flex-start;
   gap: 8px;
-  /* 8px to the title: eyebrow and title read as one label */
-  margin: 0 0 8px;
+  /* 12px to the title, 16px from the title to the intro, 32px between
+     sections: one rising rhythm from the eyebrow down */
+  margin: 0 0 12px;
   font-size: var(--fs-small);
   font-weight: 600;
   line-height: 1.4;
@@ -235,9 +236,9 @@
 }
 
 /* The intro, compact for a 380px panel: a 22px title, 15px body at
-   1.6, 12px between them and to the provisional notice */
+   1.6, 16px between them and to the provisional notice */
 .overview-intro .landing-heading {
-  margin: 0 0 12px;
+  margin: 0 0 16px;
   font-size: 1.375rem;
   /* Tight enough that a two-line title reads as one block */
   line-height: 1.25;
@@ -252,7 +253,7 @@
    wrap to two lines) under the intro */
 .overview-intro .publication-provisional {
   display: block;
-  margin: 12px 0 0;
+  margin: 16px 0 0;
   padding: 6px 10px;
   border-radius: 8px;
   font-size: var(--fs-micro);
@@ -382,12 +383,12 @@
 /* "Built with": the last section, at the foot of the panel (the body
    above fills the rest), at least 32px under the groups with a hairline
    halfway (the body's 16px, then its own); its links as small chips in
-   one row, each with its icon and an arrow out; 24px under them (more on
+   one row, each with its icon and an arrow out; 20px under them (more on
    a phone with a home indicator) */
 .overview-footer {
   flex: none;
   margin: 0 20px;
-  padding: 16px 0 calc(24px + env(safe-area-inset-bottom, 0px));
+  padding: 16px 0 calc(20px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--pe-gray-100);
 }
 

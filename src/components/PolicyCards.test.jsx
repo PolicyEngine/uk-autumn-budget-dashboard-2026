@@ -592,7 +592,7 @@ describe("the card's frame", () => {
     expect(costing.getAttribute("href")).toMatch(/^https:\/\/www\.gov\.uk\/government\/publications\/budget-2026-document\//);
     // The trading allowance's worked example, under What changes; none where no source gives one
     const example = within(cards[2]).getByRole("region", { name: /^Example: / });
-    expect(example).toHaveTextContent("£1,500 of trading receipts and no expenses pays £100 less income tax in 2027-28");
+    expect(example).toHaveTextContent("An employee on £30,000 with £3,000 of side income and no expenses pays £400 less income tax in 2027-28.");
     expect(cards[2].querySelector(".policy-card-spec")).toContainElement(example);
     expect(cards[1].querySelector(".policy-card-example")).toBeNull();
   });

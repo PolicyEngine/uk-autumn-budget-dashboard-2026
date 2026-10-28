@@ -31,9 +31,10 @@
  * - budgetRows: the measure's rows in the Budget's Table 6.1 (as
  *   data_inputs/treasury/mapping.csv maps them), which order the cards and
  *   link each card to the Budget's costing;
- * - example: { title, text, source }: a worked example, or the reach the
+ * - example: { title, text, items?, source }: a worked example, or the reach the
  *   Budget states, every figure from its source (a cited document or a
- *   verified household calculation), shown under "What changes";
+ *   verified household calculation), shown under "What changes": one short line, and any further points as
+ *   a short list (`items`), never a long paragraph;
  * - writtenFor: the measure's description in reforms.py, which the
  *   publication carries verbatim, when the entry was written. After
  *   changing a measure in reforms.py, check its entry still holds, then copy
@@ -98,7 +99,7 @@ export const POLICY_DETAILS = [
     budgetRows: [52],
     example: {
       title: "Example",
-      text: "In 2027-28 a pensioner with only the full new State Pension, £13,036.40, pays no income tax: the allowance cancels the £93.28 due. One with total income of £13,186.40, £150 above it, gets £44 (£94 less £150 ÷ 3), and one on £13,400 gets nothing.",
+      text: "In 2027-28 a pensioner whose only income is the full new State Pension (£13,036.40) pays no income tax. Above that, the allowance falls by £1 for every £3 of extra income, so at £13,186.40 it is worth £44.",
       source: { label: "Pension Tax Allowance explainer", href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer" },
     },
   },
@@ -368,7 +369,11 @@ export const POLICY_DETAILS = [
     budgetRows: [1],
     example: {
       title: "Who it reaches",
-      text: "The Budget puts its reach at up to 20 million households, around 80% of households in England, including 83% of those whose energy costs are over 10% of their after-housing-costs income and 88% of those in the bottom three income deciles.",
+      text: "Up to 20 million households in England (about 80%), including:",
+      items: [
+        "83% of households spending over a tenth of their income on energy",
+        "88% of households in the bottom three income deciles",
+      ],
       source: { label: "Budget 2026, paragraphs 3.5 and 3.6", href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html" },
     },
   },
@@ -396,8 +401,8 @@ export const POLICY_DETAILS = [
     budgetRows: [15],
     example: {
       title: "Example",
-      text: "An employee on £30,000 with £1,500 of trading receipts and no expenses pays £100 less income tax in 2027-28, and £400 less with receipts of £3,000 or more; with £2,000 of expenses, receipts of £3,000 or more save £200. The population figures cannot follow this, as the data hold profits, not receipts (see About this result).",
-      source: { label: "PolicyEngine household calculations, policyengine-uk 2.151.0 (review on PR #290)", href: "https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/290" },
+      text: "An employee on £30,000 with £3,000 of side income and no expenses pays £400 less income tax in 2027-28.",
+      source: { label: "PolicyEngine household calculations, policyengine-uk 2.151.0 (review on PR 290)", href: "https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/290" },
     },
   },
 ];
