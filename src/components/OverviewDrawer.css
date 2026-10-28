@@ -126,9 +126,9 @@
   align-items: center;
   align-self: flex-start;
   gap: 8px;
-  /* 12px to the title, 16px from the title to the intro, 32px between
+  /* 16px to the title, 24px from the title to the intro, 32px between
      sections: one rising rhythm from the eyebrow down */
-  margin: 0 0 12px;
+  margin: 0 0 16px;
   font-size: var(--fs-small);
   font-weight: 600;
   line-height: 1.4;
@@ -236,9 +236,9 @@
 }
 
 /* The intro, compact for a 380px panel: a 22px title, 15px body at
-   1.6, 16px between them and to the provisional notice */
+   1.65, 24px between them, 16px to the provisional notice */
 .overview-intro .landing-heading {
-  margin: 0 0 16px;
+  margin: 0 0 24px;
   font-size: 1.375rem;
   /* Tight enough that a two-line title reads as one block */
   line-height: 1.25;
@@ -246,7 +246,7 @@
 
 .overview-intro .landing-intro {
   font-size: var(--fs-body);
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 /* The provisional notice: a small rounded box (not a pill, as it can
