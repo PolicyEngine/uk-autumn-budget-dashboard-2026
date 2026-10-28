@@ -6,7 +6,6 @@ import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import { EXTERNAL } from "../../utils/sources";
 import {
   COSTING_YEARS,
-  OTHER_MEASURES_NOTE,
   TABLE_6_1_URL,
   UNMODELLED_MEASURES,
 } from "../../utils/unmodelledMeasures";
@@ -150,11 +149,8 @@ export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES }) {
       <SectionHeading icon="list" title={UNMODELLED_TITLE} subtitle={UNMODELLED_SUBTITLE} />
       <div className="report-section policy-details-content">
         <p className="umm-intro">
-          Below are Budget measures for households that this dashboard does not model, so its figures leave them
-          out. Each entry says what changes, who it reaches, with the government's figures where it gives
-          them, what it might mean for a household, and why the model leaves it out. Costings are the Treasury's,
-          from Table 6.1 of the <SourceLink href={TABLE_6_1_URL}>Budget document</SourceLink>, in £ million: a
-          positive figure is a gain to the Exchequer, a negative figure a cost.
+          Budget measures that affect households but are not in our figures. Costings are the Treasury's (
+          <SourceLink href={TABLE_6_1_URL}>Table 6.1</SourceLink>, £m; positive = gain to the Exchequer).
         </p>
         <ul className="policy-cards umm-list">
           {measures.map((measure) => {
@@ -162,7 +158,6 @@ export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES }) {
             return <PolicyCard key={measure.id} policy={policy} parameters={parameters} />;
           })}
         </ul>
-        {OTHER_MEASURES_NOTE && <p className="umm-note">{OTHER_MEASURES_NOTE}</p>}
       </div>
     </section>
   );

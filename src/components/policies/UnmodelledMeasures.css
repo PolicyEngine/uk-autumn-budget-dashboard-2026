@@ -78,18 +78,6 @@
   color: var(--pe-gray-600);
 }
 
-.umm-note {
-  margin: 0;
-  font-size: var(--fs-caption);
-  line-height: 1.5;
-  color: var(--pe-gray-600);
-}
-
-.umm-note {
-  max-width: 72ch;
-  margin-top: 16px;
-}
-
 .umm-link {
   color: var(--pe-teal-700);
   text-decoration: underline;

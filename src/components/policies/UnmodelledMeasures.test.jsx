@@ -6,7 +6,6 @@ import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import {
   BUDGET_DOCUMENT,
   COSTING_YEARS,
-  OTHER_MEASURES_NOTE,
   TABLE_6_1_URL,
   UNMODELLED_MEASURES,
 } from "../../utils/unmodelledMeasures";
@@ -64,7 +63,7 @@ describe("the unmodelled measures (unmodelledMeasures.js)", () => {
   });
 
   it("carry no PolicyEngine figure and no evaluative wording", () => {
-    const text = [...UNMODELLED_MEASURES.map(entryText), OTHER_MEASURES_NOTE].join(" ");
+    const text = UNMODELLED_MEASURES.map(entryText).join(" ");
     expect(text).not.toMatch(/PolicyEngine|our estimate|we estimate/i);
     expect(text).not.toMatch(
       /\b(winners?|losers?|hits?|hard-hit|boosts?|boosted|generous|unfair|fairer|significant(ly)?|huge|massive|slashe[sd]|welcome)\b/i,
@@ -190,5 +189,23 @@ describe("UnmodelledMeasures", () => {
   it("shows nothing for an empty list", () => {
     const { container } = render(<UnmodelledMeasures measures={[]} />);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("the section's text", () => {
+  it("has a one-line intro and no closing note", () => {
+    render(<UnmodelledMeasures />);
+    const section = screen.getByRole("region", { name: UNMODELLED_TITLE });
+    expect(section.querySelectorAll(".umm-intro")).toHaveLength(1);
+    expect(section.querySelector(".umm-intro").textContent.split(/\s+/).length).toBeLessThanOrEqual(30);
+    expect(section.querySelector(".umm-note")).toBeNull();
+  });
+
+  it("keeps each card's For a household and Why we don't model it to about 30 words", () => {
+    for (const measure of UNMODELLED_MEASURES) {
+      for (const field of ["household", "notModelled"]) {
+        expect(measure[field].split(/\s+/).length, `${measure.id} ${field}`).toBeLessThanOrEqual(30);
+      }
+    }
   });
 });
