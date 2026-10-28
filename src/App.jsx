@@ -68,7 +68,9 @@ const PovertyMeasuresRow = lazyView(chartViews, (m) => m.PovertyMeasuresRow);
 const PersonalImpactTab = lazyView(chartViews, (m) => m.PersonalImpactTab);
 const LivingStandardsTab = lazyView(chartViews, (m) => m.LivingStandardsTab);
 const PolicyCards = lazyView(() => import("./components/PolicyCards"));
-const UnmodelledMeasures = lazyView(() => import("./components/policies/UnmodelledMeasures"));
+const policiesViews = () => import("./components/policies/UnmodelledMeasures");
+const UnmodelledMeasures = lazyView(policiesViews);
+const HouseholdOnlyMeasures = lazyView(policiesViews, (m) => m.HouseholdOnlyMeasures);
 const MethodologyTab = lazyView(() => import("./components/MethodologyTab"));
 
 // The code each view ("tab" or "tab:sub", as bootView names them) needs
@@ -80,7 +82,7 @@ const VIEW_CODE = {
   "dashboard:poverty": [PovertyMeasuresRow],
   household: [PersonalImpactTab],
   outlook: [LivingStandardsTab],
-  policies: [PolicyCards, UnmodelledMeasures],
+  policies: [PolicyCards, HouseholdOnlyMeasures, UnmodelledMeasures],
   methodology: [MethodologyTab],
 };
 
@@ -1362,8 +1364,12 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
                 onShowEffect={handleShowEffect}
               />
             </section>
-            {/* The Budget's measures the dashboard leaves out, as cards of the same kind */}
-            <UnmodelledMeasures />
+            {/* The Budget's measures modelled for one household only (the
+                Household calculator's calculator-only ones), then those the
+                dashboard leaves out, as cards of the same kind
+                (utils/measureClass.js) */}
+            <HouseholdOnlyMeasures published={allPolicyIds} onShowTab={handleTabChange} />
+            <UnmodelledMeasures published={allPolicyIds} />
           </div>
         ) : value === "methodology" ? (
           <MethodologyTab onShowTab={handleTabChange} />
