@@ -1,6 +1,6 @@
 # OBR: Economic and fiscal outlook, October 2026 (28 October 2026)
 
-These are the Office for Budget Responsibility's files for the October 2026 Economic and fiscal outlook (EFO), kept unchanged so the team can read and check them. No dashboard calculation uses them. They do travel with the code: the Modal images copy all of `data_inputs/` (`modal_household.py`, `modal_generate.py`), and the deploy's checkout check (`runtime_identity.py`) hashes those copied files. The Next.js site and the Docker image don't include them.
+These are the Office for Budget Responsibility's files for the October 2026 Economic and fiscal outlook (EFO), kept unchanged so the team can read and check them. No dashboard calculation uses them. They do travel with the code: the household and generation Modal apps (`modal_household.py`, `modal_generate.py`) add all of `data_inputs/` to their containers at startup (Modal's `add_local_dir` without `copy=True`, so the files aren't built into the image), and the deploy's checkout check (`runtime_identity.py`) hashes the local files before upload. The living-standards app adds only its own subfolder. The Next.js site and the Docker image don't include them.
 
 - **EFO page:** https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/
 - **Licence:** © Crown copyright 2026, published under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).

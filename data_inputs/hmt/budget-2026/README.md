@@ -1,6 +1,6 @@
 # HM Treasury: Budget 2026 documents (28 October 2026)
 
-These are the official Budget 2026 files from GOV.UK, kept unchanged so the team can read and check them without downloading each one. No dashboard calculation uses them. They do travel with the code: the Modal images copy all of `data_inputs/` (`modal_household.py`, `modal_generate.py`), and the deploy's checkout check (`runtime_identity.py`) hashes those copied files. The Next.js site and the Docker image don't include them.
+These are the official Budget 2026 files from GOV.UK, kept unchanged so the team can read and check them without downloading each one. No dashboard calculation uses them. They do travel with the code: the household and generation Modal apps (`modal_household.py`, `modal_generate.py`) add all of `data_inputs/` to their containers at startup (Modal's `add_local_dir` without `copy=True`, so the files aren't built into the image), and the deploy's checkout check (`runtime_identity.py`) hashes the local files before upload. The living-standards app adds only its own subfolder. The Next.js site and the Docker image don't include them.
 
 - **Licence:** © Crown copyright 2026, published under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
 - **Fetched:** with `curl` from GOV.UK on 28 Oct 2026, 19:44Z.
