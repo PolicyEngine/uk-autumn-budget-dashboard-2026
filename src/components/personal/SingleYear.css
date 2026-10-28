@@ -1363,6 +1363,16 @@
 }
 
 
+/* Across earnings: each card's Show chips (one state for both) under its
+   plot. On a touch screen, a 44px tap area round each chip, as the
+   household form's controls (HouseholdCalculator.css), drawn by the
+   invisible layer globals.css gives the chips, so nothing moves */
+@media (pointer: coarse) {
+  .single-year-chart-pair .series-toggle-chip::before {
+    inset: min(0px, calc((100% - 44px) / 2)) 0;
+  }
+}
+
 /* Said above the pair when the answer has no breakdown by tax and benefit */
 .across-earnings-no-parts {
   margin: 0 0 16px;
