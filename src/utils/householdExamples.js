@@ -12,8 +12,11 @@
  * checked against the household test API running candidates-ten on 27
  * October 2026 (include by_policy), so that the measure its card features
  * changes its net income in a year the page offers: 2027-28, or 2031-32
- * for the threshold freeze. The Warm Home Discount top-up has no example:
- * it is paid in 2026-27, before the examples' first year.
+ * for the threshold freeze. The carer replaced the middle earner on 28
+ * October 2026 (PR #284), checked the same way against the production
+ * household API with the eight published measures. The Warm Home Discount
+ * top-up has no example: it is paid in 2026-27, before the examples' first
+ * year.
  * The description and note describe the household, never a measure: which
  * measures change its income is the calculation's answer, and the published
  * measures can change, so a name there could name one the page no longer
@@ -167,22 +170,39 @@ export const HOUSEHOLD_EXAMPLES = [
     spendingSource: decileSpending(8).source,
   },
   {
-    id: "middle-earner",
-    label: "A middle earner on £45,000",
-    short: "Middle earner",
-    description: "Aged 40, owns their home with a mortgage",
-    icon: "hardHat",
-    measure: "threshold_freeze_2031_32",
-    tag: "Threshold freeze, 2031-32",
+    id: "carer",
+    label: "A carer looking after a parent",
+    short: "Carer",
+    description: "Aged 50, works part time on £8,600, renting",
+    icon: "handHeart",
+    measure: "employer_nics_secondary_threshold_raise",
+    tag: "Employer NI threshold",
+    // The household API asks nothing about caring (no hours of care, no
+    // Carer's Allowance, no Universal Credit carer element: api.py's
+    // HouseholdAnswersRequest), so the figures are this household's
+    // earnings, rent and Universal Credit without them, and the note says
+    // so (about £2,500 a year of carer element, £209.34 a month in
+    // 2026-27; Carer's Allowance itself would come off Universal Credit
+    // pound for pound). The earnings stay below the Carer's Allowance
+    // earnings limit (£204 a week of net earnings from April 2026, SI
+    // 2026/218) in every year the page offers, the employer's passed-on
+    // National Insurance included (about £197 a week in 2031-32, household
+    // API, 28 October 2026), so a caring input could later complete this
+    // household without moving it across that limit
     inputs: {
       ...RESET,
-      current_age: 40,
-      current_salary: 45000,
-      tenure: "OWNED_WITH_MORTGAGE",
-      ...spendingInputs(7),
+      current_age: 50,
+      // About 13 hours a week at the National Living Wage from April 2026
+      // (£12.71 an hour, GOV.UK)
+      current_salary: 8600,
+      tenure: "RENT_PRIVATELY",
+      // Fixed: the North West's average private rent (ONS, September 2026)
+      monthly_rent: 975,
+      claims_universal_credit: true,
+      ...spendingInputs(2),
     },
-    note: "Aged 40, earns £45,000 and owns with a mortgage. Spends £1,080 a year on electricity and £1,200 on petrol and diesel, the average for households in the seventh tenth by gross income (ONS Family Spending, FYE 2025).",
-    spendingSource: decileSpending(7).source,
+    note: "Aged 50, single, and looks after a parent for more than 35 hours a week. Earns £8,600 working about 13 hours a week at the 2026 National Living Wage, and rents privately at £975 a month, the North West's average. Claims the Universal Credit they are due. The calculator asks nothing about caring, so its figures leave out Carer's Allowance and the carer element of Universal Credit. Spends £890 a year on electricity and £430 on petrol and diesel, the average for households in the second tenth by gross income (ONS Family Spending, FYE 2025).",
+    spendingSource: decileSpending(2).source,
   },
   {
     id: "lone-parent",
