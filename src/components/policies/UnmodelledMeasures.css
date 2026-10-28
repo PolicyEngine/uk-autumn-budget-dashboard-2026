@@ -1,0 +1,237 @@
+/* The Budget measures this dashboard does not model (UnmodelledMeasures.jsx):
+   a disclosure card of its own under the policy cards, closed by default.
+   Open, a list of measures, two to a row like the cards, one on a phone. */
+.umm {
+  margin-top: 24px;
+}
+
+.umm-disclosure .disclosure-content {
+  padding: 4px 0 var(--card-padding);
+}
+
+.umm-intro {
+  max-width: 72ch;
+  margin: 0 0 16px;
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--pe-gray-700);
+}
+
+.umm-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Each measure is a container: its costing table fits the measure's own
+   width, whether two to a row or one on a phone */
+.umm-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 16px 18px;
+  background: var(--pe-gray-50);
+  border-radius: 10px;
+  container-type: inline-size;
+}
+
+.umm-name {
+  margin: 0;
+  font-size: var(--fs-body-lg);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--pe-gray-900);
+}
+
+/* Small muted icons beside the labels, for scanning, as on the cards */
+.umm-fact dt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.umm-starts svg,
+.umm-fact dt svg {
+  flex: none;
+  color: var(--pe-gray-400);
+}
+
+/* The start date wraps under its label on a phone */
+.umm-starts {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-700);
+}
+
+.umm-starts svg {
+  margin-right: 5px;
+  vertical-align: -2px;
+}
+
+.umm-starts-label {
+  font-weight: 600;
+}
+
+.umm-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.umm-fact dt {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+.umm-fact dd {
+  margin: 2px 0 0;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-700);
+}
+
+/* Table 6.1's rows: years across, £ million; scrolls inside its box, never the page */
+.umm-costing-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.umm-costing {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+.umm-costing caption {
+  padding-bottom: 2px;
+  font-size: var(--fs-micro);
+  text-align: left;
+  color: var(--pe-gray-500);
+}
+
+.umm-costing th,
+.umm-costing td {
+  padding: 3px 8px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.umm-costing th:first-child,
+.umm-costing td:first-child {
+  padding-left: 0;
+}
+
+.umm-costing thead th {
+  font-weight: 600;
+  color: var(--pe-gray-600);
+  border-bottom: 1px solid var(--c-grid);
+}
+
+.umm-costing tbody th {
+  font-weight: 500;
+  text-align: left;
+  color: var(--pe-gray-600);
+}
+
+.umm-costing tbody td {
+  color: var(--pe-gray-800);
+}
+
+.umm-year-short {
+  display: none;
+}
+
+.umm-costing-note {
+  margin: 4px 0 0;
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-600);
+}
+
+.umm-sources,
+.umm-note {
+  margin: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.umm-note {
+  max-width: 72ch;
+  margin-top: 16px;
+}
+
+.umm-link {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.umm-link:hover {
+  text-decoration-color: currentColor;
+}
+
+/* The icon stays with the last word when the label wraps */
+.umm-link-end {
+  white-space: nowrap;
+}
+
+.umm-link svg {
+  display: inline;
+  margin-left: 4px;
+  vertical-align: -1px;
+}
+
+/* One column: plain blocks between rules, so a measure keeps the card's
+   full width on a phone */
+@media (max-width: 768px) {
+  .umm-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .umm-item {
+    padding: 16px 0 0;
+    background: none;
+    border-top: 1px solid var(--c-grid);
+    border-radius: 0;
+  }
+}
+
+/* A narrow measure (two to a row, or a phone): the years as "26-27", still
+   read in full by screen readers */
+@container (max-width: 480px) {
+  .umm-year-full {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .umm-year-short {
+    display: inline;
+  }
+
+  .umm-costing {
+    font-size: var(--fs-micro);
+  }
+
+  .umm-costing thead th {
+    font-weight: 500;
+  }
+
+  .umm-costing th,
+  .umm-costing td {
+    padding: 3px 2px;
+  }
+}

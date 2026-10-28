@@ -8,6 +8,7 @@ import { parameterTableFor } from "../utils/policyParameters";
 import PolicyChange, { usePolicyParameters } from "./PolicyChange";
 import Disclosure from "./Disclosure";
 import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
+import UnmodelledMeasures from "./policies/UnmodelledMeasures";
 import { MODELLING_LIMITS, measureModellingFacts, sentences } from "../utils/measureModelling";
 
 /**
@@ -409,6 +410,9 @@ function PolicyCard({ policy, onShowEffect, parameters }) {
  * one exists, and what changes: the model's parameters before and after
  * (public/data/policy_parameters.json). Revenue figures stay in the charts: "See its effect" opens
  * Population impact with only that measure selected.
+ *
+ * Below the cards, with or without any, the Budget measures the dashboard
+ * does not model, closed by default (policies/UnmodelledMeasures.jsx).
  */
 function PolicyCards({ policies, selectedPolicies, onShowEffect, parameterTables }) {
   const tables = usePolicyParameters(parameterTables);
@@ -421,18 +425,21 @@ function PolicyCards({ policies, selectedPolicies, onShowEffect, parameterTables
   const items = shown
     .sort((a, b) => rank(a) - rank(b) || a.order - b.order)
     .map(withPolicyDetails);
-  if (!shown.length) return null;
+  if (!shown.length) return <UnmodelledMeasures />;
   return (
-    <ul className="policy-cards">
-      {items.map((policy) => (
-        <PolicyCard
-          key={policy.id}
-          policy={policy}
-          onShowEffect={onShowEffect}
-          parameters={parameterTableFor(tables, policy)}
-        />
-      ))}
-    </ul>
+    <>
+      <ul className="policy-cards">
+        {items.map((policy) => (
+          <PolicyCard
+            key={policy.id}
+            policy={policy}
+            onShowEffect={onShowEffect}
+            parameters={parameterTableFor(tables, policy)}
+          />
+        ))}
+      </ul>
+      <UnmodelledMeasures />
+    </>
   );
 }
 
