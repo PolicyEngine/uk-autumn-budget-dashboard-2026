@@ -141,7 +141,14 @@ def _saved_frames():
     from uk_budget_data.publication.tables import TABLES
 
     def row(columns):
-        values = {"str": None, "int": 2026, "float": -1.25, "bool": True}
+        values = {
+            "str": None,
+            "int": 2026,
+            "float": -1.25,
+            # A figure the floor may withhold, here published
+            "float_or_withheld": -1.25,
+            "bool": True,
+        }
         return {
             name: TEXT.get(name, "text") if kind == "str" else values[kind]
             for name, kind in columns
