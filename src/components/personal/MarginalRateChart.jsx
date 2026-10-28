@@ -274,9 +274,9 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
   const csvColumns = [
     { key: "income", label: "Your salary (£)", decimals: 0 },
     { key: "to", label: "To salary (£)", decimals: 0 },
-    ...(parts ?? []).map((part) => ({ key: part.name, label: `${part.label} after`, decimals: 4 })),
-    { key: "before", label: "Marginal tax rate before", decimals: 4 },
-    { key: "after", label: "Marginal tax rate after", decimals: 4 },
+    ...(parts ?? []).map((part) => ({ key: part.name, label: `${part.label}, with the policies`, decimals: 4 })),
+    { key: "before", label: "Marginal tax rate, current law", decimals: 4 },
+    { key: "after", label: "Marginal tax rate, with the policies", decimals: 4 },
   ];
   const csvRows = rates.map((rate, i) => ({ ...rate, ...(breakdown?.after[i] ?? {}) }));
   const download = {
@@ -318,7 +318,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
                 : `At ${formatPounds(salary)} your marginal tax rate is `}
               {pct(yours.before) === pct(yours.after)
                 ? pct(yours.after)
-                : `${pct(yours.before)} before and ${pct(yours.after)} after`}
+                : `${pct(yours.before)} under current law and ${pct(yours.after)} with the policies`}
               {keep ? `, so ${keep}.` : "."}
             </p>
           )}

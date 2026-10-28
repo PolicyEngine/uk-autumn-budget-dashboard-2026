@@ -531,7 +531,7 @@ export function keepClause(before, after, { first = false } = {}) {
   const lead = `of your ${first ? "first" : "next"} ${money(unit)} of earnings, you`;
   const [was, now] = [kept(before), kept(after)];
   if (was === now) return `${lead} ${say(was)}`;
-  return `${lead} ${say(was)} before and ${say(now)} after`;
+  return `${lead} ${say(was)} under current law and ${say(now)} with them`;
 }
 
 /**

@@ -484,21 +484,19 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Winners and losers",
                   {
-                    value: "Three thresholds, by chart:",
+                    value: "Each chart has its own no-change threshold. None uses the app's 0.1% and 5% bands.",
                     more: [
                       <>
-                        Winners and losers and people affected: see{" "}
-                        <AnchorLink id={METHOD_SECTIONS.young}>Results by age</AnchorLink>.
+                        By age: as under <AnchorLink id={METHOD_SECTIONS.young}>Results by age</AnchorLink>.
                       </>,
-                      "Figures by area: under half a pound, or 0.005 percentage points, is no change; the map's Little change is under £10 (or 0.1%) either way.",
+                      "Figures by area: under 50p (or 0.005% of income) either way is no change. The map's Little change is under £10 (or 0.1%) either way.",
                       "Household scatter: under £1 either way is no change.",
-                      "The PolicyEngine app's winners-and-losers bands (0.1% and 5%) are not used here.",
                     ],
                   },
                 ],
                 [
                   "Poverty",
-                  "Poverty uses official (HBAI) income. A child is a dependent child as HBAI defines one; the PolicyEngine app counts everyone aged 0 to 17.",
+                  "A child is a dependent child as HBAI defines one; the PolicyEngine app counts everyone aged 0 to 17.",
                 ],
               ]}
             />
@@ -650,7 +648,7 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Winners and losers",
                   {
-                    value: "Household net income rises or falls by more than 0.01%; otherwise unchanged.",
+                    value: "Household net income rises or falls by more than 0.01%; otherwise no change.",
                     more: ["The 0.01% is of baseline net income, with a baseline below £1 counted as £1."],
                   },
                 ],
@@ -754,7 +752,7 @@ function MethodologyTab({ onShowTab }) {
               decile and age charts add up their separate effects, so they leave out interactions
               between policies (<Term id="ownRuns">policies run on their own</Term>); the{" "}
               <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>{" "}and the
-              winners and losers come from a run of the whole selection, so they include
+              winners and losers charts come from a run of the whole selection, so they include
               them, and show nothing for a selection with no such run.
             </p>
           </Topic>

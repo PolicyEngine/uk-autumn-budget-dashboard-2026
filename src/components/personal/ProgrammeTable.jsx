@@ -293,7 +293,7 @@ export default function ProgrammeTable({
           </h3>
           {/* Named against the waterfall above: that is by policy, this by
               tax and benefit; both add up to the same change (HH5) */}
-          <p className="chart-description">By tax and benefit.{!showTabs && ` ${sentence}`}</p>
+          {!showTabs && <p className="chart-description">{sentence}</p>}
         </div>
         <ChartDownloadMenu formats={formats} chartTitle={policyTitle} ariaLabel={`Download table: ${policyTitle}`} />
       </div>
@@ -322,7 +322,7 @@ export default function ProgrammeTable({
           aria-pressed={showBoth}
           onClick={() => setShowBoth((value) => !value)}
         >
-          {showBoth ? "Hide both columns" : "Show both columns"}
+          {showBoth ? "Show change only" : "Show all columns"}
         </button>
       )}
       {activePolicy ? (

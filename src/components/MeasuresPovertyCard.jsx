@@ -22,8 +22,8 @@ import MeasureRowLabel from "./MeasureRowLabel";
 import LsCard from "./livingStandards/LsCard";
 import ControlBar from "./ControlBar";
 import ChartMoreInfo from "./ChartMoreInfo";
+import NoBreakYear from "./NoBreakYear";
 import { METHOD_ANCHORS } from "./methodology/anchors";
-import { MethodLink } from "../utils/methodLink";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import SummaryMetricChart, { SUMMARY_METRICS, hasColumn, metricValue, povertyMetric, usePovertyChoice } from "./SummaryMetricChart";
 import { useOutlook } from "./livingStandards/useOutlook";
@@ -308,10 +308,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
           info={{
             how: [
               "Each bar is one policy on its own.",
-              <>
-                The last bar is all the selected policies together, from its own run. The bars do not add up to it;
-                see <MethodLink anchor={METHOD_ANCHORS.limitations}>Policies added up</MethodLink>.
-              </>,
+              "The last bar is all the selected policies together, from its own run, so the bars need not add up to it.",
             ],
             caveats: [
               read.fellBack && (
@@ -373,7 +370,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
                   {step.kind === "none" ? (
                     <>
                       <span className="wf-main row-band-value">No change</span>
-                      <span className="wf-reason">{reasonOf(step)}</span>
+                      <span className="wf-reason"><NoBreakYear text={reasonOf(step)} /></span>
                     </>
                   ) : (
                     <span className="wf-main row-band-value"><CountUpText text={main(step)} /></span>

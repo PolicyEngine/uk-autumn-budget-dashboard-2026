@@ -763,7 +763,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const medianChange = incomeAt(curves.after, 50) - medianBefore;
   const compareRows = [
     { key: "you", label: "Your household", gbp: ownChange, pct: ownPct, you: true },
-    { key: "tenth", label: `Average in your tenth (${tenthName(decile).toLowerCase()})`, gbp: averages?.[decile] ?? null, pct: percents?.[decile] ?? null },
+    { key: "tenth", label: `Average in your tenth (the ${TENTH_WORDS[decile]?.toLowerCase() ?? ordinal(decile)})`, gbp: averages?.[decile] ?? null, pct: percents?.[decile] ?? null },
     { key: "uk", label: "Average UK household", gbp: ukAverage, pct: null },
     { key: "median", label: "UK middle income, adjusted for household size", gbp: medianChange, pct: (medianChange / medianBefore) * 100 },
   ];
@@ -871,8 +871,8 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const youPlace = side === "after" ? position.after : position.before;
   const whereAlt =
     showAs === "rank"
-      ? `The share of people with less income than each income ${side} the selected policies, on a log scale: ${describePosition(youPlace)} for you.`
-      : `The UK income distribution ${side} the selected policies, on a log scale, with you at ${describePosition(youPlace)} and in the ${tenthName(decile).toLowerCase()}.`;
+      ? `The share of people with less income than each income ${side === "after" ? "with the selected policies" : "under current law"}, on a log scale: ${describePosition(youPlace)} for you.`
+      : `The UK income distribution ${side === "after" ? "with the selected policies" : "under current law"}, on a log scale, with you at ${describePosition(youPlace)} and in the ${tenthName(decile).toLowerCase()}.`;
   const compareAlt =
     compareBy === "tenths"
       ? `Average change by tenth of people by income, ${unit === "pct" ? "% of net income" : "£ a year"}: ${Array.from({ length: 10 }, (_, i) => `${i + 1}: ${unit === "pct" ? (percents ? signedPct(percents[i + 1], 2) : "n/a") : averages ? signedPounds(averages[i + 1]) : "n/a"}`).join(", ")}. You, in the ${tenthName(decile).toLowerCase()}: ${unit === "pct" ? signedPct(ownPct, 2) : signedPounds(ownChange)}.`
@@ -931,7 +931,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
         icon="pin"
         id="where-you-sit"
         title="Where you sit"
-        subtitle="Where your income sits in the UK, and how your change compares."
+        subtitle="How your income and your change compare with the rest of the UK."
       />
 
       <div className="charts-grid position-pair">
@@ -964,7 +964,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
             <ControlBar
               name={whereTitle}
               options={[
-                { label: "Show", value: side, onChange: setSide, options: SIDES },
+                { label: "Income", value: side, onChange: setSide, options: SIDES },
                 { label: "Show as", value: showAs, onChange: setShowAs, options: SHOW_AS },
               ]}
             />
@@ -992,10 +992,10 @@ export default function IncomePositionChart({ net, household, year, policies, ye
                 how: [
                   `Your household's net income is divided by ${position.factor.toFixed(2)} for its size, and everyone's is adjusted the same way (the modified OECD scale, before housing costs).`,
                   "Spread shows how many people have each household income; Rank shows how many have a lower one than each. Both are the same distribution, on the same axis.",
-                  "Your percentile compares your income with everyone's on the same side: both under current law, or both with the policies.",
+                  "Your percentile ranks your income against everyone's under the same policies: both under current law, or both with the policies.",
                 ],
                 caveats: [
-                  "Where the changes are small next to incomes, the curves before and after overlap almost exactly.",
+                  "Where the changes are small next to incomes, the two curves overlap almost exactly.",
                 ],
                 method: { anchor: METHOD_ANCHORS.incomePosition, label: "How your income percentile is worked out" },
               }}
@@ -1013,7 +1013,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               <p className="chart-description">
                 {compareBy === "tenths"
                   ? `Average change in net income, ${unit === "pct" ? "as a % of income" : "in £ a year"}, for each tenth of people by income; you're in the ${TENTH_WORDS[decile]?.toLowerCase() ?? ordinal(decile)} (${unit === "pct" ? signedPct(ownPct, 2) : signedPounds(ownChange)}).`
-                  : "Your change beside your tenth's average, the average UK household and the middle income."}
+                  : "Your change next to the average for your tenth, the UK average and the middle income."}
                 {compareBy === "like" && policyLine ? ` ${policyLine}` : ""}
               </p>
             </div>
@@ -1061,7 +1061,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               year={year}
               info={{
                 how: [
-                  "Tenths rank people by household income before the policies, adjusted for household size; each bar is the average change in that tenth.",
+                  "Tenths rank people by household income under current law, adjusted for household size. Each bar is the average change in that tenth.",
                 ],
                 caveats: ["The decile charts rank by HBAI income, without VAT and fuel duty, so the two medians differ slightly."],
                 method: { anchor: METHOD_ANCHORS.incomePosition, label: "How your income percentile is worked out" },

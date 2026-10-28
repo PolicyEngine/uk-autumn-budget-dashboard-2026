@@ -75,7 +75,7 @@ describe("the two Across earnings cards", () => {
     const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
     const [net, rate] = cards(container);
     expect(net.querySelector(".chart-description").textContent).toMatch(/^With no earnings, your household's net income is about £[\d,]+ a year with the selected policies\.$/);
-    expect(rate.querySelector(".chart-description").textContent).toMatch(/^With no earnings, your marginal tax rate on your first £200 would be 16% before and 0% after/);
+    expect(rate.querySelector(".chart-description").textContent).toMatch(/^With no earnings, your marginal tax rate on your first £200 would be 16% under current law and 0% with the policies/);
     expect(net.querySelector(".earnings-you")).not.toBeNull();
     fireEvent.click(within(rate).getByRole("button", { name: "About this chart" }));
     // The cliff caveat is for a pensioner on the State Pension alone; this

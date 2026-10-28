@@ -192,7 +192,7 @@ describe("the Poverty sub-tab's measures pair", () => {
     // About this chart: that the parts need not add up; the policies that
     // move no one are in their rows, not listed again here
     fireEvent.click(within(measures).getByRole("button", { name: "About this chart" }));
-    expect(within(measures).getByText(/The bars do not add up to it/)).toBeInTheDocument();
+    expect(within(measures).getByText(/so the bars need not add up to it/)).toBeInTheDocument();
     const about = measures.querySelector(".chart-more-info");
     expect(about).not.toHaveTextContent(/No effect on/);
     expect(about.querySelector("[data-zero-measure]")).toBeNull();

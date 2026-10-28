@@ -176,7 +176,7 @@ describe("the two Across earnings cards in step", () => {
       />,
     );
     expect(document.querySelector(".chart-description").textContent).toBe(
-      "With no earnings, your marginal tax rate on your first £200 would be 20% before and 39% after, so of your first £200 of earnings, you keep £160 before and keep £121 after.",
+      "With no earnings, your marginal tax rate on your first £200 would be 20% under current law and 39% with the policies, so of your first £200 of earnings, you keep £160 under current law and keep £121 with them.",
     );
   });
 });

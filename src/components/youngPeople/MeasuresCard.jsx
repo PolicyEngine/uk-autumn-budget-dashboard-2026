@@ -204,7 +204,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
   const compareName = compareKey === ALL_BAND ? "All ages" : AGE_BANDS.find((b) => b.key === compareKey)?.label ?? compareKey;
   const GROUPS = groupsFor(band).map((item) => (item.key === "all" ? { ...item, label: compareName } : item));
   const description = single
-    ? "How much each policy changes income, on average per person."
+    ? "Average change per person from each policy, for people of all ages."
     : measuresDescription(band, compareKey);
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);

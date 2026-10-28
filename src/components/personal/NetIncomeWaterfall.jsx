@@ -114,7 +114,10 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
   const hi = Math.max(...rows.map((row) => row.to));
   const pct = (value) => ((value - start) / Math.max(hi - start, 1)) * 100;
   const largest = largestSteps(steps);
-  const fuelDuty = (steps ?? []).some((step) => /fuel duty/i.test(`${step.name ?? ""} ${step.label ?? ""}`));
+  // Only when the fuel duty policy moves this household
+  const fuelDuty = (steps ?? []).some(
+    (step) => /fuel duty/i.test(`${step.name ?? ""} ${step.label ?? ""}`) && Math.round(step.rounded ?? 0) !== 0,
+  );
   // Each policy's bar by direction and size, the largest darkest; the
   // interaction step keeps its plain direction colour
   const policySteps = rows.filter((row) => !row.total && row.id !== "interaction");
@@ -143,7 +146,7 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
           <p className="waterfall-sub">
             By policy. The table below splits the same change by tax and benefit.
             {fuelDuty &&
-              " Freezing fuel duty also cuts the VAT charged on it, so the table's VAT change row includes part of the fuel duty policy."}
+              " The fuel duty policy also changes the VAT on fuel, so part of its effect shows in the table's VAT row."}
           </p>
         )}
         <p id={sentenceId} className={noChange ? "waterfall-no-change" : "visually-hidden"}>
@@ -154,7 +157,7 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
         <ol
           className="waterfall-rows"
           aria-describedby={sentenceId}
-          aria-label={`Net income from current law to with the selected policies, ${yearLabel}: ${rows
+          aria-label={`Net income under current law and with the selected policies, ${yearLabel}: ${rows
             .map((row) => `${row.name} ${row.total ? money(row.to) : signedMoney(row.rounded)}`)
             .join("; ")}`}
         >

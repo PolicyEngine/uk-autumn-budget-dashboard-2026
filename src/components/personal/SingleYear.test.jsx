@@ -1099,16 +1099,16 @@ describe("the fixture", () => {
 describe("keepSentence: the marginal rate as money", () => {
   it("keeps of the next £1,000, before and after, once when they round the same", () => {
     expect(keepSentence(0.62, 0.62)).toBe("Of your next £1,000 of earnings, you keep £380.");
-    expect(keepSentence(0.62, 0.65)).toBe("Of your next £1,000 of earnings, you keep £380 before and keep £350 after.");
+    expect(keepSentence(0.62, 0.65)).toBe("Of your next £1,000 of earnings, you keep £380 under current law and keep £350 with them.");
   });
 
   it("says a loss as a loss", () => {
-    expect(keepSentence(1.05, 0.55)).toBe("Of your next £1,000 of earnings, you would lose £50 before and keep £450 after.");
+    expect(keepSentence(1.05, 0.55)).toBe("Of your next £1,000 of earnings, you would lose £50 under current law and keep £450 with them.");
   });
 
   it("turns to the next £200 at a cliff, where £1,000 would overstate it", () => {
     // Net income falls £2,140 over the next £200 before, £32 kept after
-    expect(keepSentence(11.7, 0.84)).toBe("Of your next £200 of earnings, you would lose £2,140 before and keep £32 after.");
+    expect(keepSentence(11.7, 0.84)).toBe("Of your next £200 of earnings, you would lose £2,140 under current law and keep £32 with them.");
     expect(keepSentence(11.7, 11.7)).toBe("Of your next £200 of earnings, you would lose £2,140.");
   });
 
@@ -1302,6 +1302,11 @@ describe("the waterfall's one line", () => {
       "How each policy changes your income" + container.querySelector(".waterfall-sub").textContent + container.querySelector(".visually-hidden").textContent,
     );
     expect(container.querySelector(".waterfall-sub")).toHaveTextContent("By policy. The table below splits the same change by tax and benefit.");
+    // The fuel duty policy moves this household: the VAT line, with no
+    // claim that the policy is a freeze (HH5)
+    expect(container.querySelector(".waterfall-sub")).toHaveTextContent(
+      "The fuel duty policy also changes the VAT on fuel, so part of its effect shows in the table's VAT row.",
+    );
     const chart = container.querySelector("ol.waterfall-rows");
     const described = document.getElementById(chart.getAttribute("aria-describedby"));
     expect(described).toHaveClass("visually-hidden");
@@ -1325,7 +1330,20 @@ describe("the waterfall's one line", () => {
       "Largest gain",
       "Largest loss",
     ]);
+    // No fuel duty policy: no VAT line
+    expect(mixed.container.querySelector(".waterfall-sub")).not.toHaveTextContent(/fuel/);
     mixed.unmount();
+
+    // A fuel duty policy that does not move this household: no VAT line
+    const still = render(
+      <NetIncomeWaterfall
+        totals={{ before: 18000, after: 18204, change: 204 }}
+        steps={[step("Zero VAT on electricity", 204), step("Fuel duty frozen", 0)]}
+        yearLabel="2027-28"
+      />,
+    );
+    expect(still.container.querySelector(".waterfall-sub")).not.toHaveTextContent(/fuel/);
+    still.unmount();
 
     // One policy: no chip, the sentence still the text alternative
     const one = render(

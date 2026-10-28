@@ -245,7 +245,7 @@ describe("young people cards", () => {
 
   it("takes its focus from By age's group: the compare option and the dumbbell follow it", () => {
     const { unmount } = render(<TrendCard {...props} selectedYear={2029} group="25-34" />);
-    expect(screen.getByRole("button", { name: /^Options: 25 to 34 and all/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Options: With all ages/ })).toBeInTheDocument();
     unmount();
     render(<MeasuresCard {...props} selectedYear={2028} group="pensioners" />);
     expect(screen.getByRole("button", { name: /^Options: Pensioners/ })).toBeInTheDocument();
@@ -298,14 +298,14 @@ describe("young people cards", () => {
     fireEvent.click(within(card()).getByRole("button", { name: /^Options:/ }));
     fireEvent.click(within(card()).getByRole("radio", { name: "Running total" }));
     rerender(<TrendCard {...props} selectedYear={2029} group="25-34" />);
-    expect(within(card()).getByRole("button", { name: /^Options: 25 to 34.*Running total/ })).toBeInTheDocument();
+    expect(within(card()).getByRole("button", { name: /^Options: With all ages.*Running total/ })).toBeInTheDocument();
   });
 
   it("says what the chart shows in About this chart (AGE7)", () => {
     render(<TrendCard {...props} selectedYear={2029} />);
     const card = document.querySelector(".young-people-trend");
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
-    expect(card).toHaveTextContent("The average change per person in each age group, each year, with all ages for comparison.");
+    expect(card).toHaveTextContent("Average change per person in each age group, each year, with all ages for comparison.");
   });
 
   it("draws every year shown, whatever year is selected", () => {

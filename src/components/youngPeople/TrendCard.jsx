@@ -72,7 +72,7 @@ const SELECTED_FILL = CHART_COLOURS.highlightBand;
 
 
 const compareOptions = (label) => [
-  { value: "focus", label: `${label} and all ages`, summary: `${label} and all` },
+  { value: "focus", label: `${label} and all ages`, summary: "With all ages" },
   { value: "groups", label: "Every age group", summary: "Every group" },
 ];
 const viewOptions = (label) => [
@@ -975,8 +975,8 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
           members={members}
           year={Number(selectedYear)}
           info={{
-            shows: "The average change per person in each age group, each year, with all ages for comparison.",
-            how: ["Each line is the average change per person for that group. Running total adds up the years from the first one shown."],
+            shows: "Average change per person in each age group, each year, with all ages for comparison.",
+            how: ["Running total adds up the years from the first one shown."],
             caveats: [
               missingNote,
               byMeasure && netOnly && PACKAGE_NET_ONLY,

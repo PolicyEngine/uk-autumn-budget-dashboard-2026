@@ -840,7 +840,7 @@ function PensionersSection({ selectedPolicies, selectedYear, policies }) {
         id="pensioners-who-gains"
         icon="userPlus"
         title="Winners and losers, and which policies drive them"
-        subtitle="How many pensioners gain or lose, and which policies drive the change."
+        subtitle="How many pensioners gain or lose, and from which policies."
       />
       <section className="report-section young-people-section" aria-label="Winners and losers, and which policies drive them">
         <div className="charts-grid">

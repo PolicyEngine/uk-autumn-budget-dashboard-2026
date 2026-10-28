@@ -109,7 +109,7 @@ export default function AgeSection({ selectedPolicies, selectedYear, policies })
         id="age-who-gains"
         icon="userPlus"
         title="Winners and losers, and which policies drive them"
-        subtitle={`How many ${subject.toLowerCase()} gain or lose, and which policies drive the change.`}
+        subtitle={`How many ${subject.toLowerCase()} gain or lose, and from which policies.`}
       />
       <section className="report-section young-people-section" aria-label="Winners and losers, and which policies drive them">
         <div className="charts-grid">

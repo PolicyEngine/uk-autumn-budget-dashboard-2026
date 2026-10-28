@@ -208,7 +208,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
   const anyLoss = data.some((point) => (point.netChange ?? 0) < 0);
   const anyGain = data.some((point) => (point.netChange ?? 0) > 0);
   const nameOf = (id) => catalogue.byId.get(id)?.label ?? id;
-  const showSpa = spa >= window[0] && spa <= window[1] && (group === PENSIONERS || group === "65+" || group === ALL_BAND || window[1] >= spa);
+  const showSpa = spa > window[0] && spa <= window[1] && (group === PENSIONERS || group === "65+" || group === ALL_BAND || window[1] >= spa);
   // The window is the group's own ages, so no end is picked out on the axis
   const tickEnds = [];
   const title = `${titleBase}, ${yearLabel}`;
@@ -371,7 +371,8 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
                   strokeDasharray="4 3"
                   label={{
                     value: narrow ? `Pension age ${spa}` : `State Pension age, ${spa}`,
-                    position: "insideTopRight",
+                    // Near the left end, the label reads to the right of the line
+                    position: spa - window[0] < (window[1] - window[0]) / 2 ? "insideTopLeft" : "insideTopRight",
                     fill: CHART_COLOURS.highlight,
                     fontSize: TICK_STYLE.fontSize,
                     fontWeight: 600,
@@ -422,7 +423,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
                 `One bar per single year of age, ${agesText(window)}.`,
                 "The line averages the five ages centred on each one, as single ages rest on few survey records.",
                 showSpa && `The dashed line marks State Pension age (${spa} in ${yearLabel}); pensioners are the ages from it.`,
-                partsOffered && "By policy shows every selected policy's own part at each age, stacked.",
+                partsOffered && "Each policy stacks every selected policy's own part at each age.",
               ],
               method: AGE_METHOD,
             }}

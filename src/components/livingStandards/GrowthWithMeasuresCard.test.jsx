@@ -73,7 +73,7 @@ describe("Growth across the distribution, with the selected measures", () => {
     expect(document.querySelector(".chart-description").textContent).toMatch(/^With the selected policies, real incomes .+ \(lowest tenth: \S+% a year; top tenth: \S+%\)\.$/);
     expect(document.querySelector(".chart-description").textContent).not.toMatch(/^Under current law/);
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
-    expect(screen.getByText("Effect of the policies is growth with them less growth under current law.")).toBeTruthy();
+    expect(screen.getByText("The effect of the policies is growth with them less growth under current law.")).toBeTruthy();
   });
 
   it("says so, with no chart, when the measure does not move HBAI income", async () => {
