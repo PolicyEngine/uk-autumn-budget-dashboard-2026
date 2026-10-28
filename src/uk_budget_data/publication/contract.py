@@ -132,6 +132,7 @@ def contract() -> dict:
                 "columns": [list(column) for column in spec.columns],
                 "key": list(spec.key),
                 "required": spec.required,
+                **({"nullable": list(spec.nullable)} if spec.nullable else {}),
             }
             for name, spec in TABLES.items()
         },

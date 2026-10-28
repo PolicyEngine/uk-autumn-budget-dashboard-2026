@@ -186,6 +186,9 @@ function isHeld(receipt) {
 export async function receiptProblems(receipt, key, entry) {
   const problems = [];
   const dashboard = receipt?.dashboard ?? {};
+  if (dashboard.disclosure_floor?.thin_cells_in_tables) {
+    problems.push("its tables hold cells under the floor of survey households");
+  }
   if ((await artifactSha256(receipt)) !== entry.artifact_sha256) {
     problems.push("the receipt is not the artifact the manifest names");
   }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
-import { parseCsv, parseTable, TableError, TABLES } from "./csv";
+import { parseCsv, parseFlatTable, parseTable, TableError, TABLES } from "./csv";
 import { fixtureJson, fixtureText } from "../../test/publicationFixture";
 
 describe("parseCsv", () => {
@@ -77,6 +77,14 @@ describe("parseTable", () => {
         parseTable("budgetary_impact", `${header}\nx,X,2030,${zero}\n`)[0]
           .value === 0,
       ).toBe(true);
+    }
+  });
+
+  it("preserves blank decile values as null, while flat files stay strict", () => {
+    for (const [table, column, label] of [["distributional_impact", "value", "1st"], ["winners_losers", "avg_change", "all"]]) {
+      const text = `${TABLES[table].columns.map(([name]) => name).join(",")}\nx,X,2030,${label},\n`;
+      expect(parseTable(table, text)[0][column]).toBeNull();
+      expect(() => parseFlatTable(table, text)).toThrow(TableError);
     }
   });
 
