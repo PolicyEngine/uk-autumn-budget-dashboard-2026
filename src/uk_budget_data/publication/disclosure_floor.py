@@ -16,17 +16,43 @@ from one survey household, so the floor counts the survey households behind
 the changed records (``pipeline.scatter_survey_households``), as the binned
 scatter and the results by area do.
 
-The age table may leave rows out, so its thin cells are withheld with
-whatever would give them back by difference (``withheld_age_labels``): a
-thin single year of age takes the other single ages of its band with it,
-so the bands and "all" stay; a thin band leaves only "all"; a thin "all"
-leaves no row. The decile tables keep their identifying columns and
-withhold every value in a thin decile's row, plus the winners and losers
-"all" row that would give it back by difference. A combined run also
-withholds its members' withheld cells. When "all" itself is thin, the
-whole measure and its costing rest on too few households: that run keeps
-the warning and publication refusal, or is refused before writing when
-THIN_DECILES_ENV is "refuse".
+The age table's columns rest on different people (``age_change_sets``):
+the households that changed (the means), those better off, worse off or
+neither under the 0.01% share people affected uses (the shares), and the
+people whose own taxes or earnings moved (people directly affected), each
+with the people a share or count gives back as its complement. An age
+group thin under any of them is thin, so its "all" row is thin whenever
+people affected is. The age table may leave rows out, so its thin cells
+are withheld with whatever would give them back by difference
+(``withheld_age_labels``): a thin single year of age takes the other
+single ages of its band with it, so the bands and "all" stay; a thin band
+leaves only "all"; a thin "all" leaves no row. The decile tables keep
+their identifying columns and withhold every value in a thin decile's
+row, plus the winners and losers "all" row that would give it back by
+difference. A combined run also withholds its members' withheld cells.
+When "all" itself is thin, the whole measure and its costing rest on too
+few households: that run keeps the warning and publication refusal, or is
+refused before writing when THIN_DECILES_ENV is "refuse".
+
+The summary statistics (``metrics`` and ``poverty_inequality``) are held to
+the same floor (``thin_metrics``). A poverty change rests on the survey
+households behind the people whose poverty flag the measure changes, and
+people affected on the survey households behind the households it
+affects (``calculators.household_income_changed``). A figure resting on 1
+to SURVEY_HOUSEHOLD_FLOOR - 1 of them is withheld, with its partner: a
+change in percentage points with its change in % of the baseline rate,
+a child poverty change when the people other than children would be
+given back by difference from everyone's, and people affected when the
+households it does not affect are that few, since it is 100 less their
+share. A withheld figure is an empty cell, and the receipt names its
+table, year and column, never a figure. Like a withheld decile cell it is
+the intended outcome, so the artifact still stages and shows.
+Differences across runs are not checked. A package inherits its members'
+withheld decile cells, but not their withheld summary figures, so a
+package's poverty figure less its other members' can give back a member's
+withheld one, closely when the measures barely interact (#285 re-review,
+P1). Keyed noise (#270) closes that route: differences between noised
+figures need no check. Until it lands, the route is open.
 """
 
 import os
@@ -38,10 +64,18 @@ import pandas as pd
 from uk_budget_data.calculators import (
     AGE_BAND_ALL,
     AGE_BANDS,
+    DIRECT_EFFECT_MIN_GBP,
+    HEADLINE_POVERTY,
+    POVERTY_GROUPS,
+    POVERTY_MEASURES,
     SINGLE_AGE_MIN_RECORDS,
     age_band_of,
+    household_income_changed,
+    income_change_direction,
+    own_income_change,
     single_age_of,
 )
+from uk_budget_data.publication.tables import TABLES
 
 SURVEY_HOUSEHOLD_FLOOR = 3
 # A household whose net income moves by less than this, £ a year, has not
@@ -49,11 +83,35 @@ SURVEY_HOUSEHOLD_FLOOR = 3
 CHANGE_TOLERANCE = 0.01
 DECILE_TABLES = ("distributional_impact", "winners_losers")
 AGE_TABLE = "age_impact"
-# The tables a receipt's floor record covers: the decile and age tables,
+# The tables a receipt's floor record covers, and names in its "tables"
+# (``floor_record``): the decile and age tables,
 # held to SURVEY_HOUSEHOLD_FLOOR, and the binned scatter, whose rows name
 # their survey household once it has run and which ``tables.bin_scatter``
 # holds to its own SCATTER_MIN_HOUSEHOLDS.
-FLOOR_TABLES = (*DECILE_TABLES, AGE_TABLE, "household_scatter_binned")
+# The summary statistics' tables, whose thin figures are withheld
+# (``thin_metrics``): the headline ones in metrics, the poverty measures by
+# group in poverty_inequality. Only their withholdable columns
+# (``tables.WITHHELD_FLOAT``: people affected and the poverty changes) are
+# counted. Their Gini, top shares and 90/10 rest on the whole-measure
+# refusal when "all" is thin, so "tables" naming them in a receipt is no
+# check of those columns.
+METRICS_TABLES = ("metrics", "poverty_inequality")
+FLOOR_TABLES = (
+    *DECILE_TABLES,
+    AGE_TABLE,
+    "household_scatter_binned",
+    *METRICS_TABLES,
+)
+# What the floor covered before its record named its tables (#271): a
+# receipt with no "tables" covers these, and not the summary statistics.
+FLOOR_TABLES_BEFORE_THE_LIST = (
+    *DECILE_TABLES,
+    AGE_TABLE,
+    "household_scatter_binned",
+)
+# The people a group's poverty figure and everyone's give back by
+# difference: those outside the group (``thin_metrics``).
+OUTSIDE = " (outside)"
 # Groups no row shows but the rows give back by difference (``age_groups``):
 # a band's people whose age has no row of its own, labelled with the band
 # and this, and anyone in no band.
@@ -138,33 +196,89 @@ def _values(simulation, variable: str, year: int, map_to: str) -> np.ndarray:
     )
 
 
-def thin_cells(
-    baseline, reformed, years: list[int], survey
-) -> dict[tuple[str, int], list[str]]:
-    """Each (table, year) with a thin cell, and the cells' labels.
-
-    ``survey`` names the survey household behind each of the simulations'
-    households, in the engine's household order.
-    """
-    survey = np.asarray(survey)
-    households = pd.Index(
-        _values(baseline, "household_id", years[0], "household")
-    )
+def _person_households(baseline, year: int, survey: np.ndarray) -> np.ndarray:
+    """Each person's household's position in the engine's household order,
+    which ``survey`` follows."""
+    households = pd.Index(_values(baseline, "household_id", year, "household"))
     if len(households) != len(survey):
         raise ValueError(
             f"{len(survey)} survey households for {len(households)} households"
         )
     position = households.get_indexer(
-        _values(baseline, "household_id", years[0], "person")
+        _values(baseline, "household_id", year, "person")
     )
     if (position < 0).any():
         raise ValueError("a person's household is not among the households")
+    return position
+
+
+def age_change_sets(
+    baseline_net, reform_net, own_change, position
+) -> dict[str, np.ndarray]:
+    """The people each of the age table's columns rests on, by person, as
+    ``AgeImpactCalculator`` makes them (#285 review, findings 2 and 5):
+
+    - ``changed``: their household's net income moved by CHANGE_TOLERANCE
+      or more, behind ``mean_change`` and ``mean_equivalised_change``.
+    - ``better``, ``worse`` and ``affected``: it moved up, down, or either
+      way by more than the calculator's share of baseline income
+      (``calculators.income_change_direction``), behind ``pct_better_off``
+      and ``pct_worse_off``. ``affected`` is ``household_income_changed``,
+      the people_affected rule, so the "all" row is thin whenever
+      metrics' people_affected is: its better and worse off add up to it.
+    - ``unchanged``: neither, behind ``pct_unchanged``.
+    - ``not better``, ``not worse``, ``not affected``: the people the
+      shares give back as 100 less them.
+    - ``direct`` and ``not direct``: their own taxes or earnings moved by
+      DIRECT_EFFECT_MIN_GBP or more (``calculators.own_income_change``),
+      behind ``people_directly_affected``; ``people`` less it gives back
+      the others.
+
+    ``baseline_net`` and ``reform_net`` are by household, ``own_change``
+    by person, and ``position`` is each person's household."""
+    change = reform_net - baseline_net
+    better, worse = income_change_direction(baseline_net, reform_net)
+    affected = household_income_changed(baseline_net, reform_net)
+    direct = own_change >= DIRECT_EFFECT_MIN_GBP
+    return {
+        "changed": (np.abs(change) >= CHANGE_TOLERANCE)[position],
+        "better": better[position],
+        "worse": worse[position],
+        "affected": affected[position],
+        "unchanged": ~(better | worse)[position],
+        "not better": ~better[position],
+        "not worse": ~worse[position],
+        "not affected": ~affected[position],
+        "direct": direct,
+        "not direct": ~direct,
+    }
+
+
+def thin_cells(
+    baseline, reformed, years: list[int], survey
+) -> dict[tuple[str, int], list[str]]:
+    """Each (table, year) with a thin cell, and the cells' labels.
+
+    A decile is thin when 1 to SURVEY_HOUSEHOLD_FLOOR - 1 survey households
+    in it changed by CHANGE_TOLERANCE or more. An age group is thin when
+    it is under any of ``age_change_sets``, so no column of its row rests
+    on 1 or 2 survey households, nor gives them back. The labels keep the
+    groups' order.
+
+    ``survey`` names the survey household behind each of the simulations'
+    households, in the engine's household order.
+    """
+    survey = np.asarray(survey)
+    position = _person_households(baseline, years[0], survey)
     found = {}
     for year in years:
-        change = _values(
+        baseline_net = _values(
+            baseline, "household_net_income", year, "household"
+        )
+        reform_net = _values(
             reformed, "household_net_income", year, "household"
-        ) - _values(baseline, "household_net_income", year, "household")
-        changed = np.abs(change) >= CHANGE_TOLERANCE
+        )
+        changed = np.abs(reform_net - baseline_net) >= CHANGE_TOLERANCE
         decile = _values(
             baseline, "household_income_decile", year, "household"
         )
@@ -176,10 +290,143 @@ def thin_cells(
             _values(baseline, "age", year, "person"),
             _values(baseline, "household_income_decile", year, "person"),
         )
-        thin = thin_groups(groups, changed[position], survey[position])
+        sets = age_change_sets(
+            baseline_net,
+            reform_net,
+            own_income_change(baseline, reformed, year),
+            position,
+        )
+        flagged = set()
+        for members in sets.values():
+            flagged.update(thin_groups(groups, members, survey[position]))
+        thin = [label for label in groups if label in flagged]
         if thin:
             found[(AGE_TABLE, year)] = thin
     return found
+
+
+def _crossed(baseline, reformed, variable: str, year: int) -> np.ndarray:
+    """The people whose ``variable`` (a poverty flag) the measure changes."""
+    before = _values(baseline, variable, year, "person").astype(bool)
+    return before != _values(reformed, variable, year, "person").astype(bool)
+
+
+def _with_partners(table: str, columns: set[str]) -> list[str]:
+    """``columns`` with each change in percentage points' partner in % of
+    the baseline rate (one gives the other back, given the rate), in the
+    table's column order."""
+    columns = columns | {
+        column[: -len("_pp")] + "_pct"
+        for column in columns
+        if column.endswith("_pp")
+    }
+    return [name for name in TABLES[table].column_names if name in columns]
+
+
+def thin_metrics(
+    baseline, reformed, years: list[int], survey
+) -> dict[tuple[str, int], list[str]]:
+    """Each (table, year) of the summary statistics with a figure resting
+    on 1 to SURVEY_HOUSEHOLD_FLOOR - 1 survey households, and the columns
+    to withhold, its partners included. With the calculator's variables
+    and definitions (``calculators.MetricsCalculator``), so the check is of
+    what is published:
+
+    - ``people_affected``: the survey households behind the households
+      ``household_income_changed`` counts, of those with an income decile;
+      or behind those it does not, since people_affected is 100 less
+      their share (#285 review, finding 5).
+    - ``poverty_change_pp`` and ``_pct`` (HEADLINE_POVERTY, everyone), and
+      each POVERTY_MEASURES column for each POVERTY_GROUPS group: the
+      survey households behind the people in the group whose flag the
+      measure changes. Nobody crossing is an exact zero, which is safe.
+    - A group's column, when the people outside it are thin and
+      everyone's is not: everyone's and the group's give theirs back by
+      difference.
+
+    ``survey`` names the survey household behind each of the simulations'
+    households, in the engine's household order.
+    """
+    survey = np.asarray(survey)
+    person_survey = survey[_person_households(baseline, years[0], survey)]
+    found = {}
+    for year in years:
+        changed = household_income_changed(
+            _values(baseline, "household_net_income", year, "household"),
+            _values(reformed, "household_net_income", year, "household"),
+        )
+        decile = _values(
+            baseline, "household_income_decile", year, "household"
+        )
+        valid = {"people_affected": decile >= 1}
+        withheld = {
+            "metrics": set(thin_groups(valid, changed, survey))
+            | set(thin_groups(valid, ~changed, survey)),
+            "poverty_inequality": set(),
+        }
+        everyone = np.ones(len(person_survey), dtype=bool)
+        if thin_groups(
+            {"poverty_change_pp": everyone},
+            _crossed(baseline, reformed, HEADLINE_POVERTY, year),
+            person_survey,
+        ):
+            withheld["metrics"].add("poverty_change_pp")
+        groups = {
+            prefix: (
+                everyone
+                if flag is None
+                else _values(baseline, flag, year, "person").astype(bool)
+            )
+            for prefix, flag in POVERTY_GROUPS.items()
+        }
+        groups.update(
+            {
+                prefix + OUTSIDE: ~groups[prefix]
+                for prefix, flag in POVERTY_GROUPS.items()
+                if flag is not None
+            }
+        )
+        for measure, variable in POVERTY_MEASURES.items():
+            thin = set(
+                thin_groups(
+                    groups,
+                    _crossed(baseline, reformed, variable, year),
+                    person_survey,
+                )
+            )
+            for label in thin:
+                prefix = label.removesuffix(OUTSIDE)
+                if label.endswith(OUTSIDE) and "" in thin:
+                    # Everyone's is withheld, so nothing gives these back.
+                    continue
+                withheld["poverty_inequality"].add(
+                    f"{prefix}poverty_{measure}_change_pp"
+                )
+        for table, columns in withheld.items():
+            if columns:
+                found[(table, year)] = _with_partners(table, columns)
+    return found
+
+
+def withhold_metrics(
+    rows: list[dict], found: dict[tuple[str, int], list[str]]
+) -> list[dict]:
+    """The summary statistics' rows (``ReformResult.metrics``, which carry
+    both tables' columns) with each thin figure ``thin_metrics`` found set
+    to None, which the tables write as an empty cell."""
+    withheld: dict[int, set[str]] = {}
+    for (table, year), columns in found.items():
+        if table in METRICS_TABLES:
+            withheld.setdefault(year, set()).update(columns)
+    return [
+        {
+            column: (
+                None if column in withheld.get(row["year"], ()) else value
+            )
+            for column, value in row.items()
+        }
+        for row in rows
+    ]
 
 
 def floor_record(
@@ -194,16 +441,19 @@ def floor_record(
     year and group label, never a figure, and whether any is still published.
     A thin "all" always keeps the refusal, including the costing. An
     omitted ``withheld`` keeps the meaning of receipts made before decile
-    withholding. ``survey_households`` is the decile and age tables'
-    floor, SURVEY_HOUSEHOLD_FLOOR; the binned scatter's is
-    SCATTER_MIN_HOUSEHOLDS. A run whose survey households cannot be told
-    apart records that it was not checked, and why."""
+    withholding. ``survey_households`` is the decile, age and summary
+    tables' floor, SURVEY_HOUSEHOLD_FLOOR; the binned scatter's is
+    SCATTER_MIN_HOUSEHOLDS. ``tables`` names the tables the floor covers
+    (FLOOR_TABLES), so the gate can tell a receipt made before it covered
+    one (``publish._floor_problems``). A run whose survey households cannot
+    be told apart records that it was not checked, and why."""
     cells = [
         {"table": table, "year": year, "groups": list(labels)}
         for (table, year), labels in sorted(found.items())
     ]
     record = {
         "survey_households": SURVEY_HOUSEHOLD_FLOOR,
+        "tables": list(FLOOR_TABLES),
         "checked": not_checked_because is None,
         "thin_cells": cells,
         "thin_cells_in_tables": any(
@@ -340,6 +590,38 @@ def thin_cells_reason(found: dict[tuple[str, int], list[str]]) -> str:
     ]
     return (
         f"cells resting on fewer than {SURVEY_HOUSEHOLD_FLOOR} survey "
+        f"households: {'; '.join(parts)}"
+    )
+
+
+def withheld_line(record: Optional[dict]) -> Optional[str]:
+    """One line naming what the floor withheld in a run's tables, for the
+    generation's progress (#285 review, finding 9): the summary statistics'
+    columns, the age table's thin groups and the decile tables' withheld
+    cells (their own, partners and those inherited from members), by table
+    and year, never a figure. None when it withheld nothing. A thin "all"
+    decile, which withholds nothing but refuses the whole measure, is the
+    run's warning (``thin_cells_reason``)."""
+    record = record if isinstance(record, dict) else {}
+    cells = {
+        (cell["table"], cell["year"]): cell["groups"]
+        for cell in record.get("thin_cells") or []
+        if cell.get("table") in (*METRICS_TABLES, AGE_TABLE)
+    }
+    cells.update(
+        {
+            (cell["table"], cell["year"]): cell["groups"]
+            for cell in record.get("withheld_cells") or []
+        }
+    )
+    parts = [
+        f"{table} {year} ({', '.join(groups)})"
+        for (table, year), groups in sorted(cells.items())
+    ]
+    if not parts:
+        return None
+    return (
+        f"WITHHELD, resting on fewer than {SURVEY_HOUSEHOLD_FLOOR} survey "
         f"households: {'; '.join(parts)}"
     )
 

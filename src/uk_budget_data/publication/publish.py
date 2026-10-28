@@ -74,8 +74,12 @@ from uk_budget_data.publication.attestations import (
 )
 from uk_budget_data.publication.combine import combined_key
 from uk_budget_data.publication.disclosure_floor import (
+    AGE_TABLE,
     DECILE_TABLES,
     FLOOR_TABLES,
+    FLOOR_TABLES_BEFORE_THE_LIST,
+    METRICS_TABLES,
+    withheld_age_labels,
 )
 from uk_budget_data.publication.receipt import (
     artifact_sha256,
@@ -575,12 +579,22 @@ def _floor_problems(dashboard: dict, tables: dict, level: str) -> list[str]:
     """Check the floor and the receipt's withholding at every figure level.
 
     Published thin decile cells are refused even at staging. Withheld
-    rows must be present and blank, with their complementary all row.
-    Provisional and approved household tables also need a recorded floor
-    check, so artifacts made before the floor must be regenerated.
+    decile rows must be present and blank, with their complementary all
+    row, and a summary statistic is empty exactly where the receipt
+    records it withheld (``_unrecorded_withheld``), and the age table holds
+    no row its receipt's thin groups withhold (``_unwithheld_age_rows``).
+    Provisional and approved household tables also need a recorded floor check that covers
+    every table the floor now covers, so artifacts made before the floor,
+    or before it covered the summary statistics (#285 review, finding 6),
+    must be regenerated. No acknowledgement lifts any of these: such a
+    cell rests on too few cases to publish.
     """
     floor = dashboard.get("disclosure_floor")
-    problems = withholding_problems(tables, floor)
+    problems = (
+        withholding_problems(tables, floor)
+        + _unrecorded_withheld(floor, tables)
+        + _unwithheld_age_rows(floor, tables)
+    )
     if floor is None:
         if level in (m.PROVISIONAL, m.APPROVED) and (
             tables.keys() & set(FLOOR_TABLES)
@@ -593,6 +607,19 @@ def _floor_problems(dashboard: dict, tables: dict, level: str) -> list[str]:
         return problems
     if not isinstance(floor, dict):
         return problems
+    if level in (m.PROVISIONAL, m.APPROVED):
+        covered = floor.get("tables", FLOOR_TABLES_BEFORE_THE_LIST)
+        uncovered = [
+            table
+            for table in FLOOR_TABLES
+            if table in tables and table not in covered
+        ]
+        if uncovered:
+            problems.append(
+                "its receipt's floor of survey households does not cover "
+                f"{', '.join(uncovered)}, as for an artifact generated "
+                "before the floor covered them: regenerate it"
+            )
     if not floor.get("thin_cells_in_tables"):
         return problems
     cells = "; ".join(
@@ -604,6 +631,66 @@ def _floor_problems(dashboard: dict, tables: dict, level: str) -> list[str]:
         "its tables hold cells resting on fewer than "
         f"{floor.get('survey_households')} survey households: {cells}"
     ]
+
+
+def _unrecorded_withheld(floor: Optional[dict], tables: dict) -> list[str]:
+    """A summary statistic whose cell and the receipt's floor record
+    disagree. An empty cell the record does not name as withheld: only the
+    floor may leave one empty (``disclosure_floor.thin_metrics``), so any
+    other is a figure that failed, never to be shown as "Not published".
+    Or a cell the record names as withheld that still holds a figure: that
+    figure rests on 1 or 2 survey households, so it is never published,
+    whatever the receipt says was done with it (#285 review, finding 1)."""
+    record = floor if isinstance(floor, dict) else {}
+    named = {
+        (cell.get("table"), cell.get("year"), group)
+        for cell in record.get("thin_cells") or []
+        if isinstance(cell, dict) and cell.get("table") in METRICS_TABLES
+        for group in cell.get("groups") or []
+    }
+    empty: set = set()
+    held: set = set()
+    for table in METRICS_TABLES:
+        for row in tables.get(table) or []:
+            for column, value in row.items():
+                cell = (table, row["year"], column)
+                if value is None and cell not in named:
+                    empty.add(cell)
+                elif value is not None and cell in named:
+                    held.add(cell)
+    return [
+        f"{table} {year} {column}: empty, but its receipt does not record "
+        "it withheld by the floor of survey households"
+        for table, year, column in sorted(empty)
+    ] + [
+        f"{table} {year} {column}: recorded withheld by the floor, but holds "
+        "a figure"
+        for table, year, column in sorted(held)
+    ]
+
+
+def _unwithheld_age_rows(floor: Optional[dict], tables: dict) -> list[str]:
+    """Age table rows its receipt records as withheld: each year's thin
+    groups and whatever would give them back (``withheld_age_labels``),
+    every row of the year when "all" is thin. Generation leaves them out;
+    one still in the table rests on 1 or 2 survey households (#285 second
+    review, the age table's counterpart of finding 1)."""
+    record = floor if isinstance(floor, dict) else {}
+    rows = tables.get(AGE_TABLE) or []
+    problems = []
+    for cell in record.get("thin_cells") or []:
+        if not isinstance(cell, dict) or cell.get("table") != AGE_TABLE:
+            continue
+        year = cell.get("year")
+        labels = [row["age_band"] for row in rows if row["year"] == year]
+        withheld = withheld_age_labels(list(cell.get("groups") or []), labels)
+        problems.extend(
+            f"{AGE_TABLE} {year} {label}: recorded withheld by the floor, "
+            "but in the table"
+            for label in labels
+            if withheld is None or label in withheld
+        )
+    return problems
 
 
 def _year_problems(document: dict, tables: dict) -> list[str]:

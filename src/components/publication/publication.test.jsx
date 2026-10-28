@@ -52,6 +52,26 @@ describe("CombinedStats (UI regression)", () => {
     expect(screen.getByText("7.25%")).toBeInTheDocument();
   });
 
+  it("says Not published for a statistic the floor withheld, never 0", () => {
+    const { container } = render(
+      <CombinedStats
+        stats={{
+          status: "available",
+          key: "combined--alpha+beta",
+          year: IN_DATA,
+          provisional: false,
+          peopleAffected: null,
+          giniChange: -0.0275,
+          povertyChangePp: null,
+          povertyChangePct: null,
+        }}
+        measureNames={names}
+      />,
+    );
+    expect(screen.getAllByText("Not published")).toHaveLength(3);
+    expect(container.textContent).not.toMatch(/0\.00pp|0%/);
+  });
+
   it("is the same whatever order the measures were selected in", () => {
     const first = renderStats(["alpha", "beta"], IN_DATA).container.innerHTML;
     const second = renderStats(["beta", "alpha"], IN_DATA).container.innerHTML;

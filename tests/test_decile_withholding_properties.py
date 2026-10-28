@@ -13,7 +13,7 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from tests.publication_support import make_tables
-from tests.test_disclosure_floor import _Dataset, _Simulation
+from tests.test_disclosure_floor import _Dataset, _own_incomes, _Simulation
 from uk_budget_data.publication import disclosure_floor as floor
 from uk_budget_data.publication import generate, publish, tables
 
@@ -286,12 +286,16 @@ def test_no_thin_cells_preserve_baseline_bytes_and_floor_record(
     withheld = floor.withheld_decile_cells({})
     record = floor.floor_record({}, withheld=withheld)
     assert record.pop("withheld_cells", []) == []
+    # #285 names the tables the floor covers; f80215e7's record did not
+    assert record.pop("tables") == list(floor.FLOOR_TABLES)
     assert record == previous_modules["disclosure_floor"].floor_record({})
     household_ids = np.arange(len(survey))
     person = {
         "household_id": household_ids,
         "household_income_decile": deciles,
         "age": np.full(len(survey), 40),
+        # Nobody's own taxes or earnings move (#285's age floor reads them)
+        **_own_incomes(len(survey)),
     }
     household = {
         "household_id": household_ids,
@@ -325,6 +329,12 @@ def test_no_thin_cells_preserve_baseline_bytes_and_floor_record(
         patch.setattr(
             pipeline, "scatter_survey_households", lambda sim, path: survey
         )
+        # The summary statistics' floor (#285) is not in f80215e7; it has
+        # its own tests in test_disclosure_floor. This compares the decile
+        # and age floor with f80215e7's.
+        patch.setattr(
+            floor, "thin_metrics", lambda baseline, reformed, years, s: {}
+        )
         old_warnings, old_record = previous_modules[
             "generate"
         ]._apply_disclosure_floor("a", job, baseline, reformed, old_result)
@@ -333,6 +343,24 @@ def test_no_thin_cells_preserve_baseline_bytes_and_floor_record(
         )
     assert old_warnings == new_warnings == []
     assert new_record.pop("withheld_cells", []) == []
+    assert new_record.pop("tables") == list(floor.FLOOR_TABLES)
+
+    def by_table(record):
+        return {
+            (cell["table"], cell["year"]): set(cell["groups"])
+            for cell in record["thin_cells"]
+        }
+
+    # #285 counts each age column's own households, so its age floor finds
+    # every group f80215e7's did, and may find more; the rest is unchanged
+    old_cells, new_cells = by_table(old_record), by_table(new_record)
+    for cell, labels in old_cells.items():
+        if cell[0] == floor.AGE_TABLE:
+            assert labels <= new_cells.get(cell, set())
+    assert {c: g for c, g in old_cells.items() if c[0] != floor.AGE_TABLE} == {
+        c: g for c, g in new_cells.items() if c[0] != floor.AGE_TABLE
+    }
+    del old_record["thin_cells"], new_record["thin_cells"]
     assert old_record == new_record
     for table in inputs:
         rows = getattr(old_result, table)

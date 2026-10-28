@@ -13,6 +13,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from tests.publication_support import DATASET_NAME, SMALL_DATASET_NAME
+from uk_budget_data.calculators import DIRECT_EFFECT_VARIABLES
 from uk_budget_data.publication import disclosure_floor as floor
 from uk_budget_data.publication.receipt import ReceiptUnavailable
 from uk_budget_data.publication.tables import (
@@ -42,19 +43,48 @@ class _Dataset(dict):
     years = [YEAR]
 
 
-def _population(changed_survey, records_each=3):
+POVERTY_FLAGS = (
+    "in_poverty_bhc",
+    "in_poverty_ahc",
+    "in_relative_poverty_bhc",
+    "in_relative_poverty_ahc",
+)
+
+
+def _own_incomes(n):
+    """Each person's own taxes and earnings (DIRECT_EFFECT_VARIABLES), the
+    same on both sides unless a test moves them: nobody directly
+    affected."""
+    return {variable: np.zeros(n) for variable in DIRECT_EFFECT_VARIABLES}
+
+
+def _no_poverty(n):
+    """Person flags for the metrics floor: no one in poverty on either
+    side, and no child; and nobody's own taxes or earnings move."""
+    return {
+        **{flag: np.zeros(n, dtype=bool) for flag in POVERTY_FLAGS},
+        "is_hbai_dependent_child": np.zeros(n, dtype=bool),
+        **_own_incomes(n),
+    }
+
+
+def _population(changed_survey, records_each=3, gains=None):
     """Ten deciles of 20 survey households, each built into
     ``records_each`` records of one adult aged 40. The households in
-    ``changed_survey`` gain £100."""
+    ``changed_survey`` gain £100; ``gains`` maps others to their own gain
+    or loss, £ a year."""
     survey = np.repeat(np.arange(200), records_each)
     household_id = np.arange(len(survey)) + 1_000
     decile = survey // 20 + 1
     base = np.full(len(survey), 20_000.0)
     gain = np.where(np.isin(survey, list(changed_survey)), 100.0, 0.0)
+    for household, amount in (gains or {}).items():
+        gain[survey == household] = amount
     person = {
         "household_id": household_id,
         "age": np.full(len(survey), 40),
         "household_income_decile": decile,
+        **_no_poverty(len(survey)),
     }
     baseline = _Simulation(
         {
@@ -233,6 +263,7 @@ def test_generation_withholds_one_thin_decile_and_the_complement(
         ],
         age_impact=[],
         household_scatter=[],
+        metrics=[],
     )
     warnings, record = generate._apply_disclosure_floor(
         "a", _job(refuse_thin_deciles=refuse), baseline, reformed, result
@@ -268,7 +299,7 @@ def test_generation_names_survey_households_in_the_scatter(monkeypatch):
     )
     job = _job()
     rows = [{"household_id": 1_000}, {"household_id": 1_005}]
-    result = SimpleNamespace(household_scatter=rows, age_impact=[])
+    result = SimpleNamespace(household_scatter=rows, age_impact=[], metrics=[])
     generate._apply_disclosure_floor("a", job, baseline, reformed, result)
     assert [row["survey_household"] for row in result.household_scatter] == [
         0,
@@ -387,6 +418,7 @@ def _ages(changed):
         "household_id": household_id,
         "age": age,
         "household_income_decile": decile,
+        **_own_incomes(len(survey)),
     }
 
     def simulation(net):
@@ -409,6 +441,186 @@ def test_a_thin_single_age_in_a_band_that_is_not_thin_is_found_alone():
     assert found[("age_impact", YEAR)] == ["40"]
 
 
+# The age table's columns each rest on their own people (#285 review,
+# findings 2 and 5): a 50p change on £20,000 moves the household (the
+# means), but under the 0.01% share that counts it better or worse off.
+PENNIES = 0.5
+
+
+def _age_thin(baseline, reformed, survey):
+    return floor.thin_cells(baseline, reformed, [YEAR], survey).get(
+        (floor.AGE_TABLE, YEAR), []
+    )
+
+
+def test_the_age_table_never_gives_back_a_withheld_people_affected():
+    """Finding 2: two survey households pass the 0.01% rule and nine more
+    move by pennies. Eleven households changed, so no decile is thin, but
+    people affected rests on two, and the age table's "all" row gives it
+    back (its better and worse off add up to it). So "all" is thin, no age
+    row is left, and people affected is withheld with it."""
+    baseline, reformed, survey = _population(
+        {0, 1}, gains={n: PENNIES for n in range(2, 11)}
+    )
+    found = floor.thin_cells(baseline, reformed, [YEAR], survey)
+    assert not set(floor.DECILE_TABLES) & {table for table, _ in found}
+    thin = found[(floor.AGE_TABLE, YEAR)]
+    assert floor.AGE_BAND_ALL in thin
+    assert floor.withheld_age_labels(thin, ["35-49", "all", "40"]) is None
+    assert floor.thin_metrics(baseline, reformed, [YEAR], survey) == {
+        ("metrics", YEAR): ["people_affected"]
+    }
+
+
+def test_three_households_past_the_share_keep_the_age_rows():
+    baseline, reformed, survey = _population(
+        {0, 1, 2}, gains={n: PENNIES for n in range(3, 11)}
+    )
+    assert _age_thin(baseline, reformed, survey) == []
+    assert floor.thin_metrics(baseline, reformed, [YEAR], survey) == {}
+
+
+@pytest.mark.parametrize("losers", [1, 2])
+def test_a_share_worse_off_resting_on_one_or_two_households_is_thin(losers):
+    """Finding 2: pct_worse_off is a cell of its own (the page draws it).
+    Eighteen survey households in the first decile gain, and one or two
+    lose: nothing else is thin, but the age rows' share worse off rests on
+    the losers."""
+    gains = {n: -100.0 for n in range(18, 18 + losers)}
+    baseline, reformed, survey = _population(range(18), gains=gains)
+    assert floor.thin_metrics(baseline, reformed, [YEAR], survey) == {}
+    found = floor.thin_cells(baseline, reformed, [YEAR], survey)
+    assert list(found) == [(floor.AGE_TABLE, YEAR)]
+    assert floor.AGE_BAND_ALL in found[(floor.AGE_TABLE, YEAR)]
+
+
+@pytest.mark.parametrize(
+    "not_affected, thin",
+    [(0, False), (1, True), (2, True), (3, False)],
+    ids=["none", "one", "two", "three"],
+)
+def test_people_affected_goes_when_one_or_two_households_are_not(
+    not_affected, thin
+):
+    """Finding 5: when only 1 or 2 survey households with a decile are not
+    affected, people affected is 100 less their share; and the age rows'
+    pct_unchanged is their share. Everyone affected (100%) is exact."""
+    unaffected = set(range(200 - not_affected, 200))
+    baseline, reformed, survey = _population(set(range(200)) - unaffected)
+    found = floor.thin_metrics(baseline, reformed, [YEAR], survey)
+    assert found == ({("metrics", YEAR): ["people_affected"]} if thin else {})
+    assert (floor.AGE_BAND_ALL in _age_thin(baseline, reformed, survey)) == (
+        thin
+    )
+
+
+def test_households_with_no_decile_are_not_counted_as_not_affected():
+    """Finding 5: people affected is a share of those with a decile, so a
+    household without one is neither affected nor its complement."""
+    baseline, reformed, survey = _population(set(range(198)))
+    for simulation in (baseline, reformed):
+        for table in ("household", "person"):
+            decile = simulation.arrays[table]["household_income_decile"]
+            decile[np.isin(survey, [198, 199])] = 0
+    assert floor.thin_metrics(baseline, reformed, [YEAR], survey) == {}
+
+
+@pytest.mark.parametrize("direct", [1, 2, 198, 199])
+def test_people_directly_affected_is_held_to_the_floor(direct):
+    """Finding 2's third set: people_directly_affected, a column of the
+    artifact's age table, counts people whose own taxes or earnings move by
+    £1 or more. Every household gains £100 (so nothing else is thin), and
+    the people of 1 or 2 survey households, or of all but 1 or 2 (which
+    ``people`` less it gives back), pay £5 more income tax."""
+    baseline, reformed, survey = _population(set(range(200)))
+    moved = dict(reformed.arrays["person"])
+    moved["income_tax"] = np.where(survey < direct, 5.0, 0.0)
+    reformed.arrays = {**reformed.arrays, "person": moved}
+    assert floor.thin_metrics(baseline, reformed, [YEAR], survey) == {}
+    assert floor.AGE_BAND_ALL in _age_thin(baseline, reformed, survey)
+
+
+def test_a_direct_change_under_a_pound_is_not_direct():
+    baseline, reformed, survey = _population(set(range(200)))
+    moved = dict(reformed.arrays["person"])
+    moved["employment_income"] = np.where(survey < 2, 0.5, 0.0)
+    reformed.arrays = {**reformed.arrays, "person": moved}
+    assert _age_thin(baseline, reformed, survey) == []
+
+
+@given(
+    base=st.floats(-1e6, 1e7, allow_nan=False),
+    change=st.floats(-1e5, 1e5, allow_nan=False),
+)
+def test_better_and_worse_off_add_up_to_people_affected(base, change):
+    """The age table's better and worse off are disjoint and together are
+    exactly the households people_affected counts, so the "all" row's
+    pct_better_off + pct_worse_off is people affected."""
+    from uk_budget_data.calculators import (
+        household_income_changed,
+        income_change_direction,
+    )
+
+    better, worse = income_change_direction([base], [base + change])
+    assert not (better & worse).any()
+    assert (
+        (better | worse) == household_income_changed([base], [base + change])
+    ).all()
+
+
+@given(data=st.data())
+def test_a_withheld_people_affected_takes_the_age_tables_all_row(data):
+    """For any population: people affected is withheld exactly when 1 or 2
+    survey households with a decile are affected, or are not; and whenever
+    it is, the age table's "all" row is thin, so no age row gives it
+    back."""
+    n = data.draw(st.integers(1, 12))
+
+    def draw(values):
+        return np.array(
+            data.draw(
+                st.lists(st.sampled_from(values), min_size=n, max_size=n)
+            )
+        )
+
+    survey = draw(range(6))
+    base = draw([0.0, 50.0, 20_000.0])
+    net = base + draw([0.0, 0.005, PENNIES, 1.0, 100.0, -100.0])
+    decile = draw([0, 1, 5])
+    household_id = np.arange(n) + 1_000
+    person = {
+        "household_id": household_id,
+        "age": np.full(n, 40),
+        "household_income_decile": decile,
+        **_own_incomes(n),
+    }
+
+    def simulation(income):
+        return _Simulation(
+            {
+                "household_id": household_id,
+                "household_net_income": income,
+                "household_income_decile": decile,
+            },
+            {**person, **_no_poverty(n)},
+        )
+
+    baseline, reformed = simulation(base), simulation(net)
+    found = floor.thin_metrics(baseline, reformed, [YEAR], survey)
+    withheld = "people_affected" in found.get(("metrics", YEAR), [])
+    from uk_budget_data.calculators import household_income_changed
+
+    affected = household_income_changed(base, net)
+    valid = decile >= 1
+
+    def thin(members):
+        return 0 < len(set(survey[members].tolist())) < FLOOR
+
+    assert withheld == (thin(valid & affected) or thin(valid & ~affected))
+    if withheld:
+        assert floor.AGE_BAND_ALL in _age_thin(baseline, reformed, survey)
+
+
 def test_warn_mode_writes_a_thin_decile_run_with_a_warning(monkeypatch):
     """Written as the run says, even where the process it runs in says
     "refuse" (#208 review, finding 3: the mode travels with the run)."""
@@ -425,6 +637,7 @@ def test_warn_mode_writes_a_thin_decile_run_with_a_warning(monkeypatch):
     result = SimpleNamespace(
         household_scatter=[],
         age_impact=[_age_row(YEAR, "35-49"), _age_row(YEAR, "all")],
+        metrics=[],
     )
     (warning,), record = generate._apply_disclosure_floor(
         "a", job, baseline, reformed, result
@@ -656,6 +869,105 @@ def test_an_artifact_made_before_the_floor_is_never_shown():
         world.close()
 
 
+def _before_the_summary_floor():
+    """A receipt's floor record as #271 made it: no "tables", so it covers
+    the decile and age tables and the binned scatter, not the summary
+    statistics."""
+    return {
+        key: value
+        for key, value in floor.floor_record({}).items()
+        if key != "tables"
+    }
+
+
+@pytest.mark.parametrize(
+    "record, tables, uncovered",
+    [
+        (_before_the_summary_floor(), ["metrics"], "metrics"),
+        (
+            _before_the_summary_floor(),
+            ["metrics", "poverty_inequality", "age_impact"],
+            "metrics, poverty_inequality",
+        ),
+        (
+            {**floor.floor_record({}), "tables": ["metrics"]},
+            ["metrics", "poverty_inequality"],
+            "poverty_inequality",
+        ),
+        (
+            {**floor.floor_record({}), "tables": ["metrics"]},
+            ["metrics"],
+            None,
+        ),
+        (floor.floor_record({}), list(floor.FLOOR_TABLES), None),
+    ],
+    ids=[
+        "before-metrics",
+        "before-both",
+        "poverty-uncovered",
+        "no-poverty-table",
+        "current",
+    ],
+)
+def test_a_receipt_made_before_the_floor_covered_a_table_is_never_shown(
+    record, tables, uncovered
+):
+    """#285 review, finding 6: a receipt whose floor record does not cover
+    a table the artifact holds and the floor now covers stages, but is
+    never made provisional or approved."""
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.publish import _floor_problems
+
+    dashboard = {"disclosure_floor": record}
+    held = {table: [] for table in tables}
+    assert _floor_problems(dashboard, held, m.STAGED) == []
+    for level in (m.PROVISIONAL, m.APPROVED):
+        expected = (
+            []
+            if uncovered is None
+            else [
+                "its receipt's floor of survey households does not cover "
+                f"{uncovered}, as for an artifact generated before the "
+                "floor covered them: regenerate it"
+            ]
+        )
+        assert _floor_problems(dashboard, held, level) == expected
+
+
+def test_an_artifact_made_before_the_summary_floor_stages_but_never_shows():
+    """#285 review, finding 6, through the gate: an artifact generated on
+    #271's code (its record covers no summary statistics) stages, but is
+    refused provisional and approved until it is regenerated."""
+    from tests.publication_support import World
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.publish import (
+        PublishError,
+        approve,
+        stage,
+    )
+
+    world = World()
+    try:
+        values = {2027: -1.0, 2028: -2.0}
+        arguments = dict(data_root=world.data_root, inputs=world.inputs)
+        manifest = m.Manifest()
+        before = world.ready(
+            "alpha", values, floor=_before_the_summary_floor()
+        )
+        uncovered = "does not cover metrics.*regenerate it"
+        with pytest.raises(PublishError, match=uncovered):
+            stage(manifest, before.path, provisional=True, **arguments)
+        stage(manifest, before.path, **arguments)
+        with pytest.raises(PublishError, match=uncovered):
+            approve(manifest, "alpha", "Reviewer", **arguments)
+        regenerated = world.ready("alpha", values)
+        stage(manifest, regenerated.path, **arguments)
+        approve(manifest, "alpha", "Reviewer", **arguments)
+        assert manifest.measures["alpha"].status == m.APPROVED
+    finally:
+        world.close()
+
+
 def test_the_record_names_cells_never_figures_and_flags_decile_ones():
     found = {
         ("winners_losers", YEAR): ["5", "all"],
@@ -664,6 +976,7 @@ def test_the_record_names_cells_never_figures_and_flags_decile_ones():
     record = floor.floor_record(found)
     assert record == {
         "survey_households": FLOOR,
+        "tables": list(floor.FLOOR_TABLES),
         "checked": True,
         "thin_cells": [
             {"table": floor.AGE_TABLE, "year": YEAR, "groups": ["40"]},
@@ -736,6 +1049,706 @@ def test_a_warned_run_is_recorded_and_never_staged(monkeypatch):
                 PublishError,
                 match=f"fewer than {FLOOR} survey households: "
                 "distributional_impact 2027",
+            ):
+                stage(
+                    manifest,
+                    reference.path,
+                    provisional=provisional,
+                    **arguments,
+                )
+        assert "alpha" not in manifest.measures
+    finally:
+        world.close()
+
+
+# --- the summary statistics: people affected and the poverty changes -----
+
+POVERTY_COLUMNS = [
+    f"{group}poverty_{measure}_change_{unit}"
+    for measure in ("abs_bhc", "abs_ahc", "rel_bhc", "rel_ahc")
+    for group in ("", "child_")
+    for unit in ("pp", "pct")
+]
+
+
+def _metrics_population(
+    crossing=(), children=(), changed=(), records_each=3, flags=None
+):
+    """40 survey households in deciles of 4, each built into
+    ``records_each`` records of one person. The people of the survey
+    households in ``crossing`` enter poverty (on ``flags``, every poverty
+    measure by default), those in ``children`` are HBAI dependent
+    children, and the households in ``changed`` gain £100."""
+    survey = np.repeat(np.arange(40), records_each)
+    n = len(survey)
+    household_id = np.arange(n) + 1_000
+    decile = survey // 4 + 1
+    base = np.full(n, 20_000.0)
+    gain = np.where(np.isin(survey, list(changed)), 100.0, 0.0)
+    before = _no_poverty(n)
+    before["is_hbai_dependent_child"] = np.isin(survey, list(children))
+    after = dict(before)
+    for flag in flags or POVERTY_FLAGS:
+        after[flag] = np.isin(survey, list(crossing))
+    person = {
+        "household_id": household_id,
+        "household_income_decile": decile,
+        "age": np.full(n, 40),
+    }
+    household = {
+        "household_id": household_id,
+        "household_income_decile": decile,
+    }
+    baseline = _Simulation(
+        {**household, "household_net_income": base}, {**person, **before}
+    )
+    reformed = _Simulation(
+        {**household, "household_net_income": base + gain},
+        {**person, **after},
+    )
+    return baseline, reformed, survey
+
+
+def _withheld(crossing=(), children=(), changed=(), **kwargs):
+    baseline, reformed, survey = _metrics_population(
+        crossing, children, changed, **kwargs
+    )
+    return floor.thin_metrics(baseline, reformed, [YEAR], survey)
+
+
+@pytest.mark.parametrize(
+    "crossing, thin",
+    [((), False), ((5,), True), ((5, 6), True), ((5, 6, 7), False)],
+    ids=["none", "one", "two", "three"],
+)
+def test_a_poverty_change_is_withheld_when_one_or_two_households_cross(
+    crossing, thin
+):
+    """Everyone's columns, the headline's in metrics too, by the survey
+    households whose people cross the line, however many records each
+    has. Nobody crossing is an exact zero, which is published."""
+    found = _withheld(crossing)
+    everyone = [c for c in POVERTY_COLUMNS if not c.startswith("child_")]
+    if thin:
+        assert found == {
+            ("metrics", YEAR): ["poverty_change_pp", "poverty_change_pct"],
+            ("poverty_inequality", YEAR): everyone,
+        }
+    else:
+        assert found == {}
+
+
+def test_children_are_held_to_the_floor_on_their_own():
+    """Five survey households cross, two of them children's: everyone's
+    change stands, the children's is withheld."""
+    found = _withheld(crossing=range(5), children=(0, 1))
+    assert ("metrics", YEAR) not in found
+    assert found[("poverty_inequality", YEAR)] == [
+        c for c in POVERTY_COLUMNS if c.startswith("child_")
+    ]
+
+
+def test_three_childrens_households_publish_the_childrens_change():
+    assert _withheld(crossing=range(6), children=(0, 1, 2)) == {}
+
+
+def test_the_pct_partner_goes_with_the_pp():
+    """Only absolute poverty after housing costs is moved, by children in
+    two survey households: both its child columns go, nothing else."""
+    found = _withheld(
+        crossing=(0, 1, 10, 11, 12),
+        children=(0, 1),
+        flags=["in_poverty_ahc"],
+    )
+    assert found == {
+        ("poverty_inequality", YEAR): [
+            "child_poverty_abs_ahc_change_pp",
+            "child_poverty_abs_ahc_change_pct",
+        ]
+    }
+
+
+def test_childrens_change_goes_when_it_gives_back_the_others():
+    """Four children's survey households and one other cross: everyone's
+    change less the children's would give back the one other household's,
+    so the children's is withheld with everyone's left."""
+    found = _withheld(crossing=(0, 1, 2, 3, 10), children=(0, 1, 2, 3))
+    assert found == {
+        ("poverty_inequality", YEAR): [
+            c for c in POVERTY_COLUMNS if c.startswith("child_")
+        ]
+    }
+
+
+def test_a_withheld_total_needs_no_partner_withheld():
+    """One survey household, not a child's, crosses: everyone's change is
+    withheld, and the children's exact zero stays."""
+    found = _withheld(crossing=(10,), children=(0, 1, 2))
+    assert all(
+        not c.startswith("child_") for c in found[("poverty_inequality", YEAR)]
+    )
+
+
+@pytest.mark.parametrize(
+    "changed, thin",
+    [((), False), ((5,), True), ((5, 6), True), ((5, 6, 7), False)],
+    ids=["none", "one", "two", "three"],
+)
+def test_people_affected_counts_the_affected_survey_households(changed, thin):
+    found = _withheld(changed=changed)
+    assert found == ({("metrics", YEAR): ["people_affected"]} if thin else {})
+
+
+def test_people_affected_uses_the_calculators_definition_of_changed():
+    """A £1 change on £20,000 is under AFFECTED_RELATIVE_CHANGE, so not
+    affected; a household with no income decile is not counted."""
+    baseline, reformed, survey = _metrics_population(changed=(5, 6, 7))
+    income = reformed.arrays["household"]["household_net_income"]
+    income[np.isin(survey, [7])] = 20_001.0
+    found = floor.thin_metrics(baseline, reformed, [YEAR], survey)
+    assert found == {("metrics", YEAR): ["people_affected"]}
+    baseline, reformed, survey = _metrics_population(changed=(5, 6, 7))
+    decile = baseline.arrays["household"]["household_income_decile"]
+    decile[np.isin(survey, [7])] = 0
+    found = floor.thin_metrics(baseline, reformed, [YEAR], survey)
+    assert found == {("metrics", YEAR): ["people_affected"]}
+
+
+def test_withholding_blanks_only_the_found_columns_of_their_year():
+    rows = [
+        {"year": 2027, "people_affected": 1.0, "gini_change": 0.1},
+        {"year": 2028, "people_affected": 2.0, "gini_change": 0.2},
+    ]
+    found = {
+        ("metrics", 2027): ["people_affected"],
+        ("age_impact", 2028): ["40"],
+    }
+    assert floor.withhold_metrics(rows, found) == [
+        {"year": 2027, "people_affected": None, "gini_change": 0.1},
+        {"year": 2028, "people_affected": 2.0, "gini_change": 0.2},
+    ]
+
+
+@given(
+    survey=st.lists(st.integers(0, 5), min_size=1, max_size=30),
+    data=st.data(),
+)
+def test_a_poverty_column_is_withheld_exactly_when_thin(survey, data):
+    """For every survey grouping, set of children and poverty flags on
+    each side, each measure its own (finding 9: people enter and leave
+    poverty, and the measures differ): a measure's everyone columns are
+    withheld exactly when the people whose flag it changes come from 1 to
+    FLOOR - 1 survey households; its children's exactly when theirs do,
+    or when the others' do and everyone's is published; the pct with the
+    pp; the headline in metrics with absolute poverty before housing
+    costs; and nothing when nobody's flag changes."""
+    n = len(survey)
+    survey = np.array(survey)
+    household_id = np.arange(n) + 1_000
+
+    def flags():
+        return np.array(
+            data.draw(st.lists(st.booleans(), min_size=n, max_size=n))
+        )
+
+    child = flags()
+    before = {**_no_poverty(n), "is_hbai_dependent_child": child}
+    after = dict(before)
+    for flag in POVERTY_FLAGS:
+        before[flag], after[flag] = flags(), flags()
+    household = {
+        "household_id": household_id,
+        "household_income_decile": np.ones(n),
+        "household_net_income": np.full(n, 20_000.0),
+    }
+    person = {"household_id": household_id}
+    found = floor.thin_metrics(
+        _Simulation(household, {**person, **before}),
+        _Simulation(household, {**person, **after}),
+        [YEAR],
+        survey,
+    )
+    withheld = set(found.get(("poverty_inequality", YEAR), []))
+
+    def thin(members, crossing):
+        count = len(set(survey[members & crossing].tolist()))
+        return 0 < count < FLOOR
+
+    everyone = np.ones(n, dtype=bool)
+    from uk_budget_data.calculators import HEADLINE_POVERTY, POVERTY_MEASURES
+
+    for measure, flag in POVERTY_MEASURES.items():
+        crossing = before[flag] != after[flag]
+        expected_everyone = thin(everyone, crossing)
+        expected_child = thin(child, crossing) or (
+            thin(~child, crossing) and not expected_everyone
+        )
+        for unit in ("pp", "pct"):
+            assert (f"poverty_{measure}_change_{unit}" in withheld) == (
+                expected_everyone
+            )
+            assert (f"child_poverty_{measure}_change_{unit}" in withheld) == (
+                expected_child
+            )
+        if not (child & crossing).any():
+            # The children's exact 0 gives back nothing everyone's does not
+            assert f"child_poverty_{measure}_change_pp" not in withheld
+    headline = set(found.get(("metrics", YEAR), []))
+    crossing = before[HEADLINE_POVERTY] != after[HEADLINE_POVERTY]
+    for unit in ("pp", "pct"):
+        assert (f"poverty_change_{unit}" in headline) == thin(
+            everyone, crossing
+        )
+    # Nobody's income moves, so everyone is not affected: people affected
+    # (0) rests on them all, thin only in a population of 1 or 2 survey
+    # households (finding 5)
+    households = len(set(survey.tolist()))
+    assert ("people_affected" in headline) == (0 < households < FLOOR)
+    if all((before[f] == after[f]).all() for f in POVERTY_FLAGS):
+        assert ("poverty_inequality", YEAR) not in found
+
+
+def test_the_withheld_line_names_cells_never_figures():
+    """Finding 9: one line per run naming the summary columns, age groups
+    and decile cells the floor withheld, by table and year (#279's withheld
+    decile cells, with the winners and losers "all" that gives one back).
+    A thin decile the receipt does not record withheld (a thin "all", the
+    run's warning, or a receipt made before #279) is not named here."""
+    found = {
+        ("metrics", 2027): ["people_affected"],
+        (floor.AGE_TABLE, 2027): ["all"],
+        ("winners_losers", 2027): ["5"],
+        ("poverty_inequality", 2028): [
+            "poverty_rel_ahc_change_pp",
+            "poverty_rel_ahc_change_pct",
+        ],
+    }
+    record = floor.floor_record(
+        found, withheld=floor.withheld_decile_cells(found)
+    )
+    assert floor.withheld_line(record) == (
+        f"WITHHELD, resting on fewer than {FLOOR} survey households: "
+        "age_impact 2027 (all); metrics 2027 (people_affected); "
+        "poverty_inequality 2028 (poverty_rel_ahc_change_pp, "
+        "poverty_rel_ahc_change_pct); winners_losers 2027 (5, all)"
+    )
+    assert floor.withheld_line(floor.floor_record({})) is None
+    assert floor.withheld_line(None) is None
+    # Recorded thin but not withheld: a receipt made before #279
+    deciles = floor.floor_record({("winners_losers", 2027): ["5"]})
+    assert floor.withheld_line(deciles) is None
+    # A thin "all" withholds nothing; the run's warning names it
+    whole = {("winners_losers", 2027): ["5", "all"]}
+    assert (
+        floor.withheld_line(
+            floor.floor_record(
+                whole, withheld=floor.withheld_decile_cells(whole)
+            )
+        )
+        is None
+    )
+
+
+def test_a_withheld_figure_is_written_empty_recorded_and_shown(monkeypatch):
+    """A withheld summary figure is the intended outcome, unlike a thin
+    decile cell: the run is written with an empty cell, its receipt names
+    the table, year and column, and the gate stages, makes provisional and
+    approves it; the public data check finds nothing to refuse."""
+    import importlib.util
+    from pathlib import Path
+
+    from tests.publication_support import World
+    from tests.test_publication_flow import YEARS, fake_process, reform
+    from uk_budget_data.models import DataConfig
+    from uk_budget_data.publication import generate
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.artifacts import RECEIPT_FILE, read_receipt
+    from uk_budget_data.publication.publish import approve, stage
+    from uk_budget_data.publication.tables import (
+        POVERTY_INEQUALITY_COLUMNS,
+        parse_csv,
+    )
+
+    found = {
+        ("metrics", 2027): ["people_affected"],
+        ("poverty_inequality", 2028): [
+            "child_poverty_abs_bhc_change_pp",
+            "child_poverty_abs_bhc_change_pct",
+        ],
+    }
+
+    def floor_withholds(subject, job, baseline, reformed, result):
+        result.metrics = floor.withhold_metrics(result.metrics, found)
+        return [], floor.floor_record(found)
+
+    values = {"alpha": {2027: -1.0, 2028: -2.0}}
+    process = fake_process(values)
+
+    def with_poverty_measures(*args):
+        result = process(*args)
+        for row in result.metrics:
+            row.update({c: 0.5 for c, _ in POVERTY_INEQUALITY_COLUMNS})
+        return result
+
+    monkeypatch.setattr(generate, "_apply_disclosure_floor", floor_withholds)
+    world = World()
+    lines = []
+    try:
+        monkeypatch.setattr(
+            generate, "code_revision", lambda root: world.revision()
+        )
+        (reference,) = generate.generate_artifacts(
+            [reform("alpha")],
+            DataConfig(years=YEARS),
+            artifacts_root=world.artifacts,
+            generator_argv=["test"],
+            build=lambda dataset, scenario=None: world.sim(),
+            process=with_poverty_measures,
+            on_progress=lines.append,
+        ).written
+        # One line names what was withheld, never a figure (finding 9)
+        (withheld,) = [line for line in lines if "WITHHELD" in line]
+        assert withheld == (
+            f"alpha: WITHHELD, resting on fewer than {FLOOR} survey "
+            "households: metrics 2027 (people_affected); "
+            "poverty_inequality 2028 (child_poverty_abs_bhc_change_pp, "
+            "child_poverty_abs_bhc_change_pct)"
+        )
+        path = Path(reference.path)
+        metrics = (path / "metrics.csv").read_bytes()
+        rows = {row["year"]: row for row in parse_csv("metrics", metrics)}
+        assert rows[2027]["people_affected"] is None
+        assert rows[2028]["people_affected"] == 8.0
+        # The empty cell itself, as the page reads it
+        (line,) = [x for x in metrics.split(b"\n") if b",2027," in x]
+        assert line.split(b",")[3] == b""
+        poverty = parse_csv(
+            "poverty_inequality",
+            (path / "poverty_inequality.csv").read_bytes(),
+        )
+        by_year = {row["year"]: row for row in poverty}
+        assert by_year[2028]["child_poverty_abs_bhc_change_pp"] is None
+        assert by_year[2028]["child_poverty_abs_bhc_change_pct"] is None
+        assert by_year[2027]["child_poverty_abs_bhc_change_pp"] == 0.5
+        record = read_receipt(reference.path)["dashboard"]["disclosure_floor"]
+        assert record == floor.floor_record(found)
+        assert record["thin_cells_in_tables"] is False
+        assert {
+            "table": "metrics",
+            "year": 2027,
+            "groups": ["people_affected"],
+        } in record["thin_cells"]
+        manifest = m.Manifest()
+        arguments = dict(data_root=world.data_root, inputs=world.inputs)
+        world.costing("alpha", values["alpha"])
+        world.reconcile(reference)
+        stage(manifest, reference.path, provisional=True, **arguments)
+        approve(manifest, "alpha", "Reviewer", **arguments)
+        assert manifest.measures["alpha"].status == m.APPROVED
+        script = Path(__file__).parent.parent / "scripts/check_public_data.py"
+        spec = importlib.util.spec_from_file_location("cpd_floor", script)
+        check_public_data = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(check_public_data)
+        receipt = (path / RECEIPT_FILE).read_bytes()
+        assert check_public_data.thin_cells_in_tables(receipt) is False
+    finally:
+        world.close()
+
+
+def test_a_withheld_cell_is_empty_and_reads_back_as_none():
+    """Only the columns the floor may withhold take an empty cell; NaN, or
+    an empty cell anywhere else, is still refused."""
+    from uk_budget_data.publication.tables import (
+        TableError,
+        canonical_csv,
+        parse_csv,
+    )
+
+    row = {
+        "reform_id": "a",
+        "reform_name": "A",
+        "year": YEAR,
+        "people_affected": None,
+        "gini_change": 0.1,
+        "poverty_change_pp": None,
+        "poverty_change_pct": None,
+    }
+    data = canonical_csv("metrics", [row])
+    assert data.endswith(b"\na,A,2027,,0.1,,\n")
+    assert parse_csv("metrics", data) == [row]
+    assert canonical_csv("metrics", parse_csv("metrics", data)) == data
+    with pytest.raises(TableError, match="people_affected.*missing value"):
+        canonical_csv("metrics", [{**row, "people_affected": float("nan")}])
+    with pytest.raises(TableError, match="missing value"):
+        canonical_csv("metrics", [{**row, "gini_change": None}])
+
+
+def test_an_empty_cell_the_receipt_does_not_name_is_never_staged(monkeypatch):
+    """Only the floor may leave a summary figure empty: one its receipt
+    does not record as withheld is a figure that failed, refused at every
+    level rather than shown as "Not published"."""
+    from tests.publication_support import World
+    from tests.test_publication_flow import YEARS, fake_process, reform
+    from uk_budget_data.models import DataConfig
+    from uk_budget_data.publication import generate
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.publish import PublishError, stage
+
+    def floor_blanks_unrecorded(subject, job, baseline, reformed, result):
+        found = {("metrics", 2027): ["people_affected"]}
+        result.metrics = floor.withhold_metrics(result.metrics, found)
+        return [], floor.floor_record({})
+
+    monkeypatch.setattr(
+        generate, "_apply_disclosure_floor", floor_blanks_unrecorded
+    )
+    values = {"alpha": {2027: -1.0, 2028: -2.0}}
+    world = World()
+    try:
+        monkeypatch.setattr(
+            generate, "code_revision", lambda root: world.revision()
+        )
+        (reference,) = generate.generate_artifacts(
+            [reform("alpha")],
+            DataConfig(years=YEARS),
+            artifacts_root=world.artifacts,
+            generator_argv=["test"],
+            build=lambda dataset, scenario=None: world.sim(),
+            process=fake_process(values),
+        ).written
+        manifest = m.Manifest()
+        arguments = dict(data_root=world.data_root, inputs=world.inputs)
+        with pytest.raises(
+            PublishError, match="metrics 2027 people_affected: empty"
+        ):
+            stage(manifest, reference.path, **arguments)
+    finally:
+        world.close()
+
+
+def _summary_row(year):
+    """A summary-statistics row as ``ReformResult.metrics`` carries it:
+    both tables' columns, each holding a figure."""
+    from uk_budget_data.publication.tables import TABLES
+
+    row = {"reform_id": "a", "reform_name": "A", "year": year}
+    for table in floor.METRICS_TABLES:
+        for name in TABLES[table].column_names:
+            row.setdefault(name, 0.5)
+    return row
+
+
+def _split(rows):
+    """The summary rows as the two tables the artifact writes."""
+    from uk_budget_data.publication.tables import TABLES
+
+    return {
+        table: [
+            {name: row[name] for name in TABLES[table].column_names}
+            for row in rows
+        ]
+        for table in floor.METRICS_TABLES
+    }
+
+
+def _named(record):
+    return {
+        (cell["table"], cell["year"], group)
+        for cell in record["thin_cells"]
+        if cell["table"] in floor.METRICS_TABLES
+        for group in cell["groups"]
+    }
+
+
+@pytest.mark.parametrize(
+    "population, expected",
+    [
+        (
+            {"crossing": (5,)},
+            {
+                ("metrics", c)
+                for c in ("poverty_change_pp", "poverty_change_pct")
+            }
+            | {
+                ("poverty_inequality", c)
+                for c in POVERTY_COLUMNS
+                if not c.startswith("child_")
+            },
+        ),
+        ({"changed": (5,)}, {("metrics", "people_affected")}),
+    ],
+    ids=["one-household-crosses", "one-household-affected"],
+)
+def test_the_floor_as_generation_runs_it_empties_what_it_records(
+    monkeypatch, population, expected
+):
+    """#285 review, finding 1: the floor as generation runs it, not
+    monkeypatched away, on full summary rows. One survey household crossing
+    the line (or affected) withholds those figures and no other: their
+    cells are None, the receipt names exactly them, and the gate takes the
+    tables at every level. The rows as they were before the floor, still
+    holding the figures, are refused under that receipt."""
+    from uk_budget_data import pipeline
+    from uk_budget_data.publication import generate
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.publish import _floor_problems
+
+    baseline, reformed, survey = _metrics_population(**population)
+    baseline.dataset = reformed.dataset = _Dataset()
+    monkeypatch.setattr(
+        pipeline, "scatter_survey_households", lambda sim, path: survey
+    )
+    before = [_summary_row(YEAR)]
+    result = SimpleNamespace(
+        household_scatter=[], age_impact=[], metrics=before
+    )
+    _, record = generate._apply_disclosure_floor(
+        "a", _job(refuse_thin_deciles=False), baseline, reformed, result
+    )
+    assert _named(record) == {
+        (table, YEAR, column) for table, column in expected
+    }
+    withheld = {column for _, column in expected}
+    (row,) = result.metrics
+    assert {c for c, value in row.items() if value is None} == withheld
+    dashboard = {"disclosure_floor": record}
+
+    def summary_problems(rows, level):
+        # The one household affected also leaves a decile cell thin, which
+        # the gate refuses on its own (test_a_warned_run_is_recorded_...)
+        return [
+            p
+            for p in _floor_problems(dashboard, _split(rows), level)
+            if p.startswith(floor.METRICS_TABLES)
+        ]
+
+    for level in (m.STAGED, m.PROVISIONAL, m.APPROVED):
+        assert summary_problems(result.metrics, level) == []
+        assert sorted(summary_problems(before, level)) == sorted(
+            f"{table} {YEAR} {column}: recorded withheld by the floor, but "
+            "holds a figure"
+            for table, column in expected
+        )
+
+
+def test_a_cell_the_receipt_withholds_that_holds_a_figure_is_refused():
+    """#285 review, finding 1: a figure the receipt names as withheld but
+    still in the table is refused at every level, as is an empty cell the
+    receipt does not name; one named and empty is not."""
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.publish import _floor_problems
+
+    record = floor.floor_record(
+        {
+            ("metrics", YEAR): ["people_affected"],
+            ("poverty_inequality", YEAR): [
+                "child_poverty_rel_bhc_change_pp",
+                "child_poverty_rel_bhc_change_pct",
+            ],
+        }
+    )
+    row = _summary_row(YEAR)
+    row["child_poverty_rel_bhc_change_pct"] = None
+    for level in (m.STAGED, m.PROVISIONAL, m.APPROVED):
+        assert _floor_problems(
+            {"disclosure_floor": record}, _split([row]), level
+        ) == [
+            f"metrics {YEAR} people_affected: recorded withheld by the "
+            "floor, but holds a figure",
+            f"poverty_inequality {YEAR} child_poverty_rel_bhc_change_pp: "
+            "recorded withheld by the floor, but holds a figure",
+        ]
+
+
+@pytest.mark.parametrize(
+    "groups, kept, refused",
+    [
+        # "all" thin: every row of the year is withheld
+        (["all"], ["35-49", "all", "40"], ["35-49", "all", "40"]),
+        (["all"], [], []),
+        # A band thin: every row but "all"
+        (["35-49"], ["35-49", "all", "40"], ["35-49", "40"]),
+        (["35-49"], ["all"], []),
+        # A single age thin: its band's single ages
+        (["40"], ["35-49", "all", "40", "41"], ["40", "41"]),
+        (["40"], ["35-49", "all"], []),
+    ],
+)
+def test_an_age_row_the_receipt_withholds_that_is_in_the_table_is_refused(
+    groups, kept, refused
+):
+    """#285 second review: the age table's counterpart of finding 1. A row
+    the receipt's thin groups withhold, still in the table, is refused at
+    every level; the other year's rows are not affected."""
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.publish import _floor_problems
+
+    record = floor.floor_record({(floor.AGE_TABLE, YEAR): groups})
+    rows = [
+        {"year": year, "age_band": band}
+        for year in (YEAR, YEAR + 1)
+        for band in (kept if year == YEAR else ["35-49", "all", "40"])
+    ]
+    for level in (m.STAGED, m.PROVISIONAL, m.APPROVED):
+        assert _floor_problems(
+            {"disclosure_floor": record}, {floor.AGE_TABLE: rows}, level
+        ) == [
+            f"age_impact {YEAR} {band}: recorded withheld by the floor, but "
+            "in the table"
+            for band in refused
+        ]
+
+
+def test_a_receipt_that_withholds_a_figure_still_written_is_never_staged(
+    monkeypatch,
+):
+    """#285 review, finding 1: a run whose receipt names people affected as
+    withheld while its metrics table still holds the figure (as when the
+    line that empties it is lost) is refused at stage, at every level."""
+    from tests.publication_support import World
+    from tests.test_publication_flow import YEARS, fake_process, reform
+    from uk_budget_data.models import DataConfig
+    from uk_budget_data.publication import generate
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.publish import PublishError, stage
+
+    def floor_records_but_keeps(subject, job, baseline, reformed, result):
+        return [], floor.floor_record({("metrics", 2027): ["people_affected"]})
+
+    values = {"alpha": {2027: -1.0, 2028: -2.0}}
+    process = fake_process(values)
+
+    def holding_half(*args):
+        result = process(*args)
+        for row in result.metrics:
+            row["people_affected"] = 0.5
+        return result
+
+    monkeypatch.setattr(
+        generate, "_apply_disclosure_floor", floor_records_but_keeps
+    )
+    world = World()
+    try:
+        monkeypatch.setattr(
+            generate, "code_revision", lambda root: world.revision()
+        )
+        (reference,) = generate.generate_artifacts(
+            [reform("alpha")],
+            DataConfig(years=YEARS),
+            artifacts_root=world.artifacts,
+            generator_argv=["test"],
+            build=lambda dataset, scenario=None: world.sim(),
+            process=holding_half,
+        ).written
+        manifest = m.Manifest()
+        arguments = dict(data_root=world.data_root, inputs=world.inputs)
+        world.costing("alpha", values["alpha"])
+        world.reconcile(reference)
+        for provisional in (False, True):
+            with pytest.raises(
+                PublishError,
+                match="metrics 2027 people_affected: recorded withheld by "
+                "the floor, but holds a figure",
             ):
                 stage(
                     manifest,

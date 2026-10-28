@@ -2085,7 +2085,7 @@
         ],
         [
           "people_affected",
-          "float"
+          "float_or_withheld"
         ],
         [
           "gini_change",
@@ -2093,11 +2093,11 @@
         ],
         [
           "poverty_change_pp",
-          "float"
+          "float_or_withheld"
         ],
         [
           "poverty_change_pct",
-          "float"
+          "float_or_withheld"
         ]
       ],
       "file": "metrics.csv",
@@ -2123,67 +2123,67 @@
         ],
         [
           "poverty_abs_bhc_change_pp",
-          "float"
+          "float_or_withheld"
         ],
         [
           "poverty_abs_bhc_change_pct",
-          "float"
+          "float_or_withheld"
         ],
         [
           "child_poverty_abs_bhc_change_pp",
-          "float"
+          "float_or_withheld"
         ],
         [
           "child_poverty_abs_bhc_change_pct",
-          "float"
+          "float_or_withheld"
         ],
         [
           "poverty_abs_ahc_change_pp",
-          "float"
+          "float_or_withheld"
         ],
         [
           "poverty_abs_ahc_change_pct",
-          "float"
+          "float_or_withheld"
         ],
         [
           "child_poverty_abs_ahc_change_pp",
-          "float"
+          "float_or_withheld"
         ],
         [
           "child_poverty_abs_ahc_change_pct",
-          "float"
+          "float_or_withheld"
         ],
         [
           "poverty_rel_bhc_change_pp",
-          "float"
+          "float_or_withheld"
         ],
         [
           "poverty_rel_bhc_change_pct",
-          "float"
+          "float_or_withheld"
         ],
         [
           "child_poverty_rel_bhc_change_pp",
-          "float"
+          "float_or_withheld"
         ],
         [
           "child_poverty_rel_bhc_change_pct",
-          "float"
+          "float_or_withheld"
         ],
         [
           "poverty_rel_ahc_change_pp",
-          "float"
+          "float_or_withheld"
         ],
         [
           "poverty_rel_ahc_change_pct",
-          "float"
+          "float_or_withheld"
         ],
         [
           "child_poverty_rel_ahc_change_pp",
-          "float"
+          "float_or_withheld"
         ],
         [
           "child_poverty_rel_ahc_change_pct",
-          "float"
+          "float_or_withheld"
         ],
         [
           "top_10_share_change_pp",

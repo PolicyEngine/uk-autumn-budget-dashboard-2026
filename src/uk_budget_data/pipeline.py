@@ -312,6 +312,9 @@ class DataPipeline:
         self.reforms = reforms or get_autumn_budget_2026_reforms()
         self.config = config or DataConfig()
         self.household_scatter = household_scatter
+        # The tables whose rows the floor withheld in the last run
+        # (``withheld_tables``), which ``_save_all`` never leaves stale
+        self.withheld_tables: frozenset = frozenset()
 
     def run(
         self, skip_input_check: bool = False, runner=None
@@ -345,10 +348,13 @@ class DataPipeline:
         outcomes = flat_units(
             self.reforms, self.config, dataset_path, tables, runner
         )
+        for line in hold_packages_to_members(outcomes):
+            console.print(line)
         results = [outcome.result for outcome in outcomes]
 
         # Aggregate and save
         aggregated = aggregate_results(results, config=self.config)
+        self.withheld_tables = withheld_tables(outcomes)
         self._save_all(aggregated)
         if self.household_scatter:
             save_scatter(
@@ -380,6 +386,10 @@ class DataPipeline:
                 # Metadata belongs to the manifest and its bound receipts.
                 # Keep the numeric tables in the canonical artifact schema.
                 save_csv(data[key], output_dir / filename)
+            elif key in self.withheld_tables:
+                # The floor withheld every row: never leave an earlier
+                # file in the table's place
+                remove_withheld_file(output_dir / filename)
 
         console.print(f"[green]Saved results to {output_dir}/[/green]")
 
@@ -600,6 +610,13 @@ class FlatOutcome:
     # year is back (``merge_year_outcomes``), since the floor reads them all.
     growth_cells: dict = field(default_factory=dict)
     messages: list = field(default_factory=list)
+    # What the floor of survey households withheld (``hold_flat_to_floor``):
+    # the whole measure, the years with no decile rows, or the years with
+    # age rows left out. A package's rows carry its members'
+    # (``hold_packages_to_members``).
+    withheld_whole: bool = False
+    withheld_decile_years: set = field(default_factory=set)
+    withheld_age_years: set = field(default_factory=set)
 
 
 def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
@@ -717,6 +734,11 @@ def run_flat_unit(unit: FlatUnit) -> FlatOutcome:
             outcome.scatter_cells = _scatter_cells(
                 reform, config, dataset_path, baseline, reformed, survey
             )
+
+    if flat or "age_impact" in unit.tables:
+        hold_flat_to_floor(
+            outcome, baseline, reformed, dataset_path, list(config.years)
+        )
 
     _say_limits(say, reform, baseline, reformed, observed, flat)
     # The observation holds both simulations: free them together.
@@ -850,6 +872,251 @@ def read_flat_tables(
     del observed
     outcome.messages.append(f"[green]✓[/green] {reform.name}")
     return outcome
+
+
+def _built_from_a_dataset(simulation) -> bool:
+    """Whether ``simulation`` was built from a dataset with tables by year,
+    whose household and person tables name the survey households (as
+    ``generate._built_from_a_dataset``)."""
+    dataset = getattr(simulation, "dataset", None)
+    return hasattr(dataset, "years") and hasattr(dataset, "__getitem__")
+
+
+def hold_flat_to_floor(
+    outcome: "FlatOutcome",
+    baseline,
+    reformed,
+    dataset_path: Optional[str],
+    years: list[int],
+) -> None:
+    """Hold one measure's flat rows to the floor of survey households, as
+    generation holds an artifact's (``disclosure_floor``; #285 review,
+    finding 3, and its second review):
+
+    - When a decile table's "all" is thin in any year, the whole measure's
+      change rests on 1 or 2 survey households: none of its rows is
+      written, in any table or year, its costing and inequality figures
+      included, as the publication gate never shows such an artifact.
+    - Otherwise a year in which a decile is thin has no decile rows for the
+      measure, which leaves out at least what an artifact withholds (that
+      decile's cells and the winners and losers "all" row); the flat
+      tables have no receipt to say which blank is withheld.
+    - The flat metrics.csv's thin figures are written as empty cells, and
+      the age table's thin groups are left out with whatever gives them
+      back, as in an artifact.
+
+    What was withheld is said in the unit's lines, by table, year and
+    column, never a figure. A package's rows also carry its members'
+    (``hold_packages_to_members``).
+
+    A run on simulations built from no dataset (a stand-in in tests) is
+    said to be unchecked. One whose survey households cannot be told apart
+    is refused on data that could be certified, as generation refuses it;
+    on any other data none of its rows is written."""
+    from uk_budget_data.publication import disclosure_floor
+    from uk_budget_data.publication.generate import _certifiable
+
+    say = outcome.messages.append
+    name = escape(outcome.reform_name or outcome.reform_id)
+    if not all(_built_from_a_dataset(sim) for sim in (baseline, reformed)):
+        say(
+            f"{name}: not held to the floor of survey households (its "
+            "simulations were not built from a dataset)"
+        )
+        return
+    try:
+        survey = scatter_survey_households(baseline, dataset_path)
+    except ValueError as error:
+        if _certifiable(dataset_path):
+            raise ValueError(
+                f"{outcome.reform_name or outcome.reform_id}: the survey "
+                "households behind the records cannot be told apart, so its "
+                f"flat rows cannot be held to the floor: {error}"
+            ) from error
+        _withhold_whole_measure(outcome)
+        say(
+            f"[bold red]NOT HELD TO THE FLOOR[/bold red] {name}: its "
+            f"survey households cannot be told apart ({escape(str(error))})"
+            "; the data is not certified, so none of its rows is written."
+        )
+        return
+    found = disclosure_floor.thin_cells(baseline, reformed, years, survey)
+    deciles = {
+        cell: labels
+        for cell, labels in found.items()
+        if cell[0] in disclosure_floor.DECILE_TABLES
+    }
+    whole = {
+        cell: labels for cell, labels in deciles.items() if "all" in labels
+    }
+    if whole:
+        _withhold_whole_measure(outcome)
+        say(
+            f"{name}: WITHHELD, the whole measure: "
+            f"{escape(disclosure_floor.thin_cells_reason(whole))}; none of "
+            "its rows is written"
+        )
+        return
+    result = outcome.result
+    thin_years = {year for _, year in deciles}
+    if result is not None:
+        result.age_impact = disclosure_floor.withhold_thin_age_rows(
+            result.age_impact, found
+        )
+        withheld = disclosure_floor.thin_metrics(
+            baseline, reformed, years, survey
+        )
+        result.metrics = disclosure_floor.withhold_metrics(
+            result.metrics, withheld
+        )
+        found.update(withheld)
+        _drop_decile_years(outcome, thin_years)
+    else:
+        # ``generate --only age_impact``: the age table alone
+        found = {
+            cell: labels
+            for cell, labels in found.items()
+            if cell[0] == disclosure_floor.AGE_TABLE
+        }
+    outcome.age_rows = disclosure_floor.withhold_thin_age_rows(
+        outcome.age_rows, found
+    )
+    outcome.withheld_age_years |= {
+        year for table, year in found if table == disclosure_floor.AGE_TABLE
+    }
+    record = disclosure_floor.floor_record(found)
+    line = disclosure_floor.withheld_line(record)
+    if line is not None:
+        say(f"{name}: {escape(line)}")
+    if deciles and result is not None:
+        say(
+            f"{name}: WITHHELD, no decile rows for "
+            f"{', '.join(str(y) for y in sorted(thin_years))}: "
+            f"{escape(disclosure_floor.thin_cells_reason(deciles))}"
+        )
+
+
+# The flat tables a measure's result holds (``ReformResult``), all left
+# empty when the floor withholds the whole measure.
+_RESULT_TABLES = (
+    "budgetary_impact",
+    "distributional_impact",
+    "winners_losers",
+    "metrics",
+    "income_curve",
+    "household_scatter",
+    "constituency",
+    "demographic_constituency",
+    "age_impact",
+)
+
+
+def withheld_tables(outcomes: list["FlatOutcome"]) -> frozenset:
+    """The flat tables whose rows the floor of survey households withheld
+    in this run (``hold_flat_to_floor``): every table of a measure withheld
+    whole, and the OBR comparison made from its costing; the decile tables
+    in a year with a thin decile; the age table where a group was thin."""
+    tables = set()
+    for outcome in outcomes:
+        if outcome.withheld_whole:
+            tables.update((*_RESULT_TABLES, "obr_comparison"))
+        if outcome.withheld_decile_years:
+            tables.update(("distributional_impact", "winners_losers"))
+        if outcome.withheld_age_years:
+            tables.add("age_impact")
+    return frozenset(tables)
+
+
+def remove_withheld_file(path: Path) -> None:
+    """Remove ``path`` when the floor of survey households withheld every
+    row of its table in this run (#285 re-review, P1): an earlier file,
+    whose rows this run never held to the floor, must not stand in for the
+    table. Says so, naming the file, never a figure."""
+    existed = path.is_file() or path.is_symlink()
+    path.unlink(missing_ok=True)
+    console.print(
+        f"[bold red]WITHHELD[/bold red] {escape(path.name)}: the floor of "
+        "survey households withheld every row, so none is written"
+        + ("; the earlier file is removed" if existed else "")
+    )
+
+
+def _withhold_whole_measure(outcome: "FlatOutcome") -> None:
+    """Leave out every row of the measure, in every table and year."""
+    if outcome.result is not None:
+        for table in _RESULT_TABLES:
+            if hasattr(outcome.result, table):
+                setattr(outcome.result, table, [])
+    outcome.age_rows = []
+    outcome.scatter_cells = []
+    outcome.withheld_whole = True
+
+
+def _drop_decile_years(outcome: "FlatOutcome", years: set) -> None:
+    """Leave out the measure's decile rows in ``years``."""
+    outcome.withheld_decile_years |= set(years)
+    for table in ("distributional_impact", "winners_losers"):
+        setattr(
+            outcome.result,
+            table,
+            [
+                row
+                for row in getattr(outcome.result, table)
+                if row["year"] not in outcome.withheld_decile_years
+            ],
+        )
+
+
+def _is_package(reform_id: str) -> bool:
+    """Whether a flat outcome is a combined run of other measures: the
+    Autumn Budget package, or one under a combined key
+    (``combine.combined_key``)."""
+    from uk_budget_data.publication.artifacts import COMBINED_PREFIX
+    from uk_budget_data.reforms import AUTUMN_BUDGET_2026_COMBINED_ID
+
+    return reform_id == AUTUMN_BUDGET_2026_COMBINED_ID or reform_id.startswith(
+        COMBINED_PREFIX
+    )
+
+
+def hold_packages_to_members(outcomes: list["FlatOutcome"]) -> list[str]:
+    """Carry the members' floor into each package's flat rows, as a
+    combined artifact inherits its members' withheld cells (#279), so the
+    package less its other members never gives a member's withheld figures
+    back. A member withheld whole withholds the package whole, as a
+    combined artifact with a member never shown is never shown; otherwise
+    the package has no decile rows in a year any member has none. Every
+    other measure in the run counts as a member, which can only withhold
+    more. Returns the lines to say, naming measures and years, never a
+    figure."""
+    members = [o for o in outcomes if not _is_package(o.reform_id)]
+    whole = [o.reform_name or o.reform_id for o in members if o.withheld_whole]
+    years = set()
+    for member in members:
+        years |= member.withheld_decile_years
+    lines = []
+    for package in outcomes:
+        if not _is_package(package.reform_id) or package.withheld_whole:
+            continue
+        name = escape(package.reform_name or package.reform_id)
+        if whole:
+            _withhold_whole_measure(package)
+            lines.append(
+                f"{name}: WITHHELD, the whole package: its members "
+                f"{escape(', '.join(whole))} are withheld whole; none of "
+                "its rows is written"
+            )
+        elif package.result is not None and years - (
+            package.withheld_decile_years
+        ):
+            inherited = sorted(years - package.withheld_decile_years)
+            _drop_decile_years(package, years)
+            lines.append(
+                f"{name}: WITHHELD, no decile rows for "
+                f"{', '.join(str(y) for y in inherited)}, as a member has "
+                "none"
+            )
+    return lines
 
 
 def flat_units(
@@ -1061,7 +1328,15 @@ def generate_age_impact(
     config = config or DataConfig()
     dataset_path = str(config.dataset_path) if config.dataset_path else None
     outcomes = flat_units(reforms, config, dataset_path, AGE, runner)
-    frame = pd.DataFrame([row for o in outcomes for row in o.age_rows])
+    # A member withheld whole withholds its package's rows too
+    for line in hold_packages_to_members(outcomes):
+        console.print(line)
+    rows = [row for o in outcomes for row in o.age_rows]
+    if not rows and "age_impact" in withheld_tables(outcomes):
+        # The floor withheld every row: never leave an earlier file
+        remove_withheld_file(config.output_dir / "age_impact.csv")
+        return pd.DataFrame()
+    frame = pd.DataFrame(rows)
     save_csv(frame, config.output_dir / "age_impact.csv")
     console.print(
         f"[green]Saved {len(frame)} rows to "

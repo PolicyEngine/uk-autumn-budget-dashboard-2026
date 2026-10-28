@@ -26,7 +26,7 @@ import NoBreakYear from "./NoBreakYear";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import { MethodLink } from "../utils/methodLink";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
-import SummaryMetricChart, { SUMMARY_METRICS, hasColumn, metricValue, povertyMetric, usePovertyChoice } from "./SummaryMetricChart";
+import SummaryMetricChart, { NOT_PUBLISHED, SUMMARY_METRICS, hasColumn, isWithheld, metricValue, povertyMetric, usePovertyChoice } from "./SummaryMetricChart";
 import { useOutlook } from "./livingStandards/useOutlook";
 import { formatPp, outlookPopulation, roundPeople } from "../utils/povertyPeople";
 import { CHART_COLOURS, MAGNITUDE_RAMPS, fiscalYearTick, fitTicks, magnitudeColours } from "../utils/chartTheme";
@@ -45,11 +45,20 @@ import "./MeasuresPovertyCard.css";
  * muted), and the package's (the combined run) when one run covers the
  * selection. {idle} are the selected measures that change no income that
  * year (muted), each a "No change" row. {missing} lists the runs read whose
- * rows do not carry `key`; such a measure's value is null, never 0.
+ * rows do not carry `key`; such a measure's value is null, never 0. A
+ * figure the floor of survey households withheld (isWithheld) is null with
+ * {withheld} true, and is not missing; {totalWithheld} says the same of the
+ * package's. A withheld people affected still changes incomes: it rests on
+ * a household or two, so the measure is never muted for it; nor for a
+ * withheld `key`, even where people affected is 0.
  */
 export function measurePovertyRows(rows, catalogue, selectedPolicies, year, key) {
   const rowFor = (id) => (rows ?? []).find((row) => row.reform_id === id && Number(row.year) === year);
-  const members = legendMembership(catalogue, selectedPolicies, (id) => Number(rowFor(id)?.people_affected) > 0);
+  // A withheld figure is never "No change" (#285 review, finding 8): one
+  // or two people crossed, through a penny or a move in the relative line
+  const affects = (id) =>
+    isWithheld(rowFor(id), "people_affected") || isWithheld(rowFor(id), key) || Number(rowFor(id)?.people_affected) > 0;
+  const members = legendMembership(catalogue, selectedPolicies, affects);
   const measures = members
     .filter((member) => !member.muted)
     .map((member) => ({
@@ -57,6 +66,7 @@ export function measurePovertyRows(rows, catalogue, selectedPolicies, year, key)
       name: shortNameOf(member),
       description: member.description,
       value: metricValue(rowFor(member.id), key),
+      withheld: isWithheld(rowFor(member.id), key),
       colour: catalogue.byId.get(member.id)?.color ?? CHART_COLOURS.noChange,
     }));
   const idle = members
@@ -66,11 +76,12 @@ export function measurePovertyRows(rows, catalogue, selectedPolicies, year, key)
   const run = wholeSelectionRun(catalogue.displayable, selectedPolicies, combinedId);
   const packageRow = combinedId && run === combinedId ? rowFor(run) : undefined;
   const total = packageRow ? metricValue(packageRow, key) : null;
+  const totalWithheld = isWithheld(packageRow, key);
   const missing = [
-    ...measures.filter((measure) => measure.value === null).map((measure) => measure.id),
-    ...(packageRow && total === null ? [run] : []),
+    ...measures.filter((measure) => measure.value === null && !measure.withheld).map((measure) => measure.id),
+    ...(packageRow && total === null && !totalWithheld ? [run] : []),
   ];
-  return { members, measures, idle, total, missing };
+  return { members, measures, idle, total, totalWithheld, missing };
 }
 
 // The headline poverty measure: metrics' own column, which every run carries
@@ -99,22 +110,29 @@ export function povertyCardRows(rows, catalogue, selectedPolicies, year, chosen)
  * bar) for each measure that moves no one (a value of exactly 0, or `idle`:
  * no income changed that year), then all the selected policies together
  * from 0. A small non-zero change is a bar, never "No change". Nothing is
- * summed: no gap or interaction row.
+ * summed: no gap or interaction row. A measure the floor of survey
+ * households withheld ({withheld}) is a "withheld" row with no bar, said to
+ * be not published. With `totalWithheld`, the package is such a row.
  * Returns { steps, zero, peopleMode }; each step is
- * { id, name, pp, x, start, end, colour, kind: "measure" | "none" | "total" }.
+ * { id, name, pp, x, start, end, colour, kind: "measure" | "none" | "withheld" | "total" }.
  */
-export function povertyWaterfall(measures, total, millions, idle = []) {
+export function povertyWaterfall(measures, total, millions, idle = [], totalWithheld = false) {
   const peopleMode = Boolean(millions);
   const toX = (pp) => (peopleMode ? -(pp / 100) * millions * 1e6 : -pp);
-  const zero = [...measures.filter((m) => m.value === 0), ...idle];
-  const moving = measures.filter((m) => m.value !== 0).sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+  const withheld = measures.filter((m) => m.withheld);
+  const shown = measures.filter((m) => !m.withheld);
+  const zero = [...shown.filter((m) => m.value === 0), ...idle];
+  const moving = shown.filter((m) => m.value !== 0).sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
   const steps = moving.map((m) => {
     const x = toX(m.value);
     return { id: m.id, name: m.name, pp: m.value, x, start: 0, end: x, colour: m.colour, kind: "measure" };
   });
   // At 0 to 0, so a row with no bar never widens the axis
   for (const m of zero) steps.push({ id: m.id, name: m.name, pp: 0, x: 0, start: 0, end: 0, colour: m.colour, kind: "none" });
-  if (total !== null) {
+  for (const m of withheld) steps.push({ id: m.id, name: m.name, pp: null, x: 0, start: 0, end: 0, colour: m.colour, kind: "withheld" });
+  if (totalWithheld) {
+    steps.push({ id: "package", name: TOGETHER, pp: null, x: 0, start: 0, end: 0, colour: null, kind: "withheld" });
+  } else if (total !== null) {
     const x = toX(total);
     steps.push({ id: "package", name: TOGETHER, pp: total, x, start: 0, end: x, colour: null, kind: "total" });
   }
@@ -180,10 +198,10 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   if (!read) return null;
 
   const year = fiscalYearTick(selectedYear);
-  const { measures, idle, total } = read;
+  const { measures, idle, total, totalWithheld } = read;
   // The shown measure's people: everyone's when the card falls back
   const millions = population ? population(selectedYear, metric.group) : null;
-  const { steps, peopleMode } = povertyWaterfall(measures, total, millions, idle);
+  const { steps, peopleMode } = povertyWaterfall(measures, total, millions, idle, totalWithheld);
   const who = metric.group === "children" ? "children" : "people";
 
   // The rate's change in words: "down 0.005 percentage points"
@@ -230,6 +248,8 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   const measureSteps = steps.filter((s) => s.kind === "measure");
   const top = measureSteps[0];
   const totalStep = steps.find((s) => s.kind === "total");
+  // The last bar, the package's, whether its figure is drawn or withheld
+  const packageStep = steps.at(-1)?.id === "package" ? steps.at(-1) : undefined;
   // A plain sentence: no "≈" and no "pp" (the values are in the rows)
   const about = (step) => {
     const n = Math.abs(step.x);
@@ -270,6 +290,9 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
         {top.name} moves the rate most, by {formatPp(top.pp).replace(/^[+−]/, "").replace(/pp$/, " percentage points")}.
       </>
     )
+  ) : steps.some((step) => step.kind === "withheld") ? (
+    // Withheld is never "moves no one": too few survey households to say
+    <>{NOT_PUBLISHED} for {year}: too few survey households are behind these figures.</>
   ) : (
     <>No selected policy on its own moves anyone across the poverty line in {year}.</>
   );
@@ -293,10 +316,11 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
               { key: "pp", label: "Change (pp)", decimals: 4 },
               ...(peopleMode ? [{ key: "people", label: `Change in ${who} in poverty`, decimals: 0 }] : []),
             ],
+            // A withheld figure says so, never 0
             rows: steps.map((s) => ({
               name: s.name,
-              pp: s.pp,
-              people: s.x === 0 ? 0 : -s.x,
+              pp: s.kind === "withheld" ? NOT_PUBLISHED : s.pp,
+              people: s.kind === "withheld" ? NOT_PUBLISHED : s.x === 0 ? 0 : -s.x,
             })),
           }),
       }}
@@ -310,9 +334,10 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
             how: [
               // The policy's own effect is said once, in the sentence above
               // (round 3); why the bars need not add up, linked (critic W2).
-              // Only when the last bar is drawn: every offered policy
-              // selected, with the combined run published (W6 G1)
-              totalStep && (
+              // Only when the last row is drawn: every offered policy
+              // selected, with the combined run published (W6 G1), its
+              // figure shown or withheld
+              packageStep && (
                 <>
                   The last bar is all the selected policies modelled together, so the bars need not add up to it.{" "}
                   <MethodLink anchor={METHOD_ANCHORS.limitations}>Policies added up</MethodLink> explains why.
@@ -337,17 +362,27 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
             const left = Math.min(pos(step.start), pos(step.end));
             const width = Math.max(Math.abs(pos(step.end) - pos(step.start)), 0.6);
             return (
-              <div className={`wf-row wf-${step.kind} row-band${i % 2 === 0 ? " is-banded" : ""}`} role="row" key={step.id}>
+              <div
+                // A withheld package is still the last, total row
+                className={`wf-row wf-${step.kind}${step.kind === "withheld" && step.id === "package" ? " wf-total" : ""} row-band${i % 2 === 0 ? " is-banded" : ""}`}
+                role="row"
+                key={step.id}
+              >
                 <span className="wf-label" role="rowheader">
-                  {step.kind === "measure" || step.kind === "none" ? (
+                  {step.kind === "measure" || step.kind === "none" || (step.kind === "withheld" && step.id !== "package") ? (
                     <MeasureRowLabel measure={catalogue.byId?.get(step.id) ?? { id: step.id, name: step.name, color: step.colour }} name={step.name} colour={step.colour} />
                   ) : (
                     step.name
                   )}
                 </span>
-                {step.kind === "none" ? (
-                  // No bar: the gridlines only, so "No change" never reads as a tiny step
-                  <span className="wf-track" role="cell" aria-label={`No change: ${reasonOf(step)}`}>
+                {step.kind === "none" || step.kind === "withheld" ? (
+                  // No bar: the gridlines only, so "No change" never reads as
+                  // a tiny step, nor a withheld figure as any change
+                  <span
+                    className="wf-track"
+                    role="cell"
+                    aria-label={step.kind === "withheld" ? `${NOT_PUBLISHED}: too few survey households` : `No change: ${reasonOf(step)}`}
+                  >
                     {ticks.map((t) => (
                       <span key={t} className={`wf-grid${t === 0 ? " wf-zero" : ""}`} style={{ left: `${pos(t)}%` }} />
                     ))}
@@ -376,7 +411,12 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
                 </span>
                 )}
                 <span className="wf-value" role="cell">
-                  {step.kind === "none" ? (
+                  {step.kind === "withheld" ? (
+                    <>
+                      <span className="wf-main row-band-value">{NOT_PUBLISHED}</span>
+                      <span className="wf-reason">Too few survey households</span>
+                    </>
+                  ) : step.kind === "none" ? (
                     <>
                       <span className="wf-main row-band-value">No change</span>
                       <span className="wf-reason"><NoBreakYear text={reasonOf(step)} /></span>

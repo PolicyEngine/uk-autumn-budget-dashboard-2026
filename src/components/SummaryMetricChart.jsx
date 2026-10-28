@@ -419,10 +419,112 @@ export function metricValue(row, key) {
   return Number.isFinite(value) ? value : null;
 }
 
+/** What the page says where the floor of survey households withheld a figure. */
+export const NOT_PUBLISHED = "Not published";
+
+/**
+ * Whether a run's row carries the measure but the floor of survey
+ * households withheld it (an empty cell, read as null): too few survey
+ * households are behind it to publish. Never a change of 0, and not the
+ * same as a run written before the measure (no column at all).
+ */
+export function isWithheld(row, key) {
+  return row != null && Object.hasOwn(row, key) && row[key] === null;
+}
+
+/**
+ * The note in place of the plot when every published year reads as no
+ * change but the floor of survey households withheld some (#285 review):
+ * it names the withheld years, never saying "no change" of them.
+ *
+ * @param {Object} metric - The chart's metric (its title names the subject).
+ * @param {number[]} years - The withheld years, in order.
+ * @returns {string}
+ */
+export function withheldNoChangeNote(metric, years) {
+  const names = years.map(fiscalYearTick);
+  const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
+  return (
+    `${NOT_PUBLISHED} for ${list}: too few survey households are behind ${names.length > 1 ? "them" : "it"}. ` +
+    `In the other years shown, the selected policies do not change ${subjectOf(metric)}.`
+  );
+}
+
+/**
+ * The hover's line under a year's figure: for a year the floor of survey
+ * households withheld, that it is not published (#285 review, finding 7:
+ * no bar is drawn, so the hover is all there is); otherwise the people a
+ * poverty change is (`peopleText(year, value)`), or nothing.
+ */
+export function summaryTooltipNote(point, peopleText) {
+  if (point?.withheld) return `${NOT_PUBLISHED}: too few survey households`;
+  return point?.value ? peopleText(point.year, point.value) : null;
+}
+
+/**
+ * The hover for a summary chart's year. A withheld year has no bar, so
+ * its entry is null and Recharts would drop it (filterNull): the chart
+ * keeps nulls and this says the year is not published. A year not yet
+ * published has no hover, as before.
+ */
+export function SummaryTooltip(props) {
+  const point = props.payload?.[0]?.payload;
+  if (point && point.value === null && !point.withheld) return null;
+  return <ChartTooltip {...props} />;
+}
+
+/**
+ * "Not published" drawn at each withheld year on the chart, at the zero
+ * line (above it where there is room, else below), so a year with no bar
+ * never reads as no change. On one line where the year's band is wide
+ * enough, otherwise on two. Use with Recharts' <Customized component={<WithheldYearLabels points={…} />} />.
+ */
+export function WithheldYearLabels({ xAxisMap, yAxisMap, points }) {
+  const xAxis = xAxisMap && Object.values(xAxisMap)[0];
+  const yAxis = yAxisMap && Object.values(yAxisMap)[0];
+  if (!xAxis?.scale || !yAxis?.scale) return null;
+  const width = xAxis.scale.bandwidth ? xAxis.scale.bandwidth() : 0;
+  const zero = yAxis.scale(0);
+  if (!Number.isFinite(zero)) return null;
+  const lines = width >= 84 ? [NOT_PUBLISHED] : ["Not", "published"];
+  const lineHeight = 13;
+  const above = zero - 6 - (lines.length - 1) * lineHeight >= yAxis.y + 10;
+  const first = above ? zero - 6 - (lines.length - 1) * lineHeight : zero + 14;
+  return (
+    <g className="withheld-year-labels">
+      {(points ?? [])
+        .filter((point) => point.withheld)
+        .map((point) => {
+          const start = xAxis.scale(point.year);
+          if (start === undefined || Number.isNaN(start)) return null;
+          return (
+            <text
+              key={point.year}
+              className="withheld-year-label"
+              data-year={point.year}
+              x={start + width / 2}
+              y={first}
+              textAnchor="middle"
+              fontSize={11}
+              fill={CHART_COLOURS.tick}
+            >
+              {lines.map((line, i) => (
+                <tspan key={line} x={start + width / 2} dy={i === 0 ? 0 : lineHeight}>
+                  {line}
+                </tspan>
+              ))}
+            </text>
+          );
+        })}
+    </g>
+  );
+}
+
 /**
  * One point per shown year: the metric for the whole selection's run, or
  * null where that run has no row for the year, or a row without the metric
- * (not yet published).
+ * (not yet published). {withheld} marks a null the floor of survey
+ * households withheld (isWithheld), which the chart says is not published.
  *
  * @param {Array<Object>} rows - metrics.csv rows (strings, as parsed)
  * @param {string|null} run - The run to read (wholeSelectionRun)
@@ -435,7 +537,11 @@ export function metricByYear(rows, run, metric, years = DISPLAY_YEARS) {
       (candidate) => candidate.reform_id === run && Number(candidate.year) === year,
     );
     const value = metricValue(row, metric.key);
-    return { year, value: value === null ? null : value * (metric.scale ?? 1) };
+    return {
+      year,
+      value: value === null ? null : value * (metric.scale ?? 1),
+      withheld: isWithheld(row, metric.key),
+    };
   });
 }
 
@@ -487,9 +593,12 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
     ? byMeasure.flatMap((m) => m.points).filter((point) => point.value !== null)
     : data.filter((point) => point.value !== null);
   // Every shown value reads as zero at the tooltip's precision (a measure
-  // that moves no one across the poverty line): a note, not a plot of zeros
+  // that moves no one across the poverty line): a note, not a plot of zeros.
+  // A year the floor withheld is not among them, so the note names it
+  // rather than call every year shown no change (#285 review)
   const allZero =
     shown.length > 0 && shown.every((point) => Number(Math.abs(point.value).toFixed(metric.decimals)) === 0);
+  const withheldYears = data.filter((point) => point.withheld).map((point) => point.year);
   // Fitted to the data: from zero when every bar has one sign, fitted to
   // each side when they go both ways, with round ticks (tightAxis)
   const { domain, ticks } = tightAxis(shown.map((point) => point.value));
@@ -527,7 +636,11 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
               { key: "year", label: "Fiscal year" },
               ...byMeasure.map((m) => ({ key: m.id, label: `${m.name}: ${metric.csvLabel ?? metric.unit}`, decimals: 4 })),
             ],
-            rows: measureData.map((point) => ({ ...point, year: fiscalYearTick(point.year) })),
+            rows: measureData.map((point, i) => ({
+              ...point,
+              ...Object.fromEntries(byMeasure.filter((m) => m.points[i]?.withheld).map((m) => [m.id, NOT_PUBLISHED])),
+              year: fiscalYearTick(point.year),
+            })),
             notes: ["Each column is one policy simulated on its own; the columns are not added up."],
           })
         : buildChartCsv({
@@ -537,7 +650,10 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
               { key: "year", label: "Fiscal year" },
               { key: "value", label: metric.csvLabel ?? metric.unit, decimals: 4 },
             ],
-            rows: shown.map((point) => ({ ...point, year: fiscalYearTick(point.year) })),
+            // A withheld year says so, never 0 and never left out
+            rows: data
+              .filter((point) => point.value !== null || point.withheld)
+              .map((point) => ({ ...point, value: point.withheld ? NOT_PUBLISHED : point.value, year: fiscalYearTick(point.year) })),
           }),
     published: shown.length > 0,
   };
@@ -553,7 +669,9 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           {/* One short line: the selected year's figure; what the chart
               measures is in About this chart */}
           <p className="chart-description">
-            {selected?.value != null ? (
+            {selected?.withheld ? (
+              `Not published for ${fiscalYearTick(selectedYear)}: too few survey households are behind it.`
+            ) : selected?.value != null ? (
               Math.round(selected.value * 1e6) === 0 ? (
                 `In ${fiscalYearTick(selectedYear)} the selected policies do not change ${subjectOf(metric)}.`
               ) : (
@@ -603,13 +721,18 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
           </div>
         ) : shown.length === 0 ? (
           // On Budget day a run (the combined one last) can be named
-          // before its rows are published: say so, never draw zeros
+          // before its rows are published: say so, never draw zeros. Every
+          // year withheld by the floor of survey households: say that
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>Not yet published for this selection</p>
+            <p>
+              {data.some((point) => point.withheld)
+                ? `${NOT_PUBLISHED}: too few survey households are behind these figures`
+                : "Not yet published for this selection"}
+            </p>
           </div>
         ) : allZero ? (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>{metric.noChange}</p>
+            <p>{withheldYears.length ? withheldNoChangeNote(metric, withheldYears) : metric.noChange}</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={height}>
@@ -641,14 +764,16 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
               <Tooltip
                 {...TOOLTIP_PROPS}
                 cursor={HOVER_CURSOR}
+                // A withheld year's null is kept, so its hover says so
+                filterNull={false}
                 content={
-                  <ChartTooltip
+                  <SummaryTooltip
                     format={metric.format}
                     labelFormat={fiscalYearTick}
                     showPlus
                     showZero
                     grouped={false}
-                    note={(point) => (point?.value ? peopleText(point.year, point.value) : null)}
+                    note={(point) => summaryTooltipNote(point, peopleText)}
                   />
                 }
               />
@@ -676,6 +801,8 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
                 })}
               </Bar>
               <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
+              {/* A withheld year has no bar: say so where it would be */}
+              <Customized component={<WithheldYearLabels points={data} />} />
               <Customized component={<ChartUnitLabel text={metric.unit} />} />
               <Customized component={PolicyEngineLogo} />
             </BarChart>

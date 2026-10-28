@@ -24,7 +24,9 @@ decile's figures and the "all" row that could give them back. A combined
 run also withholds its members' withheld cells. When "all" itself is thin,
 the run keeps the warning and publication refusal; under
 ``UK_BUDGET_THIN_DECILES=refuse`` it is refused before anything is written.
-The age table's thin cells are withheld under its existing rule.
+The age table's thin cells are withheld, and so are the summary
+statistics' thin figures (people affected and the poverty changes), which
+the receipt names.
 """
 
 import atexit
@@ -423,7 +425,7 @@ def run_artifact(job: ArtifactRun) -> ArtifactOutcome:
     be receipted is refused, not raised; any other failure raises."""
     outcome = ArtifactOutcome(key=job.key)
     try:
-        reference, limited, warnings = _write_run(job)
+        reference, limited, warnings, withheld = _write_run(job)
     except ReceiptUnavailable as error:
         outcome.refused = error.reason
         outcome.progress.append(f"{job.key}: REFUSED: {error.reason}")
@@ -434,11 +436,16 @@ def run_artifact(job: ArtifactRun) -> ArtifactOutcome:
         f"{job.key}: {'wrote' if reference.created else 'unchanged'} "
         f"{reference.path}{note if limited else ''}"
     )
+    if withheld is not None:
+        # What the floor withheld, by table, year and column, never a figure
+        outcome.progress.append(f"{job.key}: {withheld}")
     outcome.progress.extend(f"{job.key}: WARNING: {w}" for w in warnings)
     return outcome
 
 
-def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool, list[str]]:
+def _write_run(
+    job: ArtifactRun,
+) -> tuple[ArtifactRef, bool, list[str], Optional[str]]:
     config = job.config
     reform, members = _run_reform(job)
     key = job.key
@@ -548,7 +555,12 @@ def _write_run(job: ArtifactRun) -> tuple[ArtifactRef, bool, list[str]]:
         build_receipt,
         job.artifacts_root,
     )
-    return reference, bool(limits), warnings
+    return (
+        reference,
+        bool(limits),
+        warnings,
+        disclosure_floor.withheld_line(floor),
+    )
 
 
 # What the receipt records of the floor for a run whose simulations were
@@ -591,8 +603,10 @@ def _apply_disclosure_floor(
 ) -> tuple[list[str], Optional[dict]]:
     """Hold a run's household tables to the floor of survey households
     (``disclosure_floor``): withhold thin decile cells and their totals,
-    including those withheld by a combined run's members, and withhold the
-    age table's thin cells. Return a warning when the whole measure is thin
+    including those withheld by a combined run's members, the age table's
+    thin cells and the summary statistics' thin figures
+    (``disclosure_floor.thin_metrics``, recorded by table, year and column,
+    never a figure). Return a warning when the whole measure is thin
     (or, when the run was planned under
     ``UK_BUDGET_THIN_DECILES=refuse``, ``job.refuse_thin_deciles`` True,
     refuse the run), and make the binned scatter count survey households
@@ -677,6 +691,13 @@ def _apply_disclosure_floor(
     result.age_impact = disclosure_floor.withhold_thin_age_rows(
         result.age_impact, found
     )
+    thin_figures = disclosure_floor.thin_metrics(
+        baseline, reformed, years, survey
+    )
+    result.metrics = disclosure_floor.withhold_metrics(
+        result.metrics, thin_figures
+    )
+    found.update(thin_figures)
     household_ids = baseline.calculate(
         "household_id", period=years[0], map_to="household"
     ).values

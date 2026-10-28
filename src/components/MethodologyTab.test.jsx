@@ -239,7 +239,7 @@ describe("MethodologyTab", () => {
     expect(container).not.toHaveTextContent("signs off every public data file before it is published");
   });
 
-  it("states the floor of 3 survey households for the deciles and ages, and that the age filter counts records", () => {
+  it("states the floor of 3 survey households for the deciles, ages, people affected and poverty, and that the age filter counts records", () => {
     const { container } = renderTab();
     const small = [...container.querySelectorAll(".method-fact")].find(
       (fact) => fact.querySelector("dt")?.textContent === "Small groups",
@@ -256,6 +256,10 @@ describe("MethodologyTab", () => {
     // The age sentence says what is withheld, as the deciles' does
     expect(text).toContain("When an age band or single year of age rests on one or two survey households, it is not published: a single year takes the other single years of its band with it, and a band takes every row but all ages.");
     expect(text).not.toContain("would give it back");
+    // People affected and the poverty changes say what goes with them
+    expect(text).toContain("Each figure in an age row counts the households behind it: those better off, worse off or unchanged, and those directly affected.");
+    expect(text).toContain("People affected, the share of people whose household's net income changes by more than 0.01%, is not published when it rests on one or two survey households, or when the households it leaves out are that few, and nor is that year's age table.");
+    expect(text).toContain("A change in poverty is not published when the people who cross the line come from one or two survey households, and its change in percent goes with it.");
     expect(text).not.toContain("survey records is not shown");
   });
 

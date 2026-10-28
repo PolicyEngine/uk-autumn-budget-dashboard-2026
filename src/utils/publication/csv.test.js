@@ -71,6 +71,31 @@ describe("parseTable", () => {
     }
   });
 
+  it("reads a figure the floor withheld as null, and only there", () => {
+    const metrics = TABLES.metrics.columns.map(([column]) => column).join(",");
+    expect(parseTable("metrics", `${metrics}\nx,X,2030,,0.1,,\n`)).toEqual([
+      {
+        reform_id: "x",
+        reform_name: "X",
+        year: 2030,
+        people_affected: null,
+        gini_change: 0.1,
+        poverty_change_pp: null,
+        poverty_change_pct: null,
+      },
+    ]);
+    // Withheld is an empty cell: anything else that is not a number, or an
+    // empty Gini, is still refused
+    for (const bad of ["NaN", "abc", " "]) {
+      expect(() =>
+        parseTable("metrics", `${metrics}\nx,X,2030,${bad},0.1,0,0\n`),
+      ).toThrow(TableError);
+    }
+    expect(() =>
+      parseTable("metrics", `${metrics}\nx,X,2030,1,,0,0\n`),
+    ).toThrow(TableError);
+  });
+
   it("still reads a real zero", () => {
     for (const zero of ["0", "0.0", "-0.0", "0e5"]) {
       expect(

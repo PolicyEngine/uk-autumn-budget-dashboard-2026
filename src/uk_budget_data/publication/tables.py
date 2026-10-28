@@ -17,6 +17,11 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Mapping, Optional
 
 STR, INT, FLOAT, BOOL = "str", "int", "float", "bool"
+# A float, or an empty cell where the floor of survey households withholds
+# the figure (``disclosure_floor.thin_metrics``): None in rows, an empty
+# cell in the file. NaN is still refused, so a figure that failed is never
+# mistaken for one withheld.
+WITHHELD_FLOAT = "float_or_withheld"
 # Integers beyond this cannot all be told apart once read as floats (here, or
 # by the browser), so they are refused rather than collapsed together.
 MAX_EXACT_INTEGER = 2**53 - 1
@@ -53,7 +58,7 @@ class TableSpec:
 # relative change.
 POVERTY_INEQUALITY_COLUMNS: tuple[tuple[str, str], ...] = (
     *(
-        (f"{group}poverty_{measure}_change_{unit}", FLOAT)
+        (f"{group}poverty_{measure}_change_{unit}", WITHHELD_FLOAT)
         for measure in ("abs_bhc", "abs_ahc", "rel_bhc", "rel_ahc")
         for group in ("", "child_")
         for unit in ("pp", "pct")
@@ -106,10 +111,10 @@ TABLES: dict[str, TableSpec] = {
                 ("reform_id", STR),
                 ("reform_name", STR),
                 ("year", INT),
-                ("people_affected", FLOAT),
+                ("people_affected", WITHHELD_FLOAT),
                 ("gini_change", FLOAT),
-                ("poverty_change_pp", FLOAT),
-                ("poverty_change_pct", FLOAT),
+                ("poverty_change_pp", WITHHELD_FLOAT),
+                ("poverty_change_pct", WITHHELD_FLOAT),
             ),
             ("reform_id", "year"),
         ),
@@ -248,7 +253,11 @@ TABLES: dict[str, TableSpec] = {
 
 
 def _coerce(value: Any, kind: str, where: str, nullable: bool = False) -> Any:
-    """Convert one cell to its declared type, refusing anything ambiguous."""
+    """Convert one cell to its declared type, refusing anything ambiguous.
+    A WITHHELD_FLOAT cell, or one in a column its table declares nullable
+    (a withheld decile cell), may be None (an empty cell, as read back)."""
+    if kind == WITHHELD_FLOAT:
+        nullable, kind = True, FLOAT
     if value is None or (nullable and value == ""):
         if nullable:
             return None
@@ -298,7 +307,7 @@ def _coerce(value: Any, kind: str, where: str, nullable: bool = False) -> Any:
 
 
 def _text(value: Any) -> str:
-    if value is None:
+    if value is None:  # a withheld figure or decile cell
         return ""
     if isinstance(value, bool):
         return "True" if value else "False"

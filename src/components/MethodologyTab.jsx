@@ -511,6 +511,7 @@ function MethodologyTab({ onShowTab }) {
                       </>,
                       "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate.",
                       "People moved out of or into poverty are the change in the rate times that year's population in the current-law projection, to the nearest 1,000.",
+                      "A change in poverty is not published when the people who cross the line come from one or two survey households, and its change in percent goes with it. A change for children goes too when the people other than children who cross come from one or two survey households, since everyone's change less children's would show theirs.",
                     ],
                   },
                 ],
@@ -699,6 +700,8 @@ function MethodologyTab({ onShowTab }) {
                     more: [
                       `A band or age with fewer than ${MIN_SAMPLE_SIZE} records in the dataset is not shown. Microcosm builds several records from one survey household, so this counts records, not households.`,
                       "When an age band or single year of age rests on one or two survey households, it is not published: a single year takes the other single years of its band with it, and a band takes every row but all ages.",
+                      "Each figure in an age row counts the households behind it: those better off, worse off or unchanged, and those directly affected.",
+                      "People affected, the share of people whose household's net income changes by more than 0.01%, is not published when it rests on one or two survey households, or when the households it leaves out are that few, and nor is that year's age table.",
                       <>
                         Each person counts their whole household&apos;s change in net income, not
                         equivalised, and averages are <Term id="perPerson">per person</Term>.

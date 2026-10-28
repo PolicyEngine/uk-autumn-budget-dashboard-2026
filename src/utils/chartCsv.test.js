@@ -130,3 +130,22 @@ it("uses published CSV headings while reading namespaced measure keys", () => {
   expect(decile).toContain("Income decile,netImpact,Net change");
   expect(decile).toContain("1,2,2");
 });
+
+describe("a figure the floor of survey households withheld", () => {
+  it("is written as Not published, never 0 or empty, even in a number column", () => {
+    const text = buildChartCsv({
+      title: "T",
+      units: "pp",
+      columns: [
+        { key: "year", label: "Fiscal year" },
+        { key: "value", label: "Change", decimals: 4 },
+      ],
+      rows: [
+        { year: "2027-28", value: "Not published" },
+        { year: "2028-29", value: -0.00123456 },
+      ],
+    });
+    expect(text).toContain("2027-28,Not published\r\n");
+    expect(text).toContain("2028-29,-0.0012\r\n");
+  });
+});

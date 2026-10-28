@@ -46,6 +46,10 @@ def test_package_inherits_withheld_cells_from_member_receipts(
         "thin_cells",
         lambda baseline, reformed, years, survey: baseline.thin,
     )
+    # No summary figure is thin here (#285's floor has its own tests)
+    monkeypatch.setattr(
+        floor, "thin_metrics", lambda baseline, reformed, years, survey: {}
+    )
     alpha = reform("alpha")
     beta = Reform(
         id="beta",

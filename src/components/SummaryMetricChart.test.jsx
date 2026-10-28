@@ -10,6 +10,7 @@ import SummaryMetricChart, {
   metricByYear,
   metricSentence,
   metricValue,
+  isWithheld,
   parsePovertyChoice,
   povertyMetric,
   sigFigs,
@@ -290,5 +291,62 @@ describe("the inequality chart", () => {
       "In 2027-28 the selected policies lower income inequality (the Gini coefficient) by about 0.04%.",
     );
     expect(container.querySelector(".chart-description strong")).toBeNull();
+  });
+});
+
+describe("a figure the floor of survey households withheld", () => {
+  const run = "fuel_duty_rise_deferral";
+  const single = { policies: POLICIES, selectedPolicies: [run], selectedYear: 2027 };
+
+  it("is null and marked withheld only where the row carries the column empty", () => {
+    expect(isWithheld({ poverty_change_pp: null }, "poverty_change_pp")).toBe(true);
+    // A run written before the measure, or a missing row, is not withheld
+    expect(isWithheld({}, "poverty_change_pp")).toBe(false);
+    expect(isWithheld(undefined, "poverty_change_pp")).toBe(false);
+    expect(isWithheld({ poverty_change_pp: 0 }, "poverty_change_pp")).toBe(false);
+    const points = metricByYear([{ reform_id: run, year: "2027", poverty_change_pp: null }], run, SUMMARY_METRICS.poverty);
+    expect(points.find((point) => point.year === 2027)).toMatchObject({ value: null, withheld: true });
+    expect(points.find((point) => point.year === 2028)).toMatchObject({ value: null, withheld: false });
+  });
+
+  it("says the selected year's figure is not published, never no change", () => {
+    render(
+      <SummaryMetricChart
+        metric={SUMMARY_METRICS.poverty}
+        rows={[
+          { reform_id: run, year: "2027", poverty_change_pp: null },
+          { reform_id: run, year: "2028", poverty_change_pp: "-0.002" },
+        ]}
+        {...single}
+      />,
+    );
+    expect(document.querySelector(".chart-description")).toHaveTextContent("Not published for 2027-28: too few survey households are behind it.");
+    expect(document.querySelector(".chart-description")).not.toHaveTextContent(/do not change/);
+  });
+
+  it("says so when every year is withheld, rather than not yet published", () => {
+    render(<SummaryMetricChart metric={SUMMARY_METRICS.poverty} rows={[{ reform_id: run, year: "2027", poverty_change_pp: null }]} {...single} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Not published: too few survey households are behind these figures");
+  });
+
+  it("each measure on its own, year by year: the withheld cell says Not published", () => {
+    render(
+      <SummaryMetricChart
+        metric={SUMMARY_METRICS.poverty}
+        rows={[
+          { reform_id: run, year: "2027", poverty_change_pp: null },
+          { reform_id: "road_fuel_vat_cut", year: "2027", poverty_change_pp: "-0.003" },
+        ]}
+        policies={POLICIES}
+        selectedPolicies={[run, "road_fuel_vat_cut"]}
+        selectedYear={2027}
+      />,
+    );
+    expect(document.querySelector(".mev-row--none")).toHaveTextContent("Not published");
+    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(screen.getByRole("radiogroup", { name: "View" })).getByRole("radio", { name: "Year by year" }));
+    const cells = [...document.querySelectorAll(".mev-table tbody td")].map((cell) => cell.textContent);
+    expect(cells).toContain("Not published");
+    expect(cells).not.toContain("0");
   });
 });
