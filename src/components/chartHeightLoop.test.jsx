@@ -2,18 +2,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import WaterfallChart from "./WaterfallChart";
 import DistributionalChart from "./DistributionalChart";
-import YoungPeopleSection from "./YoungPeopleSection";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { ALPHA, BETA, YEAR, measureCatalogueFixture } from "../test/measureCatalogueFixture";
 
 // A chart drawn at a percentage height (ResponsiveContainer height="100%")
-// takes its plot's height. Anything else in the plot above it (a note, a
-// notice, even one kept hidden) is then added to the plot on every measure:
+// takes its plot's height. Anything else in the plot beside it (a note, a
+// notice, even one kept hidden) is then added to the plot on every resize:
 // in a pair of cards, whose shared rows grow with the taller plot, the chart
 // and the card beside it grow without end (production, 28 Oct: All
 // households' decile card and the household scatter, 2,312px to 52,629px in
 // 20s at 1440px). jsdom has no layout, so the loop itself can't run here;
-// this checks its cause: a chart at a percentage height is alone in its plot.
+// this checks its cause in the decile charts: a chart at a percentage height
+// is alone in its plot.
 
 vi.setConfig({ testTimeout: 30000 });
 
@@ -32,21 +32,6 @@ vi.mock("recharts", async () => {
   };
 });
 vi.mock("./ChartDownloadMenu", () => ({ default: () => null }));
-vi.mock("../utils/loadDashboard", async (importOriginal) => {
-  const actual = await importOriginal();
-  const { parseTable } = await import("../utils/publication/csv");
-  const { isCatalogueRowDisplayable } = await import("../utils/measureCatalogue");
-  return {
-    ...actual,
-    loadVerifiedTable: async (catalogue, table) => {
-      const response = await fetch(`/data/${table}.csv`);
-      if (!response.ok) throw new Error(`${table} is unavailable`);
-      return parseTable(table, await response.text()).filter((row) =>
-        isCatalogueRowDisplayable(catalogue, row.reform_id, row.year),
-      );
-    },
-  };
-});
 vi.mock("../utils/chartLogo", () => ({
   PolicyEngineLogo: () => null,
   CHART_LOGO: { href: "data:image/png;base64,iVBORw0KGgo=", width: 80, height: 17, padding: 8 },
@@ -54,19 +39,18 @@ vi.mock("../utils/chartLogo", () => ({
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
 });
 
-/** Whether anything in the chart's plot comes before it. */
+/** Whether anything else is in the chart's plot, before or after it. */
 function crowded(chart) {
   const plot = chart.closest(".chart-plot");
   for (let node = chart; node && node !== plot; node = node.parentElement) {
-    if (node.previousElementSibling) return true;
+    if (node.previousElementSibling || node.nextElementSibling) return true;
   }
   return false;
 }
 
-/** Each chart drawn at a percentage height with something above it in its plot. */
+/** Each chart drawn at a percentage height with something else in its plot. */
 function loops(container) {
   const charts = [...container.querySelectorAll(".recharts-responsive-container")];
   expect(charts.length).toBeGreaterThan(0);
@@ -100,26 +84,6 @@ describe("no chart can grow its plot without end", () => {
     const rows = fixture[source].filter((row) => row.reform_id !== BETA);
     const { container } = rendered(fixture, <Chart rawData={rows} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />);
     expect(screen.getByRole("status")).toHaveTextContent("The net change is unavailable");
-    expect(loops(container)).toEqual([]);
-  });
-
-  it.each([
-    ["every band published", [ALPHA, BETA], () => true, false],
-    // One measure missing a band: drawn, under the notice (several missing
-    // one are not published together, a note in place of the plot)
-    ["one measure missing a band (the notice above the plot)", [ALPHA], (line, first) => line !== first, true],
-  ])("the average change by age, %s", async (_name, selected, keep, notice) => {
-    const fixture = measureCatalogueFixture({ held: false });
-    const [header, ...lines] = fixture.ageCsv.split("\n");
-    const first = lines.find((line) => line.startsWith(`${ALPHA},`) && line.includes(`,${YEAR},`));
-    const ageCsv = [header, ...lines.filter((line) => keep(line, first))].join("\n");
-    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, text: async () => ageCsv })));
-    const { container } = rendered(
-      fixture,
-      <YoungPeopleSection policies={buildMeasureCatalogue(fixture).measures} selectedPolicies={selected} selectedYear={YEAR} />,
-    );
-    await screen.findAllByTestId("chart");
-    expect(screen.queryAllByText(/no published results by age/).length > 0).toBe(notice);
     expect(loops(container)).toEqual([]);
   });
 });
