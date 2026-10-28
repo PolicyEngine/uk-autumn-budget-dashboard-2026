@@ -153,12 +153,11 @@ def test_state_pension_only_pays_no_income_tax_from_2027():
     assert result["net_income"]["change"] == 0
 
 
-@pytest.mark.parametrize("other", [260, 400, 2_000])
-def test_any_private_pension_takes_the_allowance_away(other):
-    """The total-income design: a private pension on top of the full new
-    State Pension puts total income above the allowance, so it is not
-    given, and the bill is 20% of income above the standard £12,570 either
-    way."""
+@pytest.mark.parametrize("other", [150, 260, 400, 2_000])
+def test_a_private_pension_tapers_the_reduction_away(other):
+    """The Pension Tax Allowance (Budget 2026): a reduction of up to £94
+    in 2027-28, less £1 for every £3 of total income above the full new
+    State Pension (£13,036.40), never more than the tax due."""
     full = household_impact.full_new_state_pension(2027)
     income = full + other
     result = calculate(
@@ -168,8 +167,10 @@ def test_any_private_pension_takes_the_allowance_away(other):
     )
     tax = programme(result, "income_tax")
     assert tax["baseline"] == pytest.approx(0.2 * (income - 12_570), abs=0.02)
-    assert tax["reform"] == pytest.approx(tax["baseline"], abs=0.02)
-    assert result["net_income"]["change"] == 0
+    reduction = max(0, 94 - (income - 13_036.40) / 3)
+    assert tax["reform"] == pytest.approx(
+        max(0, tax["baseline"] - reduction), abs=0.02
+    )
 
 
 # --- Warm Home Discount top-up ----------------------------------------------------
