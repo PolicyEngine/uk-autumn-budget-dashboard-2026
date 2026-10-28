@@ -119,7 +119,8 @@ describe("BudgetaryImpactChart", () => {
       expect(container).not.toHaveTextContent(/before the years shown/i);
       // The net line names both gaps from a combined run and links to them
       // (critic W1, round 3)
-      expect(container).toHaveTextContent(/leaves out interactions between them and any difference between the baselines/);
+      expect(container).toHaveTextContent(/leaves out interactions between them\./);
+      expect(container).not.toHaveTextContent(/difference between the baselines/);
       expect(screen.getByRole("link", { name: "Policies added up" })).toHaveAttribute("href", "?tab=methodology#method-limitations");
     });
 

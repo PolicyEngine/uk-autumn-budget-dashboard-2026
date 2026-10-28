@@ -130,14 +130,14 @@ const CHART_DESCRIPTION =
 
 // The card's "About this chart"
 // The net line's gap from a run of all the policies together: interactions
-// and the runs' baselines (critic W1, round 3), explained under Limitations
+// (critic W1, round 3), explained under Limitations; every run shares one
+// declared baseline
 const REVENUE_INFO = {
   how: [
     "Each policy is costed on its own against current law.",
     <>
-      The net line is their sum, so it leaves out interactions between them and any difference between the baselines
-      of the single and combined runs. <MethodLink anchor={METHOD_ANCHORS.limitations}>Policies added up</MethodLink>{" "}
-      explains both.
+      The net line is their sum, so it leaves out interactions between them.{" "}
+      <MethodLink anchor={METHOD_ANCHORS.limitations}>Policies added up</MethodLink>{" "}explains this.
     </>,
   ],
   method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the policies" },

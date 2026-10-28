@@ -20,7 +20,15 @@ import ViewLink from "../ViewLink";
 import { FORECAST_FEED_ANCHOR } from "../methodology/ForecastFeedMethod";
 import { forecastName, hasPost } from "../../utils/livingStandards/forecast";
 import { OutlookStatus, useOutlook } from "./useOutlook";
+import { EXTERNAL } from "../../utils/sources";
 import "./LivingStandards.css";
+
+/**
+ * The one forecast's name, from the data: its source's release ("OBR
+ * Economic and fiscal outlook, March 2026"), else its label without the
+ * Budget tag ("OBR March 2026").
+ */
+const forecastSourceName = (forecast) => forecast.pre_source?.release || forecastName(forecast.pre_label) || "OBR forecast";
 
 /** The OBR forecast behind the baseline: headline tiles, then the series. */
 function ForecastPanel({ forecast, data, onShowTab }) {
@@ -52,7 +60,16 @@ function ForecastPanel({ forecast, data, onShowTab }) {
               </>
             ) : (
               <>
-                Calendar-year growth behind the baseline, from the <SourceLink source="obr_efo_march_2026" />.
+                Calendar-year growth behind the baseline, from the{" "}
+                {forecast.pre_source?.url ? (
+                  <a href={forecast.pre_source.url} {...EXTERNAL}>
+                    {forecastSourceName(forecast)}
+                    <span className="policy-sr-only"> (opens in a new tab)</span>
+                  </a>
+                ) : (
+                  forecastSourceName(forecast)
+                )}
+                .
               </>
             )}{" "}
             <ViewLink tab="methodology" hash={FORECAST_FEED_ANCHOR} onShowTab={onShowTab}>

@@ -12,8 +12,8 @@ export const SOURCES = {
   // (src/uk_budget_data/forecast/obr_october_2026.json over policyengine-uk's
   // economic assumptions; data_inputs/publication_basis.json), so every
   // place that names it describes the Budget runs. The Pre-measures
-  // forecast tab's projections are still on March 2026 and name
-  // obr_efo_march_2026.
+  // forecast tab's projections are on it too (outlookForecastSource); March
+  // 2026 (obr_efo_march_2026) stays beside it on Forecast changes.
   obr_efo_current: {
     label: "OBR, Economic and fiscal outlook – October 2026",
     url: "https://obr.uk/download/economic-and-fiscal-outlook-october-2026/",
