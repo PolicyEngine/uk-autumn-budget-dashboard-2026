@@ -30,6 +30,27 @@ import { METHOD_ANCHORS } from "../../methodology/anchors";
 // Axis ticks to the step's own precision: a 0.25 step reads "0.25%", not
 // "0.3%" (tightAxis's steps go down to 0.01)
 const pctTickFormat = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
+
+// Both ends round to under 0.15 (one of them shown as 0): neither "grow" nor
+// "fall" describes it, and "about as fast" beside a 0 reads as an error
+const nearZero = (bottom, top) => Math.max(Math.abs(bottom), Math.abs(top)) < 0.15;
+
+// Current law, in words, from the signs of the two ends (rounded means, as shown)
+export function trendWords(bottom, top) {
+  if (nearZero(bottom, top)) return "barely change at either end";
+  if (Math.abs(top - bottom) < 0.15) return bottom >= 0 && top >= 0 ? "grow about as fast at the bottom as at the top" : bottom <= 0 && top <= 0 ? "fall about as fast at the bottom as at the top" : "barely change at either end";
+  if (bottom >= 0 && top >= 0) return top > bottom ? "grow faster at the top than at the bottom" : "grow faster at the bottom than at the top";
+  if (bottom <= 0 && top <= 0) return top > bottom ? "fall faster at the bottom than at the top" : "fall faster at the top than at the bottom";
+  return top > bottom ? "grow at the top and fall at the bottom" : "grow at the bottom and fall at the top";
+}
+
+// The policies' change, in words (rounded means, as shown)
+export function changeWords(bottom, top) {
+  if (nearZero(bottom, top)) return "barely change income growth at either end on average";
+  if (Math.abs(top - bottom) < 0.15) return "change income growth about equally at both ends";
+  return top > bottom ? "change income growth more at the top" : "change income growth more at the bottom";
+}
+
 export const pctTick = (v) => `${pctTickFormat.format(v)}%`;
 const pct = (v) => `${formatOneDp(v)}%`;
 // The measures' effect on growth, in percentage points (two decimals: it is
@@ -284,7 +305,6 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const highMean = round1(mean(highVals));
   const num = (v) => signed(v, "").replace(/^0\.0$/, "0");
   const per = annual ? " a year" : "";
-  const gap = Math.abs(highMean - lowMean);
   const unitWord = diff ? " points" : "%";
   const ends = (
     <>
@@ -293,21 +313,14 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     </>
   );
   const largest = Math.max(...[...lowVals, ...highVals].map((v) => Math.abs(v)));
-  // The finding in words, from the signs of the two ends
-  const trend = (bottom, top) => {
-    if (Math.abs(top - bottom) < 0.15) return bottom >= 0 && top >= 0 ? "grow about as fast at the bottom as at the top" : bottom <= 0 && top <= 0 ? "fall about as fast at the bottom as at the top" : "barely change at either end";
-    if (bottom >= 0 && top >= 0) return top > bottom ? "grow faster at the top than at the bottom" : "grow faster at the bottom than at the top";
-    if (bottom <= 0 && top <= 0) return top > bottom ? "fall faster at the bottom than at the top" : "fall faster at the top than at the bottom";
-    return top > bottom ? "grow at the top and fall at the bottom" : "grow at the bottom and fall at the top";
-  };
   const summary = diff ? (
     largest < 0.25 ? (
       <>The policies barely change income growth at either end, under {formatOneDp(Math.max(0.1, Math.ceil(largest * 10 + 1e-9) / 10))} points{per}.</>
     ) : (
-      <>The policies change income growth {gap < 0.15 ? "about equally at both ends" : highMean > lowMean ? "more at the top" : "more at the bottom"} {ends}.</>
+      <>The policies {changeWords(lowMean, highMean)} {ends}.</>
     )
   ) : (
-    <>Under current law, real incomes {trend(lowMean, highMean)} {ends}.</>
+    <>Under current law, real incomes {trendWords(lowMean, highMean)} {ends}.</>
   );
   // The ranges and exact groups, for About this chart
   const low = skip ? `second-lowest-income ${g.share}` : `lowest-income ${g.share}`;
