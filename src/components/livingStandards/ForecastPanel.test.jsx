@@ -195,9 +195,11 @@ describe("Forecast changes once the Budget forecast is published", () => {
     );
     expect(screen.getByRole("link", { name: /^October 2026 ?\(opens in a new tab\)$/ })).toHaveAttribute("target", "_blank");
     const prices = card(/^Inflation measures$/);
-    // The series chips, then the forecast chips
-    const forecasts = within(within(prices).getByRole("group", { name: "Forecasts: show or hide" })).getAllByRole("button");
-    expect(forecasts.map((c) => c.textContent)).toEqual(["March 2026 forecast", "October 2026 forecast"]);
+    // Which forecasts are drawn is the card's Options pill, both by
+    // default; no Show forecasts chips
+    const pill = within(prices).getByRole("button", { name: "Options: March and October 2026" });
+    expect(within(prices).queryByRole("group", { name: "Forecasts: show or hide" })).toBeNull();
+    expect(prices).not.toHaveTextContent(/Show forecasts/);
     const lines = chartProps.find((p) => p.series.some((s) => s.key === "cpi")).series;
     const cpi = lines.filter((s) => s.series === "cpi");
     expect(cpi.map((s) => s.name)).toEqual(["CPI, March 2026 forecast", "CPI, October 2026 forecast"]);
@@ -206,10 +208,14 @@ describe("Forecast changes once the Budget forecast is published", () => {
     // The tile shows October and names March
     expect(screen.getAllByText(pct(cpiPre() + 0.003)).length).toBeGreaterThan(0);
     expect(screen.getByText(`annual growth, 2027 (March: ${pct(cpiPre())})`)).toBeInTheDocument();
-    // Hiding March leaves the October lines only
-    fireEvent.click(forecasts[0]);
+    // Choosing October alone leaves the October lines only, and the pill says so
+    fireEvent.click(pill);
+    const choices = screen.getByRole("radiogroup", { name: "Forecasts" });
+    expect(within(choices).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Both", "March 2026", "October 2026"]);
+    fireEvent.click(within(choices).getByRole("radio", { name: "October 2026" }));
     const last = chartProps.filter((p) => p.series.some((s) => s.series === "cpi")).at(-1).series;
     expect(last.every((s) => s.forecast === "post")).toBe(true);
+    expect(within(prices).getByRole("button", { name: "Options: October 2026 forecast" })).toBeInTheDocument();
   });
 
   it("keeps the March line alone, and says why, for a series October does not carry yet", async () => {

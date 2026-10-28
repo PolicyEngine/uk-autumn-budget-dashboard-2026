@@ -5,8 +5,8 @@
 // public/data/obr_price_categories_october_2026.json, the October 2026 one
 // (tools/extract-obr-price-categories.mjs, from Table 1.19 of the OBR's
 // economy detailed forecast tables). With both, as the inflation measures,
-// March is drawn faded and October full, with "Show forecasts" chips to
-// show either; if the March file is missing the card says it is not yet
+// March is drawn faded and October full, with the card's Options pill
+// (ControlBar) to show either or both; if the March file is missing the card says it is not yet
 // available. The y axis is
 // fitted to the data (chartTheme.fittedAxis, always with 0); the x axis is
 // titled "Financial year", beside the inflation measures' "Calendar year".
@@ -15,6 +15,8 @@ import { useEffect, useState } from "react";
 import LsCard from "./LsCard";
 import ViewToggle from "../ViewToggle";
 import SeriesToggle from "../SeriesToggle";
+import ControlBar from "../ControlBar";
+import { forecastsOption } from "./controlOptions";
 import { LsLineChart, lineLegendItems } from "./LsCharts";
 import { CHART_COLOURS, SERIES_COLOURS, fittedAxis, useNarrowViewport } from "../../utils/chartTheme";
 import { formatOneDp, fyLabel } from "../../utils/livingStandards/outlook";
@@ -196,6 +198,10 @@ export default function ObrPriceCategoriesCard({ view = "chart", onViewChange })
       method: { anchor: METHOD_ANCHORS.forecastFeed, label: "How the forecast feeds the baseline" },
     },
     viewToggle: onViewChange && <ViewToggle value={view} onChange={onViewChange} name={OBR_PRICE_CATEGORIES_TITLE} />,
+    // Which forecasts are drawn: the Options pill, as the inflation measures beside it
+    controls: both && (
+      <ControlBar name={OBR_PRICE_CATEGORIES_TITLE} options={[forecastsOption(forecastsShown, setForecastsShown, preName, postName)]} />
+    ),
   };
 
   const chips = (
@@ -208,19 +214,6 @@ export default function ObrPriceCategoriesCard({ view = "chart", onViewChange })
         label="Lines"
         narrow={narrow}
       />
-      {both && (
-        <SeriesToggle
-          series={[
-            { key: "pre", label: preName, colour: CHART_COLOURS.before },
-            { key: "post", label: postName, colour: CHART_COLOURS.reference },
-          ]}
-          shown={forecastsShown}
-          onChange={setForecastsShown}
-          label="Forecasts"
-          lead="Show forecasts:"
-          narrow={narrow}
-        />
-      )}
     </>
   );
 
