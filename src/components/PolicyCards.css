@@ -67,9 +67,11 @@
   margin-left: auto;
 }
 
+/* A lead line's points: real bullets, indented, tight */
 .policy-card-example-items {
-  margin: 0;
-  padding-left: 18px;
+  margin: 2px 0 0;
+  padding-left: 20px;
+  list-style: disc outside;
   font-size: var(--fs-small);
   line-height: 1.55;
   color: var(--pe-gray-600);
@@ -116,4 +118,16 @@
 /* Who it reaches, in full: a row of its own under Starts and Ends */
 .policy-card-affects.is-wide {
   grid-column: 1 / -1;
+}
+
+.policy-card-example-items li {
+  display: list-item;
+}
+
+.policy-card-example-items li + li {
+  margin-top: 2px;
+}
+
+.policy-card-example-items li::marker {
+  color: var(--pe-gray-400);
 }

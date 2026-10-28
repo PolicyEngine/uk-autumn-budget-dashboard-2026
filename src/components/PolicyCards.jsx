@@ -281,7 +281,16 @@ function PolicyTimeline({ policy, highlight }) {
  * card, bare or not, is as tall as its row, its sections always in the
  * same order (CARD_SECTIONS) and the footer pinned to the bottom.
  */
-export function PolicyCard({ policy, onShowEffect, parameters }) {
+export function PolicyCard({ policy, onShowEffect, parameters: published }) {
+  // The card's own shorter words for the main row, where it has them
+  const parameters = published && policy.changeLabel
+    ? {
+        ...published,
+        rows: published.rows.map((row) =>
+          row.primary ? { ...row, label: policy.changeLabel.label, unit_words: policy.changeLabel.unitWords ?? row.unit_words } : row,
+        ),
+      }
+    : published;
   const temporary = Boolean(policy.inForce?.to);
   // Derived from the publication for any measure (utils/measureCategory.js),
   // in the same tinted tile as every per-measure row
@@ -355,7 +364,9 @@ export function PolicyCard({ policy, onShowEffect, parameters }) {
         </dl>
         </>
         )}
-        {policy.inForce && policy.timeline !== false && (
+        {/* No year strip by default: At a glance says when, and What changes
+            plots a change that moves over the years */}
+        {policy.inForce && policy.timeline === true && (
           <PolicyTimeline policy={policy} highlight={highlight} />
         )}
       </div>

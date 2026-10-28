@@ -256,14 +256,16 @@ describe("UnmodelledMeasures", () => {
     for (const measure of UNMODELLED_MEASURES) expect(measure.name.split(/\s+/).length, measure.id).toBeLessThanOrEqual(10);
   });
 
-  it("renders only short text on every card: no paragraph over 30 words, who it affects in 15", () => {
+  it("renders only short text on every card: summary and For a household in 20 words, who it affects in 12, nothing over 30", () => {
     render(<UnmodelledMeasures />);
     open();
     const words = (node) => node.textContent.trim().split(/\s+/).length;
     for (const item of cards()) {
-      expect(words(item.querySelector(".policy-card-summary")), item.id).toBeLessThanOrEqual(30);
-      expect(words(item.querySelector(".policy-card-affects dd")), item.id).toBeLessThanOrEqual(15);
-      expect(words(item.querySelector(".policy-card-example-text")), item.id).toBeLessThanOrEqual(30);
+      expect(words(item.querySelector(".policy-card-summary")), item.id).toBeLessThanOrEqual(20);
+      expect(words(item.querySelector(".policy-card-affects dd")), item.id).toBeLessThanOrEqual(12);
+      expect(words(item.querySelector(".policy-card-example-text")), item.id).toBeLessThanOrEqual(20);
+      // What changes is said once: the summary line, then only the values
+      expect(item.querySelector(".pchg-lead")).toBeNull();
       for (const block of item.querySelectorAll("p, dd, li")) {
         expect(words(block), `${item.id}: ${block.textContent.slice(0, 60)}`).toBeLessThanOrEqual(30);
       }
@@ -297,8 +299,11 @@ describe("the section's text", () => {
 
   it("keeps each card's What changes, For a household and Why we don't model it to 30 words, and who it affects to 15", () => {
     for (const measure of UNMODELLED_MEASURES) {
-      expect(measure.reaches.split(/\s+/).length, `${measure.id} reaches`).toBeLessThanOrEqual(15);
-      for (const field of ["changes", "household", "notModelled"]) {
+      expect(measure.reaches.split(/\s+/).length, `${measure.id} reaches`).toBeLessThanOrEqual(12);
+      for (const field of ["changes", "household"]) {
+        expect(measure[field].split(/\s+/).length, `${measure.id} ${field}`).toBeLessThanOrEqual(20);
+      }
+      for (const field of ["notModelled"]) {
         expect(measure[field].split(/\s+/).length, `${measure.id} ${field}`).toBeLessThanOrEqual(30);
       }
     }

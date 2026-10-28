@@ -274,10 +274,6 @@ function ChangeTable({ lines, unit, tone, caption, first }) {
   );
 }
 
-// The displays drawn as a step plot even when the change is one step (a
-// "table" of several parameters keeps its tiles and button only)
-export const PLOTTED_DISPLAYS = new Set(["switch", "before-after", "path"]);
-
 const plotCaption = (row) => (row.unit_words ? `${row.label}, ${row.unit_words}` : row.label);
 
 /** The plot's key: current law dashed grey, the measure in its colour. */
@@ -315,8 +311,7 @@ function Reveal({ show, hide, children }) {
  * A card's "What changes", in one form for every measure (#260): the main
  * parameter's current law and the policy as two tiles with the change,
  * then, where the change varies over the years or is a `switch` (a change
- * for a while only: a window, or one winter) or one lasting change
- * (`before-after`, or a `path` that moves once), the step plot of the two
+ * for a while only: a window, or one winter), the step plot of the two
  * over April 2026 to March 2032 (on dates the rates change, for a
  * `schedule`). Everything else sits behind a button: the years or dates as
  * a table, the yearly averages, or every parameter that changes when there
@@ -331,10 +326,10 @@ export default function PolicyChange({ entry, direction, onHighlight, name, lead
   if (!main || !first) return null;
   const schedule = entry.display === "schedule";
   const varies = variesByPeriod(main);
-  // A switch is plotted too: it is on for a while, then off again; and so
-  // is a single lasting change (before-after, or a path that moves once),
-  // so every card shows its change over the charts' years
-  const plots = varies || PLOTTED_DISPLAYS.has(entry.display);
+  // One visual per change: the tiles for a single change of value, and a
+  // plot only where the value moves over the years (fuel duty's dates, the
+  // Pension Tax Allowance's path)
+  const plots = varies;
   const segments = plots ? segmentsFor(main) : [];
   const plotted = segments.some(differs);
   // A schedule's or a window's averages over each fiscal year, where the
