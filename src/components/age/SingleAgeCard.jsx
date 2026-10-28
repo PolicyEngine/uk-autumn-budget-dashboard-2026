@@ -239,7 +239,10 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
     csv: () =>
       buildChartCsv({
         title: `Average change in household net income per person by single year of age, ${yearLabel}`,
-        units: `${CSV_UNITS}; the sum of each selected policy's own effect; the five-year average is centred on each age`,
+        // Not "the sum of each policy's own effect": with a published run of
+        // the whole selection (the default), Net change is that run's own row
+        // (singleAgeSelection)
+        units: `${CSV_UNITS}; the five-year average is centred on each age`,
         columns: [
           { key: "label", label: "Age" },
           ...measureIds.map((id) => ({ key: id, label: nameOf(id), decimals: 2 })),
@@ -425,8 +428,8 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
               how: [
                 `One bar per single year of age, ${agesText(window)}.`,
                 "The line averages the five ages centred on each one, as single ages rest on few survey records.",
-                showSpa && `The dashed line marks State Pension age (${spa} in ${yearLabel}); pensioners are the ages from it.`,
-                partsOffered && "Each policy stacks every selected policy's own part at each age.",
+                showSpa && `The dashed line marks State Pension age (${spa} in ${yearLabel}), where pensioners start.`,
+                partsOffered && "With Show set to Each policy, each selected policy's part is stacked at each age.",
               ],
               method: AGE_METHOD,
             }}
