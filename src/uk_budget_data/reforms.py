@@ -751,14 +751,14 @@ def _create_unearned_income_rates_up() -> Reform:
 
 AUTUMN_BUDGET_2026_COMBINED_ID = "autumn_budget_2026_combined"
 # The candidate set Vahid chose on the evening of 27 October 2026 (#222):
-# every registered measure, eight. Withdrawn, so in neither the package
-# nor the registry (``_MEASURE_FACTORIES``), and run or published by no
-# default command: the Carer's Allowance earnings taper
-# (``CARERS_ALLOWANCE_TAPER_ID``, #263) and the Local Housing Allowance
-# unfreeze (``LHA_UNFREEZE_ID``), whose cells by decile rest on fewer than
-# 10 survey households, and the road fuel VAT cut (``FUEL_VAT_ID``) that
-# evening, and
-# earlier that day the Business Asset Disposal Relief cut (``BADR_ID``) and
+# every registered measure, eight; on Budget day the Carer's Allowance
+# earnings taper (``CARERS_ALLOWANCE_TAPER_ID``, withdrawn on 27 October
+# for #263) was registered again once announced (HCWS421), making nine.
+# Withdrawn, so in neither the package nor the registry
+# (``_MEASURE_FACTORIES``), and run or published by no default command:
+# the Local Housing Allowance unfreeze (``LHA_UNFREEZE_ID``), whose cells
+# by decile rest on fewer than 10 survey households, and the road fuel VAT
+# cut (``FUEL_VAT_ID``) that evening, and earlier that day the Business Asset Disposal Relief cut (``BADR_ID``) and
 # the employer NI relief for under-25s (``EMPLOYER_NI_ID``). Their
 # factories stay above, unregistered. Considered that evening and left out:
 # tobacco duty at RPI+2% (already in current law: policyengine-uk 2.151.0
@@ -778,6 +778,11 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
     PLAN_2_ID,
     EMPLOYER_NI_THRESHOLD_ID,
     UNEARNED_INCOME_RATES_ID,
+    # Budget day: registered once announced (HCWS421). If #271 (disclosure
+    # floor 3) is not merged before generation, its artifact cannot be
+    # staged and the combined run refuses: then drop it from here and keep
+    # it in _MEASURE_FACTORIES, listed but not combined.
+    CARERS_ALLOWANCE_TAPER_ID,
 )
 
 _MEASURE_FACTORIES = (
@@ -789,6 +794,7 @@ _MEASURE_FACTORIES = (
     _create_plan_2_threshold_unfreeze,
     _create_employer_nics_secondary_threshold_raise,
     _create_unearned_income_rates_up,
+    _create_carers_allowance_earnings_taper,
 )
 
 
@@ -809,7 +815,7 @@ def _create_combined_autumn_budget_reform(members: list[Reform]) -> Reform:
         id=AUTUMN_BUDGET_2026_COMBINED_ID,
         name="Autumn Budget 2026 candidates (combined)",
         description=(
-            "All eight candidate measures simulated together: "
+            "All nine candidate measures simulated together: "
             + ", ".join(member.name for member in members)
             + ". Shows the package's impact with interactions."
         ),
@@ -857,7 +863,7 @@ def _get_reform_lookup() -> dict[str, Reform]:
 
 
 def get_autumn_budget_2026_reforms() -> list[Reform]:
-    """The combined package, then the eight candidate measures."""
+    """The combined package, then the nine candidate measures."""
     return _get_autumn_budget_2026_reforms()
 
 

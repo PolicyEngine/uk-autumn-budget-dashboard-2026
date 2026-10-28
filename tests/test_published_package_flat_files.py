@@ -33,6 +33,7 @@ FIXTURE = (
 # The eight candidate measures Vahid chose for the package (27 October 2026,
 # evening), sorted by id. (The name is kept from the seven-measure package.)
 SEVEN = [
+    "carers_allowance_earnings_taper",
     "domestic_electricity_zero_vat",
     "employer_nics_secondary_threshold_raise",
     "fuel_duty_rise_deferral",
@@ -74,7 +75,7 @@ class CapturingRunner:
 def test_the_seven_compose_to_the_package_key():
     # The key tonight's combined run and the area run use (#222)
     package = portable_combined([get_reform(i) for i in SEVEN])
-    assert package.id == "combined--894152ce8c83f1d8"
+    assert package.id == "combined--47727b6baf58047f"
     assert package.id == combined_key(SEVEN)
 
 

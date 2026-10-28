@@ -1212,6 +1212,73 @@
           }
         }
       ]
+    },
+    "carers_allowance_earnings_taper": {
+      "description": "Candidate measure. From 2030-31 Carer's Allowance no longer stops when weekly net earnings pass the £204 earnings limit (16 hours at the National Living Wage in 2026-27, held at £204 in the model): it is reduced by £1 for each £1 of weekly earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The government says the taper begins within 2030-31, once DWP's new IT system is ready; the model applies it to the whole of 2030-31. Carers at or below the limit are unchanged. Scotland's Carer Support Payment is unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
+      "display": "path",
+      "rows": [
+        {
+          "label": "Weekly earnings at which Carer's Allowance stops",
+          "unit": "gbp",
+          "unit_words": "£ of net earnings a week",
+          "primary": true,
+          "points": [
+            {
+              "key": "2026",
+              "label": "2026-27",
+              "year": 2026,
+              "before": 204.0,
+              "after": 204.0
+            },
+            {
+              "key": "2027",
+              "label": "2027-28",
+              "year": 2027,
+              "before": 204.0,
+              "after": 204.0
+            },
+            {
+              "key": "2028",
+              "label": "2028-29",
+              "year": 2028,
+              "before": 204.0,
+              "after": 204.0
+            },
+            {
+              "key": "2029",
+              "label": "2029-30",
+              "year": 2029,
+              "before": 204.0,
+              "after": 204.0
+            },
+            {
+              "key": "2030",
+              "label": "2030-31",
+              "year": 2030,
+              "before": 204.0,
+              "after": 299.045463
+            },
+            {
+              "key": "2031",
+              "label": "2031-32",
+              "year": 2031,
+              "before": 204.0,
+              "after": 300.946641
+            }
+          ],
+          "source": {
+            "before": {
+              "kind": "engine_parameter",
+              "where": "the earnings limit (gov.dwp.carers_allowance.earnings_limit); with the measure, the limit plus the weekly rate (gov.dwp.carers_allowance.rate) divided by the taper rate"
+            },
+            "after": {
+              "kind": "modifier_constant",
+              "where": "budget_measures/carers_allowance_earnings_taper.py carers_allowance_earnings_taper(start_year, taper_rate)"
+            }
+          },
+          "note": "Current law stops the allowance at £1 over the earnings limit (£204 a week, not uprated in the engine); with the measure it falls by £1 for each £1 above the limit"
+        }
+      ]
     }
   }
 }

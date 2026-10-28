@@ -221,19 +221,13 @@ def test_universal_credit_takes_it_all_back_and_tax_leaves_a_loss():
     assert net_after - net_before == pytest.approx(-506.68, abs=0.01)
 
 
-def test_withdrawn_but_still_built_by_its_factory():
-    # Withdrawn on 27 October 2026 (Vahid): its cells by decile rest on
-    # fewer than 10 survey households (#263). Unregistered, out of the
-    # package; its factory still builds it.
-    from uk_budget_data import reforms
-
-    assert CARERS_ALLOWANCE_TAPER_ID not in list_reform_ids()
-    assert get_reform(CARERS_ALLOWANCE_TAPER_ID) is None
-    assert (
-        CARERS_ALLOWANCE_TAPER_ID not in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
-    )
-    measure = reforms._create_carers_allowance_earnings_taper()
+def test_registered_on_budget_day():
+    # Withdrawn on 27 October 2026 (#263, thin cells), registered again on
+    # Budget day once announced (HCWS421), in the package.
+    measure = get_reform(CARERS_ALLOWANCE_TAPER_ID)
+    assert CARERS_ALLOWANCE_TAPER_ID in list_reform_ids()
+    assert CARERS_ALLOWANCE_TAPER_ID in AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
     assert measure.simulation_modifier is carers_allowance_earnings_taper
     assert measure.description.startswith("Candidate measure.")
     combined = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID)
-    assert measure.name not in combined.description
+    assert measure.name in combined.description

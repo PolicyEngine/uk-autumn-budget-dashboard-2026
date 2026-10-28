@@ -212,8 +212,9 @@ def test_the_table_covers_the_eight_package_measures_only(document):
     assert list(document["measures"]) == list(
         registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
     )
-    assert len(document["measures"]) == 8
-    assert registry.CARERS_ALLOWANCE_TAPER_ID not in document["measures"]
+    # Nine on Budget day: the Carer's Allowance taper is registered again
+    assert len(document["measures"]) == 9
+    assert registry.CARERS_ALLOWANCE_TAPER_ID in document["measures"]
     assert registry.LHA_UNFREEZE_ID not in document["measures"]
     assert registry.FUEL_VAT_ID not in document["measures"]
     assert registry.BADR_ID not in document["measures"]
@@ -261,6 +262,7 @@ def test_each_measure_gets_the_display_its_shape_calls_for(document):
         "plan_2_threshold_unfreeze": "path",
         "employer_nics_secondary_threshold_raise": "path",
         "unearned_income_rates_up": "before-after",
+        "carers_allowance_earnings_taper": "path",
     }
 
 

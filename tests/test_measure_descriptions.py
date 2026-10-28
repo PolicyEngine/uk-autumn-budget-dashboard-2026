@@ -164,6 +164,7 @@ DECLARED = {
     "threshold_freeze_2031_32": {"income tax", "National Insurance"},
     # Student loan repayments are not a tax.
     "plan_2_threshold_unfreeze": set(),
+    "carers_allowance_earnings_taper": set(),
     "employer_nics_secondary_threshold_raise": {"National Insurance"},
     "unearned_income_rates_up": {"income tax"},
 }

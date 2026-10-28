@@ -58,6 +58,7 @@ POLICY_IDS = [
     "plan_2_threshold_unfreeze",
     "employer_nics_secondary_threshold_raise",
     "unearned_income_rates_up",
+    "carers_allowance_earnings_taper",
 ]
 
 

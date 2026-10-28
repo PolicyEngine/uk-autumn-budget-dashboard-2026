@@ -57,6 +57,7 @@ CANDIDATES = (
     "plan_2_threshold_unfreeze",
     "employer_nics_secondary_threshold_raise",
     "unearned_income_rates_up",
+    "carers_allowance_earnings_taper",
 )
 # Individual candidates that are not components of the combined package.
 NOT_IN_PACKAGE = ()
@@ -65,6 +66,8 @@ NOT_IN_PACKAGE = ()
 NOT_YET_GENERATED = (
     "employer_nics_secondary_threshold_raise",
     "unearned_income_rates_up",
+    # Registered again on Budget day (HCWS421)
+    "carers_allowance_earnings_taper",
 )
 # Withdrawn on 27 October 2026 (Vahid): out of the registry and the
 # package, so no default command runs or publishes them. Their factories
@@ -74,10 +77,6 @@ WITHDRAWN = {
     "badr_lifetime_limit_cut": reforms._create_badr_lifetime_limit_cut,
     # Withdrawn the same evening, when Vahid chose the ten candidates
     "road_fuel_vat_cut": reforms._create_road_fuel_vat_cut,
-    # Its cells by decile rest on fewer than 10 survey households (#263)
-    "carers_allowance_earnings_taper": (
-        reforms._create_carers_allowance_earnings_taper
-    ),
     # Its cells in deciles 9 and 10 rest on fewer than 10 survey households
     "lha_unfreeze_2027": reforms._create_lha_unfreeze_2027,
 }
@@ -131,14 +130,15 @@ def test_the_package_is_the_eight_candidates():
     from uk_budget_data.geography import manifest_key
     from uk_budget_data.publication.combine import combined_key
 
-    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 8
-    assert len(reforms._MEASURE_FACTORIES) == 8
+    # Nine on Budget day: the eight and the Carer's Allowance taper
+    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 9
+    assert len(reforms._MEASURE_FACTORIES) == 9
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
-    assert key == "combined--894152ce8c83f1d8"
+    assert key == "combined--47727b6baf58047f"
     # The area run's package alias stands for that key
     assert manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     description = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID).description
-    assert description.startswith("All eight candidate measures")
+    assert description.startswith("All nine candidate measures")
 
 
 def test_the_withdrawn_measures_are_not_registered():
@@ -1012,6 +1012,14 @@ FIRST_YEARS = {
         2027,
         "income_tax",
         {"employment_income": 30_000, "dividend_income": 5_000},
+        {},
+    ),
+    # £11,000 of pay, about £211 a week, over the £204 limit: no allowance
+    # under current law, a tapered one from 2030-31
+    "carers_allowance_earnings_taper": (
+        2030,
+        "carers_allowance",
+        {"employment_income": 11_000, "care_hours": 35},
         {},
     ),
 }

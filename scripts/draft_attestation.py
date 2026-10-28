@@ -31,10 +31,22 @@ from uk_budget_data.reforms import (
 )
 
 # Factual reasons only: what was checked, never survey-level values.
-# The employer NI relief for under-25s and the Carer's Allowance earnings
-# taper are withdrawn (27 October 2026) and unregistered, so neither has a
-# reason: nothing drafts them.
+# The employer NI relief for under-25s is withdrawn (27 October 2026) and
+# unregistered, so it has no reason: nothing drafts it. The Carer's
+# Allowance earnings taper, withdrawn that day, was registered again on
+# Budget day (HCWS421).
 REASONS = {
+    "carers_allowance_earnings_taper": (
+        "Checked budget_measures.carers_allowance_earnings_taper: from "
+        "2030-31 it replaces carers_allowance_pre_overlap for carers whose "
+        "weekly net earnings are above the engine's earnings limit with "
+        "the weekly rate less £1 for each £1 of earnings above the limit, "
+        "floored at zero; at or below the limit, before 2030-31 and in "
+        "Scotland (Carer Support Payment) the native amount stands, and "
+        "it adds no take-up draw of its own. The receipt's outputs were "
+        "compared with the hand-computed cases in "
+        "tests/test_carers_allowance_earnings_taper.py."
+    ),
     "plan_2_threshold_unfreeze": (
         "Checked budget_measures.connect_student_loan_repayments, applied "
         "on both sides: it replaces reported Plan 2 repayments with "

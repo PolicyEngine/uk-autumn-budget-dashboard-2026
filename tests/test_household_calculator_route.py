@@ -36,6 +36,7 @@ MEASURE_YEARS = {
     "plan_2_threshold_unfreeze": 2027,
     "employer_nics_secondary_threshold_raise": 2027,
     "unearned_income_rates_up": 2027,
+    "carers_allowance_earnings_taper": 2030,
 }
 # Every measure the calculator shows moves some probe household (employer
 # NI, which moved none, is withdrawn).
