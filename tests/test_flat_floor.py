@@ -2,14 +2,15 @@
 
 ``generate`` without ``--artifacts`` writes the flat national CSVs
 (metrics.csv, age_impact.csv and the decile tables) into public/data by
-default. The page reads none of them, but they are public, so they are held
-to the same floor as an artifact's tables (#285 review, finding 3):
-``pipeline.hold_flat_to_floor``.
+default. The page reads none of them, and #285 removed the committed ones,
+but anything written there is public once committed, so they are held to
+the same floor as an artifact's tables (#285 review, finding 3, and its
+second review): ``pipeline.hold_flat_to_floor`` and
+``pipeline.hold_packages_to_members``.
 """
 
 from types import SimpleNamespace
 
-import numpy as np
 import pytest
 
 from tests.test_disclosure_floor import (
@@ -88,25 +89,61 @@ def test_a_thin_summary_figure_is_an_empty_cell_in_the_flat_metrics(
 
 
 def test_a_year_with_a_thin_decile_has_no_decile_rows(monkeypatch):
-    """Two survey households in the fifth decile gain: the decile tables
-    cannot leave one decile out, so the measure has no decile rows that
-    year; the age table's "all" is thin, so no age row is left; people
-    affected rests on the two and is empty. The other year stays."""
-    baseline, reformed = _with_dataset(monkeypatch, _population({80, 81}))
+    """Two survey households in the fifth decile gain, and 20 in each of
+    the first three: the fifth decile is thin, "all" is not. The measure
+    has no decile rows that year, which leaves out what an artifact
+    withholds (the fifth decile and winners and losers' "all"); its
+    costing, summary figures and other years stay."""
+    changed = {80, 81} | set(range(60))
+    baseline, reformed = _with_dataset(monkeypatch, _population(changed))
     outcome = _outcome(years=(YEAR,))
+    outcome.result.budgetary_impact = [{"year": YEAR, "value": 1.0}]
     outcome.result.distributional_impact += _decile_rows(YEAR + 1)
     outcome.result.winners_losers += _decile_rows(YEAR + 1)
     pipeline.hold_flat_to_floor(outcome, baseline, reformed, None, [YEAR])
     for table in ("distributional_impact", "winners_losers"):
         rows = getattr(outcome.result, table)
         assert {row["year"] for row in rows} == {YEAR + 1}
-    assert outcome.result.age_impact == []
+    assert outcome.result.budgetary_impact == [{"year": YEAR, "value": 1.0}]
     (row,) = outcome.result.metrics
-    assert row["people_affected"] is None
+    assert row["people_affected"] is not None
+    assert outcome.withheld_whole is False
+    assert outcome.withheld_decile_years == {YEAR}
     assert any(
         f"no decile rows for {YEAR}" in line
-        and f"winners_losers {YEAR} (5, all)" in line
+        and f"winners_losers {YEAR} (5)" in line
         for line in outcome.messages
+    )
+
+
+def test_a_thin_all_withholds_every_row_of_the_measure(monkeypatch):
+    """Two survey households gain in all: the measure's whole change, its
+    costing and inequality figures included, rests on them, so none of its
+    rows is written, in any table or year, as the gate never shows such an
+    artifact (#285 second review)."""
+    baseline, reformed = _with_dataset(monkeypatch, _population({80, 81}))
+    outcome = _outcome(years=(YEAR,))
+    outcome.result.budgetary_impact = [{"year": YEAR, "value": 1.0}]
+    outcome.result.income_curve = [{"year": YEAR}]
+    outcome.result.distributional_impact += _decile_rows(YEAR + 1)
+    outcome.age_rows = _age_rows(YEAR)
+    pipeline.hold_flat_to_floor(outcome, baseline, reformed, None, [YEAR])
+    for table in (
+        "budgetary_impact",
+        "distributional_impact",
+        "winners_losers",
+        "metrics",
+        "income_curve",
+        "age_impact",
+    ):
+        assert getattr(outcome.result, table) == [], table
+    assert outcome.age_rows == []
+    assert outcome.withheld_whole is True
+    (line,) = outcome.messages
+    assert line == (
+        f"A: WITHHELD, the whole measure: cells resting on fewer than "
+        f"{FLOOR} survey households: distributional_impact {YEAR} (5, all); "
+        f"winners_losers {YEAR} (5, all); none of its rows is written"
     )
 
 
@@ -125,7 +162,8 @@ def test_nothing_thin_leaves_the_rows_and_says_nothing(monkeypatch):
 
 def test_only_age_impact_withholds_its_thin_age_rows(monkeypatch):
     """``generate --only age_impact`` fills the age rows alone; they are
-    held to the floor too, and no decile is named."""
+    held to the floor too: here the whole measure rests on two survey
+    households, so no age row is left."""
     baseline, reformed = _with_dataset(monkeypatch, _population({80, 81}))
     outcome = pipeline.FlatOutcome(
         reform_id="a", reform_name="A", age_rows=_age_rows(YEAR)
@@ -133,10 +171,35 @@ def test_only_age_impact_withholds_its_thin_age_rows(monkeypatch):
     pipeline.hold_flat_to_floor(outcome, baseline, reformed, None, [YEAR])
     assert outcome.age_rows == []
     (line,) = outcome.messages
-    assert line == (
-        f"A: WITHHELD, resting on fewer than {FLOOR} survey households: "
-        f"age_impact {YEAR} (35-49, all, 40)"
+    assert line.startswith("A: WITHHELD, the whole measure: ")
+
+
+def test_only_age_impact_withholds_a_thin_age_group(monkeypatch):
+    """With no thin decile, the age table's thin groups alone go: one
+    survey household's people are 70, so the 65+ band and its single age
+    are thin, and a thin band leaves only "all" (``withheld_age_labels``);
+    the line names them, never a figure."""
+    baseline, reformed, survey = _population(set(range(0, 200, 2)))
+    age = baseline.arrays["person"]["age"]
+    age[survey == 0] = 70
+    baseline, reformed = _with_dataset(
+        monkeypatch, (baseline, reformed, survey)
     )
+    rows = [
+        {"reform_id": "a", "year": YEAR, "age_band": band, "mean_change": 1.0}
+        for band in ("35-49", "65+", "70", "all", "40")
+    ]
+    outcome = pipeline.FlatOutcome(
+        reform_id="a", reform_name="A", age_rows=rows
+    )
+    pipeline.hold_flat_to_floor(outcome, baseline, reformed, None, [YEAR])
+    assert [row["age_band"] for row in outcome.age_rows] == ["all"]
+    (line,) = outcome.messages
+    assert line.startswith(
+        f"A: WITHHELD, resting on fewer than {FLOOR} survey households: "
+        f"age_impact {YEAR} ("
+    )
+    assert "65+" in line
 
 
 def test_stand_in_simulations_are_said_to_be_unchecked():
@@ -150,9 +213,9 @@ def test_stand_in_simulations_are_said_to_be_unchecked():
     ]
 
 
-def test_survey_households_that_cannot_be_told_apart_are_said_loudly(
-    monkeypatch,
-):
+def _cannot_tell_apart(monkeypatch, certifiable):
+    from uk_budget_data.publication import generate
+
     baseline, reformed, _ = _population({80, 81})
     baseline.dataset = reformed.dataset = _Dataset()
 
@@ -160,11 +223,37 @@ def test_survey_households_that_cannot_be_told_apart_are_said_loudly(
         raise ValueError("no survey ids")
 
     monkeypatch.setattr(pipeline, "scatter_survey_households", cannot)
+    monkeypatch.setattr(generate, "_certifiable", lambda path: certifiable)
+    return baseline, reformed
+
+
+def test_survey_households_that_cannot_be_told_apart_refuse_certifiable_data(
+    monkeypatch,
+):
+    """As generation refuses it (#285 second review): on data that could
+    be certified, the flat run stops rather than write unfloored rows."""
+    baseline, reformed = _cannot_tell_apart(monkeypatch, certifiable=True)
     outcome = _outcome()
-    pipeline.hold_flat_to_floor(outcome, baseline, reformed, None, [YEAR])
-    assert len(outcome.result.winners_losers) == 10
+    with pytest.raises(ValueError, match="cannot be told apart"):
+        pipeline.hold_flat_to_floor(outcome, baseline, reformed, None, [YEAR])
+
+
+def test_survey_households_that_cannot_be_told_apart_write_nothing(
+    monkeypatch,
+):
+    """On uncertified data none of the measure's rows is written (they
+    would land in public/data by default), and it is said loudly."""
+    baseline, reformed = _cannot_tell_apart(monkeypatch, certifiable=False)
+    outcome = _outcome()
+    outcome.age_rows = _age_rows(YEAR)
+    pipeline.hold_flat_to_floor(outcome, baseline, reformed, "x.h5", [YEAR])
+    assert outcome.result.winners_losers == []
+    assert outcome.result.metrics == []
+    assert outcome.age_rows == []
+    assert outcome.withheld_whole is True
     (line,) = outcome.messages
-    assert "NOT HELD TO THE FLOOR" in line and "Never commit" in line
+    assert "NOT HELD TO THE FLOOR" in line
+    assert "none of its rows is written" in line
 
 
 def test_a_flat_unit_holds_its_rows_to_the_floor(monkeypatch):
@@ -200,24 +289,57 @@ def test_a_flat_unit_holds_its_rows_to_the_floor(monkeypatch):
     assert any("WITHHELD" in line for line in outcome.messages)
 
 
-@pytest.mark.parametrize("crossing", [(5,), (5, 6, 7)])
-def test_the_flat_floor_withholds_what_the_artifact_floor_does(
-    monkeypatch, crossing
-):
-    """Differential: on the same simulations, the flat writer and
-    generation withhold the same summary figures and age rows."""
-    from uk_budget_data.publication import generate
+_ORDINALS = {1: "st", 2: "nd", 3: "rd"}
 
-    population = _metrics_population(crossing=crossing, changed=(5, 6))
+
+def _artifact(year):
+    """An artifact's tables as generation holds them, every cell a figure."""
+    named = {"reform_id": "a", "reform_name": "A", "year": year}
+    return SimpleNamespace(
+        household_scatter=[],
+        age_impact=_age_rows(year),
+        metrics=[_summary_row(year)],
+        distributional_impact=[
+            {**named, "decile": f"{n}{_ORDINALS.get(n, 'th')}", "value": 1.0}
+            for n in range(1, 11)
+        ],
+        winners_losers=[
+            {**named, "decile": label, "avg_change": 1.0}
+            for label in [str(n) for n in range(1, 11)] + ["all"]
+        ],
+    )
+
+
+@pytest.mark.parametrize(
+    "crossing, changed",
+    [
+        # A thin poverty change; every household's income moves
+        ((5,), tuple(range(40))),
+        # Enough cross; every household's income moves
+        ((5, 6, 7), tuple(range(40))),
+        # The second decile is thin (two of its four), "all" is not
+        ((5,), (0, 1, 2, 4, 5)),
+        # Only two households change: "all" is thin
+        ((5, 6, 7), (5, 6)),
+    ],
+    ids=["thin-poverty", "nothing-thin", "thin-decile", "thin-all"],
+)
+def test_the_flat_floor_withholds_what_the_artifact_floor_does(
+    monkeypatch, crossing, changed
+):
+    """Differential, on the same simulations: where generation's receipt
+    keeps the artifact from ever being shown (a thin "all"), the flat
+    writer writes none of the measure's rows; otherwise both withhold the
+    same summary figures and age rows, and every decile cell the artifact
+    withholds is absent from the flat rows."""
+    from uk_budget_data.publication import disclosure_floor, generate
+
+    population = _metrics_population(crossing=crossing, changed=changed)
     baseline, reformed = _with_dataset(monkeypatch, population)
     flat = _outcome()
     pipeline.hold_flat_to_floor(flat, baseline, reformed, None, [YEAR])
-    artifact = SimpleNamespace(
-        household_scatter=[],
-        age_impact=_age_rows(YEAR),
-        metrics=[_summary_row(YEAR)],
-    )
-    generate._apply_disclosure_floor(
+    artifact = _artifact(YEAR)
+    _, record = generate._apply_disclosure_floor(
         "a",
         SimpleNamespace(
             dataset_path=None,
@@ -228,6 +350,111 @@ def test_the_flat_floor_withholds_what_the_artifact_floor_does(
         reformed,
         artifact,
     )
+    assert flat.withheld_whole is record["thin_cells_in_tables"]
+    if flat.withheld_whole:
+        assert flat.result.metrics == flat.result.age_impact == []
+        return
     assert flat.result.metrics == artifact.metrics
     assert flat.result.age_impact == artifact.age_impact
-    assert np.any([v is None for v in flat.result.metrics[0].values()])
+    published = {
+        (table, row["year"], disclosure_floor.decile_label(row["decile"]))
+        for table in disclosure_floor.DECILE_TABLES
+        for row in getattr(flat.result, table)
+    }
+    for cell in record["withheld_cells"]:
+        for group in cell["groups"]:
+            assert (cell["table"], cell["year"], group) not in published
+    if changed == (0, 1, 2, 4, 5):
+        assert record["withheld_cells"] and not published
+
+
+def test_a_package_carries_its_members_floor():
+    """A member with no decile rows in a year leaves the package none that
+    year, and a member withheld whole withholds the package whole, so the
+    package less its other members never gives a member's figures back
+    (as a combined artifact inherits its members' cells, #279)."""
+    from uk_budget_data.reforms import AUTUMN_BUDGET_2026_COMBINED_ID
+
+    def outcome(reform_id, years=(YEAR, YEAR + 1)):
+        made = _outcome(years=years)
+        made.reform_id = made.reform_name = reform_id
+        made.result.budgetary_impact = [{"year": y} for y in years]
+        return made
+
+    thin, plain, package = (
+        outcome("thin"),
+        outcome("plain"),
+        outcome(AUTUMN_BUDGET_2026_COMBINED_ID),
+    )
+    other = outcome("combined--plain+thin")
+    thin.withheld_decile_years = {YEAR}
+    lines = pipeline.hold_packages_to_members([package, thin, plain, other])
+    for combined in (package, other):
+        for table in ("distributional_impact", "winners_losers"):
+            rows = getattr(combined.result, table)
+            assert {row["year"] for row in rows} == {YEAR + 1}
+        assert len(combined.result.budgetary_impact) == 2
+    assert {row["year"] for row in plain.result.winners_losers} == {
+        YEAR,
+        YEAR + 1,
+    }
+    assert lines == [
+        f"{AUTUMN_BUDGET_2026_COMBINED_ID}: WITHHELD, no decile rows for "
+        f"{YEAR}, as a member has none",
+        f"combined--plain+thin: WITHHELD, no decile rows for {YEAR}, as a "
+        "member has none",
+    ]
+
+    package = outcome(AUTUMN_BUDGET_2026_COMBINED_ID)
+    plain.withheld_whole = True
+    lines = pipeline.hold_packages_to_members([package, plain])
+    assert package.withheld_whole is True
+    assert package.result.budgetary_impact == []
+    assert package.result.metrics == []
+    assert lines == [
+        f"{AUTUMN_BUDGET_2026_COMBINED_ID}: WITHHELD, the whole package: its "
+        "members plain are withheld whole; none of its rows is written"
+    ]
+    # Nothing withheld: nothing changes, nothing said
+    package, plain = outcome(AUTUMN_BUDGET_2026_COMBINED_ID), outcome("plain")
+    assert pipeline.hold_packages_to_members([package, plain]) == []
+    assert len(package.result.winners_losers) == 20
+
+
+def test_the_flat_run_holds_its_package_to_its_members(monkeypatch):
+    """``DataPipeline.run`` applies the members' floor to the package
+    before it aggregates and saves."""
+    from uk_budget_data.models import DataConfig, Reform
+    from uk_budget_data.reforms import AUTUMN_BUDGET_2026_COMBINED_ID
+
+    def flat_units(reforms, config, dataset_path, tables, runner=None):
+        made = []
+        for reform in reforms:
+            outcome = _outcome(years=(YEAR, YEAR + 1))
+            outcome.reform_id, outcome.reform_name = reform.id, reform.name
+            outcome.result.reform_id = reform.id
+            made.append(outcome)
+        made[1].withheld_decile_years = {YEAR}
+        return made
+
+    saved = {}
+    monkeypatch.setattr(pipeline, "flat_units", flat_units)
+    monkeypatch.setattr(
+        pipeline,
+        "aggregate_results",
+        lambda results, config: {"results": results},
+    )
+    monkeypatch.setattr(
+        pipeline.DataPipeline,
+        "_save_all",
+        lambda self, data: saved.update(data),
+    )
+    reforms = [
+        Reform(id=AUTUMN_BUDGET_2026_COMBINED_ID, name="Package"),
+        Reform(id="thin", name="Thin"),
+    ]
+    pipeline.DataPipeline(reforms, DataConfig(years=[YEAR])).run(
+        skip_input_check=True
+    )
+    package = saved["results"][0]
+    assert {row["year"] for row in package.winners_losers} == {YEAR + 1}
