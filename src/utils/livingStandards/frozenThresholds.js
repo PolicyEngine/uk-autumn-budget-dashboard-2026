@@ -4,9 +4,11 @@
 // threshold that keeps pace with pay stays at 100, a frozen one falls.
 // The thresholds are the current-law values policy_parameters.json carries
 // in its current_law block (uk-budget-data policy-table, the engine's own
-// parameters, whatever the package holds); earnings is the OBR growth in
-// the outlook file (public/data/living_standards_outlook.json).
+// parameters, whatever the package holds); earnings is the OBR October
+// 2026 growth every simulation runs on
+// (src/uk_budget_data/forecast/obr_october_2026.json, Table A.1).
 
+import OCTOBER_2026 from "../../uk_budget_data/forecast/obr_october_2026.json";
 import { fittedAxis } from "../chartTheme";
 import { fyLabel, formatOneDp } from "./outlook";
 
@@ -26,14 +28,21 @@ export function thresholdValues(document, { row }) {
   return Object.fromEntries(found.points.filter((p) => Number.isFinite(p.before)).map((p) => [p.year, p.before]));
 }
 
+const EARNINGS_PARAMETER = "gov.economic_assumptions.yoy_growth.obr.average_earnings";
+
 /**
- * The OBR earnings growth before the measures, as { year: rate } (calendar
- * years, rate a fraction), or null.
+ * The OBR October 2026 earnings growth the runs use, as { year: rate }
+ * (calendar years, rate a fraction), from the forecast file's
+ * "YYYY-01-01.YYYY-12-31" keys; null without it.
  */
-export function earningsGrowth(outlook) {
-  const series = outlook?.forecast?.sections?.flatMap((s) => s.series).find((s) => s.key === "earnings");
-  if (!series?.pre?.length) return null;
-  return Object.fromEntries(series.pre.filter((p) => Number.isFinite(p.value)).map((p) => [Number(p.year), p.value]));
+export function earningsGrowth(forecast = OCTOBER_2026) {
+  const values = forecast?.parameter_changes?.[EARNINGS_PARAMETER]?.values;
+  if (!values) return null;
+  return Object.fromEntries(
+    Object.entries(values)
+      .map(([period, value]) => [Number(period.slice(0, 4)), value])
+      .filter(([year, value]) => Number.isFinite(year) && Number.isFinite(value)),
+  );
 }
 
 /**
@@ -55,8 +64,7 @@ export function earningsIndex(growth) {
  * divided by the earnings index, times 100), so a threshold that keeps
  * pace with pay stays at 100; null when the data is missing.
  */
-export function thresholdRows(document, outlook) {
-  const growth = earningsGrowth(outlook);
+export function thresholdRows(document, growth = earningsGrowth()) {
   const values = THRESHOLDS.map((t) => [t.key, thresholdValues(document, t)]);
   if (!growth || values.some(([, v]) => !v?.[BASE_YEAR])) return null;
   const earnings = earningsIndex(growth);

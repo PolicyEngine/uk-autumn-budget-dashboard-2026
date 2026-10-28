@@ -87,7 +87,7 @@ describe("MethodologyTab", () => {
     expect(screen.queryByRole("heading", { name: "Published measure descriptions" })).toBeNull();
     const model = container.querySelector(`#${METHOD_SECTIONS.model}`);
     const summary = model.querySelector(".section-heading p");
-    expect(summary).toHaveTextContent("What each policy does and how it is modelled is on Policies.");
+    expect(summary).toHaveTextContent("what each policy does and how it is modelled is on Policies.");
     const link = within(summary).getByRole("link", { name: "Policies" });
     expect(link).toHaveAttribute("href", "?tab=policies");
     fireEvent.click(link);

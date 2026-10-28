@@ -32,6 +32,10 @@ from uk_budget_data.publication.combine import (
 from uk_budget_data.reforms import get_reform
 from uk_budget_data.runtime_identity import runtime_identity
 
+# The four candidates withdrawn on Budget day stay fixtures of the
+# calculation's machinery here (tests/conftest.py).
+pytestmark = pytest.mark.usefixtures("pre_budget_registry")
+
 YEAR = 2029
 Child = household_impact.Child
 

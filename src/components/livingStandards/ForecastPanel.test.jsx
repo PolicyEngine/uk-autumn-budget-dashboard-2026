@@ -147,7 +147,7 @@ describe("Forecast changes with one forecast", () => {
     // No sentence repeats its series' name as a verb ("growth growing")
     expect(document.body.textContent).not.toMatch(/growth growing|has [a-z]PI/);
     // How the forecast feeds the figures is in Methodology, one link away
-    expect(screen.getByRole("link", { name: "How these forecasts feed our figures →" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "How these feed our figures →" })).toHaveAttribute(
       "href",
       "?tab=methodology#method-forecast-feed",
     );
@@ -190,7 +190,10 @@ describe("Forecast changes once the Budget forecast is published", () => {
   it("draws both forecasts, March faded and October full, and says the Budget figures use October", async () => {
     chartProps.length = 0;
     await renderForecast(publishedOutlook());
-    expect(screen.getByText(/The Budget figures use the October 2026 forecast\./)).toBeInTheDocument();
+    expect(screen.getByText(/Calendar-year growth in the OBR's/)).toHaveTextContent(
+      "Calendar-year growth in the OBR's March 2026 (opens in a new tab) and October 2026 (opens in a new tab) forecasts. Budget figures use October.",
+    );
+    expect(screen.getByRole("link", { name: /^October 2026 ?\(opens in a new tab\)$/ })).toHaveAttribute("target", "_blank");
     const prices = card(/^Inflation measures$/);
     // The series chips, then the forecast chips
     const forecasts = within(within(prices).getByRole("group", { name: "Forecasts: show or hide" })).getAllByRole("button");

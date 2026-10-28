@@ -166,8 +166,7 @@ function MethodologyTab({ onShowTab }) {
           summary={
             <>
               We run <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink>{" "}on a
-              representative survey of UK households, with and without each policy, for each
-              fiscal year from {yearRange}, and weight the difference up to the whole country.
+              survey of UK households with and without each policy, {yearRange}, weighted to the UK.
             </>
           }
         >
@@ -186,8 +185,7 @@ function MethodologyTab({ onShowTab }) {
           summary={
             <>
               Households from the <SourceLink id="frs_2024_25">Family Resources Survey 2024-25</SourceLink>,
-              built into <SourceLink id="microcosm">Microcosm UK 2024-25</SourceLink>, each weighted
-              to the number of UK households it stands for.
+              built into <SourceLink id="microcosm">Microcosm UK 2024-25</SourceLink>.
             </>
           }
         >
@@ -275,10 +273,8 @@ function MethodologyTab({ onShowTab }) {
           title="Model and policies"
           summary={
             <>
-              <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink>{" "}works out each
-              household&apos;s taxes, benefits and <Term id="netIncome">net income</Term>{" "}under
-              current law, then again with a policy; the difference is the policy&apos;s effect.
-              What each policy does and how it is modelled is on{" "}
+              The model works out each household&apos;s taxes, benefits and{" "}
+              <Term id="netIncome">net income</Term>; what each policy does and how it is modelled is on{" "}
               <ViewLink tab="policies" onShowTab={onShowTab}>
                 Policies
               </ViewLink>
@@ -335,10 +331,8 @@ function MethodologyTab({ onShowTab }) {
           title="Population impact"
           summary={
             <>
-              The charts on{" "}
-              <ViewLink tab="dashboard" onShowTab={onShowTab}>Population impact</ViewLink>{" "}add up
-              every household&apos;s change with its weight, by income, age and area; no household
-              is ever shown on its own.
+              <ViewLink tab="dashboard" onShowTab={onShowTab}>Population impact</ViewLink>{" "}adds up
+              weighted household changes by income, age and area, never one household alone.
             </>
           }
         >
@@ -725,19 +719,19 @@ function MethodologyTab({ onShowTab }) {
           title="Pre-measures forecast"
           summary={
             <>
-              Incomes and poverty under current law, before any policy, on the{" "}
+              Current-law incomes and poverty on{" "}
               <ViewLink tab="outlook" sub="living" onShowTab={onShowTab}>
                 Living standards
               </ViewLink>{" "}
               and{" "}
               <ViewLink tab="outlook" sub="poverty" onShowTab={onShowTab}>
                 Poverty
-              </ViewLink>{" "}
-              tabs, built on the forecast that{" "}
+              </ViewLink>
+              , from the forecast on{" "}
               <ViewLink tab="outlook" sub="forecast" onShowTab={onShowTab}>
                 Forecast changes
-              </ViewLink>{" "}
-              shows.
+              </ViewLink>
+              .
             </>
           }
         >
@@ -755,7 +749,7 @@ function MethodologyTab({ onShowTab }) {
         <MethodSection
           id={METHOD_SECTIONS.limitations}
           title="Limitations"
-          summary="Most charts add up policies run separately, the economic assumptions follow one OBR forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
+          summary="Most charts add up separate policy runs, assumptions follow one OBR forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
         >
           <Topic title="Policies added up" preview="Revenue, decile and age charts · Household scatter · Winners and losers">
             <p className="method-more">

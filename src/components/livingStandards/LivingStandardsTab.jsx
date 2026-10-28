@@ -46,9 +46,9 @@ function ForecastPanel({ forecast, data, onShowTab }) {
           <>
             {later ? (
               <>
-                Calendar-year growth in the <SourceLink source="obr_efo_march_2026" /> and the{" "}
-                <SourceLink source="obr_efo_october_2026" />, published with the Budget, shown for comparison. The
-                Budget figures use the October 2026 forecast.
+                Calendar-year growth in the OBR&apos;s <SourceLink source="obr_efo_march_2026">March 2026</SourceLink>{" "}
+                and <SourceLink source="obr_efo_october_2026">October 2026</SourceLink> forecasts. Budget figures use
+                October.
               </>
             ) : (
               <>
@@ -56,7 +56,7 @@ function ForecastPanel({ forecast, data, onShowTab }) {
               </>
             )}{" "}
             <ViewLink tab="methodology" hash={FORECAST_FEED_ANCHOR} onShowTab={onShowTab}>
-              How these forecasts feed our figures →
+              How these feed our figures →
             </ViewLink>
           </>
         }
