@@ -181,14 +181,16 @@ export function comparisonSentence(rows, obrKind) {
   const gap = (row) => Math.abs(shownDifference(row.pe, row.obr));
   const close = paired.filter((row) => gap(row) <= CLOSE_BN + 1e-9).length;
   const largest = paired.reduce((best, row) => (gap(row) > gap(best) ? row : best));
-  // Counted among the policies with an official figure this year, said
-  // so, as the chart also draws policies without one
-  const withFigure = paired.length === rows.length ? `${paired.length} policies` : `${paired.length} policies with an official figure this year`;
-  const lead = close === paired.length
-    ? `For all ${withFigure} our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`
-    : `For ${close} of the ${withFigure} our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`;
-  if (formatBn(largest.pe) === formatBn(largest.obr)) return `${lead}.`;
-  return `${lead}; the largest gap is ${largest.name} (${formatBn(largest.pe)} vs ${formatBn(largest.obr)}).`;
+  // Counted out of every policy the chart draws, with those it cannot
+  // compare this year said apart, so the count matches the chart
+  const all = rows.length;
+  const lead = close === all
+    ? `For all ${all} policies our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`
+    : `For ${close} of the ${all} policies our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`;
+  const unpaired = all - paired.length;
+  const apart = unpaired > 0 ? `; ${unpaired} ${unpaired === 1 ? "has" : "have"} no comparable official figure this year` : "";
+  if (formatBn(largest.pe) === formatBn(largest.obr)) return `${lead}${apart}.`;
+  return `${lead}; the largest gap is ${largest.name} (${formatBn(largest.pe)} vs ${formatBn(largest.obr)})${apart}.`;
 }
 
 // About this chart: what the two bases are, why the figures differ, sources
@@ -197,7 +199,7 @@ const COMPARISON_INFO = {
     "PolicyEngine's estimate of each policy's effect on the public finances beside the official costing for the same year, in £m under £1bn and £bn above; positive values raise revenue or cut spending. Largest official costing first.",
   how: [
     "PolicyEngine's figures are static, so an official static costing is the like-for-like comparison. Budget 2026's costings give one figure per policy, which for most policies includes behavioural responses, so the card compares with that.",
-    "Shown as a share of the official figure, each official costing is 100% and our figure is its share of it; a policy costed under £50m has no share.",
+    "Our estimate as % of the official costing: each official costing is 100%, and a bar at 90% means our estimate is nine-tenths of it. A policy costed under £50m has no %.",
     "Difference is PolicyEngine minus the official figure.",
   ],
   definitions: [
@@ -334,7 +336,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
       onChange: setScale,
       options: [
         { value: "bn", label: "£bn" },
-        { value: "pct", label: "Our figure as a share of the official one" },
+        { value: "pct", label: "Our estimate as % of the official costing" },
       ],
     },
   ].filter(Boolean);
