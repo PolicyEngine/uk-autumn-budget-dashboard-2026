@@ -2778,11 +2778,18 @@
 }
 
 /* A step's "Other questions": the answers no selected policy reads, under
-   the ones it does, collapsed until opened */
+   the ones it does, collapsed until opened; lined up with the step's boxes */
 .household-step-optional {
-  margin-top: 12px;
+  margin-top: 14px;
+  padding-left: 36px;
 }
 
-.household-step-optional > .household-grid {
-  margin-top: 12px;
+.household-step-optional > .household-grid-step {
+  padding-left: 0;
+}
+
+@media (max-width: 640px) {
+  .household-step-optional {
+    padding-left: 0;
+  }
 }
