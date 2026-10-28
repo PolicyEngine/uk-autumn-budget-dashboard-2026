@@ -29,7 +29,7 @@ import { DEFAULT_SPENDING, SALARY_SOURCE, WIZARD_DEFAULTS, regionalRent } from "
 // The form's answers at their defaults (utils/householdDefaults.js)
 export { WIZARD_DEFAULTS };
 import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
-import ConstituencyField from "./personal/ConstituencyField";
+import LocalAuthorityField from "./personal/LocalAuthorityField";
 import { policyQuestions } from "../utils/householdPolicyFields";
 import { CALCULATOR_ONLY_MEASURES, SAVINGS_INCOME_RATES_ID, withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
@@ -98,14 +98,15 @@ export const FORM_GROUPS = [
   },
   {
     key: "pensions",
-    title: "Pensions",
-    hint: "Pensions paid to you before tax, and pension paid by salary sacrifice.",
+    title: "Pensions and student loan",
+    hint: "Pensions paid to you before tax, pension paid by salary sacrifice, and any student loan.",
     fields: [
       "state_pension_per_year",
       "private_pension_per_year",
       "partner_state_pension_per_year",
       "partner_private_pension_per_year",
       "salary_sacrifice_per_year",
+      "student_loan_plan",
     ],
   },
 ];
@@ -125,10 +126,10 @@ export const REGION_OPTIONS = [
   ["NORTHERN_IRELAND", "Northern Ireland"],
 ];
 
-// The "region" question asks for a constituency (2024 boundaries), which
-// sets the region the calculation reads; the constituency itself is not sent
-const CONSTITUENCY_HINT =
-  "Your constituency sets your region, which the calculation uses: Scotland has its own income tax rates, and the rent and Council Tax estimates and housing support follow the region.";
+// The "region" question asks for a local authority (council), which sets
+// the region the calculation reads; the council itself is not sent
+const LOCAL_AUTHORITY_HINT =
+  "Your council sets your region, which the calculation uses: Scotland has its own income tax rates, and the rent estimate and housing support follow the region. Council Tax is estimated from your band and your region's average Band D, not your own council's rate.";
 
 const YES_NO = [
   { value: false, label: "No" },
@@ -173,6 +174,18 @@ const CHOICE_CONFIGS = {
       { value: "RENT_PRIVATELY", label: "Private landlord" },
       { value: "RENT_FROM_COUNCIL", label: "Council" },
       { value: "RENT_FROM_HA", label: "Housing association" },
+    ],
+  },
+  student_loan_plan: {
+    label: "Student loan plan",
+    layout: "grid",
+    options: [
+      { value: "NONE", label: "No loan" },
+      { value: "PLAN_1", label: "Plan 1", hint: "Started before Sept 2012, or Northern Ireland" },
+      { value: "PLAN_2", label: "Plan 2", hint: "England or Wales, Sept 2012 to July 2023" },
+      { value: "PLAN_4", label: "Plan 4", hint: "Scotland" },
+      { value: "PLAN_5", label: "Plan 5", hint: "England, from Aug 2023" },
+      { value: "POSTGRADUATE", label: "Postgraduate", hint: "Master's or doctoral loan" },
     ],
   },
   council_tax_band: {
@@ -394,7 +407,7 @@ export function stepSummary(fields, { answer, applies, changed, inputs, children
       continue;
     }
     if (id === "region") {
-      if (inputs.constituency) parts.push(inputs.constituency);
+      if (inputs.council) parts.push(inputs.council);
       continue;
     }
     if (id === "care_hours_per_week") continue;
@@ -405,6 +418,9 @@ export function stepSummary(fields, { answer, applies, changed, inputs, children
     if (!changed(id)) continue;
     if (id === "claims_universal_credit") {
       parts.push(inputs[id] ? "Claims Universal Credit" : "Does not claim Universal Credit");
+    } else if (id === "student_loan_plan") {
+      const chosen = CHOICE_CONFIGS[id].options.find((option) => option.value === inputs[id]);
+      parts.push(!chosen || chosen.value === "NONE" ? "No student loan" : `${chosen.label} student loan`);
     } else if (id === "council_tax_band") {
       parts.push(`Band ${inputs[id]}`);
     } else if (id === "tenure" || id === "rent_from") {
@@ -982,15 +998,15 @@ function HouseholdCalculator({
       );
     } else if (id === "region") {
       field = (
-        <ConstituencyField
-          id="constituency"
-          label="Constituency"
-          value={inputs.constituency ?? null}
+        <LocalAuthorityField
+          id="council"
+          label="Local authority"
+          value={inputs.council ?? null}
           regionLabel={regionName(inputs.region)}
-          hint={CONSTITUENCY_HINT}
-          onChange={(seat) => {
+          hint={LOCAL_AUTHORITY_HINT}
+          onChange={(council) => {
             setPresetId(null);
-            setInputs((prev) => ({ ...prev, constituency: seat.name, region: seat.region }));
+            setInputs((prev) => ({ ...prev, council: council.name, region: council.region }));
           }}
         />
       );

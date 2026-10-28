@@ -1,25 +1,25 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { CONSTITUENCIES, exactConstituency, searchConstituencies } from "../../utils/constituencies";
+import { LOCAL_AUTHORITIES, exactLocalAuthority, searchLocalAuthorities } from "../../utils/localAuthorities";
 import { FieldLabel } from "./FormControls";
-import "./ConstituencyField.css";
+import "./LocalAuthorityField.css";
 
 /**
- * A constituency, picked by typing part of its name: an editable combobox
- * with a list of the matching constituencies (the ARIA 1.2 combobox
+ * A local authority (council), picked by typing part of its name: an editable combobox
+ * with a list of the matching local authorities (the ARIA 1.2 combobox
  * pattern). Arrow keys move through the list, Enter picks, Escape closes;
  * leaving the box keeps a name typed in full and otherwise goes back to the
- * constituency picked before. The region the picked constituency lies in
+ * council picked before. The region the picked council lies in
  * shows under the box: it is what the household calculation reads.
  *
  * @param {Object} props
  * @param {string} props.id - The field's id
  * @param {string} props.label
- * @param {string|null} props.value - The picked constituency's name, or null
+ * @param {string|null} props.value - The picked local authority's name, or null
  * @param {string} props.regionLabel - The region in use, as shown ("North West")
- * @param {(seat: {name: string, region: string}) => void} props.onChange
+ * @param {(council: {name: string, key: string, region: string}) => void} props.onChange
  * @param {string} [props.hint] - A note behind the info icon by the label
  */
-export default function ConstituencyField({ id, label, value, regionLabel, onChange, hint }) {
+export default function LocalAuthorityField({ id, label, value, regionLabel, onChange, hint }) {
   const uid = useId();
   const fieldId = `field-${id}`;
   const listId = `${uid}-list`;
@@ -31,10 +31,10 @@ export default function ConstituencyField({ id, label, value, regionLabel, onCha
   const listRef = useRef(null);
   const inputRef = useRef(null);
 
-  // The query as typed; the picked name alone lists every constituency, so
+  // The query as typed; the picked name alone lists every local authority, so
   // reopening the list shows the others
   const matches = useMemo(
-    () => (query === (value ?? "") ? CONSTITUENCIES : searchConstituencies(query)),
+    () => (query === (value ?? "") ? LOCAL_AUTHORITIES : searchLocalAuthorities(query)),
     [query, value],
   );
 
@@ -54,21 +54,21 @@ export default function ConstituencyField({ id, label, value, regionLabel, onCha
   const openList = () => {
     if (open) return;
     setOpen(true);
-    const at = matches.findIndex((seat) => seat.name === value);
+    const at = matches.findIndex((council) => council.name === value);
     setActive(at);
   };
   const close = () => {
     setOpen(false);
     setActive(-1);
   };
-  const pick = (seat) => {
-    setQuery(seat.name);
+  const pick = (council) => {
+    setQuery(council.name);
     close();
-    if (seat.name !== value) onChange(seat);
+    if (council.name !== value) onChange(council);
   };
   // Leaving the box: a full name typed is picked; anything else goes back
   const settle = () => {
-    const typed = exactConstituency(query);
+    const typed = exactLocalAuthority(query);
     if (typed) pick(typed);
     else {
       setQuery(value ?? "");
@@ -111,11 +111,11 @@ export default function ConstituencyField({ id, label, value, regionLabel, onCha
   const describedBy = [regionId, hintId].filter(Boolean).join(" ");
   const activeId = open && active >= 0 && matches[active] ? `${uid}-option-${active}` : undefined;
   return (
-    <div className={`constituency-field ${open ? "is-open" : ""}`.trim()} data-field={id}>
+    <div className={`council-field ${open ? "is-open" : ""}`.trim()} data-field={id}>
       <FieldLabel htmlFor={fieldId} label={label} hint={hint} hintId={hintId} hintAs="tooltip" />
-      <div className="constituency-box">
+      <div className="council-box">
         <svg
-          className="constituency-search-icon"
+          className="council-search-icon"
           width="16"
           height="16"
           viewBox="0 0 24 24"
@@ -138,7 +138,7 @@ export default function ConstituencyField({ id, label, value, regionLabel, onCha
           autoCapitalize="words"
           spellCheck={false}
           enterKeyHint="done"
-          placeholder={`Search ${CONSTITUENCIES.length} constituencies`}
+          placeholder={`Search ${LOCAL_AUTHORITIES.length} local authorities`}
           aria-autocomplete="list"
           aria-expanded={open}
           aria-controls={listId}
@@ -157,7 +157,7 @@ export default function ConstituencyField({ id, label, value, regionLabel, onCha
         />
         <button
           type="button"
-          className="constituency-toggle"
+          className="council-toggle"
           tabIndex={-1}
           aria-label={open ? "Close the list" : "Show the list"}
           aria-controls={listId}
@@ -190,40 +190,40 @@ export default function ConstituencyField({ id, label, value, regionLabel, onCha
           id={listId}
           ref={listRef}
           role="listbox"
-          aria-label={`${label}s`}
-          className="constituency-list"
+          aria-label="Local authorities"
+          className="council-list"
           hidden={!open}
         >
           {open &&
-            matches.map((seat, index) => (
+            matches.map((council, index) => (
               <li
-                key={seat.name}
+                key={council.name}
                 id={`${uid}-option-${index}`}
                 data-index={index}
                 role="option"
                 aria-selected={index === active}
-                className={`constituency-option ${index === active ? "is-active" : ""} ${
-                  seat.name === value ? "is-picked" : ""
+                className={`council-option ${index === active ? "is-active" : ""} ${
+                  council.name === value ? "is-picked" : ""
                 }`.trim()}
                 onMouseDown={(event) => event.preventDefault()}
                 onMouseMove={() => index !== active && setActive(index)}
-                onClick={() => pick(seat)}
+                onClick={() => pick(council)}
               >
-                {seat.name}
+                {council.name}
               </li>
             ))}
           {open && matches.length === 0 && (
-            <li className="constituency-empty" role="presentation">
-              No constituency matches
+            <li className="council-empty" role="presentation">
+              No local authority matches
             </li>
           )}
         </ul>
       </div>
-      <p className="field-hint constituency-region" id={regionId}>
-        {value ? regionLabel : `${regionLabel}, until you pick a constituency`}
+      <p className="field-hint council-region" id={regionId}>
+        {value ? regionLabel : `${regionLabel}, until you pick your council`}
       </p>
       <span className="visually-hidden" aria-live="polite">
-        {open ? `${matches.length} ${matches.length === 1 ? "constituency" : "constituencies"}` : ""}
+        {open ? `${matches.length} ${matches.length === 1 ? "local authority" : "local authorities"}` : ""}
       </span>
     </div>
   );

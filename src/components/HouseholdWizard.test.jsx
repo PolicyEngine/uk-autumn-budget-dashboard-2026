@@ -14,7 +14,7 @@ const field = (id) => document.querySelector(`[data-row="${id}"]`);
 /** The questions shown, in order. */
 const fields = () => [...document.querySelectorAll(".household-field")].map((row) => row.dataset.row);
 /** The steps after You and Household, each closed at first. */
-const DETAIL_GROUPS = ["Spending", "Savings and other income", "Council Tax", "Benefits and loans", "Pensions"];
+const DETAIL_GROUPS = ["Spending", "Savings and other income", "Council Tax", "Benefits and loans", "Pensions and student loan"];
 /** A numbered step's heading button, by its title ("Step 4: Savings and other income"). */
 const groupToggle = (title) => screen.getByRole("button", { name: new RegExp(`^Step \\d+: ${title}$`) });
 /** A closed step's one line: the answers that differ from the typical ones. */
@@ -54,15 +54,15 @@ const value = (name) => {
   const input = box(name);
   return input.type === "number" ? Number(input.value) : parseAmount(input.value);
 };
-const seatBox = () => screen.getByRole("combobox", { name: "Constituency" });
-/** Pick a constituency by typing its name and choosing it from the list. */
-const pickSeat = (name) => {
-  fireEvent.focus(seatBox());
-  fireEvent.change(seatBox(), { target: { value: name } });
+const councilBox = () => screen.getByRole("combobox", { name: "Local authority" });
+/** Pick a local authority by typing its name and choosing it from the list. */
+const pickCouncil = (name) => {
+  fireEvent.focus(councilBox());
+  fireEvent.change(councilBox(), { target: { value: name } });
   fireEvent.click(within(screen.getByRole("listbox", { name: (label) => label !== "Households" })).getByRole("option", { name }));
 };
-/** The region the constituency sets, as shown under it. */
-const regionShown = () => document.getElementById("region-constituency").textContent;
+/** The region the council sets, as shown under it. */
+const regionShown = () => document.getElementById("region-council").textContent;
 const cards = () => screen.getByRole("region", { name: "Choose a household" });
 const examples = cards;
 // A card in the grid, or, once a household is chosen and the cards fold
@@ -112,7 +112,7 @@ describe("the personal impact form", () => {
       "Step 4: Savings and other income",
       "Step 5: Council Tax",
       "Step 6: Benefits and loans",
-      "Step 7: Pensions",
+      "Step 7: Pensions and student loan",
     ]);
     expect(FORM_GROUPS).toHaveLength(7);
     // After You and Household, each closed at first; with every answer
@@ -145,12 +145,11 @@ describe("the personal impact form", () => {
       "is_carer",
       "private_pension_per_year",
       "salary_sacrifice_per_year",
+      "student_loan_plan",
     ]);
-    // No student loan question (Vahid, 28 October)
-    expect(field("student_loan_plan")).toBeNull();
     expect(value("Age")).toBe(30);
-    expect(seatBox()).toHaveValue("");
-    expect(regionShown()).toBe("North West, until you pick a constituency");
+    expect(councilBox()).toHaveValue("");
+    expect(regionShown()).toBe("North West, until you pick your council");
     expect(chosen("Partner")).toBe("No");
     expect(chosen("Housing")).toBe("Rent");
     expect(chosen("Rent from")).toBe("Private landlord");
@@ -168,13 +167,13 @@ describe("the personal impact form", () => {
     fireEvent.change(box("Self-employment or side income"), { target: { value: "3,000" } });
     choose("Council tax band", "B");
     choose("Carer", "Yes");
-    fireEvent.change(box("Salary sacrifice pension"), { target: { value: "1,000" } });
+    choose("Student loan plan", "Plan 2");
     for (const title of DETAIL_GROUPS) fireEvent.click(groupToggle(title));
     expect(stepLine("Spending")).toBe("Petrol £1,200 a year");
     expect(stepLine("Savings and other income")).toBe("Dividends £2,000 a year · Self-employment or side income £3,000 a year");
     expect(stepLine("Council Tax")).toBe("Band B");
     expect(stepLine("Benefits and loans")).toBe("Carer, 35 hours a week");
-    expect(stepLine("Pensions")).toBe("Salary sacrifice pension £1,000 a year");
+    expect(stepLine("Pensions and student loan")).toBe("Plan 2 student loan");
     expect(groupToggle("Spending")).toHaveAccessibleDescription("Petrol £1,200 a year");
   });
 
@@ -199,8 +198,8 @@ describe("the personal impact form", () => {
     fireEvent.click(screen.getByRole("button", { name: "Age: 1 more" }));
     expect(value("Age")).toBe(31);
     expect(screen.queryByRole("button", { name: /^Salary in 2026: £/ })).toBeNull();
-    pickSeat("Holborn and St Pancras");
-    expect(seatBox()).toHaveValue("Holborn and St Pancras");
+    pickCouncil("Camden");
+    expect(councilBox()).toHaveValue("Camden");
     expect(regionShown()).toBe("London");
     // The rent follows the region until it is changed
     expect(value("Rent")).toBe(REGIONAL_RENT.LONDON);
@@ -228,6 +227,7 @@ describe("the personal impact form", () => {
     expect(box("Rent")).toHaveAccessibleDescription(/average private rent in North West/);
     expect(screen.getByRole("button", { name: "About Rent" })).toBeInTheDocument();
     openMore();
+    expect(chosen("Student loan plan")).toBe("No loan");
     expect(value("Petrol")).toBe(DEFAULT_SPENDING.petrol);
     // The form's info icons are the dashboard's one InfoTip: lucide's Info,
     // its note in the shared white tip card, opened on focus or a tap
@@ -308,16 +308,20 @@ describe("the personal impact form", () => {
     expect(value("Private or workplace pension")).toBe(0);
     expect(field("partner_private_pension_per_year")).toBeNull();
     expect(field("council_tax_band")).not.toBeNull();
-    pickSeat("Belfast South and Mid Down");
+    pickCouncil("Belfast");
     expect(field("council_tax_band")).toBeNull();
   });
 
-  it("asks no student loan question, though the request still sends the plan (none)", () => {
+  it("asks the loan plan, never the balance, with the chosen plan's note", () => {
     renderForm();
     openMore();
-    expect(field("student_loan_plan")).toBeNull();
-    expect(screen.queryByRole("combobox", { name: "Student loan plan" })).toBeNull();
-    expect(buildHouseholdRequest(WIZARD_DEFAULTS, { year: 2027, policies: [] }).household.student_loan_plan).toBe("NONE");
+    const plans = within(select("Student loan plan"))
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    expect(plans).toEqual(["No loan", "Plan 1", "Plan 2", "Plan 4", "Plan 5", "Postgraduate"]);
+    choose("Student loan plan", "Plan 2");
+    expect(chosen("Student loan plan")).toBe("Plan 2");
+    expect(select("Student loan plan")).toHaveAccessibleDescription("England or Wales, Sept 2012 to July 2023");
   });
 
   it("asks for the State Pension only at State Pension age, prefilled with the full rate", () => {
@@ -574,6 +578,7 @@ describe("the personal impact form", () => {
       expect(chosen("Partner")).toBe(expected.partner);
       expect(chosen("Children")).toBe(expected.children);
       openMore();
+      expect(chosen("Student loan plan")).toBe("No loan");
       expect(chosen("Carer")).toBe(expected.caring);
       unmount();
     }
@@ -650,7 +655,7 @@ describe("the selected policies' questions", () => {
     "Step 4: Savings and other income",
     "Step 5: Council Tax",
     "Step 6: Benefits and loans",
-    "Step 7: Pensions",
+    "Step 7: Pensions and student loan",
   ];
 
   it("puts the answers the selected policies read first in each step, the rest under Other questions", () => {
@@ -673,8 +678,8 @@ describe("the selected policies' questions", () => {
     expect(asked("Benefits and loans")).toEqual(["is_carer"]);
     // No selected policy reads the pensions step's answers under State
     // Pension age: all of them, with no Other questions
-    expect(asked("Pensions")).toEqual(["private_pension_per_year", "salary_sacrifice_per_year"]);
-    expect(otherToggle("Pensions")).toBeNull();
+    expect(asked("Pensions and student loan")).toEqual(["private_pension_per_year", "salary_sacrifice_per_year", "student_loan_plan"]);
+    expect(otherToggle("Pensions and student loan")).toBeNull();
     // The rest, collapsed in their own step until opened
     expect(otherToggle("Spending")).toBeNull();
     const savingsOther = otherToggle("Savings and other income");
@@ -710,12 +715,13 @@ describe("the selected policies' questions", () => {
     fireEvent.change(box("Age"), { target: { value: "70" } });
     expect(groups()).toEqual(SEVEN_STEPS);
     openSteps();
-    expect(asked("Pensions")).toEqual(["state_pension_per_year", "private_pension_per_year"]);
-    fireEvent.click(otherToggle("Pensions"));
-    expect(asked("Pensions")).toEqual([
+    expect(asked("Pensions and student loan")).toEqual(["state_pension_per_year", "private_pension_per_year"]);
+    fireEvent.click(otherToggle("Pensions and student loan"));
+    expect(asked("Pensions and student loan")).toEqual([
       "state_pension_per_year",
       "private_pension_per_year",
       "salary_sacrifice_per_year",
+      "student_loan_plan",
     ]);
   });
 
