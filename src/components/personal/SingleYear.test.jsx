@@ -408,7 +408,7 @@ describe("the household calculation, from the fixture", () => {
     // Not entered by the reader: marked as assumed, with what it does
     expect(box("Spending a year").querySelector("dt")).toHaveTextContent("Spending a year (assumed, ONS average)");
     expect(tipOf("Spending a year")).toBe(
-      "Fuel and electricity policies scale with what you spend; change these in More details to match your household.",
+      "Fuel and electricity policies scale with what you spend; change these in the Spending step to match your household.",
     );
     // Whose result it is, in one line under the figure
     // No chip row of household facts: the details are in About this result
@@ -575,14 +575,14 @@ describe("Calculate", () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     // An example card shows its result without Calculate, and hides it
-    fireEvent.click(householdItem(/(^|: )A graduate on £35,000/));
+    fireEvent.click(householdItem(/(^|: )A carer working part time/));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
-    expect(household[0].household.age).toBe(27);
+    expect(household[0].household.age).toBe(50);
     // Your household opens the form with its answers, and Calculate, to
     // change one and calculate again; the example's result goes
     fireEvent.click(householdItem(/^Your household/));
     expect(headlineCard()).toBeNull();
-    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(27);
+    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(50);
     expect(calculateButton()).toBeEnabled();
     // An edit brings Calculate back, and asks nothing on its own
     const before = household.length;
@@ -637,7 +637,7 @@ describe("an example card", () => {
     expect(document.activeElement).toBe(screen.getByRole("region", { name: "Results" }));
     // Every card: another one scrolls again
     scrollIntoView.mockClear();
-    fireEvent.click(householdItem(/(^|: )A graduate on £35,000/));
+    fireEvent.click(householdItem(/(^|: )A carer working part time/));
     // (the first scroll's own settling re-check is instant, so only smooth ones count)
     await waitFor(() => expect(smooth()).toHaveLength(1));
     expect(smooth()[0][0]).toEqual({ top: 1500 - 16, behavior: "smooth" });
@@ -689,7 +689,7 @@ describe("an example card", () => {
     // Lower down, with reduced motion: an instant scroll
     rect.mockReturnValue({ top: 1500, bottom: 1900, height: 400 });
     motion(true);
-    fireEvent.click(householdItem(/(^|: )A graduate on £35,000/));
+    fireEvent.click(householdItem(/(^|: )A carer working part time/));
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
     expect(scrollIntoView.mock.calls[0][0]).toEqual({ top: 1500 - 16, behavior: "auto" });
     window.scrollTo = originalScrollTo;
@@ -729,7 +729,7 @@ describe("switching from one household's card to another", () => {
     renderTab();
     // Example A: its headline arrives; its split by policy and sweep are
     // still out when the reader moves on
-    fireEvent.click(card("A graduate on £35,000"));
+    fireEvent.click(card("A carer working part time"));
     await waitFor(() => expect(held).toHaveLength(1));
     held[0].release(1111);
     await waitFor(() => expect(headlineCard()).toHaveTextContent("+£1,111"));
@@ -751,12 +751,12 @@ describe("switching from one household's card to another", () => {
   });
 
   it("from an example to Your household: the form opens with the example's answers, the example's result goes, Calculate gives Your household's own", async () => {
-    serve((body) => json(answerWith(body, body.household.age === 27 ? 1111 : 3333)));
+    serve((body) => json(answerWith(body, body.household.age === 50 ? 1111 : 3333)));
     renderTab();
-    fireEvent.click(card("A graduate on £35,000"));
+    fireEvent.click(card("A carer working part time"));
     await waitFor(() => expect(headlineCard()).toHaveTextContent("+£1,111"));
     fireEvent.click(card("Your household"));
-    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(27);
+    expect(screen.getByRole("spinbutton", { name: "Age" })).toHaveValue(50);
     expect(headlineCard()).toBeNull();
     expect(screen.queryByText("+£1,111", { selector: ".result-change-value" })).toBeNull();
     // A changed answer and Calculate: the new result
@@ -801,7 +801,7 @@ describe("the examples' precomputed results", () => {
       { wrapper: PublishedMeasures },
     );
     await waitFor(() => expect(fetch).toHaveBeenCalled());
-    fireEvent.click(householdItem(/(^|: )A graduate on £35,000/));
+    fireEvent.click(householdItem(/(^|: )A carer working part time/));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
     await splitShown();
   }
@@ -1099,7 +1099,7 @@ describe("an unavailable household calculation", () => {
     expect(panel).not.toHaveTextContent("£0");
     expect(screen.queryByText(HEADLINE)).toBeNull();
     expect(screen.queryByRole("region", { name: "Your household's results" })).toBeNull();
-    expect(screen.getByRole("heading", { name: /^More details/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Step 3: Spending$/ })).toBeInTheDocument();
     expect(household.length).toBeGreaterThan(0);
   });
 });
@@ -1446,9 +1446,9 @@ describe("the assumed-spending caution", () => {
 
   it("calls spending assumed at the prefilled averages or an example's figure, not once the reader enters their own", () => {
     expect(spendingAssumed(WIZARD_DEFAULTS, null)).toBe("average");
-    expect(spendingAssumed(WIZARD_DEFAULTS, "driver")).toBe("average");
+    expect(spendingAssumed(WIZARD_DEFAULTS, "saver")).toBe("average");
     const own = { ...WIZARD_DEFAULTS, petrol_spending_per_year: 2600 };
-    expect(spendingAssumed(own, "driver")).toBe("example");
+    expect(spendingAssumed(own, "saver")).toBe("example");
     expect(spendingAssumed(own, null)).toBeNull();
   });
 });

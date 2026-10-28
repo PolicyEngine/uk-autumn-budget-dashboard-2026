@@ -27,6 +27,7 @@ import {
   bandLabel,
   changeBandLabel as describeChangeBand,
   changeBandMiddle,
+  changeKind,
   openEdge,
   SCATTER_BINS,
 } from "./publication/scatter";
@@ -178,6 +179,18 @@ export function scatterView({ data, selectedIds, policyIds, year, packageKey = n
         changeBandUpper: row.change_band_upper,
       }));
   const points = cellsIn(year);
+  // A combined run that shows no change while one of its policies' own runs
+  // moves households that year is not the selection's result: say the
+  // combination is not published, never that nothing changes
+  const moves = (row) => row.year === year && row.households > 0 && changeKind(row.change_band, row.change_band_upper) !== "zero";
+  if (
+    choice.kind === "package" &&
+    points.length > 0 &&
+    !data.rows.some((row) => row.reform_id === choice.reform && moves(row)) &&
+    data.rows.some((row) => choice.members.includes(row.reform_id) && moves(row))
+  ) {
+    return notice(SCATTER_SELECTION_NOT_PUBLISHED);
+  }
   if (points.length === 0) {
     return notice(
       `No household results are published for this policy in ${fiscalYearLabel(year)}.`,

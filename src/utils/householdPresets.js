@@ -19,6 +19,7 @@ import {
   normaliseHouseholdImpact,
   requestKey,
 } from "./householdImpactApi";
+import { withCalculatorOnly } from "./calculatorOnlyMeasures";
 
 export const PRESETS_FILE = "household_presets.json";
 
@@ -31,6 +32,14 @@ export const PRESETS_FILE = "household_presets.json";
  * (#136); any other request goes to the live API.
  */
 const sameSet = (a, b) => a.length === b.length && a.every((id) => b.includes(id));
+
+/**
+ * The measures an example's request is for: `policies`, then any
+ * calculator-only measure the example turns on (the saver's savings rise,
+ * calculatorOnlyMeasures.js). The file's `policies` stay the published
+ * ones; such an example's entries are for these.
+ */
+export const presetPolicies = (preset, policies) => withCalculatorOnly(policies, preset?.calculatorOnly ?? []);
 
 /** An example's answers, as choosing it fills the form. */
 export const presetInputs = (preset) => ({ ...WIZARD_DEFAULTS, ...preset.inputs });
@@ -45,7 +54,7 @@ export function presetRequests(policies) {
       year,
       request: buildHouseholdRequest(presetInputs(preset), {
         year,
-        policies,
+        policies: presetPolicies(preset, policies),
         include: ["by_policy", "sweep"],
       }),
     })),
@@ -63,10 +72,10 @@ function currentEntries(file, policies = file?.policies ?? []) {
   return file.entries.flatMap((entry) => {
     const preset = byId.get(entry.preset_id);
     if (!preset || !entry.response) return [];
-    const asked = buildHouseholdRequest(presetInputs(preset), { year: entry.year, policies: file.policies });
+    const asked = buildHouseholdRequest(presetInputs(preset), { year: entry.year, policies: presetPolicies(preset, file.policies) });
     if (requestKey(asked) !== requestKey(entry.request)) return [];
     // Keyed as the page asks: its own order of the same measures
-    const key = requestKey(buildHouseholdRequest(presetInputs(preset), { year: entry.year, policies }));
+    const key = requestKey(buildHouseholdRequest(presetInputs(preset), { year: entry.year, policies: presetPolicies(preset, policies) }));
     return [{ key, entry }];
   });
 }

@@ -11,6 +11,7 @@ import {
   personalSeriesProblems,
   PROVISIONAL_LABEL,
   provisionalLabel,
+  provisionalNotice,
   publicationLabel,
 } from "./manifest";
 import { fixtureJson } from "../../test/publicationFixture";
@@ -344,6 +345,17 @@ describe("availability", () => {
     expect(provisionalLabel(edited((copy) => {
       copy.updated_at = "not a date";
     }))).toBe(PROVISIONAL_LABEL);
+  });
+
+  it("shows the candidate notice before the Budget and no notice for statement figures", () => {
+    expect(provisionalNotice(raw)).toBe(CANDIDATE_PROVISIONAL_LABEL);
+    expect(provisionalNotice(edited((copy) => {
+      copy.updated_at = "2026-10-28T13:05:00+00:00";
+    }))).toBe("");
+    expect(provisionalNotice(edited((copy) => {
+      copy.basis.forecast.status = "updated";
+    }))).toBe("");
+    expect(provisionalNotice(undefined)).toBe("");
   });
 });
 

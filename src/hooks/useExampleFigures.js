@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { withCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { SELECTABLE_YEARS } from "../utils/displayYears";
 import {
   DefinitionMismatchError,
@@ -245,7 +246,12 @@ export default function useExampleFigures({
       const asks = [];
       for (const y of years) {
         for (const example of examples) {
-          const key = exampleKey(example.inputs, { year: y, policies: used, publicationKey });
+          // An example that turns on a calculator-only measure (the saver)
+          // is asked with it, as choosing it asks. Only the selected
+          // measures have approved definitions to check: a calculator-only
+          // one has no published figures (calculatorOnlyMeasures.js)
+          const own = withCalculatorOnly(used, example.calculatorOnly ?? []);
+          const key = exampleKey(example.inputs, { year: y, policies: own, publicationKey });
           const approved = approvedFor(used);
           const net =
             peekHouseholdImpact(key, expectedEngine, approved, used)?.net ??
@@ -254,7 +260,7 @@ export default function useExampleFigures({
           if (net) put(example.id, y, net);
           else {
             pending.add(`${example.id}:${y}`);
-            asks.push({ example, year: y, key });
+            asks.push({ example, year: y, key, own });
           }
         }
       }
@@ -267,11 +273,11 @@ export default function useExampleFigures({
     // One cell: its headline, checked, cached and stored. A refusal of
     // measures the API does not know is thrown for the caller; any other
     // failure leaves the cell to "Calculated when chosen"
-    const ask = async ({ example, year: y, key }) => {
+    const ask = async ({ example, year: y, key, own }) => {
       const cell = `${example.id}:${y}`;
       try {
         const asked = used;
-        const body = buildHouseholdRequest(example.inputs, { year: y, policies: asked, include: HEADLINE_INCLUDE });
+        const body = buildHouseholdRequest(example.inputs, { year: y, policies: own, include: HEADLINE_INCLUDE });
         // The detail URL's answer is taken only if it passes the checks;
         // otherwise the main API is asked, and its answer checked in turn
         const accept = (answer) => {

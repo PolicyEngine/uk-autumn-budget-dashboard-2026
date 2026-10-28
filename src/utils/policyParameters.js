@@ -25,18 +25,21 @@ const MONTH_NAMES = [
 const trimmed = (value, digits) =>
   value.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: digits });
 
-/** A value in its unit: "5%", "52.95p", "£30,267"; none is "none". */
+/** A value in its unit: "5%", "52.95p", "35p", "£13.21", "£30,267"; none is "none". */
 export function formatValue(value, unit) {
   if (value === null || value === undefined) return "none";
   if (unit === "percent") return `${trimmed(value * 100, 2)}%`;
   if (unit === "pence_per_litre") return `${value.toFixed(2)}p`;
+  if (unit === "pence") return `${trimmed(value, 2)}p`;
+  if (unit === "gbp_pence") return `£${value.toFixed(2)}`;
   return `£${Math.round(value).toLocaleString("en-GB")}`;
 }
 
 /** The size of a change, unsigned, in its unit: "£1,130", "6.8p". */
 export function formatSize(before, after, unit) {
   const size = Math.abs((after ?? 0) - (before ?? 0));
-  if (unit === "pence_per_litre") return `${trimmed(size, 2)}p`;
+  if (unit === "pence_per_litre" || unit === "pence") return `${trimmed(size, 2)}p`;
+  if (unit === "gbp_pence") return `£${size.toFixed(2)}`;
   return `£${Math.round(size).toLocaleString("en-GB")}`;
 }
 
@@ -55,7 +58,7 @@ export function formatChange(before, after, unit) {
 const same = (a, b) => (a ?? null) === (b ?? null) || (a != null && b != null && Math.abs(a - b) < 1e-9);
 export const differs = (item) => !same(item.before, item.after);
 
-export const DISPLAYS = ["switch", "before-after", "path", "schedule", "table"];
+export const DISPLAYS = ["switch", "before-after", "path", "schedule", "table", "pairs"];
 
 /**
  * A measure's entry ({ display, rows }), or null: none unless the file
@@ -139,6 +142,80 @@ export function segmentsFor(row) {
     .map((segment) => ({ ...segment, from: yearOfMonth(segment.start), to: yearOfMonth(segment.end - 1e-6) }));
 }
 
+// --- Periods ---------------------------------------------------------------
+
+const previousDay = (isoDate) => {
+  const day = new Date(`${isoDate}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() - 1);
+  return day.toISOString().slice(0, 10);
+};
+
+/**
+ * A period in words, from its first day to its last: "1 January to 28
+ * February 2027", "1 to 31 March 2027", "1 July 2027 to 31 March 2028";
+ * "To 31 December 2026" where it opens the timeline (no `first`).
+ */
+export function periodLabel(first, last) {
+  const parts = (iso) => {
+    const [year, month, day] = iso.split("-").map(Number);
+    return { year, month: MONTH_NAMES[month - 1], day };
+  };
+  const b = parts(last);
+  const end = `${b.day} ${b.month} ${b.year}`;
+  if (!first) return `To ${end}`;
+  const a = parts(first);
+  if (a.year !== b.year) return `${a.day} ${a.month} ${a.year} to ${end}`;
+  if (a.month !== b.month) return `${a.day} ${a.month} to ${end}`;
+  return `${a.day} to ${end}`;
+}
+
+/**
+ * A dated schedule as periods (PR 290, Anthony, 19:37): each period the
+ * measure differs from current law, with the period either side where it
+ * does not, so the table shows when the rate holds and when it returns to
+ * current law. Each period runs to the day before the next date; the
+ * timeline's first day opens the first ("To ..."). Rates actually in
+ * force, never averages.
+ */
+export function schedulePeriods(row) {
+  const points = [...(row?.points ?? [])].filter(isDated).sort((a, b) => a.key.localeCompare(b.key));
+  const changed = points.map(differs);
+  const first = changed.indexOf(true);
+  if (first < 0) return [];
+  const last = changed.lastIndexOf(true);
+  const from = Math.max(first - 1, 0);
+  const to = Math.min(last + 1, points.length - 1);
+  return points.slice(from, to + 1).map((point, offset) => {
+    const i = from + offset;
+    const next = points[i + 1];
+    const opensTimeline = i === 0;
+    const label = next
+      ? periodLabel(opensTimeline ? null : point.key, previousDay(next.key))
+      : `From ${point.label}`;
+    return { ...point, label };
+  });
+}
+
+/**
+ * The lines of a measure's changes, one per parameter where its change is
+ * the same in every period it applies (PR 290, Anthony, 19:36: a rate the
+ * same from 2027-28 to 2031-32 is said once), else one per period.
+ */
+export function changeLines(rows) {
+  return rows.flatMap((row) => {
+    const points = row.points ?? [];
+    const moved = points.filter(differs);
+    if (!moved.length) return [];
+    const unbroken = points.indexOf(moved[moved.length - 1]) - points.indexOf(moved[0]) === moved.length - 1;
+    const once = unbroken && moved.every((point) => same(point.before, moved[0].before) && same(point.after, moved[0].after));
+    if (once && moved.length > 1) {
+      const span = `${moved[0].label} to ${moved[moved.length - 1].label}`;
+      return [{ ...moved[0], key: `${row.label}|${moved[0].key}`, label: row.label, unit: row.unit, period: span }];
+    }
+    return moved.map((point) => ({ ...point, key: `${row.label}|${point.key}`, label: row.label, unit: row.unit, period: point.label }));
+  });
+}
+
 // --- Words -----------------------------------------------------------------
 
 /** A step in words, for the plot's tooltip and its text alternative. */
@@ -167,4 +244,34 @@ export function loadPolicyParameters({ fetchImpl = globalThis.fetch, base = proc
 /** For tests: forget the loaded file. */
 export function resetPolicyParameters() {
   cached = undefined;
+}
+
+/**
+ * Each measure's scored years, from the file: { id: { first, last } }, the
+ * first and last fiscal year (its start) in which any of its parameters
+ * differs from current law. A measure with no changed year is left out.
+ */
+export function measureWindows(document) {
+  const windows = {};
+  for (const [id, entry] of Object.entries(document?.measures ?? {})) {
+    const years = (entry?.rows ?? [])
+      .flatMap((row) => row?.points ?? [])
+      .filter((point) => differs(point))
+      .map((point) => (Number.isFinite(point.year) ? point.year : Number(String(point.key ?? "").slice(0, 4))))
+      .filter(Number.isFinite);
+    if (years.length) windows[id] = { first: Math.min(...years), last: Math.max(...years) };
+  }
+  return windows;
+}
+
+/**
+ * What a measure is in `year` when it is not in force then: "Starts
+ * 2030-31" before its first year, "Ended 2029-30" after its last, "2026-27
+ * only" for a one-year measure; null in its years or without a window.
+ * `label` writes a year (start year) as "2030-31".
+ */
+export function outOfForceText(window, year, label) {
+  if (!window || !Number.isFinite(year) || (year >= window.first && year <= window.last)) return null;
+  if (window.first === window.last) return `${label(window.first)} only`;
+  return year < window.first ? `Starts ${label(window.first)}` : `Ended ${label(window.last)}`;
 }

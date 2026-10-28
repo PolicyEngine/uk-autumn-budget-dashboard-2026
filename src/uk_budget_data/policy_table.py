@@ -31,17 +31,27 @@ from __future__ import annotations
 import importlib.metadata
 import inspect
 import json
+import math
 import re
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Callable, Optional
 
 from uk_budget_data import reforms as registry
+from uk_budget_data.budget_measures import (
+    zero_vat_on_domestic_electricity as _electricity,
+)
 from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
     carers_allowance_earnings_taper,
 )
 from uk_budget_data.budget_measures.employer_ni_relief_ages_21_to_24 import (
     employer_ni_relief_ages_21_to_24,
+)
+from uk_budget_data.budget_measures.household_energy_payment_2026 import (
+    household_energy_payment_2026,
+)
+from uk_budget_data.budget_measures.pension_tax_allowance import (
+    pension_tax_allowance,
 )
 from uk_budget_data.budget_measures.road_fuel_vat_cut import (
     ROAD_FUEL_VAT_RATE,
@@ -57,6 +67,7 @@ from uk_budget_data.budget_measures.warm_home_discount_top_up import (
     warm_home_discount_top_up,
 )
 from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
+    SPRING_SHARE,
     WINTER_SHARE,
     zero_vat_on_domestic_electricity,
 )
@@ -89,9 +100,11 @@ MONTHS = (
 
 
 def _parameters():
-    from policyengine_uk.system import system
+    """Current law on the OBR October 2026 forecast, as every run builds
+    it (``uk_budget_data.forecast``)."""
+    from uk_budget_data.forecast import forecast_parameters
 
-    return system.parameters
+    return forecast_parameters()
 
 
 def engine_value(path: str, year: int) -> float:
@@ -166,8 +179,19 @@ UNIT_WORDS = {
 
 
 def _row(
-    label, unit, points, source, *, primary=True, note=None, unit_words=None
+    label,
+    unit,
+    points,
+    source,
+    *,
+    primary=True,
+    note=None,
+    unit_words=None,
+    card_note=None,
 ) -> dict:
+    """One parameter's points. ``note`` qualifies the row where the page
+    lists it; ``card_note``, on a measure's main row, is a line the
+    Policies card shows under its values."""
     row = {
         "label": label,
         "unit": unit,
@@ -180,6 +204,8 @@ def _row(
     }
     if note:
         row["note"] = note
+    if card_note:
+        row["card_note"] = card_note
     return row
 
 
@@ -230,15 +256,27 @@ def _modifier_source(modifier: Callable, names: str) -> dict:
 # against the constants.
 
 VAT_WINDOWS = {
-    registry.ELECTRICITY_VAT_ID: (date(2026, 10, 1), date(2028, 3, 31)),
+    registry.ELECTRICITY_VAT_ID: (
+        (
+            date(2026, 10, 1)
+            if _electricity.PRE_BUDGET_ZERO_RATE_IN_MEASURE
+            else date(2027, 4, 1)
+        ),
+        date.fromisoformat(_electricity.ZERO_RATE_EXTENDED_TO),
+    ),
     registry.FUEL_VAT_ID: (date(2026, 12, 1), date(2027, 5, 31)),
 }
 
 # A year a modifier weights by something other than its days in force:
 # electricity's 2026-27 carries the October to March share of a year's use
 # (WINTER_SHARE in its module), not 182 of 365 days, as the zero-rated
-# months are the higher-use half of the year.
-YEAR_WEIGHTS = {registry.ELECTRICITY_VAT_ID: {2026: WINTER_SHARE}}
+# months are the higher-use half of the year; its 2027-28 the April to June
+# share (SPRING_SHARE), not 91 of 366 days.
+YEAR_WEIGHTS = (
+    {registry.ELECTRICITY_VAT_ID: {2026: WINTER_SHARE, 2027: SPRING_SHARE}}
+    if _electricity.PRE_BUDGET_ZERO_RATE_IN_MEASURE
+    else {}
+)
 
 # How a VAT measure's table says its constants are weighted, unless the
 # measure says otherwise (a year in YEAR_WEIGHTS)
@@ -288,6 +326,7 @@ def _vat_rows(
     names: str,
     divided: str = DAYS_DIVIDED,
     note: str = DAYS_NOTE,
+    card_note: Optional[str] = None,
 ) -> list[dict]:
     first, last = VAT_WINDOWS[measure_id]
     cut = in_force_rate_change(measure_id, changes)
@@ -313,6 +352,7 @@ def _vat_rows(
                 )
             ],
             _source(base_source, derived),
+            card_note=card_note,
         ),
         _row(
             f"{label}, averaged over the year",
@@ -398,9 +438,61 @@ def _fuel_duty(reform) -> list[dict]:
     ]
 
 
+def _pension_tax_allowance(reform) -> list[dict]:
+    values = constants(pension_tax_allowance)
+    weekly_path = "gov.dwp.state_pension.new_state_pension.amount"
+    allowance_path = registry.PERSONAL_ALLOWANCE
+    step = values["weekly_rounding"]
+
+    def largest(year):
+        if not values["first_year"] <= year <= values["last_year"]:
+            return 0
+        weekly = (
+            math.floor(engine_value(weekly_path, year) / step + 1e-9) * step
+        )
+        full = round(weekly * 52, 2)
+        return math.ceil(
+            round(
+                values["basic_rate"]
+                * (full - engine_value(allowance_path, year)),
+                6,
+            )
+        )
+
+    return [
+        _row(
+            "Pension Tax Allowance, the largest tax reduction",
+            POUNDS,
+            _yearly(lambda year: 0, largest),
+            _source(
+                {
+                    "kind": "documented",
+                    "where": "no such reduction under current law",
+                },
+                {
+                    "kind": "modifier_constant",
+                    "where": "20% of the full new State Pension "
+                    f"(policyengine-uk {weekly_path} x 52, rounded down to "
+                    f"5p a week) above the personal allowance "
+                    f"({allowance_path}), rounded up; "
+                    + _modifier_source(
+                        pension_tax_allowance, "first_year, last_year"
+                    )["where"],
+                },
+            ),
+            unit_words="£ of income tax a year",
+            note="For people over State Pension age; reduced by £1 for "
+            f"every £{values['taper_divisor']} of total income above the "
+            "full new State Pension",
+        )
+    ]
+
+
 def _state_pension_allowance(reform) -> list[dict]:
     path = registry.PERSONAL_ALLOWANCE
     modifier = reform.simulation_modifier
+    if modifier is pension_tax_allowance:
+        return _pension_tax_allowance(reform)
     if modifier not in (
         state_pension_income_tax_allowance,
         state_pension_only_income_tax_allowance,
@@ -418,6 +510,10 @@ def _state_pension_allowance(reform) -> list[dict]:
             allowance.update({int(k): v for k, v in value.items()})
         else:
             allowance[int(name.removeprefix("allowance_"))] = value
+    # The allowance's last year, where the modifier has one
+    last = values.get("last_year")
+    if last is not None:
+        allowance = {y: v for y, v in allowance.items() if y <= last}
     if modifier is state_pension_only_income_tax_allowance:
         tests = []
         if values["total_income_at_most_allowance"]:
@@ -511,6 +607,25 @@ def _documented_amount(text: str, before: str, after: str) -> float:
     return float(match.group(1).replace(",", ""))
 
 
+def _electricity_where(values: dict) -> str:
+    """Where the zero rate applies, from the modifier's geographies (#290,
+    Max, 19:32): Great Britain from October 2026, and Northern Ireland from
+    April 2027 only as the Budget expects (RB 6.210), while HMRC's VAT
+    Notice 701/19 keeps it at 5% there."""
+    first, _ = VAT_WINDOWS[registry.ELECTRICITY_VAT_ID]
+    if (values["geography"], values["geography_2027"]) != ("GB", "UK"):
+        raise ValueError(
+            "the electricity card's note knows Great Britain, then the UK "
+            "from April 2027, only"
+        )
+    return (
+        f"0% instead of 5% in Great Britain from {_day_label(first)}. The "
+        "Budget expects the zero rate to "
+        "apply in Northern Ireland too from April 2027, and the model "
+        "counts it there from then."
+    )
+
+
 def _electricity_vat(reform) -> list[dict]:
     values = constants(zero_vat_on_domestic_electricity)
     changes = {
@@ -519,24 +634,43 @@ def _electricity_vat(reform) -> list[dict]:
         if name.startswith("rate_change_")
     }
     path = "gov.hmrc.vat.reduced_rate"
+    card_note = _electricity_where(values)
+    if _electricity.PRE_BUDGET_ZERO_RATE_IN_MEASURE:
+        # The October to March zero rate was already law (SI 2026/987): the
+        # 5% is the scoring baseline, as Table 6.1 scores it (#290, Max)
+        card_note += (
+            " The October to March zero rate was already law (SI 2026/987); "
+            "like the Treasury's costing, the model scores the whole period "
+            "against 5%."
+        )
     return _vat_rows(
         registry.ELECTRICITY_VAT_ID,
         zero_vat_on_domestic_electricity,
         engine_value(path, POLICY_YEARS[0]),
         _engine_source(path),
-        "VAT on domestic electricity in Great Britain",
+        "VAT on domestic electricity",
         changes,
         "rate_change_2026, rate_change_2027",
-        # 2026-27 by its share of a year's use (YEAR_WEIGHTS)
-        divided=(
-            "rate_change_2026 divided by that module's WINTER_SHARE (the "
-            "October to March share of a year's electricity use) and "
-            "rate_change_2027 by its share of the fiscal year's days in force"
-        ),
-        note=(
-            "As modelled: the cut weighted in 2026-27 by the October to "
-            "March share of a year's electricity use, not by its days in "
-            "force"
+        card_note=card_note,
+        # 2026-27 by its share of a year's use (YEAR_WEIGHTS), while the
+        # pre-Budget zero rate is in the measure; else by days
+        **(
+            dict(
+                divided=(
+                    "rate_change_2026 divided by that module's WINTER_SHARE "
+                    "(the October to March share of a year's electricity "
+                    "use) and rate_change_2027 by its SPRING_SHARE (the "
+                    "April to June share)"
+                ),
+                note=(
+                    "As modelled: the cut weighted in 2026-27 by the "
+                    "October to March share of a year's electricity use "
+                    "and in 2027-28 by the April to June share, not by "
+                    "their days in force"
+                ),
+            )
+            if _electricity.PRE_BUDGET_ZERO_RATE_IN_MEASURE
+            else {}
         ),
     )
 
@@ -695,41 +829,85 @@ def _plan_2(reform) -> list[dict]:
     ]
 
 
+def carers_allowance_limit(year: int) -> float:
+    """The measure's Weekly Earnings Limit, £ a week, as the modifier
+    computes it: 16 hours at the OBR's National Living Wage for that April
+    (``national_living_wage_by_april``), else £13.21 from April 2027 moved
+    on with average earnings, rounded up to the pound."""
+    values = constants(carers_allowance_earnings_taper)
+    wages = dict(values["national_living_wage_by_april"])
+    if year in wages:
+        wage = wages[year]
+    else:
+        earnings = "gov.economic_assumptions.indices.obr.average_earnings"
+        wage = (
+            values["national_living_wage_2027"]
+            * engine_value(earnings, year)
+            / engine_value(earnings, 2027)
+        )
+    return float(math.ceil(round(values["limit_hours"] * wage, 6)))
+
+
 def _carers_allowance_taper(reform) -> list[dict]:
+    """The cliff the measure removes (#290, Anthony, 19:20): the allowance
+    £1 a week over the earnings limit, nothing under current law and the
+    weekly rate less £1 with the taper. The measure does not move the limit
+    itself, so no row shows it as a change; the card's note gives the limit
+    and where the tapered allowance runs out."""
     values = constants(carers_allowance_earnings_taper)
     start, taper = values["start_year"], values["taper_rate"]
     if values["earnings_limit"] is not None:
-        raise ValueError("the table reads the engine's earnings limit")
-    limit = "gov.dwp.carers_allowance.earnings_limit"
+        raise ValueError("the table reads the measure's own earnings limit")
     rate = "gov.dwp.carers_allowance.rate"
     modifier = _modifier_source(
-        carers_allowance_earnings_taper, "start_year, taper_rate"
+        carers_allowance_earnings_taper,
+        "start_year, taper_rate, limit_hours, national_living_wage_by_april",
     )
+
+    def over_by_a_pound(y):
+        if y < start:
+            return 0.0
+        return round(max(engine_value(rate, y) - taper * 1, 0.0), 2)
+
+    def runs_out(y):
+        return carers_allowance_limit(y) + engine_value(rate, y) / taper
+
+    shown = [y for y in POLICY_YEARS if y >= start]
+
+    def by_year(amount):
+        parts = [f"£{amount(y):,.0f}" for y in shown]
+        parts[0] += " a week"
+        return " and ".join(
+            f"{part} in {_fiscal_label(y)}" for part, y in zip(parts, shown)
+        )
+
+    limits, ends = by_year(carers_allowance_limit), by_year(runs_out)
     return [
         _row(
-            "Weekly earnings at which Carer's Allowance stops",
+            "Carer's Allowance at £1 a week over the earnings limit",
             POUNDS,
-            _yearly(
-                lambda y: engine_value(limit, y),
-                lambda y: (
-                    engine_value(limit, y) + engine_value(rate, y) / taper
-                    if y >= start
-                    else engine_value(limit, y)
-                ),
-            ),
+            _yearly(lambda y: 0.0, over_by_a_pound),
             _source(
                 {
-                    "kind": "engine_parameter",
-                    "where": f"the earnings limit ({limit}); with the "
-                    f"measure, the limit plus the weekly rate ({rate}) "
-                    "divided by the taper rate",
+                    "kind": "documented",
+                    "where": "current law pays no Carer's Allowance above "
+                    "the earnings limit (gov.dwp.carers_allowance."
+                    "earnings_limit)",
                 },
-                modifier,
+                {
+                    "kind": "modifier_constant",
+                    "where": f"the weekly rate ({rate}) less taper_rate x "
+                    "£1; " + modifier["where"],
+                },
             ),
-            unit_words="£ of net earnings a week",
-            note="Current law stops the allowance at £1 over the earnings "
-            "limit (£204 a week, not uprated in the engine); with the "
-            "measure it falls by £1 for each £1 above the limit",
+            unit_words="£ a week",
+            card_note=(
+                "The earnings limit is 16 hours at the National Living "
+                f"Wage, rounded up to the pound: {limits}. Current law "
+                "stops the allowance at £1 over it. With the measure it "
+                f"falls by £1 for each £1 above the limit, and runs out at "
+                f"{ends}."
+            ),
         ),
     ]
 
@@ -786,21 +964,74 @@ def _employer_ni_threshold(reform) -> list[dict]:
     ]
 
 
-def _unearned_income_rates(reform) -> list[dict]:
-    labels = {
-        "dividends[0].rate": "Dividend ordinary rate",
-        "dividends[1].rate": "Dividend upper rate",
-        "dividends[2].rate": "Dividend additional rate",
-        "savings.basic": "Savings basic rate",
-        "savings.higher": "Savings higher rate",
-        "savings.additional": "Savings additional rate",
-        "property.basic": "Property basic rate",
-        "property.higher": "Property higher rate",
-        "property.additional": "Property additional rate",
-    }
-    function = "unearned_income_rates_up()"
+def _household_energy_payment(reform) -> list[dict]:
+    values = constants(household_energy_payment_2026)
+    year = values["year"]
+    bands = ", ".join(values["bands"])
+    where = "England" if values["country"] == "ENGLAND" else values["country"]
+    return [
+        _row(
+            "Household energy payment",
+            POUNDS,
+            [
+                _point(
+                    year,
+                    f"Winter {_fiscal_label(year)}",
+                    year,
+                    0,
+                    values["amount"],
+                )
+            ],
+            _source(
+                {
+                    "kind": "documented",
+                    "where": "no such payment under current law",
+                },
+                _modifier_source(household_energy_payment_2026, "amount"),
+            ),
+            unit_words="£ a household, once",
+            note=f"Paid to households in {where} in council tax bands "
+            f"{bands}",
+        )
+    ]
+
+
+def _trading_allowance(reform) -> list[dict]:
+    path = registry.TRADING_ALLOWANCE
+    return [
+        _row(
+            "Trading allowance",
+            POUNDS,
+            _yearly(
+                lambda y: engine_value(path, y),
+                _engine_or_change(reform, path),
+            ),
+            _source(
+                _engine_source(path),
+                _change_source(path, "_create_trading_allowance_raise()"),
+            ),
+            unit_words="£ of trading receipts a year",
+            note="Relieves trading receipts in place of actual expenses",
+        )
+    ]
+
+
+_RATE_LABELS = {
+    "savings.basic": "Savings basic rate",
+    "savings.higher": "Savings higher rate",
+    "savings.additional": "Savings additional rate",
+    "property.basic": "Property basic rate",
+    "property.higher": "Property higher rate",
+    "property.additional": "Property additional rate",
+}
+
+
+def _income_rates(reform, kinds, function, primary) -> list[dict]:
+    """The rates of each income in ``kinds``, the ``primary`` one first."""
     rows = []
-    for suffix, label in labels.items():
+    for suffix, label in _RATE_LABELS.items():
+        if suffix.split(".")[0] not in kinds:
+            continue
         path = f"{registry.INCOME_TAX_RATES}.{suffix}"
         rows.append(
             _row(
@@ -811,10 +1042,32 @@ def _unearned_income_rates(reform) -> list[dict]:
                     _engine_or_change(reform, path),
                 ),
                 _source(_engine_source(path), _change_source(path, function)),
-                primary=suffix == "dividends[0].rate",
+                primary=suffix == primary,
             )
         )
     return rows
+
+
+def _property_income_rates(reform) -> list[dict]:
+    return _income_rates(
+        reform, ("property",), "property_income_rates_up()", "property.basic"
+    )
+
+
+def _savings_income_rates(reform) -> list[dict]:
+    return _income_rates(
+        reform, ("savings",), "savings_income_rates_up()", "savings.basic"
+    )
+
+
+def _unearned_income_rates(reform) -> list[dict]:
+    # Withdrawn (split into the two above); its builder still reads it
+    return _income_rates(
+        reform,
+        ("savings", "property"),
+        "unearned_income_rates_up()",
+        "savings.basic",
+    )
 
 
 BUILDERS = {
@@ -831,6 +1084,10 @@ BUILDERS = {
     registry.LHA_UNFREEZE_ID: _lha_unfreeze,
     registry.EMPLOYER_NI_THRESHOLD_ID: _employer_ni_threshold,
     registry.UNEARNED_INCOME_RATES_ID: _unearned_income_rates,
+    registry.PROPERTY_INCOME_RATES_ID: _property_income_rates,
+    registry.SAVINGS_INCOME_RATES_ID: _savings_income_rates,
+    registry.HOUSEHOLD_ENERGY_PAYMENT_ID: _household_energy_payment,
+    registry.TRADING_ALLOWANCE_ID: _trading_allowance,
 }
 
 
@@ -897,8 +1154,58 @@ def display_for(rows: list[dict]) -> str:
     return PATH
 
 
+def current_law() -> dict:
+    """Thresholds under current law alone, whatever the package holds: the
+    Living standards "Frozen thresholds against pay" card reads them. Each
+    row's points carry the engine's value as both before and after."""
+    allowance, band = registry.PERSONAL_ALLOWANCE, registry.BASIC_RATE_BAND
+    plan_2 = registry.PLAN_2_THRESHOLD
+
+    def unchanged(value: Callable[[int], float]) -> list[dict]:
+        return _yearly(value, value)
+
+    def source(where: dict) -> dict:
+        return _source(where, where)
+
+    return {
+        "rows": [
+            _row(
+                "Personal allowance",
+                POUNDS,
+                unchanged(lambda y: engine_value(allowance, y)),
+                source(_engine_source(allowance)),
+            ),
+            _row(
+                "Higher rate threshold",
+                POUNDS,
+                unchanged(
+                    lambda y: engine_value(allowance, y)
+                    + engine_value(band, y)
+                ),
+                source(
+                    {
+                        "kind": "engine_parameter",
+                        "where": f"personal allowance plus basic rate band "
+                        f"({allowance} + {band})",
+                    }
+                ),
+                primary=False,
+                note="The personal allowance plus the basic rate band",
+            ),
+            _row(
+                "Plan 2 repayment threshold",
+                POUNDS,
+                unchanged(lambda y: engine_value(plan_2, y)),
+                source(_engine_source(plan_2)),
+                primary=False,
+            ),
+        ]
+    }
+
+
 def build() -> dict:
-    """Every candidate measure's table, in the registry's order."""
+    """Every candidate measure's table, in the registry's order, and the
+    current-law thresholds (``current_law``)."""
     measures = {}
     for measure_id in registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS:
         reform = registry.get_reform(measure_id)
@@ -921,6 +1228,7 @@ def build() -> dict:
         },
         "years": list(POLICY_YEARS),
         "measures": measures,
+        "current_law": current_law(),
     }
 
 

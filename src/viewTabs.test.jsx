@@ -186,8 +186,12 @@ describe("the view tabs", () => {
     expect(screen.queryByText(/What each policy does is on/)).toBeNull();
     fireEvent.click(screen.getByRole("tab", { name: "Policies" }));
     const panel = screen.getByRole("tabpanel", { name: "Policies" });
-    // The fixture publishes one measure (beforeEach)
-    expect(within(panel).getAllByRole("listitem")).toHaveLength(1);
+    // The fixture publishes one measure (beforeEach); the Budget's measures
+    // the dashboard does not model follow in their own section
+    const modelled = panel.querySelector("#policy-details");
+    expect(within(modelled).getAllByRole("listitem")).toHaveLength(1);
+    expect(within(panel).getByRole("region", { name: "Budget policies we do not model" })).toBeInTheDocument();
+    expect(within(panel).getByRole("button", { name: "Budget policies we do not model" })).toHaveAttribute("aria-expanded", "false");
     expect(new URLSearchParams(window.location.search).get("tab")).toBe("policies");
   });
 

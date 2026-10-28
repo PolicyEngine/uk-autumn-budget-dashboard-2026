@@ -9,7 +9,7 @@
  *
  * 2026-27 (EARLY_YEAR) is shown as a normal year, in every chart, table and
  * the year pill, only while a selected policy moves revenue in it (e.g. the
- * Warm Home Discount top-up, winter 2026-27): yearsForSelection. Otherwise
+ * household energy payment, winter 2026-27): yearsForSelection. Otherwise
  * the years start at 2027-28. No note says either way.
  */
 import { createContext, useContext } from "react";

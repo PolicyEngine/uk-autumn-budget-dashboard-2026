@@ -228,7 +228,7 @@ describe("young people cards", () => {
     // The age group is the card's one Options pill
     fireEvent.click(screen.getByRole("button", { name: /^Options: 16 to 24/ }));
     fireEvent.click(within(screen.getByRole("radiogroup", { name: "Compare" })).getByRole("radio", { name: /65 and over/ }));
-    expect(screen.getByText("Average change per person from each policy, for people aged 65 and over and people of all ages.")).toBeInTheDocument();
+    expect(screen.getByText("Average change in household income from each policy, for people aged 65 and over and people of all ages.")).toBeInTheDocument();
   });
 
   it("describes missing age-group rows as unavailable", () => {
@@ -316,7 +316,7 @@ describe("young people cards", () => {
     render(<TrendCard {...props} selectedYear={2029} />);
     const card = document.querySelector(".young-people-trend");
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
-    expect(card).toHaveTextContent("Average change per person in each age group, each year, with all ages for comparison.");
+    expect(card).toHaveTextContent("Average change in household income per person in each age group, each year, with all ages for comparison.");
   });
 
   it("keys the lines by its chips alone, with no names at the lines' ends, on a wide screen and a phone", () => {
@@ -397,5 +397,22 @@ describe("the change-by-year helpers", () => {
     expect(topParts(series[2]).map((part) => part.id)).toEqual(["b", "a"]);
     // A running total stops at a gap, never reading it as zero
     expect(cumulate(series, ["net"]).map((point) => point.net)).toEqual([60, 130, -10, null]);
+  });
+});
+
+describe("Change by year's hover", () => {
+  it("lists every line shown, not only the chosen group and all ages", async () => {
+    const { render } = await import("@testing-library/react");
+    const { TrendTooltip } = await import("./TrendCard");
+    const lines = [
+      { key: "16-24", label: "16 to 24", colour: "var(--a)" },
+      { key: "all", label: "All ages", colour: "var(--b)" },
+      { key: "65+", label: "65 and over", colour: "var(--c)" },
+    ];
+    const row = { year: 2029, "16-24": -5, all: -6, "65+": 1 };
+    const { container } = render(
+      <TrendTooltip active payload={[{ payload: row }]} label={2029} focusSeries={[{ year: 2029 }]} allValue={() => -6} groupValue={() => -5} groupLabel="16 to 24" nameOf={(id) => id} cumulative={false} selectedYear={2027} lines={lines} />,
+    );
+    expect([...container.querySelectorAll(".chart-tooltip-name")].map((n) => n.textContent)).toEqual(["16 to 24", "All ages", "65 and over"]);
   });
 });

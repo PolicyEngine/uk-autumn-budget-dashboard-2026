@@ -18,6 +18,7 @@ import {
   requestKey,
   stageMismatch,
 } from "../utils/householdImpactApi";
+import { isCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 
 // Results already fetched this session, by request: switching the year or
 // the policies back shows them at once
@@ -136,7 +137,8 @@ const DEBOUNCE_MS = 400;
  *   DefinitionMismatchError naming the measures (a detail service answer
  *   like that is asked again of the main API). A measure asked about with
  *   none here is refused before any request, so leaving it out never shows
- *   an unchecked answer.
+ *   an unchecked answer; a calculator-only measure with none is the
+ *   exception, with no published figures to check it against.
  *   Only those of `policies` are used and sent, and the request is checked
  *   again when one of them comes or goes. An answer in the session cache is
  *   shown only when it reports them too: a precomputed example's has the
@@ -168,9 +170,15 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
   // selection, which can differ from the policies asked about (answers sent
   // with Calculate, then edited while the bar changed). The check is made
   // again whenever one of them comes or goes, so a refusal never outlives
-  // the definitions it was made against.
+  // the definitions it was made against. Only a measure with published
+  // figures has one: a calculator-only measure turned on
+  // (utils/calculatorOnlyMeasures.js) with none is computed by the API's
+  // running code, unchecked, and the calculator says it is not in the
+  // national results. Once one has an approved definition (back in the
+  // national results), it is checked as any other.
+  const published = policies.filter((id) => !isCalculatorOnly(id) || Object.hasOwn(expectedDefinitions ?? {}, id));
   const approved = Object.fromEntries(
-    policies.filter((id) => Object.hasOwn(expectedDefinitions ?? {}, id)).map((id) => [id, expectedDefinitions[id]]),
+    published.filter((id) => Object.hasOwn(expectedDefinitions ?? {}, id)).map((id) => [id, expectedDefinitions[id]]),
   );
   const checksKey = JSON.stringify([Object.entries(approved), expectedEngine]);
   const [attempt, setAttempt] = useState(0);
@@ -201,9 +209,9 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
       // Nothing else this request asked for can be shown now
       controller.abort();
     };
-    // Nothing is answered unchecked: a selected measure with no approved
-    // definition is refused before any request
-    const unapproved = policies.filter((id) => !Object.hasOwn(approved, id));
+    // Nothing published is answered unchecked: a selected measure with no
+    // approved definition is refused before any request
+    const unapproved = published.filter((id) => !Object.hasOwn(approved, id));
     if (unapproved.length) {
       refuse(new DefinitionMismatchError(definitionRefusals(approved, null, unapproved)));
       return undefined;
@@ -214,7 +222,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     // precomputed example's has the definitions its file recorded, or none.
     const entry = underEngine(cache.get(key), expectedEngine);
     const cached =
-      entry && definitionRefusals(approved, entry.data?.definitions ?? null, policies).length === 0 ? entry : null;
+      entry && definitionRefusals(approved, entry.data?.definitions ?? null, published).length === 0 ? entry : null;
     if (cached?.complete) {
       setState({
         key,
@@ -257,7 +265,7 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
     // The refusal of the selected measures the API's code does not compute
     // from their approved definitions, or null when it computes them all
     const mismatch = (answer) => {
-      const refused = definitionRefusals(approved, answer.definitions, policies);
+      const refused = definitionRefusals(approved, answer.definitions, published);
       return refused.length ? new DefinitionMismatchError(refused, { unchecked: answer.definitions === null }) : null;
     };
     const definitions = approved;

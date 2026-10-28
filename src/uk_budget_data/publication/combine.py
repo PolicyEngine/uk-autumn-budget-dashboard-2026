@@ -250,10 +250,11 @@ def parameter_snapshot(scenario, instants: list[str], label: str) -> dict:
     from policyengine_uk import Simulation
 
     try:
-        if scenario is None:
-            simulation = Simulation(situation=_SITUATION)
-        else:
-            simulation = Simulation(situation=_SITUATION, scenario=scenario)
+        from uk_budget_data.forecast import with_forecast
+
+        simulation = Simulation(
+            situation=_SITUATION, scenario=with_forecast(scenario)
+        )
     except Exception as error:  # noqa: BLE001 - reported, not swallowed
         raise CombineInconsistent(
             f"{label} could not be applied to a household simulation, so it "

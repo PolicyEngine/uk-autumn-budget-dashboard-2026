@@ -4,8 +4,8 @@
 // the selected policies together (the combined run), also from zero. No bar
 // starts where another ends and nothing is added up or backed out: each row
 // reads one published run. (Pavel's review, POV2 to POV5: the old waterfall
-// read as if the policies stacked, and its "interaction" step also held the
-// Plan 2 baseline difference.) People are the change in
+// read as if the policies stacked, and its "interaction" step also held a
+// baseline difference.) People are the change in
 // the rate times the outlook's population that year (povertyPeople.js);
 // without a population the card falls back to percentage points
 // throughout. Every selected policy has a row: one that moves no one shows
@@ -236,7 +236,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     return n < 1000 ? "under 1,000" : `about ${roundPeople(n)}`;
   };
   // The measure as a sentence's subject: its own sentence form where the
-  // catalogue publishes one ("Unfreezing the Plan 2 threshold"), otherwise
+  // catalogue publishes one ("Introducing the Pension Tax Allowance"), otherwise
   // "Of the measures, <its name>"
   const subjectOf = (step) => {
     const measure = catalogue.byId?.get(step.id);
@@ -245,7 +245,7 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   };
   const direction = (step) => (step.x > 0 ? "out of" : "into");
   // Mid-sentence, the measure's own sentence form as it is published
-  // ("unfreezing the student loan threshold"), else its name
+  // ("raising tax on savings and property income"), else its name
   const inSentence = (step) => {
     const measure = catalogue.byId?.get(step.id);
     return measure?.sentence ?? policyDetailsFor(measure)?.sentence ?? step.name;

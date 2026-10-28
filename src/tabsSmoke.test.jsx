@@ -34,6 +34,7 @@ import { fixtureJson } from "./test/publicationFixture";
 import { receiptEngine } from "./utils/publication/load";
 import { CANDIDATE_PROVISIONAL_LABEL } from "./utils/publication/manifest";
 import { receiptDefinitionFor, reportedDefinitions, requestedDefinitions, route } from "./test/definitionsFixture";
+import { SAVINGS_INCOME_RATES_ID, withoutCalculatorOnly } from "./utils/calculatorOnlyMeasures";
 import { OBR_CARD_TITLE, OBR_PENDING } from "./components/OBRComparisonTable";
 
 // Every view's code is in before a test renders it (App.jsx lazyView)
@@ -104,7 +105,7 @@ const LOADED = {
   // shows once the outlook is read. Living standards is the default.
   outlook: (panel) => within(panel).findAllByRole("heading", { name: "Living standards under current law" }),
   outlookPoverty: (panel) => within(panel).findAllByRole("heading", { name: "Poverty under current law" }),
-  outlookForecast: (panel) => within(panel).findAllByRole("heading", { name: /economic forecast$/ }),
+  outlookForecast: (panel) => within(panel).findAllByRole("heading", { name: /economic forecasts?$/ }),
   // Every published measure's card, whatever the band's selection
   policies: (panel) => within(panel).findAllByRole("listitem"),
   methodology: (panel) => within(panel).findAllByRole("heading"),
@@ -258,10 +259,13 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
         const asked = requests.filter((r) => route(r.url) === HOUSEHOLD_API);
         expect(asked.filter(yours).map((r) => JSON.parse(r.body).include)).toEqual([[], ["sweep"], ["by_policy"]]);
         // Every request, the example cards' too, names each measure it
-        // asks about with that measure's approved commit
+        // asks about with that measure's approved commit. The saver's card
+        // also asks with the calculator-only savings rise, which has no
+        // published figures and so no approved definition to name
+        expect(asked.some((r) => JSON.parse(r.body).policies.includes(SAVINGS_INCOME_RATES_ID))).toBe(true);
         for (const r of asked) {
           const named = requestedDefinitions(r.url);
-          expect(named.map(([id]) => id)).toEqual([...JSON.parse(r.body).policies].sort());
+          expect(named.map(([id]) => id)).toEqual(withoutCalculatorOnly(JSON.parse(r.body).policies).sort());
           for (const [id, commit] of named) expect(commit).toBe(publishedDefinition(id).git_sha);
         }
         expect(requests.filter((r) => r.url.startsWith(API)).every((r) => route(r.url) === HOUSEHOLD_API)).toBe(
@@ -319,7 +323,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     await within(poverty).findByRole("heading", { level: 3, name: /^Poverty over time$/ }, { timeout: 5000 });
     fireEvent.click(screen.getByRole("tab", { name: "Forecast changes" }));
     const forecast = screen.getByRole("tabpanel", { name: "Forecast changes" });
-    expect(await within(forecast).findByRole("heading", { name: /economic forecast$/ })).toBeInTheDocument();
+    expect(await within(forecast).findByRole("heading", { name: /economic forecasts?$/ })).toBeInTheDocument();
     expect(requests.filter((r) => r.url.endsWith("living_standards_outlook.json"))).toHaveLength(1);
     expect(document.querySelectorAll("#current-law-incomes")).toHaveLength(1);
     expect(document.querySelectorAll("#current-law-poverty")).toHaveLength(1);

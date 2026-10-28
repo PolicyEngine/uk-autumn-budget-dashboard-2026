@@ -892,3 +892,144 @@ def test_a_lettered_figure_on_a_subtotal_row_is_refused(figure):
     subtotal = (None, figure, "Subtotal", None, None, None, None)
     with pytest.raises(ScorecardError, match="unrecognised total"):
         parse_rows([HEADER, TAX, subtotal, GRAND_TOTAL])
+
+
+# Budget 2026's Table 6.1, as published on 28 October 2026: a hidden working
+# column "Fiscal Head check (hide)" between the description and Head, with
+# "SUBTOTAL", "RDEL" or "Tax/TME" in it; a footnote figure on "Head3"; a
+# measure label beginning with a tab; and a measure whose description uses
+# the words "total income".
+T61_HEADER = (
+    None,
+    None,
+    None,
+    "Fiscal Head \ncheck (hide) ",
+    "Head3",
+    "2026-27",
+    "2027-28",
+    "2028-29",
+)
+T61_ROWS = [
+    (None, "Table 6.1 Budget 2026 policy decisions (£ million)1,2"),
+    T61_HEADER,
+    (None, "Breathing space for families", None, None),
+    (
+        None,
+        1,
+        "Household Energy Payment: £100 rebate",
+        "RDEL",
+        "Spend",
+        -2625,
+        0,
+        0,
+    ),
+    (
+        None,
+        2,
+        "Support for Energy Bills: Cut VAT on electricity",
+        "SUBTOTAL",
+        "Tax",
+        -755,
+        -305,
+        0,
+    ),
+    (
+        None,
+        52,
+        "Pension Tax Allowance: Remove the income tax liability for "
+        "pensioners with total income up to the value of the new State Pension",
+        "Tax",
+        "Tax",
+        0,
+        -45,
+        -90,
+    ),
+    (
+        None,
+        61,
+        "\tProperty Income: Increase tax rates by 2ppts",
+        "Tax",
+        "Tax",
+        0,
+        35,
+        575,
+    ),
+    (None, None, "Total policy decisions", None, None, -3380, -315, 485),
+    (None, None, "Total spending policy decisions", None, None, -2625, 0, 0),
+    (None, None, "Total tax policy decisions", None, None, -755, -315, 485),
+    (
+        None,
+        "1 Costings reflect the OBR’s latest determinants. Totals may not sum due to rounding.",
+    ),
+]
+
+
+def test_table_6_1_with_its_hidden_check_column_is_read(tmp_path):
+    scorecard = parse_rows(T61_ROWS, "Table 6.1")
+    assert [m.number for m in scorecard.measures] == ["1", "2", "52", "61"]
+    assert scorecard.measures[1].label.startswith("Support for Energy Bills")
+    assert scorecard.measures[3].label.startswith("Property Income")
+    assert scorecard.measures[2].values_m["2027-28"] == -45
+    check_totals(scorecard)
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Table 6.1"
+    for row in T61_ROWS:
+        sheet.append(list(row))
+    path = tmp_path / "t61.xlsx"
+    workbook.save(path)
+    out = tmp_path / "AB2026-T6.1.csv"
+    args = [str(path), "--source-id", "T61", "--document", "Budget 2026"]
+    assert main([*args, "--table", "6.1", "--out", str(out)]) == 0
+    written = list(csv.DictReader(out.open()))
+    assert {r["table"] for r in written} == {"6.1"}
+    assert len(written) == 4 * 3
+
+
+def test_a_hidden_column_among_the_figures_is_refused():
+    header = (
+        None,
+        None,
+        None,
+        "Head",
+        "2026-27",
+        "check (hide)",
+        "2027-28",
+        "2028-29",
+    )
+    with pytest.raises(ScorecardError, match="hide"):
+        parse_rows([header, (None, 1, "A: tax", "Tax", 1, 2, 3, 4)])
+
+
+@pytest.mark.parametrize(
+    "label",
+    [
+        "Total income: a measure",
+        "Subtotal: total tax policy decisions",
+        "Net total tax policy decisions: other words",
+        ": total tax policy decisions",
+    ],
+)
+def test_a_total_in_a_heading_is_still_refused(label):
+    """The 'Heading: description' allowance covers a total only in the
+    description, after a heading with words and no total."""
+    with pytest.raises(
+        ScorecardError, match="beside other text|unrecognised total"
+    ):
+        parse_rows(
+            [HEADER, TAX, (None, 9, label, "Tax", 0, 0, 0), GRAND_TOTAL]
+        )
+
+
+def test_total_income_in_a_measure_description_is_read():
+    """Budget 2026 row 52 describes pensioners 'with total income up to'
+    the new State Pension: a measure, not a subtotal."""
+    label = (
+        "Pension Tax Allowance: Remove the income tax liability for "
+        "pensioners with total income up to the new State Pension"
+    )
+    scorecard = parse_rows(
+        [HEADER, TAX, (None, 52, label, "Tax", 0, 0, 0), GRAND_TOTAL]
+    )
+    assert [m.number for m in scorecard.measures] == ["1", "52"]

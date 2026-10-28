@@ -82,7 +82,7 @@ async function renderForecast(data, props = {}) {
   window.history.replaceState({}, "", "/?tab=living&sub=forecast");
   const { default: LivingStandardsTab } = await import("./LivingStandardsTab");
   render(<LivingStandardsTab {...props} />);
-  if (data.forecast.post_published) await screen.findByText("Budget-day forecast is unavailable until verified");
+  if (data.forecast.post_published) await screen.findByRole("heading", { name: "OBR March 2026 and October 2026 economic forecasts" });
   else await screen.findByRole("heading", { name: "OBR March 2026 economic forecast" });
 }
 
@@ -147,7 +147,7 @@ describe("Forecast changes with one forecast", () => {
     // No sentence repeats its series' name as a verb ("growth growing")
     expect(document.body.textContent).not.toMatch(/growth growing|has [a-z]PI/);
     // How the forecast feeds the figures is in Methodology, one link away
-    expect(screen.getByRole("link", { name: "How these forecasts feed our figures →" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "How these feed our figures →" })).toHaveAttribute(
       "href",
       "?tab=methodology#method-forecast-feed",
     );
@@ -187,20 +187,54 @@ describe("Forecast changes with one forecast", () => {
 });
 
 describe("Forecast changes once the Budget forecast is published", () => {
-  it("holds the Budget-day extract until it has a verified publication route", async () => {
+  it("draws October by default, both on choosing them (March faded, October full), and says the Budget figures use October", async () => {
+    chartProps.length = 0;
     await renderForecast(publishedOutlook());
-    expect(screen.getByText("Budget-day forecast is unavailable until verified")).toBeInTheDocument();
-    expect(document.querySelector(".ls-card")).toBeNull();
-    expect(screen.queryByText(`${pct(cpiPre())} → ${pct(cpiPre() + 0.003)}`)).toBeNull();
-    expect(screen.queryByText("+0.3pp")).toBeNull();
-    expect(screen.queryByRole("button", { name: /Chart or table/ })).toBeNull();
+    expect(screen.getByText(/Calendar-year growth in the OBR's/)).toHaveTextContent(
+      "Calendar-year growth in the OBR's March 2026 (opens in a new tab) and October 2026 (opens in a new tab) forecasts. Budget figures use October.",
+    );
+    expect(screen.getByRole("link", { name: /^October 2026 ?\(opens in a new tab\)$/ })).toHaveAttribute("target", "_blank");
+    const prices = card(/^Inflation measures$/);
+    // Which forecasts are drawn is the card's Options pill, October alone
+    // by default; no Show forecasts chips
+    const pill = within(prices).getByRole("button", { name: "Options: October 2026 forecast" });
+    expect(within(prices).queryByRole("group", { name: "Forecasts: show or hide" })).toBeNull();
+    expect(prices).not.toHaveTextContent(/Show forecasts/);
+    const cpiLines = () => chartProps.filter((p) => p.series.some((s) => s.series === "cpi")).at(-1).series.filter((s) => s.series === "cpi");
+    expect(cpiLines().map((s) => s.forecast)).toEqual(["post"]);
+    // Both: March faded, October full, and the pill says so
+    fireEvent.click(pill);
+    const choices = screen.getByRole("radiogroup", { name: "Forecasts" });
+    expect(within(choices).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Both", "March 2026", "October 2026"]);
+    fireEvent.click(within(choices).getByRole("radio", { name: "Both" }));
+    expect(within(prices).getByRole("button", { name: "Options: March and October 2026" })).toBeInTheDocument();
+    const cpi = cpiLines();
+    expect(cpi.map((s) => s.name)).toEqual(["CPI, March 2026 forecast", "CPI, October 2026 forecast"]);
+    expect(cpi[0].opacity).toBeLessThan(1);
+    expect(cpi[1].opacity ?? 1).toBe(1);
+    // The tile shows October and names March
+    expect(screen.getAllByText(pct(cpiPre() + 0.003)).length).toBeGreaterThan(0);
+    expect(screen.getByText(`annual growth, 2027 (March: ${pct(cpiPre())})`)).toBeInTheDocument();
   });
 
-  it("keeps the independent baseline available beside the held forecast", async () => {
-    // The held forecast's notice, then the Living standards and Poverty
-    // sub-tabs, which read only the independent outlook
+  it("keeps the March line alone, and says why, for a series October does not carry yet", async () => {
+    const data = publishedOutlook();
+    for (const section of data.forecast.sections) {
+      for (const series of section.series) if (series.key === "cpih") series.post = null;
+    }
+    chartProps.length = 0;
+    await renderForecast(data);
+    // On the default, October alone: CPIH still draws its March line
+    const lines = chartProps.find((p) => p.series.some((s) => s.series === "cpi")).series;
+    expect(lines.filter((s) => s.series === "cpih").map((s) => s.forecast)).toEqual(["pre"]);
+    expect(lines.find((s) => s.series === "cpih").opacity ?? 1).toBe(1);
+    const prices = card(/^Inflation measures$/);
+    fireEvent.click(within(prices).getByRole("button", { name: /About this chart/ }));
+    expect(prices).toHaveTextContent(/CPIH: not in the October 2026 forecast's summary table yet/);
+  });
+
+  it("keeps the independent baseline available beside the forecasts", async () => {
     await renderForecast(publishedOutlook());
-    expect(screen.getByText("Budget-day forecast is unavailable until verified")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "Living standards" }));
     expect(await screen.findByRole("heading", { name: "Living standards under current law" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "Poverty" }));

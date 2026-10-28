@@ -278,6 +278,8 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
     image: activePolicies.length > 0,
   };
 
+  // A note shown above the plot, inside it
+  const hasPlotNote = published && (hasUnavailableResults || withheldDeciles.size > 0);
   return (
     <div className="waterfall-chart">
       <div className="chart-header">
@@ -306,9 +308,16 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
         {published && hasUnavailableResults && (
           <UnavailableNotice reason="Some selected policies have no published results for this chart. The net change is unavailable." />
         )}
-        {published && withheldDeciles.size > 0 && (
-          <p className="chart-description">
-            * Income deciles {[...withheldDeciles].map((decile) => String(decile).replace(/st|nd|rd|th/g, "")).join(", ")}: <span>{WITHHELD_DECILE_MESSAGE}</span>.
+        {/* The note's line is always kept, hidden in a year with nothing
+            withheld, so the card holds its height as Play moves through the
+            years (Vahid, 28 Oct: it jumped in 2030-31) */}
+        {published && (
+          <p
+            className="chart-description"
+            aria-hidden={withheldDeciles.size > 0 ? undefined : "true"}
+            style={withheldDeciles.size > 0 ? undefined : { visibility: "hidden" }}
+          >
+            * Income deciles {withheldDeciles.size > 0 ? [...withheldDeciles].map((decile) => String(decile).replace(/st|nd|rd|th/g, "")).join(", ") : "7, 9"}: <span>{WITHHELD_DECILE_MESSAGE}</span>.
           </p>
         )}
         {nothingChanges ? (
@@ -320,8 +329,13 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
             <p>{noHouseholdChange(formatYearRange(selectedYear))}</p>
           </div>
         ) : published ? (
-          // As tall as the plot rows in a pair (globals.css), else plotHeight
-          <ResponsiveContainer width="100%" height="100%" minHeight={plotHeight}>
+          // As tall as the plot rows in a pair (globals.css), else plotHeight.
+          // With a note above it in the plot (a withheld decile, results
+          // unavailable), its own fixed height: at 100% it would take the
+          // plot's height, note included, and grow by the note's height on
+          // every measure, without end (#290, Anthony, 6479887743: All
+          // households, 2030-31, where a decile is withheld)
+          <ResponsiveContainer width="100%" height={hasPlotNote ? plotHeight : "100%"} minHeight={plotHeight}>
             <ComposedChart
               data={data}
               margin={{ ...chartMargin(narrow), bottom: key.shared ? LOGO_ROOM : 0 }}

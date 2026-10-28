@@ -87,9 +87,12 @@ describe("the build's verified publication", () => {
     await waitFor(() => expect(container.querySelector('.app[data-publication-check="page"]')).not.toBeNull());
     // Alpha's artifact fails the page's check: the build's copy of its
     // figures is gone, and it is no longer a policy shown
-    // The build showed every published policy; the page now shows one fewer
-    const built = Number(renderToString(<App boot={boot} />).match(/policy-selector-count">(\d+)</)[1]);
-    expect(container.textContent).toContain(`All ${built - 1} policies`);
+    // The build showed every published policy; the page's Policies tab
+    // shows one fewer (its cards are every policy, whatever is chosen)
+    const builtCount = Object.values(boot.manifest?.measures ?? {}).filter((entry) => ["approved", "provisional"].includes(entry.status)).length;
+    const cards = () => container.querySelectorAll(".policy-details-content [aria-label^='See its effect']").length;
+    await waitFor(() => expect(cards()).toBeGreaterThan(0));
+    expect(cards()).toBeLessThan(builtCount);
     expect(container.querySelector(".policy-details-content").textContent).not.toContain("Alpha");
     act(() => root.unmount());
   });

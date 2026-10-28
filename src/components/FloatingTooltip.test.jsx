@@ -14,7 +14,7 @@ const rowsFor = {
 const dumbbell = (year) => <OBRDumbbellChart rows={rowsFor[year]} yearLabel={`${year}-${String(year + 1).slice(-2)}`} obrKind="static" tooltipKey={`${year}-false`} />;
 
 describe("tooltips on hand-drawn charts", () => {
-  it("the official costings dumbbell shows PolicyEngine, the official costing and the difference, with the year", () => {
+  it("the official costings dumbbell shows ours, the official costing and the difference, with the year", () => {
     const { container, rerender } = render(
       dumbbell(2027),
     );
@@ -23,9 +23,9 @@ describe("tooltips on hand-drawn charts", () => {
     fireEvent.mouseEnter(row, { clientX: 100, clientY: 20 });
     const tip = screen.getByRole("tooltip");
     expect(tip).toHaveTextContent("Fuel duty rises deferred, 2027-28");
-    expect(tip).toHaveTextContent("PolicyEngine (static)−£1.2bn");
+    expect(tip).toHaveTextContent("Ours (static)−£1.2bn");
     expect(tip).toHaveTextContent("Official costing (static)−£1.0bn");
-    expect(tip).toHaveTextContent("Difference (PolicyEngine − official)−£0.2bn");
+    expect(tip).toHaveTextContent("Difference (ours − official)−£200m");
     // A new year (the Play button) clears it: no last year's figures
     rerender(dumbbell(2028));
     expect(screen.queryByRole("tooltip")).toBeNull();

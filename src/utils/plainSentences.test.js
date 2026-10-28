@@ -151,3 +151,13 @@ describe("plain card sentences", () => {
     expect(laterRevenueNote(null, [{ yearLabel: "2030-31", net: 3.2 }])).toBeNull();
   });
 });
+
+describe("the revenue sentence's rounding", () => {
+  it("rounds as the chart's labels and tooltip do (£m to the nearest £5m, £bn to one decimal)", async () => {
+    const { revenueSentence } = await import("./plainSentences");
+    const { formatBnOrM } = await import("./moneyFormat");
+    expect(revenueSentence(-0.6172, "2027-28")).toBe("In 2027-28, the selected policies cost the government £615 million.");
+    expect(formatBnOrM(-0.6172)).toBe("−£615m");
+    expect(revenueSentence(2.36, "2028-29")).toBe("In 2028-29, the selected policies raise £2.4 billion for the government.");
+  });
+});

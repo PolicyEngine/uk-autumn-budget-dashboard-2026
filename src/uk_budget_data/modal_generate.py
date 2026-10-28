@@ -50,6 +50,8 @@ from pathlib import Path
 
 import modal
 
+from uk_budget_data import modal_limits
+
 APP_NAME = "uk-budget-2026-generate"
 # The Modal secret holding HUGGING_FACE_TOKEN (read-only), and nothing else:
 # the workspace's existing fine-grained read token for
@@ -97,6 +99,8 @@ IMAGE = build_image()
 app = modal.App(APP_NAME, image=IMAGE)
 # The smoke test's own app, so it never needs the real app's secret.
 smoke_app = modal.App(f"{APP_NAME}-smoke", image=IMAGE)
+# The one secret, shared by the artifacts' app and the national run's.
+HF = [modal.Secret.from_name(HF_SECRET, required_keys=["HUGGING_FACE_TOKEN"])]
 
 
 def _pack(directory: Path) -> bytes:
@@ -108,7 +112,7 @@ def _pack(directory: Path) -> bytes:
     return buffer.getvalue()
 
 
-def run_artifact_here(job, allow_bundle: bool):
+def run_artifact_here(job, allow_bundle: bool, flat_tables=None):
     """One receipted artifact in this container.
 
     Returns ``(outcome, relative_path, files)``: the outcome as a local run
@@ -116,6 +120,11 @@ def run_artifact_here(job, allow_bundle: bool):
     and its files packed (``_pack``), or ``None`` for both when nothing was
     written. A ``synthetic:`` dataset is built here; any other local dataset
     path is refused, since no dataset file is ever sent to Modal.
+
+    With ``flat_tables`` (the national run), the artifact is made by
+    ``national.run_national_job``, which then reads its package-file rows
+    from the same simulations, and a fourth item is returned: those rows
+    (a ``FlatOutcome``), or None when no artifact was written.
     """
     from uk_budget_data import synthetic_dataset
     from uk_budget_data.modal_runner import Timed, phase_line
@@ -140,22 +149,31 @@ def run_artifact_here(job, allow_bundle: bool):
     builds: list = []
     processes: list = []
     started = time.perf_counter()
-    outcome = run_artifact(
-        replace(
-            job,
-            artifacts_root=root,
-            dataset_path=dataset,
-            build=Timed(job.build, builds),
-            process=Timed(job.process, processes),
+    here = replace(
+        job,
+        artifacts_root=root,
+        dataset_path=dataset,
+        build=Timed(job.build, builds),
+        process=Timed(job.process, processes),
+    )
+    flat = None
+    rows: list = []
+    if flat_tables is None:
+        outcome = run_artifact(here)
+    else:
+        from uk_budget_data.national import run_national_job
+
+        outcome, flat = run_national_job(here, flat_tables, rows)
+    outcome.progress.append(
+        phase_line(
+            job.key, time.perf_counter() - started, builds, processes, rows
         )
     )
-    outcome.progress.append(
-        phase_line(job.key, time.perf_counter() - started, builds, processes)
-    )
+    extra = () if flat_tables is None else (flat,)
     if outcome.reference is None:
-        return outcome, None, None
+        return (outcome, None, None, *extra)
     relative = outcome.reference.path.relative_to(root)
-    return outcome, str(relative), _pack(outcome.reference.path)
+    return (outcome, str(relative), _pack(outcome.reference.path), *extra)
 
 
 @app.cls(
@@ -165,9 +183,7 @@ def run_artifact_here(job, allow_bundle: bool):
     retries=RETRIES,
     max_containers=MAX_CONTAINERS,
     enable_memory_snapshot=True,
-    secrets=[
-        modal.Secret.from_name(HF_SECRET, required_keys=["HUGGING_FACE_TOKEN"])
-    ],
+    secrets=HF,
 )
 class Generator:
     @modal.enter(snap=True)
@@ -247,3 +263,97 @@ class SmokeGenerator:
             + "\n"
         )
         return f"{key}/{digest[:16]}", _pack(target)
+
+
+# --- The national run: one app for measures, package and their rows ------
+#
+# ``generate --national --backend modal`` (``national``,
+# ``modal_runner.national_modal_session``). Its own app, so the artifacts'
+# app above is unchanged. One small container first fills the dataset cache
+# on a Volume (``dataset_cache``); each measure's container then copies the
+# dataset from it and never downloads it. Names and guards are in
+# ``modal_limits``.
+
+national_app = modal.App(modal_limits.NATIONAL_APP_NAME, image=IMAGE)
+dataset_volume = modal.Volume.from_name(
+    modal_limits.DATASET_VOLUME, create_if_missing=True
+)
+
+
+@national_app.function(
+    cpu=modal_limits.PRIME_CPU,
+    memory=modal_limits.PRIME_MEMORY_MB,
+    timeout=modal_limits.PRIME_TIMEOUT_S,
+    retries=0,
+    max_containers=1,
+    volumes={modal_limits.DATASET_CACHE_MOUNT: dataset_volume},
+    secrets=HF,
+)
+def prime_dataset() -> dict:
+    """The pinned files in the cache, downloaded only if missing (with
+    retries on a Hugging Face 5xx), each checked against its digest."""
+    from uk_budget_data import dataset_cache
+
+    dataset_volume.reload()
+    done = dataset_cache.ensure_cached(
+        dataset_cache.pinned_files(),
+        Path(modal_limits.DATASET_CACHE_MOUNT),
+    )
+    if "downloaded" in done.values():
+        dataset_volume.commit()
+    return done
+
+
+@national_app.cls(
+    cpu=modal_limits.CPU,
+    memory=modal_limits.MEMORY_MB,
+    timeout=modal_limits.NATIONAL_TIMEOUT_S,
+    retries=0,
+    max_containers=modal_limits.MAX_CONTAINERS,
+    scaledown_window=modal_limits.NATIONAL_SCALEDOWN_S,
+    volumes={modal_limits.DATASET_CACHE_MOUNT: dataset_volume},
+    secrets=HF,
+)
+class NationalGenerator:
+    @modal.enter()
+    def load(self):
+        """Import the engine before the first run; the dataset is copied
+        from the cache at the first run on it (``_seed``)."""
+        import policyengine_uk.system  # noqa: F401
+
+        import uk_budget_data.national  # noqa: F401
+        import uk_budget_data.pipeline  # noqa: F401
+        import uk_budget_data.publication.generate  # noqa: F401
+
+        self.seeded = False
+
+    def _seed(self):
+        """Copy the cached dataset to where policyengine looks for it
+        (``./data``), each file checked against its digest, once per
+        container. policyengine then finds it and downloads nothing."""
+        if self.seeded:
+            return
+        from uk_budget_data import dataset_cache
+
+        started = time.perf_counter()
+        dataset_volume.reload()
+        dataset_cache.seed(
+            dataset_cache.pinned_files(),
+            Path(modal_limits.DATASET_CACHE_MOUNT),
+            Path(WORKDIR),
+        )
+        self.seeded = True
+        print(
+            f"dataset copied from the cache in {time.perf_counter() - started:.0f} s"
+        )
+
+    @modal.method()
+    def run(self, job):
+        """One artifact and its package-file rows."""
+        from uk_budget_data.national import NATIONAL_TABLES
+
+        if job.dataset_path is None:
+            self._seed()
+        return run_artifact_here(
+            job, allow_bundle=True, flat_tables=NATIONAL_TABLES
+        )

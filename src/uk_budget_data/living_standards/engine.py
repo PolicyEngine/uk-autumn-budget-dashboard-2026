@@ -49,10 +49,11 @@ def headline_end_year(policyengine_uk: str | None = None) -> int:
 
 
 def long_run_growth(year: int = END_YEAR) -> dict:
-    """CPI and earnings growth policyengine-uk assumes for a calendar year."""
-    from policyengine_uk.system import system
+    """CPI and earnings growth the runs assume for a calendar year (the OBR
+    October 2026 forecast, uk_budget_data.forecast)."""
+    from uk_budget_data.forecast import forecast_parameters
 
-    obr = system.parameters.gov.economic_assumptions.yoy_growth.obr
+    obr = forecast_parameters().gov.economic_assumptions.yoy_growth.obr
     return {
         "cpi": float(obr.consumer_price_index(f"{year}-01-01")),
         "earnings": float(obr.average_earnings(f"{year}-01-01")),
@@ -67,9 +68,10 @@ def headline_end_year_note(policyengine_uk: str | None = None) -> str:
     """
     growth = long_run_growth(END_YEAR)
     return (
-        f"{fy(END_YEAR)} is past the OBR March 2026 forecast, so it uses "
-        f"policyengine-uk's long-run assumptions (CPI {growth['cpi'] * 100:.1f}%, "
-        f"earnings growth {growth['earnings'] * 100:.1f}%)."
+        f"{fy(END_YEAR)} is the last year of the OBR October 2026 forecast "
+        f"(calendar {END_YEAR}: CPI {growth['cpi'] * 100:.1f}%, "
+        f"earnings growth {growth['earnings'] * 100:.1f}%); from 2032 "
+        "policyengine-uk's long-run assumptions apply."
     )
 
 

@@ -1,9 +1,13 @@
-// Prices by spending category: the OBR's March 2026 forecast
-// of CPI inflation for its five spending categories, by fiscal year, drawn
-// beside the inflation measures (ForecastSeriesSection). The data are
-// public/data/obr_price_categories.json (tools/extract-obr-price-categories.mjs,
-// from Table 1.19 of the OBR's economy detailed forecast tables); if the
-// file is missing the card says it is not yet available. The y axis is
+// Prices by spending category: the OBR's forecast of CPI inflation for its
+// five spending categories, by fiscal year, drawn beside the inflation
+// measures (ForecastSeriesSection). The data are
+// public/data/obr_price_categories.json, the March 2026 forecast, and
+// public/data/obr_price_categories_october_2026.json, the October 2026 one
+// (tools/extract-obr-price-categories.mjs, from Table 1.19 of the OBR's
+// economy detailed forecast tables). With both, as the inflation measures,
+// March is drawn faded and October full, with the card's Options pill
+// (ControlBar) to show either or both; if the March file is missing the card says it is not yet
+// available. The y axis is
 // fitted to the data (chartTheme.fittedAxis, always with 0); the x axis is
 // titled "Financial year", beside the inflation measures' "Calendar year".
 
@@ -11,12 +15,19 @@ import { useEffect, useState } from "react";
 import LsCard from "./LsCard";
 import ViewToggle from "../ViewToggle";
 import SeriesToggle from "../SeriesToggle";
+import ControlBar from "../ControlBar";
+import { forecastsOption } from "./controlOptions";
 import { LsLineChart, lineLegendItems } from "./LsCharts";
-import { SERIES_COLOURS, fittedAxis, useNarrowViewport } from "../../utils/chartTheme";
+import { CHART_COLOURS, SERIES_COLOURS, fittedAxis, useNarrowViewport } from "../../utils/chartTheme";
 import { formatOneDp, fyLabel } from "../../utils/livingStandards/outlook";
 import { buildChartCsv } from "../../utils/chartCsv";
 import { METHOD_ANCHORS } from "../methodology/anchors";
-import { categoryRows, loadObrPriceCategories, obrPriceCategoriesSentence } from "../../utils/livingStandards/obrPriceCategories";
+import {
+  categoryRows,
+  loadObrPriceCategories,
+  loadObrPriceCategoriesPost,
+  obrPriceCategoriesSentence,
+} from "../../utils/livingStandards/obrPriceCategories";
 
 export const OBR_PRICE_CATEGORIES_TITLE = "Prices by spending category";
 
@@ -61,19 +72,25 @@ const LINES = {
   },
 };
 const ORDER = Object.keys(LINES);
+// The later forecast's line for a category: its key in the joined rows
+const postKey = (key) => `${key}__post`;
+// The earlier forecast's lines, faded, beside the later one's (as the inflation measures)
+const PRE_OPACITY = 0.4;
+/** "Economic and fiscal outlook, March 2026" -> "OBR March 2026". */
+const forecastName = (source) => `OBR ${source.release.split(", ").at(-1)}`;
 
 const pctTick = (v) => `${formatOneDp(v).replace(/\.0$/, "")}%`;
 const pctText = (v) => `${formatOneDp(v)}%`;
 const ukDay = (iso) =>
   iso ? new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) : undefined;
 
-/** The file as { loading, data, error, unavailable }, loaded once per page. */
+/** The files as { loading, data, post, error, unavailable }, loaded once per page; post is the October file, or null. */
 function useObrPriceCategories() {
-  const [state, setState] = useState({ loading: true, data: null, error: null, unavailable: false });
+  const [state, setState] = useState({ loading: true, data: null, post: null, error: null, unavailable: false });
   useEffect(() => {
     let live = true;
-    loadObrPriceCategories().then((r) => {
-      if (live) setState({ loading: false, ...r });
+    Promise.all([loadObrPriceCategories(), loadObrPriceCategoriesPost()]).then(([r, p]) => {
+      if (live) setState({ loading: false, ...r, post: p.data });
     });
     return () => {
       live = false;
@@ -88,9 +105,11 @@ export function obrPriceSourceText(source) {
 }
 
 export default function ObrPriceCategoriesCard({ view = "chart", onViewChange }) {
-  const { loading, data, error, unavailable } = useObrPriceCategories();
+  const { loading, data, post, error, unavailable } = useObrPriceCategories();
   const narrow = useNarrowViewport();
   const [shown, setShown] = useState(ORDER);
+  // October alone by default; March or both in the Options pill
+  const [forecastsShown, setForecastsShown] = useState(["post"]);
   const [hovered, setHovered] = useState(null);
 
   const base = { id: "forecast-obr-price-categories", title: OBR_PRICE_CATEGORIES_TITLE, icon: "tag" };
@@ -115,12 +134,32 @@ export default function ObrPriceCategoriesCard({ view = "chart", onViewChange })
   }
 
   const keys = ORDER.filter((k) => data.series.some((s) => s.key === k));
-  const rows = categoryRows(data);
-  const allLines = keys.map((key) => ({ key, ...LINES[key] }));
-  const lines = allLines.filter((l) => shown.includes(l.key));
-  const sentence = obrPriceCategoriesSentence(rows, Object.fromEntries(keys.map((k) => [k, LINES[k].inSentence])));
+  const preRows = categoryRows(data);
+  const postRows = post ? categoryRows(post) : [];
+  const postByYear = Object.fromEntries(postRows.map((r) => [r.year, r]));
+  const both = postRows.length > 0;
+  // One row per year: March under each key, October under its __post key
+  const rows = preRows.map((r) => ({
+    ...r,
+    ...Object.fromEntries(keys.map((k) => [postKey(k), postByYear[r.year]?.[k] ?? null])),
+  }));
+  const preName = forecastName(data.source);
+  const postName = both ? forecastName(post.source) : null;
+  // One line per category, or with October as well, March faded and October full
+  const allLines = keys.flatMap((key) => {
+    const line = { key, category: key, forecast: "pre", ...LINES[key] };
+    if (!both) return [line];
+    return [
+      { ...line, name: `${LINES[key].name}, ${preName}`, opacity: PRE_OPACITY, width: 2 },
+      { ...line, key: postKey(key), forecast: "post", group: key, name: `${LINES[key].name}, ${postName}` },
+    ];
+  });
+  const lines = allLines.filter((l) => shown.includes(l.category) && (!both || forecastsShown.includes(l.forecast)));
+  // The sentence reads the latest forecast
+  const sentence = obrPriceCategoriesSentence(both ? postRows : preRows, Object.fromEntries(keys.map((k) => [k, LINES[k].inSentence])));
   const src = data.source;
-  const sourceText = obrPriceSourceText(src);
+  const sources = both ? [src, post.source] : [src];
+  const sourceText = sources.map(obrPriceSourceText).join("; ");
   const period = `${fyLabel(rows[0].year)} to ${fyLabel(rows[rows.length - 1].year)}`;
   const units = "Year-on-year growth (%); fiscal years";
 
@@ -131,7 +170,7 @@ export default function ObrPriceCategoriesCard({ view = "chart", onViewChange })
       source: sourceText,
       columns: [{ key: "fy", label: "Fiscal year" }, ...allLines.map((l) => ({ key: l.key, label: l.name, decimals: 4 }))],
       rows: rows.map((r) => ({ ...r, fy: fyLabel(r.year) })),
-      notes: [`${data.vintage}.`],
+      notes: [data, post].filter(Boolean).map((d) => `${d.vintage}.`),
     });
 
   const common = {
@@ -151,24 +190,32 @@ export default function ObrPriceCategoriesCard({ view = "chart", onViewChange })
         { term: "Financial year", meaning: "April to March, as the OBR publishes this table; the inflation measures beside it are by calendar year." },
       ],
       caveats: [
-        "This is the OBR's March 2026 forecast, made before the Autumn Budget 2026, so it leaves out the candidate VAT, fuel duty and energy bill measures, which act directly on these prices.",
+        both
+          ? `The faded lines are the ${preName} forecast, made before the Autumn Budget 2026; the full lines are the ${postName} forecast, made with it.`
+          : "This is the OBR's March 2026 forecast, made before the Autumn Budget 2026, so it leaves out the Budget's changes to fuel duty and VAT, which act directly on these prices.",
         "The OBR publishes no all-items CPI in this table; CPI and the other inflation measures are in the inflation measures card, by calendar year.",
       ],
-      sources: [{ label: `${src.publisher}, ${src.workbook}, ${src.table}: ${src.table_title}`, href: src.url, date: ukDay(src.release_date) }],
+      sources: sources.map((s) => ({ label: `${s.publisher}, ${s.workbook}, ${s.table}: ${s.table_title}`, href: s.url, date: ukDay(s.release_date) })),
       method: { anchor: METHOD_ANCHORS.forecastFeed, label: "How the forecast feeds the baseline" },
     },
     viewToggle: onViewChange && <ViewToggle value={view} onChange={onViewChange} name={OBR_PRICE_CATEGORIES_TITLE} />,
+    // Which forecasts are drawn: the Options pill, as the inflation measures beside it
+    controls: both && (
+      <ControlBar name={OBR_PRICE_CATEGORIES_TITLE} options={[forecastsOption(forecastsShown, setForecastsShown, preName, postName)]} />
+    ),
   };
 
   const chips = (
-    <SeriesToggle
-      series={allLines.map((l) => ({ key: l.key, label: l.name, short: l.short, colour: l.colour }))}
-      shown={shown}
-      onChange={setShown}
-      onHover={setHovered}
-      label="Lines"
-      narrow={narrow}
-    />
+    <>
+      <SeriesToggle
+        series={keys.map((key) => ({ key, label: LINES[key].name, short: LINES[key].short, colour: LINES[key].colour }))}
+        shown={shown}
+        onChange={setShown}
+        onHover={setHovered}
+        label="Lines"
+        narrow={narrow}
+      />
+    </>
   );
 
   if (view === "table") {

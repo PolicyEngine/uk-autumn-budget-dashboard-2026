@@ -171,6 +171,17 @@ class _Answer:
         return self._body
 
 
+@pytest.fixture(autouse=True)
+def _no_faked_answer_left_cached():
+    """_Recording fakes the route's calculation, and the route caches what
+    it answers: clear it after each test, so a later test of the real route
+    (test_deploy_smoke's) is not answered from the fake."""
+    yield
+    from uk_budget_data import api
+
+    api._cached_household_impact.cache_clear()
+
+
 class _Recording:
     """The real household route (its calculation faked: definitions don't
     depend on it), recording what it was asked."""
@@ -408,7 +419,8 @@ def test_each_receipt_commit_is_listed_once_with_its_measures(tmp_path, repo):
     assert code == 0, lines
     at = lines.index(CHANGES_HEADING)
     assert lines[at + 1 : -1] == [
-        f"  since {first[:12]} ({MEASURES[0]}, {MEASURES[2]}):",
+        # Each commit's measures in id order
+        f"  since {first[:12]} ({', '.join(sorted((MEASURES[0], MEASURES[2])))}):",
         "    src/uk_budget_data/x.py",
         "    uv.lock",
         f"  since {second[:12]} ({MEASURES[1]}):",

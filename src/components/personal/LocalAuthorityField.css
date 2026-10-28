@@ -1,15 +1,15 @@
-/* The constituency picker: a 40px search box, as the selects, with its
+/* The local authority picker: a 40px search box, as the selects, with its
    list of matches below */
-.constituency-field {
+.council-field {
   position: relative;
   min-width: 0;
 }
 
-.constituency-box {
+.council-box {
   position: relative;
 }
 
-.constituency-box input {
+.council-box input {
   width: 100%;
   height: 40px;
   padding: 0 38px 0 34px;
@@ -24,22 +24,22 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.constituency-box input::placeholder {
+.council-box input::placeholder {
   font-weight: 400;
   color: var(--pe-gray-400);
 }
 
-.constituency-box input:hover {
+.council-box input:hover {
   border-color: var(--pe-gray-300);
 }
 
-.constituency-box input:focus {
+.council-box input:focus {
   outline: none;
   border-color: var(--pe-teal-500);
   box-shadow: 0 0 0 2px var(--pe-teal-100);
 }
 
-.constituency-search-icon {
+.council-search-icon {
   position: absolute;
   top: 50%;
   left: 11px;
@@ -48,7 +48,7 @@
   pointer-events: none;
 }
 
-.constituency-toggle {
+.council-toggle {
   position: absolute;
   top: 0;
   right: 0;
@@ -64,11 +64,11 @@
   cursor: pointer;
 }
 
-.constituency-field.is-open .constituency-toggle svg {
+.council-field.is-open .council-toggle svg {
   transform: rotate(180deg);
 }
 
-.constituency-list {
+.council-list {
   position: absolute;
   z-index: 30;
   top: calc(100% + 4px);
@@ -86,12 +86,12 @@
   box-shadow: 0 8px 24px var(--shadow-strong);
 }
 
-.constituency-list[hidden] {
+.council-list[hidden] {
   display: none;
 }
 
-.constituency-option,
-.constituency-empty {
+.council-option,
+.council-empty {
   padding: 10px;
   font-size: 0.875rem;
   line-height: 1.3;
@@ -99,31 +99,31 @@
   border-radius: 4px;
 }
 
-.constituency-option {
+.council-option {
   cursor: pointer;
 }
 
-.constituency-option.is-picked {
+.council-option.is-picked {
   font-weight: 600;
 }
 
-.constituency-option.is-active {
+.council-option.is-active {
   background: var(--pe-teal-50);
   color: var(--pe-gray-800);
 }
 
-.constituency-empty {
+.council-empty {
   color: var(--pe-gray-500);
 }
 
 /* A phone: a taller row per option, easier to tap */
 @media (max-width: 640px) {
-  .constituency-box input {
+  .council-box input {
     font-size: 1rem;
   }
 
-  .constituency-option,
-  .constituency-empty {
+  .council-option,
+  .council-empty {
     min-height: 44px;
     padding: 12px 10px;
   }

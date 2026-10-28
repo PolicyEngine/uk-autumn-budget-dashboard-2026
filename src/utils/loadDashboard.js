@@ -102,7 +102,14 @@ export async function loadVerifiedTable(catalogue, table, options) {
 }
 
 /** Null is an unavailable figure, never a zero standing in for a missing row. */
-export function budgetChartData(budgetary, measures, selected, years) {
+/**
+ * The revenue chart's points: each selected measure's own bar, and the net
+ * line. With `packageKey` (the published combined run of exactly the
+ * selected measures, selectionPackageKey) the net line is that run's own
+ * figure (`netFromPackage`, the bars' sum kept as `barsSum`); otherwise it
+ * adds up the bars.
+ */
+export function budgetChartData(budgetary, measures, selected, years, packageKey = null) {
   return years.map((year) => {
     const point = { year };
     let total = 0;
@@ -119,6 +126,15 @@ export function budgetChartData(budgetary, measures, selected, years) {
     }
     point.netImpact = complete ? total : null;
     point.unpublished = !complete;
+    if (packageKey) {
+      const run = budgetary.find((item) => item.reform_id === packageKey && Number(item.year) === year);
+      const value = run?.value !== "" && run?.value != null ? Number(run.value) : NaN;
+      if (Number.isFinite(value)) {
+        point.barsSum = point.netImpact;
+        point.netImpact = value;
+        point.netFromPackage = true;
+      }
+    }
     return point;
   });
 }

@@ -45,6 +45,9 @@ const KIND_TESTS = [
   ["fuelVat", (row) => /\bVAT\b/.test(row.label) && /(petrol|diesel|road fuel)/i.test(row.label)],
   ["electricityVat", (row) => /electricity/i.test(row.label)],
   ["pensionAgeAllowance", (row) => /state pension age/i.test(row.label)],
+  // A reduction in income tax (the Pension Tax Allowance): by its unit, a
+  // sum of income tax, which policy_table.py gives a tax reduction only
+  ["taxReduction", (row) => row.unit === "gbp" && /^£ of income tax\b/.test(row.unit_words ?? "")],
   ["unearned", (row) => /^(dividend|savings|property)\b.*\brate\b/i.test(row.label)],
   ["incomeTaxThreshold", (row) => row.unit === "gbp" && /(personal allowance|rate threshold|rate band)/i.test(row.label)],
 ];
@@ -82,7 +85,7 @@ export function parameterRowsFor(parameters, measure, year) {
     .map((row) => {
       const point = (row.points ?? []).find((p) => p.key === String(year));
       if (!point) return null;
-      return { kind: "parameter", id: row.label, label: row.label, unit: row.unit, before: point.before, after: point.after };
+      return { kind: "parameter", id: row.label, label: row.label, unit: row.unit, unit_words: row.unit_words, note: row.note, before: point.before, after: point.after };
     })
     .filter(Boolean);
 }
@@ -210,6 +213,43 @@ function householdSteps({ params, kinds, household, salaryUsed, rows: allRows, e
       steps.push(inputRow("employment_income", "Your employment income", salaryUsed));
       steps.push(stepRow("income_above_threshold", "Income above the threshold", before, after));
       parts = [fromSummary(repayment, `Repayment (${Math.round(STUDENT_LOAN_RATE * 100)}% of income above the threshold)`)];
+    }
+  }
+
+  // A tax reduction: income tax without it, the largest reduction, what
+  // the taper (or the tax due, as it is non-refundable) takes back, and
+  // income tax with it. Only when the income tax row moves by no more
+  // than the largest reduction
+  const reduction = param("taxReduction");
+  if (reduction && !parts) {
+    const tax = row("income_tax");
+    if (tax && moves(tax)) {
+      const taxBefore = Math.abs(tax.before);
+      const taxAfter = Math.abs(tax.after);
+      const given = taxBefore - taxAfter;
+      const largest = Number(reduction.after) || 0;
+      if (given > 0 && given <= largest + SAME_CHANGE) {
+        const withdrawn = Math.max(0, largest - given);
+        steps.push(inputRow("tax_without_reduction", "Income tax without the reduction", taxBefore));
+        steps.push(stepRow("tax_reduction_largest", reduction.label, 0, largest));
+        if (withdrawn >= SAME_CHANGE) {
+          // Non-refundable: all the tax due is taken off, and no more
+          const limited = taxAfter < SAME_CHANGE;
+          const taper = /reduced by (£1 for every £\d+[^;.]*)/i.exec(reduction.note ?? "")?.[1];
+          const label = limited ? "Not used: more than the income tax due" : `Withdrawn by the taper${taper ? ` (${taper})` : ""}`;
+          steps.push(stepRow(limited ? "tax_reduction_unused" : "tax_reduction_taper", label, 0, -withdrawn));
+        }
+        const taxPart = worked("income_tax_total", "Income tax", -taxBefore, -taxAfter, given);
+        const sum = (list) => list.reduce((acc, part) => acc + part.raw, 0);
+        if (Math.abs(given - effectRaw) < MATCH_POUNDS) parts = [taxPart];
+        else if (!othersTouchIncome) {
+          // The rest from the Summary rows it moves besides income tax
+          // (Pension Credit, Council Tax Reduction), when nothing else can
+          const others = rows.filter((item) => moves(item) && !item.parent && item.id !== "income_tax" && !SPENDING_ROWS.has(item.id));
+          const all = [taxPart, ...others.map((item) => fromSummary(item))];
+          if (Math.abs(sum(all) - effectRaw) < MATCH_POUNDS) parts = all;
+        }
+      }
     }
   }
 
