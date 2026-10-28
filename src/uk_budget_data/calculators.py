@@ -314,6 +314,25 @@ POVERTY_MEASURES = {
 # (is_hbai_dependent_child: under 16, or 16-19 in non-advanced education and
 # living with a parent), as DWP's child poverty statistics count them.
 POVERTY_GROUPS = {"": None, "child_": "is_hbai_dependent_child"}
+# The headline poverty change in metrics (poverty_change_pp and _pct):
+# absolute poverty before housing costs, for everyone.
+HEADLINE_POVERTY = "in_poverty_bhc"
+# A household is affected (people_affected) when its net income moves by
+# more than this share of its baseline net income, floored at £1.
+AFFECTED_RELATIVE_CHANGE = 0.0001
+
+
+def household_income_changed(baseline_income, reform_income) -> np.ndarray:
+    """Which households the measure affects, as people_affected counts
+    them: net income moved by more than AFFECTED_RELATIVE_CHANGE of the
+    baseline's, floored at £1. Also the disclosure floor's definition of
+    changed for people_affected (``disclosure_floor.thin_metrics``)."""
+    baseline_income = np.asarray(baseline_income)
+    change = np.asarray(reform_income) - baseline_income
+    return (
+        np.abs(change / np.maximum(baseline_income, 1))
+        > AFFECTED_RELATIVE_CHANGE
+    )
 
 
 def poverty_change(
@@ -413,15 +432,13 @@ class MetricsCalculator(BaseCalculator):
             "household_weight", period=year, map_to="household"
         )
 
-        income_change = reform_income - baseline_income
-        capped_baseline = np.maximum(baseline_income.values, 1)
-        income_change_pct = income_change.values / capped_baseline
-
         # People per household, weighted natively by microdf.
         people = MicroSeries(
             household_count.values, weights=household_weight.values
         )
-        income_changed = np.abs(income_change_pct) > 0.0001
+        income_changed = household_income_changed(
+            baseline_income.values, reform_income.values
+        )
         valid_deciles = household_decile.values >= 1
 
         people_affected = people[income_changed & valid_deciles].sum()
@@ -461,10 +478,10 @@ class MetricsCalculator(BaseCalculator):
 
         # Calculate poverty change
         baseline_poverty = baseline.calculate(
-            "in_poverty_bhc", period=year, map_to="person"
+            HEADLINE_POVERTY, period=year, map_to="person"
         ).values
         reformed_poverty = reformed.calculate(
-            "in_poverty_bhc", period=year, map_to="person"
+            HEADLINE_POVERTY, period=year, map_to="person"
         ).values
         person_weight = baseline.calculate(
             "person_weight", period=year, map_to="person"

@@ -42,6 +42,23 @@ class _Dataset(dict):
     years = [YEAR]
 
 
+POVERTY_FLAGS = (
+    "in_poverty_bhc",
+    "in_poverty_ahc",
+    "in_relative_poverty_bhc",
+    "in_relative_poverty_ahc",
+)
+
+
+def _no_poverty(n):
+    """Person flags for the metrics floor: no one in poverty on either
+    side, and no child."""
+    return {
+        **{flag: np.zeros(n, dtype=bool) for flag in POVERTY_FLAGS},
+        "is_hbai_dependent_child": np.zeros(n, dtype=bool),
+    }
+
+
 def _population(changed_survey, records_each=3):
     """Ten deciles of 20 survey households, each built into
     ``records_each`` records of one adult aged 40. The households in
@@ -55,6 +72,7 @@ def _population(changed_survey, records_each=3):
         "household_id": household_id,
         "age": np.full(len(survey), 40),
         "household_income_decile": decile,
+        **_no_poverty(len(survey)),
     }
     baseline = _Simulation(
         {
@@ -219,7 +237,7 @@ def test_generation_names_survey_households_in_the_scatter(monkeypatch):
     )
     job = _job()
     rows = [{"household_id": 1_000}, {"household_id": 1_005}]
-    result = SimpleNamespace(household_scatter=rows, age_impact=[])
+    result = SimpleNamespace(household_scatter=rows, age_impact=[], metrics=[])
     generate._apply_disclosure_floor("a", job, baseline, reformed, result)
     assert [row["survey_household"] for row in result.household_scatter] == [
         0,
@@ -347,6 +365,7 @@ def test_warn_mode_writes_a_thin_decile_run_with_a_warning(monkeypatch):
     result = SimpleNamespace(
         household_scatter=[],
         age_impact=[_age_row(YEAR, "35-49"), _age_row(YEAR, "all")],
+        metrics=[],
     )
     (warning,), record = generate._apply_disclosure_floor(
         "a", job, baseline, reformed, result
@@ -652,3 +671,226 @@ def test_a_warned_run_is_recorded_and_never_staged(monkeypatch):
         assert "alpha" not in manifest.measures
     finally:
         world.close()
+
+
+# --- the summary statistics: people affected and the poverty changes -----
+
+POVERTY_COLUMNS = [
+    f"{group}poverty_{measure}_change_{unit}"
+    for measure in ("abs_bhc", "abs_ahc", "rel_bhc", "rel_ahc")
+    for group in ("", "child_")
+    for unit in ("pp", "pct")
+]
+
+
+def _metrics_population(
+    crossing=(), children=(), changed=(), records_each=3, flags=None
+):
+    """40 survey households in deciles of 4, each built into
+    ``records_each`` records of one person. The people of the survey
+    households in ``crossing`` enter poverty (on ``flags``, every poverty
+    measure by default), those in ``children`` are HBAI dependent
+    children, and the households in ``changed`` gain £100."""
+    survey = np.repeat(np.arange(40), records_each)
+    n = len(survey)
+    household_id = np.arange(n) + 1_000
+    decile = survey // 4 + 1
+    base = np.full(n, 20_000.0)
+    gain = np.where(np.isin(survey, list(changed)), 100.0, 0.0)
+    before = _no_poverty(n)
+    before["is_hbai_dependent_child"] = np.isin(survey, list(children))
+    after = dict(before)
+    for flag in flags or POVERTY_FLAGS:
+        after[flag] = np.isin(survey, list(crossing))
+    person = {"household_id": household_id, "household_income_decile": decile}
+    household = {
+        "household_id": household_id,
+        "household_income_decile": decile,
+    }
+    baseline = _Simulation(
+        {**household, "household_net_income": base}, {**person, **before}
+    )
+    reformed = _Simulation(
+        {**household, "household_net_income": base + gain},
+        {**person, **after},
+    )
+    return baseline, reformed, survey
+
+
+def _withheld(crossing=(), children=(), changed=(), **kwargs):
+    baseline, reformed, survey = _metrics_population(
+        crossing, children, changed, **kwargs
+    )
+    return floor.thin_metrics(baseline, reformed, [YEAR], survey)
+
+
+@pytest.mark.parametrize(
+    "crossing, thin",
+    [((), False), ((5,), True), ((5, 6), True), ((5, 6, 7), False)],
+    ids=["none", "one", "two", "three"],
+)
+def test_a_poverty_change_is_withheld_when_one_or_two_households_cross(
+    crossing, thin
+):
+    """Everyone's columns, the headline's in metrics too, by the survey
+    households whose people cross the line, however many records each
+    has. Nobody crossing is an exact zero, which is published."""
+    found = _withheld(crossing)
+    everyone = [c for c in POVERTY_COLUMNS if not c.startswith("child_")]
+    if thin:
+        assert found == {
+            ("metrics", YEAR): ["poverty_change_pp", "poverty_change_pct"],
+            ("poverty_inequality", YEAR): everyone,
+        }
+    else:
+        assert found == {}
+
+
+def test_children_are_held_to_the_floor_on_their_own():
+    """Five survey households cross, two of them children's: everyone's
+    change stands, the children's is withheld."""
+    found = _withheld(crossing=range(5), children=(0, 1))
+    assert ("metrics", YEAR) not in found
+    assert found[("poverty_inequality", YEAR)] == [
+        c for c in POVERTY_COLUMNS if c.startswith("child_")
+    ]
+
+
+def test_three_childrens_households_publish_the_childrens_change():
+    assert _withheld(crossing=range(6), children=(0, 1, 2)) == {}
+
+
+def test_the_pct_partner_goes_with_the_pp():
+    """Only absolute poverty after housing costs is moved, by children in
+    two survey households: both its child columns go, nothing else."""
+    found = _withheld(
+        crossing=(0, 1, 10, 11, 12),
+        children=(0, 1),
+        flags=["in_poverty_ahc"],
+    )
+    assert found == {
+        ("poverty_inequality", YEAR): [
+            "child_poverty_abs_ahc_change_pp",
+            "child_poverty_abs_ahc_change_pct",
+        ]
+    }
+
+
+def test_childrens_change_goes_when_it_gives_back_the_others():
+    """Four children's survey households and one other cross: everyone's
+    change less the children's would give back the one other household's,
+    so the children's is withheld with everyone's left."""
+    found = _withheld(crossing=(0, 1, 2, 3, 10), children=(0, 1, 2, 3))
+    assert found == {
+        ("poverty_inequality", YEAR): [
+            c for c in POVERTY_COLUMNS if c.startswith("child_")
+        ]
+    }
+
+
+def test_a_withheld_total_needs_no_partner_withheld():
+    """One survey household, not a child's, crosses: everyone's change is
+    withheld, and the children's exact zero stays."""
+    found = _withheld(crossing=(10,), children=(0, 1, 2))
+    assert all(
+        not c.startswith("child_") for c in found[("poverty_inequality", YEAR)]
+    )
+
+
+@pytest.mark.parametrize(
+    "changed, thin",
+    [((), False), ((5,), True), ((5, 6), True), ((5, 6, 7), False)],
+    ids=["none", "one", "two", "three"],
+)
+def test_people_affected_counts_the_affected_survey_households(changed, thin):
+    found = _withheld(changed=changed)
+    assert found == ({("metrics", YEAR): ["people_affected"]} if thin else {})
+
+
+def test_people_affected_uses_the_calculators_definition_of_changed():
+    """A £1 change on £20,000 is under AFFECTED_RELATIVE_CHANGE, so not
+    affected; a household with no income decile is not counted."""
+    baseline, reformed, survey = _metrics_population(changed=(5, 6, 7))
+    income = reformed.arrays["household"]["household_net_income"]
+    income[np.isin(survey, [7])] = 20_001.0
+    found = floor.thin_metrics(baseline, reformed, [YEAR], survey)
+    assert found == {("metrics", YEAR): ["people_affected"]}
+    baseline, reformed, survey = _metrics_population(changed=(5, 6, 7))
+    decile = baseline.arrays["household"]["household_income_decile"]
+    decile[np.isin(survey, [7])] = 0
+    found = floor.thin_metrics(baseline, reformed, [YEAR], survey)
+    assert found == {("metrics", YEAR): ["people_affected"]}
+
+
+def test_withholding_blanks_only_the_found_columns_of_their_year():
+    rows = [
+        {"year": 2027, "people_affected": 1.0, "gini_change": 0.1},
+        {"year": 2028, "people_affected": 2.0, "gini_change": 0.2},
+    ]
+    found = {
+        ("metrics", 2027): ["people_affected"],
+        ("age_impact", 2028): ["40"],
+    }
+    assert floor.withhold_metrics(rows, found) == [
+        {"year": 2027, "people_affected": None, "gini_change": 0.1},
+        {"year": 2028, "people_affected": 2.0, "gini_change": 0.2},
+    ]
+
+
+@given(
+    survey=st.lists(st.integers(0, 5), min_size=1, max_size=30),
+    data=st.data(),
+)
+def test_a_poverty_column_is_withheld_exactly_when_thin(survey, data):
+    """For every survey grouping, line crossing and set of children:
+    everyone's columns are withheld exactly when the people crossing come
+    from 1 to FLOOR - 1 survey households; the children's exactly when
+    theirs do, or when the others' do and everyone's is published; the
+    pct with the pp; and never when nobody crosses."""
+    n = len(survey)
+    survey = np.array(survey)
+    household_id = np.arange(n) + 1_000
+    crossing = np.array(
+        data.draw(st.lists(st.booleans(), min_size=n, max_size=n))
+    )
+    child = np.array(
+        data.draw(st.lists(st.booleans(), min_size=n, max_size=n))
+    )
+    before = {**_no_poverty(n), "is_hbai_dependent_child": child}
+    after = {**before, **{flag: crossing for flag in POVERTY_FLAGS}}
+    household = {
+        "household_id": household_id,
+        "household_income_decile": np.ones(n),
+        "household_net_income": np.full(n, 20_000.0),
+    }
+    person = {"household_id": household_id}
+    found = floor.thin_metrics(
+        _Simulation(household, {**person, **before}),
+        _Simulation(household, {**person, **after}),
+        [YEAR],
+        survey,
+    )
+    withheld = set(found.get(("poverty_inequality", YEAR), []))
+
+    def count(members):
+        return len(set(survey[members & crossing].tolist()))
+
+    def thin(members):
+        return 0 < count(members) < FLOOR
+
+    everyone = np.ones(n, dtype=bool)
+    expected_everyone = thin(everyone)
+    expected_child = thin(child) or (thin(~child) and not expected_everyone)
+    for measure in ("abs_bhc", "abs_ahc", "rel_bhc", "rel_ahc"):
+        for unit in ("pp", "pct"):
+            assert (f"poverty_{measure}_change_{unit}" in withheld) == (
+                expected_everyone
+            )
+            assert (f"child_poverty_{measure}_change_{unit}" in withheld) == (
+                expected_child
+            )
+    assert (("metrics", YEAR) in found) == expected_everyone
+    if not crossing.any():
+        assert found == {}
+    if count(child) == 0:
+        assert not any(c.startswith("child_") for c in withheld)
