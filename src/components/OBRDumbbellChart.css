@@ -82,6 +82,12 @@
   border-radius: 50%;
 }
 
+/* Ours on the official costing's basis: a smaller ring, as in the chart */
+.obr-dumbbell-key-ring.is-basis {
+  width: 10px;
+  height: 10px;
+}
+
 .obr-dumbbell-legend .obr-dumbbell-legend-title {
   color: var(--pe-gray-600);
 }
