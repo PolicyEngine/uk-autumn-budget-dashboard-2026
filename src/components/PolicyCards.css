@@ -80,9 +80,11 @@
   row-gap: 0;
 }
 
+/* A lead line's points: real bullets, indented, tight */
 .policy-card-example-items {
-  margin: 0;
-  padding-left: 18px;
+  margin: 2px 0 0;
+  padding-left: 20px;
+  list-style: disc outside;
   font-size: var(--fs-small);
   line-height: 1.55;
   color: var(--pe-gray-600);
@@ -129,4 +131,37 @@
 /* Who it reaches, in full: a row of its own under Starts and Ends */
 .policy-card-affects.is-wide {
   grid-column: 1 / -1;
+}
+
+.policy-card-example-items li {
+  display: list-item;
+}
+
+.policy-card-example-items li + li {
+  margin-top: 2px;
+}
+
+.policy-card-example-items li::marker {
+  color: var(--pe-gray-400);
+}
+
+/* The change beside the new value, so both tiles keep one height */
+.pchg-tile-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 2px;
+}
+
+/* Several before-and-after pairs: a little air between them */
+.pchg-ba + .pchg-ba {
+  margin-top: 4px;
+}
+
+/* A card's footer disclosure (About this result, Treasury costing): the
+   chevron at the row's right edge, the same on every card */
+.policy-card-modelling .disclosure-compact > .disclosure-toggle {
+  width: 100%;
+  justify-content: space-between;
 }

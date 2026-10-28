@@ -1,6 +1,6 @@
 /* The Budget measures this dashboard does not model (UnmodelledMeasures.jsx):
-   a section under the modelled cards, its heading like theirs, the
-   measures as compact cards, two to a row (one on a phone), in groups. */
+   a section under the modelled cards, its heading like theirs, each
+   measure a Policies card (globals.css .policy-card), in groups. */
 .umm {
   margin-top: 40px;
 }
@@ -63,120 +63,7 @@
   color: var(--pe-gray-500);
 }
 
-/* Two cards to a row, each as tall as its row; one on a phone */
-.umm-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 16px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.umm-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-  padding: 18px 20px 14px;
-  background: var(--pe-surface);
-  border: 1px solid var(--card-border);
-  border-radius: var(--pe-radius-lg);
-  box-shadow: 0 1px 2px var(--shadow-faint);
-  container-type: inline-size;
-}
-
-.umm-card .policy-card-topline {
-  margin-bottom: 0;
-}
-
-.umm-card-name {
-  margin: 0;
-  font-size: var(--fs-body-lg);
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--pe-gray-900);
-}
-
-.umm-card-changes {
-  margin: 0;
-  font-size: var(--fs-small);
-  line-height: 1.55;
-  color: var(--pe-gray-700);
-}
-
-/* The headline: the values before and after, big */
-.umm-headline {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.umm-headline-values {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-}
-
-.umm-before {
-  color: var(--pe-gray-400);
-  text-decoration: line-through;
-  text-decoration-thickness: 1px;
-}
-
-.umm-after {
-  color: var(--pe-gray-900);
-}
-
-.umm-arrow {
-  flex: none;
-  color: var(--pe-gray-400);
-}
-
-.umm-headline-label,
-.umm-meta {
-  margin: 0;
-  font-size: var(--fs-caption);
-  line-height: 1.45;
-  color: var(--pe-gray-500);
-}
-
-/* For a household, and why it is not in our figures: a line each */
-.umm-lines {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  font-size: var(--fs-small);
-  line-height: 1.5;
-}
-
-.umm-lines dt {
-  display: inline;
-  font-weight: 600;
-  color: var(--pe-gray-700);
-}
-
-.umm-lines dd {
-  display: inline;
-  margin: 0 0 0 4px;
-  color: var(--pe-gray-600);
-}
-
 /* The Treasury's six years as one strip of small cells */
-.umm-costing-section {
-  margin-top: auto;
-  padding-top: 10px;
-  border-top: 1px solid var(--c-grid);
-}
-
 .umm-costing-scroll {
   max-width: 100%;
   overflow-x: auto;
@@ -278,30 +165,19 @@
   color: var(--pe-gray-600);
 }
 
-/* Sources, closed at the foot of each card */
-.umm-sources {
-  font-size: var(--fs-caption);
-  color: var(--pe-gray-600);
+/* Inside Treasury costing: the sources and the Table 6.1 rows, a line each */
+.umm-costing-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
 }
 
-/* "Our explainer", in the sources' size, just above them */
-.umm-explainer {
+.umm-sources {
   margin: 0;
   font-size: var(--fs-caption);
-  font-weight: 500;
-}
-
-.umm-sources summary {
-  width: fit-content;
-  cursor: pointer;
-  font-weight: 500;
-  color: var(--pe-teal-700);
-}
-
-.umm-sources ul {
-  margin: 6px 0 0;
-  padding-left: 18px;
   line-height: 1.5;
+  color: var(--pe-gray-600);
 }
 
 .umm-link {
@@ -326,14 +202,16 @@
   vertical-align: -1px;
 }
 
-@media (max-width: 768px) {
-  .umm-list {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .umm-chevron {
     transition: none;
   }
+}
+
+/* A measure the model covers but this release holds back */
+.umm-held-back {
+  margin: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--pe-gray-500);
 }

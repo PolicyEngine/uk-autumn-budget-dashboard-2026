@@ -26,6 +26,7 @@ import {
   relativeAxis,
   sameThresholds,
   thresholdRows,
+  thresholdsHeadline,
   thresholdsSentence,
   tradingAllowance,
 } from "../../utils/livingStandards/frozenThresholds";
@@ -159,7 +160,8 @@ export default function FrozenThresholdsCard({ view = "chart", onViewChange }) {
   const common = {
     ...base,
     period,
-    summary: thresholdsSentence(rows, trading),
+    // One short line; each threshold's own figure is in What it shows
+    summary: thresholdsHeadline(rows),
     about: `Each threshold's value relative to average earnings, ${fyLabel(BASE_YEAR)} = 100${trading ? ` (the trading allowance from ${fyLabel(trading.start)} = 100)` : ""}.`,
     sourceText,
     info: {
@@ -174,7 +176,7 @@ export default function FrozenThresholdsCard({ view = "chart", onViewChange }) {
             </>
           )}
           . A threshold that keeps pace with pay stays at 100; one that falls below it takes a larger share of income
-          into tax.
+          into tax. {thresholdsSentence(rows, trading)}
         </>
       ),
       how: [

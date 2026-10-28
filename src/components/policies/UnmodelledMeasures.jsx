@@ -1,18 +1,22 @@
 import { useId, useState } from "react";
-import { ArrowRight, ChevronDown, ExternalLink } from "lucide-react";
+import { ChevronDown, ExternalLink, Landmark } from "lucide-react";
 import TitleIcon from "../TitleIcon";
-import { measureCategoryOf } from "../../utils/measureCategory";
-import { differs, formatValue } from "../../utils/policyParameters";
+import Disclosure from "../Disclosure";
+import { PolicyCard } from "../PolicyCards";
 import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import { EXTERNAL } from "../../utils/sources";
 import {
   COSTING_YEARS,
+  TABLE_6_1_URL,
   UNMODELLED_GROUPS,
   UNMODELLED_MEASURES,
 } from "../../utils/unmodelledMeasures";
 import "./UnmodelledMeasures.css";
 
 export const UNMODELLED_TITLE = "Budget policies we do not model";
+/** "row 15", or "rows 38 and 39". */
+const rowsLabel = (rows) => (rows.length === 1 ? `row ${rows[0]}` : `rows ${rows.slice(0, -1).join(", ")} and ${rows[rows.length - 1]}`);
+
 export const COSTING_CAPTION = "Treasury costing, £m (Table 6.1; + is a gain to the Exchequer)";
 export const UNMODELLED_SUBTITLE = "What each policy changes, who it reaches and why we leave it out.";
 
@@ -90,129 +94,88 @@ function Costing({ measure }) {
   );
 }
 
-/** "1 April 2027." → "1 April 2027", for the card's one meta line. */
-const clause = (text) => String(text ?? "").trim().replace(/\.$/, "");
-
 /**
- * A measure's values before and after, from its layout
- * (utils/unmodelledCards.js), or [] where the entry gives none: the main
- * one first, as the card's headline.
+ * One measure as a Policies card (PolicyCards.jsx's PolicyCard), in the
+ * modelled cards' own style, kept compact: the category and name, What
+ * changes as the summary line, At a glance (Starts, Ends, who it reaches;
+ * no timeline), the values before and after in the What changes block
+ * where the entry gives them (no chart), For a household, then in the
+ * footer one disclosure, Treasury costing, styled as About this result:
+ * the Treasury's six years as a strip, the sources and the Table 6.1 rows. The words are the entry's own
+ * (utils/unmodelledMeasures.js).
  */
-export function headlineValues(measure) {
-  const rows = UNMODELLED_CARDS[measure.id]?.parameters?.rows ?? [];
-  return rows
-    .map((row) => {
-      const point = row.points.find(differs);
-      return point ? { label: row.label, primary: row.primary, unit: row.unit, before: point.before, after: point.after } : null;
-    })
-    .filter(Boolean)
-    .sort((x, y) => Number(y.primary) - Number(x.primary));
-}
-
-/**
- * One measure as a compact card: its category and name, what changes,
- * the values before and after as the headline, when and whom in one line,
- * for a household and why it is not in our figures in a line each, the
- * Treasury's six years as a strip, PolicyEngine's post on it where there
- * is one, and its sources behind a disclosure. The words are the entry's
- * own (utils/unmodelledMeasures.js).
- */
-function UnmodelledCard({ measure }) {
-  const layout = UNMODELLED_CARDS[measure.id] ?? {};
-  const category = measureCategoryOf({ category: layout.category, name: measure.name, id: measure.id });
-  const values = headlineValues(measure);
-  const [main, ...more] = values;
-  const meta = [`From ${clause(measure.starts)}`, layout.ends ? `Ends ${layout.ends}` : "Continues", clause(measure.reaches)];
-  return (
-    <li className="umm-card" id={`unmodelled-${measure.id}`}>
-      <div className="policy-card-topline">
-        <p className="policy-card-type">
-          <span className="mrl-icon" aria-hidden="true" style={{ "--mrl-colour": "var(--pe-gray-500)" }}>
-            <TitleIcon name={category.icon} bare size={13} />
-          </span>
-          {category.label}
-        </p>
-      </div>
-      <h3 className="umm-card-name">{measure.name}</h3>
-      <p className="umm-card-changes">{measure.changes}</p>
-      {main && (
-        <div className="umm-headline">
-          <p className="umm-headline-values" aria-label={`${main.label}: ${formatValue(main.before, main.unit)} becomes ${formatValue(main.after, main.unit)}`}>
-            <span className="umm-before">{formatValue(main.before, main.unit)}</span>
-            <ArrowRight size={18} aria-hidden="true" className="umm-arrow" />
-            <span className="umm-after">{formatValue(main.after, main.unit)}</span>
-          </p>
-          <p className="umm-headline-label">
-            {main.label}
-            {more.map((row) => (
-              <span key={row.label}>
-                {" · "}
-                {row.label}: {formatValue(row.before, row.unit)} → {formatValue(row.after, row.unit)}
-              </span>
-            ))}
-          </p>
-        </div>
-      )}
-      <p className="umm-meta">{meta.join(" · ")}</p>
-      <dl className="umm-lines">
-        <div>
-          <dt>For a household:</dt>
-          <dd>{measure.household}</dd>
-        </div>
-        <div>
-          <dt>{WHY_LABEL}</dt>
-          <dd>
-            {measure.notModelled}
-            {measure.seeAlso && (
+export function unmodelledCard(measure) {
+  const { parameters, ...layout } = UNMODELLED_CARDS[measure.id] ?? {};
+  const total = measure.costings.reduce((sum, { values }) => sum + values.reduce((x, y) => x + y, 0), 0);
+  return {
+    parameters: parameters ?? null,
+    policy: {
+      ...layout,
+      id: measure.id,
+      anchorId: `unmodelled-${measure.id}`,
+      name: measure.name,
+      label: measure.name,
+      summary: measure.changes,
+      starts: measure.starts,
+      affects: measure.reaches,
+      affectsWide: true,
+      timeline: false,
+      direction: total < 0 ? "cost" : total > 0 ? "revenue" : "neutral",
+      example: { title: "For a household", text: measure.household },
+      // PolicyEngine's post on it, in the footer as on the modelled cards
+      explainer: measure.explainer,
+      // No "Why we don't model it": the section's title says so. The
+      // reason stays in the data (measure.notModelled).
+      footExtra: (
+        <>
+        {measure.heldBack && <p className="umm-held-back">{measure.heldBack}</p>}
+        <div className="policy-card-modelling">
+          <Disclosure
+            compact
+            title={
               <>
-                {" "}
-                {measure.seeAlso.before}
-                <SourceLink href={measure.seeAlso.href}>{measure.seeAlso.label}</SourceLink>
-                {measure.seeAlso.after}
+                <Landmark size={14} aria-hidden="true" className="policy-card-icon-inline" />
+                Treasury costing
               </>
-            )}
-          </dd>
+            }
+            className="policy-card-details umm-costing-disclosure"
+            preview={[
+              measure.costings.length ? `£m, ${COSTING_YEARS[0]} to ${COSTING_YEARS[COSTING_YEARS.length - 1]}` : "No Table 6.1 row",
+              measure.sources.length > 1 ? "Sources" : "Source",
+            ].join(" · ")}
+          >
+            <section className="umm-costing-section" aria-label={`Treasury costing: ${measure.name}`}>
+              {measure.costings.length ? <Costing measure={measure} /> : <p className="umm-no-costing">No Table 6.1 row</p>}
+              <p className="umm-sources">
+                {measure.sources.length > 1 ? "Sources: " : "Source: "}
+                {measure.sources.map((source, index) => (
+                  <span key={source.label}>
+                    {index > 0 && "; "}
+                    <SourceLink href={source.href}>{source.label}</SourceLink>
+                  </span>
+                ))}
+              </p>
+              {measure.seeAlso && (
+                <p className="umm-sources">
+                  {measure.seeAlso.before}
+                  <SourceLink href={measure.seeAlso.href}>{measure.seeAlso.label}</SourceLink>
+                  {measure.seeAlso.after}
+                </p>
+              )}
+              {measure.costings.length > 0 && (
+                <p className="umm-sources">
+                  Costing: <SourceLink href={TABLE_6_1_URL}>{`Budget 2026, Table 6.1, ${rowsLabel(measure.costings.map(({ row }) => row))}`}</SourceLink>
+                </p>
+              )}
+            </section>
+          </Disclosure>
         </div>
-      </dl>
-      <section className="umm-costing-section" aria-label={`Treasury costing: ${measure.name}`}>
-        {measure.costings.length ? (
-          <Costing measure={measure} />
-        ) : (
-          <p className="umm-no-costing">
-            <span className="umm-strip-label">Treasury costing</span> No Table 6.1 row
-          </p>
-        )}
-      </section>
-      {/* PolicyEngine's post on the measure, as on the modelled cards;
-          the sources stay the card's foot */}
-      {measure.explainer && (
-        <p className="umm-explainer">
-          <a className="umm-link" href={measure.explainer.href} {...EXTERNAL}>
-            Our{" "}
-            <span className="umm-link-end">
-              explainer
-              <ExternalLink size={12} aria-hidden="true" />
-            </span>
-            <span className="policy-sr-only">: {measure.explainer.label} (opens in a new tab)</span>
-          </a>
-        </p>
-      )}
-      <details className="umm-sources">
-        <summary>{measure.sources.length > 1 ? "Sources" : "Source"}</summary>
-        <ul>
-          {measure.sources.map((source) => (
-            <li key={source.label}>
-              <SourceLink href={source.href}>{source.label}</SourceLink>
-            </li>
-          ))}
-        </ul>
-      </details>
-    </li>
-  );
+        </>
+      ),
+    },
+  };
 }
 
-/** The label of a card's reason, as one short line. */
-export const WHY_LABEL = "Not in our figures because:";
 
 /**
  * The measures in their groups (UNMODELLED_GROUPS), in order, each group
@@ -270,10 +233,11 @@ export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES }) {
                   {label}
                 </p>
               )}
-              <ul className="umm-list" aria-labelledby={label ? `${id}-${group}` : undefined}>
-                {items.map((measure) => (
-                  <UnmodelledCard key={measure.id} measure={measure} />
-                ))}
+              <ul className="policy-cards umm-list" aria-labelledby={label ? `${id}-${group}` : undefined}>
+                {items.map((measure) => {
+                  const { policy, parameters } = unmodelledCard(measure);
+                  return <PolicyCard key={measure.id} policy={policy} parameters={parameters} />;
+                })}
               </ul>
             </div>
           ))}

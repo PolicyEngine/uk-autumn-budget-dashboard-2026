@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import UnmodelledMeasures, { COSTING_CAPTION, UNMODELLED_SUBTITLE, UNMODELLED_TITLE, WHY_LABEL, formatMillions } from "./UnmodelledMeasures";
+import UnmodelledMeasures, { COSTING_CAPTION, UNMODELLED_SUBTITLE, UNMODELLED_TITLE, formatMillions } from "./UnmodelledMeasures";
+import { WHY_NOT_MODELLED } from "../PolicyCards";
 import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import {
   BUDGET_DOCUMENT,
@@ -95,7 +96,7 @@ const toggle = () => screen.getByRole("button", { name: UNMODELLED_TITLE });
 const open = () => fireEvent.click(toggle());
 
 describe("UnmodelledMeasures", () => {
-  const cards = () => [...document.querySelectorAll(".umm-list > .umm-card")];
+  const cards = () => [...document.querySelectorAll(".umm-list > .policy-card")];
 
   it("is a section like Policies we model: its heading (a native button) and subtitle, the cards closed", () => {
     render(<UnmodelledMeasures />);
@@ -123,7 +124,7 @@ describe("UnmodelledMeasures", () => {
     expect(cards()).toHaveLength(0);
   });
 
-  it("lists every measure in order as a compact card, each part in its place", () => {
+  it("lists every measure in order as a Policies card, in the modelled cards' style", () => {
     render(<UnmodelledMeasures />);
     open();
     const items = cards();
@@ -134,45 +135,49 @@ describe("UnmodelledMeasures", () => {
       const measure = UNMODELLED_MEASURES[index];
       expect(item.id).toBe(`unmodelled-${measure.id}`);
       expect(item.querySelector(".policy-card-type"), measure.id).toBeTruthy();
-      expect(item.querySelector(".umm-card-changes")).toHaveTextContent(measure.changes);
-      // When and whom, in one line
-      const meta = item.querySelector(".umm-meta");
-      expect(meta).toHaveTextContent(measure.starts.replace(/\.$/, ""));
-      expect(meta).toHaveTextContent(measure.reaches.replace(/\.$/, ""));
-      expect(within(item).getByText("For a household:").tagName).toBe("DT");
-      expect(within(item).getByText(WHY_LABEL).tagName).toBe("DT");
+      // What changes as the summary line
+      expect(item.querySelector(".policy-card-summary")).toHaveTextContent(measure.changes);
+      // At a glance: Starts, Ends, Affects
+      expect(item.querySelector(".policy-card-glance-title")).toHaveTextContent("At a glance");
+      expect(item.querySelector(".policy-card-start")).toHaveTextContent(measure.starts);
+      expect(item.querySelector(".policy-card-affects")).toHaveTextContent(measure.reaches);
+      expect(within(item).getByText("For a household")).toBeInTheDocument();
       expect(item).toHaveTextContent(measure.household);
-      expect(item).toHaveTextContent(measure.notModelled);
+      // No "Why we don't model it": the section title says so
+      expect(within(item).queryByText(WHY_NOT_MODELLED)).toBeNull();
+      expect(item).not.toHaveTextContent(measure.notModelled);
+      // Treasury costing: one disclosure, closed, last in the footer, holding the strip and the sources
+      const costing = within(item).getByRole("button", { name: "Treasury costing" });
+      expect(costing).toHaveAttribute("aria-expanded", "false");
+      expect(item.querySelector(".umm-costing-section")).toBeNull();
+      fireEvent.click(costing);
+      expect(costing).toHaveAttribute("aria-expanded", "true");
       expect(within(item).getByRole("region", { name: `Treasury costing: ${measure.name}` })).toBeInTheDocument();
-      // Sources closed at the foot
-      const sources = item.querySelector("details.umm-sources");
-      expect(sources).not.toHaveAttribute("open");
-      expect(item.lastElementChild).toBe(sources);
-      // Name, What changes, headline, when and whom, the two lines, costing, sources: in that order
-      const order = [".umm-card-name", ".umm-card-changes", ".umm-headline", ".umm-meta", ".umm-lines", ".umm-costing-section", ".umm-sources"]
+      for (const source of measure.sources) expect(item).toHaveTextContent(source.label);
+      expect(item.querySelector("details")).toBeNull();
+      // Summary, At a glance, What changes, For a household, costing: in that order
+      const order = [".policy-card-summary", ".policy-card-when", ".pchg", ".policy-card-example", ".umm-costing-disclosure"]
         .map((selector) => item.querySelector(selector))
         .filter(Boolean);
       for (let i = 1; i < order.length; i += 1) {
         expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING, `${measure.id} ${i}`).toBeTruthy();
       }
-      // No model card's parts: no plot, timeline or effect button
-      expect(item.querySelector(".pchg-svg, .ptl, .policy-card-effect"), measure.id).toBeNull();
+      // Compact: no chart, timeline, effect button or reason block
+      expect(item.querySelector(".pchg-svg, .ptl, .policy-card-effect, .policy-card-why"), measure.id).toBeNull();
     });
   });
 
-  it("leads with the values before and after where the entry gives them", () => {
+  it("shows the values before and after in the What changes block where the entry gives them", () => {
     render(<UnmodelledMeasures />);
     open();
     for (const item of cards()) {
       const id = item.id.replace(/^unmodelled-/, "");
-      expect(Boolean(item.querySelector(".umm-headline")), id).toBe(Boolean(UNMODELLED_CARDS[id]?.parameters));
+      const parameters = UNMODELLED_CARDS[id]?.parameters;
+      expect(item.querySelectorAll(".pchg-tile").length, id).toBe(parameters ? (parameters.display === "pairs" ? 2 * parameters.rows.length : 2) : 0);
     }
-    const wage = document.getElementById("unmodelled-national-living-wage").querySelector(".umm-headline-values");
-    expect(wage).toHaveTextContent("£12.71£13.21");
-    expect(wage).toHaveAttribute("aria-label", "National Living Wage: £12.71 becomes £13.21");
-    const cars = document.getElementById("unmodelled-company-car-tax").querySelector(".umm-headline");
-    expect(cars).toHaveTextContent("9%10%");
-    expect(cars).toHaveTextContent("Cars emitting 1 to 50g CO2/km: 19% → 20%");
+    const wage = document.getElementById("unmodelled-national-living-wage");
+    expect(wage.querySelector(".pchg-tile.is-before")).toHaveTextContent("£12.71");
+    expect(wage.querySelector(".pchg-tile.is-after")).toHaveTextContent("£13.21+£0.50");
   });
 
   it("shows a measure's Table 6.1 rows by year, in £ million, on the card", () => {
@@ -180,6 +185,7 @@ describe("UnmodelledMeasures", () => {
     open();
     const measure = UNMODELLED_MEASURES.find(({ id }) => id === "first-time-buyer-isa");
     const item = document.getElementById(`unmodelled-${measure.id}`);
+    fireEvent.click(within(item).getByRole("button", { name: "Treasury costing" }));
     const table = within(item).getByRole("table", { name: COSTING_CAPTION });
     for (const year of COSTING_YEARS) expect(within(table).getByRole("columnheader", { name: year })).toBeInTheDocument();
     const rows = within(table).getAllByRole("row").slice(1);
@@ -194,8 +200,10 @@ describe("UnmodelledMeasures", () => {
     open();
     for (const measure of UNMODELLED_MEASURES.filter(({ costings }) => !costings.length)) {
       const item = document.getElementById(`unmodelled-${measure.id}`);
-        expect(within(item).queryByRole("table")).toBeNull();
-      expect(item.querySelector(".umm-no-costing")).toHaveTextContent(/No Table 6\.1 row$/);
+      expect(within(item).getByRole("button", { name: "Treasury costing" })).toHaveTextContent("No Table 6.1 row");
+      fireEvent.click(within(item).getByRole("button", { name: "Treasury costing" }));
+      expect(within(item).queryByRole("table")).toBeNull();
+      expect(item.querySelector(".umm-no-costing")).toHaveTextContent(/^No Table 6\.1 row$/);
     }
   });
 
@@ -204,6 +212,7 @@ describe("UnmodelledMeasures", () => {
     open();
     for (const measure of UNMODELLED_MEASURES) {
       const item = document.getElementById(`unmodelled-${measure.id}`);
+      fireEvent.click(within(item).getByRole("button", { name: "Treasury costing" }));
       for (const source of measure.sources) {
         const label = source.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const link = within(item).getByRole("link", { name: new RegExp(`^${label}\\s*\\(opens in a new tab\\)$`) });
@@ -214,17 +223,17 @@ describe("UnmodelledMeasures", () => {
     }
   });
 
-  it("links PolicyEngine's own work where it models a measure, after the reason this dashboard does not", () => {
+  it("links PolicyEngine's own work where it models a measure, with the card's sources", () => {
     render(<UnmodelledMeasures />);
     open();
     const linked = UNMODELLED_MEASURES.filter(({ seeAlso }) => seeAlso);
     expect(linked.map(({ id }) => id)).toEqual(["adjusted-triple-lock"]);
-    for (const { id, seeAlso, notModelled } of linked) {
+    for (const { id, seeAlso } of linked) {
       expect(seeAlso.href).toMatch(/^https:\/\/www\.policyengine\.org\//);
       // A pointer, never a figure of our own
       expect(`${seeAlso.before}${seeAlso.label}${seeAlso.after}`).not.toMatch(/£|%|\bbn\b|billion|million/);
       const card = document.getElementById(`unmodelled-${id}`);
-      expect(card).toHaveTextContent(notModelled);
+      fireEvent.click(within(card).getByRole("button", { name: "Treasury costing" }));
       const label = seeAlso.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const link = within(card).getByRole("link", { name: new RegExp(`^${label}\\s*\\(opens in a new tab\\)$`) });
       expect(link).toHaveAttribute("href", seeAlso.href);
@@ -232,23 +241,7 @@ describe("UnmodelledMeasures", () => {
     }
   });
 
-  it("shows the cards in their groups, by who a measure touches, each under its label", () => {
-    render(<UnmodelledMeasures />);
-    open();
-    const groups = [...document.querySelectorAll(".umm-group")];
-    expect(groups.map((group) => group.querySelector(".umm-group-title").textContent)).toEqual(UNMODELLED_GROUPS.map(({ label }) => label));
-    for (const [index, group] of groups.entries()) {
-      const ids = [...group.querySelectorAll(".umm-card")].map((card) => card.id.replace(/^unmodelled-/, ""));
-      expect(ids).toEqual(UNMODELLED_MEASURES.filter((m) => m.group === UNMODELLED_GROUPS[index].id).map((m) => m.id));
-    }
-    expect(UNMODELLED_MEASURES.every((m) => UNMODELLED_GROUPS.some(({ id }) => id === m.group))).toBe(true);
-  });
-
-  it("keeps names short: 10 words at most", () => {
-    for (const measure of UNMODELLED_MEASURES) expect(measure.name.split(/\s+/).length, measure.id).toBeLessThanOrEqual(10);
-  });
-
-  it("links PolicyEngine's post on a measure as \"Our explainer\", in a new tab, just above its sources", () => {
+  it("links PolicyEngine's post on a measure as \"Our explainer\" in the card's footer, in a new tab", () => {
     render(<UnmodelledMeasures />);
     open();
     const explained = UNMODELLED_MEASURES.filter(({ explainer }) => explainer);
@@ -270,12 +263,69 @@ describe("UnmodelledMeasures", () => {
       expect(link).toHaveAttribute("href", href);
       expect(link).toHaveAttribute("target", "_blank");
       expect(link).toHaveAttribute("rel", "noopener noreferrer");
-      // Visible, not behind the sources' disclosure, and just above it
-      const line = link.closest(".umm-explainer");
-      expect(line).not.toBeNull();
+      // In the footer, as on the modelled cards: visible without opening Treasury costing
+      expect(link.closest(".policy-card-actions")).not.toBeNull();
       expect(link.closest("details")).toBeNull();
-      expect(line.nextElementSibling).toBe(card.querySelector("details.umm-sources"));
+      expect(link.closest(".policy-card")).toBe(card);
     }
+  });
+
+  it("shows the cards in their groups, by who a measure touches, each under its label", () => {
+    render(<UnmodelledMeasures />);
+    open();
+    const groups = [...document.querySelectorAll(".umm-group")];
+    expect(groups.map((group) => group.querySelector(".umm-group-title").textContent)).toEqual(UNMODELLED_GROUPS.map(({ label }) => label));
+    for (const [index, group] of groups.entries()) {
+      const ids = [...group.querySelectorAll(".policy-card")].map((card) => card.id.replace(/^unmodelled-/, ""));
+      expect(ids).toEqual(UNMODELLED_MEASURES.filter((m) => m.group === UNMODELLED_GROUPS[index].id).map((m) => m.id));
+    }
+    expect(UNMODELLED_MEASURES.every((m) => UNMODELLED_GROUPS.some(({ id }) => id === m.group))).toBe(true);
+  });
+
+  it("keeps names short: 10 words at most", () => {
+    for (const measure of UNMODELLED_MEASURES) expect(measure.name.split(/\s+/).length, measure.id).toBeLessThanOrEqual(10);
+  });
+
+  it("renders only short text on every card: summary and For a household in 20 words, who it affects in 12, nothing over 30", () => {
+    render(<UnmodelledMeasures />);
+    open();
+    const words = (node) => node.textContent.trim().split(/\s+/).length;
+    for (const item of cards()) {
+      expect(words(item.querySelector(".policy-card-summary")), item.id).toBeLessThanOrEqual(20);
+      expect(words(item.querySelector(".policy-card-affects dd")), item.id).toBeLessThanOrEqual(12);
+      expect(words(item.querySelector(".policy-card-example-text")), item.id).toBeLessThanOrEqual(20);
+      // What changes is said once: the summary line, then only the values
+      expect(item.querySelector(".pchg-lead")).toBeNull();
+      for (const block of item.querySelectorAll("p, dd, li")) {
+        expect(words(block), `${item.id}: ${block.textContent.slice(0, 60)}`).toBeLessThanOrEqual(30);
+      }
+    }
+  });
+
+  it("marks the savings measure held back from this release in one muted line", () => {
+    render(<UnmodelledMeasures />);
+    open();
+    const held = UNMODELLED_MEASURES.filter(({ heldBack }) => heldBack);
+    expect(held.map(({ id }) => id)).toEqual(["savings-income-tax"]);
+    const card = document.getElementById("unmodelled-savings-income-tax");
+    expect(card.querySelector(".umm-held-back")).toHaveTextContent(/^Held back: our data miss ISA interest/);
+    fireEvent.click(within(card).getByRole("button", { name: "Treasury costing" }));
+    expect(within(card).getByRole("table", { name: COSTING_CAPTION })).toHaveTextContent("+590");
+  });
+
+  it("keeps At a glance short and the summary one sentence, and shows every change a card names", () => {
+    render(<UnmodelledMeasures />);
+    open();
+    for (const item of cards()) {
+      expect(item.querySelector(".policy-card-start").textContent.length, item.id).toBeLessThanOrEqual(20);
+      expect(item.querySelector(".policy-card-end").textContent.length, item.id).toBeLessThanOrEqual(20);
+      expect(item.querySelector(".policy-card-summary").textContent.trim(), item.id).not.toMatch(/\.\s+[A-Z]/);
+    }
+    // Two changes, two pairs of tiles
+    for (const id of ["mileage-rates", "company-car-tax"]) {
+      expect(document.getElementById(`unmodelled-${id}`).querySelectorAll(".pchg-ba"), id).toHaveLength(2);
+    }
+    expect(document.getElementById("unmodelled-mileage-rates").querySelector(".pchg-ba")).toHaveTextContent("First 10,000 business milesCurrent law45pWith the policy55p+10p");
   });
 
   it("shows nothing for an empty list", () => {
@@ -294,8 +344,11 @@ describe("the section's text", () => {
 
   it("keeps each card's What changes, For a household and Why we don't model it to 30 words, and who it affects to 15", () => {
     for (const measure of UNMODELLED_MEASURES) {
-      expect(measure.reaches.split(/\s+/).length, `${measure.id} reaches`).toBeLessThanOrEqual(15);
-      for (const field of ["changes", "household", "notModelled"]) {
+      expect(measure.reaches.split(/\s+/).length, `${measure.id} reaches`).toBeLessThanOrEqual(12);
+      for (const field of ["changes", "household"]) {
+        expect(measure[field].split(/\s+/).length, `${measure.id} ${field}`).toBeLessThanOrEqual(20);
+      }
+      for (const field of ["notModelled"]) {
         expect(measure[field].split(/\s+/).length, `${measure.id} ${field}`).toBeLessThanOrEqual(30);
       }
     }

@@ -59,3 +59,14 @@ describe("the growth sentences", () => {
     );
   });
 });
+
+describe("an end group's mean effect in the growth sentence", () => {
+  it("has two decimals, says under 0.01 for a tiny one, and 0 only for none", async () => {
+    const { effectEndText } = await import("./DecileGrowthSection");
+    expect(effectEndText(0.031)).toBe("+0.03");
+    expect(effectEndText(-0.0249)).toBe("−0.02");
+    expect(effectEndText(0.004)).toBe("under 0.01");
+    expect(effectEndText(-0.001)).toBe("under 0.01");
+    expect(effectEndText(0)).toBe("0");
+  });
+});

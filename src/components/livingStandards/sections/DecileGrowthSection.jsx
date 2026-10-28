@@ -81,6 +81,18 @@ export function ppRange(values) {
   if (lo === 0 && hi === 0) return "nil each year";
   return lo === hi ? `${pp(lo)} each year` : `${pp(lo)} to ${pp(hi)} a year`;
 }
+/**
+ * An end group's mean effect in the sentence, in pp without the unit:
+ * two decimals ("+0.03"), "under 0.01" for one that is not zero but
+ * rounds to it, "0" only for a true zero.
+ */
+export function effectEndText(value) {
+  if (value === 0) return "0";
+  const rounded = Math.round(value * 100) / 100;
+  if (rounded === 0) return "under 0.01";
+  return `${rounded > 0 ? "+" : "−"}${pp2.format(Math.abs(rounded))}`;
+}
+
 /** "+0.12pp", "nil" for one effect (in pp). */
 const ppOne = (v) => (Math.round(v * 100) === 0 ? "nil" : pp(v));
 
@@ -316,8 +328,15 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const lowVals = annual ? lowAnnual : [periodRows[0].growth];
   const highVals = annual ? highAnnual : [periodRows.at(-1).growth];
   const mean = (vals) => vals.reduce((sum, v) => sum + v, 0) / vals.length;
-  const lowMean = round1(mean(lowVals));
-  const highMean = round1(mean(highVals));
+  // An effect in pp to two decimals, as the axis and tooltip give it: a
+  // mean of hundredths of a point rounded to one decimal read "0pp" (as
+  // nothing); a non-zero one under 0.005pp is "under 0.01" (the poverty
+  // charts' rule), only a true zero is 0
+  const lowRaw = mean(lowVals);
+  const highRaw = mean(highVals);
+  const lowMean = diff ? Math.round(lowRaw * 100) / 100 : round1(lowRaw);
+  const highMean = diff ? Math.round(highRaw * 100) / 100 : round1(highRaw);
+  const ppEnd = (_rounded, raw) => effectEndText(raw);
   const num = (v) => signed(v, "").replace(/^0\.0$/, "0");
   const per = annual ? " a year" : "";
   // The effect in pp, as the axis and tooltip give it (round 3)
@@ -331,8 +350,8 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
   const bottomName = skip ? `${ordinal(skip + 1)} ${g.share}` : `lowest ${g.share}`;
   const ends = (
     <>
-      ({bottomName}: <strong>{num(lowMean)}{unitWord}</strong>
-      {per}; top {g.share}: <strong>{num(highMean)}{unitWord}</strong>)
+      ({bottomName}: <strong>{diff ? ppEnd(lowMean, lowRaw) : num(lowMean)}{unitWord}</strong>
+      {per}; top {g.share}: <strong>{diff ? ppEnd(highMean, highRaw) : num(highMean)}{unitWord}</strong>)
     </>
   );
   const largest = Math.max(...[...lowVals, ...highVals].map((v) => Math.abs(v)));
