@@ -334,7 +334,7 @@ describe("the household calculation, from the fixture", () => {
     expect(tiles.map((tile) => tile.querySelector(".forecast-tile-name").textContent)).toEqual([
       "Your change",
       "Share of your income",
-      "Your place (percentile)",
+      "Income percentile",
     ]);
     expect(tiles[0]).toHaveTextContent(`In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies`);
     expect(changeValue()).toBe("+£3,765");

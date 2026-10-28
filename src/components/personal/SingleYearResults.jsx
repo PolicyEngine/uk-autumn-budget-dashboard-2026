@@ -672,6 +672,7 @@ export function SingleYearDetails({ result, year, policies, household = null, se
           policies={selected ?? []}
           yearLabel={yearLabel}
           you={you}
+          policySteps={bars?.rows ?? null}
         />
       )}
 
