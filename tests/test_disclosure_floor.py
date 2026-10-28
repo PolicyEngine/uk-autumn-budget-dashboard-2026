@@ -788,6 +788,105 @@ def test_an_artifact_made_before_the_floor_is_never_shown():
         world.close()
 
 
+def _before_the_summary_floor():
+    """A receipt's floor record as #271 made it: no "tables", so it covers
+    the decile and age tables and the binned scatter, not the summary
+    statistics."""
+    return {
+        key: value
+        for key, value in floor.floor_record({}).items()
+        if key != "tables"
+    }
+
+
+@pytest.mark.parametrize(
+    "record, tables, uncovered",
+    [
+        (_before_the_summary_floor(), ["metrics"], "metrics"),
+        (
+            _before_the_summary_floor(),
+            ["metrics", "poverty_inequality", "age_impact"],
+            "metrics, poverty_inequality",
+        ),
+        (
+            {**floor.floor_record({}), "tables": ["metrics"]},
+            ["metrics", "poverty_inequality"],
+            "poverty_inequality",
+        ),
+        (
+            {**floor.floor_record({}), "tables": ["metrics"]},
+            ["metrics"],
+            None,
+        ),
+        (floor.floor_record({}), list(floor.FLOOR_TABLES), None),
+    ],
+    ids=[
+        "before-metrics",
+        "before-both",
+        "poverty-uncovered",
+        "no-poverty-table",
+        "current",
+    ],
+)
+def test_a_receipt_made_before_the_floor_covered_a_table_is_never_shown(
+    record, tables, uncovered
+):
+    """#285 review, finding 6: a receipt whose floor record does not cover
+    a table the artifact holds and the floor now covers stages, but is
+    never made provisional or approved."""
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.publish import _floor_problems
+
+    dashboard = {"disclosure_floor": record}
+    held = {table: [] for table in tables}
+    assert _floor_problems(dashboard, held, m.STAGED) == []
+    for level in (m.PROVISIONAL, m.APPROVED):
+        expected = (
+            []
+            if uncovered is None
+            else [
+                "its receipt's floor of survey households does not cover "
+                f"{uncovered}, as for an artifact generated before the "
+                "floor covered them: regenerate it"
+            ]
+        )
+        assert _floor_problems(dashboard, held, level) == expected
+
+
+def test_an_artifact_made_before_the_summary_floor_stages_but_never_shows():
+    """#285 review, finding 6, through the gate: an artifact generated on
+    #271's code (its record covers no summary statistics) stages, but is
+    refused provisional and approved until it is regenerated."""
+    from tests.publication_support import World
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.publish import (
+        PublishError,
+        approve,
+        stage,
+    )
+
+    world = World()
+    try:
+        values = {2027: -1.0, 2028: -2.0}
+        arguments = dict(data_root=world.data_root, inputs=world.inputs)
+        manifest = m.Manifest()
+        before = world.ready(
+            "alpha", values, floor=_before_the_summary_floor()
+        )
+        uncovered = "does not cover metrics.*regenerate it"
+        with pytest.raises(PublishError, match=uncovered):
+            stage(manifest, before.path, provisional=True, **arguments)
+        stage(manifest, before.path, **arguments)
+        with pytest.raises(PublishError, match=uncovered):
+            approve(manifest, "alpha", "Reviewer", **arguments)
+        regenerated = world.ready("alpha", values)
+        stage(manifest, regenerated.path, **arguments)
+        approve(manifest, "alpha", "Reviewer", **arguments)
+        assert manifest.measures["alpha"].status == m.APPROVED
+    finally:
+        world.close()
+
+
 def test_the_record_names_cells_never_figures_and_flags_decile_ones():
     found = {
         ("winners_losers", YEAR): ["5", "all"],
@@ -796,6 +895,7 @@ def test_the_record_names_cells_never_figures_and_flags_decile_ones():
     record = floor.floor_record(found)
     assert record == {
         "survey_households": FLOOR,
+        "tables": list(floor.FLOOR_TABLES),
         "checked": True,
         "thin_cells": [
             {"table": floor.AGE_TABLE, "year": YEAR, "groups": ["40"]},

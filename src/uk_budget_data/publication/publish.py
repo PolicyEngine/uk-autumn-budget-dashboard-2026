@@ -76,6 +76,7 @@ from uk_budget_data.publication.combine import combined_key
 from uk_budget_data.publication.disclosure_floor import (
     DECILE_TABLES,
     FLOOR_TABLES,
+    FLOOR_TABLES_BEFORE_THE_LIST,
     METRICS_TABLES,
 )
 from uk_budget_data.publication.receipt import (
@@ -577,8 +578,10 @@ def _floor_problems(dashboard: dict, tables: dict, level: str) -> list[str]:
     staged, so ``publish review-rows`` deletes it before anything is
     committed. Or, to be provisional or approved, its household tables were
     never held to it: its receipt records no check, as for one generated
-    before the floor. No acknowledgement lifts either: such a cell rests on
-    too few cases to publish."""
+    before the floor; or its record does not cover one of its tables the
+    floor now covers, as for one generated before the floor covered the
+    summary statistics (#285 review, finding 6). No acknowledgement lifts
+    any of these: such a cell rests on too few cases to publish."""
     floor = dashboard.get("disclosure_floor")
     problems = _unrecorded_withheld(floor, tables)
     if floor is None:
@@ -591,6 +594,19 @@ def _floor_problems(dashboard: dict, tables: dict, level: str) -> list[str]:
                 "generated before the floor: regenerate it"
             ]
         return problems
+    if level in (m.PROVISIONAL, m.APPROVED):
+        covered = floor.get("tables", FLOOR_TABLES_BEFORE_THE_LIST)
+        uncovered = [
+            table
+            for table in FLOOR_TABLES
+            if table in tables and table not in covered
+        ]
+        if uncovered:
+            problems.append(
+                "its receipt's floor of survey households does not cover "
+                f"{', '.join(uncovered)}, as for an artifact generated "
+                "before the floor covered them: regenerate it"
+            )
     if not floor.get("thin_cells_in_tables"):
         return problems
     cells = "; ".join(

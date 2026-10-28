@@ -79,7 +79,8 @@ SURVEY_HOUSEHOLD_FLOOR = 3
 CHANGE_TOLERANCE = 0.01
 DECILE_TABLES = ("distributional_impact", "winners_losers")
 AGE_TABLE = "age_impact"
-# The tables a receipt's floor record covers: the decile and age tables,
+# The tables a receipt's floor record covers, and names in its "tables"
+# (``floor_record``): the decile and age tables,
 # held to SURVEY_HOUSEHOLD_FLOOR, and the binned scatter, whose rows name
 # their survey household once it has run and which ``tables.bin_scatter``
 # holds to its own SCATTER_MIN_HOUSEHOLDS.
@@ -92,6 +93,13 @@ FLOOR_TABLES = (
     AGE_TABLE,
     "household_scatter_binned",
     *METRICS_TABLES,
+)
+# What the floor covered before its record named its tables (#271): a
+# receipt with no "tables" covers these, and not the summary statistics.
+FLOOR_TABLES_BEFORE_THE_LIST = (
+    *DECILE_TABLES,
+    AGE_TABLE,
+    "household_scatter_binned",
 )
 # The people a group's poverty figure and everyone's give back by
 # difference: those outside the group (``thin_metrics``).
@@ -423,16 +431,19 @@ def floor_record(
     and group label, never a figure, and whether any is still in the tables
     (a decile table's, unless the run was refused), which the publication
     gate and the public data check refuse. ``survey_households`` is the
-    decile and age tables' floor, SURVEY_HOUSEHOLD_FLOOR; the binned
-    scatter's is SCATTER_MIN_HOUSEHOLDS. A run on data whose survey
-    households cannot be told apart records that it was not checked, and
-    why."""
+    decile, age and summary tables' floor, SURVEY_HOUSEHOLD_FLOOR; the
+    binned scatter's is SCATTER_MIN_HOUSEHOLDS. ``tables`` names the tables
+    the floor covers (FLOOR_TABLES), so the gate can tell a receipt made
+    before it covered one (``publish._floor_problems``). A run on data
+    whose survey households cannot be told apart records that it was not
+    checked, and why."""
     cells = [
         {"table": table, "year": year, "groups": list(labels)}
         for (table, year), labels in sorted(found.items())
     ]
     record = {
         "survey_households": SURVEY_HOUSEHOLD_FLOOR,
+        "tables": list(FLOOR_TABLES),
         "checked": not_checked_because is None,
         "thin_cells": cells,
         "thin_cells_in_tables": any(

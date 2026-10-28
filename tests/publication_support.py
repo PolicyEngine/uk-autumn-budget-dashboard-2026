@@ -364,6 +364,7 @@ class World:
         modifier_templates=None,
         git_sha=None,
         before_the_floor=False,
+        floor=None,
     ):
         """Generate an artifact for ``key`` with the given fiscal impact.
 
@@ -382,7 +383,9 @@ class World:
         An artifact with figures records, as generation does, that the
         floor of survey households found no thin cell in its tables;
         ``before_the_floor=True`` records nothing, as for one generated
-        before the floor (#208), which the gate refuses to show.
+        before the floor (#208), which the gate refuses to show; ``floor``
+        records that instead, as for one generated before the floor
+        covered a table.
         """
         revision = self.revision(clean, sha=git_sha or "a" * 40)
         scenario = Scenario(
@@ -464,7 +467,9 @@ class World:
         if with_tables is None:
             with_tables = not data_limits
         if with_tables and not data_limits and not before_the_floor:
-            inputs["disclosure_floor"] = floor_record({})
+            inputs["disclosure_floor"] = (
+                floor_record({}) if floor is None else floor
+            )
         tables = tables or make_tables(key, values, name)
         if with_tables and data_limits:
             return self._write_with_tables(tables, key, build)
