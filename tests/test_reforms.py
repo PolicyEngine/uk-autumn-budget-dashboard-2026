@@ -58,9 +58,10 @@ CANDIDATES = (
     "employer_nics_secondary_threshold_raise",
     "unearned_income_rates_up",
     "carers_allowance_earnings_taper",
+    "household_energy_payment_2026",
 )
 # Individual candidates that are not components of the combined package.
-NOT_IN_PACKAGE = ()
+NOT_IN_PACKAGE = ("household_energy_payment_2026",)
 # Registered on 27 October, before its first national generation: its rows
 # are checked once budgetary_impact.csv has them.
 NOT_YET_GENERATED = (
@@ -68,6 +69,8 @@ NOT_YET_GENERATED = (
     "unearned_income_rates_up",
     # Registered again on Budget day (HCWS421)
     "carers_allowance_earnings_taper",
+    # Announced in the Budget speech
+    "household_energy_payment_2026",
 )
 # Withdrawn on 27 October 2026 (Vahid): out of the registry and the
 # package, so no default command runs or publishes them. Their factories
@@ -132,7 +135,8 @@ def test_the_package_is_the_eight_candidates():
 
     # Nine on Budget day: the eight and the Carer's Allowance taper
     assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 9
-    assert len(reforms._MEASURE_FACTORIES) == 9
+    # and the household energy payment, registered outside the package
+    assert len(reforms._MEASURE_FACTORIES) == 10
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
     assert key == "combined--47727b6baf58047f"
     # The area run's package alias stands for that key
@@ -1021,6 +1025,13 @@ FIRST_YEARS = {
         "carers_allowance",
         {"employment_income": 11_000, "care_hours": 35},
         {},
+    ),
+    # A band B household in England: £100 in 2026-27 only
+    "household_energy_payment_2026": (
+        2026,
+        "household_net_income",
+        {"employment_income": 20_000},
+        {"country": "ENGLAND", "council_tax_band": "B"},
     ),
 }
 

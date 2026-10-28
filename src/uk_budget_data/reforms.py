@@ -34,6 +34,9 @@ from uk_budget_data.budget_measures.connect_student_loan_repayments import (
 from uk_budget_data.budget_measures.employer_ni_relief_ages_21_to_24 import (
     employer_ni_relief_ages_21_to_24,
 )
+from uk_budget_data.budget_measures.household_energy_payment_2026 import (
+    household_energy_payment_2026,
+)
 from uk_budget_data.budget_measures.pump_vat_on_fuel_duty_deferral import (
     pump_vat_on_fuel_duty_deferral,
 )
@@ -107,6 +110,7 @@ UNEARNED_INCOME_RATES_ID = "unearned_income_rates_up"
 LHA_UNFREEZE_ID = "lha_unfreeze_2027"
 CARERS_ALLOWANCE_TAPER_ID = "carers_allowance_earnings_taper"
 STATE_PENSION_DOUBLE_LOCK_ID = "state_pension_double_lock_2030"
+HOUSEHOLD_ENERGY_PAYMENT_ID = "household_energy_payment_2026"
 
 
 def _years_dict(value, years: list[int] = None) -> dict[str, any]:
@@ -757,6 +761,35 @@ def _create_unearned_income_rates_up() -> Reform:
 
 
 # =============================================================================
+# HOUSEHOLD ENERGY PAYMENT: £100, BANDS A TO D, ENGLAND, WINTER 2026-27
+# =============================================================================
+
+# Announced in the speech (28 October 2026, 12:53). Budget day, from the
+# documents (each a default of the hand-written modifier in
+# budget_measures/household_energy_payment_2026.py; changing one needs a
+# fresh attestation): amount=100, year=2026 (winter 2026-27),
+# country="ENGLAND" (devolved governments get a Barnett share instead; "UK"
+# pays every country), bands=("A", "B", "C", "D"). Registered, but not in
+# the package: adding it changes the package key the tests pin.
+
+
+def _create_household_energy_payment_2026() -> Reform:
+    return Reform(
+        id=HOUSEHOLD_ENERGY_PAYMENT_ID,
+        name="Household energy payment",
+        description=(
+            "Candidate measure. A one-off payment of £100 in winter 2026-27 "
+            "to each household in England in property valuation bands A to "
+            "D (the lowest four of England's eight), paid into bank "
+            "accounts. Scotland, Wales and Northern Ireland "
+            "receive a share of the funding instead, which is not modelled. "
+            "It counts as household income."
+        ),
+        simulation_modifier=household_energy_payment_2026,
+    )
+
+
+# =============================================================================
 # STATE PENSION DOUBLE LOCK FROM APRIL 2030 (not registered)
 # =============================================================================
 
@@ -870,6 +903,7 @@ _MEASURE_FACTORIES = (
     _create_employer_nics_secondary_threshold_raise,
     _create_unearned_income_rates_up,
     _create_carers_allowance_earnings_taper,
+    _create_household_energy_payment_2026,
 )
 
 

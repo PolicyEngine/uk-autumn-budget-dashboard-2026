@@ -165,6 +165,7 @@ DECLARED = {
     # Student loan repayments are not a tax.
     "plan_2_threshold_unfreeze": set(),
     "carers_allowance_earnings_taper": set(),
+    "household_energy_payment_2026": set(),
     "employer_nics_secondary_threshold_raise": {"National Insurance"},
     "unearned_income_rates_up": {"income tax"},
 }
