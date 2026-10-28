@@ -1,6 +1,6 @@
 # OBR: Economic and fiscal outlook, October 2026 (28 October 2026)
 
-These are the Office for Budget Responsibility's files for the October 2026 Economic and fiscal outlook (EFO), kept unchanged so the team can read and check them. The dashboard code doesn't read them.
+These are the Office for Budget Responsibility's files for the October 2026 Economic and fiscal outlook (EFO), kept unchanged so the team can read and check them. No dashboard calculation uses them. They do travel with the code: the Modal images copy all of `data_inputs/` (`modal_household.py`, `modal_generate.py`), and the deploy's checkout check (`runtime_identity.py`) hashes those copied files. The Next.js site and the Docker image don't include them.
 
 - **EFO page:** https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/
 - **Licence:** © Crown copyright 2026, published under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
@@ -60,6 +60,18 @@ Each was downloaded from https://obr.uk/docs/sodugn2q20l901oy19v1cz5e/ followed 
 | `efo-october-2026-speaking-notes.pdf` | 128,826 | `84a9ce2cc05501d1d44292c37e636f61c90f0d7637223246f81f27477d02cc4a` | 15:17:48 GMT | 19:45Z |
 | `efo-october-2026-presentation-slides.pdf` | 189,839 | `564c90dac9823f0f9bf2f76086bf89669c1dcb0300bb9d088a5476bdbf077427` | 15:17:48 GMT | 19:45Z |
 | `efo-october-2026-log-of-substantive-contact.pdf` (contact between the OBR and Treasury ministers, special advisers and private offices, 3 March to 27 October 2026) | 80,540 | `8625a607d6a5a8da5633baeb16cdd17f981456dccbfee0cfedfe80d91731a2ee` | 14:27:05 GMT | 19:45Z |
+
+## Text extractions
+
+Each `.txt` here is `pdftotext -layout` output (poppler 26.09.0) for the PDF of the same name, made on 28 Oct 2026 for searching. They aren't official files; the PDF is the authority. This README is provenance notes and isn't hashed.
+
+| File | Extracted from | Bytes | SHA-256 |
+|---|---|--:|---|
+| `economic-and-fiscal-outlook-october-2026-web-accessible.txt` | `economic-and-fiscal-outlook-october-2026-web-accessible.pdf` | 727,958 | `0d449b8015fec840e66a5a9de03c06becb4546b59d8e6cd0b284da5194120ed4` |
+| `efo-october-2026-devolved-tax-and-spending.txt` | `efo-october-2026-devolved-tax-and-spending.pdf` | 118,704 | `d68848d152fbb8b5eb40e063b17ebacef34bb405b9b23b066871bd47d9b9fd8b` |
+| `efo-october-2026-log-of-substantive-contact.txt` | `efo-october-2026-log-of-substantive-contact.pdf` | 5,470 | `85b8a33dd277578be461bb746936123bf53dc1f0b5247fbaea48fb4ec1d74825` |
+| `efo-october-2026-presentation-slides.txt` | `efo-october-2026-presentation-slides.pdf` | 12,187 | `37854029688714e87ee628dd3db4f2a0649f1b1590887dadd9b795d89cad65a6` |
+| `efo-october-2026-speaking-notes.txt` | `efo-october-2026-speaking-notes.pdf` | 10,314 | `dd56727c451134dca7204e82492e08eaf47a774fab7b37279790c70ca6a66e31` |
 
 ## Not published yet
 

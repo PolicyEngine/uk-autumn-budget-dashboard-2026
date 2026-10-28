@@ -1,6 +1,6 @@
 # HM Treasury: Budget 2026 documents (28 October 2026)
 
-These are the official Budget 2026 files from GOV.UK, kept unchanged so the team can read and check them without downloading each one. The dashboard code doesn't read them.
+These are the official Budget 2026 files from GOV.UK, kept unchanged so the team can read and check them without downloading each one. No dashboard calculation uses them. They do travel with the code: the Modal images copy all of `data_inputs/` (`modal_household.py`, `modal_generate.py`), and the deploy's checkout check (`runtime_identity.py`) hashes those copied files. The Next.js site and the Docker image don't include them.
 
 - **Licence:** © Crown copyright 2026, published under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
 - **Fetched:** with `curl` from GOV.UK on 28 Oct 2026, 19:44Z.
@@ -17,6 +17,18 @@ These are the official Budget 2026 files from GOV.UK, kept unchanged so the team
 | `AB26_Policy_Costing.pdf` (Policy costings) | as above ([file](https://assets.publishing.service.gov.uk/media/6ae1883fe4367e5c8b0467df/AB26_Policy_Costing.pdf)) | 745,488 | `f716efada8a4d0726ce12b0f97d3f0dac671c31b2d005ecf300a48ff309638bf` | 28 Oct 2026 05:29:35 GMT |
 | `Impact_on_households.pdf` (distributional analysis) | as above ([file](https://assets.publishing.service.gov.uk/media/6ae1850f16428df53760627d/Impact_on_households.pdf)) | 197,606 | `36cd5afb4fceca2cecba0d065974ffe8280888e15ed852c129339439e539469c` | 28 Oct 2026 05:15:59 GMT |
 | `Budget_2026_-_Data_Sources.pdf` | as above ([file](https://assets.publishing.service.gov.uk/media/6ae1e9a2460c1346f7be77ff/Budget_2026_-_Data_Sources.pdf)) | 371,383 | `d3afd2b7ad3aa45dce035e69e0dd3abb9b03d9f568e092dcdc987097aa558f7e` | 28 Oct 2026 12:25:06 GMT |
+
+## Text extractions
+
+Each `.txt` here is `pdftotext -layout` output (poppler 26.09.0) for the PDF of the same name, made on 28 Oct 2026 for searching. They aren't official files; the PDF is the authority. This README is provenance notes and isn't hashed.
+
+| File | Extracted from | Bytes | SHA-256 |
+|---|---|--:|---|
+| `AB26_Policy_Costing.txt` | `AB26_Policy_Costing.pdf` | 213,530 | `cbb16957b74baca074b7eab5b991bfc3ac390e170c7be65b7ad43c4fb26374fa` |
+| `Budget_2026_-_Data_Sources.txt` | `Budget_2026_-_Data_Sources.pdf` | 51,270 | `53aabd239b9671370e706998aa6cd7bfbf38f7400d832d41f3ea3f55f652edc9` |
+| `E03668986_HMT_Budget_2026_ELAY__2_.txt` | `E03668986_HMT_Budget_2026_ELAY__2_.pdf` | 488,933 | `5bded9fac772a53f7dbe9244bfc644ac867ad3377f3f10d92ea1b31f3eaae171` |
+| `E03668986_HMT_Budget_2026_TEXT_PRINT__1_.txt` | `E03668986_HMT_Budget_2026_TEXT_PRINT__1_.pdf` | 619,374 | `9a755cc7f58ce83b99df784a17747075991c6c66390dc1f378a17e00d9565fe7` |
+| `Impact_on_households.txt` | `Impact_on_households.pdf` | 28,173 | `d36dd2b550931d871ae23cab16c2efa166af78fb7288406c20db2f6887d96a93` |
 
 ## The Budget document was replaced after publication
 
