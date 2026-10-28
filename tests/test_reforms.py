@@ -912,19 +912,25 @@ def test_vat_on_1508_pounds_of_petrol(year, saving):
 # --- 9. Plan 2 --------------------------------------------------------------
 
 
+# Plan 2 is not in the Budget, but its factory stays as a fixture of the
+# household calculator's machinery (a student loan threshold;
+# pre_budget_registry), so these keep testing it on the October forecast.
+@pytest.mark.usefixtures("pre_budget_registry")
 def test_the_unfrozen_thresholds_follow_rpi_from_29385_pounds():
     rpi = PARAMETERS.gov.economic_assumptions.indices.obr.rpi
     thresholds = plan_2_unfrozen_thresholds()
-    assert thresholds["2027"] == 30_648  # October 2026 RPI
+    # October 2026 RPI, on the October detailed forecast tables
+    assert thresholds["2027"] == 30_654
     for year in range(2027, 2032):
         assert thresholds[str(year)] == round(
             29_385 * rpi(f"{year}-04-06") / rpi("2026-04-06")
         )
 
 
+@pytest.mark.usefixtures("pre_budget_registry")
 def test_a_graduate_on_45000_pounds_repays_114_pounds_less():
     """2027-28: 9% of £45,000 - £29,385, £1,405.35, becomes 9% of
-    £45,000 - £30,648 (RPI on the OBR October 2026 forecast), £1,291.68."""
+    £45,000 - £30,654 (RPI on the OBR October 2026 forecast), £1,291.14."""
     year = 2027
     sit = situation(
         {
@@ -941,7 +947,7 @@ def test_a_graduate_on_45000_pounds_repays_114_pounds_less():
         "plan_2_threshold_unfreeze", sit, "student_loan_repayment", year
     )
     assert baseline == pytest.approx(1_405.35, abs=PENNY)
-    assert reformed == pytest.approx(1_291.68, abs=PENNY)
+    assert reformed == pytest.approx(1_291.14, abs=PENNY)
 
 
 # The blocks of page source that may name more than one candidate measure,
