@@ -248,6 +248,8 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
   const measureSteps = steps.filter((s) => s.kind === "measure");
   const top = measureSteps[0];
   const totalStep = steps.find((s) => s.kind === "total");
+  // The last bar, the package's, whether its figure is drawn or withheld
+  const packageStep = steps.at(-1)?.id === "package" ? steps.at(-1) : undefined;
   // A plain sentence: no "≈" and no "pp" (the values are in the rows)
   const about = (step) => {
     const n = Math.abs(step.x);
@@ -332,9 +334,10 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
             how: [
               // The policy's own effect is said once, in the sentence above
               // (round 3); why the bars need not add up, linked (critic W2).
-              // Only when the last bar is drawn: every offered policy
-              // selected, with the combined run published (W6 G1)
-              totalStep && (
+              // Only when the last row is drawn: every offered policy
+              // selected, with the combined run published (W6 G1), its
+              // figure shown or withheld
+              packageStep && (
                 <>
                   The last bar is all the selected policies modelled together, so the bars need not add up to it.{" "}
                   <MethodLink anchor={METHOD_ANCHORS.limitations}>Policies added up</MethodLink> explains why.
@@ -359,7 +362,12 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
             const left = Math.min(pos(step.start), pos(step.end));
             const width = Math.max(Math.abs(pos(step.end) - pos(step.start)), 0.6);
             return (
-              <div className={`wf-row wf-${step.kind} row-band${i % 2 === 0 ? " is-banded" : ""}`} role="row" key={step.id}>
+              <div
+                // A withheld package is still the last, total row
+                className={`wf-row wf-${step.kind}${step.kind === "withheld" && step.id === "package" ? " wf-total" : ""} row-band${i % 2 === 0 ? " is-banded" : ""}`}
+                role="row"
+                key={step.id}
+              >
                 <span className="wf-label" role="rowheader">
                   {step.kind === "measure" || step.kind === "none" || (step.kind === "withheld" && step.id !== "package") ? (
                     <MeasureRowLabel measure={catalogue.byId?.get(step.id) ?? { id: step.id, name: step.name, color: step.colour }} name={step.name} colour={step.colour} />

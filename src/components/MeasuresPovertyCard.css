@@ -95,8 +95,9 @@
 }
 
 /* A policy that moves no one: its label, no bar, and a muted "No change"
-   with why under it */
-.wf-none .wf-main {
+   with why under it; a withheld figure's "Not published" likewise */
+.wf-none .wf-main,
+.wf-withheld .wf-main {
   color: var(--pe-gray-500);
   font-weight: 500;
 }

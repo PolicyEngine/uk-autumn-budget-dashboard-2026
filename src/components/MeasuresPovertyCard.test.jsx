@@ -463,6 +463,32 @@ describe("a figure the floor of survey households withheld", () => {
     expect(steps.at(-1)).toMatchObject({ id: "package", name: TOGETHER, kind: "withheld", pp: null });
   });
 
+  it("keeps the last-bar line and the total row's look when the package's figure is withheld", async () => {
+    window.history.replaceState({}, "", "/?sub=poverty");
+    const rows = metrics.map((row) =>
+      row.reform_id === COMBINED && row.year === "2027" ? { ...row, poverty_change_pp: null, poverty_change_pct: null } : row,
+    );
+    render(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <PovertyMeasuresRow rows={rows} policies={catalogue.measures} selectedPolicies={ALL} selectedYear={2027} />
+      </MeasureCatalogueProvider>,
+    );
+    const heading = await within(document.body).findByRole("heading", { level: 3, name: /^Which policies move poverty/ }, { timeout: 5000 });
+    const card = heading.closest(".mp-card");
+    const last = within(card).getAllByRole("row").filter((r) => r.classList.contains("wf-row")).at(-1);
+    expect(last.querySelector(".wf-label")).toHaveTextContent(TOGETHER);
+    expect(last.classList.contains("wf-withheld")).toBe(true);
+    expect(last.classList.contains("wf-total")).toBe(true);
+    expect(last.querySelector(".wf-main").textContent).toBe("Not published");
+    fireEvent.click(within(card).getByRole("button", { name: "About this chart" }));
+    expect(card.querySelector(".chart-more-info")).toHaveTextContent(/The last bar is all the selected policies modelled together/);
+  });
+
+  it("styles Not published as muted as No change", () => {
+    const css = readFileSync(join(__dirname, "MeasuresPovertyCard.css"), "utf8");
+    expect(css).toMatch(/\.wf-none \.wf-main,\s*\.wf-withheld \.wf-main\s*\{[^}]*color: var\(--pe-gray-500\)/);
+  });
+
   it("says Not published in its row, never a change, and the card still renders", async () => {
     window.history.replaceState({}, "", "/?sub=poverty");
     render(
