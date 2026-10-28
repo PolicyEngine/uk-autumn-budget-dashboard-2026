@@ -3,6 +3,9 @@ import "./SeriesToggle.css";
 import Tip from "./Tip";
 
 const HINT_KEY = "pe-series-toggle-hint-seen";
+// Said to every key on the page when the reader first clicks a chip, so
+// two keys sharing one state (Across earnings) drop the hint together
+const HINT_EVENT = "pe-series-toggle-hint-seen";
 
 /** Whether the reader has clicked a chip in this session (sessionStorage, if it can be read). */
 function hintSeen() {
@@ -19,6 +22,7 @@ function markHintSeen() {
   } catch {
     // Private browsing or blocked storage: the hint just shows again
   }
+  window.dispatchEvent(new Event(HINT_EVENT));
 }
 
 /**
@@ -61,6 +65,9 @@ export function chipTip(s, last) {
  *   "N more with no effect for you" toggle that opens them in place
  * @param {boolean} [props.expanded] - Whether that chip is open (to share it)
  * @param {(open: boolean) => void} [props.onExpandedChange]
+ * @param {string} [props.noEffectOn] - Where the folded chips have no
+ *   effect, for that chip's tip ("this chart"; "either chart" for a key
+ *   two cards share)
  * @param {"card"|"section"} [props.placement] - "section" for one control
  *   above several cards: a bordered, rounded bar like the section measure
  *   key (MeasureKey's is-section), its lead as a title on the left, a
@@ -82,6 +89,7 @@ export default function SeriesToggle({
   expanded: expandedProp,
   onExpandedChange,
   placement = "card",
+  noEffectOn,
 }) {
   // The disabled chips folded into one "N more with no effect for you" toggle
   // (`collapseDisabled`), opened in place; open or not can be shared
@@ -92,6 +100,9 @@ export default function SeriesToggle({
   const [hint, setHint] = useState(false);
   useEffect(() => {
     setHint(!hintSeen());
+    const seen = () => setHint(false);
+    window.addEventListener(HINT_EVENT, seen);
+    return () => window.removeEventListener(HINT_EVENT, seen);
   }, []);
   const off = new Set(series.filter((s) => s.disabled).map((s) => s.key));
   // Folded into "+N": those marked `folded`, else every disabled one
@@ -169,7 +180,7 @@ export default function SeriesToggle({
           );
         })}
         {collapseDisabled && foldedCount > 0 && (
-          <Tip content={expanded ? null : `${foldedCount === 1 ? "One component has" : `${foldedCount} components have`} no effect on ${placement === "section" ? "either chart" : "this chart"} for you: open to list them.`}>
+          <Tip content={expanded ? null : `${foldedCount === 1 ? "One component has" : `${foldedCount} components have`} no effect on ${noEffectOn ?? (placement === "section" ? "either chart" : "this chart")} for you: open to list them.`}>
           <button
             type="button"
             className="series-toggle-chip series-toggle-more"

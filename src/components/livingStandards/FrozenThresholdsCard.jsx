@@ -60,9 +60,6 @@ const PAY = {
 };
 /** The lines to draw: one for both income tax thresholds while they are equal, else one each. */
 const linesFor = (rows) => (sameThresholds(rows) ? [BOTH, PLAN_2, PAY] : [PA, HR, PLAN_2, PAY]);
-// End labels in a half-width card: short names (no values: the table and
-// tooltip give them) in a narrow right margin
-const END_LABELS = { width: 96, minWidth: 420 };
 
 const indexText = (v) => (v == null ? "–" : formatOneDp(v));
 const indexTick = (v) => String(v);
@@ -126,7 +123,7 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
   const lineSet = linesFor(rows);
   const shown = lineSet.map((l) => l.key).filter((k) => !hidden.includes(k));
   const setShown = (keys) => setHidden(lineSet.map((l) => l.key).filter((k) => !keys.includes(k)));
-  const lines = lineSet.filter((l) => shown.includes(l.key)).map((l) => ({ ...l, endLabel: l.short }));
+  const lines = lineSet.filter((l) => shown.includes(l.key));
   // Drawn in reverse: Plan 2 is frozen too until it is uprated, so it lies
   // under the income tax line until it parts from it (and the tooltip lists
   // the lines top to bottom, as they end)
@@ -248,7 +245,6 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
         yLabel={`Value relative to average earnings (${fyLabel(BASE_YEAR)} = 100)`}
         yDomain={axis.domain}
         yTicks={axis.ticks}
-        endLabels={END_LABELS}
         legend={false}
         focusKey={hovered}
         onLineHover={setHovered}
