@@ -165,3 +165,40 @@
   width: 100%;
   justify-content: space-between;
 }
+
+/* The two cards in a row one height; the footer pinned to the bottom, so
+   any extra space is one gap above it; no section or box inside stretched
+   (globals.css lines the sections up with a subgrid; this replaces it) */
+.policy-cards {
+  align-items: stretch;
+}
+
+.policy-cards > .policy-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  grid-row: auto;
+  grid-template-rows: none;
+}
+
+.policy-cards > .policy-card > * {
+  grid-row: auto;
+  flex: none;
+  align-self: stretch;
+}
+
+.policy-cards > .policy-card > .policy-card-foot {
+  margin-top: auto;
+}
+
+/* At a glance where Affects has its own row: Starts and Ends wide enough
+   for "Oct 2026 / Apr 2029" on one line */
+.policy-card-dates:has(> .policy-card-affects.is-wide) {
+  grid-template-columns: minmax(160px, max-content) minmax(0, 1fr);
+}
+
+@media (max-width: 480px) {
+  .policy-card-dates:has(> .policy-card-affects.is-wide) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}

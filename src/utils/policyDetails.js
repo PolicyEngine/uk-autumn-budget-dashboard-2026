@@ -36,9 +36,12 @@
  *   title and its page under EXPLAINER_BASE, for the card's "Our
  *   explainer" link. Added only once the post is live (its page answers 200), so a
  *   card never links to a missing page;
+ * - cardOrder: the card's place on the Policies tab (1 up), set so the two
+ *   cards in a row are close in height (the charts together, the tiles
+ *   together); cards without one follow, by budgetRows;
  * - budgetRows: the measure's rows in the Budget's Table 6.1 (as
- *   data_inputs/treasury/mapping.csv maps them), which order the cards and
- *   link each card to the Budget's costing;
+ *   data_inputs/treasury/mapping.csv maps them), which link each card to
+ *   the Budget's costing;
  * - example: { title, text, items?, source }: a worked example, or the reach the
  *   Budget states, every figure from its source (a cited document or a
  *   verified household calculation), shown under "What changes": one short line, and any further points as
@@ -62,6 +65,7 @@
 export const POLICY_DETAILS = [
   {
     id: "fuel_duty_rise_deferral",
+    cardOrder: 1,
     shortName: "Fuel duty cut extended",
     sentence: "extending the 5p fuel duty cut to 1 July 2027",
     name: "Fuel duty cut extended",
@@ -69,7 +73,7 @@ export const POLICY_DETAILS = [
     writtenFor: "The 5p cut in fuel duty is kept: the main rate stays at 52.95p a litre to 30 June 2027, so the rise due on 1 January 2027 and the March and April 2027 steps do not happen. From 1 July 2027 it returns to current law's 60.59p a litre, rising with RPI each April. Rates are day-weighted to fiscal years, and the VAT on the lower pump price is included.",
     summary:
       "Keeps fuel duty at 52.95p a litre to July 2027, then returns it to current law's rate.",
-    starts: "January 2027",
+    starts: "Jan 2027",
     affects: "Households buying petrol or diesel",
     type: "Fuel duty",
     inForce: { from: "2027-01" },
@@ -90,6 +94,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "state_pension_income_tax_protection",
+    cardOrder: 7,
     shortName: "Pension Tax Allowance",
     sentence: "introducing the Pension Tax Allowance",
     name: "Pension Tax Allowance",
@@ -98,11 +103,11 @@ export const POLICY_DETAILS = [
     writtenFor: "From 6 April 2027 to 5 April 2030, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (£13,036.40 in 2027-28) get a Pension Tax Allowance: a non-refundable reduction in their income tax, worth up to £94 in 2027-28. It falls by £1 for every £3 of income above the full new State Pension, so it is gone at about £13,319 in 2027-28. The personal allowance is unchanged.",
     summary:
       "Pensioners on up to the full new State Pension pay less income tax, 2027-28 to 2029-30.",
-    starts: "April 2027",
+    starts: "Apr 2027",
     affects: "People over State Pension age",
     type: "Income tax",
     inForce: { from: "2027-04", to: "2030-03" },
-    ends: "April 2030",
+    ends: "Apr 2030",
     howCalculated:
       "Cuts eligible people's income tax, never below zero; it tapers by £1 per £3 above the full new State Pension.",
     details:
@@ -150,6 +155,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "domestic_electricity_zero_vat",
+    cardOrder: 5,
     shortName: "Zero VAT on electricity",
     sentence: "taking VAT off household electricity",
     name: "Zero VAT on domestic electricity",
@@ -157,11 +163,11 @@ export const POLICY_DETAILS = [
     writtenFor: "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027. It applies in Great Britain from October 2026 and across the UK from April 2027. It covers electricity only, not gas. Each year counts its share of a year's electricity use: about 57% in 2026-27 (October to March) and 22% in 2027-28 (April to June).",
     summary:
       "Charges no VAT on household electricity bills, instead of 5%, from October 2026 to July 2027.",
-    starts: "October 2026",
+    starts: "Oct 2026",
     affects: "Households in Great Britain, and in Northern Ireland from April 2027",
     type: "VAT",
     inForce: { from: "2026-10", to: "2027-06" },
-    ends: "July 2027",
+    ends: "Jul 2027",
     howCalculated:
       "Applies 0% VAT instead of 5% to each household's electricity spending in the survey.",
     details:
@@ -282,6 +288,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "carers_allowance_earnings_taper",
+    cardOrder: 2,
     shortName: "Carer's Allowance taper",
     sentence: "tapering Carer's Allowance above the earnings limit",
     name: "Carer's Allowance earnings taper",
@@ -349,6 +356,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "property_income_rates_up",
+    cardOrder: 6,
     shortName: "Property income tax up",
     sentence: "raising tax on property income",
     name: "Property income tax rates up",
@@ -356,7 +364,7 @@ export const POLICY_DETAILS = [
     writtenFor: "From 6 April 2027 the income tax rates on property income rise to 24%, 44% and 49% at the basic, higher and additional rates in England, Wales and Northern Ireland: 2 percentage points above current law, which already includes Budget 2025's rises. Finance cost relief for landlords follows the property basic rate, so rises to 24%, Scottish landlords' included. Incomes are held fixed, with no behavioural response.",
     summary:
       "Raises the income tax rates on property income outside Scotland by 2 percentage points from April 2027.",
-    starts: "April 2027",
+    starts: "Apr 2027",
     affects: "People with rental income",
     type: "Income tax",
     inForce: { from: "2027-04" },
@@ -372,6 +380,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "savings_income_rates_up",
+    cardOrder: 8,
     shortName: "Savings income tax up",
     sentence: "raising tax on savings income",
     name: "Savings income tax rates up",
@@ -379,7 +388,7 @@ export const POLICY_DETAILS = [
     writtenFor: "From 6 April 2027 the income tax rates on savings income rise to 24%, 44% and 49% at the basic, higher and additional rates across the UK: 2 percentage points above current law, which already includes Budget 2025's rises. Dividend rates are unchanged. Incomes are held fixed, with no behavioural response.",
     summary:
       "Raises the income tax rates on savings income across the UK by 2 percentage points from April 2027.",
-    starts: "April 2027",
+    starts: "Apr 2027",
     affects: "People with savings interest",
     type: "Income tax",
     inForce: { from: "2027-04" },
@@ -395,6 +404,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "household_energy_payment_2026",
+    cardOrder: 3,
     shortName: "Energy payment",
     sentence: "paying £100 towards energy bills",
     name: "Household Energy Payment",
@@ -402,7 +412,7 @@ export const POLICY_DETAILS = [
     writtenFor: "A one-off £100 payment from January 2027 to each household in England in property valuation bands A to D (the lowest four of England's eight), up to 20 million households, paid into bank accounts and counted as household income in 2026-27. Scotland, Wales and Northern Ireland receive a share of the funding instead, which is not modelled.",
     summary:
       "Pays £100 once, from January 2027, to each household in England in council tax bands A to D.",
-    starts: "January 2027",
+    starts: "Jan 2027",
     affects: "Households in England in council tax bands A to D",
     type: "Payment",
     inForce: { from: "2027-01", to: "2027-03" },
@@ -436,6 +446,7 @@ export const POLICY_DETAILS = [
   },
   {
     id: "trading_allowance_raise",
+    cardOrder: 4,
     shortName: "Trading allowance",
     sentence: "raising the trading allowance",
     name: "Trading allowance raised to £3,000",
@@ -443,7 +454,7 @@ export const POLICY_DETAILS = [
     writtenFor: "From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from £1,000 to £3,000, for income tax and Class 4 National Insurance. Without gross receipts in the data, the model relieves a profit up to £3,000 in full and gives no relief above it, so the cost may be overstated for some people and understated for others.",
     summary:
       "Raises the trading allowance, which lets people earn from trading without tax, from £1,000 to £3,000 from April 2027.",
-    starts: "April 2027",
+    starts: "Apr 2027",
     affects: "Sole traders with small incomes or expenses under £3,000",
     type: "Income tax",
     inForce: { from: "2027-04" },

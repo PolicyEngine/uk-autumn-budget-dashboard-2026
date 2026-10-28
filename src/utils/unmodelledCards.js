@@ -48,7 +48,7 @@ export const UNMODELLED_CARDS = {
   "universal-credit-surplus-earnings": {
     category: { label: "Benefits", icon: "piggy" },
     inForce: { from: "2027-04", to: "2028-03" },
-    ends: "March 2028",
+    ends: "Mar 2028",
     duration: "One year",
     parameters: {
       display: "table",
@@ -82,7 +82,7 @@ export const UNMODELLED_CARDS = {
   "bus-fare-cap": {
     category: { label: "Transport", icon: "compass" },
     inForce: { from: "2027-01", to: "2027-12" },
-    ends: "December 2027",
+    ends: "Dec 2027",
     duration: "One year",
     parameters: {
       display: "table",
@@ -188,7 +188,7 @@ export const UNMODELLED_CARDS = {
   "bank-surcharge": {
     category: { label: "Business", icon: "building" },
     inForce: { from: "2027-01", to: "2028-03" },
-    ends: "March 2028",
+    ends: "Mar 2028",
     duration: "15 months",
     parameters: {
       display: "table",
