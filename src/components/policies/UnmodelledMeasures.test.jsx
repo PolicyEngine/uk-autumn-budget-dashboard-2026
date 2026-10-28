@@ -416,7 +416,7 @@ describe("HouseholdOnlyMeasures", () => {
     const disclosure = within(card).getByRole("button", { name: CERTIFIED_TITLE });
     expect(within(card).queryByRole("button", { name: "Treasury costing" })).toBeNull();
     fireEvent.click(disclosure);
-    expect(CERTIFIED_CAPTION).toBe("The government's costing, certified by the OBR, £m (+ is a gain to the Exchequer)");
+    expect(CERTIFIED_CAPTION).toBe("The government's costing, which the OBR certified, £m (+ is a gain to the Exchequer)");
     const table = within(card).getByRole("table", { name: CERTIFIED_CAPTION });
     const rows = within(table).getAllByRole("row").slice(1);
     // OBR detailed forecast tables (policy), Table 1.1, measure 62
@@ -451,7 +451,12 @@ describe("HouseholdOnlyMeasures", () => {
     expect(line.compareDocumentPosition(card.querySelector(".umm-held-back")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const link = within(card).getByRole("link", { name: "Household calculator" });
     expect(link).toHaveAttribute("href", "?tab=household");
-    fireEvent.click(link);
+    // A modified click opens a new tab or window, as the browser does
+    for (const modifier of ["metaKey", "ctrlKey", "shiftKey", "altKey"]) {
+      expect(fireEvent.click(link, { [modifier]: true }), modifier).toBe(true);
+    }
+    expect(onShowTab).not.toHaveBeenCalled();
+    expect(fireEvent.click(link)).toBe(false);
     expect(onShowTab).toHaveBeenCalledWith("household");
   });
 
@@ -477,7 +482,7 @@ describe("HouseholdOnlyMeasures", () => {
     expect(section().querySelector(".umm-costing-section")).toBeNull();
   });
 
-  it("shows nothing once the measure is published, or with no household-only card, and the not-modelled section then has no copy either", () => {
+  it("shows nothing once we publish the measure, or with no household-only card, and the not-modelled section then has no copy either", () => {
     const { container } = render(<HouseholdOnlyMeasures published={["savings_income_rates_up"]} />);
     expect(container).toBeEmptyDOMElement();
     const { container: none } = render(<HouseholdOnlyMeasures measures={NOT_MODELLED} />);

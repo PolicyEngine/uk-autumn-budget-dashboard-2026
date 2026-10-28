@@ -144,6 +144,14 @@
   line-height: 1.25;
 }
 
+/* On a phone the tax's name takes less, so each year keeps room for its
+   figure and a heading on one line */
+@media (max-width: 600px) {
+  .umm-list .umm-costing.is-certified:has(tbody th:not(.is-hidden)) thead th:first-child {
+    width: 6.5em;
+  }
+}
+
 /* The OBR breakdown's total, under its heads */
 .umm-costing tr.is-total td,
 .umm-costing tr.is-total th {

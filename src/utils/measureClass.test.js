@@ -1,8 +1,9 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import { CALCULATOR_ONLY_MEASURES, isCalculatorOnly, withCalculatorOnly, withoutCalculatorOnly } from "./calculatorOnlyMeasures";
+import { HOUSEHOLD_EXAMPLES } from "./householdExamples";
 import { HOUSEHOLD_ONLY_TITLE, MEASURE_CLASSES, classOf, householdOnlyLine, splitUnmodelled } from "./measureClass";
 import { UNMODELLED_MEASURES } from "./unmodelledMeasures";
 
@@ -27,8 +28,8 @@ const world = fc
       published: fc.subarray([...measures.map((n) => `m${n}`), "p0", "p1", "p2"]),
     }),
   )
-  // A card names one measure at most (calculatorOnlyMeasures.js; the
-  // real list is checked below)
+  // A card names one measure at most (calculatorOnlyMeasures.js; a test
+  // below checks the real list)
   .filter(({ calculatorOnly }) => {
     const cards = Object.values(calculatorOnly).map(({ card }) => card).filter(Boolean);
     return new Set(cards).size === cards.length;
@@ -78,7 +79,7 @@ describe("the three classes (measureClass.js)", () => {
           expect(card).toEqual({ ...list.find(({ id }) => id === card.id), measure: card.measure });
         }
         // Every card a calculator-only measure names is household-only
-        // unless that measure is published, and then in neither section
+        // until we publish that measure, and then in neither section
         for (const { id, card } of Object.values(calculatorOnly)) {
           if (!card || !ids(list).includes(card)) continue;
           expect(ids(published.includes(id) ? split.population : split.household)).toContain(card);
@@ -121,7 +122,11 @@ describe("the calculator-only measures' requests (calculatorOnlyMeasures.js)", (
         const request = withCalculatorOnly(selected, extras);
         expect(request.slice(0, selected.length)).toEqual(selected);
         expect(new Set(request).size).toBe(request.length);
-        for (const id of request.slice(selected.length)) expect(isCalculatorOnly(id)).toBe(true);
+        const added = request.slice(selected.length);
+        for (const id of added) expect(isCalculatorOnly(id)).toBe(true);
+        // Every calculator-only one switched on, in the order first switched on
+        for (const id of extras) if (isCalculatorOnly(id)) expect(request).toContain(id);
+        expect(added).toEqual([...added].sort((a, b) => extras.indexOf(a) - extras.indexOf(b)));
         expect(withoutCalculatorOnly(request)).toEqual(selected);
         // Off, the request is the selection itself (the examples' answers)
         expect(withCalculatorOnly(selected, [])).toEqual(selected);
@@ -137,7 +142,7 @@ describe("the page's own lists", () => {
     for (const card of cards) expect(ids(UNMODELLED_MEASURES), card).toContain(card);
   });
 
-  it("show the savings income tax rise as household-only, on its card, until it is published", () => {
+  it("show the savings income tax rise as household-only, on its card, until we publish it", () => {
     const split = splitUnmodelled();
     expect(split.household.map(({ id, measure }) => [id, measure])).toEqual([["savings-income-tax", "savings_income_rates_up"]]);
     expect(ids(split.none)).not.toContain("savings-income-tax");
@@ -146,8 +151,11 @@ describe("the page's own lists", () => {
   });
 
   // No household-only measure in any national figure: the manifest, its
-  // package (combined) runs, the downloads or any other published file
-  it("keep every calculator-only measure out of everything published in public/data", () => {
+  // package (combined) runs, the downloads or any other published file.
+  // The example households' answers (household_presets.json, one household
+  // each) name one only for an example that turns it on (householdExamples.js,
+  // `calculatorOnly`; the saver, Vahid, 28 October 2026), and for no other
+  it("keep every calculator-only measure out of everything published in public/data, but the answers of an example that turns it on", () => {
     const root = join(process.cwd(), "public", "data");
     const files = [];
     const walk = (dir) => {
@@ -160,13 +168,23 @@ describe("the page's own lists", () => {
     walk(root);
     expect(files.length).toBeGreaterThan(0);
     const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
+    const PRESETS = "household_presets.json";
+    const presets = JSON.parse(readFileSync(join(root, PRESETS), "utf8"));
+    expect(presets.entries.length).toBeGreaterThan(0);
+    const turnsOn = new Map(HOUSEHOLD_EXAMPLES.map(({ id, calculatorOnly = [] }) => [id, calculatorOnly]));
     for (const id of Object.keys(CALCULATOR_ONLY_MEASURES)) {
       // Published after all? Then it is no longer calculator-only: take it
       // out of calculatorOnlyMeasures.js in the same change
       expect(Object.keys(manifest.measures), id).not.toContain(id);
       for (const combined of Object.values(manifest.combined ?? {})) expect(combined.measures ?? [], id).not.toContain(id);
-      const naming = files.filter((path) => readFileSync(path, "utf8").includes(id));
+      const naming = files.filter((path) => relative(root, path) !== PRESETS && readFileSync(path, "utf8").includes(id));
       expect(naming, id).toEqual([]);
+      // The examples' shared selection never has it; an example's answers
+      // have it exactly when that example turns it on
+      expect(presets.policies, id).not.toContain(id);
+      for (const entry of presets.entries) {
+        expect(JSON.stringify(entry).includes(id), `${entry.preset_id} ${entry.year}: ${id}`).toBe(turnsOn.get(entry.preset_id)?.includes(id) ?? false);
+      }
     }
   });
 });

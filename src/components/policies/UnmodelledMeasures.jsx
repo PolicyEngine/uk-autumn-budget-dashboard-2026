@@ -24,7 +24,7 @@ export const COSTING_CAPTION = "Treasury costing, £m (Table 6.1; + is a gain to
 // Where the entry gives the OBR's breakdown (`certified`): the government's
 // costing as the OBR certifies it, by tax, then Table 6.1 as context
 export const CERTIFIED_TITLE = "Government costing";
-export const CERTIFIED_CAPTION = "The government's costing, certified by the OBR, £m (+ is a gain to the Exchequer)";
+export const CERTIFIED_CAPTION = "The government's costing, which the OBR certified, £m (+ is a gain to the Exchequer)";
 export const UNMODELLED_SUBTITLE = "What each policy changes, who it reaches and why we leave it out.";
 
 // £ million as Table 6.1 prints it: a sign on every figure but zero, with a true minus
@@ -304,8 +304,8 @@ export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES, pub
 /**
  * "Policies we model for households only" (utils/measureClass.js): the
  * Budget policies the Household calculator can add for one household
- * (utils/calculatorOnlyMeasures.js) that no national figure includes, as
- * the not-modelled cards are drawn, each with a link to the calculator.
+ * (utils/calculatorOnlyMeasures.js) that no national figure includes, drawn
+ * like the not-modelled cards, each with a link to the calculator.
  * Never a figure of ours: only the Treasury's costing. Nothing when there
  * are none, so the tab reads as it did before the class.
  */
@@ -314,7 +314,8 @@ export function HouseholdOnlyMeasures({ measures = UNMODELLED_MEASURES, publishe
   if (!items.length) return null;
   const line = householdOnlyLine(items.length);
   const openCalculator = (event) => {
-    if (!onShowTab) return;
+    // A modified click (a new tab or window) stays the browser's
+    if (!onShowTab || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
     event.preventDefault();
     onShowTab("household");
   };

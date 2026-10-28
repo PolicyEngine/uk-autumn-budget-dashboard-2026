@@ -27,8 +27,8 @@ export const householdOnlyLine = (count = 1) =>
 
 /**
  * A policy's class: published ids (the catalogue's) first, so a measure
- * that comes to be published is never also counted household-only; then
- * the calculator-only ones; any other is not modelled.
+ * we come to publish never counts as household-only too; then the
+ * calculator-only ones; any other is not modelled.
  */
 export function classOf(id, { published = [], calculatorOnly = CALCULATOR_ONLY_MEASURES } = {}) {
   if (published.includes(id)) return "population";

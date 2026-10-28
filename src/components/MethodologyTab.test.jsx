@@ -151,11 +151,11 @@ describe("MethodologyTab", () => {
     expect(card.textContent).not.toMatch(/£|\d+(\.\d+)?%/);
   });
 
-  it("says some are modelled for households only and links to them on Policies, with the cards' own reason", () => {
+  it("says we model some for households only and links to them on Policies, with the cards' own reason", () => {
     const onShowTab = vi.fn();
     renderTab(onShowTab);
     const card = screen.getByRole("button", { name: "Not modelled" }).closest(".method-topic");
-    expect(card).toHaveTextContent("Others are modelled for one household at a time, in the Household calculator, and left out of every national figure");
+    expect(card).toHaveTextContent("We model others for one household at a time, in the Household calculator, and leave them out of every national figure");
     const link = within(card).getByRole("link", { name: "Policies we model for households only", hidden: true });
     expect(link).toHaveAttribute("href", "?tab=policies#budget-measures-household-only");
     fireEvent.click(link);

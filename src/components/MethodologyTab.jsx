@@ -375,8 +375,8 @@ function MethodologyTab({ onShowTab }) {
               costed household by household.{" "}
               {householdOnly ? (
                 <>
-                  Others are modelled for one household at a time, in the Household calculator, and
-                  left out of every national figure, because our survey data can't yet estimate their
+                  We model others for one household at a time, in the Household calculator, and leave
+                  them out of every national figure, because our survey data can't yet estimate their
                   national effect.{" "}
                   <ViewLink tab="policies" hash="budget-measures-household-only" onShowTab={onShowTab}>
                     {HOUSEHOLD_ONLY_TITLE}

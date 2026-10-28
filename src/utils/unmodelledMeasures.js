@@ -57,7 +57,7 @@ const obr = (part) => ({
  * release holds back.
  * `certified`, where given, is the OBR's breakdown of the costing by tax
  * (OBR_POLICY_TABLE, its `measure` number): the card shows it first, as the
- * government's costing certified by the OBR, with Table 6.1 as context.
+ * government's costing, which the OBR certified, with Table 6.1 as context.
  * `seeAlso` links PolicyEngine's own published work that models the
  * measure, after the reason this dashboard does not.
  */
