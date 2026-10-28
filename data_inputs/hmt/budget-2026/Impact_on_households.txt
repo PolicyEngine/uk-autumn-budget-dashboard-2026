@@ -1,0 +1,683 @@
+Impact on households:
+distributional analysis to
+accompany Budget 2026
+
+
+
+
+                       October 2026
+2
+Impact on households:
+distributional analysis to
+accompany Budget 2026
+
+
+
+
+                       October 2026
+© Crown copyright 2026
+
+
+This publication is licensed under the terms of the Open Government
+Licence v3.0 except where otherwise stated. To view this licence, visit
+nationalarchives.gov.uk/doc/open-government-licence/version/3.
+
+
+Where we have identified any third party copyright information you will
+need to obtain permission from the copyright holders concerned.
+
+
+This publication is available at: www.gov.uk/official-documents.
+
+
+Any enquiries regarding this publication should be sent to us at
+public.enquiries@hmtreasury.gov.uk
+
+
+ISBN: 978-1-918417-88-3
+
+
+PU 3677
+
+                                    4
+Contents
+Chapter 1 Distributional analysis of tax, welfare and public
+          service spending decisions                           6
+Chapter 2 Data sources and methodology                         13
+
+
+
+
+                                  5
+Chapter 1
+Distributional analysis of
+tax, welfare and public
+service spending
+decisions
+1.1   This document sets out estimates of the impact of tax, welfare
+and public service spending decisions on household incomes, across
+the household income distribution. It contains the following charts:
+•    Figures 1.A and 1.B illustrate the impact of decisions announced at
+     Budget 2026 (including those pre-announced where funding is
+     allocated at Budget 2026) in 2027-28
+
+•    Figures 1.C and 1.D illustrate the cumulative impact of decisions
+     announced from Autumn Budget 2024 onwards up to and including
+     Budget 2026 in 2028-29
+
+•    Figure 1.E shows how the overall level of welfare and public service
+     spending received, and tax paid, is distributed across households,
+     providing context beyond the impact of recent government policy
+     decisions
+1.2     The analysis contained in this document generally only considers
+policies with a direct impact on income from welfare benefits1, tax paid
+or the benefits-in-kind received through public services by UK
+residents. The analysis excludes the impact of business taxes, changes
+to regulation (including the National Living Wage), the impact of
+government borrowing and the impact of policies on non-UK residents
+(fuller details of the policy scope of the analysis are set out in Chapter
+2).
+1.3   The analysis also does not capture the impact of supply-side
+growth policies that may indirectly impact households, for example
+through increases in employment or higher wages.
+1.4    Figures 1.A to 1.E in this document include the impact of the
+following Budget 2026 policies:
+
+
+
+
+1 A list of the most significant welfare benefits microsimulated is included in paragraph 2.14.
+
+                                                         6
+•   Support for Energy Bills: Cut VAT on domestic electricity from 5% to
+    0% from 1 October 2026 to 1 July 2027
+
+•   Fuel Duty: Extend the temporary 5p-per-litre duty cut and defer the
+    planned Retail Prices Index (RPI) increase to 1 July 2027
+
+•   Bus Fares: Cap single bus fares at £2 in England outside London for
+    one year from 1 January 2027, funded by reprioritising DESNZ
+    budgets
+
+•   Mileage Rates: Increase the tax-free and tax-deductible car and van
+    rates to 55p for the first 10,000 business miles from 6 April 2026 and
+    the higher mileage rate to 35p from 6 April 2027
+
+•   Universal Credit: Extend the £2,500 surplus earnings threshold for
+    one year from 1 April 2027
+
+•   Cash ISAs: Maintain the cash ISA limit at £20,000 from 6 April 2027
+
+•   Trading Allowance: Increase the Income Tax Trading Allowance to
+    £3,000 from £1,000 from 6 April 2027
+
+•   Founders' Relief: Introduce a new CGT relief for qualifying founders
+    of high-growth, innovative companies from 6 April 2027
+
+•   Lifetime ISA: Reduce the withdrawal charge from 25% to 20% for
+    first-time buyers purchasing properties above the £450,000 price
+    cap from 29 October 2026
+
+•   Distributions: Modernise the distributions framework from 6 April
+    2028
+
+•   Pension Tax Allowance: Remove the income tax liability for
+    pensioners with total income up to the value of the new State
+    Pension from 6 April 2027 until 5 April 2030
+
+•   Private Hire Vehicle Operators: Deem larger operators with annual
+    fare turnover over £50 million liable for VAT on the full value of their
+    fares from 2 January 2028
+
+•   Business Asset Disposal Relief (BADR): Reduce the lifetime limit to
+    £500,000 from 6 April 2027
+
+•   Property Income: Increase tax rates on property income by 2ppts at
+    the basic, higher and additional rate from 6 April 2027
+
+•   Savings Income: Increase tax rates on savings income by 2ppts at
+    the basic, higher and additional rate from 6 April 2027
+
+•   Spring 2026 Youth Employment and Skills Package: Expand Youth
+    Guarantee and apprenticeship support
+
+•   Low Value Imports: Remove the £135 customs duty relief and
+    introduce new customs arrangements from October 2028
+
+
+                                      7
+•   Renters' Rights: roll out a £65 fee for the 'Register your rental
+    property' service for private landlords and private properties in
+    England from 15 December 2026, with receipts intended to fund the
+    operational costs of the service and enforcement activity in the
+    private rented sector by local councils.
+1.5    Figures 1.A and 1.B show the impact of government decisions
+announced at Budget 2026 in 2027-28. Figures 1.C and 1.D show the
+cumulative impact of decisions announced from Autumn Budget 2024
+onwards up to and including Budget 2026 in 2028-29, the final year for
+which there are detailed plans for resource departmental expenditure
+limit (RDEL) spending, as set out in Spending Review 2025. Including
+public service spending in the analysis provides a more complete
+assessment of government decisions.
+
+Analysis of decisions on household incomes in
+2027-28
+1.6   Figures 1.A and 1.B illustrate the impact in 2027-28 of decisions
+announced at Budget 2026 (including those pre-announced where
+funding is allocated at Budget 2026). Both charts show the average
+impact on households, compared to a counterfactual in which the
+modelled policies were not introduced.
+1.7    Figures 1.A and 1.B show that, on average, households in the
+lowest income deciles in 2027-28 will benefit the most from policy
+decisions as a percentage of net income and increases in tax will be
+concentrated on the highest income households. In 2027-28, on
+average, all but the top 20% of households will benefit from policy
+decisions.
+
+
+
+
+                                    8
+Figure 1.A Impact of decisions at Budget 2026 on
+households in 2027-28, as a percentage of net income, by
+income decile
+ 0.6%
+
+
+ 0.5%
+
+
+0.4%
+
+
+ 0.3%
+
+
+ 0.2%
+
+
+ 0.1%
+
+
+0.0%
+
+
+-0.1%
+        Bottom    2     3       4       5        6      7       8        9    Top     All
+         Decile                                                              Decile House-
+                                Equivalised Net Income Decile                        holds
+            Tax       Welfare        Benefits-in-kind from public services     Overall
+
+
+Source: HM Treasury distributional analysis model
+
+
+
+
+                                             9
+Figure 1.B Impact of decisions at Budget 2026 on
+households in 2027-28, in cash terms (£ per year), by
+income decile
+ £100
+  £80
+  £60
+  £40
+  £20
+   £0
+ -£20
+ -£40
+ -£60
+ -£80
+-£100
+ -£120
+-£140
+         Bottom   2       3     4        5       6       7       8          9    Top      All
+         Decile                 Equivalised Net Income Decile                   Decile House-
+                                                                                        holds
+          Tax         Welfare       Benefits-in-kind from public services         Overall
+
+Source: HM Treasury distributional analysis model
+
+
+ Analysis of decisions announced from Autumn
+ Budget 2024 onwards on household incomes
+ in 2028-29
+ 1.8    Figures 1.C and 1.D illustrate the cumulative impact in 2028-29 of
+ decisions announced from Autumn Budget 2024 onwards up to and
+ including Budget 2026. Both charts show the average impact on
+ households, compared to a counterfactual in which the modelled
+ policies and spending settlements were not introduced.
+ 1.9    Figures 1.C and 1.D show that, on average, households in the
+ lowest income deciles in 2028-29 will benefit the most from those
+ policy decisions and increases in tax will be concentrated on the
+ highest income households. In 2028-29, on average, all but the top 20%
+ of households will benefit from those policy decisions.
+
+
+
+
+                                               10
+Figure 1.C Impact of decisions from Autumn Budget 2024
+onwards on households in 2028-29, as a percentage of net
+income, by income decile
+  9%
+  8%
+  7%
+  6%
+  5%
+  4%
+  3%
+  2%
+  1%
+  0%
+  -1%
+ -2%
+         Bottom      2       3        4       5       6      7              8        9        Top     All
+         Decile                      Equivalised Net Income Decile                           Decile House-
+                                                                                                     holds
+        Tax                                                    Benefits-in-kind from public services
+        Welfare (inc Renewables Obligation funding)            Overall
+
+Source: HM Treasury distributional analysis model
+
+Figure 1.D Impact of decisions from Autumn Budget 2024
+onwards on households in 2028-29, in cash terms (£ per
+year), by income decile
+£2,000
+
+ £1,500
+
+ £1,000
+
+  £500
+
+    £0
+
+ -£500
+
+-£1,000
+
+-£1,500
+
+-£2,000
+
+-£2,500
+
+-£3,000
+           Bottom        2       3     4        5          6         7          8        9     Top     All
+           Decile                    Equivalised Net Income Decile                            Decile House-
+                                                                                                      holds
+        Tax                                                    Benefits-in-kind from public services
+        Welfare (inc Renewables Obligation funding)            Overall
+
+Source: HM Treasury distributional analysis model
+
+
+
+
+                                                      11
+Overall level of tax, welfare and public service
+spending
+1.10   To provide context beyond the impact of recent government
+policy decisions set out in Figures 1.A to 1.D, Figure 1.E shows the
+estimated overall level of welfare and public service spending received,
+and tax paid, by households across the income distribution. This shows
+that government policy continues to be highly redistributive, and that
+in 2028-29:
+•     on average, the bottom and middle of the income distribution – 60%
+      of all households – will receive more in public spending than they
+      contribute in tax
+
+•     on average, households in the lowest income decile will receive over
+      four times as much in public spending than they pay in tax
+
+Figure 1.E Overall level of public spending received, and
+tax paid, as a percentage of net income, by income decile,
+in 2028-29
+ 200%
+    180%
+    160%
+    140%
+    120%
+    100%
+    80%
+    60%
+    40%
+    20%
+     0%
+    -20%
+    -40%
+    -60%
+    -80%
+           Bottom   2      3      4      5        6      7        8       9    Top     All
+           Decile                                                             Decile House-
+                                  Equivalised Net Income Decile
+                                                                                      holds
+              Tax       Welfare       Benefits-in-kind from public services      Overall
+
+Source: HM Treasury distributional analysis model
+
+
+
+
+                                             12
+Chapter 2
+Data sources and
+methodology
+Table 2.A Data sources for charts
+Figure          Source
+1.A to 1.E      Internal HM Treasury modelling. See 2.1 to 2.29.
+
+Table 2.B Data sources for statistics
+Paragraph       Statistic                     Source
+2.4             Income movements              Income Dynamics: Movements
+                                              between quintiles: 2010 to 2024,
+                                              DWP, March 2026
+2.5             Expenditure distribution      Internal HM Treasury modelling
+
+Constructing Figures 1.A to 1.E
+Policies in scope
+2.1  All charts show impacts relative to a counterfactual of no policy
+changes over the relevant period.
+2.2    Throughout, measures are only included if they have a clear first-
+order impact on the benefit income, tax paid, or the benefits-in-kind
+received through public services by UK residents. The following policy
+impacts are therefore outside the scope of this analysis:
+•     the impact of changes to regulation, for example the National Living
+      Wage and moving gas standing charges onto unit rates, which are
+      not direct changes to the distribution of tax or public spending
+
+•     the behavioural impacts of most measures, for example where
+      households might reduce consumption to reduce the amount of tax
+      they might otherwise pay
+
+•     impacts resulting from reduced fraud, error or debt in the welfare
+      system, as full compliance with the rules of the welfare system is
+      assumed throughout the modelling
+
+•     impacts resulting from reduced tax non-compliance, as full
+      compliance with the rules of the tax system is assumed throughout
+      the modelling. Anti-avoidance measures are captured where they
+      result in a change in tax liabilities in the year being analysed
+
+
+                                        13
+•   impacts of decisions made by devolved administrations
+
+•   impacts of taxes where the incidence of the tax does not fall directly
+    on households, for example employer National Insurance
+    contributions. We exclude such taxes from this analysis as we are
+    unable to robustly determine the distributional consequences of
+    how they all could be passed through to households
+
+•   the impact of supply-side growth policies that may indirectly impact
+    households, for example through increases in employment or higher
+    wages
+2.3  Additionally, measures are routinely excluded from this analysis
+where there is insufficient data to robustly model the distributional
+impacts.
+
+Defining household living standards
+2.4    The analysis in this document uses household income as the
+measure of household living standards. While this is considered a
+standard approach, income may not always best represent some
+households’ general standard of living, as some households may
+finance their expenditure using wealth rather than income, or
+experience periods of low income temporarily (for example households
+containing students, the temporarily unemployed, or the self-
+employed). The most recent analysis by the Department for Work and
+Pensions (DWP) has shown that, of those surveyed in 2023-24, 59% of
+those in the bottom quintile in 2015-16 were in a higher income quintile
+in 2023-24.
+2.5    An alternative approach to approximating household living
+standards is to use household expenditure. While there is a strong
+correlation between income and expenditure, there are many
+households with both low income and high expenditure (and vice
+versa) – approximately 20% of households in the bottom income decile
+are in the top half of the expenditure distribution, for example.
+2.6    Due to a lack of data on expenditure in some of the datasets
+used in this analysis, an expenditure-based approach is not used here.
+However, the impact of government decisions on low-income
+households should be considered in the context of these
+methodological choices.
+
+Defining income and ranking households
+2.7  This distributional analysis uses equivalised net household
+income, before housing costs, as the main indicator by which to rank
+households from lowest income to highest income. This indicator is
+comprised of several components:
+•   ‘Equivalised’: equivalisation is a process that adjusts a household’s
+    net income to take into account the fact that larger households will
+    require a higher net income to achieve the same standard of living
+    as a household with fewer members. The equivalisation factors used
+                                    14
+    in the analysis are the modified OECD factors (as also used in DWP’s
+    Households Below Average Income publication)
+
+•   ‘Net’: household incomes are ranked after deductions from direct
+    taxes, and after additions from welfare benefits. Deductions from
+    indirect taxes, or additions through benefits-in-kind from public
+    services, are not used to rank households
+
+•   ‘Household’: incomes are assessed in aggregate at the household,
+    not individual level. Comparing household, rather than individual,
+    incomes reduces the subjectivity of this analysis, ensuring that no
+    assumptions are made about how incomes or expenditure are
+    shared between separate individuals within the household
+
+•   ‘Before housing costs’: housing costs, such as rent or the cost of
+    servicing a mortgage, are not deducted from household incomes
+2.8    The household income distribution is created by ranking
+households from the lowest equivalised net income to the highest
+equivalised net income, and then dividing this ranking into ten equally
+sized groups called deciles, across which the analysis is produced.
+2.9    To provide an approximation of where different households
+might be found in the income distribution, Table 2.C shows estimated
+median gross incomes (pre-tax private income including earnings,
+private pensions, savings and investments, plus benefit income) within
+each decile. This is a less precise estimate of a household’s position in
+the income distribution than net income, but is easier to understand
+because many people think about their incomes or salaries in gross
+rather than net terms.
+2.10 For example, if a household consisting of two adults has a gross
+income of £33,500 per year between them, there is a high likelihood
+that this household will be found in the third income decile. However,
+this is not guaranteed, as different gross household incomes can result
+in different net household incomes, depending on how many earners
+there are in the household, the size of the household, and which
+benefits the household qualifies for.
+
+
+
+
+                                    15
+Table 2.C Median gross income for each decile (£ per year,
+2028-29) for different household compositions
+ Median gross               1 adult       1 adult and         2 adults          2 adults           2 adults
+ income of                                     1 child                        and 1 child             and 2
+ households in                                                                                     children
+ decile
+
+ Top decile                102,400             157,400         149,200              193,100         240,000
+
+ Ninth decile                63,500             95,000           93,100             121,600           151,700
+
+ Eighth decile               50,100             67,000          74,200              96,400            116,700
+
+ Seventh decile              41,900             58,800          62,400               81,000           97,800
+
+ Sixth decile               35,400              45,800           53,300             68,900            83,200
+
+ Fifth decile               30,400              40,000          45,300              60,000             71,900
+
+ Fourth decile               26,300             35,000          39,000              50,600            60,600
+
+ Third decile                22,200             29,000           33,500             43,400            52,000
+
+ Second decile               18,200             23,800          27,800              36,000            42,000
+
+ Bottom decile                12,100             16,800          18,400             23,700            27,200
+
+Source: HM Treasury distributional analysis model
+
+Tax, welfare and public service spending
+methodology
+Tax and welfare
+2.11   Where possible, tax and welfare policy changes are analysed
+using HM Treasury’s Intra-Governmental Tax and Benefit
+Microsimulation model (IGOTM), which is underpinned by data from
+both DWP's Family Resources Survey (FRS)2 (where three years of data
+have been pooled together, specifically 2022-23, 2023-24 and 2024-25)
+and the ONS’s Living Costs and Food Survey (LCF)3 (where three years
+of data have also been pooled together, specifically 2019-20, 2022-23,
+and 2023-24).4 This data is then projected forward to reflect the financial
+year being modelled using the latest Office for Budget Responsibility
+average earnings and inflation forecasts. The model generally makes no
+changes to the underlying demographics, employment levels or
+expenditure patterns in the base data.
+2.12 Not all measures can be reliably modelled using IGOTM due to
+data and/or modelling constraints. Tax and welfare changes that
+
+
+2 DWP, Family Resources Survey.
+
+3 ONS, Living Costs and Food Survey.
+
+4 Survey years 2020-21 and 2021-22 are affected by the COVID-19 pandemic and therefore not used for this
+
+ analysis.
+
+                                                      16
+cannot be modelled using microsimulation modelling are, where
+possible, apportioned to household equivalised net income deciles. This
+is done according to the Exchequer costs or savings from the measures,
+applied to households based on where the impacts are likely to fall.
+2.13   Within the tax system, the main taxes microsimulated in this
+analysis generally include: Income Tax, employee and self-employed
+National Insurance contributions, Council Tax, VAT, Insurance Premium
+Tax, Fuel Duty, Alcohol Duty, Tobacco Duty, Stamp Duty Land Tax, and
+Air Passenger Duty.
+2.14 Within the welfare system, the most significant welfare benefits
+microsimulated in this analysis generally include: the State Pension,
+Pension Credit, Winter Fuel Payments, Attendance Allowance,
+Jobseeker’s Allowance, Employment and Support Allowance, Housing
+Benefit, Universal Credit, Child Benefit, Disability Living Allowance,
+Personal Independence Payment and Tax-Free Childcare.
+2.15 Not all households take up all the benefits to which they are
+entitled. HM Treasury’s microsimulation modelling takes this into
+account when calculating the effects of policy changes by using
+information on the take-up of benefits in the underlying survey data.
+This methodology provides a more accurate estimate of the impact of
+welfare changes on households.
+2.16 Modelling of tax and welfare measures in IGOTM takes into
+account the devolution of decisions in some areas from the UK
+government to devolved administrations. UK government decisions are
+modelled as applying only to households directly affected by the
+measure, while decisions taken by the devolved administrations are not
+included as policy impacts.
+2.17 In general, all charts in Chapter 1 assume that Universal Credit
+has been fully rolled out and claimants are no longer claiming benefits
+under the older legacy system. However, where measures relate directly
+to migration of legacy benefits, adjustments are made to account for
+these impacts.
+
+Public service spending
+2.18 The analysis of public service spending is aimed at quantifying
+the benefit that frontline public services provide to households. This
+covers services provided by the Department of Health and Social Care,
+the Department for Education, the Department for Work and Pensions,
+the Department for Transport, the Ministry of Justice, the Department
+for Digital, Culture, Media and Sport, and some services delivered by
+local government in England.
+2.19 Public service spending estimates used in this analysis include
+the cost of providing the public services, including employment costs
+where relevant. This analysis excludes:
+•   administrative spending
+
+•   capital spending and the depreciation of capital assets
+
+                                    17
+•   spending on public goods where it is not possible to identify the
+    direct benefits from these areas of spending for specific households
+2.20 To align with the definition of income used in DWP’s Households
+Below Average Income publication, the analysis of spending on public
+services also includes student loans. To account for this source of
+income, estimates of student loan outlay in a given financial year are
+counted as household income from public spending. Likewise,
+estimates of student loan repayments in that same financial year are
+reflected as a loss to households, again through the public spending
+bars.
+2.21 For Figures 1.A and 1.B, the analysis of public service spending
+compares a policy scenario including announced measures with a
+counterfactual where those policy announcements are not
+implemented.
+2.22 Figures 1.C and 1.D illustrate the impact of changes to public
+service spending in 2028-29 compared to a counterfactual of planned
+spending at Spring Budget 2024. This analysis uses detailed spending
+plans for 2028-29 (as announced at Spending Review 2025).
+2.23 Charts are presented on a UK basis, though any public service
+spending that is the responsibility of the devolved administrations is
+not reflected in this analysis. This means that any changes to devolved
+spending – whether positive or negative – have no impact on this
+analysis.
+2.24 The analysis of the benefits-in-kind provided by public service
+spending is, as with tax and welfare measures, derived from HM
+Treasury’s IGOTM model. However, the modelling approach taken for
+public services is slightly different.
+2.25 Where the use of a public service is reported in the LCF, no
+additional data is required and the approach is similar to that used for
+most tax and welfare modelling. The spending on a particular public
+service is allocated between all those households who are expected to
+use this public service, in proportion to each household’s expected use
+of the service.
+2.26 Where information about the use of a service is not available in
+the LCF, additional data sources are required. This additional data is
+used to identify characteristics associated with the use of the service
+and then used to derive probabilities of service use conditional on these
+characteristics. The cash value spent on public services is converted into
+a one-for-one cash gain to households and distributed to households
+based on the probability that any given household uses the service.
+
+Continuous improvements to modelling and
+analysis
+2.27 The modelling underpinning our analysis of tax, welfare and
+public service spending is under continuous improvement, to enable us
+to provide the best estimate (subject to time, resource, and data
+constraints) of how households are impacted by the cumulative tax,
+                                   18
+welfare and public service spending decisions made by the
+government.
+2.28 We also aim to capture the most comprehensive and up-to-date
+record of where government spending is directed to inform this
+analysis, noting this will continue to evolve as final departmental
+spending lines are decided. As such, the charts in Chapter 1 represent
+our best estimates of impacts at the time of publishing.
+2.29 Finally, the analysis shown in our charts is based on the latest
+available Office for Budget Responsibility forecast. For these reasons, as
+well as those set out above, charts published at consecutive fiscal
+events are not directly comparable.
+
+
+
+
+                                    19
+HM Treasury contacts
+
+This document can be downloaded from www.gov.uk
+
+If you require this information in an alternative format or have general
+enquiries about HM Treasury and its work, contact:
+
+Correspondence Team
+HM Treasury
+1 Horse Guards Road
+London
+SW1A 2HQ
+
+Tel: 020 7270 5000
+
+Email: public.enquiries@hmtreasury.gov.uk
+
+
+                                  20
+
