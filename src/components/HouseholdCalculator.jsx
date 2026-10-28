@@ -98,15 +98,14 @@ export const FORM_GROUPS = [
   },
   {
     key: "pensions",
-    title: "Pensions and student loan",
-    hint: "Pensions paid to you before tax, pension paid by salary sacrifice, and any student loan.",
+    title: "Pensions",
+    hint: "Pensions paid to you before tax, and pension paid by salary sacrifice.",
     fields: [
       "state_pension_per_year",
       "private_pension_per_year",
       "partner_state_pension_per_year",
       "partner_private_pension_per_year",
       "salary_sacrifice_per_year",
-      "student_loan_plan",
     ],
   },
 ];
@@ -174,18 +173,6 @@ const CHOICE_CONFIGS = {
       { value: "RENT_PRIVATELY", label: "Private landlord" },
       { value: "RENT_FROM_COUNCIL", label: "Council" },
       { value: "RENT_FROM_HA", label: "Housing association" },
-    ],
-  },
-  student_loan_plan: {
-    label: "Student loan plan",
-    layout: "grid",
-    options: [
-      { value: "NONE", label: "No loan" },
-      { value: "PLAN_1", label: "Plan 1", hint: "Started before Sept 2012, or Northern Ireland" },
-      { value: "PLAN_2", label: "Plan 2", hint: "England or Wales, Sept 2012 to July 2023" },
-      { value: "PLAN_4", label: "Plan 4", hint: "Scotland" },
-      { value: "PLAN_5", label: "Plan 5", hint: "England, from Aug 2023" },
-      { value: "POSTGRADUATE", label: "Postgraduate", hint: "Master's or doctoral loan" },
     ],
   },
   council_tax_band: {
@@ -418,9 +405,6 @@ export function stepSummary(fields, { answer, applies, changed, inputs, children
     if (!changed(id)) continue;
     if (id === "claims_universal_credit") {
       parts.push(inputs[id] ? "Claims Universal Credit" : "Does not claim Universal Credit");
-    } else if (id === "student_loan_plan") {
-      const chosen = CHOICE_CONFIGS[id].options.find((option) => option.value === inputs[id]);
-      parts.push(!chosen || chosen.value === "NONE" ? "No student loan" : `${chosen.label} student loan`);
     } else if (id === "council_tax_band") {
       parts.push(`Band ${inputs[id]}`);
     } else if (id === "tenure" || id === "rent_from") {
@@ -560,6 +544,9 @@ export function resetSavedWizard() {
   Object.assign(savedWizard, { inputs: null, presetId: null, formOpen: false, optionalOpen: {}, stepOpen: {}, submitted: null, startFrom: null, extras: [] });
 }
 
+// Answers always shown first in their step, whatever is selected
+const ALWAYS_FIRST = ["savings_interest_per_year"];
+
 // The address parameter naming the calculator-only measures turned on
 export const EXTRAS_PARAM = "also";
 
@@ -574,7 +561,8 @@ const FORM_PANEL_ID = "household-form-panel";
  * (POST /api/household-impact).
  */
 // Each example's id and full answers, for the cards' background figures
-const EXAMPLE_REQUESTS = HOUSEHOLD_EXAMPLES.map((example) => ({ id: example.id, inputs: presetInputs(example) }));
+// (and any calculator-only measure it turns on: the saver's savings rise)
+const EXAMPLE_REQUESTS = HOUSEHOLD_EXAMPLES.map((example) => ({ id: example.id, inputs: presetInputs(example), calculatorOnly: example.calculatorOnly ?? [] }));
 
 function HouseholdCalculator({
   selectedPolicies = [],
@@ -739,10 +727,14 @@ function HouseholdCalculator({
     // progress) is scrolled to once shown
     setFormOpen(false);
     scrollToResult.current = true;
+    // An example that turns on a calculator-only measure (the saver) turns
+    // its switch on, so its precomputed answer, with it, is the one shown
+    const turnsOn = (preset.calculatorOnly ?? []).filter((id) => !extras.includes(id));
+    if (turnsOn.length) setExtras((prev) => [...prev, ...turnsOn]);
     if (householdPolicies.length > 0) {
       // Another household: its own result or a clean loading state, never
       // the previous card's (useHouseholdImpact's `household`)
-      setSubmitted({ inputs: next, year, policies: requestPolicies, at: Date.now(), household: preset.id });
+      setSubmitted({ inputs: next, year, policies: withCalculatorOnly(requestPolicies, turnsOn), at: Date.now(), household: preset.id });
     }
   };
   // The results for the answers sent with Calculate, never the ones being
@@ -1097,8 +1089,11 @@ function HouseholdCalculator({
   const policyOrder = policyAsks.map((question) => question.id);
   const shownGroups = FORM_GROUPS.map((group) => {
     if (group.always) return { ...group, primary: group.fields, optional: [] };
-    const asked = policyOrder.filter((id) => group.fields.includes(id));
-    if (asked.length === 0) return { ...group, primary: group.fields, optional: [] };
+    // Savings interest is always asked first in its step, so the savings
+    // switch (and the saver example) always has its answer in view
+    const read = policyOrder.filter((id) => group.fields.includes(id));
+    if (read.length === 0) return { ...group, primary: group.fields, optional: [] };
+    const asked = [...new Set([...group.fields.filter((id) => ALWAYS_FIRST.includes(id)), ...read])];
     return { ...group, primary: asked, optional: group.fields.filter((id) => !asked.includes(id)) };
   });
   // Whether a numbered group starts open: You and Household only. The
