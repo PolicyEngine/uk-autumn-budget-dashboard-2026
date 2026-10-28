@@ -34,9 +34,12 @@ const read = (name) => JSON.parse(readFileSync(join(PUBLIC, name), "utf8"));
 // growth the runs use (src/uk_budget_data/forecast/obr_october_2026.json)
 const PARAMETERS = read("policy_parameters.json");
 const OUTLOOK = read("living_standards_outlook.json");
-// Table A.1's average earnings growth, calendar 2027 to 2031
-const OCTOBER = { 2027: 0.03, 2028: 0.022, 2029: 0.023, 2030: 0.025, 2031: 0.026 };
-const EARNINGS_2031 = 100 * 1.03 * 1.022 * 1.023 * 1.025 * 1.026;
+// The October 2026 average earnings growth the runs use (detailed forecast
+// tables, four decimals), calendar 2027 to 2031
+const OCTOBER = { 2027: 0.0299, 2028: 0.0215, 2029: 0.0227, 2030: 0.0249, 2031: 0.026 };
+// Average earnings chained from 2026-27 = 100 by the given years' growth
+const grown = (...years) => years.reduce((index, year) => index * (1 + OCTOBER[year]), 100);
+const EARNINGS_2031 = grown(2027, 2028, 2029, 2030, 2031);
 
 const serve = (body) => vi.stubGlobal("fetch", vi.fn(async () => new Response(body ? JSON.stringify(body) : "", { status: body ? 200 : 404 })));
 
@@ -70,7 +73,7 @@ describe("Frozen thresholds against pay: data", () => {
     // No Plan 2 line: the Budget has no Plan 2 measure
     expect(rows.every((r) => !("plan_2" in r))).toBe(true);
     const frozen = rows.find((r) => r.year === 2030);
-    const earnings = 100 * 1.03 * 1.022 * 1.023 * 1.025;
+    const earnings = grown(2027, 2028, 2029, 2030);
     expect(frozen.earnings).toBeCloseTo(earnings, 9);
     // Frozen: 100 / the earnings index
     expect(frozen.personal_allowance).toBeCloseTo((100 * 100) / earnings, 9);
@@ -97,7 +100,7 @@ describe("Frozen thresholds against pay: data", () => {
     expect(rows.find((r) => r.year === 2026).trading_allowance).toBeNull();
     expect(rows.find((r) => r.year === 2027).trading_allowance).toBeCloseTo(100, 9);
     // Held at £3,000 while earnings grow by 2028 to 2031's rates
-    expect(rows.at(-1).trading_allowance).toBeCloseTo(100 / (1.022 * 1.023 * 1.025 * 1.026), 9);
+    expect(rows.at(-1).trading_allowance).toBeCloseTo((100 * 100) / grown(2028, 2029, 2030, 2031), 9);
     // Without the measure the rows carry no trading allowance at all
     const { trading_allowance_raise: _, ...others } = PARAMETERS.measures;
     expect(thresholdRows({ ...PARAMETERS, measures: others }).every((r) => !("trading_allowance" in r))).toBe(true);
@@ -112,17 +115,17 @@ describe("Frozen thresholds against pay: data", () => {
   it("says what the income tax thresholds are worth against earnings in one sentence", () => {
     const rows = thresholdRows(PARAMETERS).filter((r) => r.year <= 2030);
     expect(thresholdsSentence(rows)).toBe(
-      "By 2030-31 the personal allowance and higher rate threshold are worth 9.4% less relative to average earnings than in 2026-27.",
+      "By 2030-31 the personal allowance and higher rate threshold are worth 9.3% less relative to average earnings than in 2026-27.",
     );
     const apart = rows.map((r) => ({ ...r, higher_rate: 100 }));
     expect(thresholdsSentence(apart)).toBe(
-      "By 2030-31 the personal allowance is worth 9.4% less and the higher rate threshold 0.0% more relative to average earnings than in 2026-27.",
+      "By 2030-31 the personal allowance is worth 9.3% less and the higher rate threshold 0.0% more relative to average earnings than in 2026-27.",
     );
   });
 
   it("adds the trading allowance, its level and first year read from the measure", () => {
     expect(thresholdsSentence(thresholdRows(PARAMETERS), tradingAllowance(PARAMETERS))).toBe(
-      "By 2031-32 the personal allowance is worth 9.9% less and the higher rate threshold 9.8% less relative to average earnings than in 2026-27; the trading allowance, £3,000 from 2027-28, is worth 9.1% less than in its first year.",
+      "By 2031-32 the personal allowance is worth 9.8% less and the higher rate threshold 9.7% less relative to average earnings than in 2026-27; the trading allowance, £3,000 from 2027-28, is worth 9.0% less than in its first year.",
     );
   });
 
@@ -145,7 +148,7 @@ describe("Frozen thresholds against pay: data", () => {
 describe("Frozen thresholds against pay: card", () => {
   it("shows the title, the sentence and a chip per line", async () => {
     render(<FrozenThresholdsCard data={OUTLOOK} />);
-    expect(await screen.findByText(/^By 2031-32 the personal allowance is worth 9\.9% less and the higher rate threshold 9\.8% less/)).toBeTruthy();
+    expect(await screen.findByText(/^By 2031-32 the personal allowance is worth 9\.8% less and the higher rate threshold 9\.7% less/)).toBeTruthy();
     expect(screen.getByRole("heading", { level: 3, name: FROZEN_THRESHOLDS_TITLE })).toBeTruthy();
     // Uprated apart in 2031-32, so a line each
     for (const name of ["Personal allowance", "Higher rate threshold", "Trading allowance", "Keeps pace with pay"]) {
@@ -177,7 +180,7 @@ describe("Frozen thresholds against pay: card", () => {
     render(<FrozenThresholdsCard data={OUTLOOK} view="table" onViewChange={() => {}} />);
     await screen.findByText(/^By 2031-32/);
     const last = [...document.querySelectorAll(".ls-table tbody tr")].at(-1);
-    expect([...last.cells].map((c) => c.textContent)).toEqual(["2031-32", "113.2", "90.1", "90.2", "90.9"]);
+    expect([...last.cells].map((c) => c.textContent)).toEqual(["2031-32", "113.1", "90.2", "90.3", "91.0"]);
   });
 
   it("names the October 2026 forecast it ends with", async () => {
