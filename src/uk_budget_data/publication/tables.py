@@ -34,6 +34,7 @@ class TableSpec:
     columns: tuple[tuple[str, str], ...]
     key: tuple[str, ...]
     required: bool = True
+    nullable: tuple[str, ...] = ()
 
     @property
     def column_names(self) -> tuple[str, ...]:
@@ -85,6 +86,7 @@ TABLES: dict[str, TableSpec] = {
                 ("value", FLOAT),
             ),
             ("reform_id", "year", "decile"),
+            nullable=("value",),
         ),
         TableSpec(
             "winners_losers",
@@ -96,6 +98,7 @@ TABLES: dict[str, TableSpec] = {
                 ("avg_change", FLOAT),
             ),
             ("reform_id", "year", "decile"),
+            nullable=("avg_change",),
         ),
         TableSpec(
             "metrics",
@@ -244,9 +247,13 @@ TABLES: dict[str, TableSpec] = {
 }
 
 
-def _coerce(value: Any, kind: str, where: str) -> Any:
+def _coerce(value: Any, kind: str, where: str, nullable: bool = False) -> Any:
     """Convert one cell to its declared type, refusing anything ambiguous."""
-    if value is None or (isinstance(value, float) and math.isnan(value)):
+    if value is None or (nullable and value == ""):
+        if nullable:
+            return None
+        raise TableError(f"{where}: missing value")
+    if isinstance(value, float) and math.isnan(value):
         raise TableError(f"{where}: missing value")
     if kind == STR:
         return str(value)
@@ -291,6 +298,8 @@ def _coerce(value: Any, kind: str, where: str) -> Any:
 
 
 def _text(value: Any) -> str:
+    if value is None:
+        return ""
     if isinstance(value, bool):
         return "True" if value else "False"
     if isinstance(value, float):
@@ -320,7 +329,12 @@ def normalise(name: str, rows: Iterable[Mapping[str, Any]]) -> list[dict]:
             )
         typed.append(
             {
-                column: _coerce(row[column], kind, f"{name}.{column}[{index}]")
+                column: _coerce(
+                    row[column],
+                    kind,
+                    f"{name}.{column}[{index}]",
+                    column in spec.nullable,
+                )
                 for column, kind in spec.columns
             }
         )
