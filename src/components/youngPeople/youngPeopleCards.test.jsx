@@ -1,3 +1,4 @@
+import { cloneElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import fc from "fast-check";
 import { fireEvent, render, screen, within } from "@testing-library/react";
@@ -22,9 +23,10 @@ vi.mock("recharts", async () => {
   const actual = await vi.importActual("recharts");
   return {
     ...actual,
+    // A fixed size, so the plot itself is drawn
     ResponsiveContainer: ({ children }) => (
       <div data-testid="recharts-responsive-container" style={{ width: 800, height: 500 }}>
-        {children}
+        {cloneElement(children, { width: 800, height: 400 })}
       </div>
     ),
   };
@@ -315,6 +317,17 @@ describe("young people cards", () => {
     const card = document.querySelector(".young-people-trend");
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
     expect(card).toHaveTextContent("Average change per person in each age group, each year, with all ages for comparison.");
+  });
+
+  it("keys the lines by its chips alone, with no names at the lines' ends, on a wide screen and a phone", () => {
+    for (const narrow of [false, true]) {
+      const { unmount } = render(<TrendCard {...props} narrow={narrow} selectedYear={2029} />);
+      const card = document.querySelector(".young-people-trend");
+      expect(card.querySelectorAll(".recharts-line").length).toBeGreaterThan(0);
+      expect(card.querySelector(".trend-end-labels")).toBeNull();
+      expect(card.querySelector(".chart-legend .series-toggle")).not.toBeNull();
+      unmount();
+    }
   });
 
   it("draws every year shown, whatever year is selected", () => {

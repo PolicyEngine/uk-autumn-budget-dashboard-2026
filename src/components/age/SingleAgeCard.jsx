@@ -28,7 +28,7 @@ import {
   barShape,
   fiscalYearTick,
 } from "../../utils/chartTheme";
-import { ALL_BAND, COMBINATION_NOT_PUBLISHED, PACKAGE_PARTS_CAVEAT, SINGLE_AGE_TOP, isPublished, singleAgeKey, singleAgeSelection } from "../../utils/ageImpact";
+import { ALL_BAND, COMBINATION_NOT_PUBLISHED, SINGLE_AGE_TOP, isPublished, policiesWithoutRows, singleAgeKey, singleAgeSelection, withheldPartsCaveat, withheldPartsNote } from "../../utils/ageImpact";
 import { selectionPackageKey } from "../../utils/geography/selection";
 import { legendMembership } from "../../utils/legendMembership";
 import { PENSIONERS, ageWindow } from "../../utils/ageGroups";
@@ -65,20 +65,11 @@ export function windowTicks([first, last], ends, narrow) {
   return [...ticks].sort((a, b) => a - b).map(singleAgeKey);
 }
 
-const listNames = (names) => (names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0]);
-
-/** Why Each policy is unavailable, as the short line under the Show choice. */
-export const withheldPartsNote = (names) =>
-  names.length
-    ? `not available, as ${listNames(names)} ${names.length > 1 ? "have" : "has"} too few survey records at some ages`
-    : "not available for this selection";
-
 /** "16 to 24", "67 to 90 and over": the window's ages in words. */
 export const agesText = ([first, last]) => `${first} to ${last >= SINGLE_AGE_TOP ? "90 and over" : last}`;
 
-/** Why By policy is not offered: the policies with too few records by single year of age. */
-export const withheldPartsCaveat = (names) =>
-  `Each policy's part is not shown, as ${names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0]} ${names.length > 1 ? "have" : "has"} too few survey records by single year of age. The bars show all the selected policies together.`;
+// The text helpers live with the selection rule; re-exported for the tests
+export { withheldPartsCaveat, withheldPartsNote };
 
 /** An age tick, the group's ends in bold teal. */
 function AgeTick({ x, y, payload, ends }) {
@@ -169,15 +160,18 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
   const netOnly = data.some((point) => point.fromPackage && !point.partsShown);
   // By policy is offered only when every selected policy has rows at every
   // age shown: a policy withheld by single year of age is never backed out
-  // of the package's own net, so then no policy parts are drawn at all
+  // of the package's own net, so then no policy parts are drawn at all.
+  // Not even the other policies' parts: the Net change view of the same
+  // chart shows the package's net at each age, and the net less the parts
+  // shown would give the withheld policies' part back by difference
   const partsOffered = !netOnly && !combinationUnavailable;
   const stacked = byMeasure && partsOffered;
   // The selected policies with no row at some age shown, named in Caveats
+  const windowLabels = Array.from({ length: window[1] - window[0] + 1 }, (_, i) => singleAgeKey(window[0] + i));
   const withheldNames = netOnly
-    ? policies
-        .filter((policy) => selectedPolicies.includes(policy.id) && policy.displayable !== false)
-        .filter((policy) => singleAgeBars(rows, [policy], [policy.id], year, window[0], window[1]).some((point) => point.netChange === null))
-        .map((policy) => catalogue.byId.get(policy.id)?.label ?? policy.label ?? policy.name ?? policy.id)
+    ? policiesWithoutRows(rows, policies, selectedPolicies, [year], windowLabels).map(
+        (policy) => catalogue.byId.get(policy.id)?.label ?? policy.label ?? policy.name ?? policy.id,
+      )
     : [];
   const partKeys = [...new Set(data.flatMap((point) => point.parts.map((part) => part.key)))];
   // Round £ ticks from the lowest to the highest in the year shown, through
@@ -198,13 +192,18 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
     return niceRange(Math.min(...values), Math.max(...values), { maxSteps: 5 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, policies, selectedPolicies, group, byMeasure, stacked, year, packageRun]);
+  // With no policy parts (the package's own net, or a combination not
+  // published by age) the parts are empty, not zero: no policy is then
+  // listed as having no effect, as Age groups does (MeanChangeCard)
   const members = useMemo(
     () =>
-      legendMembership(catalogue, selectedPolicies, (id) =>
-        data.some((point) => point.parts.some((part) => part.id === id && Math.abs(part.value) > 0)),
-      ),
+      partsOffered
+        ? legendMembership(catalogue, selectedPolicies, (id) =>
+            data.some((point) => point.parts.some((part) => part.id === id && Math.abs(part.value) > 0)),
+          )
+        : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rows, policies, selectedPolicies, year, group, packageRun],
+    [rows, policies, selectedPolicies, year, group, packageRun, partsOffered],
   );
   const key = useMeasureKey(stacked ? members : [], stacked ? "Net change" : undefined);
   const missing = data.filter((point) => point.netChange === null);
@@ -422,7 +421,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
             year={year}
             info={{
               caveats: [
-                netOnly && (withheldNames.length ? withheldPartsCaveat(withheldNames) : PACKAGE_PARTS_CAVEAT),
+                netOnly && withheldPartsCaveat(withheldNames),
                 missing.length > 0 && !combinationUnavailable && `Not shown, as too few survey records: ages ${missing.map((p) => p.label).join(", ")}.`,
               ],
               how: [

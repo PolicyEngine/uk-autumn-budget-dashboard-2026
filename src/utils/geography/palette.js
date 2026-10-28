@@ -77,6 +77,11 @@ export const HATCH_COLOURS = Object.freeze({
   line: CHART_COLOURS.hatchLine,
 });
 
-/** An area with no published row: white, outlined. */
-export const NO_DATA_FILL = CHART_COLOURS.surface;
-export const NO_DATA_STROKE = CHART_COLOURS.noChange;
+/**
+ * An area with no data (no row, not published, or too uncertain to place
+ * on the scale): a faded cool slate that does not draw the eye, kept apart
+ * from the scale's 0 (the warmer light grey of no change), with the same
+ * thin white border as every other area (Vahid, 28 October).
+ */
+export const NO_DATA_FILL = CHART_COLOURS.noData;
+export const NO_DATA_STROKE = CHART_COLOURS.surface;

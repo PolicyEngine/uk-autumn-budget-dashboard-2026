@@ -30,7 +30,7 @@ import { useMeasureCatalogue } from "../../utils/measureCatalogue";
 import { shortNameOf } from "../../utils/policyDetails";
 import { X_AXIS_HEIGHT, plotMargin } from "../youngPeople/chartRows";
 import { cumulate, groupMeasureSeries, niceRange, signedPounds, stepAnnotations } from "../youngPeople/youngPeopleData";
-import { EndLabels, StepLabels, TrendTooltip, YearShading, about, signed, stackColumns, stepSentence } from "../youngPeople/TrendCard";
+import { StepLabels, TrendTooltip, YearShading, about, signed, stackColumns, stepSentence } from "../youngPeople/TrendCard";
 import SeriesToggle from "../SeriesToggle";
 import { pensionerMeasureSeries } from "./pensionersData";
 
@@ -48,8 +48,8 @@ const YEARS_OPTIONS = [
 ];
 
 const LINES = [
-  { key: ALL_BAND, label: "All ages", short: "All", colour: CHART_COLOURS.reference, dash: REFERENCE_DASH, width: 2, strong: true },
-  { key: FOCUS, label: FOCUS_LABEL, short: "Pens.", colour: FOCUS_COLOUR, width: 3, strong: true },
+  { key: ALL_BAND, label: "All ages", colour: CHART_COLOURS.reference, dash: REFERENCE_DASH, width: 2 },
+  { key: FOCUS, label: FOCUS_LABEL, colour: FOCUS_COLOUR, width: 3 },
 ];
 
 /**
@@ -188,7 +188,7 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
       }),
     published: focusSeries.some((point) => point.net !== null),
   };
-  const margin = plotMargin(narrow, { right: byMeasure ? 16 : narrow ? 44 : 84 });
+  const margin = plotMargin(narrow, { right: 16 });
 
   return (
     <div className="pensioners-trend">
@@ -315,9 +315,6 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
                   onMouseLeave={() => setHovered(null)}
                 />
               ))}
-            {!byMeasure && (
-              <Customized component={<EndLabels data={data} lines={LINES.filter((line) => shown.includes(line.key))} hovered={hovered} onHover={setHovered} narrow={narrow} />} />
-            )}
             {!cumulative && !phone && notes.length > 0 && (
               <Customized
                 component={

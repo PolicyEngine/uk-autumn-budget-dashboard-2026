@@ -403,10 +403,11 @@ function AboutResult({ items, caution, bars, totals }) {
 
 /**
  * The two "Across earnings" cards, in step, side by side (stacked on a
- * phone): one Before | After | Change choice, one "Show:" control above
- * both for the components they share (a chip switches a component on
- * both cards, hovering one brings it forward on both), and the salary
- * hovered on one marked on the other.
+ * phone): one Before | After | Change choice, the same "Show:" chips under
+ * each card's plot for the components they share (one state here, so a
+ * chip switches a component on both cards and both keys, and hovering one
+ * brings it forward on both), and the salary hovered on one marked on the
+ * other.
  */
 export function AcrossEarnings({ sweep, salary, yearLabel }) {
   const narrow = useNarrowViewport();
@@ -429,7 +430,30 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
   // One control only when both cards draw their parts; else each its own key
   const shared = Boolean(sweep.netParts && sweep.parts);
   const chips = useMemo(() => sharedSweepChips(netInUse, rateInUse), [netInUse, rateInUse]);
-  const sync = { view, setView, hidden, setHidden, hover, setHover, expanded, setExpanded, union, focus, setFocus: shared ? setFocus : undefined, sharedLegend: shared };
+  // The one key both cards draw under their plots: the same chips, the
+  // same state; a card adds only its own non-chip items (`extras`)
+  const legend = shared
+    ? (extras = []) => (
+        <SeriesToggle
+          lead="Show:"
+          label="Components"
+          series={chips}
+          shown={chips.filter((chip) => !chip.disabled && !hidden.includes(chip.key)).map((chip) => chip.key)}
+          onChange={(next) => {
+            const mine = chips.filter((chip) => !chip.disabled).map((chip) => chip.key);
+            setHidden(mine.filter((key) => !next.includes(key)));
+          }}
+          onHover={setFocus}
+          collapseDisabled
+          expanded={expanded}
+          onExpandedChange={setExpanded}
+          noEffectOn="either chart"
+          narrow={narrow}
+          extras={extras}
+        />
+      )
+    : null;
+  const sync = { view, setView, hidden, setHidden, hover, setHover, expanded, setExpanded, union, focus, setFocus: shared ? setFocus : undefined, legend };
   // An answer without the parts (a calculation server deployed before they
   // were added) draws the totals alone: said here, never silently
   const missing = [!sweep.netParts && "net income", !sweep.parts && "the marginal tax rate"].filter(Boolean);
@@ -440,26 +464,6 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
           The calculation server did not send the breakdown of {missing.join(" or ")} by tax and benefit, so{" "}
           {missing.length === 2 ? "both charts show" : "that chart shows"} the total only.
         </p>
-      )}
-      {shared && (
-        <div className="across-earnings-show">
-          <SeriesToggle
-            placement="section"
-            lead="Show on both charts"
-            label="Components"
-            series={chips}
-            shown={chips.filter((chip) => !chip.disabled && !hidden.includes(chip.key)).map((chip) => chip.key)}
-            onChange={(next) => {
-              const mine = chips.filter((chip) => !chip.disabled).map((chip) => chip.key);
-              setHidden(mine.filter((key) => !next.includes(key)));
-            }}
-            onHover={setFocus}
-            collapseDisabled
-            expanded={expanded}
-            onExpandedChange={setExpanded}
-            narrow={narrow}
-          />
-        </div>
       )}
       <div className="charts-grid single-year-chart-pair">
         <EarningsChart sweep={sweep} salary={salary} yearLabel={yearLabel} sync={sync} />

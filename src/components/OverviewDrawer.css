@@ -28,7 +28,8 @@
   opacity: 1;
 }
 
-/* The panel: header, a body that fits without scrolling, a footer. No
+/* The panel: header, the body, the footer, in flow (it scrolls when
+   they are taller than the window). No
    border: a light edge would show as a white line beside the band; the
    shadow and the dimmed page mark its edge. Its own background carries the
    band's gradient behind the header's height, so a classic scrollbar's
@@ -125,9 +126,8 @@
   align-items: center;
   align-self: flex-start;
   gap: 8px;
-  /* 12px to the title: close enough that eyebrow and title read as one
-     label, apart enough that the small words don't crowd the cap height */
-  margin: 0 0 12px;
+  /* 8px to the title: eyebrow and title read as one label */
+  margin: 0 0 8px;
   font-size: var(--fs-small);
   font-weight: 600;
   line-height: 1.4;
@@ -182,25 +182,23 @@
   outline-offset: -2px;
 }
 
-/* One left edge (20px) for the wordmark's column, the eyebrow, the
-   title, the intro, the group labels, the cards' contents and the footer */
+/* One spacing scale for the whole panel: 24px between sections (the
+   intro, each link group, the footer), 8px from a label to its content,
+   and one left edge (20px) for everything. The sections follow one
+   another from the top; any spare height falls below the footer, so no
+   gap opens between them however tall the window. */
 .overview-body {
   display: flex;
-  flex: 1;
+  flex: none;
   flex-direction: column;
-  gap: clamp(12px, 2svh, 20px);
-  /* The eyebrow sits a fixed 24px (the section step) under the band */
-  padding: 24px 20px 12px;
+  gap: 24px;
+  padding: 24px 20px 0;
 }
 
-/* Spare height is shared above and below the groups, so the panel is
-   filled, not left with a gap at the foot, and the band-to-eyebrow gap
-   stays 24px however tall the window */
 .overview-nav {
   display: flex;
   flex-direction: column;
-  gap: clamp(12px, 2svh, 16px);
-  margin-block: auto;
+  gap: 24px;
 }
 
 .overview-group {
@@ -208,9 +206,11 @@
   flex-direction: column;
 }
 
-/* A group's label: small semibold muted words, sentence case */
+/* A section's label ("In this dashboard", "More from PolicyEngine",
+   "Built with"): small semibold muted words, sentence case, 8px above
+   its content */
 .overview-group-label {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-size: var(--fs-small);
   font-weight: 600;
   line-height: 1.4;
@@ -219,31 +219,36 @@
   color: var(--pe-gray-500);
 }
 
-/* The intro, compact for a 380px panel */
+/* The intro, compact for a 380px panel: a 22px title, 15px body at
+   1.5, 12px between them and to the provisional notice */
 .overview-intro .landing-heading {
-  margin: 0 0 16px;
+  margin: 0 0 12px;
   font-size: 1.375rem;
   /* Tight enough that a two-line title reads as one block */
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .overview-intro .landing-intro {
   font-size: var(--fs-body);
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
+/* The provisional notice: a small rounded box (not a pill, as it can
+   wrap to two lines) under the intro */
 .overview-intro .publication-provisional {
-  display: inline-block;
-  margin: 14px 0 0;
-  padding: 2px 10px;
-  border-radius: 999px;
+  display: block;
+  margin: 12px 0 0;
+  padding: 6px 10px;
+  border-radius: 8px;
   font-size: var(--fs-micro);
   line-height: 1.5;
 }
 
-/* "In this dashboard": the three views as one card, rows split by hairlines
-   inside it (none above the first or below the last) */
-.landing-rows {
+/* Both link groups are the same card: a 1px border, 12px corners, the
+   surface. "In this dashboard" holds the three views, rows split by
+   hairlines inside it (none above the first or below the last). */
+.landing-rows,
+.overview-external {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -264,8 +269,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: clamp(52px, 7svh, 60px);
-  padding: 8px 12px;
+  min-height: 60px;
+  padding: 10px 12px;
+  box-sizing: border-box;
   color: var(--c-text);
   text-decoration: none;
   transition: background-color var(--motion-fast) ease;
@@ -340,12 +346,10 @@
   transform: translateX(2px);
 }
 
-/* "More from PolicyEngine": the website, a quieter muted row of its own
-   (no border; a grey fill), with the PolicyEngine mark and an arrow out */
+/* "More from PolicyEngine": the website, one row in the same card, with
+   the PolicyEngine mark and an arrow out */
 .overview-external {
-  min-height: 52px;
-  border-radius: 12px;
-  background: var(--pe-gray-50);
+  list-style: none;
 }
 
 .overview-external-mark {
@@ -355,27 +359,19 @@
   object-fit: contain;
 }
 
-.overview-external .landing-row-title {
-  font-size: var(--fs-small);
-}
-
 .overview-external:hover .landing-row-chevron {
   color: var(--c-gain-text);
   transform: translate(2px, -2px);
 }
 
-/* "Built with": a compact group at the foot, on the same left edge; its
-   links as small chips, each with its icon and an arrow out */
+/* "Built with": the last section, 24px under the groups, set off by a
+   hairline 16px above its label; its links as small chips in one row,
+   each with its icon and an arrow out */
 .overview-footer {
   flex: none;
-  margin-top: auto;
-  padding: 12px 20px 16px;
+  margin: 24px 20px 0;
+  padding: 16px 0 24px;
   border-top: 1px solid var(--pe-gray-100);
-}
-
-.overview-footer .overview-group-label {
-  font-size: var(--fs-micro);
-  margin-bottom: 6px;
 }
 
 .overview-built-links {
@@ -391,8 +387,9 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 28px;
+  height: 30px;
   padding: 0 9px 0 8px;
+  box-sizing: border-box;
   font-size: var(--fs-micro);
   font-weight: 500;
   color: var(--pe-gray-700);
@@ -423,50 +420,16 @@
   outline-offset: 2px;
 }
 
-/* A short window: everything a little tighter, so it still fits */
-@media (max-height: 760px), (max-height: 840px) and (min-width: 601px) {
+/* A desktop window up to 960px tall: the intro a size smaller, so the
+   panel fits without scrolling, with or without the provisional notice
+   (the spacing scale stays the same) */
+@media (max-height: 960px) and (min-width: 601px) {
   .overview-intro .landing-heading {
     font-size: var(--fs-section);
   }
 
   .overview-intro .landing-intro {
     font-size: var(--fs-small);
-    line-height: 1.5;
-  }
-
-  .landing-row-icon {
-    width: 32px;
-    height: 32px;
-  }
-
-  .landing-row {
-    min-height: 56px;
-  }
-
-  .overview-footer {
-    padding-top: 10px;
-    padding-bottom: 12px;
-  }
-}
-
-/* Shorter still: the rows and the intro's spacing tighten too */
-@media (max-height: 700px) {
-  .overview-body {
-    gap: 8px;
-  }
-
-  .landing-row {
-    min-height: 52px;
-    padding-top: 6px;
-    padding-bottom: 6px;
-  }
-
-  .overview-intro .landing-heading {
-    margin-bottom: 8px;
-  }
-
-  .overview-intro .publication-provisional {
-    margin-top: 8px;
   }
 }
 
