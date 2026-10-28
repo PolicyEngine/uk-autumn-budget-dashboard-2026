@@ -162,6 +162,10 @@ export const POLICY_DETAILS = [
       label: "Temporary zero rate of VAT for domestic electricity",
       href: "https://www.gov.uk/government/publications/temporary-zero-rate-of-vat-for-domestic-electricity-in-great-britain/temporary-zero-rate-of-vat-in-great-britain-for-domestic-electricity",
     },
+    explainer: {
+      label: "Analysis of the Autumn Budget 2026 energy bill measures",
+      href: "https://www.policyengine.org/uk/research/budget-2026-energy-bills",
+    },
     budgetRows: [2],
   },
   {
@@ -403,6 +407,10 @@ export const POLICY_DETAILS = [
     source: {
       label: "Budget 2026",
       href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
+    },
+    explainer: {
+      label: "Analysis of the Autumn Budget 2026 energy bill measures",
+      href: "https://www.policyengine.org/uk/research/budget-2026-energy-bills",
     },
     budgetRows: [1],
     example: {
