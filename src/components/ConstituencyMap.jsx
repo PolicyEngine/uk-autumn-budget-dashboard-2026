@@ -47,7 +47,7 @@ import {
 } from "../utils/geography/palette";
 import {
   SCALE_GRADIENT,
-  fittedExtent,
+  colourExtent,
   scaleColour,
   scaleLabels,
 } from "../utils/geography/scale";
@@ -421,8 +421,8 @@ function MapKey({ outcome, extent, counts, highlight, onHighlight, placement = "
             <InfoTip
               label="How to read the key"
               content={
-                `Amber is a loss, light grey little or no change and teal a gain, on a scale from ${low} to ${high} ` +
-                "fitted to the figures shown (larger ones take the end colours). No data: not published, or too few survey households to estimate. " +
+                `Amber is a loss, light grey little or no change and teal a gain, on one scale from ${low} to ${high} ` +
+                "for every policy and year (larger changes take the end colours). No data: not published, or too few survey households to estimate. " +
                 "About this chart says more."
               }
             />
@@ -689,16 +689,9 @@ export default function ConstituencyMap({
     [features, constituencyTable, reform, selectedYear, outcome],
   );
 
-  // The colour scale's half-width, fitted to the figures the map colours
-  // (fittedExtent): ± their 95th percentile, rounded up to a clean step
-  const colourDomain = useMemo(
-    () =>
-      fittedExtent(
-        [...(states?.values() ?? [])].filter((state) => !drawnAsNoData(state)).map((state) => state.row.value),
-        outcome,
-      ),
-    [states, outcome],
-  );
+  // The colour scale's half-width: fixed in advance, the same for every
+  // selection, year and policy (scale.js)
+  const colourDomain = colourExtent(outcome);
 
   // The Table view: every seat's figures for the reform and year, ranked
   // by the outcome the map shows.

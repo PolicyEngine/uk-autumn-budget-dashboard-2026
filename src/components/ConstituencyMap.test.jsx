@@ -129,22 +129,21 @@ describe("ConstituencyMap", () => {
     const { container } = await renderMap();
     const fill = (code) => seat(container, code).getAttribute("fill");
     const opacity = (code) => seat(container, code).getAttribute("fill-opacity");
-    // The scale fits the figures shown (largest drawn: −1.35%), so it runs
-    // to ±2%: +1.12% sits part way to its teal
-    expect(fill("Z14000001")).toBe(scaleColour("0.0112", 0.02));
+    // +1.12% is past the fixed scale's +0.1% end: clamped to its teal
+    expect(fill("Z14000001")).toBe(SCALE_COLOURS.gain.toLowerCase());
     expect(opacity("Z14000001")).toBe("1");
     // No texture on any seat (Vahid, 28 October): an approximate seat is
     // its own colour, full strength; its card says it is approximate
-    expect(fill("Z14000002")).toBe(scaleColour("0.0068", 0.02));
+    expect(fill("Z14000002")).toBe(scaleColour("0.0068", 0.001));
     expect(opacity("Z14000002")).toBe("1");
     const fills = [...container.querySelectorAll("path.constituency-path")].map((path) => path.getAttribute("fill"));
     expect(fills.some((value) => value.startsWith("url("))).toBe(false);
     // Too uncertain to place on the scale: the No data swatch, not a grey
     // that reads as a size of change
     expect(fill("Z14000004")).toBe(NO_DATA_FILL);
-    expect(fill("Z14000005")).toBe(scaleColour("-0.0135", 0.02));
+    expect(fill("Z14000005")).toBe(SCALE_COLOURS.loss.toLowerCase());
     expect(fill("Z14000007")).toBe(SCALE_COLOURS.neutral);
-    expect(fill("Z14000008")).toBe(scaleColour("0.0004", 0.02));
+    expect(fill("Z14000008")).toBe(scaleColour("0.0004", 0.001));
   });
 
   it("a hovered seat shows its average and relative change in a floating card", async () => {
@@ -177,9 +176,9 @@ describe("ConstituencyMap", () => {
     expect(legend).not.toBeNull();
     const text = legend.textContent;
     for (const entry of [
-      "\u22122%",
+      "\u22120.1%",
       "0%",
-      "+2%",
+      "+0.1%",
       "No data: not published, or too few survey households",
     ]) {
       expect(text).toContain(entry);
@@ -197,7 +196,7 @@ describe("ConstituencyMap", () => {
     showChangeAs("£ per household");
     await waitFor(() =>
       expect(container.querySelector("svg > g.map-legend").textContent).toContain(
-        "+£500",
+        "+£50",
       ),
     );
   });
@@ -211,10 +210,11 @@ describe("ConstituencyMap", () => {
     const key = screen.getByRole("group", { name: "Key" });
     expect(map.contains(key)).toBe(false);
     expect(key).toHaveTextContent("Change in household net income, % of income");
-    expect(key.querySelector(".map-key-labels").textContent).toBe("\u22122%0%+2%");
+    expect(key.querySelector(".map-key-labels").textContent).toBe("\u22120.1%0%+0.1%");
     expect(key).not.toHaveTextContent("Loss");
     expect(key).not.toHaveTextContent("Gain");
-    expect(key).not.toHaveTextContent("0.1%");
+    // No category ranges (the scale's own ends, ±0.1%, are its labels)
+    expect(key).not.toHaveTextContent(/under 0.1%|0.1% to 1%/);
     expect([...key.querySelectorAll("button[data-key]")].map((chip) => chip.textContent)).toEqual(["No data"]);
     // Little change is the scale's 0; approximate is said in About this chart
     expect(key).not.toHaveTextContent("Too uncertain");
@@ -409,8 +409,8 @@ describe("ConstituencyMap", () => {
     showChangeAs("£ per household");
     await waitFor(() =>
       expect(seat(container, "Z14000002").getAttribute("fill")).toBe(
-        // The largest drawn figure is −£480: the scale runs to ±£500
-        scaleColour("150", 500),
+        // +£150 is past the fixed ±£50 scale: clamped to its teal
+        scaleColour("150", 50),
       ),
     );
     fireEvent.click(seat(container, "Z14000005"));
@@ -426,8 +426,7 @@ describe("ConstituencyMap", () => {
     );
     await waitFor(() =>
       expect(seat(container, "Z14000001").getAttribute("fill")).toBe(
-        // The one drawn figure fits a scale of ±0.5%
-        scaleColour("0.0021", 0.005),
+        scaleColour("0.0021", 0.001),
       ),
     );
     expect(seat(container, "Z14000002").getAttribute("data-state")).toBe("no-data");
@@ -662,7 +661,9 @@ describe("ConstituencyMap and the release's area routing", () => {
       geographyFetch({ [AREA_ROUTING_URL]: areaRouting("available", kind) }),
     );
     const { container } = await renderMap();
-    expect(seat(container, "Z14000001").getAttribute("fill")).toBe(scaleColour("0.0112", 0.02));
+    expect(seat(container, "Z14000001").getAttribute("fill")).toBe(
+      SCALE_COLOURS.gain.toLowerCase(),
+    );
     expect(screen.queryByText(NOT_AVAILABLE)).not.toBeInTheDocument();
     expect(screen.getByText(HOW_TO_READ)).toBeInTheDocument();
   });
