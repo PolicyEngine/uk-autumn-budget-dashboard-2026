@@ -10,11 +10,24 @@
  *
  * The eight were chosen for the candidate measures before the Budget
  * (PR #261) and checked against the household test API on 27 October
- * 2026. Three feature a measure the Budget left out (the employer NI
- * threshold, the Plan 2 threshold unfreeze and the threshold freeze to
- * 2031-32): the catalogue no longer publishes it, so those cards show no
- * tag or accent (featuresPublished) and keep their households, whose
- * results come from the announced measures.
+ * 2026. The Warm Home Discount top-up had no example: it is paid in
+ * 2026-27, before the examples' first year.
+ *
+ * Budget day (28 October 2026, #287): examples whose measure is not in the
+ * Budget give their place to announced measures. The pensioner on
+ * the full new State Pension takes the part-time worker's (the employer NI
+ * threshold): with a little private pension, their income is just above
+ * the full new State Pension, where the Pension Tax Allowance tapers away
+ * (£1 for every £3 above it: HM Treasury's explainer), beside the pensioner
+ * at 70, whose income is below it. The carer takes the graduate's (the Plan
+ * 2 threshold): they earn a little above Carer's Allowance's weekly
+ * earnings limit, so are not entitled to it before the Budget's taper, which
+ * begins within 2030-31; their partner's earnings leave the couple no
+ * Universal Credit, which would otherwise offset the allowance. One still
+ * features a measure not in the Budget (the threshold freeze to
+ * 2031-32): the catalogue no longer publishes it, so its card shows no tag
+ * or accent (featuresPublished) and keeps its household, whose results
+ * come from the announced measures.
  * The description and note describe the household, never a measure: which
  * measures change its income is the calculation's answer, and the published
  * measures can change, so a name there could name one the page no longer
@@ -59,45 +72,68 @@ export const HOUSEHOLD_EXAMPLES = [
     spendingSource: decileSpending(1).source,
   },
   {
-    id: "part-time-worker",
-    label: "A part-time worker on £13,000",
-    short: "Part-time worker",
-    description: "Aged 45, works part time, owns with a mortgage",
-    icon: "key",
-    measure: "employer_nics_secondary_threshold_raise",
-    tag: "Employer NI threshold",
+    id: "pensioner-full-state-pension",
+    label: "A pensioner on the full State Pension",
+    short: "Full State Pension",
+    description: "Aged 68, full new State Pension plus £150 private",
+    icon: "glasses",
+    measure: "state_pension_income_tax_protection",
+    tag: "Pension Tax Allowance",
     inputs: {
       ...RESET,
-      current_age: 45,
-      // About 20 hours a week at the National Living Wage from April 2026
-      // (£12.71 an hour, GOV.UK)
-      current_salary: 13000,
-      tenure: "OWNED_WITH_MORTGAGE",
-      ...spendingInputs(3),
+      current_age: 68,
+      current_salary: 0,
+      tenure: "OWNED_OUTRIGHT",
+      // The full new State Pension (state_pension_per_year left null: the
+      // API reads the model's rate for the year, £13,036.40 in 2027-28 in
+      // HM Treasury's Pension Tax Allowance explainer, 28 October 2026)
+      // and a small workplace pension: £150 a year above the full new
+      // State Pension, the explainer's own case of £13,186.40, so its
+      // total income is just above the full new State Pension in every
+      // year
+      private_pension_per_year: 150,
+      ...spendingInputs(1),
     },
-    note: "Aged 45, single, earns £13,000 working about 20 hours a week at the 2026 National Living Wage, and owns with a mortgage. Spends £910 a year on electricity and £650 on petrol and diesel, the average for households in the third tenth by gross income (ONS Family Spending, FYE 2025).",
-    spendingSource: decileSpending(3).source,
+    note: "Aged 68, owns their home outright. Gets the full new State Pension, £13,036.40 a year in 2027-28 (HM Treasury, October 2026), and £150 a year from a small workplace pension. Spends £760 a year on electricity and £320 on petrol and diesel, the average for households in the lowest tenth by gross income (ONS Family Spending, FYE 2025).",
+    spendingSource: decileSpending(1).source,
   },
   {
-    id: "graduate-35k",
-    label: "A graduate on £35,000",
-    short: "Graduate",
-    description: "Aged 27, Plan 2 student loan, renting",
-    icon: "graduate",
-    measure: "plan_2_threshold_unfreeze",
-    tag: "Student loan threshold",
+    id: "carer",
+    label: "A carer working part time",
+    short: "Carer",
+    description: "Aged 50, cares 35 hours a week, earns £12,000",
+    icon: "handHeart",
+    measure: "carers_allowance_earnings_taper",
+    // The year it starts on the chip, as the threshold freeze's had: the
+    // calculator's years start in 2027-28, and the taper "within 2030-31"
+    // (Budget 2026, 6.13)
+    tag: "Carer's taper, 2030-31",
     inputs: {
       ...RESET,
-      current_age: 27,
-      current_salary: 35000,
-      student_loan_plan: "PLAN_2",
-      tenure: "RENT_PRIVATELY",
-      // Fixed: the North West's average private rent (ONS, September 2026)
-      monthly_rent: 975,
-      ...spendingInputs(4),
+      current_age: 50,
+      // About 18 hours a week at the National Living Wage from April 2026
+      // (£12.71 an hour, GOV.UK): a little above the 16 hours at the
+      // National Living Wage that Carer's Allowance's weekly earnings
+      // limit is set at (£204 a week in 2026-27, DWP), so about £27 a
+      // week above it in 2026-27
+      current_salary: 12000,
+      has_partner: true,
+      partner_age: 52,
+      // The UK median salary in April 2026, the form's default (ONS ASHE
+      // 2026 provisional, householdDefaults.js): with it the couple is due
+      // no Universal Credit
+      partner_salary: 34200,
+      tenure: "OWNED_WITH_MORTGAGE",
+      // A carer for 35 hours a week, Carer's Allowance's minimum (DWP), for
+      // someone who gets a qualifying disability benefit
+      is_carer: true,
+      care_hours_per_week: 35,
+      // Its tenth by gross income: the couple's £47,300 a year in 2027-28,
+      // £910 a week
+      ...spendingInputs(5),
     },
-    note: "Aged 27, earns £35,000 and repays a Plan 2 student loan; rents privately at £975 a month, the North West's average. Spends £1,010 a year on electricity and £910 on petrol and diesel, the average for households in the fourth tenth by gross income (ONS Family Spending, FYE 2025).",
-    spendingSource: decileSpending(4).source,
+    note: "Aged 50, lives with their partner, aged 52, and owns their home with a mortgage. Cares for their mother, who lives nearby and gets Attendance Allowance, for 35 hours a week, and works about 18 hours a week at the 2026 National Living Wage (£12.71 an hour, GOV.UK): £12,000 a year, about £27 a week more than the £204 a week a carer can earn in 2026-27 and still receive Carer's Allowance (DWP). Their partner earns £34,200, the UK median salary (ONS ASHE 2026, provisional). The couple is due no Universal Credit. Spends £1,060 a year on electricity and £970 on petrol and diesel, the average for households in the fifth tenth by gross income (ONS Family Spending, FYE 2025).",
+    spendingSource: decileSpending(5).source,
   },
   {
     id: "driver",
@@ -150,7 +186,7 @@ export const HOUSEHOLD_EXAMPLES = [
     id: "landlord-saver",
     label: "A landlord with savings",
     short: "Landlord",
-    description: "£50,000 salary, rent from a flat, dividends, interest",
+    description: "£50,000 salary, rent from a flat, savings interest",
     icon: "briefcase",
     measure: "unearned_income_rates_up",
     tag: "Savings and property tax",
@@ -160,11 +196,12 @@ export const HOUSEHOLD_EXAMPLES = [
       current_salary: 50000,
       tenure: "OWNED_OUTRIGHT",
       property_income_per_year: 9000,
-      dividends_per_year: 3000,
+      // No dividends: the Budget raises the savings and property income
+      // rates, not the dividend rates (Budget 2026, 6.246 and 6.247)
       savings_interest_per_year: 2000,
       ...spendingInputs(8),
     },
-    note: "Aged 55, earns £50,000 and owns their home outright. Lets a flat for £9,000 a year after costs, and gets £3,000 of dividends and £2,000 of savings interest. Spends £1,120 a year on electricity and £1,350 on petrol and diesel, the average for households in the eighth tenth by gross income (ONS Family Spending, FYE 2025).",
+    note: "Aged 55, earns £50,000 and owns their home outright. Lets a flat for £9,000 a year after costs, and gets £2,000 of savings interest. Spends £1,120 a year on electricity and £1,350 on petrol and diesel, the average for households in the eighth tenth by gross income (ONS Family Spending, FYE 2025).",
     spendingSource: decileSpending(8).source,
   },
   {

@@ -6,8 +6,10 @@ import {
   BriefcaseBusiness,
   Car,
   ChevronDown,
+  Glasses,
   LayoutGrid,
   GraduationCap,
+  HandHeart,
   HardHat,
   House,
   KeyRound,
@@ -36,6 +38,8 @@ export const EXAMPLE_ICONS = {
   car: Car,
   briefcase: BriefcaseBusiness,
   baby: Baby,
+  glasses: Glasses,
+  handHeart: HandHeart,
 };
 
 /**

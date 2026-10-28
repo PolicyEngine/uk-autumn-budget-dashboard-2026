@@ -101,11 +101,11 @@ describe("the two Across earnings cards", () => {
     const { container } = render(<AcrossEarnings sweep={data.sweep} salary={data.salaryUsed} yearLabel="2027-28" />);
     const [net, rate] = cards(container);
     expect(net.querySelector(".chart-description").textContent).toMatch(/^With no earnings, your household's net income is about £[\d,]+ a year with the selected policies\.$/);
-    expect(rate.querySelector(".chart-description").textContent).toMatch(/^On your first £200 of earnings, your marginal tax rate falls from 16% to 0%, so you keep £200 instead of £\d+\.$/);
+    expect(rate.querySelector(".chart-description").textContent).toMatch(/^On your first £200 of earnings, your marginal tax rate falls from 20% to 0%, so you keep £200 instead of £\d+\.$/);
     expect(net.querySelector(".earnings-you")).not.toBeNull();
     fireEvent.click(within(rate).getByRole("button", { name: "About this chart" }));
     // The allowance caveat flags a rate that rises at the start of earnings
-    // with the policies; here they lower it there (16% to 0%), so none
+    // with the policies; here they lower it there (20% to 0%), so none
     expect(rate.querySelector(".chart-more-info")).not.toHaveTextContent(/at or below the full new State Pension/);
     expect(rate.querySelector(".chart-more-info")).not.toHaveTextContent(/usual personal allowance applies again/);
   });

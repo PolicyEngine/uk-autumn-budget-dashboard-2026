@@ -98,14 +98,21 @@ describe("the examples' precomputed results (public/data/household_presets.json)
     const pensioner = figures("pensioner-70", 2027);
     expect(Math.round(pensioner.ownPart)).toBe(Math.round(changes["pensioner-70"][2027].byPolicy.state_pension_income_tax_protection));
     expect(Math.round(pensioner.ownPart)).not.toBe(0);
-    // The middle earner's own measure (the threshold freeze) changes
-    // nothing before 2031-32
+    // The carer's own measure (the Carer's Allowance taper) changes
+    // nothing before 2030-31, so its chip names another measure then
+    expect(Math.round(figures("carer", 2027).ownPart)).toBe(0);
+    expect(figures("carer", 2027).top.own).toBe(false);
+    expect(Math.round(figures("carer", 2031).ownPart)).not.toBe(0);
+    expect(figures("carer", 2031).top).toMatchObject({ own: true });
+    // The middle earner's own measure (the threshold freeze) is not in the
+    // Budget: no part, and its chip names another measure
+    expect(Math.round(figures("middle-earner", 2031).ownPart)).toBe(0);
     expect(figures("middle-earner", 2027).top.own).toBe(false);
-    expect(Math.round(figures("middle-earner", 2031).ownPart)).not.toBe(0);
-    // The part-time worker's own measure gives most of its change
-    expect(figures("part-time-worker", 2027).top).toMatchObject({ own: true });
+    // The pensioner on the full State Pension: its own measure gives most
+    // of its change
+    expect(figures("pensioner-full-state-pension", 2027).top).toMatchObject({ own: true });
     // A bar for each year a reader can choose
-    expect(figures("part-time-worker", 2027).series.map((point) => point.year)).toEqual([...SELECTABLE_YEARS]);
+    expect(figures("pensioner-full-state-pension", 2027).series.map((point) => point.year)).toEqual([...SELECTABLE_YEARS]);
   });
 });
 
