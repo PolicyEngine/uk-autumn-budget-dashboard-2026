@@ -495,8 +495,13 @@ def check_contract(doc: dict) -> None:
     assert meta["real_price_base"] == meta["headline_start_year"] == "2027-28"
     end = meta["headline_end_year"]
     assert end == "2031-32"
+    # Runs on the OBR October 2026 forecast write the first; the committed
+    # outlook keeps the second until it is regenerated on that forecast.
     assert meta["headline_end_year_note"].startswith(
-        f"{end} is the last year of the OBR October 2026"
+        (
+            f"{end} is the last year of the OBR October 2026",
+            f"{end} is past the OBR March 2026 forecast",
+        )
     )
     if needs_uc_health_element_extension(meta["policyengine_uk"]):
         assert meta["uc_health_element_extension"]["years"] == [2030, 2031]
