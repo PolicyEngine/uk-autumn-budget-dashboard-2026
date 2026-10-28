@@ -946,12 +946,17 @@ def _create_trading_allowance_raise() -> Reform:
 #   PolicyEngine/uk-triple-lock ("burnham_2030": never below an earnings
 #   link from the 2029-30 level, as the speech's "hold its value relative
 #   to earnings over time"); False is plain max(CPI, 2.5%).
-# On the engine's forecast neither reading changes anything to 2031-32:
-# the inputs for April 2030 (May-July 2029 earnings 2.19%, September 2029
-# CPI 2.05%) and April 2031 (2.39%, 2.00%) are both under 2.5%, so the
-# floor sets both upratings either way. Generation would refuse a measure
-# that scores nothing; keep it on the ledger unless the engine's forecast
-# changes.
+# On the OBR October 2026 forecast the dashboard runs on
+# (uk_budget_data.forecast), neither reading changes anything to 2031-32:
+# the inputs for April 2030 (May-July 2029 earnings 2.28%, September 2029
+# CPI 2.15%) and April 2031 (2.49%, 2.00%) are both under 2.5%, so the
+# floor sets both upratings either way (full new State Pension £265.72 ->
+# £272.36 -> £279.17 a week, with or without the switches). The OBR says
+# the same: "an uprating of 2.5 per cent would apply under both the
+# previous and adjusted version of the triple lock in both 2030-31 and
+# 2031-32" (EFO October 2026, paragraph 3.50, footnote 17; Table A.3
+# triple-lock guarantee 2.5, 2.5). Generation would refuse a measure that
+# scores nothing; keep it on the ledger unless the forecast changes.
 TRIPLE_LOCK_INCLUDE_EARNINGS = (
     "gov.dwp.state_pension.triple_lock.include_earnings"
 )
