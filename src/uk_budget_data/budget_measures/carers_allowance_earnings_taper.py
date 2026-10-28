@@ -113,11 +113,19 @@ def carers_allowance_earnings_taper(
             would_claim = would_claim | (
                 newly_entitled & (draw < newly_entitled_take_up)
             )
+        # policyengine-uk 2.151.0's native formula also needs the carer to
+        # be at least gov.dwp.carers_allowance.min_age (16); 2.132.6, which
+        # #254's revert of the 6.11.1 adoption goes back to, has no age
+        # test and no such parameter. The taper keeps whichever conditions
+        # the installed engine has.
+        meets_age = (
+            person("age", period) >= ca.min_age if "min_age" in ca else True
+        )
         eligible = (
             ~csp_replaces_ca
             & (meets_hours | reported)
             & would_claim
-            & (person("age", period) >= ca.min_age)
+            & meets_age
         )
         tapered = eligible * weekly_award * 52
         if earnings_limit is None:

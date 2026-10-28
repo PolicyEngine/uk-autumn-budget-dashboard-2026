@@ -133,11 +133,15 @@ def test_default_start_leaves_earlier_years_unchanged():
 
 def test_scotland_is_unaffected():
     # Carer Support Payment replaced the allowance in Scotland from
-    # 2025-26 and has its own earnings limit: nothing changes there.
-    for variable in ("carers_allowance", "carer_support_payment"):
-        before, after = _both(_carer(10_660, "SCOTLAND"), variable)
-        assert before == pytest.approx(0, abs=0.01)
-        assert after == pytest.approx(0, abs=0.01)
+    # 2025-26: nothing changes there. policyengine-uk 2.132.6 models no
+    # earnings limit for it (2.151.0's takes it all at £205 a week), so
+    # this carer keeps the full £86.45 x 52 = £4,495.40 either way.
+    before, after = _both(_carer(10_660, "SCOTLAND"), "carers_allowance")
+    assert before == pytest.approx(0, abs=0.01)
+    assert after == pytest.approx(0, abs=0.01)
+    before, after = _both(_carer(10_660, "SCOTLAND"), "carer_support_payment")
+    assert before == pytest.approx(4_495.40, abs=0.01)
+    assert after == pytest.approx(4_495.40, abs=0.01)
 
 
 def test_a_carer_who_would_not_claim_gets_nothing():
