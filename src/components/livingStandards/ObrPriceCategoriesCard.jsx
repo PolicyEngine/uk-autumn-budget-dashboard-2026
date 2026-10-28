@@ -20,10 +20,11 @@ import { categoryRows, loadObrPriceCategories, obrPriceCategoriesSentence } from
 
 export const OBR_PRICE_CATEGORIES_TITLE = "Prices by spending category";
 
-// Each line: the OBR's name for it, a short end label and chip where room is
-// short, its name in a sentence, colour, and what it covers (About this
-// chart). Styled as the other line cards: 2.5px solid lines, each category
-// in its own hue from the chart tokens.
+// Each line: the OBR's name for it, a short chip name where room is short,
+// its name in a sentence, colour, and what it covers (About this chart).
+// Styled as the other line cards: 2.5px solid lines, each category in its
+// own hue from the chart tokens. The chips under the plot are the key, so
+// the lines carry no end labels.
 const LINES = {
   food: {
     name: "Food, beverages and tobacco",
@@ -60,8 +61,6 @@ const LINES = {
   },
 };
 const ORDER = Object.keys(LINES);
-// End labels in a half-width card: short names in a narrow right margin
-const END_LABELS = { width: 96, minWidth: 420 };
 
 const pctTick = (v) => `${formatOneDp(v).replace(/\.0$/, "")}%`;
 const pctText = (v) => `${formatOneDp(v)}%`;
@@ -117,7 +116,7 @@ export default function ObrPriceCategoriesCard({ view = "chart", onViewChange })
 
   const keys = ORDER.filter((k) => data.series.some((s) => s.key === k));
   const rows = categoryRows(data);
-  const allLines = keys.map((key) => ({ key, endLabel: LINES[key].short, ...LINES[key] }));
+  const allLines = keys.map((key) => ({ key, ...LINES[key] }));
   const lines = allLines.filter((l) => shown.includes(l.key));
   const sentence = obrPriceCategoriesSentence(rows, Object.fromEntries(keys.map((k) => [k, LINES[k].inSentence])));
   const src = data.source;
@@ -216,7 +215,6 @@ export default function ObrPriceCategoriesCard({ view = "chart", onViewChange })
         yLabel="Annual growth (%)"
         yDomain={axis.domain}
         yTicks={axis.ticks}
-        endLabels={END_LABELS}
         legend={false}
         focusKey={hovered}
         onLineHover={setHovered}
