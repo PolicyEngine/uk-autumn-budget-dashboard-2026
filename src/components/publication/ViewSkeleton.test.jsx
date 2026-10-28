@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -77,6 +79,29 @@ describe("a view's loading placeholder", () => {
     const last = render(<ViewSkeleton view="outlook:living" viewTabs={viewTabs.slice(0, 3)} />).container;
     expect(last.querySelector(".skeleton-tab-tail")).toBeNull();
     expect(last.querySelector(".skeleton-tab-ghost")).toHaveClass("is-last");
+  });
+
+  it("starts both rows at the left when the first tab is chosen, as the real bar never scrolls for it", () => {
+    const viewTabs = [
+      { value: "dashboard", label: "Population impact" },
+      { value: "household", label: "Household calculator" },
+      { value: "outlook", label: "Current law" },
+    ];
+    const labels = (node) => [...node.querySelectorAll(".view-tab-label")].map((label) => label.textContent);
+    const first = render(<ViewSkeleton view="dashboard:finances" viewTabs={viewTabs} />).container;
+    const row = first.querySelector(".boot-view-tabs .view-tabs");
+    expect(row).toHaveClass("is-at-start");
+    expect(row.querySelector(".skeleton-tab-tail")).toBeNull();
+    expect(labels(row)).toEqual(viewTabs.map(({ label }) => label));
+    expect(first.querySelector(".skeleton-sub-tabs")).toHaveClass("has-tab-lead", "is-at-start");
+    // A later tab chosen: the row ends 24px after it, as before
+    const later = render(<ViewSkeleton view="outlook:living" viewTabs={viewTabs} />).container;
+    expect(later.querySelector(".boot-view-tabs .view-tabs")).not.toHaveClass("is-at-start");
+    expect(later.querySelector(".skeleton-sub-tabs")).not.toHaveClass("is-at-start");
+    // The rules that hold them at the start
+    const css = readFileSync(join(process.cwd(), "src", "components", "publication", "publication.css"), "utf8");
+    expect(css).toMatch(/\.boot-view-tabs \.view-tabs\.is-at-start \{\s*justify-content: flex-start;\s*\}/);
+    expect(css).toMatch(/\.skeleton-sub-tabs\.has-tab-lead\.is-at-start \{\s*grid-template-columns: max-content minmax\(0, 1fr\);\s*\}/);
   });
 
   it("puts every view's placeholder in the server's HTML, one per address", () => {

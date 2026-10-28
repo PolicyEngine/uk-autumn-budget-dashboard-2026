@@ -47,6 +47,16 @@ describe("where a scrolling tab row scrolls to keep the chosen tab in sight (scr
     expect(scrollToShow({ left: 300, width: 150, scrollLeft: 400, clientWidth: 470 })).toBe(276);
     expect(scrollToShow({ left: 10, width: 150, scrollLeft: 400, clientWidth: 470 })).toBe(0);
   });
+
+  // The loading placeholder copies this (ViewSkeleton.jsx, is-at-start)
+  it("never scrolls for the first tab, even one wider than the row", () => {
+    fc.assert(
+      fc.property(fc.nat(600), fc.integer({ min: 1, max: 600 }), fc.nat(800), (width, clientWidth, scrollLeft) => {
+        expect(scrollToShow({ left: 0, width, scrollLeft, clientWidth })).toBe(0);
+      }),
+    );
+    expect(scrollToShow({ left: 0, width: 195, scrollLeft: 0, clientWidth: 194 })).toBe(0);
+  });
 });
 
 describe("the view tab bar's scrolling row", () => {

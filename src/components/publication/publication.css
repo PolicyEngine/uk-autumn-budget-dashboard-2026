@@ -356,6 +356,13 @@
   margin-left: calc(-1 * var(--tab-gap, 8px));
 }
 
+/* The first tab chosen, or none (ViewSkeleton.jsx): the real row stays at
+   its start (scrollToShow), so the copy does too, cut off on the right
+   where it doesn't fit */
+.boot-view-tabs .view-tabs.is-at-start {
+  justify-content: flex-start;
+}
+
 .skeleton-tab-tail {
   display: flex;
   flex: none;
@@ -376,6 +383,13 @@
 .skeleton-sub-tabs.has-tab-lead {
   display: grid;
   grid-template-columns: minmax(0, max-content) minmax(max-content, 1fr);
+}
+
+/* The first tab chosen: the real bar never scrolls, so the lead keeps its
+   whole width and the row starts under that tab however little room the
+   band has */
+.skeleton-sub-tabs.has-tab-lead.is-at-start {
+  grid-template-columns: max-content minmax(0, 1fr);
 }
 
 .skeleton-tab-lead {

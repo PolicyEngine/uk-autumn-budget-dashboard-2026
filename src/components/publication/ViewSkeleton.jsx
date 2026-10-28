@@ -163,11 +163,15 @@ const StaticTab = ({ item, tab }) => (
 // .skeleton-tab-tail; ViewTabs.jsx, scrollToShow)
 function StaticViewTabs({ tabs, tab }) {
   const chosen = tabs.findIndex((item) => item.value === tab);
-  const after = chosen >= 0 ? tabs.slice(chosen + 1) : [];
+  // The first tab chosen, or none: the real row never scrolls (scrollToShow
+  // leaves a tab less than 24px from the row's start at 0), so the copy
+  // starts at its left too, however little of it fits
+  const atStart = chosen <= 0;
+  const after = atStart ? [] : tabs.slice(chosen + 1);
   return (
     <div className={`view-tabs-bar has-leading boot-view-tabs${SUB_TABS[tab] ? " has-notch" : ""}`} aria-hidden="true">
       <StaticAbout />
-      <div className="view-tabs">
+      <div className={`view-tabs${atStart ? " is-at-start" : ""}`}>
         {tabs.slice(0, tabs.length - after.length).map((item) => (
           <StaticTab key={item.value} item={item} tab={tab} />
         ))}
@@ -194,7 +198,7 @@ function StaticSubTabs({ tab, sub, viewTabs = null }) {
   if (!tabs) return null;
   const chosen = viewTabs ? viewTabs.findIndex((item) => item.value === tab) : -1;
   return (
-    <div className={`sub-tabs-band skeleton-sub-tabs${chosen >= 0 ? " has-tab-lead" : ""}`} aria-hidden="true">
+    <div className={`sub-tabs-band skeleton-sub-tabs${chosen >= 0 ? " has-tab-lead" : ""}${chosen === 0 ? " is-at-start" : ""}`} aria-hidden="true">
       {chosen >= 0 && (
         <span className="skeleton-tab-lead">
           <StaticAbout />
