@@ -8,9 +8,6 @@ import pytest
 from policyengine_uk.system import system
 
 from uk_budget_data import reforms as registry
-from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
-    WINTER_SHARE,
-)
 from uk_budget_data.cli import main
 from uk_budget_data.policy_table import (
     OUTPUT_FILE,
@@ -95,13 +92,12 @@ def test_every_candidate_has_a_table_with_its_published_description(document):
 
 def test_fuel_duty_by_date(document):
     dated = by_key(rows(document, "fuel_duty_rise_deferral")["Fuel duty"])
-    # 52.95p held through 2027-28, then RPI from April 2028 on 52.95p:
-    # 61.54p x 52.95 / 59.75 = 54.54p
+    # 52.95p held to 31 July 2027, then current law's 59.75p and its RPI
     assert dated["2027-01-01"] == (55.95, 52.95)
     assert dated["2027-03-01"] == (57.95, 52.95)
     assert dated["2027-04-01"] == (59.75, 52.95)
-    assert dated["2028-04-01"] == (61.54, 54.54)
-    assert "2027-09-01" not in dated
+    assert dated["2027-08-01"] == (59.75, 59.75)
+    assert dated["2028-04-01"] == (61.54, 61.54)
     assert "2032-04-01" not in dated  # after the timeline
     assert dated["2026-04-01"] == (52.95, 52.95)  # the timeline's first day
 
@@ -119,7 +115,9 @@ def test_fuel_duty_averages_are_the_engine_and_the_measure(document):
             f"{year}-04-06"
         )
         assert before == pytest.approx(engine * 100, abs=1e-4)
-        assert after == pytest.approx(rates[str(year)] * 100, abs=1e-4)
+        assert after == pytest.approx(
+            rates.get(str(year), engine) * 100, abs=1e-4
+        )
     # The dated current law is the engine's, day-weighted
     means = registry.fiscal_year_means(registry.FUEL_DUTY_CURRENT_LAW)
     for year in range(2026, 2032):
@@ -158,7 +156,7 @@ def test_vat_rates_while_in_force(document):
         "points"
     ]
     assert (point["label"], point["before"], point["after"]) == (
-        "October 2026 to March 2028",
+        "April 2027 to July 2027",
         0.05,
         0.0,
     )
@@ -177,27 +175,21 @@ def test_in_force_dates_that_do_not_fit_the_constants_fail():
         in_force_rate_change(registry.FUEL_VAT_ID, {2026: -0.05, 2027: -0.05})
 
 
-def test_electricity_2026_carries_the_winter_share(document):
-    """Electricity's 2026-27 constant is the zero rate weighted by the
-    October to March share of a year's use, not by its 182 days of 365;
-    the road fuel cut stays weighted by its days."""
+def test_electricity_is_the_extension_weighted_by_its_days(document):
+    """Announced: the zero rate extended from 31 March 2027 to July 2027.
+    The measure is the extension alone, weighted by its days in 2027-28
+    (122 of 366 to 31 July), as the road fuel cut is."""
     yearly = rows(document, "domestic_electricity_zero_vat")[
         "VAT on domestic electricity in Great Britain, averaged over the year"
     ]
     averages = by_key(yearly)
-    assert averages["2026"] == (0.05, round(0.05 - 0.05 * WINTER_SHARE, 6))
-    assert averages["2027"] == (0.05, 0.0)
-    assert "2026-27 by the October to March share" in yearly["note"]
-    fuel = withdrawn_rows(registry.FUEL_VAT_ID)[
-        "VAT on petrol and diesel, averaged over the year"
-    ]
-    assert "weighted by the days it is in force" in fuel["note"]
-    # Weighted by its days, electricity's 2026 constant no longer fits
-    with pytest.raises(ValueError, match="do not fit"):
-        in_force_rate_change(
-            registry.ELECTRICITY_VAT_ID,
-            {2026: -0.05 * 182 / 365, 2027: -0.05},
-        )
+    assert averages["2026"] == (0.05, 0.05)
+    assert averages["2027"] == (0.05, round(0.05 - 0.05 * 122 / 366, 6))
+    assert "weighted by the days it is in force" in yearly["note"]
+    (point,) = rows(document, "domestic_electricity_zero_vat")[
+        "VAT on domestic electricity in Great Britain"
+    ]["points"]
+    assert point["label"] == "April 2027 to July 2027"
 
 
 def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):

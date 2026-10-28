@@ -15,7 +15,7 @@
   ],
   "measures": {
     "fuel_duty_rise_deferral": {
-      "description": "Candidate measure. Fuel duty stays at 52.95p a litre through 2027-28 (to 31 March 2028): the rise due on 1 January 2027 does not happen, so the 5p cut continues, and there is no March 2027 step and no April 2027 RPI rise. RPI uprating resumes in April 2028 from 52.95p, so the 5p and that year's RPI are never made up. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+      "description": "Candidate measure. Fuel duty stays at 52.95p a litre to 31 July 2027: the rise due on 1 January 2027 and the March and April 2027 steps do not happen while the 5p cut is extended. From 1 August 2027 fuel duty is current law's, 59.75p a litre, rising with RPI each April as current law has it. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
       "display": "schedule",
       "rows": [
         {
@@ -53,32 +53,39 @@
               "after": 52.95
             },
             {
+              "key": "2027-08-01",
+              "label": "1 August 2027",
+              "year": 2027,
+              "before": 59.75,
+              "after": 59.75
+            },
+            {
               "key": "2028-04-01",
               "label": "1 April 2028",
               "year": 2028,
               "before": 61.54,
-              "after": 54.54
+              "after": 61.54
             },
             {
               "key": "2029-04-01",
               "label": "1 April 2029",
               "year": 2029,
               "before": 63.26,
-              "after": 56.06
+              "after": 63.26
             },
             {
               "key": "2030-04-01",
               "label": "1 April 2030",
               "year": 2030,
               "before": 65.09,
-              "after": 57.68
+              "after": 65.09
             },
             {
               "key": "2031-04-01",
               "label": "1 April 2031",
               "year": 2031,
               "before": 66.59,
-              "after": 59.01
+              "after": 66.59
             }
           ],
           "source": {
@@ -110,35 +117,35 @@
               "label": "2027-28",
               "year": 2027,
               "before": 59.774454,
-              "after": 52.9717
+              "after": 57.6007
             },
             {
               "key": "2028",
               "label": "2028-29",
               "year": 2028,
               "before": 61.563562,
-              "after": 54.5608
+              "after": 61.563562
             },
             {
               "key": "2029",
               "label": "2029-30",
               "year": 2029,
               "before": 63.285068,
-              "after": 56.0822
+              "after": 63.285068
             },
             {
               "key": "2030",
               "label": "2030-31",
               "year": 2030,
               "before": 65.110548,
-              "after": 57.6982
+              "after": 65.110548
             },
             {
               "key": "2031",
               "label": "2031-32",
               "year": 2031,
               "before": 66.610902,
-              "after": 59.0286
+              "after": 66.610902
             }
           ],
           "source": {
@@ -255,7 +262,7 @@
       ]
     },
     "domestic_electricity_zero_vat": {
-      "description": "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 31 March 2028: the zero rate to March 2027, not in the model's baseline, scored with a candidate one-year extension. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%). 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days.",
+      "description": "Candidate measure. The zero rate of VAT on domestic electricity, in force from 1 October 2026 to 31 March 2027, is extended to 31 July 2027: VAT is 0% instead of 5% from 1 April 2027 to 31 July 2027. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%), weighted by its 122 days of 2027-28's 366. The zero rate before April 2027 is in neither the model's baseline nor this measure.",
       "display": "switch",
       "rows": [
         {
@@ -265,9 +272,9 @@
           "primary": true,
           "points": [
             {
-              "key": "2026-10-01/2028-03-31",
-              "label": "October 2026 to March 2028",
-              "year": 2026,
+              "key": "2027-04-01/2027-07-31",
+              "label": "April 2027 to July 2027",
+              "year": 2027,
               "before": 0.05,
               "after": 0.0
             }
@@ -279,7 +286,7 @@
             },
             "after": {
               "kind": "modifier_constant",
-              "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027), rate_change_2026 divided by that module's WINTER_SHARE (the October to March share of a year's electricity use) and rate_change_2027 by its share of the fiscal year's days in force, October 2026 to March 2028 (the dates in the measure's description)"
+              "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027), each divided by its share of the fiscal year's days in force, April 2027 to July 2027 (the dates in the measure's description)"
             }
           }
         },
@@ -294,14 +301,14 @@
               "label": "2026-27",
               "year": 2026,
               "before": 0.05,
-              "after": 0.021657
+              "after": 0.05
             },
             {
               "key": "2027",
               "label": "2027-28",
               "year": 2027,
               "before": 0.05,
-              "after": 0.0
+              "after": 0.033333
             },
             {
               "key": "2028",
@@ -342,7 +349,7 @@
               "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027)"
             }
           },
-          "note": "As modelled: the cut weighted in 2026-27 by the October to March share of a year's electricity use, not by its days in force"
+          "note": "As modelled: the cut weighted by the days it is in force in each fiscal year"
         }
       ]
     },

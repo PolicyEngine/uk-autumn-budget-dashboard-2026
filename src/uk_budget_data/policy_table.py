@@ -37,6 +37,9 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from uk_budget_data import reforms as registry
+from uk_budget_data.budget_measures import (
+    zero_vat_on_domestic_electricity as _electricity,
+)
 from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
     carers_allowance_earnings_taper,
 )
@@ -230,7 +233,14 @@ def _modifier_source(modifier: Callable, names: str) -> dict:
 # against the constants.
 
 VAT_WINDOWS = {
-    registry.ELECTRICITY_VAT_ID: (date(2026, 10, 1), date(2028, 3, 31)),
+    registry.ELECTRICITY_VAT_ID: (
+        (
+            date(2026, 10, 1)
+            if _electricity.PRE_BUDGET_ZERO_RATE_IN_MEASURE
+            else date(2027, 4, 1)
+        ),
+        date.fromisoformat(_electricity.ZERO_RATE_EXTENDED_TO),
+    ),
     registry.FUEL_VAT_ID: (date(2026, 12, 1), date(2027, 5, 31)),
 }
 
@@ -238,7 +248,11 @@ VAT_WINDOWS = {
 # electricity's 2026-27 carries the October to March share of a year's use
 # (WINTER_SHARE in its module), not 182 of 365 days, as the zero-rated
 # months are the higher-use half of the year.
-YEAR_WEIGHTS = {registry.ELECTRICITY_VAT_ID: {2026: WINTER_SHARE}}
+YEAR_WEIGHTS = (
+    {registry.ELECTRICITY_VAT_ID: {2026: WINTER_SHARE}}
+    if _electricity.PRE_BUDGET_ZERO_RATE_IN_MEASURE
+    else {}
+)
 
 # How a VAT measure's table says its constants are weighted, unless the
 # measure says otherwise (a year in YEAR_WEIGHTS)
@@ -531,16 +545,24 @@ def _electricity_vat(reform) -> list[dict]:
         "VAT on domestic electricity in Great Britain",
         changes,
         "rate_change_2026, rate_change_2027",
-        # 2026-27 by its share of a year's use (YEAR_WEIGHTS)
-        divided=(
-            "rate_change_2026 divided by that module's WINTER_SHARE (the "
-            "October to March share of a year's electricity use) and "
-            "rate_change_2027 by its share of the fiscal year's days in force"
-        ),
-        note=(
-            "As modelled: the cut weighted in 2026-27 by the October to "
-            "March share of a year's electricity use, not by its days in "
-            "force"
+        # 2026-27 by its share of a year's use (YEAR_WEIGHTS), while the
+        # pre-Budget zero rate is in the measure; else by days
+        **(
+            dict(
+                divided=(
+                    "rate_change_2026 divided by that module's WINTER_SHARE "
+                    "(the October to March share of a year's electricity "
+                    "use) and rate_change_2027 by its share of the fiscal "
+                    "year's days in force"
+                ),
+                note=(
+                    "As modelled: the cut weighted in 2026-27 by the "
+                    "October to March share of a year's electricity use, "
+                    "not by its days in force"
+                ),
+            )
+            if _electricity.PRE_BUDGET_ZERO_RATE_IN_MEASURE
+            else {}
         ),
     )
 

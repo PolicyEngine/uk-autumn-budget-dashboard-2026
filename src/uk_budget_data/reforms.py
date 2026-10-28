@@ -25,6 +25,9 @@ from typing import Optional
 from uk_budget_data.budget_measures import (
     state_pension_only_income_tax_allowance as _sp_threshold,
 )
+from uk_budget_data.budget_measures import (
+    zero_vat_on_domestic_electricity as _electricity,
+)
 from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
     carers_allowance_earnings_taper,
 )
@@ -197,6 +200,17 @@ FUEL_DUTY_CURRENT_LAW = (
 # and tests/test_reforms.py fails until they are pasted in.
 FUEL_DUTY_FROZEN = 0.5295
 FUEL_DUTY_FROZEN_THROUGH = 2027
+#
+# Announced in the speech (28 October 2026, 12:54): "a further extension
+# of the 5p fuel duty cut until next July". FUEL_DUTY_FROZEN_UNTIL, when
+# set, is the first day back on current law: 52.95p to the day before,
+# then current law's rate in force that day (59.75p, with the January,
+# March and April 2027 steps all taken at once) and its RPI rises after.
+# TODO from the documents: "2027-08-01" (cut to 31 July 2027) or
+# "2027-07-01" (to 30 June), and whether the rise afterwards is staged.
+# None gives the 27 October candidate (FUEL_DUTY_FROZEN_THROUGH, with RPI
+# resuming from 52.95p).
+FUEL_DUTY_FROZEN_UNTIL = "2027-08-01"
 FUEL_DUTY_STAGES = (("2026-03-23", FUEL_DUTY_FROZEN),)
 FUEL_DUTY_RPI_FROM = f"{FUEL_DUTY_FROZEN_THROUGH + 1}-04-01"
 
@@ -213,6 +227,21 @@ def _fuel_duty_scale_base() -> float:
 
 def fuel_duty_deferral_schedule() -> tuple:
     """The candidate's rates by the date each takes effect."""
+    if FUEL_DUTY_FROZEN_UNTIL is not None:
+        before = [
+            rate
+            for day, rate in FUEL_DUTY_CURRENT_LAW
+            if day <= FUEL_DUTY_FROZEN_UNTIL
+        ]
+        return (
+            FUEL_DUTY_STAGES
+            + ((FUEL_DUTY_FROZEN_UNTIL, before[-1]),)
+            + tuple(
+                (day, rate)
+                for day, rate in FUEL_DUTY_CURRENT_LAW
+                if day > FUEL_DUTY_FROZEN_UNTIL
+            )
+        )
     scale = FUEL_DUTY_FROZEN / _fuel_duty_scale_base()
     later = tuple(
         (day, round(rate * scale, 4))
@@ -242,13 +271,23 @@ def fiscal_year_means(schedule, years=DEFAULT_YEARS) -> dict[str, float]:
 def fuel_duty_deferral_rates() -> dict[str, float]:
     """The candidate's annual fuel duty rates, every policy year (the
     parameter is uprated, so a bounded change would return to the old
-    path: policyengine-uk #2430)."""
-    return {
+    path: policyengine-uk #2430). With FUEL_DUTY_FROZEN_UNTIL, only the
+    years the extension touches: later years return to current law's own
+    path, which is what the extension does."""
+    rates = {
         year: round(rate, 6)
         for year, rate in fiscal_year_means(
             fuel_duty_deferral_schedule()
         ).items()
     }
+    if FUEL_DUTY_FROZEN_UNTIL is not None:
+        last = date.fromisoformat(FUEL_DUTY_FROZEN_UNTIL)
+        # The fiscal year (from 6 April) of the last frozen day
+        last_year = (
+            last.year if (last.month, last.day) > (4, 6) else last.year - 1
+        )
+        rates = {y: r for y, r in rates.items() if int(y) <= last_year}
+    return rates
 
 
 def pump_vat_on_fuel_duty_deferral_defaults() -> dict[str, float]:
@@ -263,9 +302,13 @@ def pump_vat_on_fuel_duty_deferral_defaults() -> dict[str, float]:
     rates = fuel_duty_deferral_rates()
     current = fiscal_year_means(FUEL_DUTY_CURRENT_LAW)
     return {
-        f"{fuel}_{year}": 0.24
-        * (rates[str(year)] - current[str(year)])
-        / getattr(prices, fuel)(f"{year}-04-30")
+        f"{fuel}_{year}": (
+            0.24
+            * (rates[str(year)] - current[str(year)])
+            / getattr(prices, fuel)(f"{year}-04-30")
+            if str(year) in rates
+            else 0.0
+        )
         for year in POLICY_YEARS
         for fuel in ("petrol", "diesel")
     }
@@ -279,7 +322,25 @@ def _pence(rate: float) -> str:
     return f"{rate * 100:.2f}p"
 
 
+def _fuel_duty_cut_extension_description() -> str:
+    frozen = _pence(FUEL_DUTY_FROZEN)
+    back = date.fromisoformat(FUEL_DUTY_FROZEN_UNTIL)
+    last = date.fromordinal(back.toordinal() - 1)
+    rate = dict(fuel_duty_deferral_schedule())[FUEL_DUTY_FROZEN_UNTIL]
+    return (
+        f"Candidate measure. Fuel duty stays at {frozen} a litre to "
+        f"{last.day} {last:%B %Y}: the rise due on 1 January 2027 and the "
+        "March and April 2027 steps do not happen while the 5p cut is "
+        f"extended. From {back.day} {back:%B %Y} fuel duty is current "
+        f"law's, {_pence(rate)} a litre, rising with RPI each April as "
+        "current law has it. Rates are day-weighted to fiscal years. "
+        "Includes the VAT on the lower pump price."
+    )
+
+
 def _fuel_duty_deferral_description() -> str:
+    if FUEL_DUTY_FROZEN_UNTIL is not None:
+        return _fuel_duty_cut_extension_description()
     frozen = _pence(FUEL_DUTY_FROZEN)
     through = FUEL_DUTY_FROZEN_THROUGH
     resume = through + 1
@@ -424,19 +485,36 @@ def _create_warm_home_discount_top_up() -> Reform:
 # =============================================================================
 
 
+def _electricity_vat_description() -> str:
+    end = date.fromisoformat(_electricity.ZERO_RATE_EXTENDED_TO)
+    end_text = f"{end.day} {end:%B %Y}"
+    days = (end - date(2027, 4, 1)).days + 1
+    if _electricity.PRE_BUDGET_ZERO_RATE_IN_MEASURE:
+        return (
+            "Candidate measure. VAT on domestic electricity is 0% instead "
+            f"of 5% from 1 October 2026 to {end_text}: the zero rate to "
+            "March 2027, not in the model's baseline, and its extension. "
+            "Applied to electricity spending only, in Great Britain "
+            "(Northern Ireland keeps the 5%). 2026-27 carries the October "
+            "to March share of a year's electricity use (about 57%), not a "
+            f"share of its days; 2027-28 its {days} days of 366."
+        )
+    return (
+        "Candidate measure. The zero rate of VAT on domestic electricity, "
+        "in force from 1 October 2026 to 31 March 2027, is extended to "
+        f"{end_text}: VAT is 0% instead of 5% from 1 April 2027 to "
+        f"{end_text}. Applied to electricity spending only, in Great "
+        "Britain (Northern Ireland keeps the 5%), weighted by its "
+        f"{days} days of 2027-28's 366. The zero rate before April 2027 "
+        "is in neither the model's baseline nor this measure."
+    )
+
+
 def _create_domestic_electricity_zero_vat() -> Reform:
     return Reform(
         id=ELECTRICITY_VAT_ID,
         name="Zero VAT on domestic electricity",
-        description=(
-            "Candidate measure. VAT on domestic electricity is 0% instead "
-            "of 5% from 1 October 2026 to 31 March 2028: the zero rate to "
-            "March 2027, not in the model's baseline, scored with a "
-            "candidate one-year extension. Applied to electricity spending "
-            "only, in Great Britain (Northern Ireland keeps the 5%). "
-            "2026-27 carries the October to March share of a year's "
-            "electricity use (about 57%), not a share of its days."
-        ),
+        description=_electricity_vat_description(),
         simulation_modifier=zero_vat_on_domestic_electricity,
     )
 

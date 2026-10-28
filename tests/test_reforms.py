@@ -234,37 +234,32 @@ def test_current_law_fuel_duty_blends_as_the_engine_does():
 
 
 def test_the_fuel_duty_path_by_hand():
+    """Announced: the 5p cut extended "until next July". 52.95p to
+    31 July 2027, then current law's 59.75p (FUEL_DUTY_FROZEN_UNTIL)."""
     rates = fuel_duty_deferral_rates()
     # 2026-27: 52.95p all year
     assert rates["2026"] == 0.5295
-    # 2027-28 (6 April 2027 to 5 April 2028, 366 days): 52.95p to
-    # 31 March 2028 (361 days), then 52.95p uprated by 2028 RPI, 61.54p x
-    # 52.95 / 59.75 = 54.54p, from 1 April (5)
+    # 2027-28 (6 April 2027 to 5 April 2028, 366 days): 52.95p to 31 July
+    # (117 days), then 59.75p to 31 March 2028 (244), then 61.54p from
+    # 1 April 2028 (5)
     assert rates["2027"] == pytest.approx(
-        (361 * 0.5295 + 5 * 0.5454) / 366, abs=1e-6
+        (117 * 0.5295 + 244 * 0.5975 + 5 * 0.6154) / 366, abs=1e-6
     )
-    # 2028-29: 54.54p to 31 March 2029 (360 days), then 63.26p x 52.95 /
-    # 59.75 = 56.06p (5)
-    assert rates["2028"] == pytest.approx(
-        (360 * 0.5454 + 5 * 0.5606) / 365, abs=1e-6
-    )
-    assert set(rates) == {str(year) for year in POLICY_YEARS}
+    # Later years are current law's own: not written
+    assert set(rates) == {"2026", "2027"}
 
 
-def test_the_5p_and_the_april_2027_rise_are_never_made_up():
-    """From 2028-29 the measure's rate stays the 5p and a year's RPI below
-    current law (52.95p against 59.75p, uprated alike), so it costs revenue
-    in every later year; the description says so."""
-    rates = fuel_duty_deferral_rates()
-    current = fiscal_year_means(FUEL_DUTY_CURRENT_LAW)
-    for year in (y for y in POLICY_YEARS if y >= 2028):
-        assert rates[str(year)] == pytest.approx(
-            current[str(year)] * 0.5295 / 0.5975, abs=1e-4
-        ), year
-        assert rates[str(year)] < current[str(year)], year
+def test_after_the_extension_fuel_duty_is_current_laws():
+    """From 1 August 2027 the measure follows current law, so it costs
+    nothing after 2027-28; the description says so."""
+    schedule = dict(reforms.fuel_duty_deferral_schedule())
+    assert schedule["2027-08-01"] == 0.5975
+    for day, rate in reforms.FUEL_DUTY_CURRENT_LAW:
+        if day > "2027-08-01":
+            assert schedule[day] == rate
     description = get_reform("fuel_duty_rise_deferral").description
-    assert "52.95p a litre through 2027-28" in description
-    assert "never made up" in description
+    assert "52.95p a litre to 31 July 2027" in description
+    assert "never made up" not in description
 
 
 def test_the_pump_vat_defaults_are_20_percent_of_the_duty_change():
@@ -276,6 +271,10 @@ def test_the_pump_vat_defaults_are_20_percent_of_the_duty_change():
     ]
     for name, value in zip(names, defaults):
         fuel, year = name.split("_")
+        if year not in rates:
+            # A year the measure leaves on current law
+            assert value == 0.0, name
+            continue
         price = getattr(PARAMETERS.household.consumption.fuel.prices, fuel)(
             f"{year}-04-30"
         )
@@ -591,12 +590,29 @@ def test_receipt_rates_come_in_pairs():
 # --- 4. Electricity VAT -----------------------------------------------------
 
 
+def test_electricity_defaults_follow_its_constants():
+    """The module's defaults are literals (template-proved), so this ties
+    them to its end date and attribution switch."""
+    from uk_budget_data.budget_measures import (
+        zero_vat_on_domestic_electricity as module,
+    )
+
+    first, second, _ = modifier(
+        "zero_vat_on_domestic_electricity"
+    ).__defaults__
+    share = module.EXTENSION_SHARES[module.ZERO_RATE_EXTENDED_TO]
+    assert second == pytest.approx(-0.05 * share, abs=1e-15)
+    winter = -0.05 * module.WINTER_SHARE
+    expected = winter if module.PRE_BUDGET_ZERO_RATE_IN_MEASURE else 0.0
+    assert first == pytest.approx(expected, abs=1e-15)
+
+
 @pytest.mark.parametrize(
     "year, saving",
-    # £1,050 a year including 5% VAT holds £50 of VAT. 2026-27: the
-    # October to March share of a year's use (WINTER_SHARE), £28.34;
-    # 2027-28: all of it; 2028-29: none.
-    [(2026, 28.34), (2027, 50.00), (2028, 0.0)],
+    # £1,050 a year including 5% VAT holds £50 of VAT. The extension
+    # alone: 2026-27 none (the pre-Budget zero rate is not the measure's);
+    # 2027-28 122 days of 366 to 31 July 2027, £16.67; 2028-29 none.
+    [(2026, 0.0), (2027, 16.67), (2028, 0.0)],
 )
 def test_electricity_vat_on_1050_pounds_a_year(year, saving):
     sit = situation(
@@ -980,7 +996,7 @@ FIRST_YEARS = {
         {"country": "ENGLAND"},
     ),
     "domestic_electricity_zero_vat": (
-        2026,
+        2027,
         "household_net_income",
         {"employment_income": 20_000},
         {"electricity_consumption": 1_050},
