@@ -3,13 +3,15 @@ import { SAVINGS_INCOME_RATES_ID, withCalculatorOnly, withoutCalculatorOnly } fr
 import { policyRows } from "./singleYear";
 
 describe("calculator-only measures", () => {
-  it("go after the selected measures, once, and come off for the national figures", () => {
-    expect(withCalculatorOnly(["a", "b"], [])).toEqual(["a", "b"]);
-    expect(withCalculatorOnly(["a", "b"], [SAVINGS_INCOME_RATES_ID, "unknown"])).toEqual(["a", "b", SAVINGS_INCOME_RATES_ID]);
+  it("always go after the selected measures, once, and come off for the national figures", () => {
+    expect(withCalculatorOnly(["a", "b"])).toEqual(["a", "b", SAVINGS_INCOME_RATES_ID]);
+    expect(withCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID])).toEqual(["a", SAVINGS_INCOME_RATES_ID]);
+    // Nothing selected: no request, so nothing added
+    expect(withCalculatorOnly([])).toEqual([]);
     expect(withoutCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID])).toEqual(["a"]);
   });
 
-  it("show in the split by policy with their short name and why they are not in the national results", () => {
+  it("show in the split by policy with their short name, and no note", () => {
     const byPolicy = {
       measures: [
         { id: "property_income_rates_up", name: "Property income tax rates up", change: 0, status: "not_affected" },
@@ -19,13 +21,6 @@ describe("calculator-only measures", () => {
     };
     const bars = policyRows(byPolicy, -190, [{ id: "property_income_rates_up", name: "Property income tax up" }], 2027);
     expect(bars.rows).toEqual([expect.objectContaining({ id: SAVINGS_INCOME_RATES_ID, name: "Savings income tax up", rounded: -190 })]);
-    expect(bars.notes).toEqual([
-      {
-        id: SAVINGS_INCOME_RATES_ID,
-        name: "Savings income tax up",
-        kind: "calculator_only",
-        text: "Held back from the national results while our savings data are corrected.",
-      },
-    ]);
+    expect(bars.notes).toEqual([]);
   });
 });
