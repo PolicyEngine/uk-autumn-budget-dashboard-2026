@@ -32,6 +32,10 @@
  *   (collapsed by default, under "About this result");
  * - caveats: further caveats, in sentences, where the details state none;
  * - source: a public page on the policy, where one exists;
+ * - explainer: { label, href }: PolicyEngine's post on the measure, its
+ *   title and its page under EXPLAINER_BASE, for the card's "Explainer"
+ *   link. Added only once the post is live (its page answers 200), so a
+ *   card never links to a missing page;
  * - budgetRows: the measure's rows in the Budget's Table 6.1 (as
  *   data_inputs/treasury/mapping.csv maps them), which order the cards and
  *   link each card to the Budget's costing;
@@ -436,6 +440,9 @@ export const POLICY_DETAILS = [
     },
   },
 ];
+
+/** Where every explainer post lives: PolicyEngine's UK research pages. */
+export const EXPLAINER_BASE = "https://www.policyengine.org/uk/research/";
 
 const DETAILS_BY_ID = Object.fromEntries(
   POLICY_DETAILS.map(({ id, name: _name, description: _description, writtenFor, ...fields }) => [id, { writtenFor, fields }]),

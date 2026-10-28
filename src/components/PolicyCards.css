@@ -44,8 +44,10 @@
   text-underline-offset: 3px;
 }
 
-/* The Budget's costing row, beside the source and styled as it is */
-.policy-card-actions .policy-card-costing {
+/* The Budget's costing row and the explainer post, beside the source and
+   styled as it is */
+.policy-card-actions .policy-card-costing,
+.policy-card-actions .policy-card-explainer {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -58,13 +60,22 @@
 }
 
 .policy-card-example-source a:hover,
-.policy-card-actions .policy-card-costing:hover {
+.policy-card-actions .policy-card-costing:hover,
+.policy-card-actions .policy-card-explainer:hover {
   text-decoration-color: currentColor;
 }
 
 /* Source and Costing side by side on the left, the effect button right */
 .policy-card-actions .policy-card-effect {
   margin-left: auto;
+}
+
+/* With an explainer too, a narrow card wraps the effect button onto its
+   own line, still at the right, rather than overflowing */
+.policy-card-actions:has(.policy-card-explainer) {
+  flex-wrap: wrap;
+  column-gap: 12px;
+  row-gap: 0;
 }
 
 .policy-card-example-items {

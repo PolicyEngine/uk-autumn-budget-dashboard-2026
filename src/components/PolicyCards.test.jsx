@@ -14,7 +14,7 @@ import PolicyCards, {
 } from "./PolicyCards";
 import { PLOTTED_DISPLAYS } from "./PolicyChange";
 import { buildMeasureCatalogue } from "../utils/measureCatalogue";
-import { POLICY_DETAILS } from "../utils/policyDetails";
+import { EXPLAINER_BASE, POLICY_DETAILS, withPolicyDetails } from "../utils/policyDetails";
 import { ALPHA, BETA, HELD, measureCatalogueFixture } from "../test/measureCatalogueFixture";
 
 const catalogue = buildMeasureCatalogue(measureCatalogueFixture());
@@ -618,5 +618,52 @@ describe("the card's frame", () => {
       expect(policy.budgetRows, policy.id).toEqual(mapped[policy.id]);
     }
     expect(Object.keys(mapped).filter((id) => detailsById[id]).every((id) => detailsById[id].budgetRows), "every mapped measure has its rows").toBe(true);
+  });
+});
+
+describe("the explainer link (policyDetails.js `explainer`)", () => {
+  const explainerLink = (container) => within(container).queryByRole("link", { name: /^Explainer/ });
+
+  it("links a card with an explainer to its post, in a new tab, after the source and costing", () => {
+    const id = "fuel_duty_rise_deferral";
+    const post = { label: "The fuel duty cut extension", href: `${EXPLAINER_BASE}fuel-duty-cut-extension` };
+    render(<PolicyCards policies={[{ ...published(id, "Fuel duty cut extended"), explainer: post }]} selectedPolicies={[id]} onShowEffect={() => {}} />);
+    const card = screen.getByRole("listitem");
+    const link = explainerLink(card);
+    expect(link).toHaveAccessibleName(/^Explainer: The fuel duty cut extension\s*\(opens in a new tab\)$/);
+    expect(link).toHaveAttribute("href", "https://www.policyengine.org/uk/research/fuel-duty-cut-extension");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    // Source, Costing, Explainer, then the effect at the right
+    const actions = [...card.querySelector(".policy-card-actions").children].map((child) =>
+      (child.classList.contains("tip-anchor") ? child.firstElementChild : child).className);
+    expect(actions).toEqual(["policy-card-source", "policy-card-costing", "policy-card-explainer", "policy-card-effect"]);
+  });
+
+  it("shows no explainer link on a card without one", () => {
+    const entry = POLICY_DETAILS.find((policy) => !policy.explainer);
+    render(<PolicyCards policies={[published(entry.id, entry.name)]} selectedPolicies={[entry.id]} onShowEffect={() => {}} />);
+    const card = screen.getByRole("listitem");
+    expect(explainerLink(card)).toBeNull();
+    expect(card.querySelector(".policy-card-explainer")).toBeNull();
+  });
+
+  it("links every explainer in the card details to a post among PolicyEngine's UK research pages", () => {
+    expect(EXPLAINER_BASE).toBe("https://www.policyengine.org/uk/research/");
+    for (const policy of POLICY_DETAILS.filter((entry) => entry.explainer)) {
+      expect(policy.explainer.href.startsWith(EXPLAINER_BASE), policy.id).toBe(true);
+      expect(policy.explainer.href.slice(EXPLAINER_BASE.length), policy.id).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+      expect(policy.explainer.label?.trim(), policy.id).toBeTruthy();
+    }
+  });
+
+  it("shows each entry's explainer while the publication describes the measure as written, and drops it with the other details once it doesn't", () => {
+    for (const policy of POLICY_DETAILS.filter((entry) => entry.explainer)) {
+      expect(withPolicyDetails(published(policy.id, policy.name)).explainer, policy.id).toEqual(policy.explainer);
+      const changed = { ...published(policy.id, policy.name), description: "A changed measure." };
+      render(<PolicyCards policies={[changed]} selectedPolicies={[policy.id]} onShowEffect={() => {}} />);
+      expect(explainerLink(screen.getByRole("listitem")), policy.id).toBeNull();
+      cleanup();
+    }
   });
 });

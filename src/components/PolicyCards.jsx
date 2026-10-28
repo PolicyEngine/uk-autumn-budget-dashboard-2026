@@ -272,7 +272,8 @@ function PolicyTimeline({ policy, highlight }) {
  * One measure's card: the head (type on one line, then the name), the summary, what changes (the model's parameters,
  * current law beside the measure), when it is in force (Starts and Ends,
  * then the timeline), and the footer ("How it is modelled", then the
- * source and "See its effect").
+ * source, the costing, PolicyEngine's explainer post where its details
+ * name one, and "See its effect").
  *
  * A measure without card details (no entry in policyDetails.js, or one
  * written for another description, as when a run publishes a changed
@@ -479,6 +480,23 @@ export function PolicyCard({ policy, onShowEffect, parameters }) {
             >
               Costing
               <span className="policy-sr-only">: Budget 2026, Table 6.1, {budgetRowsLabel(policy.budgetRows)}</span>
+              <ExternalLink size={14} aria-hidden="true" />
+              <span className="policy-sr-only"> (opens in a new tab)</span>
+            </a>
+            </Tip>
+          )}
+          {/* PolicyEngine's post on the measure, a page of policyengine.org:
+              a link rather than embedded, which reads better on a phone */}
+          {policy.explainer && (
+            <Tip content={policy.explainer.label}>
+            <a
+              className="policy-card-explainer"
+              href={policy.explainer.href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Explainer
+              <span className="policy-sr-only">: {policy.explainer.label}</span>
               <ExternalLink size={14} aria-hidden="true" />
               <span className="policy-sr-only"> (opens in a new tab)</span>
             </a>
