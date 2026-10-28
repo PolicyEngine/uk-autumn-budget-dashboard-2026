@@ -325,6 +325,52 @@ export const POLICY_DETAILS = [
       href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
     },
   },
+  {
+    id: "household_energy_payment_2026",
+    shortName: "Energy payment",
+    sentence: "paying £100 towards energy bills",
+    name: "Household energy payment",
+    description: "Pay £100 to households in council tax bands A to D in England this winter",
+    writtenFor: "Candidate measure. A one-off payment of £100 in winter 2026-27 to each household in England in property valuation bands A to D (the lowest four of England's eight), paid into bank accounts. Scotland, Wales and Northern Ireland receive a share of the funding instead, which is not modelled. It counts as household income.",
+    summary:
+      "Pays £100 once, in winter 2026-27, to each household in England in council tax bands A to D.",
+    starts: "Winter 2026-27",
+    affects: "Households in England in council tax bands A to D",
+    type: "Payment",
+    inForce: { from: "2027-01", to: "2027-03" },
+    ends: "After one winter",
+    duration: "One winter",
+    howCalculated:
+      "Adds £100 to the income of each household in England whose council tax band is A, B, C or D, in 2026-27.",
+    details:
+      "England only: the Scottish, Welsh and Northern Ireland governments receive a share of the funding instead, which is not modelled. The Treasury's £2.6bn cost likely includes that share and £100m for councils' targeted support.",
+    source: {
+      label: "Budget 2026",
+      href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
+    },
+  },
+  {
+    id: "trading_allowance_raise",
+    shortName: "Trading allowance",
+    sentence: "raising the trading allowance",
+    name: "Trading allowance raised",
+    description: "Raise the trading allowance from £1,000 to £3,000",
+    writtenFor: "Candidate measure. From 6 April 2027 the trading allowance, which relieves trading receipts in place of actual expenses, rises from £1,000 to £3,000, for income tax and Class 4 National Insurance. Every self-employed person gets it: the data cannot tell a new venture from an established one. Without gross receipts in the data, a profit within the allowance is treated as fully relieved, so the cost may be overstated.",
+    summary:
+      "Raises the trading allowance, which lets people earn from trading without tax, from £1,000 to £3,000 from April 2027.",
+    starts: "April 2027",
+    affects: "Self-employed people with small trading incomes",
+    type: "Income tax",
+    inForce: { from: "2027-04" },
+    howCalculated:
+      "Raises the trading allowance parameter to £3,000 from 2027-28, for income tax and Class 4 National Insurance.",
+    details:
+      "The Budget describes it as for new ventures; the data cannot tell new businesses from established ones, so every self-employed person gets it. Without gross receipts, a profit within the allowance is treated as fully relieved, so the cost may be overstated. The Treasury's costing starts in 2028-29, when self-assessment payments fall due; the model's static figure starts in 2027-28.",
+    source: {
+      label: "Budget 2026",
+      href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
+    },
+  },
 ];
 
 const DETAILS_BY_ID = Object.fromEntries(

@@ -52,13 +52,11 @@ YEARS = [2025, 2026, 2027, 2028, 2029, 2030]
 POLICY_IDS = [
     "fuel_duty_rise_deferral",
     "state_pension_income_tax_protection",
-    "warm_home_discount_top_up",
     "domestic_electricity_zero_vat",
-    "threshold_freeze_2031_32",
-    "plan_2_threshold_unfreeze",
-    "employer_nics_secondary_threshold_raise",
     "unearned_income_rates_up",
     "carers_allowance_earnings_taper",
+    "household_energy_payment_2026",
+    "trading_allowance_raise",
 ]
 
 

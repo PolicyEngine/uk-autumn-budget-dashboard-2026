@@ -51,25 +51,17 @@ PARAMETERS = system.parameters
 CANDIDATES = (
     "fuel_duty_rise_deferral",
     "state_pension_income_tax_protection",
-    "warm_home_discount_top_up",
     "domestic_electricity_zero_vat",
-    "threshold_freeze_2031_32",
-    "plan_2_threshold_unfreeze",
-    "employer_nics_secondary_threshold_raise",
     "unearned_income_rates_up",
     "carers_allowance_earnings_taper",
     "household_energy_payment_2026",
     "trading_allowance_raise",
 )
 # Individual candidates that are not components of the combined package.
-NOT_IN_PACKAGE = (
-    "household_energy_payment_2026",
-    "trading_allowance_raise",
-)
+NOT_IN_PACKAGE = ()
 # Registered on 27 October, before its first national generation: its rows
 # are checked once budgetary_impact.csv has them.
 NOT_YET_GENERATED = (
-    "employer_nics_secondary_threshold_raise",
     "unearned_income_rates_up",
     # Registered again on Budget day (HCWS421)
     "carers_allowance_earnings_taper",
@@ -87,6 +79,13 @@ REDEFINED_ON_BUDGET_DAY = (
 # package, so no default command runs or publishes them. Their factories
 # stay, unregistered, and are still tested here as code.
 WITHDRAWN = {
+    # Not in the Budget 2026 document (28 October 2026)
+    "warm_home_discount_top_up": reforms._create_warm_home_discount_top_up,
+    "threshold_freeze_2031_32": reforms._create_threshold_freeze_2031_32,
+    "plan_2_threshold_unfreeze": reforms._create_plan_2_threshold_unfreeze,
+    "employer_nics_secondary_threshold_raise": (
+        reforms._create_employer_nics_secondary_threshold_raise
+    ),
     "employer_ni_relief_under_25s": reforms._create_employer_ni_relief_under_25s,
     "badr_lifetime_limit_cut": reforms._create_badr_lifetime_limit_cut,
     # Withdrawn the same evening, when Vahid chose the ten candidates
@@ -144,17 +143,15 @@ def test_the_package_is_the_eight_candidates():
     from uk_budget_data.geography import manifest_key
     from uk_budget_data.publication.combine import combined_key
 
-    # Nine on Budget day: the eight and the Carer's Allowance taper
-    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 9
-    # and the household energy payment and the trading allowance,
-    # registered outside it
-    assert len(reforms._MEASURE_FACTORIES) == 11
+    # Seven on Budget day: the measures the Budget 2026 document announced
+    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 7
+    assert len(reforms._MEASURE_FACTORIES) == 7
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
-    assert key == "combined--47727b6baf58047f"
+    assert key == "combined--4e3e325c74977848"
     # The area run's package alias stands for that key
     assert manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     description = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID).description
-    assert description.startswith("All nine candidate measures")
+    assert description.startswith("All seven candidate measures")
 
 
 def test_the_withdrawn_measures_are_not_registered():
@@ -193,8 +190,9 @@ def test_the_combined_package_merges_every_members_changes():
         ).items():
             assert combined.parameter_changes[path] == values, path
     assert combined.simulation_modifier is not None
-    # The Plan 2 measure counts modelled repayments on both sides
-    assert combined.baseline_simulation_modifier is not None
+    # The Plan 2 measure, which counted modelled repayments on both sides,
+    # is withdrawn: no baseline modifier
+    assert combined.baseline_simulation_modifier is None
 
 
 # --- Receipts ---------------------------------------------------------------
@@ -813,7 +811,7 @@ def test_a_single_person_on_30000_pounds_in_2031_pays_52_pounds_more():
 def test_the_freeze_changes_only_2031():
     """Its thresholds change in 2031 alone. It also carries the static
     capital gains pin, in every policy year (test_capital_gains_pin)."""
-    changes = dict(get_reform("threshold_freeze_2031_32").parameter_changes)
+    changes = dict(WITHDRAWN["threshold_freeze_2031_32"]().parameter_changes)
     for path in static_capital_gains():
         changes.pop(path)
     assert all(set(values) == {"2031"} for values in changes.values())
@@ -1008,43 +1006,11 @@ FIRST_YEARS = {
         {"age": 70, "state_pension": 13_000},
         {},
     ),
-    "warm_home_discount_top_up": (
-        2026,
-        "household_net_income",
-        {"age": 75, "state_pension": 8_000},
-        {"country": "ENGLAND"},
-    ),
     "domestic_electricity_zero_vat": (
         2026,
         "household_net_income",
         {"employment_income": 20_000},
         {"electricity_consumption": 1_050},
-    ),
-    "threshold_freeze_2031_32": (
-        2031,
-        "income_tax",
-        {"employment_income": 30_000},
-        {},
-    ),
-    "plan_2_threshold_unfreeze": (
-        2027,
-        "student_loan_repayment",
-        {
-            "age": 30,
-            "employment_income": 45_000,
-            "student_loan_plan": "PLAN_2",
-            "student_loan_balance": 60_000,
-            "student_loan_repayments": 500,
-        },
-        {},
-    ),
-    # £30,000 of pay: £4,100 more below the threshold, £615 a year at 15%
-    # before the pay response
-    "employer_nics_secondary_threshold_raise": (
-        2027,
-        "ni_class_1_employer",
-        {"employment_income": 30_000},
-        {},
     ),
     # £5,000 of savings interest, £4,000 over the £1,000 personal savings
     # allowance: 2 points is £80 (dividends no longer move)

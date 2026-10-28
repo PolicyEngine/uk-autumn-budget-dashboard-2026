@@ -46,6 +46,9 @@ from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
 from uk_budget_data.budget_measures.employer_ni_relief_ages_21_to_24 import (
     employer_ni_relief_ages_21_to_24,
 )
+from uk_budget_data.budget_measures.household_energy_payment_2026 import (
+    household_energy_payment_2026,
+)
 from uk_budget_data.budget_measures.road_fuel_vat_cut import (
     ROAD_FUEL_VAT_RATE,
     road_fuel_vat_cut,
@@ -812,6 +815,58 @@ def _employer_ni_threshold(reform) -> list[dict]:
     ]
 
 
+def _household_energy_payment(reform) -> list[dict]:
+    values = constants(household_energy_payment_2026)
+    year = values["year"]
+    bands = ", ".join(values["bands"])
+    where = "England" if values["country"] == "ENGLAND" else values["country"]
+    return [
+        _row(
+            "Household energy payment",
+            POUNDS,
+            [
+                _point(
+                    year,
+                    f"Winter {_fiscal_label(year)}",
+                    year,
+                    0,
+                    values["amount"],
+                )
+            ],
+            _source(
+                {
+                    "kind": "documented",
+                    "where": "no such payment under current law",
+                },
+                _modifier_source(household_energy_payment_2026, "amount"),
+            ),
+            unit_words="£ a household, once",
+            note=f"Paid to households in {where} in council tax bands "
+            f"{bands}",
+        )
+    ]
+
+
+def _trading_allowance(reform) -> list[dict]:
+    path = registry.TRADING_ALLOWANCE
+    return [
+        _row(
+            "Trading allowance",
+            POUNDS,
+            _yearly(
+                lambda y: engine_value(path, y),
+                _engine_or_change(reform, path),
+            ),
+            _source(
+                _engine_source(path),
+                _change_source(path, "_create_trading_allowance_raise()"),
+            ),
+            unit_words="£ of trading receipts a year",
+            note="Relieves trading receipts in place of actual expenses",
+        )
+    ]
+
+
 def _unearned_income_rates(reform) -> list[dict]:
     labels = {
         "savings.basic": "Savings basic rate",
@@ -854,6 +909,8 @@ BUILDERS = {
     registry.LHA_UNFREEZE_ID: _lha_unfreeze,
     registry.EMPLOYER_NI_THRESHOLD_ID: _employer_ni_threshold,
     registry.UNEARNED_INCOME_RATES_ID: _unearned_income_rates,
+    registry.HOUSEHOLD_ENERGY_PAYMENT_ID: _household_energy_payment,
+    registry.TRADING_ALLOWANCE_ID: _trading_allowance,
 }
 
 

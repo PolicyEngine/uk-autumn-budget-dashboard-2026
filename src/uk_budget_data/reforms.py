@@ -1014,33 +1014,39 @@ AUTUMN_BUDGET_2026_COMBINED_ID = "autumn_budget_2026_combined"
 AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
     FUEL_DUTY_DEFERRAL_ID,
     STATE_PENSION_ALLOWANCE_ID,
-    WARM_HOME_DISCOUNT_ID,
     ELECTRICITY_VAT_ID,
-    THRESHOLD_FREEZE_ID,
-    PLAN_2_ID,
-    EMPLOYER_NI_THRESHOLD_ID,
     UNEARNED_INCOME_RATES_ID,
-    # Budget day: registered once announced (HCWS421). If #271 (disclosure
-    # floor 3) is not merged before generation, its artifact cannot be
-    # staged and the combined run refuses: then drop it from here and keep
-    # it in _MEASURE_FACTORIES, listed but not combined.
+    # Budget day: registered once announced (HCWS421). Its cells in some
+    # deciles rest on fewer than 3 survey households, so the combined run
+    # refuses while it is here: drop it and keep it in _MEASURE_FACTORIES,
+    # listed but not combined.
     CARERS_ALLOWANCE_TAPER_ID,
+    HOUSEHOLD_ENERGY_PAYMENT_ID,
+    TRADING_ALLOWANCE_ID,
 )
 
+# Withdrawn on Budget day, not in the Budget 2026 document: the Warm Home
+# Discount top-up, the threshold freeze to 2031-32 (not extended), the
+# Plan 2 threshold unfreeze (the freeze stays) and the employer NI
+# secondary threshold (stays £5,000). Their factories stay, unregistered.
 _MEASURE_FACTORIES = (
     _create_fuel_duty_rise_deferral,
     _create_state_pension_income_tax_protection,
-    _create_warm_home_discount_top_up,
     _create_domestic_electricity_zero_vat,
-    _create_threshold_freeze_2031_32,
-    _create_plan_2_threshold_unfreeze,
-    _create_employer_nics_secondary_threshold_raise,
     _create_unearned_income_rates_up,
     _create_carers_allowance_earnings_taper,
     _create_household_energy_payment_2026,
-    # Announced 13:14; outside the package
     _create_trading_allowance_raise,
 )
+
+
+_NUMBER_WORDS = {
+    n: word
+    for n, word in enumerate(
+        "zero one two three four five six seven eight nine ten eleven "
+        "twelve".split()
+    )
+}
 
 
 def _create_combined_autumn_budget_reform(members: list[Reform]) -> Reform:
@@ -1060,7 +1066,8 @@ def _create_combined_autumn_budget_reform(members: list[Reform]) -> Reform:
         id=AUTUMN_BUDGET_2026_COMBINED_ID,
         name="Autumn Budget 2026 candidates (combined)",
         description=(
-            "All nine candidate measures simulated together: "
+            f"All {_NUMBER_WORDS[len(members)]} candidate measures simulated "
+            "together: "
             + ", ".join(member.name for member in members)
             + ". Shows the package's impact with interactions."
         ),
@@ -1108,7 +1115,7 @@ def _get_reform_lookup() -> dict[str, Reform]:
 
 
 def get_autumn_budget_2026_reforms() -> list[Reform]:
-    """The combined package, then the nine candidate measures."""
+    """The combined package, then the registered measures."""
     return _get_autumn_budget_2026_reforms()
 
 

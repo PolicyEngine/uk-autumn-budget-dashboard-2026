@@ -81,13 +81,13 @@ def test_the_eight_package_reason_names_its_two_hand_written_members(
 
     members = list(reforms.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
     key = combined_key(members)
-    # Nine on Budget day, with the Carer's Allowance taper
-    assert key == "combined--47727b6baf58047f"
+    # Seven on Budget day
+    assert key == "combined--4e3e325c74977848"
     record = drafted(key, members)
     assert record["measure_id"] == key
     assert (
         "hand-written carers_allowance_earnings_taper and "
-        "plan_2_threshold_unfreeze and " in record["reason"]
+        "household_energy_payment_2026 and " in record["reason"]
     )
     assert reforms.STATE_PENSION_ALLOWANCE_ID in record["reason"]
     assert reforms.EMPLOYER_NI_ID not in record["reason"]

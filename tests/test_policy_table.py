@@ -44,6 +44,13 @@ def withdrawn_rows(measure_id):
     factory = {
         registry.FUEL_VAT_ID: registry._create_road_fuel_vat_cut,
         registry.LHA_UNFREEZE_ID: registry._create_lha_unfreeze_2027,
+        # Withdrawn on Budget day
+        registry.WARM_HOME_DISCOUNT_ID: registry._create_warm_home_discount_top_up,
+        registry.THRESHOLD_FREEZE_ID: registry._create_threshold_freeze_2031_32,
+        registry.PLAN_2_ID: registry._create_plan_2_threshold_unfreeze,
+        registry.EMPLOYER_NI_THRESHOLD_ID: (
+            registry._create_employer_nics_secondary_threshold_raise
+        ),
     }
     reform = factory[measure_id]()
     return {row["label"]: row for row in BUILDERS[measure_id](reform)}
@@ -150,7 +157,7 @@ def test_the_state_pension_allowance_is_the_full_state_pension_rounded_up(
 
 
 def test_warm_home_discount(document):
-    row = rows(document, "warm_home_discount_top_up")["Warm Home Discount"]
+    row = withdrawn_rows(registry.WARM_HOME_DISCOUNT_ID)["Warm Home Discount"]
     assert by_key(row) == {"2026": (150, 250)}
     assert row["source"]["before"]["kind"] == "documented"
 
@@ -210,7 +217,7 @@ def test_the_table_covers_the_eight_package_measures_only(document):
         registry.AUTUMN_BUDGET_2026_COMBINED_COMPONENTS
     )
     # Nine on Budget day: the Carer's Allowance taper is registered again
-    assert len(document["measures"]) == 9
+    assert len(document["measures"]) == 7
     assert registry.CARERS_ALLOWANCE_TAPER_ID in document["measures"]
     assert registry.LHA_UNFREEZE_ID not in document["measures"]
     assert registry.FUEL_VAT_ID not in document["measures"]
@@ -219,7 +226,7 @@ def test_the_table_covers_the_eight_package_measures_only(document):
 
 
 def test_threshold_freeze(document):
-    table = rows(document, "threshold_freeze_2031_32")
+    table = withdrawn_rows(registry.THRESHOLD_FREEZE_ID)
     assert by_key(table["Personal allowance"])["2031"] == (12_830, 12_570)
     assert by_key(table["Higher rate threshold"])["2031"] == (51_330, 50_270)
     assert by_key(table["Basic rate band"])["2031"] == (38_500, 37_700)
@@ -232,9 +239,7 @@ def test_threshold_freeze(document):
 
 def test_plan_2(document):
     plan_2 = by_key(
-        rows(document, "plan_2_threshold_unfreeze")[
-            "Plan 2 repayment threshold"
-        ]
+        withdrawn_rows(registry.PLAN_2_ID)["Plan 2 repayment threshold"]
     )
     assert plan_2["2026"] == (29_385, 29_385)
     assert plan_2["2027"] == (29_385, 30_267)
@@ -253,13 +258,11 @@ def test_each_measure_gets_the_display_its_shape_calls_for(document):
     } == {
         "fuel_duty_rise_deferral": "schedule",
         "state_pension_income_tax_protection": "path",
-        "warm_home_discount_top_up": "switch",
         "domestic_electricity_zero_vat": "switch",
-        "threshold_freeze_2031_32": "table",
-        "plan_2_threshold_unfreeze": "path",
-        "employer_nics_secondary_threshold_raise": "path",
         "unearned_income_rates_up": "path",
         "carers_allowance_earnings_taper": "path",
+        "household_energy_payment_2026": "switch",
+        "trading_allowance_raise": "before-after",
     }
 
 
@@ -279,7 +282,7 @@ def test_lha_unfreeze():
 
 def test_employer_ni_threshold(document):
     row = by_key(
-        rows(document, "employer_nics_secondary_threshold_raise")[
+        withdrawn_rows(registry.EMPLOYER_NI_THRESHOLD_ID)[
             "Employer National Insurance threshold"
         ]
     )

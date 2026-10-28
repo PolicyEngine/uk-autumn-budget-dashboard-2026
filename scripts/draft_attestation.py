@@ -36,6 +36,14 @@ from uk_budget_data.reforms import (
 # Allowance earnings taper, withdrawn that day, was registered again on
 # Budget day (HCWS421).
 REASONS = {
+    "household_energy_payment_2026": (
+        "Checked budget_measures.household_energy_payment_2026: in 2026-27 "
+        "only it adds the payment to ebr_council_tax_rebate for households "
+        "in England whose council tax band is A, B, C or D, leaving every "
+        "other household and year at the native amount. The receipt's "
+        "outputs were compared with the hand-computed households in "
+        "tests/test_reforms.py."
+    ),
     "carers_allowance_earnings_taper": (
         "Checked budget_measures.carers_allowance_earnings_taper: from "
         "2030-31 it replaces carers_allowance_pre_overlap for carers whose "

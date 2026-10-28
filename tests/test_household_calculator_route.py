@@ -30,17 +30,17 @@ from uk_budget_data.reforms import get_autumn_budget_2026_reforms
 MEASURE_YEARS = {
     "fuel_duty_rise_deferral": 2027,
     "state_pension_income_tax_protection": 2027,
-    "warm_home_discount_top_up": 2026,
     "domestic_electricity_zero_vat": 2027,
-    "threshold_freeze_2031_32": 2031,
-    "plan_2_threshold_unfreeze": 2027,
-    "employer_nics_secondary_threshold_raise": 2027,
     "unearned_income_rates_up": 2027,
     "carers_allowance_earnings_taper": 2030,
+    "household_energy_payment_2026": 2026,
+    "trading_allowance_raise": 2027,
 }
 # Every measure the calculator shows moves some probe household (employer
 # NI, which moved none, is withdrawn).
-NO_HOUSEHOLD_EFFECT: set[str] = set()
+# The trading allowance moves only self-employed income, which no probe
+# household has.
+NO_HOUSEHOLD_EFFECT: set[str] = {"trading_allowance_raise"}
 HOUSEHOLDS = {
     "employee_30k": personal_impact.HouseholdInput(employment_income=30_000),
     "employee_60k": personal_impact.HouseholdInput(employment_income=60_000),

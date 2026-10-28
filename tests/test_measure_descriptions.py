@@ -155,19 +155,10 @@ DECLARED = {
     # The duty, and the VAT charged on it at the pump.
     "fuel_duty_rise_deferral": {"fuel duty", "VAT"},
     "state_pension_income_tax_protection": {"income tax"},
-    # A payment, through the cost-of-living channel.
-    "warm_home_discount_top_up": set(),
     "domestic_electricity_zero_vat": {"VAT"},
-    # From 2031-32 the engine sets the NI primary threshold and upper
-    # earnings limit at the allowance and higher rate threshold, so holding
-    # those holds them too.
-    "threshold_freeze_2031_32": {"income tax", "National Insurance"},
-    # Student loan repayments are not a tax.
-    "plan_2_threshold_unfreeze": set(),
     "carers_allowance_earnings_taper": set(),
     "household_energy_payment_2026": set(),
     "trading_allowance_raise": {"income tax", "National Insurance"},
-    "employer_nics_secondary_threshold_raise": {"National Insurance"},
     "unearned_income_rates_up": {"income tax"},
 }
 # The combined measure moves what its members move.
@@ -336,7 +327,9 @@ def test_the_threshold_freeze_copy_states_the_frozen_thresholds():
     rate band, not the band alone: the 2030-31 values held in 2031-32,
     against the engine's 2031-32 values."""
     income_tax = installed_system.parameters.gov.hmrc.income_tax
-    description = get_reform("threshold_freeze_2031_32").description
+    from uk_budget_data import reforms
+
+    description = reforms._create_threshold_freeze_2031_32().description
     held = "2030-04-06"
     allowance = income_tax.allowances.personal_allowance.amount(held)
     band = income_tax.rates.uk.brackets[1].threshold(held)
