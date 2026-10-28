@@ -258,7 +258,7 @@ export function NoEffectList({ items, title, info = {} }) {
       items.map((item) => (
         <span key={item.id} className="no-effect-item" data-policy={item.id}>
           {item.name}
-          {item.reason && <> — {item.reason.charAt(0).toLowerCase() + item.reason.slice(1).replace(/\.$/, "")}</>}
+          {item.reason && <>: {item.reason.charAt(0).toLowerCase() + item.reason.slice(1).replace(/\.$/, "")}</>}
         </span>
       )),
       "no-effect",
