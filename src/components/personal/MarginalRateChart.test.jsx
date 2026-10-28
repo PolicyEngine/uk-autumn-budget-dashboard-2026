@@ -216,7 +216,7 @@ describe("MarginalRateChart", () => {
     }
   });
 
-  it("describes the modelled State Pension allowance, not the sole-income design, for a pensioner with earnings (W6 G1)", () => {
+  it("describes the Pension Tax Allowance's £1-in-£3 taper for a pensioner with earnings (W6 G1)", () => {
     // State Pension and £1,000 of salary: the rate jumps from 20% to 60%
     // over the next £200, which sets the caveat off
     render(
@@ -233,7 +233,7 @@ describe("MarginalRateChart", () => {
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     const about = document.querySelector(".chart-more-info");
     expect(about).toHaveTextContent(
-      "For a pensioner whose total income is at or below the full new State Pension, the selected policies raise the tax-free allowance to that amount. Once total income passes it, the usual personal allowance applies again, so income tax jumps there.",
+      "For a pensioner, the selected policies give an income tax reduction that falls by £1 for every £3 of total income above the full new State Pension, so over that range each extra £1 of income costs about 53p in income tax: 20p at the basic rate (19p at the starter rate in Scotland) plus 33p of the reduction withdrawn.",
     );
     expect(about).not.toHaveTextContent(/only income is the State Pension|Any earnings take the whole allowance away|first pound earned/);
   });

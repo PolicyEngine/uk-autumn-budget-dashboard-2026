@@ -201,6 +201,26 @@ it("orders rows by the size of the official costing", async () => {
   expect(names).toEqual([ALPHA, BETA].map((id) => catalogue.byId.get(id).label ?? catalogue.byId.get(id).name));
 });
 
+// Budget 2026 publishes one Exchequer impact per measure, post-behavioural:
+// with no static figure, no line may call the figure shown static
+it("names the post-behavioural basis when the official costings give only that", async () => {
+  const fixture = measureCatalogueFixture({ held: false });
+  const catalogue = buildMeasureCatalogue({ ...fixture, tablesByKey: Object.fromEntries([ALPHA, BETA].map((id) => [id, { budgetary_impact: fixture.budgetary.filter((row) => row.reform_id === id) }])) });
+  const csv = ["reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value", `${ALPHA},Alpha,${YEAR},,-5`, `${BETA},Beta,${YEAR},,2`].join("\n");
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(csv)));
+  const { container } = renderReact(<MeasureCatalogueProvider catalogue={catalogue}><OBRComparisonTable selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} /></MeasureCatalogueProvider>);
+  await screen.findByRole("radio", { name: "Show as chart" });
+  const sentence = container.querySelector(".chart-description").textContent;
+  expect(sentence).toContain("the official post-behavioural costing");
+  expect(sentence).not.toContain("official static");
+  // No basis choice with only one basis published
+  expect(screen.queryByText("Official basis")).not.toBeInTheDocument();
+  show("Table");
+  expect(container.querySelector(".comparison-table-note").textContent).toBe(
+    "Difference: PolicyEngine minus the official post-behavioural costing, £bn.",
+  );
+});
+
 describe("before the OBR costs the measures", () => {
   it("says the comparison is not available and pairs nothing", async () => {
     const catalogue = buildMeasureCatalogue(measureCatalogueFixture({ held: false }));

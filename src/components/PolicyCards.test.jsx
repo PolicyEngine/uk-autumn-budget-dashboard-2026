@@ -505,7 +505,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     expect(within(dates).getAllByRole("row")[1]).toHaveTextContent("1 January 202755.95p52.95p−3p");
     fireEvent.click(screen.getByRole("button", { name: "Show the yearly averages" }));
     const averages = screen.getByRole("table", { name: /As modelled/ });
-    expect(within(averages).getAllByRole("row")[1]).toHaveTextContent("2026-2753.95p52.95p−1p");
+    expect(within(averages).getAllByRole("row")[1]).toHaveTextContent("2026-2753.96p52.95p−1.01p");
   });
 
   it("shows nothing for a measure described otherwise than when the file was built, with no empty slot", () => {

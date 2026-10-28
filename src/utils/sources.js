@@ -146,19 +146,19 @@ Object.assign(SOURCES, {
     label: "PolicyEngine UK",
     url: "https://policyengine.org/uk/model",
   },
-  // Where the measures and their costings are read from, linked in the intro.
-  // Update on Budget day (runbook step): the Autumn Budget 2026 document and
-  // its policy costings on gov.uk. Before the Budget, HM Treasury's page.
+  // Where the measures are read from: the Budget 2026 document on gov.uk
+  // (published 28 October 2026)
   budget_documents: {
-    label: "HM Treasury",
-    url: "https://www.gov.uk/government/organisations/hm-treasury",
+    label: "HM Treasury, Budget 2026",
+    url: "https://www.gov.uk/government/publications/budget-2026-document",
   },
-  // Published with the Budget on 28 October 2026; linked once it exists
-  // HM Treasury's policy costings, certified by the OBR: the figures the
-  // reconciliation gate compares (public/data/official_costings.json)
+  // HM Treasury's Budget 2026 policy costings, certified by the OBR,
+  // published 28 October 2026 (the policy costings PDF from gov.uk's
+  // supporting documents page): the figures the reconciliation gate compares
+  // (public/data/official_costings.json, from Table 6.1)
   obr_budget_2026_costings: {
     label: "the official Autumn Budget 2026 costings (HM Treasury, certified by the OBR)",
-    url: null,
+    url: "https://assets.publishing.service.gov.uk/media/6ae1883fe4367e5c8b0467df/AB26_Policy_Costing.pdf",
   },
   ons_ashe: {
     label: "ONS, Annual Survey of Hours and Earnings",

@@ -345,7 +345,7 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id={METHOD_ANCHORS.publicFinances}
             title="Public finances"
-            preview="Budgetary impact · Exceptions · Net change · OBR comparison"
+            preview="Budgetary impact · Net change · OBR comparison"
           >
             <p className="method-more">
               The{" "}
@@ -358,17 +358,7 @@ function MethodologyTab({ onShowTab }) {
                   "Budgetary impact",
                   {
                     value: "Taxes collected less benefits and other spending, in £ billion a year.",
-                    more: [
-                      "It includes employer National Insurance and VAT receipts.",
-                      "The employer National Insurance threshold's cost is net of the extra income tax and National Insurance on the higher pay it leads to.",
-                    ],
-                  },
-                ],
-                [
-                  "Exceptions",
-                  {
-                    value: "A policy whose published description says it is costed another way follows that description.",
-                    more: ["For example, from a Treasury cost estimate or from the change in loan repayments."],
+                    more: ["It includes employer National Insurance and VAT receipts."],
                   },
                 ],
                 [
@@ -511,7 +501,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Budget",
-                  "Here a policy is costed by its change in the government's balance, as set out under Public finances. The app costs it as the change in households' taxes less benefits, so its cost for the employer National Insurance threshold differs.",
+                  "Here a policy is costed by its change in the government's balance, as set out under Public finances. The app costs it as the change in households' taxes less benefits.",
                 ],
               ]}
             />

@@ -621,7 +621,12 @@ def build_outlook(
         },
     }
 
-    obr = params.yoy_growth.obr
+    # The pre-Budget series are the OBR March 2026 forecast, as
+    # policyengine-uk ships it: its own parameters, not the October forecast
+    # the projections run on (forecast_parameters), or the Forecast changes
+    # sub-tab would draw October twice. check_pre_is_march holds them to the
+    # committed March 2026 EFO tables below.
+    obr = system.parameters.gov.economic_assumptions.yoy_growth.obr
     sections = []
     for title, series in SECTIONS:
         out_series = []
@@ -747,6 +752,11 @@ def build_outlook(
         "obr_rhdi": obr_rhdi,
         "income_growth_by_group": income_growth_by_group,
     }
+    from uk_budget_data.living_standards import INPUTS_DIR
+    from uk_budget_data.living_standards.forecast import check_pre_is_march
+    from uk_budget_data.living_standards.obr import EFO_FILE_NAME
+
+    check_pre_is_march(outlook["forecast"], INPUTS_DIR / EFO_FILE_NAME)
     for note in outlook["meta"]["notes"] + CAVEATS:
         assert len(note) <= 160, note
     return outlook

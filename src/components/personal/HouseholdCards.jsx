@@ -26,6 +26,7 @@ import { fiscalYearTick, shortFiscalYearTick } from "../../utils/chartTheme";
 import { SELECTABLE_YEARS, isDisplayYear } from "../../utils/displayYears";
 import { MINUS, money } from "../../utils/singleYear";
 import Tip from "../Tip";
+import { shortNameOf } from "../../utils/policyDetails";
 
 /** Each example's icon, by the name it gives (householdExamples.js). */
 export const EXAMPLE_ICONS = {
@@ -50,25 +51,13 @@ export function featuresPublished(example, catalogue) {
   return (example.measures ?? [example.measure]).every((id) => catalogue.byId.get(id)?.displayable === true);
 }
 
-/** Each measure's short name, as a card's chip names it (sentence case there). */
-const SOURCE_NAMES = {
-  domestic_electricity_zero_vat: "zero VAT on electricity",
-  fuel_duty_rise_deferral: "the fuel duty deferral",
-  road_fuel_vat_cut: "the VAT cut on road fuel",
-  state_pension_income_tax_protection: "the Pension Tax Allowance",
-  plan_2_threshold_unfreeze: "the Plan 2 threshold unfreeze",
-  threshold_freeze_2031_32: "the threshold freeze",
-  warm_home_discount_top_up: "the Warm Home Discount top-up",
-  employer_ni_relief_under_25s: "employer National Insurance relief",
-  badr_lifetime_limit_cut: "the Business Asset Disposal Relief cut",
-  carers_allowance_earnings_taper: "the Carer's Allowance taper",
-  lha_unfreeze_2027: "the Local Housing Allowance unfreeze",
-  employer_nics_secondary_threshold_raise: "the employer NI threshold",
-  unearned_income_rates_up: "the unearned income tax rise",
+// A measure's short name, as Policies names it (policyDetails.js), else
+// its published name
+const sourceName = (id, catalogue) => {
+  const measure = catalogue?.byId.get(id);
+  return measure ? shortNameOf(measure) : id;
 };
-// A short name where there is one, else the catalogue's published name
-const sourceName = (id, catalogue) => SOURCE_NAMES[id] ?? catalogue?.byId.get(id)?.name ?? id;
-// As a chip names it: "Zero VAT on electricity", "Fuel duty deferral"
+// As a chip names it: "Zero VAT on electricity", "Pension Tax Allowance"
 const chipName = (id, catalogue) => {
   const name = sourceName(id, catalogue).replace(/^the /, "");
   return name.charAt(0).toUpperCase() + name.slice(1);

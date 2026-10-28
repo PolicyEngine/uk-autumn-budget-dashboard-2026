@@ -140,7 +140,7 @@ def test_fuel_duty_averages_are_the_engine_and_the_measure(document):
 
 def test_the_pension_tax_allowance_is_the_largest_reduction(document):
     """Budget 2026: up to £94 in 2027-28, rising with the full new State
-    Pension, to 2029-30."""
+    Pension (OBR October 2026 forecast: £182, £250), to 2029-30."""
     row = by_key(
         rows(document, "state_pension_income_tax_protection")[
             "Pension Tax Allowance, the largest tax reduction"
@@ -246,7 +246,7 @@ def test_plan_2(document):
         withdrawn_rows(registry.PLAN_2_ID)["Plan 2 repayment threshold"]
     )
     assert plan_2["2026"] == (29_385, 29_385)
-    assert plan_2["2027"] == (29_385, 30_267)
+    assert plan_2["2027"] == (29_385, 30_648)
     assert {
         year: after for year, (_, after) in plan_2.items() if year != "2026"
     } == {

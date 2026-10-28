@@ -374,10 +374,11 @@ describe("the Pre-measures forecast view", () => {
     choose(who, "Poverty line", "Relative");
     fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
     const couplesRow = () => within(who).getByRole("rowheader", { name: "People in couple families with children" }).closest(".measure-dumbbell-row");
-    // People in couple families with children, relative before housing costs: 14.5% in both
-    // years, said once beside the marks
+    // People in couple families with children, relative before housing costs:
+    // 14.6% in 2027-28, 14.5% in 2031-32 (a fall: the end year's value left
+    // of its dot, the start year's right of its ring)
     let couples = couplesRow();
-    expect(couples).toHaveTextContent("People in couple families with children14.5%no change");
+    expect(couples).toHaveTextContent("People in couple families with children14.5%14.6%−0.1pp");
     expect(couples.querySelector(".measure-dumbbell-ring")).not.toBeNull();
     expect(couples.querySelector(".measure-dumbbell-dot")).not.toBeNull();
     // Its tooltip, on hover or keyboard focus: both years, the change and
@@ -387,26 +388,41 @@ describe("the Pre-measures forecast view", () => {
     // Drawn in the window (ViewportTooltip), outside the card
     let tip = screen.getByRole("tooltip");
     expect(tip).toHaveTextContent("People in couple families with children: relative poverty (BHC)");
-    expect(tip).toHaveTextContent("2027-2814.5%");
-    expect(tip).toHaveTextContent("ChangeNo change");
+    expect(tip).toHaveTextContent("2027-2814.6%");
+    expect(tip).toHaveTextContent("Change−0.1pp");
     expect(tip).toHaveTextContent(/All people, \d{4}-\d{2}/);
     fireEvent.blur(area);
     expect(screen.queryByRole("tooltip")).toBeNull();
-    // After housing costs, from here: 20.1% in 2027-28, 20.5% in 2031-32
+    // A change that rounds to nothing is said once as no change, never as a
+    // signed zero: outright owners, relative before housing costs, 13.4%
+    // in both years (0.05 points lower unrounded)
+    choose(who, "Breakdown", "Tenure");
+    fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
+    const owners = within(who).getByRole("rowheader", { name: "Outright owners" }).closest(".measure-dumbbell-row");
+    expect(owners).toHaveTextContent(/13\.4%no change$/);
+    expect(owners.textContent).not.toMatch(/[−-]0\.0/);
+    fireEvent.focus(owners);
+    tip = screen.getByRole("tooltip");
+    expect(tip).toHaveTextContent("2027-2813.4%");
+    expect(tip).toHaveTextContent("ChangeNo change");
+    fireEvent.blur(owners);
+    choose(who, "Breakdown", "Family type");
+    fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
+    // After housing costs, from here: 20.2% in 2027-28, 20.4% in 2031-32
     choose(who, "Housing costs", "After housing costs");
     fireEvent.keyDown(within(who).getByRole("dialog"), { key: "Escape" });
     couples = couplesRow();
     // Each value beside its mark: the start year left of its ring, the end
     // year right of its dot
-    expect(couples).toHaveTextContent("People in couple families with children20.1%20.5%+0.4pp");
-    expect(couples.querySelector(".ls-dumbbell-value.from.left")).toHaveTextContent("20.1%");
-    expect(couples.querySelector(".ls-dumbbell-value.to.right")).toHaveTextContent("20.5%");
+    expect(couples).toHaveTextContent("People in couple families with children20.2%20.4%+0.2pp");
+    expect(couples.querySelector(".ls-dumbbell-value.from.left")).toHaveTextContent("20.2%");
+    expect(couples.querySelector(".ls-dumbbell-value.to.right")).toHaveTextContent("20.4%");
     area = couples;
     fireEvent.focus(area);
     tip = screen.getByRole("tooltip");
     expect(tip).toHaveTextContent("People in couple families with children: relative poverty (AHC)");
-    expect(tip).toHaveTextContent("2027-2820.1%");
-    expect(tip).toHaveTextContent("Change+0.4pp");
+    expect(tip).toHaveTextContent("2027-2820.2%");
+    expect(tip).toHaveTextContent("Change+0.2pp");
     fireEvent.blur(area);
     expect(within(who).getByText(/^All people/)).toBeInTheDocument();
     for (const option of ["Tenure", "Children by number of children", "Children: lone parent vs couple"]) {
