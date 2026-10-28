@@ -140,15 +140,15 @@ The full sequence, roles and timings are in the [runbook](docs/budget-day-runboo
 | OBR tables | Download the OBR workbooks **in a browser** (obr.uk refuses scripts) and import them | [Documents arrive](docs/budget-day-runbook.md#documents-arrive-1340), [OBR forecast](docs/budget-day-runbook.md#budget-day-obr-forecast-living-standards-tab-from-1340) |
 | Generate | `generate --artifacts`, one receipted artifact per measure, locally or on Modal | [G2](docs/budget-day-runbook.md#g2-provisional-numbers-1315) |
 | Stage | `publish reconcile` and `publish stage`; each measure needs a signed expected-effects row (in #140, after #104) | [G2](docs/budget-day-runbook.md#g2-provisional-numbers-1315), [G3](docs/budget-day-runbook.md#g3-rebase-and-reconcile-1340-to-1410) |
-| Attest | Hand-written modifiers (`plan_2_threshold_unfreeze`, `state_pension_income_tax_protection`) and any package holding them are held until **two different people** sign an attestation for that exact receipt | [How a measure must be written](docs/budget-day-runbook.md#how-a-measure-must-be-written) |
-| Approve | The Reconciler runs `publish approve`, then `publish review-rows` | [G3](docs/budget-day-runbook.md#g3-rebase-and-reconcile-1340-to-1410) |
+| Attest | Only while sign-off is on (it is off; see [Review and sign-off](#review-and-sign-off)): hand-written modifiers (`plan_2_threshold_unfreeze`, `state_pension_income_tax_protection`) and any package holding them are held until **two different people** sign an attestation for that exact receipt | [How a measure must be written](docs/budget-day-runbook.md#how-a-measure-must-be-written) |
+| Approve | `publish approve --by <name>`; `publish review-rows` writes the review rows sign-off needs, and deletes the artifacts no entry names | [G3](docs/budget-day-runbook.md#g3-rebase-and-reconcile-1340-to-1410) |
 | Combined | `generate --combined` over the approved measures, staged and approved | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
 | Results by area | `geography` over the approved ids locally, or `constituencies --backend modal` for seats on Microcosm's local-area cut; both write `area_provenance.json` for `publish index` | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
 | Publish | `publish index`, `publish check`, then the pull request whose merge deploys | [G4](docs/budget-day-runbook.md#g4-combined-run-and-publish-1450) |
 | Sources | Point the page's OBR and Budget-document links at the day's publications (config keys `obr_efo_current` and `budget_documents`, in #128 and #127) | — |
 | Corrections | Withdraw, fix, regenerate | [G5](docs/budget-day-runbook.md#g5-corrections-whenever-one-arrives), [Rollback](docs/budget-day-runbook.md#rollback) |
 
-**Who signs what.** The expected-effects rows (`data_inputs/treasury/expected_effects.csv`, in #140) carry a reviewer's name. Each attestation needs two distinct people. Approval and review rows are the Reconciler's. See [Roles](docs/budget-day-runbook.md#roles).
+**Who signs what.** Nobody, from Budget day evening (28 October 2026): sign-off is off, and a pull request merges on GitHub's review alone, with no review rows, no attestations and no second signer. The expected-effects rows (`data_inputs/treasury/expected_effects.csv`, in #140) still name whoever declared them, and the manifest records who approved each entry. With sign-off on, each attestation needs two distinct people, and approval and review rows are the Reconciler's. See [Roles](docs/budget-day-runbook.md#roles).
 
 ### Running it
 
@@ -160,13 +160,21 @@ The full sequence, roles and timings are in the [runbook](docs/budget-day-runboo
 
 The figures derive from UKDS-licensed survey microdata, and this repository and the site are public, so every file under `public/` is a publication.
 
-- Each file under `public/` must be listed in [`data_inputs/public_data_review.csv`](data_inputs/public_data_review.csv) with the sha256 of the bytes a person reviewed (`shasum -a 256 <file>`). Any change fails until it is reviewed again. A `pending` entry passes only until its expiry date, at most 14 days after it was added. No public file may carry household, benefit unit or person ids or weights.
-- The one exception is `public/data/area-routing.json`, written from the installed bundle by `uk_budget_data.area_routing`: it takes no review entry, and may hold only one of the few texts that module writes.
-- Tables written by `policyengine.disclosure` (`regional.csv`, `constituency.csv`) are reviewed as kind `disclosure_table` and must also pass its `validate_public`. Results by area go through that layer only; the legacy constituency calculators (`generate --legacy-geography`) write only to the private directory named by `UK_BUDGET_DISCLOSURE_AUDIT_DIR`, outside any git repository.
-- `area_provenance.json` is reviewed as `publication_provenance` under its closed metadata schema; each area CSV still passes disclosure validation.
-- Two checks enforce the list: `uv run python scripts/check_public_data.py` (CI's Public data check) and `bun scripts/check-public-files.mjs` (run by `bun run build`, so a deploy fails too). They print file paths and rule names, never values.
-- `uv run uk-budget-data publish check` re-runs every publication gate on the manifest (CI's Publication gate).
-- `main` requires a pull request and six checks: Python tests, Python lint, Certified data, Frontend build, Frontend tests and Frontend lint.
+**Sign-off is off** from Budget day, 28 October 2026: `REQUIRED = False` in [`src/uk_budget_data/sign_off.py`](src/uk_budget_data/sign_off.py), the one switch. A pull request merges on GitHub's review alone. No public file needs a review row, no hand-written modifier is held for a two-person attestation, and there is no second signer. Every automated check still blocks:
+
+- No public file may carry household, benefit unit or person ids or weights.
+- No artifact may keep a cell resting on fewer survey households than the floor in its tables (`uk_budget_data.publication.disclosure_floor`), and every cell its receipt withholds must stay blank.
+- Tables written by `policyengine.disclosure` (`regional.csv`, `constituency.csv`) must pass its `validate_public`. Results by area go through that layer only; the legacy constituency calculators (`generate --legacy-geography`) write only to the private directory named by `UK_BUDGET_DISCLOSURE_AUDIT_DIR`, outside any git repository.
+- No file may carry more than 20 constituency, local-authority or small-area codes, unless it is a validated table, a reference input under `data_inputs/`, or reference geography whose exact bytes have a `reference_geography` row in [`data_inputs/public_data_review.csv`](data_inputs/public_data_review.csv) (or a `pending` row, until its expiry date). That row is the area-code guard's record that the file holds no survey figures, not a sign-off, so a changed boundary file needs a new one.
+- `public/data/area-routing.json`, written from the installed bundle by `uk_budget_data.area_routing`, may hold only one of the few texts that module writes, and `area_provenance.json` must keep to its closed metadata schema.
+- Two checks enforce these rules: `uv run python scripts/check_public_data.py` (CI's Public data check, and a Python test on this repository) and `bun scripts/check-public-files.mjs` (run by `bun run build`, so a deploy fails too). They print file paths and rule names, never values.
+- `uv run uk-budget-data publish check` re-runs every publication gate on the manifest (CI's Publication gate): receipts, file digests, certification, responsiveness, the floor, completeness, reconciliation and combined-run membership.
+- `main` requires a pull request and six checks: Python tests, Python lint, Certified data, Frontend build, Frontend tests and Frontend lint. It requires no approving review; requiring one is a change to the repository's ruleset, which only an admin can make.
+
+**To turn sign-off back on**, set `REQUIRED = True` in `src/uk_budget_data/sign_off.py` and regenerate the page's contract, which carries the switch to the page and to the build's check (a test fails until the two agree): `uv run python -m uk_budget_data.publication.contract > src/utils/publication/contract.json`. Then add what the checks ask for:
+
+- each file under `public/` needs a row in the review list with the sha256 of the bytes a person reviewed (`shasum -a 256 <file>`; `uv run uk-budget-data publish review-rows --reviewer NAME` writes the publication's), and any change fails until it is reviewed again. A `pending` row passes only until its expiry date, at most 14 days after it was added. The area routing status takes no row; disclosure tables are reviewed as `disclosure_table`, and `area_provenance.json` as `publication_provenance`;
+- while a data limit is active, a hand-written modifier, and any package holding one, is held until two different people attest its exact receipt (`scripts/draft_attestation.py`); restage any entry staged without its attestation.
 
 ## Deployment
 

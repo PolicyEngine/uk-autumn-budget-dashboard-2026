@@ -1,5 +1,7 @@
 # Publishing the Budget dashboard incrementally
 
+**Status, 28 October.** Sign-off is off from Budget day evening (`src/uk_budget_data/sign_off.py`): a pull request merges on GitHub's review alone. Where this design asks for review rows, a two-person attestation or a second signer, none is needed until sign-off is turned back on (the README's "Review and sign-off"). Every automated gate below still blocks.
+
 **Status, 19 October.** On 12 October Max ruled that changes which only fix bugs or add opt-in tooling are obvious improvements, and land on the normal review gates. Most of this design has since merged (see "Status of the work"). Six questions for Vahid and María are below. The third, on required checks, is partly settled: since 15 October `main` requires six. Comment on the PR that adds this file.
 
 The UK Autumn Budget is on Wednesday 28 October 2026, and the briefing is due by 07:00 on 29 October. There is no model freeze; the model keeps improving through Budget day. So each number on the dashboard and in the briefing has to carry evidence of what produced it, and pass checks, before it is published, measure by measure as measures are coded.

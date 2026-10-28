@@ -2,6 +2,8 @@
 
 The order of the day on one page. Every step's detail, and every reason, is in [`budget-day-runbook.md`](budget-day-runbook.md); where the two differ, the runbook wins and this page is wrong. Times are UTC (UK time equals UTC from 25 October). Roles as in the runbook: **Integrator** generates, stages and opens the PRs; **Reconciler** reconciles, approves and writes the review rows. Names go in the clock table, not here.
 
+**Sign-off is off from Budget day evening (28 October 2026)** (`src/uk_budget_data/sign_off.py`; see the runbook's note under its title). A pull request merges on GitHub's review alone: skip the "two reviewers" attestation rows, the Reconciler's review rows and re-reviews, and `scripts/draft_attestation.py`. The public-file checks no longer fail on files without a row. Every automated disclosure and publication check still runs.
+
 Every Modal command starts `uv run --with modal==1.6.2 python -m uk_budget_data.cli`, written `MODAL` below. The `uk-budget-data` script form fails with `--with modal` (it runs the project's own Python, which has no `modal`). Commands without Modal stay `uv run uk-budget-data ...`.
 
 ## Tuesday 27 October

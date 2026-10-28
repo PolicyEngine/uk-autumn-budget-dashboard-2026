@@ -4,6 +4,8 @@
 
 Wednesday 28 October 2026. Briefing by 07:00 on Thursday 29 October.
 
+> **Sign-off is off from Budget day evening (28 October 2026).** `REQUIRED = False` in [`src/uk_budget_data/sign_off.py`](../src/uk_budget_data/sign_off.py) turns off every human sign-off this runbook describes: a pull request merges on GitHub's review alone. No public file needs a row in `data_inputs/public_data_review.csv`, no hand-written modifier is held for a two-person attestation (`scripts/draft_attestation.py` is not needed), and no step waits for a second signer or for the Reconciler's rows. Where a step below says to attest, sign or write review rows, skip it. `publish review-rows` is optional: it still deletes the artifacts no current entry names. Every automated check still blocks: record-level identifiers, the floor of survey households and its withheld cells, `validate_public`, the area-code guard, file digests, certification, responsiveness, completeness, reconciliation and combined-run membership. A changed boundary file still needs its `reference_geography` row, which is the area-code guard's record. The README's "Review and sign-off" says how to turn sign-off back on.
+
 ## Roles
 
 | Role | Owns | Does not |
