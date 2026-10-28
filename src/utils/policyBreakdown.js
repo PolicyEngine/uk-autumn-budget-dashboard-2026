@@ -120,6 +120,9 @@ const fromSummary = (row, label = row.label) => ({
   changeOnly: row.changeOnly,
   before: row.shown?.before ?? row.before,
   raw: row.change,
+  // The Summary's own whole pounds for this row: the same amount is never
+  // shown £1 apart in the two tabs (reconcileParts)
+  pin: typeof row.shown?.change === "number" ? row.shown.change : null,
 });
 const worked = (id, label, before, after, raw) => ({ kind: "part", id, label, before, after, raw });
 
@@ -340,10 +343,7 @@ export function reconcileParts(parts, effectRaw, effect) {
   if (!parts?.length) return [];
   const sum = parts.reduce((acc, part) => acc + part.raw, 0);
   if (Math.abs(sum - effectRaw) >= MATCH_POUNDS) return [];
-  const rounded = consistentRound(
-    parts.map((part) => part.raw),
-    effect,
-  );
+  const rounded = pinnedParts(parts, effect);
   return parts.map((part, index) => {
     const before = part.before === null || part.before === undefined ? null : Math.round(part.before);
     return {
@@ -353,6 +353,36 @@ export function reconcileParts(parts, effectRaw, effect) {
       after: before === null ? null : before + rounded[index],
     };
   });
+}
+
+/**
+ * Whole pounds for a tab's parts that add up to `effect`, with each part
+ * that is a Summary row at the Summary's own figure (its `pin`) and the
+ * parts worked out here taking up the rounding. The employer NI tab's pay
+ * was +£546 against the Summary's +£545 for the same £545.48 (2031-32,
+ * part-time worker); now both say +£545 and the tab's income tax takes the
+ * £1. Plain largest remainder when no part is free to take it, or the pins
+ * leave the free parts more than £1 from their share.
+ */
+function pinnedParts(parts, effect) {
+  const plain = () =>
+    consistentRound(
+      parts.map((part) => part.raw),
+      effect,
+    );
+  const pinned = parts.map((part) => (typeof part.pin === "number" ? part.pin : null));
+  const free = parts.map((_, index) => index).filter((index) => pinned[index] === null);
+  const pinnedSum = pinned.reduce((acc, pin) => acc + (pin ?? 0), 0);
+  if (free.length === parts.length) return plain();
+  if (free.length === 0) return pinnedSum === effect ? pinned : plain();
+  const freeRaw = free.map((index) => parts[index].raw);
+  if (Math.abs(freeRaw.reduce((acc, value) => acc + value, 0) - (effect - pinnedSum)) > MATCH_POUNDS) return plain();
+  const rest = consistentRound(freeRaw, effect - pinnedSum);
+  const out = pinned.slice();
+  free.forEach((index, i) => {
+    out[index] = rest[i];
+  });
+  return out;
 }
 
 /**
@@ -533,11 +563,27 @@ function taxBandSteps({ has, rows, law, effectRaw, othersTouchIncome }) {
     Math.abs(niBefore.total - value("national_insurance", "before")) < MATCH_POUNDS;
 
   const steps = [];
+  // The same incomes in the Summary's whole pounds, for the rows shown:
+  // pay after is the Summary's before plus its change, so a step here and
+  // the Summary's Employment income row never differ by £1
+  const shownValue = (id, side) => Math.abs(row(id)?.shown?.[side] ?? row(id)?.[side] ?? 0);
+  const shownIncome = (side) => ({
+    earned: shownValue("employment_income", side) + shownValue("private_pension_income", side) + shownValue("state_pension", side),
+    property: shownValue("property_income", side),
+    savings: shownValue("savings_interest_income", side),
+    dividends: shownValue("dividend_income", side),
+  });
+  const shownBefore = shownIncome("before");
+  const shownAfter = has("employerNi") ? shownIncome("after") : shownBefore;
   // Your income of each kind (pay after, too, under the employer NI threshold)
   for (const kind of ["earned", "property", "savings", "dividends"]) {
     if (!before[kind] && !after[kind]) continue;
     const label = `Your ${KIND_WORDS[kind].charAt(0).toLowerCase()}${KIND_WORDS[kind].slice(1)}`;
-    steps.push(before[kind] === after[kind] ? inputRow(`income_${kind}`, label, before[kind]) : stepRow(`income_${kind}`, label, before[kind], after[kind]));
+    steps.push(
+      before[kind] === after[kind]
+        ? inputRow(`income_${kind}`, label, shownBefore[kind])
+        : stepRow(`income_${kind}`, label, shownBefore[kind], shownAfter[kind]),
+    );
   }
   steps.push({ kind: "heading", id: "tax_heading", label: "Income tax, band by band" });
   steps.push(stepRow("personal_allowance_used", "Your personal allowance (after any taper)", taxBefore.allowance, taxAfter.allowance));
@@ -595,4 +641,79 @@ function taxBandSteps({ has, rows, law, effectRaw, othersTouchIncome }) {
 function withPartsHeading(steps, parts) {
   if (!parts.length || !steps.some((step) => step.kind === "heading")) return [...steps, ...parts];
   return [...steps, { kind: "heading", id: "parts_heading", label: "What it does to your net income" }, ...parts];
+}
+
+// The Summary row a tab's worked-out part belongs to (a part taken from the
+// Summary is its own row)
+const PART_ROW = {
+  income_tax_total: "income_tax",
+  national_insurance_total: "national_insurance",
+  fuel_duty_vat: "vat_change",
+  electricity_vat: "vat_change",
+  fuel_vat: "vat_change",
+};
+
+/**
+ * The table's By policy tab: the chart's own steps (policyRows(...).rows,
+ * the same objects in the same order, the interaction row included), each
+ * with the Summary rows its tab says it moves, in the Summary's names, and
+ * the total, so the chart, this tab and the By tax and benefit tab show one
+ * set of figures. When every policy's tab splits its effect into Summary
+ * rows, what those leave of each Summary row is shown too: under the
+ * interaction row when there is one, else as changes that cancel out (a
+ * policy with no net effect can still move a tax and a benefit by the same
+ * amount: State Pension protection for the pensioner in 2028-29, income tax
+ * +£46 and Pension Credit −£46). Then every Summary row's change is the sum
+ * of its parts here.
+ *
+ * @param {Object} options
+ * @param {ReturnType<import("./singleYear").policyRows>} options.split
+ * @param {Array} options.tabs - policyTabs(...).tabs
+ * @param {Array} options.groups - The Summary's groups (groupTotals(roundProgrammeGroups(...)))
+ * @param {{change: number}} options.totals - headlineTotals
+ * @returns {{rows: Array<{id, name, label, rounded, parts: Array<{id, label, change}>}>, total: number, complete: boolean}}
+ */
+export function policyBridge({ split, tabs = [], groups = [], totals }) {
+  const topRows = (groups ?? []).flatMap((group) => group.rows ?? []);
+  const parentOf = new Map(topRows.flatMap((row) => (row.children ?? []).map((child) => [child.id, row.id])));
+  const rowOf = (id) => {
+    const target = PART_ROW[id] ?? id;
+    return topRows.some((row) => row.id === target) ? target : (parentOf.get(target) ?? null);
+  };
+  const labelOf = new Map(topRows.map((row) => [row.id, row.label]));
+  const byTab = new Map(tabs.map((tab) => [tab.id, tab]));
+  let complete = true;
+  const assigned = new Map();
+  const steps = (split?.rows ?? []).map((step) => {
+    if (step.id === "interaction") return { ...step, parts: [] };
+    const tabParts = (byTab.get(step.id)?.household ?? []).filter((item) => item.kind === "part");
+    // Each part under its Summary row, two parts on one row (fuel duty's
+    // VAT and electricity's) added together
+    const sums = new Map();
+    for (const part of tabParts) {
+      const id = rowOf(part.id);
+      if (!id) {
+        complete = false;
+        continue;
+      }
+      sums.set(id, (sums.get(id) ?? 0) + part.change);
+    }
+    if (!tabParts.length || tabParts.some((part) => !rowOf(part.id))) complete = false;
+    for (const [id, change] of sums) assigned.set(id, (assigned.get(id) ?? 0) + change);
+    const parts = [...sums]
+      .filter(([, change]) => change !== 0)
+      .map(([id, change]) => ({ id, label: labelOf.get(id) ?? id, change }));
+    return { ...step, parts };
+  });
+  if (complete) {
+    const rest = topRows
+      .map((row) => ({ id: row.id, label: row.label, change: (row.shown?.change ?? 0) - (assigned.get(row.id) ?? 0) }))
+      .filter((row) => row.change !== 0);
+    if (rest.length) {
+      const interaction = steps.find((step) => step.id === "interaction");
+      if (interaction) interaction.parts = rest;
+      else steps.push({ id: "cancel_out", name: "Changes that cancel out", label: "Changes that cancel out", rounded: 0, parts: rest });
+    }
+  }
+  return { rows: steps, total: totals?.change ?? steps.reduce((acc, step) => acc + step.rounded, 0), complete };
 }
