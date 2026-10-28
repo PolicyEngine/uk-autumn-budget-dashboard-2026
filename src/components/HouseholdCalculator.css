@@ -2551,7 +2551,8 @@
   .household-field .select-box select,
   .household-field select,
   .household-field input[type="text"],
-  .household-field input[type="number"] {
+  .household-field input[type="number"],
+  .constituency-box input {
     font-size: 16px;
   }
 }
@@ -2572,6 +2573,15 @@
 
   .reset-answers-button {
     min-height: 44px;
+  }
+
+  .constituency-box input {
+    height: 44px;
+  }
+
+  .constituency-toggle {
+    width: 44px;
+    height: 44px;
   }
 
   /* "Edit these answers": the line's height around the words */
