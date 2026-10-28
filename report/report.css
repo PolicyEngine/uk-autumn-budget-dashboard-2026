@@ -115,3 +115,11 @@ dl.glossary { margin: 2mm 0 0; }
 dl.glossary div { display: grid; grid-template-columns: 38mm 1fr; gap: 4mm; padding: 1.6mm 0; border-bottom: 0.6px solid #E5E7EB; break-inside: avoid; }
 dl.glossary dt { font-weight: 600; color: #285E61; }
 dl.glossary dd { margin: 0; }
+/* Summary page: key findings and scope, then the introduction on a new page */
+#summary { break-after: page; }
+.scope { margin-top: 2mm; }
+.scope h3 { margin: 0 0 1.5mm; }
+.scope p { margin: 0 0 2.4mm; }
+/* A paragraph after a figure or table saying how to read it */
+.explain { margin: -1mm 0 4.5mm; font-size: 9.4pt; }
+ul.measures-list { columns: 2; column-gap: 8mm; }

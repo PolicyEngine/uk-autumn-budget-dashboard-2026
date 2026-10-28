@@ -172,6 +172,37 @@ def test_key_findings_box_running_header_and_annexes(tmp_path):
     assert "not yet published in this release" in html
 
 
+def test_summary_scope_introduction_and_section_numbers(tmp_path):
+    import re
+
+    html = build(publication(tmp_path), tmp_path / "out")
+    # The summary page: key findings, then what the report compares
+    summary = html[html.index('<section id="summary"'):]
+    summary = summary[: summary.index("</section>")]
+    assert "What this report compares" in summary
+    # The introduction is section 1 and lists every measure shown, by name
+    intro = html[html.index('<section class="sec" id="introduction">'):]
+    intro = intro[: intro.index("</section>")]
+    assert '<p class="secnum">1</p><h2>Introduction</h2>' in intro
+    for name in re.findall(r'<tr><th scope="row">([^<]+)</th><td class="num total-col', html):
+        if name != "All measures together":
+            assert f"<li>{name}</li>" in intro
+    # Its pointer to the poverty section uses that section's number
+    num = re.search(r'<p class="secnum">(\d+)</p><h2>Poverty and inequality</h2>', html).group(1)
+    assert f"Section {num}." in intro
+    # The model description is said once, in the introduction
+    assert html.count("open-source microsimulation model") == 1
+
+
+def test_better_off_threshold_and_left_out_outlook(tmp_path):
+    html = build(publication(tmp_path), tmp_path / "out")
+    # calculators.py AGE_CHANGE_THRESHOLD = 0.0001: more than 0.01% of net income
+    assert "rises by more than 0.01%" in html
+    assert "Changes of any size count" not in html
+    assert "Living standards outlook." in html
+    assert '<p class="explain">' in html
+
+
 def test_no_combined_run_shows_a_notice_never_a_sum(tmp_path):
     html = build(publication(tmp_path, combined=False), tmp_path / "out")
     assert "No combined run is published for exactly these measures" in html
