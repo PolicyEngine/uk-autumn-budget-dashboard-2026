@@ -117,7 +117,7 @@ describe("ConstituencyMap on Budget day", () => {
     );
     expect(screen.queryByText(/combination of policies are not published/)).toBeNull();
     expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: 2 child limit repeal$/);
-    expect(screen.getByRole("button", { name: "Policy: 2 child limit repeal" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^2 child limit repeal · /);
   });
 
   it("offers each selected policy with results in the Policy pill, and follows the choice", async () => {
@@ -131,22 +131,22 @@ describe("ConstituencyMap on Budget day", () => {
     await waitFor(() =>
       expect(container.querySelectorAll("path.constituency-path[data-state]")).toHaveLength(8),
     );
-    fireEvent.click(screen.getByRole("button", { name: /^Policy:/ }));
-    const list = screen.getByRole("listbox", { name: "Policy" });
+    fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+    const list = screen.getByRole("radiogroup", { name: "Policy" });
     // No combined run is published (listed first, unavailable: AH1), and
     // fuel duty has no constituency rows
-    expect(within(list).getAllByRole("option").map((option) => option.textContent)).toEqual([
+    expect(within(list).getAllByRole("radio").map((option) => option.textContent)).toEqual([
       "All selected policies",
       "2 child limit repeal",
       "Rail fares freeze",
     ]);
-    expect(within(list).getByRole("option", { name: "All selected policies" })).toHaveAttribute("aria-disabled", "true");
-    expect(within(list).getByRole("option", { name: "2 child limit repeal" })).toHaveAttribute("aria-selected", "true");
-    fireEvent.click(within(list).getByRole("option", { name: "Rail fares freeze" }));
+    expect(within(list).getByRole("radio", { name: "All selected policies" })).toBeDisabled();
+    expect(within(list).getByRole("radio", { name: "2 child limit repeal" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(within(list).getByRole("radio", { name: "Rail fares freeze" }));
     await waitFor(() =>
       expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: Rail fares freeze$/),
     );
-    expect(screen.getByRole("button", { name: "Policy: Rail fares freeze" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^Rail fares freeze · /);
     // The figures' line only: the greyed-out All selected policies says
     // the map shows one policy at a time
     expect(container.querySelector(".chart-header .chart-description").textContent).toBe(

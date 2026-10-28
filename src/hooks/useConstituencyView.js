@@ -55,6 +55,7 @@ export function useConstituencyView({
     choice,
     options: policyOptions,
     value: policyValue,
+    fallback: policyFallback,
   } = chooseAreaPolicy({
     value: policyChoice,
     selectedIds: selectedPolicies,
@@ -104,5 +105,6 @@ export function useConstituencyView({
     regionalHasChoice,
     policyOptions,
     policyValue,
+    policyFallback,
   };
 }

@@ -949,3 +949,11 @@
   border: 1px solid var(--card-border);
   border-left: 3px solid var(--pe-gray-400);
 }
+
+/* The map shows another policy than the header's selection, which has no
+   map yet: one muted line under the sentence */
+.map-fallback-note {
+  margin: 6px 0 0;
+  font-size: var(--fs-small);
+  color: var(--pe-gray-500);
+}

@@ -650,6 +650,7 @@ export default function ConstituencyMap({
     regionalHasChoice,
     policyOptions,
     policyValue,
+    policyFallback,
   } = useConstituencyView({ selectedPolicies, policies, selectedYear, outcome, policyChoice });
   const policyName = (id) => shortNameOf(policies.find((policy) => policy.id === id) ?? { id });
   // On a release that routes no results by area, the card describes the
@@ -1122,28 +1123,35 @@ export default function ConstituencyMap({
   // on Budget day): All selected policies is listed first, unavailable, and
   // the card shows one policy at a time. Singles are never summed (Pavel's
   // review, AH1; #274 item 12)
+  // The Policy choice is the first group of the card's own Options pill
+  // (Vahid, 28 October): "All selected policies", then every published
+  // policy with a map, by short name; the pill's face names the choice
   const combinedPending =
     selectedPolicies.length > 1 && policyOptions.length > 0 && !policyOptions.some((option) => option.value === COMBINED_CHOICE);
-  const policyPill = (policyOptions.length > 1 || combinedPending) && (
-    <PillSelect
-      variant="light"
-      name="Policy"
-      prefix="Policy"
-      value={policyValue}
-      onChange={setPolicyChoice}
-      options={[
-        ...(combinedPending
-          ? [{ value: COMBINED_PENDING, label: "All selected policies", disabled: true, title: "Published later on Budget day" }]
-          : []),
-        ...policyOptions.map((option) =>
-          option.value === COMBINED_CHOICE
-            ? { value: option.value, label: "All selected policies" }
-            : { value: option.value, label: policyName(option.value) },
-        ),
-      ]}
-    />
-  );
+  const policyGroup = (policyOptions.length > 1 || combinedPending) && {
+    label: "Policy",
+    value: policyValue,
+    onChange: setPolicyChoice,
+    stacked: true,
+    options: [
+      ...(combinedPending
+        ? [{ value: COMBINED_PENDING, label: "All selected policies", disabled: true, title: "No map yet for all the policies together" }]
+        : []),
+      ...policyOptions.map((option) =>
+        option.value === COMBINED_CHOICE
+          ? { value: option.value, label: "All selected policies" }
+          : { value: option.value, label: policyName(option.value) },
+      ),
+    ],
+  };
+  // Shown instead of the header's selection, which has no map yet: said in
+  // a muted line under the sentence
+  const fallbackNote =
+    policyFallback && policyValue
+      ? `No map yet for ${selectedPolicies.length > 1 ? "all the policies together" : policyName(selectedPolicies[0])}; showing ${policyName(policyValue)}. Choose another in Options.`
+      : null;
   const optionGroups = [
+    policyGroup,
     {
       label: "Show the change as",
       value: outcome,
@@ -1192,6 +1200,7 @@ export default function ConstituencyMap({
               // 28 October)
               sentence && <p className="chart-description">{sentence}</p>
             )}
+            {fallbackNote && <p className="map-fallback-note">{fallbackNote}</p>}
           </div>
           {downloadsReady ? (
             <ChartDownloadMenu
@@ -1217,9 +1226,7 @@ export default function ConstituencyMap({
             view) and the search box, which picks a seat on a map and
             filters the table */}
         <div className="map-top-bar">
-          <ControlBar name={CHART_TITLE} options={optionGroups}>
-            {policyPill}
-          </ControlBar>
+          <ControlBar name={CHART_TITLE} options={optionGroups.filter(Boolean)} />
           <div className="map-search-section">
             <div className="search-container">
               <input
