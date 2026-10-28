@@ -153,7 +153,8 @@
   cursor: pointer;
 }
 
-.policy-item input[type="checkbox"] {
+.policy-item input[type="checkbox"],
+.policy-item input[type="radio"] {
   width: 18px;
   height: 18px;
   margin: 0;
@@ -161,7 +162,8 @@
   cursor: pointer;
 }
 
-.policy-item input[type="checkbox"]:focus-visible {
+.policy-item input[type="checkbox"]:focus-visible,
+.policy-item input[type="radio"]:focus-visible {
   outline: 2px solid var(--band-teal);
   outline-offset: 2px;
 }
@@ -305,4 +307,15 @@
 .policy-selector-done:focus-visible {
   outline: 2px solid var(--band-teal);
   outline-offset: 2px;
+}
+
+/* One at a time: the pill names the chosen policy, cut short with "…"
+   where the band is narrow */
+.policy-selector-chosen {
+  display: inline-block;
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
