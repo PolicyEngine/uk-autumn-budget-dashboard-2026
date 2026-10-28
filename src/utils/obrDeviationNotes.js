@@ -4,9 +4,8 @@ import { policyDetailsFor } from "./policyDetails";
  * Why our estimates differ from the official costings, for the comparison
  * with them on Public finances (OBRComparisonTable).
  *
- * OBR_DEVIATION_STATEMENT is the comparison's general statement, shown
- * under its chart or table: the reasons any estimate can differ, as "About
- * this chart" gives them.
+ * OBR_DEVIATION_STATEMENT is the comparison's general statement, in its
+ * "About this chart": the reasons any estimate can differ.
  *
  * OBR_DEVIATION_NOTES has one note per measure the comparison costs (each
  * measure data_inputs/treasury/mapping.csv maps to the Budget's Table 6.1),
@@ -14,15 +13,15 @@ import { policyDetailsFor } from "./policyDetails";
  * review seat, from its own runs and the Budget documents: the gap in the
  * compared years, in £m or %, and its reasons (timing, coverage, behaviour,
  * scope or forecast). A measure within its band still has one. The
- * comparison shows a measure's note in the tooltip of its row and in "Why
- * each policy differs" under the chart, which works on a phone.
+ * comparison shows a measure's note behind the ⓘ at the right of its
+ * difference, in the chart and the table (OBRDeviationExplanation.jsx),
+ * which a tap opens on a phone too.
  *
  * OBR_COMPARISON_BASES has one line per compared measure, keyed by measure
  * id: what each side counts ("Official: …. Ours: …."), from each measure's
- * policy costing note (#297). It sits above the measure's note wherever the
- * note shows (the tooltip, the table's Difference cell, "Why each policy
- * differs" and the CSV), so a reader sees what the two figures measure
- * before the gap.
+ * policy costing note (#297). It sits above the measure's note, behind its
+ * ⓘ and in the CSV, so a reader sees what the two figures measure before
+ * the gap.
  *
  * A note or line was written for the measure as the publication then
  * described it, so it shows only while its card entry (policyDetails.js)
@@ -32,7 +31,7 @@ import { policyDetailsFor } from "./policyDetails";
  * rewritten.
  */
 export const OBR_DEVIATION_STATEMENT =
-  "Our estimates differ from the official costings for four main reasons: when tax is counted (we score each tax year's liability; the official costings are on a National Accounts basis, in which tax paid through Self Assessment can fall in a later year), coverage (we use household survey data, so effects outside households, and on incomes the survey records thinly, are estimated less fully in ours), behaviour (ours are static; most official costings include responses) and scope (the parts of a policy each models). Each policy's note below says which apply.";
+  "Our estimates differ from the official costings for four main reasons: when tax is counted (we score each tax year's liability; the official costings are on a National Accounts basis, in which tax paid through Self Assessment can fall in a later year), coverage (we use household survey data, so effects outside households, and on incomes the survey records thinly, are estimated less fully in ours), behaviour (ours are static; most official costings include responses) and scope (the parts of a policy each models). The ⓘ beside each policy's difference says which apply.";
 
 export const OBR_DEVIATION_NOTES = {
   household_energy_payment_2026:

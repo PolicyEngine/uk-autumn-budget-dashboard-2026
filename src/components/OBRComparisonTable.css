@@ -106,60 +106,97 @@
   margin-top: 2px;
 }
 
-/* Why the estimates differ: the general statement, then each policy's
-   note, in view under the chart or table (a phone has no hover) */
-.obr-deviation {
-  margin-top: 16px;
+/* Why a policy's two figures differ, behind the ⓘ at the right of its
+   difference (OBRDeviationExplanation.jsx). The ⓘ is the shared info-tip
+   button; open, it stays in the teal it takes on hover. */
+.obr-explain-button.is-open {
+  color: var(--c-gain-text);
+}
+
+/* The table's ⓘ column: as narrow as the button */
+.comparison-table .explain-cell {
+  width: 28px;
+  padding-left: 0;
+  padding-right: 4px;
+  text-align: center;
+}
+
+/* The explanation: what each side counts, why a year is not comparable,
+   then the note */
+.obr-explain {
   font-size: var(--fs-small);
   line-height: 1.55;
-  color: var(--pe-gray-600);
+  color: var(--pe-gray-700);
+  text-align: left;
+  white-space: normal;
 }
 
-.obr-deviation-statement {
+.obr-explain p {
   margin: 0;
 }
 
-.obr-deviation-title {
-  margin: 12px 0 4px;
+.obr-explain p + p {
+  margin-top: 6px;
+}
+
+.obr-explain-label {
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+/* In the table: a row under the policy's, opened by its ⓘ */
+.comparison-table .obr-explain-row td {
+  padding-top: 4px;
+  padding-bottom: 12px;
+}
+
+/* In the chart: a panel in the window by the row's ⓘ, above the page as
+   the tips are (Tip.css) */
+.obr-explain-panel {
+  z-index: 1400;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 12px 14px;
+  background: var(--tip-bg);
+  border: var(--tip-border);
+  border-radius: var(--tip-radius);
+  box-shadow: var(--tip-shadow);
+}
+
+.obr-explain-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.obr-explain-title {
+  margin: 0;
   font-size: var(--fs-small);
   font-weight: 600;
-  color: var(--pe-gray-700);
+  color: var(--pe-gray-800);
 }
 
-.obr-deviation-list {
-  margin: 0;
-  padding-left: 18px;
+.obr-explain-close {
+  display: inline-flex;
+  flex: none;
+  padding: 2px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--pe-gray-500);
+  cursor: pointer;
 }
 
-.obr-deviation-list li + li {
-  margin-top: 4px;
+.obr-explain-close:hover,
+.obr-explain-close:focus-visible {
+  color: var(--pe-gray-800);
 }
 
-.obr-deviation-list strong {
-  font-weight: 600;
-  color: var(--pe-gray-700);
-}
-
-/* A policy's note under the line saying what each side counts */
-.obr-deviation-note {
-  display: block;
-  margin-top: 2px;
-}
-
-/* In a Difference cell's tip: what each side counts, on its own line
-   above the note */
-.obr-basis-line {
-  display: block;
-  margin-bottom: 4px;
-  font-weight: 600;
-}
-
-/* A Difference with a note: dotted, so it reads as having more to say */
-.difference-note-anchor {
-  cursor: help;
-  text-decoration: underline dotted;
-  text-decoration-color: var(--pe-gray-400);
-  text-underline-offset: 3px;
+.obr-explain-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 /* The card's plot area when the year is past the official costings */

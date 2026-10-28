@@ -154,48 +154,65 @@ describe("why our estimates differ from the official costings", () => {
     );
   };
   const tableRow = () => screen.getAllByRole("row")[1];
+  const infoButton = () => screen.getByRole("button", { name: `Why ${ENTRY.shortName} differs from the official costing` });
 
-  it("says the general reasons under the chart, then each policy's note in a list, under what each side counts", async () => {
+  it("keeps the text under the chart short: the general reasons are in About this chart", async () => {
     renderNoted();
     await screen.findByRole("radio", { name: "Show as chart" });
-    expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
-    const list = screen.getByRole("region", { name: "Why each policy differs" });
-    const items = within(list).getAllByRole("listitem");
-    expect(items.map((li) => plain(li.textContent))).toEqual([`${ENTRY.shortName}: ${BASIS} ${NOTE}`]);
-    // The line on the name's line, the note on its own under it
-    expect(items[0].querySelector(".obr-deviation-note")).toHaveTextContent(NOTE);
-    expect(items[0].querySelector(".obr-deviation-note")).not.toHaveTextContent(BASIS);
-    // The statement and the list stay when the table replaces the chart
-    show("Table");
-    expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Why each policy differs" })).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(OBR_DEVIATION_STATEMENT);
+    expect(document.body).not.toHaveTextContent(NOTE);
+    expect(screen.queryByRole("region", { name: "Why each policy differs" })).toBeNull();
+    expect(document.querySelector(".obr-deviation")).toBeNull();
   });
 
-  it("shows a row's note in the chart's tooltip for that row, under what each side counts", async () => {
+  it("opens a row's explanation from the ⓘ at the right of its difference in the chart, and closes it again", async () => {
+    renderNoted();
+    await screen.findByRole("radio", { name: "Show as chart" });
+    const button = infoButton();
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    const panel = screen.getByRole("region", { name: `Why ${ENTRY.shortName} differs` });
+    expect(button).toHaveAttribute("aria-controls", panel.id);
+    // What each side counts first, then the note
+    expect([...panel.querySelectorAll(".obr-explain p")].map((p) => p.textContent)).toEqual([`What each side counts. ${BASIS}`, NOTE]);
+    // The ⓘ again closes it, as does its close button and Escape
+    fireEvent.click(button);
+    expect(screen.queryByRole("region", { name: `Why ${ENTRY.shortName} differs` })).toBeNull();
+    fireEvent.click(button);
+    fireEvent.click(within(screen.getByRole("region", { name: `Why ${ENTRY.shortName} differs` })).getByRole("button", { name: "Close" }));
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(button);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(button).toHaveFocus();
+  });
+
+  it("keeps the hover tooltip to the figures", async () => {
     const { container } = renderNoted();
     await screen.findByRole("radio", { name: "Show as chart" });
     fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
-    expect([...document.querySelectorAll(".chart-tooltip-note")].map((line) => line.textContent)).toEqual([BASIS, NOTE]);
+    expect(document.querySelector(".chart-tooltip")).not.toBeNull();
+    expect(document.querySelector(".chart-tooltip-note")).toBeNull();
   });
 
-  it("shows a row's note on its Difference cell in the table, on hover and on focus", async () => {
+  it("opens it in a row under the policy's in the table", async () => {
     renderNoted();
     await screen.findByRole("radio", { name: "Show as chart" });
     show("Table");
-    const difference = within(tableRow()).getAllByRole("cell")[4];
-    // The figure itself is unchanged; the note is on hover, focus or a tap
-    expect(difference).toHaveTextContent(/^−£200m$/);
-    const anchor = difference.querySelector(".difference-note-anchor");
-    fireEvent.mouseEnter(anchor);
-    expect(screen.getByRole("tooltip")).toHaveTextContent(`${BASIS} ${NOTE}`);
-    // What each side counts first, on its own line
-    expect(screen.getByRole("tooltip").querySelector(".obr-basis-line").textContent).toBe(BASIS);
-    fireEvent.mouseLeave(anchor);
-    fireEvent.focus(anchor);
-    expect(screen.getByRole("tooltip")).toHaveTextContent(`${BASIS} ${NOTE}`);
+    // The Difference itself is unchanged; the ⓘ has its own column after it
+    const cells = within(tableRow()).getAllByRole("cell");
+    expect(cells[4]).toHaveTextContent(/^−£200m$/);
+    expect(within(cells[5]).getByRole("button", { name: `Why ${ENTRY.shortName} differs from the official costing` })).toBe(infoButton());
+    fireEvent.click(infoButton());
+    const explanation = screen.getAllByRole("row")[2];
+    expect(explanation).toHaveAttribute("id", infoButton().getAttribute("aria-controls"));
+    expect([...explanation.querySelectorAll(".obr-explain p")].map((p) => p.textContent)).toEqual([`What each side counts. ${BASIS}`, NOTE]);
+    fireEvent.click(infoButton());
+    expect(screen.getAllByRole("row")).toHaveLength(2);
   });
 
-  it("adds each note to the table's CSV download", async () => {
+  it("adds what each side counts and each note to the table's CSV download", async () => {
     renderNoted();
     await screen.findByRole("radio", { name: "Show as chart" });
     show("Table");
@@ -204,45 +221,34 @@ describe("why our estimates differ from the official costings", () => {
     fireEvent.click(screen.getByRole("button", { name: "CSV Data" }));
     await waitFor(() => expect(downloadFile).toHaveBeenCalledTimes(1));
     const [content] = vi.mocked(downloadFile).mock.calls[0];
-    // What each side counts, then why it differs, as their own columns
     expect(content).toContain("What each side counts,Why it differs");
     expect(content).toContain(BASIS);
     expect(content).toContain(NOTE);
-    expect(content.indexOf(BASIS)).toBeLessThan(content.indexOf(NOTE));
   });
 
-  it("says what each side counts for a policy with no note", async () => {
-    const { container } = renderNoted({ notes: {} });
+  it("shows what each side counts for a policy with no note", async () => {
+    renderNoted({ notes: {} });
     await screen.findByRole("radio", { name: "Show as chart" });
-    const list = screen.getByRole("region", { name: "Why each policy differs" });
-    expect(within(list).getAllByRole("listitem").map((li) => plain(li.textContent))).toEqual([`${ENTRY.shortName}: ${BASIS}`]);
-    expect(list.querySelector(".obr-deviation-note")).toBeNull();
-    fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
-    expect([...document.querySelectorAll(".chart-tooltip-note")].map((line) => line.textContent)).toEqual([BASIS]);
+    fireEvent.click(infoButton());
+    const panel = screen.getByRole("region", { name: `Why ${ENTRY.shortName} differs` });
+    expect([...panel.querySelectorAll(".obr-explain p")].map((p) => p.textContent)).toEqual([`What each side counts. ${BASIS}`]);
   });
 
-  it("keeps the statement, with no list, tooltip or anchor, for a policy with no note or line", async () => {
-    const { container } = renderNoted({ notes: { other: NOTE, [ID]: "  " }, bases: { other: BASIS } });
+  it("gives a policy with nothing to explain no ⓘ", async () => {
+    renderNoted({ notes: { other: NOTE, [ID]: "  " }, bases: { other: BASIS } });
     await screen.findByRole("radio", { name: "Show as chart" });
-    expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Why each policy differs" })).toBeNull();
-    fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
-    expect(document.querySelector(".chart-tooltip-note")).toBeNull();
+    expect(document.querySelector(".obr-explain-button")).toBeNull();
     show("Table");
-    expect(document.querySelector(".difference-note-anchor")).toBeNull();
+    expect(document.querySelector(".obr-explain-button")).toBeNull();
+    expect(within(tableRow()).getAllByRole("cell")).toHaveLength(5);
   });
 
-  it("steps the note aside, keeping the statement, once the publication describes the measure differently", async () => {
-    const { container } = renderNoted({ description: "Savings income tax rates rise by 2 points from April 2028." });
+  it("steps the note and line aside once the publication describes the measure differently", async () => {
+    renderNoted({ description: "Savings income tax rates rise by 2 points from April 2028." });
     await screen.findByRole("radio", { name: "Show as chart" });
-    expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Why each policy differs" })).toBeNull();
+    expect(document.querySelector(".obr-explain-button")).toBeNull();
     expect(document.body).not.toHaveTextContent(NOTE);
     expect(document.body).not.toHaveTextContent(BASIS);
-    fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
-    expect(document.querySelector(".chart-tooltip-note")).toBeNull();
-    show("Table");
-    expect(document.querySelector(".difference-note-anchor")).toBeNull();
   });
 });
 
@@ -419,23 +425,30 @@ describe("a year classified not comparable", () => {
     geographyFetch({ "/data/official_costings.csv": COSTINGS, "/data/budgetary_impact.csv": BUDGETARY_IMPACT }),
   );
 
-  it("says the year is not comparable, with the reason, not that it is missing", async () => {
+  it("draws our estimate with the official one marked not comparable, the reason behind the ⓘ", async () => {
     costings();
     const { container } = render(<OBRComparisonTable selectedPolicies={["two_child_limit"]} selectedYear={2031} />);
     await screen.findByRole("heading", { name: /official costings, 2031-32/ });
-    expect(container.querySelector(".obr-not-covered").textContent).toBe(
-      `2 child limit repeal: the official costing for 2031-32 is not comparable with our estimate. ${REASON}`,
-    );
+    // The chart is drawn, not replaced by text, and never says the year is missing
+    expect(container.querySelector(".obr-not-covered")).toBeNull();
+    expect(container.querySelector(".obr-dumbbell-dot.pe")).not.toBeNull();
+    expect(container.querySelector(".obr-dumbbell")).toHaveTextContent("Not comparable");
     expect(container).not.toHaveTextContent("is not in the official costings");
+    expect(container.querySelector(".chart-description")).toHaveTextContent(
+      "For 2 child limit repeal, the official costing for 2031-32 is not comparable with our estimate; the ⓘ beside it says why.",
+    );
+    const button = screen.getByRole("button", { name: "Why 2 child limit repeal differs from the official costing" });
+    fireEvent.click(button);
+    expect(screen.getByRole("region", { name: "Why 2 child limit repeal differs" })).toHaveTextContent(`Not comparable in 2031-32. ${REASON}`);
     show("Table");
     const cells = within(screen.getByRole("row", { name: /2 child limit repeal/ })).getAllByRole("cell");
-    expect(cells.map((td) => td.textContent)).toEqual(["2 child limit repeal", "−£3.6bn", "Not comparable", "Not comparable", "—"]);
-    // The reason on hover, and in the note under the table
+    expect(cells.slice(0, 5).map((td) => td.textContent)).toEqual(["2 child limit repeal", "−£3.6bn", "Not comparable", "Not comparable", "—"]);
+    // The reason on hover, and behind the ⓘ, not in a paragraph under the table
     expect(cells[2]).toHaveAttribute("title", REASON);
     expect(cells[3]).toHaveAttribute("title", REASON);
     expect([...container.querySelectorAll(".comparison-table-note")].map((p) => p.textContent)).toEqual([
       "Difference: PolicyEngine minus the official static costing.",
-      `2 child limit repeal: the official costing for 2031-32 is not comparable with our estimate. ${REASON}`,
+      "ⓘ: why the two differ, and why an official figure is not comparable.",
     ]);
   });
 

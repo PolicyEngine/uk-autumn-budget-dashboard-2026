@@ -4,6 +4,7 @@ import { CHART_LOGO } from "../utils/chartLogo";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import useElementWidth from "../hooks/useElementWidth";
 import { SvgMeasureLabel, SVG_LABEL_INDENT } from "./MeasureRowLabel";
+import { AnchoredDeviationPanel, DeviationButton, explanationId, hasExplanation } from "./OBRDeviationExplanation";
 import { formatBnOrM, formatSignedBnOrM, shownBn } from "../utils/moneyFormat";
 import "./OBRDumbbellChart.css";
 
@@ -37,6 +38,12 @@ import "./OBRDumbbellChart.css";
  * benefits the official costing covers, where it covers fewer than our net
  * figure. It sits inside the official ring when the two agree. Only rows
  * whose measure has an official basis carry it; the others keep two marks.
+ *
+ * Why a row's two figures differ is behind the ⓘ at the right of its
+ * difference (OBRDeviationExplanation): `explained` names the row whose
+ * panel is open, `onExplain` opens one (or closes it, given null). The
+ * ⓘ is HTML over the plot and the panel is drawn in the window, so the
+ * downloaded images carry neither.
  */
 
 export const PE_COLOUR = CHART_COLOURS.gain;
@@ -154,7 +161,7 @@ export function dumbbellLegendItems(obrKind, withBasis = false) {
   ];
 }
 
-function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", chartRef, tooltipKey }) {
+function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", chartRef, tooltipKey, explained = null, onExplain, explainBase = "obr" }) {
   const [wrapperRef, measuredWidth] = useElementWidth();
   const narrow = useNarrowViewport();
   // Until the plot is measured, a typical width for the screen
@@ -222,8 +229,11 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
   const fontSize = narrow ? 12 : 13;
   const labelGap = OBR_RADIUS + 5;
   const labelRoom = narrow ? 54 : 62;
-  // The difference column at the right (on a phone, on the name line)
-  const diffWidth = narrow ? 0 : 84 + BAND_PAD;
+  // The ⓘ column at the far right, where a row has something to explain
+  const infoWidth = onExplain && rows.some(hasExplanation) ? 26 : 0;
+  // The difference column, left of it (on a phone, on the name line)
+  const diffRight = width - BAND_PAD - infoWidth;
+  const diffWidth = narrow ? 0 : 84 + BAND_PAD + infoWidth;
   const nameWidth = narrow
     ? 0
     : Math.min(Math.max(...rows.map((row) => approxWidth(row.name, fontSize)), 80) + 16 + BAND_PAD + SVG_LABEL_INDENT.full, width * 0.38);
@@ -422,12 +432,10 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
     }
 
     const share = pctOfOfficial(row.pe, row.obr);
-    // Under the figures: what each side counts, then why the two differ
-    const noteLines = [row.basis, row.note].filter(Boolean);
+    // The figures only: why they differ is behind the row's ⓘ
     const tooltip = (
       <TooltipRows
         label={`${row.name}, ${yearLabel}`}
-        note={noteLines.length ? noteLines : undefined}
         rows={[
           { key: "pe", name: "PolicyEngine (static)", text: isValue(row.pe) ? bn(row.pe) : "Not yet published", color: PE_COLOUR },
           ...(isValue(row.peOfficial) ? [{ key: "basis", name: BASIS_LABEL, text: bn(row.peOfficial), color: PE_COLOUR }] : []),
@@ -474,10 +482,10 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
         {parts}
         {/* On a phone the difference shares the name's line, where the zero
             line can run: a backing in the row's background keeps it clear */}
-        {narrow && backing(width - BAND_PAD - approxWidth(differenceText, 12) - 2, nameY, approxWidth(differenceText, 12) + 2, background)}
+        {narrow && backing(diffRight - approxWidth(differenceText, 12) - 2, nameY, approxWidth(differenceText, 12) + 2, background)}
         <text
           className="obr-dumbbell-difference"
-          x={width - BAND_PAD}
+          x={diffRight}
           y={narrow ? nameY : cy}
           dy="0.35em"
           textAnchor="end"
@@ -513,7 +521,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
               style={{ fontFamily: "inherit", display: "block" }}
             >
               {/* The difference column's heading */}
-              <text className="obr-dumbbell-column-head" x={width - BAND_PAD} y={10} textAnchor="end" fill={TICK_STYLE.fill} fontSize={11}>
+              <text className="obr-dumbbell-column-head" x={diffRight} y={10} textAnchor="end" fill={TICK_STYLE.fill} fontSize={11}>
                 Difference
               </text>
               {pct && (
@@ -570,6 +578,28 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
           <p className="obr-dumbbell-empty">Not yet published</p>
         )}
         {hasData && <FloatingTooltip tip={tip} />}
+        {/* Each row's ⓘ, at the right of its difference, and the open
+            row's panel by it */}
+        {hasData &&
+          infoWidth > 0 &&
+          plotted.map((row, index) => {
+            if (!hasExplanation(row)) return null;
+            const rowY = narrow ? top + index * rowHeight + 14 : dotY(index);
+            const open = explained === row.id;
+            const id = explanationId(explainBase, row);
+            return (
+              <div key={row.id}>
+                <DeviationButton
+                  row={row}
+                  open={open}
+                  onToggle={onExplain}
+                  controls={id}
+                  style={{ position: "absolute", left: width - BAND_PAD - infoWidth / 2 - 10, top: rowY - 10 }}
+                />
+                {open && <AnchoredDeviationPanel row={row} yearLabel={yearLabel} id={id} onClose={() => onExplain(null)} />}
+              </div>
+            );
+          })}
       </div>
 
       {hasData && (
