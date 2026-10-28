@@ -640,6 +640,16 @@ describe("the explainer link (policyDetails.js `explainer`)", () => {
     expect(actions).toEqual(["policy-card-source", "policy-card-costing", "policy-card-explainer", "policy-card-effect"]);
   });
 
+  it("keeps the footer for a card whose only action is its explainer", () => {
+    // No details entry, so no source or costing, and no effect button
+    const id = "a_measure_without_details";
+    const post = { label: "A post", href: `${EXPLAINER_BASE}a-post` };
+    render(<PolicyCards policies={[{ ...published(id, "A measure"), explainer: post }]} selectedPolicies={[id]} />);
+    const card = screen.getByRole("listitem");
+    expect(card.querySelector(".policy-card-source, .policy-card-costing, .policy-card-effect")).toBeNull();
+    expect(explainerLink(card)).toHaveAttribute("href", post.href);
+  });
+
   it("shows no explainer link on a card without one", () => {
     const entry = POLICY_DETAILS.find((policy) => !policy.explainer);
     render(<PolicyCards policies={[published(entry.id, entry.name)]} selectedPolicies={[entry.id]} onShowEffect={() => {}} />);

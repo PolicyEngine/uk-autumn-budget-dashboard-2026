@@ -454,7 +454,7 @@ export function PolicyCard({ policy, onShowEffect, parameters }) {
             ))}
           </p>
         )}
-        {(policy.source || policy.budgetRows?.length > 0 || onShowEffect) && (
+        {(policy.source || policy.budgetRows?.length > 0 || policy.explainer || onShowEffect) && (
         <div className="policy-card-actions">
           {policy.source && (
             <Tip content={policy.source.label}>
