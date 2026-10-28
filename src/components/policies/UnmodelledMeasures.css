@@ -201,3 +201,23 @@
   line-height: 1.5;
   color: var(--pe-gray-500);
 }
+
+/* A group of cards by why we do not model them: its title, the reason in
+   a line, then its cards */
+.umm-group + .umm-group {
+  margin-top: 32px;
+}
+
+.umm-group-title {
+  margin: 0;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.umm-group-why {
+  margin: 2px 0 12px;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-600);
+}

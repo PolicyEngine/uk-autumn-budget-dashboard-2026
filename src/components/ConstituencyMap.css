@@ -949,3 +949,10 @@
   border: 1px solid var(--card-border);
   border-left: 3px solid var(--pe-gray-400);
 }
+
+
+/* The Policy pill and the Options pill: on a phone the Policy pill takes
+   its own line above Options rather than crowd it */
+.map-top-bar .control-bar {
+  flex-wrap: wrap;
+}

@@ -1,0 +1,150 @@
+{
+  "files": {
+    "constituency.csv": "793cb52b5f01cffd12b74b61bfd4d528c0a84cddbe1e7695f66587f92be9a05d"
+  },
+  "manifest_revision": 8,
+  "manifest_sha256": "1083c2ac400c947636ad39442bddba1bf002898e95bd9aa83e58008b4c0f653d",
+  "reforms": {
+    "carers_allowance_earnings_taper": {
+      "artifact": "artifacts/carers_allowance_earnings_taper/9458905cefca3e88",
+      "artifact_sha256": "9458905cefca3e88fa6aed96196d6d621b3d577fd0759e081e79dab4fd6abf54",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "key": "carers_allowance_earnings_taper",
+      "outputs_sha256": "161037a4ca464ce6cafdd41f1a0901455c010d88b8ae2ed646f05a2ec36312bc",
+      "receipt_sha256": "792fb4c051af0402aa02d5bd4055d8497c742fbdfb6795643a79ab44f6d9ba3e",
+      "reform": {
+        "binding": "code_revision",
+        "kind": "reform",
+        "reform_sha256": "f45943c11aed787c570af3cc82d11af9cf181ce0877b5cb9350a9bc1e2f84dc8",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    },
+    "domestic_electricity_zero_vat": {
+      "artifact": "artifacts/domestic_electricity_zero_vat/2d9c65726915303e",
+      "artifact_sha256": "2d9c65726915303e22758fe87e8d66e9b20049b4433f0bbc47d3754aeb56c081",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "key": "domestic_electricity_zero_vat",
+      "outputs_sha256": "86bbb52bc9100cd479e56d7baaf785aeee74027e2e59d50bb0ade667977ee0a2",
+      "receipt_sha256": "5b09acd80d3adad51228cb8d74933dd4a658a21cf4de2df456945666304ba258",
+      "reform": {
+        "binding": "code_revision",
+        "kind": "reform",
+        "reform_sha256": "5ee4d8844432367d5557df38ee89e23b206e2c1236bce2451b0336ada02b58b6",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    },
+    "fuel_duty_rise_deferral": {
+      "artifact": "artifacts/fuel_duty_rise_deferral/e077f8d4b70440c8",
+      "artifact_sha256": "e077f8d4b70440c8286cf2ebe85853cbc2e98fbf44e24ea688ebc9e559e8c79a",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "key": "fuel_duty_rise_deferral",
+      "outputs_sha256": "4e624ac4047411f2c5abd2e4282465e415cf892309f9aa364ffee5d842b3f079",
+      "receipt_sha256": "02762ce13b98a5c3930f8864607725dda04cb569aa583743a6c1c99027d99035",
+      "reform": {
+        "binding": "code_revision",
+        "kind": "reform",
+        "reform_sha256": "1dae41af83e4402f6b3af756d7dcdcc1dd525883dd32c3c8b9050456f52310f1",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    },
+    "household_energy_payment_2026": {
+      "artifact": "artifacts/household_energy_payment_2026/101a07dc7238a10e",
+      "artifact_sha256": "101a07dc7238a10e5811cfc0e8e7938ef213d483d2019d05871671c4b889eba3",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "key": "household_energy_payment_2026",
+      "outputs_sha256": "18fb3a856326d708284266c5dd240b81e9e9ab4c427c493a062cfe6ae0997215",
+      "receipt_sha256": "50a581145fbd0abf3fcb9a0870c2a624ba6cb3427701ca0f61daf474590e8256",
+      "reform": {
+        "binding": "code_revision",
+        "kind": "reform",
+        "reform_sha256": "ceede8365a9462ac389dc5210882ea23850babfed6e5bff8cf264e774cd616ad",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    },
+    "property_income_rates_up": {
+      "artifact": "artifacts/property_income_rates_up/7bf77b35e33233e0",
+      "artifact_sha256": "7bf77b35e33233e0f8174f4be78c7bd6e4eca46f95f1f72b100a68f19280dcfd",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "key": "property_income_rates_up",
+      "outputs_sha256": "6748d5ee971f1b8428186ca778b4bd01ee1320c4e9f7cc67f34b5fc398330d47",
+      "receipt_sha256": "777e8839f0f7c541229eb281de5fd497819c34c07ebad865456bbb639d4806e6",
+      "reform": {
+        "binding": "content",
+        "kind": "reform",
+        "reform_sha256": "d46bf10b10b298db4059d7b6a2dccac7997e09afec0a88542c2059ea70646aa0",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    },
+    "state_pension_income_tax_protection": {
+      "artifact": "artifacts/state_pension_income_tax_protection/1bfeed3c27a3c9b9",
+      "artifact_sha256": "1bfeed3c27a3c9b9e433b9fa7ce1de4d30bce2b237d78c349d4540747997e12e",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "key": "state_pension_income_tax_protection",
+      "outputs_sha256": "bc98a27c3d80a54f3b56ef1ebffe5ca3085077be0d3626b887eab822042776e5",
+      "receipt_sha256": "639abc7f6560dab736da0d59e4c1bb272312e5500d1c94f33fc208145d039e65",
+      "reform": {
+        "binding": "code_revision",
+        "kind": "reform",
+        "reform_sha256": "65a95c811e5d6c6dd0b54255dd20ab1439c542994f1918778b93769c14199524",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    },
+    "trading_allowance_raise": {
+      "artifact": "artifacts/trading_allowance_raise/eddde823a65b7be4",
+      "artifact_sha256": "eddde823a65b7be434b88e127a4bfde6203df9a0b47d5046a6eb1ebf1a36b3e7",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "key": "trading_allowance_raise",
+      "outputs_sha256": "1192055fc58d352149cc8bad067655a7d03fb1cfaa6e5eb5ef9ac88d2a856ccc",
+      "receipt_sha256": "6bcce622b86c3da3f36df52a1ef30a4ec4fbc2d050531f716bb679bb2039962f",
+      "reform": {
+        "binding": "content",
+        "kind": "reform",
+        "reform_sha256": "cdcc8b19d5234afe31ae857db16a8f2d6a18578a1d7da1c890b3c5f21832c268",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    }
+  },
+  "schema": "uk-budget-area-provenance/v1"
+}

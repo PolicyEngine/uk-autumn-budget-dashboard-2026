@@ -1092,7 +1092,6 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
     STATE_PENSION_ALLOWANCE_ID,
     ELECTRICITY_VAT_ID,
     PROPERTY_INCOME_RATES_ID,
-    SAVINGS_INCOME_RATES_ID,
     # Budget day: registered once announced (HCWS421). Its cells in some
     # deciles rest on fewer than 3 survey households, so the combined run
     # refuses while it is here: drop it and keep it in _MEASURE_FACTORIES,

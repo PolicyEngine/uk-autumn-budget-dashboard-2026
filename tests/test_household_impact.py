@@ -607,21 +607,22 @@ def test_a_30k_single_renter_in_2028():
 
 
 def test_a_graduate_on_35k_under_the_plan_2_unfreeze():
-    """£35,000 on Plan 2 in 2029-30: the threshold is £32,016 (RPI from
-    £29,385) instead of £29,385, so 9% of £2,631 less is repaid:
-    £236.79 more net income."""
+    """£35,000 on Plan 2 in 2029-30: the threshold is £32,524 (RPI on the
+    OBR October 2026 forecast from £29,385; £32,016 on the March forecast)
+    instead of £29,385, so 9% of £3,139 less is repaid: £282.51 more net
+    income."""
     measure = get_reform("plan_2_threshold_unfreeze")
     unfrozen = measure.parameter_changes[
         "gov.hmrc.student_loans.thresholds.plan_2"
     ]["2029"]
-    assert unfrozen == 32_016
+    assert unfrozen == 32_524
     result = calculate(
         probe("graduate_35k", YEAR),
         ["plan_2_threshold_unfreeze"],
         include=("by_policy",),
     )
     assert result["net_income"]["change"] == pytest.approx(
-        0.09 * (32_016 - 29_385), abs=0.01
+        0.09 * (32_524 - 29_385), abs=0.01
     )
     [change] = result["by_policy"]["measures"]
     assert change["status"] == "affected"

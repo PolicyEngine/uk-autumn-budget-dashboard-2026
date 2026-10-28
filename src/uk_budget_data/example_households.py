@@ -124,8 +124,9 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
         definition=(
             "One adult aged 30 with a Plan 2 student loan, renting a "
             "one-bedroom home privately in Manchester for £1,007 a month and "
-            "spending £1,040 a year on electricity; the unfrozen Plan 2 "
-            "threshold, when selected, lowers their repayments from 2027-28."
+            "spending £1,040 a year on electricity; the zero rate of VAT on "
+            "domestic electricity, when selected, lowers their bill from "
+            "April to June 2027."
         ),
         x_variable=EMPLOYMENT_INCOME,
         x_label="Employment income",
@@ -137,7 +138,7 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
             "electricity_consumption": ELECTRICITY_SPENDING,
             "rent": MANCHESTER_RENT_ONE_BED * 12,
         },
-        measure_id="plan_2_threshold_unfreeze",
+        measure_id="domestic_electricity_zero_vat",
         measure_year=2027,
     ),
     ExampleHousehold(
@@ -176,9 +177,9 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
         definition=(
             "A lone parent aged 32 with children aged 6 and 9, renting a "
             "two-bedroom home privately in Manchester for £1,239 a month and "
-            "spending £1,040 a year on electricity; while they receive "
-            "Universal Credit, the Warm Home Discount top-up, when selected, "
-            "adds £100 in 2026-27."
+            "spending £1,040 a year on electricity; the Household Energy "
+            "Payment, when selected, adds £100 in 2026-27 (council tax band "
+            "D)."
         ),
         x_variable=EMPLOYMENT_INCOME,
         x_label="Employment income",
@@ -194,7 +195,7 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
             "electricity_consumption": ELECTRICITY_SPENDING,
             "rent": MANCHESTER_RENT_TWO_BED * 12,
         },
-        measure_id="warm_home_discount_top_up",
+        measure_id="household_energy_payment_2026",
         measure_year=2026,
     ),
     ExampleHousehold(
@@ -227,10 +228,10 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
         label="Higher earner with savings",
         definition=(
             "One adult aged 45 who owns their home with a mortgage, with "
-            "£3,000 a year of savings interest and £5,000 of dividends on "
-            "top of their pay, spending £1,040 a year on electricity; the "
-            "threshold freeze, when selected, raises their income tax from "
-            "2031-32."
+            "£3,000 a year of savings interest, £5,000 of dividends and "
+            "£5,000 of rental profit on top of their pay, spending £1,040 a "
+            "year on electricity; the property income tax rates, when "
+            "selected, raise their income tax from 2027-28."
         ),
         x_variable=EMPLOYMENT_INCOME,
         x_label="Employment income",
@@ -242,6 +243,7 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
                 {
                     "savings_interest_income": 3_000,
                     "dividend_income": 5_000,
+                    "property_income": 5_000,
                 },
             ),
         ),
@@ -250,8 +252,8 @@ EXAMPLE_HOUSEHOLDS: tuple[ExampleHousehold, ...] = (
             "tenure_type": "OWNED_WITH_MORTGAGE",
             "electricity_consumption": ELECTRICITY_SPENDING,
         },
-        measure_id="threshold_freeze_2031_32",
-        measure_year=2031,
+        measure_id="property_income_rates_up",
+        measure_year=2027,
     ),
 )
 

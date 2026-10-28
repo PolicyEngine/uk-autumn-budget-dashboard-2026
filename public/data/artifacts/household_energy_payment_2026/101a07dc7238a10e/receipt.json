@@ -1,0 +1,177 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "OBR EFO October 2026",
+        "status": "updated",
+        "vintage": "OBR Economic and fiscal outlook, October 2026 (Annex A, Tables A.1 and A.3), applied over policyengine-uk's March 2026 growth rates by src/uk_budget_data/forecast/obr_october_2026.json"
+      },
+      "notes": "The forecast is rebased on the Budget's OBR forecast: every simulation, baseline and reform alike, is built on the October 2026 growth rates in src/uk_budget_data/forecast/obr_october_2026.json (CPI, RPI, average earnings, house prices; the September 2027 CPI gap). Series that file does not list keep the March 2026 path the installed policyengine-uk ships; the receipt records the exact model version."
+    },
+    "composition": null,
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "c48a8fe082168969b5c3e6d6689a630c9f47ac64fa9de7efd11a055d2cab1a4b",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "description": "A one-off \u00a3100 payment from January 2027 to each household in England in property valuation bands A to D (the lowest four of England's eight), up to 20 million households, paid into bank accounts and counted as household income in 2026-27. Scotland, Wales and Northern Ireland receive a share of the funding instead, which is not modelled.",
+    "digests": {
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "outputs_sha256": "18fb3a856326d708284266c5dd240b81e9e9ab4c427c493a062cfe6ae0997215",
+      "receipt_sha256": "50a581145fbd0abf3fcb9a0870c2a624ba6cb3427701ca0f61daf474590e8256"
+    },
+    "disclosure_floor": {
+      "checked": true,
+      "survey_households": 3,
+      "thin_cells": [],
+      "thin_cells_in_tables": false,
+      "withheld_cells": []
+    },
+    "files": {
+      "age_impact.csv": "07ee17908a9d19a0557a53364c2fbb3d9234aa805a284ed9e45b4db7df3b3e3e",
+      "budgetary_impact.csv": "581499ef5a1d0f7d611383351f101743e4d794ba7411e308bc828f016da9ea23",
+      "distributional_impact.csv": "9cb05bfb61069a380a4e0ce94a3213e2d91db9293b0bea1272994fc87102f03b",
+      "household_scatter_binned.csv": "b14f8fa2e1ebd16b903c97a3b5449d943d8415f80f098a2691a6fef5ba0e9387",
+      "income_curve.csv": "1da13b2def2fd8e531355cf05f39396555e94f5505bd4cfea4d22c9a0d042705",
+      "metrics.csv": "f4d88e39c39a466cd55f9037de7f64390525b9eb88c3364e5cffbe0d4927e01a",
+      "poverty_inequality.csv": "aa7fa6c121d42611f386063fe928b3ee1f61cc2220b94060ea401de0e18b71c2",
+      "winners_losers.csv": "f7ffa08e861bb41a6da0764125e9c5e501328c98302ef3a218c5fe4c913d3b4c"
+    },
+    "generated_at": "2026-10-28T17:07:18.666809+00:00",
+    "generation_id": "e68937ceafdc466380a2e75cd8c7f653",
+    "generator_argv": [
+      "/private/tmp/claude-501/-Users-vahid/59114aef-a9b7-4663-a8bc-32b2c6146551/scratchpad/final/household_energy_payment_2026/src/uk_budget_data/cli.py",
+      "generate",
+      "--artifacts",
+      "--backend",
+      "modal",
+      "--reforms",
+      "household_energy_payment_2026"
+    ],
+    "git_sha": "4de166f05eebbc7e501fcf39206cdc82fd199213",
+    "key": "household_energy_payment_2026",
+    "measure_ids": [
+      "household_energy_payment_2026"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "9d3479f1f5ac859ab6bd2644aaff443a29c0dad3f2944b1ef98866028f9d4b89",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": [
+        null
+      ]
+    },
+    "name": "Household Energy Payment",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.11.1",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "household_energy_payment_2026 baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.11.1",
+      "certificate_sha256": "f2e6fc9faafab32b50c1c76067fb070ae9686b6f375e44417776de16e9c3521f",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.151.0",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "ec8e6c4194b5e1ec0acd64c8718d0eecb6b41648b53f0b453c425b516e5a4489"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "build_model_version": "2.151.0",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.151.0"
+    },
+    "outputs_sha256": "18fb3a856326d708284266c5dd240b81e9e9ab4c427c493a062cfe6ae0997215",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "code_revision",
+      "kind": "reform",
+      "name": "household_energy_payment_2026",
+      "reform_sha256": "ceede8365a9462ac389dc5210882ea23850babfed6e5bff8cf264e774cd616ad",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "linux",
+      "python_version": "3.13.3"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.11.1"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}

@@ -1,5 +1,5 @@
 {
-  "name": "PLUMBING CHECK: single employee on £12,000, six measures change nothing",
+  "name": "PLUMBING CHECK: single employee on £12,000, seven measures change nothing",
   "kind": "plumbing check, not an accuracy check",
   "route": "/api/personal-impact",
   "request": {
@@ -131,30 +131,6 @@
       "value": 0.0
     },
     {
-      "path": "policies.warm_home_discount_top_up.years.2025.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.warm_home_discount_top_up.years.2026.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.warm_home_discount_top_up.years.2027.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.warm_home_discount_top_up.years.2028.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.warm_home_discount_top_up.years.2029.net_income_change",
-      "value": 0.0
-    },
-    {
-      "path": "policies.warm_home_discount_top_up.years.2030.net_income_change",
-      "value": 0.0
-    },
-    {
       "path": "policies.domestic_electricity_zero_vat.years.2025.net_income_change",
       "value": 0.0
     },
@@ -179,51 +155,99 @@
       "value": 0.0
     },
     {
-      "path": "policies.threshold_freeze_2031_32.years.2025.net_income_change",
+      "path": "policies.property_income_rates_up.years.2025.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.threshold_freeze_2031_32.years.2026.net_income_change",
+      "path": "policies.property_income_rates_up.years.2026.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.threshold_freeze_2031_32.years.2027.net_income_change",
+      "path": "policies.property_income_rates_up.years.2027.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.threshold_freeze_2031_32.years.2028.net_income_change",
+      "path": "policies.property_income_rates_up.years.2028.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.threshold_freeze_2031_32.years.2029.net_income_change",
+      "path": "policies.property_income_rates_up.years.2029.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.threshold_freeze_2031_32.years.2030.net_income_change",
+      "path": "policies.property_income_rates_up.years.2030.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.plan_2_threshold_unfreeze.years.2025.net_income_change",
+      "path": "policies.savings_income_rates_up.years.2025.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.plan_2_threshold_unfreeze.years.2026.net_income_change",
+      "path": "policies.savings_income_rates_up.years.2026.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.plan_2_threshold_unfreeze.years.2027.net_income_change",
+      "path": "policies.savings_income_rates_up.years.2027.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.plan_2_threshold_unfreeze.years.2028.net_income_change",
+      "path": "policies.savings_income_rates_up.years.2028.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.plan_2_threshold_unfreeze.years.2029.net_income_change",
+      "path": "policies.savings_income_rates_up.years.2029.net_income_change",
       "value": 0.0
     },
     {
-      "path": "policies.plan_2_threshold_unfreeze.years.2030.net_income_change",
+      "path": "policies.savings_income_rates_up.years.2030.net_income_change",
+      "value": 0.0
+    },
+    {
+      "path": "policies.carers_allowance_earnings_taper.years.2025.net_income_change",
+      "value": 0.0
+    },
+    {
+      "path": "policies.carers_allowance_earnings_taper.years.2026.net_income_change",
+      "value": 0.0
+    },
+    {
+      "path": "policies.carers_allowance_earnings_taper.years.2027.net_income_change",
+      "value": 0.0
+    },
+    {
+      "path": "policies.carers_allowance_earnings_taper.years.2028.net_income_change",
+      "value": 0.0
+    },
+    {
+      "path": "policies.carers_allowance_earnings_taper.years.2029.net_income_change",
+      "value": 0.0
+    },
+    {
+      "path": "policies.carers_allowance_earnings_taper.years.2030.net_income_change",
+      "value": 0.0
+    },
+    {
+      "path": "policies.trading_allowance_raise.years.2025.net_income_change",
+      "value": 0.0
+    },
+    {
+      "path": "policies.trading_allowance_raise.years.2026.net_income_change",
+      "value": 0.0
+    },
+    {
+      "path": "policies.trading_allowance_raise.years.2027.net_income_change",
+      "value": 0.0
+    },
+    {
+      "path": "policies.trading_allowance_raise.years.2028.net_income_change",
+      "value": 0.0
+    },
+    {
+      "path": "policies.trading_allowance_raise.years.2029.net_income_change",
+      "value": 0.0
+    },
+    {
+      "path": "policies.trading_allowance_raise.years.2030.net_income_change",
       "value": 0.0
     }
   ],
@@ -233,10 +257,12 @@
     "universal_credit": "Nil in every year, so no measure can move it. A single adult with no children, housing costs, disability or caring has no work allowance and no housing element, so the 55% taper applies to all of the month's earnings. That is £1,000 a month, so the taper takes £550; in 2029 and 2030 (2029-30 and 2030-31), while the salary sacrifice cap applies in current law, the model's broad-base haircut (0.16%) leaves £998.40 a month and a taper of £549.12. Either exceeds the single 25-and-over standard allowance in every year: £400.14 a month in 2025-26 and £424.90 in 2026-27, the statutory rates, and policyengine-uk's projections of £434.67, £443.36, £452.23 and £461.28 for 2027 to 2030. Asserted for the baseline, so a later uplift that made this household eligible fails here instead of quietly changing what the fixture means.",
     "fuel_duty_rise_deferral": "Changes the petrol and diesel duty rate and the VAT on fuel spending. The household buys no fuel: £0.",
     "state_pension_income_tax_protection": "An extra allowance for people over State Pension age. The adult is 35 to 40, and below the personal allowance anyway: £0.",
-    "warm_home_discount_top_up": "£100 in 2026 to households receiving Universal Credit or Pension Credit. The household receives neither: £0.",
     "domestic_electricity_zero_vat": "Removes VAT from electricity spending. The route sets no electricity spending: £0.",
-    "threshold_freeze_2031_32": "Changes the personal allowance and basic rate band in 2031 only, a year the route does not calculate: £0.",
-    "plan_2_threshold_unfreeze": "Raises the Plan 2 student loan threshold. No student loan: £0."
+    "property_income_rates_up": "Raises the income tax rates on property income from 2027-28. The household has no property income: £0.",
+    "savings_income_rates_up": "Raises the income tax rates on savings income from 2027-28. The household has no savings income: £0.",
+    "carers_allowance_earnings_taper": "Tapers Carer's Allowance above the earnings limit from 2030-31. The adult provides no care: £0.",
+    "trading_allowance_raise": "Raises the trading allowance to £3,000 from 2027-28. The household has no trading income: £0.",
+    "household_energy_payment_2026": "Not asserted: £100 in 2026-27 to households in council tax bands A to D in England, and the route's household (London, the engine's default band D) is one."
   },
-  "source": "Hand calculation from statute and the measures' own definitions in src/uk_budget_data/reforms.py, by W5 (Claude Code, for Max Ghenis), 20 October 2026; rewritten for the candidate measures on 24 October 2026, and for the nine left when the salary sacrifice cap measure was dropped that day, for the seven kept on 27 October 2026 (Business Asset Disposal Relief and employer NI relief withdrawn), and for the eight candidates chosen that evening (the road fuel VAT cut withdrawn; the employer NI threshold and the unearned income rates are not asserted: the threshold rise reaches this employee's pay through the model's employer cost pass-through); see reasoning. A plumbing check: it shows the deployed route answers on the bundle's versions, with the response's shape, and that no measure reaches a household it can't affect. It checks no non-zero answer. María's specimen households, with independently computed non-zero answers, are the accuracy check."
+  "source": "Hand calculation from statute and the measures' own definitions in src/uk_budget_data/reforms.py, by W5 (Claude Code, for Max Ghenis), 20 October 2026; rewritten for the candidate measures on 24 October 2026, and for the nine left when the salary sacrifice cap measure was dropped that day, for the seven kept on 27 October 2026 (Business Asset Disposal Relief and employer NI relief withdrawn), and for the eight candidates chosen that evening (the road fuel VAT cut withdrawn; the employer NI threshold and the unearned income rates are not asserted: the threshold rise reaches this employee's pay through the model's employer cost pass-through); see reasoning. A plumbing check: it shows the deployed route answers on the bundle's versions, with the response's shape, and that no measure reaches a household it can't affect. It checks no non-zero answer. María's specimen households, with independently computed non-zero answers, are the accuracy check. Rewritten on 28 October 2026 for the Budget-day registry: the Warm Home Discount top-up, the threshold freeze to 2031-32 and the Plan 2 threshold unfreeze were withdrawn; the property and savings income rates, the Carer's Allowance taper and the trading allowance are asserted instead, and the Household Energy Payment is not (it pays this household)."
 }

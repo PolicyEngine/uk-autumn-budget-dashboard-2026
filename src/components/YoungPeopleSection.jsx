@@ -620,15 +620,18 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
                   />
                 }
               />
-              {/* The package's own net, as bars, when no policy part is drawn */}
+              {/* The package's own net, as bars, when no policy part is drawn.
+                  In the same stack slot as the policy parts (stackId), so a
+                  net bar is centred on its age group, under its dot and its
+                  label, not squeezed to the left of an empty slot */}
               {netOnly && (
-                <Bar dataKey="netChange" name="Net change" isAnimationActive={false} legendType="none">
+                <Bar dataKey="netChange" name="Net change" stackId="stack" isAnimationActive={false} legendType="none">
                   {data.map((point) => (
                     <Cell key={point.band} fill={(point.netChange ?? 0) < 0 ? CHART_COLOURS.loss : CHART_COLOURS.gain} fillOpacity={0.55} />
                   ))}
                 </Bar>
               )}
-              {ALL_POLICY_NAMES.map((name) => (
+              {!netOnly && ALL_POLICY_NAMES.map((name) => (
                 <Bar
                   key={name}
                   dataKey={name}

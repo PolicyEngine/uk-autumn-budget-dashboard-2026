@@ -35,10 +35,12 @@ def test_workers_give_exactly_the_serial_answer(monkeypatch):
         "POLICY_IDS",
         [
             "fuel_duty_rise_deferral",
-            "threshold_freeze_2031_32",
+            "trading_allowance_raise",
             # A measure whose modifier changes households: it must reach
-            # the workers (pickled by reference) and act there.
-            "warm_home_discount_top_up",
+            # the workers (pickled by reference) and act there. A released
+            # measure, not a pre_budget_registry fixture: the workers import
+            # the registry afresh.
+            "household_energy_payment_2026",
         ],
     )
     household = HouseholdInput(
@@ -73,14 +75,15 @@ def test_workers_give_exactly_the_serial_answer(monkeypatch):
     # The serial run used no workers; the parallel one did.
     assert calls == [2]
     assert any(
-        serial["policies"]["warm_home_discount_top_up"]["years"][year][
+        serial["policies"]["household_energy_payment_2026"]["years"][year][
             "net_income_change"
         ]
         for year in [2025, 2026, 2028, 2030]
     )
     # No parameter-change measure left moves this household in these years
     # (the salary sacrifice cap's haircut did, before that measure was
-    # dropped); the warm home discount above shows a measure acting there.
+    # dropped); the Household Energy Payment above shows a measure acting
+    # there.
 
 
 @pytest.mark.parametrize(

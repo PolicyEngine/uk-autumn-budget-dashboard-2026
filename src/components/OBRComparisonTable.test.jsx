@@ -17,6 +17,9 @@ import { geographyFetch } from "../test/geographyFixture";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { parseDashboardCsv } from "../utils/loadDashboard";
 import { ALPHA, BETA, YEAR, measureCatalogueFixture } from "../test/measureCatalogueFixture";
+import { OBR_DEVIATION_STATEMENT } from "../utils/obrDeviationNotes";
+import { POLICY_DETAILS } from "../utils/policyDetails";
+import { downloadFile } from "../utils/downloadFile";
 
 // The official costings as rows, from a CSV fixture; the loader's own checks
 // are tested in utils/publication/officialCostings.test.js
@@ -125,6 +128,124 @@ describe("the OBR comparison table", () => {
 
 const plain = (text) => text?.replace(/\u2060/g, "");
 
+describe("why our estimates differ from the official costings", () => {
+  // A real measure, published as its card entry was written for, so its
+  // note fits (deviationNoteFor); invented figures
+  const ID = "savings_income_rates_up";
+  const ENTRY = POLICY_DETAILS.find((entry) => entry.id === ID);
+  const NOTE = "Most of the gap is in the 2029-30 base; timing affects only the first two years.";
+  const BASIS = "Official: income tax, after behaviour. Ours: income tax, static.";
+  const renderNoted = ({ description = ENTRY.writtenFor, notes = { [ID]: NOTE }, bases = { [ID]: BASIS } } = {}) => {
+    const impact = ["reform_id,reform_name,year,value", `${ID},${ENTRY.name},2030,0.3`].join("\n");
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({
+        "/data/official_costings.csv": ["reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value", `${ID},${ENTRY.name},2030,0.5,0.5`].join("\n"),
+        "/data/budgetary_impact.csv": impact,
+      }),
+    );
+    const rows = parseDashboardCsv(impact);
+    const manifest = { measures: { [ID]: { name: ENTRY.name, description, status: "approved", years: DISPLAY_YEARS, unsupported_years: [] } }, combined: {} };
+    const catalogue = buildMeasureCatalogue({ manifest, budgetary: rows, tablesByKey: { [ID]: { budgetary_impact: rows } } });
+    return renderReact(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <OBRComparisonTable selectedPolicies={[ID]} selectedYear={2030} notes={notes} bases={bases} />
+      </MeasureCatalogueProvider>,
+    );
+  };
+  const tableRow = () => screen.getAllByRole("row")[1];
+
+  it("says the general reasons under the chart, then each policy's note in a list, under what each side counts", async () => {
+    renderNoted();
+    await screen.findByRole("radio", { name: "Show as chart" });
+    expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
+    const list = screen.getByRole("region", { name: "Why each policy differs" });
+    const items = within(list).getAllByRole("listitem");
+    expect(items.map((li) => plain(li.textContent))).toEqual([`${ENTRY.shortName}: ${BASIS} ${NOTE}`]);
+    // The line on the name's line, the note on its own under it
+    expect(items[0].querySelector(".obr-deviation-note")).toHaveTextContent(NOTE);
+    expect(items[0].querySelector(".obr-deviation-note")).not.toHaveTextContent(BASIS);
+    // The statement and the list stay when the table replaces the chart
+    show("Table");
+    expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Why each policy differs" })).toBeInTheDocument();
+  });
+
+  it("shows a row's note in the chart's tooltip for that row, under what each side counts", async () => {
+    const { container } = renderNoted();
+    await screen.findByRole("radio", { name: "Show as chart" });
+    fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
+    expect([...document.querySelectorAll(".chart-tooltip-note")].map((line) => line.textContent)).toEqual([BASIS, NOTE]);
+  });
+
+  it("shows a row's note on its Difference cell in the table, on hover and on focus", async () => {
+    renderNoted();
+    await screen.findByRole("radio", { name: "Show as chart" });
+    show("Table");
+    const difference = within(tableRow()).getAllByRole("cell")[4];
+    // The figure itself is unchanged; the note is on hover, focus or a tap
+    expect(difference).toHaveTextContent(/^−£200m$/);
+    const anchor = difference.querySelector(".difference-note-anchor");
+    fireEvent.mouseEnter(anchor);
+    expect(screen.getByRole("tooltip")).toHaveTextContent(`${BASIS} ${NOTE}`);
+    // What each side counts first, on its own line
+    expect(screen.getByRole("tooltip").querySelector(".obr-basis-line").textContent).toBe(BASIS);
+    fireEvent.mouseLeave(anchor);
+    fireEvent.focus(anchor);
+    expect(screen.getByRole("tooltip")).toHaveTextContent(`${BASIS} ${NOTE}`);
+  });
+
+  it("adds each note to the table's CSV download", async () => {
+    renderNoted();
+    await screen.findByRole("radio", { name: "Show as chart" });
+    show("Table");
+    vi.mocked(downloadFile).mockClear();
+    fireEvent.click(document.querySelector(".chart-download-button:not([disabled])"));
+    fireEvent.click(screen.getByRole("button", { name: "CSV Data" }));
+    await waitFor(() => expect(downloadFile).toHaveBeenCalledTimes(1));
+    const [content] = vi.mocked(downloadFile).mock.calls[0];
+    // What each side counts, then why it differs, as their own columns
+    expect(content).toContain("What each side counts,Why it differs");
+    expect(content).toContain(BASIS);
+    expect(content).toContain(NOTE);
+    expect(content.indexOf(BASIS)).toBeLessThan(content.indexOf(NOTE));
+  });
+
+  it("says what each side counts for a policy with no note", async () => {
+    const { container } = renderNoted({ notes: {} });
+    await screen.findByRole("radio", { name: "Show as chart" });
+    const list = screen.getByRole("region", { name: "Why each policy differs" });
+    expect(within(list).getAllByRole("listitem").map((li) => plain(li.textContent))).toEqual([`${ENTRY.shortName}: ${BASIS}`]);
+    expect(list.querySelector(".obr-deviation-note")).toBeNull();
+    fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
+    expect([...document.querySelectorAll(".chart-tooltip-note")].map((line) => line.textContent)).toEqual([BASIS]);
+  });
+
+  it("keeps the statement, with no list, tooltip or anchor, for a policy with no note or line", async () => {
+    const { container } = renderNoted({ notes: { other: NOTE, [ID]: "  " }, bases: { other: BASIS } });
+    await screen.findByRole("radio", { name: "Show as chart" });
+    expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Why each policy differs" })).toBeNull();
+    fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
+    expect(document.querySelector(".chart-tooltip-note")).toBeNull();
+    show("Table");
+    expect(document.querySelector(".difference-note-anchor")).toBeNull();
+  });
+
+  it("steps the note aside, keeping the statement, once the publication describes the measure differently", async () => {
+    const { container } = renderNoted({ description: "Savings income tax rates rise by 2 points from April 2028." });
+    await screen.findByRole("radio", { name: "Show as chart" });
+    expect(screen.getByText(OBR_DEVIATION_STATEMENT)).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Why each policy differs" })).toBeNull();
+    expect(document.body).not.toHaveTextContent(NOTE);
+    expect(document.body).not.toHaveTextContent(BASIS);
+    fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
+    expect(document.querySelector(".chart-tooltip-note")).toBeNull();
+    show("Table");
+    expect(document.querySelector(".difference-note-anchor")).toBeNull();
+  });
+});
+
 describe("a policy not in force in the year shown", () => {
   const catalogue = { measures: [{ id: "a" }, { id: "b" }, { id: "c" }], byId: new Map() };
   const windows = { a: { first: 2030, last: 2031 }, b: { first: 2026, last: 2026 }, c: { first: 2027, last: 2029 } };
@@ -148,7 +269,8 @@ describe("the comparison sentence", () => {
   const row = (name, pe, obr) => ({ id: name, name, pe, obr });
   it("counts the measures within £200m and names the largest gap", () => {
     expect(plain(comparisonSentence([row("Employer NI relief", -6.2, -6.5), row("A", 1, 1.1), row("B", 0.4, 0.4), row("C", 0.1, null)], "static"))).toBe(
-      "For 2 of 3 policies our static estimate is within £200m of the official static costing; the largest gap is Employer NI relief (−£6.2bn vs −£6.5bn).",
+      // Counted out of every policy the chart draws (C has no official figure)
+      "For 2 of the 4 policies our static estimate is within £200m of the official static costing; the largest gap is Employer NI relief (−£6.2bn vs −£6.5bn); 1 has no comparable official figure this year.",
     );
   });
   it("leaves out the gap when every measure rounds equal", () => {

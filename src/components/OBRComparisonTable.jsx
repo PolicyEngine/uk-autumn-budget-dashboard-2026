@@ -8,6 +8,7 @@ import ChartMoreInfo from "./ChartMoreInfo";
 import TitleIcon from "./TitleIcon";
 import MeasureRowLabel from "./MeasureRowLabel";
 import NoBreakYear from "./NoBreakYear";
+import Tip from "./Tip";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import OBRDumbbellChart, { dumbbellLegendItems, formatBn, formatBn as formatFigure, formatDifference, obrValue, rowDecimals, shownDifference } from "./OBRDumbbellChart";
@@ -19,6 +20,7 @@ import { loadPolicyParameters, measureWindows, outOfForceText } from "../utils/p
 import { loadOfficialCostings, OfficialCostingsPendingError } from "../utils/publication/officialCostings";
 import { SOURCES } from "../utils/sources";
 import { METHOD_ANCHORS } from "./methodology/anchors";
+import { OBR_COMPARISON_BASES, OBR_DEVIATION_NOTES, OBR_DEVIATION_STATEMENT, comparisonBasisFor, deviationNoteFor } from "../utils/obrDeviationNotes";
 
 /** What the comparison says when the official costings cover none of the selected measures. */
 export const OBR_UNAVAILABLE = "The official costings have no figures for the selected policies.";
@@ -181,20 +183,25 @@ export function comparisonSentence(rows, obrKind) {
   const gap = (row) => Math.abs(shownDifference(row.pe, row.obr));
   const close = paired.filter((row) => gap(row) <= CLOSE_BN + 1e-9).length;
   const largest = paired.reduce((best, row) => (gap(row) > gap(best) ? row : best));
-  const lead = close === paired.length
-    ? `For all ${paired.length} policies our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`
-    : `For ${close} of ${paired.length} policies our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`;
-  if (formatBn(largest.pe) === formatBn(largest.obr)) return `${lead}.`;
-  return `${lead}; the largest gap is ${largest.name} (${formatBn(largest.pe)} vs ${formatBn(largest.obr)}).`;
+  // Counted out of every policy the chart draws, with those it cannot
+  // compare this year said apart, so the count matches the chart
+  const all = rows.length;
+  const lead = close === all
+    ? `For all ${all} policies our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`
+    : `For ${close} of the ${all} policies our static estimate is within ${formatBn(CLOSE_BN)} of ${costing}`;
+  const unpaired = all - paired.length;
+  const apart = unpaired > 0 ? `; ${unpaired} ${unpaired === 1 ? "has" : "have"} no comparable official figure this year` : "";
+  if (formatBn(largest.pe) === formatBn(largest.obr)) return `${lead}${apart}.`;
+  return `${lead}; the largest gap is ${largest.name} (${formatBn(largest.pe)} vs ${formatBn(largest.obr)})${apart}.`;
 }
 
 // About this chart: what the two bases are, why the figures differ, sources
 const COMPARISON_INFO = {
   shows:
-    "PolicyEngine's estimate of each policy's effect on the public finances beside the official costing for the same year, in £ billion; positive values raise revenue or cut spending. Largest official costing first.",
+    "PolicyEngine's estimate of each policy's effect on the public finances beside the official costing for the same year, in £m under £1bn and £bn above; positive values raise revenue or cut spending. Largest official costing first.",
   how: [
     "PolicyEngine's figures are static, so an official static costing is the like-for-like comparison. Budget 2026's costings give one figure per policy, which for most policies includes behavioural responses, so the card compares with that.",
-    "On the % scale each official costing is 100%; a policy costed under £50m has no %.",
+    "Our estimate as % of the official costing: each official costing is 100%, and a bar at 90% means our estimate is nine-tenths of it. A policy costed under £50m has no %.",
     "Difference is PolicyEngine minus the official figure.",
   ],
   definitions: [
@@ -204,7 +211,7 @@ const COMPARISON_INFO = {
   caveats: [
     "Effects outside households, or on incomes the survey covers thinly (such as the very top), are estimated less fully than in official costings built from administrative data.",
     "The two can also differ in the economic forecast, take-up and the parts of a policy each models.",
-    "Our figures are by tax year. The official ones count tax when it is paid, so a change in tax paid through Self Assessment, such as the trading allowance, appears about a year later in them than in ours.",
+    "Our figures are by tax year. The official costings are on a National Accounts basis, in which tax paid through Self Assessment can fall in a later year: a change in it, such as the trading allowance, can appear about a year later in them than in ours.",
   ],
   sources: [
     { label: "PolicyEngine UK microsimulation" },
@@ -213,14 +220,29 @@ const COMPARISON_INFO = {
   method: { anchor: METHOD_ANCHORS.publicFinances, label: "How we cost the policies" },
 };
 
+/** A Difference cell's tip: what each side counts, then why they differ. */
+function DeviationTip({ basis, note }) {
+  return (
+    <>
+      {basis && <span className="obr-basis-line">{basis}</span>}
+      {basis && note && " "}
+      {note}
+    </>
+  );
+}
+
 /**
  * How our estimates compare with the official costings: a card of its own
  * on Public finances, directly under Revenue impact, for the year in the
  * header. A dumbbell chart (or a table) per measure, largest official
  * costing first, the difference in £bn at the right. Its Options choose
- * the official basis and the chart's scale.
+ * the official basis and the chart's scale. Under it, why the two differ:
+ * the general statement, then each policy's note (`notes`, by measure id:
+ * utils/obrDeviationNotes.js), which also shows in its row's tooltip and,
+ * in the table, on its Difference cell. Above each note, wherever it
+ * shows, is the line saying what each side counts (`bases`).
  */
-function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, data }) {
+function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_YEAR, data, notes = OBR_DEVIATION_NOTES, bases = OBR_COMPARISON_BASES }) {
   const catalogue = useMeasureCatalogue();
   const windows = useMeasureWindows();
   const fetched = useObrComparisonData(!data);
@@ -251,7 +273,14 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   }
 
   const yearLabel = fiscalYear(selectedYear);
-  const rows = comparisonRows(selectedRows, selectedPolicies, selectedYear, showBehavioural, catalogue, windows);
+  // Each row with what each side counts and why it differs from the
+  // official costing, while they were written for the measure as published
+  const rows = comparisonRows(selectedRows, selectedPolicies, selectedYear, showBehavioural, catalogue, windows).map((row) => ({
+    ...row,
+    basis: comparisonBasisFor(row.measure, bases),
+    note: deviationNoteFor(row.measure, notes),
+  }));
+  const notedRows = rows.filter((row) => row.basis !== null || row.note !== null);
   // The basis the figures shown are on: the other one when the official
   // costings give none on the chosen basis this year (Budget 2026 publishes
   // one Exchequer impact per measure, post-behavioural), so no line calls
@@ -289,6 +318,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
         { key: "obrStatic", label: "Official, static (£bn)", decimals: 4 },
         { key: "obrBehavioural", label: "Official, post-behavioural (£bn)", decimals: 4 },
         { key: "difference", label: `Difference, PolicyEngine minus official ${obrKind} (£bn)`, decimals: 4 },
+        { key: "basis", label: "What each side counts" },
+        { key: "note", label: "Why it differs" },
       ],
       rows: rows.map((row) => ({
         name: row.name,
@@ -296,6 +327,8 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
         obrStatic: row.obrStatic ?? undefined,
         obrBehavioural: row.obrBehavioural ?? undefined,
         difference: row.pe !== null && row.obr !== null ? row.pe - row.obr : undefined,
+        basis: row.basis ?? undefined,
+        note: row.note ?? undefined,
       })),
     });
   // The download follows the view: the chart's images, or the table's
@@ -307,7 +340,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
     image: showTable || yearCovered,
     exportOptions: {
       title,
-      description: `Each row shows a policy's budgetary impact in ${yearLabel}, in £ billion: PolicyEngine's static estimate and the official ${obrKind} costing, with the difference (PolicyEngine minus official) at the right. Positive values raise revenue or reduce spending.`,
+      description: `Each row shows a policy's budgetary impact in ${yearLabel}, in £m under £1bn and £bn above: PolicyEngine's static estimate and the official ${obrKind} costing, with the difference (PolicyEngine minus official) at the right. Positive values raise revenue or reduce spending.`,
       legendItems: dumbbellLegendItems(obrKind),
       logo: CHART_LOGO,
       svgSelector: showTable ? undefined : "svg",
@@ -331,7 +364,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
       onChange: setScale,
       options: [
         { value: "bn", label: "£bn" },
-        { value: "pct", label: "% of official costing" },
+        { value: "pct", label: "Our estimate as % of the official costing" },
       ],
     },
   ].filter(Boolean);
@@ -443,7 +476,18 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
                               : ""
                         }`}
                       >
-                        {formatDifference(difference, decimals)}
+                        {/* What each side counts and why it differs, on
+                            hover, focus or a tap; the list under the table
+                            says them too */}
+                        {row.basis || row.note ? (
+                          <Tip content={<DeviationTip basis={row.basis} note={row.note} />} wide>
+                            <span className="difference-note-anchor" tabIndex={0}>
+                              {formatDifference(difference, decimals)}
+                            </span>
+                          </Tip>
+                        ) : (
+                          formatDifference(difference, decimals)
+                        )}
                       </td>
                     </tr>
                   );
@@ -456,6 +500,33 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
           </div>
         )}
       </SwapTransition>
+
+      {/* Why the estimates differ, in view under the chart or table: the
+          general reasons, then each policy's own, so every gap is
+          explained on a phone too, where there is no hover */}
+      <div className="obr-deviation">
+        <p className="obr-deviation-statement">{OBR_DEVIATION_STATEMENT}</p>
+        {notedRows.length > 0 && (
+          <section className="obr-deviation-notes" aria-labelledby="obr-deviation-title">
+            <h4 className="obr-deviation-title" id="obr-deviation-title">Why each policy differs</h4>
+            <ul className="obr-deviation-list">
+              {notedRows.map((row) => (
+                // What each side counts on the name's line, the note
+                // under it
+                <li key={row.id} data-measure={row.id}>
+                  <strong>{row.name}:</strong> {row.basis ?? row.note}
+                  {row.basis && row.note && (
+                    <>
+                      {" "}
+                      <span className="obr-deviation-note">{row.note}</span>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
 
       <div className="chart-footer">
         <ChartMoreInfo info={COMPARISON_INFO} />

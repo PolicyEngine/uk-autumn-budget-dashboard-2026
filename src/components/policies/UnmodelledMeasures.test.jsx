@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import UnmodelledMeasures, { COSTING_CAPTION, UNMODELLED_SUBTITLE, UNMODELLED_TITLE, formatMillions } from "./UnmodelledMeasures";
+import UnmodelledMeasures, { COSTING_CAPTION, UNMODELLED_SUBTITLE, UNMODELLED_TITLE, formatMillions, groupsOf } from "./UnmodelledMeasures";
 import { WHY_NOT_MODELLED } from "../PolicyCards";
 import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import {
   BUDGET_DOCUMENT,
   COSTING_YEARS,
-  UNMODELLED_GROUPS,
   UNMODELLED_MEASURES,
+  UNMODELLED_REASONS,
 } from "../../utils/unmodelledMeasures";
 
 
@@ -270,20 +270,77 @@ describe("UnmodelledMeasures", () => {
     }
   });
 
-  it("orders the cards by the data's own order field, pairing cards of a like shape", () => {
+  it("orders the cards by the data's own order field, group by group, pairing cards of a like shape", () => {
     expect(UNMODELLED_MEASURES.map((m) => m.order)).toEqual(UNMODELLED_MEASURES.map((_, index) => index + 1));
+    // The data's order is the groups' order, so the list reads as shown
+    expect(groupsOf(UNMODELLED_MEASURES).flatMap(({ items }) => items.map((m) => m.id))).toEqual(UNMODELLED_MEASURES.map((m) => m.id));
     render(<UnmodelledMeasures />);
     open();
     expect(cards().map((card) => card.id.replace(/^unmodelled-/, ""))).toEqual(UNMODELLED_MEASURES.map((m) => m.id));
-    // Each row of two has the same shape: one pair of tiles, two, or none
+    // Within each group, each row of two has the same shape: one pair of
+    // tiles, two, or none
     const shape = (card) => card.querySelectorAll(".pchg-ba").length;
-    const items = cards();
     const mismatched = [];
-    for (let i = 0; i + 1 < items.length; i += 2) if (shape(items[i]) !== shape(items[i + 1])) mismatched.push(items[i].id);
+    for (const list of document.querySelectorAll(".umm-list")) {
+      const items = [...list.querySelectorAll(":scope > .policy-card")];
+      for (let i = 0; i + 1 < items.length; i += 2) if (shape(items[i]) !== shape(items[i + 1])) mismatched.push(items[i].id);
+    }
     expect(mismatched).toEqual([]);
-    expect(document.querySelector(".umm-group-title")).toBeNull();
-    // Every measure still says who it touches
-    expect(UNMODELLED_MEASURES.every((m) => UNMODELLED_GROUPS.some(({ id }) => id === m.group))).toBe(true);
+  });
+
+  // #297: by why we do not model each one, and whether we will
+  it("groups the cards by why we do not model them, each group titled with its reason in a line", () => {
+    expect(UNMODELLED_REASONS.map(({ label }) => label)).toEqual([
+      "Coming soon",
+      "Modelled separately",
+      "Outside a household model",
+      "Not in our data yet",
+    ]);
+    // Every measure names a reason the groups have
+    expect(UNMODELLED_MEASURES.filter((m) => !UNMODELLED_REASONS.some(({ id }) => id === m.reason)).map((m) => m.id)).toEqual([]);
+    for (const { id, why } of UNMODELLED_REASONS) {
+      expect(why, id).toMatch(/^[A-Z].*\.$/);
+      expect(why.split(/\s+/).length, id).toBeLessThanOrEqual(30);
+    }
+    render(<UnmodelledMeasures />);
+    open();
+    const shown = [...document.querySelectorAll(".umm-group")].map((group) => ({
+      title: group.querySelector(".umm-group-title").textContent,
+      cards: [...group.querySelectorAll(".policy-card")].map((card) => card.id.replace(/^unmodelled-/, "")),
+    }));
+    expect(shown).toEqual([
+      { title: "Coming soon", cards: ["bus-fare-cap", "savings-income-tax", "machine-games-duty", "cash-isa-limit"] },
+      { title: "Modelled separately", cards: ["adjusted-triple-lock"] },
+      { title: "Outside a household model", cards: ["bank-surcharge", "pubs-business-rates-relief", "online-marketplace-liability", "your-first-home"] },
+      {
+        title: "Not in our data yet",
+        cards: [
+          "national-living-wage",
+          "universal-credit-surplus-earnings",
+          "mileage-rates",
+          "company-car-tax",
+          "business-asset-disposal-relief",
+          "first-time-buyer-isa",
+          "parental-allowance",
+          "gas-standing-charges",
+        ],
+      },
+    ]);
+    // Each group's list is named by its title and described by its reason
+    for (const { label, why } of UNMODELLED_REASONS) {
+      const list = screen.getByRole("list", { name: label });
+      expect(list).toHaveAccessibleDescription(why);
+    }
+  });
+
+  it("puts a measure with no known reason last, unlabelled, and leaves out an empty group", () => {
+    const [first, second] = UNMODELLED_MEASURES;
+    const groups = groupsOf([{ ...second, reason: "unknown" }, first]);
+    expect(groups.map(({ id, label }) => [id, label])).toEqual([
+      [first.reason, UNMODELLED_REASONS.find(({ id }) => id === first.reason).label],
+      ["other", null],
+    ]);
+    expect(groups[1].items.map((m) => m.id)).toEqual([second.id]);
   });
 
   it("keeps names short: 10 words at most", () => {
@@ -312,7 +369,9 @@ describe("UnmodelledMeasures", () => {
     const held = UNMODELLED_MEASURES.filter(({ heldBack }) => heldBack);
     expect(held.map(({ id }) => id)).toEqual(["savings-income-tax"]);
     const card = document.getElementById("unmodelled-savings-income-tax");
-    expect(card.querySelector(".umm-held-back")).toHaveTextContent(/^Held back: our data miss ISA interest/);
+    // Our interest included ISA interest: calibrated on a different basis, not missing it (#297)
+    expect(card.querySelector(".umm-held-back")).toHaveTextContent(/^Held back: we calibrated savings interest to HMRC's figures on a different basis/);
+    for (const text of [held[0].heldBack, held[0].notModelled]) expect(text).not.toMatch(/miss(?:es)? ISA interest/);
     fireEvent.click(within(card).getByRole("button", { name: "Treasury costing" }));
     expect(within(card).getByRole("table", { name: COSTING_CAPTION })).toHaveTextContent("+590");
   });

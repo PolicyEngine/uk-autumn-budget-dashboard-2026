@@ -357,12 +357,14 @@
     grid-template-areas:
       "name values"
       "plot plot";
-    row-gap: 0;
+    /* Room between the name and the marks, so a two-line name never
+       crowds the plot */
+    row-gap: 6px;
   }
 
   .measure-dumbbell:not(.ls-poverty-dumbbell) > .measure-dumbbell-row {
     min-height: 0;
-    padding: 5px 10px;
+    padding: 8px 10px;
   }
 
   .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-name {
@@ -379,9 +381,10 @@
     padding-left: 0;
   }
 
+  /* The marks' line: the ring, dot and £0 line share its centre */
   .measure-dumbbell:not(.ls-poverty-dumbbell) .measure-dumbbell-plot {
     grid-area: plot;
-    min-height: 18px;
+    min-height: 20px;
   }
 
   .measure-dumbbell:not(.ls-poverty-dumbbell) .mrl-caption {

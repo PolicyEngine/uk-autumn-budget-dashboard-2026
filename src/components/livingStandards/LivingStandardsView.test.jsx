@@ -467,7 +467,8 @@ describe("the Pre-measures forecast view", () => {
     // review, LS4: no Income groups choice); one short line naming the two
     // groups it compares (LS1)
     const headline = () => growth.querySelector(".chart-description").textContent;
-    expect(headline()).toMatch(/^Under current law, real incomes (grow|fall|barely) .+ \(lowest tenth: \S+% a year; top tenth: \S+%\)\.$/);
+    expect(headline()).toMatch(/^Under current law, real incomes (grow|fall|barely) .+ \(second tenth: \S+% a year; top tenth: \S+%\)\.$/);
+    expect(document.body.textContent).not.toMatch(/lowest tenth:/);
     fireEvent.click(within(growth).getByRole("button", { name: "About this chart" }));
     expect(within(growth).getByText(/re-ranked each year/)).toBeInTheDocument();
     expect(within(growth).queryByText(/twentieth/)).toBeNull();
@@ -485,13 +486,13 @@ describe("the Pre-measures forecast view", () => {
     choose(growth, "Population", "Non-pensioners");
     const chosen = new URLSearchParams(window.location.search);
     expect([chosen.get("ls_growth"), chosen.get("ls_housing"), chosen.get("ls_pop")]).toEqual([null, "ahc", "non_pensioners"]);
-    expect(within(growth).getByText("Bottom is the lowest-income tenth; top the highest-income tenth among non-pensioners.")).toBeInTheDocument();
+    expect(within(growth).getByText("Bottom is the second-lowest-income tenth; top the highest-income tenth among non-pensioners.")).toBeInTheDocument();
     expect(within(growth).getByText(/^Each year from 2028-29 to 2031-32/)).toBeInTheDocument();
     expect(within(growth).getByText("Highest income")).toBeInTheDocument();
-    // Decile 1 after housing costs: kept, with a short caution under the
-    // key, said once (not again in About this chart)
-    expect(within(growth).getByText(/^The lowest-income tenth after housing costs swings from year to year/)).toBeInTheDocument();
-    expect(within(growth).getAllByText(/swings from year to year/)).toHaveLength(1);
+    // Decile 1 is not shown (its survey incomes are often below spending):
+    // said once, as a caveat, and no caution about it under the key
+    expect(within(growth).queryByText(/swings from year to year/)).toBeNull();
+    expect(within(growth).getAllByText(/^The lowest tenth is not shown: /)).toHaveLength(1);
     // Whole period goes in the address; back to the defaults leaves nothing
     choose(growth, "View", "Whole period");
     expect(new URLSearchParams(window.location.search).get("ls_growth")).toBe("period");

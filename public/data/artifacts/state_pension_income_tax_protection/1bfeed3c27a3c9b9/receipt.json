@@ -1,0 +1,283 @@
+{
+  "dashboard": {
+    "basis": {
+      "calibration": {
+        "source": "the certified dataset pinned by the installed policyengine bundle: Microcosm UK from policyengine 6.10.1, policyengine-uk-data before it",
+        "status": "pre_budget",
+        "vintage": "as pinned by the installed bundle"
+      },
+      "forecast": {
+        "source": "OBR EFO October 2026",
+        "status": "updated",
+        "vintage": "OBR Economic and fiscal outlook, October 2026 (Annex A, Tables A.1 and A.3), applied over policyengine-uk's March 2026 growth rates by src/uk_budget_data/forecast/obr_october_2026.json"
+      },
+      "notes": "The forecast is rebased on the Budget's OBR forecast: every simulation, baseline and reform alike, is built on the October 2026 growth rates in src/uk_budget_data/forecast/obr_october_2026.json (CPI, RPI, average earnings, house prices; the September 2027 CPI gap). Series that file does not list keep the March 2026 path the installed policyengine-uk ships; the receipt records the exact model version."
+    },
+    "composition": null,
+    "config_baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "configured baseline",
+      "reform_sha256": null,
+      "representation": null
+    },
+    "data_limits": [],
+    "data_limits_registry_sha256": "c48a8fe082168969b5c3e6d6689a630c9f47ac64fa9de7efd11a055d2cab1a4b",
+    "dataset_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "description": "From 6 April 2027 to 5 April 2030, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (\u00a313,036.40 in 2027-28) get a Pension Tax Allowance: a non-refundable reduction in their income tax, worth up to \u00a394 in 2027-28. It falls by \u00a31 for every \u00a33 of income above the full new State Pension, so it is gone at about \u00a313,319 in 2027-28. The personal allowance is unchanged.",
+    "digests": {
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "outputs_sha256": "bc98a27c3d80a54f3b56ef1ebffe5ca3085077be0d3626b887eab822042776e5",
+      "receipt_sha256": "639abc7f6560dab736da0d59e4c1bb272312e5500d1c94f33fc208145d039e65"
+    },
+    "disclosure_floor": {
+      "checked": true,
+      "survey_households": 3,
+      "thin_cells": [
+        {
+          "groups": [
+            "11",
+            "12",
+            "13",
+            "14",
+            "15",
+            "16",
+            "19",
+            "20",
+            "21",
+            "22",
+            "24",
+            "26",
+            "27",
+            "28",
+            "30",
+            "34",
+            "4",
+            "41",
+            "42",
+            "43",
+            "45",
+            "46",
+            "47",
+            "48",
+            "53",
+            "56",
+            "57",
+            "9"
+          ],
+          "table": "age_impact",
+          "year": 2027
+        },
+        {
+          "groups": [
+            "11",
+            "12",
+            "14",
+            "15",
+            "16",
+            "18",
+            "19",
+            "2",
+            "20",
+            "22",
+            "24",
+            "25",
+            "26",
+            "27",
+            "3",
+            "30",
+            "31",
+            "38",
+            "39",
+            "4",
+            "45",
+            "46",
+            "47",
+            "5",
+            "50",
+            "52",
+            "57",
+            "6",
+            "8",
+            "9"
+          ],
+          "table": "age_impact",
+          "year": 2028
+        },
+        {
+          "groups": [
+            "0",
+            "1",
+            "11",
+            "12",
+            "15",
+            "16",
+            "18",
+            "19",
+            "2",
+            "20",
+            "22",
+            "23",
+            "24",
+            "26",
+            "27",
+            "3",
+            "30",
+            "31",
+            "38",
+            "39",
+            "4",
+            "45",
+            "47",
+            "49",
+            "50",
+            "52",
+            "6",
+            "8",
+            "9"
+          ],
+          "table": "age_impact",
+          "year": 2029
+        }
+      ],
+      "thin_cells_in_tables": false,
+      "withheld_cells": []
+    },
+    "files": {
+      "age_impact.csv": "0a7f214250df7da5289263ca57896b769a4e162f064acfe3a71804cd3ca0154c",
+      "budgetary_impact.csv": "458ab1c75a1fa350f632c740402d93810b24ea4102c120bce259d862c969ee3c",
+      "distributional_impact.csv": "c57081763b8c9ff3a0afce16ad5d2b1412b11c61a0666fb37721787b6a87f1af",
+      "household_scatter_binned.csv": "123fd6dc424a976e603f6b28284cf597ea364e2ab5d9d1bcf135fccf12623899",
+      "income_curve.csv": "f076170fc982d81e96937bd776215797a3a33ace40416d19ed3ced84f517b71a",
+      "metrics.csv": "cf7742558ad872fdf07574e1ee676a574da00928d9782cabda767775793cdf8c",
+      "poverty_inequality.csv": "608c664ac8af8cd5e9b4c4a0a4d19d5058ca906fcc214e4df446c166559cec61",
+      "winners_losers.csv": "89b58413e073b73f00a12872d07e8ea48af15de8b1164e0e43d3a939d1364c60"
+    },
+    "generated_at": "2026-10-28T17:08:11.348926+00:00",
+    "generation_id": "15641132e3f64345a6b40cca567dc430",
+    "generator_argv": [
+      "/private/tmp/claude-501/-Users-vahid/59114aef-a9b7-4663-a8bc-32b2c6146551/scratchpad/final/state_pension_income_tax_protection/src/uk_budget_data/cli.py",
+      "generate",
+      "--artifacts",
+      "--backend",
+      "modal",
+      "--reforms",
+      "state_pension_income_tax_protection"
+    ],
+    "git_sha": "4de166f05eebbc7e501fcf39206cdc82fd199213",
+    "key": "state_pension_income_tax_protection",
+    "measure_ids": [
+      "state_pension_income_tax_protection"
+    ],
+    "member_outputs_sha256": null,
+    "members": null,
+    "model_limits": [],
+    "model_limits_registry_sha256": "9d3479f1f5ac859ab6bd2644aaff443a29c0dad3f2944b1ef98866028f9d4b89",
+    "modifier_templates": {
+      "baseline": [],
+      "reform": [
+        null
+      ]
+    },
+    "name": "Pension Tax Allowance",
+    "publishable": true,
+    "reasons": [],
+    "receipt_source": "policyengine==6.11.1",
+    "tree_clean": true,
+    "unsupported_years": []
+  },
+  "execution_receipt": {
+    "baseline": {
+      "binding": "content",
+      "kind": "current_law",
+      "name": "state_pension_income_tax_protection baseline"
+    },
+    "certificate": {
+      "bundle_version": "6.11.1",
+      "certificate_sha256": "f2e6fc9faafab32b50c1c76067fb070ae9686b6f375e44417776de16e9c3521f",
+      "certificate_source": "packaged",
+      "certified_by": "policyengine.py bundle certification",
+      "certified_dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "certified_for_core_version": "3.33.3",
+      "certified_for_model_version": "2.151.0",
+      "compatibility_basis": "built_with_model_package",
+      "country_id": "uk",
+      "tro_composition_fingerprint": "ec8e6c4194b5e1ec0acd64c8718d0eecb6b41648b53f0b453c425b516e5a4489"
+    },
+    "certification_status": "certified",
+    "core": {
+      "name": "policyengine-core",
+      "version": "3.33.3"
+    },
+    "country_id": "uk",
+    "data": {
+      "build_id": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "build_model_version": "2.151.0",
+      "data_package": "microcosm-data",
+      "dataset": "microcosm_uk_2024_25",
+      "dataset_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "dataset_sha256": "b96a8cd625b645a409c063b1de5158532708a2f0d3c3897a794a8fb0bbd5064e",
+      "dataset_uri": "hf://policyengine/populace-uk-private/microcosm_uk_2024_25.h5@microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_manifest_revision": "microcosm-uk-2024-25-national-20261025T091414Z-a6299504",
+      "release_version": "0.1.0"
+    },
+    "fiscal_year": {
+      "convention": "uk_fiscal_year",
+      "parameter_annualisation": "policyengine-uk/fiscal-year-parameters",
+      "period_start": "04-06",
+      "year_label": "start_year"
+    },
+    "model": {
+      "name": "policyengine-uk",
+      "version": "2.151.0"
+    },
+    "outputs_sha256": "bc98a27c3d80a54f3b56ef1ebffe5ca3085077be0d3626b887eab822042776e5",
+    "receipt_type": "policyengine.execution_receipt",
+    "reform": {
+      "binding": "code_revision",
+      "kind": "reform",
+      "name": "state_pension_income_tax_protection",
+      "reform_sha256": "65a95c811e5d6c6dd0b54255dd20ab1439c542994f1918778b93769c14199524",
+      "representation": "policyengine-uk.scenario/v1"
+    },
+    "runtime": {
+      "platform": "linux",
+      "python_version": "3.13.3"
+    },
+    "schema_version": 1,
+    "supported_years": [
+      2024,
+      2025,
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031,
+      2032
+    ],
+    "wrapper": {
+      "name": "policyengine",
+      "version": "6.11.1"
+    },
+    "years": [
+      2026,
+      2027,
+      2028,
+      2029,
+      2030,
+      2031
+    ]
+  },
+  "schema": "uk-budget-dashboard/artifact-receipt/v1"
+}
