@@ -60,6 +60,11 @@ from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
     zero_vat_on_domestic_electricity,
 )
 from uk_budget_data.budget_years import POLICY_YEARS
+from uk_budget_data.forecast import (
+    FUEL_DUTY_STATUTORY,
+    forecast_parameters,
+    fuel_duty_rpi_steps,
+)
 from uk_budget_data.measure_templates import rate_change, threshold_change
 from uk_budget_data.models import Reform
 
@@ -172,16 +177,13 @@ def static_capital_gains() -> dict[str, dict[str, any]]:
 # date each rate takes effect: 52.95p to 31 December 2026, 55.95p from
 # 1 January 2027, 57.95p from 1 March 2027, then RPI each April. The 2032
 # step is the engine's own uprating (2031's rate by 2031 RPI growth).
+# From April 2027, RPI uprating on the OBR October 2026 forecast, the same
+# path the baseline is built on (uk_budget_data.forecast.fuel_duty_rpi_steps).
 FUEL_DUTY_CURRENT_LAW = (
     ("2026-03-23", 0.5295),
     ("2027-01-01", 0.5595),
-    ("2027-03-01", 0.5795),
-    ("2027-04-01", 0.5975),
-    ("2028-04-01", 0.6154),
-    ("2029-04-01", 0.6326),
-    ("2030-04-01", 0.6509),
-    ("2031-04-01", 0.6659),
-    ("2032-04-01", 0.6812),
+    FUEL_DUTY_STATUTORY,
+    *fuel_duty_rpi_steps(),
 )
 # The candidate (Vahid, 27 October 2026): no 1 January 2027 rise, so the
 # 5p cut continues and 52.95p is frozen through 2027-28 (to 31 March
@@ -288,9 +290,7 @@ def fuel_duty_deferral_rates() -> dict[str, float]:
         # After the extension, current law's own rates, written for every
         # scored year: the parameter is uprated, so a bounded change would
         # return to the old path (policyengine-uk #2430; scored_years).
-        from policyengine_uk.system import system
-
-        node = system.parameters.get_child(FUEL_DUTY)
+        node = forecast_parameters().get_child(FUEL_DUTY)
         for y in list(rates):
             if int(y) not in fuel_duty_extension_years():
                 rates[y] = node(f"{y}-04-30")
@@ -314,9 +314,7 @@ def pump_vat_on_fuel_duty_deferral_defaults() -> dict[str, float]:
     the modifier's comment). Paste them into
     ``budget_measures/pump_vat_on_fuel_duty_deferral.py`` after changing
     the freeze."""
-    from policyengine_uk.system import system
-
-    prices = system.parameters.household.consumption.fuel.prices
+    prices = forecast_parameters().household.consumption.fuel.prices
     rates = fuel_duty_deferral_rates()
     current = fiscal_year_means(FUEL_DUTY_CURRENT_LAW)
     return {

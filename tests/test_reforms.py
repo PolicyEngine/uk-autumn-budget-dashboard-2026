@@ -12,10 +12,10 @@ from importlib import import_module
 
 import pytest
 from policyengine_uk import Simulation
-from policyengine_uk.system import system
 
 from uk_budget_data import reforms
 from uk_budget_data.budget_years import POLICY_YEARS
+from uk_budget_data.forecast import forecast_parameters
 from uk_budget_data.models import DataConfig
 from uk_budget_data.publication.receipt import (
     CodeRevision,
@@ -47,7 +47,8 @@ def modifier(name):
 
 
 PENNY = 0.01
-PARAMETERS = system.parameters
+# Current law on the OBR October 2026 forecast, as every run builds it.
+PARAMETERS = forecast_parameters()
 CANDIDATES = (
     "fuel_duty_rise_deferral",
     "state_pension_income_tax_protection",
@@ -251,10 +252,11 @@ def test_the_fuel_duty_path_by_hand():
     # 2026-27: 52.95p all year
     assert rates["2026"] == 0.5295
     # 2027-28 (6 April 2027 to 5 April 2028, 366 days): 52.95p to 30 June
-    # (86 days), then 59.75p to 31 March 2028 (275), then 61.54p from
-    # 1 April 2028 (5)
+    # (86 days), then 60.04p (57.95p x 1.036, October 2026 RPI for 2026) to
+    # 31 March 2028 (275), then 62.62p (x 1.043, RPI 2027) from 1 April
+    # 2028 (5)
     assert rates["2027"] == pytest.approx(
-        (86 * 0.5295 + 275 * 0.5975 + 5 * 0.6154) / 366, abs=1e-6
+        (86 * 0.5295 + 275 * 0.6004 + 5 * 0.6262) / 366, abs=1e-6
     )
     # Later years are current law's own, written for every scored year
     # (the parameter is uprated: policyengine-uk #2430)
@@ -270,7 +272,7 @@ def test_after_the_extension_fuel_duty_is_current_laws():
     """From 1 August 2027 the measure follows current law, so it costs
     nothing after 2027-28; the description says so."""
     schedule = dict(reforms.fuel_duty_deferral_schedule())
-    assert schedule["2027-07-01"] == 0.5975
+    assert schedule["2027-07-01"] == 0.6004
     for day, rate in reforms.FUEL_DUTY_CURRENT_LAW:
         if day > "2027-07-01":
             assert schedule[day] == rate

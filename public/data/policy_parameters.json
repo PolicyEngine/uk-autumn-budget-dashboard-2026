@@ -15,7 +15,7 @@
   ],
   "measures": {
     "fuel_duty_rise_deferral": {
-      "description": "Candidate measure. Fuel duty stays at 52.95p a litre to 30 June 2027: the rise due on 1 January 2027 and the March and April 2027 steps do not happen while the 5p cut is extended. From 1 July 2027 fuel duty is current law's, 59.75p a litre, rising with RPI each April as current law has it. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+      "description": "Candidate measure. Fuel duty stays at 52.95p a litre to 30 June 2027: the rise due on 1 January 2027 and the March and April 2027 steps do not happen while the 5p cut is extended. From 1 July 2027 fuel duty is current law's, 60.04p a litre, rising with RPI each April as current law has it. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
       "display": "schedule",
       "rows": [
         {
@@ -49,43 +49,43 @@
               "key": "2027-04-01",
               "label": "1 April 2027",
               "year": 2027,
-              "before": 59.75,
+              "before": 60.04,
               "after": 52.95
             },
             {
               "key": "2027-07-01",
               "label": "1 July 2027",
               "year": 2027,
-              "before": 59.75,
-              "after": 59.75
+              "before": 60.04,
+              "after": 60.04
             },
             {
               "key": "2028-04-01",
               "label": "1 April 2028",
               "year": 2028,
-              "before": 61.54,
-              "after": 61.54
+              "before": 62.62,
+              "after": 62.62
             },
             {
               "key": "2029-04-01",
               "label": "1 April 2029",
               "year": 2029,
-              "before": 63.26,
-              "after": 63.26
+              "before": 64.5,
+              "after": 64.5
             },
             {
               "key": "2030-04-01",
               "label": "1 April 2030",
               "year": 2030,
-              "before": 65.09,
-              "after": 65.09
+              "before": 66.44,
+              "after": 66.44
             },
             {
               "key": "2031-04-01",
               "label": "1 April 2031",
               "year": 2031,
-              "before": 66.59,
-              "after": 66.59
+              "before": 67.97,
+              "after": 67.97
             }
           ],
           "source": {
@@ -109,43 +109,43 @@
               "key": "2026",
               "label": "2026-27",
               "year": 2026,
-              "before": 53.95274,
+              "before": 53.956712,
               "after": 52.95
             },
             {
               "key": "2027",
               "label": "2027-28",
               "year": 2027,
-              "before": 59.774454,
-              "after": 58.1766
+              "before": 60.075246,
+              "after": 58.4093
             },
             {
               "key": "2028",
               "label": "2028-29",
               "year": 2028,
-              "before": 61.563562,
-              "after": 61.563562
+              "before": 62.645753,
+              "after": 62.645753
             },
             {
               "key": "2029",
               "label": "2029-30",
               "year": 2029,
-              "before": 63.285068,
-              "after": 63.285068
+              "before": 64.526575,
+              "after": 64.526575
             },
             {
               "key": "2030",
               "label": "2030-31",
               "year": 2030,
-              "before": 65.110548,
-              "after": 65.110548
+              "before": 66.460959,
+              "after": 66.460959
             },
             {
               "key": "2031",
               "label": "2031-32",
               "year": 2031,
-              "before": 66.610902,
-              "after": 66.610902
+              "before": 67.990492,
+              "after": 67.990492
             }
           ],
           "source": {
@@ -730,14 +730,14 @@
               "label": "2030-31",
               "year": 2030,
               "before": 204.0,
-              "after": 299.045463
+              "after": 300.44426
             },
             {
               "key": "2031",
               "label": "2031-32",
               "year": 2031,
               "before": 204.0,
-              "after": 300.946641
+              "after": 302.37293
             }
           ],
           "source": {

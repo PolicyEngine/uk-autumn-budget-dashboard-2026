@@ -98,9 +98,11 @@ MONTHS = (
 
 
 def _parameters():
-    from policyengine_uk.system import system
+    """Current law on the OBR October 2026 forecast, as every run builds
+    it (``uk_budget_data.forecast``)."""
+    from uk_budget_data.forecast import forecast_parameters
 
-    return system.parameters
+    return forecast_parameters()
 
 
 def engine_value(path: str, year: int) -> float:

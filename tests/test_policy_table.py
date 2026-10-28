@@ -4,13 +4,13 @@ read from the model by ``uk-budget-data policy-table``."""
 from pathlib import Path
 
 import pytest
-from policyengine_uk.system import system
 
 from uk_budget_data import reforms as registry
 from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
     WINTER_SHARE,
 )
 from uk_budget_data.cli import main
+from uk_budget_data.forecast import forecast_parameters
 from uk_budget_data.policy_table import (
     OUTPUT_FILE,
     YEAR_WEIGHTS,
@@ -22,7 +22,8 @@ from uk_budget_data.policy_table import (
 PUBLISHED = (
     Path(__file__).resolve().parents[1] / "public" / "data" / OUTPUT_FILE
 )
-PARAMETERS = system.parameters
+# Current law on the OBR October 2026 forecast, as every run builds it.
+PARAMETERS = forecast_parameters()
 
 
 @pytest.fixture(scope="module")
@@ -101,12 +102,13 @@ def test_every_candidate_has_a_table_with_its_published_description(document):
 
 def test_fuel_duty_by_date(document):
     dated = by_key(rows(document, "fuel_duty_rise_deferral")["Fuel duty"])
-    # 52.95p held to 30 June 2027, then current law's 59.75p and its RPI
+    # 52.95p held to 30 June 2027, then current law's 60.04p and its RPI
+    # (OBR October 2026 forecast)
     assert dated["2027-01-01"] == (55.95, 52.95)
     assert dated["2027-03-01"] == (57.95, 52.95)
-    assert dated["2027-04-01"] == (59.75, 52.95)
-    assert dated["2027-07-01"] == (59.75, 59.75)
-    assert dated["2028-04-01"] == (61.54, 61.54)
+    assert dated["2027-04-01"] == (60.04, 52.95)
+    assert dated["2027-07-01"] == (60.04, 60.04)
+    assert dated["2028-04-01"] == (62.62, 62.62)
     assert "2032-04-01" not in dated  # after the timeline
     assert dated["2026-04-01"] == (52.95, 52.95)  # the timeline's first day
 
