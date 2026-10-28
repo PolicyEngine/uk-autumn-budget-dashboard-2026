@@ -18,6 +18,10 @@
  * - inForce: the months it is in force, as "YYYY-MM" (`to` is the last
  *   month; a lasting measure has none), for the card's timeline;
  * - ends: when a temporary measure ends, in words (only with `to`);
+ * - outsidePovertyIncome: true where the model pays the measure through a
+ *   variable HBAI's household net income leaves out (policyengine-uk's
+ *   hbai_household_net_income), so poverty and inequality cannot move with
+ *   it even in the years it is in force;
  * - duration: a temporary measure's length in words, where a count of
  *   months would mislead (a one-off winter payment);
  * - steps / stepsLabel: dated stages within a measure, drawn as diamonds,
@@ -66,7 +70,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Applies the duty rate in force on each day to households' petrol and diesel spending, day-weighted to fiscal years.",
     details:
-      "Assumes no rise on 1 January 2027 and none in March or April 2027 until the cut ends on 1 July 2027, when duty returns to current law's rate and its RPI rises; after that it costs nothing. The end date is the Budget document's. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel for vans, lorries and business use of cars is not modelled, so the figure covers households' own fuel; the Treasury's figure also covers business fuel.",
+      "Assumes no rise on 1 January 2027 and none in March or April 2027 until the cut ends on 1 July 2027, when duty returns to current law's rate and its RPI rises; after that it costs nothing. The end date is the Budget document's. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel for vans, lorries and business use of cars is not modelled, so the figure covers households' own fuel; the Treasury's figure also covers business fuel but is fuel duty receipts only, without the VAT our figure includes.",
     source: {
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
@@ -89,9 +93,9 @@ export const POLICY_DETAILS = [
     inForce: { from: "2027-04", to: "2030-03" },
     ends: "April 2030",
     howCalculated:
-      "Reduces each eligible person's modelled income tax, never below zero; the reduction falls by £1 for every £3 of total income above the full new State Pension.",
+      "Reduces each eligible person's modelled income tax, never below zero, and the income tax that Universal Credit deducts from their earnings; the reduction falls by £1 for every £3 of total income above the full new State Pension.",
     details:
-      "Total income counts the State Pension and all other income, savings interest included, so a larger State Pension (with increments or additional State Pension) reduces the allowance too. The personal allowance is unchanged. People who reach State Pension age after 6 October in a tax year are not included, though the allowance covers them, so its reach and cost are slightly understated.",
+      "Total income counts the State Pension and all other income, savings interest included, so a larger State Pension (with increments or additional State Pension) reduces the allowance too. The personal allowance is unchanged. People who reach State Pension age after 6 October in a tax year are not included, though the allowance covers them, so its reach and cost are slightly understated. Scottish taxpayers get the same allowance, at the 20% basic rate. Pension Credit, Housing Benefit and Council Tax Reduction count income after tax, so they take back part of the allowance, and a claimant aged 75 or over who leaves Pension Credit loses the free TV licence. Universal Credit counts pension income before tax, so it changes only where the allowance cuts the tax on earnings.",
     source: {
       label: "Pension Tax Allowance explainer",
       href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer",
@@ -134,7 +138,7 @@ export const POLICY_DETAILS = [
     sentence: "taking VAT off household electricity",
     name: "Zero VAT on domestic electricity",
     description: "Zero-rate VAT on domestic electricity to July 2027",
-    writtenFor: "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027: in Great Britain to March 2027 and across the UK from April 2027. The model's baseline has no zero rate, so the measure covers the whole period, as the Treasury costs it. It applies to electricity spending only. Each year carries its share of a year's electricity use, not a share of its days (DESNZ Energy Trends Table 5.5): 2026-27 the October to March share (about 57%), 2027-28 the April to June share (about 22%).",
+    writtenFor: "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027. It applies in Great Britain from October 2026 and across the UK from April 2027. It covers electricity only, not gas. Each year counts its share of a year's electricity use: about 57% in 2026-27 (October to March) and 22% in 2027-28 (April to June).",
     summary:
       "Charges no VAT on household electricity bills, instead of 5%, from October 2026 to July 2027.",
     starts: "October 2026",
@@ -321,27 +325,50 @@ export const POLICY_DETAILS = [
     },
   },
   {
-    id: "unearned_income_rates_up",
-    shortName: "Savings and property tax up",
-    sentence: "raising tax on savings and property income",
-    name: "Savings and property income tax rates up",
-    description: "Raise income tax on savings and property income by 2 points",
-    writtenFor: "From 6 April 2027 the income tax rates on savings income rise to 24%, 44% and 49% at the basic, higher and additional rates across the UK, and those on property income to the same rates in England, Wales and Northern Ireland: 2 percentage points above current law, which already includes Budget 2025's rises. Finance cost relief for landlords follows the property basic rate, so rises to 24%. Dividend rates are unchanged. Incomes are held fixed, with no behavioural response.",
+    id: "property_income_rates_up",
+    shortName: "Property income tax up",
+    sentence: "raising tax on property income",
+    name: "Property income tax rates up",
+    description: "Raise income tax on property income by 2 points",
+    writtenFor: "From 6 April 2027 the income tax rates on property income rise to 24%, 44% and 49% at the basic, higher and additional rates in England, Wales and Northern Ireland: 2 percentage points above current law, which already includes Budget 2025's rises. Finance cost relief for landlords follows the property basic rate, so rises to 24%, Scottish landlords' included. Incomes are held fixed, with no behavioural response.",
     summary:
-      "Raises the income tax rates on savings income, and on property income outside Scotland, by 2 percentage points from April 2027.",
+      "Raises the income tax rates on property income outside Scotland by 2 percentage points from April 2027.",
     starts: "April 2027",
-    affects: "People with savings interest or rental income",
+    affects: "People with rental income",
     type: "Income tax",
     inForce: { from: "2027-04" },
     howCalculated:
-      "Adds 2 percentage points to each savings and property income rate from 2027-28: to 24%, 44% and 49% at the basic, higher and additional rates. Dividend rates are unchanged.",
+      "Adds 2 percentage points to each property income rate from 2027-28: to 24%, 44% and 49% at the basic, higher and additional rates.",
     details:
-      "The 2-point rise is on top of the rises Budget 2025 legislated. Scottish taxpayers pay Scottish rates on property income, so their property rates don't change. Finance cost relief follows the property basic rate, which the law as it stands sets for the whole UK, so Scottish landlords' relief also rises to 24% and they pay a little less tax. Incomes are held fixed: no one is assumed to change how they hold savings or property.",
+      "The 2-point rise is on top of the rises Budget 2025 legislated. Scottish taxpayers pay Scottish rates on property income, so their property rates don't change. Finance cost relief follows the property basic rate, which the law as it stands sets for the whole UK, so Scottish landlords' relief also rises to 24% and they pay a little less tax. Incomes are held fixed: no one is assumed to change how they hold property.",
     source: {
       label: "HMRC: changes to tax rates for property, savings and dividend income",
       href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
     },
-    budgetRows: [61, 62],
+    budgetRows: [61],
+  },
+  {
+    id: "savings_income_rates_up",
+    shortName: "Savings income tax up",
+    sentence: "raising tax on savings income",
+    name: "Savings income tax rates up",
+    description: "Raise income tax on savings income by 2 points",
+    writtenFor: "From 6 April 2027 the income tax rates on savings income rise to 24%, 44% and 49% at the basic, higher and additional rates across the UK: 2 percentage points above current law, which already includes Budget 2025's rises. Dividend rates are unchanged. Incomes are held fixed, with no behavioural response.",
+    summary:
+      "Raises the income tax rates on savings income across the UK by 2 percentage points from April 2027.",
+    starts: "April 2027",
+    affects: "People with savings interest",
+    type: "Income tax",
+    inForce: { from: "2027-04" },
+    howCalculated:
+      "Adds 2 percentage points to each savings income rate from 2027-28: to 24%, 44% and 49% at the basic, higher and additional rates. Dividend rates are unchanged.",
+    details:
+      "The 2-point rise is on top of the rises Budget 2025 legislated. It applies across the UK, Scotland included: savings income is taxed at UK rates. Incomes are held fixed: no one is assumed to change how they hold savings.",
+    source: {
+      label: "HMRC: changes to tax rates for property, savings and dividend income",
+      href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
+    },
+    budgetRows: [62],
   },
   {
     id: "household_energy_payment_2026",
@@ -356,6 +383,9 @@ export const POLICY_DETAILS = [
     affects: "Households in England in council tax bands A to D",
     type: "Payment",
     inForce: { from: "2027-01", to: "2027-03" },
+    // Paid through ebr_council_tax_rebate (energy_bills_rebate), which
+    // policyengine-uk 2.151.0's hbai_household_net_income does not add
+    outsidePovertyIncome: true,
     ends: "After one winter",
     duration: "One winter",
     howCalculated:

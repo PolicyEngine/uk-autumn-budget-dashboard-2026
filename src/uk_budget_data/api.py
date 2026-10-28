@@ -465,6 +465,27 @@ class HouseholdAnswersRequest(BaseModel):
         ),
     )
 
+    self_employment_receipts: float = Field(
+        default=0,
+        ge=0,
+        le=MAX_AMOUNT,
+        description=(
+            "The head's self-employment or side income, £ a year: gross "
+            "receipts (turnover), as policyengine-uk's "
+            "self_employment_gross_receipts, so the trading allowance "
+            "election can be made"
+        ),
+    )
+    self_employment_expenses: float = Field(
+        default=0,
+        ge=0,
+        le=MAX_AMOUNT,
+        description=(
+            "Its allowable expenses, £ a year; self_employment_income is "
+            "receipts less expenses"
+        ),
+    )
+
     def answers(self) -> household_impact.HouseholdAnswers:
         values = self.model_dump()
         values["children"] = tuple(

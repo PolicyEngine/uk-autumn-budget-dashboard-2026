@@ -58,6 +58,7 @@ const PovertyMeasuresRow = lazyView(chartViews, (m) => m.PovertyMeasuresRow);
 const PersonalImpactTab = lazyView(chartViews, (m) => m.PersonalImpactTab);
 const LivingStandardsTab = lazyView(chartViews, (m) => m.LivingStandardsTab);
 const PolicyCards = lazyView(() => import("./components/PolicyCards"));
+const UnmodelledMeasures = lazyView(() => import("./components/policies/UnmodelledMeasures"));
 const MethodologyTab = lazyView(() => import("./components/MethodologyTab"));
 
 // The code each view ("tab" or "tab:sub", as bootView names them) needs
@@ -69,7 +70,7 @@ const VIEW_CODE = {
   "dashboard:poverty": [PovertyMeasuresRow],
   household: [PersonalImpactTab],
   outlook: [LivingStandardsTab],
-  policies: [PolicyCards],
+  policies: [PolicyCards, UnmodelledMeasures],
   methodology: [MethodologyTab],
 };
 
@@ -1285,6 +1286,8 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
                 onShowEffect={handleShowEffect}
               />
             </section>
+            {/* The Budget's measures the dashboard leaves out, as cards of the same kind */}
+            <UnmodelledMeasures />
           </div>
         ) : value === "methodology" ? (
           <MethodologyTab onShowTab={handleTabChange} />

@@ -53,7 +53,8 @@ CANDIDATES = (
     "fuel_duty_rise_deferral",
     "state_pension_income_tax_protection",
     "domestic_electricity_zero_vat",
-    "unearned_income_rates_up",
+    "property_income_rates_up",
+    "savings_income_rates_up",
     "carers_allowance_earnings_taper",
     "household_energy_payment_2026",
     "trading_allowance_raise",
@@ -63,7 +64,9 @@ NOT_IN_PACKAGE = ()
 # Registered on 27 October, before its first national generation: its rows
 # are checked once budgetary_impact.csv has them.
 NOT_YET_GENERATED = (
-    "unearned_income_rates_up",
+    # Split from the savings and property measure on Budget day
+    "property_income_rates_up",
+    "savings_income_rates_up",
     # Registered again on Budget day (HCWS421)
     "carers_allowance_earnings_taper",
     # Announced in the Budget speech
@@ -93,6 +96,9 @@ WITHDRAWN = {
     "road_fuel_vat_cut": reforms._create_road_fuel_vat_cut,
     # Its cells in deciles 9 and 10 rest on fewer than 10 survey households
     "lha_unfreeze_2027": reforms._create_lha_unfreeze_2027,
+    # Split on Budget day into the property and savings measures, Table 6.1
+    # rows 61 and 62
+    "unearned_income_rates_up": reforms._create_unearned_income_rates_up,
 }
 OLD_PLACEHOLDERS = (
     "two_child_limit",
@@ -147,15 +153,16 @@ def test_the_package_is_the_eight_candidates():
     from uk_budget_data.geography import manifest_key
     from uk_budget_data.publication.combine import combined_key
 
-    # Seven on Budget day: the measures the Budget 2026 document announced
-    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 7
-    assert len(reforms._MEASURE_FACTORIES) == 7
+    # Eight on Budget day: the measures the Budget 2026 document announced,
+    # savings and property rates one each (Table 6.1 rows 61 and 62)
+    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 8
+    assert len(reforms._MEASURE_FACTORIES) == 8
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
-    assert key == "combined--4e3e325c74977848"
+    assert key == "combined--92701a68cf080aa8"
     # The area run's package alias stands for that key
     assert manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     description = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID).description
-    assert description.startswith("All seven announced measures")
+    assert description.startswith("All eight announced measures")
 
 
 def test_the_withdrawn_measures_are_not_registered():
@@ -180,7 +187,8 @@ ANNOUNCED = (
     "domestic_electricity_zero_vat",
     "household_energy_payment_2026",
     "carers_allowance_earnings_taper",
-    "unearned_income_rates_up",
+    "property_income_rates_up",
+    "savings_income_rates_up",
     "trading_allowance_raise",
 )
 
@@ -1067,10 +1075,18 @@ FIRST_YEARS = {
     ),
     # £5,000 of savings interest, £4,000 over the £1,000 personal savings
     # allowance: 2 points is £80 (dividends no longer move)
-    "unearned_income_rates_up": (
+    "savings_income_rates_up": (
         2027,
         "income_tax",
         {"employment_income": 30_000, "savings_interest_income": 5_000},
+        {},
+    ),
+    # £9,000 of property income, £8,000 over the £1,000 property allowance,
+    # in the basic rate band: 2 points is £160
+    "property_income_rates_up": (
+        2027,
+        "income_tax",
+        {"employment_income": 30_000, "property_income": 9_000},
         {},
     ),
     # £12,500 of pay, about £240 a week, over the Budget's limit (16 hours

@@ -92,18 +92,24 @@ SECONDARY_THRESHOLD = (
     "gov.hmrc.national_insurance.class_1.employer_scale[1].threshold"
 )
 INCOME_TAX_RATES = "gov.hmrc.income_tax.rates"
-# The dividend schedule's four brackets (the fourth a technical top node
-# repeating the additional rate) and the savings and property rates.
-# Budget 2026 document (3.9; rows 61 and 62): savings and property income
-# rates up a further 2 points from April 2027 at the basic, higher and
-# additional rates; dividends unchanged.
-UNEARNED_INCOME_RATE_PATHS = (
-    f"{INCOME_TAX_RATES}.savings.basic",
-    f"{INCOME_TAX_RATES}.savings.higher",
-    f"{INCOME_TAX_RATES}.savings.additional",
+# Budget 2026 document (3.9; Table 6.1 rows 61 and 62): property and
+# savings income rates up a further 2 points from April 2027 at the basic,
+# higher and additional rates; dividends unchanged. One measure each, as
+# the Treasury's two rows (Vahid, 28 October 2026).
+PROPERTY_INCOME_RATE_PATHS = (
     f"{INCOME_TAX_RATES}.property.basic",
     f"{INCOME_TAX_RATES}.property.higher",
     f"{INCOME_TAX_RATES}.property.additional",
+)
+SAVINGS_INCOME_RATE_PATHS = (
+    f"{INCOME_TAX_RATES}.savings.basic",
+    f"{INCOME_TAX_RATES}.savings.higher",
+    f"{INCOME_TAX_RATES}.savings.additional",
+)
+# Both together: the single measure withdrawn when they were split.
+UNEARNED_INCOME_RATE_PATHS = (
+    *SAVINGS_INCOME_RATE_PATHS,
+    *PROPERTY_INCOME_RATE_PATHS,
 )
 
 FUEL_DUTY_DEFERRAL_ID = "fuel_duty_rise_deferral"
@@ -117,6 +123,8 @@ FUEL_VAT_ID = "road_fuel_vat_cut"
 PLAN_2_ID = "plan_2_threshold_unfreeze"
 EMPLOYER_NI_THRESHOLD_ID = "employer_nics_secondary_threshold_raise"
 UNEARNED_INCOME_RATES_ID = "unearned_income_rates_up"
+PROPERTY_INCOME_RATES_ID = "property_income_rates_up"
+SAVINGS_INCOME_RATES_ID = "savings_income_rates_up"
 LHA_UNFREEZE_ID = "lha_unfreeze_2027"
 CARERS_ALLOWANCE_TAPER_ID = "carers_allowance_earnings_taper"
 STATE_PENSION_DOUBLE_LOCK_ID = "state_pension_double_lock_2030"
@@ -529,14 +537,11 @@ def _electricity_vat_description() -> str:
     if _electricity.PRE_BUDGET_ZERO_RATE_IN_MEASURE:
         return (
             "VAT on domestic electricity is 0% instead of 5% from "
-            f"1 October 2026 to {end_text}: in Great "
-            "Britain to March 2027 and across the UK from April 2027. The "
-            "model's baseline has no zero rate, so the measure covers the "
-            "whole period, as the Treasury costs it. It applies to "
-            "electricity spending only. Each year carries its share of a "
-            "year's electricity use, not a share of its days (DESNZ Energy "
-            "Trends Table 5.5): 2026-27 the October to March share (about "
-            "57%), 2027-28 the April to June share (about 22%)."
+            f"1 October 2026 to {end_text}. It applies in Great Britain "
+            "from October 2026 and across the UK from April 2027. It covers "
+            "electricity only, not gas. Each year counts its share of a "
+            "year's electricity use: about 57% in 2026-27 (October to "
+            "March) and 22% in 2027-28 (April to June)."
         )
     return (
         "The zero rate of VAT on domestic electricity, "
@@ -825,17 +830,18 @@ def _create_employer_nics_secondary_threshold_raise() -> Reform:
 
 
 # =============================================================================
-# DIVIDEND, SAVINGS AND PROPERTY INCOME TAX RATES UP 2 POINTS FROM APRIL 2027
+# PROPERTY AND SAVINGS INCOME TAX RATES UP 2 POINTS FROM APRIL 2027
 # =============================================================================
 
 UNEARNED_INCOME_RATE_RISE = 0.02
 UNEARNED_INCOME_RATES_FROM = 2027
 
 
-def unearned_income_rates_up() -> dict[str, dict[str, float]]:
-    """Current law's rate plus 2 points, every policy year from 2027."""
+def _rates_up(paths) -> dict[str, dict[str, float]]:
+    """Current law's rate plus 2 points at each path, every policy year
+    from 2027."""
     changes = {}
-    for path in UNEARNED_INCOME_RATE_PATHS:
+    for path in paths:
         node = forecast_parameters().get_child(path)
         changes.update(
             rate_change(
@@ -852,7 +858,62 @@ def unearned_income_rates_up() -> dict[str, dict[str, float]]:
     return changes
 
 
+def property_income_rates_up() -> dict[str, dict[str, float]]:
+    """The property basic, higher and additional rates, 2 points up."""
+    return _rates_up(PROPERTY_INCOME_RATE_PATHS)
+
+
+def savings_income_rates_up() -> dict[str, dict[str, float]]:
+    """The savings basic, higher and additional rates, 2 points up."""
+    return _rates_up(SAVINGS_INCOME_RATE_PATHS)
+
+
+def unearned_income_rates_up() -> dict[str, dict[str, float]]:
+    """Both: the withdrawn single measure's changes."""
+    return _rates_up(UNEARNED_INCOME_RATE_PATHS)
+
+
+def _create_property_income_rates_up() -> Reform:
+    # Table 6.1 row 61. The engine's property rates do not apply to
+    # Scottish taxpayers, whose property income is taxed at Scottish rates;
+    # finance cost relief follows the property basic rate UK-wide (ITTOIA
+    # 2005 s. 274AA(5) as amended by FA 2026), so Scottish landlords' relief
+    # rises too (Max, #290, 28 October 2026).
+    return Reform(
+        id=PROPERTY_INCOME_RATES_ID,
+        name="Property income tax rates up",
+        description=(
+            "From 6 April 2027 the income tax rates on property income rise "
+            "to 24%, 44% and 49% at the basic, higher and additional rates "
+            "in England, Wales and Northern Ireland: 2 percentage points "
+            "above current law, which already includes Budget 2025's rises. "
+            "Finance cost relief for landlords follows the property basic "
+            "rate, so rises to 24%, Scottish landlords' included. Incomes "
+            "are held fixed, with no behavioural response."
+        ),
+        parameter_changes=property_income_rates_up(),
+    )
+
+
+def _create_savings_income_rates_up() -> Reform:
+    # Table 6.1 row 62.
+    return Reform(
+        id=SAVINGS_INCOME_RATES_ID,
+        name="Savings income tax rates up",
+        description=(
+            "From 6 April 2027 the income tax rates on savings income rise "
+            "to 24%, 44% and 49% at the basic, higher and additional rates "
+            "across the UK: 2 percentage points above current law, which "
+            "already includes Budget 2025's rises. Dividend rates are "
+            "unchanged. Incomes are held fixed, with no behavioural response."
+        ),
+        parameter_changes=savings_income_rates_up(),
+    )
+
+
 def _create_unearned_income_rates_up() -> Reform:
+    # Withdrawn on Budget day, 28 October 2026: split into the property and
+    # savings measures above, one per Table 6.1 row. Unregistered.
     return Reform(
         id=UNEARNED_INCOME_RATES_ID,
         name="Savings and property income tax rates up",
@@ -1030,7 +1091,8 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
     FUEL_DUTY_DEFERRAL_ID,
     STATE_PENSION_ALLOWANCE_ID,
     ELECTRICITY_VAT_ID,
-    UNEARNED_INCOME_RATES_ID,
+    PROPERTY_INCOME_RATES_ID,
+    SAVINGS_INCOME_RATES_ID,
     # Budget day: registered once announced (HCWS421). Its cells in some
     # deciles rest on fewer than 3 survey households, so the combined run
     # refuses while it is here: drop it and keep it in _MEASURE_FACTORIES,
@@ -1044,11 +1106,15 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
 # Discount top-up, the threshold freeze to 2031-32 (not extended), the
 # Plan 2 threshold unfreeze (the freeze stays) and the employer NI
 # secondary threshold (stays £5,000). Their factories stay, unregistered.
+# Also withdrawn that day: the savings and property income tax rates as one
+# measure (``UNEARNED_INCOME_RATES_ID``), split into the property and the
+# savings measures, Table 6.1 rows 61 and 62. Package of eight.
 _MEASURE_FACTORIES = (
     _create_fuel_duty_rise_deferral,
     _create_state_pension_income_tax_protection,
     _create_domestic_electricity_zero_vat,
-    _create_unearned_income_rates_up,
+    _create_property_income_rates_up,
+    _create_savings_income_rates_up,
     _create_carers_allowance_earnings_taper,
     _create_household_energy_payment_2026,
     _create_trading_allowance_raise,

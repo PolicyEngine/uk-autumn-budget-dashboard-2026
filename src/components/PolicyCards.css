@@ -83,3 +83,37 @@
   -webkit-line-clamp: unset;
   line-clamp: none;
 }
+
+/* What changes, in the entry's own words, above any values */
+.pchg-lead {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-700);
+}
+
+/* A card's sources, in a line above Costing */
+.policy-card-sources {
+  margin: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.policy-card-sources a {
+  color: var(--pe-teal-700);
+  text-decoration: underline;
+  text-decoration-color: var(--pe-teal-200);
+  text-underline-offset: 3px;
+}
+
+.policy-card-why {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Who it reaches, in full: a row of its own under Starts and Ends */
+.policy-card-affects.is-wide {
+  grid-column: 1 / -1;
+}

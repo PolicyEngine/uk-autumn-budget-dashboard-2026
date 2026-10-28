@@ -171,12 +171,12 @@ describe("the chosen household", () => {
 describe("an example card's chip tooltip (W6 G1)", () => {
   it("names the largest single effect, never 'most of the change' when it pulls the other way", () => {
     // Illustrative figures: a loss of £90 overall, the example's own
-    // measure −£260, a gain of £320 from another: the largest, but not
-    // most of a loss
-    const own = "unearned_income_rates_up";
+    // measures −£260 together (property −£200, savings −£60), a gain of
+    // £320 from another: the largest, but not most of a loss
+    const [property, savings] = ["property_income_rates_up", "savings_income_rates_up"];
     const other = "fuel_duty_rise_deferral";
-    const catalogue = publishing([own, other]);
-    const presets = { "landlord-saver": { 2029: { change: -90, before: 40000, after: 39910, byPolicy: { [own]: -260, [other]: 320 } } } };
+    const catalogue = publishing([property, savings, other]);
+    const presets = { "landlord-saver": { 2029: { change: -90, before: 40000, after: 39910, byPolicy: { [property]: -200, [savings]: -60, [other]: 320 } } } };
     render(
       <MeasureCatalogueProvider catalogue={catalogue}>
         <HouseholdCards examples={HOUSEHOLD_EXAMPLES} value={null} formOpen={false} formId="f" onYours={() => {}} onChoose={() => {}} presets={presets} yoursChange={null} year={2029} chosen={false} yoursSelected={false} />

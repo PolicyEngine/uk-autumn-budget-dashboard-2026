@@ -44,6 +44,9 @@ export const EXAMPLE_ANSWERS = Object.freeze({
   dividends_per_year: 0,
   savings_interest_per_year: 0,
   property_income_per_year: 0,
+  // No self-employment (nothing sent)
+  self_employment_receipts_per_year: 0,
+  self_employment_expenses_per_year: 0,
   private_pension_per_year: 0,
   partner_private_pension_per_year: 0,
   monthly_childcare: 0,

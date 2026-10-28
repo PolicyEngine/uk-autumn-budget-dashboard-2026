@@ -25,18 +25,21 @@ const MONTH_NAMES = [
 const trimmed = (value, digits) =>
   value.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: digits });
 
-/** A value in its unit: "5%", "52.95p", "£30,267"; none is "none". */
+/** A value in its unit: "5%", "52.95p", "35p", "£13.21", "£30,267"; none is "none". */
 export function formatValue(value, unit) {
   if (value === null || value === undefined) return "none";
   if (unit === "percent") return `${trimmed(value * 100, 2)}%`;
   if (unit === "pence_per_litre") return `${value.toFixed(2)}p`;
+  if (unit === "pence") return `${trimmed(value, 2)}p`;
+  if (unit === "gbp_pence") return `£${value.toFixed(2)}`;
   return `£${Math.round(value).toLocaleString("en-GB")}`;
 }
 
 /** The size of a change, unsigned, in its unit: "£1,130", "6.8p". */
 export function formatSize(before, after, unit) {
   const size = Math.abs((after ?? 0) - (before ?? 0));
-  if (unit === "pence_per_litre") return `${trimmed(size, 2)}p`;
+  if (unit === "pence_per_litre" || unit === "pence") return `${trimmed(size, 2)}p`;
+  if (unit === "gbp_pence") return `£${size.toFixed(2)}`;
   return `£${Math.round(size).toLocaleString("en-GB")}`;
 }
 
@@ -167,4 +170,34 @@ export function loadPolicyParameters({ fetchImpl = globalThis.fetch, base = proc
 /** For tests: forget the loaded file. */
 export function resetPolicyParameters() {
   cached = undefined;
+}
+
+/**
+ * Each measure's scored years, from the file: { id: { first, last } }, the
+ * first and last fiscal year (its start) in which any of its parameters
+ * differs from current law. A measure with no changed year is left out.
+ */
+export function measureWindows(document) {
+  const windows = {};
+  for (const [id, entry] of Object.entries(document?.measures ?? {})) {
+    const years = (entry?.rows ?? [])
+      .flatMap((row) => row?.points ?? [])
+      .filter((point) => differs(point))
+      .map((point) => (Number.isFinite(point.year) ? point.year : Number(String(point.key ?? "").slice(0, 4))))
+      .filter(Number.isFinite);
+    if (years.length) windows[id] = { first: Math.min(...years), last: Math.max(...years) };
+  }
+  return windows;
+}
+
+/**
+ * What a measure is in `year` when it is not in force then: "Starts
+ * 2030-31" before its first year, "Ended 2029-30" after its last, "2026-27
+ * only" for a one-year measure; null in its years or without a window.
+ * `label` writes a year (start year) as "2030-31".
+ */
+export function outOfForceText(window, year, label) {
+  if (!window || !Number.isFinite(year) || (year >= window.first && year <= window.last)) return null;
+  if (window.first === window.last) return `${label(window.first)} only`;
+  return year < window.first ? `Starts ${label(window.first)}` : `Ended ${label(window.last)}`;
 }

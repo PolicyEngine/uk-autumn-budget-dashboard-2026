@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import PolicyCards, {
   BUDGET_DAY_MONTH,
   CARD_SECTIONS,
+  UNMODELLED_ONLY_SECTIONS,
   TIMELINE_START_YEAR,
   TIMELINE_YEARS,
   durationLabel,
@@ -443,7 +444,8 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       ["warm_home_discount_top_up", "£150£250+£100"],
       ["domestic_electricity_zero_vat", "5%0%−5 points"],
       ["threshold_freeze_2031_32", "£12,830£12,570−£260"],
-      ["unearned_income_rates_up", "22%24%+2 points"],
+      ["property_income_rates_up", "22%24%+2 points"],
+      ["savings_income_rates_up", "22%24%+2 points"],
     ];
     for (const [id, values] of cases) {
       if (!file.measures[id]) continue;
@@ -455,12 +457,13 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     }
   });
 
-  it("gives each of the seven announced measures, as the real file describes it, its summary, timing, category, what changes and caveats", () => {
+  it("gives each of the eight announced measures, as the real file describes it, its summary, timing, category, what changes and caveats", () => {
     const seven = [
       ["fuel_duty_rise_deferral", "Fuel duty cut extended", "Fuel duty", "January 2027"],
       ["state_pension_income_tax_protection", "Pension Tax Allowance", "Income tax", "April 2027"],
       ["domestic_electricity_zero_vat", "Zero VAT on domestic electricity", "VAT", "October 2026"],
-      ["unearned_income_rates_up", "Savings and property income tax rates up", "Income tax", "April 2027"],
+      ["property_income_rates_up", "Property income tax rates up", "Income tax", "April 2027"],
+      ["savings_income_rates_up", "Savings income tax rates up", "Income tax", "April 2027"],
       ["carers_allowance_earnings_taper", "Carer's Allowance earnings taper", "Benefits", "2030-31"],
       ["household_energy_payment_2026", "Household Energy Payment", "Energy", "January 2027"],
       ["trading_allowance_raise", "Trading allowance raised to £3,000", "Income tax", "April 2027"],
@@ -485,8 +488,11 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
   it("names the incidence, benefit cap and Budget 2025 caveats on the three new measures", () => {
     expect(detailsById.employer_nics_secondary_threshold_raise.details).toMatch(/total cost of employment fixed.*higher wages/);
     expect(detailsById.lha_unfreeze_2027.details).toMatch(/benefit cap still applies/);
-    expect(detailsById.unearned_income_rates_up.details).toMatch(/on top of the rises Budget 2025 legislated/);
-    for (const id of ["lha_unfreeze_2027", "employer_nics_secondary_threshold_raise", "unearned_income_rates_up"]) {
+    for (const id of ["property_income_rates_up", "savings_income_rates_up"]) {
+      expect(detailsById[id].details, id).toMatch(/on top of the rises Budget 2025 legislated/);
+    }
+    expect(detailsById.property_income_rates_up.details).toMatch(/Scottish landlords' relief also rises to 24%/);
+    for (const id of ["lha_unfreeze_2027", "employer_nics_secondary_threshold_raise", "property_income_rates_up", "savings_income_rates_up"]) {
       expect(detailsById[id].source.href, id).toMatch(/^https:\/\/www\.(gov|legislation\.gov)\.uk\//);
     }
   });
@@ -565,7 +571,9 @@ describe("the card's frame", () => {
     }
     // A card with details has every section
     const full = [...document.querySelectorAll(".policy-cards > .policy-card")].find((item) => !item.classList.contains("is-bare"));
-    for (const name of CARD_SECTIONS) expect(full.querySelector(`.${name}`), name).toBeTruthy();
+    for (const name of CARD_SECTIONS.filter((section) => !UNMODELLED_ONLY_SECTIONS.includes(section))) {
+      expect(full.querySelector(`.${name}`), name).toBeTruthy();
+    }
   });
 
   it("makes cards in a row one height, their sections in line and the footer at the bottom", () => {
@@ -580,14 +588,16 @@ describe("the card's frame", () => {
   });
 
   it("orders the cards as the Budget's Table 6.1 does, with each card's costing row and example", () => {
-    const ids = ["unearned_income_rates_up", "trading_allowance_raise", "household_energy_payment_2026", "carers_allowance_earnings_taper"];
-    render(<PolicyCards policies={ids.map((id) => published(id, id, id === "unearned_income_rates_up" ? "revenue" : "cost"))} selectedPolicies={ids} onShowEffect={() => {}} />);
+    const ids = ["savings_income_rates_up", "property_income_rates_up", "trading_allowance_raise", "household_energy_payment_2026", "carers_allowance_earnings_taper"];
+    const raises = ["property_income_rates_up", "savings_income_rates_up"];
+    render(<PolicyCards policies={ids.map((id) => published(id, id, raises.includes(id) ? "revenue" : "cost"))} selectedPolicies={ids} onShowEffect={() => {}} />);
     const cards = screen.getAllByRole("listitem").filter((item) => item.classList.contains("policy-card"));
-    // Rows 1, 7, 15, then 61 and 62: not raises first
+    // Rows 1, 7, 15, 61 and 62: not raises first
     expect(cards.map((item) => item.querySelector("h3").textContent)).toEqual([
-      "household_energy_payment_2026", "carers_allowance_earnings_taper", "trading_allowance_raise", "unearned_income_rates_up",
+      "household_energy_payment_2026", "carers_allowance_earnings_taper", "trading_allowance_raise", "property_income_rates_up", "savings_income_rates_up",
     ]);
-    const costing = within(cards[3]).getByRole("link", { name: /^Costing: Budget 2026, Table 6\.1, rows 61 and 62/ });
+    expect(within(cards[4]).getByRole("link", { name: /^Costing: Budget 2026, Table 6\.1, row 62/ })).toBeTruthy();
+    const costing = within(cards[3]).getByRole("link", { name: /^Costing: Budget 2026, Table 6\.1, row 61/ });
     expect(costing).toHaveAttribute("target", "_blank");
     expect(costing.getAttribute("href")).toMatch(/^https:\/\/www\.gov\.uk\/government\/publications\/budget-2026-document\//);
     // The trading allowance's worked example, under What changes; none where no source gives one

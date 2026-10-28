@@ -168,10 +168,10 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
       // An example's own figures say where they come from
       detail:
         assumed === "example" && spendingSource
-          ? `${spendingSource}. Fuel and electricity policies scale with what you spend; change these in More details to match your household.`
+          ? `${spendingSource}. Fuel and electricity policies scale with what you spend; change these in the Spending step to match your household.`
           : assumed
-            ? "Fuel and electricity policies scale with what you spend; change these in More details to match your household."
-            : "petrol, diesel and electricity, from More details",
+            ? "Fuel and electricity policies scale with what you spend; change these in the Spending step to match your household."
+            : "petrol, diesel and electricity, from the Spending step",
     });
   }
   if (showDependantsNote(data)) {

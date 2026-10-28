@@ -15,8 +15,8 @@ comparator_basis: post_behavioural
 # the static model leaves out (AB26 policy costings document): electricity
 # VAT (switching from gas), fuel duty (pump-price demand), Carer's Allowance
 # (labour supply and take-up), the Trading Allowance (people switching from
-# expenses to the allowance), property income (incorporation) and savings
-# income (shifting into ISAs). Their years pass within the wider band below.
+# expenses to the allowance), property income (incorporation; Table 6.1
+# row 61) and savings income (shifting into ISAs; row 62). Their years pass within the wider band below.
 # The Pension Tax Allowance costing "assumes no behavioural response" and the
 # Household Energy Payment is a flat payment with no costing page, so both
 # keep the ordinary band.
@@ -25,7 +25,8 @@ includes_behaviour:
   - fuel_duty_rise_deferral
   - carers_allowance_earnings_taper
   - trading_allowance_raise
-  - unearned_income_rates_up
+  - property_income_rates_up
+  - savings_income_rates_up
 # PROPOSAL: 25% of the Treasury's figure, with the ordinary £50m floor. The
 # ordinary 10% covers data and forecast differences; up to about 15% more
 # covers a behavioural offset the static model cannot reproduce. Behaviour

@@ -26,14 +26,14 @@ TABLE_A1 = {
     "average_earnings": [3.7, 3.0, 2.2, 2.3, 2.5, 2.6],
     "house_prices": [2.1, 2.4, 2.8, 2.8, 2.7, 2.7],
 }
-# Table A.2 (page 181): change since March, 2026 to 2030.
+# Table A.2 (page 182): change since March, 2026 to 2030.
 TABLE_A2 = {
     "consumer_price_index": [0.8, 1.5, 0.1, 0.1, 0.0],
     "rpi": [0.5, 1.3, 0.3, 0.1, 0.0],
     "average_earnings": [0.4, 0.6, 0.1, 0.1, 0.1],
     "house_prices": [-0.3, -0.5, 0.1, 0.2, 0.3],
 }
-# Table A.3 (page 181): the triple-lock guarantee, 2026-27 to 2031-32,
+# Table A.3 (page 182): the triple-lock guarantee, 2026-27 to 2031-32,
 # the highest of Q2 earnings growth, Q3 CPI and 2.5%, in that calendar year.
 TRIPLE_LOCK = {
     2026: 3.9,
@@ -263,4 +263,27 @@ def test_council_tax_is_expenditure_table_5_1(october):
     )
     assert council_tax.england("2027-01-01") == pytest.approx(
         49.256614 / 46.806 - 1, abs=5e-5
+    )
+
+
+def test_the_installed_engine_does_not_yet_carry_the_october_forecast():
+    """Tripwire (María, #290): once policyengine-uk carries the OBR October
+    2026 forecast itself (PolicyEngine/policyengine-uk#2711) and the bundle
+    moves to that release, this fails. Then remove the override
+    (forecast/obr_october_2026.json and with_forecast) in that PR rather
+    than applying the October values twice over the engine's own."""
+    from policyengine_uk.system import system
+
+    headline = ("consumer_price_index", "rpi", "average_earnings")
+    stored = forecast_record()["parameter_changes"]
+    matches = []
+    for name in headline:
+        node = system.parameters.get_child(OBR + name)
+        for period, value in stored[OBR + name]["values"].items():
+            day = period.split(".")[0]
+            matches.append(abs(node(day) - value) < 5e-5)
+    assert not all(matches), (
+        "the installed policyengine-uk already carries the OBR October 2026 "
+        "CPI, RPI and earnings forecast: remove the forecast override "
+        "(policyengine-uk#2711)"
     )

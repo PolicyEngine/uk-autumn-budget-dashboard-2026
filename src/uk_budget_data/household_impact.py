@@ -87,6 +87,7 @@ from uk_budget_data.publication.combine import (
 from uk_budget_data.reforms import (
     AUTUMN_BUDGET_2026_COMBINED_ID,
     EMPLOYER_NI_ID,
+    TRADING_ALLOWANCE_FROM,
     WARM_HOME_DISCOUNT_ID,
     get_autumn_budget_2026_reforms,
     get_reform,
@@ -532,6 +533,17 @@ PROGRAMMES = (
         "person",
     ),
     Programme(
+        "self_employment_income",
+        "Self-employment profit",
+        "income",
+        "self_employment_income",
+        "person",
+        note=(
+            "Receipts less allowable expenses, before the trading allowance, "
+            "which comes off taxable income."
+        ),
+    ),
+    Programme(
         "private_pension_income",
         "Private pension",
         "income",
@@ -570,6 +582,9 @@ def _all_rows():
 # exactly as it was before the form asked about caring. They are always
 # computed, and a non-carer's are £0, so "Other benefits" is unchanged.
 CARER_ROWS = frozenset({"carers_allowance", "uc_carer_element"})
+# Likewise the self-employment row: shown only for a household that gives
+# self-employment receipts or expenses (``HouseholdAnswers``).
+TRADING_ROWS = frozenset({"self_employment_income"})
 
 
 # Measures in the national figures that the household breakdown can't
@@ -786,6 +801,18 @@ class HouseholdAnswers:
     # partner is not asked.
     is_carer: bool = False
     care_hours_per_week: float = 35
+    # The head's self-employment or side income, £ a year in the year
+    # calculated: gross receipts (turnover) and allowable expenses. Given
+    # receipts, policyengine-uk's trading_allowance_deduction chooses
+    # between the trading allowance and the actual expenses.
+    self_employment_receipts: float = 0
+    self_employment_expenses: float = 0
+
+    @property
+    def self_employed(self) -> bool:
+        return bool(
+            self.self_employment_receipts or self.self_employment_expenses
+        )
 
 
 # policyengine-uk's age-derived education stage
@@ -847,12 +874,33 @@ def salaries_in(answers: HouseholdAnswers, year: int) -> tuple[float, float]:
 
 
 def full_new_state_pension(year: int) -> float:
-    """The full new State Pension, £ a year, in ``year``: the model's
-    weekly rate (``gov.dwp.state_pension.new_state_pension.amount``, read
-    as ``new_state_pension`` reads it) times its weeks in a year."""
-    from uk_budget_data.calculators import full_new_state_pension as weekly
+    """The full new State Pension, £ a year, in ``year``, as a simulation
+    on the October 2026 forecast pays it: the model's weekly rate
+    (``gov.dwp.state_pension.new_state_pension.amount``, read as
+    ``new_state_pension`` reads it) on that forecast, times its weeks in a
+    year."""
+    from uk_budget_data.calculators import forecast_full_new_state_pension
 
-    return weekly([year])[year] * WEEKS_IN_YEAR
+    return forecast_full_new_state_pension([year])[year] * WEEKS_IN_YEAR
+
+
+def reported_state_pension(paid: float, year: int) -> float:
+    """The ``state_pension_reported`` input for a State Pension of ``paid``
+    (£ a year in ``year``). policyengine-uk splits a reported amount at the
+    full rate of the version the bundle pins (the OBR's March 2026
+    forecast); on the October 2026 forecast a simulation pays it scaled by
+    October's full rate over that one. So the full rate is reported as the
+    pinned full rate, exactly, and any other amount scaled down by the
+    same ratio, so that what is paid is ``paid``."""
+    from uk_budget_data.calculators import (
+        full_new_state_pension as pinned_weekly,
+    )
+
+    pinned = pinned_weekly([year])[year] * WEEKS_IN_YEAR
+    full = full_new_state_pension(year)
+    if paid == full:
+        return pinned
+    return paid * pinned / full
 
 
 @lru_cache(maxsize=None)
@@ -1036,8 +1084,21 @@ def household_entities(
             "is_claimant_or_partner": True,
         }
     ]
+    pension_year = answers.salary_year if year is None else year
     if pension is not None:
-        people[0]["state_pension_reported"] = pension
+        people[0]["state_pension_reported"] = reported_state_pension(
+            pension, pension_year
+        )
+    if answers.self_employed:
+        # Only with self-employment answers, so every other household is
+        # exactly as before: profit, and the receipts the trading allowance
+        # election reads
+        people[0]["self_employment_income"] = (
+            answers.self_employment_receipts - answers.self_employment_expenses
+        )
+        people[0][
+            "self_employment_gross_receipts"
+        ] = answers.self_employment_receipts
     if answers.is_carer:
         # Only for a carer, so a non-carer's household is exactly as before
         # (no care_hours: policyengine-uk's default, 0)
@@ -1055,7 +1116,9 @@ def household_entities(
             }
         )
         if partner_pension is not None:
-            people[-1]["state_pension_reported"] = partner_pension
+            people[-1]["state_pension_reported"] = reported_state_pension(
+                partner_pension, pension_year
+            )
     children = [child_inputs(child) for child in answers.children]
     if children and answers.monthly_childcare:
         # The household's childcare, on its first child, as policyengine-uk
@@ -1815,6 +1878,11 @@ SKIP_REASONS = {
     "unearned_income_rates_up": (
         "no dividend, savings or property income, or before 2027-28"
     ),
+    "property_income_rates_up": "no property income, or before 2027-28",
+    "savings_income_rates_up": "no savings interest, or before 2027-28",
+    "trading_allowance_raise": (
+        "no self-employment receipts, or before 2027-28"
+    ),
 }
 
 
@@ -1868,6 +1936,16 @@ def provably_unaffected(
             + answers.property_income
         )
         return year < 2027 or not unearned
+    if measure_id == "property_income_rates_up":
+        # Only the head's property income is asked; the answers carry no
+        # finance costs, the other thing the property basic rate reaches.
+        return year < 2027 or not answers.property_income
+    if measure_id == "savings_income_rates_up":
+        return year < 2027 or not answers.savings_interest_income
+    if measure_id == "trading_allowance_raise":
+        # The allowance reads trading receipts (and profit), which only
+        # the head's self-employment answers give.
+        return year < TRADING_ALLOWANCE_FROM or not answers.self_employed
     return False
 
 
@@ -1948,7 +2026,9 @@ def calculate_household_impact(
     combined = reform_net - base_net
 
     identity = runtime_identity()
-    hidden = frozenset() if answers.is_carer else CARER_ROWS
+    hidden = (frozenset() if answers.is_carer else CARER_ROWS) | (
+        frozenset() if answers.self_employed else TRADING_ROWS
+    )
     result = {
         "year": year,
         "fiscal_year": fiscal_year(year),

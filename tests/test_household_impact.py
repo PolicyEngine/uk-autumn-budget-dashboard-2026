@@ -782,12 +782,67 @@ STATE_PENSION_JSON = (
 )
 
 
-def test_the_full_new_state_pension_is_the_models_parameter():
-    weekly = PARAMETERS.get_child(NEW_STATE_PENSION)
+def test_the_full_new_state_pension_is_the_models_parameter_on_the_forecast():
+    """The rate a simulation built on the October 2026 forecast
+    (``with_forecast``) pays, not the March forecast policyengine-uk
+    ships."""
+    from uk_budget_data.forecast import with_forecast
+
+    simulation = Simulation(
+        situation={
+            "people": {"p": {"age": {2026: 70}}},
+            "benunits": {"b": {"members": ["p"]}},
+            "households": {"h": {"members": ["p"]}},
+        },
+        scenario=with_forecast(None),
+    )
+    weekly = simulation.tax_benefit_system.parameters.get_child(
+        NEW_STATE_PENSION
+    )
     for year in POLICY_YEARS:
         assert household_impact.full_new_state_pension(year) == (
             pytest.approx(weekly(f"{year}-01-01") * 52)
         )
+
+
+def NEW_STATE_PENSION_PINNED(year):
+    """policyengine-uk's own full new State Pension, £ a year (March 2026
+    forecast)."""
+    return float(PARAMETERS.get_child(NEW_STATE_PENSION)(f"{year}-01-01")) * 52
+
+
+def test_a_pensioner_is_paid_the_full_rate_or_the_amount_entered_on_the_forecast():
+    """What the household path reports is what a simulation on the October
+    forecast pays: the October full rate, or the amount entered."""
+    from uk_budget_data.forecast import with_forecast
+
+    for year in (2028, 2031):
+        for entered, paid in (
+            (None, household_impact.full_new_state_pension(year)),
+            (9_000, 9_000),
+        ):
+            people, benunit, household = household_impact.household_entities(
+                Answers(age=75, employment_income=0, state_pension=entered),
+                year,
+            )
+            simulation = Simulation(
+                situation=household_impact.household_situation(
+                    people, benunit, household, year
+                ),
+                scenario=with_forecast(None),
+            )
+            assert simulation.calculate("state_pension", year)[
+                0
+            ] == pytest.approx(paid, abs=0.01)
+
+
+def test_the_full_new_state_pension_in_2028_29_is_octobers():
+    """£259.24 a week in 2028-29 on the October 2026 forecast; the March
+    forecast policyengine-uk ships gives £256.98."""
+    weekly = household_impact.full_new_state_pension(2028) / 52
+    assert round(weekly, 2) == 259.24
+    march = PARAMETERS.get_child(NEW_STATE_PENSION)("2028-01-01")
+    assert round(float(march), 2) == 256.98
 
 
 @pytest.mark.parametrize("year", POLICY_YEARS)
@@ -825,10 +880,13 @@ def test_the_pages_state_pension_table_is_the_models():
 def test_the_state_pension_is_entered_only_at_state_pension_age():
     age = household_impact.state_pension_age(YEAR)
     full = household_impact.full_new_state_pension(YEAR)
+    # Reported as policyengine-uk's own full rate, which a simulation on
+    # the October forecast pays as October's (reported_state_pension)
+    pinned = NEW_STATE_PENSION_PINNED(YEAR)
     people, _, _ = household_impact.household_entities(
         Answers(age=age, has_partner=True, partner_age=age - 1), YEAR
     )
-    assert people[0]["state_pension_reported"] == pytest.approx(full)
+    assert people[0]["state_pension_reported"] == pinned
     assert "state_pension_reported" not in people[1]
     people, _, _ = household_impact.household_entities(
         Answers(
@@ -840,8 +898,10 @@ def test_the_state_pension_is_entered_only_at_state_pension_age():
         ),
         YEAR,
     )
-    assert people[0]["state_pension_reported"] == 9_000
-    assert people[1]["state_pension_reported"] == pytest.approx(full)
+    assert people[0]["state_pension_reported"] == pytest.approx(
+        9_000 * pinned / full
+    )
+    assert people[1]["state_pension_reported"] == pinned
     # A single pensioner is one person: the partner's answers stay unused
     people, _, _ = household_impact.household_entities(Answers(age=72), YEAR)
     assert len(people) == 1
@@ -1768,6 +1828,34 @@ def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
         ("unearned_income_rates_up", {"dividend_income": 1_000}, 2026, True),
         ("unearned_income_rates_up", {"dividend_income": 1_000}, 2027, False),
         ("unearned_income_rates_up", {"property_income": 500}, 2028, False),
+        ("property_income_rates_up", {}, 2027, True),
+        ("property_income_rates_up", {"property_income": 500}, 2026, True),
+        ("property_income_rates_up", {"property_income": 500}, 2027, False),
+        (
+            "property_income_rates_up",
+            {"savings_interest_income": 5_000, "dividend_income": 1_000},
+            2028,
+            True,
+        ),
+        ("savings_income_rates_up", {}, 2027, True),
+        (
+            "savings_income_rates_up",
+            {"savings_interest_income": 500},
+            2026,
+            True,
+        ),
+        (
+            "savings_income_rates_up",
+            {"savings_interest_income": 500},
+            2028,
+            False,
+        ),
+        (
+            "savings_income_rates_up",
+            {"property_income": 9_000, "dividend_income": 1_000},
+            2027,
+            True,
+        ),
         ("some_future_measure", {}, 2027, False),
     ],
 )

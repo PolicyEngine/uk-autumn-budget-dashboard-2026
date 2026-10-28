@@ -1,100 +1,15 @@
 /* The Budget measures this dashboard does not model (UnmodelledMeasures.jsx):
-   a disclosure card of its own under the policy cards, closed by default.
-   Open, a list of measures, two to a row like the cards, one on a phone. */
+   a section of its own under the modelled cards, its heading like theirs,
+   each measure a Policies card (PolicyCards.jsx, globals.css). */
 .umm {
-  margin-top: 24px;
+  margin-top: 40px;
 }
 
-.umm-disclosure .disclosure-content {
-  padding: 4px 0 var(--card-padding);
-}
-
-.umm-intro {
-  max-width: 72ch;
-  margin: 0 0 16px;
-  font-size: var(--fs-body);
-  line-height: 1.6;
-  color: var(--pe-gray-700);
-}
-
-.umm-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
-  gap: 16px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Each measure is a container: its costing table fits the measure's own
-   width, whether two to a row or one on a phone */
-.umm-item {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-  padding: 16px 18px;
-  background: var(--pe-gray-50);
-  border-radius: 10px;
+/* The Treasury costing, opened in a card's foot: the table fits the
+   card's own width, two to a row or one on a phone */
+.umm-costing-body {
   container-type: inline-size;
-}
-
-.umm-name {
-  margin: 0;
-  font-size: var(--fs-body-lg);
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--pe-gray-900);
-}
-
-/* Small muted icons beside the labels, for scanning, as on the cards */
-.umm-fact dt {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.umm-starts svg,
-.umm-fact dt svg {
-  flex: none;
-  color: var(--pe-gray-400);
-}
-
-/* The start date wraps under its label on a phone */
-.umm-starts {
-  margin: 0;
-  font-size: var(--fs-caption);
-  color: var(--pe-gray-700);
-}
-
-.umm-starts svg {
-  margin-right: 5px;
-  vertical-align: -2px;
-}
-
-.umm-starts-label {
-  font-weight: 600;
-}
-
-.umm-facts {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 0;
-}
-
-.umm-fact dt {
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--pe-gray-600);
-}
-
-.umm-fact dd {
-  margin: 2px 0 0;
-  font-size: var(--fs-small);
-  line-height: 1.55;
-  color: var(--pe-gray-700);
+  padding-top: 6px;
 }
 
 /* Table 6.1's rows: years across, £ million; scrolls inside its box, never the page */
@@ -155,19 +70,6 @@
   color: var(--pe-gray-600);
 }
 
-.umm-sources,
-.umm-note {
-  margin: 0;
-  font-size: var(--fs-caption);
-  line-height: 1.5;
-  color: var(--pe-gray-600);
-}
-
-.umm-note {
-  max-width: 72ch;
-  margin-top: 16px;
-}
-
 .umm-link {
   color: var(--pe-teal-700);
   text-decoration: underline;
@@ -188,22 +90,6 @@
   display: inline;
   margin-left: 4px;
   vertical-align: -1px;
-}
-
-/* One column: plain blocks between rules, so a measure keeps the card's
-   full width on a phone */
-@media (max-width: 768px) {
-  .umm-list {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
-  }
-
-  .umm-item {
-    padding: 16px 0 0;
-    background: none;
-    border-top: 1px solid var(--c-grid);
-    border-radius: 0;
-  }
 }
 
 /* A narrow measure (two to a row, or a phone): the years as "26-27", still
@@ -233,5 +119,55 @@
   .umm-costing th,
   .umm-costing td {
     padding: 3px 2px;
+  }
+}
+
+/* The section's heading as a button: the title's own size and weight
+   (globals.css .section-heading h2), with a chevron; the subtitle under it */
+.umm-heading h2 {
+  margin: 0;
+}
+
+.umm-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  font: inherit;
+  line-height: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.umm-toggle:hover {
+  color: var(--pe-teal-700);
+}
+
+.umm-toggle:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 3px;
+}
+
+.umm-chevron {
+  flex: none;
+  color: var(--pe-gray-500);
+  transition: transform 0.2s ease;
+}
+
+.umm-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.umm-subtitle {
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .umm-chevron {
+    transition: none;
   }
 }

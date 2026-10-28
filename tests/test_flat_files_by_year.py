@@ -294,7 +294,7 @@ def test_per_year_units_write_the_same_bytes_on_the_engine(
     sets = [
         [
             get_reform("trading_allowance_raise"),
-            get_reform("unearned_income_rates_up"),
+            get_reform("savings_income_rates_up"),
         ]
     ]
     years = [2026, 2027, 2028]

@@ -230,7 +230,7 @@
       ]
     },
     "domestic_electricity_zero_vat": {
-      "description": "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027: in Great Britain to March 2027 and across the UK from April 2027. The model's baseline has no zero rate, so the measure covers the whole period, as the Treasury costs it. It applies to electricity spending only. Each year carries its share of a year's electricity use, not a share of its days (DESNZ Energy Trends Table 5.5): 2026-27 the October to March share (about 57%), 2027-28 the April to June share (about 22%).",
+      "description": "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027. It applies in Great Britain from October 2026 and across the UK from April 2027. It covers electricity only, not gas. Each year counts its share of a year's electricity use: about 57% in 2026-27 (October to March) and 22% in 2027-28 (April to June).",
       "display": "switch",
       "rows": [
         {
@@ -321,195 +321,15 @@
         }
       ]
     },
-    "unearned_income_rates_up": {
-      "description": "From 6 April 2027 the income tax rates on savings income rise to 24%, 44% and 49% at the basic, higher and additional rates across the UK, and those on property income to the same rates in England, Wales and Northern Ireland: 2 percentage points above current law, which already includes Budget 2025's rises. Finance cost relief for landlords follows the property basic rate, so rises to 24%. Dividend rates are unchanged. Incomes are held fixed, with no behavioural response.",
+    "property_income_rates_up": {
+      "description": "From 6 April 2027 the income tax rates on property income rise to 24%, 44% and 49% at the basic, higher and additional rates in England, Wales and Northern Ireland: 2 percentage points above current law, which already includes Budget 2025's rises. Finance cost relief for landlords follows the property basic rate, so rises to 24%, Scottish landlords' included. Incomes are held fixed, with no behavioural response.",
       "display": "path",
       "rows": [
-        {
-          "label": "Savings basic rate",
-          "unit": "percent",
-          "unit_words": null,
-          "primary": true,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 0.2,
-              "after": 0.2
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.22,
-              "after": 0.24
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.22,
-              "after": 0.24
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.22,
-              "after": 0.24
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.22,
-              "after": 0.24
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.22,
-              "after": 0.24
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.savings.basic, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.savings.basic; current law elsewhere"
-            }
-          }
-        },
-        {
-          "label": "Savings higher rate",
-          "unit": "percent",
-          "unit_words": null,
-          "primary": false,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 0.4,
-              "after": 0.4
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.42,
-              "after": 0.44
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.42,
-              "after": 0.44
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.42,
-              "after": 0.44
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.42,
-              "after": 0.44
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.42,
-              "after": 0.44
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.savings.higher, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.savings.higher; current law elsewhere"
-            }
-          }
-        },
-        {
-          "label": "Savings additional rate",
-          "unit": "percent",
-          "unit_words": null,
-          "primary": false,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 0.45,
-              "after": 0.45
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.47,
-              "after": 0.49
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.47,
-              "after": 0.49
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.47,
-              "after": 0.49
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.47,
-              "after": 0.49
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.47,
-              "after": 0.49
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.savings.additional, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.savings.additional; current law elsewhere"
-            }
-          }
-        },
         {
           "label": "Property basic rate",
           "unit": "percent",
           "unit_words": null,
-          "primary": false,
+          "primary": true,
           "points": [
             {
               "key": "2026",
@@ -561,7 +381,7 @@
             },
             "after": {
               "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.property.basic; current law elsewhere"
+              "where": "reforms.py property_income_rates_up(): gov.hmrc.income_tax.rates.property.basic; current law elsewhere"
             }
           }
         },
@@ -621,7 +441,7 @@
             },
             "after": {
               "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.property.higher; current law elsewhere"
+              "where": "reforms.py property_income_rates_up(): gov.hmrc.income_tax.rates.property.higher; current law elsewhere"
             }
           }
         },
@@ -681,7 +501,193 @@
             },
             "after": {
               "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.property.additional; current law elsewhere"
+              "where": "reforms.py property_income_rates_up(): gov.hmrc.income_tax.rates.property.additional; current law elsewhere"
+            }
+          }
+        }
+      ]
+    },
+    "savings_income_rates_up": {
+      "description": "From 6 April 2027 the income tax rates on savings income rise to 24%, 44% and 49% at the basic, higher and additional rates across the UK: 2 percentage points above current law, which already includes Budget 2025's rises. Dividend rates are unchanged. Incomes are held fixed, with no behavioural response.",
+      "display": "path",
+      "rows": [
+        {
+          "label": "Savings basic rate",
+          "unit": "percent",
+          "unit_words": null,
+          "primary": true,
+          "points": [
+            {
+              "key": "2026",
+              "label": "2026-27",
+              "year": 2026,
+              "before": 0.2,
+              "after": 0.2
+            },
+            {
+              "key": "2027",
+              "label": "2027-28",
+              "year": 2027,
+              "before": 0.22,
+              "after": 0.24
+            },
+            {
+              "key": "2028",
+              "label": "2028-29",
+              "year": 2028,
+              "before": 0.22,
+              "after": 0.24
+            },
+            {
+              "key": "2029",
+              "label": "2029-30",
+              "year": 2029,
+              "before": 0.22,
+              "after": 0.24
+            },
+            {
+              "key": "2030",
+              "label": "2030-31",
+              "year": 2030,
+              "before": 0.22,
+              "after": 0.24
+            },
+            {
+              "key": "2031",
+              "label": "2031-32",
+              "year": 2031,
+              "before": 0.22,
+              "after": 0.24
+            }
+          ],
+          "source": {
+            "before": {
+              "kind": "engine_parameter",
+              "where": "policyengine-uk gov.hmrc.income_tax.rates.savings.basic, at 6 April of each year"
+            },
+            "after": {
+              "kind": "measure_parameter_change",
+              "where": "reforms.py savings_income_rates_up(): gov.hmrc.income_tax.rates.savings.basic; current law elsewhere"
+            }
+          }
+        },
+        {
+          "label": "Savings higher rate",
+          "unit": "percent",
+          "unit_words": null,
+          "primary": false,
+          "points": [
+            {
+              "key": "2026",
+              "label": "2026-27",
+              "year": 2026,
+              "before": 0.4,
+              "after": 0.4
+            },
+            {
+              "key": "2027",
+              "label": "2027-28",
+              "year": 2027,
+              "before": 0.42,
+              "after": 0.44
+            },
+            {
+              "key": "2028",
+              "label": "2028-29",
+              "year": 2028,
+              "before": 0.42,
+              "after": 0.44
+            },
+            {
+              "key": "2029",
+              "label": "2029-30",
+              "year": 2029,
+              "before": 0.42,
+              "after": 0.44
+            },
+            {
+              "key": "2030",
+              "label": "2030-31",
+              "year": 2030,
+              "before": 0.42,
+              "after": 0.44
+            },
+            {
+              "key": "2031",
+              "label": "2031-32",
+              "year": 2031,
+              "before": 0.42,
+              "after": 0.44
+            }
+          ],
+          "source": {
+            "before": {
+              "kind": "engine_parameter",
+              "where": "policyengine-uk gov.hmrc.income_tax.rates.savings.higher, at 6 April of each year"
+            },
+            "after": {
+              "kind": "measure_parameter_change",
+              "where": "reforms.py savings_income_rates_up(): gov.hmrc.income_tax.rates.savings.higher; current law elsewhere"
+            }
+          }
+        },
+        {
+          "label": "Savings additional rate",
+          "unit": "percent",
+          "unit_words": null,
+          "primary": false,
+          "points": [
+            {
+              "key": "2026",
+              "label": "2026-27",
+              "year": 2026,
+              "before": 0.45,
+              "after": 0.45
+            },
+            {
+              "key": "2027",
+              "label": "2027-28",
+              "year": 2027,
+              "before": 0.47,
+              "after": 0.49
+            },
+            {
+              "key": "2028",
+              "label": "2028-29",
+              "year": 2028,
+              "before": 0.47,
+              "after": 0.49
+            },
+            {
+              "key": "2029",
+              "label": "2029-30",
+              "year": 2029,
+              "before": 0.47,
+              "after": 0.49
+            },
+            {
+              "key": "2030",
+              "label": "2030-31",
+              "year": 2030,
+              "before": 0.47,
+              "after": 0.49
+            },
+            {
+              "key": "2031",
+              "label": "2031-32",
+              "year": 2031,
+              "before": 0.47,
+              "after": 0.49
+            }
+          ],
+          "source": {
+            "before": {
+              "kind": "engine_parameter",
+              "where": "policyengine-uk gov.hmrc.income_tax.rates.savings.additional, at 6 April of each year"
+            },
+            "after": {
+              "kind": "measure_parameter_change",
+              "where": "reforms.py savings_income_rates_up(): gov.hmrc.income_tax.rates.savings.additional; current law elsewhere"
             }
           }
         }

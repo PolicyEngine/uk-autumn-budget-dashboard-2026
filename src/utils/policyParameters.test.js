@@ -7,7 +7,9 @@ import {
   formatChange,
   formatValue,
   loadPolicyParameters,
+  measureWindows,
   monthOf,
+  outOfForceText,
   parameterTableFor,
   resetPolicyParameters,
   segmentsFor,
@@ -93,5 +95,26 @@ describe("loadPolicyParameters", () => {
     resetPolicyParameters();
     expect(await loadPolicyParameters({ fetchImpl: async () => { throw new Error("offline"); } })).toBeNull();
     resetPolicyParameters();
+  });
+});
+
+describe("each measure's scored years", () => {
+  const fy = (year) => `${year}-${String((year + 1) % 100).padStart(2, "0")}`;
+  const windows = measureWindows(file);
+
+  it("reads the first and last year a measure's parameters differ from current law", () => {
+    expect(windows.carers_allowance_earnings_taper).toEqual({ first: 2030, last: 2031 });
+    expect(windows.household_energy_payment_2026).toEqual({ first: 2026, last: 2026 });
+    expect(windows.state_pension_income_tax_protection).toEqual({ first: 2027, last: 2029 });
+    expect(measureWindows(null)).toEqual({});
+  });
+
+  it("says when a measure is not in force: before it starts, after it ends, or its one year", () => {
+    expect(outOfForceText(windows.carers_allowance_earnings_taper, 2027, fy)).toBe("Starts 2030-31");
+    expect(outOfForceText(windows.household_energy_payment_2026, 2027, fy)).toBe("2026-27 only");
+    expect(outOfForceText(windows.state_pension_income_tax_protection, 2030, fy)).toBe("Ended 2029-30");
+    // In force, or no window: nothing to say
+    expect(outOfForceText(windows.state_pension_income_tax_protection, 2028, fy)).toBeNull();
+    expect(outOfForceText(undefined, 2027, fy)).toBeNull();
   });
 });
