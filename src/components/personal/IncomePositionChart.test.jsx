@@ -129,7 +129,7 @@ describe("Where you sit, for the published package (issue 228)", () => {
     served = { "income_distribution.csv": distribution(KEY), "income_mobility.csv": "" };
     const { container } = await renderChart({ withheld: true });
     await screen.findByText(/Where your income sits, \d/);
-    const reason = "Not published: fewer than 3 survey households";
+    const reason = "Not published, to protect survey respondents' confidentiality";
     const alt = container.querySelector('[role="img"][aria-label^="Average change by tenth"]').getAttribute("aria-label");
     expect(alt).toContain(`1: ${reason}`);
     expect(alt).toContain("2: +0.50%");

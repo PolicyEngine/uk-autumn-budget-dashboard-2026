@@ -194,6 +194,24 @@ def _effect(table: str, row: Mapping) -> Optional[float]:
     return None
 
 
+EFFECT_TABLES = (
+    "income_curve",
+    "winners_losers",
+    "budgetary_impact",
+    "distributional_impact",
+)
+
+
+def _effect_before_start(table: str, row: Mapping) -> bool:
+    """Whether a row shows an effect, for the check on years before a
+    measure starts. A withheld cell (None) counts as one: a decile is
+    withheld only because some household's income changed in it."""
+    if table not in EFFECT_TABLES:
+        return False
+    value = _effect(table, row)
+    return value is None or abs(value) > NO_EFFECT_TOLERANCE
+
+
 def _income_curve_problems(
     rows: list[dict], year: int, points: int
 ) -> list[str]:
@@ -286,10 +304,7 @@ def table_problems(
             if (
                 effective_from_year is not None
                 and year < effective_from_year
-                and any(
-                    abs(_effect(name, row) or 0.0) > NO_EFFECT_TOLERANCE
-                    for row in matching
-                )
+                and any(_effect_before_start(name, row) for row in matching)
             ):
                 problems.append(
                     f"{name}: an effect in {year}, before the measure "

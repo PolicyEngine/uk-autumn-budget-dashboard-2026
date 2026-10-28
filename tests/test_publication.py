@@ -415,6 +415,40 @@ def test_an_effect_before_the_start_year_is_a_problem(world):
     assert any("before the measure starts in 2028" in p for p in problems)
 
 
+def test_a_withheld_cell_before_the_start_year_is_an_effect(world):
+    """A decile is withheld only because some household's income changed in
+    it, so a blank cell in a year before the start is an effect, not none."""
+    tables = read_tables(world.write("alpha", VALUES).path)
+    for row in tables["income_curve"]:
+        if row["year"] < 2028:
+            row["reform_net_income"] = row["baseline_net_income"]
+    for name, column in (
+        ("winners_losers", "avg_change"),
+        ("budgetary_impact", "value"),
+        ("distributional_impact", "value"),
+    ):
+        for row in tables[name]:
+            if row["year"] < 2028:
+                row[column] = 0.0
+
+    def before_start():
+        return [
+            p
+            for p in table_problems(
+                tables, key="alpha", years=YEARS, effective_from_year=2028
+            )
+            if "before the measure starts" in p
+        ]
+
+    assert before_start() == []
+    next(
+        row for row in tables["distributional_impact"] if row["year"] < 2028
+    )["value"] = None
+    assert [p.split(":")[0] for p in before_start()] == [
+        "distributional_impact"
+    ]
+
+
 # --- receipts -------------------------------------------------------------
 
 

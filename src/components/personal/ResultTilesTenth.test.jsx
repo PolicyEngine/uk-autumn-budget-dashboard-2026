@@ -102,7 +102,7 @@ describe("ResultTiles' average for your income tenth", () => {
       distributional_impact: DECILES.map((decile) => ({ reform_id: "alpha", year: 2027, decile, value: decile === "3rd" ? null : 0.1 })),
     });
     show();
-    expect(screen.getByText("Not published: fewer than 3 survey households")).toBeInTheDocument();
+    expect(screen.getByText("Not published, to protect survey respondents' confidentiality")).toBeInTheDocument();
     expect(screen.queryByText("Average for your income tenth: 0.00%")).toBeNull();
   });
 
