@@ -1198,7 +1198,7 @@ export default function ConstituencyMap({
             ) : (
               sentence && <p className="chart-description">{sentence}</p>
             )}
-            {!notRouted && combinedPending && <p className="chart-description map-one-policy">{ONE_POLICY_NOTE}</p>}
+            {!notRouted && combinedPending && <p className="map-one-policy">{ONE_POLICY_NOTE}</p>}
           </div>
           {downloadsReady ? (
             <ChartDownloadMenu
