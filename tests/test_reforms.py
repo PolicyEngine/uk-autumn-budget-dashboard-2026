@@ -246,16 +246,16 @@ def test_current_law_fuel_duty_blends_as_the_engine_does():
 
 
 def test_the_fuel_duty_path_by_hand():
-    """Announced: the 5p cut extended "until next July". 52.95p to
-    31 July 2027, then current law's 59.75p (FUEL_DUTY_FROZEN_UNTIL)."""
+    """Budget 2026: the 5p cut extended to 1 July 2027. 52.95p to
+    30 June 2027, then current law's 59.75p (FUEL_DUTY_FROZEN_UNTIL)."""
     rates = fuel_duty_deferral_rates()
     # 2026-27: 52.95p all year
     assert rates["2026"] == 0.5295
-    # 2027-28 (6 April 2027 to 5 April 2028, 366 days): 52.95p to 31 July
-    # (117 days), then 59.75p to 31 March 2028 (244), then 61.54p from
+    # 2027-28 (6 April 2027 to 5 April 2028, 366 days): 52.95p to 30 June
+    # (86 days), then 59.75p to 31 March 2028 (275), then 61.54p from
     # 1 April 2028 (5)
     assert rates["2027"] == pytest.approx(
-        (117 * 0.5295 + 244 * 0.5975 + 5 * 0.6154) / 366, abs=1e-6
+        (86 * 0.5295 + 275 * 0.5975 + 5 * 0.6154) / 366, abs=1e-6
     )
     # Later years are current law's own, written for every scored year
     # (the parameter is uprated: policyengine-uk #2430)
@@ -271,12 +271,12 @@ def test_after_the_extension_fuel_duty_is_current_laws():
     """From 1 August 2027 the measure follows current law, so it costs
     nothing after 2027-28; the description says so."""
     schedule = dict(reforms.fuel_duty_deferral_schedule())
-    assert schedule["2027-08-01"] == 0.5975
+    assert schedule["2027-07-01"] == 0.5975
     for day, rate in reforms.FUEL_DUTY_CURRENT_LAW:
-        if day > "2027-08-01":
+        if day > "2027-07-01":
             assert schedule[day] == rate
     description = get_reform("fuel_duty_rise_deferral").description
-    assert "52.95p a litre to 31 July 2027" in description
+    assert "52.95p a litre to 30 June 2027" in description
     assert "never made up" not in description
 
 
@@ -341,17 +341,18 @@ def test_the_allowances_are_the_full_new_state_pension_rounded_up_to_10():
         assert defaults[f"threshold_{year}"] == expected
 
 
-@pytest.mark.parametrize("year", [2027, 2031])
+@pytest.mark.parametrize("year", [2027, 2029])
 def test_a_pensioner_on_the_full_new_state_pension_alone_pays_none(year):
     """2027-28: £13,036.97 - £12,570 = £466.97 taxed at 20%, £93.39.
-    2031-32: £14,390.39 - £12,830 = £1,560.39 at 20%, £312.08."""
+    2029-30 (the allowance's last year): £13,696.98 - £12,570 =
+    £1,126.98 at 20%, £225.40."""
     sit = situation(
         {"pensioner": {"age": {year: 70}, "state_pension": {year: nsp(year)}}}
     )
     baseline, reformed = change(
         "state_pension_income_tax_protection", sit, "income_tax", year
     )
-    expected = {2027: 93.39, 2031: 312.08}[year]
+    expected = {2027: 93.39, 2029: 225.40}[year]
     assert baseline == pytest.approx(expected, abs=PENNY)
     assert reformed == pytest.approx(0, abs=PENNY)
 
@@ -627,10 +628,10 @@ def test_electricity_defaults_follow_its_constants():
 
 @pytest.mark.parametrize(
     "year, saving",
-    # £1,050 a year including 5% VAT holds £50 of VAT. The extension
-    # alone: 2026-27 none (the pre-Budget zero rate is not the measure's);
-    # 2027-28 122 days of 366 to 31 July 2027, £16.67; 2028-29 none.
-    [(2026, 0.0), (2027, 16.67), (2028, 0.0)],
+    # £1,050 a year including 5% VAT holds £50 of VAT. 2026-27: the
+    # October to March share of a year's use (WINTER_SHARE), £28.34;
+    # 2027-28: 91 days of 366 to 30 June 2027, £12.43; 2028-29: none.
+    [(2026, 28.34), (2027, 12.43), (2028, 0.0)],
 )
 def test_electricity_vat_on_1050_pounds_a_year(year, saving):
     sit = situation(
@@ -1014,7 +1015,7 @@ FIRST_YEARS = {
         {"country": "ENGLAND"},
     ),
     "domestic_electricity_zero_vat": (
-        2027,
+        2026,
         "household_net_income",
         {"employment_income": 20_000},
         {"electricity_consumption": 1_050},
@@ -1045,11 +1046,12 @@ FIRST_YEARS = {
         {"employment_income": 30_000},
         {},
     ),
-    # £5,000 of dividends, £4,500 over the allowance: 2 points is £90
+    # £5,000 of savings interest, £4,000 over the £1,000 personal savings
+    # allowance: 2 points is £80 (dividends no longer move)
     "unearned_income_rates_up": (
         2027,
         "income_tax",
-        {"employment_income": 30_000, "dividend_income": 5_000},
+        {"employment_income": 30_000, "savings_interest_income": 5_000},
         {},
     ),
     # £11,000 of pay, about £211 a week, over the £204 limit: no allowance

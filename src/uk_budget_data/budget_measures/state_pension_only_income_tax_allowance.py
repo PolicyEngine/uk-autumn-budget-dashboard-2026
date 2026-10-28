@@ -34,7 +34,7 @@ def state_pension_only_income_tax_allowance(
     total_income_at_most_allowance=True,
     disregard_savings_interest=False,
     test_at_rounded_up_pension=True,
-    last_year=2031,
+    last_year=2029,
 ):
     """A personal allowance of the full new State Pension, from April 2027,
     for people over State Pension age whose total income is at most that
@@ -62,10 +62,9 @@ def state_pension_only_income_tax_allowance(
     ``disregard_savings_interest`` is set (the reported test is on total
     income).
 
-    ``last_year`` is the last fiscal year the allowance applies (2031 =
-    2031-32, the last scored year). Budget day: the speech said "in this
-    Parliament", so the documents may end it earlier (2028 = 2028-29, or
-    2029 = 2029-30).
+    ``last_year`` is the last fiscal year the allowance applies: 2029 =
+    2029-30, as the Budget 2026 document gives it (6 April 2027 to 5 April
+    2030, row 52).
 
     Rounded down (``ROUND_DOWN``), the total-income test stays at the full
     new State Pension rounded up unless ``test_at_rounded_up_pension`` is

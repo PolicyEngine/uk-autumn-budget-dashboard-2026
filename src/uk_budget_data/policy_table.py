@@ -814,9 +814,6 @@ def _employer_ni_threshold(reform) -> list[dict]:
 
 def _unearned_income_rates(reform) -> list[dict]:
     labels = {
-        "dividends[0].rate": "Dividend ordinary rate",
-        "dividends[1].rate": "Dividend upper rate",
-        "dividends[2].rate": "Dividend additional rate",
         "savings.basic": "Savings basic rate",
         "savings.higher": "Savings higher rate",
         "savings.additional": "Savings additional rate",
@@ -837,7 +834,7 @@ def _unearned_income_rates(reform) -> list[dict]:
                     _engine_or_change(reform, path),
                 ),
                 _source(_engine_source(path), _change_source(path, function)),
-                primary=suffix == "dividends[0].rate",
+                primary=suffix == "savings.basic",
             )
         )
     return rows

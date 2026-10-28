@@ -15,7 +15,7 @@
   ],
   "measures": {
     "fuel_duty_rise_deferral": {
-      "description": "Candidate measure. Fuel duty stays at 52.95p a litre to 31 July 2027: the rise due on 1 January 2027 and the March and April 2027 steps do not happen while the 5p cut is extended. From 1 August 2027 fuel duty is current law's, 59.75p a litre, rising with RPI each April as current law has it. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+      "description": "Candidate measure. Fuel duty stays at 52.95p a litre to 30 June 2027: the rise due on 1 January 2027 and the March and April 2027 steps do not happen while the 5p cut is extended. From 1 July 2027 fuel duty is current law's, 59.75p a litre, rising with RPI each April as current law has it. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
       "display": "schedule",
       "rows": [
         {
@@ -53,8 +53,8 @@
               "after": 52.95
             },
             {
-              "key": "2027-08-01",
-              "label": "1 August 2027",
+              "key": "2027-07-01",
+              "label": "1 July 2027",
               "year": 2027,
               "before": 59.75,
               "after": 59.75
@@ -117,7 +117,7 @@
               "label": "2027-28",
               "year": 2027,
               "before": 59.774454,
-              "after": 57.6007
+              "after": 58.1766
             },
             {
               "key": "2028",
@@ -163,7 +163,7 @@
       ]
     },
     "state_pension_income_tax_protection": {
-      "description": "Candidate measure. From 6 April 2027, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (rounded up to the pound: £13,037 in 2027-28, rising with it) get an income tax allowance of that amount, so pay no income tax. Above it there is no allowance: £1 of income over the threshold takes the whole allowance away.",
+      "description": "Candidate measure. From 6 April 2027, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (rounded up to the pound: £13,037 in 2027-28, rising with it) get an income tax allowance of that amount, so pay no income tax. Above it there is no allowance: £1 of income over the threshold takes the whole allowance away. The allowance applies to 2029-30 and ends after it.",
       "display": "path",
       "rows": [
         {
@@ -205,14 +205,14 @@
               "label": "2030-31",
               "year": 2030,
               "before": 12570.0,
-              "after": 14040.0
+              "after": 12570.0
             },
             {
               "key": "2031",
               "label": "2031-32",
               "year": 2031,
               "before": 12830.0,
-              "after": 14391.0
+              "after": 12830.0
             }
           ],
           "source": {
@@ -262,7 +262,7 @@
       ]
     },
     "domestic_electricity_zero_vat": {
-      "description": "Candidate measure. The zero rate of VAT on domestic electricity, in force from 1 October 2026 to 31 March 2027, is extended to 31 July 2027: VAT is 0% instead of 5% from 1 April 2027 to 31 July 2027. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%), weighted by its 122 days of 2027-28's 366. The zero rate before April 2027 is in neither the model's baseline nor this measure.",
+      "description": "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027: the zero rate to March 2027, not in the model's baseline, and its extension, which the Budget scores together. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%). 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days; 2027-28 its 91 days of 366.",
       "display": "switch",
       "rows": [
         {
@@ -272,9 +272,9 @@
           "primary": true,
           "points": [
             {
-              "key": "2027-04-01/2027-07-31",
-              "label": "April 2027 to July 2027",
-              "year": 2027,
+              "key": "2026-10-01/2027-06-30",
+              "label": "October 2026 to June 2027",
+              "year": 2026,
               "before": 0.05,
               "after": 0.0
             }
@@ -286,7 +286,7 @@
             },
             "after": {
               "kind": "modifier_constant",
-              "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027), each divided by its share of the fiscal year's days in force, April 2027 to July 2027 (the dates in the measure's description)"
+              "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027), rate_change_2026 divided by that module's WINTER_SHARE (the October to March share of a year's electricity use) and rate_change_2027 by its share of the fiscal year's days in force, October 2026 to June 2027 (the dates in the measure's description)"
             }
           }
         },
@@ -301,14 +301,14 @@
               "label": "2026-27",
               "year": 2026,
               "before": 0.05,
-              "after": 0.05
+              "after": 0.021657
             },
             {
               "key": "2027",
               "label": "2027-28",
               "year": 2027,
               "before": 0.05,
-              "after": 0.033333
+              "after": 0.037568
             },
             {
               "key": "2028",
@@ -349,7 +349,7 @@
               "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027)"
             }
           },
-          "note": "As modelled: the cut weighted by the days it is in force in each fiscal year"
+          "note": "As modelled: the cut weighted in 2026-27 by the October to March share of a year's electricity use, not by its days in force"
         }
       ]
     },
@@ -675,194 +675,14 @@
       ]
     },
     "unearned_income_rates_up": {
-      "description": "Candidate measure. From 6 April 2027 the income tax rates on dividends, savings income and property income each rise by 2 percentage points on top of current law, which already includes Budget 2025's rises: dividends to 12.75%, 37.75% and 41.35%, and savings and property income to 24%, 44% and 49% at the basic, higher and additional rates. Incomes are held fixed, with no behavioural response.",
-      "display": "before-after",
+      "description": "Candidate measure. From 6 April 2027 the income tax rates on savings income and property income each rise by 2 percentage points on top of current law, which already includes Budget 2025's rises: to 24%, 44% and 49% at the basic, higher and additional rates. Dividend rates are unchanged. Incomes are held fixed, with no behavioural response.",
+      "display": "path",
       "rows": [
-        {
-          "label": "Dividend ordinary rate",
-          "unit": "percent",
-          "unit_words": null,
-          "primary": true,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 0.1075,
-              "after": 0.1075
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.1075,
-              "after": 0.1275
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.1075,
-              "after": 0.1275
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.1075,
-              "after": 0.1275
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.1075,
-              "after": 0.1275
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.1075,
-              "after": 0.1275
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.dividends[0].rate, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.dividends[0].rate; current law elsewhere"
-            }
-          }
-        },
-        {
-          "label": "Dividend upper rate",
-          "unit": "percent",
-          "unit_words": null,
-          "primary": false,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 0.3575,
-              "after": 0.3575
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.3575,
-              "after": 0.3775
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.3575,
-              "after": 0.3775
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.3575,
-              "after": 0.3775
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.3575,
-              "after": 0.3775
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.3575,
-              "after": 0.3775
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.dividends[1].rate, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.dividends[1].rate; current law elsewhere"
-            }
-          }
-        },
-        {
-          "label": "Dividend additional rate",
-          "unit": "percent",
-          "unit_words": null,
-          "primary": false,
-          "points": [
-            {
-              "key": "2026",
-              "label": "2026-27",
-              "year": 2026,
-              "before": 0.3935,
-              "after": 0.3935
-            },
-            {
-              "key": "2027",
-              "label": "2027-28",
-              "year": 2027,
-              "before": 0.3935,
-              "after": 0.4135
-            },
-            {
-              "key": "2028",
-              "label": "2028-29",
-              "year": 2028,
-              "before": 0.3935,
-              "after": 0.4135
-            },
-            {
-              "key": "2029",
-              "label": "2029-30",
-              "year": 2029,
-              "before": 0.3935,
-              "after": 0.4135
-            },
-            {
-              "key": "2030",
-              "label": "2030-31",
-              "year": 2030,
-              "before": 0.3935,
-              "after": 0.4135
-            },
-            {
-              "key": "2031",
-              "label": "2031-32",
-              "year": 2031,
-              "before": 0.3935,
-              "after": 0.4135
-            }
-          ],
-          "source": {
-            "before": {
-              "kind": "engine_parameter",
-              "where": "policyengine-uk gov.hmrc.income_tax.rates.dividends[2].rate, at 6 April of each year"
-            },
-            "after": {
-              "kind": "measure_parameter_change",
-              "where": "reforms.py unearned_income_rates_up(): gov.hmrc.income_tax.rates.dividends[2].rate; current law elsewhere"
-            }
-          }
-        },
         {
           "label": "Savings basic rate",
           "unit": "percent",
           "unit_words": null,
-          "primary": false,
+          "primary": true,
           "points": [
             {
               "key": "2026",

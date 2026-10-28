@@ -86,11 +86,10 @@ SECONDARY_THRESHOLD = (
 INCOME_TAX_RATES = "gov.hmrc.income_tax.rates"
 # The dividend schedule's four brackets (the fourth a technical top node
 # repeating the additional rate) and the savings and property rates.
+# Budget 2026 document (3.9; rows 61 and 62): savings and property income
+# rates up a further 2 points from April 2027 at the basic, higher and
+# additional rates; dividends unchanged.
 UNEARNED_INCOME_RATE_PATHS = (
-    f"{INCOME_TAX_RATES}.dividends[0].rate",
-    f"{INCOME_TAX_RATES}.dividends[1].rate",
-    f"{INCOME_TAX_RATES}.dividends[2].rate",
-    f"{INCOME_TAX_RATES}.dividends[3].rate",
     f"{INCOME_TAX_RATES}.savings.basic",
     f"{INCOME_TAX_RATES}.savings.higher",
     f"{INCOME_TAX_RATES}.savings.additional",
@@ -208,11 +207,11 @@ FUEL_DUTY_FROZEN_THROUGH = 2027
 # set, is the first day back on current law: 52.95p to the day before,
 # then current law's rate in force that day (59.75p, with the January,
 # March and April 2027 steps all taken at once) and its RPI rises after.
-# TODO from the documents: "2027-08-01" (cut to 31 July 2027) or
-# "2027-07-01" (to 30 June), and whether the rise afterwards is staged.
+# Budget 2026 document: "Extend the 5p fuel duty cut and freeze ... to
+# 1 July 2027" (Table row 3: -575, -780, then 0), so "2027-07-01".
 # None gives the 27 October candidate (FUEL_DUTY_FROZEN_THROUGH, with RPI
 # resuming from 52.95p).
-FUEL_DUTY_FROZEN_UNTIL = "2027-08-01"
+FUEL_DUTY_FROZEN_UNTIL = "2027-07-01"
 FUEL_DUTY_STAGES = (("2026-03-23", FUEL_DUTY_FROZEN),)
 FUEL_DUTY_RPI_FROM = f"{FUEL_DUTY_FROZEN_THROUGH + 1}-04-01"
 
@@ -510,7 +509,8 @@ def _electricity_vat_description() -> str:
         return (
             "Candidate measure. VAT on domestic electricity is 0% instead "
             f"of 5% from 1 October 2026 to {end_text}: the zero rate to "
-            "March 2027, not in the model's baseline, and its extension. "
+            "March 2027, not in the model's baseline, and its extension, "
+            "which the Budget scores together. "
             "Applied to electricity spending only, in Great Britain "
             "(Northern Ireland keeps the 5%). 2026-27 carries the October "
             "to March share of a year's electricity use (about 57%), not a "
@@ -841,15 +841,14 @@ def unearned_income_rates_up() -> dict[str, dict[str, float]]:
 def _create_unearned_income_rates_up() -> Reform:
     return Reform(
         id=UNEARNED_INCOME_RATES_ID,
-        name="Dividend, savings and property income tax up",
+        name="Savings and property income tax up",
         description=(
             "Candidate measure. From 6 April 2027 the income tax rates on "
-            "dividends, savings income and property income each rise by 2 "
-            "percentage points on top of current law, which already "
-            "includes Budget 2025's rises: dividends to 12.75%, 37.75% and "
-            "41.35%, and savings and property income to 24%, 44% and 49% "
-            "at the basic, higher and additional rates. Incomes are held "
-            "fixed, with no behavioural response."
+            "savings income and property income each rise by 2 percentage "
+            "points on top of current law, which already includes Budget "
+            "2025's rises: to 24%, 44% and 49% at the basic, higher and "
+            "additional rates. Dividend rates are unchanged. Incomes are "
+            "held fixed, with no behavioural response."
         ),
         parameter_changes=unearned_income_rates_up(),
     )

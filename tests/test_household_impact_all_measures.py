@@ -20,6 +20,7 @@ from policyengine_uk.system import system
 
 from uk_budget_data import household_impact, personal_impact
 from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
+    WINTER_SHARE,
     zero_vat_on_domestic_electricity,
 )
 from uk_budget_data.models import DataConfig
@@ -250,15 +251,21 @@ def test_electricity_spending_defaults_to_the_ons_average():
 
 @pytest.mark.parametrize(
     "year, spending, weight",
-    [(2027, 1_040, 122 / 366), (2027, 2_000, 122 / 366)],
+    [
+        (2026, 1_040, WINTER_SHARE),
+        (2027, 1_040, 91 / 366),
+        (2027, 2_000, 91 / 366),
+    ],
 )
 def test_electricity_vat_is_5_percent_of_the_bill_for_its_period(
     year, spending, weight
 ):
-    """5% VAT on VAT-inclusive spending is spending x 0.05 / 1.05; the
-    measure is the extension, 1 April to 31 July 2027 (122 days of
-    2027-28's 366); 2026-27 carries none of the pre-Budget zero rate."""
-    assert zero_vat_on_domestic_electricity.__defaults__[0] == 0.0
+    """5% VAT on VAT-inclusive spending is spending x 0.05 / 1.05; zero
+    rated from 1 October 2026 (the October to March share of 2026-27's
+    use) to 30 June 2027 (91 days of 2027-28's 366)."""
+    assert zero_vat_on_domestic_electricity.__defaults__[0] == (
+        pytest.approx(-0.05 * WINTER_SHARE)
+    )
     result = calculate(
         Answers(year, electricity_spending=spending),
         year,

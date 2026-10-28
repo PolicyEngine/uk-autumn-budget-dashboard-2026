@@ -8,6 +8,9 @@ import pytest
 from policyengine_uk.system import system
 
 from uk_budget_data import reforms as registry
+from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
+    WINTER_SHARE,
+)
 from uk_budget_data.cli import main
 from uk_budget_data.policy_table import (
     OUTPUT_FILE,
@@ -92,11 +95,11 @@ def test_every_candidate_has_a_table_with_its_published_description(document):
 
 def test_fuel_duty_by_date(document):
     dated = by_key(rows(document, "fuel_duty_rise_deferral")["Fuel duty"])
-    # 52.95p held to 31 July 2027, then current law's 59.75p and its RPI
+    # 52.95p held to 30 June 2027, then current law's 59.75p and its RPI
     assert dated["2027-01-01"] == (55.95, 52.95)
     assert dated["2027-03-01"] == (57.95, 52.95)
     assert dated["2027-04-01"] == (59.75, 52.95)
-    assert dated["2027-08-01"] == (59.75, 59.75)
+    assert dated["2027-07-01"] == (59.75, 59.75)
     assert dated["2028-04-01"] == (61.54, 61.54)
     assert "2032-04-01" not in dated  # after the timeline
     assert dated["2026-04-01"] == (52.95, 52.95)  # the timeline's first day
@@ -135,13 +138,15 @@ def test_the_state_pension_allowance_is_the_full_state_pension_rounded_up(
         ]
     )
     assert row["2026"] == (12_570, 12_570)
-    for year in range(2027, 2032):
+    for year in range(2027, 2030):
         weekly = PARAMETERS.gov.dwp.state_pension.new_state_pension.amount(
             f"{year}-04-06"
         )
         assert row[str(year)][1] == math.ceil(weekly * 52)
     assert row["2027"] == (12_570, 13_037)
-    assert row["2031"] == (12_830, 14_391)
+    # Budget 2026: the allowance runs to 5 April 2030 (last_year 2029)
+    assert row["2029"][1] == 13_697
+    assert row["2031"] == (12_830, 12_830)
 
 
 def test_warm_home_discount(document):
@@ -156,7 +161,7 @@ def test_vat_rates_while_in_force(document):
         "points"
     ]
     assert (point["label"], point["before"], point["after"]) == (
-        "April 2027 to July 2027",
+        "October 2026 to June 2027",
         0.05,
         0.0,
     )
@@ -175,21 +180,21 @@ def test_in_force_dates_that_do_not_fit_the_constants_fail():
         in_force_rate_change(registry.FUEL_VAT_ID, {2026: -0.05, 2027: -0.05})
 
 
-def test_electricity_is_the_extension_weighted_by_its_days(document):
-    """Announced: the zero rate extended from 31 March 2027 to July 2027.
-    The measure is the extension alone, weighted by its days in 2027-28
-    (122 of 366 to 31 July), as the road fuel cut is."""
+def test_electricity_2026_carries_the_winter_share(document):
+    """Budget 2026 scores the whole zero rate, 1 October 2026 to 30 June
+    2027: 2026-27 weighted by the October to March share of a year's use,
+    2027-28 by its 91 days of 366."""
     yearly = rows(document, "domestic_electricity_zero_vat")[
         "VAT on domestic electricity in Great Britain, averaged over the year"
     ]
     averages = by_key(yearly)
-    assert averages["2026"] == (0.05, 0.05)
-    assert averages["2027"] == (0.05, round(0.05 - 0.05 * 122 / 366, 6))
-    assert "weighted by the days it is in force" in yearly["note"]
+    assert averages["2026"] == (0.05, round(0.05 - 0.05 * WINTER_SHARE, 6))
+    assert averages["2027"] == (0.05, round(0.05 - 0.05 * 91 / 366, 6))
+    assert "2026-27 by the October to March share" in yearly["note"]
     (point,) = rows(document, "domestic_electricity_zero_vat")[
         "VAT on domestic electricity in Great Britain"
     ]["points"]
-    assert point["label"] == "April 2027 to July 2027"
+    assert point["label"] == "October 2026 to June 2027"
 
 
 def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
@@ -253,7 +258,7 @@ def test_each_measure_gets_the_display_its_shape_calls_for(document):
         "threshold_freeze_2031_32": "table",
         "plan_2_threshold_unfreeze": "path",
         "employer_nics_secondary_threshold_raise": "path",
-        "unearned_income_rates_up": "before-after",
+        "unearned_income_rates_up": "path",
         "carers_allowance_earnings_taper": "path",
     }
 
@@ -288,9 +293,6 @@ def test_employer_ni_threshold(document):
 def test_unearned_income_rates(document):
     table = rows(document, "unearned_income_rates_up")
     expected = {
-        "Dividend ordinary rate": (0.1075, 0.1275),
-        "Dividend upper rate": (0.3575, 0.3775),
-        "Dividend additional rate": (0.3935, 0.4135),
         "Savings basic rate": (0.22, 0.24),
         "Savings higher rate": (0.42, 0.44),
         "Savings additional rate": (0.47, 0.49),

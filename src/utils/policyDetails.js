@@ -46,10 +46,10 @@ export const POLICY_DETAILS = [
   {
     id: "fuel_duty_rise_deferral",
     shortName: "Fuel duty frozen",
-    sentence: "extending the 5p fuel duty cut to July 2027",
+    sentence: "extending the 5p fuel duty cut to 1 July 2027",
     name: "Fuel duty rises deferred",
     description: "Keep the 5p fuel duty cut to July 2027",
-    writtenFor: "Candidate measure. Fuel duty stays at 52.95p a litre to 31 July 2027: the rise due on 1 January 2027 and the March and April 2027 steps do not happen while the 5p cut is extended. From 1 August 2027 fuel duty is current law's, 59.75p a litre, rising with RPI each April as current law has it. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
+    writtenFor: "Candidate measure. Fuel duty stays at 52.95p a litre to 30 June 2027: the rise due on 1 January 2027 and the March and April 2027 steps do not happen while the 5p cut is extended. From 1 July 2027 fuel duty is current law's, 59.75p a litre, rising with RPI each April as current law has it. Rates are day-weighted to fiscal years. Includes the VAT on the lower pump price.",
     summary:
       "Keeps fuel duty at 52.95p a litre to July 2027, then returns it to current law's rate.",
     starts: "January 2027",
@@ -59,7 +59,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Applies the duty rate in force on each day to households' petrol and diesel spending, day-weighted to fiscal years.",
     details:
-      "Assumes no rise on 1 January 2027 and none in March or April 2027 until the cut ends in July 2027, when duty returns to current law's rate (59.75p) and its RPI rises; after that it costs nothing. The exact end date and whether the return is staged are from the speech, to be checked against the Budget documents. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel bought for vans, lorries and business use of cars is not modelled, so the revenue figure covers households' own purchases only.",
+      "Assumes no rise on 1 January 2027 and none in March or April 2027 until the cut ends on 1 July 2027, when duty returns to current law's rate (59.75p) and its RPI rises; after that it costs nothing. The end date is the Budget document's. Includes the VAT on the lower pump price; fuel spending is held fixed. Fuel bought for vans, lorries and business use of cars is not modelled, so the revenue figure covers households' own purchases only.",
     source: {
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
@@ -72,7 +72,7 @@ export const POLICY_DETAILS = [
     name: "State Pension income tax protection",
     description:
       "No income tax for pensioners whose total income is at most the full new State Pension",
-    writtenFor: "Candidate measure. From 6 April 2027, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (rounded up to the pound: £13,037 in 2027-28, rising with it) get an income tax allowance of that amount, so pay no income tax. Above it there is no allowance: £1 of income over the threshold takes the whole allowance away.",
+    writtenFor: "Candidate measure. From 6 April 2027, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (rounded up to the pound: £13,037 in 2027-28, rising with it) get an income tax allowance of that amount, so pay no income tax. Above it there is no allowance: £1 of income over the threshold takes the whole allowance away. The allowance applies to 2029-30 and ends after it.",
     summary:
       "People over State Pension age whose total income is no more than the full new State Pension pay no income tax.",
     starts: "April 2027",
@@ -118,19 +118,19 @@ export const POLICY_DETAILS = [
     shortName: "Zero VAT on electricity",
     sentence: "taking VAT off household electricity",
     name: "Zero VAT on domestic electricity",
-    description: "Extend the zero rate of VAT on domestic electricity to July 2027",
-    writtenFor: "Candidate measure. The zero rate of VAT on domestic electricity, in force from 1 October 2026 to 31 March 2027, is extended to 31 July 2027: VAT is 0% instead of 5% from 1 April 2027 to 31 July 2027. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%), weighted by its 122 days of 2027-28's 366. The zero rate before April 2027 is in neither the model's baseline nor this measure.",
+    description: "Zero-rate VAT on domestic electricity to July 2027",
+    writtenFor: "Candidate measure. VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027: the zero rate to March 2027, not in the model's baseline, and its extension, which the Budget scores together. Applied to electricity spending only, in Great Britain (Northern Ireland keeps the 5%). 2026-27 carries the October to March share of a year's electricity use (about 57%), not a share of its days; 2027-28 its 91 days of 366.",
     summary:
-      "Charges no VAT on household electricity bills in Great Britain, instead of 5%, from April 2027 to July 2027, extending the zero rate in force since October 2026.",
-    starts: "April 2027",
+      "Charges no VAT on household electricity bills in Great Britain, instead of 5%, from October 2026 to July 2027.",
+    starts: "October 2026",
     affects: "Households in Great Britain",
     type: "VAT",
-    inForce: { from: "2027-04", to: "2027-07" },
+    inForce: { from: "2026-10", to: "2027-06" },
     ends: "July 2027",
     howCalculated:
       "Applies 0% VAT instead of 5% to each household's electricity spending in the survey.",
     details:
-      "Only the extension is scored: the zero rate from October 2026 to March 2027 was set before the Budget and is in neither the model's baseline nor this measure. Applied to electricity spending only, in Great Britain: Northern Ireland's households keep the 5%. Weighted by its days in 2027-28; the end date is from the speech, to be checked against the Budget documents.",
+      "The Budget scores the whole zero rate, from October 2026, as this Budget's measure; the model's baseline has none. Applied to electricity spending only, in Great Britain: Northern Ireland's households keep the 5%. 2026-27 carries the October to March share of a year's electricity use (about 57%); 2027-28 its days to 30 June.",
     source: {
       label: "Temporary zero rate of VAT for domestic electricity",
       href: "https://www.gov.uk/government/publications/temporary-zero-rate-of-vat-for-domestic-electricity-in-great-britain/temporary-zero-rate-of-vat-in-great-britain-for-domestic-electricity",
@@ -302,21 +302,21 @@ export const POLICY_DETAILS = [
   },
   {
     id: "unearned_income_rates_up",
-    shortName: "Unearned income tax up",
-    sentence: "raising tax on dividends, savings and property income",
-    name: "Dividend, savings and property income tax up",
-    description: "Raise income tax on dividends, savings and property income by 2 points",
-    writtenFor: "Candidate measure. From 6 April 2027 the income tax rates on dividends, savings income and property income each rise by 2 percentage points on top of current law, which already includes Budget 2025's rises: dividends to 12.75%, 37.75% and 41.35%, and savings and property income to 24%, 44% and 49% at the basic, higher and additional rates. Incomes are held fixed, with no behavioural response.",
+    shortName: "Savings and property tax up",
+    sentence: "raising tax on savings and property income",
+    name: "Savings and property income tax up",
+    description: "Raise income tax on savings and property income by 2 points",
+    writtenFor: "Candidate measure. From 6 April 2027 the income tax rates on savings income and property income each rise by 2 percentage points on top of current law, which already includes Budget 2025's rises: to 24%, 44% and 49% at the basic, higher and additional rates. Dividend rates are unchanged. Incomes are held fixed, with no behavioural response.",
     summary:
-      "Raises the income tax rates on dividends, savings income and property income by 2 percentage points from April 2027.",
+      "Raises the income tax rates on savings income and property income by 2 percentage points from April 2027.",
     starts: "April 2027",
-    affects: "People with dividends, savings interest or rental income",
+    affects: "People with savings interest or rental income",
     type: "Income tax",
     inForce: { from: "2027-04" },
     howCalculated:
-      "Adds 2 percentage points to each rate from 2027-28: dividends to 12.75%, 37.75% and 41.35%, and savings and property income to 24%, 44% and 49% at the basic, higher and additional rates.",
+      "Adds 2 percentage points to each savings and property income rate from 2027-28: to 24%, 44% and 49% at the basic, higher and additional rates. Dividend rates are unchanged.",
     details:
-      "The 2-point rise is an assumption made before the Budget, on top of the rises Budget 2025 legislated. Incomes are held fixed: no one is assumed to change how much they take in dividends or how they hold savings or property.",
+      "The 2-point rise is the Budget 2026 document's, on top of the rises Budget 2025 legislated. Incomes are held fixed: no one is assumed to change how they hold savings or property.",
     source: {
       label: "HMRC: changes to tax rates for property, savings and dividend income",
       href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
