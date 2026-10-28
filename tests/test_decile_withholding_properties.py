@@ -221,6 +221,30 @@ def test_withholding_is_deterministic_and_idempotent(population):
         assert rows == _rows(table, deciles, changes)
 
 
+def _baseline_source(root, name):
+    """The module's source at BASELINE. CI checks out one commit
+    (fetch-depth 1), so fetch the baseline commit when it is missing, and
+    skip, saying so, if it still cannot be read."""
+    spec = f"{BASELINE}:src/uk_budget_data/publication/{name}.py"
+
+    def show():
+        return subprocess.run(
+            ["git", "show", spec], cwd=root, capture_output=True
+        )
+
+    shown = show()
+    if shown.returncode != 0:
+        subprocess.run(
+            ["git", "fetch", "--no-tags", "--depth=1", "origin", BASELINE],
+            cwd=root,
+            capture_output=True,
+        )
+        shown = show()
+    if shown.returncode != 0:
+        pytest.skip(f"the baseline commit {BASELINE[:8]} is not in this clone")
+    return shown.stdout
+
+
 @pytest.fixture(scope="module")
 def previous_modules(tmp_path_factory):
     """Load the exact starting commit without modifying this worktree."""
@@ -228,14 +252,7 @@ def previous_modules(tmp_path_factory):
     directory = tmp_path_factory.mktemp("disclosure-baseline")
     loaded = {}
     for name in ("disclosure_floor", "tables", "generate"):
-        source = subprocess.check_output(
-            [
-                "git",
-                "show",
-                f"{BASELINE}:src/uk_budget_data/publication/{name}.py",
-            ],
-            cwd=root,
-        )
+        source = _baseline_source(root, name)
         path = directory / f"{name}.py"
         path.write_bytes(source)
         module_name = f"_withholding_baseline_{name}"
