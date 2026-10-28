@@ -79,6 +79,10 @@ export const POLICY_DETAILS = [
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
     },
+    explainer: {
+      label: "The fuel duty cut extension in the Autumn Budget 2026",
+      href: "https://www.policyengine.org/uk/research/fuel-duty-cut-extension",
+    },
     budgetRows: [3],
   },
   {
