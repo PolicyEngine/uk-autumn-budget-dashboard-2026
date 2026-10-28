@@ -104,7 +104,10 @@ describe("Frozen thresholds against pay: card", () => {
     render(<FrozenThresholdsCard data={OUTLOOK} />);
     await screen.findByText(/^By 2030-31/);
     fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
-    expect(document.body.textContent).toMatch(/earnings forecast ends in 2030, so the chart ends in 2030-31; 2031-32/);
+    expect(document.body.textContent).toMatch(
+      /earnings forecast ends in 2030, so the chart ends in 2030-31; 2031-32, when current law uprates the income tax thresholds again and one of the policies would freeze them/,
+    );
+    expect(document.body.textContent).not.toMatch(/candidate/i);
   });
 
   it("holds its place when the thresholds file is missing", async () => {

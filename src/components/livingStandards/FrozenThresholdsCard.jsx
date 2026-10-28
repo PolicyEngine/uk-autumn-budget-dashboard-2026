@@ -172,7 +172,7 @@ export default function FrozenThresholdsCard({ data, view = "chart", onViewChang
       ],
       definitions: [PA, HR, PLAN_2, PAY].map((l) => ({ term: l.name, meaning: l.meaning })),
       caveats: [
-        `The OBR's March 2026 earnings forecast ends in 2030, so the chart ends in ${fyLabel(end)}; 2031-32, when current law uprates the thresholds again and a candidate measure would freeze them for one more year, is not shown.`,
+        `The OBR's March 2026 earnings forecast ends in 2030, so the chart ends in ${fyLabel(end)}; 2031-32, when current law uprates the income tax thresholds again and one of the policies would freeze them for one more year, is not shown.`,
         "Taking a calendar year's growth for the fiscal year starting in it is an approximation: the fiscal year runs from April to March.",
         "The earnings forecast is the OBR's from before the Autumn Budget.",
       ],
