@@ -832,33 +832,38 @@ describe("exportMapAsSvg", () => {
     const initialWidth = window.innerWidth;
     afterEach(() => setWidth(initialWidth));
 
-    // The Policy choice is the first group of the card's Options pill
-    // (Vahid, 28 October, evening), its face naming the choice
+    // The Policy choice is its own pill before Options (Vahid, 28
+    // October, evening), naming the policy shown
     const policyChoices = () => {
-      fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
-      return screen.getByRole("radiogroup", { name: "Policy" });
+      fireEvent.click(screen.getByRole("button", { name: /^Policy:/ }));
+      return screen.getByRole("listbox", { name: "Policy" });
     };
 
     it("lists the combined run, then every published policy with its own results, combined by default", async () => {
       vi.stubGlobal("fetch", geographyFetch({ "/data/constituency.csv": withSingles() }));
       const { container } = await renderMap();
-      expect(screen.getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^All selected policies · % of income · Hex map$/);
+      expect(screen.getByRole("button", { name: "Policy: All selected policies" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^% of income · Hex map$/);
       expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: selected policies$/);
-      expect(container.querySelector(".map-fallback-note")).toBeNull();
       const group = policyChoices();
-      expect(within(group).getAllByRole("radio").map((option) => option.textContent)).toEqual([
+      expect(within(group).getAllByRole("option").map((option) => option.textContent)).toEqual([
         "All selected policies",
         "2 child limit repeal",
         "Rail fares freeze",
       ]);
-      expect(within(group).getByRole("radio", { name: "All selected policies" })).toHaveAttribute("aria-checked", "true");
+      expect(within(group).getByRole("option", { name: "All selected policies" })).toHaveAttribute("aria-selected", "true");
       // Selected is fill and weight, never a tick
       expect(group.textContent).not.toMatch(/\u2713|\u2714/);
-      fireEvent.click(within(group).getByRole("radio", { name: "2 child limit repeal" }));
+      fireEvent.click(within(group).getByRole("option", { name: "2 child limit repeal" }));
       await waitFor(() =>
         expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: 2 child limit repeal$/),
       );
-      expect(screen.getByRole("button", { name: /^Options:/ })).toHaveTextContent(/^2 child limit repeal · % of income · Hex map$/);
+      expect(screen.getByRole("button", { name: "Policy: 2 child limit repeal" })).toBeInTheDocument();
+      // Picked: the sentence names the policy, with no prompt
+      expect(container.querySelector(".chart-header .chart-description").textContent).toMatch(/^2 child limit repeal: households /);
+      // Not inside Options
+      fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
+      expect(screen.queryByRole("radiogroup", { name: "Policy" })).toBeNull();
     });
 
     it("offers every published policy with a map, All selected policies unavailable until its map is published, and says what it shows instead (AH1)", async () => {
@@ -869,18 +874,15 @@ describe("exportMapAsSvg", () => {
       await waitFor(() =>
         expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: Rail fares freeze$/),
       );
-      // One paragraph of figures, then the muted line saying why this policy
+      // One line: which policy, why, and its figures
       const description = container.querySelector(".chart-header .chart-description");
-      expect(description.textContent).toMatch(/^Households [^.]*\.$/);
+      expect(description.textContent).toMatch(/^Showing Rail fares freeze \(no map yet for all the policies together; choose another policy\): households [^.]*\.$/);
       expect(container.querySelectorAll(".chart-header .chart-description")).toHaveLength(1);
-      expect(container.querySelector(".map-fallback-note")).toHaveTextContent(
-        "No map yet for all the policies together; showing Rail fares freeze. Choose another in Options.",
-      );
       const group = policyChoices();
-      expect(within(group).getAllByRole("radio").map((option) => option.textContent)).toEqual(["All selected policies", "2 child limit repeal", "Rail fares freeze"]);
-      expect(within(group).getByRole("radio", { name: "All selected policies" })).toBeDisabled();
+      expect(within(group).getAllByRole("option").map((option) => option.textContent)).toEqual(["All selected policies", "2 child limit repeal", "Rail fares freeze"]);
+      expect(within(group).getByRole("option", { name: "All selected policies" })).toHaveAttribute("aria-disabled", "true");
       // Never the singles summed: the map stays on the one policy's own run
-      expect(within(group).getByRole("radio", { name: "Rail fares freeze" })).toHaveAttribute("aria-checked", "true");
+      expect(within(group).getByRole("option", { name: "Rail fares freeze" })).toHaveAttribute("aria-selected", "true");
     });
 
     it("shows a published policy's map, and says so, when the one selected has none", async () => {
@@ -888,8 +890,8 @@ describe("exportMapAsSvg", () => {
       const { container } = render(<ConstituencyMap selectedPolicies={["fuel_duty_freeze"]} selectedYear={2029} policies={POLICIES} />);
       await waitFor(() => expect(container.querySelector(".map-title-focus")).toHaveTextContent(/^: 2 child limit repeal$/));
       expect(screen.queryByText(/not yet published/)).toBeNull();
-      expect(container.querySelector(".map-fallback-note")).toHaveTextContent(
-        "No map yet for Fuel duty freeze extension; showing 2 child limit repeal. Choose another in Options.",
+      expect(container.querySelector(".chart-header .chart-description").textContent).toMatch(
+        /^Showing 2 child limit repeal \(no map yet for Fuel duty freeze extension; choose another policy\): /,
       );
     });
 
