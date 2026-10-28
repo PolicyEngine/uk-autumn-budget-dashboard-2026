@@ -168,6 +168,12 @@ describe("the Pre-measures forecast view", () => {
     fireEvent.keyDown(within(inequality).getByRole("dialog"), { key: "Escape" });
     // One short line on the card; the basis and years in About this chart
     expect(inequality.querySelector(".chart-description").textContent).toMatch(/^Under current law, income inequality, measured by the Gini coefficient, (rises|falls|stays)/);
+    // The incomes sentence says real or cash, so a figure quoted alone is
+    // not read as cash (W6 G1)
+    expect(incomes.querySelector(".chart-description").textContent).toMatch(/^Under current law, real median income \(adjusted for household size\) /);
+    choose(incomes, "Prices", "Cash terms");
+    fireEvent.keyDown(within(incomes).getByRole("dialog"), { key: "Escape" });
+    expect(incomes.querySelector(".chart-description").textContent).toMatch(/^Under current law, median income in cash terms \(adjusted for household size\) /);
     expect(living.querySelectorAll(".ls-card")).toHaveLength(3);
     // Nothing with the measures here
     expect(living).not.toHaveTextContent(/With the selected policies/);
