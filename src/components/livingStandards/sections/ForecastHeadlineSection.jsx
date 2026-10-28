@@ -77,7 +77,7 @@ export default function ForecastHeadlineSection({ data }) {
           value={pctLabel(tile.value)}
           caption={
             tile.later
-              ? `annual growth, ${year}, ${forecastChip(forecast.post_label)}; ${forecastChip(forecast.pre_label)}: ${pctLabel(preOf(tile.key))}`
+              ? `annual growth, ${year} (${forecastChip(forecast.pre_label).replace(/ \d{4} forecast$/, "")}: ${pctLabel(preOf(tile.key))})`
               : `annual growth, ${year}`
           }
           trend={{

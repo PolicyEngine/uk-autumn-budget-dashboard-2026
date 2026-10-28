@@ -202,7 +202,7 @@ describe("Forecast changes once the Budget forecast is published", () => {
     expect(cpi[1].opacity ?? 1).toBe(1);
     // The tile shows October and names March
     expect(screen.getAllByText(pct(cpiPre() + 0.003)).length).toBeGreaterThan(0);
-    expect(screen.getByText(new RegExp(`March 2026 forecast: ${pct(cpiPre()).replace(".", "\\.")}`))).toBeInTheDocument();
+    expect(screen.getByText(`annual growth, 2027 (March: ${pct(cpiPre())})`)).toBeInTheDocument();
     // Hiding March leaves the October lines only
     fireEvent.click(forecasts[0]);
     const last = chartProps.filter((p) => p.series.some((s) => s.series === "cpi")).at(-1).series;
