@@ -118,15 +118,14 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
       // Real or cash said in the sentence, so a figure quoted alone is not
       // read as cash (W6 G1); the price base is in About this chart
       const who = adjustment === "real" ? `real ${income} (adjusted for household size)` : `${income} in cash terms (adjusted for household size)`;
-      const real = ", ";
       summary = verb ? (
         <>
-          Under current law{real}{who} <strong>{verb}</strong>, from about {poundsFull(a)} a year in {fyDash(first.year)} to{" "}
+          Under current law, {who} <strong>{verb}</strong>, from about {poundsFull(a)} a year in {fyDash(first.year)} to{" "}
           {poundsFull(b)} in {fyDash(last.year)}.
         </>
       ) : (
         <>
-          Under current law{real}{who} <strong>stays at about {poundsFull(a)}</strong> a year from {fyDash(first.year)} to{" "}
+          Under current law, {who} <strong>stays at about {poundsFull(a)}</strong> a year from {fyDash(first.year)} to{" "}
           {fyDash(last.year)}.
         </>
       );

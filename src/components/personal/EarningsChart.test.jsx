@@ -144,7 +144,7 @@ describe("EarningsChart's About this chart (W6 G1)", () => {
   it("in a level view, the parts of net income, saying held fixed once", () => {
     render(<EarningsChart sweep={stackedSweep} salary={35000} yearLabel="2027-28" />);
     const text = how();
-    expect(text).toContain("Each layer is one tax or benefit's part of net income, and the line is net income.");
+    expect(text).toContain("Each layer is one part of net income (earnings, a benefit or a tax), and the line is net income.");
     expect(text).toContain("Your household is calculated again at each salary from £0 up.");
     expect(text.match(/everything else held fixed/g)).toHaveLength(1);
   });

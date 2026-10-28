@@ -768,11 +768,12 @@ function MethodologyTab({ onShowTab }) {
             <p className="method-more">
               Each policy is also simulated on its own. Where several are selected, the revenue
               and decile charts add up their separate effects, so they leave out interactions
-              between policies (<Term id="ownRuns">policies run on their own</Term>); the age
-              charts do so only when no run of the whole selection is published; the{" "}
+              between policies (<Term id="ownRuns">policies run on their own</Term>); the
+              average-change age charts do so only when no run of the whole selection is
+              published; the{" "}
               <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>{" "}and the
               winners and losers charts come from a run of the whole selection, so they include
-              them, and show nothing for a selection with no such run.
+              interactions, and show nothing for a selection with no such run.
             </p>
             <p className="method-more">
               Some policies replace values reported in the survey with modelled ones, and their

@@ -619,7 +619,7 @@ export default function EarningsChart({ initialView = "after", sweep, salary, ye
               netParts
                 ? isChange
                   ? "Each layer is one tax or benefit's part of the change: above zero where it adds to net income, below where it takes away. The line is the change in net income."
-                  : "Each layer is one tax or benefit's part of net income, and the line is net income."
+                  : "Each layer is one part of net income (earnings, a benefit or a tax), and the line is net income."
                 : isChange
                   ? "The shaded area is the change: above zero a gain, below a loss."
                   : "The line is your household's net income.",
