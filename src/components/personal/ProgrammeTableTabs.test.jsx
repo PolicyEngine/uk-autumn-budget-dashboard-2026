@@ -65,7 +65,7 @@ describe("the household table's policy tabs", () => {
   it("opens on the Summary, with a tab per policy that changes the household and the rest folded", () => {
     renderTable();
     const tabs = within(screen.getByRole("tablist")).getAllByRole("tab");
-    expect(tabs.map((tab) => tab.textContent)).toEqual(["Summary", "Zero VAT on domestic electricity", "Plan 2 student loan threshold unfrozen"]);
+    expect(tabs.map((tab) => tab.textContent)).toEqual(["Summary", "By policy", "Zero VAT on domestic electricity", "Plan 2 student loan threshold unfrozen"]);
     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("+1 with no effect for you")).toBeInTheDocument();
     // Summary has a round icon as each policy tab does, the same compact size
