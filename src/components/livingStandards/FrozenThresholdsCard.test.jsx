@@ -192,6 +192,16 @@ describe("Frozen thresholds against pay: card", () => {
     expect(document.body.textContent).not.toMatch(/candidate measure/);
   });
 
+  it("cites the detailed forecast tables' Table 1.6 for earnings, linked to the October 2026 EFO page", async () => {
+    render(<FrozenThresholdsCard data={OUTLOOK} />);
+    await screen.findByText(/^By 2031-32/);
+    fireEvent.click(screen.getByRole("button", { name: /About this chart/ }));
+    const link = [...document.querySelectorAll("a")].find((a) => /Table 1\.6: average earnings growth/.test(a.textContent));
+    expect(link.textContent).toMatch(/^OBR, Economic and fiscal outlook – October 2026: detailed forecast tables \(economy\), Table 1\.6/);
+    expect(link.getAttribute("href")).toBe("https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/");
+    expect(document.body.textContent).not.toMatch(/Table A\.1/);
+  });
+
   it("links the parameters at the policyengine-uk release it names, in a new tab", async () => {
     render(<FrozenThresholdsCard data={OUTLOOK} />);
     await screen.findByText(/^By 2031-32/);

@@ -8,7 +8,8 @@
 // engine's own parameters); the trading allowance is the same file's
 // Budget measure row of that name, its "after" values; earnings is the OBR
 // October 2026 growth every simulation runs on
-// (src/uk_budget_data/forecast/obr_october_2026.json, Table A.1).
+// (src/uk_budget_data/forecast/obr_october_2026.json: the detailed
+// forecast tables, economy, Table 1.6).
 
 import OCTOBER_2026 from "../../uk_budget_data/forecast/obr_october_2026.json";
 import { fittedAxis } from "../chartTheme";

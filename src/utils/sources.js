@@ -29,6 +29,15 @@ export const SOURCES = {
     label: "OBR, Economic and fiscal outlook – October 2026",
     url: "https://obr.uk/download/economic-and-fiscal-outlook-october-2026/",
   },
+  // The October 2026 forecast's detailed tables (economy): the overlay's
+  // growth rates are read from them at four decimals (Table 1.6 for
+  // average earnings; src/uk_budget_data/forecast/obr_october_2026.json).
+  // The EFO page lists them under its supporting documents (checked 28
+  // October 2026)
+  obr_efo_october_2026_tables: {
+    label: "OBR, Economic and fiscal outlook – October 2026: detailed forecast tables (economy)",
+    url: "https://obr.uk/efo/economic-and-fiscal-outlook-october-2026/",
+  },
   frs_2024_25: {
     label: "DWP, Family Resources Survey: financial year 2024 to 2025",
     url: "https://www.gov.uk/government/statistics/family-resources-survey-financial-year-2024-to-2025",

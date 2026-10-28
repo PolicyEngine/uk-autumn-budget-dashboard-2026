@@ -125,11 +125,12 @@ export default function FrozenThresholdsCard({ view = "chart", onViewChange }) {
 
   const end = rows.at(-1).year;
   const period = `${fyLabel(BASE_YEAR)} to ${fyLabel(end)}`;
-  const obr = SOURCES.obr_efo_october_2026;
+  // Earnings growth comes from the detailed forecast tables, Table 1.6
+  const obr = SOURCES.obr_efo_october_2026_tables;
   const obrName = obr.label;
   const engine = document.engine?.policyengine_uk;
   const trading = tradingAllowance(document);
-  const sourceText = `${obrName}: average earnings growth; policyengine-uk${engine ? ` ${engine}` : ""} parameters (current law${trading ? "; the trading allowance as the Budget sets it" : ""}); indexed by PolicyEngine`;
+  const sourceText = `${obrName}, Table 1.6: average earnings growth; policyengine-uk${engine ? ` ${engine}` : ""} parameters (current law${trading ? "; the trading allowance as the Budget sets it" : ""}); indexed by PolicyEngine`;
   const lineSet = linesFor(rows);
   const shown = lineSet.map((l) => l.key).filter((k) => !hidden.includes(k));
   const setShown = (keys) => setHidden(lineSet.map((l) => l.key).filter((k) => !keys.includes(k)));
@@ -193,7 +194,7 @@ export default function FrozenThresholdsCard({ view = "chart", onViewChange }) {
         "Taking a calendar year's growth for the fiscal year starting in it is an approximation: the fiscal year runs from April to March.",
       ],
       sources: [
-        { label: `${obrName}: average earnings growth (calendar years, Table A.1)`, href: obr.url },
+        { label: `${obrName}, Table 1.6: average earnings growth (calendar years)`, href: obr.url },
         {
           label: `policyengine-uk${engine ? ` ${engine}` : ""} parameters`,
           // The parameters at the release the outlook was built with (tags are
