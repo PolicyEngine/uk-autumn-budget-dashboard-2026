@@ -49,8 +49,8 @@ function ViewTabs({ tabs, value, onChange, tabId, panelId, notch = false, hidden
     const lead = row && bar
       ? row.getBoundingClientRect().left - bar.getBoundingClientRect().left - (parseFloat(getComputedStyle(bar).paddingLeft) || 0)
       : 0;
-    // (negative where the row is pulled into the margin to line its first
-    // tab's icon up with the page's content, HomeButton.css)
+    // (after About, which is pulled a tab's padding into the margin to
+    // line its icon up with PolicyEngine's mark, HomeButton.css)
     document.documentElement.style.setProperty("--view-tab-x", `${Math.round(lead + Math.max(0, indicator.x - scrollLeft))}px`);
   }, [indicator.x, leading]);
   // Which ends of a scrolling row have tabs out of sight, to fade them

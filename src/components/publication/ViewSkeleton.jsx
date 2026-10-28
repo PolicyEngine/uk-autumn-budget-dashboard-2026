@@ -1,3 +1,4 @@
+import { PanelLeftOpen } from "lucide-react";
 import TitleIcon from "../TitleIcon";
 import { TAB_ICONS } from "../ViewTabs";
 import { BOOT_SUBS, BOOT_TABS } from "../../utils/bootView";
@@ -139,11 +140,16 @@ function CardSkeleton({ kind, wide = false }) {
   );
 }
 
-// The page's view tab bar as it will be, the linked view chosen: the real
-// one stays hidden until the page's code opens the view
+// The page's view tab bar as it will be, the linked view chosen, About
+// first (HomeButton's EdgeAboutTab): the real one stays hidden until the
+// page's code opens the view
 function StaticViewTabs({ tabs, tab }) {
   return (
-    <div className={`view-tabs-bar boot-view-tabs${SUB_TABS[tab] ? " has-notch" : ""}`} aria-hidden="true">
+    <div className={`view-tabs-bar has-leading boot-view-tabs${SUB_TABS[tab] ? " has-notch" : ""}`} aria-hidden="true">
+      <span className="view-tab edge-about">
+        <PanelLeftOpen className="view-tab-icon" size={18} strokeWidth={1.8} aria-hidden="true" />
+        <span className="view-tab-label">About</span>
+      </span>
       <div className="view-tabs">
         {tabs.map((item) => (
           <span key={item.value} className="view-tab" aria-selected={item.value === tab ? "true" : "false"}>
