@@ -144,7 +144,7 @@ describe("buildHouseholdRequest", () => {
   it("sends a State Pension only as entered, and only at State Pension age", () => {
     const { age, full } = statePensionFor(2029);
     expect(age).toBe(67);
-    expect(full).toBeCloseTo(13696.98, 2);
+    expect(full).toBeCloseTo(13817.3, 2);
     expect(atStatePensionAge(67, 2029)).toBe(true);
     expect(atStatePensionAge(66, 2029)).toBe(false);
     expect(atStatePensionAge(66, 2026)).toBe(true);

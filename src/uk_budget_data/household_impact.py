@@ -847,12 +847,33 @@ def salaries_in(answers: HouseholdAnswers, year: int) -> tuple[float, float]:
 
 
 def full_new_state_pension(year: int) -> float:
-    """The full new State Pension, £ a year, in ``year``: the model's
-    weekly rate (``gov.dwp.state_pension.new_state_pension.amount``, read
-    as ``new_state_pension`` reads it) times its weeks in a year."""
-    from uk_budget_data.calculators import full_new_state_pension as weekly
+    """The full new State Pension, £ a year, in ``year``, as a simulation
+    on the October 2026 forecast pays it: the model's weekly rate
+    (``gov.dwp.state_pension.new_state_pension.amount``, read as
+    ``new_state_pension`` reads it) on that forecast, times its weeks in a
+    year."""
+    from uk_budget_data.calculators import forecast_full_new_state_pension
 
-    return weekly([year])[year] * WEEKS_IN_YEAR
+    return forecast_full_new_state_pension([year])[year] * WEEKS_IN_YEAR
+
+
+def reported_state_pension(paid: float, year: int) -> float:
+    """The ``state_pension_reported`` input for a State Pension of ``paid``
+    (£ a year in ``year``). policyengine-uk splits a reported amount at the
+    full rate of the version the bundle pins (the OBR's March 2026
+    forecast); on the October 2026 forecast a simulation pays it scaled by
+    October's full rate over that one. So the full rate is reported as the
+    pinned full rate, exactly, and any other amount scaled down by the
+    same ratio, so that what is paid is ``paid``."""
+    from uk_budget_data.calculators import (
+        full_new_state_pension as pinned_weekly,
+    )
+
+    pinned = pinned_weekly([year])[year] * WEEKS_IN_YEAR
+    full = full_new_state_pension(year)
+    if paid == full:
+        return pinned
+    return paid * pinned / full
 
 
 @lru_cache(maxsize=None)
@@ -1036,8 +1057,11 @@ def household_entities(
             "is_claimant_or_partner": True,
         }
     ]
+    pension_year = answers.salary_year if year is None else year
     if pension is not None:
-        people[0]["state_pension_reported"] = pension
+        people[0]["state_pension_reported"] = reported_state_pension(
+            pension, pension_year
+        )
     if answers.is_carer:
         # Only for a carer, so a non-carer's household is exactly as before
         # (no care_hours: policyengine-uk's default, 0)
@@ -1055,7 +1079,9 @@ def household_entities(
             }
         )
         if partner_pension is not None:
-            people[-1]["state_pension_reported"] = partner_pension
+            people[-1]["state_pension_reported"] = reported_state_pension(
+                partner_pension, pension_year
+            )
     children = [child_inputs(child) for child in answers.children]
     if children and answers.monthly_childcare:
         # The household's childcare, on its first child, as policyengine-uk

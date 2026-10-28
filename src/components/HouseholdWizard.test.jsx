@@ -329,8 +329,8 @@ describe("the personal impact form", () => {
     openMore();
     expect(field("state_pension_per_year")).toBeNull();
     fireEvent.change(box("Age"), { target: { value: "72" } });
-    expect(value("Your State Pension")).toBe(13697);
-    expect(screen.getByText(/Prefilled with the full new State Pension for 2029-30 \(£13,697\)/)).toBeInTheDocument();
+    expect(value("Your State Pension")).toBe(13817);
+    expect(screen.getByText(/Prefilled with the full new State Pension for 2029-30 \(£13,817\)/)).toBeInTheDocument();
     fireEvent.change(box("Your State Pension"), { target: { value: "9000" } });
     expect(value("Your State Pension")).toBe(9000);
   });

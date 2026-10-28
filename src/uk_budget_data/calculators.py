@@ -4,6 +4,7 @@ Each calculator is responsible for computing a specific type of metric
 from baseline and reformed microsimulation results.
 """
 
+import functools
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional
@@ -681,11 +682,45 @@ class IncomeCurveCalculator(BaseCalculator):
 
 
 def full_new_state_pension(years: list[int]) -> dict[int, float]:
-    """The full new State Pension, £ a week, in each year, as legislated
-    (the rate ``new_state_pension`` splits a reported amount at)."""
+    """The full new State Pension, £ a week, in each year, as legislated in
+    the policyengine-uk the bundle pins (the rate ``new_state_pension``
+    splits a reported amount at). A simulation built on the forecast
+    (``forecast.with_forecast``) pays a reported amount scaled by the
+    forecast's rate over this one, so this rate reported is the forecast's
+    full rate paid (``forecast_full_new_state_pension``)."""
     from policyengine_uk.system import system
 
     amount = system.parameters.gov.dwp.state_pension.new_state_pension.amount
+    return {year: float(amount(f"{year}-01-01")) for year in years}
+
+
+@functools.lru_cache(maxsize=None)
+def _forecast_parameters():
+    """policyengine-uk's parameters on the forecast every simulation here
+    is built with (``forecast.with_forecast``): the October 2026 OBR
+    forecast, not the March one the package ships, so the triple lock
+    uprates the State Pension on October's earnings and inflation."""
+    from policyengine_uk import Simulation
+
+    from uk_budget_data.forecast import with_forecast
+
+    simulation = Simulation(
+        situation={
+            "people": {"p": {"age": {2026: 40}}},
+            "benunits": {"b": {"members": ["p"]}},
+            "households": {"h": {"members": ["p"]}},
+        },
+        scenario=with_forecast(None),
+    )
+    return simulation.tax_benefit_system.parameters
+
+
+def forecast_full_new_state_pension(years: list[int]) -> dict[int, float]:
+    """The full new State Pension, £ a week, in each year, that a
+    simulation on the forecast pays (``_forecast_parameters``)."""
+    amount = (
+        _forecast_parameters().gov.dwp.state_pension.new_state_pension.amount
+    )
     return {year: float(amount(f"{year}-01-01")) for year in years}
 
 
