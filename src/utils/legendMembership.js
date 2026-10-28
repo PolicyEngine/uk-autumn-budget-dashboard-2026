@@ -161,7 +161,9 @@ const PRICE_TYPES = new Set(["VAT", "Fuel duty"]);
  * short, for its row on a by-policy chart: "changes prices, not incomes",
  * "winter 2026-27 only", "in force from April 2031". In order: £0 for
  * households by construction (employer costs), out of force that year
- * (inForceText), a price policy, a capital gains tax, otherwise `fallback`
+ * (inForceText), paid through income HBAI leaves out (outsidePovertyIncome:
+ * "not counted in poverty income"), a price policy, a capital gains tax,
+ * otherwise `fallback`
  * ("no one crosses the poverty line").
  */
 export function noPovertyEffectReason(measure, year, fallback = "no one crosses the poverty line") {
@@ -169,6 +171,8 @@ export function noPovertyEffectReason(measure, year, fallback = "no one crosses 
   const policy = policyDetailsFor(measure);
   // Short: "in force from April 2031", without inForceText's "(2031-32 only)"
   if (policy && !inForceIn(policy, year)) return inForceText(policy).replace(/ \(\d{4}-\d{2} only\)$/, "");
+  // In force, but paid through a variable poverty income leaves out
+  if (policy?.outsidePovertyIncome) return "not counted in poverty income";
   const type = policy?.type;
   if (PRICE_TYPES.has(type)) return "changes prices, not incomes";
   if (type === "Capital gains tax") return "taxes capital gains, not incomes";

@@ -18,6 +18,10 @@
  * - inForce: the months it is in force, as "YYYY-MM" (`to` is the last
  *   month; a lasting measure has none), for the card's timeline;
  * - ends: when a temporary measure ends, in words (only with `to`);
+ * - outsidePovertyIncome: true where the model pays the measure through a
+ *   variable HBAI's household net income leaves out (policyengine-uk's
+ *   hbai_household_net_income), so poverty and inequality cannot move with
+ *   it even in the years it is in force;
  * - duration: a temporary measure's length in words, where a count of
  *   months would mislead (a one-off winter payment);
  * - steps / stepsLabel: dated stages within a measure, drawn as diamonds,
@@ -379,6 +383,9 @@ export const POLICY_DETAILS = [
     affects: "Households in England in council tax bands A to D",
     type: "Payment",
     inForce: { from: "2027-01", to: "2027-03" },
+    // Paid through ebr_council_tax_rebate (energy_bills_rebate), which
+    // policyengine-uk 2.151.0's hbai_household_net_income does not add
+    outsidePovertyIncome: true,
     ends: "After one winter",
     duration: "One winter",
     howCalculated:
