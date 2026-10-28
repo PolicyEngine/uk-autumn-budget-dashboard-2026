@@ -74,7 +74,7 @@ export default function useInequalityView(data, range = null, setRange = null) {
     period: rowsPeriod(rows),
     summary,
     // What it shows; the two measures are defined once, under Definitions
-    about: "How unequal household incomes are each year under current law, the years compared shaded.",
+    about: "How unequal household incomes are each year under current law. The shaded years are the ones compared.",
     notes: [...(ineq.notes || []).filter((n) => !/^Outturn is/.test(n)), data.meta.headline_end_year_note],
     source: <HbaiSource />,
     sourceText: CSV_SOURCES.hbai,

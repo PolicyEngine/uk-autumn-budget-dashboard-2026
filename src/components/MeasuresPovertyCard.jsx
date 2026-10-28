@@ -23,6 +23,7 @@ import LsCard from "./livingStandards/LsCard";
 import ControlBar from "./ControlBar";
 import ChartMoreInfo from "./ChartMoreInfo";
 import { METHOD_ANCHORS } from "./methodology/anchors";
+import { MethodLink } from "../utils/methodLink";
 import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTooltip";
 import SummaryMetricChart, { SUMMARY_METRICS, hasColumn, metricValue, povertyMetric, usePovertyChoice } from "./SummaryMetricChart";
 import { useOutlook } from "./livingStandards/useOutlook";
@@ -248,23 +249,15 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
     const measure = catalogue.byId?.get(step.id);
     return measure?.sentence ?? policyDetailsFor(measure)?.sentence ?? step.name;
   };
-  // Led by all the policies together, then the policy that moves the most:
-  // "does most of it" when it moves at least half as many the same way
-  const doesMost = (step) =>
-    totalStep && direction(step) === direction(totalStep) && Math.abs(step.x) >= Math.abs(totalStep.x) / 2;
+  // Led by all the policies together, then the policy that moves the most
+  // on its own: never read as a share of the total (POV2)
   const summary = top ? (
     peopleMode ? (
       totalStep ? (
         <>
-          In {year} the selected policies together move {about(totalStep)} {who} {direction(totalStep)} poverty;{" "}
-          {doesMost(top) ? (
-            <>{inSentence(top)} does most of it.</>
-          ) : (
-            <>
-              {inSentence(top)} moves the most ({about(top)}
-              {direction(top) === direction(totalStep) ? "" : ` ${who} ${direction(top)} poverty`}).
-            </>
-          )}
+          The selected policies together move {about(totalStep)} {who} {direction(totalStep)} poverty. On its own,{" "}
+          {inSentence(top)} moves the most ({about(top)}
+          {direction(top) === direction(totalStep) ? "" : ` ${who} ${direction(top)} poverty`}).
         </>
       ) : (
         <>
@@ -315,7 +308,10 @@ export default function MeasuresPovertyCard({ rows, policies, selectedPolicies, 
           info={{
             how: [
               "Each bar is one policy on its own.",
-              "The last bar is all the selected policies together, which can differ from adding the bars up because policies reach the same households.",
+              <>
+                The last bar is all the selected policies together, from its own run. The bars do not add up to it;
+                see <MethodLink anchor={METHOD_ANCHORS.limitations}>Policies added up</MethodLink>.
+              </>,
             ],
             caveats: [
               read.fellBack && (

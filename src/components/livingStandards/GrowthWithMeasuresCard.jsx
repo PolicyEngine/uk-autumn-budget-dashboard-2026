@@ -27,8 +27,8 @@ export const WITH_MEASURES_ANCHOR = "growth-with-measures";
 // Shows: the measures' effect first (see GrowthWithMeasuresCard); each
 // label says what is plotted (Pavel's review, LS3)
 export const SHOWS = [
-  { value: "difference", label: "Effect of the policies (points)" },
-  { value: "growth", label: "Total growth, with the policies" },
+  { value: "difference", label: "Effect of the policies (percentage points)" },
+  { value: "growth", label: "Growth with the policies (%)" },
 ];
 
 // The file is read once per page

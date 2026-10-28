@@ -175,7 +175,7 @@ describe("the Poverty sub-tab's measures pair", () => {
     expect(measures.querySelector(".wf-total .wf-main")).toHaveTextContent(/^about [\d,]+ fewer people$/);
     // A plain sentence, no "≈" or "pp"
     const headline = measures.querySelector(".chart-description");
-    expect(headline).toHaveTextContent(/^In 2027-28 the selected policies together move about [\d,]+ people out of poverty; unfreezing the student loan threshold (does most of it|moves the most \(about [\d,]+\))\.$/);
+    expect(headline).toHaveTextContent(/^The selected policies together move about [\d,]+ people out of poverty\. On its own, unfreezing the student loan threshold moves the most \(about [\d,]+\)\.$/);
     expect(measures.textContent).not.toMatch(/package/i);
     expect(headline.textContent).not.toMatch(/≈|pp/);
 
@@ -192,7 +192,7 @@ describe("the Poverty sub-tab's measures pair", () => {
     // About this chart: that the parts need not add up; the policies that
     // move no one are in their rows, not listed again here
     fireEvent.click(within(measures).getByRole("button", { name: "About this chart" }));
-    expect(within(measures).getByText(/can differ from adding the bars up because policies reach the same households/)).toBeInTheDocument();
+    expect(within(measures).getByText(/The bars do not add up to it/)).toBeInTheDocument();
     const about = measures.querySelector(".chart-more-info");
     expect(about).not.toHaveTextContent(/No effect on/);
     expect(about.querySelector("[data-zero-measure]")).toBeNull();

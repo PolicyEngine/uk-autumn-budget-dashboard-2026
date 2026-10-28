@@ -696,7 +696,7 @@ function SummaryMetricChart({ metric: family, rows, policies, selectedPolicies, 
             // Pavel's review MT1: why VAT and fuel duty move this but not poverty
             caveats:
               metric.choices === "inequality"
-                ? ["Inequality counts VAT and fuel duty; poverty uses official income, which leaves them out, so price policies move this chart but not poverty."]
+                ? ["VAT and fuel duty count here but not in the poverty figures, so a price policy can move inequality without moving poverty."]
                 : [],
             method: { anchor: METHOD_ANCHORS.poverty, label: "How we measure poverty and inequality" },
           }}

@@ -322,7 +322,7 @@ export default function ProgrammeTable({
           aria-pressed={showBoth}
           onClick={() => setShowBoth((value) => !value)}
         >
-          {showBoth ? "Hide current law and with the policies" : "Show current law and with the policies"}
+          {showBoth ? "Hide both columns" : "Show both columns"}
         </button>
       )}
       {activePolicy ? (

@@ -178,8 +178,8 @@ describe("changeFromLine: the policies behind your change (HH4)", () => {
         { id: "b", label: "Student loan threshold unfrozen", rounded: 248 },
         { id: "c", label: "Threshold freeze", rounded: -73 },
       ]),
-    ).toBe("Your change comes mostly from the employer NI threshold (+£343) and the student loan threshold unfrozen (+£248).");
-    expect(changeFromLine([{ id: "a", label: "Fuel duty frozen", rounded: 53 }])).toBe("Your change comes from the fuel duty frozen (+£53).");
+    ).toBe("Largest effects: Employer NI threshold (+£343) and Student loan threshold unfrozen (+£248).");
+    expect(changeFromLine([{ id: "a", label: "Fuel duty frozen", rounded: 53 }])).toBe("Largest effect: Fuel duty frozen (+£53).");
     expect(changeFromLine(null)).toBeNull();
   });
 });

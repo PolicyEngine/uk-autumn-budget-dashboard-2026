@@ -18,7 +18,7 @@ import "./MeasureSharesChart.css";
 const OUTCOMES = [
   { key: "pct_better_off", label: "Gain", color: CHART_COLOURS.gain },
   { key: "pct_unchanged", label: "No change", color: CHART_COLOURS.noChange },
-  { key: "pct_worse_off", label: "Lose", color: CHART_COLOURS.loss },
+  { key: "pct_worse_off", label: "Loss", color: CHART_COLOURS.loss },
 ];
 const KEYS = OUTCOMES.map((outcome) => outcome.key);
 
@@ -44,7 +44,7 @@ export default function MeasureSharesChart({ rows, groupLabel, yearLabel, emphas
           <span className="msc-up">▲</span> Gain
         </span>
         <span className="msc-num" role="columnheader">
-          <span className="msc-down">▼</span> Lose
+          <span className="msc-down">▼</span> Loss
         </span>
       </div>
       {rows.map(({ id, name, fullName, row }, index) => {

@@ -91,7 +91,7 @@ const CHART_TITLE = "Constituency impacts";
 // The Policy option for all the selected policies before their map is
 // published: listed, never chosen
 const COMBINED_PENDING = "combined-pending";
-export const ONE_POLICY_NOTE = "Shows one policy at a time until the map for all selected policies is published.";
+export const ONE_POLICY_NOTE = "The map shows one policy at a time until the map for all selected policies is published.";
 
 // The card's three views, and the URL parameter that opens the second or
 // third. The hex map is the default: every constituency the same size, so
@@ -187,7 +187,7 @@ export function constituencyInfo({ label, yearLabel, outcome, releaseKind, notRo
       { ref: "netIncome" },
       { term: "Hex map", meaning: "One equal hexagon per seat, placed roughly where it lies; shapes are not geographic." },
       { term: "Map", meaning: "Each seat's real boundary, so large rural seats dominate." },
-      { term: "Too uncertain", meaning: "The range of likely values is too wide to put the area in one category." },
+      { term: "Too uncertain", meaning: "The 90% range spans more than two categories, so the area is not classified." },
     ],
     caveats: [
       "Survey weights are held fixed in the resampling, so the intervals understate the uncertainty.",
@@ -327,11 +327,11 @@ const STATUS_ENTRIES = [
     fill: WITHHELD_FILL,
   },
   { key: "kind:no-data", label: "No data", fill: NO_DATA_FILL, stroke: NO_DATA_STROKE },
-  // No change: the light grey of £0, in both views (MAP1)
+  // Little change: the light grey of £0, in both views (MAP1)
   {
     key: "cat:little_change",
-    label: "No change",
-    detail: "Little or no change",
+    label: "Little change",
+    detail: "Little change: under £10 (or 0.1%) either way",
     fill: CATEGORY_COLOURS.little_change,
   },
   {

@@ -359,9 +359,8 @@ function MethodologyTab({ onShowTab }) {
                   {
                     value: "Taxes collected less benefits and other spending, in £ billion a year.",
                     more: [
-                      "Revenue is the change in government receipts net of spending in the model, including employer National Insurance and VAT.",
-                      "The employer NI threshold's figure is net of the income tax and National Insurance paid on the higher pay its saving goes to.",
-                      "The Plan 2 student loan threshold's figure is the change in student loan repayments.",
+                      "It includes employer National Insurance and VAT receipts.",
+                      "The employer National Insurance threshold's cost is net of the extra income tax and National Insurance on the higher pay it leads to.",
                     ],
                   },
                 ],
@@ -470,25 +469,28 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id="definitions-compared"
             title="Definitions compared with the PolicyEngine app"
-            preview="Inequality · Income tenths · Gains and losses · Poverty"
+            preview="Inequality · Income deciles · Winners and losers · Poverty"
           >
             <FactList
               items={[
                 [
                   "Inequality",
-                  "Inequality (Gini, 90:10) uses PolicyEngine's household net income adjusted for household size, including public services in kind such as the NHS and schools and after indirect taxes such as VAT and fuel duty, counting each person. Poverty uses the official (HBAI) income, which leaves indirect taxes out, so price policies move inequality but not poverty.",
+                  "The app uses HBAI income and counts each household once. Here inequality counts each person and uses the income described under Poverty and inequality.",
                 ],
                 [
-                  "Income tenths",
-                  "Income tenths rank people by household income adjusted for household size, as official statistics do; each bar is the average change per household in that tenth. These tenths differ from the PolicyEngine app's.",
+                  "Income deciles",
+                  "The app ranks households by household net income, not adjusted for household size, so its deciles differ.",
                 ],
                 [
-                  "Gains and losses",
+                  "Winners and losers",
                   {
                     value: "Three thresholds, by chart:",
                     more: [
-                      "Winners and losers and people affected: a change of more than 0.01% of household net income.",
-                      "Figures by area: under half a pound, or 0.005 percentage points, is no change.",
+                      <>
+                        Winners and losers and people affected: see{" "}
+                        <AnchorLink id={METHOD_SECTIONS.young}>Results by age</AnchorLink>.
+                      </>,
+                      "Figures by area: under half a pound, or 0.005 percentage points, is no change; the map's Little change is under £10 (or 0.1%) either way.",
                       "Household scatter: under £1 either way is no change.",
                       "The PolicyEngine app's winners-and-losers bands (0.1% and 5%) are not used here.",
                     ],
@@ -496,7 +498,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Poverty",
-                  "Poverty follows official statistics (HBAI): relative poverty after housing costs by default, and a child is a dependent child as HBAI defines one. The PolicyEngine app's default is before housing costs and ages 0 to 17.",
+                  "Poverty uses official (HBAI) income. A child is a dependent child as HBAI defines one; the PolicyEngine app counts everyone aged 0 to 17.",
                 ],
               ]}
             />
@@ -575,7 +577,7 @@ function MethodologyTab({ onShowTab }) {
               <ViewLink tab="dashboard" sub="age" age="16-24" hash="young-people" onShowTab={onShowTab}>
                 results by age
               </ViewLink>{" "}
-              count who is better or worse off in each age band and single year of age.
+              count winners and losers in each age band and single year of age.
             </p>
             <FactList
               items={[
@@ -646,7 +648,7 @@ function MethodologyTab({ onShowTab }) {
                   </>,
                 ],
                 [
-                  "Better or worse off",
+                  "Winners and losers",
                   {
                     value: "Household net income rises or falls by more than 0.01%; otherwise unchanged.",
                     more: ["The 0.01% is of baseline net income, with a baseline below £1 counted as £1."],
@@ -707,12 +709,6 @@ function MethodologyTab({ onShowTab }) {
               ]}
             />
           </Topic>
-          <Topic id="household-whd" title="Warm Home Discount" preview="Shown in full if received">
-            <p className="method-more">
-              Warm Home Discount: shown in full if received. The national figures pay it to 85% of Pension Credit
-              households and 70% of other eligible households.
-            </p>
-          </Topic>
         </MethodSection>
 
         <MethodSection
@@ -752,13 +748,13 @@ function MethodologyTab({ onShowTab }) {
           title="Limitations"
           summary="Most charts add up policies run separately, the economic assumptions follow one OBR forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
         >
-          <Topic title="Policies added up" preview="Revenue, decile and age charts · Household scatter · Shares better and worse off">
+          <Topic title="Policies added up" preview="Revenue, decile and age charts · Household scatter · Winners and losers">
             <p className="method-more">
               Each policy is also simulated on its own. Where several are selected, the revenue,
               decile and age charts add up their separate effects, so they leave out interactions
               between policies (<Term id="ownRuns">policies run on their own</Term>); the{" "}
               <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>{" "}and the
-              shares better and worse off come from a run of the whole selection, so they include
+              winners and losers come from a run of the whole selection, so they include
               them, and show nothing for a selection with no such run.
             </p>
           </Topic>

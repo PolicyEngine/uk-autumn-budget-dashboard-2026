@@ -172,7 +172,7 @@ function breakdownsFor(data, from, to) {
 // A title for what it shows, the change (Pavel's review, PM1); the years are
 // in the card's period and sentence, as on every card here
 export const TITLE = "Change in poverty by group";
-export const FELL_BACK_NOTE = "Child breakdowns are published after housing costs only; showing AHC.";
+export const FELL_BACK_NOTE = "Child figures are after housing costs only.";
 
 export default function WhoIsInPovertySection({ data }) {
   const pbg = data.poverty_by_group;

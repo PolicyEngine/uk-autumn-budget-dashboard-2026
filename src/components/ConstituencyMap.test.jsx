@@ -225,9 +225,9 @@ describe("ConstituencyMap", () => {
     expect(key).not.toHaveTextContent("0.1%");
     expect(key.querySelectorAll("button[data-key]")).toHaveLength(5);
     expect(key).toHaveTextContent("Too uncertain");
-    // No change has its own entry, in the light grey of £0; too uncertain is
+    // Little change has its own entry, in the light grey of £0; too uncertain is
     // mid grey, in both views (Pavel's review, MAP1)
-    expect(key).toHaveTextContent("No change");
+    expect(key).toHaveTextContent("Little change");
     expect(key).not.toHaveTextContent("Shown by pattern:");
     expect(key).toHaveTextContent("Approximate");
     expect(key).toHaveTextContent("Not published");

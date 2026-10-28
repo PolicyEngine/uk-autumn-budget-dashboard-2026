@@ -392,8 +392,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
     info: {
       shows: `The real change in the median income of each ${g.share} of people, ${annual ? "on the year before" : "between the two years"}${diff ? ", with the policies less without them, in percentage points" : ""}.`,
       how: [
-        measures && "Effect of the policies is growth with them minus growth under current law.",
-        measures && !diff && "Total growth is current law's growth plus that effect, from the same pair of simulations.",
+        measures && "Effect of the policies is growth with them less growth under current law.",
         `Bottom is the ${low}; top the highest-income ${g.share}${who}.`,
         `${annual ? `Each year from ${fyDash(annualYears[0].year)} to ${fyDash(end.year)}` : `From ${fyDash(first.year)} to ${fyDash(end.year)}`}, ${diff ? "the policies change their growth by" : "their real income changes by"} ${between(lowVals)}${diff ? " points" : "%"}${per} and ${between(highVals)}${diff ? " points" : "%"} respectively.`,
         popNote.trim(),

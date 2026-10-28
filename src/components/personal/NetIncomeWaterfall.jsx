@@ -64,9 +64,9 @@ function waterfallRows(totals, steps) {
     return [...done, { ...step, from, to: from + step.rounded }];
   }, []);
   return [
-    { id: "before", name: "Net income before", from: null, to: totals.before, total: true },
+    { id: "before", name: "Current law", from: null, to: totals.before, total: true },
     ...stepRows,
-    { id: "after", name: "Net income after", from: null, to: totals.after, total: true },
+    { id: "after", name: "With the policies", from: null, to: totals.after, total: true },
   ];
 }
 
@@ -114,6 +114,7 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
   const hi = Math.max(...rows.map((row) => row.to));
   const pct = (value) => ((value - start) / Math.max(hi - start, 1)) * 100;
   const largest = largestSteps(steps);
+  const fuelDuty = (steps ?? []).some((step) => /fuel duty/i.test(`${step.name ?? ""} ${step.label ?? ""}`));
   // Each policy's bar by direction and size, the largest darkest; the
   // interaction step keeps its plain direction colour
   const policySteps = rows.filter((row) => !row.total && row.id !== "interaction");
@@ -137,9 +138,12 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
         </h3>
         {!noChange && (
           // Named against the table below: this is by policy, that by tax
-          // and benefit; both add up to the same change (Pavel's review, HH5)
+          // and benefit; both add up to the same change (Pavel's review, HH5).
+          // The fuel duty policy also moves the VAT row there
           <p className="waterfall-sub">
-            By policy. The table by tax and benefit below adds up to the same change.
+            By policy. The table below splits the same change by tax and benefit.
+            {fuelDuty &&
+              " Freezing fuel duty also cuts the VAT charged on it, so the table's VAT change row includes part of the fuel duty policy."}
           </p>
         )}
         <p id={sentenceId} className={noChange ? "waterfall-no-change" : "visually-hidden"}>
@@ -150,7 +154,7 @@ export default function NetIncomeWaterfall({ totals, steps, yearLabel, splitFail
         <ol
           className="waterfall-rows"
           aria-describedby={sentenceId}
-          aria-label={`Net income from before to after the selected policies, ${yearLabel}: ${rows
+          aria-label={`Net income from current law to with the selected policies, ${yearLabel}: ${rows
             .map((row) => `${row.name} ${row.total ? money(row.to) : signedMoney(row.rounded)}`)
             .join("; ")}`}
         >

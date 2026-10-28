@@ -171,9 +171,9 @@ export function MeasureDumbbell({ rows, domain, ticks: allTicks, groupName, year
   );
 }
 
-/** "How much each policy changes income for 16 to 24-year-olds, beside all ages." */
-export const measuresDescription = (band, compareName = "all ages") =>
-  `How much each policy changes income for ${groupSubject(band).toLowerCase()}, beside ${compareName.toLowerCase()}.`;
+/** "Average change per person from each policy, for 16 to 24-year-olds and people of all ages." */
+export const measuresDescription = (band, compareKey = ALL_BAND) =>
+  `Average change per person from each policy, for ${groupSubject(band).toLowerCase()} and ${groupSubject(compareKey).toLowerCase()}.`;
 
 const BAND_OPTIONS = [
   ...AGE_BANDS.map((band) => ({ value: band.key, label: band.label })),
@@ -205,7 +205,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
   const GROUPS = groupsFor(band).map((item) => (item.key === "all" ? { ...item, label: compareName } : item));
   const description = single
     ? "How much each policy changes income, on average per person."
-    : measuresDescription(band, compareName);
+    : measuresDescription(band, compareKey);
   const yearLabel = fiscalYearTick(selectedYear);
   const published = isPublished(rows, selectedYear);
   const { shown, noEffect, suppressed } =

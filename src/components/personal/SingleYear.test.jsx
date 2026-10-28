@@ -345,11 +345,11 @@ describe("the household calculation, from the fixture", () => {
     expect(card.querySelector(".result-value")).toBeNull();
     // The figure once, for copying and screen readers alike
     expect(card.textContent.match(/£3,765/g)).toHaveLength(1);
-    expect(tiles[0].querySelector(".forecast-tile-sub")).toHaveTextContent("a year, after the selected policies");
+    expect(tiles[0].querySelector(".forecast-tile-sub")).toHaveTextContent("a year, with the selected policies");
     // Its share, and the waterfall from net income before to after
     expect(tiles[1].querySelector(".forecast-tile-value")).toHaveTextContent("+5.76%");
     const ends = [...card.querySelectorAll(".waterfall-row.is-total")].map((row) => row.textContent);
-    expect(ends).toEqual(["Net income before£65,371", "Net income after£69,136"]);
+    expect(ends).toEqual(["Current law£65,371", "With the policies£69,136"]);
     expect(panel.querySelectorAll(".result-card")).toHaveLength(1);
     // The change is said once: no sentence repeating it
     expect(panel).not.toHaveTextContent("The selected policies would");
@@ -1211,7 +1211,7 @@ describe("the breakdown's rows", () => {
     { id: "state_pension", group: "benefit", label: "State Pension", before: 12000, after: 12000 },
     { id: "council_tax", group: "tax", label: "Council Tax", before: 2000, after: 2000 },
     { id: "tv_licence", group: "tax", label: "TV licence", before: 175, after: 175 },
-    { id: "vat_change", group: "tax", label: "VAT", before: 0, after: -1 },
+    { id: "vat_change", group: "tax", label: "VAT change", before: 0, after: -1 },
   ];
   const totals = { before: 9825, after: 9826, change: 1 };
 
@@ -1301,7 +1301,7 @@ describe("the waterfall's one line", () => {
     expect(container.querySelector(".waterfall-header").textContent).toBe(
       "How each policy changes your income" + container.querySelector(".waterfall-sub").textContent + container.querySelector(".visually-hidden").textContent,
     );
-    expect(container.querySelector(".waterfall-sub")).toHaveTextContent("By policy. The table by tax and benefit below adds up to the same change.");
+    expect(container.querySelector(".waterfall-sub")).toHaveTextContent("By policy. The table below splits the same change by tax and benefit.");
     const chart = container.querySelector("ol.waterfall-rows");
     const described = document.getElementById(chart.getAttribute("aria-describedby"));
     expect(described).toHaveClass("visually-hidden");

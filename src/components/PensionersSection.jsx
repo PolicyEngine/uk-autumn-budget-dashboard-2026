@@ -80,7 +80,7 @@ const HIGHLIGHT_FILL = CHART_COLOURS.highlightBand;
 const OUTCOMES = [
   { key: "pct_better_off", label: "Gain", color: CHART_COLOURS.gain },
   { key: "pct_unchanged", label: "No change", color: CHART_COLOURS.noChange },
-  { key: "pct_worse_off", label: "Lose", color: CHART_COLOURS.loss },
+  { key: "pct_worse_off", label: "Loss", color: CHART_COLOURS.loss },
 ];
 const OUTCOME_KEYS = OUTCOMES.map((outcome) => outcome.key);
 const CSV_UNITS =
@@ -412,7 +412,7 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
     maxSteps: DUMBBELL_MAX_STEPS,
   });
   const title = `Effect of each policy, ${yearLabel}`;
-  const description = "How much each policy changes income for pensioners, beside all ages.";
+  const description = "Average change per person from each policy, for pensioners and people of all ages.";
   const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
   // As in MeasuresCard: each by its short name, and when it is in force
   // where that is not this year
@@ -639,10 +639,10 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
     csv: () =>
       buildChartCsv({
         title: perMeasure
-          ? `People who gain, see no change and lose, ${groupLabel.toLowerCase()}, each policy on its own, ${yearLabel}`
+          ? `Winners, losers and no change, ${groupLabel.toLowerCase()}, each policy on its own, ${yearLabel}`
           : single
-          ? `People who gain, see no change and lose by single year of age, pensioners, ${yearLabel}`
-          : `People who gain, see no change and lose, pensioners and others, ${yearLabel}`,
+          ? `Winners, losers and no change by single year of age, pensioners, ${yearLabel}`
+          : `Winners, losers and no change, pensioners and others, ${yearLabel}`,
         units: `% of people in the group; a change of more than 0.01% of household net income; pensioners are aged ${pensionerAge(year)} and over`,
         columns: [
           { key: "group", label: perMeasure ? "Policy" : single ? "Age" : "Group" },

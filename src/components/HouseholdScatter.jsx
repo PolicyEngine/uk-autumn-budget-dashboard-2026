@@ -12,8 +12,6 @@ import { CHART_LOGO, PolicyEngineLogo } from "../utils/chartLogo";
 import { SCATTER_BINS, changeKind } from "../utils/publication/scatter";
 import { fiscalYearLabel } from "../utils/publication/format";
 import {
-  CHANGE_AXIS_DOMAIN,
-  CHANGE_CAP_QUANTILE,
   clampToAxis,
   fitChangeAxisAcrossYears,
   householdsPerDot,
@@ -122,7 +120,7 @@ function ScatterMoreInfo({ basisLabel }) {
       info={{
         how: [
           `Each dot is a group of households with similar ${basisLabel} incomes before the policies (${pounds(SCATTER_BINS.income_band_width)} bands). The groups are the same in every year.`,
-          `The change axis is the same in every year. Changes beyond ±${pounds(CHANGE_AXIS_DOMAIN[1])} (or beyond the ${Math.round(CHANGE_CAP_QUANTILE * 100)}th percentile) show as arrows at the edge.`,
+          "The change axis is the same in every year. Changes beyond it show as arrows at its edge.",
           "No change (under £1 either way) is an unfilled ring on £0.",
         ],
         caveats: ["Groups with too few survey households are left out."],
