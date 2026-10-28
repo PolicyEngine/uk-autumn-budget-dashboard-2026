@@ -873,6 +873,7 @@ def _carers_allowance_taper(reform) -> list[dict]:
         return carers_allowance_limit(y) + engine_value(rate, y) / taper
 
     shown = [y for y in POLICY_YEARS if y >= start]
+
     def by_year(amount):
         parts = [f"£{amount(y):,.0f}" for y in shown]
         parts[0] += " a week"
