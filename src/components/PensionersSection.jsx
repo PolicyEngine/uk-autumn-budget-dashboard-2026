@@ -49,7 +49,7 @@ import {
   CHART_COLOURS,
   divergingAxis,
   HOVER_CURSOR,
-  noHouseholdChange,
+  emptyMeasuresNote,
 } from "../utils/chartTheme";
 import { isPublished, singleAgeKey } from "../utils/ageImpact";
 import { useDisplayYears } from "../utils/displayYears";
@@ -466,7 +466,7 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
           />
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>{noHouseholdChange(yearLabel)}</p>
+            <p>{emptyMeasuresNote({ noEffect, selectedPolicies, yearLabel })}</p>
           </div>
         )}
       </div>

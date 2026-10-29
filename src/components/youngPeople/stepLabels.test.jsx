@@ -116,4 +116,13 @@ describe("step labels", () => {
       stepSentence(notes.slice(1), "People gain about £50 a person in 2029-30 and lose about £20 from 2030-31, when the threshold freeze applies.", nameIn),
     ).toBeNull();
   });
+
+  it("names a step from a measure ending as its end, never as it applying", () => {
+    const notes = [{ year: 2028, measureId: "fuel", ends: true }];
+    const nameIn = () => "fuel duty cut extended";
+    expect(stepSentence(notes, null, nameIn)).toBe("The biggest step comes in 2028-29 from the end of the fuel duty cut extended.");
+    expect(
+      stepSentence(notes, "People gain about £36 a person in 2027-28 and lose about £5 from 2028-29, when the fuel duty cut extended has ended.", nameIn),
+    ).toBeNull();
+  });
 });

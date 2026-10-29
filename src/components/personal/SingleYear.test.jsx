@@ -1,6 +1,7 @@
 import { HOUSEHOLD_ABOUT_ID } from "../methodology/anchors";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import fc from "fast-check";
 import PersonalImpactTab from "../PersonalImpactTab";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../../utils/measureCatalogue";
 import { fixtureJson } from "../../test/publicationFixture";
@@ -318,6 +319,36 @@ describe("the household calculation, from the fixture", () => {
     expect(calculateButton()).not.toBeDisabled();
   });
 
+  it("for any selection, the card counts the selection as the header does and names the savings rise", async () => {
+    // The header's Policies control counts the selection ("All 7"); the
+    // result also covers the savings rise the calculator adds, which the card
+    // names rather than counting (production showed "with 8 policies")
+    await fc.assert(
+      fc.asyncProperty(fc.subarray(SUPPORTED_POLICY_IDS, { minLength: 1 }), async (ids) => {
+        // Each run from nothing: no wizard, cached answers or stored example
+        // headlines (useExampleFigures) left from the run before
+        cleanup();
+        resetSavedWizard();
+        clearHouseholdImpactCache();
+        clearBasisIncomeCache();
+        resetPresetResults();
+        window.sessionStorage.clear();
+        serve((body) => json(householdAnswerFor(body)));
+        renderTab({ selectedPolicies: ids });
+        toResults();
+        await waitFor(() => expect(headlineCard()).not.toBeNull());
+        const tile = headlineCard().querySelector(".result-tiles .forecast-tile");
+        const unit = ids.length === 1 ? "policy" : "policies";
+        expect(tile.querySelector(".result-policies-link")).toHaveTextContent(
+          new RegExp(`^${ids.length} ${unit} and the savings income tax rise$`),
+        );
+        // The request carries the savings rise, so the card must name it
+        expect(household.at(-1).policies).toContain("savings_income_rates_up");
+      }),
+      { numRuns: 8 },
+    );
+  });
+
   it("shows the change in one result card: the figure, its share, before and after, and what it is based on", async () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
@@ -336,8 +367,9 @@ describe("the household calculation, from the fixture", () => {
       "Share of your income",
       "Income percentile",
     ]);
-    // The selected policies and the savings rise the calculator always adds
-    expect(tiles[0]).toHaveTextContent(`In 2029-30, with ${SUPPORTED_POLICY_IDS.length + 1} policies`);
+    // The selected policies, counted as the header counts them, and the
+    // savings rise the calculator always adds, named
+    expect(tiles[0]).toHaveTextContent(`In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies and the savings income tax rise`);
     expect(changeValue()).toBe("+£3,765");
     // All three figures in the tiles' one headline class, the change not
     // in the map's micro .result-value

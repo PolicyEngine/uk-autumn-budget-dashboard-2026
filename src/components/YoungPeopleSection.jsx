@@ -526,10 +526,11 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
           <div className="plot-empty" style={{ minHeight: height }} role="status">
             <p>{COMBINATION_NOT_PUBLISHED}</p>
           </div>
-        ) : activeNames.length === 0 && !incomplete && !netOnly ? (
+        ) : activeNames.length === 0 && !incomplete && !netOnly && suppressed.length === 0 ? (
           // Only measures that change no household's income this year (an
           // employer cost): a note, not an empty plot of £0 ticks. A
-          // measure with no published result by age is not 'no change'
+          // measure with no published result by age is not 'no change',
+          // nor is one whose bands are held back for too few survey records
           <div className="plot-empty" style={{ minHeight: height }} role="status">
             <p>{noHouseholdChange(yearLabel)}</p>
           </div>

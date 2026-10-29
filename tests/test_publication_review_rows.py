@@ -1940,7 +1940,9 @@ def test_the_ci_check_passes_on_the_helpers_rows(base):
         run(root, on="2026-10-23")
         subprocess.run(["git", "init", "-q"], cwd=root, check=True)
         subprocess.run(["git", "add", "-A"], cwd=root, check=True)
-        report = check_public_data.check(root, today=date(2026, 10, 23))
+        report = check_public_data.check(
+            root, today=date(2026, 10, 23), sign_off_required=True
+        )
     assert report.problems == []
 
 

@@ -1,4 +1,5 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { useWidth } from "../utils/useWidth";
 import { ArrowRightLeft, Table } from "lucide-react";
 import {
   FIRST_YEAR,
@@ -41,24 +42,6 @@ const TONES = { cost: "gain", revenue: "loss" };
 
 const HEIGHT = 140;
 const MARGIN = { top: 22, right: 10, bottom: 24, left: 58 };
-const DEFAULT_WIDTH = 520;
-
-/** The width of an element, followed as it changes. */
-function useWidth(ref) {
-  const [width, setWidth] = useState(DEFAULT_WIDTH);
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element || typeof ResizeObserver === "undefined") return undefined;
-    const observer = new ResizeObserver(([entry]) => {
-      const next = Math.round(entry.contentRect.width);
-      if (next > 0) setWidth(next);
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [ref]);
-  return width;
-}
-
 const YEAR_LABELS = Array.from({ length: MONTHS / 12 }, (_, i) => {
   const year = FIRST_YEAR + i;
   return { year, full: `${year}-${String((year + 1) % 100).padStart(2, "0")}`, short: `${String(year % 100)}-${String((year + 1) % 100).padStart(2, "0")}` };
@@ -287,7 +270,12 @@ export function changeView(entry, lead) {
   return { main, schedule, varies, segments, plotted, lines, others, everyChange, periods, note };
 }
 
-export default function PolicyChange({ entry, direction, onHighlight, name, lead }) {
+/**
+ * `figure`, where given, is the measure's own visual
+ * (policies/PolicyVisual.jsx): it takes the place of the plot and of the
+ * main row's note, which it shows in its own caption where it needs it.
+ */
+export default function PolicyChange({ entry, direction, onHighlight, name, lead, figure }) {
   const id = useId();
   const tone = TONES[direction] ?? "neutral";
   const view = changeView(entry, lead);
@@ -305,8 +293,9 @@ export default function PolicyChange({ entry, direction, onHighlight, name, lead
       </div>
       {/* A card's own words for the change, where it has them, before the values */}
       {lead && <p className="pchg-lead">{lead}</p>}
-      {note && <p className="pchg-caption pchg-note">{note}</p>}
-      {plotted && (
+      {figure}
+      {!figure && note && <p className="pchg-caption pchg-note">{note}</p>}
+      {!figure && plotted && (
         <>
           <div className="pchg-head is-plot">
             <p className="pchg-caption">{plotCaption(main)}</p>

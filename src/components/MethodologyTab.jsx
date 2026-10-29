@@ -18,7 +18,7 @@ import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { OPEN_VIEW_EVENT } from "../utils/methodLink";
 import { AnchorLink, ExternalLink, ReasonList, SourceLink, Tag, Topic } from "./methodology/MethodUi";
 import { glossaryAnchor } from "./methodology/glossary";
-import { Calculator, ChartColumn, Compass, Database, House, TrendingUp, TriangleAlert } from "lucide-react";
+import { Calculator, ChartColumn, Compass, Database, House, TrendingUp, Info } from "lucide-react";
 import "./methodology/Methodology.css";
 import { scrollBelowBars, smoothUnlessReduced } from "../utils/pageScroll";
 
@@ -52,7 +52,7 @@ export const METHOD_CONTENTS = [
   { id: METHOD_SECTIONS.population, title: "Population impact", icon: ChartColumn, titleIcon: "bars" },
   { id: METHOD_SECTIONS.personal, title: "Household calculator", icon: House, titleIcon: "house" },
   { id: METHOD_SECTIONS.living, title: "Pre-measures forecast", icon: TrendingUp, titleIcon: "trend" },
-  { id: METHOD_SECTIONS.limitations, title: "Limitations", icon: TriangleAlert, titleIcon: "alert" },
+  { id: METHOD_SECTIONS.limitations, title: "Limitations", icon: Info, titleIcon: "book" },
 ];
 
 const SECTION_ICONS = Object.fromEntries(METHOD_CONTENTS.map(({ id, titleIcon }) => [id, titleIcon]));
