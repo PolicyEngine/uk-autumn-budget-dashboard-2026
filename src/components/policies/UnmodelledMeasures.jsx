@@ -303,7 +303,7 @@ export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES, pub
 
 /**
  * "Policies we model for households only" (utils/measureClass.js): the
- * Budget policies the Household calculator can add for one household
+ * Budget policies the Household calculator always includes for a household
  * (utils/calculatorOnlyMeasures.js) that no national figure includes, drawn
  * like the not-modelled cards, each with a link to the calculator.
  * Never a figure of ours: only the Treasury's costing. Nothing when there
@@ -331,11 +331,11 @@ export function HouseholdOnlyMeasures({ measures = UNMODELLED_MEASURES, publishe
                 <p className="umm-calculator">
                   <House size={14} aria-hidden="true" className="policy-card-icon-inline" />
                   <span>
-                    Add it to a household in the{" "}
+                    The{" "}
                     <a className="umm-link" href="?tab=household" onClick={openCalculator}>
                       Household calculator
-                    </a>
-                    , under the example households.
+                    </a>{" "}
+                    always includes it.
                   </span>
                 </p>
               ),

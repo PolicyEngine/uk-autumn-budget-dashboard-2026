@@ -446,7 +446,8 @@ describe("HouseholdOnlyMeasures", () => {
     render(<HouseholdOnlyMeasures onShowTab={onShowTab} />);
     const card = items()[0];
     const line = card.querySelector(".umm-calculator");
-    expect(line).toHaveTextContent("Add it to a household in the Household calculator, under the example households.");
+    // Always: every household request carries it (calculatorOnlyMeasures.js, #306)
+    expect(line).toHaveTextContent(/^The Household calculator always includes it\.$/);
     // First in the footer, before the held-back line
     expect(line.compareDocumentPosition(card.querySelector(".umm-held-back")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const link = within(card).getByRole("link", { name: "Household calculator" });
