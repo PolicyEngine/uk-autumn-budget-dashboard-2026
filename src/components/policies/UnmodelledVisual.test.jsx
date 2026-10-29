@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import UnmodelledVisual, { UNMODELLED_VISUAL_KINDS } from "./UnmodelledVisual";
-import UnmodelledMeasures from "./UnmodelledMeasures";
+import UnmodelledMeasures, { HouseholdOnlyMeasures } from "./UnmodelledMeasures";
 import { UNMODELLED_MEASURES } from "../../utils/unmodelledMeasures";
 import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import { UNMODELLED_VISUALS } from "../../utils/unmodelledVisuals";
@@ -205,10 +205,18 @@ describe("each kind of picture", () => {
 
 describe("on the cards (UnmodelledMeasures.jsx)", () => {
   it("puts each card's picture under What changes, with no values' tiles beside it", () => {
-    render(<UnmodelledMeasures />);
+    // The not-modelled list and the policies we model for households only
+    // (the savings rise) draw the same card, each with its picture
+    render(
+      <>
+        <UnmodelledMeasures />
+        <HouseholdOnlyMeasures />
+      </>,
+    );
     fireEvent.click(screen.getByRole("button", { name: /Budget policies we do not model/ }));
     for (const measure of UNMODELLED_MEASURES) {
-      const card = document.getElementById(`unmodelled-${measure.id}`);
+      const card = document.getElementById(`unmodelled-${measure.id}`) ?? document.getElementById(`household-only-${measure.id}`);
+      expect(card, measure.id).not.toBeNull();
       const spec = card.querySelector(".policy-card-spec");
       expect(within(spec).getByRole("img", { name: UNMODELLED_VISUALS[measure.id].alt }), measure.id).toBeInTheDocument();
       expect(spec.querySelectorAll(".pchg").length, measure.id).toBe(1);

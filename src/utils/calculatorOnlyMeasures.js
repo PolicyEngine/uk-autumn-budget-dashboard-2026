@@ -17,6 +17,9 @@ export const CALCULATOR_ONLY_MEASURES = {
   [SAVINGS_INCOME_RATES_ID]: {
     id: SAVINGS_INCOME_RATES_ID,
     name: "Savings income tax up",
+    // Its card's words (utils/unmodelledMeasures.js), shown on Policies with
+    // the policies we model for households only (utils/measureClass.js)
+    card: "savings-income-tax",
   },
 };
 

@@ -133,6 +133,31 @@
   white-space: nowrap;
 }
 
+/* The OBR breakdown: a tax's name to a row, wider than "Row 38", on two
+   lines where it must be ("Onshore corporation tax") */
+.umm-list .umm-costing.is-certified:has(tbody th:not(.is-hidden)) thead th:first-child {
+  width: 9em;
+}
+
+.umm-costing.is-certified tbody th {
+  white-space: normal;
+  line-height: 1.25;
+}
+
+/* On a phone the tax's name takes less, so each year keeps room for its
+   figure and a heading on one line */
+@media (max-width: 600px) {
+  .umm-list .umm-costing.is-certified:has(tbody th:not(.is-hidden)) thead th:first-child {
+    width: 6.5em;
+  }
+}
+
+/* The OBR breakdown's total, under its heads */
+.umm-costing tr.is-total td,
+.umm-costing tr.is-total th {
+  font-weight: 600;
+}
+
 .umm-costing-note {
   margin: 4px 0 0;
   font-size: var(--fs-micro);
@@ -200,6 +225,24 @@
   font-size: var(--fs-caption);
   line-height: 1.5;
   color: var(--pe-gray-500);
+}
+
+/* A household-only card's link to the Household calculator, first in its
+   footer (HouseholdOnlyMeasures) */
+.umm-calculator {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--pe-gray-700);
+}
+
+.umm-calculator svg {
+  flex: none;
+  align-self: center;
+  color: var(--pe-teal-600);
 }
 
 /* A group of cards by why we do not model them: its title, the reason in

@@ -1,15 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import UnmodelledMeasures, { COSTING_CAPTION, UNMODELLED_SUBTITLE, UNMODELLED_TITLE, formatMillions, groupsOf } from "./UnmodelledMeasures";
+import UnmodelledMeasures, { CERTIFIED_CAPTION, CERTIFIED_TITLE, COSTING_CAPTION, HouseholdOnlyMeasures, costingRows, UNMODELLED_SUBTITLE, UNMODELLED_TITLE, formatMillions, groupsOf } from "./UnmodelledMeasures";
 import { WHY_NOT_MODELLED } from "../PolicyCards";
 import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import {
   BUDGET_DOCUMENT,
   COSTING_YEARS,
+  OBR_POLICY_TABLE,
   UNMODELLED_MEASURES,
   UNMODELLED_REASONS,
 } from "../../utils/unmodelledMeasures";
+import { HOUSEHOLD_ONLY_TITLE, householdOnlyLine, splitUnmodelled } from "../../utils/measureClass";
+import { NOT_COMPARABLE_SHORT, OBR_COMPARISON_BASES, OBR_DEVIATION_NOTES, OBR_DIFFERENCE_POINTS, OBR_PANEL_BASES } from "../../utils/obrDeviationNotes";
 
+// The cards the section shows: the list without those of the policies we
+// model for households only (utils/measureClass.js), which have their own
+const { household: HOUSEHOLD_ONLY, none: NOT_MODELLED } = splitUnmodelled();
 
 // Every string an entry shows, for the wording checks
 const entryText = (measure) =>
@@ -118,7 +124,7 @@ describe("UnmodelledMeasures", () => {
     expect(toggle()).toHaveAttribute("aria-expanded", "true");
     const content = document.getElementById(toggle().getAttribute("aria-controls"));
     expect(content).not.toHaveAttribute("hidden");
-    expect(cards()).toHaveLength(UNMODELLED_MEASURES.length);
+    expect(cards()).toHaveLength(NOT_MODELLED.length);
     fireEvent.click(toggle());
     expect(toggle()).toHaveAttribute("aria-expanded", "false");
     expect(cards()).toHaveLength(0);
@@ -129,10 +135,10 @@ describe("UnmodelledMeasures", () => {
     open();
     const items = cards();
     expect(items.map((item) => within(item).getByRole("heading", { level: 3 }).textContent)).toEqual(
-      UNMODELLED_MEASURES.map((measure) => measure.name),
+      NOT_MODELLED.map((measure) => measure.name),
     );
     items.forEach((item, index) => {
-      const measure = UNMODELLED_MEASURES[index];
+      const measure = NOT_MODELLED[index];
       expect(item.id).toBe(`unmodelled-${measure.id}`);
       expect(item.querySelector(".policy-card-type"), measure.id).toBeTruthy();
       // What changes as the summary line
@@ -191,7 +197,7 @@ describe("UnmodelledMeasures", () => {
   it("says in one muted line where Table 6.1 has no row", () => {
     render(<UnmodelledMeasures />);
     open();
-    for (const measure of UNMODELLED_MEASURES.filter(({ costings }) => !costings.length)) {
+    for (const measure of NOT_MODELLED.filter(({ costings }) => !costings.length)) {
       const item = document.getElementById(`unmodelled-${measure.id}`);
       expect(within(item).getByRole("button", { name: "Treasury costing" })).toHaveTextContent("No Table 6.1 row");
       fireEvent.click(within(item).getByRole("button", { name: "Treasury costing" }));
@@ -203,7 +209,7 @@ describe("UnmodelledMeasures", () => {
   it("links every source in a new tab, saying so to screen readers", () => {
     render(<UnmodelledMeasures />);
     open();
-    for (const measure of UNMODELLED_MEASURES) {
+    for (const measure of NOT_MODELLED) {
       const item = document.getElementById(`unmodelled-${measure.id}`);
       fireEvent.click(within(item).getByRole("button", { name: "Treasury costing" }));
       for (const source of measure.sources) {
@@ -240,7 +246,7 @@ describe("UnmodelledMeasures", () => {
     expect(groupsOf(UNMODELLED_MEASURES).flatMap(({ items }) => items.map((m) => m.id))).toEqual(UNMODELLED_MEASURES.map((m) => m.id));
     render(<UnmodelledMeasures />);
     open();
-    expect(cards().map((card) => card.id.replace(/^unmodelled-/, ""))).toEqual(UNMODELLED_MEASURES.map((m) => m.id));
+    expect(cards().map((card) => card.id.replace(/^unmodelled-/, ""))).toEqual(NOT_MODELLED.map((m) => m.id));
     // Within each group, each row of two has the same shape: one pair of
     // tiles, two, or none
     const shape = (card) => card.querySelectorAll(".pchg-ba").length;
@@ -261,7 +267,10 @@ describe("UnmodelledMeasures", () => {
     expect(screen.queryByText("Modelled separately")).toBeNull();
     expect(document.querySelectorAll("ul.umm-list")).toHaveLength(1);
     const cards = [...document.querySelectorAll(".umm-list .policy-card")].map((card) => card.id.replace(/^unmodelled-/, ""));
-    expect(cards).toHaveLength(UNMODELLED_MEASURES.length);
+    expect(cards).toHaveLength(NOT_MODELLED.length);
+    // The savings rise is with the policies we model for households only
+    expect(HOUSEHOLD_ONLY.length).toBeGreaterThan(0);
+    for (const { id } of HOUSEHOLD_ONLY) expect(cards).not.toContain(id);
     expect(new Set(cards).size).toBe(cards.length);
   });
 
@@ -293,19 +302,6 @@ describe("UnmodelledMeasures", () => {
         expect(words(block), `${item.id}: ${block.textContent.slice(0, 60)}`).toBeLessThanOrEqual(30);
       }
     }
-  });
-
-  it("marks the savings measure held back from this release in one muted line", () => {
-    render(<UnmodelledMeasures />);
-    open();
-    const held = UNMODELLED_MEASURES.filter(({ heldBack }) => heldBack);
-    expect(held.map(({ id }) => id)).toEqual(["savings-income-tax"]);
-    const card = document.getElementById("unmodelled-savings-income-tax");
-    // Our interest included ISA interest: calibrated on a different basis, not missing it (#297)
-    expect(card.querySelector(".umm-held-back")).toHaveTextContent(/^Held back: we calibrated savings interest to HMRC's figures on a different basis/);
-    for (const text of [held[0].heldBack, held[0].notModelled]) expect(text).not.toMatch(/miss(?:es)? ISA interest/);
-    fireEvent.click(within(card).getByRole("button", { name: "Treasury costing" }));
-    expect(within(card).getByRole("table", { name: COSTING_CAPTION })).toHaveTextContent("+590");
   });
 
   it("keeps At a glance short and the summary one sentence, and shows every change a card names", () => {
@@ -351,5 +347,121 @@ describe("the section's text", () => {
         expect(measure[field].split(/\s+/).length, `${measure.id} ${field}`).toBeLessThanOrEqual(30);
       }
     }
+  });
+});
+
+describe("HouseholdOnlyMeasures", () => {
+  const section = () => screen.getByRole("region", { name: HOUSEHOLD_ONLY_TITLE });
+  const items = () => [...section().querySelectorAll(".umm-list > .policy-card")];
+
+  it("is a section of its own with its class said plainly, its cards shown, and not in the not-modelled section", () => {
+    render(
+      <>
+        <HouseholdOnlyMeasures />
+        <UnmodelledMeasures />
+      </>,
+    );
+    expect(HOUSEHOLD_ONLY.map(({ id }) => id)).toEqual(["savings-income-tax"]);
+    const heading = within(section()).getByRole("heading", { level: 2, name: HOUSEHOLD_ONLY_TITLE });
+    expect(heading.closest(".section-heading")).toBeTruthy();
+    expect(section()).toHaveTextContent(householdOnlyLine(1));
+    expect(items().map((item) => item.id)).toEqual(["household-only-savings-income-tax"]);
+    expect(within(items()[0]).getByRole("heading", { level: 3 })).toHaveTextContent("Tax on savings interest up 2 points");
+    open();
+    expect(document.getElementById("unmodelled-savings-income-tax")).toBeNull();
+  });
+
+  it("marks the savings measure held back from the national figures in one muted line", () => {
+    render(<HouseholdOnlyMeasures />);
+    const held = UNMODELLED_MEASURES.filter(({ heldBack }) => heldBack);
+    expect(held.map(({ id }) => id)).toEqual(["savings-income-tax"]);
+    const card = document.getElementById("household-only-savings-income-tax");
+    // Our interest included ISA interest: calibrated on a different basis, not missing it (#297)
+    expect(card.querySelector(".umm-held-back")).toHaveTextContent(/^Held back: we calibrated savings interest to HMRC's figures on a different basis/);
+    for (const text of [held[0].heldBack, held[0].notModelled]) expect(text).not.toMatch(/miss(?:es)? ISA interest/);
+  });
+
+  // Max, 28 Oct: cite the primary source, the OBR's certified breakdown
+  it("shows the government's costing as the OBR certifies it, by tax, with Table 6.1 as context", () => {
+    render(<HouseholdOnlyMeasures />);
+    const card = document.getElementById("household-only-savings-income-tax");
+    const disclosure = within(card).getByRole("button", { name: CERTIFIED_TITLE });
+    expect(within(card).queryByRole("button", { name: "Treasury costing" })).toBeNull();
+    fireEvent.click(disclosure);
+    expect(CERTIFIED_CAPTION).toBe("The government's costing, which the OBR certified, £m (+ is a gain to the Exchequer)");
+    const table = within(card).getByRole("table", { name: CERTIFIED_CAPTION });
+    const rows = within(table).getAllByRole("row").slice(1);
+    // OBR detailed forecast tables (policy), Table 1.1, measure 62
+    expect(rows.map((row) => [within(row).getByRole("rowheader").textContent, ...within(row).getAllByRole("cell").map((cell) => cell.textContent)])).toEqual([
+      ["Income tax", "0", "+63", "+483", "+443", "+475", "+510"],
+      ["Onshore corporation tax", "+13", "+63", "+74", "+78", "+80", "+81"],
+      ["Total", "+13", "+126", "+557", "+521", "+555", "+591"],
+    ]);
+    const obrLink = within(card).getByRole("link", { name: /^OBR, Economic and fiscal outlook – October 2026, detailed forecast tables, Table 1\.1, measure 62/ });
+    expect(obrLink).toHaveAttribute("href", OBR_POLICY_TABLE.href);
+    expect(card).toHaveTextContent("Budget 2026, Table 6.1, row 62 (opens in a new tab) gives the total to the nearest £5m.");
+  });
+
+  it("holds Table 6.1's row to the OBR breakdown's total, to the nearest £5m, wherever an entry has both", () => {
+    const both = UNMODELLED_MEASURES.filter(({ certified }) => certified);
+    expect(both.map(({ id }) => id)).toEqual(["savings-income-tax"]);
+    for (const measure of both) {
+      const total = costingRows(measure).find(({ key }) => key === "total").values;
+      expect(measure.costings).toHaveLength(1);
+      expect(measure.costings[0].values, measure.id).toEqual(total.map((value) => Math.round(value / 5) * 5));
+      for (const { values } of measure.certified.heads) expect(values).toHaveLength(COSTING_YEARS.length);
+    }
+  });
+
+  it("links each card to the Household calculator, switched to in place", () => {
+    const onShowTab = vi.fn();
+    render(<HouseholdOnlyMeasures onShowTab={onShowTab} />);
+    const card = items()[0];
+    const line = card.querySelector(".umm-calculator");
+    // Always: every household request carries it (calculatorOnlyMeasures.js, #306)
+    expect(line).toHaveTextContent(/^The Household calculator always includes it\.$/);
+    // First in the footer, before the held-back line
+    expect(line.compareDocumentPosition(card.querySelector(".umm-held-back")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const link = within(card).getByRole("link", { name: "Household calculator" });
+    expect(link).toHaveAttribute("href", "?tab=household");
+    // A modified click opens a new tab or window, as the browser does
+    for (const modifier of ["metaKey", "ctrlKey", "shiftKey", "altKey"]) {
+      expect(fireEvent.click(link, { [modifier]: true }), modifier).toBe(true);
+    }
+    expect(onShowTab).not.toHaveBeenCalled();
+    expect(fireEvent.click(link)).toBe(false);
+    expect(onShowTab).toHaveBeenCalledWith("household");
+  });
+
+  it("shows no figure of ours: no OBR comparison note, no Why we don't model it", () => {
+    render(<HouseholdOnlyMeasures />);
+    const text = section().textContent;
+    // Every comparison of ours with the official costing (obrDeviationNotes.js),
+    // which hold our national figures, stays off it
+    const id = "savings_income_rates_up";
+    const notes = [
+      OBR_DEVIATION_NOTES[id],
+      NOT_COMPARABLE_SHORT[id],
+      OBR_COMPARISON_BASES[id],
+      ...(OBR_DIFFERENCE_POINTS[id] ?? []).map((point) => point.text),
+      ...Object.values(OBR_PANEL_BASES[id] ?? {}),
+    ].filter(Boolean);
+    expect(notes.length).toBeGreaterThan(0);
+    for (const note of notes) expect(text).not.toContain(note);
+    expect(text).not.toMatch(/£\d+m against|ours is \d+%/);
+    expect(text).not.toMatch(/PolicyEngine estimate|our estimate|we estimate/i);
+    expect(within(section()).queryByText(WHY_NOT_MODELLED)).toBeNull();
+    // The only figures are the card's values and the Treasury's (closed)
+    expect(section().querySelector(".umm-costing-section")).toBeNull();
+  });
+
+  it("shows nothing once we publish the measure, or with no household-only card, and the not-modelled section then has no copy either", () => {
+    const { container } = render(<HouseholdOnlyMeasures published={["savings_income_rates_up"]} />);
+    expect(container).toBeEmptyDOMElement();
+    const { container: none } = render(<HouseholdOnlyMeasures measures={NOT_MODELLED} />);
+    expect(none).toBeEmptyDOMElement();
+    render(<UnmodelledMeasures published={["savings_income_rates_up"]} />);
+    open();
+    expect(document.getElementById("unmodelled-savings-income-tax")).toBeNull();
   });
 });
