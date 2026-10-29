@@ -12,7 +12,7 @@ import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
 
 import anyio
 import numpy as np
@@ -326,6 +326,10 @@ async def calculate_personal_impact_stream(data: APIHouseholdInput):
 
 # The largest amount a field takes, in £ a year
 MAX_AMOUNT = 10_000_000
+# The largest month's pay, £ a month: a twelfth of the largest yearly
+# amount (policyengine-uk is run on twelve times it)
+MAX_MONTHLY_AMOUNT = MAX_AMOUNT // 12
+MonthlyPay = Annotated[float, Field(ge=0, le=MAX_MONTHLY_AMOUNT)]
 
 
 class HouseholdChildRequest(BaseModel):
@@ -517,12 +521,56 @@ class HouseholdAnswersRequest(BaseModel):
             "receipts less expenses"
         ),
     )
+    monthly_employment_income: Optional[list[MonthlyPay]] = Field(
+        default=None,
+        min_length=12,
+        max_length=12,
+        description=(
+            "The head's pay before tax in each month of the chosen year, "
+            "April to March, £ a month as paid (not grown like the salary), "
+            "for the Universal Credit surplus earnings threshold measure "
+            "only (answer: surplus_earnings). Every other figure still "
+            "comes from employment_income. Left out: not asked, and the "
+            "answer is as before."
+        ),
+    )
+    partner_monthly_employment_income: Optional[list[MonthlyPay]] = Field(
+        default=None,
+        min_length=12,
+        max_length=12,
+        description=(
+            "The partner's, likewise, only with has_partner and "
+            "monthly_employment_income. Left out with the head's months: "
+            "partner_employment_income, grown to the year, spread evenly."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _partner_months(self):
+        if self.partner_monthly_employment_income is None:
+            return self
+        if not self.has_partner:
+            raise ValueError(
+                "partner_monthly_employment_income needs has_partner"
+            )
+        if self.monthly_employment_income is None:
+            raise ValueError(
+                "partner_monthly_employment_income needs "
+                "monthly_employment_income"
+            )
+        return self
 
     def answers(self) -> household_impact.HouseholdAnswers:
         values = self.model_dump()
         values["children"] = tuple(
             household_impact.Child(**child) for child in values["children"]
         )
+        for name in (
+            "monthly_employment_income",
+            "partner_monthly_employment_income",
+        ):
+            if values[name] is not None:
+                values[name] = tuple(values[name])
         return household_impact.HouseholdAnswers(**values)
 
 

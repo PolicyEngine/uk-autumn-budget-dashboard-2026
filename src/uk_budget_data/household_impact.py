@@ -811,6 +811,14 @@ class HouseholdAnswers:
     # between the trading allowance and the actual expenses.
     self_employment_receipts: float = 0
     self_employment_expenses: float = 0
+    # The head's pay before tax in each month of the year calculated, April
+    # to March, £ a month as paid (not grown like the yearly salary), for
+    # the Universal Credit surplus earnings threshold measure only
+    # (uc_surplus_earnings). None: not asked, and every figure is as before.
+    monthly_employment_income: Optional[tuple[float, ...]] = None
+    # The partner's, likewise; None with the head's months: the partner's
+    # yearly salary, grown to the year, spread evenly
+    partner_monthly_employment_income: Optional[tuple[float, ...]] = None
 
     @property
     def self_employed(self) -> bool:
