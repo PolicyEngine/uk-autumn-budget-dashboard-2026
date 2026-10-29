@@ -161,15 +161,31 @@ def exchequer_signs(variables) -> dict[str, int]:
     return signs
 
 
+# The engine variables each measure's official costing covers, where it
+# covers fewer taxes and benefits than our net figure (#297): the Carer's
+# Allowance taper's costing is Carer's Allowance and Universal Credit
+# spending (policy costings p. 16), the Pension Tax Allowance's income tax
+# only (p. 63). Code, not a Treasury input under data_inputs/treasury/,
+# which generation never reads (publication.receipt.is_non_calculation_path):
+# the official_basis table is generated from these, so its receipt binds them.
+OFFICIAL_BASES: dict[str, tuple[str, ...]] = {
+    "carers_allowance_earnings_taper": (
+        "carers_allowance",
+        "universal_credit",
+    ),
+    "state_pension_income_tax_protection": ("income_tax",),
+}
+
+
 @dataclass
 class OfficialBasisCalculator(BaseCalculator):
     """A measure's figure on its official costing's basis (#297).
 
     Where the official costing covers fewer taxes and benefits than our net
     figure (``budgetary_impact``, the change in ``gov_balance``), the change
-    in just those (mapping.csv's ``official_basis``), from the same two
-    simulations, in £bn with the same sign: + is a gain to the Exchequer.
-    No rows for a measure with no official basis.
+    in just those (``OFFICIAL_BASES``), from the same two simulations, in
+    £bn with the same sign: + is a gain to the Exchequer. No rows for a
+    measure with no official basis.
     """
 
     years: list[int] = field(default_factory=lambda: list(POLICY_YEARS))

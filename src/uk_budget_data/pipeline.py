@@ -19,6 +19,7 @@ from rich.markup import escape
 
 from uk_budget_data import data_limits, model_limits
 from uk_budget_data.calculators import (
+    OFFICIAL_BASES,
     AgeImpactCalculator,
     BudgetaryImpactCalculator,
     ConstituencyCalculator,
@@ -64,18 +65,6 @@ def build_microsimulation(dataset_path: Optional[str], scenario=None):
         allow_unmanaged=dataset_path is not None,
         scenario=with_forecast(scenario),
     )
-
-
-def official_basis_for(reform_id: str, config: DataConfig) -> tuple:
-    """The engine variables a measure's official costing covers
-    (data_inputs/treasury/mapping.csv's ``official_basis``, #297), or none."""
-    from uk_budget_data.publication.reconcile import (
-        load_mapping,
-        official_bases,
-    )
-
-    mapping = load_mapping(config.data_inputs_dir / "treasury" / "mapping.csv")
-    return official_bases(mapping).get(reform_id, ())
 
 
 def save_csv(df: pd.DataFrame, csv_path: Path) -> None:
@@ -137,7 +126,8 @@ class ReformProcessor:
         self.official_basis_calc = OfficialBasisCalculator(
             years=self.config.years
         )
-        self.official_basis = official_basis_for(reform.id, self.config)
+        # The variables its official costing covers, or none (#297)
+        self.official_basis = OFFICIAL_BASES.get(reform.id, ())
         self.distributional_calc = DistributionalImpactCalculator()
         self.winners_losers_calc = WinnersLosersCalculator()
         self.metrics_calc = MetricsCalculator()

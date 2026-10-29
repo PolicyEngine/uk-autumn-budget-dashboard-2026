@@ -128,6 +128,27 @@ class TestOfficialBasisCalculator:
             == []
         )
 
+    def test_the_official_bases(self):
+        """The Carer's Allowance taper's costing is Carer's Allowance and
+        Universal Credit spending (policy costings p. 16), the Pension Tax
+        Allowance's income tax only (p. 63); no other measure has one. Each
+        names a registered measure and distinct variables with an Exchequer
+        sign."""
+        from uk_budget_data.calculators import OFFICIAL_BASES, exchequer_signs
+        from uk_budget_data.reforms import get_all_reforms
+
+        assert OFFICIAL_BASES == {
+            "carers_allowance_earnings_taper": (
+                "carers_allowance",
+                "universal_credit",
+            ),
+            "state_pension_income_tax_protection": ("income_tax",),
+        }
+        assert set(OFFICIAL_BASES) <= {r.id for r in get_all_reforms()}
+        for variables in OFFICIAL_BASES.values():
+            assert len(set(variables)) == len(variables)
+            assert set(exchequer_signs(variables)) == set(variables)
+
 
 class TestDistributionalImpactCalculator:
     """Tests for distributional impact calculation."""

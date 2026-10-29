@@ -90,8 +90,6 @@ class ReconciliationInputError(ValueError):
 
 
 _FISCAL_YEAR = re.compile(r"[1-9][0-9]{3}-[0-9]{2}")
-# An engine variable's name, as official_basis lists them
-_VARIABLE = re.compile(r"[a-z][a-z0-9_]*")
 
 
 def _finite(value, label: str) -> float:
@@ -217,13 +215,6 @@ class MappingRow:
     or behaviour before it starts or after it ends. Either needs a reason
     and a reviewer. Neither touches a declared expected effect: a year a
     declaration covers is still checked for responsiveness.
-
-    ``official_basis`` names the engine variables the official costing
-    covers, where it covers fewer taxes and benefits than our net figure
-    (#297): the page shows their change beside the measure's own figure, on
-    the official costing's basis. It is never compared: the gate reconciles
-    ``budgetary_impact`` as before. A measure's rows that name one agree
-    (``official_bases``).
     """
 
     measure_id: str
@@ -235,7 +226,6 @@ class MappingRow:
     reason: str = ""
     reviewer: str = ""
     not_comparable_years: tuple[str, ...] = ()
-    official_basis: tuple[str, ...] = ()
 
     def __post_init__(self):
         scale = _finite(self.scale, f"{self.measure_id}: mapping scale")
@@ -306,26 +296,6 @@ class MappingRow:
                     f"{self.measure_id}: the {name} for the years "
                     f"{', '.join(years)} classified not comparable",
                 )
-        basis = self.official_basis
-        if isinstance(basis, (str, bytes)) or not isinstance(
-            basis, (tuple, list)
-        ):
-            raise ReconciliationInputError(
-                f"{self.measure_id}: official_basis must be a list of "
-                f"variable names, not {basis!r}"
-            )
-        basis = tuple(basis)
-        for name in basis:
-            if not isinstance(name, str) or not _VARIABLE.fullmatch(name):
-                raise ReconciliationInputError(
-                    f"{self.measure_id}: official_basis names {name!r}, not "
-                    "an engine variable such as income_tax"
-                )
-        if len(set(basis)) != len(basis):
-            raise ReconciliationInputError(
-                f"{self.measure_id}: official_basis names a variable twice"
-            )
-        object.__setattr__(self, "official_basis", basis)
 
     def excluded_in(self, fiscal_year: str) -> bool:
         """Whether a reviewer took this row out of the comparison in the
@@ -999,11 +969,6 @@ def load_mapping(path: Path) -> list[MappingRow]:
                 for year in (line.get("not_comparable_years") or "").split(";")
                 if year.strip()
             ),
-            official_basis=tuple(
-                name.strip()
-                for name in (line.get("official_basis") or "").split(";")
-                if name.strip()
-            ),
         )
         for line in _read_csv(path)
     ]
@@ -1020,23 +985,6 @@ def load_mapping(path: Path) -> list[MappingRow]:
             )
         seen.add(identity)
     return rows
-
-
-def official_bases(mapping: Iterable[MappingRow]) -> dict[str, tuple]:
-    """Each measure's official basis (``MappingRow.official_basis``): the
-    variables its rows name, for measures that name any. The rows of one
-    measure that name a basis must name the same one, in the same order."""
-    bases: dict[str, tuple] = {}
-    for row in mapping:
-        if not row.official_basis:
-            continue
-        known = bases.setdefault(row.measure_id, row.official_basis)
-        if known != row.official_basis:
-            raise ReconciliationInputError(
-                f"{row.measure_id}: mapping rows name different official "
-                f"bases, {';'.join(known)} and {';'.join(row.official_basis)}"
-            )
-    return bases
 
 
 def _reviewed_text(entry: dict, name: str, where: str) -> str:
