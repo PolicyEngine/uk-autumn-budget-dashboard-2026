@@ -127,9 +127,9 @@ export const REGION_OPTIONS = [
 ];
 
 // The "region" question asks for a local authority (council), which sets
-// the region the calculation reads; the council itself is not sent
+// the region the calculation reads and is sent for its own Council Tax
 const LOCAL_AUTHORITY_HINT =
-  "Your council sets your region, which the calculation uses: Scotland has its own income tax rates, and the rent estimate and housing support follow the region. Council Tax is estimated from your band and your region's average Band D, not your own council's rate.";
+  "Your council sets your region: Scotland has its own income tax rates, and the rent estimate and housing support follow the region, not your council. Council Tax is estimated from your band and your council's Band D.";
 
 const YES_NO = [
   { value: false, label: "No" },
@@ -193,7 +193,7 @@ const CHOICE_CONFIGS = {
     summary: (value) => `Band ${value}`,
     layout: "segmented",
     options: ["A", "B", "C", "D", "E", "F", "G", "H"].map((band) => ({ value: band, label: band })),
-    hint: "Estimated from your band and your region's average Band D for 2026-27, not your own council's, grown with the OBR's forecast (Source: MHCLG, Welsh and Scottish governments). Choose Band D if you are not sure.",
+    hint: "Estimated from your band and your council's Band D for 2026-27 (your region's average until you pick your council), grown with the OBR's forecast (Source: MHCLG, Welsh and Scottish governments, via policyengine-uk). Choose Band D if you are not sure.",
   },
   claims_universal_credit: {
     label: "Universal Credit",

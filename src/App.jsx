@@ -1279,11 +1279,12 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
         <UpdateToast show={updated} />
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
+        {/* "About": a tab on the window's left edge that opens the
+            overview drawer (below) from the same edge */}
+        {!landing && (
+          <EdgeAboutTab open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
+        )}
         <ViewTabs
-          leading={!landing && (
-            // "About": opens the overview drawer (below)
-            <EdgeAboutTab open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
-          )}
           tabs={VIEWS}
           value={landing ? null : activeTab}
           onChange={handleTabChange}

@@ -29,11 +29,11 @@ function Mark({ className, hidden = false }) {
 const CUE_KEY = "ab2026-about-cue";
 
 /**
- * "About", at the start of the view tabs row and styled as its tabs are
- * (App.jsx passes it to ViewTabs as `leading`; it is not on the landing
- * page), but a button, never a chosen tab, with no hover card: a click
- * opens the overview drawer (OverviewDrawer.jsx); hidden
- * while the drawer is open. It pulses softly once per session (not under
+ * "About", a side tab on the window's left edge (App.jsx; it is not on the
+ * landing page): the title band's teal, its label written upwards under a
+ * panel icon, with no hover card. A click opens the overview drawer
+ * (OverviewDrawer.jsx), which slides out from the same edge; hidden while
+ * the drawer is open. It pulses softly once per session (not under
  * reduced motion).
  *
  * @param {Object} props
@@ -58,14 +58,14 @@ export function EdgeAboutTab({ open, onToggle, buttonRef }) {
     <button
       ref={buttonRef}
       type="button"
-      className={`view-tab edge-about${cue ? " is-cue" : ""}`}
+      className={`edge-about${cue ? " is-cue" : ""}`}
       aria-label="About this dashboard"
       aria-expanded={open}
       aria-controls="overview-drawer"
       onClick={onToggle}
     >
-      <PanelLeftOpen className="view-tab-icon" size={18} strokeWidth={1.8} aria-hidden="true" />
-      <span className="view-tab-label" aria-hidden="true">About</span>
+      <PanelLeftOpen className="edge-about-icon" size={16} strokeWidth={2} aria-hidden="true" />
+      <span className="edge-about-label" aria-hidden="true">About</span>
     </button>
   );
 }
