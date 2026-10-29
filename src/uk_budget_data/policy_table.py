@@ -187,14 +187,12 @@ def _row(
     primary=True,
     note=None,
     unit_words=None,
-    card_note=None,
     figures=None,
 ) -> dict:
     """One parameter's points. ``note`` qualifies the row where the page
-    lists it; ``card_note``, on a measure's main row, is a line the
-    Policies card shows under its values; ``figures``, the figures a card's
-    visual draws that are not the row's points, by name and then fiscal
-    year."""
+    lists it; ``figures``, the figures a card's visual draws that are not
+    the row's points, by name and then fiscal year. A card's words are
+    src/utils/policyDetails.js's summary and points, not a row's."""
     row = {
         "label": label,
         "unit": unit,
@@ -207,8 +205,6 @@ def _row(
     }
     if note:
         row["note"] = note
-    if card_note:
-        row["card_note"] = card_note
     if figures:
         row["figures"] = figures
     return row
@@ -331,7 +327,6 @@ def _vat_rows(
     names: str,
     divided: str = DAYS_DIVIDED,
     note: str = DAYS_NOTE,
-    card_note: Optional[str] = None,
 ) -> list[dict]:
     first, last = VAT_WINDOWS[measure_id]
     cut = in_force_rate_change(measure_id, changes)
@@ -357,7 +352,6 @@ def _vat_rows(
                 )
             ],
             _source(base_source, derived),
-            card_note=card_note,
         ),
         _row(
             f"{label}, averaged over the year",
@@ -612,24 +606,18 @@ def _documented_amount(text: str, before: str, after: str) -> float:
     return float(match.group(1).replace(",", ""))
 
 
-def _electricity_where(values: dict) -> str:
+def _check_electricity_where(values: dict) -> None:
     """Where the zero rate applies, from the modifier's geographies (#290,
     Max, 19:32): Great Britain from October 2026, and Northern Ireland from
     April 2027 only as the Budget expects (RB 6.210), while HMRC's VAT
-    Notice 701/19 keeps it at 5% there."""
-    first, _ = VAT_WINDOWS[registry.ELECTRICITY_VAT_ID]
+    Notice 701/19 keeps it at 5% there. The card says so in its points and
+    visual (src/utils/policyDetails.js), so a measure applied elsewhere
+    stops the table being written until they are checked."""
     if (values["geography"], values["geography_2027"]) != ("GB", "UK"):
         raise ValueError(
-            "the electricity card's note knows Great Britain, then the UK "
-            "from April 2027, only"
+            "the electricity card knows Great Britain, then the UK from "
+            "April 2027, only"
         )
-    # One short line for the card (Vahid, 29 Oct): that Northern Ireland
-    # is only expected is the card's At a glance and the visual's key, and
-    # the law before the Budget the visual's bracket
-    return (
-        f"0% instead of 5% from {first:%B %Y} (Northern Ireland from "
-        "April 2027)."
-    )
 
 
 def _electricity_vat(reform) -> list[dict]:
@@ -643,7 +631,7 @@ def _electricity_vat(reform) -> list[dict]:
     # While the pre-Budget zero rate is in the measure (SI 2026/987), the
     # 5% is the scoring baseline, as Table 6.1 scores it (#290, Max); the
     # card's visual marks those months as law before the Budget
-    card_note = _electricity_where(values)
+    _check_electricity_where(values)
     return _vat_rows(
         registry.ELECTRICITY_VAT_ID,
         zero_vat_on_domestic_electricity,
@@ -652,7 +640,6 @@ def _electricity_vat(reform) -> list[dict]:
         "VAT on domestic electricity",
         changes,
         "rate_change_2026, rate_change_2027",
-        card_note=card_note,
         # 2026-27 by its share of a year's use (YEAR_WEIGHTS), while the
         # pre-Budget zero rate is in the measure; else by days
         **(
@@ -897,14 +884,8 @@ def _carers_allowance_taper(reform) -> list[dict]:
                 },
             ),
             unit_words="£ a week",
-            # One short line for the card (Vahid, 29 Oct); the visual
-            # draws the limit and where the allowance runs out, from
-            # ``figures`` (src/utils/policyVisuals.js carersTaperView)
-            card_note=(
-                f"From {_fiscal_label(start)} the allowance tapers away "
-                "(£1 for each £1 earned above the limit) instead of "
-                "stopping at £1 over it."
-            ),
+            # The visual draws the limit and where the allowance runs out,
+            # from ``figures`` (src/utils/policyVisuals.js carersTaperView)
             figures={
                 "earnings_limit": by_year(carers_allowance_limit),
                 "runs_out": by_year(runs_out),

@@ -16,9 +16,12 @@ from uk_budget_data.forecast import forecast_parameters
 from uk_budget_data.policy_table import (
     OUTPUT_FILE,
     YEAR_WEIGHTS,
+    _check_electricity_where,
     build,
+    constants,
     in_force_rate_change,
     render,
+    zero_vat_on_domestic_electricity,
 )
 
 PUBLISHED = (
@@ -219,16 +222,18 @@ def test_electricity_says_where_and_what_it_is_scored_against(document):
     """#290 (Max, 19:32): Great Britain from October 2026, Northern Ireland
     from April 2027 only as the Budget expects; and current law's 5% for
     October to March is the scoring baseline, the zero rate already being
-    law (SI 2026/987)."""
-    note = rows(document, "domestic_electricity_zero_vat")[
+    law (SI 2026/987). The card's words are its points in
+    src/utils/policyDetails.js (Vahid, 29 Oct: bullets, not a note), so the
+    row carries no card_note, and the table is not written for a measure
+    applied anywhere else."""
+    row = rows(document, "domestic_electricity_zero_vat")[
         "VAT on domestic electricity"
-    ]["card_note"]
-    # One short sentence (Vahid, 29 Oct): the card's visual marks the law
-    # before the Budget, its At a glance that Northern Ireland is expected
-    assert note == (
-        "0% instead of 5% from October 2026 (Northern Ireland from April "
-        "2027)."
-    )
+    ]
+    assert "card_note" not in row
+    values = constants(zero_vat_on_domestic_electricity)
+    _check_electricity_where(values)
+    with pytest.raises(ValueError, match="Great Britain"):
+        _check_electricity_where({**values, "geography_2027": "GB"})
 
 
 def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
@@ -455,9 +460,6 @@ def test_carers_allowance_shows_the_cliff_it_removes(document):
             "2031-32": round(234 + rate("2031-04-06")),
         },
     }
-    # One short sentence (Vahid, 29 Oct)
-    assert row["card_note"] == (
-        "From 2030-31 the allowance tapers away (£1 for each £1 earned "
-        "above the limit) instead of stopping at £1 over it."
-    )
+    # The card's words are its points (src/utils/policyDetails.js)
+    assert "card_note" not in row
     assert "Earnings limit" not in row["label"]

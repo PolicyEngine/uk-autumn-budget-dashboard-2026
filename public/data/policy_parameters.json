@@ -256,8 +256,7 @@
               "kind": "modifier_constant",
               "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027), rate_change_2026 divided by that module's WINTER_SHARE (the October to March share of a year's electricity use) and rate_change_2027 by its SPRING_SHARE (the April to June share), October 2026 to June 2027 (the dates in the measure's description)"
             }
-          },
-          "card_note": "0% instead of 5% from October 2026 (Northern Ireland from April 2027)."
+          }
         },
         {
           "label": "VAT on domestic electricity, averaged over the year",
@@ -571,7 +570,6 @@
               "where": "the weekly rate (gov.dwp.carers_allowance.rate) less taper_rate x £1; budget_measures/carers_allowance_earnings_taper.py carers_allowance_earnings_taper(start_year, taper_rate, limit_hours, national_living_wage_by_april)"
             }
           },
-          "card_note": "From 2030-31 the allowance tapers away (£1 for each £1 earned above the limit) instead of stopping at £1 over it.",
           "figures": {
             "earnings_limit": {
               "2030-31": 228,

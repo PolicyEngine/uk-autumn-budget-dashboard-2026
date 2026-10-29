@@ -110,9 +110,9 @@ describe("electricityVatView", () => {
     expect(zero("Great Britain")).toEqual(["2026-10", "2026-11", "2026-12", "2027-01", "2027-02", "2027-03", "2027-04", "2027-05", "2027-06"]);
     expect(zero("Northern Ireland")).toEqual(["2027-04", "2027-05", "2027-06"]);
     expect(view.regions[1].expected).toBe(true);
-    // The row's own dates and note
+    // The row's own dates; no note, the card's points say it (policyDetails.js)
     expect(entry(id).rows[0].points[0].key).toBe("2026-10-01/2027-06-30");
-    expect(view.note).toBe("0% instead of 5% from October 2026 (Northern Ireland from April 2027).");
+    expect(view.note).toBeNull();
   });
 
   it("marks October to March as law before the Budget", () => {
