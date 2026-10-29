@@ -104,7 +104,7 @@ export function missingGroupsNote(points, labelOf) {
   if (!gaps.length) return null;
   const keys = [...new Set(gaps.flatMap((point) => point.missing))];
   const groups = keys.length >= AGE_GROUPS.length - 1 ? "every age group except all ages" : keys.map(labelOf).join(", ");
-  return `Not drawn in ${yearList(gaps.map((point) => point.year))}, as a selected policy has too few survey records by age: ${groups}.`;
+  return `No line in ${yearList(gaps.map((point) => point.year))}, as a selected policy has too few survey records by age: ${groups}.`;
 }
 
 /** "+£120", "−£180": a change with a true minus. */
@@ -713,7 +713,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
           // (changeByYear, groupSeries)
           units: cumulative
             ? "£ per person, running total from the first year"
-            : "£ per person per year; each person counts their household's change in net income (not equivalised)",
+            : "£ per person per year; each person counts their household's change in net income (without equivalisation)",
           columns: [
             { key: "yearLabel", label: "Year" },
             ...SERIES_LIST.map((series) => ({ key: series.key, label: series.label, decimals: 2 })),
@@ -960,7 +960,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
           year={Number(selectedYear)}
           info={{
             shows: "Average change in household income per person in each age group, each year, with all ages for comparison.",
-            how: ["Running total adds up the years from the first one shown."],
+            how: ["Running total adds up the years from the first one we show."],
             caveats: [
               missingNote,
               byMeasure && netOnly && withheldNetOnly(withheldNames),

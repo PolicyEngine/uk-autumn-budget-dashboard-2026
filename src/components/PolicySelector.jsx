@@ -111,7 +111,7 @@ function PolicySelector({ policies: providedPolicies, selectedPolicies, onPolicy
     else ids.filter((id) => selectedPolicies.includes(id) !== next.includes(id)).forEach((id) => onPolicyToggle(id));
   };
   const none = !loading && policies.length === 0;
-  const reason = disabledReason ?? (none ? noneReason ?? "No policies are published yet" : undefined);
+  const reason = disabledReason ?? (none ? noneReason ?? "We have published no policies yet" : undefined);
   const disabled = loading || Boolean(reason);
   // A view the policies do not change: the menu closes and does not open
   useEffect(() => {

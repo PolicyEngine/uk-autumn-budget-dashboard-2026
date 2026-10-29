@@ -63,7 +63,7 @@ const LAYOUTS = {
     { icon: "trend", title: "Economic forecast", cards: [["lines", "wide"], ["lines"], ["lines"]] },
   ],
   policies: [
-    { icon: "fileText", title: "Policies we model", subtitle: "What each policy changes, when, and how it is modelled.", cards: [["text", "wide"], ["text", "wide"], ["text", "wide"]] },
+    { icon: "fileText", title: "Policies we model", subtitle: "What each policy changes, when, and how we model it.", cards: [["text", "wide"], ["text", "wide"], ["text", "wide"]] },
   ],
   methodology: [
     { icon: "book", title: "Methodology", cards: [["text", "wide"], ["text", "wide"]] },

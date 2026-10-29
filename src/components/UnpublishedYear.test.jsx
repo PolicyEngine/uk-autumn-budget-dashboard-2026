@@ -38,7 +38,7 @@ describe("a year not yet published", () => {
       />,
     );
     expect(
-      screen.getByText("Results for 2031-32 are not yet published."),
+      screen.getByText("We have not yet published results for 2031-32."),
     ).toBeInTheDocument();
     expect(container.querySelector(".recharts-bar-rectangle")).toBeNull();
     expect(container.textContent).not.toMatch(/£0/);

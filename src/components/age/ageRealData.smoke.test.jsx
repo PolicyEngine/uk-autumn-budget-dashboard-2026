@@ -115,7 +115,7 @@ describe.skipIf(!STAGED)("By age on the staged publication", () => {
     }
     if (selected.length > 1) {
       // A combination is drawn whole or said as not published
-      expect(container.textContent).not.toMatch(/Not drawn in/);
+      expect(container.textContent).not.toMatch(/No line in/);
       for (const rows of chartRows(container)) {
         const points = rows.filter((point) => point.year === undefined || point.year === YEAR);
         for (const key of KEYS) {

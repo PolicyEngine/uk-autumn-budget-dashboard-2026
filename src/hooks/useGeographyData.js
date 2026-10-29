@@ -271,7 +271,7 @@ export function useGeographyData(name) {
   const catalogue = useMeasureCatalogue();
   const state = useCachedResource(Object.hasOwn(FILES, name) ? name : `unknown:${name}`, catalogue);
   return useMemo(() => {
-    if (!catalogue.manifest) return failure("unavailable", "No Budget results are published yet");
+    if (!catalogue.manifest) return failure("unavailable", "We have published no Budget results yet");
     if (state.status !== "ready") return state;
     const rows = state.table.rows.filter((row) =>
       isCatalogueRowDisplayable(catalogue, row.reform, row.year),

@@ -361,7 +361,7 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
           info={{
             caveats: [
               unpublished.length > 0 &&
-                `Not shown: ${unpublished.map((point) => fiscalYearTick(point.year)).join(", ")} (not yet published, or too few survey records).`,
+                `The chart leaves out ${unpublished.map((point) => fiscalYearTick(point.year)).join(", ")} (not yet published, or too few survey records).`,
             ],
             method: BY_YEAR_METHOD,
           }}

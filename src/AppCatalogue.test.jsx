@@ -85,7 +85,7 @@ describe("the page's verified publication catalogue", () => {
       catch { return new Response(null, { status: 404 }); }
     });
     render(<App />);
-    expect(await screen.findByText("No Budget results are published yet")).toBeInTheDocument();
+    expect(await screen.findByText("We have published no Budget results yet")).toBeInTheDocument();
     expect(screen.queryByTestId("budget-figures")).toBeNull();
     expect(screen.queryByTestId("distributional-figures")).toBeNull();
   });
@@ -124,9 +124,9 @@ describe("the page's verified publication catalogue", () => {
     expect(within(screen.getByRole("tablist", { name: "Views" })).getAllByRole("tab")).toHaveLength(5);
     // The default view is mounted from the first render and kept, hidden,
     // since #128; the open view says nothing about Budget results
-    expect(within(screen.getByRole("tabpanel")).queryByText("No Budget results are published yet")).toBeNull();
+    expect(within(screen.getByRole("tabpanel")).queryByText("We have published no Budget results yet")).toBeNull();
     fireEvent.click(screen.getByRole("tab", { name: "Population impact" }));
-    expect(await screen.findByText("No Budget results are published yet")).toBeInTheDocument();
+    expect(await screen.findByText("We have published no Budget results yet")).toBeInTheDocument();
     expect(screen.queryByTestId("budget-figures")).toBeNull();
   });
 });
@@ -274,7 +274,7 @@ describe("an open page follows the publication", () => {
     await screen.findByTestId("distributional-figures");
     vi.stubGlobal("fetch", dashboardFixtureFetch({ overrides: { "manifest.json": 404 } }));
     await act(async () => { window.dispatchEvent(new Event("focus")); });
-    expect(await screen.findByText("No Budget results are published yet")).toBeInTheDocument();
+    expect(await screen.findByText("We have published no Budget results yet")).toBeInTheDocument();
     expect(screen.queryByTestId("distributional-figures")).toBeNull();
   });
 
@@ -289,7 +289,7 @@ describe("an open page follows the publication", () => {
         ? async () => { throw new TypeError("Failed to fetch"); }
         : dashboardFixtureFetch({ overrides: { "manifest.json": failure === "invalid" ? "{}" : Number(failure) } }));
       await act(async () => { window.dispatchEvent(new Event("focus")); });
-      expect(await screen.findByText(failure === "404" ? "No Budget results are published yet" : "Published results are unavailable")).toBeInTheDocument();
+      expect(await screen.findByText(failure === "404" ? "We have published no Budget results yet" : "Published results are unavailable")).toBeInTheDocument();
       expect(screen.queryByTestId("distributional-figures")).toBeNull();
       expect(screen.queryByTestId("budget-figures")).toBeNull();
 

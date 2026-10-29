@@ -158,8 +158,8 @@ describe("published measure catalogue in population views", () => {
     expect(loading).not.toHaveTextContent(/0 of 0/);
     expect(loading).toBeDisabled();
     unmount();
-    render(withCatalogue(empty, <PolicySelector policies={[]} selectedPolicies={[]} onPolicyToggle={vi.fn()} noneReason="No Budget results are published yet" />));
-    const none = screen.getByRole("button", { name: "No policies yet: No Budget results are published yet" });
+    render(withCatalogue(empty, <PolicySelector policies={[]} selectedPolicies={[]} onPolicyToggle={vi.fn()} noneReason="We have published no Budget results yet" />));
+    const none = screen.getByRole("button", { name: "No policies yet: We have published no Budget results yet" });
     expect(none).toHaveTextContent("No policies yet");
     expect(none).toBeDisabled();
   });

@@ -443,7 +443,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
     .filter((policy) => selectedPolicies.includes(policy.id))
     .map((policy) => ({ key: policy.seriesKey ?? `measure:${policy.id}`, label: policy.label ?? policy.name, decimals: 2 }));
   const units =
-    "£ per person per year; each person counts their household's change in net income (not equivalised)";
+    "£ per person per year; each person counts their household's change in net income (without equivalisation)";
   const csvText = () =>
     single
       ? buildChartCsv({
@@ -457,7 +457,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
           // The real values, not the slivers drawn
           rows: published && !combinationUnavailable ? singleData.filter((point) => point.netChange !== null) : [],
           notes: missingAges.length
-            ? [`Not shown, too few survey records: ages ${missingAges.map((p) => p.label).join(", ")}`]
+            ? [`Too few survey records to show: ages ${missingAges.map((p) => p.label).join(", ")}`]
             : [],
         })
       : buildChartCsv({
@@ -470,7 +470,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
           ],
           rows: published && !combinationUnavailable ? data.filter((point) => !point.suppressed) : [],
           notes: suppressed.length
-            ? [`Not shown, too few survey records: ${suppressed.map((p) => p.label).join(", ")}`]
+            ? [`Too few survey records to show: ${suppressed.map((p) => p.label).join(", ")}`]
             : [],
         });
   const download = {
@@ -696,7 +696,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
             info={{
               caveats: [
                 partsWithheld && withheldPartsCaveat(withheldNames, single ? "at some ages" : "in some age groups"),
-                notShown && !combinationUnavailable && `Not shown, as too few survey records: ${notShown}.`,
+                notShown && !combinationUnavailable && `Too few survey records to show: ${notShown}.`,
                 single &&
                   "Single years of age rest on fewer households: a few large changes, such as capital gains, can move one age's average.",
               ],
@@ -790,7 +790,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
       // The real shares, not the widened ones drawn
       rows: data.map((row) => ({ group: row.group, ...row.real })),
       notes: thin.length
-        ? [`Not shown, too few survey records: ${thin.map((group) => group.label).join(", ")}`]
+        ? [`Too few survey records to show: ${thin.map((group) => group.label).join(", ")}`]
         : [],
     });
   // Until the year is published, only its CSV (the menu says why otherwise)
@@ -909,7 +909,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
           />
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>No shares are published for this selection in {yearLabel}.</p>
+            <p>We have not published shares for this selection in {yearLabel}.</p>
           </div>
         )}
       </SwapTransition>
@@ -921,7 +921,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
       <div className="chart-footer">
         {filtered?.hidden > 0 && (
           <Note>
-            {filtered.hidden} {filtered.hidden === 1 ? "policy" : "policies"} with no effect hidden
+            Hiding {filtered.hidden} {filtered.hidden === 1 ? "policy" : "policies"} with no effect
           </Note>
         )}
         {/* The same foot as the card beside it, so the pair ends level */}
@@ -931,12 +931,12 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
             how: perMeasure
               ? [
                   // Each row's policy on its own is in the description (round 3)
-                  "No published run covers this selection together, so the rows' shares can't be added up across policies.",
+                  "No published run covers this selection together, so you can't add up the rows' shares across policies.",
                 ]
               : ["Shares come from one run of the whole selection, so they include how the policies interact."],
             caveats: [
-              published && thin.length > 0 && `Not shown, as too few survey records: ${thin.map((group) => group.label).join(", ")}.`,
-              perMeasure?.missing.length > 0 && `Not shown, too few survey records: ${perMeasure.missing.join(", ")}.`,
+              published && thin.length > 0 && `Too few survey records to show: ${thin.map((group) => group.label).join(", ")}.`,
+              perMeasure?.missing.length > 0 && `Too few survey records to show: ${perMeasure.missing.join(", ")}.`,
             ],
             method: AGE_METHOD,
           }}

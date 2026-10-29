@@ -6,7 +6,7 @@
 function UnpublishedPlot({ height, yearLabel }) {
   return (
     <div className="unpublished-plot" style={{ height }} role="status">
-      <p>Results for {yearLabel} are not yet published.</p>
+      <p>We have not yet published results for {yearLabel}.</p>
     </div>
   );
 }

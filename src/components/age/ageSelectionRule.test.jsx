@@ -125,7 +125,7 @@ describe("By age's selection rule with a single that withholds its age bands", (
     const { container } = await renderAge(withheldFixture(), [ALPHA, BETA]);
     meanCard(container);
     expect(screen.queryByText(COMBINATION_NOT_PUBLISHED)).toBeNull();
-    expect(container.textContent).not.toMatch(/Not drawn in/);
+    expect(container.textContent).not.toMatch(/No line in/);
     expect(container.textContent).not.toMatch(/no published results by age/);
     // Average change by age: the package's net (50) in every band, and no
     // stack of the singles under it
@@ -157,7 +157,7 @@ describe("By age's selection rule with a single that withholds its age bands", (
   it("shows another combination as not published by age, never half drawn", async () => {
     const { container } = await renderAge(withheldFixture({ packagePublished: false }), [ALPHA, BETA]);
     expect(screen.getAllByText(COMBINATION_NOT_PUBLISHED).length).toBeGreaterThan(0);
-    expect(container.textContent).not.toMatch(/Not drawn in/);
+    expect(container.textContent).not.toMatch(/No line in/);
     for (const rows of chartRows(container)) {
       for (const point of rows) {
         for (const key of ["netChange", ...BANDS, "all"]) expect(point[key] ?? null).toBeNull();
@@ -174,9 +174,9 @@ describe("By age's selection rule with a single that withholds its age bands", (
     // No note under any plot: the reason sits in About this chart's caveats
     expect(container.querySelector(".chart-footer .note")).toBeNull();
     const trendCard = container.querySelector(".young-people-trend");
-    expect(trendCard.textContent).not.toMatch(/Not drawn in/);
+    expect(trendCard.textContent).not.toMatch(/No line in/);
     fireEvent.click(within(trendCard).getByRole("button", { name: /About this chart/ }));
-    expect(trendCard.textContent).toMatch(/Not drawn in .*, as a selected policy has too few survey records by age/);
+    expect(trendCard.textContent).toMatch(/No line in .*, as a selected policy has too few survey records by age/);
   });
 
   it("applies the same rule to single years of age", () => {
@@ -302,7 +302,7 @@ describe("The single-year age axis", () => {
 
   it("says in one sentence why the split by policy is not shown, naming the thin policies", () => {
     expect(withheldPartsCaveat(["A"])).toBe(
-      "The split by policy is not shown for this selection: A has too few survey records at some ages, so the other policies' parts would reveal its part.",
+      "The chart leaves out the split by policy for this selection: A has too few survey records at some ages, so the other policies' parts would reveal its part.",
     );
     expect(withheldPartsCaveat(["A"], "in some age groups")).toMatch(/A has too few survey records in some age groups, so/);
     expect(withheldPartsCaveat([])).toBe(PACKAGE_PARTS_CAVEAT);

@@ -1333,7 +1333,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
               unavailable.empty && <p>Figures appear here once the 2026 Budget policies are approved for publication.</p>
             ) : (
               <>
-                <p>No figures are shown for a selection while any of it is unavailable.</p>
+                <p>We show no figures for a selection while any of it is unavailable.</p>
                 <RemoveUnavailable
                   names={unavailableIds.map((id) => catalogue.byId.get(id)?.name ?? id)}
                   onRemove={() => removeFromSelection(unavailableIds)}
@@ -1351,7 +1351,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
             <SectionHeading
               icon="fileText"
               title="Policies we model"
-              subtitle={`${notice ? `${notice}. ` : ""}What each policy changes, when, and how it is modelled.`}
+              subtitle={`${notice ? `${notice}. ` : ""}What each policy changes, when, and how we model it.`}
             />
             <section id="policy-details" className="report-section policy-details-content">
               <PolicyCards
@@ -1533,7 +1533,7 @@ function App({ boot = null }) {
     : error
     ? { reason: "Published results are unavailable", detail: error }
     : published.status === "no-manifest"
-      ? { reason: "No Budget results are published yet", empty: true }
+      ? { reason: "We have published no Budget results yet", empty: true }
       : null;
   const shown = unavailable ? NOTHING_PUBLISHED : published;
   // One snapshot per mount: a newer one starts the views afresh

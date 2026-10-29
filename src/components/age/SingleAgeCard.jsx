@@ -35,7 +35,7 @@ import { PENSIONERS, ageWindow } from "../../utils/ageGroups";
 
 const AGE_UNIT = "Average change in household income, per person (£ a year)";
 const CSV_UNITS =
-  "£ per person per year; each person counts their household's change in net income (not equivalised)";
+  "£ per person per year; each person counts their household's change in net income (without equivalisation)";
 const SHOW_OPTIONS = [
   { value: "net", label: "Net change", summary: "Net change" },
   { value: "measures", label: "Each policy", summary: "By policy" },
@@ -241,7 +241,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
         // Not "the sum of each policy's own effect": with a published run of
         // the whole selection (the default), Net change is that run's own row
         // (singleAgeSelection)
-        units: `${CSV_UNITS}; the five-year average is centred on each age`,
+        units: `${CSV_UNITS}; the five-year average centres on each age`,
         columns: [
           { key: "label", label: "Age" },
           ...measureIds.map((id) => ({ key: id, label: nameOf(id), decimals: 2 })),
@@ -253,7 +253,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
               .filter((point) => point.netChange !== null)
               .map((point) => ({ ...point, ...Object.fromEntries(point.parts.map((part) => [part.id, part.value])) }))
           : [],
-        notes: missing.length ? [`Not shown, too few survey records: ages ${missing.map((p) => p.label).join(", ")}`] : [],
+        notes: missing.length ? [`Too few survey records to show: ages ${missing.map((p) => p.label).join(", ")}`] : [],
       }),
     published,
   };
@@ -297,7 +297,7 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
           // The window is the group's own ages: when none has enough survey
           // records, say so rather than draw an empty plot
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>{`Not shown: too few survey records at every age from ${agesText(window)}.`}</p>
+            <p>{`Too few survey records to show any age from ${agesText(window)}.`}</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={height}>
@@ -413,13 +413,13 @@ export default function SingleAgeCard({ catalogue, rows, policies, selectedPolic
             info={{
               caveats: [
                 netOnly && withheldPartsCaveat(withheldNames),
-                missing.length > 0 && !combinationUnavailable && `Not shown, as too few survey records: ages ${missing.map((p) => p.label).join(", ")}.`,
+                missing.length > 0 && !combinationUnavailable && `Too few survey records to show: ages ${missing.map((p) => p.label).join(", ")}.`,
               ],
               how: [
                 `One bar per single year of age, ${agesText(window)}.`,
-                "The line averages the five ages centred on each one, as single ages rest on few survey records.",
+                "At each age, the line averages the five ages with that age in the middle, as single ages rest on few survey records.",
                 showSpa && `The dashed line marks State Pension age (${spa} in ${yearLabel}), where pensioners start.`,
-                partsOffered && "With Show set to Each policy, each selected policy's part is stacked at each age.",
+                partsOffered && "When Show is Each policy, each age's bar stacks each selected policy's part.",
               ],
               method: AGE_METHOD,
             }}

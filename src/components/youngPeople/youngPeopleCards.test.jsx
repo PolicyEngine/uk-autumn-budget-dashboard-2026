@@ -147,7 +147,7 @@ describe("young people data", () => {
     const [alone] = changeByYear(rows, POLICIES, ["threshold_freeze_extension"], [2029]);
     expect(alone).toMatchObject({ published: true, all: -50, missing: bands });
     expect(missingGroupsNote([alone], (key) => key)).toBe(
-      "Not drawn in 2029-30, as a selected policy has too few survey records by age: every age group except all ages.",
+      "No line in 2029-30, as a selected policy has too few survey records by age: every age group except all ages.",
     );
 
     // The selection is a published combined package: its own rows, every
@@ -251,7 +251,7 @@ describe("young people cards", () => {
 
   it("shows a year with no rows as not yet published", () => {
     render(<MeasuresCard {...props} selectedYear={2031} />);
-    expect(screen.getByText("Results for 2031-32 are not yet published.")).toBeInTheDocument();
+    expect(screen.getByText("We have not yet published results for 2031-32.")).toBeInTheDocument();
   });
 
   it("takes its focus from By age's group: the compare option and the dumbbell follow it", () => {
@@ -291,7 +291,7 @@ describe("young people cards", () => {
     expect(card.querySelector(".chart-footer .note")).toBeNull();
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
     expect(card.querySelector(".chart-footer")).toHaveTextContent(
-      `Not drawn in ${yearList(DISPLAY_YEARS)}, as a selected policy has too few survey records by age: every age group except all ages.`,
+      `No line in ${yearList(DISPLAY_YEARS)}, as a selected policy has too few survey records by age: every age group except all ages.`,
     );
   });
 

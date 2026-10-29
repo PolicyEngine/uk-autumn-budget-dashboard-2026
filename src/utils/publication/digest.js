@@ -248,7 +248,7 @@ export async function receiptProblems(receipt, key, entry) {
     contract.data_limits_registry_sha256
   ) {
     problems.push(
-      "the receipt was generated against another data-limit registry",
+      "we generated the receipt against another data-limit registry",
     );
   }
   if (!Array.isArray(dashboard.data_limits)) {
@@ -256,7 +256,7 @@ export async function receiptProblems(receipt, key, entry) {
   } else if (dashboard.data_limits.length > 0) {
     problems.push(
       "the receipt records data limits: not computable on current data, " +
-        "so its figures cannot be shown",
+        "so we cannot show its figures",
     );
   }
   // A measure the installed model mis-costs records its model limits in its
@@ -268,7 +268,7 @@ export async function receiptProblems(receipt, key, entry) {
     contract.model_limits_registry_sha256
   ) {
     problems.push(
-      "the receipt was generated against another model-limit registry",
+      "we generated the receipt against another model-limit registry",
     );
   }
   if (!Array.isArray(dashboard.model_limits)) {
@@ -278,8 +278,8 @@ export async function receiptProblems(receipt, key, entry) {
     entry.status !== "provisional"
   ) {
     problems.push(
-      "the receipt records model limits: held at provisional, so it " +
-        "cannot be shown as approved",
+      "the receipt records model limits: it stays provisional, so we " +
+        "cannot show it as approved",
     );
   }
   // Pure template proofs are recorded at generation time. Any hand-written

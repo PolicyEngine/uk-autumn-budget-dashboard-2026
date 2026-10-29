@@ -274,7 +274,7 @@ describe("YoungPeopleSection", () => {
 
   it("shows a year with no rows as not yet published", async () => {
     render(<YoungPeopleSection selectedPolicies={ALL} selectedYear={2031} policies={POLICIES} />);
-    expect(await screen.findAllByText("Results for 2031-32 are not yet published.")).toHaveLength(3);
+    expect(await screen.findAllByText("We have not yet published results for 2031-32.")).toHaveLength(3);
   });
 });
 
