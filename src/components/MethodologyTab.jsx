@@ -18,7 +18,7 @@ import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { OPEN_VIEW_EVENT } from "../utils/methodLink";
 import { AnchorLink, ExternalLink, ReasonList, SourceLink, Tag, Topic } from "./methodology/MethodUi";
 import { glossaryAnchor } from "./methodology/glossary";
-import { Calculator, ChartColumn, Compass, Database, House, TrendingUp, Info } from "lucide-react";
+import { Calculator, ChartColumn, Compass, Database, FileDown, House, TrendingUp, Info } from "lucide-react";
 import "./methodology/Methodology.css";
 import { scrollBelowBars, smoothUnlessReduced } from "../utils/pageScroll";
 
@@ -71,12 +71,69 @@ const yearRange = `${fiscalYearTick(EARLY_YEAR)} to ${fiscalYearTick(LAST_DISPLA
  * heading with its icon and a one-line summary, then its topics, each
  * folded until asked for.
  */
-function MethodSection({ id, title, summary, children }) {
+function MethodSection({ id, title, summary, lead, children }) {
   return (
     <section id={id} className="method-section" aria-label={title}>
       <SectionHeading id={`${id}-heading`} icon={SECTION_ICONS[id]} title={title} subtitle={summary} />
+      {lead}
       {children && <div className="card method-card method-topics">{children}</div>}
     </section>
+  );
+}
+
+/**
+ * Our written report on the Budget, served from public/reports: the reader
+ * version that went out on 29 October (sha256 0a13a780…1a6fc7), from
+ * PolicyEngine/uk-autumn-budget-2026-policies-explained, published/2026-10-29-reader.
+ */
+export const REPORT_PDF = {
+  file: "reports/policyengine-autumn-budget-2026-policies-explained.pdf",
+  title: "Autumn Budget 2026 policies explained",
+  pages: 20,
+  size: "320 KB",
+};
+
+const RESEARCH = "https://www.policyengine.org/uk/research";
+
+/** Our published write-ups on the Budget, on policyengine.org: the briefing, then each explainer. */
+export const EXPLAINERS = [
+  { slug: "uk-autumn-budget-2026-briefing", title: "Our briefing on what the Budget means for households" },
+  { slug: "budget-2026-energy-bills", title: "The energy bill measures" },
+  { slug: "fuel-duty-cut-extension", title: "The fuel duty cut extension" },
+  { slug: "pension-tax-allowance", title: "The Pension Tax Allowance" },
+  { slug: "uk-autumn-budget-2026-property-income-tax", title: "Higher tax on property income" },
+  { slug: "uk-autumn-budget-2026-trading-allowance", title: "Raising the trading allowance" },
+  { slug: "carers-allowance-taper", title: "The Carer's Allowance earnings taper" },
+  { slug: "uk-triple-lock-budget-2026", title: "The adjusted Triple Lock" },
+];
+
+/** A card with a button that downloads our PDF report, and links to our explainers. */
+function ReportDownload() {
+  const href = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/${REPORT_PDF.file}`;
+  return (
+    <div className="card method-card">
+      <div className="method-report">
+        <div className="method-report-text">
+          <p className="method-report-title">Our report: {REPORT_PDF.title}</p>
+          <p className="method-report-note">
+            Each modelled measure, our estimates beside the official costings, and how we made them.
+            PDF, {REPORT_PDF.pages} pages, {REPORT_PDF.size}.
+          </p>
+        </div>
+        <a className="method-report-button" href={href} download>
+          <FileDown size={18} aria-hidden="true" />
+          Download the PDF
+        </a>
+      </div>
+      <p className="method-report-title method-explainers-title">Our explainers</p>
+      <ul className="method-explainers">
+        {EXPLAINERS.map(({ slug, title }) => (
+          <li key={slug}>
+            <ExternalLink href={`${RESEARCH}/${slug}`}>{title}</ExternalLink>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -173,6 +230,7 @@ function MethodologyTab({ onShowTab }) {
               survey of UK households with and without each policy, {yearRange}, weighted to the UK.
             </>
           }
+          lead={<ReportDownload />}
         >
           <Topic
             id={METHOD_ANCHORS.glossary}
