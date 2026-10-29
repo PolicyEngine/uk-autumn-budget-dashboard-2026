@@ -22,9 +22,8 @@ function figuresOf(id) {
   const words = [
     measure.name,
     measure.starts,
-    measure.changes,
-    measure.reaches,
-    measure.household,
+    measure.summary,
+    ...(measure.points ?? []).map((point) => point.text),
     measure.noCosting,
     ...measure.costings.map((costing) => costing.note),
     ...(card.parameters?.rows ?? []).map((row) => row.label),
