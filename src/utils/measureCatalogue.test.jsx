@@ -257,9 +257,8 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   //   same, as the side panel's short lines, by the same rule.
   // - CALCULATOR_ONLY_MEASURES and SAVINGS_INCOME_RATES_ID: the savings
   //   income tax rise, held back from the release and so never in the
-  //   manifest, which the Household calculator adds to one household's
-  //   request only when its switch is on (Vahid and María, 28 October), and
-//   an example's calculatorOnly, the saver's, which turns it on.
+  //   manifest, which the Household calculator always adds to a
+  //   household's request (Vahid and María, 28 October).
   // Before #185: MODELLING_NOTE, whose id test_reforms.py holds to a
   // registered measure, and singleYear.js's labels for the household API's
   // own programme line of the same name as the Warm Home Discount top-up.
@@ -267,7 +266,7 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   // files, and every other file, still fails.
   const allowed = {
     "utils/policyDetails.js": [/export const POLICY_DETAILS = \[[\s\S]*?\n\];/],
-    "utils/householdExamples.js": [/^\s*(?:measure|measures|tag|calculatorOnly): .*$/gm],
+    "utils/householdExamples.js": [/^\s*(?:measure|measures|tag): .*$/gm],
     "components/personal/SingleYearResults.jsx": [/export const SPENDING_MEASURES = \[.*\];/],
     "utils/measureModelling.js": [/export const MODELLING_NOTE = \{[\s\S]*?\n\};/],
     "utils/singleYear.js": [/^\s*warm_home_discount_top_up: "[^"]*",$/gm],

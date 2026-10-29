@@ -12,6 +12,7 @@ import {
   postHouseholdDetail,
 } from "../utils/householdImpactApi";
 import { APPROVED_COMMIT, approvedDefinition, reportedDefinitions, requestedDefinitions, route } from "../test/definitionsFixture";
+import { withCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { SELECTABLE_YEARS } from "../utils/displayYears";
 import { HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
 import { presetInputs } from "../utils/householdPresets";
@@ -98,7 +99,9 @@ describe("the example cards' background figures", () => {
     }
     await waitFor(() => expect(first.result.current.pending.size).toBe(0));
     first.unmount();
-    const key = exampleKey(EXAMPLES[0].inputs, { year: YEAR, policies: POLICIES });
+    // Asked, and keyed, with the savings rise the calculator always adds;
+    // checked against the selected measures' approved definitions
+    const key = exampleKey(EXAMPLES[0].inputs, { year: YEAR, policies: [...POLICIES, "savings_income_rates_up"] });
     expect(peekHouseholdImpact(key, null, approvedFor(POLICIES), POLICIES)?.net.change).toBe(5);
     expect(readStoredHeadline(key, null, approvedFor(POLICIES), POLICIES)?.net.change).toBe(5);
     // Again, from the session cache: no request
@@ -122,7 +125,7 @@ describe("the example cards' background figures", () => {
     rerender({ examples: EXAMPLES, policies: ["road_fuel_vat_cut"], year: YEAR, enabled: true, expectedDefinitions: DEFINITIONS, post: api.post });
     expect(old.signal.aborted).toBe(true);
     await waitFor(() => expect(api.calls).toHaveLength(2));
-    expect(api.calls[1].body.policies).toEqual(["road_fuel_vat_cut"]);
+    expect(api.calls[1].body.policies).toEqual(["road_fuel_vat_cut", "savings_income_rates_up"]);
     unmount();
     expect(api.calls[1].signal.aborted).toBe(true);
     expect(result.current.figures).toEqual({});
@@ -141,8 +144,9 @@ describe("the example cards' background figures", () => {
       ),
     );
     await waitFor(() => expect(api.calls).toHaveLength(2));
-    expect(api.calls[1].body.policies).toEqual(["fuel_duty_rise_deferral"]);
-    // The request asked again names only the measures it asks with
+    expect(api.calls[1].body.policies).toEqual(["fuel_duty_rise_deferral", "savings_income_rates_up"]);
+    // The request asked again names only the selected measures it asks
+    // with (the savings rise has no approved definition)
     expect(api.calls[1].definitions).toEqual(approvedFor(["fuel_duty_rise_deferral"]));
     await act(async () => api.answer(api.calls[1], 7));
     await waitFor(() => expect(result.current.figures[EXAMPLES[0].id]?.[YEAR]?.change).toBe(7));
@@ -212,7 +216,9 @@ describe("the example cards' background figures", () => {
 
 // #136: the cards' figures are checked as the calculator's own answers are
 describe("the example cards' background figures, checked against the approved definitions", () => {
-  const key = (y = YEAR, example = EXAMPLES[0], policies = POLICIES) => exampleKey(example.inputs, { year: y, policies });
+  // A card's key: asked with the selection and the calculator-only measures
+  const key = (y = YEAR, example = EXAMPLES[0], policies = POLICIES) =>
+    exampleKey(example.inputs, { year: y, policies: withCalculatorOnly(policies) });
   const nothingKept = (cell = key()) => {
     expect(peekHouseholdImpact(cell, null, approvedFor(POLICIES), POLICIES)).toBeNull();
     expect(sessionStorage.getItem(`ab2026:example-headline:v1:${cell}`)).toBeNull();
@@ -400,7 +406,7 @@ describe("the example cards' background figures, checked against the approved de
           await waitFor(() => expect(result.current.pending.size).toBe(0));
           const shown = reportsAny && policies.every((id) => (reports[id] ?? "same") === "same");
           for (const y of SELECTABLE_YEARS) {
-            const cell = exampleKey(EXAMPLES[0].inputs, { year: y, policies });
+            const cell = exampleKey(EXAMPLES[0].inputs, { year: y, policies: withCalculatorOnly(policies) });
             expect(result.current.figures[EXAMPLES[0].id]?.[y]?.change ?? null).toBe(shown ? 5 : null);
             expect(result.current.failed.has(`${EXAMPLES[0].id}:${y}`)).toBe(!shown);
             // Kept for the calculator and the next visit only when shown

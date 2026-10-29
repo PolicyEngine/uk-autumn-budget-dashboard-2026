@@ -220,6 +220,8 @@ export default function useExampleFigures({
       (!expectedEngine || engineDifferences(expectedEngine, data.engine).length === 0) &&
       definitionRefusals(approvedFor(ids), data.definitions, ids).length === 0;
     let figures = {};
+    // Measures the API refused, the calculator-only ones among them
+    const refused = new Set();
     const pending = new Set();
     const failed = new Set();
     const put = (id, y, net) => {
@@ -246,11 +248,11 @@ export default function useExampleFigures({
       const asks = [];
       for (const y of years) {
         for (const example of examples) {
-          // An example that turns on a calculator-only measure (the saver)
-          // is asked with it, as choosing it asks. Only the selected
-          // measures have approved definitions to check: a calculator-only
-          // one has no published figures (calculatorOnlyMeasures.js)
-          const own = withCalculatorOnly(used, example.calculatorOnly ?? []);
+          // With the calculator-only measures, as choosing it asks, but
+          // any the API refused. Only the selected measures have approved
+          // definitions to check: a calculator-only one has no published
+          // figures (calculatorOnlyMeasures.js)
+          const own = withCalculatorOnly(used).filter((id) => !refused.has(id));
           const key = exampleKey(example.inputs, { year: y, policies: own, publicationKey });
           const approved = approvedFor(used);
           const net =
@@ -316,6 +318,7 @@ export default function useExampleFigures({
         } catch (error) {
           if (!(error instanceof UnknownMeasuresError)) return;
           used = used.filter((id) => !error.unknown.includes(id));
+          for (const id of error.unknown) refused.add(id);
           storeList(supportedKey, used);
           if (used.length === 0) {
             for (const { example, year: y } of asks) failed.add(`${example.id}:${y}`);

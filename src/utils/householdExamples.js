@@ -139,8 +139,8 @@ export const HOUSEHOLD_EXAMPLES = [
   {
     // Takes the commuter's place (Vahid, 28 October 2026): the savings
     // income tax rise is in the Household calculator only (not in the
-    // national results, calculatorOnlyMeasures.js), and this card turns it
-    // on. A basic-rate taxpayer whose savings interest is well above their
+    // national results, calculatorOnlyMeasures.js), always included there.
+    // A basic-rate taxpayer whose savings interest is well above their
     // £1,000 Personal Savings Allowance, so the 2-point rise reaches £9,000
     // of it: about £180 a year. Salary and interest together stay inside
     // the basic-rate band in every year, and the salary is above the £5,000
@@ -151,9 +151,6 @@ export const HOUSEHOLD_EXAMPLES = [
     description: "£30,000 salary, £10,000 a year of savings interest",
     icon: "piggyBank",
     measure: "savings_income_rates_up",
-    // Calculator-only measures this card turns on: its figures and its
-    // precomputed answers are with them added to the published ones
-    calculatorOnly: ["savings_income_rates_up"],
     tag: "Savings tax",
     inputs: {
       ...RESET,

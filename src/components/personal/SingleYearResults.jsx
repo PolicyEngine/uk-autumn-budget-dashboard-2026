@@ -304,8 +304,7 @@ const shortReason = (text) => {
 function AboutResult({ items, caution, bars, totals }) {
   const noEffect = bars?.noEffectItems ?? [];
   // Employer costs are said with their chip under "No effect on you"
-  // A calculator-only measure's note is under the waterfall, beside its bar
-  const notes = (bars?.notes ?? []).filter((note) => note.kind !== "employer_cost" && note.kind !== "calculator_only");
+  const notes = (bars?.notes ?? []).filter((note) => note.kind !== "employer_cost");
   const under = bars?.underAPound ?? [];
   // The waterfall's bars start above £0 (its axis tick shows where): why
   const scaleStart = totals ? waterfallScaleStart(totals, bars ? bars.rows : null) : 0;
@@ -523,16 +522,6 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
           // showed (chart and table audit, 28 October)
           typeOf={(id) => policyDetailsFor(catalogue.find((policy) => policy.id === id))?.type ?? null}
         />
-        {/* A calculator-only measure (the savings rise): why it is in this
-            household's result but not the national ones, one line under
-            its bar */}
-        {(bars?.notes ?? [])
-          .filter((note) => note.kind === "calculator_only")
-          .map((note) => (
-            <p key={note.id} className="single-year-quiet result-card-calculator-only" data-note={note.kind}>
-              <strong>{note.name}</strong>: {note.text}
-            </p>
-          ))}
       </div>
       <AboutResult items={items} caution={caution} bars={bars} totals={totals} />
     </section>

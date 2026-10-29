@@ -14,6 +14,7 @@ import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixtu
 import { POLICIES_FOR_TEST } from "../../test/personalPolicies";
 import { APPROVED_COMMIT, approvedDefinition, requestedDefinitions, route, withReportedDefinitions } from "../../test/definitionsFixture";
 import { keepSentence, marginalRateSentence } from "../../utils/singleYear";
+import { withCalculatorOnly } from "../../utils/calculatorOnlyMeasures";
 
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
 // The receipts' model versions, which the household fixture's answer runs:
@@ -354,7 +355,8 @@ describe("the household calculation, from the fixture", () => {
       "Share of your income",
       "Income percentile",
     ]);
-    expect(tiles[0]).toHaveTextContent(`In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies`);
+    // The selected policies and the savings rise the calculator always adds
+    expect(tiles[0]).toHaveTextContent(`In 2029-30, with ${SUPPORTED_POLICY_IDS.length + 1} policies`);
     expect(changeValue()).toBe("+£3,765");
     // All three figures in the tiles' one headline class, the change not
     // in the map's micro .result-value
@@ -1247,7 +1249,8 @@ describe("a household calculation from other definitions", () => {
     rerender(tab(rest));
     expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
     expect(screen.queryByText(NOTICE)).not.toBeInTheDocument();
-    expect(yours().at(-1).policies).toEqual(rest);
+    // With the savings rise the calculator always adds
+    expect(yours().at(-1).policies).toEqual(withCalculatorOnly(rest));
   });
 
   it("an edit after a refusal takes it away, and removing the measure then brings nothing back", async () => {
@@ -1329,7 +1332,7 @@ describe("a household calculation from other definitions", () => {
     const region = await results();
     expect(await within(region).findByText(HEADLINE)).toBeInTheDocument();
     expect(within(region).queryByText(NOTICE)).not.toBeInTheDocument();
-    expect(household.at(-1).policies).toEqual(SUPPORTED_POLICY_IDS);
+    expect(household.at(-1).policies).toEqual(withCalculatorOnly(SUPPORTED_POLICY_IDS));
   });
 
   it("names only the definitions of the measures it asks about", async () => {
@@ -1352,7 +1355,7 @@ describe("a household calculation from other definitions", () => {
     const before = urls.length;
     render(tab([...SUPPORTED_POLICY_IDS, extra]), { wrapper: PublishedMeasures });
     await waitFor(() => expect(urls.length).toBeGreaterThan(before));
-    expect(household.at(-1).policies).toEqual(SUPPORTED_POLICY_IDS);
+    expect(household.at(-1).policies).toEqual(withCalculatorOnly(SUPPORTED_POLICY_IDS));
     // The household API's requests (the page also loads its files)
     const asked = urls.filter((url) => route(url) === HOUSEHOLD_API);
     expect(asked.length).toBeGreaterThan(0);

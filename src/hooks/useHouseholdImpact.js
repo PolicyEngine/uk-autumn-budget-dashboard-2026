@@ -18,7 +18,7 @@ import {
   requestKey,
   stageMismatch,
 } from "../utils/householdImpactApi";
-import { isCalculatorOnly } from "../utils/calculatorOnlyMeasures";
+import { definitionChecked } from "../utils/calculatorOnlyMeasures";
 
 // Results already fetched this session, by request: switching the year or
 // the policies back shows them at once
@@ -171,12 +171,9 @@ export default function useHouseholdImpact({ inputs, year, policies, enabled, pu
   // with Calculate, then edited while the bar changed). The check is made
   // again whenever one of them comes or goes, so a refusal never outlives
   // the definitions it was made against. Only a measure with published
-  // figures has one: a calculator-only measure turned on
-  // (utils/calculatorOnlyMeasures.js) with none is computed by the API's
-  // running code, unchecked, and the calculator says it is not in the
-  // national results. Once one has an approved definition (back in the
-  // national results), it is checked as any other.
-  const published = policies.filter((id) => !isCalculatorOnly(id) || Object.hasOwn(expectedDefinitions ?? {}, id));
+  // figures has one: a calculator-only measure, which every household
+  // request carries, is checked only once it has one (`definitionChecked`)
+  const published = definitionChecked(policies, expectedDefinitions);
   const approved = Object.fromEntries(
     published.filter((id) => Object.hasOwn(expectedDefinitions ?? {}, id)).map((id) => [id, expectedDefinitions[id]]),
   );

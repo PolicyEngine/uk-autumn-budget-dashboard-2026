@@ -11,6 +11,7 @@ import {
   requestKey,
 } from "../utils/householdImpactApi";
 import { peekHouseholdImpact } from "./useHouseholdImpact";
+import { definitionChecked } from "../utils/calculatorOnlyMeasures";
 
 // This hook's own answers, by key. Kept apart from useHouseholdImpact's
 // cache: an answer there is shown as the page's headline, and this one has
@@ -53,6 +54,9 @@ function approvedFor(ids, definitions) {
  * refused, as an error, when the answer reports others or none; the ring
  * then goes by the shown result's own baseline income. A selected measure
  * with no approved definition is asked about nowhere: nothing is placed.
+ * A calculator-only measure with none, which every household request
+ * carries, is asked unchecked, as the calculator asks it
+ * (`definitionChecked`).
  *
  * @param {Object} params
  * @param {Object|null} params.inputs - The answers the result was asked with
@@ -82,14 +86,17 @@ export default function useBasisIncome({
   basisYear,
   enabled,
 }) {
-  const own = approvedFor(policies, expectedDefinitions);
-  const preset = approvedFor(presetPolicies, presetDefinitions);
+  // The measures each answer is checked for
+  const ownChecked = definitionChecked(policies, expectedDefinitions);
+  const presetChecked = definitionChecked(presetPolicies, presetDefinitions);
+  const own = approvedFor(ownChecked, expectedDefinitions);
+  const preset = approvedFor(presetChecked, presetDefinitions);
   // The selection's own answer first, then the examples'
   const lookups =
     enabled && inputs && basisYear && own
       ? [
-          { policies, approved: own },
-          ...(preset ? [{ policies: presetPolicies, approved: preset }] : []),
+          { policies, checked: ownChecked, approved: own },
+          ...(preset ? [{ policies: presetPolicies, checked: presetChecked, approved: preset }] : []),
         ].map((set) => ({
           ...set,
           key: `${publicationKey}:${requestKey(buildHouseholdRequest(inputs, { year: basisYear, policies: set.policies }))}`,
@@ -101,7 +108,7 @@ export default function useBasisIncome({
   const ownKey = primary ? `${primary.key}#${JSON.stringify(Object.entries(primary.approved))}` : null;
   const fromCache = () => {
     for (const lookup of lookups) {
-      const data = peekHouseholdImpact(lookup.key, expectedEngine, lookup.approved, lookup.policies);
+      const data = peekHouseholdImpact(lookup.key, expectedEngine, lookup.approved, lookup.checked);
       if (data && Number.isFinite(data.net?.before)) return data.net.before;
     }
     return ownKey !== null && fetchedIncomes.has(ownKey) ? fetchedIncomes.get(ownKey) : null;
@@ -122,7 +129,7 @@ export default function useBasisIncome({
         const data = normaliseHouseholdImpact(raw);
         const differ = expectedEngine ? engineDifferences(expectedEngine, data.engine) : [];
         if (differ.length > 0) throw new EngineMismatchError(differ);
-        const refused = definitionRefusals(primary.approved, data.definitions ?? null, policies);
+        const refused = definitionRefusals(primary.approved, data.definitions ?? null, primary.checked);
         if (refused.length > 0) throw new DefinitionMismatchError(refused, { unchecked: data.definitions === null });
         if (!Number.isFinite(data.net?.before)) throw new Error("The answer has no baseline net income");
         fetchedIncomes.set(ownKey, data.net.before);

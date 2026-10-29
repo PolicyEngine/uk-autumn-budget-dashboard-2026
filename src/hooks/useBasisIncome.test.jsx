@@ -251,3 +251,50 @@ it("finds nothing in the page's cache with no measures to check an answer agains
   }
   expect(peekHouseholdImpact(pageKey(PUBLICATION), PUBLISHED_ENGINE, undefined, POLICIES)).toBeNull();
 });
+
+describe("with the calculator-only savings rise, which every household request carries", () => {
+  // It publishes no figures, so it has no approved definition
+  // (utils/calculatorOnlyMeasures.js)
+  const SAVINGS = "savings_income_rates_up";
+  const WITH_SAVINGS = [...POLICIES, SAVINGS];
+  const named = (url) => requestedDefinitions(url).sort();
+  const publishedAt = (commit) => POLICIES.map((id) => [id, commit]).sort();
+
+  it("asks with it, naming only the published measures' definitions, and places the household", async () => {
+    const { result } = render({ policies: WITH_SAVINGS });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(urls).toHaveLength(1);
+    expect(named(urls[0])).toEqual(publishedAt(APPROVED_COMMIT));
+  });
+
+  it("uses the examples' precomputed answers, asked with it, asking nothing", () => {
+    const presetWithSavings = [...PRESET, SAVINGS];
+    const key = `${PUBLICATION}:${requestKey(buildHouseholdRequest(WIZARD_DEFAULTS, { year: BASIS_YEAR, policies: presetWithSavings }))}`;
+    const data = { ...answer(), definitions: PRESET_APPROVED };
+    seedHouseholdImpactCache([[key, data]]);
+    const { result } = render({ policies: WITH_SAVINGS, presetPolicies: presetWithSavings, presetDefinitions: PRESET_APPROVED });
+    expect(result.current).toEqual({ status: "ready", income: data.net.before });
+    expect(asked).toBe(0);
+  });
+
+  it("still refuses an answer that reports another definition for a published measure", async () => {
+    respond = (url, body) => {
+      const reported = reportedDefinitions(url);
+      return { ...householdAnswerFor(body), definitions: { ...reported, [POLICIES[0]]: { ...reported[POLICIES[0]], git_sha: "f".repeat(40) } } };
+    };
+    const { result } = render({ policies: WITH_SAVINGS });
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    expect(result.current.income).toBeNull();
+  });
+
+  it("checks it as any other once it has an approved definition", async () => {
+    const withItsOwn = { ...APPROVED, [SAVINGS]: approvedDefinition(SAVINGS) };
+    respond = (url, body) => {
+      const reported = reportedDefinitions(url);
+      return { ...householdAnswerFor(body), definitions: { ...reported, [SAVINGS]: { ...reported[SAVINGS], git_sha: "f".repeat(40) } } };
+    };
+    const { result } = render({ policies: WITH_SAVINGS, expectedDefinitions: withItsOwn });
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    expect(named(urls[0])).toEqual(WITH_SAVINGS.map((id) => [id, APPROVED_COMMIT]).sort());
+  });
+});

@@ -128,8 +128,11 @@ describe("the personal impact form", () => {
     const spending = groupToggle("Spending");
     expect(spending).toHaveAttribute("aria-expanded", "true");
     expect(document.getElementById(spending.getAttribute("aria-controls"))).toBeVisible();
-    // No policy selected reads anything: each step shows all its answers
-    expect(document.querySelector(".household-step-optional-toggle")).toBeNull();
+    // No selected policy reads anything; the savings rise, always in the
+    // request, reads savings interest, so only that step splits its answers
+    expect([...document.querySelectorAll(".household-step-optional-toggle")].map((toggle) => toggle.getAttribute("aria-controls"))).toEqual([
+      "household-step-savings-panel-optional",
+    ]);
     expect(fields()).toEqual([
       ...essentials,
       "petrol_spending_per_year",
@@ -886,28 +889,23 @@ describe("the selected policies' questions", () => {
       vi.unstubAllEnvs();
     }
   });
-  it("keeps the savings switch in the address, so a reload keeps it", async () => {
+  it("has no savings switch, and ignores an old ?also= in the address", () => {
     const published = ALL_SEVEN.filter((id) => id !== "savings_income_rates_up");
     window.history.replaceState({}, "", "/?tab=household&also=savings_income_rates_up");
     try {
       form(published);
-      const toggle = () => screen.getByRole("checkbox", { name: /Also include: Savings income tax up/ });
-      await waitFor(() => expect(toggle()).toBeChecked());
-      // On, the savings interest question comes first in its step
+      expect(screen.queryByRole("checkbox", { name: /Savings income tax up/ })).toBeNull();
+      expect(document.body).not.toHaveTextContent(/Also include/);
+      expect(document.body).not.toHaveTextContent(/Held back from the national results/);
+      // The page keeps working; the savings interest question is first in its step
       openSteps();
-      expect(asked("Savings and other income")).toContain("savings_interest_per_year");
-      fireEvent.click(toggle());
-      expect(toggle()).not.toBeChecked();
-      await waitFor(() => expect(new URLSearchParams(window.location.search).get("also")).toBeNull());
-      expect(new URLSearchParams(window.location.search).get("tab")).toBe("household");
-      fireEvent.click(toggle());
-      await waitFor(() => expect(new URLSearchParams(window.location.search).get("also")).toBe("savings_income_rates_up"));
+      expect(asked("Savings and other income")[0]).toBe("savings_interest_per_year");
     } finally {
       window.history.replaceState({}, "", "/");
     }
   });
 
-  it("adds the savings income tax rise to this household's request only when its switch is on", async () => {
+  it("always adds the savings income tax rise to a household's request, the cards' too", async () => {
     const API = "https://api.test/api/household-impact";
     const bodies = [];
     const urls = [];
@@ -929,32 +927,23 @@ describe("the selected policies' questions", () => {
     const expectedDefinitions = Object.fromEntries(published.map((id) => [id, approvedDefinition(id)]));
     try {
       form(published, { year: 2027, expectedDefinitions });
-      const toggle = screen.getByRole("checkbox", { name: /Also include: Savings income tax up \(not in the national results\)/ });
-      // Off at first: the request is the selection itself (the presets' key)
-      expect(toggle).not.toBeChecked();
-      // Savings interest is always first in its step, in view
       openSteps();
-      expect(asked("Savings and other income")[0]).toBe("savings_interest_per_year");
       fireEvent.change(box("Savings interest"), { target: { value: "12000" } });
       fireEvent.blur(box("Savings interest"));
       fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
       const headline = () => bodies.filter((body) => body.household.savings_interest_income === 12000 && body.include.length === 0);
       await waitFor(() => expect(headline()).toHaveLength(1));
-      expect(headline()[0].policies).toEqual(published);
-      // On: the calculation runs again, with it after the selected ones
-      fireEvent.click(toggle);
-      expect(toggle).toBeChecked();
-      await waitFor(() => expect(headline()).toHaveLength(2));
-      expect(headline()[1].policies).toEqual([...published, "savings_income_rates_up"]);
+      expect(headline()[0].policies).toEqual([...published, "savings_income_rates_up"]);
       // Asked, not refused for having no approved definition, and naming
       // only the published measures' definitions
-      expect(requestedDefinitions(urls[bodies.indexOf(headline()[1])]).sort()).toEqual(
-        published.map((id) => [id, APPROVED_COMMIT]).sort(),
-      );
-      // The example cards' figures stay with the published measures, but
-      // the saver's (£10,000 of interest), which turns the rise on
+      const named = published.map((id) => [id, APPROVED_COMMIT]).sort();
+      expect(requestedDefinitions(urls[bodies.indexOf(headline()[0])]).sort()).toEqual(named);
+      // Every example card's figures are asked with it too, naming the
+      // same definitions
       const cards = bodies.filter((body) => body.household.savings_interest_income !== 12000);
-      expect(cards.filter((body) => body.household.savings_interest_income !== 10000).every((body) => !body.policies.includes("savings_income_rates_up"))).toBe(true);
+      expect(cards.length).toBeGreaterThan(0);
+      expect(cards.every((body) => body.policies.at(-1) === "savings_income_rates_up")).toBe(true);
+      for (const body of cards) expect(requestedDefinitions(urls[bodies.indexOf(body)]).sort()).toEqual(named);
     } finally {
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();
