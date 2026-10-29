@@ -226,33 +226,18 @@ export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES }) {
         </div>
       </div>
       <div id={`${id}-cards`} className="report-section policy-details-content" hidden={!open}>
-        {/* A group per reason we do not model them: its title and why,
-            then its cards, two to a row */}
-        {open &&
-          groupsOf(measures).map(({ id: group, label, why, items }) => (
-            <div key={group} className="umm-group" data-reason={group}>
-              {label && (
-                <>
-                  <p className="umm-group-title" id={`${id}-${group}`}>
-                    {label}
-                  </p>
-                  <p className="umm-group-why" id={`${id}-${group}-why`}>
-                    {why}
-                  </p>
-                </>
-              )}
-              <ul
-                className="policy-cards umm-list"
-                aria-labelledby={label ? `${id}-${group}` : undefined}
-                aria-describedby={label ? `${id}-${group}-why` : undefined}
-              >
-                {items.map((measure) => {
-                  const { policy, parameters } = unmodelledCard(measure);
-                  return <PolicyCard key={measure.id} policy={policy} parameters={parameters} />;
-                })}
-              </ul>
-            </div>
-          ))}
+        {/* One list of cards, two to a row, with no group titles (Vahid,
+            29 Oct): the section's title and subtitle say why they are here */}
+        {open && (
+          <ul className="policy-cards umm-list">
+            {groupsOf(measures)
+              .flatMap(({ items }) => items)
+              .map((measure) => {
+                const { policy, parameters } = unmodelledCard(measure);
+                return <PolicyCard key={measure.id} policy={policy} parameters={parameters} />;
+              })}
+          </ul>
+        )}
       </div>
     </section>
   );

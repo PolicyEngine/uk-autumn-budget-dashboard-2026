@@ -253,48 +253,16 @@ describe("UnmodelledMeasures", () => {
   });
 
   // #297: by why we do not model each one, and whether we will
-  it("groups the cards by why we do not model them, each group titled with its reason in a line", () => {
-    expect(UNMODELLED_REASONS.map(({ label }) => label)).toEqual([
-      "Coming soon",
-      "Modelled separately",
-      "Outside a household model",
-      "Not in our data yet",
-    ]);
-    // Every measure names a reason the groups have
-    expect(UNMODELLED_MEASURES.filter((m) => !UNMODELLED_REASONS.some(({ id }) => id === m.reason)).map((m) => m.id)).toEqual([]);
-    for (const { id, why } of UNMODELLED_REASONS) {
-      expect(why, id).toMatch(/^[A-Z].*\.$/);
-      expect(why.split(/\s+/).length, id).toBeLessThanOrEqual(30);
-    }
+  it("shows the cards as one list, with no group titles (Vahid, 29 Oct)", () => {
     render(<UnmodelledMeasures />);
     open();
-    const shown = [...document.querySelectorAll(".umm-group")].map((group) => ({
-      title: group.querySelector(".umm-group-title").textContent,
-      cards: [...group.querySelectorAll(".policy-card")].map((card) => card.id.replace(/^unmodelled-/, "")),
-    }));
-    expect(shown).toEqual([
-      { title: "Coming soon", cards: ["bus-fare-cap", "savings-income-tax", "machine-games-duty", "cash-isa-limit"] },
-      { title: "Modelled separately", cards: ["adjusted-triple-lock"] },
-      { title: "Outside a household model", cards: ["bank-surcharge", "pubs-business-rates-relief", "online-marketplace-liability", "your-first-home"] },
-      {
-        title: "Not in our data yet",
-        cards: [
-          "national-living-wage",
-          "universal-credit-surplus-earnings",
-          "mileage-rates",
-          "company-car-tax",
-          "business-asset-disposal-relief",
-          "first-time-buyer-isa",
-          "parental-allowance",
-          "gas-standing-charges",
-        ],
-      },
-    ]);
-    // Each group's list is named by its title and described by its reason
-    for (const { label, why } of UNMODELLED_REASONS) {
-      const list = screen.getByRole("list", { name: label });
-      expect(list).toHaveAccessibleDescription(why);
-    }
+    expect(document.querySelectorAll(".umm-group-title")).toHaveLength(0);
+    expect(screen.queryByText("Coming soon")).toBeNull();
+    expect(screen.queryByText("Modelled separately")).toBeNull();
+    expect(document.querySelectorAll("ul.umm-list")).toHaveLength(1);
+    const cards = [...document.querySelectorAll(".umm-list .policy-card")].map((card) => card.id.replace(/^unmodelled-/, ""));
+    expect(cards).toHaveLength(UNMODELLED_MEASURES.length);
+    expect(new Set(cards).size).toBe(cards.length);
   });
 
   it("puts a measure with no known reason last, unlabelled, and leaves out an empty group", () => {
