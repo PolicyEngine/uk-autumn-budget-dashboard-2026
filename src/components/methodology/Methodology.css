@@ -754,16 +754,34 @@
   min-width: 0;
 }
 
-.method-report-title {
+.method-report-eyebrow {
   margin: 0 0 4px;
+  font-size: var(--fs-micro);
   font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pe-teal-700);
+}
+
+.method-report-title {
+  margin: 0 0 6px;
+  font-size: var(--fs-body-lg);
+  font-weight: 600;
+  line-height: 1.35;
   color: var(--pe-gray-900);
 }
 
 .method-report-note {
   margin: 0;
   font-size: var(--fs-small);
-  color: var(--pe-gray-600);
+  line-height: 1.5;
+  color: var(--pe-gray-700);
+}
+
+.method-report-meta {
+  margin: 6px 0 0;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
 }
 
 .method-card .method-report-button {
