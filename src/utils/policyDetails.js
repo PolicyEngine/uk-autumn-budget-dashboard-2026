@@ -171,15 +171,16 @@ export const POLICY_DETAILS = [
     shortName: "Zero VAT on electricity",
     sentence: "taking VAT off household electricity",
     name: "Zero VAT on domestic electricity",
-    description: "Zero-rate VAT on domestic electricity to July 2027",
+    description: "Zero-rate VAT on domestic electricity to June 2027",
     writtenFor: "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027. It applies in Great Britain from October 2026 and across the UK from April 2027. It covers electricity only, not gas. Each year counts its share of a year's electricity use: about 57% in 2026-27 (October to March) and 22% in 2027-28 (April to June).",
     summary:
-      "Charges no VAT on household electricity bills, instead of 5%, from October 2026 to July 2027.",
+      "Charges no VAT on household electricity bills, instead of 5%, from October 2026 to June 2027.",
     starts: "Oct 2026",
     affects: "Households in Great Britain, and expected in Northern Ireland from April 2027",
     type: "VAT",
     inForce: { from: "2026-10", to: "2027-06" },
-    ends: "Jul 2027",
+    // The last month in force (to 30 June 2027), as for the other cards
+    ends: "Jun 2027",
     howCalculated:
       "Applies 0% VAT instead of 5% to each household's electricity spending in the survey.",
     details:
