@@ -146,7 +146,7 @@ describe("each kind of picture", () => {
     };
     expect(labels("bank-surcharge")).toEqual({ text: ["3%", "6% for 15 months", "Jan 2027", "Mar 2028"], lines: 2 });
     expect(labels("mileage-rates")).toEqual({ text: ["55p, made permanent", "35p", "was 25p", "10,000 miles"], lines: 2 });
-    expect(labels("gas-standing-charges")).toEqual({ text: ["£108 standing charge", "Light users pay less", "Heavy users pay more"], lines: 2 });
+    expect(labels("gas-standing-charges")).toEqual({ text: ["£108 standing charge", "Less gas used: bill falls", "More gas used: bill rises"], lines: 2 });
   });
 
   it("pubs relief: the relief as a share of the bill, 15% then 35%", () => {
