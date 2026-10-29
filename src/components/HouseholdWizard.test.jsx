@@ -360,7 +360,7 @@ describe("the personal impact form", () => {
       "A family with high electricity use",
       "A landlord with savings",
       "A middle earner who lets a flat",
-      "A lone parent working part time",
+      "A bus commuter in the North West",
     ]);
     const examples = buttons.slice(1);
     expect(examples.every((item) => card(item).querySelector(".household-card-description").textContent.length > 0)).toBe(true);
@@ -510,7 +510,7 @@ describe("the personal impact form", () => {
       "Universal Credit family",
       "Landlord",
       "Small landlord",
-      "Lone parent",
+      "Bus commuter",
     ]);
     // The full name on hover, the short one cut if it runs out of room
     expect(chips[0]).toHaveAttribute("title", "A pensioner with a small private pension");
@@ -536,7 +536,7 @@ describe("the personal impact form", () => {
     // End: the last example; Home and Enter: Your household, chosen with
     // its tick, the form open
     fireEvent.keyDown(document.activeElement, { key: "End" });
-    expect(document.activeElement).toBe(exampleItem("A lone parent working part time"));
+    expect(document.activeElement).toBe(exampleItem("A bus commuter in the North West"));
     fireEvent.keyDown(document.activeElement, { key: "Home" });
     expect(document.activeElement).toBe(yoursCard());
     fireEvent.keyDown(document.activeElement, { key: "Enter" });
@@ -565,7 +565,6 @@ describe("the personal impact form", () => {
   it("fills the household answers from each example", () => {
     const cases = [
       ["A carer working part time", { housing: "Mortgage", partner: "Yes", children: "0", caring: "Yes" }],
-      ["A lone parent working part time", { housing: "Rent", rent: REGIONAL_RENT.NORTH_WEST, partner: "No", children: "1", caring: "No" }],
     ];
     for (const [label, expected] of cases) {
       resetSavedWizard();
