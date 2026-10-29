@@ -198,25 +198,41 @@ describe("By age's selection rule with a single that withholds its age bands", (
 });
 
 describe("Average change by age with a package whose every member has rows by age", () => {
-  it("shows the package's own bars, with each policy's part offered as By policy", async () => {
+  it("opens on By policy, each policy's part stacked under the package's net, and keeps the reader's choice", async () => {
     const { container } = await renderAge(measureCatalogueFixture({ held: false }), [ALPHA, BETA]);
     const card = meanCard(container);
-    const bandRows = () => chartRows(card).find((rows) => rows.some((point) => point.band === "16-24"));
-    // By default: the package's own net, no policy parts
+    const bandRows = () => chartRows(container.querySelector(".young-people-mean")).find((rows) => rows.some((point) => point.band === "16-24"));
+    // By default (Vahid, 29 October): each policy's own rows stacked under the package's net
+    expect(bandRows().map((point) => point[`measure:${ALPHA}`])).toEqual(BANDS.map(() => 100));
+    expect(bandRows().map((point) => point[`measure:${BETA}`])).toEqual(BANDS.map(() => -50));
+    expect(bandRows().map((point) => point.netChange)).toEqual(BANDS.map(() => 50));
+    // By policy is the default, so the pill does not name it
+    expect(within(card).getByRole("button", { name: /^Options:/ }).getAttribute("aria-label") ?? "").not.toMatch(/By policy/);
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    expect(within(card).getByRole("radio", { name: "By policy" })).toHaveAttribute("aria-checked", "true");
+    // All selected policies: the package's own net, no policy parts
+    fireEvent.click(within(card).getByRole("radio", { name: "All selected policies" }));
     expect(bandRows().map((point) => point.netChange)).toEqual(BANDS.map(() => 50));
     expect(bandRows().every((point) => point[`measure:${ALPHA}`] === null)).toBe(true);
     expect(within(card).getByText("Average change in household income per person, £ a year, with all the selected policies.")).toBeInTheDocument();
     expect(within(card).queryByText(PACKAGE_NET_ONLY)).toBeNull();
-    // By policy: each policy's own rows stacked under the package's net
-    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
-    fireEvent.click(within(card).getByRole("radio", { name: "By policy" }));
-    expect(bandRows().map((point) => point[`measure:${ALPHA}`])).toEqual(BANDS.map(() => 100));
-    expect(bandRows().map((point) => point[`measure:${BETA}`])).toEqual(BANDS.map(() => -50));
-    expect(bandRows().map((point) => point.netChange)).toEqual(BANDS.map(() => 50));
-    expect(within(card).getByRole("button", { name: /^Options:.*By policy/ })).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: /^Options:.*All selected policies/ })).toBeInTheDocument();
     // No caveat: nothing is withheld
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
     expect(within(card).queryByText(PACKAGE_PARTS_CAVEAT)).toBeNull();
+  });
+
+  it("keeps the reader's Policies choice across a switch to single years and back", async () => {
+    const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
+    const card = meanCard(container);
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(card).getByRole("radio", { name: "All selected policies" }));
+    const again = container.querySelector(".young-people-mean");
+    if (!within(again).queryByRole("radio", { name: "Single year of age" })) fireEvent.click(within(again).getByRole("button", { name: /^Options:/ }));
+    fireEvent.click(within(again).getByRole("radio", { name: "Single year of age" }));
+    const back = meanCard(container);
+    fireEvent.click(within(back).getByRole("button", { name: /^Options:/ }));
+    expect(within(back).getByRole("radio", { name: "All selected policies" })).toHaveAttribute("aria-checked", "true");
   });
 });
 
@@ -294,6 +310,62 @@ describe("Average change by age by single year of age (the default view)", () =>
     expect(within(trend).queryAllByTestId("series").map((node) => node.dataset.key)).not.toContain(`measure:${ALPHA}`);
     fireEvent.click(within(trend).getByRole("button", { name: /About this chart/ }));
     expect(await within(trend).findByText(withheldNetOnly(["Mock beta contribution"]))).toBeInTheDocument();
+  });
+});
+
+describe("Average change by age when the package withholds every single age", () => {
+  // The members have single years, the package none (a package withholds
+  // what its members withhold, #347); `bands` keeps or drops its age bands
+  function packageWithoutSingleAges({ bands = true } = {}) {
+    const fixture = withSingleAges(measureCatalogueFixture({ held: false }), COMBINED);
+    if (bands) return fixture;
+    const [header, ...lines] = fixture.ageCsv.split("\n");
+    const kept = lines.filter((line) => {
+      const [id, , , band] = line.split(",");
+      return !(id === COMBINED && BANDS.includes(band));
+    });
+    return { ...fixture, ageCsv: [header, ...kept].join("\n") };
+  }
+
+  it("falls back to the age bands, with no note, and Options shows Age groups chosen", async () => {
+    const { container } = await renderAge(packageWithoutSingleAges(), [ALPHA, BETA]);
+    expect(container.querySelector(".single-age-card")).toBeNull();
+    const card = container.querySelector(".young-people-mean");
+    expect(card).not.toBeNull();
+    // No note on the card (Vahid, 29 October)
+    expect(card.querySelector(".note")).toBeNull();
+    expect(card.textContent).not.toMatch(/Single ages not published/);
+    expect(card.textContent).not.toMatch(/Not shown: too few survey records at every age/);
+    // The package's own net in every band
+    const bands = chartRows(card).find((rows) => rows.some((point) => point.band === "16-24"));
+    expect(bands.map((point) => point.netChange)).toEqual(BANDS.map(() => 50));
+    const pill = within(card).getByRole("button", { name: /^Options:/ });
+    expect(pill.getAttribute("aria-label") ?? pill.textContent).toMatch(/Age groups/);
+    fireEvent.click(pill);
+    expect(within(card).getByRole("radio", { name: "Age groups" })).toHaveAttribute("aria-checked", "true");
+    const single = within(card).getByRole("radio", { name: "Single year of age" });
+    expect(single).toBeDisabled();
+    expect(single).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(single);
+    expect(container.querySelector(".single-age-card")).toBeNull();
+    // No explanation line, no confidentiality wording anywhere on the card
+    expect(card.querySelector(".control-bar-note")).toBeNull();
+    expect(container.querySelector(".young-people-mean").textContent).not.toMatch(/confidential|not published for this selection/i);
+  });
+
+  it("keeps the single-age view for a policy alone that has its single ages", async () => {
+    const { container } = await renderAge(packageWithoutSingleAges(), [ALPHA]);
+    const card = container.querySelector(".single-age-card");
+    expect(card).not.toBeNull();
+    expect(container.querySelector(".young-people-mean")).toBeNull();
+  });
+
+  it("says not shown where the package withholds its bands too", async () => {
+    const { container } = await renderAge(packageWithoutSingleAges({ bands: false }), [ALPHA, BETA]);
+    const card = container.querySelector(".single-age-card");
+    expect(card).not.toBeNull();
+    expect(card.textContent).toMatch(/Not shown: too few survey records at every age from 16 to 24\./);
+    expect(container.querySelector(".young-people-mean")).toBeNull();
   });
 });
 

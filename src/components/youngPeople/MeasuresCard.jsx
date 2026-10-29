@@ -189,7 +189,7 @@ const UNIT = "Average change in household income, per person (£ a year)";
  * chosen age group (16 to 24 at first) beside its all-ages figure, in the
  * selected year. Every bar is one policy's own run, so nothing is added up.
  */
-function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, extraOptions = [] }) {
+function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, extraOptions = [], defaultCompare = ALL_BAND }) {
   const { byId } = useMeasureCatalogue();
   const chartRef = useRef(null);
   // The section's age group (By age), which the card's Compare can override
@@ -198,8 +198,9 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
   useEffect(() => {
     setBand(group);
   }, [group]);
-  // What the group is compared with: all ages, or another age band
-  const [compareWith, setCompareWith] = useState(ALL_BAND);
+  // What the group is compared with: all ages, or another age band (By age
+  // opens on 25 to 34, defaultCompare; all ages when that is the group)
+  const [compareWith, setCompareWith] = useState(defaultCompare);
   const compareKey = compareWith === band ? ALL_BAND : compareWith;
   // All ages chosen as the group: nothing to compare it with
   const single = band === compareKey;

@@ -71,6 +71,26 @@ export const agesText = ([first, last]) => `${first} to ${last >= SINGLE_AGE_TOP
 // The text helpers live with the selection rule; re-exported for the tests
 export { withheldPartsCaveat };
 
+/**
+ * Whether the chosen group's single ages are all withheld in the year (too
+ * few survey records at every one, under the selection rule) while the year
+ * is published and the combination is: By age then shows the age bands
+ * instead (AgeChangeCard).
+ */
+export function everySingleAgeWithheld({ catalogue, rows, policies, selectedPolicies, selectedYear, group = PENSIONERS }) {
+  const year = Number(selectedYear);
+  if (!isPublished(rows, year)) return false;
+  const [first, last] = ageWindow(group, year);
+  const points = singleAgeSelection(singleAgeBars(rows, policies, selectedPolicies, year, first, last), {
+    rows,
+    policies,
+    selected: selectedPolicies,
+    year,
+    packageRun: selectionPackageKey(catalogue?.manifest, selectedPolicies),
+  });
+  return points.length > 0 && points.every((point) => point.netChange === null && !point.combinationUnavailable);
+}
+
 /** An age tick, the group's ends in bold teal. */
 function AgeTick({ x, y, payload, ends }) {
   const own = ends.includes(payload.value);

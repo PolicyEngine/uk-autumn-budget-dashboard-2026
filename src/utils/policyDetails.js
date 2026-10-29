@@ -530,7 +530,8 @@ export const POLICY_DETAILS = [
     // Paid through epg_subsidy, which policyengine-uk 2.151.0's
     // hbai_household_net_income does not add
     outsidePovertyIncome: true,
-    ends: "Jan 2028",
+    // The last month in force (to 31 December 2027), not the month after
+    ends: "Dec 2027",
     howCalculated:
       "Shares the Treasury's costing (Table 6.1) out by bus fare spending in England outside London, and adds it to income.",
     details:

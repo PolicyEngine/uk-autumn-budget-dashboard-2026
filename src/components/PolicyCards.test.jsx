@@ -95,6 +95,16 @@ describe("PolicyCards", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "true");
   });
 
+  it("ends the bus fare cap in its last month in force, December 2027", () => {
+    const id = "bus_fare_cap_2027";
+    expect(detailsById[id].inForce.to).toBe("2027-12");
+    render(<PolicyCards policies={[{ ...published(id, "Single bus fares capped at £2"), timeline: true }]} selectedPolicies={[id]} />);
+    const card = screen.getByRole("listitem");
+    expect(card.querySelector(".policy-card-ends")).toHaveTextContent(/^Ends\s*Dec 2027$/);
+    expect(card).not.toHaveTextContent("Jan 2028");
+    expect(within(card).getByRole("img", { name: /^In force from January 2027 to December 2027 \(12 months\)/ })).toBeTruthy();
+  });
+
   it("marks a lasting measure as continuing, with no end date", () => {
     const id = "badr_lifetime_limit_cut";
     render(<PolicyCards policies={[{ ...published(id, "Business Asset Disposal Relief restricted", "revenue"), timeline: true }]} selectedPolicies={[id]} />);

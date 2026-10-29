@@ -323,7 +323,7 @@ function packageOnly(point, policies) {
   return next;
 }
 
-export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, bandsOnly = false, extraOptions = [], title: titleBase = "Average change by age", keyInLegend = false }) {
+export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear, narrow, height, group = YOUNG_BAND, bandsOnly = false, extraOptions = [], title: titleBase = "Average change by age", keyInLegend = false, defaultPackageView = "package", packageView: heldPackageView, onPackageViewChange }) {
   const catalogue = useMeasureCatalogue();
   const {
     allPolicyNames: ALL_POLICY_NAMES,
@@ -333,7 +333,11 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
   const chartRef = useRef(null);
   // By age shows single years of age in a card of their own (SingleAgeCard)
   const [chosenView, setView] = useState("band");
-  const [packageView, setPackageView] = useState("package");
+  // By age opens on By policy (defaultPackageView); the reader's choice then holds
+  // (held by the parent when it passes packageView, so it survives a view switch)
+  const [ownPackageView, setOwnPackageView] = useState(defaultPackageView);
+  const packageView = heldPackageView ?? ownPackageView;
+  const setPackageView = onPackageViewChange ?? setOwnPackageView;
   const view = bandsOnly ? "band" : chosenView;
   const single = view === "single";
   const yearLabel = fiscalYearTick(selectedYear);
@@ -510,7 +514,7 @@ export function MeanChangeCard({ rows, policies, selectedPolicies, selectedYear,
               ...(bandsOnly ? [] : [{ label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]),
               // Offered only when every selected policy has rows by age (else hidden)
               ...(partsAvailable && !single
-                ? [{ label: "Policies", value: packageView, onChange: setPackageView, options: PACKAGE_VIEWS, omitAtDefault: "package" }]
+                ? [{ label: "Policies", value: packageView, onChange: setPackageView, options: PACKAGE_VIEWS, omitAtDefault: defaultPackageView }]
                 : []),
             ]}
           />
