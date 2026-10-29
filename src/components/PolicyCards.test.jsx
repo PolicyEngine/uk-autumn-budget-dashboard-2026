@@ -17,6 +17,7 @@ import PolicyCards, {
 } from "./PolicyCards";
 import { buildMeasureCatalogue } from "../utils/measureCatalogue";
 import { POLICY_DETAILS } from "../utils/policyDetails";
+import { explainerFor } from "../utils/explainers";
 import { ALPHA, BETA, HELD, measureCatalogueFixture } from "../test/measureCatalogueFixture";
 
 const catalogue = buildMeasureCatalogue(measureCatalogueFixture());
@@ -185,6 +186,33 @@ describe("PolicyCards", () => {
     render(<PolicyCards policies={catalogue.measures} selectedPolicies={[ALPHA]} onShowEffect={onShowEffect} />);
     fireEvent.click(screen.getByRole("button", { name: new RegExp(`effect: ${catalogue.byId.get(ALPHA).label},`) }));
     expect(onShowEffect).toHaveBeenCalledWith(ALPHA);
+  });
+});
+
+describe("our explainers (explainers.js)", () => {
+  it("links a measure's card to our explainer of it, and no other card", () => {
+    const policies = [published("trading_allowance_raise", "Trading allowance raised to £3,000"), { ...catalogue.byId.get(ALPHA) }];
+    render(<PolicyCards policies={policies} selectedPolicies={policies.map((policy) => policy.id)} onShowEffect={vi.fn()} />);
+    const links = screen.getAllByRole("link", { name: /^Read policy brief/ });
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute("href", "https://www.policyengine.org/uk/research/uk-autumn-budget-2026-trading-allowance");
+    expect(links[0]).toHaveAttribute("target", "_blank");
+    cleanup();
+  });
+
+  it("gives each of the seven published measures an explainer", () => {
+    for (const id of [
+      "carers_allowance_earnings_taper",
+      "domestic_electricity_zero_vat",
+      "fuel_duty_rise_deferral",
+      "household_energy_payment_2026",
+      "property_income_rates_up",
+      "state_pension_income_tax_protection",
+      "trading_allowance_raise",
+    ]) {
+      expect(explainerFor(id)?.href).toMatch(/^https:\/\/www\.policyengine\.org\/uk\/research\/[a-z0-9-]+$/);
+    }
+    expect(explainerFor("not_a_measure")).toBeNull();
   });
 });
 

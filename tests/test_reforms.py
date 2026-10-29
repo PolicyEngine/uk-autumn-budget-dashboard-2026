@@ -957,8 +957,11 @@ def test_a_graduate_on_45000_pounds_repays_114_pounds_less():
 #   one is published;
 # - SPENDING_MEASURES: those whose gain scales with fuel and electricity
 #   spending, for one line of text, which a measure not published can only
-#   make show less often.
+#   make show less often;
+# - EXPLAINERS: the measures each of our published posts explains, for the
+#   card's link to its post, which shows only while the card does.
 CARD_TEXT_BLOCKS = {
+    "utils/explainers.js": [r"export const EXPLAINERS = \[[\s\S]*?\n\];"],
     "utils/policyDetails.js": [
         r"(?s)export const POLICY_DETAILS = \[.*?\n\];"
     ],

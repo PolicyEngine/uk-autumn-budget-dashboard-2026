@@ -11,6 +11,7 @@ import { policyVisual } from "./policies/PolicyVisual";
 import Disclosure from "./Disclosure";
 import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
 import { TABLE_6_1_URL } from "../utils/unmodelledMeasures";
+import { explainerFor } from "../utils/explainers";
 import { MODELLING_LIMITS, measureModellingFacts, sentences } from "../utils/measureModelling";
 
 /**
@@ -348,6 +349,7 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
       }
     : published;
   const temporary = Boolean(policy.inForce?.to);
+  const explainer = policy.id ? explainerFor(policy.id) : null;
   // Derived from the publication for any measure (utils/measureCategory.js),
   // in the same tinted tile as every per-measure row
   const category = measureCategoryOf(policy);
@@ -530,7 +532,7 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
             ))}
           </p>
         )}
-        {(policy.source || policy.budgetRows?.length > 0 || onShowEffect) && (
+        {(policy.source || policy.budgetRows?.length > 0 || explainer || onShowEffect) && (
         <div className="policy-card-actions">
           {policy.source && (
             <Tip content={policy.source.label}>
@@ -557,6 +559,21 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
             >
               Costing
               <span className="policy-sr-only">: Budget 2026, Table 6.1, {budgetRowsLabel(policy.budgetRows)}</span>
+              <ExternalLink size={14} aria-hidden="true" />
+              <span className="policy-sr-only"> (opens in a new tab)</span>
+            </a>
+            </Tip>
+          )}
+          {explainer && (
+            <Tip content={`Our policy brief: ${explainer.title}`}>
+            <a
+              className="policy-card-explainer"
+              href={explainer.href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Read policy brief
+              <span className="policy-sr-only">: {explainer.title}</span>
               <ExternalLink size={14} aria-hidden="true" />
               <span className="policy-sr-only"> (opens in a new tab)</span>
             </a>

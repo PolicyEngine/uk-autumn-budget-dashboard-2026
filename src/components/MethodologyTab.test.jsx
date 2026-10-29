@@ -3,7 +3,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS } from "./MethodologyTab";
+import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS, REPORT_PDF } from "./MethodologyTab";
+import { EXPLAINERS } from "../utils/explainers";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import { unavailableMeasures } from "./methodology/measures";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
@@ -20,6 +21,21 @@ afterEach(() => {
 const renderTab = (onShowTab = vi.fn()) => render(<MeasureCatalogueProvider catalogue={catalogue}><MethodologyTab onShowTab={onShowTab} /></MeasureCatalogueProvider>);
 
 describe("MethodologyTab", () => {
+  it("offers our PDF report, a file in public/, and links each explainer", () => {
+    renderTab();
+    const download = screen.getByRole("link", { name: "Download the PDF" });
+    expect(download).toHaveAttribute("href", `/${REPORT_PDF.file}`);
+    expect(download).toHaveAttribute("download");
+    const pdf = readFileSync(join(fileURLToPath(import.meta.url), "..", "..", "..", "public", REPORT_PDF.file));
+    expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
+    for (const { slug, title } of EXPLAINERS) {
+      expect(screen.getByRole("link", { name: new RegExp(`^${title}`) })).toHaveAttribute(
+        "href",
+        `https://www.policyengine.org/uk/research/${slug}`,
+      );
+    }
+  });
+
   it("keeps the anchors other views link to", () => {
     // Other views (e.g. the map and Household calculator) link to these
     expect(METHOD_SECTIONS.geography).toBe("method-area");

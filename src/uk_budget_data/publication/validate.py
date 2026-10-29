@@ -33,11 +33,12 @@ ROWS_PER_YEAR = {
     "winners_losers": 11,
     "metrics": 1,
     "poverty_inequality": 1,
+    "official_basis": 1,
     # Every example household, at each point on its income grid
     "income_curve": CURVE_POINTS * len(HOUSEHOLD_IDS),
 }
 # Optional tables that, when an artifact has them, cover every year.
-COMPLETE_WHEN_PRESENT = frozenset({"poverty_inequality"})
+COMPLETE_WHEN_PRESENT = frozenset({"poverty_inequality", "official_basis"})
 DECILES = frozenset(
     f"{n}{'st' if n == 1 else 'nd' if n == 2 else 'rd' if n == 3 else 'th'}"
     for n in range(1, 11)
