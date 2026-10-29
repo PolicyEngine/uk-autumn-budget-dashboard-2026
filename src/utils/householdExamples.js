@@ -290,4 +290,35 @@ export const HOUSEHOLD_EXAMPLES = [
     // The spending's source, in the result's "Based on"
     spendingSource: own("Electricity: its own, electric storage heating. Petrol and diesel", 4),
   },
+  {
+    // Added for the £2 bus fare cap (#321, Vahid, 29 October 2026): a
+    // renter in England outside London, where the form asks bus fares, who
+    // has no car and takes the bus to work. The credit is a share of the
+    // fares paid in the cap's years (2026-27 and 2027-28); nothing after
+    id: "bus-commuter",
+    label: "A bus commuter in the North West",
+    short: "Bus commuter",
+    description: "Aged 28, earns £22,000, £700 a year on bus fares",
+    icon: "bus",
+    measure: "bus_fare_cap_2027",
+    tag: "Bus fare cap",
+    inputs: {
+      ...RESET,
+      current_age: 28,
+      current_salary: 22000,
+      tenure: "RENT_PRIVATELY",
+      // Fixed: the North West's average private rent (ONS, September 2026)
+      monthly_rent: 975,
+      // Electricity: the average for its tenth by gross income (£423 a
+      // week of earnings, ONS Family Spending FYE 2025, Table A6)
+      ...spendingInputs(2),
+      // No car
+      petrol_spending_per_year: 0,
+      diesel_spending_per_year: 0,
+      // About 230 single journeys a year at £3 (DfT)
+      bus_fare_spending_per_year: 700,
+    },
+    note: "Aged 28, earns £22,000 and rents privately at £975 a month in the North West. Has no car and takes the bus to work: spends £700 a year on bus fares, about 230 single journeys at £3. Claims the Universal Credit they are due. Spends £890 a year on electricity, the average for households in the second tenth by gross income (ONS Family Spending, FYE 2025).",
+    spendingSource: own("Bus fares: its own; no car. Electricity", 2),
+  },
 ];

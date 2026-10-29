@@ -340,7 +340,7 @@ describe("the personal impact form", () => {
     expect(value("Your State Pension")).toBe(9000);
   });
 
-  it("shows Your household first, then eight example cards, each a name, who they are and its measure", () => {
+  it("shows Your household first, then nine example cards, each a name, who they are and its measure", () => {
     render(<HouseholdCalculator />);
     const buttons = within(cards()).getAllByRole("button");
     // Each example card is a box with one button (its name) over it
@@ -361,6 +361,7 @@ describe("the personal impact form", () => {
       "A landlord with savings",
       "A middle earner who lets a flat",
       "A lone parent working part time",
+      "A bus commuter in the North West",
     ]);
     const examples = buttons.slice(1);
     expect(examples.every((item) => card(item).querySelector(".household-card-description").textContent.length > 0)).toBe(true);
@@ -497,10 +498,10 @@ describe("the personal impact form", () => {
     expect(within(cards()).queryByRole("button", { name: "Show all households" })).not.toBeInTheDocument();
     applyExample("A pensioner with a small private pension");
     // Folded: the grid's cards are hidden; Your household first, then
-    // eight example chips below it
+    // nine example chips below it
     const strip = within(cards()).getByRole("listbox", { name: "Households" });
     const chips = within(strip).getAllByRole("option").slice(1);
-    expect(within(strip).getAllByRole("option")).toHaveLength(9);
+    expect(within(strip).getAllByRole("option")).toHaveLength(10);
     expect(within(strip).getAllByRole("option")[0]).toHaveTextContent("Your household");
     expect(chips.map((chip) => chip.textContent)).toEqual([
       "Pensioner",
@@ -511,6 +512,7 @@ describe("the personal impact form", () => {
       "Landlord",
       "Small landlord",
       "Lone parent",
+      "Bus commuter",
     ]);
     // The full name on hover, the short one cut if it runs out of room
     expect(chips[0]).toHaveAttribute("title", "A pensioner with a small private pension");
@@ -536,7 +538,7 @@ describe("the personal impact form", () => {
     // End: the last example; Home and Enter: Your household, chosen with
     // its tick, the form open
     fireEvent.keyDown(document.activeElement, { key: "End" });
-    expect(document.activeElement).toBe(exampleItem("A lone parent working part time"));
+    expect(document.activeElement).toBe(exampleItem("A bus commuter in the North West"));
     fireEvent.keyDown(document.activeElement, { key: "Home" });
     expect(document.activeElement).toBe(yoursCard());
     fireEvent.keyDown(document.activeElement, { key: "Enter" });
