@@ -1099,6 +1099,28 @@ def council_tax_basis(answers: "HouseholdAnswers") -> str:
     return "region"
 
 
+def council_tax_row_note(answers: "HouseholdAnswers") -> str:
+    """The Council Tax row's note in the breakdown, from the same basis as
+    ``council_tax_used``: entered, the local authority's own Band D, the
+    region's average or none (Northern Ireland)."""
+    if answers.council_tax is not None:
+        return "As entered. No measure changes it."
+    return {
+        "none": (
+            "No Council Tax in Northern Ireland (domestic rates are not "
+            "modelled)."
+        ),
+        "council": (
+            "Estimated from the band and the local authority's own Band D, "
+            "unless entered. No measure changes it."
+        ),
+        "region": (
+            "Estimated from the band and the region's average Band D "
+            "(COUNCIL_TAX_BAND_D), unless entered. No measure changes it."
+        ),
+    }[council_tax_basis(answers)]
+
+
 def household_entities(
     answers: HouseholdAnswers, year: Optional[int] = None
 ) -> tuple[list, dict, dict]:
@@ -2153,7 +2175,16 @@ def calculate_household_impact(
         "not_modelled": sides.not_modelled,
         "by_policy": None,
         "programmes": [
-            _programme_entry(row, before, after, hidden)
+            {
+                **_programme_entry(row, before, after, hidden),
+                # The note says what this household's Council Tax starts
+                # from, as council_tax_used does
+                **(
+                    {"note": council_tax_row_note(answers)}
+                    if row.id == "council_tax"
+                    else {}
+                ),
+            }
             for row in (*PROGRAMMES, *OTHER_ROWS)
             if row.id not in hidden
         ],
