@@ -154,9 +154,9 @@
   },
   "flat_aliases": {},
   "flat_files": {
-    "constituency.csv": "793cb52b5f01cffd12b74b61bfd4d528c0a84cddbe1e7695f66587f92be9a05d"
+    "constituency.csv": "56b55f1460ff9f56ac1b89be08da910fc9f28c5eeb3e958be72b8dd754e81b40"
   },
-  "flat_provenance_sha256": "58a2e5425363e189a89afd960d59ec10ca41122d66be5b702b17df7763599d5d",
+  "flat_provenance_sha256": "45eb28315eda76b12085522b20331e75ee204350894893f6bf257df368800b36",
   "measures": {
     "bus_fare_cap_2027": {
       "approval": {
@@ -400,7 +400,7 @@
     }
   },
   "release": "uk-autumn-budget-2026",
-  "revision": 46,
+  "revision": 47,
   "schema": "uk-budget-dashboard/publication-manifest/v1",
   "superseded": [
     {
@@ -666,5 +666,5 @@
       "superseded_at": "2026-10-29T16:32:18.314483+00:00"
     }
   ],
-  "updated_at": "2026-10-29T16:43:44.030579+00:00"
+  "updated_at": "2026-10-29T17:35:00.795025+00:00"
 }
