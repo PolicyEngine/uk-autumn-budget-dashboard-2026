@@ -700,7 +700,7 @@ describe("the selected policies' questions", () => {
     expect(document.querySelector(".household-step-head [tabindex]")).toBeNull();
     expect(document.querySelector(".household-form")).not.toHaveTextContent("✓");
     // The group's line says what the spending boxes start at, once
-    expect(group("Spending")).toHaveTextContent("We prefill this with the average household's spending");
+    expect(group("Spending")).toHaveTextContent("We prefill these with the average household's spending");
     expect(document.getElementById("hint-petrol_spending_per_year")).toBeNull();
     // Nothing after the seven steps, and every answer asked once
     expect(screen.queryByRole("region", { name: "More details" })).toBeNull();
@@ -757,7 +757,7 @@ describe("the selected policies' questions", () => {
     // Opened from its heading, by click or keyboard (a button): the boxes
     fireEvent.click(stepToggle("Spending"));
     expect(stepToggle("Spending")).toHaveAttribute("aria-expanded", "true");
-    expect(group("Spending")).toHaveTextContent("We prefill this with the average household's spending");
+    expect(group("Spending")).toHaveTextContent("We prefill these with the average household's spending");
     fireEvent.change(box("Petrol"), { target: { value: "500" } });
     fireEvent.blur(box("Petrol"));
     // Closed again: the edited answer alone
