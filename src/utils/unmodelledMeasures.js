@@ -69,10 +69,10 @@ export const UNMODELLED_MEASURES = [
     id: "bus-fare-cap",
     order: 1,
     reason: "coming-soon",
-    name: "£2 cap on single bus fares outside London",
+    name: "Single bus fares capped at £2 outside London",
     starts: "1 Jan 2027",
     changes:
-      "Single fares on participating buses in England outside London have a £2 cap; most have a £3 cap until then.",
+      "Single fares on participating buses in England outside London are capped at £2; most are capped at £3 until then.",
     reaches: "Bus passengers in England outside London, on participating services.",
     household:
       "The same journeys cost less; household income does not change.",
@@ -80,7 +80,7 @@ export const UNMODELLED_MEASURES = [
       {
         row: 4,
         values: [-50, -180, 65, 170, 0, 0],
-        note: "The row's title adds that reprioritising Department for Energy Security and Net Zero budgets funds the cap.",
+        note: "The row's title adds that the cap is funded by reprioritising Department for Energy Security and Net Zero budgets.",
       },
     ],
     notModelled:
