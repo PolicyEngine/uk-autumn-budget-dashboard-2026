@@ -38,7 +38,7 @@ export { WIZARD_DEFAULTS };
 import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
 import LocalAuthorityField from "./personal/LocalAuthorityField";
 import { policyQuestions } from "../utils/householdPolicyFields";
-import { withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
+import { calculatorOnlyNote, withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
@@ -1174,9 +1174,7 @@ function HouseholdCalculator({
         note:
           placed.notModelled.length > 0
             ? `Your change leaves out ${placed.notModelled.length === 1 ? "one policy" : `${placed.notModelled.length} policies`} not modelled for one household; the dots include ${placed.notModelled.length === 1 ? "it" : "them"}.`
-            : submitted.policies.length !== withoutCalculatorOnly(submitted.policies).length
-              ? "Your change includes the savings income tax rise, which the dots leave out."
-              : null,
+            : calculatorOnlyNote(submitted.policies),
       }
     : null;
 

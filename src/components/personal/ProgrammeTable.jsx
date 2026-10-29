@@ -61,12 +61,15 @@ const changeClass = (value) => {
  */
 // Each group in words: what "up" means for it (taxes are negative amounts,
 // so a rise in the amount is a fall in what you pay). Market income, taxes
-// and benefits are always named; pension contributions only when they move.
+// and benefits are always named; pension contributions and the gas bill
+// only when they move. The gas bill is one row, so its noun names it
+// (`named`): no "all from" after it.
 const GROUP_WORDS = [
   { id: "income", noun: "market income", up: "rises", down: "falls", always: true },
   { id: "tax", noun: "taxes", up: "fall", down: "rise", always: true },
   { id: "benefit", noun: "benefits", up: "rise", down: "fall", always: true },
   { id: "pension", noun: "pension contributions", up: "fall", down: "rise", always: false },
+  { id: "bills", noun: "the gas bill", up: "falls", down: "rises", always: false, named: true },
 ];
 
 // "Fuel duty" -> "fuel duty"; "VAT" and "Council Tax" keep their capitals;
@@ -104,7 +107,9 @@ export function breakdownSentence(groups) {
     if (change === 0) {
       if (words.always) still.push(words.noun);
     } else {
-      moved.push(`${words.noun} ${change > 0 ? words.up : words.down} by ${money(Math.abs(change))} a year${mainRow(group, change)}`);
+      moved.push(
+        `${words.noun} ${change > 0 ? words.up : words.down} by ${money(Math.abs(change))} a year${words.named ? "" : mainRow(group, change)}`,
+      );
     }
   }
   if (!moved.length) return "No change to your taxes or benefits.";

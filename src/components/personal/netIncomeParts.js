@@ -37,6 +37,9 @@ export const NET_LAYERS = [
     label: "Pension contributions",
     color: CHART_COLOURS.pensionContributions,
   },
+  // Gas standing charges abolished: the gas bill change the household
+  // API counts in net income, the same at every point
+  { key: "gas_bill_change", label: "Gas bill change", color: CHART_COLOURS.netGasBill },
   { key: "other_taxes", label: "Other taxes", color: CHART_COLOURS.mtrOther },
 ];
 

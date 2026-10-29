@@ -87,9 +87,12 @@ QUARTER_USE_SHARES = ((4, 0.125), (7, 0.125), (10, 0.375), (1, 0.375))
 REGIONS_NOT_COVERED = frozenset({"NORTHERN_IRELAND"})
 
 NO_MAINS_GAS = "0 kWh, no mains gas: no gas standing charge to remove."
+# Each reason reads after a dash with its first letter in lower case
+# (the page's list of measures with no effect), so none starts with a
+# proper noun
 NOT_GREAT_BRITAIN = (
-    "Great Britain only: Ofgem's price cap, and the abolition, do not cover "
-    "Northern Ireland."
+    "Outside Great Britain: Ofgem's price cap, and the abolition, do not "
+    "cover Northern Ireland."
 )
 BEFORE_START = (
     "Not yet in force: the start is assumed to be "

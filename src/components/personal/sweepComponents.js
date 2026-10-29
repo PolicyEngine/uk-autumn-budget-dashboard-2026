@@ -130,6 +130,15 @@ export const SWEEP_COMPONENTS = [
     absent: { rate: "Does not change with salary" },
   },
   {
+    key: "gas_bill",
+    label: "Gas bill change",
+    about: "The change in your gas bill when gas standing charges are abolished: neither a tax nor a benefit, and the same at every salary.",
+    color: CHART_COLOURS.netGasBill,
+    net: ["gas_bill_change"],
+    rate: null,
+    absent: { rate: "Does not change with salary" },
+  },
+  {
     key: "other",
     label: "Other",
     about: "Taxes and deductions not named here.",

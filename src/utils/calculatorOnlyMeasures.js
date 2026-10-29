@@ -47,6 +47,27 @@ export const isCalculatorOnly = (id) => Object.hasOwn(CALCULATOR_ONLY_MEASURES, 
 export const withCalculatorOnly = (policies) =>
   policies.length === 0 ? [] : [...policies, ...CALCULATOR_ONLY_IDS.filter((id) => !policies.includes(id))];
 
+/** "a", "a and b", "a, b and c". */
+const inWords = (items) => (items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`);
+
+/**
+ * The calculator-only measures in words, each by its phrase ("the savings
+ * income tax rise and the gas standing charge abolition"): all of them, or
+ * those among `ids`.
+ */
+export const calculatorOnlyPhrases = (ids = CALCULATOR_ONLY_IDS) =>
+  inWords(CALCULATOR_ONLY_IDS.filter((id) => ids.includes(id)).map((id) => CALCULATOR_ONLY_MEASURES[id].phrase));
+
+/**
+ * The note beside your place among households, whose dots are the
+ * national results: the calculator-only measures your change includes and
+ * they leave out. Null with none.
+ */
+export function calculatorOnlyNote(policies) {
+  const named = calculatorOnlyPhrases(policies);
+  return named ? `Your change includes ${named}, which the dots leave out.` : null;
+}
+
 /** The measures without the calculator-only ones (for the national figures). */
 export const withoutCalculatorOnly = (policies) => policies.filter((id) => !isCalculatorOnly(id));
 

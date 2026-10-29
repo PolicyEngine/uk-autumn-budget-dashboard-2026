@@ -329,6 +329,8 @@ code {
   --c-net-council-tax: #92400e; /* amber-800 */
   --c-net-fuel-duty: #f59e0b; /* amber-500 */
   --c-net-vat: #fde68a; /* amber-200 */
+  /* The gas bill change, neither a tax nor a benefit */
+  --c-net-gas-bill: #64748b; /* slate-500 */
   /* Type scale: section titles, card titles, body, small text, captions
      (sources, notes, axis units) and micro labels */
   --fs-stat: 1.75rem;

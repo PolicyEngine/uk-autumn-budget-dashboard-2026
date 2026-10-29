@@ -100,6 +100,9 @@ export const CHART_COLOURS = {
   netCouncilTax: "#92400E",
   netFuelDuty: "#F59E0B",
   netVat: "#FDE68A",
+  // The gas bill change (gas standing charges abolished), neither a tax
+  // nor a benefit: slate, apart from both families
+  netGasBill: "#64748B",
 };
 
 /**

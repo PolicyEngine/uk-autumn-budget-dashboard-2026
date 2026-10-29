@@ -156,3 +156,13 @@ def test_suppliers_recover_the_same_revenue(uses):
     scale = gas.MEAN_GAS_USE_KWH * len(uses) / sum(uses)
     total = sum(change_for(use * scale).change for use in uses)
     assert total == pytest.approx(0, abs=1e-6 * len(uses))
+
+
+def test_each_reason_reads_after_a_dash_in_lower_case():
+    """The page lists a measure with no effect as "name — reason", with
+    the reason's first letter in lower case, so no reason starts with a
+    proper noun."""
+    assert gas.NOT_GREAT_BRITAIN.startswith("Outside Great Britain:")
+    for reason in (gas.NO_MAINS_GAS, gas.NOT_GREAT_BRITAIN, gas.BEFORE_START):
+        first_word = reason.split()[0]
+        assert first_word[0].isdigit() or first_word in {"Outside", "Not"}

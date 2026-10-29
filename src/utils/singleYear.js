@@ -12,7 +12,7 @@ import {
   WHO_IS_A_CHILD_NOTE,
 } from "../components/personal/singleYearMethodNotes";
 import { consistentRound } from "./householdImpactApi";
-import { CALCULATOR_ONLY_MEASURES } from "./calculatorOnlyMeasures";
+import { CALCULATOR_ONLY_MEASURES, calculatorOnlyPhrases } from "./calculatorOnlyMeasures";
 import { CHART_COLOURS } from "./chartTheme";
 import { policyDetailsFor, shortNameOf } from "./policyDetails";
 import { inForceIn } from "./legendMembership";
@@ -85,6 +85,7 @@ export const PROGRAMME_LABELS = {
   property_income: "Property income",
   private_pension_income: "Private pension",
   other_income: "Other income",
+  gas_bill_change: "Gas bill change",
 };
 
 /** How "the largest changes are to …" names a programme mid-sentence. */
@@ -104,21 +105,26 @@ const IN_SENTENCE = {
   property_income: "property income",
   private_pension_income: "private pension",
   benefit_cap: "the benefit cap",
+  gas_bill_change: "the gas bill",
 };
 
 // The breakdown's top rows, in Spring Statement's order: market income,
 // taxes, benefits, pension contributions. Each opens to its programmes.
+// Then the gas bill: the change in it when gas standing charges are
+// abolished (#355), which the household API counts in net income though
+// it is no tax or benefit, so the table still adds up to net income.
 export const GROUPS = [
   { id: "income", label: "Market income", color: CHART_COLOURS.marketIncome },
   { id: "tax", label: "Taxes", color: CHART_COLOURS.noChange },
   { id: "benefit", label: "Benefits", color: CHART_COLOURS.gain },
   { id: "pension", label: "Pension contributions", color: CHART_COLOURS.pensionContributions },
+  { id: "bills", label: "Gas bill", color: CHART_COLOURS.netGasBill },
 ];
 
 // Rows the API files under taxes that the breakdown shows as their own
 // top row, as Spring Statement does
 const OWN_GROUP = { pension_contributions: "pension" };
-const NEGATIVE_GROUPS = new Set(["tax", "pension"]);
+const NEGATIVE_GROUPS = new Set(["tax", "pension", "bills"]);
 const groupOf = (row) => OWN_GROUP[row.id] ?? row.group ?? "benefit";
 
 // The dashboard's sentence-case names first; the API's labels ("Income
@@ -128,9 +134,10 @@ const programmeLabel = (row) =>
 
 // Rows that are only the change the measures make, not an amount the
 // household pays: VAT on the spending entered (the form asks about no other
-// spending, so VAT itself is unknown). Before is a dash; after is the
-// change, signed as the other taxes (a cut is a positive amount).
-export const CHANGE_ONLY = new Set(["vat_change"]);
+// spending, so VAT itself is unknown), and the gas bill change (the form
+// asks gas use, not the bill). Before is a dash; after is the change,
+// signed as the other taxes (a fall is a positive amount).
+export const CHANGE_ONLY = new Set(["vat_change", "gas_bill_change"]);
 
 // This page's note on a row, in place of the API's
 const PROGRAMME_NOTES = {
@@ -159,13 +166,14 @@ export function programmeGroups(programmes) {
         .map((child) => toRow(child, sign)),
     };
   };
-  return GROUPS.map((group) => ({
-    ...group,
-    rows: (programmes ?? [])
+  return GROUPS.map((group) => {
+    const rows = (programmes ?? [])
       .filter((row) => groupOf(row) === group.id)
       .filter((row) => Math.round(row.before) !== 0 || Math.round(row.after) !== 0)
-      .map((row) => toRow(row, NEGATIVE_GROUPS.has(group.id) ? -1 : 1)),
-  })).filter((group) => group.rows.length > 0);
+      .map((row) => toRow(row, NEGATIVE_GROUPS.has(group.id) ? -1 : 1));
+    // A group of change-only rows (the gas bill) is itself only a change
+    return { ...group, rows, changeOnly: rows.length > 0 && rows.every((row) => row.changeOnly) };
+  }).filter((group) => group.rows.length > 0);
 }
 
 /**
@@ -313,7 +321,9 @@ export function policyRows(byPolicy, total, policies, year = null) {
       .filter((row) => row.status === "not_affected" && row.noteKind !== "employer_cost")
       .map(nameOf),
     // Every measure that leaves the household's net income where it was,
-    // with its colour and, for an employer cost, the API's note on why. No
+    // with its colour and, for an employer cost or a bill change (gas
+    // standing charges: no mains gas, outside Great Britain, before the
+    // start, or a calculated £0 at average use), the API's note on why. No
     // reason is kept here by measure id: that would be a measure list of
     // the page's own
     noEffectItems: byPolicy.measures
@@ -324,16 +334,19 @@ export function policyRows(byPolicy, total, policies, year = null) {
         label: labelOf(row),
         color: policies.find((policy) => policy.id === row.id)?.color ?? CHART_COLOURS.noChange,
         reason:
-          row.noteKind === "employer_cost"
+          row.noteKind === "employer_cost" || row.noteKind === "bill_change"
             ? row.note
             : outOfForceReason(policies.find((policy) => policy.id === row.id), year),
       })),
     // Notes on a measure's figure: an employer cost always, "if received"
-    // where the household gets the amount
+    // where the household gets the amount, and a bill change (not a tax or
+    // benefit) where it changes the household
     notes: byPolicy.measures
       .filter(
         (row) =>
-          row.note && (row.noteKind === "employer_cost" || (row.noteKind === "if_received" && row.change !== 0)),
+          row.note &&
+          (row.noteKind === "employer_cost" ||
+            ((row.noteKind === "if_received" || row.noteKind === "bill_change") && row.change !== 0)),
       )
       .map((row) => ({ id: row.id, name: nameOf(row), kind: row.noteKind, text: row.note })),
     underAPound: rows.filter((row) => row.rounded === 0 && row.id !== "interaction").map((row) => row.name),
@@ -610,7 +623,7 @@ export function areaName(brma) {
 export const SINGLE_YEAR_METHOD = [
   [
     "Engine and policies",
-    "The calculator uses the same engine (policyengine.py and policyengine-uk) as the national figures to apply the policies selected in the header to one household's answers. It also adds the savings income tax rise, which the national figures leave out.",
+    `The calculator uses the same engine (policyengine.py and policyengine-uk) as the national figures to apply the policies selected in the header to one household's answers. It also adds ${calculatorOnlyPhrases()}, which the national figures leave out.`,
   ],
   [
     "One year",
