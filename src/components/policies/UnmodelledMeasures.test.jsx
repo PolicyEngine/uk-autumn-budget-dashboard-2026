@@ -40,6 +40,9 @@ describe("the unmodelled measures (unmodelledMeasures.js)", () => {
     }
     const ids = UNMODELLED_MEASURES.map((measure) => measure.id);
     expect(new Set(ids).size).toBe(ids.length);
+    // Kebab-case with a hyphen, so no id is a registry id (snake_case):
+    // explainers.js looks both up in one list
+    for (const id of ids) expect(id).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)+$/);
   });
 
   it("give each Table 6.1 row its number and a figure for each of the table's six years", () => {
@@ -253,6 +256,8 @@ describe("UnmodelledMeasures", () => {
       }
       expect(links, id).toHaveLength(1);
       const [link] = links;
+      const title = explainer.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      expect(link).toHaveAccessibleName(new RegExp(`^Read policy brief: ${title}\\s*\\(opens in a new tab\\)$`));
       expect(link).toHaveAttribute("href", explainer.href);
       expect(link).toHaveAttribute("target", "_blank");
       expect(link).toHaveAttribute("rel", "noopener noreferrer");
