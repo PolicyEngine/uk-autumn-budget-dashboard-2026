@@ -273,18 +273,20 @@ function MethodologyTab({ onShowTab }) {
               The page describes the current pipeline, which may be newer than this dashboard&apos;s data.
             </p>
           </Topic>
-          {/* Sign-off covers every public file, so it sits here rather than
-              under the household scatter (scripts/check_public_data.py) */}
-          <Topic title="Published files" preview="Sign-off">
+          {/* The checks cover every public file, so they sit here rather than
+              under the household scatter (scripts/check_public_data.py; with
+              sign_off.REQUIRED off, #308, no file needs a named reviewer) */}
+          <Topic title="Published files" preview="Checks">
             <FactList
               items={[
                 [
-                  "Sign-off",
+                  "Checks",
                   {
                     value:
-                      "Each public data file is listed with a named reviewer and a digest of the exact bytes they reviewed. A changed file fails the publication checks until it is reviewed again.",
+                      "Automated checks run on every public data file before it is published; no named reviewer signs each file off. A file that fails a check is not published.",
                     more: [
-                      "A file awaiting sign-off can be published as pending, for at most 14 days after its entry; after that it fails the checks until it is signed off.",
+                      "No file may carry household, benefit unit or person ids or weights, a figure for a group under the floor of survey households (Small groups, above), or more than 20 constituency, local-authority or small-area codes, except a validated table of results by area or a boundary file.",
+                      "Each results file must match the digest its run's receipt records; the run must be approved, use the certified data and pass the reconciliation against the Budget's costings.",
                     ],
                   },
                 ],
