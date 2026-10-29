@@ -347,6 +347,15 @@ body {
   background: var(--page-bg);
 }
 
+/* The canvas outside the page: what Safari's rubber-band overscroll shows
+   above the title band and below the footer. The band and the footer are
+   both the teal gradient, so the canvas is their dark teal, not the page's
+   near-white: the band never looks cut off from a white strip above it.
+   On html, so body's own background stays on the page only. */
+html {
+  background-color: var(--color-teal-800);
+}
+
 /* The two bars: the ui-kit site nav (PolicyEngineShell renders it with an
    inline position:sticky; top:0) and the title band. The site nav is out
    of the page's flow and hidden above the window by default, so the band
@@ -469,6 +478,14 @@ html[data-site-nav-shown] {
   transition: top var(--motion-slide) var(--ease-out);
   /* Above every chart, label, tooltip and card on the page */
   z-index: 1100;
+  /* Its own compositing layer, always. Safari otherwise paints the band
+     into the page's layer when nothing seems to overlap it, and the
+     landing page's blurred, masked backdrop (its own layer, LandingPage.css)
+     then draws over it while Safari scrolls or rubber-bands: the band
+     shows washed out under the backdrop's page-coloured veil. Opacity, not
+     transform: a transform would trap the phone sheets (position: fixed)
+     its pills open. */
+  will-change: opacity;
   /* One row on a wide screen: the title, then the year and policy pills
      at the right. A pill that does not apply to the view is hidden but
      keeps its place. Narrower screens use two fixed rows (below). */

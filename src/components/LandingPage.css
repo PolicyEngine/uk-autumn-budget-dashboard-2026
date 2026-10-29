@@ -29,6 +29,18 @@ html:has(.view-stage.is-landing) .main-content {
   display: flex;
   flex: 1;
   flex-direction: column;
+  /* The landing page's layers (the blurred backdrop and its veil, the glass
+     panels) stack inside the stage, at the page's level, so they are
+     always under the title band (z-index 1100, globals.css) */
+  isolation: isolate;
+  z-index: 0;
+}
+
+/* The landing page is sized to the window, so there is little or nothing
+   to scroll: no rubber-band on it, which is when Safari let the backdrop
+   wash over the band */
+html:has(.view-stage.is-landing) {
+  overscroll-behavior-y: none;
 }
 
 /* The silhouette behind: clipped to the landing page, blurred, fading out
