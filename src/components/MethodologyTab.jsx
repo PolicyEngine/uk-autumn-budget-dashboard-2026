@@ -16,6 +16,7 @@ import { EARLY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { OPEN_VIEW_EVENT } from "../utils/methodLink";
+import { EXPLAINERS, RESEARCH_URL } from "../utils/explainers";
 import { AnchorLink, ExternalLink, ReasonList, SourceLink, Tag, Topic } from "./methodology/MethodUi";
 import { glossaryAnchor } from "./methodology/glossary";
 import { Calculator, ChartColumn, Compass, Database, FileDown, House, TrendingUp, Info } from "lucide-react";
@@ -93,20 +94,6 @@ export const REPORT_PDF = {
   size: "320 KB",
 };
 
-const RESEARCH = "https://www.policyengine.org/uk/research";
-
-/** Our published write-ups on the Budget, on policyengine.org: the briefing, then each explainer. */
-export const EXPLAINERS = [
-  { slug: "uk-autumn-budget-2026-briefing", title: "Our briefing on what the Budget means for households" },
-  { slug: "budget-2026-energy-bills", title: "The energy bill measures" },
-  { slug: "fuel-duty-cut-extension", title: "The fuel duty cut extension" },
-  { slug: "pension-tax-allowance", title: "The Pension Tax Allowance" },
-  { slug: "uk-autumn-budget-2026-property-income-tax", title: "Higher tax on property income" },
-  { slug: "uk-autumn-budget-2026-trading-allowance", title: "Raising the trading allowance" },
-  { slug: "carers-allowance-taper", title: "The Carer's Allowance earnings taper" },
-  { slug: "uk-triple-lock-budget-2026", title: "The adjusted Triple Lock" },
-];
-
 /** A card with a button that downloads our PDF report, and links to our explainers. */
 function ReportDownload() {
   const href = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/${REPORT_PDF.file}`;
@@ -129,7 +116,7 @@ function ReportDownload() {
       <ul className="method-explainers">
         {EXPLAINERS.map(({ slug, title }) => (
           <li key={slug}>
-            <ExternalLink href={`${RESEARCH}/${slug}`}>{title}</ExternalLink>
+            <ExternalLink href={`${RESEARCH_URL}/${slug}`}>{title}</ExternalLink>
           </li>
         ))}
       </ul>
