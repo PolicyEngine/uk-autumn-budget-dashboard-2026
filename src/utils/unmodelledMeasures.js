@@ -69,10 +69,10 @@ export const UNMODELLED_MEASURES = [
     id: "bus-fare-cap",
     order: 1,
     reason: "coming-soon",
-    name: "Single bus fares capped at £2 outside London",
+    name: "£2 cap on single bus fares outside London",
     starts: "1 Jan 2027",
     changes:
-      "Single fares on participating buses in England outside London are capped at £2; most are capped at £3 until then.",
+      "Single fares on participating buses in England outside London have a £2 cap; most have a £3 cap until then.",
     reaches: "Bus passengers in England outside London, on participating services.",
     household:
       "The same journeys cost less; household income does not change.",
@@ -80,7 +80,7 @@ export const UNMODELLED_MEASURES = [
       {
         row: 4,
         values: [-50, -180, 65, 170, 0, 0],
-        note: "The row's title adds that the cap is funded by reprioritising Department for Energy Security and Net Zero budgets.",
+        note: "The row's title adds that reprioritising Department for Energy Security and Net Zero budgets funds the cap.",
       },
     ],
     notModelled:
@@ -105,7 +105,7 @@ export const UNMODELLED_MEASURES = [
     household: "People with taxable savings interest pay 2 points more on it.",
     costings: [{ row: 62, values: [15, 125, 555, 520, 555, 590] }],
     notModelled:
-      "The model covers it, but it is held back from this release: we calibrated savings interest to HMRC's figures on a different basis, so our taxable interest is too low.",
+      "The model covers it, but this release holds it back: we calibrated savings interest to HMRC's figures on a different basis, so our taxable interest is too low.",
     heldBack:
       "Held back: we calibrated savings interest to HMRC's figures on a different basis, so our taxable interest is too low. We're correcting it for the next data update.",
     sources: [budget("paragraph 6.247")],
@@ -120,7 +120,7 @@ export const UNMODELLED_MEASURES = [
       "The duty on machine games with stakes over £1 or prizes over £100 rises from 20% to 25%.",
     reaches: "Venues with higher-stake machines, commonly adult gaming centres (Budget).",
     household:
-      "Charged on businesses running the machines; any effect reaches households through stakes and prizes, or as owners and staff.",
+      "Businesses running the machines pay the duty; any effect reaches households through stakes and prizes, or as owners and staff.",
     costings: [{ row: 56, values: [0, 135, 150, 145, 145, 145] }],
     notModelled: "Our data hold no household spending on gambling, so the model can't pass the duty through to households.",
     sources: [budget("paragraphs 2.49 and 6.225")],
@@ -129,7 +129,7 @@ export const UNMODELLED_MEASURES = [
     id: "cash-isa-limit",
     order: 4,
     reason: "coming-soon",
-    name: "Cash ISA limit kept at £20,000",
+    name: "Cash ISA limit stays at £20,000",
     starts: "6 Apr 2027",
     changes:
       "A planned cut in the cash ISA limit to £12,000 for under-65s does not go ahead; it stays at £20,000.",
@@ -197,7 +197,7 @@ export const UNMODELLED_MEASURES = [
       "Business rates relief for pubs, social clubs and most live music venues in England rises from 15% to 35%.",
     reaches: "Pubs, social clubs and most live music venues in England.",
     household:
-      "Paid by businesses, not households; the Budget puts the relief at over £3,000 per pub on average next year.",
+      "Businesses, not households, pay business rates; the Budget puts the relief at over £3,000 per pub on average next year.",
     costings: [{ row: 12, values: [5, -160, -115, -5, -5, -5] }],
     notModelled:
       "The model attributes business rates to households through shareholdings, as a share of total receipts, with no reliefs, so a relief for pubs changes nothing in it.",
@@ -216,7 +216,7 @@ export const UNMODELLED_MEASURES = [
       "The VAT rate does not change: the marketplace collects the VAT these sellers owe.",
     costings: [{ row: 46, values: [0, 165, 320, 270, 250, 265] }],
     notModelled:
-      "The model charges VAT on households' spending, scaled to total receipts, with no measure of VAT sellers leave unpaid, so collecting it changes nothing in the model.",
+      "The model charges VAT on households' spending and scales it to total receipts, with no measure of VAT sellers leave unpaid, so collecting it changes nothing in the model.",
     sources: [budget("paragraphs 2.44 and 6.154")],
   },
   {
@@ -237,7 +237,7 @@ export const UNMODELLED_MEASURES = [
         note: "Row 37 is the scheme's net income from developer fees; the loans themselves are financial transactions, in Table 6.2.",
       },
     ],
-    notModelled: "The model has no home purchases or loans, and a loan is lent rather than paid, so household incomes do not change.",
+    notModelled: "The model has no home purchases or loans, and the scheme lends rather than pays, so household incomes do not change.",
     sources: [budget("paragraphs 5.5 and 6.113")],
   },
   {
@@ -261,14 +261,14 @@ export const UNMODELLED_MEASURES = [
     id: "universal-credit-surplus-earnings",
     order: 11,
     reason: "data",
-    name: "Universal Credit surplus earnings threshold kept at £2,500",
+    name: "Universal Credit surplus earnings threshold stays at £2,500",
     starts: "1 Apr 2027",
     changes:
       "The Universal Credit surplus earnings threshold stays at £2,500 to March 2028, rather than falling to £300.",
     reaches:
       "Universal Credit claimants who reclaim within six months of a high-pay month.",
     household:
-      "Earnings up to £2,500 above where an award stops, such as a bonus, are not carried into a new claim.",
+      "Earnings up to £2,500 above where an award stops, such as a bonus, do not carry into a new claim.",
     costings: [{ row: 8, values: [0, -140, 0, 0, 0, 0] }],
     notModelled:
       "The model works out Universal Credit over a whole year rather than month by month, so it has no surplus earnings rule.",
@@ -278,10 +278,10 @@ export const UNMODELLED_MEASURES = [
     id: "mileage-rates",
     order: 12,
     reason: "data",
-    name: "Tax-free mileage rates raised",
+    name: "Tax-free mileage rates up",
     starts: "Apr 2026 / Apr 2027",
     changes:
-      "The tax-free 55p a mile for the first 10,000 business miles is made permanent; above that, 25p rises to 35p.",
+      "The tax-free 55p a mile for the first 10,000 business miles becomes permanent; above that, 25p rises to 35p.",
     reaches: "Around 2 million employees and 1 million self-employed people (government estimate).",
     household:
       "Less income tax for those driving for work: £120 a year for 6,000 miles, £300 for 15,000 (Treasury).",
@@ -296,7 +296,7 @@ export const UNMODELLED_MEASURES = [
     name: "Company car tax up 1 point in 2030-31",
     starts: "6 Apr 2030",
     changes:
-      "Company car tax percentages for 2030-31 are 1 point above 2029-30's in every band, up to 40%.",
+      "Company car tax percentages for 2030-31 exceed 2029-30's by 1 point in every band, up to 40%.",
     reaches: "Employees with a company car.",
     household:
       "More income tax on the same company car, from April 2030.",
@@ -308,17 +308,17 @@ export const UNMODELLED_MEASURES = [
     id: "business-asset-disposal-relief",
     order: 14,
     reason: "data",
-    name: "Business Asset Disposal Relief limit cut to £500,000",
+    name: "Business Asset Disposal Relief limit down to £500,000",
     starts: "6 Apr 2027",
     changes:
-      "The lifetime limit on gains taxed at Business Asset Disposal Relief's 18% falls from £1 million to £500,000.",
+      "The lifetime limit on gains that qualify for Business Asset Disposal Relief's 18% falls from £1 million to £500,000.",
     reaches:
       "Sellers of qualifying businesses; three-quarters keep relief on their whole gain.",
     household:
-      "Gains above £500,000 are taxed at up to 24% rather than 18%.",
+      "Gains above £500,000 pay up to 24% rather than 18%.",
     costings: [{ row: 60, values: [5, 60, 180, 255, 280, 305] }],
     notModelled:
-      "The model has no record of relief used in earlier years, and its gains are calibrated to 2024-25, when disposals were unusually high.",
+      "The model has no record of relief used in earlier years, and we calibrated its gains to 2024-25, when disposals were unusually high.",
     sources: [
       budget("paragraphs 2.53 and 6.261"),
       { label: "HMRC, Capital Gains Tax rates", href: "https://www.gov.uk/capital-gains-tax/rates" },
@@ -335,7 +335,7 @@ export const UNMODELLED_MEASURES = [
     reaches:
       "People saving for a first home, including existing Lifetime ISA holders.",
     household:
-      "The bonus adds to a buyer's deposit, not their income, and is paid when the savings buy the home.",
+      "The bonus adds to a buyer's deposit, not their income, and pays out when the savings buy the home.",
     costings: [
       { row: 38, values: [0, 0, 0, 110, 110, 235], note: "Row 38 is the First Time Buyer ISA." },
       { row: 39, values: [-15, -20, -20, -25, -25, -25], note: "Row 39 is the lower Lifetime ISA withdrawal charge." },
@@ -350,13 +350,13 @@ export const UNMODELLED_MEASURES = [
     name: "Parental pay for self-employed fathers, partners and adopters",
     starts: "Apr 2029",
     changes:
-      "Parental pay is extended to eligible self-employed fathers, partners and adopters in Great Britain, and some with irregular work.",
+      "Parental pay extends to eligible self-employed fathers, partners and adopters in Great Britain, and some with irregular work.",
     reaches: "Over 150,000 parents a year (government estimate).",
     household:
       "A self-employed father or partner could get two weeks' pay after a birth, now up to £194 a week (Treasury).",
     costings: [{ row: 6, values: [0, 0, 0, -70, -70, -70] }],
     notModelled:
-      "The eligibility rules are not yet published, and the model takes paternity pay and Maternity Allowance as reported in its data rather than working out who qualifies.",
+      "The government has not yet published the eligibility rules, and the model takes paternity pay and Maternity Allowance as its data report them rather than working out who qualifies.",
     sources: [
       budget("paragraphs 3.20 and 6.12"),
       {
@@ -369,7 +369,7 @@ export const UNMODELLED_MEASURES = [
     id: "gas-standing-charges",
     order: 17,
     reason: "data",
-    name: "Gas standing charges to be abolished",
+    name: "Gas standing charges to end",
     starts: "End of 2027 or later",
     changes:
       "The government has asked Ofgem to abolish gas standing charges in Great Britain, £108 a year on average.",

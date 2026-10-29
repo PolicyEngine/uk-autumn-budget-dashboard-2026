@@ -159,7 +159,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Adds £100 to the Warm Home Discount for each household that receives it in winter 2026-27.",
     details:
-      "Paid to households in Great Britain on Universal Credit, Pension Credit, Housing Benefit or income-related ESA, the 2026-27 core group in England and Wales. Receipt follows DESNZ's rates: 85% of Pension Credit households and 70% of other eligible households receive it. Scotland's scheme has its own core group, so eligibility there is approximate.",
+      "Goes to households in Great Britain on Universal Credit, Pension Credit, Housing Benefit or income-related ESA, the 2026-27 core group in England and Wales. Receipt follows DESNZ's rates: 85% of Pension Credit households and 70% of other eligible households receive it. Scotland's scheme has its own core group, so eligibility there is approximate.",
     source: {
       label: "Warm Home Discount",
       href: "https://www.gov.uk/the-warm-home-discount-scheme",
@@ -253,7 +253,7 @@ export const POLICY_DETAILS = [
     description: "Halve the Business Asset Disposal Relief lifetime limit",
     writtenFor: "Candidate measure. From 6 April 2027 the lifetime limit on gains qualifying for Business Asset Disposal Relief falls from £1 million to £500,000; the relief rate stays at 18%. Gains above the limit pay the main capital gains tax rates. The model applies the limit to each year's gains. Capital gains are imputed and calibrated to 2024-25, when disposals were unusually high ahead of the April 2025 rise in the relief's rate, so the relief's base, and the revenue from restricting it, are likely 1.5 to 1.7 times too high.",
     summary:
-      "Halves the lifetime limit on gains taxed at the 18% Business Asset Disposal Relief rate, from £1 million to £500,000.",
+      "Halves the lifetime limit on gains that qualify for the 18% Business Asset Disposal Relief rate, from £1 million to £500,000.",
     starts: "April 2027",
     type: "Capital gains tax",
     inForce: { from: "2027-04" },

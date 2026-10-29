@@ -166,7 +166,7 @@ Object.assign(SOURCES, {
   // supporting documents page): the figures the reconciliation gate compares
   // (public/data/official_costings.json, from Table 6.1)
   obr_budget_2026_costings: {
-    label: "the official Autumn Budget 2026 costings (HM Treasury, certified by the OBR)",
+    label: "the official Autumn Budget 2026 costings (HM Treasury, with OBR certification)",
     url: "https://assets.publishing.service.gov.uk/media/6ae1883fe4367e5c8b0467df/AB26_Policy_Costing.pdf",
   },
   ons_ashe: {

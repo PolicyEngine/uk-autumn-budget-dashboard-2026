@@ -34,7 +34,7 @@ export default function ObrDifferencePanel({ row, year, yearLabel, obrKind }) {
       : !isValue(row.obr)
         ? `No official figure for ${yearLabel}.`
         : !isValue(row.pe)
-          ? `Ours is not yet published for ${yearLabel}.`
+          ? `We have not yet published ours for ${yearLabel}.`
           : null;
   return (
     <aside className="obr-panel" aria-label={`Why ours differs: ${row.name}`} aria-live="polite">

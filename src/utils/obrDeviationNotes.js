@@ -40,8 +40,8 @@ export const OBR_DIFFERENCE_POINTS = {
     {
       reason: "Coverage",
       byYear: {
-        2026: "Scaled to all fuel, ours would be about £450m",
-        2027: "Scaled to all fuel, ours would be about £760m",
+        2026: "If we scaled to all fuel, ours would be about £450m",
+        2027: "If we scaled to all fuel, ours would be about £760m",
       },
     },
     { reason: "Timing", text: "Official assumes 5p back on 1 Jan, law phases it", years: [2026] },

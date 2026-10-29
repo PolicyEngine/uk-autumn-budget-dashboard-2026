@@ -90,7 +90,7 @@ export function buildMeasureCatalogue({ manifest = null, receipts = {}, budgetar
     const size = budgetRows.reduce((sum, row) => sum + Math.abs(Number(row.value)), 0);
     const direction = impact === null || impact === 0 ? "neutral" : impact < 0 ? "cost" : "revenue";
     const name = entry?.name || receipt?.name || ownRows.find((row) => row.reform_name)?.reform_name || id;
-    const description = entry?.description || receipt?.description || ownRows.find((row) => row.reform_description)?.reform_description || "A public description has not yet been published.";
+    const description = entry?.description || receipt?.description || ownRows.find((row) => row.reform_description)?.reform_description || "We have not yet published a public description.";
     const availability = measureAvailability(manifest, id);
     const verified = tablesByKey != null && Object.hasOwn(tablesByKey, id) && !failures[id];
     if (!verified && isDisplayable(entry)) {

@@ -33,7 +33,7 @@ export const OBR_UNAVAILABLE = "The official costings have no figures for the se
  * October: the card is always on Public finances). The Treasury published
  * the costings with the Budget; the file follows once checked.
  */
-export const OBR_PENDING = "The official costings were published with the Budget; this comparison fills in once we have checked them against our estimates.";
+export const OBR_PENDING = "The Treasury published the official costings with the Budget; this comparison fills in once we have checked them against our estimates.";
 
 /** The card's title without a year, while there are no figures to date. */
 export const OBR_CARD_TITLE = "How our estimates compare with the official costings";
@@ -203,17 +203,17 @@ const COMPARISON_INFO = {
     "Our estimate of each policy's effect on the public finances beside the official costing for the same year, in £m under £1bn and £bn above; positive values raise revenue or cut spending. Largest official costing first.",
   how: [
     "Our figures are static, so an official static costing is the like-for-like comparison. Budget 2026's costings give one figure per policy, which for most policies includes behavioural responses, so the card compares with that.",
-    "Our estimate as % of the official costing: each official costing is 100%, and a bar at 90% means our estimate is nine-tenths of it. A policy costed under £50m has no %.",
+    "Our estimate as % of the official costing: each official costing is 100%, and a bar at 90% means our estimate is nine-tenths of it. A policy whose official costing is under £50m has no %.",
     "Difference is ours minus the official figure.",
   ],
   definitions: [
-    { term: "Static costing", meaning: "The direct effect, with behaviour held fixed." },
-    { term: "Post-behavioural costing", meaning: "The static costing plus expected responses, such as changes in hours worked or spending." },
+    { term: "Static costing", meaning: "The direct effect, with no change in behaviour." },
+    { term: "Post-behavioural costing", meaning: "The static costing plus expected responses, such as changes in the hours people work or in spending." },
   ],
   caveats: [
-    "Effects outside households, or on incomes the survey covers thinly (such as the very top), are estimated less fully than in official costings built from administrative data.",
+    "We estimate effects outside households, or on incomes the survey covers thinly (such as the very top), less fully than official costings that draw on administrative data do.",
     "The two can also differ in the economic forecast, take-up and the parts of a policy each models.",
-    "Our figures are by tax year. The official costings are on a National Accounts basis, in which tax paid through Self Assessment can fall in a later year: a change in it, such as the trading allowance, can appear about a year later in them than in ours.",
+    "Our figures are by tax year. The official costings are on a National Accounts basis, in which tax that taxpayers pay through Self Assessment can fall in a later year: a change in it, such as the trading allowance, can appear about a year later in them than in ours.",
   ],
   sources: [
     { label: "PolicyEngine UK microsimulation" },
