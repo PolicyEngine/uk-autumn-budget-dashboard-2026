@@ -15,7 +15,7 @@
  */
 
 export const UNMODELLED_VISUALS = {
-  // "capped at £2; most are capped at £3 until then", from 1 Jan 2027 to Dec 2027
+  // "capped at £2, down from £3", from 1 Jan 2027 to Dec 2027
   "bus-fare-cap": {
     kind: "columns",
     caption: "Single bus fare cap",
@@ -43,14 +43,14 @@ export const UNMODELLED_VISUALS = {
   // "rises from 20% to 25%"
   "machine-games-duty": {
     kind: "bars",
-    caption: "Machine Games Duty rate, higher-stake machines",
+    caption: "Machine Games Duty rate",
     max: 32,
     rows: [
       { label: "Until 1 Apr 2027", value: 20, text: "20%", plain: true },
       { label: "From 1 Apr 2027", base: 20, value: 25, text: "25%" },
     ],
     tone: "loss",
-    alt: "Machine Games Duty on higher-stake machines: 20% until 1 April 2027, 25% from then.",
+    alt: "Machine Games Duty rate on these machines: 20% until 1 April 2027, 25% from then.",
   },
   // "A planned cut ... to £12,000 for under-65s does not go ahead; it stays at £20,000"
   "cash-isa-limit": {
@@ -194,13 +194,13 @@ export const UNMODELLED_VISUALS = {
     amount: "Up to £194",
     alt: "Parental pay for a self-employed father or partner from April 2029: two weeks' pay after a birth, each week up to £194.",
   },
-  // "£108 a year on average"; "bills fall for light users, rise for heavy ones"
+  // "£108 a year on average"; "bills fall for homes using less gas, rise for those using more"
   "gas-standing-charges": {
     kind: "standing",
     caption: "A year's gas bill by gas used (not to scale)",
     charge: "£108 standing charge",
-    light: "Light users pay less",
-    heavy: "Heavy users pay more",
-    alt: "Gas bills without the standing charge, £108 a year on average: its costs move into unit rates, so before mitigation bills fall for light users and rise for heavy ones.",
+    light: "Less gas used: bill falls",
+    heavy: "More gas used: bill rises",
+    alt: "Gas bills without the standing charge, £108 a year on average: its costs move into unit rates, so before mitigation bills fall for homes using less gas and rise for those using more.",
   },
 };

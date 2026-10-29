@@ -296,7 +296,7 @@ function Mileage({ spec }) {
   );
 }
 
-/** A year's bill against gas used: with the standing charge, and without it, with dearer units. */
+/** A year's bill against gas used: with the standing charge, and without it, its costs in the unit rates. */
 function Standing({ spec }) {
   const wrap = useRef(null);
   const width = useWidth(wrap);
@@ -334,7 +334,7 @@ function Standing({ spec }) {
         </span>
         <span className="umv-key-item">
           <span className="umv-swatch is-ink is-line" />
-          Without it, dearer units
+          Without it, costs in unit rates
         </span>
       </p>
     </div>
