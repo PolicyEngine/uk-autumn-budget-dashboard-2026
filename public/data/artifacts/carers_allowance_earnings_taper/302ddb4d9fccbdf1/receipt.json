@@ -37,8 +37,8 @@
     "description": "In England and Wales, Carer's Allowance no longer stops when weekly net earnings pass the Weekly Earnings Limit, 16 hours at the National Living Wage (\u00a3212 a week at April 2027's \u00a313.21, rounded up to the pound): it is reduced by \u00a31 for each \u00a31 of earnings above the limit, a 100% taper, to nothing once earnings exceed the limit by the full weekly rate. The taper starts within 2030-31, on a date still to come, so the model counts half of that year. Carers at or below the limit, and Scotland's Carer Support Payment, are unchanged. Claims by carers the limit kept out follow the data's take-up draw (60%). For a carer on Universal Credit the model counts the extra allowance in full as unearned income but deducts none of the PAYE on it from earnings, as DWP would, so such a carer can lose overall.",
     "digests": {
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
-      "outputs_sha256": "8cea5169ff945832d5a00539152c7fae26216fb9478a1613946edf30387080a1",
-      "receipt_sha256": "05e89d470da0b8f1d50a1fcbad9658c77b02dc4f5e30fde8f9280fffc409cad7"
+      "outputs_sha256": "51d582bd4f867fa6701a20a36bf3bcacc450081e5cbe1f8614232125d57d9083",
+      "receipt_sha256": "6fa24117eeff0f24c347d07821a1ff431a53688a6ee53732c22f0933b66208dd"
     },
     "disclosure_floor": {
       "checked": true,
@@ -394,13 +394,14 @@
       "household_scatter_binned.csv": "fee78c23abe01e0c4845360196f0168b06d32ada89e33ad8cfb269fa70f0212c",
       "income_curve.csv": "eb31df9c849b865b48dc31f9eca97dcd751af0c840dbadd32dd9377469c7560a",
       "metrics.csv": "721b5d2e62fdcd91f5bf68a248f6d6581b15bc1e334a20a0a0cdd6f8b46f5eff",
+      "official_basis.csv": "83b3cff2ee2c59bb735eadc3dc9c1a19969986a3af840215da355c567aec71ba",
       "poverty_inequality.csv": "82f43a6e9682dc9624a8d50baac2bce2047fa20494e6f256a83daddddffa5093",
       "winners_losers.csv": "ec8f924c3c293c830d1f11d9a23b03ddbd04791e6dfe6d45d2e74c888ea8fb15"
     },
-    "generated_at": "2026-10-29T16:09:13.296370+00:00",
-    "generation_id": "33506c55dcec4b74be2ee054771b1898",
+    "generated_at": "2026-10-29T18:32:34.228050+00:00",
+    "generation_id": "dddfdf4da6d34ac9b49200817bea2c24",
     "generator_argv": [
-      "/private/tmp/claude-501/-Users-vahid/59114aef-a9b7-4663-a8bc-32b2c6146551/scratchpad/bus/src/uk_budget_data/cli.py",
+      "/private/tmp/claude-501/-Users-vahid/59114aef-a9b7-4663-a8bc-32b2c6146551/scratchpad/rerun/src/uk_budget_data/cli.py",
       "generate",
       "--national",
       "--backend",
@@ -417,7 +418,7 @@
       "state_pension_income_tax_protection",
       "trading_allowance_raise"
     ],
-    "git_sha": "f400d4a5359526a8891b5aabfe5df10d9d104a8c",
+    "git_sha": "ac61319f7b0563118de2152d2169dd204959c760",
     "key": "carers_allowance_earnings_taper",
     "measure_ids": [
       "carers_allowance_earnings_taper"
@@ -484,13 +485,13 @@
       "name": "policyengine-uk",
       "version": "2.151.0"
     },
-    "outputs_sha256": "8cea5169ff945832d5a00539152c7fae26216fb9478a1613946edf30387080a1",
+    "outputs_sha256": "51d582bd4f867fa6701a20a36bf3bcacc450081e5cbe1f8614232125d57d9083",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "code_revision",
       "kind": "reform",
       "name": "carers_allowance_earnings_taper",
-      "reform_sha256": "e7611e1193e7688a3a7ff0988c2806a2a16a44b93b6cdea857c5319a91047e4d",
+      "reform_sha256": "d1ab76effcf31e3341c8175d88bbd540ba8793b6b397b80a9c9892c4fe9522ba",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {

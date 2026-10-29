@@ -7,9 +7,9 @@
   "files": {
     "constituency.csv": "56b55f1460ff9f56ac1b89be08da910fc9f28c5eeb3e958be72b8dd754e81b40"
   },
-  "flat_provenance_sha256": "45eb28315eda76b12085522b20331e75ee204350894893f6bf257df368800b36",
-  "manifest_revision": 47,
-  "manifest_sha256": "dad2bc6c9b2212b60821d902dca7b65b13df5c1c7d0bce12baff9cd057d770e4",
+  "flat_provenance_sha256": "e928d7870b1607712efda731ec143a39fb43ac8aff8fa1f7451dbc6c576dbb20",
+  "manifest_revision": 60,
+  "manifest_sha256": "272f83014d2202abf19111dac49b42cab0f00edebe2f1d7d9df6127c94950565",
   "release": "uk-autumn-budget-2026",
   "schema": "uk-budget-release-index/v1"
 }

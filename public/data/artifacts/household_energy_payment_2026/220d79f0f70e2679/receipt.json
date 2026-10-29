@@ -34,11 +34,11 @@
       2031,
       2032
     ],
-    "description": "Single bus fares on participating services in England outside London are capped at \u00a32 instead of \u00a33 from 1 January to 31 December 2027. The saving is the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London: 10.0% of what that spending would be at \u00a33 fares (\u00a3230m, divided by 0.9 for operator participation, over \u00a32,557m of spending), for the days the cap runs: 1 January to 5 April 2027 in 2026-27 and 6 April to 31 December 2027 in 2027-28. London residents get \u00a30. The saving is counted as household income, a methodological choice: the official cost is a grant to bus operators. Spending is held fixed, with no extra travel.",
+    "description": "A one-off \u00a3100 payment from January 2027 to each household in England in property valuation bands A to D (the lowest four of England's eight), up to 20 million households, paid into bank accounts and counted as household income in 2026-27. Scotland, Wales and Northern Ireland receive a share of the funding instead, which is not modelled.",
     "digests": {
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
-      "outputs_sha256": "47d07c7736d46eacaded835254e789df44fbc31e457af4e2cf2efc9953e58220",
-      "receipt_sha256": "627e1664cc4b4c31b0b2aad5dcdb4eee9f06a3919200cf46593544cb97cad7fc"
+      "outputs_sha256": "f1c12b0b2dff9cdc9e340f2ad59e90ffad2eebb9aa5ac13762127747ac3f2bba",
+      "receipt_sha256": "a1af6e4022f0653f7692d70085bae5e561c167dc8e7432feac8e18e530b9032b"
     },
     "disclosure_floor": {
       "checked": true,
@@ -48,19 +48,19 @@
       "withheld_cells": []
     },
     "files": {
-      "age_impact.csv": "7dae3b8f32ad2db2d79a527c7ad256eb29752d5c257a89e5bf7e02bd3359beae",
-      "budgetary_impact.csv": "f9eb465a65810f8fba7336f7b22a1d96fe6c28cdc4c47f4d105833ab33c53ac2",
-      "distributional_impact.csv": "24dd292293b7fd1c2d2c948ab8f8bd2b9c5f4bbd2c04b7c1eeb5702bb1c6e22e",
-      "household_scatter_binned.csv": "9ebcbf1e76c876fe910bb0a85b39fe54b8657da7a0add3c72cd5c63d25490647",
-      "income_curve.csv": "e9561d3d2de0a4914580a3886bb70f6d849305e94587c84a563189f1923a4508",
-      "metrics.csv": "79a697c0c639ca884b2009271678ebfe2309c889b69b1e9b57a07190decf7f4c",
-      "poverty_inequality.csv": "311b23697fce02b9ce9962142b2c21d3561c519fcd7437eeeb3bba53976d7ff9",
-      "winners_losers.csv": "c89515b9f6c5d03aaa569ca32bc25437bc89996c277de2d0512542126a2c94b9"
+      "age_impact.csv": "07ee17908a9d19a0557a53364c2fbb3d9234aa805a284ed9e45b4db7df3b3e3e",
+      "budgetary_impact.csv": "581499ef5a1d0f7d611383351f101743e4d794ba7411e308bc828f016da9ea23",
+      "distributional_impact.csv": "9cb05bfb61069a380a4e0ce94a3213e2d91db9293b0bea1272994fc87102f03b",
+      "household_scatter_binned.csv": "b14f8fa2e1ebd16b903c97a3b5449d943d8415f80f098a2691a6fef5ba0e9387",
+      "income_curve.csv": "0f3a91e6a8194431ee86b1e462e0dd11c55b2a57bfb92f1f2c3097f17e89690b",
+      "metrics.csv": "f4d88e39c39a466cd55f9037de7f64390525b9eb88c3364e5cffbe0d4927e01a",
+      "poverty_inequality.csv": "aa7fa6c121d42611f386063fe928b3ee1f61cc2220b94060ea401de0e18b71c2",
+      "winners_losers.csv": "f7ffa08e861bb41a6da0764125e9c5e501328c98302ef3a218c5fe4c913d3b4c"
     },
-    "generated_at": "2026-10-29T16:14:36.492162+00:00",
-    "generation_id": "a4e56ec0a74641f1b51a6f1c2b33246d",
+    "generated_at": "2026-10-29T18:38:30.230885+00:00",
+    "generation_id": "aed23c92cb5c4b9dbd184308e3a3aaa1",
     "generator_argv": [
-      "/private/tmp/claude-501/-Users-vahid/59114aef-a9b7-4663-a8bc-32b2c6146551/scratchpad/bus/src/uk_budget_data/cli.py",
+      "/private/tmp/claude-501/-Users-vahid/59114aef-a9b7-4663-a8bc-32b2c6146551/scratchpad/rerun/src/uk_budget_data/cli.py",
       "generate",
       "--national",
       "--backend",
@@ -77,10 +77,10 @@
       "state_pension_income_tax_protection",
       "trading_allowance_raise"
     ],
-    "git_sha": "f400d4a5359526a8891b5aabfe5df10d9d104a8c",
-    "key": "bus_fare_cap_2027",
+    "git_sha": "ac61319f7b0563118de2152d2169dd204959c760",
+    "key": "household_energy_payment_2026",
     "measure_ids": [
-      "bus_fare_cap_2027"
+      "household_energy_payment_2026"
     ],
     "member_outputs_sha256": null,
     "members": null,
@@ -92,7 +92,7 @@
         null
       ]
     },
-    "name": "Single bus fares capped at \u00a32",
+    "name": "Household Energy Payment",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.11.1",
@@ -103,7 +103,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "bus_fare_cap_2027 baseline"
+      "name": "household_energy_payment_2026 baseline"
     },
     "certificate": {
       "bundle_version": "6.11.1",
@@ -144,13 +144,13 @@
       "name": "policyengine-uk",
       "version": "2.151.0"
     },
-    "outputs_sha256": "47d07c7736d46eacaded835254e789df44fbc31e457af4e2cf2efc9953e58220",
+    "outputs_sha256": "f1c12b0b2dff9cdc9e340f2ad59e90ffad2eebb9aa5ac13762127747ac3f2bba",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "code_revision",
       "kind": "reform",
-      "name": "bus_fare_cap_2027",
-      "reform_sha256": "040797b5e16ee70e3d4025347a0b1c9bc8fff3282939971db1ee525531af9793",
+      "name": "household_energy_payment_2026",
+      "reform_sha256": "db5d8ffda91e63d3bb693013dd556bf82014540160a381a5e7938c5ddff24b04",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {

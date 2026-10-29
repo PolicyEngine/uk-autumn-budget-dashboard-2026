@@ -34,11 +34,11 @@
       2031,
       2032
     ],
-    "description": "A one-off \u00a3100 payment from January 2027 to each household in England in property valuation bands A to D (the lowest four of England's eight), up to 20 million households, paid into bank accounts and counted as household income in 2026-27. Scotland, Wales and Northern Ireland receive a share of the funding instead, which is not modelled.",
+    "description": "The 5p cut in fuel duty is kept: the main rate stays at 52.95p a litre to 30 June 2027, so the rise due on 1 January 2027 and the March and April 2027 steps do not happen. From 1 July 2027 it returns to current law's 60.59p a litre, rising with RPI each April. Rates are day-weighted to fiscal years, and the VAT on the lower pump price is included.",
     "digests": {
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
-      "outputs_sha256": "f1c12b0b2dff9cdc9e340f2ad59e90ffad2eebb9aa5ac13762127747ac3f2bba",
-      "receipt_sha256": "66416dbf0a5fd98d24671ff696efadf2099026b9c8270dd6a68757cc55115d3c"
+      "outputs_sha256": "73eea8d5d3519830e4abab84e5ff77d58753050075b92dedb9e62296d282afa6",
+      "receipt_sha256": "1da86a4e8233faa91854d0c8934c0cf7d1e8ed5bd7a69efe60814068f7be7697"
     },
     "disclosure_floor": {
       "checked": true,
@@ -48,19 +48,18 @@
       "withheld_cells": []
     },
     "files": {
-      "age_impact.csv": "07ee17908a9d19a0557a53364c2fbb3d9234aa805a284ed9e45b4db7df3b3e3e",
-      "budgetary_impact.csv": "581499ef5a1d0f7d611383351f101743e4d794ba7411e308bc828f016da9ea23",
-      "distributional_impact.csv": "9cb05bfb61069a380a4e0ce94a3213e2d91db9293b0bea1272994fc87102f03b",
-      "household_scatter_binned.csv": "b14f8fa2e1ebd16b903c97a3b5449d943d8415f80f098a2691a6fef5ba0e9387",
-      "income_curve.csv": "0f3a91e6a8194431ee86b1e462e0dd11c55b2a57bfb92f1f2c3097f17e89690b",
-      "metrics.csv": "f4d88e39c39a466cd55f9037de7f64390525b9eb88c3364e5cffbe0d4927e01a",
-      "poverty_inequality.csv": "aa7fa6c121d42611f386063fe928b3ee1f61cc2220b94060ea401de0e18b71c2",
-      "winners_losers.csv": "f7ffa08e861bb41a6da0764125e9c5e501328c98302ef3a218c5fe4c913d3b4c"
+      "age_impact.csv": "dcef3d9342d576ed00a4074fb2d13f81e54733bb21364f8e057e2a0cf5b01325",
+      "budgetary_impact.csv": "8387246ce038f14fd2d74fd56e4dbf517bf7709d236aa3bc1f3693dddc2f0d2e",
+      "distributional_impact.csv": "380b1152abd775e2f6601cdde851aac5b8074d6b0d45502f73215658c928c835",
+      "household_scatter_binned.csv": "75c3ac9f43eda1d72cba17431d80bfbe73a3c1bbc8fa50ef212315da3d993f5d",
+      "income_curve.csv": "dee453c574be4b0501e9c82601287f68df7880d8ea3c9bb8ceb0a7756ecf255c",
+      "metrics.csv": "898a1fe903f673ee0bfa643b6534bcd17fef72dfea5219cff4a0256a0f064894",
+      "poverty_inequality.csv": "32025767ff9d5f5bcd74f2290206ab59993ffc1eee107bf62320eac828042bf4",
+      "winners_losers.csv": "b525e402e5a9650f6c4817521e05f604293fe031b087dbdffa543d3e2734ae89"
     },
-    "generated_at": "2026-10-29T16:10:54.282745+00:00",
-    "generation_id": "8e63551698ff4471b9698dcc6a02bd98",
+    "generated_at": "2026-10-29T18:35:02.036096+00:00",
     "generator_argv": [
-      "/private/tmp/claude-501/-Users-vahid/59114aef-a9b7-4663-a8bc-32b2c6146551/scratchpad/bus/src/uk_budget_data/cli.py",
+      "/private/tmp/claude-501/-Users-vahid/59114aef-a9b7-4663-a8bc-32b2c6146551/scratchpad/rerun/src/uk_budget_data/cli.py",
       "generate",
       "--national",
       "--backend",
@@ -77,10 +76,10 @@
       "state_pension_income_tax_protection",
       "trading_allowance_raise"
     ],
-    "git_sha": "f400d4a5359526a8891b5aabfe5df10d9d104a8c",
-    "key": "household_energy_payment_2026",
+    "git_sha": "ac61319f7b0563118de2152d2169dd204959c760",
+    "key": "fuel_duty_rise_deferral",
     "measure_ids": [
-      "household_energy_payment_2026"
+      "fuel_duty_rise_deferral"
     ],
     "member_outputs_sha256": null,
     "members": null,
@@ -89,10 +88,12 @@
     "modifier_templates": {
       "baseline": [],
       "reform": [
-        null
+        [
+          "apply_vat_base_change"
+        ]
       ]
     },
-    "name": "Household Energy Payment",
+    "name": "Fuel duty cut extended",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.11.1",
@@ -103,7 +104,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "household_energy_payment_2026 baseline"
+      "name": "fuel_duty_rise_deferral baseline"
     },
     "certificate": {
       "bundle_version": "6.11.1",
@@ -144,13 +145,13 @@
       "name": "policyengine-uk",
       "version": "2.151.0"
     },
-    "outputs_sha256": "f1c12b0b2dff9cdc9e340f2ad59e90ffad2eebb9aa5ac13762127747ac3f2bba",
+    "outputs_sha256": "73eea8d5d3519830e4abab84e5ff77d58753050075b92dedb9e62296d282afa6",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "code_revision",
       "kind": "reform",
-      "name": "household_energy_payment_2026",
-      "reform_sha256": "fbe79dbfe6ac09ee12015eee9815c00bef2505913eb1eb324acd6a9e5ffa25c0",
+      "name": "fuel_duty_rise_deferral",
+      "reform_sha256": "d4c645acb2306773e19afc6a8f4ce2c496884bb0aa93f42ea9ca73b9de4693aa",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {

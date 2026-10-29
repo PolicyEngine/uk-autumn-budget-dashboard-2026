@@ -37,8 +37,8 @@
     "description": "From 6 April 2027 to 5 April 2030, people over State Pension age whose total income (the State Pension, with any increments or additional State Pension, plus all other income, savings interest included) is at or below the full new State Pension (\u00a313,036.40 in 2027-28) get a Pension Tax Allowance: a non-refundable reduction in their income tax, worth up to \u00a394 in 2027-28. It falls by \u00a31 for every \u00a33 of income above the full new State Pension, so it is gone at about \u00a313,319 in 2027-28. The personal allowance is unchanged.",
     "digests": {
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
-      "outputs_sha256": "2d00d34b2f4b883194cd1c84c9467380e3049f53762b56ec6689369d5d832a51",
-      "receipt_sha256": "2a69205d5d54a06aa02aa83d18766c40ab1ace8fba5e89df716da0ffdd0a6239"
+      "outputs_sha256": "fd6fea536a7ef66adfc7e4236dc7365ebd966d606e513d57cddb08c022f123d5",
+      "receipt_sha256": "8d0d477f5d3852a241edcc2fbd1b9de133eb5a4bc77afb370faf6aed90f8af33"
     },
     "disclosure_floor": {
       "checked": true,
@@ -374,13 +374,14 @@
       "household_scatter_binned.csv": "123fd6dc424a976e603f6b28284cf597ea364e2ab5d9d1bcf135fccf12623899",
       "income_curve.csv": "0793dfec0731e4891ab666d52d5ba02bb7d35d1680a3909119a075ca2c9dd9b5",
       "metrics.csv": "cf7742558ad872fdf07574e1ee676a574da00928d9782cabda767775793cdf8c",
+      "official_basis.csv": "9b86afd9bd9c5b78eb004c8b242274efce5c2576fe9c1411b693c54c6f1cb33e",
       "poverty_inequality.csv": "608c664ac8af8cd5e9b4c4a0a4d19d5058ca906fcc214e4df446c166559cec61",
       "winners_losers.csv": "89b58413e073b73f00a12872d07e8ea48af15de8b1164e0e43d3a939d1364c60"
     },
-    "generated_at": "2026-10-29T16:09:28.436341+00:00",
-    "generation_id": "402b550bf1214ed4a21015da3342a32f",
+    "generated_at": "2026-10-29T18:33:12.834037+00:00",
+    "generation_id": "44ee4ea7373d47f0b9b630b081c7b98a",
     "generator_argv": [
-      "/private/tmp/claude-501/-Users-vahid/59114aef-a9b7-4663-a8bc-32b2c6146551/scratchpad/bus/src/uk_budget_data/cli.py",
+      "/private/tmp/claude-501/-Users-vahid/59114aef-a9b7-4663-a8bc-32b2c6146551/scratchpad/rerun/src/uk_budget_data/cli.py",
       "generate",
       "--national",
       "--backend",
@@ -397,7 +398,7 @@
       "state_pension_income_tax_protection",
       "trading_allowance_raise"
     ],
-    "git_sha": "f400d4a5359526a8891b5aabfe5df10d9d104a8c",
+    "git_sha": "ac61319f7b0563118de2152d2169dd204959c760",
     "key": "state_pension_income_tax_protection",
     "measure_ids": [
       "state_pension_income_tax_protection"
@@ -464,13 +465,13 @@
       "name": "policyengine-uk",
       "version": "2.151.0"
     },
-    "outputs_sha256": "2d00d34b2f4b883194cd1c84c9467380e3049f53762b56ec6689369d5d832a51",
+    "outputs_sha256": "fd6fea536a7ef66adfc7e4236dc7365ebd966d606e513d57cddb08c022f123d5",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
       "binding": "code_revision",
       "kind": "reform",
       "name": "state_pension_income_tax_protection",
-      "reform_sha256": "90c710f02289572b3c608f6bdf686106ef1749ae1901b791b98b265be8b93c59",
+      "reform_sha256": "37ea047ac5d0fb7da81a21de88a474c021f8819ba74f4075955416045387864d",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {

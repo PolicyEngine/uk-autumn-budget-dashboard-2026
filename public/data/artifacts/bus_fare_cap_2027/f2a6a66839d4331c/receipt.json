@@ -34,11 +34,11 @@
       2031,
       2032
     ],
-    "description": "From 6 April 2027 the income tax rates on property income rise to 24%, 44% and 49% at the basic, higher and additional rates in England, Wales and Northern Ireland: 2 percentage points above current law, which already includes Budget 2025's rises. Finance cost relief for landlords follows the property basic rate, so rises to 24%, Scottish landlords' included. Incomes are held fixed, with no behavioural response.",
+    "description": "Single bus fares on participating services in England outside London are capped at \u00a32 instead of \u00a33 from 1 January to 31 December 2027. The saving is the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London: 10.0% of what that spending would be at \u00a33 fares (\u00a3230m, divided by 0.9 for operator participation, over \u00a32,557m of spending), for the days the cap runs: 1 January to 5 April 2027 in 2026-27 and 6 April to 31 December 2027 in 2027-28. London residents get \u00a30. The saving is counted as household income, a methodological choice: the official cost is a grant to bus operators. Spending is held fixed, with no extra travel.",
     "digests": {
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
-      "outputs_sha256": "bf7f8a799d545967674a2730dd5e836f9cca220e541ccc950a62fec298a268fd",
-      "receipt_sha256": "0dad9121342537de582feaff91550f11545c9e430d2b9ba016e9f9d31e9b5ddc"
+      "outputs_sha256": "47d07c7736d46eacaded835254e789df44fbc31e457af4e2cf2efc9953e58220",
+      "receipt_sha256": "368483a62fd281af002442214ab492107cde412b792dbb46be72e7b45f9bddf0"
     },
     "disclosure_floor": {
       "checked": true,
@@ -48,18 +48,19 @@
       "withheld_cells": []
     },
     "files": {
-      "age_impact.csv": "58739a9b47fcb4e76983119c87131e88362375275fbd4fe7d8933f8772c0b02a",
-      "budgetary_impact.csv": "5c2abf677accb05d3616c2038823aa1a8f22897ce6dd19700a8e0444eb6ba4ec",
-      "distributional_impact.csv": "ea4e02c19d075a12cf4922fbca80e65cc7fbc0eaf40d6526619f6e18024318b3",
-      "household_scatter_binned.csv": "287909c485122279e4502489da0962d2452fcd10fda1950cfb857facc4b0751c",
-      "income_curve.csv": "48906e1d64f366c00f01e50b85eb796d5c32751c0bf100b557f514cb632c7466",
-      "metrics.csv": "a2b3d8532a12002ea330342a548ba9ef6ef2480ebd693e8716c25ad4262579ee",
-      "poverty_inequality.csv": "e58160aff8fa5d3d3285889c60e1deebc7ed38f2b9ea7121ad76f3f8681e2fde",
-      "winners_losers.csv": "25a9145c0873baf8fee612a1340414090b82ff1421839d22f8c23e5272941841"
+      "age_impact.csv": "7dae3b8f32ad2db2d79a527c7ad256eb29752d5c257a89e5bf7e02bd3359beae",
+      "budgetary_impact.csv": "f9eb465a65810f8fba7336f7b22a1d96fe6c28cdc4c47f4d105833ab33c53ac2",
+      "distributional_impact.csv": "24dd292293b7fd1c2d2c948ab8f8bd2b9c5f4bbd2c04b7c1eeb5702bb1c6e22e",
+      "household_scatter_binned.csv": "9ebcbf1e76c876fe910bb0a85b39fe54b8657da7a0add3c72cd5c63d25490647",
+      "income_curve.csv": "e9561d3d2de0a4914580a3886bb70f6d849305e94587c84a563189f1923a4508",
+      "metrics.csv": "79a697c0c639ca884b2009271678ebfe2309c889b69b1e9b57a07190decf7f4c",
+      "poverty_inequality.csv": "311b23697fce02b9ce9962142b2c21d3561c519fcd7437eeeb3bba53976d7ff9",
+      "winners_losers.csv": "c89515b9f6c5d03aaa569ca32bc25437bc89996c277de2d0512542126a2c94b9"
     },
-    "generated_at": "2026-10-29T16:09:00.651670+00:00",
+    "generated_at": "2026-10-29T18:34:02.794449+00:00",
+    "generation_id": "376e5c0154214a9b938da2653473ad6d",
     "generator_argv": [
-      "/private/tmp/claude-501/-Users-vahid/59114aef-a9b7-4663-a8bc-32b2c6146551/scratchpad/bus/src/uk_budget_data/cli.py",
+      "/private/tmp/claude-501/-Users-vahid/59114aef-a9b7-4663-a8bc-32b2c6146551/scratchpad/rerun/src/uk_budget_data/cli.py",
       "generate",
       "--national",
       "--backend",
@@ -76,10 +77,10 @@
       "state_pension_income_tax_protection",
       "trading_allowance_raise"
     ],
-    "git_sha": "f400d4a5359526a8891b5aabfe5df10d9d104a8c",
-    "key": "property_income_rates_up",
+    "git_sha": "ac61319f7b0563118de2152d2169dd204959c760",
+    "key": "bus_fare_cap_2027",
     "measure_ids": [
-      "property_income_rates_up"
+      "bus_fare_cap_2027"
     ],
     "member_outputs_sha256": null,
     "members": null,
@@ -87,9 +88,11 @@
     "model_limits_registry_sha256": "9d3479f1f5ac859ab6bd2644aaff443a29c0dad3f2944b1ef98866028f9d4b89",
     "modifier_templates": {
       "baseline": [],
-      "reform": []
+      "reform": [
+        null
+      ]
     },
-    "name": "Property income tax rates up",
+    "name": "Single bus fares capped at \u00a32",
     "publishable": true,
     "reasons": [],
     "receipt_source": "policyengine==6.11.1",
@@ -100,7 +103,7 @@
     "baseline": {
       "binding": "content",
       "kind": "current_law",
-      "name": "property_income_rates_up baseline"
+      "name": "bus_fare_cap_2027 baseline"
     },
     "certificate": {
       "bundle_version": "6.11.1",
@@ -141,13 +144,13 @@
       "name": "policyengine-uk",
       "version": "2.151.0"
     },
-    "outputs_sha256": "bf7f8a799d545967674a2730dd5e836f9cca220e541ccc950a62fec298a268fd",
+    "outputs_sha256": "47d07c7736d46eacaded835254e789df44fbc31e457af4e2cf2efc9953e58220",
     "receipt_type": "policyengine.execution_receipt",
     "reform": {
-      "binding": "content",
+      "binding": "code_revision",
       "kind": "reform",
-      "name": "property_income_rates_up",
-      "reform_sha256": "d46bf10b10b298db4059d7b6a2dccac7997e09afec0a88542c2059ea70646aa0",
+      "name": "bus_fare_cap_2027",
+      "reform_sha256": "9e2abed0c853b7892953b195c2ac08ca0a50979ad116835facaff4af30603ca9",
       "representation": "policyengine-uk.scenario/v1"
     },
     "runtime": {
