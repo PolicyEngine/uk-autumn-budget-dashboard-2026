@@ -129,7 +129,7 @@ Locally, with `HOUSEHOLD_WORKERS=2 PORT=8010 uv run uk-budget-api`, it is `http:
 
 **Not modelled for one household.** The rail fares freeze (a national cost spread by rail use: it is in the national figures only); a local authority's choice of BRMA (policyengine-uk reads the BRMA, defaulting to the region's BRMA with the most private-rented households, and reads the local authority only for the few Council Tax Reduction schemes it models).
 
-**Council Tax.** Left out of the request, it is estimated from `council_tax_band` and the region's average Band D for 2026-27 (MHCLG Table 10, tax-base weighted by region; Welsh Government £2,283; Scottish Government £1,653.44), grown with policyengine-uk's OBR Council Tax series; none in Northern Ireland (domestic rates). The answer says which in `council_tax_used`. No measure changes it.
+**Council Tax.** Left out of the request, it is estimated from `council_tax_band` and a Band D for 2026-27, grown with policyengine-uk's OBR Council Tax series; none in Northern Ireland (domestic rates). With `local_authority` given, the Band D is that council's own (policyengine-uk's `gov.local_authorities.council_tax.band_d.amounts`, which `council_tax_band_d_amount` reads); without one, it is the region's average (MHCLG Table 10, tax-base weighted by region; Welsh Government £2,283; Scottish Government £1,653.44). The answer says which in `council_tax_used`. No measure changes it. The local authority does not choose the rental area (BRMA): policyengine-uk places that from the region.
 
 **Concurrency.** See the runbook: requests share the workers run by run, and Cloud Run `--concurrency 4` is the setting to pair with `--cpu 2`.
 

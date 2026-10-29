@@ -348,11 +348,15 @@ class HouseholdAnswersRequest(BaseModel):
         Field(
             default=None,
             description=(
-                "Local authority. policyengine-uk reads it only for the few "
-                "Council Tax Reduction schemes it models, so it matters only "
-                "with council_tax entered; it does not choose the BRMA. Left "
-                "out: a local authority in the region's default BRMA (none "
-                "with a modelled working-age scheme)."
+                "Local authority (policyengine-uk's LocalAuthority name). "
+                "With council_tax left out, Council Tax is estimated from "
+                "the band and this council's own Band D (policyengine-uk), "
+                "not the region's average. policyengine-uk also reads it for "
+                "the few Council Tax Reduction schemes it models. It does "
+                "not choose the BRMA (policyengine-uk places that from the "
+                "region). Left out: Council Tax from the region's average "
+                "Band D, and a local authority in the region's default BRMA "
+                "(none with a modelled working-age scheme)."
             ),
         )
     )
@@ -362,8 +366,9 @@ class HouseholdAnswersRequest(BaseModel):
         le=100_000,
         description=(
             "Council Tax a year, as billed. Left out: estimated from "
-            "council_tax_band and the region's average Band D for 2026-27, "
-            "grown to the year (none in Northern Ireland)."
+            "council_tax_band and local_authority's own Band D for 2026-27 "
+            "(the region's average without one), grown to the year (none "
+            "in Northern Ireland)."
         ),
     )
     council_tax_band: Literal[household_impact.COUNCIL_TAX_BANDS] = "D"
