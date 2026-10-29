@@ -140,3 +140,149 @@ def test_package_inherits_withheld_cells_from_member_receipts(
         assert manifest.combined[key].status == m.APPROVED
     finally:
         world.close()
+
+
+AGE_LABELS = ["0-15", "16-24", "25-34", "35-49", "50-64", "65+", "all"]
+AGE_SINGLES = ["40", "70", "90+"]
+
+
+def _age_rows(measure, year):
+    return [
+        {
+            "reform_id": measure.id,
+            "reform_name": measure.name,
+            "year": year,
+            "age_band": label,
+            "people": 1_000.0,
+            "sample_size": 500,
+            "mean_change": -1.0,
+            "mean_equivalised_change": -1.0,
+            "pct_better_off": 0.0,
+            "pct_worse_off": 50.0,
+            "pct_unchanged": 50.0,
+            "people_directly_affected": 500.0,
+        }
+        for label in AGE_LABELS + AGE_SINGLES
+    ]
+
+
+@pytest.mark.parametrize("from_manifest", [False, True])
+def test_package_leaves_out_the_age_rows_its_members_leave_out(
+    monkeypatch, from_manifest
+):
+    """#340: a member's thin single age (70) takes its band's single ages
+    out of the member's table. The package must leave out the same rows,
+    or its row less the other members' gives the member's back."""
+    from uk_budget_data import pipeline
+
+    world = World()
+    monkeypatch.setattr(
+        generate, "code_revision", lambda root: world.revision()
+    )
+    monkeypatch.setattr(combine, "check_consistency", lambda *args: None)
+    monkeypatch.setattr(generate, "_built_from_a_dataset", lambda sim: True)
+    monkeypatch.setattr(
+        pipeline, "scatter_survey_households", lambda sim, path: np.arange(10)
+    )
+    monkeypatch.setattr(
+        floor,
+        "thin_cells",
+        lambda baseline, reformed, years, survey: baseline.thin,
+    )
+    alpha = reform("alpha")
+    beta = Reform(
+        id="beta",
+        name="Beta",
+        parameter_changes={HIGHER_RATE_PATH: {str(y): 0.41 for y in YEARS}},
+    )
+    key = "combined--alpha+beta"
+    values = {
+        "alpha": {2027: -1.0, 2028: -2.0},
+        "beta": {2027: -0.5, 2028: -0.6},
+        key: {2027: -1.4, 2028: -2.5},
+    }
+    # Only alpha has a thin cell, and only in the age table
+    thin = {"alpha": {("age_impact", 2027): ["70"]}, "beta": {}, key: {}}
+    make_result = fake_process(values)
+
+    def process(measure, config, baseline, reformed, baseline_scenario):
+        baseline.thin = thin[measure.id]
+        baseline.calculate = lambda *args, **kwargs: SimpleNamespace(
+            values=np.arange(1, 11)
+        )
+        result = make_result(
+            measure, config, baseline, reformed, baseline_scenario
+        )
+        result.age_impact = [
+            row for year in YEARS for row in _age_rows(measure, year)
+        ]
+        return result
+
+    arguments = dict(data_root=world.data_root, inputs=world.inputs)
+    manifest = m.Manifest()
+
+    def publish_member(reference):
+        world.costing(reference.key, values[reference.key])
+        world.reconcile(reference)
+        stage(manifest, reference.path, **arguments)
+        approve(manifest, reference.key, "María", **arguments)
+
+    def run(members, combined):
+        return generate.generate_artifacts(
+            members,
+            DataConfig(years=YEARS),
+            combined_sets=combined,
+            artifacts_root=world.artifacts,
+            build=lambda dataset, scenario=None: world.sim(),
+            process=process,
+        )
+
+    withheld_age = {
+        "table": "age_impact",
+        "year": 2027,
+        "groups": ["70", "90+"],
+    }
+    try:
+        if from_manifest:
+            members = run([alpha, beta], [])
+            assert members.refused == {}
+            for reference in members.written:
+                publish_member(reference)
+            m.save_manifest(manifest, world.data_root)
+            report = run([], [[beta, alpha]])
+        else:
+            report = run([alpha, beta], [[beta, alpha]])
+            for reference in report.written[:2]:
+                publish_member(reference)
+        assert report.refused == {}
+        reference = report.written[-1]
+        assert reference.key == key
+        document = read_receipt(reference.path)
+        record = document["dashboard"]["disclosure_floor"]
+        # The package's own cells are not thin: it withholds alpha's
+        assert record["thin_cells"] == []
+        assert record["thin_cells_in_tables"] is False
+        assert record["withheld_cells"] == [withheld_age]
+        published = {
+            (row["year"], row["age_band"])
+            for row in read_tables(reference.path)["age_impact"]
+        }
+        assert published == {
+            (year, label)
+            for year in YEARS
+            for label in AGE_LABELS + AGE_SINGLES
+        } - {(2027, "70"), (2027, "90+")}
+        # The member's own receipt records the rows it left out the same way
+        if not from_manifest:
+            member = next(r for r in report.written if r.key == "alpha")
+            member_record = read_receipt(member.path)["dashboard"][
+                "disclosure_floor"
+            ]
+            assert member_record["withheld_cells"] == [withheld_age]
+        assert file_problems(reference.path, document) == []
+        assert document_problems(document) == []
+        stage(manifest, reference.path, **arguments)
+        approve(manifest, key, "María", **arguments)
+        assert manifest.combined[key].status == m.APPROVED
+    finally:
+        world.close()
