@@ -1,10 +1,11 @@
 /**
- * The flat CSVs under public/data that the page reads, checked against the
- * columns and types the publication contract gives them (contract.json, from
- * uk_budget_data.publication.tables). The build checks only that each file
- * was reviewed and carries no record-level ids; a regenerated file with a
- * renamed column or a blank cell would otherwise reach the page and show as
- * zero or nothing.
+ * Flat CSVs as a plain `uk-budget-data generate` writes them, checked
+ * against the columns and types the publication contract gives them
+ * (contract.json, from uk_budget_data.publication.tables), so a renamed
+ * column or a blank cell fails here. The files are the pre-Budget run of the
+ * nine candidate measures, kept as test data under
+ * src/test/fixtures/candidate-run/ when #339 removed them from public/data:
+ * the page reads approved artifacts only, never these.
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -12,16 +13,16 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { FLAT_EXTRA_COLUMNS, TABLES, TableError, parseCsv, parseFlatTable, parseTable } from "./csv";
 import { AGE_BANDS } from "../ageImpact";
-// The flat files' own combined run (not a manifest key)
+// The candidate run's own combined run (not a manifest key)
 const COMBINED_REFORM_ID = "autumn_budget_2026_combined";
 import { csvField } from "../geography/exportTable";
 
-const DATA = join(dirname(fileURLToPath(import.meta.url)), "../../../public/data");
+const DATA = join(dirname(fileURLToPath(import.meta.url)), "../../test/fixtures/candidate-run");
 const read = (file) => readFileSync(join(DATA, file), "utf8");
 
-// Every flat table a tab fetches, by its contract name.
+// Every flat table, by its contract name.
 const CONTRACT_TABLES = [
-  ["budgetary_impact", "budgetary_impact.csv"], // Population: public finances, OBR table
+  ["budgetary_impact", "budgetary_impact.csv"], // Population: public finances
   ["distributional_impact", "distributional_impact.csv"], // Population: deciles
   ["winners_losers", "winners_losers.csv"], // Population: deciles
   ["metrics", "metrics.csv"], // Population: headline metrics
@@ -29,21 +30,10 @@ const CONTRACT_TABLES = [
   ["age_impact", "age_impact.csv"], // Young people
 ];
 
-// obr_comparison.csv has no contract entry: these are the columns
-// OBRComparisonTable reads, by position for the first three.
-const OBR_COLUMNS = [
-  ["reform_id", "str"],
-  ["reform_name", "str"],
-  ["year", "int"],
-  ["policyengine_value", "float"],
-  ["obr_static_value", "float"],
-  ["obr_post_behavioural_value", "float"],
-];
-
 const standaloneIds = (rows) =>
   [...new Set(rows.map((r) => r.reform_id).filter((id) => !id.endsWith("_combined")))].sort();
 
-describe("the flat tables the page reads", () => {
+describe("the flat tables a generate run writes", () => {
   const tables = Object.fromEntries(
     CONTRACT_TABLES.map(([name, file]) => {
       let parsed;
@@ -63,7 +53,7 @@ describe("the flat tables the page reads", () => {
     }
   });
 
-  it.each([...CONTRACT_TABLES.map(([, file]) => file), "obr_comparison.csv"])(
+  it.each(CONTRACT_TABLES.map(([, file]) => file))(
     "%s round trips quoted CSV cells through the real parser",
     (file) => {
       const rows = parseCsv(read(file)).slice(0, 20);
@@ -79,24 +69,6 @@ describe("the flat tables the page reads", () => {
     expect(parseTable("budgetary_impact", text)).toEqual([
       { reform_id: "fresh", reform_name: name, year: 2026, value: -1.25 },
     ]);
-  });
-
-  it("obr_comparison.csv has the columns OBRComparisonTable reads", () => {
-    const [header, ...lines] = parseCsv(read("obr_comparison.csv").trimEnd());
-    expect(header).toEqual(OBR_COLUMNS.map(([column]) => column));
-    expect(lines.length).toBeGreaterThan(0);
-    lines.forEach((cells, i) => {
-      expect(cells, `row ${i + 1}`).toHaveLength(OBR_COLUMNS.length);
-      expect(cells[0], `row ${i + 1} reform_id`).not.toBe("");
-      expect(Number.isInteger(Number(cells[2])), `row ${i + 1} year`).toBe(true);
-      // A missing OBR figure is blank; anything else must be a number.
-      cells.slice(3).forEach((cell, j) => {
-        if (j > 0 && cell === "") return;
-        expect(Number.isFinite(Number(cell)) && cell !== "", `row ${i + 1} ${OBR_COLUMNS[j + 3][0]}`).toBe(
-          true,
-        );
-      });
-    });
   });
 
   it("age_impact.csv covers every age band and the combined run", () => {
@@ -119,15 +91,6 @@ describe("the flat tables the page reads", () => {
     for (const [name] of CONTRACT_TABLES) {
       expect(standaloneIds(tables[name]()), name).toEqual(expected);
     }
-    // The OBR comparison covers the same measures once the OBR has costed
-    // them. Until 28 October it holds last year's costings, under last
-    // year's ids, so it shares none with the candidates and pairs nothing
-    // (OBRComparisonTable says it is not yet available).
-    const [, ...obr] = parseCsv(read("obr_comparison.csv").trimEnd());
-    const obrIds = standaloneIds(obr.map(([reform_id]) => ({ reform_id })));
-    const shared = obrIds.filter((id) => expected.includes(id));
-    expect(shared.length === 0 || shared.length === expected.length, "obr_comparison").toBe(true);
-    if (shared.length) expect(obrIds).toEqual(expected);
   });
 
   it("each decile table has the decile labels App.jsx matches on", () => {

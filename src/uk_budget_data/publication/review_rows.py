@@ -127,10 +127,8 @@ NATIONAL_TABLE = "national_table"
 SYNTHETIC_HOUSEHOLD = "synthetic_household"
 STATIC_ASSET = "static_asset"
 # The kind each artifact table is reviewed as. Every table but one holds UK
-# totals or UK deciles, as the flat CSVs it replaces do, and the binned
-# scatter counts households by UK-wide income and change bands; the income
-# curve is one hypothetical household, as public/data/income_curve.csv is
-# reviewed. None carries the disclosure layer's public columns, so none may
+# totals or UK deciles, and the binned scatter counts households by UK-wide
+# income and change bands; the income curve is one hypothetical household. None carries the disclosure layer's public columns, so none may
 # be reviewed as a disclosure_table.
 TABLE_KINDS = {
     "budgetary_impact.csv": NATIONAL_TABLE,

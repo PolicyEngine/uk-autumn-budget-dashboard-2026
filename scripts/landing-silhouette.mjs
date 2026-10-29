@@ -6,19 +6,23 @@
 //
 //   node scripts/landing-silhouette.mjs
 //
-// Re-run when public/data/budgetary_impact.csv changes.
+// Re-run when a published measure's budgetary_impact.csv changes: it reads
+// each measure the manifest lists, from its approved artifact.
 import { readFileSync, writeFileSync } from "node:fs";
 
-const COMBINED = /_combined$/;
-const rows = readFileSync(new URL("../public/data/budgetary_impact.csv", import.meta.url), "utf8")
-  .trim()
-  .split("\n")
-  .slice(1)
-  .map((line) => {
-    const cells = line.split(",");
-    return { id: cells[0], year: Number(cells.at(-2)), value: Number(cells.at(-1)) };
-  })
-  .filter((row) => !COMBINED.test(row.id) && Number.isFinite(row.value));
+const data = new URL("../public/data/", import.meta.url);
+const { measures: published } = JSON.parse(readFileSync(new URL("manifest.json", data), "utf8"));
+const rows = Object.entries(published).flatMap(([id, { artifact }]) =>
+  readFileSync(new URL(`${artifact}/budgetary_impact.csv`, data), "utf8")
+    .trim()
+    .split("\n")
+    .slice(1)
+    .map((line) => {
+      const cells = line.split(",");
+      return { id: cells[0], year: Number(cells.at(-2)), value: Number(cells.at(-1)) };
+    })
+    .filter((row) => row.id === id && Number.isFinite(row.value)),
+);
 
 const years = [...new Set(rows.map((row) => row.year))].sort();
 const ids = [...new Set(rows.map((row) => row.id))];
