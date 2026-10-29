@@ -113,7 +113,9 @@ describe("each kind of picture", () => {
       expect(add).toHaveClass("is-loss");
       expect(parseFloat(add.style.width)).toBeCloseTo((100 * 2) / 55, 5);
     }
-    expect(container.querySelector(".umv-key").textContent).toBe("Until 6 Apr 20272 points more");
+    // The grey rates are the ones already set for 6 April 2027 (Budget
+    // 2025), never in force before it
+    expect(container.querySelector(".umv-key").textContent).toBe("Already set for 6 Apr 20272 points more");
   });
 
   it("cash ISA: £20,000 kept against the planned £12,000, the gap outlined as the cut not made", () => {
