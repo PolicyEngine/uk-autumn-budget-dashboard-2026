@@ -68,8 +68,7 @@ function useMeasureWindows() {
  * official costing's basis from its verified official_basis table where it
  * has one (#297). Null while loading;
  * `{ pending: true }` while the file is not published; `{ unavailable: true }`
- * when it is published but does not check. obr_comparison.csv is never read:
- * it holds last year's costings under reused ids.
+ * when it is published but does not check.
  */
 export function useObrComparisonData(enabled = true) {
   const catalogue = useMeasureCatalogue();

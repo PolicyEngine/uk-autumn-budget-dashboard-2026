@@ -795,7 +795,7 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
 /**
  * "Pensioners": how the selected policies change household incomes for
  * people at or over State Pension age, from the single years of age in
- * public/data/age_impact.csv (pensioners/pensionersData.js). It follows the
+ * each artifact's age_impact.csv (pensioners/pensionersData.js). It follows the
  * page's policy and year pills, and links to the pensioner example
  * household on Household calculator.
  *

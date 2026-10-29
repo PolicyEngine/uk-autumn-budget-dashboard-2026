@@ -146,7 +146,6 @@
   .methodology {
     padding: 16px;
   }
-
 }
 
 /* About this model: an in-card expander, with the one rule above it */
@@ -1701,12 +1700,6 @@
   }
 }
 
-@media (max-width: 640px) {
-  .household-grid-details {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 @media (max-width: 480px) {
   .household-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -2018,12 +2011,6 @@
   gap: 6px;
 }
 
-.household-label-icon {
-  display: inline-flex;
-  flex: none;
-  color: var(--pe-gray-500);
-}
-
 /* The form, scrolled to from "Your household": clear of the sticky bars */
 .household-form {
   scroll-margin-top: calc(var(--sticky-offset, 120px) + 16px);
@@ -2213,123 +2200,9 @@
   border-radius: 999px;
 }
 
-.household-more-note {
-  margin: 2px 0 0;
-  font-size: var(--fs-caption);
-  line-height: 1.45;
-  color: var(--pe-gray-500);
-}
-
-.household-detail + .household-detail {
-  border-top: 1px solid var(--pe-gray-100);
-}
-
-.household-detail-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.household-detail-heading {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin: 0;
-  font: inherit;
-}
-
-.household-detail-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  margin: 0 -8px;
-  width: calc(100% + 16px);
-  padding: 8px;
-  font: inherit;
-  text-align: left;
-  color: var(--pe-gray-800);
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.household-detail-toggle:hover {
-  background: var(--pe-gray-50);
-}
-
-.household-detail-toggle:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
-  outline-offset: -2px;
-}
-
-.household-detail-title {
-  flex: none;
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
-/* Closed: what the group holds, on the rest of the row, cut to one line */
-.household-detail-summary {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--pe-gray-500);
-}
-
-.household-detail.is-open .household-detail-title {
-  flex: 1 1 auto;
-}
-
-.household-detail-changed {
-  flex: none;
-  padding: 1px 8px;
-  font-size: var(--fs-micro, 0.6875rem);
-  font-weight: 600;
-  color: var(--pe-teal-800);
-  background: var(--pe-teal-50);
-  border: 1px solid var(--pe-teal-200);
-  border-radius: 999px;
-}
-
-.household-detail-toggle .household-more-chevron {
-  flex: none;
-  margin-left: auto;
-}
-
-.household-detail-toggle[aria-expanded="true"] .household-more-chevron {
-  transform: rotate(180deg);
-}
-
-.household-detail-reset {
-  flex: none;
-  white-space: nowrap;
-}
-
-.household-detail-panel {
-  padding: 4px 0 18px;
-}
-
 @media (max-width: 480px) {
   .household-more {
     padding: 18px 16px 6px;
-  }
-
-  /* On a phone the summary goes under the title */
-  .household-detail-toggle {
-    flex-wrap: wrap;
-    row-gap: 2px;
-  }
-
-  .household-detail-summary {
-    order: 5;
-    flex-basis: 100%;
-    padding-left: 22px;
-    white-space: normal;
   }
 }
 
@@ -2476,7 +2349,6 @@
   line-height: 1.45;
   color: var(--pe-gray-500);
 }
-
 
 /* The boxes sit under the heading, clear of the rail; the gap above them
    is inside the expander, so a closed group keeps none */
@@ -2670,8 +2542,7 @@
   display: none;
 }
 
-.household-step-toggle,
-.household-detail-toggle {
+.household-step-toggle {
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -2683,8 +2554,7 @@
 }
 
 .household-step-hint,
-.household-step-summary,
-.household-detail-summary {
+.household-step-summary {
   display: block;
   margin: 0;
   overflow: visible;
@@ -2693,45 +2563,6 @@
   white-space: normal;
   color: var(--pe-gray-500);
   font-variant-numeric: tabular-nums;
-}
-
-.household-detail-lead {
-  flex: none;
-  width: 24px;
-}
-
-.household-detail-text {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.household-detail-title,
-.household-detail.is-open .household-detail-title {
-  display: block;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  line-height: 24px;
-  letter-spacing: -0.005em;
-  color: var(--pe-gray-800);
-}
-
-.household-detail-toggle .household-step-chevron {
-  margin-top: 4px;
-  margin-left: 0;
-}
-
-/* The two "changed" tags alike */
-.household-detail-changed {
-  display: inline-block;
-  margin-left: 8px;
-  padding: 0 6px;
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  line-height: 1.5;
-  color: var(--pe-teal-700);
-  background: var(--pe-teal-50);
-  border: 0;
-  border-radius: var(--pe-radius-sm);
 }
 
 /* More details: a light label, then its rows, parted by the same
@@ -2763,16 +2594,6 @@
   content: "· ";
 }
 
-.household-detail {
-  border-top: 1px solid var(--pe-gray-100);
-  margin: 0 -28px;
-  padding: 6px 28px;
-}
-
-.household-detail-panel {
-  padding: 4px 0 14px 36px;
-}
-
 @media (max-width: 640px) {
   .household-group.household-step {
     padding: 6px 16px;
@@ -2784,21 +2605,6 @@
 
   .household-group.household-step.is-open {
     padding-bottom: 18px;
-  }
-
-  .household-detail {
-    margin: 0 -16px;
-    padding: 6px 16px;
-  }
-
-  .household-detail-panel {
-    padding-left: 0;
-  }
-}
-
-@media (max-width: 480px) {
-  .household-detail-summary {
-    padding-left: 0;
   }
 }
 
