@@ -22,22 +22,22 @@ export const GLOSSARY = {
   equivalised: {
     term: "Equivalised income",
     meaning:
-      "Net income adjusted for household size and make-up (the modified OECD scale), stated as for a couple with no children.",
+      "Net income with an adjustment for household size and make-up (the modified OECD scale), which puts it in terms of a couple with no children.",
     // HBAI's methodology report explains the scale (its section 8)
     sources: { "modified OECD scale": "dwp_hbai_methodology" },
   },
   median: {
     term: "Median",
-    meaning: "The middle income when people are ranked by income; the mean is the average.",
+    meaning: "The middle income in a ranking of people by income; the mean is the average.",
   },
   incomeGroups: {
     term: "Deciles, quintiles and vigintiles",
-    meaning: "Tenths, fifths and twentieths of people, ranked by equivalised household income.",
+    meaning: "Tenths, fifths and twentieths of people, by equivalised household income.",
   },
   real: {
     term: "Real terms and cash terms",
     meaning:
-      "Real figures are adjusted for price rises (CPI, or CPI after housing costs for incomes after housing costs); cash figures are not.",
+      "Real figures take out price rises (CPI, or CPI after housing costs for incomes after housing costs); cash figures do not.",
   },
   points: {
     term: "Percentage points",
@@ -46,7 +46,7 @@ export const GLOSSARY = {
   absolutePoverty: {
     term: "Absolute poverty",
     meaning:
-      "Income below 60% of the 2024-25 median, held fixed in real terms. Relative poverty uses each year's own median.",
+      "Income below 60% of the 2024-25 median, which stays fixed in real terms. Relative poverty uses each year's own median.",
   },
   gini: {
     term: "Gini coefficient",
@@ -54,12 +54,12 @@ export const GLOSSARY = {
   },
   perPerson: {
     term: "Change per person",
-    meaning: "In results by age, each person counts their whole household's change, averaged over the people in the group.",
+    meaning: "In results by age, each person counts their whole household's change, and the figure averages it over the people in the group.",
   },
   ownRuns: {
-    term: "Policies run on their own",
+    term: "Policies we run on their own",
     meaning:
-      "Each policy simulated alone against current law; adding these up leaves out how policies interact.",
+      "A simulation of each policy alone against current law; adding these up leaves out how policies interact.",
   },
   static: {
     term: "Static estimates",

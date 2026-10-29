@@ -170,13 +170,13 @@ function MethodologyTab({ onShowTab }) {
           summary={
             <>
               We run <SourceLink id="policyengine_uk_model">PolicyEngine UK</SourceLink>{" "}on a
-              survey of UK households with and without each policy, {yearRange}, weighted to the UK.
+              survey of UK households with and without each policy, {yearRange}; weights scale the survey to the UK.
             </>
           }
         >
           <Topic
             id={METHOD_ANCHORS.glossary}
-            title="Terms used on the charts"
+            title="Terms the charts use"
             preview="Net income, housing costs, deciles, poverty, Gini and other terms, one line each"
           >
             <MethodGlossary />
@@ -189,7 +189,7 @@ function MethodologyTab({ onShowTab }) {
           summary={
             <>
               Households from the <SourceLink id="frs_2024_25">Family Resources Survey 2024-25</SourceLink>,
-              built into <SourceLink id="microcosm">Microcosm UK 2024-25</SourceLink>.
+              which feed <SourceLink id="microcosm">Microcosm UK 2024-25</SourceLink>.
             </>
           }
         >
@@ -199,10 +199,9 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Dataset",
                   <>
-                    The national file (<code>microcosm_uk_2024_25</code>), certified and pinned with
-                    the model version by the policyengine.py release this build uses
-                    (in About this dashboard&apos;s Built with), so the
-                    two cannot drift apart.
+                    The national file (<code>microcosm_uk_2024_25</code>): the policyengine.py release
+                    this build uses (in About this dashboard&apos;s Built with) certifies it and pins
+                    it with the model version, so the two cannot drift apart.
                   </>,
                 ],
                 [
@@ -210,43 +209,43 @@ function MethodologyTab({ onShowTab }) {
                   {
                     value: (
                       <>
-                        Built with <SourceLink id="microcosm_site">Microcosm</SourceLink>: a sequence of
+                        <SourceLink id="microcosm_site">Microcosm</SourceLink>{" "}builds the dataset: a sequence of
                         stages adds to each Family Resources Survey household what the survey does not
                         record; calibration then sets each record&apos;s weight.
                       </>
                     ),
                     more: [
                       "The stages draw on other surveys and on administrative statistics for high incomes, wealth, spending, travel, benefit take-up, capital gains, pension salary sacrifice and student loans.",
-                      "The same stages feed two files: the national file, certified with the model, and a local-area file for constituencies and local authorities, which that certificate does not cover.",
-                      "Both files are built from survey microdata licensed through the UK Data Service, so they are not public downloads.",
+                      "The same stages feed two files: the national file, which the release certifies with the model, and a local-area file for constituencies and local authorities, which that certificate does not cover.",
+                      "Both files come from survey microdata that the UK Data Service supplies under licence, so they are not public downloads.",
                     ],
                   },
                 ],
                 [
                   "Survey",
-                  "A survey household can appear as several records, each linked to the household it was made from.",
+                  "A survey household can appear as several records, each of which links to the household it came from.",
                 ],
                 [
                   "Weights",
                   {
                     value: (
                       <>
-                        Calibrated to published totals for the UK, its nations and the English regions (
+                        Calibration fits them to published totals for the UK, its nations and the English regions (
                         <SourceLink id="uk_calibration_targets">calibration targets</SourceLink>); the release
                         pins the calibration with the data.
                       </>
                     ),
                     more: [
-                      "The totals include HMRC income and tax statistics, DWP benefit caseloads, OBR forecasts published before the October 2026 one, and ONS population estimates.",
-                      "The local-area file is calibrated to constituency and local-authority totals as well.",
+                      "The totals include HMRC income and tax statistics, DWP benefit caseloads, forecasts the OBR published before the October 2026 one, and ONS population estimates.",
+                      "The local-area file's calibration targets constituency and local-authority totals as well.",
                     ],
                   },
                 ],
                 [
                   "Projection",
                   <>
-                    Incomes and prices are projected to each year shown with the growth rates of
-                    the <SourceLink id="obr_efo_current" />, applied over{" "}
+                    We project incomes and prices to each year we show, with the growth rates of
+                    the <SourceLink id="obr_efo_current" />, which we apply over{" "}
                     <SourceLink id="policyengine_uk">policyengine-uk</SourceLink>&apos;s own
                     assumptions (the OBR&apos;s March 2026 forecast); after the forecast period,
                     the OBR&apos;s long-run assumptions (
@@ -269,7 +268,7 @@ function MethodologyTab({ onShowTab }) {
               ]}
             />
             <p className="method-more">
-              <SourceLink id="uk_data_pipeline">Read how Microcosm UK is built today, stage by stage</SourceLink>.
+              <SourceLink id="uk_data_pipeline">Read how the pipeline builds Microcosm UK today, stage by stage</SourceLink>.
               The page describes the current pipeline, which may be newer than this dashboard&apos;s data.
             </p>
           </Topic>
@@ -282,9 +281,9 @@ function MethodologyTab({ onShowTab }) {
                   "Sign-off",
                   {
                     value:
-                      "Each public data file is listed with a named reviewer and a digest of the exact bytes they reviewed. A changed file fails the publication checks until it is reviewed again.",
+                      "We list each public data file with a named reviewer and a digest of the exact bytes they reviewed. A changed file fails the publication checks until a reviewer reviews it again.",
                     more: [
-                      "A file awaiting sign-off can be published as pending, for at most 14 days after its entry; after that it fails the checks until it is signed off.",
+                      "We can publish a file awaiting sign-off as pending, for at most 14 days after its entry; after that it fails the checks until a reviewer signs it off.",
                     ],
                   },
                 ],
@@ -299,7 +298,7 @@ function MethodologyTab({ onShowTab }) {
           summary={
             <>
               The model works out each household&apos;s taxes, benefits and{" "}
-              <Term id="netIncome">net income</Term>; what each policy does and how it is modelled is on{" "}
+              <Term id="netIncome">net income</Term>; what each policy does and how we model it is on{" "}
               <ViewLink tab="policies" onShowTab={onShowTab}>
                 Policies
               </ViewLink>
@@ -313,11 +312,11 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Model",
                   <>
-                    PolicyEngine UK (<SourceLink id="policyengine_uk">policyengine-uk</SourceLink>), run
+                    PolicyEngine UK (<SourceLink id="policyengine_uk">policyengine-uk</SourceLink>), which we run
                     through <SourceLink id="policyengine_py_release">policyengine.py</SourceLink>{" "}on
-                    the <AnchorLink id={METHOD_SECTIONS.data}>data above</AnchorLink>. Measures are
-                    written as parameter changes where possible, or built from tested measure
-                    templates. Three of the policies here are written by hand, and are published
+                    the <AnchorLink id={METHOD_SECTIONS.data}>data above</AnchorLink>. We write measures
+                    as parameter changes where possible, or build them from tested measure
+                    templates. We write three of the policies here by hand, and publish them
                     only after two reviewers have checked the exact run.
                   </>,
                 ],
@@ -334,7 +333,7 @@ function MethodologyTab({ onShowTab }) {
                       "The model holds the National Living Wage at £12.71 an hour from April 2026. It sets Universal Credit's minimum income floor, the benefit cap's earnings exemption and the childcare earnings tests.",
                       "It holds Carer's Allowance's own earnings limit at £204 a week, so a carer earning between £204 and the higher limit the Budget's Carer's Allowance change sets gets no Carer's Allowance in either run.",
                       <>
-                        Benefit rates, including the Pension Credit guarantee, rise as described
+                        Benefit rates, including the Pension Credit guarantee, rise as we describe
                         under <AnchorLink id={FORECAST_FEED_ANCHOR}>how the forecast feeds the baseline</AnchorLink>.
                       </>,
                     ],
@@ -353,7 +352,7 @@ function MethodologyTab({ onShowTab }) {
                   <>
                     <ViewLink tab="dashboard" onShowTab={onShowTab}>Population impact</ViewLink> and{" "}
                     <ViewLink tab="household" onShowTab={onShowTab}>Household calculator</ViewLink>{" "}figures
-                    are in <Term id="real">cash terms</Term>{" "}for the year shown, not adjusted for
+                    are in <Term id="real">cash terms</Term>{" "}for the year on screen, with no adjustment for
                     inflation.
                   </>,
                 ],
@@ -405,15 +404,15 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Budgetary impact",
                   {
-                    value: "Taxes collected less benefits and other spending, in £ billion a year.",
+                    value: "Taxes the government collects less benefits and other spending, in £ billion a year.",
                     more: ["It counts indirect taxes, such as VAT and fuel duty, as well as taxes on income."],
                   },
                 ],
                 [
                   "Net change",
                   <>
-                    With several policies selected, the net line is their run together when one is
-                    published for that selection, and otherwise adds their separate effects (see{" "}
+                    With several policies selected, the net line is their run together when we publish one
+                    for that selection, and otherwise adds their separate effects (see{" "}
                     <AnchorLink id={METHOD_SECTIONS.limitations}>limitations</AnchorLink>).
                   </>,
                 ],
@@ -431,8 +430,8 @@ function MethodologyTab({ onShowTab }) {
                       </>
                     ),
                     more: [
-                      "Before a policy is published, each year's figure must be within the larger of 25% of the official one and £50m where the costing includes behaviour, and within the larger of 10% and £50m where it assumes no behavioural response or the policy is a payment rather than a tax. A reviewer can accept a larger gap only with a written reason.",
-                      "Ours count each tax year's liability. The official figures are on a National Accounts basis, so a change in tax paid through Self Assessment appears about a year later in theirs.",
+                      "Before we publish a policy, each year's figure must be within the larger of 25% of the official one and £50m where the costing includes behaviour, and within the larger of 10% and £50m where it assumes no behavioural response or the policy is a payment rather than a tax. A reviewer can accept a larger gap only with a written reason.",
+                      "Ours count each tax year's liability. The official figures are on a National Accounts basis, so a change in the tax people pay through Self Assessment appears about a year later in theirs.",
                       "A reviewer can mark a year not comparable, such as a year after a policy ends or an early year of a Self Assessment change; the card then says so, with the reason, and shows no difference.",
                       <>
                         Our fuel duty figures cover households&apos; own fuel only (
@@ -464,13 +463,13 @@ function MethodologyTab({ onShowTab }) {
                     value: "Ten groups of equal numbers of people, by household income.",
                     more: [
                       <>
-                        Ranked by baseline <Term id="equivalised">equivalised</Term>{" "}household net
+                        The ranking uses baseline <Term id="equivalised">equivalised</Term>{" "}household net
                         income <Term id="housingCosts">before housing costs</Term> (the{" "}
                         <SourceLink id="dwp_hbai">HBAI</SourceLink> measure).
                       </>,
                       "Negative incomes count as zero for the ranking.",
-                      "Households without a decile are left out.",
-                      "When a decile's change comes from only one or two survey households, its figures are not published, and nor is that year's winners and losers figure for all households; a package also leaves out the cells its members withhold. That is the minimum the UK Data Service requires for survey data it supplies under its End User Licence. The rest of the measure is shown.",
+                      "The decile charts leave out households without a decile.",
+                      "When a decile's change comes from only one or two survey households, we do not publish its figures, nor that year's winners and losers figure for all households; a package also leaves out the cells its members withhold. That is the minimum the UK Data Service requires for survey data it supplies under its End User Licence. We show the rest of the measure.",
                     ],
                   },
                 ],
@@ -505,7 +504,7 @@ function MethodologyTab({ onShowTab }) {
                     ),
                     more: [
                       <>
-                        Poverty is measured on <SourceLink id="dwp_hbai">HBAI</SourceLink>{" "}
+                        The poverty rate uses <SourceLink id="dwp_hbai">HBAI</SourceLink>{" "}
                         income, which is before indirect taxes, so the VAT and fuel duty policies do
                         not change it.
                       </>,
@@ -518,7 +517,7 @@ function MethodologyTab({ onShowTab }) {
                   "Inequality",
                   <>
                     The relative change in the <Term id="gini">Gini coefficient</Term> of{" "}
-                    <Term id="equivalised">equivalised</Term> household net income, people weighted.{" "}
+                    <Term id="equivalised">equivalised</Term> household net income, counting each person.{" "}
                     This income includes public services in kind, such as the NHS and schools, and is
                     after fuel duty and other duties, counting any change in VAT, so the VAT and fuel
                     duty policies change it.
@@ -527,8 +526,8 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Which run",
                   <>
-                    Neither adds up across policies, so each is read from one run: a policy&apos;s{" "}
-                    <Term id="ownRuns">own</Term>, or the combined run when every policy is selected.
+                    Neither adds up across policies, so each comes from one run: a policy&apos;s{" "}
+                    <Term id="ownRuns">own</Term>, or the combined run when the selection includes every policy.
                   </>,
                 ],
               ]}
@@ -538,18 +537,18 @@ function MethodologyTab({ onShowTab }) {
               differ from the PolicyEngine app's */}
           <Topic
             id="definitions-compared"
-            title="Definitions compared with the PolicyEngine app"
+            title="Our definitions and the PolicyEngine app's"
             preview="Inequality · Income deciles · Winners and losers · Poverty · Budget"
           >
             <FactList
               items={[
                 [
                   "Inequality",
-                  "The app uses HBAI income and counts each household once. Here inequality counts each person and uses the income described under Poverty and inequality.",
+                  "The app uses HBAI income and counts each household once. Here inequality counts each person and uses the income that Poverty and inequality describes.",
                 ],
                 [
                   "Income deciles",
-                  "The app ranks households by household net income, not adjusted for household size, so its deciles differ.",
+                  "The app ranks households by household net income, without adjusting for household size, so its deciles differ.",
                 ],
                 [
                   "Winners and losers",
@@ -570,7 +569,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Budget",
-                  "Here a policy is costed by its change in the government's balance, as set out under Public finances. The app costs it as the change in households' taxes less benefits.",
+                  "Here we cost a policy by its change in the government's balance, as Public finances sets out. The app costs it as the change in households' taxes less benefits.",
                 ],
               ]}
             />
@@ -586,7 +585,7 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Household scatter bands",
                   {
-                    value: "Households grouped by income and by change in income.",
+                    value: "Groups of households by income and by change in income.",
                     more: [
                       `Income: 2027-28 baseline net income, in ${pounds(SCATTER_BINS.income_band_width)} bands up to ${pounds(SCATTER_BINS.income_max)}, so a group is the same households in every year.`,
                       <>
@@ -598,7 +597,7 @@ function MethodologyTab({ onShowTab }) {
                         </span>
                       </>,
                       `Changes of ${pounds(SCATTER_CHANGE_MAX)} or more either way form one open band at each end, outside the chart's −£5,000 to £5,000 axis.`,
-                      "About 500 dots, shared out by each income group's households in 2027-28.",
+                      "About 500 dots; each income group's share follows its number of households in 2027-28.",
                       "A group's k-th dot sits at its k-th quantile of change, so it keeps its row between years.",
                     ],
                   },
@@ -613,8 +612,8 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Disclosure",
                   {
-                    value: `Counts are weighted and rounded to the nearest ${SCATTER_BINS.round_to.toLocaleString("en-GB")}.`,
-                    more: ["Groups come from one simulation of the selection and are never added up."],
+                    value: `We weight the counts and round them to the nearest ${SCATTER_BINS.round_to.toLocaleString("en-GB")}.`,
+                    more: ["Groups come from one simulation of the selection; the scatter never adds them up."],
                   },
                 ],
               ]}
@@ -626,8 +625,8 @@ function MethodologyTab({ onShowTab }) {
             preview="Disclosure checks · 90% intervals · Map colours · Local calibration"
           >
             <p className="method-more">
-              Constituency figures come from the same survey as the national ones. Each is
-              published only after disclosure checks, with a 90% interval, and the map colours a
+              Constituency figures come from the same survey as the national ones. We publish each
+              only after disclosure checks, with a 90% interval, and the map colours a
               constituency only when its interval is narrow enough to place it.
             </p>
             <GeographyMethodology />
@@ -680,10 +679,10 @@ function MethodologyTab({ onShowTab }) {
                   {
                     lead: "The Change by year chart on By age:",
                     points: [
-                      "Each point is a whole fiscal year: all the selected policies run together when that run is published, otherwise the sum of each policy's own effect; the curve between points never goes past them.",
+                      "Each point is a whole fiscal year: the run of all the selected policies together when we publish one, otherwise the sum of each policy's own effect; the curve between points never goes past them.",
                       "A label names the policy behind each of the largest year-on-year steps.",
                       "Breakdown by policy stacks each policy's own change, with the net change as the line; the running total adds each year's change from the first year.",
-                      "No share of income is shown: the results by age carry no income to divide by.",
+                      "The chart shows no share of income: the results by age carry no income to divide by.",
                     ],
                   },
                 ],
@@ -717,7 +716,7 @@ function MethodologyTab({ onShowTab }) {
                   "Winners and losers",
                   {
                     value: "Household net income rises or falls by more than 0.01%; otherwise no change.",
-                    more: ["The 0.01% is of baseline net income, with a baseline below £1 counted as £1."],
+                    more: ["The 0.01% is of baseline net income, and a baseline below £1 counts as £1."],
                   },
                 ],
               ]}
@@ -730,7 +729,7 @@ function MethodologyTab({ onShowTab }) {
           title="Household calculator"
           summary={
             <span id={METHOD_SECTIONS.singleYear} className="method-anchor">
-              The same model and policies, applied to one household&apos;s answers on the{" "}
+              We apply the same model and policies to one household&apos;s answers on the{" "}
               <ViewLink tab="household" onShowTab={onShowTab}>
                 Household calculator tab
               </ViewLink>
@@ -755,7 +754,7 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Income",
                   <>
-                    Household net income after taxes (fuel duty and any change in VAT included) and
+                    Household net income after taxes (including fuel duty and any change in VAT) and
                     with benefits, divided by your household&apos;s size on the HBAI scale. Unlike the
                     income under <AnchorLink id={METHOD_ANCHORS.poverty}>Inequality</AnchorLink>, it
                     leaves out public services in kind.
@@ -763,19 +762,19 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Tenths",
-                  "The tenths' average changes are the decile charts' own, ranked by HBAI income without VAT and fuel duty, so a household near a boundary may sit in the next tenth there. The average UK household's change has no published % of net income.",
+                  "The tenths' average changes are the decile charts' own, and those charts rank people by HBAI income without VAT and fuel duty, so a household near a boundary may sit in the next tenth there. The average UK household's change has no published % of net income.",
                 ],
                 [
                   "Distribution",
-                  `Published from the ${ordinal(LOWEST_PERCENTILE)} to the ${ordinal(HIGHEST_PERCENTILE)} percentile, as averages over bands one percentile wide; the lowest and highest 1% are not drawn.`,
+                  `We publish it from the ${ordinal(LOWEST_PERCENTILE)} to the ${ordinal(HIGHEST_PERCENTILE)} percentile, as averages over bands one percentile wide; the chart leaves out the lowest and highest 1%.`,
                 ],
                 [
                   "Who moves",
-                  "Everyone is ranked before and after the selected policies: a person moves up when the whole percentile (or tenth) of their rank is higher after. A share from fewer than 10 survey households is not published.",
+                  "We rank everyone before and after the selected policies: a person moves up when the whole percentile (or tenth) of their rank is higher after. We do not publish a share from fewer than 10 survey households.",
                 ],
                 [
                   "Among all households",
-                  "The Population impact scatter: each household sits by its 2027-28 net income before the policies, not adjusted for household size, in every year, and you by yours. Each dot is a group of households.",
+                  "The Population impact scatter: each household sits by its 2027-28 net income before the policies, with no adjustment for household size, in every year, and you by yours. Each dot is a group of households.",
                 ],
               ]}
             />
@@ -821,11 +820,11 @@ function MethodologyTab({ onShowTab }) {
         >
           <Topic title="Policies added up" preview="Revenue, decile and age charts · Household scatter · Winners and losers">
             <p className="method-more">
-              Each policy is simulated on its own, and the full package of policies together in one
+              We simulate each policy on its own, and the full package of policies together in one
               run. Where several are selected, the decile charts add up the policies&apos; separate
               effects, so they leave out interactions between policies (
-              <Term id="ownRuns">policies run on their own</Term>). The revenue chart&apos;s net line
-              is the run of the selected policies together when one is published, and otherwise adds
+              <Term id="ownRuns">policies we run on their own</Term>). The revenue chart&apos;s net line
+              is the run of the selected policies together when we publish one, and otherwise adds
               up the separate effects. The average-change age charts read the package&apos;s run when
               the selection is the full package, and otherwise add up the separate effects. The{" "}
               <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>, the winners
@@ -843,7 +842,7 @@ function MethodologyTab({ onShowTab }) {
             <p className="method-more">
               The Budget figures grow prices, earnings, rents, mortgage interest, other incomes and
               council tax at the rates of the <SourceLink id="obr_efo_current" />, in the baseline
-              and the reform alike, applied over policyengine-uk&apos;s March 2026 rates, with these exceptions:
+              and the reform alike; we apply them over policyengine-uk&apos;s March 2026 rates, with these exceptions:
             </p>
             <ul className="method-list">
               <li>The fuel volumes behind fuel duty, and the population, keep the March 2026 path.</li>
@@ -856,7 +855,7 @@ function MethodologyTab({ onShowTab }) {
                 CPI after housing costs and social rents are PolicyEngine&apos;s own derivations from
                 the October figures, not OBR series.
               </li>
-              <li>The weights keep the certified dataset&apos;s calibration, made to earlier OBR forecasts.</li>
+              <li>The weights keep the certified dataset&apos;s calibration to earlier OBR forecasts.</li>
             </ul>
             <p className="method-more">
               Current law&apos;s fuel duty is 60.59p a litre from April 2027, then rises each April
@@ -866,7 +865,7 @@ function MethodologyTab({ onShowTab }) {
           </Topic>
           <Topic id="method-business-fuel" title="Business fuel use" preview="Fuel duty on households' own purchases only">
             <p className="method-more">
-              Fuel duty is modelled on households' own petrol and diesel purchases. Duty on fuel
+              We model fuel duty on households' own petrol and diesel purchases. Duty on fuel
               for vans, lorries and business use of cars, roughly half of fuel duty receipts, is
               not in the model, so a change in fuel duty moves revenue by less here than in a
               full costing.
@@ -883,7 +882,7 @@ function MethodologyTab({ onShowTab }) {
                 Treasury&apos;s costing: about 670,000 in 2027-28, against 500,000.
               </li>
               <li>The data hold few small traders, the people the trading allowance reaches.</li>
-              <li>Electricity spending is grown with CPI, not the energy price cap; the electricity VAT zero rate scales with it.</li>
+              <li>Electricity spending grows with CPI, not the energy price cap; the electricity VAT zero rate scales with it.</li>
             </ul>
             <p className="method-more">
               The{" "}

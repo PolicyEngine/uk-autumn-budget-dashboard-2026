@@ -28,4 +28,4 @@ export const AGE_METHOD = { anchor: METHOD_ANCHORS.young, label: "How we split r
 export const HOUSEHOLD_ABOUT_ID = "household-about-figures";
 
 // The by-year age cards' About this chart: how the chart is drawn
-export const BY_YEAR_METHOD = { anchor: METHOD_ANCHORS.young, label: "How the by-year charts are drawn" };
+export const BY_YEAR_METHOD = { anchor: METHOD_ANCHORS.young, label: "How we draw the by-year charts" };

@@ -88,7 +88,7 @@ describe("MethodologyTab", () => {
     expect(screen.queryByRole("heading", { name: "Published measure descriptions" })).toBeNull();
     const model = container.querySelector(`#${METHOD_SECTIONS.model}`);
     const summary = model.querySelector(".section-heading p");
-    expect(summary).toHaveTextContent("what each policy does and how it is modelled is on Policies.");
+    expect(summary).toHaveTextContent("what each policy does and how we model it is on Policies.");
     const link = within(summary).getByRole("link", { name: "Policies" });
     expect(link).toHaveAttribute("href", "?tab=policies");
     fireEvent.click(link);
@@ -132,7 +132,7 @@ describe("MethodologyTab", () => {
     const { container } = renderTab();
     const text = container.textContent;
     expect(text).toContain("after fuel duty and other duties, counting any change in VAT");
-    expect(text).toContain("fuel duty and any change in VAT included");
+    expect(text).toContain("including fuel duty and any change in VAT");
     expect(text).not.toMatch(/after indirect taxes/);
     expect(text.match(/such as the NHS and schools/g)).toHaveLength(1);
   });
@@ -217,7 +217,7 @@ describe("MethodologyTab", () => {
     const terms = [...card.querySelectorAll(".method-fact dt")].map((term) => term.textContent);
     expect(terms).toEqual(["Dataset", "Pipeline", "Survey", "Weights", "Projection", "Small groups"]);
     // The pipeline page describes the current build, which may be newer than the dashboard's data
-    const pipeline = within(card).getByRole("link", { name: /^Read how Microcosm UK is built today/, hidden: true });
+    const pipeline = within(card).getByRole("link", { name: /^Read how the pipeline builds Microcosm UK today/, hidden: true });
     expect(pipeline).toHaveAttribute("href", "https://www.policyengine.org/uk/model/data/pipeline");
     expect(pipeline.parentElement).toHaveTextContent("may be newer than this dashboard's data");
     const targets = within(card).getByRole("link", { name: /^calibration targets/, hidden: true });
@@ -232,8 +232,8 @@ describe("MethodologyTab", () => {
     const { container } = renderTab();
     const data = container.querySelector(`#${METHOD_SECTIONS.data}`);
     const card = within(data).getByRole("button", { name: "Published files" }).closest(".method-topic");
-    expect(card).toHaveTextContent("Each public data file is listed with a named reviewer");
-    expect(card).toHaveTextContent("can be published as pending, for at most 14 days");
+    expect(card).toHaveTextContent("We list each public data file with a named reviewer");
+    expect(card).toHaveTextContent("We can publish a file awaiting sign-off as pending, for at most 14 days");
     const scatter = document.getElementById(METHOD_ANCHORS.scatter);
     expect(scatter).not.toHaveTextContent("Sign-off");
     expect(container).not.toHaveTextContent("signs off every public data file before it is published");
@@ -249,9 +249,9 @@ describe("MethodologyTab", () => {
       `#${METHOD_ANCHORS.byIncome}`,
     );
     const text = container.textContent;
-    expect(text).toContain("comes from only one or two survey households, its figures are not published, and nor is that year's winners and losers figure for all households; a package also leaves out the cells its members withhold");
+    expect(text).toContain("comes from only one or two survey households, we do not publish its figures, nor that year's winners and losers figure for all households; a package also leaves out the cells its members withhold");
     expect(text).not.toContain("any figures that would give them back");
-    expect(text).toContain("The rest of the measure is shown.");
+    expect(text).toContain("We show the rest of the measure.");
     expect(text).toContain("so this counts records, not households");
     // The age sentence says what is withheld, as the deciles' does
     expect(text).toContain("When an age band or single year of age rests on one or two survey households, it is not published: a single year takes the other single years of its band with it, and a band takes every row but all ages.");
@@ -340,7 +340,7 @@ describe("MethodologyTab", () => {
   it("opens a folded topic when a link leads into it", async () => {
     const { container } = renderTab();
     const glossary = document.getElementById(METHOD_ANCHORS.glossary);
-    const toggle = within(glossary).getByRole("button", { name: /Terms used on the charts/ });
+    const toggle = within(glossary).getByRole("button", { name: /Terms the charts use/ });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     // A term link inside another topic leads to the glossary
     fireEvent.click(container.querySelector('a[href="#term-netIncome"]'));
