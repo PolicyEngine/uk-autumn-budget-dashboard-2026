@@ -2051,9 +2051,57 @@ def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
             2027,
             True,
         ),
-        # The calculator asks no bus fares, so the cap credits nothing
-        ("bus_fare_cap_2027", {}, 2026, True),
-        ("bus_fare_cap_2027", {"electricity_spending": 1_000}, 2027, True),
+        # The bus fare cap: bus fares, in England outside London, in
+        # 2026-27 or 2027-28
+        ("bus_fare_cap_2027", {"region": "NORTH_WEST"}, 2027, True),
+        (
+            "bus_fare_cap_2027",
+            {"region": "NORTH_WEST", "bus_fare_spending": 500},
+            2026,
+            False,
+        ),
+        (
+            "bus_fare_cap_2027",
+            {"region": "SOUTH_WEST", "bus_fare_spending": 500},
+            2027,
+            False,
+        ),
+        (
+            "bus_fare_cap_2027",
+            {"region": "NORTH_WEST", "bus_fare_spending": 500},
+            2028,
+            True,
+        ),
+        (
+            "bus_fare_cap_2027",
+            {"region": "NORTH_WEST", "bus_fare_spending": 500},
+            2025,
+            True,
+        ),
+        (
+            "bus_fare_cap_2027",
+            {"region": "LONDON", "bus_fare_spending": 500},
+            2027,
+            True,
+        ),
+        (
+            "bus_fare_cap_2027",
+            {"region": "SCOTLAND", "bus_fare_spending": 500},
+            2027,
+            True,
+        ),
+        (
+            "bus_fare_cap_2027",
+            {"region": "WALES", "bus_fare_spending": 500},
+            2027,
+            True,
+        ),
+        (
+            "bus_fare_cap_2027",
+            {"region": "NORTHERN_IRELAND", "bus_fare_spending": 500},
+            2027,
+            True,
+        ),
         ("some_future_measure", {}, 2027, False),
     ],
 )
@@ -2062,6 +2110,86 @@ def test_provably_unaffected_rules(measure, answers, year, expected):
         household_impact.provably_unaffected(measure, Answers(**answers), year)
         is expected
     )
+
+
+def test_the_bus_fare_cap_years_and_regions_are_the_modifiers():
+    """The skip rule's years are the modifier's capped shares, and its
+    regions England's outside London."""
+    assert household_impact.BUS_FARE_CAP_YEARS == {2026, 2027}
+    assert household_impact.BUS_FARE_CAP_REGIONS == {
+        "NORTH_EAST",
+        "NORTH_WEST",
+        "YORKSHIRE",
+        "EAST_MIDLANDS",
+        "WEST_MIDLANDS",
+        "EAST_OF_ENGLAND",
+        "SOUTH_EAST",
+        "SOUTH_WEST",
+    }
+
+
+def test_bus_fares_are_set_only_when_entered():
+    """No bus fares sets nothing, so every other household's inputs (and
+    run keys) are as before."""
+    _, _, household = household_impact.household_entities(Answers())
+    assert "bus_fare_spending" not in household
+    _, _, household = household_impact.household_entities(
+        Answers(bus_fare_spending=500)
+    )
+    assert household["bus_fare_spending"] == 500
+
+
+@pytest.mark.parametrize(
+    "year, saving",
+    [
+        # 500 x step / (1 - step), step = 10.0% x 95/365
+        (2026, 500 * (0.1 * 95 / 365) / (1 - 0.1 * 95 / 365)),
+        # step = 10.0% x 270/366
+        (2027, 500 * (0.1 * 270 / 366) / (1 - 0.1 * 270 / 366)),
+    ],
+)
+def test_bus_fares_in_england_outside_london_by_hand(year, saving):
+    """£500 a year of bus fares in the North West: about £13 in 2026-27
+    and £40 in 2027-28, the policy card's example, as other benefits
+    (the credit is in epg_subsidy, so household_benefits). Skipped or
+    run, the same, and the national route's."""
+    answers = Answers(
+        region="NORTH_WEST", bus_fare_spending=500, salary_year=year
+    )
+    result = calculate(
+        answers, ["bus_fare_cap_2027"], year, include=("by_policy",)
+    )
+    change = changes_by_measure(result)["bus_fare_cap_2027"]
+    assert change["change"] == pytest.approx(saving, abs=0.01)
+    assert change["status"] == "affected"
+    assert round(change["change"]) == {2026: 13, 2027: 40}[year]
+    assert programme(result, "other_benefits")["change"] == pytest.approx(
+        saving, abs=0.01
+    )
+    before, after = national_route(answers, ["bus_fare_cap_2027"], year)
+    assert result["net_income"]["change"] == pytest.approx(
+        after - before, abs=0.01
+    )
+
+
+@pytest.mark.parametrize("region", ["LONDON", "SCOTLAND"])
+def test_bus_fares_in_london_or_outside_england_get_nothing(region):
+    """The same £500 of bus fares in London or Scotland: £0 in 2027-28, by
+    the skip rule and by the run itself."""
+    answers = Answers(region=region, bus_fare_spending=500, salary_year=2027)
+    for skip in (True, False):
+        household_impact.clear_runs()
+        result = calculate(
+            answers,
+            ["bus_fare_cap_2027"],
+            2027,
+            include=("by_policy",),
+            skip_unaffected=skip,
+        )
+        change = changes_by_measure(result)["bus_fare_cap_2027"]
+        assert change["change"] == 0
+        assert change["status"] == "not_affected"
+        assert result["net_income"]["change"] == 0
 
 
 # The households the skip rules treat differently. Each (household, year)

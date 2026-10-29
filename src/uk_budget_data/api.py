@@ -131,6 +131,15 @@ class APIHouseholdInput(BaseModel):
         ge=0,
         description="Annual rail spending (GBP)",
     )
+    bus_fare_spending: float = Field(
+        default=0.0,
+        ge=0,
+        le=100_000,
+        description=(
+            "Annual bus fare spending (GBP), for the £2 bus fare cap; this "
+            "route's household is in London, where it credits nothing"
+        ),
+    )
 
     @field_validator("children_ages")
     @classmethod
@@ -160,6 +169,7 @@ def convert_api_input_to_household(api_input: APIHouseholdInput) -> dict:
         ),
         fuel_spending=api_input.fuel_spending,
         rail_spending=api_input.rail_spending,
+        bus_fare_spending=api_input.bus_fare_spending,
     )
 
 
@@ -449,6 +459,17 @@ class HouseholdAnswersRequest(BaseModel):
             "changes the VAT on domestic gas. Left out: the average UK "
             "household's, £14.10 a week (ONS, Family spending in the UK, "
             "April 2024 to March 2025, Table A1, 4.4.2)."
+        ),
+    )
+    bus_fare_spending: float = Field(
+        default=0,
+        ge=0,
+        le=100_000,
+        description=(
+            "Bus and coach fares paid, £ a year, for the £2 bus fare cap "
+            "(policyengine-uk's bus_fare_spending): it credits a share of "
+            "them in England outside London in 2026-27 and 2027-28. Left "
+            "out: none, as before the form asked."
         ),
     )
     salary_sacrifice_pension_contributions: float = Field(
