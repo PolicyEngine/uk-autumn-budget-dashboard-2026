@@ -520,14 +520,14 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
             </Tip>
           )}
           {explainer && (
-            <Tip content={`Our explainer on policyengine.org: ${explainer.title}`}>
+            <Tip content={`Our policy brief: ${explainer.title}`}>
             <a
               className="policy-card-explainer"
               href={explainer.href}
               target="_blank"
               rel="noopener noreferrer"
             >
-              Our explainer
+              Read policy brief
               <span className="policy-sr-only">: {explainer.title}</span>
               <ExternalLink size={14} aria-hidden="true" />
               <span className="policy-sr-only"> (opens in a new tab)</span>

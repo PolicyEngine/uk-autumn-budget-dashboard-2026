@@ -23,7 +23,7 @@ const renderTab = (onShowTab = vi.fn()) => render(<MeasureCatalogueProvider cata
 describe("MethodologyTab", () => {
   it("offers our PDF report, a file in public/, and links each explainer", () => {
     renderTab();
-    const download = screen.getByRole("link", { name: "Download the PDF" });
+    const download = screen.getByRole("link", { name: /^Download our report \(PDF\)/ });
     expect(download).toHaveAttribute("href", `/${REPORT_PDF.file}`);
     expect(download).toHaveAttribute("download");
     const pdf = readFileSync(join(fileURLToPath(import.meta.url), "..", "..", "..", "public", REPORT_PDF.file));

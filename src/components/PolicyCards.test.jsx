@@ -180,7 +180,7 @@ describe("our explainers (explainers.js)", () => {
   it("links a measure's card to our explainer of it, and no other card", () => {
     const policies = [published("trading_allowance_raise", "Trading allowance raised to £3,000"), { ...catalogue.byId.get(ALPHA) }];
     render(<PolicyCards policies={policies} selectedPolicies={policies.map((policy) => policy.id)} onShowEffect={vi.fn()} />);
-    const links = screen.getAllByRole("link", { name: /^Our explainer/ });
+    const links = screen.getAllByRole("link", { name: /^Read policy brief/ });
     expect(links).toHaveLength(1);
     expect(links[0]).toHaveAttribute("href", "https://www.policyengine.org/uk/research/uk-autumn-budget-2026-trading-allowance");
     expect(links[0]).toHaveAttribute("target", "_blank");
