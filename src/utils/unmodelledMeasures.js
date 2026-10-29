@@ -296,7 +296,7 @@ export const UNMODELLED_MEASURES = [
     name: "Company car tax up 1 point in 2030-31",
     starts: "6 Apr 2030",
     changes:
-      "Company car tax percentages for 2030-31 are 1 point above 2029-30's in every band, up to 40%.",
+      "Company car tax percentages for 2030-31 exceed 2029-30's by 1 point in every band, up to 40%.",
     reaches: "Employees with a company car.",
     household:
       "More income tax on the same company car, from April 2030.",
