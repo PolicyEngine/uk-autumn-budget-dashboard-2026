@@ -19,7 +19,7 @@ import { policyDetailsFor } from "./policyDetails";
  * the statement alone until they are rewritten.
  */
 export const OBR_DEVIATION_STATEMENT =
-  "Gaps come from timing, coverage, behaviour and scope: select a policy to see why.";
+  "Gaps come from timing, coverage, behaviour and scope.";
 
 /** The four kinds of reason a gap can have, each a chip in the panel. */
 export const REASON_TYPES = ["Timing", "Coverage", "Behaviour", "Scope"];
@@ -117,7 +117,7 @@ export const OBR_DEVIATION_NOTES = {
   carers_allowance_earnings_taper:
     "Our static estimate is about 60% of the official costing in both compared years: £24 million against £40 million in 2030-31, and £48 million against £80 million in 2031-32. The official figure, the OBR's £38 million and £79 million before the Treasury rounds them, includes £5 million and £10 million of extra block grant for Scotland, where Carer's Allowance is devolved; the rest, £33 million and £69 million, is Carer's Allowance and Universal Credit spending, with no line for income tax (OBR policy Table 1.1). Before the income tax on the higher allowance (£15 million and £32 million), which our net cost subtracts, ours is £39 million and £79 million, about a sixth more than that spending. The official figure also includes a labour-supply response, which ours does not, and the model does not count the income tax collected on the allowance through PAYE against Universal Credit earnings, which makes its Universal Credit saving larger.",
   state_pension_income_tax_protection:
-    "The official costing counts no benefit savings: its income tax is £44m, £83m and £144m (OBR detailed table 1.1). Ours is £42m, £112m and £193m: 6% lower in 2027-28 and 35% and 34% higher in 2028-29 and 2029-30. More pensioners gain in our data (about 670,000 in 2027-28, against the Treasury's 500,000). After Pension Credit, Housing Benefit and Council Tax Reduction take back part of it, our net cost is £30m, £83m and £144m. For 2028-29 and 2029-30 we set the allowance at £182 and £250 a year, from the October 2026 forecast of the State Pension.",
+    "The official costing counts no benefit savings: its income tax is £44m, £83m and £144m (OBR detailed table 1.1). Ours is £42m, £112m and £193m: about 5% lower in 2027-28 and 35% and 34% higher in 2028-29 and 2029-30. More pensioners gain in our data (about 670,000 in 2027-28, against the Treasury's 500,000). After Pension Credit, Housing Benefit and Council Tax Reduction take back part of it, our net cost is £30m, £83m and £144m. For 2028-29 and 2029-30 we set the allowance at £182 and £250 a year, from the October 2026 forecast of the State Pension.",
   trading_allowance_raise:
     "From 2028-29 our estimate is £46m to £107m a year below the Treasury's (28% to 47%), with the largest gap in 2028-29. The Treasury's costing includes people switching from actual expenses to the larger allowance, which we don't model. Without gross receipts in the survey data, we give traders with profits above £3,000 nothing from the change and give miscellaneous income no allowance at all, while for some profits between £1,000 and £3,000 we overstate the gain, because we leave them unrelieved under the current £1,000 allowance.",
   fuel_duty_rise_deferral:

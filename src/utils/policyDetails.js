@@ -38,7 +38,7 @@
  * - budgetRows: the measure's rows in the Budget's Table 6.1 (as
  *   data_inputs/treasury/mapping.csv maps them), which link each card to
  *   the Budget's costing;
- * - example: { title, text, items?, source }: a worked example, or the reach the
+ * - example: { title, text, items?, source? }: a worked example, or the reach the
  *   Budget states, every figure from its source (a cited document or a
  *   verified household calculation), shown under "What changes": one short line, and any further points as
  *   a short list (`items`), never a long paragraph;
@@ -160,9 +160,11 @@ export const POLICY_DETAILS = [
       "Applies 0% VAT instead of 5% to each household's electricity spending in the survey.",
     details:
       "Shares of a year's electricity use: October to March for 2026-27 (about 57%), April to June for 2027-28 (about 22%). Both from DESNZ Energy Trends.",
+    // HMRC's VAT Notice 701/19, which sets out the zero rate's dates and
+    // where it applies (#290, Max, 6480086305)
     source: {
-      label: "Temporary zero rate of VAT for domestic electricity",
-      href: "https://www.gov.uk/government/publications/temporary-zero-rate-of-vat-for-domestic-electricity-in-great-britain/temporary-zero-rate-of-vat-in-great-britain-for-domestic-electricity",
+      label: "VAT on fuel and power (VAT Notice 701/19)",
+      href: "https://www.gov.uk/guidance/vat-on-fuel-and-power-notice-70119",
     },
     budgetRows: [2],
   },
@@ -447,7 +449,6 @@ export const POLICY_DETAILS = [
     example: {
       title: "Example",
       text: "An employee on £30,000 with £3,000 of side income and no expenses pays £400 less income tax in 2027-28.",
-      source: { label: "PolicyEngine household calculations, policyengine-uk 2.151.0 (review on PR 290)", href: "https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/290" },
     },
   },
 ];

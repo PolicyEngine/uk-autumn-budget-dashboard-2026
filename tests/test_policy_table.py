@@ -223,9 +223,11 @@ def test_electricity_says_where_and_what_it_is_scored_against(document):
     note = rows(document, "domestic_electricity_zero_vat")[
         "VAT on domestic electricity"
     ]["card_note"]
-    assert note.startswith("0% instead of 5% in Great Britain from 1 October 2026.")
+    assert note.startswith(
+        "0% instead of 5% in Great Britain from 1 October 2026."
+    )
     assert (
-        "expects the zero rate to apply in Northern Ireland too from 1 April 2027"
+        "expects the zero rate to apply in Northern Ireland too from April 2027"
         in note
     )
     assert "SI 2026/987" in note

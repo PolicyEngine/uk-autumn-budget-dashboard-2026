@@ -1,6 +1,7 @@
 /* The comparison chart (or table) and, on its right, the panel on the
    selected policy; the panel drops below under 900px */
 .obr-compare-layout {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
   gap: 24px;
@@ -14,17 +15,135 @@
   }
 }
 
+/* Beside the chart the panel is at least the chart's height, its content at
+   the top; a longer note makes it taller rather than cutting it off or
+   scrolling inside it (Vahid, 28 Oct: the last line was clipped) */
+@media (min-width: 900px) {
+  .obr-compare-layout {
+    align-items: stretch;
+  }
+
+  .obr-panel-cell {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .obr-panel-cell > .obr-panel {
+    flex: 1 0 auto;
+  }
+}
+
 .obr-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  box-sizing: border-box;
   padding: 16px;
   font-size: var(--fs-small);
   line-height: 1.4;
   color: var(--pe-gray-700);
   background: var(--c-row-band);
-  border: 1px solid var(--pe-gray-100);
+  /* In the selected row's accent, so the two read as one: the row's bar,
+     the connector and the panel's edge */
+  border: 1px solid var(--c-gain);
+  border-left-width: 3px;
   border-radius: 10px;
+  animation: obr-panel-pulse 1.2s ease-out 1;
+}
+
+/* Once, when the panel first appears: a soft ring that fades */
+@keyframes obr-panel-pulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--c-gain-light);
+  }
+  40% {
+    box-shadow: 0 0 0 6px var(--c-gain-light);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .obr-panel {
+    animation: none;
+  }
+}
+
+/* The callout line from the selected row to the panel */
+.obr-connector {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+@media (max-width: 899px) {
+  .obr-connector {
+    display: none;
+  }
+}
+
+/* The figure's mark, bottom right: under the panel, or after it on a phone */
+.obr-figure-logo {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.obr-figure-logo svg {
+  display: block;
+}
+
+/* The chart's two marks beside the figures they key */
+.obr-panel-key {
+  display: inline-block;
+  margin-right: 5px;
+  vertical-align: middle;
+  border-radius: 50%;
+}
+
+.obr-panel-key.is-ours {
+  width: 8px;
+  height: 8px;
+  background: var(--c-gain);
+}
+
+.obr-panel-key.is-official {
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--c-obr);
+}
+
+.obr-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: obr-panel-in 180ms ease-out;
+}
+
+/* A new selection: the content fades in from 4px below */
+@keyframes obr-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.obr-connector path {
+  transition: d 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .obr-panel-body {
+    animation: none;
+  }
+
+  .obr-connector path {
+    transition: none;
+  }
 }
 
 .obr-panel p {

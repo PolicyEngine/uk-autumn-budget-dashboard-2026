@@ -38,6 +38,8 @@ export default function ObrDifferencePanel({ row, year, yearLabel, obrKind }) {
           : null;
   return (
     <aside className="obr-panel" aria-label={`Why ours differs: ${row.name}`} aria-live="polite">
+      {/* Keyed by policy: a new selection fades and slides in */}
+      <div className="obr-panel-body" key={row.id}>
       <p className="obr-panel-name">
         <MeasureRowLabel measure={row.measure ?? { id: row.id, name: row.name }} name={row.name} tip={false} />
       </p>
@@ -46,11 +48,11 @@ export default function ObrDifferencePanel({ row, year, yearLabel, obrKind }) {
       ) : (
         <dl className="obr-panel-figures">
           <div>
-            <dt>Ours</dt>
+            <dt><span className="obr-panel-key is-ours" aria-hidden="true" />Ours</dt>
             <dd className="is-ours">{formatBn(row.pe, decimals)}</dd>
           </div>
           <div>
-            <dt title={`Official costing (${obrKind})`}>Official</dt>
+            <dt title={`Official costing (${obrKind})`}><span className="obr-panel-key is-official" aria-hidden="true" />Official</dt>
             <dd>{formatBn(row.obr, decimals)}</dd>
           </div>
           <div>
@@ -84,6 +86,7 @@ export default function ObrDifferencePanel({ row, year, yearLabel, obrKind }) {
           </ul>
         </>
       )}
+      </div>
     </aside>
   );
 }

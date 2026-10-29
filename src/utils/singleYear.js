@@ -12,6 +12,7 @@ import {
   WHO_IS_A_CHILD_NOTE,
 } from "../components/personal/singleYearMethodNotes";
 import { consistentRound } from "./householdImpactApi";
+import { CALCULATOR_ONLY_MEASURES } from "./calculatorOnlyMeasures";
 import { CHART_COLOURS } from "./chartTheme";
 import { policyDetailsFor, shortNameOf } from "./policyDetails";
 import { inForceIn } from "./legendMembership";
@@ -268,7 +269,10 @@ export function outOfForceReason(measure, year) {
  */
 export function policyRows(byPolicy, total, policies, year = null) {
   const nameOf = (row) =>
-    policies.find((policy) => policy.id === row.id)?.name ?? row.name ?? row.id.replace(/_/g, " ");
+    policies.find((policy) => policy.id === row.id)?.name ??
+    CALCULATOR_ONLY_MEASURES[row.id]?.name ??
+    row.name ??
+    row.id.replace(/_/g, " ");
   // A short name for tight labels (policyDetails.js's, while it describes
   // the published measure), else the name
   const labelOf = (row) => {

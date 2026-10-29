@@ -74,7 +74,7 @@ const PENSIONER_MEASURES_INFO = {
 export const PENSIONERS_ANCHOR = "pensioners";
 
 const UNIT = "Average change per pensioner (£ a year)";
-const AGE_UNIT = "Average change per person (£ a year)";
+const AGE_UNIT = "Average change in household income, per person (£ a year)";
 // The pensioners' ages and the selected year: the page's highlight tint
 const HIGHLIGHT_FILL = CHART_COLOURS.highlightBand;
 const OUTCOMES = [
@@ -250,7 +250,7 @@ function AgeCard({ catalogue, rows, policies, selectedPolicies, selectedYear, na
   const anyLoss = data.some((point) => (point.netChange ?? 0) < 0);
   const anyGain = data.some((point) => (point.netChange ?? 0) > 0);
   const title = `Change by age, ${yearLabel}`;
-  const description = "Average change per person, £ a year, by age.";
+  const description = "Average change in household income per person, £ a year, by age.";
   const measureIds = [...new Set(data.flatMap((point) => point.parts.map((part) => part.id)))];
   const measureName = (id) => catalogue.byId.get(id)?.label ?? id;
   const download = {
@@ -412,7 +412,7 @@ function MeasuresCard({ catalogue, rows, policies, selectedPolicies, selectedYea
     maxSteps: DUMBBELL_MAX_STEPS,
   });
   const title = `Effect of each policy, ${yearLabel}`;
-  const description = "Average change per person from each policy, for pensioners and people of all ages.";
+  const description = "Average change in household income from each policy, for pensioners and people of all ages.";
   const notes = suppressed.length ? [`Not shown, too few survey records: ${suppressed.join(", ")}`] : [];
   // As in MeasuresCard: each by its short name, and when it is in force
   // where that is not this year

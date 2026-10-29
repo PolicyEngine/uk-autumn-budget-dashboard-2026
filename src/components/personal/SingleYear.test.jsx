@@ -336,7 +336,8 @@ describe("the household calculation, from the fixture", () => {
       "Share of your income",
       "Income percentile",
     ]);
-    expect(tiles[0]).toHaveTextContent(`In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies`);
+    // The selected policies and the savings rise the calculator always adds
+    expect(tiles[0]).toHaveTextContent(`In 2029-30, with ${SUPPORTED_POLICY_IDS.length + 1} policies`);
     expect(changeValue()).toBe("+£3,765");
     // All three figures in the tiles' one headline class, the change not
     // in the map's micro .result-value
@@ -1162,9 +1163,9 @@ describe("the assumed-spending caution", () => {
 
   it("calls spending assumed at the prefilled averages or an example's figure, not once the reader enters their own", () => {
     expect(spendingAssumed(WIZARD_DEFAULTS, null)).toBe("average");
-    expect(spendingAssumed(WIZARD_DEFAULTS, "driver")).toBe("average");
+    expect(spendingAssumed(WIZARD_DEFAULTS, "saver")).toBe("average");
     const own = { ...WIZARD_DEFAULTS, petrol_spending_per_year: 2600 };
-    expect(spendingAssumed(own, "driver")).toBe("example");
+    expect(spendingAssumed(own, "saver")).toBe("example");
     expect(spendingAssumed(own, null)).toBeNull();
   });
 });

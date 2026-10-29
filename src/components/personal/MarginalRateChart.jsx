@@ -51,6 +51,9 @@ const points = (value) => {
  * when they are drawn (W6 G1: it claimed both totals in every view).
  */
 export function rateExportDescription(view, hasParts, yearLabel) {
+  if (view === "both") {
+    return `Share of each extra pound of salary lost to taxes and withdrawn benefits in ${yearLabel}, under current law and with the policies.`;
+  }
   if (view === "change") {
     return `The change the selected policies make to the share of each extra pound of salary lost to taxes and withdrawn benefits in ${yearLabel}, in percentage points.`;
   }
@@ -101,6 +104,23 @@ export function RateTooltip({ yearLabel, parts, view, focusPart = null, ...props
         format={(value) => `${Math.round(value * 100)}%`}
         labelFormat={(value) => `At ${formatPoundsShort(value)}`}
         payload={[{ dataKey: one.name, name: one.label, value: point[one.name] ?? 0, color: one.color }]}
+      />
+    );
+  }
+  if (view === "both") {
+    return (
+      <ChartTooltip
+        active
+        label={point.income}
+        grouped={false}
+        showZero
+        format={(value) => `${Math.round(value * 100)}%`}
+        labelFormat={labelFormat}
+        payload={[
+          { dataKey: "before", name: `Total rate ${SIDE_NAME.before}`, value: point.beforeRaw, color: BEFORE_COLOUR },
+          { dataKey: "after", name: `Total rate ${SIDE_NAME.after}`, value: point.afterRaw, color: AFTER_COLOUR },
+          { dataKey: "change", name: "Change", value: point.change, text: points(point.change), color: CHANGE_COLOUR },
+        ]}
       />
     );
   }
@@ -176,22 +196,24 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
   const focus = focusParts?.[0] ?? null;
   const setFocus = setFocusKey;
   const isChange = view === "change";
-  const side = isChange ? "after" : view;
+  // Both: the two totals as lines, no stacked parts
+  const isBoth = view === "both";
+  const side = isChange || isBoth ? "after" : view;
   const rates = useMemo(() => marginalRates(sweep), [sweep]);
   const breakdown = sweep.parts ?? null;
   // The parts in use on either side, so switching views keeps the colours
   const parts = useMemo(
-    () => (breakdown && !isChange ? partsInUse([...breakdown.before, ...breakdown.after]) : null),
-    [breakdown, isChange],
+    () => (breakdown && !isChange && !isBoth ? partsInUse([...breakdown.before, ...breakdown.after]) : null),
+    [breakdown, isChange, isBoth],
   );
   const rawRows = useMemo(() => {
-    const rows = breakdown
+    const rows = breakdown && !isBoth
       ? breakdownRows(rates, breakdown, side)
       : rates.map((rate) => ({ income: rate.income, to: rate.to, before: rate.before, after: rate.after }));
     // The last step runs to the sweep's end
-    if (!breakdown && rows.length) rows.push({ ...rows[rows.length - 1], income: rows[rows.length - 1].to });
+    if ((!breakdown || isBoth) && rows.length) rows.push({ ...rows[rows.length - 1], income: rows[rows.length - 1].to });
     return rows;
-  }, [rates, breakdown, side]);
+  }, [rates, breakdown, side, isBoth]);
   // The rate axis: below 0% when a total or a part is negative, above 100%
   // when a total is (Pavel's review, HH8: the hover showed negative rates the
   // chart did not), within −100% to 200%
@@ -314,7 +336,9 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
   const yourParts = breakdown?.own ? describeParts(breakdown.own.after) : "";
   const legendItems = isChange
     ? [{ label: "Change in marginal rate", color: CHANGE_COLOUR, type: "line" }]
-    : parts
+    : isBoth
+      ? LEGEND_ITEMS
+      : parts
       ? [
           ...parts.map((part) => ({ label: part.label, color: part.color, info: part.info })),
           { label: `Total rate ${SIDE_NAME[view]}`, color: TOTAL_COLOUR, type: "line" },
@@ -447,8 +471,10 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
                 stroke="none"
                 activeDot={false}
                 isAnimationActive={false}
-                onMouseEnter={() => setFocus(part.name)}
-                onMouseLeave={() => setFocus(null)}
+                // No hover focus on the bands themselves: moving across the
+                // stacked bands flipped the focus on and off at every edge,
+                // so the colours flashed (Vahid, 28 Oct). The legend chips
+                // still focus a part
               />
             ))}
             {salary !== null && (
@@ -457,7 +483,7 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
                 stroke={CHART_COLOURS.text}
                 strokeDasharray={REFERENCE_DASH}
                 label={{
-                  value: yours ? `You: ${isChange ? points(yours.after - yours.before) : pct(yours[view])}` : "You",
+                  value: yours ? `You: ${isChange ? points(yours.after - yours.before) : isBoth ? `${pct(yours.before)} → ${pct(yours.after)}` : pct(yours[view])}` : "You",
                   // Right of the line, as the net income card's "You", clear of
                   // the y axis's top tick; left of it only near the right edge
                   position: salary < xDomain[1] * 0.75 ? "insideTopLeft" : "insideTopRight",
@@ -479,8 +505,9 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
             )}
             {!(parts && hidden.includes("total")) && <Line
               type="stepAfter"
-              dataKey={isChange ? "change" : view}
+              dataKey={isChange ? "change" : side}
               name={isChange ? "Change" : view === "before" ? "Current law" : "With the policies"}
+              // In Both this is the after line
               stroke={lineStroke}
               strokeWidth={2}
               strokeOpacity={focusKey && focusKey !== "total" ? 0.3 : 1}
@@ -489,10 +516,37 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
               activeDot={false}
               isAnimationActive={false}
             />}
+            {isBoth && (
+              // Current law dashed, over the policies' solid line so both
+              // show where they meet, as the net income card's Both
+              <Line
+                type="stepAfter"
+                dataKey="before"
+                name="Current law"
+                stroke={BEFORE_COLOUR}
+                strokeWidth={2}
+                strokeDasharray={BEFORE_DASH}
+                dot={<EdgeMarker bounds={rateBounds.domain} />}
+                activeDot={false}
+                isAnimationActive={false}
+              />
+            )}
+
+            {salary !== null && yours && isBoth && (
+              <ReferenceDot
+                x={salary}
+                y={clamp(yours.before)}
+                r={5}
+                fill={BEFORE_COLOUR}
+                stroke={CHART_COLOURS.surface}
+                strokeWidth={2}
+                ifOverflow="visible"
+              />
+            )}
             {salary !== null && yours && !isChange && (
               <ReferenceDot
                 x={salary}
-                y={clamp(yours[view])}
+                y={clamp(yours[side])}
                 r={5}
                 fill={lineStroke}
                 stroke={CHART_COLOURS.surface}
@@ -560,7 +614,9 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
               "Worked out from the same salary sweep as the net income card: one minus the change in net income over the change in salary, from each salary to the next.",
               isChange
                 ? "The line is the change in the total rate, in percentage points."
-                : parts
+                : isBoth
+                  ? "The dashed line is the total rate under current law, the solid line with the policies."
+                  : parts
                   ? "Each layer is one tax's or benefit taper's part of the rate; the line is the total rate."
                   : "The line is the total rate.",
               "The dashed line marks your salary.",

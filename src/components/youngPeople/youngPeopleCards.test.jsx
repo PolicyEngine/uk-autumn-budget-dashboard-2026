@@ -228,7 +228,7 @@ describe("young people cards", () => {
     // The age group is the card's one Options pill
     fireEvent.click(screen.getByRole("button", { name: /^Options: 16 to 24/ }));
     fireEvent.click(within(screen.getByRole("radiogroup", { name: "Compare" })).getByRole("radio", { name: /65 and over/ }));
-    expect(screen.getByText("Average change per person from each policy, for people aged 65 and over and people of all ages.")).toBeInTheDocument();
+    expect(screen.getByText("Average change in household income from each policy, for people aged 65 and over and people of all ages.")).toBeInTheDocument();
   });
 
   it("describes missing age-group rows as unavailable", () => {
@@ -316,7 +316,7 @@ describe("young people cards", () => {
     render(<TrendCard {...props} selectedYear={2029} />);
     const card = document.querySelector(".young-people-trend");
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
-    expect(card).toHaveTextContent("Average change per person in each age group, each year, with all ages for comparison.");
+    expect(card).toHaveTextContent("Average change in household income per person in each age group, each year, with all ages for comparison.");
   });
 
   it("keys the lines by its chips alone, with no names at the lines' ends, on a wide screen and a phone", () => {

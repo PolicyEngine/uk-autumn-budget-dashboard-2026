@@ -133,7 +133,9 @@ describe("OBRDumbbellChart", () => {
     const { container } = chart();
     const svg = container.querySelector("svg");
     const bands = [...svg.querySelectorAll(".obr-dumbbell-band")];
-    expect(bands.map((band) => band.getAttribute("fill"))).toEqual([CHART_COLOURS.rowBand, CHART_COLOURS.rowBand]);
+    // Every row has a band (white where unbanded), so a change of selection
+    // fades its tint
+    expect(bands.map((band) => band.getAttribute("fill"))).toEqual([CHART_COLOURS.rowBand, CHART_COLOURS.surface, CHART_COLOURS.rowBand]);
     // The bands come before every gridline and row, so they are drawn under them
     const order = [...svg.querySelectorAll("*")];
     expect(order.indexOf(svg.querySelector(".obr-dumbbell-bands"))).toBeLessThan(order.indexOf(svg.querySelector("line")));

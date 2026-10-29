@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { withCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { SELECTABLE_YEARS } from "../utils/displayYears";
 import {
   HEADLINE_INCLUDE,
@@ -170,6 +171,8 @@ export default function useExampleFigures({
     const supportedKey = `${STORE_PREFIX}supported:${publicationKey}|${selectionKey}`;
     let used = readStoredList(supportedKey, policies) ?? policies;
     let figures = {};
+    // Measures the API refused, the calculator-only ones among them
+    const refused = new Set();
     const pending = new Set();
     const failed = new Set();
     const put = (id, y, net) => {
@@ -196,12 +199,15 @@ export default function useExampleFigures({
       const asks = [];
       for (const y of years) {
         for (const example of examples) {
-          const key = exampleKey(example.inputs, { year: y, policies: used, publicationKey });
+          // With the calculator-only measures, as choosing it asks, but
+          // any the API refused
+          const own = withCalculatorOnly(used).filter((id) => !refused.has(id));
+          const key = exampleKey(example.inputs, { year: y, policies: own, publicationKey });
           const net = peekHouseholdImpact(key, expectedEngine)?.net ?? readStoredHeadline(key, expectedEngine)?.net ?? null;
           if (net) put(example.id, y, net);
           else {
             pending.add(`${example.id}:${y}`);
-            asks.push({ example, year: y, key });
+            asks.push({ example, year: y, key, own });
           }
         }
       }
@@ -214,10 +220,10 @@ export default function useExampleFigures({
     // One cell: its headline, checked, cached and stored. A refusal of
     // measures the API does not know is thrown for the caller; any other
     // failure leaves the cell to "Calculated when chosen"
-    const ask = async ({ example, year: y, key }) => {
+    const ask = async ({ example, year: y, key, own }) => {
       const cell = `${example.id}:${y}`;
       try {
-        const body = buildHouseholdRequest(example.inputs, { year: y, policies: used, include: HEADLINE_INCLUDE });
+        const body = buildHouseholdRequest(example.inputs, { year: y, policies: own, include: HEADLINE_INCLUDE });
         const raw = await post(body, { signal });
         if (signal.aborted) return;
         const data = normaliseHouseholdImpact(raw);
@@ -247,6 +253,7 @@ export default function useExampleFigures({
         } catch (error) {
           if (!(error instanceof UnknownMeasuresError)) return;
           used = used.filter((id) => !error.unknown.includes(id));
+          for (const id of error.unknown) refused.add(id);
           storeList(supportedKey, used);
           if (used.length === 0) {
             for (const { example, year: y } of asks) failed.add(`${example.id}:${y}`);

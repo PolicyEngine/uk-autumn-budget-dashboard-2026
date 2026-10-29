@@ -140,7 +140,7 @@ export function dumbbellLegendItems(obrKind) {
   ];
 }
 
-function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", chartRef, tooltipKey, selectedId = null, onSelect }) {
+function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", chartRef, tooltipKey, selectedId = null, onSelect, showLogo = true }) {
   const [wrapperRef, measuredWidth] = useElementWidth();
   const narrow = useNarrowViewport();
   // Until the plot is measured, a typical width for the screen
@@ -188,8 +188,10 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
     };
   };
   // A row's background: its band, the hover band, or the card
+  // The selected row (whose policy the panel explains) a stronger tint than
+  // a hovered one, with an accent bar at its left edge
   const rowBackground = (row, index) =>
-    active === row.id || selectedId === row.id ? CHART_COLOURS.hover : index % 2 === 0 ? CHART_COLOURS.rowBand : CHART_COLOURS.surface;
+    selectedId === row.id ? CHART_COLOURS.highlightBand : active === row.id ? CHART_COLOURS.hover : index % 2 === 0 ? CHART_COLOURS.rowBand : CHART_COLOURS.surface;
   const pct = scale === "pct";
 
   // Where each mark sits: £bn, or % of the official costing
@@ -216,7 +218,11 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
   const labelGap = OBR_RADIUS + 5;
   const labelRoom = narrow ? 54 : 62;
   // The difference column at the right (on a phone, on the name line)
-  const diffWidth = narrow ? 0 : 84 + BAND_PAD;
+  // A chevron at the right of each row when rows select a policy
+  // (not on a phone, where the panel is below and the difference shares
+  // the name's line: the room goes to the labels)
+  const chevron = onSelect && !narrow ? 14 : 0;
+  const diffWidth = narrow ? 0 : 84 + BAND_PAD + chevron;
   const nameWidth = narrow
     ? 0
     : Math.min(Math.max(...rows.map((row) => approxWidth(row.name, fontSize)), 80) + 16 + BAND_PAD + SVG_LABEL_INDENT.full, width * 0.38);
@@ -353,17 +359,21 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
     } else if (pePart || obrPart) {
       const value = pePart ? row.xPe : row.xObr;
       const cx = x(value);
-      const labelSide = cx > centre ? "left" : "right";
-      const otherSide = labelSide === "left" ? "right" : "left";
+      const valueText = formatBn(pePart ? row.pe : row.obr);
+      const missingText = pePart ? (row.notComparable ? "Not comparable" : "Not in the official costings") : "Ours not yet published";
+      // The figure on the side with more room, the words on the other;
+      // where the words would run past the chart's edge (a phone), the two
+      // swap sides, so "Not comparable" is never cut off
+      const room = (side, text) =>
+        side === "right" ? cx + labelGap + approxWidth(text, 12) <= width - BAND_PAD - diffWidth : cx - labelGap - approxWidth(text, 12) >= 0;
+      let labelSide = cx > centre ? "left" : "right";
+      let otherSide = labelSide === "left" ? "right" : "left";
+      if (!room(otherSide, missingText) && room(labelSide, missingText) && room(otherSide, valueText)) {
+        [labelSide, otherSide] = [otherSide, labelSide];
+      }
       parts.push(
-        valueLabel(formatBn(pePart ? row.pe : row.obr), labelSide, cx, cy, pePart ? PE_LABEL_COLOUR : OBR_LABEL_COLOUR, "label", background),
-        missingLabel(
-          pePart ? (row.notComparable ? "Not comparable" : "Not in the official costings") : "Ours not yet published",
-          otherSide,
-          cx + (otherSide === "right" ? 2 : -2),
-          cy,
-          "missing",
-        ),
+        valueLabel(valueText, labelSide, cx, cy, pePart ? PE_LABEL_COLOUR : OBR_LABEL_COLOUR, "label", background),
+        missingLabel(missingText, otherSide, cx + (otherSide === "right" ? 2 : -2), cy, "missing"),
       );
     } else {
       parts.push(missingLabel(pct && isValue(row.pe) ? (row.notComparable ? "Not comparable" : "Not in the official costings") : "Not yet published", "right", plotLeft - labelGap, cy, "missing"));
@@ -445,10 +455,28 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
         {parts}
         {/* On a phone the difference shares the name's line, where the zero
             line can run: a backing in the row's background keeps it clear */}
-        {narrow && backing(width - BAND_PAD - approxWidth(differenceText, 12) - 2, nameY, approxWidth(differenceText, 12) + 2, background)}
+        {narrow && backing(width - BAND_PAD - chevron - approxWidth(differenceText, 12) - 2, nameY, approxWidth(differenceText, 12) + 2, background)}
+        {/* The chevron: in the accent once the row is selected, pointing
+            at the panel */}
+        {chevron > 0 && !row.status && (
+          <text
+            className={`obr-dumbbell-chevron${selectedId === row.id ? " is-selected" : ""}`}
+            x={width - BAND_PAD - 3}
+            y={narrow ? nameY : cy}
+            dy="0.35em"
+            textAnchor="middle"
+            fill={selectedId === row.id ? PE_COLOUR : TICK_STYLE.fill}
+            fontSize={16}
+            fontWeight={selectedId === row.id ? 700 : 400}
+            aria-hidden="true"
+            data-export="skip"
+          >
+            ›
+          </text>
+        )}
         <text
           className="obr-dumbbell-difference"
-          x={width - BAND_PAD}
+          x={width - BAND_PAD - chevron}
           y={narrow ? nameY : cy}
           dy="0.35em"
           textAnchor="end"
@@ -484,9 +512,14 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
               style={{ fontFamily: "inherit", display: "block" }}
             >
               {/* The difference column's heading */}
-              <text className="obr-dumbbell-column-head" x={width - BAND_PAD} y={10} textAnchor="end" fill={TICK_STYLE.fill} fontSize={11}>
+              <text className="obr-dumbbell-column-head" x={width - BAND_PAD - chevron} y={10} textAnchor="end" fill={TICK_STYLE.fill} fontSize={11}>
                 Difference
               </text>
+              {onSelect && (
+                <text className="obr-dumbbell-hint" data-export="skip" x={BAND_PAD} y={10} fill={TICK_STYLE.fill} fontSize={11}>
+                  Select a policy to see why it differs
+                </text>
+              )}
               {pct && (
                 <text x={x(100)} y={10} textAnchor="middle" fill={TICK_STYLE.fill} fontSize={11}>
                   Official costing = 100%
@@ -495,12 +528,16 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
               {/* The row bands, under the gridlines, the zero line and the
                   dots: every second row, and the hovered or focused one */}
               <g className="obr-dumbbell-bands" aria-hidden="true">
+                {/* Every row's band drawn (white where unbanded), so a
+                    change of selection fades the tints rather than
+                    swapping shapes in and out */}
                 {plotted.map((row, index) => {
                   const fill = rowBackground(row, index);
-                  return fill === CHART_COLOURS.surface ? null : (
+                  const selected = selectedId === row.id;
+                  return (
                     <rect
                       key={row.id}
-                      className={`obr-dumbbell-band${active === row.id || selectedId === row.id ? " is-active" : ""}`}
+                      className={`obr-dumbbell-band${active === row.id || selected ? " is-active" : ""}${selected ? " is-selected" : ""}`}
                       x={0}
                       y={top + index * rowHeight + 1}
                       width={width}
@@ -510,6 +547,22 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
                     />
                   );
                 })}
+                {/* One accent bar, slid to the selected row */}
+                {(() => {
+                  const index = plotted.findIndex((row) => row.id === selectedId);
+                  return index < 0 ? null : (
+                    <rect
+                      className="obr-dumbbell-accent"
+                      data-export="skip"
+                      x={0}
+                      y={0}
+                      width={3}
+                      height={rowHeight - 2}
+                      fill={PE_COLOUR}
+                      style={{ transform: `translateY(${top + index * rowHeight + 1}px)` }}
+                    />
+                  );
+                })()}
               </g>
               {axis.ticks.map((tick) => (
                 <g key={tick}>
@@ -555,9 +608,9 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
               Official costing ({obrKind})
             </li>
           </ul>
-          <svg className="obr-dumbbell-logo" width={CHART_LOGO.width} height={CHART_LOGO.height} role="img" aria-label="PolicyEngine">
+          {showLogo && <svg className="obr-dumbbell-logo" width={CHART_LOGO.width} height={CHART_LOGO.height} role="img" aria-label="PolicyEngine">
             <image href={CHART_LOGO.href} width={CHART_LOGO.width} height={CHART_LOGO.height} />
-          </svg>
+          </svg>}
         </div>
       )}
     </div>

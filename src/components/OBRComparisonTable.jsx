@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import SwapTransition from "./SwapTransition";
 import "./OBRComparisonTable.css";
 import ControlBar from "./ControlBar";
@@ -13,6 +13,7 @@ import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import OBRDumbbellChart, { dumbbellLegendItems, formatBn, formatBn as formatFigure, formatDifference, obrValue, rowDecimals, shownDifference } from "./OBRDumbbellChart";
 import { CHART_LOGO } from "../utils/chartLogo";
+import { CHART_COLOURS } from "../utils/chartTheme";
 import { buildChartCsv, fiscalYear } from "../utils/chartCsv";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import { shortNameOf } from "../utils/policyDetails";
@@ -254,6 +255,35 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   const [scale, setScale] = useState("bn");
   // The policy the panel explains: picked by a row, else the first with a gap
   const [picked, setPicked] = useState(null);
+  // The connector from the selected row to the panel: { row, panel } in px
+  // from the figure's top, measured after layout (wide screens only)
+  const layoutRef = useRef(null);
+  const [connector, setConnector] = useState(null);
+  useLayoutEffect(() => {
+    const layout = layoutRef.current;
+    if (!layout) return undefined;
+    const measure = () => {
+      const row = layout.querySelector(".obr-dumbbell-row.is-selected .obr-dumbbell-hit");
+      const panel = layout.querySelector(".obr-panel");
+      const box = layout.getBoundingClientRect();
+      if (!row || !panel || typeof window === "undefined" || window.innerWidth < 900) {
+        setConnector((current) => (current === null ? current : null));
+        return;
+      }
+      const r = row.getBoundingClientRect();
+      const p = panel.getBoundingClientRect();
+      const rowY = Math.round(r.top + r.height / 2 - box.top);
+      // Into the panel at the row's height, kept inside its rounded corners
+      const panelY = Math.round(Math.min(Math.max(rowY, p.top - box.top + 20), p.bottom - box.top - 20));
+      const next = { rowY, panelY, left: Math.round(r.right - box.left), right: Math.round(p.left - box.left) };
+      setConnector((current) => (current && current.rowY === next.rowY && current.panelY === next.panelY && current.left === next.left && current.right === next.right ? current : next));
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(measure);
+    observer.observe(layout);
+    return () => observer.disconnect();
+  });
   const chartRef = useRef(null);
   const tableRef = useRef(null);
   const showTable = view === "table";
@@ -431,7 +461,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
 
       {/* Chart or table, and on its right (below, on a phone) why the
           selected policy differs */}
-      <div className="obr-compare-layout">
+      <div className="obr-compare-layout" ref={layoutRef}>
       <div className="obr-compare-main">
       {/* Chart or table: the new one fades in, the height eases */}
       <SwapTransition swapKey={`${view}-${yearCovered}`}>
@@ -444,6 +474,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
             chartRef={chartRef}
             tooltipKey={`${selectedYear}-${showBehavioural}`}
             selectedId={selectedRow?.id ?? null}
+            showLogo={false}
             onSelect={setPicked}
           />
         ) : (
@@ -518,8 +549,32 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
       </SwapTransition>
 
       </div>
-        <ObrDifferencePanel row={selectedRow} year={selectedYear} yearLabel={yearLabel} obrKind={obrKind} />
+        <div className="obr-panel-cell">
+          <ObrDifferencePanel row={selectedRow} year={selectedYear} yearLabel={yearLabel} obrKind={obrKind} />
+        </div>
+        {/* The selected row's callout line to the panel: across the gap,
+            stepping to the panel's height where the panel is shorter */}
+        {connector && !showTable && (
+          <svg className="obr-connector" aria-hidden="true" style={{ left: connector.left, width: Math.max(connector.right - connector.left, 0) }}>
+            <path
+              d={`M0,${connector.rowY} H${(connector.right - connector.left) / 2} V${connector.panelY} H${connector.right - connector.left}`}
+              style={{ d: `path("M0,${connector.rowY} H${(connector.right - connector.left) / 2} V${connector.panelY} H${connector.right - connector.left}")` }}
+              fill="none"
+              stroke={CHART_COLOURS.gain}
+              strokeWidth={1.5}
+            />
+          </svg>
+        )}
       </div>
+      {/* The chart and the panel are one figure: its mark at the bottom
+          right, under the panel (after it, on a phone) */}
+      {(showTable || yearCovered) && (
+        <div className="obr-figure-logo">
+          <svg width={CHART_LOGO.width} height={CHART_LOGO.height} role="img" aria-label="PolicyEngine">
+            <image href={CHART_LOGO.href} width={CHART_LOGO.width} height={CHART_LOGO.height} />
+          </svg>
+        </div>
+      )}
 
       <div className="chart-footer">
         <ChartMoreInfo info={COMPARISON_INFO} />
