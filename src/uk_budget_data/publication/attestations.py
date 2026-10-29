@@ -10,6 +10,9 @@ or the output digest. Regeneration therefore requires a fresh review.
 The gate requires the file's exact bytes in the local Git HEAD. Requiring
 the commit to pass through a reviewed PR remains the repository's process;
 a local gate cannot prove that process occurred.
+
+Nothing is held while sign-off is off (``uk_budget_data.sign_off``, off
+since 28 October 2026): no attestation is read or required.
 """
 
 import json
@@ -22,7 +25,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
-from uk_budget_data import data_limits
+from uk_budget_data import data_limits, sign_off
 
 ATTESTATIONS_ROOT = Path("data_inputs/publication/attestations")
 ATTESTATION_REPOSITORY = Path(".")
@@ -90,9 +93,12 @@ def receipt_document_sha256(document: dict) -> str:
 def requires_attestation(document: dict) -> bool:
     """Whether a recorded modifier is hand-written under an active limit.
 
-    Malformed or absent proofs are independently refused by receipt
-    validation; the gate never tries to reconstruct a template proof.
+    Never while sign-off is off. Malformed or absent proofs are
+    independently refused by receipt validation; the gate never tries to
+    reconstruct a template proof.
     """
+    if not sign_off.REQUIRED:
+        return False
     if not data_limits.DATA_LIMITS:
         return False
     proofs = (document.get("dashboard") or {}).get("modifier_templates")

@@ -65,14 +65,16 @@ export const WHO_IS_A_CHILD_NOTE = (
 export const COUNCIL_TAX_NOTE = (
   <Note
     icon="building"
-    lead="Estimated from your band and region, and taken off net income."
+    lead="Estimated from your band and your council's Band D, and taken off net income."
     points={[
       <>
-        Band D averages: <SourceLink source="mhclg_council_tax">MHCLG</SourceLink>{" "}for England, tax-base weighted by
-        region; the <SourceLink source="wales_council_tax">Welsh</SourceLink> and{" "}
-        <SourceLink source="scotland_council_tax">Scottish</SourceLink> governments.
+        Each council's Band D is policyengine-uk's, from{" "}
+        <SourceLink source="mhclg_council_tax">MHCLG</SourceLink>{" "}for England and the{" "}
+        <SourceLink source="wales_council_tax">Welsh</SourceLink> and{" "}
+        <SourceLink source="scotland_council_tax">Scottish</SourceLink>
+        {" governments. Until you pick your council, it is your region's average (England's tax-base weighted by region)."}
       </>,
-      "Starts from 2026-27 averages, grown to the chosen year with policyengine-uk's OBR Council Tax forecast.",
+      "Starts from 2026-27 levels, grown to the chosen year with policyengine-uk's OBR Council Tax forecast.",
       "Northern Ireland has domestic rates, which are not modelled.",
     ]}
   />

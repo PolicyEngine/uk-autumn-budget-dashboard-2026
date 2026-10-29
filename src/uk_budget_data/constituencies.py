@@ -76,7 +76,7 @@ from policyengine.disclosure import validate_public
 from rich.console import Console
 from rich.markup import escape
 
-from uk_budget_data import area_routing, data_limits, geography
+from uk_budget_data import area_routing, data_limits, geography, sign_off
 from uk_budget_data.certified_data import TOKEN_ENV, load_bundle_manifest
 from uk_budget_data.private_outputs import (
     AUDIT_DIR_ENV,
@@ -1762,6 +1762,8 @@ def report_tables(run: RunPlan, tables: list[Path], release_name: str) -> int:
             f"[green]Wrote {escape(str(table))}: validate_public, 0 "
             f"problems; SHA-256 {sha256_file(table)}[/green]"
         )
+        if not sign_off.REQUIRED:
+            continue
         row = _review_row(table, run, release_name)
         if row is not None:
             console.print(
@@ -1770,10 +1772,11 @@ def report_tables(run: RunPlan, tables: list[Path], release_name: str) -> int:
                 "place of <reviewer>):"
             )
             sys.stdout.write(row + "\n")
-    console.print(
-        f"{release_index.AREA_PROVENANCE_FILE} gets its row from `publish "
-        "review-rows`, after `publish index`."
-    )
+    if sign_off.REQUIRED:
+        console.print(
+            f"{release_index.AREA_PROVENANCE_FILE} gets its row from `publish "
+            "review-rows`, after `publish index`."
+        )
     return 0
 
 

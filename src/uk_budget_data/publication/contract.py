@@ -21,6 +21,7 @@ from uk_budget_data import (
     definitions,
     measure_templates,
     model_limits,
+    sign_off,
 )
 from uk_budget_data.example_households import EXAMPLE_HOUSEHOLDS
 from uk_budget_data.publication import manifest as m
@@ -96,6 +97,10 @@ def contract() -> dict:
         "data_limits_registry_sha256": data_limits.REGISTRY_SHA256,
         "data_limits_active": bool(data_limits.DATA_LIMITS),
         "model_limits_registry_sha256": model_limits.REGISTRY_SHA256,
+        # The sign-off switch (uk_budget_data.sign_off): whether the page
+        # holds a hand-written modifier for its attestation, and whether
+        # the build's check needs a review row for every public file.
+        "sign_off_required": sign_off.REQUIRED,
         "measure_templates": list(measure_templates.TEMPLATES),
         # JavaScript has lowercasing but no Unicode case-fold operation.
         # Export non-identity folds, so checker names follow Python's
