@@ -138,6 +138,12 @@ describe("plain card sentences", () => {
       { yearLabel: "2030-31", low: 40, high: -60 },
     ];
     expect(laterDecileNote({ low: 0, high: 0 }, apart, "absolute")).toBe("in 2028-29 the lowest gains");
+    // Only the ends that turn clearly in the first clear year are dated: the
+    // lowest is clear in 2028-29; the highest, which shows its loss in 2027-28,
+    // is clear only in 2029-30, so it goes unnamed (Sol r1)
+    expect(laterDecileNote({ low: 40, high: 40 }, [{ yearLabel: "2027-28", low: 40, high: -10 }, { yearLabel: "2028-29", low: -20, high: -10 }, { yearLabel: "2029-30", low: -20, high: -20 }], "absolute")).toBe("in 2028-29 the lowest loses");
+    // And no later end stands in for the first clear one
+    expect(laterDecileNote({ low: 0, high: 0 }, [{ yearLabel: "2027-28", low: 20, high: 0 }, { yearLabel: "2028-29", low: 20, high: 30 }], "absolute")).toBe("in 2027-28 the lowest gains");
     // A turn that never becomes clear still says nothing, however early it shows
     expect(laterDecileNote({ low: 40, high: 30 }, [{ yearLabel: "2028-29", low: -12, high: 30 }, { yearLabel: "2029-30", low: -14, high: 30 }], "absolute")).toBeNull();
   });
@@ -172,6 +178,30 @@ describe("plain card sentences", () => {
     if (m[3]) turns.low = verbDir(m[3]);
     if (m[4] ?? m[5]) turns.high = verbDir(m[4] ?? m[5]);
     return { year: m[1], turns };
+  }
+  // The standalone sentence's year and turns, in the same shape
+  function standaloneOf(sentence) {
+    const m = sentence.match(
+      /^Later years differ: in (\S+), (?:both the lowest- and highest-income tenths (gain|lose)|the lowest-income tenth (gains|loses)(?: and the highest-income tenth (gains|loses))?|the highest-income tenth (gains|loses))\.$/,
+    );
+    if (!m) throw new Error(`Unread standalone pointer: ${sentence}`);
+    return pointerOf(`in ${m[1]} ${m[2] ? `both ${m[2]}` : [m[3] && `the lowest ${m[3]}`, (m[4] ?? m[5]) && `the highest ${m[4] ?? m[5]}`].filter(Boolean).join(" and ")}`);
+  }
+  // The pointer the sentences call for, derived from them alone: the first
+  // later year in which some end turns clearly decides; each end that turns
+  // clearly there is dated to the first later year whose sentence shows its
+  // direction; the earliest date is named, with the ends dated to it
+  function expectedPointer(was, years, clearTurn) {
+    const at = years.findIndex(({ says }) => clearTurn(says.low, was.low) || clearTurn(says.high, was.high));
+    if (at < 0) return null;
+    const dated = ["low", "high"]
+      .filter((end) => clearTurn(years[at].says[end], was[end]))
+      .map((end) => {
+        const dir = years[at].says[end].dir;
+        return { end, dir, index: years.findIndex(({ says }) => says[end].dir === dir) };
+      });
+    const index = Math.min(...dated.map((turn) => turn.index));
+    return { year: years[index].yearLabel, turns: Object.fromEntries(dated.filter((turn) => turn.index === index).map(({ end, dir }) => [end, dir])) };
   }
   const LABELS = ["2027-28", "2028-29", "2029-30", "2030-31", "2031-32", "2032-33"];
   const series = (value) =>
@@ -214,8 +244,10 @@ describe("plain card sentences", () => {
             // and which becomes clear by some year
             expect(years.slice(at).some(({ says }) => says[end].dir === dir && clearTurn(says[end], was[end]))).toBe(true);
           }
-          // The standalone sentence names the same year
-          expect(laterDecileNote(selected, later, kind, { standalone: true })).toMatch(new RegExp(`^Later years differ: in ${year}, `));
+          // Exactly the pointer the sentences call for, in both forms
+          const expected = expectedPointer(was, years, clearTurn);
+          expect(pointerOf(note)).toEqual(expected);
+          expect(standaloneOf(laterDecileNote(selected, later, kind, { standalone: true }))).toEqual(expected);
         }),
         { numRuns: 2000 },
       );
@@ -243,6 +275,11 @@ describe("plain card sentences", () => {
         expect(years[at].says).toBe(dir);
         for (const year of years.slice(0, at)) expect(year.says).not.toBe(dir);
         expect(years.slice(at).some((year) => year.says === dir && clearTurn(year))).toBe(true);
+        // Exactly the pointer the sentences call for: the first clear turn's
+        // direction, dated to the first year whose sentence shows it
+        const clearAt = years.findIndex(clearTurn);
+        expect(m[1]).toBe(years[years.findIndex((year) => year.says === years[clearAt].says)].yearLabel);
+        expect(dir).toBe(years[clearAt].says);
       }),
       { numRuns: 2000 },
     );

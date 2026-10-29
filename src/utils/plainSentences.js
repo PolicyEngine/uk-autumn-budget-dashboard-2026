@@ -136,11 +136,14 @@ const TENTH_VERB = {
 };
 
 /**
- * The decile pair's pointer: the first later year in which the lowest- or
- * highest-income tenth turns from a gain to a loss, the other way, or from
- * almost no change to a gain or loss, as that year's own sentence says it,
- * provided the turn becomes clear by some later year (CLEAR_DECILE_CHANGE,
- * on the values as the sentence rounds them; firstShownTurn). Returns the clause the
+ * The decile pair's pointer. The first later year in which the lowest- or
+ * highest-income tenth turns clearly (CLEAR_DECILE_CHANGE, on the values as
+ * the sentence rounds them) decides that there is one: from a gain to a
+ * loss, the other way, or from almost no change to a gain or loss. Each end
+ * that turns clearly there is dated to the first later year whose own
+ * sentence shows that turn, and the earliest of those years is named, with
+ * the ends dated to it (firstShownTurn). An end that turns only later, or
+ * never clearly, goes unnamed. Returns the clause the
  * decile sentence ends on, e.g. "in 2031-32 the highest loses"; with
  * standalone, a sentence of its own that names the tenths in full, for a
  * card with no decile line to hang it on (nothing changes this year).
@@ -156,7 +159,7 @@ export function laterDecileNote(selected, later, kind, { standalone = false } = 
   if (!usable(selected)) return null;
   const clear = CLEAR_DECILE_CHANGE[kind === "relative" ? "relative" : "absolute"];
   const rounded = (value) => decileRounded(value, kind);
-  // A later year without both ends is skipped, not read as a turn
+  // Skip a later year without both ends rather than read it as a turn
   const turn = firstShownTurn(
     { low: rounded(selected.low), high: rounded(selected.high) },
     (later ?? []).filter(usable),
@@ -189,11 +192,11 @@ const REVENUE_WORDS = {
 const revenueRounded = (net) => (Math.abs(net) < 0.05 ? 0 : net);
 
 /**
- * The revenue chart's pointer: the first later year in which the selected
- * measures turn from costing revenue to raising it, the other way, or from
- * roughly balancing to an effect, as that year's own sentence says it,
- * provided the turn becomes clear by some later year (CLEAR_REVENUE_CHANGE;
- * firstShownTurn).
+ * The revenue chart's pointer. The first later year in which the selected
+ * measures turn clearly (CLEAR_REVENUE_CHANGE) decides that there is one:
+ * from costing revenue to raising it, the other way, or from roughly
+ * balancing to an effect. It names the first later year whose own sentence
+ * shows that turn (firstShownTurn).
  *
  * @param {number|null} net - The selected year's net effect (£bn)
  * @param {Array<{yearLabel: string, net: number|null}>} later - Later years, in order
