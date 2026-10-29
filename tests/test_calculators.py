@@ -98,12 +98,13 @@ class TestOfficialBasisCalculator:
             ("carers_allowance", "universal_credit"),
         )
         # £1bn more Carer's Allowance, £0.5bn less Universal Credit: a cost
-        # of £0.5bn to the Exchequer
+        # of £0.5bn to the Exchequer; the row names what it sums
         assert row == {
             "reform_id": "m",
             "reform_name": "M",
             "year": 2030,
             "value": pytest.approx(-0.5),
+            "variables": "carers_allowance;universal_credit",
         }
 
     def test_more_universal_credit_is_a_cost(self):

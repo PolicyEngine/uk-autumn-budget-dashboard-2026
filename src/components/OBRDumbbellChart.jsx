@@ -31,16 +31,17 @@ import "./OBRDumbbellChart.css";
  * row says so.
  *
  * `rows`: comparisonRows() of OBRComparisonTable.jsx, { id, name, pe, obr,
- * obrStatic, obrBehavioural, peOfficial } with null for a missing figure.
+ * obrStatic, obrBehavioural, peOfficial, peOfficialVariables } with null for
+ * a missing figure.
  *
  * A third mark, a small teal ring, is our estimate on the official
  * costing's basis (`peOfficial`, #297): the change in just the taxes and
  * benefits the official costing covers, where it covers fewer than our net
  * figure. It sits inside the official ring when the two agree. Only rows
  * whose measure has an official basis carry it; the others keep two marks.
- * Its label names what it counts ("Ours, income tax only":
- * utils/officialBasis.js), since an official figure can hold more than
- * taxes and benefits, such as a block grant.
+ * Its label names what it counts ("Ours, income tax only", from the
+ * table's `peOfficialVariables`: utils/officialBasis.js), since an official
+ * figure can hold more than taxes and benefits, such as a block grant.
  */
 
 export const PE_COLOUR = CHART_COLOURS.gain;
@@ -117,7 +118,7 @@ export function pctOfOfficial(pe, obr) {
 // A row's figure on the official costing's basis, for its spoken summary,
 // named by what it counts: beside our own figure only
 const basisText = (row, decimals) =>
-  isValue(row.pe) && isValue(row.peOfficial) ? ` (${basisWords(row.id)} only: ${formatBn(row.peOfficial, decimals)})` : "";
+  isValue(row.pe) && isValue(row.peOfficial) ? ` (${basisWords(row.peOfficialVariables)} only: ${formatBn(row.peOfficial, decimals)})` : "";
 
 /**
  * Whether the chart draws a ring on the official costing's basis on any
@@ -482,7 +483,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
         note={onSelect ? "Click for why they differ" : undefined}
         rows={[
           { key: "pe", name: "Ours (static)", text: isValue(row.pe) ? bn(row.pe) : "Not yet published", color: PE_COLOUR },
-          ...(isValue(row.pe) && isValue(row.peOfficial) ? [{ key: "basis", name: `${basisLabel(row.id)} (static)`, text: bn(row.peOfficial), color: PE_COLOUR }] : []),
+          ...(isValue(row.pe) && isValue(row.peOfficial) ? [{ key: "basis", name: `${basisLabel(row.peOfficialVariables)} (static)`, text: bn(row.peOfficial), color: PE_COLOUR }] : []),
           { key: "obr", name: `Official costing (${obrKind})`, text: isValue(row.obr) ? bn(row.obr) : row.notComparable ? "Not comparable" : "Not in the official costings", color: OBR_COLOUR },
           ...(difference !== null
             ? [{ key: "difference", name: "Difference (ours − official)", text: formatDifference(difference, decimals), color: GAP_COLOUR }]

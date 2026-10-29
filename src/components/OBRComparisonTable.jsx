@@ -12,7 +12,7 @@ import Tip from "./Tip";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import OBRDumbbellChart, { drawsBasis, dumbbellLegendItems, formatBn, formatBn as formatFigure, formatDifference, obrValue, rowDecimals, shownDifference } from "./OBRDumbbellChart";
-import { BASIS_LABEL } from "../utils/officialBasis";
+import { BASIS_LABEL, basisVariables } from "../utils/officialBasis";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { CHART_COLOURS } from "../utils/chartTheme";
 import { buildChartCsv, fiscalYear } from "../utils/chartCsv";
@@ -99,7 +99,11 @@ export function useObrComparisonData(enabled = true) {
         // costing's basis
         for (const row of Object.values(catalogue.tablesByKey ?? {}).flatMap((tables) => tables.official_basis ?? [])) {
           const key = `${row.reform_id}_${row.year}`;
-          if (obrData[key] && "policyengine_value" in obrData[key]) obrData[key].policyengine_official_basis = numeric(row.value);
+          if (obrData[key] && "policyengine_value" in obrData[key]) {
+            obrData[key].policyengine_official_basis = numeric(row.value);
+            // What the figure counts, as the table names it
+            obrData[key].policyengine_official_basis_variables = basisVariables(row.variables);
+          }
         }
         const data = Object.values(obrData);
         if (live) setLoaded({
@@ -128,9 +132,11 @@ export function hasObrFigures(rows, selectedPolicies) {
 /**
  * One row per selected measure for a year, largest official costing first
  * (by size, either sign), measures with no official figure last:
- * { id, name, pe, obr, obrStatic, obrBehavioural, peOfficial, notComparable,
- * status }, null for a missing figure; `peOfficial` is ours on the official
- * costing's basis, where the measure has one (#297); `notComparable` is the
+ * { id, name, pe, obr, obrStatic, obrBehavioural, peOfficial,
+ * peOfficialVariables, notComparable, status }, null for a missing figure;
+ * `peOfficial` is ours on the official costing's basis, where the measure
+ * has one (#297), and `peOfficialVariables` what it counts, as its table
+ * names them ([] for none); `notComparable` is the
  * reviewer's reason where the official costing for the year is not
  * comparable with ours. `name` is the measure's short name, as elsewhere
  * on the page. `status` ("Starts 2030-31", "Ended 2029-30", "2026-27
@@ -157,6 +163,7 @@ export function comparisonRows(sourceRows, selectedPolicies, year, showBehaviour
       measure: catalogue.byId?.get(id) ?? { id, name: row.reform_name },
       pe: isValue(row.policyengine_value) ? row.policyengine_value : null,
       peOfficial: isValue(row.policyengine_official_basis) ? row.policyengine_official_basis : null,
+      peOfficialVariables: Array.isArray(row.policyengine_official_basis_variables) ? row.policyengine_official_basis_variables : [],
       obr: obrValue(yearData, showBehavioural),
       obrStatic: isValue(row.obr_static) ? row.obr_static : null,
       obrBehavioural: isValue(row.obr_behavioural) ? row.obr_behavioural : null,

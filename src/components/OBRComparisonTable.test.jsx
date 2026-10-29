@@ -294,7 +294,7 @@ describe("ours on the official costing's basis", () => {
   // row is meant, the generic label where one serves every row
   const OWN = "Ours, Carer's Allowance and Universal Credit only";
   const GENERIC = "Ours, the official costing's taxes and benefits only";
-  const renderBasis = ({ basis = [`${ID},${ENTRY.name},2030,-0.04`], other = false } = {}) => {
+  const renderBasis = ({ basis = [`${ID},${ENTRY.name},2030,-0.04,carers_allowance;universal_credit`], other = false } = {}) => {
     const impact = [
       "reform_id,reform_name,year,value",
       `${ID},${ENTRY.name},2030,-0.025`,
@@ -313,7 +313,7 @@ describe("ours on the official costing's basis", () => {
     );
     const rows = parseDashboardCsv(impact);
     const own = (id) => rows.filter((row) => row.reform_id === id);
-    const officialBasis = basis.length ? parseDashboardCsv(["reform_id,reform_name,year,value", ...basis].join("\n")) : undefined;
+    const officialBasis = basis.length ? parseDashboardCsv(["reform_id,reform_name,year,value,variables", ...basis].join("\n")) : undefined;
     const entry = (detail) => ({ name: detail.name, description: detail.writtenFor, status: "approved", years: DISPLAY_YEARS, unsupported_years: [] });
     const manifest = { measures: { [ID]: entry(ENTRY), ...(other ? { [OTHER]: entry(OTHER_ENTRY) } : {}) }, combined: {} };
     const tablesByKey = {

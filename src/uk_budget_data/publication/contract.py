@@ -136,12 +136,12 @@ def contract() -> dict:
         ],
         "deciles": _in_decile_order(DECILES),
         "winners_groups": _in_decile_order(WINNERS_GROUPS),
-        # The engine variables each measure's official_basis table sums
-        # (#297), so the page names what the figure counts
-        "official_bases": {
-            measure: list(variables)
-            for measure, variables in OFFICIAL_BASES.items()
-        },
+        # Every engine variable an official_basis table can sum (#297), with
+        # no measure named: the page has words for each, and a table's own
+        # ``variables`` column says which its figure counts
+        "official_basis_variables": sorted(
+            {name for names in OFFICIAL_BASES.values() for name in names}
+        ),
         "tables": {
             name: {
                 "file": spec.filename,

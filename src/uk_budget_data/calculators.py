@@ -184,8 +184,10 @@ class OfficialBasisCalculator(BaseCalculator):
     Where the official costing covers fewer taxes and benefits than our net
     figure (``budgetary_impact``, the change in ``gov_balance``), the change
     in just those (``OFFICIAL_BASES``), from the same two simulations, in
-    £bn with the same sign: + is a gain to the Exchequer. No rows for a
-    measure with no official basis.
+    £bn with the same sign: + is a gain to the Exchequer. Each row names
+    the variables it sums (``variables``, ``;``-separated), so the
+    published table says what its figure counts and the page names it by
+    them. No rows for a measure with no official basis.
     """
 
     years: list[int] = field(default_factory=lambda: list(POLICY_YEARS))
@@ -220,6 +222,7 @@ class OfficialBasisCalculator(BaseCalculator):
                     "reform_name": reform_name,
                     "year": year,
                     "value": float(impact),
+                    "variables": ";".join(signs),
                 }
             )
         return results

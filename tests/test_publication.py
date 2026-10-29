@@ -419,6 +419,7 @@ def test_official_basis_when_present_covers_every_year(world):
             "reform_name": "Alpha",
             "year": 2027,
             "value": -0.04,
+            "variables": "income_tax",
         }
     ]
     assert table_problems(tables, key="alpha", years=YEARS) == [

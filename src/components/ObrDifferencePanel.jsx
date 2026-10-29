@@ -65,7 +65,7 @@ export default function ObrDifferencePanel({ row, year, yearLabel, obrKind }) {
           </div>
           {isValue(row.peOfficial) && (
             <div className="is-basis">
-              <dt><span className="obr-panel-key is-basis" aria-hidden="true" />{basisLabel(row.id)}</dt>
+              <dt><span className="obr-panel-key is-basis" aria-hidden="true" />{basisLabel(row.peOfficialVariables)}</dt>
               <dd className="is-ours">{formatBn(row.peOfficial, decimals)}</dd>
             </div>
           )}
