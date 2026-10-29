@@ -355,7 +355,7 @@ function youSentence({ perDot, you, points, basisLabel, incomeMatches }) {
   }
   if (incomeMatches && you.income >= INCOME_AXIS_DOMAIN[1]) {
     parts.push(
-      `The chart stops at ${pounds(INCOME_AXIS_DOMAIN[1])} of ${basisLabel} net income, so households like yours are not shown; your ring sits at its top.`,
+      `The chart stops at ${pounds(INCOME_AXIS_DOMAIN[1])} of ${basisLabel} net income, so it does not show households like yours; your ring sits at its top.`,
     );
   }
   if (you.note) parts.push(you.note);
@@ -386,7 +386,7 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
         </strong>{" "}
         had <strong style={{ color: colourFor(point) }}>{change}</strong>.
         {point.clamped
-          ? " This is beyond the axis, so it is drawn as an arrow at its edge, pointing the way it lies."
+          ? " This is beyond the axis, so the chart draws it as an arrow at its edge, pointing the way it lies."
           : ""}
       </p>
     </div>
@@ -489,7 +489,7 @@ function HouseholdScatter({
             : {
                 ...youShown,
                 note: [
-                  `Your ring is placed by your ${fiscalYearLabel(youShown.incomeYear)} net income; the dots by ${basisLabel}'s.`,
+                  `The chart places your ring by your ${fiscalYearLabel(youShown.incomeYear)} net income and the dots by ${basisLabel}'s.`,
                   youShown.note,
                 ]
                   .filter(Boolean)
@@ -632,7 +632,7 @@ function HouseholdScatter({
           <ChartDownloadMenu
             download={download}
             chartTitle={chartTitle}
-            disabledReason={ready ? undefined : "Available when results are published"}
+            disabledReason={ready ? undefined : "Available when we publish results"}
           />
         </div>
       )}

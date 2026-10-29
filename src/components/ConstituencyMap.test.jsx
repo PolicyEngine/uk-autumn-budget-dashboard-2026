@@ -165,7 +165,7 @@ describe("ConstituencyMap", () => {
     const card = tooltip(container);
     expect(within(card).getByRole("heading")).toHaveTextContent("Lough Side");
     expect(card).toHaveTextContent(
-      "No data. No figure is published for this constituency.",
+      "No data. We publish no figure for this constituency.",
     );
     expect(card.textContent).not.toMatch(/%|£/);
   });
@@ -321,7 +321,7 @@ describe("ConstituencyMap", () => {
     const card = tooltip(container);
     expect(within(card).getByRole("heading")).toHaveTextContent("Harbour, Mill and Quay");
     expect(card.querySelector(".seat-card-note").textContent).toBe(
-      "Approximate: based on fewer than 30 survey households; 90% interval 0.12% to 1.24%",
+      "Approximate: it rests on fewer than 30 survey households; 90% interval 0.12% to 1.24%",
     );
   });
 
@@ -502,7 +502,7 @@ describe("ConstituencyMap", () => {
       />,
     );
     expect(
-      await screen.findByText("Results for this policy are published by region only."),
+      await screen.findByText("We publish results for this policy by region only."),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "See the results by region." }),
@@ -519,7 +519,7 @@ describe("ConstituencyMap", () => {
     );
     expect(
       await screen.findByText(
-        "Results by constituency are not yet published for this policy.",
+        "We have not yet published results by constituency for this policy.",
       ),
     ).toBeInTheDocument();
   });
@@ -535,7 +535,7 @@ describe("ConstituencyMap", () => {
       <ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />,
     );
     expect(
-      await screen.findByText("Results by constituency are not yet published."),
+      await screen.findByText("We have not yet published results by constituency."),
     ).toBeInTheDocument();
     // No results map: at most the unpublished template, every seat grey.
     const drawn = [...container.querySelectorAll("svg path")].filter(
@@ -556,7 +556,7 @@ describe("ConstituencyMap", () => {
       <ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />,
     );
     expect(
-      await screen.findByText("Results by constituency are not yet published."),
+      await screen.findByText("We have not yet published results by constituency."),
     ).toBeInTheDocument();
     // The package is published by region, so the notice points there.
     expect(
@@ -621,7 +621,7 @@ describe("ConstituencyMap", () => {
 
 describe("ConstituencyMap and the release's area routing", () => {
   const NOT_AVAILABLE = "Results by constituency are not available on this release.";
-  const NOT_LOADED = "Results by constituency could not be loaded.";
+  const NOT_LOADED = "The page could not load results by constituency.";
   const FIGURES = /[+-]£|[+-][\d.]+%|\d+\.\d+%/;
   // How to read the map is in "About this chart", whose closed line names
   // its parts; on a release that routes nothing it describes the measure only.
@@ -724,7 +724,7 @@ describe("ConstituencyMap and the release's area routing", () => {
     expect(await screen.findByText(NOT_AVAILABLE)).toBeInTheDocument();
     expect(
       screen.queryByText(
-        "Results by constituency are not yet published for this policy.",
+        "We have not yet published results by constituency for this policy.",
       ),
     ).not.toBeInTheDocument();
   });
@@ -778,7 +778,7 @@ describe("ConstituencyMap and the release's area routing", () => {
       );
       expect(await screen.findByText(NOT_LOADED)).toBeInTheDocument();
       expect(screen.getByRole("status")).toHaveTextContent(
-        /^Results by constituency could not be loaded\.(See the results by region\.)?$/,
+        /^The page could not load results by constituency\.(See the results by region\.)?$/,
       );
       expect(screen.queryByText(NOT_AVAILABLE)).not.toBeInTheDocument();
       // As for any file that fails to load, the card still says how to read

@@ -8,7 +8,7 @@ describe("the area view's notices", () => {
     const view = viewState({ data: { status: "stale", table: null }, choice, year: 2029, outcome: "relative_change", place: "by region" });
     expect(view).toMatchObject({
       kind: "notice",
-      reason: "Newer results have been published since this page loaded.",
+      reason: "We have published newer results since this page loaded.",
       detail: "Reload the page to see them.",
     });
   });

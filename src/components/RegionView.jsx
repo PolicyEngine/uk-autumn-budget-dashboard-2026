@@ -153,8 +153,8 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
           </h3>
           <p className="chart-description">
             The average change in household net income in each region and
-            nation, with its 90% interval. Figures are rounded to the precision
-            the data supports, and some are not published, to protect survey
+            nation, with its 90% interval. We round figures to the precision
+            the data supports, and withhold some, to protect survey
             respondents' confidentiality.
           </p>
         </div>
@@ -231,8 +231,8 @@ function RegionView({ selectedPolicies = [], selectedYear = DEFAULT_DISPLAY_YEAR
           </div>
           <p className="region-note">
             Approximate figures rest on few survey households, and their
-            intervals understate the uncertainty. Figures marked not
-            published are withheld to protect survey respondents'
+            intervals understate the uncertainty. Where a row says not
+            published, we withhold its figure to protect survey respondents'
             confidentiality.
           </p>
           <div className="card-logo">

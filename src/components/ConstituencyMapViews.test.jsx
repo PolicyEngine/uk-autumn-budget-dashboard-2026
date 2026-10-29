@@ -250,9 +250,9 @@ describe("constituencyInfo", () => {
     expect(how).toMatch(/90% interval from 1,000 bootstrap resamples/);
     // No data and the approximate rule (10 households, 30) are said
     // here, once: the key has only the scale and a No data chip
-    expect(how).toMatch(/^.*No data: the figure is not published/);
+    expect(how).toMatch(/^.*No data: we do not publish the figure/);
     expect(how).toMatch(/under 10 survey households/);
-    expect(how).toMatch(/Some figures are approximate, based on fewer than 30 survey households/);
+    expect(how).toMatch(/Some figures are approximate, resting on fewer than 30 survey households/);
     expect(how).not.toMatch(/dotted/i);
     expect(how).not.toMatch(/either way|hatched/);
     expect(local.definitions.map((d) => d.term ?? d.ref)).toEqual(expect.arrayContaining(["Hex map", "No data"]));
@@ -271,7 +271,7 @@ describe("InfoSections", () => {
       how: ["Step one.", "Step two."],
       definitions: [{ ref: "netIncome" }, { term: "Hex map", meaning: "One hexagon per seat." }],
       caveats: ["Only caveat."],
-      method: { anchor: "method-area", label: "How the figures by area are estimated" },
+      method: { anchor: "method-area", label: "How we estimate the figures by area" },
     };
     const { container } = render(<InfoSections info={info} />);
     expect(container.querySelectorAll(".info-section-caveat")).toHaveLength(0);
@@ -281,7 +281,7 @@ describe("InfoSections", () => {
     expect(container.querySelector(".info-term dd")).toHaveTextContent("One hexagon per seat.");
     const last = container.querySelector(".info-sections").lastElementChild;
     expect(last).toHaveClass("info-method");
-    expect(last).toHaveTextContent(/^More in Methodology: How the figures by area are estimated · Household net income →$/);
+    expect(last).toHaveTextContent(/^More in Methodology: How we estimate the figures by area · Household net income →$/);
     // Shared terms alone make no Definitions section
     expect(infoPreview({ ...info, definitions: [{ ref: "netIncome" }] })).toBe("What it shows · How it's calculated · Caveats");
   });

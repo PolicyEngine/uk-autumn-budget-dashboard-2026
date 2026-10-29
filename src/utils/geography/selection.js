@@ -34,7 +34,7 @@ export function choiceLabel(choice, policies) {
     return choice.members && !choice.all ? "Selected policies (combined)" : "All policies (the full package)";
   }
   if (choice.kind === "stack") {
-    return choice.all ? "All policies (each policy's effect added up)" : "Selected policies (each policy's effect added up)";
+    return choice.all ? "All policies (the sum of each policy's effect)" : "Selected policies (the sum of each policy's effect)";
   }
   return "";
 }

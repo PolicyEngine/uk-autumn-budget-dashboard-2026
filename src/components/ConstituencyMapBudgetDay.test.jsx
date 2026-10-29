@@ -70,7 +70,7 @@ describe("ConstituencyMap on Budget day", () => {
       <ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />,
     );
     expect(
-      await screen.findByText("Results by constituency are not yet published."),
+      await screen.findByText("We have not yet published results by constituency."),
     ).toBeInTheDocument();
     // A plain notice, not a failure
     expect(screen.queryByText(/could not be (read|loaded)/)).toBeNull();
@@ -80,7 +80,7 @@ describe("ConstituencyMap on Budget day", () => {
     expect(screen.queryByRole("group", { name: "Key" })).toBeNull();
     expect(screen.getByRole("searchbox")).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: /Available when results are published/ }),
+      screen.getByRole("button", { name: /Available when we publish results/ }),
     ).toBeDisabled();
   });
 
@@ -91,7 +91,7 @@ describe("ConstituencyMap on Budget day", () => {
     try {
       render(<ConstituencyMap selectedPolicies={ALL} selectedYear={2029} policies={POLICIES} />);
       expect(
-        await screen.findByText("Results by constituency are not yet published."),
+        await screen.findByText("We have not yet published results by constituency."),
       ).toBeInTheDocument();
       expect(screen.queryByText(/could not be (read|loaded)/)).toBeNull();
       // The notice alone: no empty table, count or "no match" line behind it

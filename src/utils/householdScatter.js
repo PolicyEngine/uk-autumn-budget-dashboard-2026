@@ -143,7 +143,7 @@ export const SCATTER_SELECTION_NOT_PUBLISHED = selectionNotPublished("Household"
 export function scatterView({ data, selectedIds, policyIds, year, packageKey = null }) {
   if (data.status === "loading") return { kind: "loading" };
   if (data.status !== "ready") {
-    return notice("Household results are not yet published.");
+    return notice("We have not yet published household results.");
   }
   const reforms = [...new Set(data.rows.map((row) => row.reform_id))];
   const choice = chooseSelectionReform({
@@ -160,7 +160,7 @@ export function scatterView({ data, selectedIds, policyIds, year, packageKey = n
     return notice(choice.reason);
   }
   if (!reforms.includes(choice.reform)) {
-    return notice("Household results are not yet published for this policy.");
+    return notice("We have not yet published household results for this policy.");
   }
   const bins = SCATTER_BINS;
   const cellsIn = (wanted) =>
@@ -193,7 +193,7 @@ export function scatterView({ data, selectedIds, policyIds, year, packageKey = n
   }
   if (points.length === 0) {
     return notice(
-      `No household results are published for this policy in ${fiscalYearLabel(year)}.`,
+      `We publish no household results for this policy in ${fiscalYearLabel(year)}.`,
     );
   }
   const basisYear = data.rows.find(
@@ -268,10 +268,10 @@ export function scatterCsv(points, { title, basisYear }) {
     notes: [
       ...(basisYear
         ? [
-            `Households are grouped by their baseline net income in ${fiscalYearLabel(basisYear)} in every year, so an income band holds the same households in each year.`,
+            `We group households by their baseline net income in ${fiscalYearLabel(basisYear)} in every year, so an income band holds the same households in each year.`,
           ]
         : []),
-      `Groups with fewer than ${SCATTER_BINS.min_households} surveyed households are not shown; the outer bands include everything beyond them.`,
+      `We leave out groups with fewer than ${SCATTER_BINS.min_households} surveyed households; the outer bands include everything beyond them.`,
       "Gains fall in [lower, upper) and losses in (lower, upper]; the no-change band is (−£1, £1); a band whose two edges are equal is open beyond that edge.",
     ],
   });

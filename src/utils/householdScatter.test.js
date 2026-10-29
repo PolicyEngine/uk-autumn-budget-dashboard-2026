@@ -133,9 +133,9 @@ describe("scatterView", () => {
 
   it("says when nothing is published", () => {
     expect(view(["a"], 2029, { status: "unavailable", rows: null }).reason).toBe(
-      "Household results are not yet published.",
+      "We have not yet published household results.",
     );
-    expect(view(["b"]).reason).toMatch(/not yet published for this policy/);
+    expect(view(["b"]).reason).toMatch(/not yet published household results for this policy/);
     expect(view(["a"], 2031).reason).toMatch(/2031-32/);
     expect(view([]).reason).toMatch(/Select a policy/);
     expect(view(["a"], 2029, { status: "loading", rows: null }).kind).toBe("loading");
