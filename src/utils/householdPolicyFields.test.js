@@ -10,6 +10,14 @@ describe("the questions the selected policies read", () => {
     for (const region of ["SCOTLAND", "WALES", "NORTHERN_IRELAND"]) expect(ask(region)).toEqual([]);
   });
 
+  it("asks bus fares for the bus fare cap in England outside London, in 2026-27 and 2027-28", () => {
+    const ask = (region, year) => policyQuestions(["bus_fare_cap_2027"], { inputs: { region }, year }).map((q) => q.id);
+    expect(ask("NORTH_WEST", 2026)).toEqual(["bus_fare_spending_per_year"]);
+    expect(ask("SOUTH_EAST", 2027)).toEqual(["bus_fare_spending_per_year"]);
+    expect(ask("NORTH_WEST", 2028)).toEqual([]);
+    for (const region of ["LONDON", "SCOTLAND", "WALES", "NORTHERN_IRELAND"]) expect(ask(region, 2027)).toEqual([]);
+  });
+
   it("asks property income for the property rates and savings interest for the savings rates, not dividends", () => {
     const ask = (ids) => policyQuestions(ids, { inputs: {}, year: 2027 }).map((q) => q.id);
     expect(ask(["property_income_rates_up"])).toEqual(["property_income_per_year"]);
