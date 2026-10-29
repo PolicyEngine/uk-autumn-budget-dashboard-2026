@@ -180,7 +180,7 @@ export const UNMODELLED_MEASURES = [
     reason: "outside",
     name: "Bank surcharge up from 3% to 6% for 15 months",
     starts: "1 Jan 2027",
-    summary: "Raises the bank surcharge from 3% to 6%.",
+    summary: "Raises the bank surcharge from 3% to 6% until March 2028.",
     points: [
       { label: "What changes", text: "Taxes banks' profits; helps fund the energy payment and electricity VAT cut." },
       { label: "Who it reaches", text: "Banks that pay the surcharge." },
@@ -262,7 +262,7 @@ export const UNMODELLED_MEASURES = [
     reason: "data",
     name: "Universal Credit surplus earnings threshold kept at £2,500",
     starts: "1 Apr 2027",
-    summary: "Keeps Universal Credit's surplus earnings threshold at £2,500, rather than falling to £300.",
+    summary: "Keeps Universal Credit's surplus earnings threshold at £2,500 to March 2028, rather than £300.",
     points: [
       { label: "What changes", text: "Excess earnings up to £2,500, such as a bonus, aren't carried forward." },
       { label: "Who it reaches", text: "Claimants reclaiming within six months of earnings ending their award." },
@@ -292,7 +292,7 @@ export const UNMODELLED_MEASURES = [
     reason: "data",
     name: "Company car tax up 1 point in 2030-31",
     starts: "6 Apr 2030",
-    summary: "Company car tax percentages for 2030-31 rise 1 point in every band, up to 40%.",
+    summary: "Sets every 2030-31 company car tax band 1 point above 2029-30's, up to 40%.",
     points: [
       { label: "What changes", text: "More income tax on the same company car." },
       { label: "Who it reaches", text: "Employees with a company car." },
@@ -307,7 +307,7 @@ export const UNMODELLED_MEASURES = [
     reason: "data",
     name: "Business Asset Disposal Relief limit cut to £500,000",
     starts: "6 Apr 2027",
-    summary: "Halves the lifetime limit on gains taxed at the relief's 18%, to £500,000.",
+    summary: "Halves the lifetime limit on gains taxed at the relief's 18%, from £1 million to £500,000.",
     points: [
       { label: "What changes", text: "Gains above £500,000 are taxed at up to 24% rather than 18%." },
       { label: "Who it reaches", text: "Sellers of qualifying businesses; three-quarters keep relief on their whole gain." },
