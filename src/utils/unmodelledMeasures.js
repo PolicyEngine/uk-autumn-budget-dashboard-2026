@@ -140,6 +140,7 @@ export const UNMODELLED_MEASURES = [
     costings: [{ row: 11, values: [0, -5, -20, -35, -50, -70] }],
     notModelled:
       "Our survey data hold no payments into ISAs yet, so there's no national figure. The Household calculator models it for one household at a time.",
+    heldBack: "In the Household calculator only: our survey data hold no payments into ISAs yet.",
     sources: [
       budget("paragraphs 2.52 and 6.248"),
       {

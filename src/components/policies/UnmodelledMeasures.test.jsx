@@ -299,7 +299,11 @@ describe("UnmodelledMeasures", () => {
     render(<UnmodelledMeasures />);
     open();
     const held = UNMODELLED_MEASURES.filter(({ heldBack }) => heldBack);
-    expect(held.map(({ id }) => id)).toEqual(["savings-income-tax"]);
+    // The cash ISA limit is in the Household calculator only (29 October)
+    expect(held.map(({ id }) => id)).toEqual(["savings-income-tax", "cash-isa-limit"]);
+    expect(document.getElementById("unmodelled-cash-isa-limit").querySelector(".umm-held-back")).toHaveTextContent(
+      /^In the Household calculator only: our survey data hold no payments into ISAs yet\.$/,
+    );
     const card = document.getElementById("unmodelled-savings-income-tax");
     // Our interest included ISA interest: calibrated on a different basis, not missing it (#297)
     expect(card.querySelector(".umm-held-back")).toHaveTextContent(/^Held back: we calibrated savings interest to HMRC's figures on a different basis/);
