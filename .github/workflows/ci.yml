@@ -27,14 +27,15 @@ jobs:
     # Every test runs in exactly one shard; tests/test_ci_parts.py checks
     # that. When the shards grow, add shards to the list; the run line takes
     # the count from the matrix (strategy.job-total).
-    # The limit is 25 minutes. The shards took 12.6 to 16.8 minutes in
-    # #311's run on 28 October, and the same tests took 1.45 times as long
-    # on one runner as on another on 26 October: 16.8 minutes becomes 24.4.
+    # The limit is 30 minutes. With #311's shard plan the slowest shard took
+    # 16.8 minutes in #311's own run on 28 October, and 17.5 and 17.9 minutes
+    # in two runs on 29 October. The same tests took 1.45 times as long on
+    # one runner as on another on 26 October, so 17.9 minutes can become 25.9.
     # More shards help little. A replay through xdist's scheduler on four
     # workers puts the slowest shard's tests at about 14.5 minutes with 10
     # shards, 14.0 with 11 and 13.6 with 14, because one 749-second test
     # (tests/test_parallel.py) has to run on one worker.
-    timeout-minutes: 25
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
