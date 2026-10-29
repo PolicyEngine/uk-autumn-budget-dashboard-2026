@@ -3,10 +3,10 @@
  * Policies card (components/policies/UnmodelledMeasures.jsx): its category
  * chip, its months on the card's timeline, when it ends, and, where the
  * entry's own text gives the values before and after, the "What changes"
- * tiles. The words and figures are María's entries
- * (utils/unmodelledMeasures.js), from the Budget documents; nothing here
- * adds a fact they do not state. Each value below names the entry's text it
- * comes from.
+ * tiles. The figures are María's entries (utils/unmodelledMeasures.js),
+ * from the Budget documents they cite; nothing here adds a fact they do
+ * not state. Each value below quotes the wording it comes from, which the
+ * entries' shorter summaries and points (29 Oct) still carry in figures.
  *
  * Fields, all optional:
  * - category: { label, icon } for the card's chip (TitleIcon names);
