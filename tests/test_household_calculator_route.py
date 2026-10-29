@@ -41,12 +41,18 @@ MEASURE_YEARS = {
     "carers_allowance_earnings_taper": 2030,
     "household_energy_payment_2026": 2026,
     "trading_allowance_raise": 2027,
+    "bus_fare_cap_2027": 2027,
 }
 # Every measure the calculator shows moves some probe household (employer
 # NI, which moved none, is withdrawn).
 # The trading allowance moves only self-employed income, which no probe
 # household has.
-NO_HOUSEHOLD_EFFECT: set[str] = {"trading_allowance_raise"}
+# The £2 bus fare cap credits a share of bus fare spending, which the
+# calculator does not ask about.
+NO_HOUSEHOLD_EFFECT: set[str] = {
+    "trading_allowance_raise",
+    "bus_fare_cap_2027",
+}
 HOUSEHOLDS = {
     "employee_30k": personal_impact.HouseholdInput(employment_income=30_000),
     "employee_60k": personal_impact.HouseholdInput(employment_income=60_000),

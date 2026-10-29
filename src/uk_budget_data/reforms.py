@@ -28,6 +28,9 @@ from uk_budget_data.budget_measures import (
 from uk_budget_data.budget_measures import (
     zero_vat_on_domestic_electricity as _electricity,
 )
+from uk_budget_data.budget_measures.bus_fare_cap_2027 import (
+    bus_fare_cap_2027,
+)
 from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
     carers_allowance_earnings_taper,
 )
@@ -130,6 +133,7 @@ CARERS_ALLOWANCE_TAPER_ID = "carers_allowance_earnings_taper"
 STATE_PENSION_DOUBLE_LOCK_ID = "state_pension_double_lock_2030"
 HOUSEHOLD_ENERGY_PAYMENT_ID = "household_energy_payment_2026"
 TRADING_ALLOWANCE_ID = "trading_allowance_raise"
+BUS_FARE_CAP_ID = "bus_fare_cap_2027"
 TRADING_ALLOWANCE = "gov.hmrc.income_tax.allowances.trading_allowance"
 
 
@@ -995,6 +999,45 @@ def _create_trading_allowance_raise() -> Reform:
 
 
 # =============================================================================
+# SINGLE BUS FARES CAPPED AT £2 OUTSIDE LONDON, CALENDAR 2027
+# =============================================================================
+
+# Budget 2026 (Table 6.1, "Single bus fares capped at £2 outside London"):
+# a £2 maximum single fare on participating services in England outside
+# London from 1 January to 31 December 2027, where most are capped at £3
+# until then. Left out on Budget day only because runs were in flight
+# (María, 29 October 2026); registered and in the package since. The
+# official cost is a grant to bus operators; this measure scores the
+# households' fare savings, as PolicyEngine/bus-fare-cap does, counted as
+# income. Defaults of the hand-written modifier in
+# budget_measures/bus_fare_cap_2027.py (changing one needs a fresh
+# attestation): reduction=0.125 (bus-fare-cap's
+# FARE_CAP_REDUCTION_CENTRAL, £3 to £2), share_2026=0.25 (January to
+# March 2027), share_2027=0.75 (April to December 2027), England outside
+# London.
+
+
+def _create_bus_fare_cap_2027() -> Reform:
+    return Reform(
+        id=BUS_FARE_CAP_ID,
+        name="Single bus fares capped at £2",
+        description=(
+            "Single bus fares on participating services in England outside "
+            "London are capped at £2 instead of £3 from 1 January to "
+            "31 December 2027. Each household there saves an estimated "
+            "12.5% of its bus fare spending while the cap runs (the "
+            "all-ticket fall in fares from a £3 to a £2 cap, derived from "
+            "DfT's evaluation of the first £2 cap): three months of "
+            "2026-27 and nine of 2027-28. The saving is counted as "
+            "household income, a methodological choice: the official cost "
+            "is a grant to bus operators. Journeys are held fixed, with no "
+            "extra travel."
+        ),
+        simulation_modifier=bus_fare_cap_2027,
+    )
+
+
+# =============================================================================
 # STATE PENSION DOUBLE LOCK FROM APRIL 2030 (not registered)
 # =============================================================================
 
@@ -1099,6 +1142,9 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
     CARERS_ALLOWANCE_TAPER_ID,
     HOUSEHOLD_ENERGY_PAYMENT_ID,
     TRADING_ALLOWANCE_ID,
+    # 29 October 2026 (María): the £2 bus fare cap, left out on Budget day
+    # only because runs were in flight. Package of eight.
+    BUS_FARE_CAP_ID,
 )
 
 # Withdrawn on Budget day, not in the Budget 2026 document: the Warm Home
@@ -1107,7 +1153,8 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
 # secondary threshold (stays £5,000). Their factories stay, unregistered.
 # Also withdrawn that day: the savings and property income tax rates as one
 # measure (``UNEARNED_INCOME_RATES_ID``), split into the property and the
-# savings measures, Table 6.1 rows 61 and 62. Package of eight.
+# savings measures, Table 6.1 rows 61 and 62. Nine registered since the £2
+# bus fare cap (29 October 2026); eight in the package (savings held back).
 _MEASURE_FACTORIES = (
     _create_fuel_duty_rise_deferral,
     _create_state_pension_income_tax_protection,
@@ -1117,6 +1164,7 @@ _MEASURE_FACTORIES = (
     _create_carers_allowance_earnings_taper,
     _create_household_energy_payment_2026,
     _create_trading_allowance_raise,
+    _create_bus_fare_cap_2027,
 )
 
 

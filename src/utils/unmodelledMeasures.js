@@ -66,36 +66,8 @@ export const UNMODELLED_REASONS = [
 
 export const UNMODELLED_MEASURES = [
   {
-    id: "bus-fare-cap",
-    order: 1,
-    reason: "coming-soon",
-    name: "Single bus fares capped at £2 outside London",
-    starts: "1 Jan 2027",
-    changes:
-      "Single fares on participating buses in England outside London are capped at £2; most are capped at £3 until then.",
-    reaches: "Bus passengers in England outside London, on participating services.",
-    household:
-      "The same journeys cost less; household income does not change.",
-    costings: [
-      {
-        row: 4,
-        values: [-50, -180, 65, 170, 0, 0],
-        note: "The row's title adds that the cap is funded by reprioritising Department for Energy Security and Net Zero budgets.",
-      },
-    ],
-    notModelled:
-      "The model prices bus journeys, but a lower fare does not change household income, which is what this dashboard measures; we plan to show the saving after Budget day.",
-    sources: [
-      budget("paragraphs 2.8 and 3.3"),
-      {
-        label: "Prime Minister's Office, HM Treasury and Department for Transport, release on the £2 bus fare cap (22 July 2026)",
-        href: "https://www.gov.uk/government/news/cheaper-travel-for-millions-with-a-third-off-fares",
-      },
-    ],
-  },
-  {
     id: "savings-income-tax",
-    order: 2,
+    order: 1,
     reason: "coming-soon",
     name: "Tax on savings interest up 2 points",
     starts: "6 Apr 2027",
@@ -112,7 +84,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "machine-games-duty",
-    order: 3,
+    order: 2,
     reason: "coming-soon",
     name: "Machine Games Duty up from 20% to 25%",
     starts: "1 Apr 2027",
@@ -127,7 +99,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "cash-isa-limit",
-    order: 4,
+    order: 3,
     reason: "coming-soon",
     name: "Cash ISA limit kept at £20,000",
     starts: "6 Apr 2027",
@@ -150,7 +122,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "adjusted-triple-lock",
-    order: 5,
+    order: 4,
     reason: "separately",
     name: "Adjusted Triple Lock for the State Pension",
     starts: "Apr 2030",
@@ -174,7 +146,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "bank-surcharge",
-    order: 6,
+    order: 5,
     reason: "outside",
     name: "Bank surcharge up from 3% to 6% for 15 months",
     starts: "1 Jan 2027",
@@ -189,7 +161,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "pubs-business-rates-relief",
-    order: 7,
+    order: 6,
     reason: "outside",
     name: "Business rates relief for pubs and venues up to 35%",
     starts: "1 Apr 2027",
@@ -205,7 +177,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "online-marketplace-liability",
-    order: 8,
+    order: 7,
     reason: "outside",
     name: "Online marketplaces to collect the tax on UK sellers' sales",
     starts: "1 Oct 2027",
@@ -221,7 +193,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "your-first-home",
-    order: 9,
+    order: 8,
     reason: "outside",
     name: "Your First Home equity loan scheme",
     starts: "Apr 2027",
@@ -242,7 +214,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "national-living-wage",
-    order: 10,
+    order: 9,
     reason: "data",
     name: "Minimum wage up 3.9%",
     starts: "1 Apr 2027",
@@ -259,7 +231,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "universal-credit-surplus-earnings",
-    order: 11,
+    order: 10,
     reason: "data",
     name: "Universal Credit surplus earnings threshold kept at £2,500",
     starts: "1 Apr 2027",
@@ -276,7 +248,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "mileage-rates",
-    order: 12,
+    order: 11,
     reason: "data",
     name: "Tax-free mileage rates raised",
     starts: "Apr 2026 / Apr 2027",
@@ -291,7 +263,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "company-car-tax",
-    order: 13,
+    order: 12,
     reason: "data",
     name: "Company car tax up 1 point in 2030-31",
     starts: "6 Apr 2030",
@@ -306,7 +278,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "business-asset-disposal-relief",
-    order: 14,
+    order: 13,
     reason: "data",
     name: "Business Asset Disposal Relief limit cut to £500,000",
     starts: "6 Apr 2027",
@@ -326,7 +298,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "first-time-buyer-isa",
-    order: 15,
+    order: 14,
     reason: "data",
     name: "First Time Buyer ISA, and a lower Lifetime ISA charge",
     starts: "Oct 2026 / Apr 2029",
@@ -345,7 +317,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "parental-allowance",
-    order: 16,
+    order: 15,
     reason: "data",
     name: "Parental pay for self-employed fathers, partners and adopters",
     starts: "Apr 2029",
@@ -367,7 +339,7 @@ export const UNMODELLED_MEASURES = [
   },
   {
     id: "gas-standing-charges",
-    order: 17,
+    order: 16,
     reason: "data",
     name: "Gas standing charges to be abolished",
     starts: "End of 2027 or later",

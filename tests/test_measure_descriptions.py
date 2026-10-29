@@ -160,6 +160,7 @@ DECLARED = {
     "domestic_electricity_zero_vat": {"VAT"},
     "carers_allowance_earnings_taper": set(),
     "household_energy_payment_2026": set(),
+    "bus_fare_cap_2027": set(),
     "trading_allowance_raise": {"income tax", "National Insurance"},
     "property_income_rates_up": {"income tax"},
     "savings_income_rates_up": {"income tax"},

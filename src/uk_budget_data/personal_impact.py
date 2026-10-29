@@ -59,6 +59,7 @@ POLICY_IDS = [
     "carers_allowance_earnings_taper",
     "household_energy_payment_2026",
     "trading_allowance_raise",
+    "bus_fare_cap_2027",
 ]
 
 

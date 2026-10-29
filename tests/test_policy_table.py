@@ -14,6 +14,7 @@ from uk_budget_data.budget_measures.zero_vat_on_domestic_electricity import (
 from uk_budget_data.cli import main
 from uk_budget_data.forecast import forecast_parameters
 from uk_budget_data.policy_table import (
+    BUILDERS,
     OUTPUT_FILE,
     YEAR_WEIGHTS,
     build,
@@ -241,7 +242,7 @@ def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
         in_force_rate_change(registry.FUEL_VAT_ID, {2028: -0.025})
 
 
-def test_the_table_covers_the_seven_package_measures_only(document):
+def test_the_table_covers_the_eight_package_measures_only(document):
     # BADR, employer NI relief and the road fuel VAT cut are withdrawn
     # (27 October 2026)
     assert list(document["measures"]) == list(
@@ -249,8 +250,10 @@ def test_the_table_covers_the_seven_package_measures_only(document):
     )
     # Seven on Budget day: the savings and property rates split in two
     # (Table 6.1 rows 61 and 62), and the savings rates held back until the
-    # corrected savings data are in (e151a865)
-    assert len(document["measures"]) == 7
+    # corrected savings data are in (e151a865); eight with the £2 bus fare
+    # cap (29 October 2026)
+    assert len(document["measures"]) == 8
+    assert registry.BUS_FARE_CAP_ID in document["measures"]
     assert registry.SAVINGS_INCOME_RATES_ID not in document["measures"]
     assert registry.UNEARNED_INCOME_RATES_ID not in document["measures"]
     assert registry.CARERS_ALLOWANCE_TAPER_ID in document["measures"]
@@ -301,7 +304,29 @@ def test_each_measure_gets_the_display_its_shape_calls_for(document):
         "carers_allowance_earnings_taper": "path",
         "household_energy_payment_2026": "switch",
         "trading_allowance_raise": "before-after",
+        "bus_fare_cap_2027": "switch",
     }
+
+
+def test_bus_fare_cap():
+    rows = {
+        row["label"]: row
+        for row in BUILDERS[registry.BUS_FARE_CAP_ID](
+            registry.get_reform(registry.BUS_FARE_CAP_ID)
+        )
+    }
+    (cap,) = rows["Single bus fare cap"]["points"]
+    assert (cap["key"], cap["year"], cap["before"], cap["after"]) == (
+        "2027-01-01/2027-12-31",
+        2026,
+        3,
+        2,
+    )
+    (saving,) = rows["Fare saving"]["points"]
+    assert (saving["before"], saving["after"]) == (0, 0.125)
+    assert rows["Fare saving"]["source"]["after"]["where"] == (
+        "budget_measures/bus_fare_cap_2027.py bus_fare_cap_2027(reduction)"
+    )
 
 
 def test_lha_unfreeze():

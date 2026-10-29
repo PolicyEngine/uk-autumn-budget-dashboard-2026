@@ -1883,6 +1883,7 @@ SKIP_REASONS = {
     "trading_allowance_raise": (
         "no self-employment receipts, or before 2027-28"
     ),
+    "bus_fare_cap_2027": "the calculator does not ask about bus fares",
 }
 
 
@@ -1946,6 +1947,10 @@ def provably_unaffected(
         # The allowance reads trading receipts (and profit), which only
         # the head's self-employment answers give.
         return year < TRADING_ALLOWANCE_FROM or not answers.self_employed
+    if measure_id == "bus_fare_cap_2027":
+        # The credit is a share of bus_fare_spending, which the answers do
+        # not set, so the household's is nil in every year.
+        return True
     return False
 
 

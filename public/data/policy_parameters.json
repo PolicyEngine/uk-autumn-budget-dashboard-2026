@@ -673,6 +673,64 @@
           "note": "Relieves trading receipts in place of actual expenses"
         }
       ]
+    },
+    "bus_fare_cap_2027": {
+      "description": "Single bus fares on participating services in England outside London are capped at £2 instead of £3 from 1 January to 31 December 2027. Each household there saves an estimated 12.5% of its bus fare spending while the cap runs (the all-ticket fall in fares from a £3 to a £2 cap, derived from DfT's evaluation of the first £2 cap): three months of 2026-27 and nine of 2027-28. The saving is counted as household income, a methodological choice: the official cost is a grant to bus operators. Journeys are held fixed, with no extra travel.",
+      "display": "switch",
+      "rows": [
+        {
+          "label": "Single bus fare cap",
+          "unit": "gbp",
+          "unit_words": "£ a single fare",
+          "primary": true,
+          "points": [
+            {
+              "key": "2027-01-01/2027-12-31",
+              "label": "January to December 2027",
+              "year": 2026,
+              "before": 3.0,
+              "after": 2.0
+            }
+          ],
+          "source": {
+            "before": {
+              "kind": "documented",
+              "where": "Budget 2026 Table 6.1 row 4 and the GOV.UK release of 22 July 2026 (the modifier does not set the cap; it credits the saving below)"
+            },
+            "after": {
+              "kind": "documented",
+              "where": "Budget 2026 Table 6.1 row 4 and the GOV.UK release of 22 July 2026 (the modifier does not set the cap; it credits the saving below)"
+            }
+          },
+          "note": "Participating services in England outside London"
+        },
+        {
+          "label": "Fare saving",
+          "unit": "percent",
+          "unit_words": null,
+          "primary": false,
+          "points": [
+            {
+              "key": "2027-01-01/2027-12-31",
+              "label": "January to December 2027",
+              "year": 2026,
+              "before": 0.0,
+              "after": 0.125
+            }
+          ],
+          "source": {
+            "before": {
+              "kind": "documented",
+              "where": "no saving at the £3 cap"
+            },
+            "after": {
+              "kind": "modifier_constant",
+              "where": "budget_measures/bus_fare_cap_2027.py bus_fare_cap_2027(reduction)"
+            }
+          },
+          "note": "Of households' bus fare spending, counted as income; derived in PolicyEngine/bus-fare-cap from DfT's evaluation of the first £2 cap"
+        }
+      ]
     }
   },
   "current_law": {

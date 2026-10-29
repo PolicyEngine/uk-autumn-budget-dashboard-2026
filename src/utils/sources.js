@@ -130,6 +130,17 @@ export const SOURCES = {
     url: "https://www.policyengine.org/uk/model/data/calibration",
   },
   // Section 8, Equivalisation: HBAI's modified OECD scale (checked 26 October 2026)
+  // The £2 bus fare cap's 12.5% fare saving (src/bus_fare_cap/sources.py,
+  // FARE_CAP_REDUCTION_CENTRAL), from DfT's evaluation of the first £2 cap
+  // (checked 29 October 2026)
+  policyengine_bus_fare_cap: {
+    label: "PolicyEngine, £2 bus fare cap analysis",
+    url: "https://github.com/PolicyEngine/bus-fare-cap",
+  },
+  dft_two_pound_cap_evaluation: {
+    label: "DfT, Evaluation of the £2 bus fare cap",
+    url: "https://www.gov.uk/government/publications/evaluation-of-the-2-bus-fare-cap",
+  },
   dwp_hbai_methodology: {
     label: "DWP, Households Below Average Income: background information and methodology",
     url: "https://www.gov.uk/government/statistics/households-below-average-income-for-financial-years-ending-1995-to-2025/households-below-average-income-background-information-and-methodology-report-fye-2025",

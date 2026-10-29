@@ -317,7 +317,7 @@ function MethodologyTab({ onShowTab }) {
                     through <SourceLink id="policyengine_py_release">policyengine.py</SourceLink>{" "}on
                     the <AnchorLink id={METHOD_SECTIONS.data}>data above</AnchorLink>. Measures are
                     written as parameter changes where possible, or built from tested measure
-                    templates. Three of the policies here are written by hand, and are published
+                    templates. Four of the policies here are written by hand, and are published
                     only after two reviewers have checked the exact run.
                   </>,
                 ],
@@ -509,7 +509,7 @@ function MethodologyTab({ onShowTab }) {
                         income, which is before indirect taxes, so the VAT and fuel duty policies do
                         not change it.
                       </>,
-                      "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate.",
+                      "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate, and the £2 bus fare cap's fare savings.",
                       "People moved out of or into poverty are the change in the rate times that year's population in the current-law projection, to the nearest 1,000.",
                     ],
                   },
@@ -870,6 +870,19 @@ function MethodologyTab({ onShowTab }) {
               for vans, lorries and business use of cars, roughly half of fuel duty receipts, is
               not in the model, so a change in fuel duty moves revenue by less here than in a
               full costing.
+            </p>
+          </Topic>
+          <Topic id="method-bus-fare-income" title="Bus fare savings as income" preview="The £2 bus fare cap counted as income">
+            <p className="method-more">
+              The £2 bus fare cap is paid to bus operators, but passengers gain from it through lower
+              fares. We count that saving as household income, as for a price subsidy: 12.5% of each
+              household&apos;s bus fare spending in England outside London while the cap runs, the
+              fall in all-ticket fares from a £3 to a £2 cap that{" "}
+              <SourceLink id="policyengine_bus_fare_cap">PolicyEngine&apos;s bus fare cap analysis</SourceLink>{" "}
+              derives from <SourceLink id="dft_two_pound_cap_evaluation">DfT&apos;s evaluation of the first £2 cap</SourceLink>. This is a choice of method: the
+              household spends less on the same journeys, so its income buys more, but no cash
+              changes hands. Journeys are held fixed. The saving counts in household net income, not
+              in the HBAI income poverty is measured on.
             </p>
           </Topic>
           <Topic title="Survey coverage" preview="Where the survey data move a policy's figures">

@@ -723,14 +723,14 @@ def _seven_manifest(combined_key_, members):
     )
 
 
-def test_the_area_run_takes_the_seven_package_under_its_key():
+def test_the_area_run_takes_the_eight_package_under_its_key():
     from uk_budget_data.reforms import (
         AUTUMN_BUDGET_2026_COMBINED_COMPONENTS,
         AUTUMN_BUDGET_2026_COMBINED_ID,
     )
 
     seven = sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS)
-    key = "combined--f91fe847275730cb"
+    key = "combined--7baf4e89377bcc9c"
     assert g.manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     manifest = _seven_manifest(key, seven)
     package = [AUTUMN_BUDGET_2026_COMBINED_ID]
@@ -753,5 +753,5 @@ def test_the_area_run_refuses_the_withdrawn_nine_measure_package():
     )
     manifest = _seven_manifest(combined_key(nine), nine)
     assert AUTUMN_BUDGET_2026_COMBINED_ID not in g.approved_reforms(manifest)
-    with pytest.raises(ValueError, match="combined--f91fe847275730cb"):
+    with pytest.raises(ValueError, match="combined--7baf4e89377bcc9c"):
         g.approved_reforms(manifest, [AUTUMN_BUDGET_2026_COMBINED_ID])

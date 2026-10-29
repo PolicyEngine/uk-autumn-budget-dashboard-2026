@@ -412,7 +412,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     }
   });
 
-  it("gives each of the seven announced measures, as the real file describes it, its summary, timing, category, what changes and caveats", () => {
+  it("gives each of the eight announced measures, as the real file describes it, its summary, timing, category, what changes and caveats", () => {
     const seven = [
       ["fuel_duty_rise_deferral", "Fuel duty cut extended", "Fuel duty", "Jan 2027"],
       ["state_pension_income_tax_protection", "Pension Tax Allowance", "Income tax", "Apr 2027"],
@@ -421,6 +421,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       ["carers_allowance_earnings_taper", "Carer's Allowance earnings taper", "Benefits", "2030-31"],
       ["household_energy_payment_2026", "Household Energy Payment", "Energy", "Jan 2027"],
       ["trading_allowance_raise", "Trading allowance raised to £3,000", "Income tax", "Apr 2027"],
+      ["bus_fare_cap_2027", "Single bus fares capped at £2", "Transport", "Jan 2027"],
     ];
     expect(Object.keys(file.measures)).toEqual(seven.map(([id]) => id));
     for (const [id, name, category, starts] of seven) {
@@ -435,7 +436,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       expect(item.querySelector(".policy-card-start"), id).toHaveTextContent(starts);
       // What changes only where it has more than a single change of value
       // to show (no tiles; Vahid, 28 Oct)
-      const shown = ["fuel_duty_rise_deferral", "state_pension_income_tax_protection", "domestic_electricity_zero_vat", "carers_allowance_earnings_taper", "property_income_rates_up"].includes(id);
+      const shown = ["fuel_duty_rise_deferral", "state_pension_income_tax_protection", "domestic_electricity_zero_vat", "carers_allowance_earnings_taper", "property_income_rates_up", "bus_fare_cap_2027"].includes(id);
       expect(Boolean(within(item).queryByRole("region", { name: /^What changes/ })), id).toBe(shown);
       expect(item.querySelector(".policy-card-details"), id).toBeTruthy();
       cleanup();

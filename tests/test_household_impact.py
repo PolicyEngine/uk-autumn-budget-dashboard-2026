@@ -1857,6 +1857,9 @@ def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
             2027,
             True,
         ),
+        # The calculator asks no bus fares, so the cap credits nothing
+        ("bus_fare_cap_2027", {}, 2026, True),
+        ("bus_fare_cap_2027", {"electricity_spending": 1_000}, 2027, True),
         ("some_future_measure", {}, 2027, False),
     ],
 )

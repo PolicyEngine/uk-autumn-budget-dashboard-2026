@@ -76,19 +76,6 @@ export const UNMODELLED_CARDS = {
       ],
     },
   },
-  // "capped at £2 for one year from 1 January 2027. Until then most single
-  // fares there are capped at £3": the cap after the year is not stated, so
-  // tiles only
-  "bus-fare-cap": {
-    category: { label: "Transport", icon: "compass" },
-    inForce: { from: "2027-01", to: "2027-12" },
-    ends: "Dec 2027",
-    duration: "One year",
-    parameters: {
-      display: "table",
-      rows: [row("Single bus fare cap", "gbp", "£ a fare", [{ key: "2027", label: "From 1 January 2027", year: 2026, before: 3, after: 2 }])],
-    },
-  },
   // No start date set ("by the end of 2027, or as soon as possible after")
   "gas-standing-charges": {
     category: { label: "Energy", icon: "flame" },

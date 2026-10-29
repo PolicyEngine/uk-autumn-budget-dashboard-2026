@@ -165,7 +165,7 @@ describe("MethodologyTab", () => {
   it("leaves the energy payment out of poverty, and calls the local-area file uncertified", () => {
     const { container } = renderTab();
     expect(container.textContent).toContain(
-      "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate.",
+      "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate, and the £2 bus fare cap's fare savings.",
     );
     expect(container.textContent).not.toContain("certified together");
     expect(container.textContent).toContain("which that certificate does not cover");

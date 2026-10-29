@@ -273,7 +273,7 @@ describe("UnmodelledMeasures", () => {
       cards: [...group.querySelectorAll(".policy-card")].map((card) => card.id.replace(/^unmodelled-/, "")),
     }));
     expect(shown).toEqual([
-      { title: "Coming soon", cards: ["bus-fare-cap", "savings-income-tax", "machine-games-duty", "cash-isa-limit"] },
+      { title: "Coming soon", cards: ["savings-income-tax", "machine-games-duty", "cash-isa-limit"] },
       { title: "Modelled separately", cards: ["adjusted-triple-lock"] },
       { title: "Outside a household model", cards: ["bank-surcharge", "pubs-business-rates-relief", "online-marketplace-liability", "your-first-home"] },
       {

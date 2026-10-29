@@ -451,6 +451,34 @@ export const POLICY_DETAILS = [
       text: "An employee on £30,000 with £3,000 of side income and no expenses pays £400 less income tax in 2027-28.",
     },
   },
+  {
+    id: "bus_fare_cap_2027",
+    cardOrder: 9,
+    shortName: "Bus fare cap",
+    sentence: "capping single bus fares at £2",
+    name: "Single bus fares capped at £2",
+    description: "Cap single bus fares at £2 outside London in 2027",
+    writtenFor: "Single bus fares on participating services in England outside London are capped at £2 instead of £3 from 1 January to 31 December 2027. Each household there saves an estimated 12.5% of its bus fare spending while the cap runs (the all-ticket fall in fares from a £3 to a £2 cap, derived from DfT's evaluation of the first £2 cap): three months of 2026-27 and nine of 2027-28. The saving is counted as household income, a methodological choice: the official cost is a grant to bus operators. Journeys are held fixed, with no extra travel.",
+    summary:
+      "Caps single bus fares at £2, down from £3, in England outside London from January to December 2027.",
+    starts: "Jan 2027",
+    affects: "Bus passengers in England outside London",
+    type: "Transport",
+    inForce: { from: "2027-01", to: "2027-12" },
+    // Paid through epg_subsidy, which policyengine-uk 2.151.0's
+    // hbai_household_net_income does not add
+    outsidePovertyIncome: true,
+    ends: "Jan 2028",
+    howCalculated:
+      "Adds 12.5% of bus fare spending to the income of households in England outside London, while the cap runs.",
+    details:
+      "The cap is paid to bus operators. We count passengers' saving as household income, as for a price subsidy. The 12.5% is the fall in all-ticket fares from a £3 to a £2 cap. Our bus fare cap analysis derives it from DfT's evaluation of the first £2 cap (range 10% to 15%). Every household outside London with bus fares counts, though only participating services cap fares. Journeys are held fixed. The model's current law already lowers 2027's fares for the cap, so the saving is slightly understated.",
+    source: {
+      label: "£2 bus fares from January 2027",
+      href: "https://www.gov.uk/government/news/cheaper-travel-for-millions-with-a-third-off-fares",
+    },
+    budgetRows: [4],
+  },
 ];
 
 const DETAILS_BY_ID = Object.fromEntries(
