@@ -189,6 +189,13 @@ describe("ours on the official costing's basis", () => {
     expect(rowEl(container, "two_child_limit").getAttribute("aria-label")).toContain("ours −£3.6bn (on the official costing's basis −£2.9bn), official −£3.0bn");
   });
 
+  it("never draws it without our dot", () => {
+    const { container } = chart({ rows: [{ ...rows[1], pe: null, peOfficial: -2.9 }] });
+    expect(container.querySelector(".obr-dumbbell-dot.obr")).not.toBeNull();
+    expect(container.querySelector(".obr-dumbbell-dot.basis")).toBeNull();
+    expect(container.querySelector('[aria-label="Legend"]')).not.toHaveTextContent(BASIS_LABEL);
+  });
+
   it("keeps two marks, and the legend, where no row has one", () => {
     const { container } = chart();
     expect(container.querySelector(".obr-dumbbell-dot.basis")).toBeNull();

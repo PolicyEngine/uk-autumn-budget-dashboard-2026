@@ -133,8 +133,8 @@ class ReformResult(BaseModel):
     constituency: list[dict]
     demographic_constituency: list[dict]
     age_impact: list[dict] = []
-    # The measure on its official costing's basis (#297), where mapping.csv
-    # names one; else none
+    # The measure on its official costing's basis (#297), where
+    # calculators.OFFICIAL_BASES names one; else none
     official_basis: list[dict] = []
 
     model_config = {"arbitrary_types_allowed": True}

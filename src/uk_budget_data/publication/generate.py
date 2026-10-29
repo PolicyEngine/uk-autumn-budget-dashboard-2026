@@ -121,7 +121,7 @@ def result_tables(
     """
     return {
         "budgetary_impact": result.budgetary_impact,
-        # Only where mapping.csv names an official basis (#297)
+        # Only where calculators.OFFICIAL_BASES names a basis (#297)
         "official_basis": result.official_basis,
         "distributional_impact": result.distributional_impact,
         "winners_losers": result.winners_losers,

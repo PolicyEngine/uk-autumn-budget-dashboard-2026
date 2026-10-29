@@ -125,6 +125,7 @@ export function drawsBasis(rows, scale = "bn") {
   return rows.some(
     (row) =>
       !row.status &&
+      // Never without our dot, as the row's own ring (basisPart)
       isValue(row.pe) &&
       isValue(row.peOfficial) &&
       (scale !== "pct" || (pctOfOfficial(row.pe, row.obr) !== null && pctOfOfficial(row.peOfficial, row.obr) !== null)),

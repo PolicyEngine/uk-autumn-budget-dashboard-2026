@@ -106,6 +106,22 @@ class TestOfficialBasisCalculator:
             "value": pytest.approx(-0.5),
         }
 
+    def test_more_universal_credit_is_a_cost(self):
+        """Spending's sign end to end, through policyengine-uk's own
+        lists: Universal Credit rising is a negative figure, a cost to the
+        Exchequer."""
+        from uk_budget_data.calculators import OfficialBasisCalculator
+
+        (row,) = OfficialBasisCalculator(years=[2030]).calculate(
+            _Sim({"universal_credit": {2030: [5e9]}}),
+            _Sim({"universal_credit": {2030: [5.2e9]}}),
+            "m",
+            "M",
+            ("universal_credit",),
+        )
+        assert row["value"] < 0
+        assert row["value"] == pytest.approx(-0.2)
+
     def test_a_tax_cut_is_a_cost(self):
         from uk_budget_data.calculators import OfficialBasisCalculator
 

@@ -24,7 +24,8 @@ import { withholdingProblems } from "./withholding";
 export const DEFAULT_TABLES = [
   "budgetary_impact",
   // Optional: a measure's figure on its official costing's basis, for the
-  // comparison with the official costings, when mapping.csv names one (#297)
+  // comparison with the official costings, where the generator's
+  // calculators.OFFICIAL_BASES names one (#297)
   "official_basis",
   "distributional_impact",
   "winners_losers",

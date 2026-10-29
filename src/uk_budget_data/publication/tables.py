@@ -131,10 +131,10 @@ TABLES: dict[str, TableSpec] = {
             required=False,
         ),
         # A measure's figure on its official costing's basis (#297): the
-        # change in just the taxes and benefits mapping.csv's
-        # official_basis names, as budgetary_impact's columns. A table of
-        # its own, and not required, so only the measures with an official
-        # basis carry it and every other artifact keeps its bytes.
+        # change in just the taxes and benefits calculators.OFFICIAL_BASES
+        # names, as budgetary_impact's columns. A table of its own, and not
+        # required, so only the measures with an official basis carry it
+        # and every other artifact keeps its bytes.
         TableSpec(
             "official_basis",
             (
