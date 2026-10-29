@@ -326,7 +326,9 @@ describe("UnmodelledMeasures", () => {
     expect(held.map(({ id }) => id)).toEqual(["savings-income-tax"]);
     const card = document.getElementById("unmodelled-savings-income-tax");
     // Our interest included ISA interest: calibrated on a different basis, not missing it (#297)
-    expect(card.querySelector(".umm-held-back")).toHaveTextContent(/^Held back: we calibrated savings interest to HMRC's figures on a different basis/);
+    expect(card.querySelector(".umm-held-back")).toHaveTextContent(/^Held back: calibrated to HMRC on a different basis, our savings interest is too low/);
+    // One short sentence (Vahid, 29 Oct)
+    expect(held[0].heldBack.split(/\s+/).length).toBeLessThanOrEqual(20);
     for (const text of [held[0].heldBack, held[0].notModelled]) expect(text).not.toMatch(/miss(?:es)? ISA interest/);
     fireEvent.click(within(card).getByRole("button", { name: "Treasury costing" }));
     expect(within(card).getByRole("table", { name: COSTING_CAPTION })).toHaveTextContent("+590");

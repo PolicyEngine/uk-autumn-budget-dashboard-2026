@@ -107,7 +107,7 @@ export const UNMODELLED_MEASURES = [
     notModelled:
       "The model covers it, but it is held back from this release: we calibrated savings interest to HMRC's figures on a different basis, so our taxable interest is too low.",
     heldBack:
-      "Held back: we calibrated savings interest to HMRC's figures on a different basis, so our taxable interest is too low. We're correcting it for the next data update.",
+      "Held back: calibrated to HMRC on a different basis, our savings interest is too low; the next update corrects it.",
     sources: [budget("paragraph 6.247")],
   },
   {
