@@ -21,7 +21,7 @@ import { NoEffectList } from "./personal/PolicyBars";
 import { DUMBBELL_MAX_STEPS, MeasureDumbbell } from "./youngPeople/MeasuresCard";
 import { niceRange, pounds, signedPounds, singleAgeBars } from "./youngPeople/youngPeopleData";
 import { X_AXIS_HEIGHT, plotMargin } from "./youngPeople/chartRows";
-import { AGE_VIEWS, useAgeImpactRows } from "./YoungPeopleSection";
+import { ageViews, publishedShareRows, useAgeImpactRows } from "./YoungPeopleSection";
 import ControlBar from "./ControlBar";
 import MeasureSharesChart from "./MeasureSharesChart";
 import { SHARE_FILTER_OPTIONS, filterShareRows, sharesByMeasure } from "../utils/measureShares";
@@ -583,7 +583,7 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
   const published = isPublished(rows, year);
   // By group (pensioners, under State Pension age, all ages) or by single
   // year of age from State Pension age, as Young people's card
-  const [view, setView] = useState("band");
+  const [chosenView, setView] = useState("band");
   // With no run for the whole selection: one row per measure, its own
   // shares for one group (pensioners first), filtered in the Options pill
   const [groupKey, setGroupKey] = useState("pensioners");
@@ -593,6 +593,16 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
   const perMeasure = sharesByMeasure(pensionerShares, rows, policies, selectedPolicies, year, catalogue.combinedId, groupKey);
   const groupLabel = perMeasure?.groups.find((group) => group.key === groupKey)?.label ?? "Pensioners";
   const filtered = perMeasure ? filterShareRows(perMeasure.rows, { hide, order, direction }) : null;
+  // Every single age withheld while the groups are published: the groups
+  // instead, with By single year of age disabled and no note (as Average
+  // change by age, 8db101aa); the reader's choice is kept otherwise
+  const fallback =
+    !perMeasure &&
+    published &&
+    // The pensioners' total row is not a single age
+    !pensionerSharesBySingleAge(rows, policies, selectedPolicies, year, catalogue.combinedId)?.groups.some((group) => group.age !== null && !group.suppressed) &&
+    publishedShareRows(pensionerShares(rows, policies, selectedPolicies, year, catalogue.combinedId));
+  const view = fallback ? "band" : chosenView;
   const single = !perMeasure && view === "single";
   const from = pensionerAge(year);
   const shares = perMeasure ? null : (single ? pensionerSharesBySingleAge : pensionerShares)(rows, policies, selectedPolicies, year, catalogue.combinedId);
@@ -682,7 +692,7 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
             ]}
           />
         ) : (
-          <ControlBar name={title} options={[...extraOptions, { label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
+          <ControlBar name={title} options={[...extraOptions, { label: "Show", value: view, onChange: setView, options: ageViews(fallback) }]} />
         )}
       </div>
       <SwapTransition swapKey={view} ref={chartRef} className="chart-plot young-people-plot">

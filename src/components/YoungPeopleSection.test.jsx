@@ -227,7 +227,9 @@ describe("YoungPeopleSection", () => {
   });
 
   it("keeps Winners and losers' view when the age group changes (AGE11, round 3)", async () => {
-    const rows = ["16-24", "25-34", "all"].map((band) => ({
+    // The bands and the single ages 16 to 34 (with none, By single year of
+    // age is disabled: ageSelectionRule.test.jsx)
+    const rows = ["16-24", "25-34", "all", ...Array.from({ length: 19 }, (_, i) => String(16 + i))].map((band) => ({
       reform_id: COMBINED_REFORM_ID, year: 2029, age_band: band, sample_size: 5000, people: 1_000_000,
       pct_better_off: 4, pct_worse_off: 10, pct_unchanged: 86,
     }));

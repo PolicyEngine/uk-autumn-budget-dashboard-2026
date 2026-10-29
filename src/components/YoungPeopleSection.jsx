@@ -100,6 +100,11 @@ export const AGE_VIEWS = [
   { value: "band", label: "By age group" },
   { value: "single", label: "By single year of age" },
 ];
+/** The age views, By single year of age disabled when every single age is withheld. */
+export const ageViews = (singleWithheld) =>
+  singleWithheld ? AGE_VIEWS.map((option) => (option.value === "single" ? { ...option, disabled: true } : option)) : AGE_VIEWS;
+/** Whether a shares result has any published (not suppressed) row. */
+export const publishedShareRows = (shares) => Boolean(shares?.groups.some((group) => !group.suppressed));
 // Ticks every five years, with the 16 to 24 band's ends (in bold) in place
 // of 15 and 25: a bar apart, both labels would run together
 const SINGLE_AGE_TICKS = ["10", "16", "20", "24", "30", "35", "40"];
@@ -724,7 +729,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
   // group are in Options. The reader's choice holds when the age group
   // changes, as on the other age cards (Pavel's review, AGE11; round 3:
   // a nine-row single-age chart left the card half empty by default)
-  const [view, setView] = useState("band");
+  const [chosenView, setView] = useState("band");
   // With no run for the whole selection: one row per measure, for one age
   // group (16 to 24 first)
   const [groupKey, setGroupKey] = useState(group);
@@ -739,8 +744,18 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
   const published = isPublished(rows, selectedYear);
   const perMeasure = sharesByMeasure(sharesByGroup, rows, policies, selectedPolicies, selectedYear, combinedId, groupKey);
   const groupLabel = perMeasure?.groups.find((group) => group.key === groupKey)?.label ?? "";
-  const single = !perMeasure && view === "single";
   const singleAges = groupAges(group, selectedYear);
+  // Every single age withheld while the age groups are published: the
+  // groups instead, with By single year of age disabled and no note (as
+  // Average change by age, 8db101aa). The reader's choice is kept for a
+  // selection or year with single ages.
+  const fallback =
+    !perMeasure &&
+    published &&
+    !publishedShareRows(sharesBySingleAge(rows, policies, selectedPolicies, selectedYear, combinedId, singleAges)) &&
+    publishedShareRows(sharesByGroup(rows, policies, selectedPolicies, selectedYear, combinedId));
+  const view = fallback ? "band" : chosenView;
+  const single = !perMeasure && view === "single";
   const description = perMeasure
     ? `Share of people aged ${groupLabel.replace(/^Aged? /i, "")} who gain or lose (a change over 0.01%), each selected policy on its own.`
     : single
@@ -843,7 +858,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
             ]}
           />
         ) : (
-          <ControlBar name={title} options={[...extraOptions, { label: "Show", value: view, onChange: setView, options: AGE_VIEWS }]} />
+          <ControlBar name={title} options={[...extraOptions, { label: "Show", value: view, onChange: setView, options: ageViews(fallback) }]} />
         )}
       </div>
       <SwapTransition swapKey={view} ref={chartRef} className="chart-plot young-people-plot">

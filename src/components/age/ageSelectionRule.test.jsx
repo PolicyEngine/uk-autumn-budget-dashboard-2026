@@ -369,6 +369,54 @@ describe("Average change by age when the package withholds every single age", ()
   });
 });
 
+describe("Winners and losers when the package withholds every single age", () => {
+  // As Average change by age above: the members have single years, the
+  // package none; its age bands are published
+  const packageWithoutSingleAges = () => withSingleAges(measureCatalogueFixture({ held: false }), COMBINED);
+
+  /** The card's View radios, its Options opened. */
+  function viewRadios(card) {
+    fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    return {
+      band: within(card).getByRole("radio", { name: "By age group" }),
+      single: within(card).getByRole("radio", { name: "By single year of age" }),
+    };
+  }
+
+  afterEach(() => window.history.replaceState(null, "", "/"));
+
+  it.each([
+    ["All ages", "all", ".young-people-shares"],
+    ["16 to 24", "16-24", ".young-people-shares"],
+  ])("%s: shows the age groups, with By single year of age disabled and no note", async (_name, age, selector) => {
+    window.history.replaceState(null, "", `/?age=${age}`);
+    const { container } = await renderAge(packageWithoutSingleAges(), [ALPHA, BETA]);
+    const card = container.querySelector(selector);
+    expect(card).not.toBeNull();
+    const { band, single } = viewRadios(card);
+    expect(band).toHaveAttribute("aria-checked", "true");
+    expect(single).toBeDisabled();
+    expect(single).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(single);
+    expect(within(card).getByRole("radio", { name: "By age group" })).toHaveAttribute("aria-checked", "true");
+    // The groups drawn, not the empty panel, and no note or explanation line
+    expect(card.textContent).not.toMatch(/No shares are published/);
+    expect(card.textContent).not.toMatch(/confidential|not published for this selection|too few survey records/i);
+    expect(card.querySelector(".note, .control-bar-note")).toBeNull();
+  });
+
+  it("keeps the reader's By single year of age where the package has its single ages", async () => {
+    window.history.replaceState(null, "", "/?age=all");
+    const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
+    const card = container.querySelector(".young-people-shares");
+    const { single } = viewRadios(card);
+    expect(single).not.toBeDisabled();
+    fireEvent.click(single);
+    expect(within(card).getByRole("radio", { name: "By single year of age" })).toHaveAttribute("aria-checked", "true");
+    expect(card.textContent).toMatch(/at each age from 0 to 90 and over/);
+  });
+});
+
 describe("The single-year age axis", () => {
   it("names every withheld policy in one list", () => {
     expect(withheldPartsCaveat(["A", "B", "C"])).toMatch(/: A, B and C have too few survey records at some ages, so the other policies' parts would reveal theirs\.$/);

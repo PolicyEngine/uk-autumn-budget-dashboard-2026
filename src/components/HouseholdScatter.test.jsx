@@ -116,15 +116,16 @@ describe("HouseholdScatter when the groups that change are withheld", () => {
     tablesByKey = undefined;
   });
 
-  const NOTE =
-    "Not published, too few survey households.";
+  // A short plain line, with no wording on why (Vahid, 29 Oct)
+  const NOTE = "No figures for this selection in 2027-28.";
 
-  it("says the changes are not published, in place of the dots, when the deciles change (the Carer's Allowance taper, 2031-32)", () => {
+  it("shows a plain 'No figures' line in place of the dots when the deciles change (the Carer's Allowance taper, 2031-32)", () => {
     // Deciles 7 and 9 withheld, the rest non-zero, as the taper publishes
     tablesByKey = decileRows([0.0036, 0.0067, 0.0007, 0.0099, 0.0059, -0.0008, "", 0.002, "", 0.00005]);
     const { container } = render(<HouseholdScatter selectedPolicies={["a"]} policies={POLICIES} selectedYear={2027} />);
     expect(screen.queryByTestId("scatter-chart")).toBeNull();
     expect(screen.getByRole("status")).toHaveTextContent(NOTE);
+    expect(container.textContent).not.toMatch(/Not published|confidential|survey households/i);
     expect(screen.queryByText(/None of the selected policies changes household incomes/)).toBeNull();
     // No dots, so the plain subtitle
     expect(container.querySelector(".chart-description").textContent).not.toMatch(/Each dot/);

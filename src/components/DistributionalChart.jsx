@@ -10,8 +10,7 @@ import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import UnavailableNotice from "./publication/UnavailableNotice";
-import WithheldDecileTick from "./WithheldDecileTick";
-import { isWithheldDecileValue, WITHHELD_DECILE_MESSAGE } from "../utils/decileWithholding";
+import { isWithheldDecileValue } from "../utils/decileWithholding";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
   barShape,
@@ -28,6 +27,7 @@ import {
   tickDecimals,
   fixedNoNegativeZero,
   noHouseholdChange,
+  noFigures,
 } from "../utils/chartTheme";
 import { DEFAULT_DISPLAY_YEAR, useDisplayYears } from "../utils/displayYears";
 import { chartMotion, netDotTitled } from "../utils/chartMotion";
@@ -228,7 +228,8 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
   const formatPercent = (value) => `${fixedNoNegativeZero(value, percentDecimals)}%`;
   const hasIncompleteResults = data.some((point) => point.incomplete);
   const hasUnavailableResults = data.some((point) => point.unavailable);
-  const withheldDeciles = new Set(data.filter((point) => point.withheld).map((point) => point.decile));
+  // Every decile withheld: a plain empty plot, never a row of zero slots
+  const allWithheld = data.length > 0 && data.every((point) => point.withheld);
 
   if (!rawData || rawData.length === 0) {
     return (
@@ -321,18 +322,6 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
         {published && hasUnavailableResults && (
           <UnavailableNotice reason="Some selected policies have no published results for this chart. The net change is unavailable." />
         )}
-        {/* The note's line is always kept, hidden in a year with nothing
-            withheld, so the card holds its height as Play moves through the
-            years (Vahid, 28 Oct: it jumped in 2030-31) */}
-        {published && (
-          <p
-            className="chart-description"
-            aria-hidden={withheldDeciles.size > 0 ? undefined : "true"}
-            style={withheldDeciles.size > 0 ? undefined : { visibility: "hidden" }}
-          >
-            * Income deciles {withheldDeciles.size > 0 ? [...withheldDeciles].map((decile) => String(decile).replace(/st|nd|rd|th/g, "")).join(", ") : "7, 9"}: <span>{WITHHELD_DECILE_MESSAGE}</span>.
-          </p>
-        )}
         {nothingChanges ? (
           // Only measures that change no household's income this year (an
           // employer cost): a note, not an empty plot of zero ticks. A
@@ -340,6 +329,10 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
           // unavailable notice above says so and the plot keeps its gaps
           <div className="plot-empty" style={{ minHeight: plotHeight }} role="status">
             <p>{noHouseholdChange(formatYearRange(selectedYear))}</p>
+          </div>
+        ) : published && allWithheld ? (
+          <div className="plot-empty" style={{ minHeight: plotHeight }} role="status">
+            <p>{noFigures(formatYearRange(selectedYear))}</p>
           </div>
         ) : published ? (
           <ResponsiveContainer width="100%" height={plotHeight}>
@@ -352,7 +345,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
               <XAxis
                 dataKey="decile"
                 tickFormatter={formatDecile}
-                tick={<WithheldDecileTick withheldDeciles={withheldDeciles} />}
+                tick={TICK_STYLE}
                 axisLine={AXIS_LINE}
                 tickLine={false}
                 interval={0}
@@ -374,19 +367,6 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
                 tick={TICK_STYLE}
               />
               <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
-              {/* A withheld decile is marked where its bar would be, so the
-                  break in the net line reads as "not published", never as
-                  a value (Vahid, 29 Oct) */}
-              {[...withheldDeciles].map((decile) => (
-                <ReferenceLine
-                  key={`withheld-${decile}`}
-                  x={decile}
-                  stroke={CHART_COLOURS.noChange}
-                  strokeDasharray="2 4"
-                  className="decile-withheld-mark"
-                  label={{ value: "Not published", angle: -90, position: "center", fill: CHART_COLOURS.noChange, fontSize: 11 }}
-                />
-              ))}
 
               {/* One segment at a time, beside the cursor; the other measures dim */}
 
