@@ -379,8 +379,10 @@ export const UNMODELLED_MEASURES = [
     costings: [],
     noCosting:
       "Table 6.1 has no row for it. Suppliers are to recover the standing charge's costs through gas unit rates instead.",
+    // The Household calculator includes it (calculatorOnlyMeasures.js, #355);
+    // the national figures do not
     notModelled:
-      "The model counts taxes on energy bills, not how suppliers set prices, and the start date and mitigation are not yet set.",
+      "The Household calculator includes it, from a home's gas use and an assumed 1 January 2028 start. National figures would need gas use in kWh, which the data lack.",
     sources: [
       budget("paragraphs 3.9 and 6.25"),
       {
