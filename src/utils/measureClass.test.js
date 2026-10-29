@@ -179,11 +179,20 @@ describe("the page's own lists", () => {
       const naming = files.filter((path) => relative(root, path) !== PRESETS && readFileSync(path, "utf8").includes(id));
       expect(naming, id).toEqual([]);
       // The examples' shared selection never has it; every example's
-      // answers do, for every year
+      // request does, for every year, and so does the answer: among the
+      // measures it includes and in its split by policy
       expect(presets.policies, id).not.toContain(id);
       for (const entry of presets.entries) {
-        expect(JSON.stringify(entry).includes(id), `${entry.preset_id} ${entry.year}: ${id}`).toBe(true);
+        const at = `${entry.preset_id} ${entry.year}: ${id}`;
+        expect(entry.request.policies, at).toContain(id);
+        expect(entry.response.included, at).toContain(id);
+        expect(entry.response.by_policy.measures.map(({ id: measure }) => measure), at).toContain(id);
       }
+    }
+    // Each request is the shared selection with the calculator-only
+    // measures after it, as the calculator sends one (withCalculatorOnly)
+    for (const entry of presets.entries) {
+      expect(entry.request.policies, `${entry.preset_id} ${entry.year}`).toEqual(withCalculatorOnly(presets.policies));
     }
   });
 });
