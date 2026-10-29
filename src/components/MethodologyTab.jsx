@@ -97,11 +97,19 @@ function ReportDownload() {
   const href = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/${REPORT_PDF.file}`;
   return (
     <div className="card method-card">
-      <a className="method-report-button" href={href} download>
-        <FileDown size={18} aria-hidden="true" />
-        Download our report (PDF)
-        <span className="policy-sr-only">: {REPORT_PDF.title}</span>
-      </a>
+      <div className="method-report">
+        <div className="method-report-text">
+          <p className="method-report-eyebrow">Our report</p>
+          <p className="method-report-title">{REPORT_PDF.title}</p>
+          <p className="method-report-note">
+            Each modelled measure, our estimates beside the official costings, and how we made them.
+          </p>
+        </div>
+        <a className="method-report-button" href={href} download>
+          <FileDown size={18} aria-hidden="true" />
+          Download the PDF
+        </a>
+      </div>
       <p className="method-report-eyebrow method-explainers-title">Our explainers</p>
       <ul className="method-explainers">
         {EXPLAINERS.map(({ slug, title }) => (
