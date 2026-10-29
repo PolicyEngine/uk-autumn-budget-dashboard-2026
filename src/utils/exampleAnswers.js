@@ -47,6 +47,9 @@ export const EXAMPLE_ANSWERS = Object.freeze({
   // No self-employment (nothing sent)
   self_employment_receipts_per_year: 0,
   self_employment_expenses_per_year: 0,
+  // No business miles (nothing sent)
+  business_miles_per_year: 0,
+  business_miles_role: "EMPLOYEE",
   private_pension_per_year: 0,
   partner_private_pension_per_year: 0,
   monthly_childcare: 0,

@@ -109,6 +109,8 @@ export const FIELD_LABELS = {
   self_employment_expenses: "Its allowable expenses",
   is_carer: "Carer",
   care_hours_per_week: "Hours of care",
+  business_miles: "Business miles",
+  business_miles_role: "Driven as",
 };
 
 /**
@@ -329,10 +331,25 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
             self_employment_expenses: inputs.self_employment_expenses_per_year || 0,
           }
         : {}),
+      // Business miles only once entered, likewise (and with them the
+      // household-only mileage measure: calculatorOnlyMeasures.js)
+      ...(businessMiles(inputs) > 0
+        ? { business_miles: businessMiles(inputs), business_miles_role: inputs.business_miles_role ?? "EMPLOYEE" }
+        : {}),
     },
     include: [...include],
   };
 }
+
+/**
+ * The head's business miles a year in their own car or van, as the API
+ * takes them: whole miles, and 0 for none, an empty box or anything that
+ * is not a positive number.
+ */
+export const businessMiles = (inputs) => {
+  const miles = inputs.business_miles_per_year;
+  return typeof miles === "number" && Number.isFinite(miles) && miles > 0 ? Math.round(miles) : 0;
+};
 
 /** The rent a month: as entered, else the region's average private rent. */
 export const monthlyRent = (inputs) =>

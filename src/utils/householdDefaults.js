@@ -95,6 +95,11 @@ export const WIZARD_DEFAULTS = {
   // expenses, £ a year; none until answered
   self_employment_receipts_per_year: 0,
   self_employment_expenses_per_year: 0,
+  // Business miles a year in your own car or van, as whole miles, and
+  // whether you drive them as an employee or self-employed (the
+  // household-only mileage measure, #357); none until answered
+  business_miles_per_year: 0,
+  business_miles_role: "EMPLOYEE",
   // Private and workplace pensions in payment, £ a year
   private_pension_per_year: 0,
   partner_private_pension_per_year: 0,

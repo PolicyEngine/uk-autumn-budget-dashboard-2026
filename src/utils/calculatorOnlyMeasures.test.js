@@ -56,10 +56,13 @@ describe("the result card's measures (resultPolicies)", () => {
     expect(resultPolicies(["a", "a", SAVINGS_INCOME_RATES_ID]).text).toBe("1 policy and the savings income tax rise");
   });
 
-  it("for any selection, counts exactly the selection and names every calculator-only measure", () => {
+  it("for any selection, counts exactly the selection and names every calculator-only measure that applies", () => {
+    // Answers every calculator-only measure applies to (the mileage one
+    // only with business miles, #357)
+    const drivesForWork = { business_miles_per_year: 15000 };
     fc.assert(
       fc.property(selection, (selected) => {
-        const { count, named, text } = resultPolicies(withCalculatorOnly(selected));
+        const { count, named, text } = resultPolicies(withCalculatorOnly(selected, drivesForWork));
         expect(count).toBe(selected.length);
         expect(text.startsWith(`${selected.length} ${selected.length === 1 ? "policy" : "policies"}`)).toBe(true);
         for (const id of CALCULATOR_ONLY_IDS) {
