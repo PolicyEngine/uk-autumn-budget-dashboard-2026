@@ -73,7 +73,7 @@ describe("ConstituencyMap on Budget day", () => {
       await screen.findByText("We have not yet published results by constituency."),
     ).toBeInTheDocument();
     // A plain notice, not a failure
-    expect(screen.queryByText(/could not be (read|loaded)/)).toBeNull();
+    expect(screen.queryByText(/could not (be )?(read|load)/)).toBeNull();
     expect(fetchImpl.calls).not.toContain("/data/constituency.csv");
     // No figures: no coloured seat, no key, search off, no downloads
     expect(container.querySelector("path.constituency-path[data-state]")).toBeNull();
@@ -93,7 +93,7 @@ describe("ConstituencyMap on Budget day", () => {
       expect(
         await screen.findByText("We have not yet published results by constituency."),
       ).toBeInTheDocument();
-      expect(screen.queryByText(/could not be (read|loaded)/)).toBeNull();
+      expect(screen.queryByText(/could not (be )?(read|load)/)).toBeNull();
       // The notice alone: no empty table, count or "no match" line behind it
       expect(screen.queryByRole("table")).toBeNull();
       expect(screen.queryByText(/0 of 0|No constituency or region matches/)).toBeNull();
