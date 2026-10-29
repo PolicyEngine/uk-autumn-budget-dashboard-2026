@@ -12,6 +12,7 @@ import { AGE_GROUP_OPTIONS, PENSIONERS, ageGroupFrom, groupSubject } from "../ut
 import "./YoungPeopleSection.css";
 import "./PensionersSection.css";
 import { scrollBelowBars } from "../utils/pageScroll";
+import { POVERTY_FIGURES_SHOWN } from "../utils/povertyFigures";
 
 /** The group in the address (?age=), read once the page is in the browser. */
 function readGroup() {
@@ -34,6 +35,8 @@ function writeGroup(group) {
  * sentences. The cards: average change by age group, change by year,
  * change by single year of age, the effect of each policy on the group
  * against all ages, and the shares who gain and lose (winners and losers).
+ * The shares are people affected, so they are left out while those figures
+ * are withheld (povertyFigures.js); the effect of each policy stays.
  */
 export default function AgeSection({ selectedPolicies, selectedYear, policies }) {
   const narrow = useNarrowViewport();
@@ -105,22 +108,40 @@ export default function AgeSection({ selectedPolicies, selectedYear, policies })
           </div>
         </section>
       </MeasureKeyProvider>
-      <SectionHeading
-        id="age-who-gains"
-        icon="userPlus"
-        title="Winners and losers, and which policies drive them"
-        subtitle={`How many ${subject.toLowerCase()} gain or lose, and from which policies.`}
-      />
-      <section className="report-section young-people-section" aria-label="Winners and losers, and which policies drive them">
-        <div className="charts-grid">
-          <MeasuresCard {...props} height={narrow ? 460 : 400} />
-          {group === PENSIONERS ? (
-            <PensionerSharesCard {...props} height={narrow ? 260 : 400} />
-          ) : (
-            <SharesCard {...props} height={narrow ? 340 : 400} />
-          )}
-        </div>
-      </section>
+      {POVERTY_FIGURES_SHOWN ? (
+        <>
+          <SectionHeading
+            id="age-who-gains"
+            icon="userPlus"
+            title="Winners and losers, and which policies drive them"
+            subtitle={`How many ${subject.toLowerCase()} gain or lose, and from which policies.`}
+          />
+          <section className="report-section young-people-section" aria-label="Winners and losers, and which policies drive them">
+            <div className="charts-grid">
+              <MeasuresCard {...props} height={narrow ? 460 : 400} />
+              {group === PENSIONERS ? (
+                <PensionerSharesCard {...props} height={narrow ? 260 : 400} />
+              ) : (
+                <SharesCard {...props} height={narrow ? 340 : 400} />
+              )}
+            </div>
+          </section>
+        </>
+      ) : (
+        <>
+          <SectionHeading
+            id="age-who-gains"
+            icon="userPlus"
+            title="Which policies drive the change"
+            subtitle={`The average change from each policy for ${subject.toLowerCase()}.`}
+          />
+          <section className="report-section young-people-section" aria-label="Which policies drive the change">
+            <div className="charts-grid">
+              <MeasuresCard {...props} height={narrow ? 460 : 400} />
+            </div>
+          </section>
+        </>
+      )}
     </>
   );
 }

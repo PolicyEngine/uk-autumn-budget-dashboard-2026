@@ -45,6 +45,8 @@ import HeadlineTile from "../livingStandards/HeadlineTile";
 import "../livingStandards/LivingStandards.css";
 import { Percent, UsersRound, Wallet } from "lucide-react";
 import "./IncomePosition.css";
+// The share of people who move is a people-affected figure: withheld for now
+import { POVERTY_FIGURES_SHOWN } from "../../utils/povertyFigures";
 
 const BEFORE = CHART_COLOURS.before;
 const AFTER = CHART_COLOURS.after;
@@ -788,7 +790,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const placeTip = [
     PERCENTILE_DEFINITION,
     moveWords,
-    everyone && everyone.up !== null && everyone.down !== null
+    POVERTY_FIGURES_SHOWN && everyone && everyone.up !== null && everyone.down !== null
       ? `Across the UK, ${everyone.up.toFixed(1)}% of people move up at least a percentile and ${everyone.down.toFixed(1)}% move down.`
       : null,
   ]
@@ -1148,7 +1150,7 @@ export function ResultTiles({ totals, changeValue, changeNote, household, year, 
       tip: [
         PERCENTILE_DEFINITION,
         moveWords,
-        everyone && everyone.up !== null && everyone.down !== null
+        POVERTY_FIGURES_SHOWN && everyone && everyone.up !== null && everyone.down !== null
           ? `Across the UK, ${everyone.up.toFixed(1)}% of people move up at least a percentile and ${everyone.down.toFixed(1)}% move down.`
           : null,
       ]

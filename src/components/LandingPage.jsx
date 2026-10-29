@@ -48,7 +48,7 @@ const boxes = (provisional) => [
  * landing page and the overview drawer each name themselves by it), the
  * paragraph and the provisional notice. One source for both.
  */
-export function LandingIntro({ headingId, provisional, className = "landing-hero" }) {
+export function LandingIntro({ headingId, provisional, note = null, className = "landing-hero" }) {
   return (
     <div className={className}>
       <h2 id={headingId} className="landing-heading">Autumn Budget 2026: fiscal and distributional analysis</h2>
@@ -60,6 +60,7 @@ export function LandingIntro({ headingId, provisional, className = "landing-hero
         forecast is the OBR&rsquo;s{" "}
         <SourceLink source="obr_efo_current">Economic and fiscal outlook, October 2026</SourceLink>.
       </p>
+      {note && <p className="landing-intro">{note}</p>}
       {provisional}
     </div>
   );

@@ -10,6 +10,7 @@
 
 import SectionHeading from "../SectionHeading";
 import TwinLink from "../TwinLink";
+import { POVERTY_FIGURES_SHOWN } from "../../utils/povertyFigures";
 import { GrowthCard, IncomesOverTimeCard, InequalityOverTimeCard, PovertyOverTimeCard } from "./sections/ViewCards";
 import WhoIsInPovertySection from "./sections/WhoIsInPovertySection";
 import PovertyTiles from "./sections/PovertyTiles";
@@ -73,7 +74,14 @@ export default function CurrentLawSection({ id, outlook, onShowTab, selectedYear
             title={section.title}
             subtitle={
               <>
-                {section.subtitle} <TwinLink tab="dashboard" sub={id} onShow={onShowTab} />
+                {section.subtitle}
+                {/* No twin while Population impact's Poverty is withheld (povertyFigures.js) */}
+                {(id !== "poverty" || POVERTY_FIGURES_SHOWN) && (
+                  <>
+                    {" "}
+                    <TwinLink tab="dashboard" sub={id} onShow={onShowTab} />
+                  </>
+                )}
               </>
             }
           />

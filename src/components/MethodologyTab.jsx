@@ -21,6 +21,7 @@ import { glossaryAnchor } from "./methodology/glossary";
 import { Calculator, ChartColumn, Compass, Database, House, TrendingUp, Info } from "lucide-react";
 import "./methodology/Methodology.css";
 import { scrollBelowBars, smoothUnlessReduced } from "../utils/pageScroll";
+import { POVERTY_FIGURES_SHOWN, WITHHELD_SENTENCE } from "../utils/povertyFigures";
 
 /**
  * The ids of the Methodology view's sections and of the topics other
@@ -489,11 +490,12 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id={METHOD_ANCHORS.poverty}
             title="Poverty and inequality"
-            preview="Poverty rate · Inequality · Which run"
+            preview={POVERTY_FIGURES_SHOWN ? "Poverty rate · Inequality · Which run" : "Poverty · Inequality · Which run"}
           >
             <FactList
               items={[
-                [
+                // Withheld for now (povertyFigures.js): one sentence in place of the definition
+                POVERTY_FIGURES_SHOWN ? [
                   "Poverty rate",
                   {
                     value: (
@@ -513,7 +515,7 @@ function MethodologyTab({ onShowTab }) {
                       "People moved out of or into poverty are the change in the rate times that year's population in the current-law projection, to the nearest 1,000.",
                     ],
                   },
-                ],
+                ] : ["Poverty", WITHHELD_SENTENCE],
                 [
                   "Inequality",
                   <>
@@ -527,7 +529,8 @@ function MethodologyTab({ onShowTab }) {
                 [
                   "Which run",
                   <>
-                    Neither adds up across policies, so each is read from one run: a policy&apos;s{" "}
+                    {POVERTY_FIGURES_SHOWN ? "Neither adds up across policies, so each is" : "Inequality does not add up across policies, so it is"}{" "}
+                    read from one run: a policy&apos;s{" "}
                     <Term id="ownRuns">own</Term>, or the combined run when every policy is selected.
                   </>,
                 ],
@@ -539,7 +542,7 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id="definitions-compared"
             title="Definitions compared with the PolicyEngine app"
-            preview="Inequality · Income deciles · Winners and losers · Poverty · Budget"
+            preview={`Inequality · Income deciles · Winners and losers · ${POVERTY_FIGURES_SHOWN ? "Poverty · " : ""}Budget`}
           >
             <FactList
               items={[
@@ -564,10 +567,14 @@ function MethodologyTab({ onShowTab }) {
                     ],
                   },
                 ],
-                [
-                  "Poverty",
-                  "The headline poverty measure here is absolute, before housing costs; the app's is relative, before housing costs. A child is a dependent child as HBAI defines one; the PolicyEngine app counts everyone aged 0 to 17.",
-                ],
+                ...(POVERTY_FIGURES_SHOWN
+                  ? [
+                      [
+                        "Poverty",
+                        "The headline poverty measure here is absolute, before housing costs; the app's is relative, before housing costs. A child is a dependent child as HBAI defines one; the PolicyEngine app counts everyone aged 0 to 17.",
+                      ],
+                    ]
+                  : []),
                 [
                   "Budget",
                   "Here a policy is costed by its change in the government's balance, as set out under Public finances. The app costs it as the change in households' taxes less benefits.",
@@ -635,14 +642,16 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id={METHOD_SECTIONS.young}
             title="Results by age"
-            preview="Age bands · Change by year · Who counts · Pensioners"
+            preview={`Age bands · Change by year · Who counts · Pensioners${POVERTY_FIGURES_SHOWN ? " · Winners and losers" : ""}`}
           >
             <p className="method-more">
               The{" "}
               <ViewLink tab="dashboard" sub="age" age="16-24" hash="young-people" onShowTab={onShowTab}>
                 results by age
               </ViewLink>{" "}
-              count winners and losers in each age band and single year of age.
+              {POVERTY_FIGURES_SHOWN
+                ? "count winners and losers in each age band and single year of age."
+                : "show the average change in each age band and single year of age."}
             </p>
             <FactList
               items={[
@@ -713,13 +722,18 @@ function MethodologyTab({ onShowTab }) {
                     <ViewLink tab="dashboard" sub="age" age="pensioners" onShowTab={onShowTab}>By age, with Pensioners chosen</ViewLink>.
                   </>,
                 ],
-                [
-                  "Winners and losers",
-                  {
-                    value: "Household net income rises or falls by more than 0.01%; otherwise no change.",
-                    more: ["The 0.01% is of baseline net income, with a baseline below £1 counted as £1."],
-                  },
-                ],
+                // The age shares are withheld for now (povertyFigures.js)
+                ...(POVERTY_FIGURES_SHOWN
+                  ? [
+                      [
+                        "Winners and losers",
+                        {
+                          value: "Household net income rises or falls by more than 0.01%; otherwise no change.",
+                          more: ["The 0.01% is of baseline net income, with a baseline below £1 counted as £1."],
+                        },
+                      ],
+                    ]
+                  : []),
               ]}
             />
           </Topic>
@@ -748,7 +762,7 @@ function MethodologyTab({ onShowTab }) {
           <Topic
             id={METHOD_ANCHORS.incomePosition}
             title="Where your income sits"
-            preview="Income · Tenths · Distribution · Who moves · Among all households"
+            preview={`Income · Tenths · Distribution · ${POVERTY_FIGURES_SHOWN ? "Who moves · " : ""}Among all households`}
           >
             <FactList
               items={[
@@ -769,10 +783,14 @@ function MethodologyTab({ onShowTab }) {
                   "Distribution",
                   `Published from the ${ordinal(LOWEST_PERCENTILE)} to the ${ordinal(HIGHEST_PERCENTILE)} percentile, as averages over bands one percentile wide; the lowest and highest 1% are not drawn.`,
                 ],
-                [
-                  "Who moves",
-                  "Everyone is ranked before and after the selected policies: a person moves up when the whole percentile (or tenth) of their rank is higher after. A share from fewer than 10 survey households is not published.",
-                ],
+                ...(POVERTY_FIGURES_SHOWN
+                  ? [
+                      [
+                        "Who moves",
+                        "Everyone is ranked before and after the selected policies: a person moves up when the whole percentile (or tenth) of their rank is higher after. A share from fewer than 10 survey households is not published.",
+                      ],
+                    ]
+                  : []),
                 [
                   "Among all households",
                   "The Population impact scatter: each household sits by its 2027-28 net income before the policies, not adjusted for household size, in every year, and you by yours. Each dot is a group of households.",
@@ -819,7 +837,7 @@ function MethodologyTab({ onShowTab }) {
           title="Limitations"
           summary="Some charts add up separate policy runs, some inputs and the weights do not follow the October 2026 forecast, fuel duty covers households' own fuel only, and surveys under-record some incomes."
         >
-          <Topic title="Policies added up" preview="Revenue, decile and age charts · Household scatter · Winners and losers">
+          <Topic title="Policies added up" preview={`Revenue, decile and age charts · Household scatter${POVERTY_FIGURES_SHOWN ? " · Winners and losers" : ""}`}>
             <p className="method-more">
               Each policy is simulated on its own, and the full package of policies together in one
               run. Where several are selected, the decile charts add up the policies&apos; separate
@@ -828,8 +846,11 @@ function MethodologyTab({ onShowTab }) {
               is the run of the selected policies together when one is published, and otherwise adds
               up the separate effects. The average-change age charts read the package&apos;s run when
               the selection is the full package, and otherwise add up the separate effects. The{" "}
-              <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>, the winners
-              and losers charts, the headline poverty and inequality figures and the{" "}
+              <AnchorLink id={METHOD_ANCHORS.scatter}>household scatter</AnchorLink>,{" "}
+              {POVERTY_FIGURES_SHOWN
+                ? "the winners and losers charts, the headline poverty and inequality figures"
+                : "the inequality figures"}{" "}
+              and the{" "}
               <AnchorLink id={METHOD_SECTIONS.geography}>figures by area</AnchorLink>{" "}come from a
               run of the whole selection, so they include interactions, and show nothing for a
               selection with no such run.

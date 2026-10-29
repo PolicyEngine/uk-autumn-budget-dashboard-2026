@@ -8,6 +8,7 @@ import { METHOD_ANCHORS } from "./methodology/anchors";
 import { unavailableMeasures } from "./methodology/measures";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { measureCatalogueFixture } from "../test/measureCatalogueFixture";
+import { POVERTY_FIGURES_SHOWN, WITHHELD_SENTENCE } from "../utils/povertyFigures";
 const catalogue = buildMeasureCatalogue(measureCatalogueFixture());
 const UNAVAILABLE = unavailableMeasures(catalogue);
 
@@ -164,9 +165,15 @@ describe("MethodologyTab", () => {
 
   it("leaves the energy payment out of poverty, and calls the local-area file uncertified", () => {
     const { container } = renderTab();
-    expect(container.textContent).toContain(
-      "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate.",
-    );
+    // While the poverty figures are withheld (povertyFigures.js), one sentence says so in their place
+    if (POVERTY_FIGURES_SHOWN) {
+      expect(container.textContent).toContain(
+        "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate.",
+      );
+    } else {
+      expect(container.textContent).toContain(WITHHELD_SENTENCE);
+      expect(container.textContent).not.toContain("energy payment to households");
+    }
     expect(container.textContent).not.toContain("certified together");
     expect(container.textContent).toContain("which that certificate does not cover");
   });
