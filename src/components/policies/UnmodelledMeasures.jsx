@@ -4,6 +4,8 @@ import TitleIcon from "../TitleIcon";
 import Disclosure from "../Disclosure";
 import { PolicyCard } from "../PolicyCards";
 import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
+import { UNMODELLED_VISUALS } from "../../utils/unmodelledVisuals";
+import UnmodelledVisual from "./UnmodelledVisual";
 import { EXTERNAL } from "../../utils/sources";
 import {
   COSTING_YEARS,
@@ -106,11 +108,15 @@ function Costing({ measure }) {
  */
 export function unmodelledCard(measure) {
   const { parameters, ...layout } = UNMODELLED_CARDS[measure.id] ?? {};
+  // A card's picture says what changes, so the values' tiles are not shown
+  // as well (each fact once)
+  const visual = UNMODELLED_VISUALS[measure.id] ? <UnmodelledVisual measure={measure} /> : null;
   const total = measure.costings.reduce((sum, { values }) => sum + values.reduce((x, y) => x + y, 0), 0);
   return {
-    parameters: parameters ?? null,
+    parameters: visual ? null : parameters ?? null,
     policy: {
       ...layout,
+      visual,
       id: measure.id,
       anchorId: `unmodelled-${measure.id}`,
       name: measure.name,

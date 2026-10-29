@@ -316,13 +316,15 @@ describe("UnmodelledMeasures", () => {
       expect(item.querySelector(".policy-card-end").textContent.length, item.id).toBeLessThanOrEqual(20);
       expect(item.querySelector(".policy-card-summary").textContent.trim(), item.id).not.toMatch(/\.\s+[A-Z]/);
     }
-    // Two changes: both in the table behind "Show every change", no tiles
-    for (const id of ["mileage-rates", "company-car-tax"]) {
-      const card = document.getElementById(`unmodelled-${id}`);
-      fireEvent.click(within(card).getByRole("button", { name: "Show every change" }));
-      expect(card.querySelectorAll(".pchg table tbody tr").length, id).toBeGreaterThanOrEqual(2);
+    // Two changes: both in the card's picture, and no table of the same values beside it
+    const mileage = document.getElementById("unmodelled-mileage-rates");
+    expect(within(mileage).getByRole("img").getAttribute("aria-label")).toMatch(/55p a mile for the first 10,000 business miles, made permanent; above 10,000 miles the rate rises from 25p to 35p/);
+    const car = document.getElementById("unmodelled-company-car-tax");
+    expect(within(car).getByRole("img").getAttribute("aria-label")).toMatch(/zero-emission cars 9% to 10%, cars emitting 1 to 50g CO2 a kilometre 19% to 20%/);
+    for (const card of [mileage, car]) {
+      expect(within(card).queryByRole("button", { name: "Show every change" })).toBeNull();
+      expect(card.querySelector(".pchg table")).toBeNull();
     }
-    expect(document.querySelectorAll("#unmodelled-mileage-rates .pchg table tr")[1]).toHaveTextContent(/^First 10,000 business miles.*45p55p\+10p$/);
   });
 
   it("shows nothing for an empty list", () => {
