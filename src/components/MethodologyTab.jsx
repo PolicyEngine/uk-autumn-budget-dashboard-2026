@@ -385,14 +385,14 @@ function MethodologyTab({ onShowTab }) {
                   <ViewLink tab="policies" hash="budget-measures-not-modelled" onShowTab={onShowTab}>
                     Budget policies we do not model
                   </ViewLink>
-                  , on Policies, list each with its reason.
+                  , on Policies, show what each one changes and who it reaches.
                 </>
               ) : (
                 <>
                   <ViewLink tab="policies" hash="budget-measures-not-modelled" onShowTab={onShowTab}>
                     Budget policies we do not model
                   </ViewLink>
-                  , on Policies, lists each with its reason.
+                  , on Policies, shows what each one changes and who it reaches.
                 </>
               )}
             </p>
