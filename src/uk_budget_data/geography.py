@@ -2305,7 +2305,7 @@ def area_provenance(
             "outputs_sha256": entry.outputs_sha256,
             "execution_identity_sha256": entry.execution_identity_sha256,
             **identities,
-            "definition": definition_digests(reform_id, years),
+            "definition": definition_digests(reform_id, sorted(set(years))),
         }
     return {
         "manifest_revision": manifest.revision,
