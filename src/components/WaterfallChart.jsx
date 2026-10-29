@@ -118,6 +118,10 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
         dataPoint[policy.seriesKey] = value;
         if (value !== null) netChange += value;
       });
+      // A withheld decile shows nothing: no other policy's bar and no net
+      // dot, as the bars beside a withheld member would give its figure
+      // back (#290 6480462886, as on the decile % chart)
+      if (withheld) POLICIES.forEach((policy) => { dataPoint[policy.seriesKey] = null; });
       dataPoint.netChange = incomplete ? null : netChange;
       dataPoint.incomplete = incomplete;
       dataPoint.unavailable = unavailable;
@@ -365,6 +369,19 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                 tickLine={false}
               />
               <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
+              {/* A withheld decile is marked where its bar would be, so the
+                  break in the net line reads as "not published", never as
+                  a value (Vahid, 29 Oct) */}
+              {[...withheldDeciles].map((decile) => (
+                <ReferenceLine
+                  key={`withheld-${decile}`}
+                  x={decile}
+                  stroke={CHART_COLOURS.noChange}
+                  strokeDasharray="2 4"
+                  className="decile-withheld-mark"
+                  label={{ value: "Not published", angle: -90, position: "center", fill: CHART_COLOURS.noChange, fontSize: 11 }}
+                />
+              ))}
 
               {/* One segment at a time, beside the cursor; the other measures dim */}
 
