@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import App, { POLICIES_INACTIVE, VIEWS, YEAR_INACTIVE, oldOutlookBaseline, opensYoungPeople, viewFromLocation, preloadAllViews } from "./App";
 import { BASE_PATH, fixtureFetch, fixtureJson } from "./test/publicationFixture";
 import { CANDIDATE_PROVISIONAL_LABEL } from "./utils/publication/manifest";
+import { EXPLAINERS, RESEARCH_URL } from "./utils/explainers";
 
 // Every view's code is in before a test renders it (App.jsx lazyView)
 beforeAll(preloadAllViews, 60_000);
@@ -388,9 +389,10 @@ describe("the view tabs", () => {
     expect(within(panel).getByRole("button", { name: "How the household calculation works" })).toBeInTheDocument();
     expect(panel).not.toHaveTextContent(/lifetime/i);
     expect(panel).toHaveTextContent("dominance and p% rules");
-    // No leftover link to last year's research
+    // No leftover link to last year's research: only this Budget's write-ups
     expect(panel).not.toHaveTextContent("our research on the");
-    expect(panel.querySelector('a[href*="policyengine.org/uk/research"]')).toBeNull();
+    const research = [...panel.querySelectorAll('a[href*="policyengine.org/uk/research"]')].map((link) => link.getAttribute("href"));
+    expect(research).toEqual(EXPLAINERS.map(({ slug }) => `${RESEARCH_URL}/${slug}`));
     const living = panel.querySelector("#method-living");
     expect(within(living).getByRole("link", { name: "Forecast changes" })).toHaveAttribute("href", "?tab=outlook&sub=forecast");
     // Said once on the page

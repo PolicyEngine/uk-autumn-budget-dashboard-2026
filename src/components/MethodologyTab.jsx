@@ -16,9 +16,10 @@ import { EARLY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { OPEN_VIEW_EVENT } from "../utils/methodLink";
+import { EXPLAINERS, RESEARCH_URL } from "../utils/explainers";
 import { AnchorLink, ExternalLink, ReasonList, SourceLink, Tag, Topic } from "./methodology/MethodUi";
 import { glossaryAnchor } from "./methodology/glossary";
-import { Calculator, ChartColumn, Compass, Database, House, TrendingUp, Info } from "lucide-react";
+import { Calculator, ChartColumn, Compass, Database, FileDown, House, TrendingUp, Info } from "lucide-react";
 import "./methodology/Methodology.css";
 import { scrollBelowBars, smoothUnlessReduced } from "../utils/pageScroll";
 
@@ -71,12 +72,53 @@ const yearRange = `${fiscalYearTick(EARLY_YEAR)} to ${fiscalYearTick(LAST_DISPLA
  * heading with its icon and a one-line summary, then its topics, each
  * folded until asked for.
  */
-function MethodSection({ id, title, summary, children }) {
+function MethodSection({ id, title, summary, lead, children }) {
   return (
     <section id={id} className="method-section" aria-label={title}>
       <SectionHeading id={`${id}-heading`} icon={SECTION_ICONS[id]} title={title} subtitle={summary} />
+      {lead}
       {children && <div className="card method-card method-topics">{children}</div>}
     </section>
+  );
+}
+
+/**
+ * Our written report on the Budget, served from public/reports: the reader
+ * version that went out on 29 October (sha256 0a13a780…1a6fc7), from
+ * PolicyEngine/uk-autumn-budget-2026-policies-explained, published/2026-10-29-reader.
+ */
+export const REPORT_PDF = {
+  file: "reports/policyengine-autumn-budget-2026-policies-explained.pdf",
+  title: "Autumn Budget 2026 policies explained",
+};
+
+/** A card with a button that downloads our PDF report, and links to our explainers. */
+function ReportDownload() {
+  const href = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/${REPORT_PDF.file}`;
+  return (
+    <div className="card method-card">
+      <div className="method-report">
+        <div className="method-report-text">
+          <p className="method-report-eyebrow">Our report</p>
+          <p className="method-report-title">{REPORT_PDF.title}</p>
+          <p className="method-report-note">
+            Each modelled measure, our estimates beside the official costings, and how we made them.
+          </p>
+        </div>
+        <a className="method-report-button" href={href} download>
+          <FileDown size={18} aria-hidden="true" />
+          Download the PDF
+        </a>
+      </div>
+      <p className="method-report-eyebrow method-explainers-title">Our explainers</p>
+      <ul className="method-explainers">
+        {EXPLAINERS.map(({ slug, title }) => (
+          <li key={slug}>
+            <ExternalLink href={`${RESEARCH_URL}/${slug}`}>{title}</ExternalLink>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -173,6 +215,7 @@ function MethodologyTab({ onShowTab }) {
               survey of UK households with and without each policy, {yearRange}, weighted to the UK.
             </>
           }
+          lead={<ReportDownload />}
         >
           <Topic
             id={METHOD_ANCHORS.glossary}

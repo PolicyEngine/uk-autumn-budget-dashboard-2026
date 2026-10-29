@@ -36,6 +36,7 @@ import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
 import { STICKY_GAP, scrollBelowBars, stickyBottom } from "../utils/pageScroll";
+import { trackEvent } from "../utils/analytics";
 
 
 // The form's seven numbered steps, read top to bottom, and nothing after
@@ -887,6 +888,7 @@ function HouseholdCalculator({
     // One calculation at a time; nothing to ask without a policy
     if (running || noneSelected) return;
     setSubmitted({ inputs, year, policies: requestPolicies, at: Date.now(), household: presetId ?? "yours" });
+    trackEvent("household_calculated", { household: presetId ?? "yours", year, policy_count: requestPolicies.length });
     // On a phone the results start screens below the button: bring the
     // waiting message into view, so pressing Calculate visibly does something
     requestAnimationFrame(() => {
