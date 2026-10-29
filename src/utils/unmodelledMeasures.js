@@ -229,7 +229,7 @@ export const UNMODELLED_MEASURES = [
       "A £4.7 billion scheme gives first-time buyers in England equity loans of up to 20%, with a 2.5% deposit.",
     reaches: "Around 70,000 first-time buyers (government estimate).",
     household:
-      "A smaller deposit and a loan interest-free for five years; the Budget says buyers save hundreds a month.",
+      "A smaller deposit, five interest-free years; the Budget says this will save the typical buyer hundreds of pounds a month.",
     costings: [
       {
         row: 37,

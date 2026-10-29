@@ -112,7 +112,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Cuts eligible people's income tax, never below zero; it tapers by £1 per £3 above the full new State Pension.",
     details:
-      "Total income counts the State Pension and all other income, savings interest included. So a larger State Pension, with increments or additional State Pension, reduces the allowance too. The personal allowance is unchanged. People reaching State Pension age after 6 October in a tax year are not included: reach and cost understated. Scottish taxpayers get the same allowance, at the 20% basic rate. Means-tested benefits can take back part of the allowance. Pension Credit, Housing Benefit and Council Tax Reduction count income after tax. A smaller award can end help that comes with it. Universal Credit counts pension income before tax, so changes only where the allowance cuts tax on earnings.",
+      "Total income counts the State Pension and all other income, savings interest included. So a larger State Pension, with increments or additional State Pension, reduces the allowance too. The personal allowance is unchanged. People reaching State Pension age after 6 October in a tax year are not included: reach and cost slightly understated. Scottish taxpayers get the same allowance, at the 20% basic rate. Means-tested benefits can take back part of the allowance. Pension Credit, Housing Benefit and Council Tax Reduction count income after tax. A smaller award can end help that comes with it. Universal Credit counts pension income before tax, so changes only where the allowance cuts tax on earnings.",
     source: {
       label: "Pension Tax Allowance explainer",
       href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer",
@@ -392,7 +392,7 @@ export const POLICY_DETAILS = [
     howCalculated:
       "Adds 2 points to each property income rate from 2027-28: 24%, 44% and 49% at basic, higher and additional.",
     details:
-      "The 2-point rise is on top of the rises Budget 2025 legislated. Scottish taxpayers pay Scottish rates on property income, so their rates don't change. Finance cost relief follows the UK property basic rate, so Scottish landlords' relief also rises to 24%. They pay less tax. Incomes are held fixed: no one changes how they hold property.",
+      "The 2-point rise is on top of the rises Budget 2025 legislated. Scottish taxpayers pay Scottish rates on property income, so their rates don't change. Finance cost relief follows the UK property basic rate, so Scottish landlords' relief also rises to 24%. They pay slightly less tax. Incomes are held fixed: no one changes how they hold property.",
     source: {
       label: "HMRC: changes to tax rates for property, savings and dividend income",
       href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
