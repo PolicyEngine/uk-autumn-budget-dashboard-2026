@@ -246,7 +246,7 @@
   font-weight: 600;
   line-height: 1.35;
   color: var(--pe-gray-800);
-  background: var(--pe-white, #fff);
+  background: var(--c-surface);
   border: 1px solid var(--pe-gray-200);
   border-left: 3px solid var(--c-before);
   border-radius: 4px;
@@ -311,7 +311,7 @@
   font-weight: 600;
   white-space: nowrap;
   color: var(--umv-ink);
-  background: var(--pe-white, #fff);
+  background: var(--c-surface);
   border: 1px solid var(--umv-tone);
   border-radius: 999px;
 }
@@ -356,7 +356,7 @@
 }
 
 .umv-part.is-gain {
-  color: var(--pe-white, #fff);
+  color: var(--c-surface);
 }
 
 .umv-part + .umv-part {
