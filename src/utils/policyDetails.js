@@ -523,7 +523,7 @@ export const POLICY_DETAILS = [
     ],
     details: [
       "Adds £100 to the 2026-27 income of each household in England in council tax bands A to D.",
-      "The Treasury's cost also covers the devolved governments' Barnett share (about £425 million), which the model leaves out.",
+      "The Treasury's cost also covers the devolved governments' Barnett share (about £425 million, our estimate), which the model leaves out.",
       "It also covers £100 million for councils in England for targeted support, also not modelled.",
     ],
     starts: "Jan 2027",

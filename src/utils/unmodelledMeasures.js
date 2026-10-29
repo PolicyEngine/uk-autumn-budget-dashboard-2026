@@ -101,7 +101,13 @@ export const UNMODELLED_MEASURES = [
       { label: "Who it reaches", text: "Adult gaming centres and other venues with these machines." },
       { label: "Why we leave it out", text: "Our data hold no household spending on gambling." },
     ],
-    costings: [{ row: 56, values: [0, 135, 150, 145, 145, 145] }],
+    costings: [
+      {
+        row: 56,
+        values: [0, 135, 150, 145, 145, 145],
+        note: "Row 56 also covers moving the duty to machine suppliers from 1 April 2028: £20m in 2028-29, £15m a year after.",
+      },
+    ],
     sources: [budget("paragraphs 2.49 and 6.225")],
   },
   {
@@ -243,7 +249,7 @@ export const UNMODELLED_MEASURES = [
       { label: "Why we leave it out", text: "The model works out Universal Credit yearly, not month by month." },
     ],
     costings: [{ row: 8, values: [0, -140, 0, 0, 0, 0] }],
-    sources: [budget("paragraph 6.11"), obr("Box 5.1")],
+    sources: [budget("paragraph 6.11"), obr("paragraph 3.44")],
   },
   {
     id: "mileage-rates",
@@ -319,9 +325,9 @@ export const UNMODELLED_MEASURES = [
     starts: "Apr 2029",
     summary: "Extends parental pay to self-employed fathers, partners, adopters and some irregular workers in Great Britain.",
     points: [
-      { label: "For a household", text: "Two weeks' pay after a birth: up to £194 a week (Treasury)." },
+      { label: "For a household", text: "Fathers and partners: two weeks at up to £194 a week (Treasury)." },
       { label: "Who it reaches", text: "Over 150,000 parents a year (government estimate)." },
-      { label: "Why we leave it out", text: "Rules unpublished; the model takes paternity pay and Maternity Allowance as reported." },
+      { label: "Why we leave it out", text: "Rules not final; paternity pay and Maternity Allowance are taken as reported." },
     ],
     costings: [{ row: 6, values: [0, 0, 0, -70, -70, -70] }],
     sources: [
