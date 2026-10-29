@@ -340,7 +340,7 @@ describe("the personal impact form", () => {
     expect(value("Your State Pension")).toBe(9000);
   });
 
-  it("shows Your household first, then nine example cards, each a name, who they are and its measure", () => {
+  it("shows Your household first, then eight example cards, each a name, who they are and its measure", () => {
     render(<HouseholdCalculator />);
     const buttons = within(cards()).getAllByRole("button");
     // Each example card is a box with one button (its name) over it
@@ -360,7 +360,6 @@ describe("the personal impact form", () => {
       "A family with high electricity use",
       "A landlord with savings",
       "A middle earner who lets a flat",
-      "A lone parent working part time",
       "A bus commuter in the North West",
     ]);
     const examples = buttons.slice(1);
@@ -498,10 +497,10 @@ describe("the personal impact form", () => {
     expect(within(cards()).queryByRole("button", { name: "Show all households" })).not.toBeInTheDocument();
     applyExample("A pensioner with a small private pension");
     // Folded: the grid's cards are hidden; Your household first, then
-    // nine example chips below it
+    // eight example chips below it
     const strip = within(cards()).getByRole("listbox", { name: "Households" });
     const chips = within(strip).getAllByRole("option").slice(1);
-    expect(within(strip).getAllByRole("option")).toHaveLength(10);
+    expect(within(strip).getAllByRole("option")).toHaveLength(9);
     expect(within(strip).getAllByRole("option")[0]).toHaveTextContent("Your household");
     expect(chips.map((chip) => chip.textContent)).toEqual([
       "Pensioner",
@@ -511,7 +510,6 @@ describe("the personal impact form", () => {
       "Universal Credit family",
       "Landlord",
       "Small landlord",
-      "Lone parent",
       "Bus commuter",
     ]);
     // The full name on hover, the short one cut if it runs out of room
@@ -567,7 +565,6 @@ describe("the personal impact form", () => {
   it("fills the household answers from each example", () => {
     const cases = [
       ["A carer working part time", { housing: "Mortgage", partner: "Yes", children: "0", caring: "Yes" }],
-      ["A lone parent working part time", { housing: "Rent", rent: REGIONAL_RENT.NORTH_WEST, partner: "No", children: "1", caring: "No" }],
     ];
     for (const [label, expected] of cases) {
       resetSavedWizard();

@@ -12,8 +12,8 @@ import { fiscalYearTick } from "./chartTheme";
 const REGISTRY = readFileSync(join(fileURLToPath(import.meta.url), "..", "..", "uk_budget_data", "reforms.py"), "utf8");
 
 describe("the example households", () => {
-  it("are nine, with unique ids, a name, a one-line description, a measure and an icon each", () => {
-    expect(HOUSEHOLD_EXAMPLES).toHaveLength(9);
+  it("are eight, with unique ids, a name, a one-line description, a measure and an icon each", () => {
+    expect(HOUSEHOLD_EXAMPLES).toHaveLength(8);
     const ids = HOUSEHOLD_EXAMPLES.map((example) => example.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const example of HOUSEHOLD_EXAMPLES) {

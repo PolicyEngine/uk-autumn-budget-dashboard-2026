@@ -250,47 +250,6 @@ export const HOUSEHOLD_EXAMPLES = [
     spendingSource: decileSpending(6).source,
   },
   {
-    id: "lone-parent",
-    label: "A lone parent working part time",
-    // On its chip once the cards fold into a strip
-    short: "Lone parent",
-    description: "One child aged 4, £14,000, electric heating",
-    icon: "baby",
-    measure: "domestic_electricity_zero_vat",
-    tag: "Zero VAT on electricity",
-    inputs: {
-      ...RESET,
-      // The average age at a first birth (29.4 in 2024: ONS, Births in
-      // England and Wales) plus the child's four years
-      current_age: 33,
-      // About 21 hours a week at the National Living Wage from April 2026
-      // (£12.71 an hour, GOV.UK), a little below the median for part-time
-      // employees (£280 a week in April 2025, £14,560 a year: ONS ASHE 2025)
-      current_salary: 14000,
-      has_partner: false,
-      children_ages: "4",
-      tenure: "RENT_PRIVATELY",
-      // Fixed: the North West's average private rent (ONS, September 2026)
-      monthly_rent: 975,
-      claims_universal_credit: true,
-      // In a reception class, so childcare in the school holidays: about 13
-      // weeks a year at England's average holiday club price, £190 a week
-      // (Coram Family and Childcare, Holiday Childcare Survey 2026), £2,470
-      // a year, about £205 a month. Universal Credit pays back up to 85% of
-      // it (DWP)
-      monthly_childcare: 205,
-      // Electricity, petrol and diesel: the averages for its tenth by gross
-      // income (£627 a week in 2027-28), ONS Family Spending FYE
-      // 2025, Table A6 (exampleSpending.js)
-      ...spendingInputs(4),
-      // A flat heated by electric storage heaters: its own figure
-      electricity_spending_per_year: 1600,
-    },
-    note: "Aged 33 with one child aged 4, renting privately at £975 a month. Earns £14,000 working part time, about 21 hours a week at the 2026 National Living Wage, a little below the median for part-time employees (ONS ASHE 2025). Their child is in a reception class; childcare in the school holidays, about 13 weeks a year at England's average holiday club price (Coram, 2026), comes to about £205 a month. Claims the Universal Credit they are due, which pays back up to 85% of childcare costs. Their flat is heated by electric storage heaters: spends £1,600 a year on electricity, and £910 on petrol and diesel, the average for households in the fourth tenth by gross income (ONS Family Spending, FYE 2025).",
-    // The spending's source, in the result's "Based on"
-    spendingSource: own("Electricity: its own, electric storage heating. Petrol and diesel", 4),
-  },
-  {
     // Added for the £2 bus fare cap (#321, Vahid, 29 October 2026): a
     // renter in England outside London, where the form asks bus fares, who
     // has no car and takes the bus to work. The credit is a share of the
