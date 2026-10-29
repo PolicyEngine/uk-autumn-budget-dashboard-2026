@@ -538,7 +538,7 @@ const BUS_HEIGHT = 64;
  * colour, and under them the card's example with each year's saving
  * picked out.
  */
-export function BusFareCapVisual({ entry, visual, name, example: card }) {
+export function BusFareCapVisual({ entry, visual, name }) {
   const view = busFareCapView(entry, visual);
   if (!view) return null;
   const { before, after, window, share, example } = view;
@@ -553,7 +553,6 @@ export function BusFareCapVisual({ entry, visual, name, example: card }) {
     { label: "Without the cap", value: before, tone: "before" },
     { label: window, value: after, tone: "after" },
   ];
-  const saved = years.map(([, value]) => wholePounds(value));
   return (
     <div className="pviz pviz-bus" role="img" aria-label={description}>
       <div className="pviz-bus-columns" aria-hidden="true">
@@ -567,20 +566,18 @@ export function BusFareCapVisual({ entry, visual, name, example: card }) {
           </div>
         ))}
       </div>
-      {/* The card's example, each year's saving picked out */}
-      {card?.text && (
-        <p className="pviz-band-saving" aria-hidden="true">
-          {card.text.split(new RegExp(`(${saved.join("|")})`)).map((part, i) =>
-            saved.includes(part) ? (
-              <strong key={i} className="pviz-band-saving-value">
-                {part}
-              </strong>
-            ) : (
-              part
-            ),
-          )}
-        </p>
-      )}
+      {/* The example as a list, as the fuel duty card's fills */}
+      <figcaption className="pviz-fills" aria-hidden="true">
+        <span className="pviz-fills-title">Saved on {wholePounds(example.spending)} a year of bus fares</span>
+        <span className="pviz-fills-list">
+          {years.map(([year, value]) => (
+            <span key={year} className="pviz-fill">
+              <span className="pviz-fill-when">{year}</span>
+              <span className="pviz-fill-value">{wholePounds(value)}</span>
+            </span>
+          ))}
+        </span>
+      </figcaption>
     </div>
   );
 }

@@ -614,7 +614,7 @@ export const POLICY_DETAILS = [
     writtenFor: "Single bus fares on participating services in England outside London are capped at £2 instead of £3 from 1 January to 31 December 2027. The saving is the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London: 10.0% of what that spending would be at £3 fares (£230m, divided by 0.9 for operator participation, over £2,557m of spending), for the days the cap runs: 1 January to 5 April 2027 in 2026-27 and 6 April to 31 December 2027 in 2027-28. London residents get £0. The saving is counted as household income, a methodological choice: the official cost is a grant to bus operators. Spending is held fixed, with no extra travel.",
     summary: "Caps single bus fares at £2, down from £3.",
     points: [
-      { label: "Where", text: "England outside London; London residents get £0." },
+      { label: "London", text: "Residents get £0." },
       { label: "Counted as", text: "Household income, though the cap is paid to operators." },
     ],
     details: [

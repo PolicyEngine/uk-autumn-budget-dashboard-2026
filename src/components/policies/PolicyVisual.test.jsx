@@ -80,7 +80,8 @@ describe("PolicyVisual", () => {
     const { container } = show("bus_fare_cap_2027");
     expect(image()).toHaveAccessibleName(/capped at £2 instead of £3.*10% of bus fare spending.*£13 in 2026-27 and £40 in 2027-28/);
     expect([...container.querySelectorAll(".pviz-bus-value")].map((v) => v.textContent)).toEqual(["£3", "£2"]);
-    expect([...container.querySelectorAll(".pviz-band-saving-value")].map((v) => v.textContent)).toEqual(["£13", "£40"]);
+    expect([...container.querySelectorAll(".pviz-bus .pviz-fill-value")].map((v) => v.textContent)).toEqual(["£13", "£40"]);
+    expect([...container.querySelectorAll(".pviz-bus .pviz-fill-when")].map((v) => v.textContent)).toEqual(["2026-27", "2027-28"]);
   });
 
   it("draws nothing without the measure's entry, or for a measure without a visual", () => {
