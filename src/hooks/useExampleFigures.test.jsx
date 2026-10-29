@@ -74,8 +74,11 @@ describe("the example cards' background figures", () => {
     }
     await waitFor(() => expect(first.result.current.pending.size).toBe(0));
     first.unmount();
-    // Asked, and keyed, with the savings rise the calculator always adds
-    const key = exampleKey(EXAMPLES[0].inputs, { year: YEAR, policies: [...POLICIES, "savings_income_rates_up"] });
+    // Asked, and keyed, with the measures the calculator always adds
+    const key = exampleKey(EXAMPLES[0].inputs, {
+      year: YEAR,
+      policies: [...POLICIES, "savings_income_rates_up", "gas_standing_charges_abolition"],
+    });
     expect(peekHouseholdImpact(key)?.net.change).toBe(5);
     expect(readStoredHeadline(key)?.net.change).toBe(5);
     // Again, from the session cache: no request
@@ -99,7 +102,7 @@ describe("the example cards' background figures", () => {
     rerender({ examples: EXAMPLES, policies: ["road_fuel_vat_cut"], year: YEAR, enabled: true, post: api.post });
     expect(old.signal.aborted).toBe(true);
     await waitFor(() => expect(api.calls).toHaveLength(2));
-    expect(api.calls[1].body.policies).toEqual(["road_fuel_vat_cut", "savings_income_rates_up"]);
+    expect(api.calls[1].body.policies).toEqual(["road_fuel_vat_cut", "savings_income_rates_up", "gas_standing_charges_abolition"]);
     unmount();
     expect(api.calls[1].signal.aborted).toBe(true);
     expect(result.current.figures).toEqual({});
@@ -118,7 +121,7 @@ describe("the example cards' background figures", () => {
       ),
     );
     await waitFor(() => expect(api.calls).toHaveLength(2));
-    expect(api.calls[1].body.policies).toEqual(["fuel_duty_rise_deferral", "savings_income_rates_up"]);
+    expect(api.calls[1].body.policies).toEqual(["fuel_duty_rise_deferral", "savings_income_rates_up", "gas_standing_charges_abolition"]);
     await act(async () => api.answer(api.calls[1], 7));
     await waitFor(() => expect(result.current.figures[EXAMPLES[0].id]?.[YEAR]?.change).toBe(7));
     expect(result.current.reduced).toEqual(["fuel_duty_rise_deferral"]);

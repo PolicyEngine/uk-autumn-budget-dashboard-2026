@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import {
   CALCULATOR_ONLY_MEASURES,
+  GAS_STANDING_CHARGES_ID,
   SAVINGS_INCOME_RATES_ID,
   isCalculatorOnly,
   resultPolicies,
@@ -9,14 +10,27 @@ import {
   withoutCalculatorOnly,
 } from "./calculatorOnlyMeasures";
 import { policyRows } from "./singleYear";
+import { UNMODELLED_MEASURES } from "./unmodelledMeasures";
 
 describe("calculator-only measures", () => {
   it("always go after the selected measures, once, and come off for the national figures", () => {
-    expect(withCalculatorOnly(["a", "b"])).toEqual(["a", "b", SAVINGS_INCOME_RATES_ID]);
-    expect(withCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID])).toEqual(["a", SAVINGS_INCOME_RATES_ID]);
+    expect(withCalculatorOnly(["a", "b"])).toEqual(["a", "b", SAVINGS_INCOME_RATES_ID, GAS_STANDING_CHARGES_ID]);
+    expect(withCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID])).toEqual(["a", SAVINGS_INCOME_RATES_ID, GAS_STANDING_CHARGES_ID]);
     // Nothing selected: no request, so nothing added
     expect(withCalculatorOnly([])).toEqual([]);
-    expect(withoutCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID])).toEqual(["a"]);
+    expect(withoutCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID, GAS_STANDING_CHARGES_ID])).toEqual(["a"]);
+  });
+
+  it("include gas standing charges abolished, named, with its Policies card", () => {
+    // The household API's own id for it (gas_standing_charges.py)
+    expect(GAS_STANDING_CHARGES_ID).toBe("gas_standing_charges_abolition");
+    expect(CALCULATOR_ONLY_MEASURES[GAS_STANDING_CHARGES_ID]).toEqual({
+      id: GAS_STANDING_CHARGES_ID,
+      name: "Gas standing charges abolished",
+      phrase: "the gas standing charge abolition",
+      card: "gas-standing-charges",
+    });
+    expect(UNMODELLED_MEASURES.map((card) => card.id)).toContain(CALCULATOR_ONLY_MEASURES[GAS_STANDING_CHARGES_ID].card);
   });
 
   it("show in the split by policy with their short name, and no note", () => {
@@ -41,14 +55,16 @@ describe("the result card's measures (resultPolicies)", () => {
     { minLength: 1, maxLength: 12 },
   );
 
-  it("counts the selection and names the savings rise, as production showed it", () => {
+  it("counts the selection and names each calculator-only measure", () => {
     const seven = ["a", "b", "c", "d", "e", "f", "g"];
     expect(resultPolicies(withCalculatorOnly(seven))).toEqual({
       count: 7,
-      named: ["the savings income tax rise"],
-      text: "7 policies and the savings income tax rise",
+      named: ["the savings income tax rise", "the gas standing charge abolition"],
+      text: "7 policies, the savings income tax rise and the gas standing charge abolition",
     });
-    expect(resultPolicies(withCalculatorOnly(["a"])).text).toBe("1 policy and the savings income tax rise");
+    expect(resultPolicies(withCalculatorOnly(["a"])).text).toBe(
+      "1 policy, the savings income tax rise and the gas standing charge abolition",
+    );
     // Without the calculator's own measures, just the count
     expect(resultPolicies(["a", "b"]).text).toBe("2 policies");
     expect(resultPolicies([]).text).toBe("0 policies");

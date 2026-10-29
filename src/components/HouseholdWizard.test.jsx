@@ -864,7 +864,9 @@ describe("the selected policies' questions", () => {
       const yours = () => bodies.find((body) => body.household.petrol_spending === 900 && body.include.length === 0);
       await waitFor(() => expect(yours()).toBeDefined());
       const answers = { ...WIZARD_DEFAULTS, petrol_spending_per_year: 900, council_tax_band: "B" };
-      expect(yours()).toEqual(buildHouseholdRequest(answers, { year: 2027, policies: ALL_SEVEN }));
+      expect(yours()).toEqual(
+        buildHouseholdRequest(answers, { year: 2027, policies: [...ALL_SEVEN, "gas_standing_charges_abolition"] }),
+      );
       expect(yours().household).toMatchObject({ petrol_spending: 900, council_tax_band: "B", diesel_spending: DEFAULT_SPENDING.diesel });
     } finally {
       vi.unstubAllGlobals();
@@ -887,7 +889,7 @@ describe("the selected policies' questions", () => {
     }
   });
 
-  it("always adds the savings income tax rise to a household's request, the cards' too", async () => {
+  it("always adds the savings income tax rise and gas standing charges abolished to a household's request, the cards' too", async () => {
     const API = "https://api.test/api/household-impact";
     const bodies = [];
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
@@ -908,11 +910,12 @@ describe("the selected policies' questions", () => {
       fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
       const headline = () => bodies.filter((body) => body.household.savings_interest_income === 12000 && body.include.length === 0);
       await waitFor(() => expect(headline()).toHaveLength(1));
-      expect(headline()[0].policies).toEqual([...published, "savings_income_rates_up"]);
-      // Every example card's figures are asked with it too
+      const added = ["savings_income_rates_up", "gas_standing_charges_abolition"];
+      expect(headline()[0].policies).toEqual([...published, ...added]);
+      // Every example card's figures are asked with them too
       const cards = bodies.filter((body) => body.household.savings_interest_income !== 12000);
       expect(cards.length).toBeGreaterThan(0);
-      expect(cards.every((body) => body.policies.at(-1) === "savings_income_rates_up")).toBe(true);
+      expect(cards.every((body) => JSON.stringify(body.policies.slice(-2)) === JSON.stringify(added))).toBe(true);
     } finally {
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();

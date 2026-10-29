@@ -19,6 +19,13 @@
  * (£620 a year), diesel £6.50 (£340), electricity (line 4.4.1) £20.00
  * (£1,040; the API's own default, ELECTRICITY_SPENDING).
  * https://www.ons.gov.uk/peoplepopulationandcommunity/personalandhouseholdfinances/expenditure/datasets/familyspendingworkbook1detailedexpenditureandtrends
+ *
+ * Gas use: Ofgem's typical gas use from 1 July 2026 (the medium Typical
+ * Domestic Consumption Value), 9,500 kWh a year, the API's own default
+ * (gas_standing_charges.TYPICAL_GAS_USE_KWH). The average, at which the
+ * gas standing charge abolition changes the bill by a calculated £0, is
+ * DESNZ's mean use per domestic meter in 2024, 11,359 kWh.
+ * https://www.ofgem.gov.uk/information-consumers/energy-advice-households/energy-price-cap
  */
 
 /** ASHE 2026 provisional median, all employee jobs, rounded. */
@@ -52,6 +59,11 @@ export const DEFAULT_SPENDING = {
   diesel: 340,
   electricity: 1040,
 };
+
+/** Ofgem's typical gas use, kWh a year (from 1 July 2026). */
+export const TYPICAL_GAS_USE_KWH = 9500;
+/** DESNZ's mean domestic gas use per meter, kWh a year (2024). */
+export const MEAN_GAS_USE_KWH = 11359;
 
 // The form's answers, each at a typical value until changed. Sources:
 // above
@@ -88,6 +100,9 @@ export const WIZARD_DEFAULTS = {
   petrol_spending_per_year: DEFAULT_SPENDING.petrol,
   diesel_spending_per_year: DEFAULT_SPENDING.diesel,
   electricity_spending_per_year: DEFAULT_SPENDING.electricity,
+  // Gas use, kWh a year, for gas standing charges abolished; 0 is no
+  // mains gas
+  gas_use_kwh_per_year: TYPICAL_GAS_USE_KWH,
   dividends_per_year: 0,
   savings_interest_per_year: 0,
   property_income_per_year: 0,

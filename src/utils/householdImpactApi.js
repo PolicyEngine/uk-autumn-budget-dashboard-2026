@@ -22,7 +22,7 @@
  */
 
 import statePensionTable from "../uk_budget_data/state_pension.json";
-import { DEFAULT_SPENDING, regionalRent } from "./householdDefaults";
+import { DEFAULT_SPENDING, TYPICAL_GAS_USE_KWH, regionalRent } from "./householdDefaults";
 import { localAuthorityKey } from "./localAuthorities";
 
 export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
@@ -95,6 +95,7 @@ export const FIELD_LABELS = {
   petrol_spending: "Petrol spending",
   diesel_spending: "Diesel spending",
   electricity_spending: "Electricity spending",
+  gas_use_kwh: "Gas use",
   salary_sacrifice_pension_contributions: "Salary sacrifice",
   student_loan_plan: "Student loan plan",
   council_tax_band: "Council tax band",
@@ -300,6 +301,9 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       petrol_spending: inputs.petrol_spending_per_year,
       diesel_spending: inputs.diesel_spending_per_year,
       electricity_spending: inputs.electricity_spending_per_year ?? DEFAULT_SPENDING.electricity,
+      // Gas use for gas standing charges abolished (0: no mains gas), sent
+      // whatever is selected, so an edited use is an edited answer
+      gas_use_kwh: inputs.gas_use_kwh_per_year ?? TYPICAL_GAS_USE_KWH,
       salary_sacrifice_pension_contributions: inputs.salary_sacrifice_per_year,
       student_loan_plan: inputs.student_loan_plan,
       // The API estimates Council Tax from the band and the council's own

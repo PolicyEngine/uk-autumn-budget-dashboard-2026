@@ -340,10 +340,11 @@ describe("the household calculation, from the fixture", () => {
         const tile = headlineCard().querySelector(".result-tiles .forecast-tile");
         const unit = ids.length === 1 ? "policy" : "policies";
         expect(tile.querySelector(".result-policies-link")).toHaveTextContent(
-          new RegExp(`^${ids.length} ${unit} and the savings income tax rise$`),
+          new RegExp(`^${ids.length} ${unit}, the savings income tax rise and the gas standing charge abolition$`),
         );
-        // The request carries the savings rise, so the card must name it
+        // The request carries both, so the card must name them
         expect(household.at(-1).policies).toContain("savings_income_rates_up");
+        expect(household.at(-1).policies).toContain("gas_standing_charges_abolition");
       }),
       { numRuns: 8 },
     );
@@ -368,8 +369,10 @@ describe("the household calculation, from the fixture", () => {
       "Income percentile",
     ]);
     // The selected policies, counted as the header counts them, and the
-    // savings rise the calculator always adds, named
-    expect(tiles[0]).toHaveTextContent(`In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies and the savings income tax rise`);
+    // measures the calculator always adds, named
+    expect(tiles[0]).toHaveTextContent(
+      `In 2029-30, with ${SUPPORTED_POLICY_IDS.length} policies, the savings income tax rise and the gas standing charge abolition`,
+    );
     expect(changeValue()).toBe("+£3,765");
     // All three figures in the tiles' one headline class, the change not
     // in the map's micro .result-value

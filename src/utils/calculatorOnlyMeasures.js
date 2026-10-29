@@ -10,8 +10,15 @@
  * María agreed it goes in the calculator only, and it is always included
  * there (Vahid, 28 October). This is the one place the page names it
  * outside the measure catalogue.
+ *
+ * Gas standing charges abolished (#355) is a household-only measure: the
+ * household API works out the household's gas bill change from its gas use
+ * (gas_standing_charges.py) and counts it in net income. It is no
+ * registered measure, so no national figure can have it. `card` is its
+ * card on the Policies tab (unmodelledMeasures.js).
  */
 export const SAVINGS_INCOME_RATES_ID = "savings_income_rates_up";
+export const GAS_STANDING_CHARGES_ID = "gas_standing_charges_abolition";
 
 export const CALCULATOR_ONLY_MEASURES = {
   [SAVINGS_INCOME_RATES_ID]: {
@@ -19,6 +26,12 @@ export const CALCULATOR_ONLY_MEASURES = {
     name: "Savings income tax up",
     // As the result card names it after the count ("with 7 policies and …")
     phrase: "the savings income tax rise",
+  },
+  [GAS_STANDING_CHARGES_ID]: {
+    id: GAS_STANDING_CHARGES_ID,
+    name: "Gas standing charges abolished",
+    phrase: "the gas standing charge abolition",
+    card: "gas-standing-charges",
   },
 };
 

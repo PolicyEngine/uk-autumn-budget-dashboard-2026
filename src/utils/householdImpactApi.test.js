@@ -149,10 +149,25 @@ describe("buildHouseholdRequest", () => {
         "council_tax_band",
         "monthly_childcare",
         "salary_year",
+        "gas_use_kwh",
       ].sort(),
     );
     // The stage is not part of the cache key
     expect(requestKey(family)).toBe(requestKey({ ...family, include: [] }));
+  });
+
+  it("sends the gas use, Ofgem's typical 9,500 kWh until changed, and 0 for no mains gas", () => {
+    const options = { year: 2028, policies: ["gas_standing_charges_abolition"] };
+    expect(WIZARD_DEFAULTS.gas_use_kwh_per_year).toBe(9500);
+    expect(buildHouseholdRequest(WIZARD_DEFAULTS, options).household.gas_use_kwh).toBe(9500);
+    // An example that leaves it out sends the same as the form's default,
+    // so its precomputed answer still matches
+    const { gas_use_kwh_per_year: _left, ...without } = WIZARD_DEFAULTS;
+    expect(requestKey(buildHouseholdRequest(without, options))).toBe(requestKey(buildHouseholdRequest(WIZARD_DEFAULTS, options)));
+    expect(buildHouseholdRequest({ ...WIZARD_DEFAULTS, gas_use_kwh_per_year: 14000 }, options).household.gas_use_kwh).toBe(14000);
+    expect(buildHouseholdRequest({ ...WIZARD_DEFAULTS, gas_use_kwh_per_year: 0 }, options).household.gas_use_kwh).toBe(0);
+    // Sent whatever is selected, so an edited gas use is an edited answer
+    expect(buildHouseholdRequest(WIZARD_DEFAULTS, { year: 2028, policies: [] }).household.gas_use_kwh).toBe(9500);
   });
 
   it("sends a State Pension only as entered, and only at State Pension age", () => {
