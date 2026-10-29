@@ -746,3 +746,263 @@ def test_a_warned_run_is_recorded_and_never_staged(monkeypatch):
         assert "alpha" not in manifest.measures
     finally:
         world.close()
+
+
+# --- #340: a package withholds the age rows its members withhold ----------
+
+
+def _age_rows_for(labels, year=YEAR):
+    return [_age_row(year, label) for label in labels]
+
+
+def test_a_package_leaves_out_the_age_rows_a_member_leaves_out():
+    """#340: a member's thin single age takes its band's single ages out of
+    the member's table; the package leaves out the same rows, in the years
+    it generates, and names them in its receipt."""
+    from uk_budget_data.publication import generate
+
+    baseline, reformed, _ = _population(set())
+    job = _job()
+    # A member year the package does not generate is not applied to it
+    job.member_thin_age_groups = {YEAR: ["70"], YEAR + 1: ["40"]}
+    result = SimpleNamespace(
+        age_impact=_age_rows_for(ROW_LABELS)
+        + _age_rows_for(ROW_LABELS, YEAR + 1),
+        household_scatter=[],
+    )
+    warnings, record = generate._apply_disclosure_floor(
+        "combined--a+b", job, baseline, reformed, result
+    )
+    assert warnings == []
+    assert [(row["year"], row["age_band"]) for row in result.age_impact] == [
+        (YEAR, label) for label in BANDS + ["all", "16", "36", "40"]
+    ] + [(YEAR + 1, label) for label in ROW_LABELS]
+    assert record["withheld_cells"] == [
+        {"table": "age_impact", "year": YEAR, "groups": ["70", "90+"]}
+    ]
+
+
+def test_a_package_on_checked_data_adds_its_members_thin_ages_to_its_own(
+    monkeypatch,
+):
+    """The package's own thin cells (none here) and its members' are
+    withheld together, and the receipt records no member cell as thin."""
+    from uk_budget_data import pipeline
+    from uk_budget_data.publication import generate
+
+    baseline, reformed, survey = _population(set())
+    baseline.dataset = reformed.dataset = _Dataset()
+    monkeypatch.setattr(
+        pipeline, "scatter_survey_households", lambda sim, path: survey
+    )
+    job = _job()
+    job.member_thin_age_groups = {YEAR: ["35-49"]}
+    result = SimpleNamespace(
+        age_impact=_age_rows_for(ROW_LABELS), household_scatter=[]
+    )
+    _, record = generate._apply_disclosure_floor(
+        "combined--a+b", job, baseline, reformed, result
+    )
+    assert [row["age_band"] for row in result.age_impact] == ["all"]
+    assert record["thin_cells"] == []
+    assert record["withheld_cells"] == [
+        {
+            "table": "age_impact",
+            "year": YEAR,
+            "groups": floor.age_labels_in_order(set(ROW_LABELS) - {"all"}),
+        }
+    ]
+
+
+def test_a_member_receipt_gives_its_thin_ages_from_either_record():
+    """Receipts made before #340 name a member's thin ages only in
+    thin_cells; later ones also name the rows left out in withheld_cells."""
+    record = {
+        "thin_cells": [
+            {"table": "winners_losers", "year": YEAR, "groups": ["5"]},
+            {"table": "age_impact", "year": YEAR, "groups": ["70"]},
+        ],
+        "withheld_cells": [
+            {"table": "winners_losers", "year": YEAR, "groups": ["5", "all"]},
+            {"table": "age_impact", "year": YEAR + 1, "groups": ["36", "40"]},
+        ],
+    }
+    assert floor.recorded_thin_age_groups(record) == {
+        YEAR: ["70"],
+        YEAR + 1: ["36", "40"],
+    }
+    # The decile reader takes the age cell without counting it as a decile
+    assert floor.recorded_withheld_cells(record) == {
+        ("winners_losers", YEAR): ["5", "all"]
+    }
+    with pytest.raises(ValueError):
+        floor.recorded_withheld_cells(
+            {
+                "withheld_cells": [
+                    {"table": "age_impact", "year": YEAR, "groups": ["101"]}
+                ]
+            }
+        )
+
+
+def test_the_validators_require_withheld_age_rows_to_be_absent():
+    from uk_budget_data.publication.validate import withholding_problems
+
+    floor_record = {
+        "withheld_cells": [
+            {"table": "age_impact", "year": YEAR, "groups": ["70", "90+"]}
+        ]
+    }
+    kept = _age_rows_for(BANDS + ["all", "40"])
+    assert withholding_problems({"age_impact": kept}, floor_record) == []
+    assert withholding_problems({}, floor_record) == []
+    assert withholding_problems(
+        {"age_impact": kept + _age_rows_for(["70"])}, floor_record
+    ) == [f"age_impact {YEAR} 70 publishes a withheld row"]
+    bad = {
+        "withheld_cells": [
+            {"table": "age_impact", "year": YEAR, "groups": ["70", "70"]}
+        ]
+    }
+    assert withholding_problems({}, bad) == [
+        "disclosure_floor.withheld_cells has an invalid cell"
+    ]
+
+
+# Single ages (one per band, and a band with two) for the by-difference
+# property: each band's people without a row of their own are a group too.
+SINGLES = ["7", "20", "30", "36", "40", "55", "70", "90+"]
+PROPERTY_LABELS = BANDS + ["all"] + SINGLES
+THIN_CHOICES = (
+    SINGLES + BANDS + [band + floor.OTHER_AGES for band in BANDS] + ["all"]
+)
+
+
+def _atoms():
+    """The groups no row splits: each single age with a row, each band's
+    ages without a row, and the people in no band."""
+    return (
+        SINGLES + [band + floor.OTHER_AGES for band in BANDS] + [floor.NO_BAND]
+    )
+
+
+def _atoms_of(label):
+    """The atoms a row or a thin group adds up."""
+    if label == "all":
+        return set(_atoms())
+    if label in BANDS:
+        return {
+            single
+            for single in SINGLES
+            if floor._band_of_single_age(single) == label
+        } | {label + floor.OTHER_AGES}
+    return {label}
+
+
+def _published_span(published, package):
+    """The members' published rows and the package's, as vectors over
+    (member, atom), the package's row of a label being the sum of the
+    members' (its interactions aside). Each row is a sum of its atoms'
+    totals, and people counts are published, so means are as good as
+    totals."""
+    atoms = _atoms()
+    members = list(published)
+    width = len(members) * len(atoms)
+
+    def vector(member_atoms):
+        row = np.zeros(width)
+        for m, chosen in member_atoms.items():
+            for atom in chosen:
+                row[members.index(m) * len(atoms) + atoms.index(atom)] = 1
+        return row
+
+    equations = [
+        vector({m: _atoms_of(label)})
+        for m, labels in published.items()
+        for label in labels
+    ] + [vector({m: _atoms_of(label) for m in members}) for label in package]
+    span = np.array(equations) if equations else np.zeros((0, width))
+    return span, vector
+
+
+def _in_span(span, target):
+    """Whether ``target`` is a sum or difference of the published rows."""
+    rank = np.linalg.matrix_rank(span) if len(span) else 0
+    return np.linalg.matrix_rank(np.vstack([span, target])) == rank
+
+
+def _recoverable(published, package, thin):
+    """Which (member, thin group) the published rows give back."""
+    span, vector = _published_span(published, package)
+    return [
+        (m, group)
+        for m, groups in thin.items()
+        for group in groups
+        if _in_span(span, vector({m: _atoms_of(group)}))
+    ]
+
+
+def _published(labels, thin):
+    dropped = floor.withheld_age_labels(thin, labels) if thin else set()
+    return (
+        []
+        if dropped is None
+        else [label for label in labels if label not in dropped]
+    )
+
+
+@given(
+    st.lists(
+        st.lists(st.sampled_from(THIN_CHOICES), max_size=3, unique=True),
+        min_size=2,
+        max_size=4,
+    )
+)
+def test_package_less_members_never_gives_back_a_withheld_age(thin_lists):
+    """#340: the package's rows less its members' published rows, and any
+    sum or difference of them, give back no member's thin age group."""
+    thin = {f"m{i}": groups for i, groups in enumerate(thin_lists)}
+    published = {m: _published(PROPERTY_LABELS, t) for m, t in thin.items()}
+    inherited = {YEAR: sorted({g for groups in thin.values() for g in groups})}
+    rows = floor.withhold_thin_age_rows(
+        _age_rows_for(PROPERTY_LABELS), {}, inherited
+    )
+    package = [row["age_band"] for row in rows]
+    assert _recoverable(published, package, thin) == []
+
+
+def test_without_inheritance_the_package_gives_back_a_member_thin_age():
+    """The case #340 found: one member's thin single age (70) is published
+    by the package and every other member, so the difference gives it."""
+    thin = {"a": ["70"], "b": []}
+    published = {m: _published(PROPERTY_LABELS, t) for m, t in thin.items()}
+    own_only = floor.withhold_thin_age_rows(_age_rows_for(PROPERTY_LABELS), {})
+    package = [row["age_band"] for row in own_only]
+    assert ("a", "70") in _recoverable(published, package, thin)
+    inherited = floor.withhold_thin_age_rows(
+        _age_rows_for(PROPERTY_LABELS), {}, {YEAR: ["70"]}
+    )
+    package = [row["age_band"] for row in inherited]
+    assert _recoverable(published, package, thin) == []
+
+
+def test_two_members_thin_at_the_same_age_stay_hidden_as_a_sum():
+    """#340's 359 two-member cells: both members leave the age out, and the
+    package must too, or it less the third member gives back their sum."""
+    thin = {"a": ["70"], "b": ["70"], "c": []}
+    published = {m: _published(PROPERTY_LABELS, t) for m, t in thin.items()}
+    rows = _age_rows_for(PROPERTY_LABELS)
+
+    def their_sum_is_given_back(package):
+        span, vector = _published_span(published, package)
+        return _in_span(span, vector({"a": {"70"}, "b": {"70"}}))
+
+    own_only = [r["age_band"] for r in floor.withhold_thin_age_rows(rows, {})]
+    assert their_sum_is_given_back(own_only)
+    package = [
+        r["age_band"]
+        for r in floor.withhold_thin_age_rows(rows, {}, {YEAR: ["70"]})
+    ]
+    assert "70" not in package and "65+" in package
+    assert not their_sum_is_given_back(package)
+    assert _recoverable(published, package, thin) == []
