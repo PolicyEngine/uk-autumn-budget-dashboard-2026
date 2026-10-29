@@ -4,6 +4,7 @@ import * as d3 from "d3";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { HOUSEHOLD_EXAMPLES } from "../utils/householdExamples";
 import HouseholdCards from "./personal/HouseholdCards";
+import UnavailableMeasures from "./publication/UnavailableMeasures";
 import UnavailableNotice from "./publication/UnavailableNotice";
 import { SingleYearDetails, SingleYearHeadline } from "./personal/SingleYearResults";
 import useHouseholdImpact, { seedHouseholdImpactCache } from "../hooks/useHouseholdImpact";
@@ -31,7 +32,7 @@ export { WIZARD_DEFAULTS };
 import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
 import LocalAuthorityField from "./personal/LocalAuthorityField";
 import { policyQuestions } from "../utils/householdPolicyFields";
-import { withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
+import { removableFromSelection, withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
@@ -575,6 +576,8 @@ const FORM_PANEL_ID = "household-form-panel";
  */
 // Each example's id and full answers, for the cards' background figures
 const EXAMPLE_REQUESTS = HOUSEHOLD_EXAMPLES.map((example) => ({ id: example.id, inputs: presetInputs(example) }));
+// No figures from the file (one object, so it stays the same between renders)
+const NO_PRESET_CHANGES = Object.freeze({});
 
 function HouseholdCalculator({
   selectedPolicies = [],
@@ -582,8 +585,11 @@ function HouseholdCalculator({
   year = DEFAULT_DISPLAY_YEAR,
   publicationKey = "",
   expectedEngine = null,
+  expectedDefinitions = null,
   presetEngine = null,
+  presetDefinitions = null,
   confirmPublication = null,
+  onRemoveUnavailable = null,
   active = true,
 }) {
   const [inputs, setInputs] = useState(() => ({ ...WIZARD_DEFAULTS, ...savedWizard.inputs }));
@@ -629,24 +635,34 @@ function HouseholdCalculator({
   // The examples' precomputed answers, loaded once and added to the
   // session cache; `seeded` tells a request already waiting to look again
   const [seeded, setSeeded] = useState(0);
-  // and each example's change in net income, for its card
-  const [presetChanges, setPresetChanges] = useState({});
-  // Whether the file has been read (until then the cards wait for it rather
-  // than ask the API)
-  const [presetsLoaded, setPresetsLoaded] = useState(false);
+  // and each example's change in net income, for its card, with the
+  // options (below) it was checked against
+  const [presetState, setPresetState] = useState({ key: null, changes: {} });
   // The measures the cards' figures are for: every published one, in the
   // page's order (#104: the page keeps no list of its own). The file's
   // answers count only for exactly these, under the engine their receipts
   // record (`presetEngine`, not the selection's: with nothing selected that
-  // is null, and none are loaded then).
+  // is null, and none are loaded then), and only when the file reports
+  // each one's approved definition (`presetDefinitions`, #136).
   const presetPolicies = useMemo(
     () => policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id),
     [policies],
   );
   const presetKey = presetPolicies.join(",");
+  const presetOptionsKey = JSON.stringify([presetKey, publicationKey, presetEngine, presetDefinitions]);
+  // Figures checked against other options (the definitions or engine just
+  // changed) count for nothing, not even for the render before the file is
+  // read again: the cards wait for that, as they do before the first read
+  const presetsLoaded = presetState.key === presetOptionsKey;
+  const presetChanges = presetsLoaded ? presetState.changes : NO_PRESET_CHANGES;
   useEffect(() => {
     let live = true;
-    const options = { policies: presetPolicies, expectedEngine: presetEngine, publicationKey };
+    const options = {
+      policies: presetPolicies,
+      expectedEngine: presetEngine,
+      expectedDefinitions: presetDefinitions,
+      publicationKey,
+    };
     loadPresetResults(options).then((entries) => {
       if (!live || entries.length === 0) return;
       seedHouseholdImpactCache(entries);
@@ -654,15 +670,15 @@ function HouseholdCalculator({
     });
     loadPresetChanges(options).then((changes) => {
       if (!live) return;
-      setPresetChanges(changes);
-      setPresetsLoaded(true);
+      setPresetState({ key: presetOptionsKey, changes });
     });
     return () => {
       live = false;
     };
-    // presetKey stands for presetPolicies; presetEngine for its own JSON
+    // presetKey stands for presetPolicies; presetEngine and
+    // presetDefinitions for their own JSON
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presetKey, publicationKey, JSON.stringify(presetEngine)]);
+  }, [presetKey, publicationKey, JSON.stringify(presetEngine), JSON.stringify(presetDefinitions)]);
 
   // The example shown, if any: its salary's source goes in "Based on"
   const activePreset = HOUSEHOLD_EXAMPLES.find((preset) => preset.id === presetId);
@@ -689,7 +705,8 @@ function HouseholdCalculator({
     allSelected &&
     HOUSEHOLD_EXAMPLES.every((example) => SELECTABLE_YEARS.every((y) => presetChanges[example.id]?.[y]));
   // Otherwise the cards' figures are asked for in the background, for the
-  // selected measures (useExampleFigures.js)
+  // selected measures, and checked as the calculator's own answers are
+  // (useExampleFigures.js)
   const fill = useExampleFigures({
     examples: EXAMPLE_REQUESTS,
     policies: householdPolicies,
@@ -697,6 +714,7 @@ function HouseholdCalculator({
     enabled: active && presetsLoaded && !presetsAnswer,
     publicationKey,
     expectedEngine,
+    expectedDefinitions,
     confirmPublication,
   });
   // Fill the form from an example and show its result at once (no
@@ -727,6 +745,7 @@ function HouseholdCalculator({
     enabled: submitted !== null,
     publicationKey,
     expectedEngine,
+    expectedDefinitions,
     confirmPublication,
     seeded,
     household: submitted?.household ?? null,
@@ -741,6 +760,21 @@ function HouseholdCalculator({
     submitted !== null &&
     requestKey(buildHouseholdRequest(inputs, { year, policies: requestPolicies })) !==
       requestKey(buildHouseholdRequest(submitted.inputs, { year: submitted.year, policies: submitted.policies }));
+  // Measures the API's code does not compute from their approved
+  // definitions (useHouseholdImpact): unavailable, with the remove action.
+  // A refusal answers the answers, year and policies sent, so it gives way
+  // once they change, as the headline does: it would otherwise list
+  // measures no longer selected, or refuse one as having no approved
+  // definition when it is only no longer selected (the definitions are the
+  // selection's), and a submission restored on coming back is one of those
+  const refusedDefinitions =
+    !changed && householdResult.status === "error" && householdResult.error?.kind === "definition"
+      ? householdResult.error.refused.map((item) => ({
+          id: item.id,
+          name: policies.find((policy) => policy.id === item.id)?.name ?? item.id,
+          why: item.problems,
+        }))
+      : [];
   // Busy while the result for these same answers is calculated (headline,
   // then the split by policy and the sweep). Changed answers can always be
   // sent: a press while the old request runs starts the new one rather than
@@ -1129,6 +1163,8 @@ function HouseholdCalculator({
     presetPolicies: withCalculatorOnly(presetPolicies),
     publicationKey,
     expectedEngine,
+    expectedDefinitions,
+    presetDefinitions,
     basisYear,
     enabled: placed !== null,
   });
@@ -1268,7 +1304,31 @@ function HouseholdCalculator({
         )}
         {(noneSelected || (submitted !== null && !changed)) && (
         <div className="household-results" role="region" aria-label="Results" ref={resultsRef} tabIndex={-1}>
-          {selectionUnavailable ? (
+          {refusedDefinitions.length > 0 && householdResult.error.unchecked ? (
+            // Nothing to tell the measures apart by: removing them all would
+            // empty the national figures too, so offer to ask again instead
+            <UnavailableNotice reason="Household calculator can't be checked right now">
+              <p>
+                The household calculator isn&apos;t reporting the definitions it computes the measures from, so its
+                answers can&apos;t be checked against the published figures.
+              </p>
+              <button type="button" className="light-pill-button" onClick={householdResult.retry}>
+                Try again
+              </button>
+            </UnavailableNotice>
+          ) : refusedDefinitions.length > 0 ? (
+            <UnavailableMeasures
+              reason="Household calculator is unavailable for the selected measures"
+              summary="The household calculator does not compute these measures from the definitions their published figures were approved on:"
+              measures={refusedDefinitions}
+              // Only when taking them out of the selection lifts this: not
+              // for a calculator-only one, in every request, selected or not
+              // (PersonalImpactTab offers none then either)
+              onRemove={
+                removableFromSelection(refusedDefinitions.map(({ id }) => id), selectedPolicies) ? onRemoveUnavailable : undefined
+              }
+            />
+          ) : selectionUnavailable ? (
             <UnavailableNotice reason="Household calculator is unavailable for this selection">
               <p>These measures cannot be calculated for one household: {unavailableNames.join(", ")}.</p>
               <p>Select policies that can all be calculated to see your household&apos;s results.</p>
@@ -1305,7 +1365,7 @@ function HouseholdCalculator({
       </div>
 
       {/* The results' sections, below the form and headline, once asked */}
-      {submitted !== null && !noneSelected && !selectionUnavailable && (
+      {submitted !== null && !noneSelected && !selectionUnavailable && refusedDefinitions.length === 0 && (
         <div role="region" aria-label="Your household's results">
           <SingleYearDetails
             result={householdResult}

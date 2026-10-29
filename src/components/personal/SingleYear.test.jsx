@@ -13,7 +13,9 @@ import { clearBasisIncomeCache } from "../../hooks/useBasisIncome";
 import { presetRequests, resetPresetResults } from "../../utils/householdPresets";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
 import { POLICIES_FOR_TEST } from "../../test/personalPolicies";
+import { APPROVED_COMMIT, approvedDefinition, requestedDefinitions, route, withReportedDefinitions } from "../../test/definitionsFixture";
 import { keepSentence, marginalRateSentence } from "../../utils/singleYear";
+import { withCalculatorOnly } from "../../utils/calculatorOnlyMeasures";
 
 const HOUSEHOLD_API = "https://api.test/api/household-impact";
 // The receipts' model versions, which the household fixture's answer runs:
@@ -24,16 +26,27 @@ const SUPPORTED_POLICY_IDS = POLICIES_FOR_TEST.filter((policy) => HOUSEHOLD_FIXT
 
 let household;
 
-/** Answer the household API with `respond(body)`; any other URL is a 404. */
-function serve(respond) {
+// The example cards' own requests (useExampleFigures.js), asked in the
+// background whenever the precomputed file doesn't answer the selection:
+// told apart by their households, none of them yours
+const EXAMPLE_HOUSEHOLDS = new Set(presetRequests([]).map((entry) => JSON.stringify(entry.request.household)));
+/** The requests for your household: every one but the example cards'. */
+const yours = () => household.filter((body) => !EXAMPLE_HOUSEHOLDS.has(JSON.stringify(body.household)));
+
+/**
+ * Answer the household API with `respond(body)`, beside the definitions an
+ * API running the approved code reports (or `definitionFor(id)` at each
+ * requested commit); any other URL is a 404.
+ */
+function serve(respond, definitionFor) {
   household = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url, init = {}) => {
-      if (url === HOUSEHOLD_API) {
+      if (route(url) === HOUSEHOLD_API) {
         const body = JSON.parse(init.body);
         household.push(body);
-        return respond(body, init);
+        return withReportedDefinitions(await respond(body, init), url, definitionFor);
       }
       return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
     }),
@@ -76,7 +89,7 @@ const testCatalogue = buildMeasureCatalogue({
     }])),
     combined: {},
   },
-  tablesByKey: Object.fromEntries(POLICIES_FOR_TEST.map((policy) => [policy.id, { engine: PUBLISHED_ENGINE }])),
+  tablesByKey: Object.fromEntries(POLICIES_FOR_TEST.map((policy) => [policy.id, { engine: PUBLISHED_ENGINE, definition: approvedDefinition(policy.id) }])),
 });
 function PublishedMeasures({ children }) {
   return <MeasureCatalogueProvider catalogue={testCatalogue}>{children}</MeasureCatalogueProvider>;
@@ -165,7 +178,11 @@ describe("Household calculator's results", () => {
           !url.endsWith("/policy_parameters.json"),
       );
     expect(urls.length).toBeGreaterThan(0);
-    expect(urls.every((url) => url === HOUSEHOLD_API)).toBe(true);
+    expect(urls.every((url) => route(url) === HOUSEHOLD_API)).toBe(true);
+    // Each names every selected measure's approved commit, in id order
+    for (const url of urls) {
+      expect(requestedDefinitions(url)).toEqual([...SUPPORTED_POLICY_IDS].sort().map((id) => [id, APPROVED_COMMIT]));
+    }
   });
 });
 
@@ -215,14 +232,14 @@ describe("the household calculation, from the fixture", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url, init = {}) => {
-        if (url !== HOUSEHOLD_API && url !== DETAIL_API) {
+        if (route(url) !== HOUSEHOLD_API && route(url) !== DETAIL_API) {
           return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
         }
         const body = JSON.parse(init.body);
-        asked.push([url, body.include]);
+        asked.push([route(url), body.include]);
         // The headline waits: nothing else is asked until it answers
         if (body.include.length === 0) await gate;
-        return json({ ...householdAnswerFor(body), git_sha: BUILD });
+        return withReportedDefinitions(json({ ...householdAnswerFor(body), git_sha: BUILD }), url);
       }),
     );
     renderTab();
@@ -253,13 +270,13 @@ describe("the household calculation, from the fixture", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url, init = {}) => {
-        if (url !== HOUSEHOLD_API && url !== DETAIL_API) {
+        if (route(url) !== HOUSEHOLD_API && route(url) !== DETAIL_API) {
           return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
         }
         const body = JSON.parse(init.body);
-        asked.push([url, body.include]);
-        const build = url === DETAIL_API ? "d".repeat(40) : "c".repeat(40);
-        return json({ ...householdAnswerFor(body), git_sha: build });
+        asked.push([route(url), body.include]);
+        const build = route(url) === DETAIL_API ? "d".repeat(40) : "c".repeat(40);
+        return withReportedDefinitions(json({ ...householdAnswerFor(body), git_sha: build }), url);
       }),
     );
     renderTab();
@@ -282,21 +299,23 @@ describe("the household calculation, from the fixture", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url, init = {}) => {
-        if (url !== HOUSEHOLD_API && url !== DETAIL_API) {
+        if (route(url) !== HOUSEHOLD_API && route(url) !== DETAIL_API) {
           return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
         }
         const body = JSON.parse(init.body);
-        asked.push([url, body.include]);
-        return url === HOUSEHOLD_API && body.include.length === 0
+        asked.push([route(url), body.include]);
+        return route(url) === HOUSEHOLD_API && body.include.length === 0
           ? json({ detail: "boom" }, 503)
-          : json(householdAnswerFor(body));
+          : withReportedDefinitions(json(householdAnswerFor(body)), url);
       }),
     );
     renderTab();
     toResults();
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(screen.queryByText(HEADLINE)).not.toBeInTheDocument();
-    // Its parts were asked for with the headline, and none is shown
+    // Cloud Run was asked (the request reached it); the detail service's
+    // parts were asked for with the headline, and none is shown
+    expect(asked).toContainEqual([HOUSEHOLD_API, []]);
     expect(screen.queryByRole("heading", { name: /^Household net income, / })).not.toBeInTheDocument();
   });
 
@@ -726,12 +745,12 @@ describe("switching from one household's card to another", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((url, init = {}) => {
-        if (url !== HOUSEHOLD_API) return Promise.resolve(new Response("{}", { status: 404 }));
+        if (route(url) !== HOUSEHOLD_API) return Promise.resolve(new Response("{}", { status: 404 }));
         const body = JSON.parse(init.body);
         household.push(body);
         return new Promise((resolve, reject) => {
           init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
-          held.push({ body, release: (change) => resolve(json(answerWith(body, change))) });
+          held.push({ body, release: (change) => resolve(withReportedDefinitions(json(answerWith(body, change)), url)) });
         });
       }),
     );
@@ -786,7 +805,8 @@ describe("switching from one household's card to another", () => {
 });
 
 describe("the examples' precomputed results", () => {
-  it("show an example's result from the published file, with no request to the API", async () => {
+  /** Choose an example with the file recording `fileDefinitions`, and wait for its whole result. */
+  async function chooseExample(fileDefinitions) {
     // The file as the precompute writes it: the API's answer for each
     // example's own request (here the fixture's answer)
     // #185 on #104: the file names its own measures; here every measure
@@ -805,9 +825,9 @@ describe("the examples' precomputed results", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url, init = {}) => {
-        if (url.endsWith("/data/household_presets.json")) return json({ policies: PRESET_POLICIES, engine: PUBLISHED_ENGINE, entries });
+        if (url.endsWith("/data/household_presets.json")) return json({ policies: PRESET_POLICIES, engine: PUBLISHED_ENGINE, definitions: fileDefinitions, entries });
         household.push(JSON.parse(init.body));
-        return json(householdAnswerFor(JSON.parse(init.body)));
+        return withReportedDefinitions(json(householdAnswerFor(JSON.parse(init.body))), url);
       }),
     );
     render(
@@ -818,7 +838,24 @@ describe("the examples' precomputed results", () => {
     fireEvent.click(householdItem(/(^|: )A carer working part time/));
     await waitFor(() => expect(headlineCard()).not.toBeNull());
     await splitShown();
+  }
+
+  it("show an example's result from the published file, with no request to the API", async () => {
+    // The file records each measure's approved definition, as the
+    // precompute does (#136)
+    await chooseExample(Object.fromEntries(SUPPORTED_POLICY_IDS.map((id) => [id, approvedDefinition(id)])));
     expect(household).toEqual([]);
+  });
+
+  // #136: the file's answers are checked as a live answer is. One that
+  // reports no definitions (written before them), or another for any
+  // measure, is never shown: the API answers instead, checked.
+  it.each([
+    ["records none", undefined],
+    ["records another for a measure", Object.fromEntries(SUPPORTED_POLICY_IDS.map((id, i) => [id, i ? approvedDefinition(id) : { ...approvedDefinition(id), git_sha: "e".repeat(40) }]))],
+  ])("ask the API for an example's result when the file %s", async (_, definitions) => {
+    await chooseExample(definitions);
+    expect(household.map((body) => body.include)).toEqual([[], ["sweep"], ["by_policy"]]);
   });
 });
 
@@ -1126,6 +1163,328 @@ describe("the fixture", () => {
       ].sort(),
     );
     expect(HOUSEHOLD_FIXTURE.sweep.points).toHaveLength(HOUSEHOLD_FIXTURE.sweep.marginal_rates.length + 1);
+  });
+});
+
+// W5's page follow-up to #125 (coordinator's ruling): measures the API's
+// code computes from other definitions are listed unavailable, with the
+// existing remove action, and no figure is shown
+describe("a household calculation from other definitions", () => {
+  const [changedId] = [...SUPPORTED_POLICY_IDS].sort();
+  const changedName = POLICIES_FOR_TEST.find((policy) => policy.id === changedId).name;
+  const otherDefinition = (id) => {
+    const definition = approvedDefinition(id);
+    return id === changedId ? { ...definition, reform: { ...definition.reform, binding: "code_revision" } } : definition;
+  };
+
+  it("lists the measure unavailable, says how it differs, and offers to remove it", async () => {
+    serve((body) => json(householdAnswerFor(body)), otherDefinition);
+    const remove = vi.fn();
+    renderTab({ onRemoveUnavailable: remove });
+    toResults();
+    const region = await results();
+    expect(await within(region).findByText("Household calculator is unavailable for the selected measures")).toBeInTheDocument();
+    expect(within(region).getByText(/does not compute these measures from the definitions/)).toBeInTheDocument();
+    expect(within(region).getAllByRole("listitem").map((item) => item.textContent)).toEqual([`${changedName}: its reform binding differs`]);
+    expect(within(region).queryByText(HEADLINE)).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Your household's results" })).not.toBeInTheDocument();
+    // No figure beside the form (the form's own answers show their pounds)
+    expect(region.textContent).not.toMatch(/£\d/);
+    fireEvent.click(within(region).getByRole("button", { name: /^Remove .* from the selection$/ }));
+    expect(remove).toHaveBeenCalledWith([changedId]);
+    // Refused at the headline: the breakdown was never asked for
+    expect(yours().map((body) => body.include)).toEqual([[]]);
+  });
+
+  it("shows the results once the API computes every measure from its approved definition", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    renderTab();
+    toResults();
+    expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
+    expect(screen.queryByText("Household calculator is unavailable for the selected measures")).not.toBeInTheDocument();
+  });
+  // Review of 0608183, finding 7: a build that reports no definitions
+  // (one before #125) gives nothing to tell the measures apart by
+  it("says the answers can't be checked when the API reports no definitions, and offers to ask again, not to remove every measure", async () => {
+    let reports = false;
+    household = [];
+    vi.stubGlobal("fetch", vi.fn(async (url, init = {}) => {
+      const body = JSON.parse(init.body);
+      household.push(body);
+      const answer = json(householdAnswerFor(body));
+      return reports ? withReportedDefinitions(answer, url) : answer;
+    }));
+    const remove = vi.fn();
+    renderTab({ onRemoveUnavailable: remove });
+    toResults();
+    const region = await results();
+    expect(await within(region).findByText("Household calculator can't be checked right now")).toBeInTheDocument();
+    expect(within(region).queryByRole("button", { name: /^Remove / })).not.toBeInTheDocument();
+    expect(within(region).queryByText(HEADLINE)).not.toBeInTheDocument();
+    expect(region.textContent).not.toMatch(/£\d/);
+    expect(screen.queryByRole("region", { name: "Your household's results" })).not.toBeInTheDocument();
+    // Asked again once the API reports them, it answers
+    reports = true;
+    fireEvent.click(within(region).getByRole("button", { name: "Try again" }));
+    expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
+    expect(remove).not.toHaveBeenCalled();
+    expect(yours().map((body) => body.include)).toEqual([[], [], ["sweep"], ["by_policy"]]);
+  });
+
+  // Review of 4be6bd9f (findings 1 and 2): a refusal answers the answers,
+  // year and policies sent, and gives way once they change, as #128's
+  // headline does. It never lists a measure no longer selected, nor refuses
+  // one as having no approved definition when it is only no longer selected
+  const NOTICE = "Household calculator is unavailable for the selected measures";
+  const UNCHECKED = "Household calculator can't be checked right now";
+  const SELECT = /Select at least one policy/;
+  // An edit after a result or a refusal: the box goes, with nothing in its
+  // place until Calculate (#185's cards say what to do), so no refusal
+  // outlives the answers it was made for
+  const noResults = () => {
+    expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
+    expect(screen.queryByText(NOTICE)).toBeNull();
+    expect(screen.queryByText(UNCHECKED)).toBeNull();
+  };
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 600));
+  const tab = (selectedPolicies) => (
+    <PersonalImpactTab selectedPolicies={selectedPolicies} policies={POLICIES_FOR_TEST} year={2029} />
+  );
+  const editAnswers = () => fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "40" } });
+  const uncheckedApi = () => {
+    household = [];
+    vi.stubGlobal("fetch", vi.fn(async (url, init = {}) => {
+      const body = JSON.parse(init.body);
+      household.push(body);
+      return json(householdAnswerFor(body));
+    }));
+  };
+
+  it("removing the only selected measure, refused, leaves the prompt to select one", async () => {
+    serve((body) => json(householdAnswerFor(body)), otherDefinition);
+    const { rerender } = renderTab({ selectedPolicies: [changedId] });
+    toResults();
+    expect(await within(await results()).findByText(NOTICE)).toBeInTheDocument();
+    rerender(tab([]));
+    await settle();
+    const region = await results();
+    expect(within(region).queryByText(NOTICE)).not.toBeInTheDocument();
+    expect(within(region).getByText(SELECT)).toBeInTheDocument();
+  });
+
+  it("removing the refused measure while others stay asks again without Calculate", async () => {
+    serve((body) => json(householdAnswerFor(body)), otherDefinition);
+    const { rerender } = renderTab();
+    toResults();
+    expect(await within(await results()).findByText(NOTICE)).toBeInTheDocument();
+    const rest = SUPPORTED_POLICY_IDS.filter((id) => id !== changedId);
+    rerender(tab(rest));
+    expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
+    expect(screen.queryByText(NOTICE)).not.toBeInTheDocument();
+    // With the savings rise the calculator always adds
+    expect(yours().at(-1).policies).toEqual(withCalculatorOnly(rest));
+  });
+
+  it("an edit after a refusal takes it away, and removing the measure then brings nothing back", async () => {
+    serve((body) => json(householdAnswerFor(body)), otherDefinition);
+    const { rerender } = renderTab();
+    toResults();
+    expect(await within(await results()).findByText(NOTICE)).toBeInTheDocument();
+    editAnswers();
+    noResults();
+    const asked = yours().length;
+    rerender(tab(SUPPORTED_POLICY_IDS.filter((id) => id !== changedId)));
+    await settle();
+    noResults();
+    // The edited answers wait for Calculate
+    expect(yours().length).toBe(asked);
+  });
+
+  it("can't-be-checked gives way when every measure is taken out of the bar", async () => {
+    uncheckedApi();
+    const { rerender } = renderTab();
+    toResults();
+    expect(await within(await results()).findByText(UNCHECKED)).toBeInTheDocument();
+    rerender(tab([]));
+    const region = await results();
+    expect(within(region).queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(within(region).getByText(SELECT)).toBeInTheDocument();
+  });
+
+  it("can't-be-checked gives way after an edit and a measure taken out", async () => {
+    uncheckedApi();
+    const { rerender } = renderTab();
+    toResults();
+    expect(await within(await results()).findByText(UNCHECKED)).toBeInTheDocument();
+    editAnswers();
+    const [, ...rest] = SUPPORTED_POLICY_IDS;
+    const asked = yours().length;
+    rerender(tab(rest));
+    await settle();
+    noResults();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(yours().length).toBe(asked);
+  });
+
+  it("a submission restored on coming back that names a removed measure shows no refusal", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const first = renderTab();
+    toResults();
+    expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
+    editAnswers();
+    // The calculator is rebuilt (a gate notice replaced it, or the snapshot
+    // changed) with one measure fewer selected
+    first.unmount();
+    const [, ...rest] = SUPPORTED_POLICY_IDS;
+    const asked = yours().length;
+    render(tab(rest), { wrapper: PublishedMeasures });
+    await settle();
+    noResults();
+    expect(yours().length).toBe(asked);
+  });
+
+  // Re-review of bc41dada (finding A): the hook checks a request again
+  // when the definitions of the measures it asks about change, so a
+  // refusal made against the selection on coming back doesn't outlive it
+  it("a restored submission shows its result once its removed measure is back and the edit undone", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const first = renderTab();
+    toResults();
+    expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
+    editAnswers();
+    first.unmount();
+    const [, ...rest] = SUPPORTED_POLICY_IDS;
+    const { rerender } = render(tab(rest), { wrapper: PublishedMeasures });
+    await settle();
+    noResults();
+    // The measure comes back and the edit is undone: the restored
+    // submission is the request on the page again
+    rerender(tab(SUPPORTED_POLICY_IDS));
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Age" }), { target: { value: "30" } });
+    const region = await results();
+    expect(await within(region).findByText(HEADLINE)).toBeInTheDocument();
+    expect(within(region).queryByText(NOTICE)).not.toBeInTheDocument();
+    expect(household.at(-1).policies).toEqual(withCalculatorOnly(SUPPORTED_POLICY_IDS));
+  });
+
+  it("names only the definitions of the measures it asks about", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    const urls = [];
+    const served = globalThis.fetch;
+    vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+      urls.push(String(url));
+      return served(url, init);
+    }));
+    const first = renderTab();
+    toResults();
+    expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
+    editAnswers();
+    first.unmount();
+    // Asked again on coming back, with another measure selected besides:
+    // its definition is the selection's, not the request's
+    clearHouseholdImpactCache();
+    const [extra] = POLICIES_FOR_TEST.map((policy) => policy.id).filter((id) => !SUPPORTED_POLICY_IDS.includes(id));
+    const before = urls.length;
+    render(tab([...SUPPORTED_POLICY_IDS, extra]), { wrapper: PublishedMeasures });
+    await waitFor(() => expect(urls.length).toBeGreaterThan(before));
+    expect(household.at(-1).policies).toEqual(withCalculatorOnly(SUPPORTED_POLICY_IDS));
+    // The household API's requests (the page also loads its files)
+    const asked = urls.filter((url) => route(url) === HOUSEHOLD_API);
+    expect(asked.length).toBeGreaterThan(0);
+    for (const url of asked) {
+      expect(requestedDefinitions(url).map(([id]) => id).sort()).toEqual([...SUPPORTED_POLICY_IDS].sort());
+    }
+  });
+
+  // Review of 0608183, finding 2: published before the deploy that
+  // registers it, or after a rollback past it
+  it("lists a measure the running code doesn't register as unavailable, with the remove action", async () => {
+    serve((body) => json({
+      detail: [{ type: "value_error", loc: ["body", "policies"], msg: `Value error, Unknown measures: ${changedId}`, input: body.policies, ctx: { error: {} } }],
+    }, 422));
+    const remove = vi.fn();
+    renderTab({ onRemoveUnavailable: remove });
+    toResults();
+    const region = await results();
+    expect(await within(region).findByText("Household calculator is unavailable for the selected measures")).toBeInTheDocument();
+    expect(within(region).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      `${changedName}: the running code cannot bind it: not a measure the running code registers`,
+    ]);
+    fireEvent.click(within(region).getByRole("button", { name: /^Remove .* from the selection$/ }));
+    expect(remove).toHaveBeenCalledWith([changedId]);
+  });
+});
+
+// Review of 34133276, P3: once published, the savings rise goes in every
+// request, selected or not. Refused for its definition, it can't be removed
+// from the selection, so the calculator offers no Remove for it
+describe("a household calculation refused for the calculator-only savings rise", () => {
+  const SAVINGS = "savings_income_rates_up";
+  const SAVINGS_POLICY = { id: SAVINGS, name: "Savings income tax up" };
+  const withSavings = [...POLICIES_FOR_TEST, SAVINGS_POLICY];
+  const savingsCatalogue = buildMeasureCatalogue({
+    manifest: {
+      ...fixtureJson("manifest.json"),
+      measures: Object.fromEntries(withSavings.map((policy) => [policy.id, {
+        ...baseEntry, ...policy, years: [2026, 2027, 2028, 2029, 2030, 2031], unsupported_years: [],
+      }])),
+      combined: {},
+    },
+    tablesByKey: Object.fromEntries(withSavings.map((policy) => [policy.id, { engine: PUBLISHED_ENGINE, definition: approvedDefinition(policy.id) }])),
+  });
+  const otherSavings = (id) => {
+    const definition = approvedDefinition(id);
+    return id === SAVINGS ? { ...definition, reform: { ...definition.reform, binding: "code_revision" } } : definition;
+  };
+  function renderWithSavings(props) {
+    return render(
+      <PersonalImpactTab selectedPolicies={SUPPORTED_POLICY_IDS} policies={withSavings} year={2029} {...props} />,
+      { wrapper: ({ children }) => <MeasureCatalogueProvider catalogue={savingsCatalogue}>{children}</MeasureCatalogueProvider> },
+    );
+  }
+
+  it("lists it unavailable, with no figure, and offers no remove: it is not selected", async () => {
+    expect(SUPPORTED_POLICY_IDS).not.toContain(SAVINGS);
+    serve((body) => json(householdAnswerFor(body)), otherSavings);
+    const remove = vi.fn();
+    renderWithSavings({ onRemoveUnavailable: remove });
+    toResults();
+    const region = await results();
+    expect(await within(region).findByText("Household calculator is unavailable for the selected measures")).toBeInTheDocument();
+    expect(within(region).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      `${SAVINGS_POLICY.name}: its reform binding differs`,
+    ]);
+    expect(region.textContent).not.toMatch(/£\d/);
+    expect(within(region).queryByRole("button", { name: /from the selection$/ })).not.toBeInTheDocument();
+    expect(remove).not.toHaveBeenCalled();
+    // It was asked with the rise, naming its approved definition
+    expect(yours()[0].policies).toContain(SAVINGS);
+  });
+
+  it.each([
+    ["it alone", [SAVINGS]],
+    ["it and a selected measure", [SAVINGS, SUPPORTED_POLICY_IDS[0]]],
+  ])("offers no remove when %s is refused, though selected: every request carries it", async (_, refused) => {
+    // Re-review of edf98756, P3: removed from the selection, it goes back in
+    serve((body) => json(householdAnswerFor(body)), (id) => {
+      const definition = approvedDefinition(id);
+      return refused.includes(id) ? { ...definition, reform: { ...definition.reform, binding: "code_revision" } } : definition;
+    });
+    const remove = vi.fn();
+    renderWithSavings({ selectedPolicies: [...SUPPORTED_POLICY_IDS, SAVINGS], onRemoveUnavailable: remove });
+    toResults();
+    const region = await results();
+    expect(await within(region).findByText("Household calculator is unavailable for the selected measures")).toBeInTheDocument();
+    expect(within(region).getAllByRole("listitem")).toHaveLength(refused.length);
+    expect(within(region).queryByRole("button", { name: /from the selection$/ })).not.toBeInTheDocument();
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it("answers when the API computes it from its approved definition", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    renderWithSavings();
+    toResults();
+    expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
   });
 });
 

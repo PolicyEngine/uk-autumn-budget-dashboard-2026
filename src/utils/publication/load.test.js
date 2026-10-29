@@ -2,6 +2,7 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadArtifact, loadPublication, unverifiedMembers } from "./load";
+import { receiptDefinition } from "./definitions";
 import { fiscalSeries } from "./select";
 import { artifactSha256, jcsSha256, sha256Hex } from "./digest";
 import { parseCsv } from "./csv";
@@ -16,6 +17,16 @@ import {
 
 const manifest = fixtureJson("manifest.json");
 const alpha = manifest.measures.alpha.artifact;
+
+describe("loadArtifact's definition", () => {
+  it("is what the verified receipt approved: its commit and both identities", async () => {
+    const tables = await loadArtifact(BASE_PATH, "alpha", manifest.measures.alpha, { fetchImpl: fixtureFetch() });
+    const receipt = fixtureJson(`${alpha}/receipt.json`);
+    expect(tables.definition).toEqual(receiptDefinition(receipt));
+    expect(tables.definition.git_sha).toBe(receipt.dashboard.git_sha);
+    expect(tables.definition.reform.reform_sha256).toBe(receipt.execution_receipt.reform.reform_sha256);
+  });
+});
 
 async function withheldArtifact(publishWithheld = false) {
   const entry = structuredClone(manifest.measures.alpha);

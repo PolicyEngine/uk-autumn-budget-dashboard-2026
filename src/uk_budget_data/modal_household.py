@@ -76,8 +76,10 @@ TIMEOUT_SECONDS = 300
 # window (the live app was raised to 40 at runtime on 26 October; a deploy
 # applies this value, so it must match). Back to 12 after 17 November.
 MAX_CONTAINERS = int(os.environ.get("HOUSEHOLD_MODAL_MAX_CONTAINERS", "40"))
-# 0: nothing runs, and nothing is paid, while no one asks. Raise only for a
-# set window (the webinar), knowing the price.
+# What the deploy keeps warm, none by default. On the production app,
+# warm_schedule (below) sets both warm counts from
+# household_warm.warm_target within 10 minutes, so this lasts only until its
+# first run; a test app has no schedule and keeps it.
 MIN_CONTAINERS = int(os.environ.get("HOUSEHOLD_MODAL_MIN_CONTAINERS", "0"))
 SCALEDOWN_SECONDS = 120
 # How many requests one Web container takes at once (Modal's

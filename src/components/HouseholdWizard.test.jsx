@@ -4,6 +4,7 @@ import HouseholdCalculator, { FORM_GROUPS, WIZARD_DEFAULTS, resetSavedWizard } f
 import { DEFAULT_SALARY, DEFAULT_SPENDING, REGIONAL_RENT } from "../utils/householdDefaults";
 import { parseAmount } from "./personal/FormControls";
 import { buildHouseholdRequest } from "../utils/householdImpactApi";
+import { APPROVED_COMMIT, approvedDefinition, requestedDefinitions, route } from "../test/definitionsFixture";
 
 beforeEach(() => {
   resetSavedWizard();
@@ -825,9 +826,15 @@ describe("the selected policies' questions", () => {
     const API = "https://api.test/api/household-impact";
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
     // The household API never answers: the first request stays loading
-    vi.stubGlobal("fetch", vi.fn((url) => (url === API ? new Promise(() => {}) : Promise.resolve(new Response("{}", { status: 404 })))));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url) => (route(url) === API ? new Promise(() => {}) : Promise.resolve(new Response("{}", { status: 404 })))),
+    );
+    // With the measures' approved definitions, or the calculator asks
+    // nothing (useHouseholdImpact)
+    const expectedDefinitions = Object.fromEntries(ALL_SEVEN.map((id) => [id, approvedDefinition(id)]));
     try {
-      form(ALL_SEVEN, { year: 2027 });
+      form(ALL_SEVEN, { year: 2027, expectedDefinitions });
       fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
       await waitFor(() => expect(screen.getByRole("button", { name: /Calculating/ })).toBeDisabled());
       // Edited while it runs: Calculate is pressable again, and the results
@@ -845,16 +852,24 @@ describe("the selected policies' questions", () => {
   it("sends the same request for the same answers, wherever they are asked", async () => {
     const API = "https://api.test/api/household-impact";
     const bodies = [];
+    const urls = [];
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url, init = {}) => {
-        if (url === API) bodies.push(JSON.parse(init.body));
+        // Every request names each measure's approved commit in its query
+        if (route(url) === API) {
+          bodies.push(JSON.parse(init.body));
+          urls.push(url);
+        }
         return new Response("{}", { status: 404 });
       }),
     );
+    // The definitions the measures' receipts approved: without them the
+    // calculator asks nothing (useHouseholdImpact)
+    const expectedDefinitions = Object.fromEntries(ALL_SEVEN.map((id) => [id, approvedDefinition(id)]));
     try {
-      form(ALL_SEVEN, { year: 2027 });
+      form(ALL_SEVEN, { year: 2027, expectedDefinitions });
       openSteps();
       fireEvent.change(box("Petrol"), { target: { value: "900" } });
       fireEvent.blur(box("Petrol"));
@@ -866,6 +881,9 @@ describe("the selected policies' questions", () => {
       const answers = { ...WIZARD_DEFAULTS, petrol_spending_per_year: 900, council_tax_band: "B" };
       expect(yours()).toEqual(buildHouseholdRequest(answers, { year: 2027, policies: ALL_SEVEN }));
       expect(yours().household).toMatchObject({ petrol_spending: 900, council_tax_band: "B", diesel_spending: DEFAULT_SPENDING.diesel });
+      expect(requestedDefinitions(urls[bodies.indexOf(yours())]).sort()).toEqual(
+        ALL_SEVEN.map((id) => [id, APPROVED_COMMIT]).sort(),
+      );
     } finally {
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();
@@ -890,18 +908,25 @@ describe("the selected policies' questions", () => {
   it("always adds the savings income tax rise to a household's request, the cards' too", async () => {
     const API = "https://api.test/api/household-impact";
     const bodies = [];
+    const urls = [];
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url, init = {}) => {
-        if (url === API) bodies.push(JSON.parse(init.body));
+        if (route(url) === API) {
+          bodies.push(JSON.parse(init.body));
+          urls.push(url);
+        }
         return new Response("{}", { status: 404 });
       }),
     );
     // The header's selection: the published measures, savings not among them
     const published = ALL_SEVEN.filter((id) => id !== "savings_income_rates_up");
+    // The published measures' approved definitions; the savings rise has
+    // none, having no published figures (calculatorOnlyMeasures.js)
+    const expectedDefinitions = Object.fromEntries(published.map((id) => [id, approvedDefinition(id)]));
     try {
-      form(published, { year: 2027 });
+      form(published, { year: 2027, expectedDefinitions });
       openSteps();
       fireEvent.change(box("Savings interest"), { target: { value: "12000" } });
       fireEvent.blur(box("Savings interest"));
@@ -909,10 +934,16 @@ describe("the selected policies' questions", () => {
       const headline = () => bodies.filter((body) => body.household.savings_interest_income === 12000 && body.include.length === 0);
       await waitFor(() => expect(headline()).toHaveLength(1));
       expect(headline()[0].policies).toEqual([...published, "savings_income_rates_up"]);
-      // Every example card's figures are asked with it too
+      // Asked, not refused for having no approved definition, and naming
+      // only the published measures' definitions
+      const named = published.map((id) => [id, APPROVED_COMMIT]).sort();
+      expect(requestedDefinitions(urls[bodies.indexOf(headline()[0])]).sort()).toEqual(named);
+      // Every example card's figures are asked with it too, naming the
+      // same definitions
       const cards = bodies.filter((body) => body.household.savings_interest_income !== 12000);
       expect(cards.length).toBeGreaterThan(0);
       expect(cards.every((body) => body.policies.at(-1) === "savings_income_rates_up")).toBe(true);
+      for (const body of cards) expect(requestedDefinitions(urls[bodies.indexOf(body)]).sort()).toEqual(named);
     } finally {
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();

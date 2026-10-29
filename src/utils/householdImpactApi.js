@@ -24,6 +24,8 @@
 import statePensionTable from "../uk_budget_data/state_pension.json";
 import { DEFAULT_SPENDING, regionalRent } from "./householdDefaults";
 import { localAuthorityKey } from "./localAuthorities";
+import contract from "./publication/contract.json";
+import { FULL_COMMIT as APPROVED_COMMIT, definitionDifferences, definitionQuery } from "./publication/definitions";
 
 export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
 
@@ -361,6 +363,35 @@ export function requestKey(body) {
   return JSON.stringify(rest);
 }
 
+/** How the API words a measure its code doesn't register (`uk_budget_data.definitions.UNREGISTERED`). */
+export const UNREGISTERED = contract.definition_unregistered;
+
+/** A DefinitionMismatchError's problem for a measure the running code doesn't register. */
+export const UNREGISTERED_PROBLEM = `the running code cannot bind it: ${UNREGISTERED}`;
+
+/**
+ * The requested measures a 422 says the running code doesn't register
+ * (`HouseholdImpactRequest._known_measures`: "Unknown measures: a, b" on
+ * `policies`), in id order. Empty unless every one it names was
+ * requested, so any other refusal keeps its own message.
+ *
+ * @param {*} detail - The 422's `detail`
+ * @param {string[]} requested - The request's `policies`
+ * @returns {string[]}
+ */
+export function unregisteredMeasures(detail, requested) {
+  if (!Array.isArray(detail) || !Array.isArray(requested)) return [];
+  const named = new Set();
+  for (const item of detail) {
+    const loc = Array.isArray(item?.loc) ? item.loc.filter((part) => part !== "body") : [];
+    const match = /Unknown measures: (.+)$/.exec(typeof item?.msg === "string" ? item.msg : "");
+    if (loc.length !== 1 || loc[0] !== "policies" || !match) return [];
+    for (const id of match[1].split(", ")) named.add(id);
+  }
+  const ids = [...named].sort();
+  return ids.length > 0 && ids.every((id) => requested.includes(id)) ? ids : [];
+}
+
 /** "household.age" from FastAPI's ["body", "household", "age"]. */
 function fieldErrors(detail) {
   if (!Array.isArray(detail)) return [];
@@ -381,23 +412,53 @@ function fieldErrors(detail) {
 }
 
 /**
+ * The response's body as JSON, or null if it isn't JSON or can't be read;
+ * rejects with the signal's reason once the signal aborts, even if the body
+ * never ends.
+ */
+function readJson(response, signal) {
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(signal.reason ?? new DOMException("The read was aborted.", "AbortError"));
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
+    Promise.resolve()
+      .then(() => response.json())
+      .then(resolve, () => resolve(null))
+      .finally(() => signal.removeEventListener("abort", onAbort));
+  });
+}
+
+/**
  * POST one stage. Resolves with the parsed JSON; rejects with a
- * HouseholdApiError (an abort by the caller rejects with the AbortError).
+ * HouseholdApiError, or a DefinitionMismatchError naming any selected
+ * measures the running code doesn't register (an abort by the caller
+ * rejects with the AbortError).
  *
  * @param {Object} body - From buildHouseholdRequest
- * @param {{ signal?: AbortSignal, timeoutMs?: number, fetchImpl?: typeof fetch }} [options]
+ * @param {{ signal?: AbortSignal, timeoutMs?: number, fetchImpl?: typeof fetch,
+ *   definitions?: Object<string, {git_sha: string}>, url?: string }} [options] -
+ *   `definitions`: the asked measures' approved definitions, whose
+ *   commits the request names so the answer reports each measure's
+ *   definition at its own (`definitions` in the answer); `url`: another
+ *   address for the same API (the detail URL), which takes the same query
  */
 export async function postHouseholdImpact(
   body,
-  { signal, timeoutMs = REQUEST_TIMEOUT_MS, fetchImpl, url: urlOverride } = {},
+  { signal, timeoutMs = REQUEST_TIMEOUT_MS, fetchImpl, definitions, url: urlOverride } = {},
 ) {
-  const url = urlOverride ?? householdApiUrl();
-  if (!url) {
+  const apiUrl = urlOverride ?? householdApiUrl();
+  if (!apiUrl) {
     throw new HouseholdApiError(
       "config",
       `${HOUSEHOLD_API_VAR} is not set, so this build cannot calculate a household.`,
     );
   }
+  // A query, not the body: a build that predates them still takes the body
+  const query = definitionQuery(definitions);
+  const url = query ? `${apiUrl}${apiUrl.includes("?") ? "&" : "?"}${query}` : apiUrl;
   const doFetch = fetchImpl ?? globalThis.fetch;
   const controller = new AbortController();
   let timedOut = false;
@@ -410,6 +471,7 @@ export async function postHouseholdImpact(
   // A signal aborted before this call never fires its event
   if (signal?.aborted) controller.abort();
   let response;
+  let payload;
   try {
     response = await doFetch(url, {
       method: "POST",
@@ -417,6 +479,10 @@ export async function postHouseholdImpact(
       body: JSON.stringify(body),
       signal: controller.signal,
     });
+    // The timeout and the caller's abort hold until the body is read: a
+    // body that stalls is a timeout, so a detail service's stalled answer
+    // falls back to the main API instead of leaving the part loading
+    payload = await readJson(response, controller.signal);
   } catch (err) {
     if (timedOut) {
       throw new HouseholdApiError(
@@ -431,12 +497,6 @@ export async function postHouseholdImpact(
     signal?.removeEventListener("abort", onAbort);
   }
 
-  let payload = null;
-  try {
-    payload = await response.json();
-  } catch {
-    payload = null;
-  }
   if (response.ok) {
     if (!payload || typeof payload !== "object" || !payload.net_income) {
       throw new HouseholdApiError("server", "The calculation service sent an answer this page cannot read.", {
@@ -448,6 +508,15 @@ export async function postHouseholdImpact(
   }
   const retryAfterMs = retryAfterOf(response, payload);
   const detail = payload?.detail;
+  // Measures the running code doesn't register (one published before the
+  // deploy that adds it, or after a rollback): unavailable, as a definition
+  // the running code can't bind is
+  const unregistered = response.status === 422 ? unregisteredMeasures(detail, body.policies) : [];
+  if (unregistered.length) {
+    throw new DefinitionMismatchError(
+      unregistered.map((id) => ({ id, problems: [UNREGISTERED_PROBLEM] })),
+    );
+  }
   if (response.status === 422 && Array.isArray(detail)) {
     const fields = fieldErrors(detail);
     throw new HouseholdApiError("invalid", "Some answers are outside what the calculation accepts.", {
@@ -656,6 +725,12 @@ export function normaliseHouseholdImpact(raw) {
         }
       : null,
     engine: raw.engine ?? {},
+    // Each named measure's definition as the API's code gives it at the
+    // approved commit; null from a build that reports none
+    definitions:
+      raw.definitions && typeof raw.definitions === "object" && !Array.isArray(raw.definitions)
+        ? raw.definitions
+        : null,
     // The build's commit, or null when the build reports none (a local run,
     // a Modal deploy from an edited checkout, or a build older than this)
     build: buildOf(raw.git_sha),
@@ -717,6 +792,26 @@ export function engineDifferences(expected, reported) {
 }
 
 /**
+ * The household API's code does not compute some selected measures from
+ * the definitions their published figures were approved on (or could not
+ * say). Household calculator is then unavailable for them: `refused` names each,
+ * with how its definition differs. `unchecked`: the answer reported no
+ * definitions at all (a build before #125), so nothing could be checked.
+ */
+export class DefinitionMismatchError extends Error {
+  constructor(refused, { unchecked = false } = {}) {
+    super(
+      `The household calculator does not compute ${refused.map((item) => item.id).join(", ")} ` +
+        "from the definitions their published figures were approved on",
+    );
+    this.name = "DefinitionMismatchError";
+    this.kind = "definition";
+    this.refused = refused;
+    this.unchecked = unchecked;
+  }
+}
+
+/**
  * The model packages a calculation's stages must share. uk_budget_data is
  * left out: every build reports the same project version for it, and a build
  * that doesn't install the project (the Modal image copies it in as a
@@ -740,6 +835,44 @@ export class StageMismatchError extends EngineMismatchError {
     this.name = "StageMismatchError";
     this.message = `The household calculator's breakdown came from another build than its headline (${packages.join(", ")})`;
   }
+}
+
+/**
+ * The selected measures whose reported definition differs from the
+ * approved one, in id order. A measure with no approved definition, or
+ * none reported, is refused: nothing is answered unchecked. An approval
+ * is a definition at a full commit (publishedDefinitions holds back any
+ * other, by the same contract pattern); anything else counts as none, since definitionDifferences, like
+ * the Python check it mirrors, finds nothing between a missing approval
+ * and a report with no commit or identities.
+ *
+ * @param {Object<string, Object>} expected - Approved definitions by id
+ * @param {Object<string, Object>|null} reported - The answer's `definitions`
+ * @param {string[]} [ids] - The selected measures (default: those expected)
+ * @returns {Array<{id: string, problems: string[]}>}
+ */
+export function definitionRefusals(expected, reported, ids = Object.keys(expected ?? {})) {
+  const approved = expected ?? {};
+  const given = reported && typeof reported === "object" && !Array.isArray(reported) ? reported : {};
+  const approvalOf = (id) => {
+    const definition = Object.hasOwn(approved, id) ? approved[id] : null;
+    return definition !== null &&
+      typeof definition === "object" &&
+      !Array.isArray(definition) &&
+      typeof definition.git_sha === "string" &&
+      APPROVED_COMMIT.test(definition.git_sha)
+      ? definition
+      : null;
+  };
+  return [...new Set(ids)]
+    .sort()
+    .map((id) => ({
+      id,
+      problems: approvalOf(id)
+        ? definitionDifferences(approvalOf(id), Object.hasOwn(given, id) ? given[id] : undefined)
+        : ["no approved definition to check it against"],
+    }))
+    .filter((item) => item.problems.length > 0);
 }
 
 /**
@@ -893,9 +1026,10 @@ export const askAllAtOnce = () => householdDetailApiUrl() !== null;
  * A detail part (sweep or split by policy): from the detail URL when the
  * build has one, falling back to the main API if that service cannot be
  * reached, errs, times out (within MODAL_TIMEOUT_MS), refuses the request
- * (an older build may not know a measure) or answers with something
- * `accept` refuses (not the headline's build). The main API's answer is
- * returned as it is: the caller checks it again.
+ * (an older build may not know a measure, or register it: a
+ * DefinitionMismatchError) or answers with something `accept` refuses (not
+ * the headline's build, or other measure definitions). The main API's
+ * answer, or its refusal, is returned as it is: the caller checks it again.
  *
  * The detail URL is not asked twice: a failure there goes to the main API
  * at once, which is quicker than waiting for a cold service. With `retry`
@@ -925,7 +1059,7 @@ export async function postHouseholdDetail(body, { accept = null, detail = true, 
     if (!accept || accept(raw)) return raw;
   } catch (error) {
     if (options.signal?.aborted) throw error;
-    if (!(error instanceof HouseholdApiError)) throw error;
+    if (!(error instanceof HouseholdApiError || error instanceof DefinitionMismatchError)) throw error;
   }
   return main();
 }

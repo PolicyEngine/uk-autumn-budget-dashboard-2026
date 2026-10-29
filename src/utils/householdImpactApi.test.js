@@ -1,19 +1,28 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fc from "fast-check";
 import {
+  DefinitionMismatchError,
   EngineMismatchError,
+  HouseholdApiError,
   STAGE_ENGINE_PACKAGES,
   StageMismatchError,
+  UNREGISTERED,
   atStatePensionAge,
   buildHouseholdRequest,
   consistentRound,
+  definitionRefusals,
   engineDifferences,
   mergeStages,
   normaliseHouseholdImpact,
+  postHouseholdImpact,
   requestKey,
   stageMismatch,
   statePensionFor,
+  unregisteredMeasures,
 } from "./householdImpactApi";
+import contract from "./publication/contract.json";
+import { definitionDifferences } from "./publication/definitions";
+import { approvedDefinition, requestedDefinitions, route } from "../test/definitionsFixture";
 import {
   areaName,
   groupTotals,
@@ -844,6 +853,169 @@ describe("the breakdown's top rows", () => {
   });
 });
 
+describe("the household answer's definitions", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  const ask = async (apiUrl, definitions) => {
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", apiUrl);
+    const fetchImpl = vi.fn(async () => Response.json(HOUSEHOLD_FIXTURE));
+    await postHouseholdImpact({ year: 2029 }, { fetchImpl, definitions });
+    return fetchImpl.mock.calls[0][0];
+  };
+
+  it("names each selected measure's approved commit in the query, the body unchanged", async () => {
+    const definitions = { beta: { ...approvedDefinition(), git_sha: "b".repeat(64) }, alpha: approvedDefinition() };
+    const url = await ask("https://api.test/api/household-impact", definitions);
+    expect(url.startsWith("https://api.test/api/household-impact?")).toBe(true);
+    expect(requestedDefinitions(url)).toEqual([["alpha", "c".repeat(40)], ["beta", "b".repeat(64)]]);
+    expect(await ask("https://api.test/api/household-impact?key=1", definitions)).toMatch(/\?key=1&definition=/);
+  });
+
+  it("asks the route as before when no definitions are named", async () => {
+    expect(await ask("https://api.test/api/household-impact", undefined)).toBe("https://api.test/api/household-impact");
+    expect(await ask("https://api.test/api/household-impact", {})).toBe("https://api.test/api/household-impact");
+  });
+
+  it("keeps the reported definitions, and null from a build that reports none", () => {
+    const definitions = { alpha: approvedDefinition() };
+    expect(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, definitions }).definitions).toEqual(definitions);
+    for (const value of [undefined, null, [], "x"]) {
+      expect(normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, definitions: value }).definitions).toBeNull();
+    }
+  });
+
+  it("refuses each selected measure whose definition differs, and only those, in id order", () => {
+    const measureIds = fc.uniqueArray(fc.constantFrom("alpha", "beta", "gamma", "delta", "constructor", "toString"), { minLength: 1 });
+    fc.assert(fc.property(measureIds, fc.func(fc.constantFrom("same", "commit", "reform", "error", "missing")), (ids, how) => {
+      const expected = Object.fromEntries(ids.map((id) => [id, approvedDefinition()]));
+      const reported = {};
+      for (const id of ids) {
+        const kind = how(id);
+        if (kind === "same") reported[id] = approvedDefinition();
+        if (kind === "commit") reported[id] = { ...approvedDefinition(), git_sha: "e".repeat(40) };
+        if (kind === "reform") reported[id] = { ...approvedDefinition(), reform: { ...approvedDefinition().reform, reform_sha256: "f".repeat(64) } };
+        if (kind === "error") reported[id] = { git_sha: "c".repeat(40), error: "not a measure the running code registers" };
+      }
+      const refused = definitionRefusals(expected, reported, ids);
+      expect(refused.map((item) => item.id)).toEqual(ids.filter((id) => how(id) !== "same").sort());
+      for (const item of refused) expect(item.problems).toEqual(definitionDifferences(expected[item.id], reported[item.id]));
+    }));
+  });
+
+  it("refuses every measure when the answer reports no definitions", () => {
+    const expected = { alpha: approvedDefinition(), beta: approvedDefinition() };
+    for (const reported of [null, undefined, [], {}]) {
+      expect(definitionRefusals(expected, reported)).toEqual([
+        { id: "alpha", problems: ["no definition reported"] },
+        { id: "beta", problems: ["no definition reported"] },
+      ]);
+    }
+  });
+
+  it("refuses a selected measure with no approved definition to check it against", () => {
+    const refused = definitionRefusals({ alpha: approvedDefinition() }, { alpha: approvedDefinition(), beta: approvedDefinition() }, ["beta", "alpha", "beta"]);
+    expect(refused).toEqual([{ id: "beta", problems: ["no approved definition to check it against"] }]);
+  });
+
+  // Mutant B9 on the review of 48584d69's fix: definitionDifferences, the
+  // Python check's twin, finds nothing between a missing approval and a
+  // report with no commit or identities (both sides' fields are null). An
+  // approval is a definition at a full commit (publishedDefinitions holds
+  // back any other), so anything else here is none.
+  it("refuses a measure whose approval is no definition at a full commit, whatever is reported", () => {
+    expect(definitionRefusals({ alpha: undefined }, { alpha: { baseline: {}, reform: {} } }, ["alpha"])).toEqual([
+      { id: "alpha", problems: ["no approved definition to check it against"] },
+    ]);
+    const approval = fc.oneof(
+      fc.constantFrom(undefined, null, {}, [], "c".repeat(40)),
+      fc.jsonValue(),
+      fc.record({ git_sha: fc.option(fc.string({ maxLength: 64 }), { nil: null }), baseline: fc.constant({}), reform: fc.constant({}) }),
+    );
+    const report = fc.oneof(fc.constant({ baseline: {}, reform: {} }), fc.constant(approvedDefinition()), fc.jsonValue());
+    fc.assert(fc.property(approval, report, (approved, reported) => {
+      const atCommit =
+        approved !== null && typeof approved === "object" && !Array.isArray(approved) &&
+        typeof approved.git_sha === "string" && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(approved.git_sha);
+      fc.pre(!atCommit);
+      expect(definitionRefusals({ alpha: approved }, { alpha: reported }, ["alpha"])).toEqual([
+        { id: "alpha", problems: ["no approved definition to check it against"] },
+      ]);
+    }));
+  });
+
+  it("explains a refusal as a definition mismatch naming the measures", () => {
+    const error = new DefinitionMismatchError([{ id: "alpha", problems: ["no definition reported"] }]);
+    expect(error.kind).toBe("definition");
+    expect(error.refused).toEqual([{ id: "alpha", problems: ["no definition reported"] }]);
+    expect(error.message).toMatch(/does not compute alpha from the definitions/);
+    expect(error.unchecked).toBe(false);
+    expect(new DefinitionMismatchError([], { unchecked: true }).unchecked).toBe(true);
+  });
+
+  // Review of 0608183, finding 2: the API refuses a measure its code doesn't
+  // register with a 422, before it reports any definition
+  describe("a 422 naming measures the running code doesn't register", () => {
+    // The API's answer (HouseholdImpactRequest._known_measures, through
+    // FastAPI), as captured from api.py on 25 October
+    const unknown = (ids, requested) => ({
+      detail: [{
+        type: "value_error",
+        loc: ["body", "policies"],
+        msg: `Value error, Unknown measures: ${ids.join(", ")}`,
+        input: requested,
+        ctx: { error: {} },
+      }],
+    });
+    const post = async (payload, policies) => {
+      vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
+      const fetchImpl = vi.fn(async () => Response.json(payload, { status: 422 }));
+      return postHouseholdImpact({ year: 2029, policies }, { fetchImpl }).then(() => null, (error) => error);
+    };
+
+    it("refuses them as definitions the running code can't bind, in the API's words", async () => {
+      const policies = ["badr_lifetime_limit_cut", "zz_new_measure", "aa_other"];
+      const error = await post(unknown(["aa_other", "zz_new_measure"], policies), policies);
+      expect(error).toBeInstanceOf(DefinitionMismatchError);
+      expect(error.unchecked).toBe(false);
+      const problem = `the running code cannot bind it: ${UNREGISTERED}`;
+      expect(error.refused).toEqual([{ id: "aa_other", problems: [problem] }, { id: "zz_new_measure", problems: [problem] }]);
+      // As the page words a reported UNREGISTERED (the contract's vectors)
+      expect(UNREGISTERED).toBe(contract.definition_unregistered);
+      expect(definitionDifferences(approvedDefinition(), { git_sha: "c".repeat(40), error: UNREGISTERED })).toEqual([problem]);
+      expect(contract.definition_vectors.differences.some((vector) => vector.problems.includes(problem))).toBe(true);
+    });
+
+    it("keeps any other 422 as it was", async () => {
+      const policies = ["badr_lifetime_limit_cut"];
+      // A measure it didn't ask for
+      expect(await post(unknown(["zz_new_measure"], ["zz_new_measure"]), policies)).toBeInstanceOf(HouseholdApiError);
+      // Another field refused beside it
+      const both = unknown(["badr_lifetime_limit_cut"], policies);
+      both.detail.push({ type: "less_than_equal", loc: ["body", "household", "children", 0, "age"], msg: "Input should be less than or equal to 19" });
+      const error = await post(both, policies);
+      expect(error).toBeInstanceOf(HouseholdApiError);
+      expect(error.fields.map((field) => field.field)).toEqual(["policies", "household.children.0.age"]);
+      // Another refusal of the measures
+      expect(await post({ detail: [{ loc: ["body", "policies"], msg: "List should have at most 12 items" }] }, policies)).toBeInstanceOf(HouseholdApiError);
+    });
+
+    it("names them exactly when every refusal is of measures the request asked for", () => {
+      const id = fc.stringMatching(/^[a-z][a-z0-9_]{0,10}$/);
+      // Named ids drawn from the requested ones as well as new ones, so a
+      // mix (some asked for, some not) is common (review of 52ec7a10)
+      const requestedAndNamed = fc.uniqueArray(id, { minLength: 1, maxLength: 6 }).chain((requested) =>
+        fc.tuple(fc.constant(requested), fc.uniqueArray(fc.oneof(fc.constantFrom(...requested), id), { minLength: 1, maxLength: 4 })),
+      );
+      fc.assert(fc.property(requestedAndNamed, ([requested, named]) => {
+        const found = unregisteredMeasures(unknown(named, requested).detail, requested);
+        expect(found).toEqual(named.every((name) => requested.includes(name)) ? [...named].sort() : []);
+      }));
+      for (const detail of [undefined, null, "Unknown measures: a", [], [{ loc: ["body", "year"], msg: "Value error, Unknown measures: a" }]]) {
+        expect(unregisteredMeasures(detail, ["a"])).toEqual([]);
+      }
+    });
+  });
+});
+
 describe("postHouseholdDetail", () => {
   const ok = { net_income: { baseline: 1, reform: 2, change: 1 } };
   const respond = (status, body) => ({ ok: status < 400, status, json: async () => body });
@@ -904,6 +1076,64 @@ describe("postHouseholdDetail", () => {
     }
   });
 
+  it("names the asked measures' definitions on the detail URL and on the fallback", async () => {
+    const { postHouseholdDetail } = await import("./householdImpactApi");
+    const main = "https://main.example/api/household-impact";
+    const detail = "https://detail.example/api/household-impact";
+    const saved = { ...process.env };
+    process.env.NEXT_PUBLIC_HOUSEHOLD_API_URL = main;
+    process.env.NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL = detail;
+    try {
+      const asked = [];
+      const fetchDetailDown = async (url) => {
+        asked.push(url);
+        if (route(url) === detail) return respond(503, {});
+        return respond(200, ok);
+      };
+      const definitions = { alpha: approvedDefinition() };
+      await postHouseholdDetail({ include: ["sweep"] }, { fetchImpl: fetchDetailDown, definitions });
+      expect(asked.map(route)).toEqual([detail, main]);
+      for (const url of asked) expect(requestedDefinitions(url)).toEqual([["alpha", "c".repeat(40)]]);
+    } finally {
+      process.env = saved;
+    }
+  });
+
+  // Coordinator, 25 October (m13): a detail build that doesn't register a
+  // measure (one deployed before it, or rolled back) is asked again of the
+  // main API; only the main API's own refusal reaches the page
+  it("asks the main API when the detail URL's code doesn't register a measure, and passes on the main API's own refusal", async () => {
+    const { postHouseholdDetail } = await import("./householdImpactApi");
+    const main = "https://main.example/api/household-impact";
+    const detail = "https://detail.example/api/household-impact";
+    const saved = { ...process.env };
+    process.env.NEXT_PUBLIC_HOUSEHOLD_API_URL = main;
+    process.env.NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL = detail;
+    const unknown = { detail: [{ type: "value_error", loc: ["body", "policies"], msg: "Value error, Unknown measures: beta" }] };
+    const body = { include: ["sweep"], policies: ["alpha", "beta"] };
+    try {
+      const asked = [];
+      const fetchDetailUnregistered = async (url) => {
+        asked.push(url);
+        return url === detail ? respond(422, unknown) : respond(200, ok);
+      };
+      expect(await postHouseholdDetail(body, { fetchImpl: fetchDetailUnregistered })).toEqual(ok);
+      expect(asked).toEqual([detail, main]);
+
+      asked.length = 0;
+      const fetchBothUnregistered = async (url) => {
+        asked.push(url);
+        return respond(422, unknown);
+      };
+      const refusal = await postHouseholdDetail(body, { fetchImpl: fetchBothUnregistered }).catch((error) => error);
+      expect(refusal).toBeInstanceOf(DefinitionMismatchError);
+      expect(refusal.refused.map((item) => item.id)).toEqual(["beta"]);
+      expect(asked).toEqual([detail, main]);
+    } finally {
+      process.env = saved;
+    }
+  });
+
   // W5's review of #104: a signal aborted before the call never fired its
   // abort event, so the request went out regardless
   it("never sends a request for a signal already aborted", async () => {
@@ -920,6 +1150,97 @@ describe("postHouseholdDetail", () => {
       postHouseholdImpact({ include: [] }, { signal: controller.signal, fetchImpl, url: "https://main.example/api/household-impact" }),
     ).rejects.toMatchObject({ name: "AbortError" });
     expect(seen).toEqual([true]);
+  });
+
+  // Coordinator, 26 October (W5's reviewer on #104's code): the timeout and
+  // the caller's abort ended once the response arrived, so a body that never
+  // ended left the part loading instead of falling back to the main API
+  describe("a body that never ends", () => {
+    const main = "https://main.example/api/household-impact";
+    const detail = "https://detail.example/api/household-impact";
+    const stalled = () => ({ ok: true, status: 200, json: () => new Promise(() => {}) });
+    // How the call settles, or "stalled" if it hasn't within `ms`
+    const within = (promise, ms = 2000) => {
+      let timer;
+      const stall = new Promise((resolve) => {
+        timer = setTimeout(() => resolve("stalled"), ms);
+      });
+      return Promise.race([promise.then((value) => ({ value }), (error) => ({ error })), stall]).finally(() =>
+        clearTimeout(timer),
+      );
+    };
+    let saved;
+    beforeEach(() => {
+      saved = { ...process.env };
+      process.env.NEXT_PUBLIC_HOUSEHOLD_API_URL = main;
+      process.env.NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL = detail;
+    });
+    afterEach(() => {
+      process.env = saved;
+    });
+
+    it("is a timeout, whether the response came in time or after it", async () => {
+      const { postHouseholdImpact } = await import("./householdImpactApi");
+      const inTime = await within(postHouseholdImpact({ include: [] }, { fetchImpl: async () => stalled(), timeoutMs: 20 }));
+      expect(inTime.error).toBeInstanceOf(HouseholdApiError);
+      expect(inTime.error.kind).toBe("timeout");
+      // A fetch that ignores the abort and answers after the timeout
+      const late = async () => {
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        return stalled();
+      };
+      const after = await within(postHouseholdImpact({ include: [] }, { fetchImpl: late, timeoutMs: 20 }));
+      expect(after.error).toBeInstanceOf(HouseholdApiError);
+      expect(after.error.kind).toBe("timeout");
+    });
+
+    it("from the detail URL, is asked again of the main API", async () => {
+      const { postHouseholdDetail } = await import("./householdImpactApi");
+      const asked = [];
+      const fetchImpl = async (url) => {
+        asked.push(url);
+        return url === detail ? stalled() : respond(200, ok);
+      };
+      // With a signal of the caller's own, as the page always passes
+      const { signal } = new AbortController();
+      const outcome = await within(postHouseholdDetail({ include: ["sweep"] }, { fetchImpl, signal, timeoutMs: 20 }));
+      expect(outcome).toEqual({ value: ok });
+      expect(asked).toEqual([detail, main]);
+    });
+
+    it("rejects with the AbortError when the caller aborts, and nothing more is asked", async () => {
+      const { postHouseholdDetail } = await import("./householdImpactApi");
+      const asked = [];
+      const controller = new AbortController();
+      const fetchImpl = async (url) => {
+        asked.push(url);
+        setTimeout(() => controller.abort(), 10);
+        return stalled();
+      };
+      const outcome = await within(postHouseholdDetail({ include: ["sweep"] }, { fetchImpl, signal: controller.signal }));
+      expect(outcome.error).toMatchObject({ name: "AbortError" });
+      expect(asked).toEqual([detail]);
+    });
+  });
+
+  it("reads a body that isn't JSON by the status alone", async () => {
+    const { postHouseholdImpact } = await import("./householdImpactApi");
+    const notJson = (status) => async () => ({
+      ok: status < 400,
+      status,
+      json: async () => {
+        throw new SyntaxError("Unexpected token '<'");
+      },
+    });
+    const url = "https://main.example/api/household-impact";
+    await expect(postHouseholdImpact({ include: [] }, { fetchImpl: notJson(504), url })).rejects.toMatchObject({
+      kind: "timeout",
+      status: 504,
+    });
+    await expect(postHouseholdImpact({ include: [] }, { fetchImpl: notJson(200), url })).rejects.toMatchObject({
+      kind: "server",
+      status: 200,
+    });
   });
 
   it("uses the main API alone when told not to ask the detail URL, though the build has one", async () => {

@@ -27,9 +27,11 @@ and their module state), the household calculation (``household_impact``,
 ``personal_impact``, ``publication.combine``), the request's defaults in
 ``api``, and the locked dependencies beyond the versions the page compares.
 A change to any of them since a receipt, or to the image's base layers,
-reaches Personal impact with the definition unchanged; listing them needs
-git history, which the API image lacks, so the runbook's G5 has whoever
-deploys list them.
+reaches Household impact with the definition unchanged. Listing them needs
+git history, which the API image lacks, so ``publish definitions`` lists
+them from the checkout it runs in (``run_check``): the paths committed since
+each receipt's commit that could change a calculation, by the area run's
+rule (``publication.receipt.calculation_changes_since``).
 
 A warning issued from a frame in a bound module leaves a
 ``__warningregistry__`` in it, and the receipt API then refuses to bind
@@ -43,6 +45,7 @@ import copy
 import functools
 import json
 import re
+import subprocess
 import urllib.parse
 from collections.abc import Callable, Iterable
 from pathlib import Path
@@ -53,7 +56,7 @@ from uk_budget_data.publication.receipt import (
     ReceiptUnavailable,
     measure_identities,
 )
-from uk_budget_data.reforms import get_reform
+from uk_budget_data.reforms import SAVINGS_INCOME_RATES_ID, get_reform
 
 # The fields of an identity its digest depends on, the ones the receipt
 # gate compares (``receipt._IDENTITY_FIELDS``); ``name`` is a label.
@@ -65,6 +68,14 @@ SEPARATOR = ":"
 # A measure a request or receipt names that the running code doesn't
 # register: a measure added since this revision, or one it has dropped.
 UNREGISTERED = "not a measure the running code registers"
+# The measures the page's Household calculator adds to every household
+# request that the national results leave out (the page's
+# ``calculatorOnlyMeasures.js``, which names no measure anywhere else, so a
+# test reads its list from there and keeps the two equal). One the manifest
+# doesn't name has no
+# receipt to check its definition against, so the page leaves it unchecked;
+# once named, it is checked as any published measure (``checked_measures``).
+CALCULATOR_ONLY_MEASURES = (SAVINGS_INCOME_RATES_ID,)
 
 # The deploy and rollback pipelines' expectations snippets
 # (cloudbuild*.yaml) call ``definitions_for`` and ``FULL_COMMIT`` inside the
@@ -191,19 +202,30 @@ def receipt_definition(document: dict) -> dict:
     }
 
 
+def _shown(value, otherwise: str = "none") -> str:
+    # A reported value as the page shows it too: only strings are shown.
+    return value if isinstance(value, str) else otherwise
+
+
 def differences(approved: dict, reported) -> list[str]:
     """How a reported definition differs from an approved one (empty when
     it is the same definition). A missing report or an ``error`` is a
-    difference."""
+    difference.
+
+    The page compares the same way (``src/utils/publication/
+    definitions.js``); the contract's ``definition_vectors`` hold the two
+    to the same answers.
+    """
     if not isinstance(reported, dict):
         return ["no definition reported"]
     if "error" in reported:
-        return [f"the running code cannot bind it: {reported['error']}"]
+        reason = _shown(reported["error"], "no reason given")
+        return [f"the running code cannot bind it: {reason}"]
     problems = []
     if reported.get("git_sha") != approved.get("git_sha"):
         problems.append(
-            f"reported at commit {reported.get('git_sha')!r}, not the "
-            f"approved {approved.get('git_sha')!r}"
+            f"reported at commit {_shown(reported.get('git_sha'))}, not "
+            f"the approved {_shown(approved.get('git_sha'))}"
         )
     for side in ("baseline", "reform"):
         theirs = reported.get(side)
@@ -214,6 +236,106 @@ def differences(approved: dict, reported) -> list[str]:
             if theirs.get(name) != approved[side].get(name):
                 problems.append(f"its {side} {name} differs")
     return problems
+
+
+# Cases the page's comparison must answer as ``differences`` does: the
+# contract exports them (``definition_vectors``). Identity values are
+# strings or null, as receipts and the API give them.
+_APPROVED = {
+    "git_sha": "1" * 40,
+    "baseline": {
+        "kind": "current_law",
+        "representation": None,
+        "reform_sha256": None,
+        "binding": "content",
+    },
+    "reform": {
+        "kind": "reform",
+        "representation": "policyengine-uk.scenario/v1",
+        "reform_sha256": "a" * 64,
+        "binding": "code_revision",
+    },
+}
+
+
+def _changed(**sides) -> dict:
+    reported = copy.deepcopy(_APPROVED)
+    for side, fields in sides.items():
+        if isinstance(fields, dict):
+            reported[side].update(fields)
+        else:
+            reported[side] = fields
+    return reported
+
+
+DIFFERENCE_CASES = [
+    _APPROVED,
+    {**_APPROVED, "name": "a label", "extra": 1},
+    None,
+    [],
+    "no",
+    {"git_sha": "1" * 40, "error": UNREGISTERED},
+    {**_APPROVED, "error": "refused"},
+    {"git_sha": "1" * 40, "error": None},
+    {"error": {"reason": 1}},
+    {**_APPROVED, "git_sha": "2" * 40},
+    {key: value for key, value in _APPROVED.items() if key != "git_sha"},
+    {**_APPROVED, "git_sha": None},
+    _changed(reform={"reform_sha256": "b" * 64}),
+    _changed(baseline={"kind": "reform"}),
+    _changed(baseline={"representation": "x"}),
+    _changed(baseline={"representation": {"x": 1}}),
+    _changed(reform={"reform_sha256": 1}),
+    _changed(reform={"binding": "content", "representation": None}),
+    _changed(baseline=None),
+    _changed(reform="not an identity"),
+    {key: value for key, value in _APPROVED.items() if key != "reform"},
+    _changed(reform={"name": "a label"}),
+    {
+        **_changed(reform={"reform_sha256": None}),
+        "git_sha": "3" * 64,
+    },
+    {
+        **_APPROVED,
+        "baseline": {
+            key: value
+            for key, value in _APPROVED["baseline"].items()
+            if value is not None
+        },
+    },
+]
+
+RECEIPT_CASES = [
+    {
+        "execution_receipt": {
+            "baseline": {"kind": "current_law", "binding": "content"},
+            "reform": {**_APPROVED["reform"], "name": "alpha"},
+        },
+        "dashboard": {"git_sha": "1" * 40, "key": "alpha"},
+    },
+    {"execution_receipt": {}, "dashboard": {}},
+    {},
+    {"execution_receipt": {"baseline": None}, "dashboard": None},
+]
+
+
+def definition_vectors() -> dict:
+    """``differences`` and ``receipt_definition`` on fixed cases, for the
+    page's copy of both to reproduce."""
+    return {
+        "differences": [
+            {
+                "approved": _APPROVED,
+                "reported": case,
+                "problems": differences(_APPROVED, case),
+            }
+            for case in DIFFERENCE_CASES
+        ],
+        "receipts": [
+            {"receipt": case, "definition": receipt_definition(case)}
+            for case in RECEIPT_CASES
+        ],
+    }
 
 
 class ApiUnanswered(Exception):
@@ -324,15 +446,125 @@ def manifest_report(
     return sorted(rows, key=lambda row: row["key"])
 
 
+def checked_measures(data_root: Path, ids: Iterable[str]) -> list[str]:
+    """The measures of a household request (``ids``, in order) whose
+    definitions the page checks: every one but a calculator-only measure
+    the publication's manifest does not name, or names as withdrawn (the
+    page's ``publishedRequest`` and ``definitionChecked``). Each of these
+    needs an approved definition, or the page answers nothing.
+    """
+    from uk_budget_data.publication import manifest as m
+
+    manifest = m.load_manifest(data_root)
+
+    def named(key):
+        entry = manifest.measures.get(key)
+        return entry is not None and entry.status != m.WITHDRAWN
+
+    return [
+        key for key in ids if key not in CALCULATOR_ONLY_MEASURES or named(key)
+    ]
+
+
+def approved_definitions(data_root: Path, ids: Iterable[str]) -> dict:
+    """``{id: receipt_definition(receipt)}`` for each of ``ids`` the page
+    displays (approved or provisional): what the page checks the household
+    API's answers for it against (``publishedDefinitions``).
+
+    One with no displayable entry, no readable receipt or no full commit
+    (the only kind the API takes) is left out: the page has nothing to
+    check it against, and answers nothing for it.
+    """
+    from uk_budget_data.publication import manifest as m
+    from uk_budget_data.publication.artifacts import read_receipt
+    from uk_budget_data.publication.publish import artifact_dir
+
+    manifest = m.load_manifest(data_root)
+    approved = {}
+    for key in ids:
+        entry = manifest.measures.get(key)
+        if entry is None or entry.status not in m.DISPLAYABLE:
+            continue
+        try:
+            document = read_receipt(artifact_dir(entry, data_root))
+        except (OSError, ValueError):
+            continue
+        definition = receipt_definition(document)
+        git_sha = definition["git_sha"]
+        if isinstance(git_sha, str) and FULL_COMMIT.fullmatch(git_sha):
+            approved[key] = definition
+    return approved
+
+
+def _changes_in_checkout(
+    git_sha: str, repo_root: Path = Path(".")
+) -> list[str]:
+    from uk_budget_data.publication.receipt import calculation_changes_since
+
+    # One this checkout lacks would otherwise read as a side branch
+    if (
+        FULL_COMMIT.fullmatch(git_sha)
+        and subprocess.run(
+            ["git", "cat-file", "-e", f"{git_sha}^{{commit}}"],
+            cwd=repo_root,
+            capture_output=True,
+        ).returncode
+    ):
+        raise ValueError(
+            f"this checkout has no commit {git_sha[:12]}: fetch it "
+            "(git fetch origin), or unshallow a shallow clone"
+        )
+    return calculation_changes_since(git_sha, repo_root)
+
+
+def changes_lines(rows: list[dict], changes_since) -> list[str]:
+    """For each receipt commit the rows name, the paths committed since it
+    that could change a calculation, as ``changes_since`` lists them.
+
+    A definition binds only a measure's parameter changes and its
+    modifier's own module, so these reach Household impact with every
+    definition the same (runbook G5, step 1). Each commit is listed once,
+    with the measures whose receipts were made at it.
+    """
+    by_commit = {}
+    for row in rows:
+        git_sha = row["git_sha"]
+        if isinstance(git_sha, str) and FULL_COMMIT.fullmatch(git_sha):
+            by_commit.setdefault(git_sha, []).append(row["key"])
+    if not by_commit:
+        return []
+    lines = [
+        "Calculation paths committed since each receipt's commit (no "
+        "definition shows them; runbook G5, step 1):"
+    ]
+    for git_sha, keys in sorted(by_commit.items(), key=lambda item: item[1]):
+        heading = f"  since {git_sha[:12]} ({', '.join(keys)})"
+        try:
+            paths = changes_since(git_sha)
+        except (OSError, ValueError) as error:
+            lines.append(f"{heading}: cannot list them: {error}")
+            continue
+        if not paths:
+            lines.append(f"{heading}: none")
+            continue
+        lines.append(f"{heading}:")
+        lines.extend(f"    {path}" for path in paths)
+    return lines
+
+
 def run_check(
     data_root: Path,
     out=print,
     report: Callable[[dict], dict] = None,
     where: str = "this code",
+    changes_since: Callable[[str], list[str]] = _changes_in_checkout,
 ) -> int:
-    """``publish definitions``: print the report; 1 if any displayed
-    measure's definition is not the approved one, or ``report`` (the
-    household API, ``where``) gave none, else 0."""
+    """``publish definitions``: print the report, then the calculation
+    paths committed since each receipt's commit (``changes_lines``; by
+    default from the checkout in the working directory); 1 if any
+    displayed measure's definition is not the approved one, or ``report``
+    (the household API, ``where``) gave none, else 0. The paths are listed,
+    not counted: whoever deploys judges them (G5)."""
     from uk_budget_data.publication import manifest as m
 
     if not m.manifest_path(data_root).exists():
@@ -351,6 +583,8 @@ def run_check(
                 out(f"  - {problem}")
         else:
             out(f"same    {row['key']} ({row['status']}, receipt {commit})")
+    for line in changes_lines(rows, changes_since):
+        out(line)
     unbound = sum(1 for row in rows if row["problems"])
     out(
         f"{len(rows) - unbound} of {len(rows)} displayed measures have the "

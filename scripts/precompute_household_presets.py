@@ -11,8 +11,13 @@ the live API.
     bun scripts/household-preset-requests.mjs > /tmp/requests.json
     uv run python scripts/precompute_household_presets.py /tmp/requests.json
 
-Re-run whenever the measures, the engine bundle or the examples change; a
-test fails when the file's engine or requests no longer match.
+Re-run whenever the measures, their receipts, the engine bundle or the
+examples change; a test fails when the file's engine or requests no longer
+match. The file records each measure's definition at its receipt's commit
+(``uk_budget_data.definitions``), as the household API reports one beside a
+live answer, and the page uses the file only when every one is the one its
+receipt approved (#136); this refuses, before any calculation, to write a
+file it would not use.
 """
 
 import argparse
@@ -47,13 +52,62 @@ def _run(entry: dict) -> dict:
     return {**entry, "response": response}
 
 
+def _definitions(data_root: Path, policies: list) -> dict:
+    """Each measure's definition at its receipt's commit, from this code.
+
+    Bound before any calculation, as the API binds them: the calculations
+    run in the pool's own processes, so no warning they raise leaves a
+    bound module unbindable (``uk_budget_data.definitions``). Exits when
+    one has no receipt to check it against or is not the approved one: the
+    page would never use the file.
+    """
+    from uk_budget_data import definitions, household_impact
+
+    # Not a calculator-only measure the publication does not name: every
+    # request carries it, and the page checks it only once it is published
+    # (``definitions.checked_measures``)
+    checked = definitions.checked_measures(data_root, policies)
+    approved = definitions.approved_definitions(data_root, checked)
+    recorded = definitions.definitions_for(
+        {key: definition["git_sha"] for key, definition in approved.items()},
+        household_impact.measure_ids(),
+    )
+    problems = {
+        key: ["no published receipt with a full commit to check it against"]
+        for key in checked
+        if key not in approved
+    }
+    for key, definition in approved.items():
+        differ = definitions.differences(definition, recorded.get(key))
+        if differ:
+            problems[key] = differ
+    if problems:
+        for key, lines in sorted(problems.items()):
+            print(f"{key}:", file=sys.stderr)
+            for line in lines:
+                print(f"  - {line}", file=sys.stderr)
+        sys.exit(
+            "The page would not use these answers: each measure's definition "
+            f"must be its receipt's (publish definitions; {data_root})"
+        )
+    return recorded
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("requests", type=Path)
     parser.add_argument("--jobs", type=int, default=2)
     parser.add_argument("--out", type=Path, default=OUT)
+    parser.add_argument(
+        "--data-root",
+        type=Path,
+        default=Path("public/data"),
+        help="the publication whose receipts the definitions are checked by",
+    )
     args = parser.parse_args()
     entries = json.loads(args.requests.read_text())
+    requested = entries[0]["request"]["policies"]
+    recorded = _definitions(args.data_root, requested)
     with ProcessPoolExecutor(max_workers=args.jobs) as pool:
         done = list(pool.map(_run, entries))
     engine = done[0]["response"]["engine"]
@@ -69,7 +123,12 @@ def main() -> None:
         ),
         "generated_on": date.today().isoformat(),
         "engine": engine,
-        "policies": done[0]["request"]["policies"],
+        # The published measures, whose definitions the page checks; not a
+        # calculator-only one the publication does not name, which every
+        # request still carries (its answers include it)
+        "policies": [key for key in requested if key in recorded],
+        # Each measure's, as the API reports them beside a live answer
+        "definitions": recorded,
         "years": sorted({entry["year"] for entry in done}),
         "entries": done,
     }

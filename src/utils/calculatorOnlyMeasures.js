@@ -38,6 +38,39 @@ export const withCalculatorOnly = (policies) =>
 export const withoutCalculatorOnly = (policies) => policies.filter((id) => !isCalculatorOnly(id));
 
 /**
+ * Whether taking `ids` out of the selection (`selected`) can lift a refusal
+ * of them: only when each one is selected and none is calculator-only,
+ * which every household request carries, selected or not
+ * (withCalculatorOnly), so a Remove would change nothing.
+ */
+export const removableFromSelection = (ids, selected) =>
+  ids.every((id) => selected.includes(id) && !isCalculatorOnly(id));
+
+/**
+ * The measures of a household request for `policies` (withCalculatorOnly)
+ * that must be checked against their published figures: every selected
+ * one, and each calculator-only measure the request adds once the
+ * publication names it (`isPublished`); until then it has no receipt to
+ * check it against. A named one's receipt's engine and definition are
+ * required as a selected measure's are; with none, the calculator is
+ * unavailable, never unchecked (PersonalImpactTab).
+ */
+export const publishedRequest = (policies, isPublished) =>
+  withCalculatorOnly(policies).filter((id) => policies.includes(id) || isPublished(id));
+
+/**
+ * The measures among `policies` whose answers are checked against an
+ * approved definition (`definitions`): every one but a calculator-only
+ * measure with none. The page approves every measure of `publishedRequest`
+ * or answers nothing, so the ones left unchecked are exactly the
+ * calculator-only measures the publication does not name: they publish no
+ * figures, the API's running code computes them, and the calculator says
+ * they are not in the national results.
+ */
+export const definitionChecked = (policies, definitions) =>
+  policies.filter((id) => !isCalculatorOnly(id) || Object.hasOwn(definitions ?? {}, id));
+
+/**
  * The measures a household's result covers, in words: the selected ones by
  * number, then each calculator-only one by name ("7 policies and the
  * savings income tax rise"). The number matches the header's selection

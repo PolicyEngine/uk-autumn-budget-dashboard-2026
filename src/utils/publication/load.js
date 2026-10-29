@@ -9,6 +9,7 @@
 
 import { cachedFile, cachedReceipt, forgetReceipt, rememberFile, rememberReceipt } from "./cache";
 import { parseTable, tableForFile, TABLES, withPovertyInequality } from "./csv";
+import { receiptDefinition } from "./definitions";
 import { receiptProblems, sha256Hex, verifyReceiptFiles } from "./digest";
 import { manifestUrl, takeEarlyManifest, takeEarlyResponse } from "./early";
 import { assertCurrentRelease } from "./release";
@@ -133,7 +134,8 @@ async function fetchEarly(fetchImpl, url, signal) {
 
 /**
  * Fetch one entry's artifact and return its verified, typed tables, with
- * the package versions its receipt records as `engine`.
+ * the package versions its receipt records as `engine` and the definition
+ * it approved (its commit and reform identities) as `definition`.
  *
  * No table is requested until its receipt has passed every check. Bytes
  * already verified on this page or a previous visit are read from the
@@ -209,6 +211,7 @@ export async function loadArtifact(
     loaded.metrics = withPovertyInequality(loaded.metrics, loaded.poverty_inequality);
   }
   loaded.engine = receiptEngine(receipt);
+  loaded.definition = receiptDefinition(receipt);
   return loaded;
 }
 

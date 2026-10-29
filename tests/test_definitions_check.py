@@ -5,9 +5,16 @@ Run before a deploy, it lists the measures Personal impact would show as
 unavailable once the household API runs this code.
 """
 
+import importlib.util
 import json
+import re
+import sys
+import tempfile
+from pathlib import Path
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from uk_budget_data import definitions, household_impact
 from uk_budget_data.cli import main
@@ -16,6 +23,10 @@ from uk_budget_data.publication import manifest as m
 MEASURES = household_impact.measure_ids()
 COMMIT = "0123456789abcdef" * 2 + "01234567"
 DIGEST = "0" * 64
+CHANGES_HEADING = (
+    "Calculation paths committed since each receipt's commit (no "
+    "definition shows them; runbook G5, step 1):"
+)
 
 
 @pytest.fixture(autouse=True)
@@ -64,9 +75,15 @@ def _publish(data_root, receipts, statuses=None, combined=()):
     m.save_manifest(manifest, data_root)
 
 
-def _run(data_root):
+def _none_since(git_sha):
+    return []
+
+
+def _run(data_root, changes_since=_none_since):
     lines = []
-    code = definitions.run_check(data_root, lines.append)
+    code = definitions.run_check(
+        data_root, lines.append, changes_since=changes_since
+    )
     return code, lines
 
 
@@ -113,6 +130,8 @@ def test_only_displayed_single_measures_are_compared(tmp_path):
     assert code == 0, lines
     assert lines == [
         f"same    {MEASURES[1]} (provisional, receipt {COMMIT[:12]})",
+        CHANGES_HEADING,
+        f"  since {COMMIT[:12]} ({MEASURES[1]}): none",
         "1 of 1 displayed measures have the approved definition in this code",
     ]
 
@@ -196,6 +215,7 @@ def _api_run(data_root, client):
         lines.append,
         definitions.api_reporter("https://api.example", client=client),
         where="the API at https://api.example",
+        changes_since=_none_since,
     )
     return code, lines
 
@@ -318,3 +338,477 @@ def test_the_command_line_asks_the_named_api(tmp_path, monkeypatch, capsys):
         "1 of 1 displayed measures have the approved definition in the "
         "API at https://tag---api.run.app" in out
     )
+
+
+# --- what no definition shows: calculation paths committed since ----------
+
+
+def _git(repo, *args):
+    import subprocess
+
+    done = subprocess.run(
+        ["git", *args], cwd=repo, capture_output=True, text=True, check=True
+    )
+    return done.stdout.strip()
+
+
+def _commit(repo, files, message):
+    for path, text in files.items():
+        target = repo / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text)
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", message)
+    return _git(repo, "rev-parse", "HEAD")
+
+
+@pytest.fixture
+def repo(tmp_path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    _git(root, "init", "-q", "-b", "main")
+    _git(root, "config", "user.email", "test@example.com")
+    _git(root, "config", "user.name", "Test")
+    return root
+
+
+def _since(repo):
+    from uk_budget_data.publication.receipt import calculation_changes_since
+
+    return lambda git_sha: calculation_changes_since(git_sha, repo)
+
+
+def test_the_calculation_paths_since_a_receipt_are_listed(tmp_path, repo):
+    """A change outside the measures' own modules leaves every definition
+    the same, so the check lists it; docs and the page's own files are not
+    calculation paths."""
+    approved = _commit(repo, {"src/uk_budget_data/x.py": "a = 1\n"}, "a")
+    _commit(
+        repo,
+        {
+            "src/uk_budget_data/measure_templates.py": "b = 2\n",
+            "docs/notes.md": "words\n",
+            "src/App.jsx": "export {};\n",
+        },
+        "b",
+    )
+    data_root = tmp_path / "data"
+    _publish(data_root, {key: _receipt(key, approved) for key in MEASURES})
+    code, lines = _run(data_root, _since(repo))
+    assert code == 0, lines
+    at = lines.index(CHANGES_HEADING)
+    assert lines[at + 1 :] == [
+        f"  since {approved[:12]} ({', '.join(sorted(MEASURES))}):",
+        "    src/uk_budget_data/measure_templates.py",
+        f"{len(MEASURES)} of {len(MEASURES)} displayed measures have the "
+        "approved definition in this code",
+    ]
+
+
+def test_each_receipt_commit_is_listed_once_with_its_measures(tmp_path, repo):
+    first = _commit(repo, {"src/uk_budget_data/x.py": "a = 1\n"}, "a")
+    second = _commit(repo, {"src/uk_budget_data/x.py": "a = 2\n"}, "b")
+    _commit(repo, {"uv.lock": "locked\n"}, "c")
+    data_root = tmp_path / "data"
+    _publish(
+        data_root,
+        {
+            MEASURES[0]: _receipt(MEASURES[0], first),
+            MEASURES[1]: _receipt(MEASURES[1], second),
+            MEASURES[2]: _receipt(MEASURES[2], first),
+        },
+    )
+    code, lines = _run(data_root, _since(repo))
+    assert code == 0, lines
+    at = lines.index(CHANGES_HEADING)
+    assert lines[at + 1 : -1] == [
+        # Each commit's measures in id order
+        f"  since {first[:12]} ({', '.join(sorted((MEASURES[0], MEASURES[2])))}):",
+        "    src/uk_budget_data/x.py",
+        "    uv.lock",
+        f"  since {second[:12]} ({MEASURES[1]}):",
+        "    uv.lock",
+    ]
+
+
+def test_a_commit_the_checkout_does_not_descend_from_says_so(tmp_path, repo):
+    _commit(repo, {"README.md": "x\n"}, "root")
+    _git(repo, "checkout", "-q", "-b", "side")
+    elsewhere = _commit(repo, {"src/uk_budget_data/x.py": "a = 1\n"}, "side")
+    _git(repo, "checkout", "-q", "main")
+    data_root = tmp_path / "data"
+    _publish(data_root, {MEASURES[0]: _receipt(MEASURES[0], elsewhere)})
+    code, lines = _run(data_root, _since(repo))
+    assert code == 0, lines
+    assert lines[-2] == (
+        f"  since {elsewhere[:12]} ({MEASURES[0]}): cannot list them: the "
+        f"approved commit {elsewhere[:12]} is not an ancestor of HEAD"
+    )
+
+
+def test_a_commit_the_checkout_lacks_says_to_fetch_it(tmp_path, repo):
+    """Review of 0608183, finding 5: a receipt commit this checkout hasn't
+    fetched (or a shallow clone lacks) read as one HEAD doesn't descend
+    from. The command's own lister tells the two apart."""
+    _commit(repo, {"README.md": "x\n"}, "root")
+    _git(repo, "checkout", "-q", "-b", "side")
+    elsewhere = _commit(repo, {"src/uk_budget_data/x.py": "a = 1\n"}, "s")
+    _git(repo, "checkout", "-q", "main")
+    missing = "f" * 40
+    data_root = tmp_path / "data"
+    _publish(
+        data_root,
+        {
+            MEASURES[0]: _receipt(MEASURES[0], missing),
+            MEASURES[1]: _receipt(MEASURES[1], elsewhere),
+        },
+    )
+    code, lines = _run(
+        data_root,
+        lambda git_sha: definitions._changes_in_checkout(git_sha, repo),
+    )
+    assert code == 0, lines
+    listed = lines[lines.index(CHANGES_HEADING) + 1 : -1]
+    assert sorted(listed) == sorted(
+        [
+            f"  since {missing[:12]} ({MEASURES[0]}): cannot list them: "
+            f"this checkout has no commit {missing[:12]}: fetch it (git fetch "
+            "origin), or unshallow a shallow clone",
+            f"  since {elsewhere[:12]} ({MEASURES[1]}): cannot list them: the "
+            f"approved commit {elsewhere[:12]} is not an ancestor of HEAD",
+        ]
+    )
+
+
+def test_a_listed_path_does_not_fail_the_check_and_a_difference_still_does(
+    tmp_path, repo
+):
+    approved = _commit(repo, {"README.md": "x\n"}, "a")
+    _commit(repo, {"src/uk_budget_data/models.py": "m = 1\n"}, "b")
+    data_root = tmp_path / "data"
+    changed = _receipt(MEASURES[0], approved)
+    changed["execution_receipt"]["reform"]["reform_sha256"] = "1" * 64
+    _publish(
+        data_root,
+        {MEASURES[0]: changed, MEASURES[1]: _receipt(MEASURES[1], approved)},
+    )
+    code, lines = _run(data_root, _since(repo))
+    assert code == 1
+    assert "    src/uk_budget_data/models.py" in lines
+
+
+def test_rows_without_a_full_commit_are_not_listed(tmp_path):
+    _publish(
+        tmp_path,
+        {
+            MEASURES[0]: None,
+            MEASURES[1]: {"dashboard": {"git_sha": "abc"}},
+        },
+    )
+    asked = []
+    code, lines = _run(tmp_path, lambda git_sha: asked.append(git_sha) or [])
+    assert code == 1
+    assert asked == []
+    assert CHANGES_HEADING not in lines
+
+
+def test_the_command_line_lists_them_from_the_working_directory(
+    tmp_path, repo, monkeypatch, capsys
+):
+    approved = _commit(repo, {"README.md": "x\n"}, "a")
+    _commit(repo, {"pyproject.toml": "[project]\n"}, "b")
+    data_root = tmp_path / "data"
+    _publish(data_root, {MEASURES[0]: _receipt(MEASURES[0], approved)})
+    monkeypatch.chdir(repo)
+    argv = ["publish", "--data-root", str(data_root), "definitions"]
+    assert main(argv) == 0
+    out = capsys.readouterr().out.splitlines()
+    assert out[out.index(CHANGES_HEADING) + 1 :] == [
+        f"  since {approved[:12]} ({MEASURES[0]}):",
+        "    pyproject.toml",
+        "1 of 1 displayed measures have the approved definition in this code",
+    ]
+
+
+@settings(max_examples=60, deadline=None)
+@given(
+    st.lists(
+        st.tuples(
+            st.sampled_from(["a", "b", "c", "d", "e"]),
+            st.sampled_from(["1" * 40, "2" * 40, "3" * 64, "abc", None]),
+        ),
+        unique_by=lambda row: row[0],
+        max_size=5,
+    )
+)
+def test_every_row_with_a_full_commit_is_listed_under_its_commit_once(rows):
+    """Property: the headings name each full commit once, and partition the
+    rows that have one."""
+    rows = [
+        {"key": key, "git_sha": git_sha, "problems": []}
+        for key, git_sha in rows
+    ]
+    lines = definitions.changes_lines(rows, lambda git_sha: [])
+    full = [
+        row
+        for row in rows
+        if isinstance(row["git_sha"], str)
+        and definitions.FULL_COMMIT.fullmatch(row["git_sha"])
+    ]
+    if not full:
+        assert lines == []
+        return
+    assert lines[0] == CHANGES_HEADING
+    named = {}
+    for line in lines[1:]:
+        assert line.endswith(": none")
+        commit, keys = line[len("  since ") :].split(" (", 1)
+        assert commit not in named
+        named[commit] = keys[: -len("): none")].split(", ")
+    assert sorted(key for keys in named.values() for key in keys) == sorted(
+        row["key"] for row in full
+    )
+    for row in full:
+        assert row["key"] in named[row["git_sha"][:12]]
+
+
+# The Household impact examples' file (#136): the page uses its answers only
+# when it records each measure's approved definition, as the API reports one.
+PRECOMPUTE = (
+    Path(__file__).resolve().parents[1]
+    / "scripts"
+    / "precompute_household_presets.py"
+)
+
+
+def _precompute():
+    spec = importlib.util.spec_from_file_location(
+        "precompute_household_presets", PRECOMPUTE
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_approved_definitions_are_the_displayed_receipts_with_a_full_commit(
+    tmp_path,
+):
+    receipts = {
+        MEASURES[0]: _receipt(MEASURES[0]),
+        MEASURES[1]: _receipt(MEASURES[1]),
+        MEASURES[2]: {"dashboard": {"git_sha": "abc"}},
+        MEASURES[3]: None,
+        MEASURES[4]: _receipt(MEASURES[4]),
+    }
+    _publish(
+        tmp_path,
+        receipts,
+        statuses={MEASURES[1]: m.WITHDRAWN, MEASURES[4]: m.PROVISIONAL},
+    )
+    approved = definitions.approved_definitions(
+        tmp_path, [*MEASURES[:5], "not_published"]
+    )
+    assert approved == {
+        key: definitions.receipt_definition(receipts[key])
+        for key in (MEASURES[0], MEASURES[4])
+    }
+
+
+def test_the_examples_file_records_what_the_api_would_report(tmp_path):
+    _publish(tmp_path, {key: _receipt(key) for key in MEASURES})
+    recorded = _precompute()._definitions(tmp_path, list(MEASURES))
+    assert recorded == definitions.definitions_for(
+        {key: COMMIT for key in MEASURES}, MEASURES
+    )
+    for key in MEASURES:
+        assert (
+            definitions.differences(
+                definitions.receipt_definition(_receipt(key)), recorded[key]
+            )
+            == []
+        )
+
+
+@pytest.mark.parametrize(
+    "receipt, problem",
+    [
+        (None, "no published receipt"),
+        ({"dashboard": {"git_sha": "abc"}}, "no published receipt"),
+        ("changed", "its reform reform_sha256 differs"),
+    ],
+)
+def test_no_examples_are_computed_for_a_file_the_page_would_not_use(
+    tmp_path, capsys, receipt, problem
+):
+    if receipt == "changed":
+        receipt = _receipt(MEASURES[0])
+        receipt["execution_receipt"]["reform"]["reform_sha256"] = "1" * 64
+    _publish(
+        tmp_path, {MEASURES[0]: receipt, MEASURES[1]: _receipt(MEASURES[1])}
+    )
+    with pytest.raises(SystemExit) as exited:
+        _precompute()._definitions(tmp_path, [MEASURES[0], MEASURES[1]])
+    assert "would not use these answers" in str(exited.value.code)
+    err = capsys.readouterr().err
+    assert f"{MEASURES[0]}:" in err and problem in err
+    assert f"{MEASURES[1]}:" not in err
+
+
+# Review of bc51d6d2: every household request carries the calculator-only
+# savings rise, so the page checks it, and the examples' file records it,
+# only once the publication names it.
+SAVINGS = "savings_income_rates_up"
+OTHER = next(key for key in MEASURES if key != SAVINGS)
+
+
+CALCULATOR_ONLY_JS = (
+    Path(__file__).resolve().parents[1]
+    / "src"
+    / "utils"
+    / "calculatorOnlyMeasures.js"
+)
+
+
+def test_the_calculator_only_measures_are_the_pages():
+    # The page's list, which the examples' requests carry; the page names
+    # measure ids nowhere else (measureCatalogue.test.jsx), so this reads it
+    # from the module's source: string constants, then each entry's `id`
+    source = CALCULATOR_ONLY_JS.read_text()
+    constants = dict(
+        re.findall(r'^export const (\w+) = "([a-z_]+)";$', source, re.M)
+    )
+    block = re.search(
+        r"^export const CALCULATOR_ONLY_MEASURES = \{([\s\S]*?)\n\};$",
+        source,
+        re.M,
+    ).group(1)
+    ids = [
+        constants[value] if value in constants else json.loads(value)
+        for value in re.findall(r"^\s+id: (\w+|\"[a-z_]+\"),$", block, re.M)
+    ]
+    assert ids == [SAVINGS]
+    assert tuple(ids) == definitions.CALCULATOR_ONLY_MEASURES
+    assert set(ids) <= set(MEASURES)
+
+
+@settings(max_examples=60, deadline=None)
+@given(
+    requested=st.lists(st.sampled_from(MEASURES), unique=True),
+    statuses=st.dictionaries(
+        st.sampled_from(MEASURES),
+        st.sampled_from([m.APPROVED, m.PROVISIONAL, m.WITHDRAWN]),
+    ),
+)
+def test_a_request_checks_every_measure_but_an_unnamed_calculator_only_one(
+    requested, statuses
+):
+    with tempfile.TemporaryDirectory() as directory:
+        data_root = Path(directory)
+        manifest = m.Manifest()
+        for key, status in statuses.items():
+            manifest.measures[key] = _entry(key, status)
+        m.save_manifest(manifest, data_root)
+        checked = definitions.checked_measures(data_root, requested)
+    # The request's measures, in its order
+    assert checked == [key for key in requested if key in checked]
+    for key in requested:
+        named = statuses.get(key, m.WITHDRAWN) != m.WITHDRAWN
+        expected = key not in definitions.CALCULATOR_ONLY_MEASURES or named
+        assert (key in checked) == expected
+
+
+def test_the_examples_file_leaves_an_unpublished_savings_rise_unchecked(
+    tmp_path,
+):
+    # Sol's repro: the current requests carry the savings rise, which has no
+    # published receipt; the check stopped before any calculation
+    _publish(tmp_path, {OTHER: _receipt(OTHER)})
+    recorded = _precompute()._definitions(tmp_path, [OTHER, SAVINGS])
+    assert recorded == definitions.definitions_for({OTHER: COMMIT}, MEASURES)
+    assert SAVINGS not in recorded
+
+
+def test_the_examples_file_leaves_a_withdrawn_savings_rise_unchecked(tmp_path):
+    _publish(
+        tmp_path,
+        {OTHER: _receipt(OTHER), SAVINGS: _receipt(SAVINGS)},
+        statuses={SAVINGS: m.WITHDRAWN},
+    )
+    recorded = _precompute()._definitions(tmp_path, [OTHER, SAVINGS])
+    assert list(recorded) == [OTHER]
+
+
+def test_the_examples_file_records_a_published_savings_rise(tmp_path):
+    _publish(tmp_path, {OTHER: _receipt(OTHER), SAVINGS: _receipt(SAVINGS)})
+    recorded = _precompute()._definitions(tmp_path, [OTHER, SAVINGS])
+    assert sorted(recorded) == sorted([OTHER, SAVINGS])
+    assert (
+        definitions.differences(
+            definitions.receipt_definition(_receipt(SAVINGS)),
+            recorded[SAVINGS],
+        )
+        == []
+    )
+
+
+def test_no_examples_are_computed_when_a_published_savings_rise_has_no_receipt(
+    tmp_path, capsys
+):
+    _publish(tmp_path, {OTHER: _receipt(OTHER), SAVINGS: None})
+    with pytest.raises(SystemExit) as exited:
+        _precompute()._definitions(tmp_path, [OTHER, SAVINGS])
+    assert "would not use these answers" in str(exited.value.code)
+    err = capsys.readouterr().err
+    assert f"{SAVINGS}:" in err and "no published receipt" in err
+    assert f"{OTHER}:" not in err
+
+
+class _InProcessPool:
+    def __init__(self, max_workers):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def map(self, function, items):
+        return map(function, items)
+
+
+def test_the_examples_file_lists_the_measures_it_checks(tmp_path, monkeypatch):
+    # The page checks the file's `policies` (householdPresets.js): the
+    # published ones, while every entry's request still carries the rise
+    module = _precompute()
+    data_root = tmp_path / "data"
+    _publish(data_root, {OTHER: _receipt(OTHER)})
+    requests = tmp_path / "requests.json"
+    request = {"year": 2027, "policies": [OTHER, SAVINGS]}
+    requests.write_text(
+        json.dumps([{"preset_id": "p", "year": 2027, "request": request}])
+    )
+    out = tmp_path / "household_presets.json"
+    monkeypatch.setattr(module, "ProcessPoolExecutor", _InProcessPool)
+    monkeypatch.setattr(
+        module,
+        "_run",
+        lambda entry: {**entry, "response": {"engine": {"p": "1"}}},
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "precompute",
+            str(requests),
+            "--out",
+            str(out),
+            "--data-root",
+            str(data_root),
+        ],
+    )
+    module.main()
+    payload = json.loads(out.read_text())
+    assert payload["policies"] == [OTHER]
+    assert list(payload["definitions"]) == [OTHER]
+    assert payload["entries"][0]["request"]["policies"] == [OTHER, SAVINGS]

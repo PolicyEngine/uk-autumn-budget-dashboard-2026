@@ -1,11 +1,26 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import useHouseholdImpact, { clearHouseholdImpactCache, detailServiceAsked, setHouseholdRetryPolicy, peekHouseholdImpact, rememberHouseholdHeadline, seedHouseholdImpactCache } from "./useHouseholdImpact";
-import { EngineMismatchError, buildHouseholdRequest, normaliseHouseholdImpact, requestKey } from "../utils/householdImpactApi";
+import {
+  BY_POLICY_INCLUDE,
+  DefinitionMismatchError,
+  EngineMismatchError,
+  HEADLINE_INCLUDE,
+  SWEEP_INCLUDE,
+  UNREGISTERED,
+  buildHouseholdRequest,
+  normaliseHouseholdImpact,
+  requestKey,
+} from "../utils/householdImpactApi";
+import { APPROVED_COMMIT, approvedDefinition, reportedDefinitions, requestedDefinitions } from "../test/definitionsFixture";
 import { WIZARD_DEFAULTS } from "../components/HouseholdCalculator";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../test/householdFixture";
 
 beforeEach(clearHouseholdImpactCache);
+
+// Every fixture measure's approved definition, which an API running the
+// approved code reports back (reportedDefinitions)
+const DEFINITIONS = Object.fromEntries(HOUSEHOLD_FIXTURE.included.map((id) => [id, approvedDefinition()]));
 afterEach(() => {
   cleanup();
   clearHouseholdImpactCache();
@@ -18,16 +33,16 @@ it("fetches a fresh answer for the same household after the publication snapshot
   const requests = [];
   let change = HOUSEHOLD_FIXTURE.net_income.change;
   vi.stubGlobal("fetch", async (url, init) => {
-    expect(url).toBe("https://api.test/api/household-impact");
+    expect(url.split("?")[0]).toBe("https://api.test/api/household-impact");
     expect(init.method).toBe("POST");
     const body = JSON.parse(init.body);
     requests.push(body);
     const answer = structuredClone(householdAnswerFor(body));
     answer.net_income.change = change;
     answer.net_income.reform = answer.net_income.baseline + change;
-    return Response.json(answer);
+    return Response.json({ ...answer, definitions: reportedDefinitions(url) });
   });
-  const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true };
+  const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true, expectedDefinitions: DEFINITIONS };
   const first = renderHook(() => useHouseholdImpact({ ...params, publicationKey: "snapshot-one" }));
   await waitFor(() => expect(first.result.current.detailStatus).toBe("ready"));
   expect(first.result.current.data.net.change).toBe(change);
@@ -54,14 +69,14 @@ it("fetches a fresh answer for the same household after the publication snapshot
 // Review of 428d209, finding 2: requests were unbound to the approved
 // definitions; the client now checks what it can.
 describe("Personal impact's live answers", () => {
-  const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true, publicationKey: "snapshot-one" };
+  const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true, publicationKey: "snapshot-one", expectedDefinitions: DEFINITIONS };
   const ENGINE = { policyengine: HOUSEHOLD_FIXTURE.engine.policyengine, "policyengine-uk": HOUSEHOLD_FIXTURE.engine["policyengine-uk"], "policyengine-core": HOUSEHOLD_FIXTURE.engine["policyengine-core"] };
   const serve = (requests, engineFor = () => HOUSEHOLD_FIXTURE.engine) => {
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
     vi.stubGlobal("fetch", async (url, init) => {
       const body = JSON.parse(init.body);
       requests.push(body);
-      return Response.json({ ...structuredClone(householdAnswerFor(body)), engine: engineFor(requests.length) });
+      return Response.json({ ...structuredClone(householdAnswerFor(body)), engine: engineFor(requests.length), definitions: reportedDefinitions(url) });
     });
   };
 
@@ -109,9 +124,12 @@ describe("Personal impact's live answers", () => {
       vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_DETAIL_API_URL", DETAIL);
       vi.stubGlobal("fetch", async (url, init) => {
         const body = JSON.parse(init.body);
-        calls.push(`${url === DETAIL ? "detail" : "main"}:${partOf(body)}`);
-        const answer = await (url === DETAIL ? detailAnswer(body) : mainAnswer(body));
-        return Response.json(answer, { status: statusOf(answer) });
+        // Each request names the asked measures' definitions in its query,
+        // and both services run the approved definitions (#136)
+        const detail = String(url).split("?")[0] === DETAIL;
+        calls.push(`${detail ? "detail" : "main"}:${partOf(body)}`);
+        const answer = await (detail ? detailAnswer(body) : mainAnswer(body));
+        return Response.json({ definitions: reportedDefinitions(url), ...answer }, { status: statusOf(answer) });
       });
     };
     const fromDetail = (change = () => ({})) => (body) => {
@@ -254,7 +272,9 @@ describe("Personal impact's live answers", () => {
       const calls = [];
       twoServices(calls, fromDetail());
       const key = `${params.publicationKey}:${requestKey(buildHouseholdRequest(params.inputs, { year: params.year, policies: params.policies }))}`;
-      const old = normaliseHouseholdImpact({ ...fromMain(buildHouseholdRequest(params.inputs, { year: params.year, policies: params.policies })), git_sha: "d".repeat(40) });
+      // With the definitions its answer reported, as the example cards' fill
+      // keeps it: a headline without them is a miss (PR 136)
+      const old = normaliseHouseholdImpact({ ...fromMain(buildHouseholdRequest(params.inputs, { year: params.year, policies: params.policies })), git_sha: "d".repeat(40), definitions: DEFINITIONS });
       rememberHouseholdHeadline(key, { ...old, byPolicy: null, sweep: null });
       const hook = renderHook(() => useHouseholdImpact({ ...params, expectedEngine: ENGINE }));
       await waitFor(() => expect(hook.result.current.status).toBe("error"));
@@ -365,7 +385,7 @@ describe("Personal impact's live answers", () => {
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
     vi.stubGlobal("fetch", async (url, init) => {
       const body = JSON.parse(init.body);
-      const answer = { ...structuredClone(householdAnswerFor(body)), engine: HOUSEHOLD_FIXTURE.engine };
+      const answer = { ...structuredClone(householdAnswerFor(body)), engine: HOUSEHOLD_FIXTURE.engine, definitions: reportedDefinitions(url) };
       if (body.include[0] === "sweep") answer.sweep = null;
       return Response.json(answer);
     });
@@ -393,7 +413,7 @@ describe("Personal impact's live answers", () => {
           const isBad = part === bad;
           if (part !== "headline") await new Promise((resolve) => setTimeout(resolve, isBad === badFirst ? 0 : 60));
           const engine = isBad ? { ...HOUSEHOLD_FIXTURE.engine, "policyengine-uk": "9.9.9" } : HOUSEHOLD_FIXTURE.engine;
-          return Response.json({ ...structuredClone(householdAnswerFor(body)), engine });
+          return Response.json({ ...structuredClone(householdAnswerFor(body)), engine, definitions: reportedDefinitions(url) });
         });
         const hook = renderHook(() => useHouseholdImpact(params));
         await waitFor(() => expect(hook.result.current.status).toBe("error"));
@@ -441,17 +461,193 @@ describe("Personal impact's live answers", () => {
   });
 });
 
+// W5's page follow-up to #125: each measure's answer must be computed from
+// the definition its receipt approved, checked on both stages.
+describe("Household calculator's definitions", () => {
+  const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true, publicationKey: "snapshot-one" };
+  const expectedDefinitions = DEFINITIONS;
+  const [first, second] = [...HOUSEHOLD_FIXTURE.included].sort();
+  const changed = (definitions, id) => ({
+    ...definitions,
+    [id]: { ...definitions[id], reform: { ...definitions[id].reform, reform_sha256: "e".repeat(64) } },
+  });
+  // Answer request n with `definitionsFor(n, reported, body)`, `reported`
+  // being what an API running the approved code reports
+  const serve = (requests, definitionsFor = (n, reported) => reported) => {
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
+    vi.stubGlobal("fetch", async (url, init) => {
+      const body = JSON.parse(init.body);
+      requests.push({ url, body });
+      const answer = structuredClone(householdAnswerFor(body));
+      const definitions = definitionsFor(requests.length, reportedDefinitions(url), body);
+      return Response.json(definitions === undefined ? answer : { ...answer, definitions });
+    });
+  };
+
+  it("answers when every measure's definition is the approved one, naming them on every request", async () => {
+    const requests = [];
+    serve(requests);
+    const hook = renderHook(() => useHouseholdImpact({ ...params, expectedDefinitions }));
+    await waitFor(() => expect(hook.result.current.detailStatus).toBe("ready"));
+    expect(hook.result.current.status).toBe("ready");
+    // The headline, then the sweep and the split by policy
+    expect(requests).toHaveLength(3);
+    for (const { url } of requests) {
+      expect(requestedDefinitions(url)).toEqual([...HOUSEHOLD_FIXTURE.included].sort().map((id) => [id, APPROVED_COMMIT]));
+    }
+  });
+
+  it("refuses a headline computed from another definition, naming only that measure", async () => {
+    const requests = [];
+    serve(requests, (n, reported) => changed(reported, second));
+    const hook = renderHook(() => useHouseholdImpact({ ...params, expectedDefinitions }));
+    await waitFor(() => expect(hook.result.current.status).toBe("error"));
+    expect(hook.result.current.error).toBeInstanceOf(DefinitionMismatchError);
+    expect(hook.result.current.error.refused).toEqual([{ id: second, problems: ["its reform reform_sha256 differs"] }]);
+    expect(hook.result.current.error.unchecked).toBe(false);
+    expect(hook.result.current.data).toBeNull();
+    // Not asked for the breakdown
+    expect(requests).toHaveLength(1);
+  });
+
+  it("refuses an answer from a build that reports no definitions", async () => {
+    const requests = [];
+    serve(requests, () => undefined);
+    const hook = renderHook(() => useHouseholdImpact({ ...params, expectedDefinitions }));
+    await waitFor(() => expect(hook.result.current.status).toBe("error"));
+    expect(hook.result.current.error.refused.map((item) => item.id)).toEqual([...HOUSEHOLD_FIXTURE.included].sort());
+    expect(hook.result.current.error.refused.every((item) => item.problems[0] === "no definition reported")).toBe(true);
+    // Nothing it reports tells the measures apart (HouseholdCalculator
+    // offers to ask again, not to remove them all)
+    expect(hook.result.current.error.unchecked).toBe(true);
+    expect(requests).toHaveLength(1);
+  });
+
+  it("refuses a selected measure with no approved definition before asking", async () => {
+    const requests = [];
+    serve(requests);
+    const { [first]: _dropped, ...partial } = expectedDefinitions;
+    const hook = renderHook(() => useHouseholdImpact({ ...params, expectedDefinitions: partial }));
+    await waitFor(() => expect(hook.result.current.status).toBe("error"));
+    expect(hook.result.current.error.refused).toEqual([{ id: first, problems: ["no approved definition to check it against"] }]);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(requests).toEqual([]);
+  });
+
+  // Review of 0608183, finding 6: the default was to check nothing
+  it("refuses every selected measure before asking when given no approved definitions", async () => {
+    const requests = [];
+    serve(requests);
+    const { expectedDefinitions: _none, ...unchecked } = params;
+    const hook = renderHook(() => useHouseholdImpact(unchecked));
+    await waitFor(() => expect(hook.result.current.status).toBe("error"));
+    expect(hook.result.current.error).toBeInstanceOf(DefinitionMismatchError);
+    expect(hook.result.current.error.refused).toEqual(
+      [...HOUSEHOLD_FIXTURE.included].sort().map((id) => ({ id, problems: ["no approved definition to check it against"] })),
+    );
+    expect(hook.result.current.data).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(requests).toEqual([]);
+  });
+
+  // Review of 0608183, finding 2: the API refuses a measure its code
+  // doesn't register with a 422 before it reports any definition
+  it("refuses a measure the running code doesn't register, from the API's 422", async () => {
+    const requests = [];
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
+    vi.stubGlobal("fetch", async (url, init) => {
+      const body = JSON.parse(init.body);
+      requests.push({ url, body });
+      return Response.json(
+        { detail: [{ type: "value_error", loc: ["body", "policies"], msg: `Value error, Unknown measures: ${second}`, input: body.policies, ctx: { error: {} } }] },
+        { status: 422 },
+      );
+    });
+    const hook = renderHook(() => useHouseholdImpact({ ...params, expectedDefinitions }));
+    await waitFor(() => expect(hook.result.current.status).toBe("error"));
+    expect(hook.result.current.error).toBeInstanceOf(DefinitionMismatchError);
+    expect(hook.result.current.error.refused).toEqual([{ id: second, problems: [`the running code cannot bind it: ${UNREGISTERED}`] }]);
+    expect(hook.result.current.data).toBeNull();
+    expect(requests).toHaveLength(1);
+  });
+
+  // Each detail part is checked on its own (#147 asks for them at once):
+  // either one from another definition takes the whole answer away
+  for (const bad of ["sweep", "by_policy"]) {
+    it(`takes the whole answer away when the ${bad} part is computed from another definition, and keeps nothing`, async () => {
+      const requests = [];
+      serve(requests, (n, reported, body) => (body.include[0] === bad ? changed(reported, first) : reported));
+      const hook = renderHook(() => useHouseholdImpact({ ...params, expectedDefinitions }));
+      await waitFor(() => expect(hook.result.current.status).toBe("error"));
+      expect(hook.result.current.error).toBeInstanceOf(DefinitionMismatchError);
+      expect(hook.result.current.error.refused.map((item) => item.id)).toEqual([first]);
+      expect(hook.result.current.data).toBeNull();
+      await waitFor(() => expect(requests).toHaveLength(3));
+      // Past the other part's answer, which never brings it back
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      expect(hook.result.current.status).toBe("error");
+      expect(hook.result.current.data).toBeNull();
+      hook.unmount();
+      // Nothing cached, not even the headline: the same request starts again
+      // from the headline, with nothing on screen meanwhile
+      const again = renderHook(() => useHouseholdImpact({ ...params, expectedDefinitions }));
+      expect(again.result.current.data).toBeNull();
+      await waitFor(() => expect(requests.length).toBeGreaterThan(3));
+      expect(requests[3].body.include).toEqual(HEADLINE_INCLUDE);
+      again.unmount();
+    });
+  }
+
+  // Review of 0608183, finding 4: a headline kept from before goes straight
+  // to the breakdown, which must be checked as a fresh headline would be
+  it("refuses a breakdown from another definition under a headline kept from before", async () => {
+    // The reader's Try again, not the page's own retry of a failed part
+    setHouseholdRetryPolicy({ maxRetries: 0 });
+    const requests = [];
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
+    vi.stubGlobal("fetch", async (url, init) => {
+      const body = JSON.parse(init.body);
+      requests.push({ url, body });
+      // The first breakdown's two parts fail; the API is then redeployed
+      if (requests.length === 2 || requests.length === 3) throw new TypeError("Failed to fetch");
+      const reported = reportedDefinitions(url);
+      return Response.json({
+        ...structuredClone(householdAnswerFor(body)),
+        definitions: requests.length > 3 ? changed(reported, first) : reported,
+      });
+    });
+    const hook = renderHook(() => useHouseholdImpact({ ...params, expectedDefinitions }));
+    await waitFor(() => expect(hook.result.current.detailStatus).toBe("error"));
+    expect(hook.result.current.status).toBe("ready");
+    act(() => hook.result.current.retry());
+    await waitFor(() => expect(hook.result.current.status).toBe("error"));
+    expect(hook.result.current.error).toBeInstanceOf(DefinitionMismatchError);
+    expect(hook.result.current.error.refused.map((item) => item.id)).toEqual([first]);
+    expect(hook.result.current.data).toBeNull();
+    // The retry asked only for the breakdown: the headline was the kept one
+    expect(requests.map((request) => request.body.include)).toEqual([
+      HEADLINE_INCLUDE,
+      SWEEP_INCLUDE,
+      BY_POLICY_INCLUDE,
+      SWEEP_INCLUDE,
+      BY_POLICY_INCLUDE,
+    ]);
+  });
+});
+
 // #104 review (m23, P1): every read of the session cache checks the engine,
 // whoever wrote the entry. A seeded answer was checked only against the
-// engine its writer had, which may have been none.
+// engine its writer had, which may have been none. #136: and its
+// definitions, as a live answer's are: a precomputed example's are the ones
+// its file recorded, or none.
 describe("an answer already in the session cache", () => {
   const ENGINE = { policyengine: HOUSEHOLD_FIXTURE.engine.policyengine, "policyengine-uk": HOUSEHOLD_FIXTURE.engine["policyengine-uk"], "policyengine-core": HOUSEHOLD_FIXTURE.engine["policyengine-core"] };
-  const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true, publicationKey: "snapshot-one", expectedEngine: ENGINE };
+  const params = { inputs: WIZARD_DEFAULTS, year: 2029, policies: HOUSEHOLD_FIXTURE.included, enabled: true, publicationKey: "snapshot-one", expectedEngine: ENGINE, expectedDefinitions: DEFINITIONS };
   const key = `snapshot-one:${requestKey(buildHouseholdRequest(WIZARD_DEFAULTS, { year: 2029, policies: HOUSEHOLD_FIXTURE.included }))}`;
-  const seeded = (engine) => {
+  const seeded = (engine, definitions = DEFINITIONS) => {
     const answer = structuredClone(householdAnswerFor(buildHouseholdRequest(WIZARD_DEFAULTS, { year: 2029, policies: HOUSEHOLD_FIXTURE.included, include: ["by_policy", "sweep"] })));
     answer.net_income.change = 4242;
-    return normaliseHouseholdImpact({ ...answer, engine });
+    return normaliseHouseholdImpact({ ...answer, engine, definitions });
   };
   let requests;
   beforeEach(() => {
@@ -459,11 +655,11 @@ describe("an answer already in the session cache", () => {
     vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", "https://api.test/api/household-impact");
     vi.stubGlobal("fetch", async (url, init) => {
       requests += 1;
-      return Response.json(householdAnswerFor(JSON.parse(init.body)));
+      return Response.json({ ...householdAnswerFor(JSON.parse(init.body)), definitions: reportedDefinitions(url) });
     });
   });
 
-  it("is shown at once, asking nothing, when the receipts record its engine", async () => {
+  it("is shown at once, asking nothing, when the receipts record its engine and definitions", async () => {
     seedHouseholdImpactCache([[key, seeded(HOUSEHOLD_FIXTURE.engine)]]);
     const { result } = renderHook(() => useHouseholdImpact(params));
     await waitFor(() => expect(result.current.status).toBe("ready"));
@@ -477,14 +673,30 @@ describe("an answer already in the session cache", () => {
     await waitFor(() => expect(result.current.detailStatus).toBe("ready"));
     expect(requests).toBeGreaterThan(0);
     expect(result.current.data.net.change).not.toBe(4242);
-    expect(peekHouseholdImpact(key, ENGINE).net.change).toBe(result.current.data.net.change);
+    expect(peekHouseholdImpact(key, ENGINE, DEFINITIONS, params.policies).net.change).toBe(result.current.data.net.change);
   });
 
   it("is never returned by a peek under another engine", () => {
     seedHouseholdImpactCache([[key, seeded({ ...HOUSEHOLD_FIXTURE.engine, policyengine: "0.0.0-other" })]]);
-    expect(peekHouseholdImpact(key, ENGINE)).toBeNull();
+    expect(peekHouseholdImpact(key, ENGINE, DEFINITIONS, params.policies)).toBeNull();
     // A reader that expects no engine sees it (none is shown that way: the
     // page expects one whenever a measure is selected)
-    expect(peekHouseholdImpact(key)).not.toBeNull();
+    expect(peekHouseholdImpact(key, null, DEFINITIONS, params.policies)).not.toBeNull();
+  });
+
+  const [measure] = [...HOUSEHOLD_FIXTURE.included].sort();
+  it.each([
+    ["reports none (a file written before them)", null],
+    ["reports another definition for a measure", { ...DEFINITIONS, [measure]: { ...DEFINITIONS[measure], reform: { ...DEFINITIONS[measure].reform, reform_sha256: "e".repeat(64) } } }],
+    ["reports one at another commit", { ...DEFINITIONS, [measure]: { ...DEFINITIONS[measure], git_sha: "f".repeat(40) } }],
+    ["leaves a selected measure out", Object.fromEntries(Object.entries(DEFINITIONS).filter(([id]) => id !== measure))],
+    ["reports a measure its code cannot bind", { ...DEFINITIONS, [measure]: { git_sha: APPROVED_COMMIT, error: UNREGISTERED } }],
+  ])("is a miss when it %s: the API answers, checked, and its answer replaces the entry", async (_, definitions) => {
+    seedHouseholdImpactCache([[key, seeded(HOUSEHOLD_FIXTURE.engine, definitions)]]);
+    const { result } = renderHook(() => useHouseholdImpact(params));
+    await waitFor(() => expect(result.current.detailStatus).toBe("ready"));
+    expect(requests).toBeGreaterThan(0);
+    expect(result.current.data.net.change).not.toBe(4242);
+    expect(peekHouseholdImpact(key, ENGINE, DEFINITIONS, params.policies).definitions).toEqual(DEFINITIONS);
   });
 });

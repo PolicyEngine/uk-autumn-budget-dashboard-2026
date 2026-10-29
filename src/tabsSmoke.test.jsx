@@ -33,6 +33,8 @@ import { dashboardFixtureFetch } from "./test/dashboardFixture";
 import { fixtureJson } from "./test/publicationFixture";
 import { receiptEngine } from "./utils/publication/load";
 import { CANDIDATE_PROVISIONAL_LABEL } from "./utils/publication/manifest";
+import { receiptDefinitionFor, reportedDefinitions, requestedDefinitions, route } from "./test/definitionsFixture";
+import { SAVINGS_INCOME_RATES_ID, withoutCalculatorOnly } from "./utils/calculatorOnlyMeasures";
 import { OBR_CARD_TITLE, OBR_PENDING } from "./components/OBRComparisonTable";
 
 // Every view's code is in before a test renders it (App.jsx lazyView)
@@ -123,19 +125,26 @@ const publicationFetch = dashboardFixtureFetch();
 const PUBLISHED_ENGINE = receiptEngine(
   fixtureJson(`${fixtureJson("manifest.json").measures.alpha.artifact}/receipt.json`),
 );
-function publishedAnswerFor(body) {
+// And compute each measure from the definition its receipt approved: answer
+// with each requested measure's.
+const publishedDefinition = receiptDefinitionFor(fixtureJson);
+function publishedAnswerFor(body, url) {
   const answer = householdAnswerFor(body);
-  return { ...answer, engine: { ...answer.engine, ...PUBLISHED_ENGINE } };
+  return {
+    ...answer,
+    engine: { ...answer.engine, ...PUBLISHED_ENGINE },
+    definitions: reportedDefinitions(url, publishedDefinition),
+  };
 }
 
 function serve(input, init = {}) {
   const url = typeof input === "string" ? input : input.url;
   const method = (init.method ?? input.method ?? "GET").toUpperCase();
   if (url.startsWith(HOUSEHOLD_API)) {
-    const ok = url === HOUSEHOLD_API && method === "POST";
+    const ok = route(url) === HOUSEHOLD_API && method === "POST";
     requests.push({ url, status: ok ? 200 : 404, body: init.body });
     return ok
-      ? new Response(JSON.stringify(publishedAnswerFor(init.body)), {
+      ? new Response(JSON.stringify(publishedAnswerFor(init.body, url)), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         })
@@ -234,7 +243,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
         // figures (the fixture's measures are not the presets file's, so
         // they are asked in the background): headlines, never your household
         const yours = (r) => JSON.parse(r.body).household.age === 30;
-        const beforeCalculate = requests.filter((r) => r.url === HOUSEHOLD_API);
+        const beforeCalculate = requests.filter((r) => route(r.url) === HOUSEHOLD_API);
         expect(beforeCalculate.filter(yours)).toEqual([]);
         expect(beforeCalculate.every((r) => JSON.parse(r.body).include.length === 0)).toBe(true);
         // Every answer has a default: one press asks the household API in
@@ -247,11 +256,19 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
           timeout: 5000,
         });
         for (const menu of downloadMenus(panel)) expect(menu.formats, menu.name).toEqual(STANDARD_FORMATS);
-        const stages = requests
-          .filter((r) => r.url === HOUSEHOLD_API && yours(r))
-          .map((r) => JSON.parse(r.body).include);
-        expect(stages).toEqual([[], ["sweep"], ["by_policy"]]);
-        expect(requests.filter((r) => r.url.startsWith(API)).every((r) => r.url === HOUSEHOLD_API)).toBe(
+        const asked = requests.filter((r) => route(r.url) === HOUSEHOLD_API);
+        expect(asked.filter(yours).map((r) => JSON.parse(r.body).include)).toEqual([[], ["sweep"], ["by_policy"]]);
+        // Every request, the example cards' too, names each measure it
+        // asks about with that measure's approved commit. The saver's card
+        // also asks with the calculator-only savings rise, which has no
+        // published figures and so no approved definition to name
+        expect(asked.some((r) => JSON.parse(r.body).policies.includes(SAVINGS_INCOME_RATES_ID))).toBe(true);
+        for (const r of asked) {
+          const named = requestedDefinitions(r.url);
+          expect(named.map(([id]) => id)).toEqual(withoutCalculatorOnly(JSON.parse(r.body).policies).sort());
+          for (const [id, commit] of named) expect(commit).toBe(publishedDefinition(id).git_sha);
+        }
+        expect(requests.filter((r) => r.url.startsWith(API)).every((r) => route(r.url) === HOUSEHOLD_API)).toBe(
           true,
         );
         for (const pattern of FAILURE_TEXT) {
@@ -333,7 +350,7 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
       "fetch",
       vi.fn(async (input, init = {}) => {
         const url = typeof input === "string" ? input : input.url;
-        if (url === HOUSEHOLD_API) {
+        if (route(url) === HOUSEHOLD_API) {
           return new Promise((resolve, reject) => {
             init.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
             held.push(() => resolve(serve(input, init)));
@@ -360,14 +377,14 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
     await waitFor(() => expect(held).toHaveLength(2));
     held.shift()();
     held.shift()();
-    await waitFor(() => expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(3));
+    await waitFor(() => expect(requests.filter((r) => route(r.url) === HOUSEHOLD_API)).toHaveLength(3));
 
     // Back: the same view, with the finished answer, and nothing asked again
     fireEvent.click(screen.getByRole("tab", { name: "Household calculator" }));
     expect(screen.getByRole("tabpanel", { name: "Household calculator" })).toBe(personal);
     expect(await within(personal).findByText(/^Your change$/)).toBeInTheDocument();
     await waitFor(() => expect(personal.querySelector('.net-income-waterfall[data-split="ready"]')).not.toBeNull());
-    expect(requests.filter((r) => r.url === HOUSEHOLD_API)).toHaveLength(3);
+    expect(requests.filter((r) => route(r.url) === HOUSEHOLD_API)).toHaveLength(3);
     expect(held).toHaveLength(0);
   });
 
@@ -410,8 +427,9 @@ describe("each of the five tabs and Population impact's sub-tabs, on a verified 
       "fetch",
       vi.fn(async (input, init = {}) => {
         const url = typeof input === "string" ? input : input.url;
-        // The household API never answers here
-        if (url === HOUSEHOLD_API) return new Promise(() => {});
+        // The household API never answers here (every request names the
+        // definitions it expects, so it is told by its route)
+        if (route(url) === HOUSEHOLD_API) return new Promise(() => {});
         return serve(input, init);
       }),
     );
