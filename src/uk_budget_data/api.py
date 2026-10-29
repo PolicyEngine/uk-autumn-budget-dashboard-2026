@@ -23,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from uk_budget_data import definitions, household_impact
+from uk_budget_data import definitions, household_impact, mileage_rates
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.personal_impact import (
     HouseholdInput,
@@ -517,6 +517,27 @@ class HouseholdAnswersRequest(BaseModel):
             "receipts less expenses"
         ),
     )
+    business_miles: int = Field(
+        default=0,
+        ge=0,
+        le=mileage_rates.MAX_BUSINESS_MILES,
+        description=(
+            "The head's business miles a year in their own car or van, as "
+            "whole miles (a fraction is refused), for "
+            "the household-only measure mileage_rates_raise (the Budget's "
+            "35p a mile above 10,000 miles from 2027-28, against current "
+            "law's 25p). Left out: none, and the household is as before"
+        ),
+    )
+    business_miles_role: Literal[mileage_rates.ROLES] = Field(
+        default=mileage_rates.EMPLOYEE,
+        description=(
+            "Whether the business miles are driven as an employee "
+            "(Mileage Allowance Relief, from income tax) or self-employed "
+            "(the flat rate deduction from profit, for income tax and "
+            "Class 4); read only with business_miles"
+        ),
+    )
 
     def answers(self) -> household_impact.HouseholdAnswers:
         values = self.model_dump()
@@ -580,7 +601,9 @@ class HouseholdImpactRequest(BaseModel):
     def _known_measures(cls, policies: Optional[list[str]]):
         if policies is None:
             return policies
-        unknown = sorted(set(policies) - set(household_impact.measure_ids()))
+        unknown = sorted(
+            set(policies) - set(household_impact.household_measure_ids())
+        )
         if unknown:
             raise ValueError(f"Unknown measures: {', '.join(unknown)}")
         return policies

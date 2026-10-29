@@ -78,6 +78,15 @@ from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
     carers_allowance_earnings_taper,
 )
 from uk_budget_data.budget_years import POLICY_YEARS
+from uk_budget_data.mileage_rates import (
+    EMPLOYEE,
+    MILEAGE_RATES_ID,
+    MILEAGE_RATES_NAME,
+    SELF_EMPLOYED,
+    car_and_van_rates,
+    deduction_change,
+    mileage_inputs,
+)
 from uk_budget_data.models import DataConfig, Reform
 from uk_budget_data.publication.combine import (
     CombineConflict,
@@ -543,7 +552,9 @@ PROGRAMMES = (
         "person",
         note=(
             "Receipts less allowable expenses, before the trading allowance, "
-            "which comes off taxable income."
+            "which comes off taxable income. With business miles driven "
+            "self-employed, less Universal Credit's flat rate for them too; "
+            "the tax rates' excess over it comes off taxable income."
         ),
     ),
     Programme(
@@ -717,13 +728,34 @@ NET_INCOME_PARTS = (
 
 
 def measure_ids() -> list[str]:
-    """The measures the household calculation accepts: every registered
-    single measure (the combined measure is the sum of these)."""
+    """The registered measures the household calculation accepts: every
+    registered single measure (the combined measure is the sum of these)."""
     return [
         reform.id
         for reform in get_autumn_budget_2026_reforms()
         if reform.id != AUTUMN_BUDGET_2026_COMBINED_ID
     ]
+
+
+# Measures for the household calculation only, by id, with their names: not
+# in reforms.py's registry, so in no national figure, manifest or receipt.
+# Each changes the household's own inputs between the two sides rather than
+# the engine's rules: the mileage rates the head's deductions for business
+# miles (mileage_rates).
+HOUSEHOLD_ONLY_MEASURES = {MILEAGE_RATES_ID: MILEAGE_RATES_NAME}
+
+
+def household_measure_ids() -> list[str]:
+    """Every measure the household calculation accepts: the registered
+    ones (``measure_ids``), then the household-only ones."""
+    return measure_ids() + list(HOUSEHOLD_ONLY_MEASURES)
+
+
+def measure_name(measure_id: str) -> str:
+    """A measure's name, registered or household-only."""
+    if measure_id in HOUSEHOLD_ONLY_MEASURES:
+        return HOUSEHOLD_ONLY_MEASURES[measure_id]
+    return get_reform(measure_id).name
 
 
 # The average UK household's domestic electricity spending, £ a year
@@ -811,6 +843,12 @@ class HouseholdAnswers:
     # between the trading allowance and the actual expenses.
     self_employment_receipts: float = 0
     self_employment_expenses: float = 0
+    # The head's business miles a year in their own car or van, as whole
+    # miles, all driven as an employee (EMPLOYEE) or all as self-employed
+    # (SELF_EMPLOYED), for the tax-free mileage rates (mileage_rates). With
+    # none, the household is built exactly as before the form asked.
+    business_miles: int = 0
+    business_miles_role: str = EMPLOYEE
 
     @property
     def self_employed(self) -> bool:
@@ -1122,12 +1160,17 @@ def council_tax_row_note(answers: "HouseholdAnswers") -> str:
 
 
 def household_entities(
-    answers: HouseholdAnswers, year: Optional[int] = None
+    answers: HouseholdAnswers,
+    year: Optional[int] = None,
+    budget_mileage: bool = False,
 ) -> tuple[list, dict, dict]:
     """The household as policyengine.py's ``people``, ``benunit`` and
     ``household`` inputs (policyengine-uk variable names, one year's
     values). With ``year``, salaries are grown to it (``salaries_in``);
     without, they are taken as entered.
+
+    The head's business miles take current law's mileage rates, or with
+    ``budget_mileage`` the Budget's (``mileage_rates.mileage_inputs``).
 
     The head and any partner are stated to be the benefit unit's claimant
     and partner, and every child not: left to presume it from ages,
@@ -1173,6 +1216,20 @@ def household_entities(
         people[0][
             "self_employment_gross_receipts"
         ] = answers.self_employment_receipts
+    if answers.business_miles:
+        # Only with business miles, so every other household is exactly as
+        # before. A self-employed driver's miles come off the profit above
+        people[0] = mileage_inputs(
+            answers.business_miles,
+            answers.business_miles_role,
+            answers.salary_year if year is None else year,
+            budget=budget_mileage,
+            profit=(
+                people[0]["self_employment_income"]
+                if answers.self_employed
+                else None
+            ),
+        ).on(people[0])
     if answers.is_carer:
         # Only for a carer, so a non-carer's household is exactly as before
         # (no care_hours: policyengine-uk's default, 0)
@@ -1958,6 +2015,10 @@ SKIP_REASONS = {
     "trading_allowance_raise": (
         "no self-employment receipts, or before 2027-28"
     ),
+    MILEAGE_RATES_ID: (
+        "no business miles above 10,000, or before 2027-28, or "
+        "self-employed miles with no self-employment"
+    ),
 }
 
 
@@ -2021,7 +2082,61 @@ def provably_unaffected(
         # The allowance reads trading receipts (and profit), which only
         # the head's self-employment answers give.
         return year < TRADING_ALLOWANCE_FROM or not answers.self_employed
+    if measure_id == MILEAGE_RATES_ID:
+        # Against current law the Budget raises only the rate above 10,000
+        # miles, from 2027-28; with no change the two sides' inputs are the
+        # same. Self-employed miles need a profit to come off.
+        return deduction_change(answers.business_miles, year) == 0 or (
+            answers.business_miles_role == SELF_EMPLOYED
+            and not answers.self_employed
+        )
     return False
+
+
+def mileage_used(
+    answers: HouseholdAnswers, year: int, applied: bool
+) -> Optional[dict]:
+    """The head's business miles as the calculation read them: the miles,
+    the role, both sides' rates for the year, how much the Budget raises
+    the deduction, and whether the mileage measure was selected (without
+    it both sides take current law). None with no business miles."""
+    if not answers.business_miles:
+        return None
+
+    def rates(budget: bool) -> dict:
+        chosen = car_and_van_rates(year, budget)
+        return {
+            "first_miles": chosen.first_miles,
+            "further_miles": chosen.further_miles,
+        }
+
+    how = (
+        "Mileage Allowance Relief, from income tax only. The employer is "
+        "taken to pay current law's rates, unchanged"
+        if answers.business_miles_role == EMPLOYEE
+        else (
+            "the flat rate deduction from self-employment profit, for "
+            "income tax and Class 4 National Insurance. Universal Credit "
+            "keeps its own 45p and 25p (reg. 59)"
+        )
+    )
+    return {
+        "business_miles": int(answers.business_miles),
+        "role": answers.business_miles_role,
+        "applied": applied,
+        "current_law_rates": rates(budget=False),
+        "budget_rates": rates(budget=True),
+        "deduction_change": _money(
+            deduction_change(answers.business_miles, year)
+        ),
+        "note": (
+            "Current law (Taxation (Energy and Vehicles) Act 2026) gives 55p "
+            "a mile for the first 10,000 business miles from 2026-27 and 25p "
+            "above; the Budget raises the rate above 10,000 miles to 35p "
+            f"from 2027-28. The deduction is {how}. The Treasury's examples "
+            "compare with 45p, so they are larger."
+        ),
+    }
 
 
 def calculate_household_impact(
@@ -2050,8 +2165,31 @@ def calculate_household_impact(
     unknown = sorted(set(include) - set(PARTS))
     if unknown:
         raise ValueError(f"Not a part of the answer: {', '.join(unknown)}")
-    sides = measure_sides(reform_ids)
+    registered = [
+        id_ for id_ in reform_ids if id_ not in HOUSEHOLD_ONLY_MEASURES
+    ]
+    mileage = MILEAGE_RATES_ID in reform_ids
+    # The registered measures' sides; with only household-only measures,
+    # sides that change nothing (measure_sides refuses no measures at all)
+    sides = (
+        measure_sides(registered)
+        if registered or not mileage
+        else MeasureSides(
+            before=_side(None, []),
+            after=_side(None, []),
+            included=[],
+            not_modelled=[],
+        )
+    )
+    included = sides.included + ([MILEAGE_RATES_ID] if mileage else [])
     people, benunit, household = household_entities(answers, year)
+    # The household on the Budget side: the same, but for the mileage
+    # measure's inputs when it is selected (pre-Budget law otherwise)
+    budget_people = (
+        household_entities(answers, year, budget_mileage=True)[0]
+        if mileage
+        else people
+    )
     salary, partner_salary = salaries_in(answers, year)
     pension, partner_pension = state_pensions(answers, year)
 
@@ -2068,31 +2206,46 @@ def calculate_household_impact(
             net_income_only,
         ) + ((True,) if parts else ())
 
-    jobs = [job(sides.before), job(sides.after)]
+    def single(id_):
+        # One measure on, every other at pre-Budget law: a registered
+        # measure's own side, or the mileage measure's Budget inputs on the
+        # pre-Budget side
+        if id_ == MILEAGE_RATES_ID:
+            return job(
+                sides.before, net_income_only=True, members=budget_people
+            )
+        return job(sides.singles[id_], net_income_only=True)
+
+    jobs = [job(sides.before), job(sides.after, members=budget_people)]
     by_policy = "by_policy" in include
-    many = len(sides.included) > 1
+    many = len(included) > 1
     # The measures whose own run is needed (provably_unaffected: the rest
     # are exactly £0 for this household and year, so they are not run).
     to_run = [
         id_
-        for id_ in sides.included
+        for id_ in included
         if not (skip_unaffected and provably_unaffected(id_, answers, year))
     ]
     if by_policy and many:
-        jobs += [
-            job(sides.singles[id_], net_income_only=True) for id_ in to_run
-        ]
+        jobs += [single(id_) for id_ in to_run]
     sweep = "sweep" in include
     if sweep:
         axes, grid = sweep_axes(salary)
-        raised = with_pay_rise(people, OWN_RATE_STEP)
         jobs += [
             job(sides.before, axes, True),
-            job(sides.after, axes, True),
+            job(sides.after, axes, True, members=budget_people),
             job(
-                sides.before, net_income_only=True, members=raised, parts=True
+                sides.before,
+                net_income_only=True,
+                members=with_pay_rise(people, OWN_RATE_STEP),
+                parts=True,
             ),
-            job(sides.after, net_income_only=True, members=raised, parts=True),
+            job(
+                sides.after,
+                net_income_only=True,
+                members=with_pay_rise(budget_people, OWN_RATE_STEP),
+                parts=True,
+            ),
         ]
     outputs = _run_all(jobs, workers)
     before, after = outputs[0], outputs[1]
@@ -2166,7 +2319,8 @@ def calculate_household_impact(
             "reform": _money(reform_net),
             "change": _money(combined),
         },
-        "included": sides.included,
+        "mileage_used": mileage_used(answers, year, applied=mileage),
+        "included": included,
         "not_modelled": sides.not_modelled,
         "by_policy": None,
         "programmes": [
@@ -2210,12 +2364,10 @@ def calculate_household_impact(
         if many:
             ran = dict(zip(to_run, outputs[2 : 2 + len(to_run)]))
             unaffected = {"household_net_income": base_net}
-            singles = [ran.get(id_, unaffected) for id_ in sides.included]
+            singles = [ran.get(id_, unaffected) for id_ in included]
         else:
-            singles = [after] if sides.included else []
-        result["by_policy"] = _by_policy(
-            sides.included, singles, base_net, combined
-        )
+            singles = [after] if included else []
+        result["by_policy"] = _by_policy(included, singles, base_net, combined)
     if sweep:
         result["sweep"] = _sweep(
             grid,
@@ -2275,7 +2427,7 @@ def _by_policy(
         measures.append(
             {
                 "id": id_,
-                "name": get_reform(id_).name,
+                "name": measure_name(id_),
                 "change": _money(change),
                 # Exactly zero, unrounded: a measure that moves the
                 # household by a penny is affecting it.
