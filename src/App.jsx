@@ -14,6 +14,7 @@ import { GROWTH_CURRENT_LAW_ANCHOR, YOUNG_PEOPLE_ANCHOR } from "./utils/viewAnch
 import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR, DisplayYearsContext, EARLY_YEAR, SELECTABLE_YEARS, selectableYearOr, yearsForSelection } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
+import { useNarrowViewport } from "./utils/chartTheme";
 import TitleMark, { EdgeAboutTab } from "./components/HomeButton";
 import OverviewDrawer from "./components/OverviewDrawer";
 import { buildMeasureCatalogue, catalogueProvisional, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
@@ -389,9 +390,12 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   // default view (Public finances), which stays mounted behind it, faded
   // and inert. Choosing any view leaves it.
   const [landing, setLanding] = useState(true);
-  // The overview drawer, opened by the "About" tab on the window's edge
+  // The overview drawer, opened by the "About" tab on the window's edge,
+  // or first in the view tabs row on a phone, whose margin has no room for
+  // a side tab (HomeButton.jsx)
   const [overviewOpen, setOverviewOpen] = useState(false);
   const aboutTabRef = useRef(null);
+  const aboutInRow = useNarrowViewport();
   const closeOverview = useCallback(() => setOverviewOpen(false), []);
   const PRESETS = [{ id: "autumn-budget", name: "All policies" }];
   // Cards fade and rise in as they scroll into view
@@ -1279,11 +1283,15 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
         {/* "About": a tab on the window's left edge that opens the
-            overview drawer (below) from the same edge */}
-        {!landing && (
+            overview drawer (below) from the same edge; on a phone, first
+            in the view tabs row */}
+        {!landing && !aboutInRow && (
           <EdgeAboutTab open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
         )}
         <ViewTabs
+          leading={!landing && aboutInRow && (
+            <EdgeAboutTab placement="row" open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
+          )}
           tabs={VIEWS}
           value={landing ? null : activeTab}
           onChange={handleTabChange}

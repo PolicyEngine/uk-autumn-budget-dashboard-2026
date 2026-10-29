@@ -374,9 +374,11 @@
    --view-tab-x puts the real one (ViewTabs.jsx), with no code: first an
    unseen copy of the tabs before the chosen one, laid out as the bar lays
    them out (a tab gap between tabs and one after the last; none when the
-   first tab is the chosen one). The ghost and the row then step back a
-   tab's padding, as the bar's row is pulled into the margin (globals.css),
-   so the step holds when the lead is empty too. It gives way, as the scrolled bar's tabs do, to an unseen copy of the
+   first tab is the chosen one). Wider than a phone, About is a side tab,
+   so the ghost and the row step back a tab's padding, as the bar's row is
+   pulled into the margin (globals.css), and the step holds when no tab
+   comes before the chosen one too. On a phone About leads the bar and the
+   lead (HomeButton.css, below). It gives way, as the scrolled bar's tabs do, to an unseen copy of the
    chosen tab and the 24px after it (none after the last tab), in the
    row's own column; the band and the bar have one padding (globals.css
    --bar-pad-x), so both rows end together. The row takes no --view-tab-x,
@@ -403,9 +405,6 @@
   visibility: hidden;
 }
 
-.skeleton-tab-lead:empty {
-  margin-right: 0;
-}
 
 .skeleton-tab-ghost {
   grid-area: 1 / 2;
@@ -429,6 +428,39 @@
   max-width: none;
   margin-left: calc(-1 * var(--tab-pad-x, 12px));
   contain: inline-size;
+}
+
+/* Wider than a phone, About is a side tab: the copies of the bar and the
+   lead drop their About, and a lead of About alone (the first tab
+   chosen) takes no room */
+@media (min-width: 769px) {
+  .boot-view-tabs > .edge-about,
+  .skeleton-tab-lead > .edge-about {
+    display: none;
+  }
+
+  .skeleton-tab-lead:not(:has(> :not(.edge-about))) {
+    margin-right: 0;
+  }
+}
+
+/* A phone (601 to 768px; narrower, there is no lead): About leads the bar,
+   pulled a tab's padding into the margin, and the row is not pulled
+   (HomeButton.css), so the lead starts in the margin, About's three tab
+   gaps follow it, and the ghost and the row take no step back */
+@media (max-width: 768px) {
+  .skeleton-tab-lead {
+    margin-left: calc(-1 * var(--tab-pad-x, 12px));
+  }
+
+  .skeleton-tab-lead > .edge-about {
+    margin-right: calc(2 * var(--tab-gap, 8px));
+  }
+
+  .skeleton-tab-ghost,
+  .skeleton-sub-tabs.has-tab-lead .sub-tabs {
+    margin-left: 0;
+  }
 }
 
 /* A phone's row starts at the left, as the real one (SubTabs.css) */
