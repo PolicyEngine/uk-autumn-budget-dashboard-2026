@@ -256,6 +256,25 @@ describe("Average change by age by single year of age (the default view)", () =>
     expect(within(card).getAllByTestId("series").map((node) => node.dataset.key)).toEqual(["netChange"]);
   });
 
+  it("leaves out the package's ages a member withholds, saying so, never as no change (issue 340)", async () => {
+    // BETA leaves out ages 20 and 21, and so does the package
+    const fixture = withSingleAges(measureCatalogueFixture({ held: false }));
+    const [header, ...lines] = fixture.ageCsv.split("\n");
+    const kept = lines.filter((line) => {
+      const [id, , , band] = line.split(",");
+      return !((id === BETA || id === COMBINED) && ["20", "21"].includes(band));
+    });
+    const { container } = await renderAge({ ...fixture, ageCsv: [header, ...kept].join("\n") }, [ALPHA, BETA]);
+    const card = singleCard(container);
+    const points = chartRows(card).find((rows) => rows.some((point) => point.label === "22"));
+    const net = Object.fromEntries(points.map((point) => [point.label, point.netChange]));
+    expect([net["20"], net["21"], net["22"]]).toEqual([null, null, 50]);
+    // Never drawn as a member's part beside the package's net
+    expect(points.every((point) => (point[`measure:${ALPHA}`] ?? null) === null)).toBe(true);
+    fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
+    expect(card.textContent).toMatch(/Not shown, as too few survey records: ages 20, 21\./);
+  });
+
   it("lists no policy as having no effect when it draws the package's net alone", async () => {
     // The bars show the package's gains, so no policy is "no change for the
     // households shown" (Vahid, 28 October: 16 to 24 in 2031-32 listed all 8)

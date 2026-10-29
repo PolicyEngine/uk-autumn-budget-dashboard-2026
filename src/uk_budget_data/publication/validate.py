@@ -69,22 +69,47 @@ def withholding_problems(
 
     Labels in the receipt are numeric, including for the distributional
     table's ordinal labels. Every value in a withheld row must be blank,
-    and a blank without a recorded withholding is refused. ``partial``
-    checks only the tables supplied, for a browser's deferred table load.
+    and a blank without a recorded withholding is refused. The age table
+    leaves its withheld rows out rather than blanking them (#340), so a
+    withheld age row must be absent. ``partial`` checks only the tables
+    supplied, for a browser's deferred table load.
     """
     from uk_budget_data.publication.disclosure_floor import (
+        AGE_TABLE,
         DECILE_TABLES,
         decile_label,
+        valid_age_labels,
     )
 
     problems = []
     withheld = set()
+    ages = set()
     if floor is not None and not isinstance(floor, dict):
         return ["disclosure_floor is not a record"]
     records = (floor or {}).get("withheld_cells", [])
     if not isinstance(records, list):
         return ["disclosure_floor.withheld_cells is not a list"]
     for cell in records:
+        if (
+            isinstance(cell, dict)
+            and set(cell) == {"table", "year", "groups"}
+            and cell["table"] == AGE_TABLE
+        ):
+            if type(cell["year"]) is not int or not valid_age_labels(
+                cell["groups"]
+            ):
+                problems.append(
+                    "disclosure_floor.withheld_cells has an invalid cell"
+                )
+                continue
+            for group in cell["groups"]:
+                key = (cell["year"], group)
+                if key in ages:
+                    problems.append(
+                        "disclosure_floor.withheld_cells repeats a cell"
+                    )
+                ages.add(key)
+            continue
         if (
             not isinstance(cell, dict)
             or set(cell) != {"table", "year", "groups"}
@@ -133,6 +158,12 @@ def withholding_problems(
     for name, year, group in sorted(withheld - seen):
         if not partial or name in tables:
             problems.append(f"{name} {year} {group}: withheld row is missing")
+    for row in tables.get(AGE_TABLE, []):
+        if (row["year"], str(row["age_band"])) in ages:
+            problems.append(
+                f"{AGE_TABLE} {row['year']} {row['age_band']} publishes a "
+                "withheld row"
+            )
     return problems
 
 
@@ -142,7 +173,10 @@ def withheld_file_problems(path: Path, document: dict) -> list[str]:
     Public file checks inspect the files even if their review and receipt
     digests match: an authenticated value must still obey its withholding.
     """
-    from uk_budget_data.publication.disclosure_floor import DECILE_TABLES
+    from uk_budget_data.publication.disclosure_floor import (
+        AGE_TABLE,
+        DECILE_TABLES,
+    )
 
     dashboard = document.get("dashboard")
     floor = (
@@ -152,7 +186,7 @@ def withheld_file_problems(path: Path, document: dict) -> list[str]:
     )
     problems = []
     tables = {}
-    for name in DECILE_TABLES:
+    for name in (*DECILE_TABLES, AGE_TABLE):
         for suffix in ("csv", "json"):
             file = path / f"{name}.{suffix}"
             if not file.exists():

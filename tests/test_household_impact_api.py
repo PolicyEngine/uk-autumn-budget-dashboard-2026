@@ -126,6 +126,39 @@ def test_answers_out_of_range_are_refused_naming_the_field(
     assert field in [error["loc"] for error in response.json()["detail"]]
 
 
+@pytest.mark.parametrize(
+    "body, field",
+    [
+        (
+            '{"year": 2027, "household": {"employment_income": NaN}}',
+            ["body", "household", "employment_income"],
+        ),
+        (
+            '{"year": 2027, "household": {"savings_interest_income": '
+            "Infinity}}",
+            ["body", "household", "savings_interest_income"],
+        ),
+        (
+            '{"year": 2027, "household": {"age": NaN}}',
+            ["body", "household", "age"],
+        ),
+        ('{"year": -Infinity}', ["body", "year"]),
+    ],
+)
+def test_non_finite_numbers_are_refused_with_a_422_not_a_500(
+    body, field, monkeypatch
+):
+    def never(*args, **kwargs):
+        raise AssertionError("a refused request reached the calculation")
+
+    monkeypatch.setattr(household_impact, "calculate_household_impact", never)
+    response = client.post(
+        ROUTE, content=body, headers={"content-type": "application/json"}
+    )
+    assert response.status_code == 422, response.text
+    assert field in [error["loc"] for error in response.json()["detail"]]
+
+
 def test_with_no_measures_named_it_uses_every_measure_it_knows(monkeypatch):
     calls = []
 
