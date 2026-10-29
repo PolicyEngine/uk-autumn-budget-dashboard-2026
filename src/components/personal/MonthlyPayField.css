@@ -1,0 +1,85 @@
+/* "My monthly pay varies": the box and its label on one row, the "?" help
+   beside the label */
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+}
+
+.checkbox-field input[type="checkbox"] {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--pe-teal-600);
+  cursor: pointer;
+}
+
+.checkbox-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--pe-gray-800);
+  cursor: pointer;
+}
+
+.checkbox-field .info-tip {
+  flex: none;
+}
+
+/* The months take the step's whole width: a month a row, a £ box each
+   (and the partner's beside it) */
+.household-field[data-row="monthly_salaries"] {
+  grid-column: 1 / -1;
+}
+
+.monthly-pay {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.monthly-pay .monthly-pay-title,
+.monthly-pay .field-hint {
+  margin: 0;
+  white-space: normal;
+}
+
+.monthly-pay-table {
+  width: 100%;
+  max-width: 420px;
+  border-collapse: collapse;
+}
+
+.monthly-pay-table.has-partner {
+  max-width: 560px;
+}
+
+.monthly-pay-table th,
+.monthly-pay-table td {
+  padding: 3px 8px 3px 0;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.monthly-pay-table thead th {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--pe-gray-500);
+}
+
+.monthly-pay-table tbody th {
+  width: 3.5em;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--pe-gray-700);
+}
+
+.monthly-pay-table .number-field {
+  min-width: 0;
+}
+
+.monthly-pay-total {
+  font-variant-numeric: tabular-nums;
+}

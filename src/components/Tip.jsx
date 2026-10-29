@@ -1,6 +1,6 @@
 import { cloneElement, isValidElement, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Info } from "lucide-react";
+import { CircleHelp, Info } from "lucide-react";
 import { stickyInset } from "../utils/tooltipPlacement";
 import "./Tip.css";
 
@@ -140,6 +140,21 @@ export function InfoTip({ content, label = "More information", wide = false }) {
     <Tip content={content} wide={wide}>
       <button type="button" className="info-tip" aria-label={label}>
         <Info size={16} strokeWidth={1.8} aria-hidden="true" />
+      </button>
+    </Tip>
+  );
+}
+
+/**
+ * The same tip behind a "?" (lucide's CircleHelp), for help on whether an
+ * answer applies to you rather than the definition of a figure: the
+ * Household calculator's "My monthly pay varies".
+ */
+export function HelpTip({ content, label = "Help", wide = false }) {
+  return (
+    <Tip content={content} wide={wide}>
+      <button type="button" className="info-tip help-tip" aria-label={label}>
+        <CircleHelp size={16} strokeWidth={1.8} aria-hidden="true" />
       </button>
     </Tip>
   );

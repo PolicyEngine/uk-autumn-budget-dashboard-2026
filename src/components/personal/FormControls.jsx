@@ -1,5 +1,38 @@
 import { useId, useState } from "react";
-import { InfoTip } from "../Tip";
+import { HelpTip, InfoTip } from "../Tip";
+
+/**
+ * A yes-or-no answer as one native checkbox, its label beside it, with
+ * an optional help behind a "?" (HelpTip) by the label. The help is also
+ * the box's description for screen readers.
+ *
+ * @param {Object} props
+ * @param {string} props.id - The field's id
+ * @param {string} props.label
+ * @param {boolean} props.checked
+ * @param {(checked: boolean) => void} props.onChange
+ * @param {string} [props.help] - Shown behind the "?"
+ */
+export function CheckboxField({ id, label, checked, onChange, help }) {
+  const fieldId = `field-${id}`;
+  const helpId = help ? `help-${id}` : undefined;
+  return (
+    <div className="checkbox-field" data-field={id}>
+      <input
+        id={fieldId}
+        type="checkbox"
+        checked={Boolean(checked)}
+        aria-describedby={helpId}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <label className="checkbox-label" htmlFor={fieldId}>
+        {label}
+      </label>
+      {help && <HelpTip content={help} label={`About ${label}`} wide />}
+      {help && <HiddenHint hint={help} hintId={helpId} />}
+    </div>
+  );
+}
 
 /**
  * One choice from a few, as selectable boxes: native radio buttons styled

@@ -144,6 +144,8 @@ describe("the personal impact form", () => {
       "self_employment_expenses_per_year",
       "council_tax_band",
       "claims_universal_credit",
+      // Asked with Universal Credit; the months only once ticked
+      "monthly_income_varies",
       // The hours of care only once "Yes" to caring
       "is_carer",
       "private_pension_per_year",
@@ -692,7 +694,7 @@ describe("the selected policies' questions", () => {
     expect(savingsOther).toHaveAttribute("aria-expanded", "true");
     expect(asked("Savings and other income").at(-1)).toBe("dividends_per_year");
     fireEvent.click(otherToggle("Benefits and loans"));
-    expect(asked("Benefits and loans")).toEqual(["is_carer", "claims_universal_credit"]);
+    expect(asked("Benefits and loans")).toEqual(["is_carer", "claims_universal_credit", "monthly_income_varies"]);
     // No policy icons in the headings: the chevron alone (Vahid, Budget day)
     for (const title of ["You", "Spending", "Savings and other income", "Council Tax"]) expect(usedBy(title)).toBeNull();
     // No chips between the boxes, no tab stop in a heading, no tick
@@ -739,7 +741,7 @@ describe("the selected policies' questions", () => {
     openSteps();
     expect(asked("Council Tax")).toEqual(["council_tax_band"]);
     // A step no selected policy reads: all its answers, no Other questions
-    expect(asked("Benefits and loans")).toEqual(["claims_universal_credit", "is_carer"]);
+    expect(asked("Benefits and loans")).toEqual(["claims_universal_credit", "monthly_income_varies", "is_carer"]);
     expect(otherToggle("Benefits and loans")).toBeNull();
   });
 
@@ -913,6 +915,111 @@ describe("the selected policies' questions", () => {
       const cards = bodies.filter((body) => body.household.savings_interest_income !== 12000);
       expect(cards.length).toBeGreaterThan(0);
       expect(cards.every((body) => body.policies.at(-1) === "savings_income_rates_up")).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
+});
+
+describe("monthly pay, for the Universal Credit surplus earnings threshold", () => {
+  const MEASURES = ["fuel_duty_rise_deferral"];
+  /** The "My monthly pay varies" box, or null when not asked. */
+  const varies = () => screen.queryByRole("checkbox", { name: "My monthly pay varies" });
+  /** One month's pay box, by its name ("Your pay in April 2027"). */
+  const month = (name) => screen.queryByRole("textbox", { name });
+  const openBenefits = () => {
+    const toggle = groupToggle("Benefits and loans");
+    if (toggle.getAttribute("aria-expanded") !== "true") fireEvent.click(toggle);
+  };
+
+  it("asks a household on Universal Credit whether its pay varies, with a ? help, and its months once ticked", () => {
+    renderForm(<HouseholdCalculator selectedPolicies={MEASURES} year={2027} />);
+    openBenefits();
+    const ticked = varies();
+    expect(ticked).not.toBeChecked();
+    // The help, behind a "?" by the box: who it is for
+    const help = within(field("monthly_income_varies")).getByRole("button", { name: "About My monthly pay varies" });
+    expect(help).toHaveClass("info-tip");
+    expect(help.querySelector("svg.lucide-circle-question-mark, svg.lucide-circle-help")).not.toBeNull();
+    expect(ticked).toHaveAccessibleDescription(/advanced users.*surplus earnings threshold/i);
+    expect(field("monthly_salaries")).toBeNull();
+    fireEvent.click(ticked);
+    expect(ticked).toBeChecked();
+    // Twelve months, April 2027 to March 2028, prefilled with the yearly
+    // salary spread evenly, and what they add up to
+    const months = field("monthly_salaries");
+    expect(within(months).getAllByRole("textbox")).toHaveLength(12);
+    expect(parseAmount(month("Your pay in April 2027").value)).toBe(DEFAULT_SALARY / 12);
+    expect(month("Your pay in March 2028")).toBeInTheDocument();
+    expect(months).toHaveTextContent("These months add up to £34,200 a year");
+    expect(months).toHaveTextContent(/every other figure comes from your yearly salary/i);
+    fireEvent.change(month("Your pay in September 2027"), { target: { value: "6,000" } });
+    expect(parseAmount(month("Your pay in September 2027").value)).toBe(6000);
+    expect(months).toHaveTextContent("These months add up to £37,350 a year");
+    // The yearly salary spread evenly again, at a click
+    fireEvent.click(within(months).getByRole("button", { name: "Spread your yearly salary evenly" }));
+    expect(parseAmount(month("Your pay in September 2027").value)).toBe(DEFAULT_SALARY / 12);
+    // Unticked, the months go
+    fireEvent.click(ticked);
+    expect(field("monthly_salaries")).toBeNull();
+    // The closed step says when it is ticked
+    fireEvent.click(ticked);
+    fireEvent.click(groupToggle("Benefits and loans"));
+    expect(stepLine("Benefits and loans")).toBe("Monthly pay varies");
+  });
+
+  it("asks it only of a household that would claim Universal Credit, in Great Britain", () => {
+    renderForm(<HouseholdCalculator selectedPolicies={MEASURES} />);
+    openBenefits();
+    expect(varies()).toBeInTheDocument();
+    choose("Universal Credit", "No");
+    expect(varies()).toBeNull();
+    choose("Universal Credit", "Yes");
+    expect(varies()).toBeInTheDocument();
+    pickCouncil("Belfast");
+    expect(varies()).toBeNull();
+  });
+
+  it("asks a partner's months too, and names the months of the year shown", () => {
+    renderForm(<HouseholdCalculator selectedPolicies={MEASURES} year={2028} />);
+    choose("Partner", "Yes");
+    openBenefits();
+    fireEvent.click(varies());
+    const months = field("monthly_salaries");
+    expect(within(months).getAllByRole("textbox")).toHaveLength(24);
+    expect(month("Your pay in April 2028")).toBeInTheDocument();
+    expect(parseAmount(month("Your partner's pay in April 2028").value)).toBe(DEFAULT_SALARY / 12);
+    // Outside 2027-28 the threshold is the same either way: said so
+    expect(months).toHaveTextContent("only for claims from April 2027 to March 2028");
+  });
+
+  it("sends the months with Calculate once ticked, and nothing new until then", async () => {
+    const API = "https://api.test/api/household-impact";
+    const bodies = [];
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        if (url === API) bodies.push(JSON.parse(init.body));
+        return new Response("{}", { status: 404 });
+      }),
+    );
+    try {
+      renderForm(<HouseholdCalculator selectedPolicies={MEASURES} year={2027} />);
+      openBenefits();
+      fireEvent.click(varies());
+      fireEvent.change(month("Your pay in September 2027"), { target: { value: "6000" } });
+      fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
+      const yours = () => bodies.filter((body) => Array.isArray(body.household.monthly_employment_income));
+      await waitFor(() => expect(yours().length).toBeGreaterThan(0));
+      const expected = Array(12).fill(DEFAULT_SALARY / 12);
+      expected[5] = 6000;
+      expect(yours()[0].household.monthly_employment_income).toEqual(expected);
+      // The example cards' requests, asked alongside, never carry months
+      const cards = bodies.filter((body) => !yours().includes(body));
+      expect(cards.length).toBeGreaterThan(0);
+      expect(cards.some((body) => "monthly_employment_income" in body.household)).toBe(false);
     } finally {
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();

@@ -28,8 +28,10 @@ import { DEFAULT_SPENDING, SALARY_SOURCE, WIZARD_DEFAULTS, regionalRent } from "
 
 // The form's answers at their defaults (utils/householdDefaults.js)
 export { WIZARD_DEFAULTS };
-import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
+import { CheckboxField, ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
 import LocalAuthorityField from "./personal/LocalAuthorityField";
+import MonthlyPayField from "./personal/MonthlyPayField";
+import { asksMonthlyPay, sendsMonthlyPay } from "../utils/surplusEarnings";
 import { policyQuestions } from "../utils/householdPolicyFields";
 import { withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
@@ -93,7 +95,9 @@ export const FORM_GROUPS = [
     key: "benefits",
     title: "Benefits and loans",
     hint: "Yes to Universal Credit counts what your answers entitle you to.",
-    fields: ["claims_universal_credit", "is_carer", "care_hours_per_week"],
+    // Monthly pay (the surplus earnings threshold) follows Universal
+    // Credit, which is all it changes
+    fields: ["claims_universal_credit", "monthly_income_varies", "monthly_salaries", "is_carer", "care_hours_per_week"],
     quiet: ["claims_universal_credit"],
   },
   {
@@ -328,6 +332,10 @@ const NUMBER_CONFIGS = {
   },
 };
 
+// "My monthly pay varies": its help, behind the "?" by the box
+const MONTHLY_PAY_HELP =
+  "For advanced users whose Universal Credit is affected by the surplus earnings threshold. When one month's pay, such as a bonus, takes your Universal Credit to nil, your award ends, and if you claim again within six months, earnings that month above the threshold count again. The Budget keeps the threshold at £2,500, rather than £300, for claims from April 2027 to March 2028. Tick this to enter your pay month by month. Surplus earnings do not apply to anyone recently a victim of domestic abuse, for whom this measure changes nothing.";
+
 // Shown only when they apply
 const FIELD_APPLIES = {
   monthly_rent: (inputs) => isRenting(inputs.tenure),
@@ -337,6 +345,10 @@ const FIELD_APPLIES = {
   children_ages: (inputs, childrenCount) => childrenCount > 0,
   monthly_childcare: (inputs, childrenCount) => childrenCount > 0,
   care_hours_per_week: (inputs) => Boolean(inputs.is_carer),
+  // Only for a household on Universal Credit in Great Britain, and the
+  // months only once ticked (surplusEarnings.js)
+  monthly_income_varies: (inputs) => asksMonthlyPay(inputs),
+  monthly_salaries: (inputs) => sendsMonthlyPay(inputs),
   partner_private_pension_per_year: (inputs) => inputs.has_partner,
   // Northern Ireland has domestic rates, not Council Tax
   council_tax_band: (inputs) => inputs.region !== "NORTHERN_IRELAND",
@@ -410,7 +422,11 @@ export function stepSummary(fields, { answer, applies, changed, inputs, children
       if (inputs.council) parts.push(inputs.council);
       continue;
     }
-    if (id === "care_hours_per_week") continue;
+    if (id === "care_hours_per_week" || id === "monthly_salaries") continue;
+    if (id === "monthly_income_varies") {
+      if (inputs.monthly_income_varies) parts.push("Monthly pay varies");
+      continue;
+    }
     if (id === "is_carer") {
       if (inputs.is_carer) parts.push(`Carer, ${careSummary(answer("care_hours_per_week"))}`);
       continue;
@@ -957,6 +973,29 @@ function HouseholdCalculator({
           options={config.options}
           value={inputs.tenure}
           onChange={(value) => handleInputChange("tenure", value)}
+        />
+      );
+    } else if (id === "monthly_income_varies") {
+      field = (
+        <CheckboxField
+          id={id}
+          label="My monthly pay varies"
+          checked={Boolean(inputs.monthly_income_varies)}
+          help={MONTHLY_PAY_HELP}
+          onChange={(value) => handleInputChange(id, value)}
+        />
+      );
+    } else if (id === "monthly_salaries") {
+      field = (
+        <MonthlyPayField
+          year={year}
+          months={inputs.monthly_salaries}
+          salary={inputs.current_salary}
+          onChange={(months) => handleInputChange("monthly_salaries", months)}
+          partner={Boolean(inputs.has_partner)}
+          partnerMonths={inputs.partner_monthly_salaries}
+          partnerSalary={inputs.partner_salary}
+          onPartnerChange={(months) => handleInputChange("partner_monthly_salaries", months)}
         />
       );
     } else if (id === "region") {
