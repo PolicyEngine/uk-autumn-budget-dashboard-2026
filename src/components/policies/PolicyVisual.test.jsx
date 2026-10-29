@@ -47,7 +47,8 @@ describe("PolicyVisual", () => {
     const { container } = show("trading_allowance_raise");
     expect(image()).toHaveAccessibleName(/from £1,000 to £3,000.*pays £400 less income tax/);
     expect(container).toHaveTextContent("£2,000 more tax-free");
-    expect(container.querySelector(".pviz-band-saving-value")).toHaveTextContent("£400");
+    expect(container.querySelector(".pviz-trading .pviz-fill-value")).toHaveTextContent("£400");
+    expect(container.querySelector(".pviz-trading .pviz-fill-when")).toHaveTextContent("2027-28");
   });
 
   it("zero VAT on electricity: a month strip for Great Britain and Northern Ireland", () => {

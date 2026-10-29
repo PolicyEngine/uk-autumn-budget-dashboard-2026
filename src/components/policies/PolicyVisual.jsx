@@ -301,7 +301,7 @@ export function EnergyReachVisual({ entry, visual, name }) {
  * the part the measure adds in its colour, the example's side income
  * marked at its end with the tax it saves.
  */
-export function TradingAllowanceVisual({ entry, visual, name, example: card }) {
+export function TradingAllowanceVisual({ entry, visual, name }) {
   const view = tradingAllowanceView(entry, visual);
   if (!view) return null;
   const { before, after, year, example } = view;
@@ -324,14 +324,18 @@ export function TradingAllowanceVisual({ entry, visual, name, example: card }) {
         <span style={{ left: share(before) }}>{wholePounds(before)}</span>
         <span style={{ left: share(after) }}>{wholePounds(after)}</span>
       </div>
-      {/* The card's example, its saving picked out */}
-      {card?.text && (
-        <p className="pviz-band-saving" aria-hidden="true">
-          {card.text.split(wholePounds(example.saving)).flatMap((part, i) =>
-            i ? [<strong key={i} className="pviz-band-saving-value">{wholePounds(example.saving)}</strong>, part] : [part],
-          )}
-        </p>
-      )}
+      {/* The example as a list, as the fuel duty card's fills */}
+      <figcaption className="pviz-fills" aria-hidden="true">
+        <span className="pviz-fills-title">
+          Income tax saved: employee on {wholePounds(example.income)}, {wholePounds(example.sideIncome)} side income, no expenses
+        </span>
+        <span className="pviz-fills-list">
+          <span className="pviz-fill">
+            <span className="pviz-fill-when">{year}</span>
+            <span className="pviz-fill-value">{wholePounds(example.saving)}</span>
+          </span>
+        </span>
+      </figcaption>
     </div>
   );
 }
