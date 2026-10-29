@@ -40,7 +40,7 @@ export const FORECAST_GROUPS = [
     section: "Income and earnings",
     title: "Pay and other income",
     icon: "briefcase",
-    subtitle: "How fast pay and other income grow, before prices are taken into account.",
+    subtitle: "How fast pay and other income grow, before accounting for prices.",
     cards: [{ id: "income", title: "Earnings and other income", icon: "briefcase", keys: ["earnings", "non_labour_income"] }],
   },
   {

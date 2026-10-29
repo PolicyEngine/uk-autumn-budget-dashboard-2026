@@ -104,7 +104,7 @@ describe("legendMembership", () => {
     // Changed since its entry was written (on Budget day, say): its window
     // may no longer hold, so it is not used
     const changed = { ...catalogue.byId.get("warm_home_discount_top_up"), description: "The Warm Home Discount rises for two winters." };
-    expect(zeroReason(changed, 2027)).toEqual({ kind: "none", text: "no change for the households shown" });
+    expect(zeroReason(changed, 2027)).toEqual({ kind: "none", text: "no change for the households we show" });
   });
 });
 

@@ -48,7 +48,7 @@ const PA = {
   short: "Allowance",
   colour: SERIES_COLOURS[0],
   width: 5,
-  meaning: "The income on which no income tax is paid.",
+  meaning: "The income on which people pay no income tax.",
 };
 const HR = {
   key: "higher_rate",
@@ -57,7 +57,7 @@ const HR = {
   colour: SERIES_COLOURS[1],
   dash: DASH.short,
   width: 2,
-  meaning: "The income above which income tax is paid at the higher rate (the personal allowance plus the basic rate band).",
+  meaning: "The income above which people pay income tax at the higher rate (the personal allowance plus the basic rate band).",
 };
 const BOTH = { ...PA, width: undefined, name: "Personal allowance and higher rate threshold", short: "Income tax" };
 const TA = {
@@ -66,7 +66,7 @@ const TA = {
   short: "Trading",
   colour: CHART_COLOURS.loss,
   meaning:
-    "Trading income up to this amount a year is free of income tax and Class 4 National Insurance. The line is the level the Budget sets, held in cash, from the year it takes effect.",
+    "Trading income up to this amount a year is free of income tax and Class 4 National Insurance. The line is the level the Budget sets, flat in cash, from the year it takes effect.",
 };
 const PAY = {
   key: "pay",
@@ -131,7 +131,7 @@ export default function FrozenThresholdsCard({ view = "chart", onViewChange }) {
   const obrName = obr.label;
   const engine = document.engine?.policyengine_uk;
   const trading = tradingAllowance(document);
-  const sourceText = `${obrName}, Table 1.6: average earnings growth; policyengine-uk${engine ? ` ${engine}` : ""} parameters (current law${trading ? "; the trading allowance as the Budget sets it" : ""}); indexed by PolicyEngine`;
+  const sourceText = `${obrName}, Table 1.6: average earnings growth; policyengine-uk${engine ? ` ${engine}` : ""} parameters (current law${trading ? "; the trading allowance as the Budget sets it" : ""}); PolicyEngine's indexing`;
   const lineSet = linesFor(rows);
   const shown = lineSet.map((l) => l.key).filter((k) => !hidden.includes(k));
   const setShown = (keys) => setHidden(lineSet.map((l) => l.key).filter((k) => !keys.includes(k)));
@@ -180,14 +180,14 @@ export default function FrozenThresholdsCard({ view = "chart", onViewChange }) {
         </>
       ),
       how: [
-        "Each income tax threshold's current-law value for a year divided by its 2026-27 value, times 100; the values are policyengine-uk's parameters at 6 April of each year.",
+        "We divide each income tax threshold's current-law value for a year by its 2026-27 value and multiply by 100; the values are policyengine-uk's parameters at 6 April of each year.",
         ...(trading
           ? [
-              `The trading allowance starts in ${fyLabel(trading.start)}, the year the Budget's new level takes effect, rather than in ${fyLabel(BASE_YEAR)}: indexed to ${fyLabel(BASE_YEAR)} its rise would dwarf the rest of the chart. Its value and average earnings are both indexed to ${fyLabel(trading.start)} = 100, so the line shows how far the cash level falls behind pay from then.`,
+              `The trading allowance starts in ${fyLabel(trading.start)}, the year the Budget's new level takes effect, rather than in ${fyLabel(BASE_YEAR)}: if we indexed it to ${fyLabel(BASE_YEAR)}, its rise would dwarf the rest of the chart. We index both its value and average earnings to ${fyLabel(trading.start)} = 100, so the line shows how far the cash level falls behind pay from then.`,
             ]
           : []),
-        "Earnings: the OBR gives growth in each calendar year's average. As the baseline does, a fiscal year takes the growth of the calendar year it starts in (2027-28 grows on 2026-27 by 2027's rate), chained from 2026-27 = 100.",
-        "Each threshold's index divided by the earnings index, times 100, is its value relative to average earnings: 100 while it keeps pace with pay, below 100 when it falls behind. A frozen threshold in a year when the earnings index is 110 is at 100 / 110 × 100 = 90.9.",
+        "Earnings: the OBR gives growth in each calendar year's average. As the baseline does, a fiscal year takes the growth of the calendar year it starts in (2027-28 grows on 2026-27 by 2027's rate); we chain this growth from 2026-27 = 100.",
+        "We divide each threshold's index by the earnings index and multiply by 100 to find its value relative to average earnings: 100 while it keeps pace with pay, below 100 when it falls behind. A frozen threshold in a year when the earnings index is 110 is at 100 / 110 × 100 = 90.9.",
         "Where the personal allowance and higher rate threshold have the same value relative to earnings in every year, one line draws both.",
       ],
       definitions: [PA, HR, ...(trading ? [TA] : []), PAY].map((l) => ({ term: l.name, meaning: l.meaning })),

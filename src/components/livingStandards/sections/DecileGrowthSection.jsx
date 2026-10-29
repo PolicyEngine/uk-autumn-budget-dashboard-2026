@@ -118,9 +118,9 @@ const POPULATIONS = { all: "All people", non_pensioners: "Non-pensioners" };
 const SKIPPED = { vigintile: 1, decile: 1 };
 // The caveat for the lowest tenth left out, in About this chart
 export const LOWEST_TENTH_CAVEAT =
-  "The lowest tenth is not shown: survey incomes at the very bottom are often below what those households spend, so their growth is unreliable.";
+  "The chart leaves out the lowest tenth: survey incomes at the very bottom are often below what those households spend, so their growth is unreliable.";
 const VIGINTILE_ABOUT =
-  "Vigintile 1, the lowest-income 5% of people, is left out. Incomes at the very bottom of the survey are often temporarily low (self-employment losses, students, people living off savings) or under-reported, so they say little about living standards, and with few households behind them their growth swings from year to year. The chart starts at vigintile 2, the 5th to 10th percentile.";
+  "The chart leaves out vigintile 1, the lowest-income 5% of people. Incomes at the very bottom of the survey are often temporarily low (self-employment losses, students, people living off savings) or under-reported, so they say little about living standards, and with few households behind them their growth swings from year to year. The chart starts at vigintile 2, the 5th to 10th percentile.";
 const VIEWS = { period: "Whole period", annual: "Year by year" };
 
 /**
@@ -414,13 +414,13 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
 
   const block = data.income_growth_by_group?.groupings && Object.keys(data.income_growth_by_group.groupings).length ? data.income_growth_by_group : null;
   const statistic = (block?.statistic || data.income_by_decile.statistic).replace(/decile/, "group");
-  const popNote = population === "non_pensioners" ? ` ${block.populations.non_pensioners}, ranked among themselves.` : "";
+  const popNote = population === "non_pensioners" ? ` ${block.populations.non_pensioners}; we rank them among themselves.` : "";
   const measuresAbout = !measures
     ? " Without the policies (current law): real growth of each group's median income before any Budget policy."
     : diff
       ? " With the selected policies: each bar is the policies' effect on that growth, in percentage points: real growth with the policies less growth without them, from the same pair of simulations (the policy's own run, or the selected policies' combined run, and its own baseline)."
       : " With the selected policies: current law's growth (the Pre-measures forecast tab's chart) plus the policies' effect on it, from the same pair of simulations (the policy's own run, or the selected policies' combined run, and its own baseline). So with less without is exactly the effect.";
-  const about = `${statistic}: each bar is the real change in that ${g.noun}'s median, ${annual ? "on the year before" : "between the two years"}.${measuresAbout} Groups are re-ranked each year, so this compares positions in the distribution, not the same people.${popNote}${grouping === "vigintile" ? ` ${VIGINTILE_ABOUT}` : ""}`;
+  const about = `${statistic}: each bar is the real change in that ${g.noun}'s median, ${annual ? "on the year before" : "between the two years"}.${measuresAbout} We re-rank groups each year, so this compares positions in the distribution, not the same people.${popNote}${grouping === "vigintile" ? ` ${VIGINTILE_ABOUT}` : ""}`;
   const fileStem = `income-growth${measures ? (diff ? "-effect-of-measures" : "-with-measures") : ""}-by-${g.noun}-${basis}${population === "all" ? "" : "-non-pensioners"}`;
   const csvTitle = (t) => (measures ? `${t}${diff ? ": effect of the selected policies" : ", with the selected policies"}` : t);
 
@@ -445,10 +445,10 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
         popNote.trim(),
       ],
       caveats: [
-        "Groups are re-ranked each year: this compares positions in the distribution, not the same people.",
+        "We re-rank groups each year: this compares positions in the distribution, not the same people.",
         grouping === "decile" && LOWEST_TENTH_CAVEAT,
         grouping === "vigintile" &&
-          `The lowest-income ${g.share} is left out: incomes there are often temporarily low or under-reported.`,
+          `The chart leaves out the lowest-income ${g.share}: incomes there are often temporarily low or under-reported.`,
         grouping === "vigintile" &&
           `The ${low}'s median is ${formatPounds(first.real_median[skip])} a year in ${fyDash(first.year)}, so a small change in pounds is a large percentage.`,
         basis === "ahc" && "Real incomes after housing costs use a PolicyEngine CPI after housing costs, not an OBR series.",

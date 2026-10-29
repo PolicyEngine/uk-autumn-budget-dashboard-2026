@@ -168,7 +168,7 @@ describe("the Poverty sub-tab's measures pair", () => {
     }
     const reasonFor = (name) => none.find((row) => row.textContent.includes(name))?.querySelector(".wf-reason")?.textContent;
     expect(reasonFor("Business sale relief limit halved")).toBe("taxes capital gains, not incomes");
-    expect(reasonFor("Employer National Insurance relief, under-25s")).toBe("changes employers' costs; wages held fixed");
+    expect(reasonFor("Employer National Insurance relief, under-25s")).toBe("changes employers' costs; we hold wages fixed");
     // The steps come first, then the no-change rows, then the total
     const kinds = [...measures.querySelectorAll(".wf-measure, .wf-interaction, .wf-none, .wf-total")].map((r) => r.className.match(/wf-(measure|interaction|none|total)/)[1]);
     expect(kinds.join(" ")).toMatch(/^(measure )+(none )+total$/);
