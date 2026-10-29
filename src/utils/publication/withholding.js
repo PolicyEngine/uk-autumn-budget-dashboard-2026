@@ -1,4 +1,4 @@
-import { AGE_BANDS, ALL_BAND, SINGLE_AGE_TOP, singleAgeKey } from "../ageImpact";
+import { AGE_BANDS, ALL_BAND, SINGLE_AGE_TOP, singleAgeKey } from "../ageImpact.js";
 
 const AGE_TABLE = "age_impact";
 /** The age table's row labels: the bands, "all", "0" to "89" and "90+". */
