@@ -11,6 +11,7 @@
 | `expected_effects.csv` | What each measure should do: `direction` (`positive` improves the government balance, `negative` worsens it) from `from_year` to `to_year`. Needed before the Treasury figures arrive; afterwards the sign of the Treasury's own figure is used for any year not declared. | Integrator, when the measure is coded |
 | `exceptions.yaml` | Reviewed acceptances of a year's residual. | Reviewer |
 | `policy.yaml` | The thresholds. They are a proposal until the team agrees them. | — |
+| `behavioural_adjustments.csv` | Reference only: what behaviour each official costing includes, whether it explains our residual, and its size in £bn where a published source gives one. Nothing reads it; published figures stay static. See [Behavioural responses](#behavioural-responses). | Reconciler |
 
 ## Budget 2026 (28 October 2026)
 
@@ -25,6 +26,17 @@
   from <https://assets.publishing.service.gov.uk/media/6ae187a2779378370fd80a9a/Table_6.1_and_6.2_Budget_2026_Policy_Decisions.xlsx> (SHA-256 `359958df6b1ab9746073725f6f8017ebdbb55040e57cf28612891f1e294a7f15`). The workbook is not kept here: a file under `data_inputs/treasury/` other than CSV, YAML or Markdown would count as calculation code to the combined and area runs (#174). Every row matched the printed totals.
 - **No static costing is published.** The policy costings document (<https://assets.publishing.service.gov.uk/media/6ae1883fe4367e5c8b0467df/AB26_Policy_Costing.pdf>, SHA-256 `f716efada8a4d0726ce12b0f97d3f0dac671c31b2d005ecf300a48ff309638bf`) prints one Exchequer impact per measure, the same as Table 6.1, and says it includes a behavioural response for electricity VAT, fuel duty, Carer's Allowance, property income and savings income. The Pension Tax Allowance costing "assumes no behavioural response". The Household Energy Payment (row 1, RDEL) has no page in it. So no `static_costing` sheet is written, and `policy.yaml` gates on `post_behavioural` (Vahid, 28 October 2026). Measures listed under `includes_behaviour` (the costing says it includes a behavioural response) pass within `behavioural_relative_tolerance` (proposed 25%) or the £50m floor, whichever is larger; the Pension Tax Allowance and the Household Energy Payment keep the ordinary band.
 - `mapping.csv`: nine measures, one per Table 6.1 row (1, 2, 3, 4, 7, 15, 52, 61 and 62), scale 1, offset 0. Savings income (row 62, `savings_income_rates_up`) is mapped but held back from the release ([README](../../README.md)). Five rows are not comparable in some years (`not_comparable_years`), each with its `reason` in the CSV: row 4 (£2 bus fare cap) in 2028-29 and 2029-30; row 15 (trading allowance) in 2027-28; row 52 (Pension Tax Allowance) in 2030-31 and 2031-32; row 61 (property income) in 2027-28 and 2028-29; row 62 (savings income) in 2026-27, 2027-28 and 2028-29.
+
+## Behavioural responses
+
+Our figures are static; Table 6.1 and the policy costings document are post-behavioural. `behavioural_adjustments.csv` records, per measure and fiscal year:
+
+- `official_behaviour`: the response the costing describes, and `direction`: whether it raises or lowers the cost (or the yield).
+- `explains_residual`: whether that direction runs from the official figure towards ours. Where it does not (electricity VAT, fuel duty, Carer's Allowance), adding behaviour to ours widens the gap, and the gap has another cause.
+- `central_bn`, `low_bn`, `high_bn`: the adjustment to our static figure, Exchequer sign: the smaller and the larger end of the range, and a central value. Blank where no published source sizes it.
+- `method` and `source`.
+
+Only property income has a published size of its own (OBR, Economic and fiscal outlook, October 2026, para 3.17). Fuel duty applies HMRC's fuel price elasticities (HM Treasury and HMRC, *Analysis of the dynamic effects of fuel duty reductions*, 2014, Table 3.1) to our own base. The values and the arithmetic are in the file's `method` column. The file feeds no calculation and no page.
 
 ## The rule
 
