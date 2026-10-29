@@ -100,8 +100,8 @@ function Costing({ measure }) {
  * One measure as a Policies card (PolicyCards.jsx's PolicyCard), in the
  * modelled cards' own style, kept compact: the category and name, What
  * changes as the summary line, At a glance (Starts, Ends, who it reaches;
- * no timeline), the values before and after in the What changes block
- * where the entry gives them (no chart), For a household, then in the
+ * no timeline), What changes as the card's picture
+ * (UnmodelledVisual.jsx), For a household, then in the
  * footer one disclosure, Treasury costing, styled as About this result:
  * the Treasury's six years as a strip, the sources and the Table 6.1 rows. The words are the entry's own
  * (utils/unmodelledMeasures.js).
