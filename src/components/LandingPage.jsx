@@ -60,7 +60,7 @@ export function LandingIntro({ headingId, provisional, note = null, className = 
         forecast is the OBR&rsquo;s{" "}
         <SourceLink source="obr_efo_current">Economic and fiscal outlook, October 2026</SourceLink>.
       </p>
-      {note && <p className="landing-intro">{note}</p>}
+      {note && <p className="landing-intro landing-intro-note">{note}</p>}
       {provisional}
     </div>
   );

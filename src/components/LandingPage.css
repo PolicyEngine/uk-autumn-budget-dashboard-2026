@@ -153,6 +153,11 @@ html[data-deep-link] .view-tabs-bar[hidden] {
   color: var(--pe-gray-700);
 }
 
+/* A second short paragraph under the lead (About's withheld-figures line) */
+.landing-intro-note {
+  margin-top: 12px;
+}
+
 .landing-intro a {
   color: var(--pe-teal-700);
   text-decoration: underline;

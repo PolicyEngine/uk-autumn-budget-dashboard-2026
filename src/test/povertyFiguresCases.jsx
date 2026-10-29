@@ -152,6 +152,23 @@ export function describePovertyFigures(shown, { files, catalogueRef }) {
     });
   });
 
+  describe("the inequality chart", () => {
+    it(`${either("may give", "never gives")} a poverty reason for a policy with no change`, async () => {
+      const { default: MeasureEffectsView } = await import("../components/MeasureEffectsView");
+      const { SUMMARY_METRICS } = await import("../components/SummaryMetricChart");
+      const { POLICY_DETAILS } = await import("../utils/policyDetails");
+      const id = "household_energy_payment_2026";
+      const payment = { id, name: id, description: POLICY_DETAILS.find((item) => item.id === id).writtenFor };
+      catalogueRef.current = { byId: new Map([[id, payment]]) };
+      const byMeasure = [{ id, name: "Energy payment", colour: "var(--c-reference)", points: [{ year: 2026, value: 0 }] }];
+      const { container } = render(
+        <MeasureEffectsView byMeasure={byMeasure} metric={SUMMARY_METRICS.inequality} selectedYear={2026} view="year" years={[2026]} />,
+      );
+      const reason = container.querySelector(".mev-reason").textContent;
+      expect(reason).toBe(either("not counted in poverty income", "no change in inequality"));
+    });
+  });
+
   describe("the words about them", () => {
     const catalogue = buildMeasureCatalogue(measureCatalogueFixture());
 
