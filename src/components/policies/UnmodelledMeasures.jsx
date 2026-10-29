@@ -20,7 +20,13 @@ export const UNMODELLED_TITLE = "Budget policies we do not model";
 const rowsLabel = (rows) => (rows.length === 1 ? `row ${rows[0]}` : `rows ${rows.slice(0, -1).join(", ")} and ${rows[rows.length - 1]}`);
 
 export const COSTING_CAPTION = "Treasury costing, £m (Table 6.1; + is a gain to the Exchequer)";
-export const UNMODELLED_SUBTITLE = "What each policy changes, who it reaches and why we leave it out.";
+/**
+ * The line under the section's heading while it is closed: how many
+ * policies it holds, from the data, and what each card says (Vahid, 29
+ * Oct). Open, the cards say it, so there is no line.
+ */
+export const unmodelledSubtitle = (count) =>
+  `${count} ${count === 1 ? "policy" : "policies"} · what each changes and why we leave it out`;
 
 // £ million as Table 6.1 prints it: a sign on every figure but zero, with a true minus
 const millions = new Intl.NumberFormat("en-GB", { signDisplay: "exceptZero" });
@@ -204,7 +210,8 @@ export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES }) {
   return (
     <section id="budget-measures-not-modelled" className="umm" aria-label={UNMODELLED_TITLE}>
       {/* The section's heading, as "Policies we model" has it, opening and
-          closing the cards: a native button in the h2, the subtitle under it */}
+          closing the cards: a native button in the h2, and while closed a
+          line under it, which the button is described by */}
       <div id="budget-policies-we-do-not-model" className="section-heading has-icon umm-heading">
         <span className="section-icon" aria-hidden="true">
           <TitleIcon name="list" bare size={18} />
@@ -217,7 +224,7 @@ export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES }) {
                 className="umm-toggle"
                 aria-expanded={open}
                 aria-controls={`${id}-cards`}
-                aria-describedby={`${id}-subtitle`}
+                aria-describedby={open ? undefined : `${id}-subtitle`}
                 onClick={toggle}
               >
                 {UNMODELLED_TITLE}
@@ -225,10 +232,12 @@ export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES }) {
               </button>
             </h2>
           </div>
-          {/* Clicking the subtitle opens it too; the button is the control */}
-          <p id={`${id}-subtitle`} className="umm-subtitle" onClick={toggle}>
-            {UNMODELLED_SUBTITLE}
-          </p>
+          {/* Clicking the line opens it too; the button is the control */}
+          {!open && (
+            <p id={`${id}-subtitle`} className="umm-subtitle" onClick={toggle}>
+              {unmodelledSubtitle(measures.length)}
+            </p>
+          )}
         </div>
       </div>
       <div id={`${id}-cards`} className="report-section policy-details-content" hidden={!open}>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import UnmodelledMeasures, { COSTING_CAPTION, UNMODELLED_SUBTITLE, UNMODELLED_TITLE, formatMillions, groupsOf } from "./UnmodelledMeasures";
+import UnmodelledMeasures, { COSTING_CAPTION, UNMODELLED_TITLE, formatMillions, groupsOf, unmodelledSubtitle } from "./UnmodelledMeasures";
 import { WHY_NOT_MODELLED } from "../PolicyCards";
 import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
 import {
@@ -103,13 +103,37 @@ describe("UnmodelledMeasures", () => {
     const section = screen.getByRole("region", { name: UNMODELLED_TITLE });
     const heading = within(section).getByRole("heading", { level: 2, name: UNMODELLED_TITLE });
     expect(heading.closest(".section-heading")).toBeTruthy();
-    expect(section).toHaveTextContent(UNMODELLED_SUBTITLE);
     const button = toggle();
     expect(heading).toContainElement(button);
     expect(button.tagName).toBe("BUTTON");
     expect(button).toHaveAttribute("type", "button");
     expect(button).toHaveAttribute("aria-expanded", "false");
     expect(cards()).toHaveLength(0);
+  });
+
+  it("says, while closed, how many policies it holds, as the button's description; open, no line (Vahid, 29 Oct)", () => {
+    render(<UnmodelledMeasures />);
+    const line = unmodelledSubtitle(UNMODELLED_MEASURES.length);
+    expect(line).toBe(`${UNMODELLED_MEASURES.length} policies · what each changes and why we leave it out`);
+    expect(document.querySelector(".umm-subtitle")).toHaveTextContent(line);
+    expect(toggle()).toHaveAccessibleDescription(line);
+    open();
+    expect(toggle()).toHaveAttribute("aria-expanded", "true");
+    expect(document.querySelector(".umm-subtitle")).toBeNull();
+    expect(toggle()).not.toHaveAttribute("aria-describedby");
+    fireEvent.click(toggle());
+    expect(toggle()).toHaveAccessibleDescription(line);
+  });
+
+  it("counts the policies it is given", () => {
+    render(<UnmodelledMeasures measures={UNMODELLED_MEASURES.slice(0, 1)} />);
+    expect(toggle()).toHaveAccessibleDescription("1 policy · what each changes and why we leave it out");
+  });
+
+  it("opens from its line too", () => {
+    render(<UnmodelledMeasures />);
+    fireEvent.click(document.querySelector(".umm-subtitle"));
+    expect(toggle()).toHaveAttribute("aria-expanded", "true");
   });
 
   it("opens and closes its cards from the heading", () => {
@@ -334,7 +358,7 @@ describe("UnmodelledMeasures", () => {
 });
 
 describe("the section's text", () => {
-  it("has only its heading and subtitle above the cards: no intro, no closing note", () => {
+  it("has only its heading and, while closed, its line above the cards: no intro, no closing note", () => {
     render(<UnmodelledMeasures />);
     const section = screen.getByRole("region", { name: UNMODELLED_TITLE });
     expect(section.querySelector(".umm-intro")).toBeNull();

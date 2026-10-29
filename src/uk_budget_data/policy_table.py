@@ -188,10 +188,13 @@ def _row(
     note=None,
     unit_words=None,
     card_note=None,
+    figures=None,
 ) -> dict:
     """One parameter's points. ``note`` qualifies the row where the page
     lists it; ``card_note``, on a measure's main row, is a line the
-    Policies card shows under its values."""
+    Policies card shows under its values; ``figures``, the figures a card's
+    visual draws that are not the row's points, by name and then fiscal
+    year."""
     row = {
         "label": label,
         "unit": unit,
@@ -206,6 +209,8 @@ def _row(
         row["note"] = note
     if card_note:
         row["card_note"] = card_note
+    if figures:
+        row["figures"] = figures
     return row
 
 
@@ -618,11 +623,12 @@ def _electricity_where(values: dict) -> str:
             "the electricity card's note knows Great Britain, then the UK "
             "from April 2027, only"
         )
+    # One short line for the card (Vahid, 29 Oct): that Northern Ireland
+    # is only expected is the card's At a glance and the visual's key, and
+    # the law before the Budget the visual's bracket
     return (
-        f"0% instead of 5% in Great Britain from {_day_label(first)}. The "
-        "Budget expects the zero rate to "
-        "apply in Northern Ireland too from April 2027, and the model "
-        "counts it there from then."
+        f"0% instead of 5% from {first:%B %Y} (Northern Ireland from "
+        "April 2027)."
     )
 
 
@@ -634,15 +640,10 @@ def _electricity_vat(reform) -> list[dict]:
         if name.startswith("rate_change_")
     }
     path = "gov.hmrc.vat.reduced_rate"
+    # While the pre-Budget zero rate is in the measure (SI 2026/987), the
+    # 5% is the scoring baseline, as Table 6.1 scores it (#290, Max); the
+    # card's visual marks those months as law before the Budget
     card_note = _electricity_where(values)
-    if _electricity.PRE_BUDGET_ZERO_RATE_IN_MEASURE:
-        # The October to March zero rate was already law (SI 2026/987): the
-        # 5% is the scoring baseline, as Table 6.1 scores it (#290, Max)
-        card_note += (
-            " The October to March zero rate was already law (SI 2026/987); "
-            "like the Treasury's costing, the model scores the whole period "
-            "against 5%."
-        )
     return _vat_rows(
         registry.ELECTRICITY_VAT_ID,
         zero_vat_on_domestic_electricity,
@@ -852,7 +853,7 @@ def _carers_allowance_taper(reform) -> list[dict]:
     """The cliff the measure removes (#290, Anthony, 19:20): the allowance
     £1 a week over the earnings limit, nothing under current law and the
     weekly rate less £1 with the taper. The measure does not move the limit
-    itself, so no row shows it as a change; the card's note gives the limit
+    itself, so no row shows it as a change; the row's figures give the limit
     and where the tapered allowance runs out."""
     values = constants(carers_allowance_earnings_taper)
     start, taper = values["start_year"], values["taper_rate"]
@@ -875,13 +876,8 @@ def _carers_allowance_taper(reform) -> list[dict]:
     shown = [y for y in POLICY_YEARS if y >= start]
 
     def by_year(amount):
-        parts = [f"£{amount(y):,.0f}" for y in shown]
-        parts[0] += " a week"
-        return " and ".join(
-            f"{part} in {_fiscal_label(y)}" for part, y in zip(parts, shown)
-        )
+        return {_fiscal_label(y): round(amount(y)) for y in shown}
 
-    limits, ends = by_year(carers_allowance_limit), by_year(runs_out)
     return [
         _row(
             "Carer's Allowance at £1 a week over the earnings limit",
@@ -901,13 +897,18 @@ def _carers_allowance_taper(reform) -> list[dict]:
                 },
             ),
             unit_words="£ a week",
+            # One short line for the card (Vahid, 29 Oct); the visual
+            # draws the limit and where the allowance runs out, from
+            # ``figures`` (src/utils/policyVisuals.js carersTaperView)
             card_note=(
-                "The earnings limit is 16 hours at the National Living "
-                f"Wage, rounded up to the pound: {limits}. Current law "
-                "stops the allowance at £1 over it. With the measure it "
-                f"falls by £1 for each £1 above the limit, and runs out at "
-                f"{ends}."
+                f"From {_fiscal_label(start)} the allowance tapers away "
+                "(£1 for each £1 earned above the limit) instead of "
+                "stopping at £1 over it."
             ),
+            figures={
+                "earnings_limit": by_year(carers_allowance_limit),
+                "runs_out": by_year(runs_out),
+            },
         ),
     ]
 

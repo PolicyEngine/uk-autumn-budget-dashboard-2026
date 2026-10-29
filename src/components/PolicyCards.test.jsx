@@ -484,11 +484,12 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
     render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
     const block = screen.getByRole("region", { name: /^What changes/ });
     const note = block.querySelector(".pchg-note");
-    expect(note).toHaveTextContent("0% instead of 5% in Great Britain from 1 October 2026.");
-    expect(note).toHaveTextContent("expects the zero rate to apply in Northern Ireland too from April 2027");
-    expect(note).toHaveTextContent("already law (SI 2026/987)");
+    // One short sentence (Vahid, 29 Oct): the visual marks the law before
+    // the Budget, At a glance and the key that Northern Ireland is expected
+    expect(note).toHaveTextContent(/^0% instead of 5% from October 2026 \(Northern Ireland from April 2027\)\.$/);
+    expect(note).not.toHaveTextContent("SI 2026/987");
     expect(within(block).queryByRole("button")).toBeNull();
-    expect(block).not.toHaveTextContent(/2\.17%|3\.89%|in Great Britain,/);
+    expect(block).not.toHaveTextContent(/2\.17%|3\.89%|averaged over the year/);
   });
 
   it("lists the property rates once for 2027-28 to 2031-32, not a row a year (PR 290, Anthony, 19:36)", () => {
@@ -650,8 +651,11 @@ describe("the card's frame", () => {
     expect(within(block).getByRole("img", { name: /against weekly earnings/ })).toBeInTheDocument();
     expect(block.querySelector(".pviz-cliff")).not.toBeNull();
     expect(block).not.toHaveTextContent(/£204|£323|£119/);
-    expect(block.querySelector(".pchg-note")).toHaveTextContent("£228 a week in 2030-31 and £234 in 2031-32");
-    expect(block.querySelector(".pchg-note")).toHaveTextContent("runs out at £324 a week in 2030-31 and £332 in 2031-32");
+    // One short sentence (Vahid, 29 Oct): the visual draws the limit and
+    // where the allowance runs out
+    expect(block.querySelector(".pchg-note")).toHaveTextContent(
+      /^From 2030-31 the allowance tapers away \(£1 for each £1 earned above the limit\) instead of stopping at £1 over it\.$/,
+    );
     // The limit is not shown as a change the measure makes
     expect(block).not.toHaveTextContent(/Earnings limit|Weekly earnings at which/);
   });

@@ -51,18 +51,20 @@ describe("fuelDutyView", () => {
 });
 
 describe("carersTaperView", () => {
-  it("reads the limit and where the taper runs out from the note, the rate from the row", () => {
+  it("reads the limit and where the taper runs out from the row's figures, the rate from its points", () => {
     const view = carersTaperView(entry("carers_allowance_earnings_taper"));
     expect(view).toMatchObject({ year: "2030-31", limit: 228, runsOut: 324, rate: 96.44 });
   });
 
-  it("draws nothing when the note and the row disagree", () => {
+  it("draws nothing when the figures and the row disagree, or are missing", () => {
     const original = entry("carers_allowance_earnings_taper");
     const changed = {
       ...original,
-      rows: [{ ...original.rows[0], card_note: original.rows[0].card_note.replace("£324 a week", "£400 a week") }],
+      rows: [{ ...original.rows[0], figures: { ...original.rows[0].figures, runs_out: { "2030-31": 400 } } }],
     };
     expect(carersTaperView(changed)).toBeNull();
+    const { figures: _figures, ...bare } = original.rows[0];
+    expect(carersTaperView({ ...original, rows: [bare] })).toBeNull();
   });
 });
 
@@ -110,12 +112,11 @@ describe("electricityVatView", () => {
     expect(view.regions[1].expected).toBe(true);
     // The row's own dates and note
     expect(entry(id).rows[0].points[0].key).toBe("2026-10-01/2027-06-30");
-    expect(view.note).toMatch(/Northern Ireland too from April 2027/);
+    expect(view.note).toBe("0% instead of 5% from October 2026 (Northern Ireland from April 2027).");
   });
 
-  it("marks October to March as law before the Budget, as the note says", () => {
+  it("marks October to March as law before the Budget", () => {
     expect([view.months[view.law.first], view.months[view.law.last]]).toEqual(["2026-10", "2027-03"]);
-    expect(view.note).toMatch(/October to March zero rate was already law/);
   });
 });
 

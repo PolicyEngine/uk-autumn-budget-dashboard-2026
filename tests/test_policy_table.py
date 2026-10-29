@@ -223,16 +223,12 @@ def test_electricity_says_where_and_what_it_is_scored_against(document):
     note = rows(document, "domestic_electricity_zero_vat")[
         "VAT on domestic electricity"
     ]["card_note"]
-    assert note.startswith(
-        "0% instead of 5% in Great Britain from 1 October 2026."
+    # One short sentence (Vahid, 29 Oct): the card's visual marks the law
+    # before the Budget, its At a glance that Northern Ireland is expected
+    assert note == (
+        "0% instead of 5% from October 2026 (Northern Ireland from April "
+        "2027)."
     )
-    assert (
-        "expects the zero rate to apply in Northern Ireland too from April 2027"
-        in note
-    )
-    assert "SI 2026/987" in note
-    assert "scores the whole period against 5%" in note
-    assert "UK-wide from April" not in note
 
 
 def test_a_weight_for_a_year_not_in_force_fails(monkeypatch):
@@ -423,7 +419,7 @@ def test_current_law_thresholds_are_the_engine_alone(document):
 def test_carers_allowance_shows_the_cliff_it_removes(document):
     """#290 (Anthony, 19:20): the measure does not move the earnings limit,
     so the card shows the allowance £1 over it, nothing in current law and
-    the weekly rate less £1 with the taper, and the note gives the limit
+    the weekly rate less £1 with the taper, and the row's figures give the limit
     (16 hours at the OBR's National Living Wage, rounded up to the pound,
     as efcda9c5) and where the allowance runs out."""
     from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
@@ -451,11 +447,17 @@ def test_carers_allowance_shows_the_cliff_it_removes(document):
         228,
         234,
     )
-    note = row["card_note"]
-    assert "£228 a week in 2030-31 and £234 in 2031-32" in note
-    ends = [
-        f"£{228 + rate('2030-04-06'):,.0f} a week in 2030-31",
-        f"£{234 + rate('2031-04-06'):,.0f} in 2031-32",
-    ]
-    assert f"runs out at {ends[0]} and {ends[1]}" in note
+    # The visual draws the limit and where the allowance runs out
+    assert row["figures"] == {
+        "earnings_limit": {"2030-31": 228, "2031-32": 234},
+        "runs_out": {
+            "2030-31": round(228 + rate("2030-04-06")),
+            "2031-32": round(234 + rate("2031-04-06")),
+        },
+    }
+    # One short sentence (Vahid, 29 Oct)
+    assert row["card_note"] == (
+        "From 2030-31 the allowance tapers away (£1 for each £1 earned "
+        "above the limit) instead of stopping at £1 over it."
+    )
     assert "Earnings limit" not in row["label"]
