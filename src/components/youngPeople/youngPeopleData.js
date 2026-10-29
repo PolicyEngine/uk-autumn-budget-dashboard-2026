@@ -343,7 +343,7 @@ export function cumulate(points, keys) {
  * Computed from the per-measure rows, so a new or changed measure is named
  * by the data, never by a list here.
  *
- * @returns {Array<{year: number, from: number, step: number, value: number, measureId: string}>}
+ * @returns {Array<{year: number, from: number, step: number, value: number, measureId: string, ends: boolean}>}
  */
 export function stepAnnotations(series, { limit = 2, share = 0.3 } = {}) {
   const values = series.map((point) => point.net).filter((value) => value !== null);
@@ -368,7 +368,12 @@ export function stepAnnotations(series, { limit = 2, share = 0.3 } = {}) {
         measureId = id;
       }
     }
-    if (measureId) steps.push({ year: after.year, from: before.year, step, value: after.net, measureId });
+    if (measureId) {
+      // The step comes from the measure ending (it is in force the year
+      // before and not after), so the headline and label never say it applies
+      const ends = Math.abs(partOf(before, measureId)) >= 0.5 && Math.abs(partOf(after, measureId)) < 0.5;
+      steps.push({ year: after.year, from: before.year, step, value: after.net, measureId, ends });
+    }
   }
   return steps.sort((a, b) => Math.abs(b.step) - Math.abs(a.step)).slice(0, limit).sort((a, b) => a.year - b.year);
 }
