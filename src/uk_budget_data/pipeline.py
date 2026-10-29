@@ -29,6 +29,7 @@ from uk_budget_data.calculators import (
     IncomeDistributionCalculator,
     IncomeMobilityCalculator,
     MetricsCalculator,
+    OfficialBasisCalculator,
     WinnersLosersCalculator,
 )
 from uk_budget_data.measure_templates import (
@@ -63,6 +64,18 @@ def build_microsimulation(dataset_path: Optional[str], scenario=None):
         allow_unmanaged=dataset_path is not None,
         scenario=with_forecast(scenario),
     )
+
+
+def official_basis_for(reform_id: str, config: DataConfig) -> tuple:
+    """The engine variables a measure's official costing covers
+    (data_inputs/treasury/mapping.csv's ``official_basis``, #297), or none."""
+    from uk_budget_data.publication.reconcile import (
+        load_mapping,
+        official_bases,
+    )
+
+    mapping = load_mapping(config.data_inputs_dir / "treasury" / "mapping.csv")
+    return official_bases(mapping).get(reform_id, ())
 
 
 def save_csv(df: pd.DataFrame, csv_path: Path) -> None:
@@ -121,6 +134,10 @@ class ReformProcessor:
         self.budgetary_calc = BudgetaryImpactCalculator(
             years=self.config.years
         )
+        self.official_basis_calc = OfficialBasisCalculator(
+            years=self.config.years
+        )
+        self.official_basis = official_basis_for(reform.id, self.config)
         self.distributional_calc = DistributionalImpactCalculator()
         self.winners_losers_calc = WinnersLosersCalculator()
         self.metrics_calc = MetricsCalculator()
@@ -162,6 +179,10 @@ class ReformProcessor:
         # Calculate budgetary impact
         budgetary = self.budgetary_calc.calculate(
             baseline, reformed, reform_id, reform_name
+        )
+        # The same, on the official costing's basis, where it is narrower
+        official_basis = self.official_basis_calc.calculate(
+            baseline, reformed, reform_id, reform_name, self.official_basis
         )
 
         # Calculate per-year metrics
@@ -241,6 +262,7 @@ class ReformProcessor:
             reform_id=reform_id,
             reform_name=reform_name,
             budgetary_impact=budgetary,
+            official_basis=official_basis,
             distributional_impact=all_distributional,
             winners_losers=all_winners_losers,
             metrics=all_metrics,
