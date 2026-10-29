@@ -1288,7 +1288,9 @@ function HouseholdCalculator({
               }}
               submitted={submitted !== null}
               changed={changed}
-              policyCount={submitted?.policies.length ?? householdPolicies.length}
+              // The measures the result covers: the selection, counted, and
+              // the calculator-only ones, named (resultPolicies)
+              requestPolicies={submitted?.policies ?? requestPolicies}
               startedAt={submitted?.at ?? null}
               salarySource={activePreset?.salarySource ?? null}
               spendingSource={activePreset?.spendingSource ?? null}
