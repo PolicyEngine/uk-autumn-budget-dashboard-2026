@@ -348,17 +348,25 @@ body {
 }
 
 /* The two bars: the ui-kit site nav (PolicyEngineShell renders it with an
-   inline position:sticky; top:0) and the title band. The site nav is out
-   of the page's flow and hidden above the window by default, so the band
-   sits at the very top of the page with the tab rows under it, from the
-   first paint. App.jsx shows it (data-site-nav-shown on <html>) when the pointer
-   rests at the window's top edge (SITE_NAV_EDGE_PX for SITE_NAV_DWELL_MS, utils/pageScroll), or the reader tabs into it (never on a scroll up; on a touch-only
-   device, only at the page's very top), keeps it 1.5s and while it is in
-   use, and hides it on any scroll down by the reader or once the pointer
-   or focus has left; it measures the nav into
-   --site-nav-height. Shown, it sits above the band: --nav-offset becomes
-   its height, so the band and tab rows move down under it and the Year and
-   Policies pills stay in view.
+   inline position:sticky; top:0) and the title band. The site nav sits in
+   the page's flow, at its top, from the first paint: on load it is in view
+   above the band, as on every policyengine.org page (app-v2's app-zone
+   shell audit looks for its Research, Model, API and Donate links in the
+   window's top 140px). A scroll down takes it away with the page, and the
+   band then sticks at the window's top. Once scrolled away it waits just
+   above the window: sticky at minus its own height (--site-nav-height,
+   which App.jsx measures; until then the ui-kit's --spacing-header, the
+   height it gives the nav). App.jsx brings it back
+   (data-site-nav-shown on <html>) when the pointer rests at the window's
+   top edge (SITE_NAV_EDGE_PX for SITE_NAV_DWELL_MS, utils/pageScroll), or
+   the reader tabs into it (never on a scroll up; on a touch-only device,
+   only at the page's very top), keeps it 1.5s and while it is in use, and
+   lets it go on any scroll down by the reader or once the pointer or focus
+   has left. Shown, it sticks at the window's top (top: 0, sliding down from
+   above) and sits above the band: --nav-offset becomes its height, so the
+   band and tab rows move down under it and the Year and Policies pills
+   stay in view. Within its own height of the page's top it is never laid
+   over the page: there it is back in its place in the flow.
    --motion-slide is 0 under reduced motion.
    Written against @policyengine/ui-kit 0.12.0, whose shell is
    <div class="min-h-screen flex flex-col"> with the nav as its first
@@ -377,27 +385,26 @@ html[data-site-nav-shown] {
 }
 
 :root[data-site-nav-shown] .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
+  top: 0 !important;
   box-shadow: 0 2px 8px var(--shadow-faint) !important;
 }
 
 .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0;
-  right: 0;
+  position: sticky !important;
+  top: calc(0px - var(--site-nav-height, var(--spacing-header, 58px))) !important;
   /* Above the title band (1100), so its About menu opens over it */
   z-index: 1110 !important;
-  transition: transform var(--motion-slide) var(--ease-out);
+  transition: top var(--motion-slide) var(--ease-out);
 }
 
 :root:not([data-site-nav-shown]) .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
-  transform: translateY(-100%);
   box-shadow: none !important;
 }
 
 /* A touch-only device (a phone or tablet): the site nav is part of the
    page, at its top, and scrolls away with it; it is never laid over the
-   page. Fixed and pushing the bars down by its height (above), it hid the
+   page, not even when focus is in it. Laid over the page and pushing the
+   bars down by its height, it hid the
    first 58px of every view under the tab rows on load: the bars moved
    down, the content did not (team review, Budget day). In the flow, the
    band, the tab rows and the content all start below it, and once it has
@@ -414,6 +421,7 @@ html[data-site-nav-shown] {
     /* Relative, not static: it keeps its z-index, so its menus still
        open over the band */
     position: relative !important;
+    top: 0 !important;
     transform: none;
     box-shadow: none !important;
     transition: none;
