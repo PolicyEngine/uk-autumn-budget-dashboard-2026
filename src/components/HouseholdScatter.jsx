@@ -132,8 +132,7 @@ function ScatterMoreInfo({ basisLabel }) {
   );
 }
 const DESCRIPTION_LOADING = "Change in net income by baseline income.";
-// Under the plot when the groups that gain or lose are left out, as the
-// map labels its blank seats
+// In place of the dots when the groups that gain or lose are left out
 export const HOUSEHOLDS_WITHHELD_NOTE = "Not published, too few survey households.";
 
 // Dots move between years and selections as the other charts' bars do:
@@ -501,17 +500,18 @@ function HouseholdScatter({
   // Cells with too few survey households are left out, so zero cells alone
   // do not mean no household's income changes: when the reform's income
   // decile results show a change, or withhold one, the groups that change
-  // were withheld. The published no-change dots are drawn, and a line
-  // under the plot labels what is missing, as the map labels its blank
-  // seats. Only a selection whose deciles are all zero (an employer cost
-  // alone) gets "None of the selected policies changes…" in place of dots
+  // were withheld, and the plot says so in place of dots. Only a selection
+  // whose deciles are all zero (an employer cost alone) gets "None of the
+  // selected policies changes…"
   const changesWithheld =
     zeroCells &&
     decilesShowChange(catalogue.tablesByKey?.[view.reform]?.distributional_impact, view.reform, selectedYear);
   const nothingChanges = zeroCells && !changesWithheld;
+  // Either way no dots are drawn
+  const noDots = nothingChanges || changesWithheld;
   // No dots drawn (a note in their place): the plain subtitle, not "Each
   // dot is about …"
-  const description = !ready || nothingChanges
+  const description = !ready || noDots
     ? DESCRIPTION_LOADING
     : youShown
       ? youSentence({
@@ -572,9 +572,9 @@ function HouseholdScatter({
   // The key: in the sentence, with the logo in the SVG as on the decile
   // card; with the reader's household, a key row under the plot and the
   // logo below it. A note instead of a plot keeps the logo row.
-  const keyRow = ready && !nothingChanges && Boolean(youShown);
+  const keyRow = ready && !noDots && Boolean(youShown);
   const svgLogo = !embedded && !youShown;
-  const htmlLogo = !embedded && (Boolean(youShown) || nothingChanges);
+  const htmlLogo = !embedded && (Boolean(youShown) || noDots);
 
   // Beside a household's result, a selection the chart is not published
   // for gets the reason in a line, not an empty plot
@@ -660,7 +660,7 @@ function HouseholdScatter({
               </span>
             </h3>
             <p className="chart-description">
-              {ready && !youShown && !nothingChanges ? describeWithKey(householdsPerDot(view.basisPoints)) : description}
+              {ready && !youShown && !noDots ? describeWithKey(householdsPerDot(view.basisPoints)) : description}
               {descriptionLink && <> {descriptionLink}</>}
             </p>
           </div>
@@ -676,9 +676,9 @@ function HouseholdScatter({
           map and colour scale, so the two cards line up and fill alike */}
       <div className="chart-plot household-scatter-template-plot">
         <div className="household-scatter-template-canvas" ref={chartRef}>
-          {nothingChanges ? (
+          {noDots ? (
             <div className="plot-empty household-scatter-no-change" role="status">
-              <p>{noHouseholdChange(yearLabel)}</p>
+              <p>{changesWithheld ? HOUSEHOLDS_WITHHELD_NOTE : noHouseholdChange(yearLabel)}</p>
             </div>
           ) : (
           <ResponsiveContainer width="100%" height="100%" minHeight={STACKED_HEIGHT / 2}>
@@ -734,7 +734,7 @@ function HouseholdScatter({
           </ResponsiveContainer>
           )}
         </div>
-        {ready && !nothingChanges && (
+        {ready && !noDots && (
           <GroupTooltip
             hover={hover}
             basisLabel={basisLabel}
@@ -752,12 +752,6 @@ function HouseholdScatter({
           </div>
         )}
       </div>
-
-      {changesWithheld && (
-        <p className="household-scatter-withheld-note" role="note">
-          {HOUSEHOLDS_WITHHELD_NOTE}
-        </p>
-      )}
 
       {keyRow && (
         <ul className="scatter-legend chart-legend" aria-label="Key">
