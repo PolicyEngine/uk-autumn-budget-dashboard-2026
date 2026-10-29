@@ -152,11 +152,17 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
   );
   const activePolicies = drawnNames(members);
   const netLabel = activePolicies.length > 1 ? "Net change" : undefined;
-  // In a section with a shared key (MeasureKey), the card draws no legend
+  // In a section with a shared key (MeasureKey), the card draws no legend.
+  // No MeasureKeyProvider wraps DecileImpactCard (only AgeSection has one;
+  // All households dropped its section key on 27 Oct), so in the app
+  // key.shared is false and the chart draws its own legend under its axis.
+  // The key.shared branches here and below run only under a provider, as
+  // in CatalogueCharts.test.jsx.
   const key = useMeasureKey(members, netLabel);
-  // The legend took about 160px (300 on a phone) of the chart's height;
-  // with the section's key above the pair, the plot keeps its own size
-  // With no legend under the plot, room below the axis for the logo
+  // With its own legend the chart is 480px (620 on a phone); the legend
+  // takes its height from those, between the axis and the logo. Under a
+  // section key there is no legend to make room for, so the chart is
+  // shorter, 410px (390 on a phone), with room below the axis for the logo
   const LOGO_ROOM = CHART_LOGO.height + CHART_LOGO.padding + 6;
   const plotHeight = key.shared ? (narrow ? 390 : 410) : narrow ? 620 : 480;
 
