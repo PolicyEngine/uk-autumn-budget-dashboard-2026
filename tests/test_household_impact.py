@@ -1635,6 +1635,26 @@ def test_without_a_local_authority_council_tax_is_the_regions_as_before(
     )
 
 
+@pytest.mark.parametrize(
+    "values, says",
+    [
+        (
+            {"region": "SCOTLAND", "local_authority": "GLASGOW_CITY"},
+            "local authority's own Band D",
+        ),
+        ({"region": "SCOTLAND"}, "region's average Band D"),
+        ({"region": "NORTHERN_IRELAND"}, "No Council Tax in Northern Ireland"),
+        ({"region": "SCOTLAND", "council_tax": 1_500}, "As entered."),
+    ],
+)
+def test_the_council_tax_row_note_follows_its_basis(values, says):
+    """The breakdown's Council Tax note names what the estimate starts
+    from, as council_tax_used does: a council's own Band D when one is
+    given, never the region's average then."""
+    note = household_impact.council_tax_row_note(Answers(**values))
+    assert says in note
+
+
 def test_a_councils_council_tax_is_taken_off_net_income():
     """Glasgow against Scotland's average: the council's own Council Tax
     is the one counted, and the answer says where it came from."""
@@ -1653,6 +1673,16 @@ def test_a_councils_council_tax_is_taken_off_net_income():
         glasgow["council_tax_used"]["note"]
     )
     assert "region's average Band D" in average["council_tax_used"]["note"]
+    # The breakdown's Council Tax row says the same
+    assert "local authority's own Band D" in (
+        _programme(glasgow, "council_tax")["note"]
+    )
+    assert "region's average Band D" not in (
+        _programme(glasgow, "council_tax")["note"]
+    )
+    assert "region's average Band D" in (
+        _programme(average, "council_tax")["note"]
+    )
     assert glasgow["area"]["local_authority"] == "GLASGOW_CITY"
     assert glasgow["area"]["local_authority_source"] == "entered"
     # The rental area is not derived from the council: policyengine-uk
