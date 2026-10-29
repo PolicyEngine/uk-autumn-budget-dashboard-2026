@@ -43,6 +43,7 @@ import { provisionalNotice } from "./utils/publication/manifest";
 import { DownloadContext, policiesLabel } from "./utils/downloadContext";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
+import { trackEvent, trackLinkClicks } from "./utils/analytics";
 import { createBandIntent, createSiteNavIntent, isProgrammaticScroll, LANDSCAPE_PHONE_QUERY, isTouchOnly, pointerWantsSiteNav, SITE_NAV_DWELL_MS, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
 
 // Each view's code (the chart library, the map's and the household
@@ -884,6 +885,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     }
     setLanding(false);
     setActiveTab(tab);
+    if (changing) trackEvent("view_opened", { view: tab, sub: sub ?? undefined });
     // A hash that belongs to the Young people sub-tab goes when another view
     // is chosen, so the address never opens a different view from this one
     if (tab !== DEFAULT_VIEW && window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
@@ -899,6 +901,8 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   useEffect(() => {
     openViewRef.current = handleTabChange;
   });
+  // Clicks on the report's download and on our posts (utils/analytics.js)
+  useEffect(() => trackLinkClicks(), []);
   useEffect(() => {
     const onOpenView = (event) => {
       const { tab, anchor } = event.detail || {};
