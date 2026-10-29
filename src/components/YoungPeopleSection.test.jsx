@@ -149,9 +149,11 @@ describe("results by age", () => {
     const alone = meanChangeByBand(thin, POLICIES, ["two_child_limit"], 2029);
     expect(alone.find((point) => point.band === "65+")).toMatchObject({ suppressed: true, netChange: null });
     expect(alone.find((point) => point.band === "16-24").netChange).toBe(100);
-    // Both policies: the thin band makes the combination unpublished, never half drawn
+    // Both policies: the thin band alone is left out; the other bands keep
+    // their parts and net (Vahid, 29 Oct: never blank the rest)
     const both = meanChangeByBand(thin, POLICIES, ALL, 2029);
-    expect(both.every((point) => point.combinationUnavailable && point.netChange === null)).toBe(true);
+    expect(both.find((point) => point.band === "65+")).toMatchObject({ suppressed: true, netChange: null });
+    expect(both.find((point) => point.band === "16-24").netChange).toBe(40);
   });
 
   it("reads shares from one policy's run or the combined run only", () => {
@@ -227,7 +229,9 @@ describe("YoungPeopleSection", () => {
   });
 
   it("keeps Winners and losers' view when the age group changes (AGE11, round 3)", async () => {
-    const rows = ["16-24", "25-34", "all"].map((band) => ({
+    // The bands and the single ages 16 to 34 (with none, By single year of
+    // age is disabled: ageSelectionRule.test.jsx)
+    const rows = ["16-24", "25-34", "all", ...Array.from({ length: 19 }, (_, i) => String(16 + i))].map((band) => ({
       reform_id: COMBINED_REFORM_ID, year: 2029, age_band: band, sample_size: 5000, people: 1_000_000,
       pct_better_off: 4, pct_worse_off: 10, pct_unchanged: 86,
     }));

@@ -88,6 +88,9 @@ export const WIZARD_DEFAULTS = {
   petrol_spending_per_year: DEFAULT_SPENDING.petrol,
   diesel_spending_per_year: DEFAULT_SPENDING.diesel,
   electricity_spending_per_year: DEFAULT_SPENDING.electricity,
+  // Bus fares, £ a year: none until answered (not sent), for the £2 bus
+  // fare cap in England outside London
+  bus_fare_spending_per_year: 0,
   dividends_per_year: 0,
   savings_interest_per_year: 0,
   property_income_per_year: 0,

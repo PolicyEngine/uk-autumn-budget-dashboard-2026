@@ -348,6 +348,7 @@ export function Segmented({ group, inSummary: summarised = true }) {
               // One tab stop per group: its chosen option
               tabIndex={checked ? 0 : -1}
               disabled={option.disabled}
+              aria-disabled={option.disabled || undefined}
               aria-label={option.ariaLabel}
               className={`control-bar-segment${checked ? " is-checked" : ""}`}
               onClick={() => {

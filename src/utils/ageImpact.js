@@ -61,100 +61,43 @@ export function packageRunFor(rows, packageRun, year) {
   return (rows ?? []).some((row) => row.reform_id === packageRun && row.year === Number(year)) ? packageRun : null;
 }
 
-/** The notice for several policies whose results by age are not published together. */
-export const COMBINATION_NOT_PUBLISHED = "Results by age for this combination of policies are not published yet.";
-
-/** Why a package's chart has its net but no policy parts. */
-export const PACKAGE_NET_ONLY =
-  "The net change is all the selected policies together. Each policy's part is not shown, as a selected policy has too few survey records by age.";
-
-/** "A", "A and B", "A, B and C". */
-export const listNames = (names) => (names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0]);
-const haveOrHas = (names) => (names.length > 1 ? "have" : "has");
-
-/**
- * Why no policy's part is drawn when some are thin: the package's net is
- * shown, so the other policies' parts beside it would give the thin
- * policies' part back by difference (never revealed by subtraction).
- */
-const BY_DIFFERENCE = "showing only the other policies would let the withheld policies' part be worked out from the net change";
-
-/**
- * Why no policy's part is shown, naming the thin policies: one sentence in
- * About this chart's caveats (the Show choice is then not offered at all).
- * `where` is the breakdown ("at some ages", "in some age groups").
- */
-export const withheldPartsCaveat = (names, where = "at some ages") =>
-  names.length
-    ? `The split by policy is not shown for this selection: ${listNames(names)} ${haveOrHas(names)} too few survey records ${where}, so the other policies' parts would reveal ${names.length > 1 ? "theirs" : "its part"}.`
-    : `The split by policy is not shown for this selection: a selected policy has too few survey records ${where}, so the other policies' parts would reveal its part.`;
-
-/** About this chart's caveat when a package's chart shows no policy parts. */
-export const PACKAGE_PARTS_CAVEAT = withheldPartsCaveat([]);
-
-/** PACKAGE_NET_ONLY, naming the thin policies. */
-export const withheldNetOnly = (names) =>
-  names.length
-    ? `The net change is all the selected policies together. Each policy's part is not shown, as ${listNames(names)} ${haveOrHas(names)} too few survey records by age, and ${BY_DIFFERENCE}.`
-    : PACKAGE_NET_ONLY;
-
-/**
- * The selected policies (shown ones only) with no usable row at one of
- * `labels` (age_band values) in one of `years` that the rows cover: the
- * policies that withhold their rows by age there.
- */
-export function policiesWithoutRows(rows, policies, selected, years, labels) {
-  const covered = years.map(Number).filter((year) => (rows ?? []).some((row) => row.year === year));
-  const usable = new Set(
-    (rows ?? []).filter((row) => usableRow(row)).map((row) => `${row.reform_id}|${row.year}|${row.age_band}`),
-  );
-  return policies.filter(
-    (policy) =>
-      selected.includes(policy.id) &&
-      policy.displayable !== false &&
-      covered.some((year) => labels.some((label) => !usable.has(`${policy.id}|${year}|${label}`))),
-  );
-}
-
 const usableRow = (row) => Boolean(row) && row.sample_size >= MIN_SAMPLE_SIZE && Number.isFinite(row.mean_change);
 
 const seriesKeyOf = (policy) => policy.seriesKey ?? `measure:${policy.id}`;
 
 /**
  * The selection rule for a chart of points (one per band or single age)
- * whose `netChange` sums the selected policies' own rows:
+ * whose `netChange` sums the selected policies' own rows, applied point by
+ * point (Vahid, 29 Oct: where one policy is withheld, show everything else
+ * that is published):
  *
- * - a published package (`run`): `netChange` is the package's own row; each
- *   policy's part stays only when every point has every part (`partsShown`),
- *   so a stack never sits under a net it does not add up to;
- * - several policies and no package: when any point lacks a member's row,
- *   every point is null and `combinationUnavailable` (never half drawn);
+ * - a published package (`run`): `netChange` is the package's own row, or
+ *   null where the package withholds it (it withholds the cells its members
+ *   withhold, #347). Each policy's own part stays where every member has a
+ *   row, and where the package's net is withheld: there the other policies'
+ *   own published parts are drawn with no net, so nothing can be worked out
+ *   by difference. Only where the package's net is published and a member's
+ *   part is not are the parts dropped (`partsShown` false), so no published
+ *   net ever sits beside a stack missing a member;
+ * - several policies and no package: each point keeps the parts its
+ *   policies publish, and its net (their sum) only where every one does;
  * - one policy: its own rows, a missing point said as missing.
  */
 function applySelectionRule(points, { rows, policies, selected, year, run, keyOf }) {
-  if (run) {
-    const yearRows = forYear(rows ?? [], year).filter((row) => row.reform_id === run);
-    const partsShown = points.every((point) => point.netChange !== null && point.netChange !== undefined);
-    return points.map((point) => {
-      const row = yearRows.find((each) => each.age_band === keyOf(point));
-      const usable = usableRow(row);
-      const next = { ...point, incomplete: false, suppressed: !usable, netChange: usable ? row.mean_change : null, fromPackage: true, partsShown };
-      if (!partsShown || !usable) {
-        for (const policy of policies) next[seriesKeyOf(policy)] = null;
-        if (next.parts) next.parts = [];
-      }
-      return next;
-    });
-  }
-  if (new Set(selected).size > 1 && points.some((point) => point.netChange === null || point.netChange === undefined)) {
-    return points.map((point) => {
-      const next = { ...point, incomplete: false, suppressed: false, netChange: null, combinationUnavailable: true };
+  if (!run) return points;
+  const yearRows = forYear(rows ?? [], year).filter((row) => row.reform_id === run);
+  return points.map((point) => {
+    const row = yearRows.find((each) => each.age_band === keyOf(point));
+    const usable = usableRow(row);
+    const partsComplete = point.netChange !== null && point.netChange !== undefined;
+    const partsShown = partsComplete || !usable;
+    const next = { ...point, incomplete: false, suppressed: Boolean(point.suppressed), netChange: usable ? row.mean_change : null, fromPackage: true, partsShown };
+    if (!partsShown) {
       for (const policy of policies) next[seriesKeyOf(policy)] = null;
       if (next.parts) next.parts = [];
-      return next;
-    });
-  }
-  return points;
+    }
+    return next;
+  });
 }
 
 /**
