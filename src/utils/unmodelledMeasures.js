@@ -105,7 +105,7 @@ export const UNMODELLED_MEASURES = [
     household: "People with taxable savings interest pay 2 points more on it.",
     costings: [{ row: 62, values: [15, 125, 555, 520, 555, 590] }],
     notModelled:
-      "The model covers it, but this release holds it back: we calibrated savings interest to HMRC's figures on a different basis, so our taxable interest is too low.",
+      "The model covers it, but we have held it back from this release: we calibrated savings interest to HMRC's figures on a different basis, so our taxable interest is too low.",
     heldBack:
       "Held back: we calibrated savings interest to HMRC's figures on a different basis, so our taxable interest is too low. We're correcting it for the next data update.",
     sources: [budget("paragraph 6.247")],
@@ -318,7 +318,7 @@ export const UNMODELLED_MEASURES = [
       "Gains above £500,000 pay up to 24% rather than 18%.",
     costings: [{ row: 60, values: [5, 60, 180, 255, 280, 305] }],
     notModelled:
-      "The model has no record of relief used in earlier years, and we calibrated its gains to 2024-25, when disposals were unusually high.",
+      "The model has no record of relief taxpayers used in earlier years, and we calibrated its gains to 2024-25, when disposals were unusually high.",
     sources: [
       budget("paragraphs 2.53 and 6.261"),
       { label: "HMRC, Capital Gains Tax rates", href: "https://www.gov.uk/capital-gains-tax/rates" },

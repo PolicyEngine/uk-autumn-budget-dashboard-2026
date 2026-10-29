@@ -286,7 +286,7 @@ export const HOUSEHOLD_EXAMPLES = [
       // A flat heated by electric storage heaters: its own figure
       electricity_spending_per_year: 1600,
     },
-    note: "Aged 33 with one child aged 4, renting privately at £975 a month. Earns £14,000 working part time, about 21 hours a week at the 2026 National Living Wage, a little below the median for part-time employees (ONS ASHE 2025). Their child is in a reception class; childcare in the school holidays, about 13 weeks a year at England's average holiday club price (Coram, 2026), comes to about £205 a month. Claims the Universal Credit they are due, which pays back up to 85% of childcare costs. Electric storage heaters heat their flat: spends £1,600 a year on electricity, and £910 on petrol and diesel, the average for households in the fourth tenth by gross income (ONS Family Spending, FYE 2025).",
+    note: "Aged 33 with one child aged 4, renting privately at £975 a month. Earns £14,000 working part time, about 21 hours a week at the 2026 National Living Wage, a little below the median for part-time employees (ONS ASHE 2025). Their child is in a reception class; childcare in the school holidays, about 13 weeks a year at England's average holiday club price (Coram, 2026), comes to about £205 a month. Claims the Universal Credit they are due, which pays back up to 85% of childcare costs. Electric storage heaters heat their flat. Spends £1,600 a year on electricity, and £910 on petrol and diesel, the average for households in the fourth tenth by gross income (ONS Family Spending, FYE 2025).",
     // The spending's source, in the result's "Based on"
     spendingSource: own("Electricity: its own, electric storage heating. Petrol and diesel", 4),
   },

@@ -20,7 +20,7 @@
  */
 export const MODELLING_NOTE = {
   id: "employer_ni_relief_under_25s",
-  note: "The cost is gross: it leaves out the change in employers' corporation tax. Estimates of reliefs like this one differ with their scope: the ages they cover, whether they include apprentices and whether they relieve earnings above the upper earnings limit. HMRC puts the existing relief for apprentices under 25, which this cost includes for those aged 21 to 24, at about £0.57bn in 2025-26.",
+  note: "The cost is gross: it leaves out the change in employers' corporation tax. Estimates of reliefs like this one differ with their scope: the ages each estimate covers, whether it includes apprentices and whether it counts relief on earnings above the upper earnings limit. HMRC puts the existing relief for apprentices under 25, which this cost includes for those aged 21 to 24, at about £0.57bn in 2025-26.",
 };
 
 /** A text's sentences: a full stop followed by a space and a capital. */
