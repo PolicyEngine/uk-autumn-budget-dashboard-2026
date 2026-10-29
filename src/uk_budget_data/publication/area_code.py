@@ -174,7 +174,7 @@ def _bound_names(statement: ast.stmt) -> list[str]:
     ]
 
 
-def _slice(source: Optional[str], names) -> Optional[str]:
+def _slice(source: Optional[str], wanted) -> Optional[str]:
     """What the named top-level definitions of a module depend on, as a
     comparable string, or None when the file is absent.
 
@@ -199,8 +199,8 @@ def _slice(source: Optional[str], names) -> Optional[str]:
             and isinstance(statement.value.value, str)
         ):
             continue  # the module docstring
-        names = _bound_names(statement)
-        if not names:
+        bound_here = _bound_names(statement)
+        if not bound_here:
             always.append(ast.dump(statement))
             continue
         if isinstance(statement, (ast.Import, ast.ImportFrom)):
@@ -212,9 +212,9 @@ def _slice(source: Optional[str], names) -> Optional[str]:
                     f"import {level}:{module}:{alias.name}:{alias.asname}"
                 )
         else:
-            for name in names:
+            for name in bound_here:
                 bindings.setdefault(name, []).append(ast.dump(statement))
-    used, pending = set(), list(names)
+    used, pending = set(), list(wanted)
     parts = []
     while pending:
         name = pending.pop()
@@ -229,7 +229,7 @@ def _slice(source: Optional[str], names) -> Optional[str]:
             pending.extend(
                 re.findall(r"id='([A-Za-z_][A-Za-z0-9_]*)'", dumped)
             )
-        if name in names and name not in bindings:
+        if name in wanted and name not in bindings:
             parts.append(f"{name}=<missing>")
     return "\n".join(sorted(parts) + always)
 

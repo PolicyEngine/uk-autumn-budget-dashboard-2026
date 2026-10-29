@@ -817,3 +817,377 @@ def test_a_receipt_without_a_full_commit_sha_is_refused(sha, tmp_path):
     commit(repo, {"base": "base\n"})
     with pytest.raises(ValueError, match="full commit sha"):
         r.calculation_changes_since(sha, repo)
+
+
+# --- results by area survive a national rerun (area_provenance v2) ---------
+
+from uk_budget_data.publication import area_code  # noqa: E402
+from uk_budget_data.publication import release_index as ri  # noqa: E402
+
+AREA_HEADER = (
+    "level,area_code,area_name,reform,year,outcome,value,lo,hi,direction,"
+    "tier,reason,support_band,noise,estimator\n"
+)
+
+
+@pytest.fixture
+def bound(state, monkeypatch):
+    """An area run over alpha (code-bound) and beta (content-bound) at the
+    attestation commit, its table and v2 record beside the manifest, and
+    a copy of the manifest to rerun nationally."""
+    # Another module fixture (documented) may have pointed these elsewhere
+    monkeypatch.setattr(sign_off, "REQUIRED", True)
+    monkeypatch.setattr(
+        a,
+        "ATTESTATIONS_ROOT",
+        state.repo / "data_inputs" / "publication" / "attestations",
+    )
+    monkeypatch.setattr(a, "ATTESTATION_REPOSITORY", state.repo)
+    provenance = run_area(state, monkeypatch, ["alpha", "beta"])
+    # The module's manifest is never saved, so its revision is 0
+    provenance["manifest_revision"] = 1
+    provenance["run"]["dataset"] = {
+        "kind": "local_area_cut",
+        "name": "synthetic-cut",
+        "sha256": "9" * 64,
+    }
+    root = state.world.data_root
+    table = root / "regional.csv"
+    table.write_text(
+        AREA_HEADER
+        + "".join(
+            f"region,E12000001,Area,{reform},2027,relative_change,0.01,"
+            "0.005,0.015,gain,reported,,30+,False,direct\n"
+            for reform in ("alpha", "beta")
+        )
+    )
+    ri.write_area_provenance(root, provenance, [table])
+    manifest = state.manifest.model_copy(deep=True)
+    yield SimpleNamespace(
+        manifest=manifest, files={"regional.csv": table.read_bytes()}
+    )
+    for name in ("regional.csv", ri.AREA_PROVENANCE_FILE):
+        (root / name).unlink(missing_ok=True)
+
+
+def gate(state, bound):
+    return ri.area_problems(
+        bound.manifest,
+        bound.files,
+        state.world.data_root,
+        code_root=state.repo,
+    )[0]
+
+
+def rerun_nationally(state, manifest, key, values=None, definition=None):
+    """Generate ``key`` again at HEAD, attest it if it needs it, and stage
+    and approve it: a national rerun, as #320's was."""
+    definition = definition or DEFINITIONS[key]
+    revision = r.code_revision(state.repo)
+    config = DataConfig(years=YEARS)
+    baseline, reform = r.measure_identities(definition, config, revision)
+    reference = state.world.ready(
+        key,
+        values or {2027: -3.0},
+        git_sha=revision.git_sha,
+        baseline_identity=baseline,
+        reform_identity=reform,
+        modifier_templates=r.template_proof.measure_templates_proof(
+            definition, config, revision
+        ),
+    )
+    document = read_receipt(reference.path)
+    if a.requires_attestation(document):
+        commit(
+            state.repo,
+            {
+                f"data_inputs/publication/attestations/{key}.json": json.dumps(
+                    attestation_record(document)
+                )
+            },
+            f"Attest {key} again",
+        )
+    args = dict(data_root=state.world.data_root, inputs=state.world.inputs)
+    stage(manifest, reference.path, **args)
+    approve(manifest, key, "Reviewer", **args)
+    return document
+
+
+def test_the_area_record_binds_definitions_not_commits(state, bound):
+    document = json.loads(
+        (state.world.data_root / ri.AREA_PROVENANCE_FILE).read_bytes()
+    )
+    assert document["schema"] == ri.AREA_PROVENANCE_SCHEMA
+    assert document["runs"]["regional.csv"]["git_sha"] == state.head
+    alpha, beta = document["reforms"]["alpha"], document["reforms"]["beta"]
+    # Content-bound: the definition is the identity's own digest
+    assert beta["definition"]["reform"] == beta["reform"]["reform_sha256"]
+    # Code-bound: the identity includes the commit, the definition doesn't
+    assert alpha["reform"]["binding"] == "code_revision"
+    assert alpha["definition"]["reform"] != alpha["reform"]["reform_sha256"]
+    assert gate(state, bound) == []
+
+
+@pytest.mark.parametrize("key", ["alpha", "beta"])
+def test_a_national_rerun_with_the_same_definitions_keeps_the_map(
+    state, bound, monkeypatch, key
+):
+    """#320: a national rerun added a table and changed no area figure. The
+    artifact, receipt, outputs and (for a code-bound measure) the reform
+    digest all change; the definitions and the area code don't."""
+    monkeypatch.chdir(state.repo)
+    monkeypatch.setattr(g, "get_reform", DEFINITIONS.get)
+    monkeypatch.setattr(g, "PACKAGES", PACKAGES)
+    before = bound.manifest.measures[key].model_copy()
+    # The national pipeline changes, outside the area code
+    commit(
+        state.repo,
+        {
+            "src/uk_budget_data/calculators.py": "OFFICIAL_BASES = {}\n",
+            "src/uk_budget_data/publication/tables.py": "TABLES = ()\n",
+        },
+        "Add the official-basis table",
+    )
+    document = rerun_nationally(state, bound.manifest, key)
+    after = bound.manifest.measures[key]
+    assert after.artifact_sha256 != before.artifact_sha256
+    assert after.outputs_sha256 != before.outputs_sha256
+    assert document["dashboard"]["git_sha"] != state.head
+    assert gate(state, bound) == []
+
+
+def test_a_changed_reform_definition_refuses_the_map(
+    state, bound, monkeypatch
+):
+    """beta's rate changes and it is rerun and approved nationally: the
+    current receipt's definition is no longer the area run's."""
+    monkeypatch.chdir(state.repo)
+    monkeypatch.setattr(g, "PACKAGES", PACKAGES)
+    changed = DEFINITIONS["beta"].model_copy(
+        update={"parameter_changes": {RATE_PATH: {"2027": 0.25}}}
+    )
+    definitions = {**DEFINITIONS, "beta": changed}
+    monkeypatch.setattr(g, "get_reform", definitions.get)
+    rerun_nationally(state, bound.manifest, "beta", definition=changed)
+    problems = gate(state, bound)
+    assert any(
+        "beta approved receipt identity differs" in problem
+        for problem in problems
+    ), problems
+
+
+def test_a_changed_definition_in_the_code_refuses_the_map(
+    state, bound, monkeypatch
+):
+    """The code at HEAD defines beta otherwise than the area run did, even
+    before a national rerun."""
+    monkeypatch.chdir(state.repo)
+    monkeypatch.setattr(g, "PACKAGES", PACKAGES)
+    changed = DEFINITIONS["beta"].model_copy(
+        update={"parameter_changes": {RATE_PATH: {"2027": 0.25}}}
+    )
+    monkeypatch.setattr(g, "get_reform", {**DEFINITIONS, "beta": changed}.get)
+    problems = gate(state, bound)
+    assert any("beta's definition changed" in p for p in problems), problems
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "src/uk_budget_data/geography.py",
+        "src/uk_budget_data/budget_measures/road_fuel_vat_cut.py",
+        "src/uk_budget_data/reforms.py",
+        "src/uk_budget_data/forecast/__init__.py",
+        "src/uk_budget_data/publication/combine.py",
+        "data_inputs/regions.csv",
+        "uv.lock",
+    ],
+)
+def test_a_changed_area_relevant_file_refuses_the_map(
+    state, bound, monkeypatch, path
+):
+    monkeypatch.chdir(state.repo)
+    monkeypatch.setattr(g, "get_reform", DEFINITIONS.get)
+    monkeypatch.setattr(g, "PACKAGES", PACKAGES)
+    commit(state.repo, {path: f"changed {path}\n"})
+    problems = gate(state, bound)
+    assert any(
+        "changed since its area run's commit" in p and path in p
+        for p in problems
+    ), problems
+
+
+def test_an_uncommitted_area_change_refuses_the_map(state, bound, monkeypatch):
+    monkeypatch.chdir(state.repo)
+    monkeypatch.setattr(g, "get_reform", DEFINITIONS.get)
+    monkeypatch.setattr(g, "PACKAGES", PACKAGES)
+    (state.repo / "src" / "uk_budget_data" / "geography.py").write_text("x\n")
+    assert any("geography.py" in p for p in gate(state, bound))
+
+
+def test_area_code_between_the_area_run_and_the_approved_receipt_counts(
+    state, bound, monkeypatch
+):
+    """The area code changed, beta was rerun nationally on it, and the
+    change was reverted: HEAD matches the area run, but the national
+    figures were made with other area code."""
+    monkeypatch.chdir(state.repo)
+    monkeypatch.setattr(g, "get_reform", DEFINITIONS.get)
+    monkeypatch.setattr(g, "PACKAGES", PACKAGES)
+    path = "src/uk_budget_data/measure_templates.py"
+    commit(state.repo, {path: "TEMPLATES = 1\n"}, "Change a template")
+    rerun_nationally(state, bound.manifest, "beta")
+    git(state.repo, "rm", "-q", path)
+    git(state.repo, "commit", "-q", "-m", "Revert it")
+    problems = gate(state, bound)
+    assert any(
+        "made with other area code" in p and path in p for p in problems
+    ), problems
+
+
+def test_a_v1_record_still_binds_under_the_old_rule(state, bound, monkeypatch):
+    """The record published before v2: accepted while every entry is the
+    one it was made beside, and refused by the first national rerun."""
+    monkeypatch.chdir(state.repo)
+    monkeypatch.setattr(g, "get_reform", DEFINITIONS.get)
+    monkeypatch.setattr(g, "PACKAGES", PACKAGES)
+    path = state.world.data_root / ri.AREA_PROVENANCE_FILE
+    document = json.loads(path.read_bytes())
+    document["schema"] = ri.AREA_PROVENANCE_SCHEMA_V1
+    del document["runs"]
+    for record in document["reforms"].values():
+        del record["definition"]
+    path.write_text(json.dumps(document))
+    assert gate(state, bound) == []
+    rerun_nationally(state, bound.manifest, "beta")
+    problems = gate(state, bound)
+    assert any("made for an earlier" in p for p in problems), problems
+
+
+PIPELINE = '''"""The pipeline."""
+import policyengine as pe
+from uk_budget_data.calculators import {imports}
+
+
+def build_microsimulation(dataset_path, scenario=None):
+    from uk_budget_data.forecast import with_forecast
+
+    return pe.uk.managed_microsimulation(
+        dataset=dataset_path, scenario=with_forecast(scenario){extra}
+    )
+
+
+class ReformProcessor:
+    def process(self):
+        return {processor}
+'''
+
+
+@pytest.mark.parametrize(
+    "change, counts",
+    [
+        # #320: a new calculator in the national pipeline
+        (dict(imports="A, OFFICIAL_BASES", processor="OFFICIAL_BASES"), False),
+        (dict(extra=", allow_unmanaged=True"), True),
+    ],
+)
+def test_only_what_build_microsimulation_uses_in_pipeline_counts(
+    tmp_path, change, counts
+):
+    repo = new_repository(tmp_path / "repo")
+    fields = dict(imports="A", extra="", processor="A")
+    path = "src/uk_budget_data/pipeline.py"
+    first = commit(repo, {path: PIPELINE.format(**fields)})
+    second = commit(repo, {path: PIPELINE.format(**{**fields, **change})})
+    found = area_code.area_changes_between(first, second, repo)
+    assert bool(found) is counts, found
+
+
+def test_a_change_to_reform_result_alone_does_not_count(tmp_path):
+    """#320 added ``official_basis`` to ReformResult in models.py."""
+    repo = new_repository(tmp_path / "repo")
+    path = "src/uk_budget_data/models.py"
+    source = (
+        "from pydantic import BaseModel\n\n"
+        "class DataConfig(BaseModel):\n    years: list = []\n\n"
+        "class Reform(BaseModel):\n    id: str\n\n"
+        "class ReformResult(BaseModel):\n    reform_id: str\n"
+    )
+    first = commit(repo, {path: source})
+    second = commit(repo, {path: source + "    official_basis: list = []\n"})
+    assert area_code.area_changes_between(first, second, repo) == []
+    third = commit(repo, {path: source.replace("id: str", "id: int", 1)})
+    assert area_code.area_changes_between(second, third, repo) == [
+        f"{path} (DataConfig, Reform)"
+    ]
+
+
+def test_320_changed_no_area_code():
+    """The commits #320 merged changed no area figure (run against this
+    repository's own history when it has it)."""
+    repo = Path(__file__).resolve().parents[1]
+    before, after = (
+        "b22f3651cbb868479c6835ccf6a7e945ebc97b05",
+        "42ab8edb6a035f795677f49d8d19802d153ff9f6",
+    )
+    for sha in (before, after):
+        if (
+            subprocess.run(
+                ["git", "cat-file", "-e", f"{sha}^{{commit}}"],
+                cwd=repo,
+                capture_output=True,
+            ).returncode
+            != 0
+        ):
+            pytest.skip("this checkout does not have #320's history")
+    assert area_code._area_paths(before, after, repo) == []
+
+
+@pytest.mark.parametrize(
+    "path, listed",
+    [
+        ("src/uk_budget_data/geography.py", True),
+        ("src/uk_budget_data/budget_measures/new_measure.py", True),
+        ("src/uk_budget_data/forecast/obr_october_2026.json", True),
+        ("uv.lock", True),
+        ("data_inputs/constituencies_2024.csv", True),
+        ("src/uk_budget_data/calculators.py", False),
+        ("src/uk_budget_data/publication/tables.py", False),
+        ("src/uk_budget_data/publication/generate.py", False),
+        ("src/uk_budget_data/pipeline.py", False),  # sliced instead
+        ("public/data/manifest.json", False),
+        ("src/uk_budget_data/budget_measures", False),
+        ("src/uk_budget_data/../uv.lock", False),
+    ],
+)
+def test_the_area_path_list(path, listed):
+    assert area_code.is_area_path(path) is listed
+
+
+def test_every_listed_path_exists():
+    """A renamed module must not drop out of the list unnoticed."""
+    root = Path(__file__).resolve().parents[1]
+    for path in (*area_code.AREA_CODE_PATHS, *area_code.AREA_CODE_SYMBOLS):
+        assert (root / path).exists(), path
+
+
+def test_what_the_sliced_definitions_use_is_area_code():
+    """Every uk_budget_data module the sliced definitions import is on the
+    list (or sliced), so the slice cannot hide a dependency."""
+    root = Path(__file__).resolve().parents[1]
+    for path, names in area_code.AREA_CODE_SYMBOLS.items():
+        sliced = area_code._slice((root / path).read_text(), names)
+        for module in re.findall(r"uk_budget_data[\w.]*", sliced):
+            parts = module.split(".")
+            candidates = [
+                "src/" + "/".join(parts) + ".py",
+                "src/" + "/".join(parts) + "/__init__.py",
+                "src/" + "/".join(parts[:-1]) + ".py",
+                "src/" + "/".join(parts[:-1]) + "/__init__.py",
+            ]
+            existing = [c for c in candidates if (root / c).exists()]
+            assert existing, module
+            assert any(
+                area_code.is_area_path(c) or c in area_code.AREA_CODE_SYMBOLS
+                for c in existing
+            ), module
