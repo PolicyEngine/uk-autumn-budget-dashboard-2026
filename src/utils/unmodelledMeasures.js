@@ -139,7 +139,7 @@ export const UNMODELLED_MEASURES = [
       "Interest in a cash ISA stays free of income tax on up to £20,000 a year of new savings.",
     costings: [{ row: 11, values: [0, -5, -20, -35, -50, -70] }],
     notModelled:
-      "The model has no payments into ISAs or limits on them, so the planned cut was never in its current law and keeping £20,000 changes nothing in it.",
+      "Our survey data hold no payments into ISAs yet, so there's no national figure. The Household calculator models it for one household at a time.",
     sources: [
       budget("paragraphs 2.52 and 6.248"),
       {

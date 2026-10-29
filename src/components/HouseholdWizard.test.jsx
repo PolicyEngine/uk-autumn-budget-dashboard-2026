@@ -138,6 +138,7 @@ describe("the personal impact form", () => {
       "diesel_spending_per_year",
       "electricity_spending_per_year",
       "savings_interest_per_year",
+      "cash_isa_payments_per_year",
       "dividends_per_year",
       "property_income_per_year",
       "self_employment_receipts_per_year",
@@ -668,10 +669,12 @@ describe("the selected policies' questions", () => {
     expect(asked("You")).toEqual(["current_age", "current_salary", "region"]);
     expect(asked("Household")).toEqual(["has_partner", "children_count", "tenure", "rent_from", "monthly_rent"]);
     expect(asked("Spending")).toEqual(["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"]);
-    // Savings interest always first, then in the table's order: property,
-    // then the trading allowance's
+    // Savings interest always first, then in the table's order: cash ISA
+    // payments (the cash ISA limit, always in the request, for an
+    // under-65), property, then the trading allowance's
     expect(asked("Savings and other income")).toEqual([
       "savings_interest_per_year",
+      "cash_isa_payments_per_year",
       "property_income_per_year",
       "self_employment_receipts_per_year",
       "self_employment_expenses_per_year",
@@ -799,7 +802,12 @@ describe("the selected policies' questions", () => {
     form(["trading_allowance_raise"]);
     fireEvent.click(stepToggle("Savings and other income"));
     // Savings interest is always first in its step
-    expect(asked("Savings and other income")).toEqual(["savings_interest_per_year", "self_employment_receipts_per_year", "self_employment_expenses_per_year"]);
+    expect(asked("Savings and other income")).toEqual([
+      "savings_interest_per_year",
+      "cash_isa_payments_per_year",
+      "self_employment_receipts_per_year",
+      "self_employment_expenses_per_year",
+    ]);
     expect(value("Self-employment or side income")).toBe(0);
     fireEvent.change(box("Self-employment or side income"), { target: { value: "3,000" } });
     fireEvent.blur(box("Self-employment or side income"));
@@ -864,7 +872,7 @@ describe("the selected policies' questions", () => {
       const yours = () => bodies.find((body) => body.household.petrol_spending === 900 && body.include.length === 0);
       await waitFor(() => expect(yours()).toBeDefined());
       const answers = { ...WIZARD_DEFAULTS, petrol_spending_per_year: 900, council_tax_band: "B" };
-      expect(yours()).toEqual(buildHouseholdRequest(answers, { year: 2027, policies: ALL_SEVEN }));
+      expect(yours()).toEqual(buildHouseholdRequest(answers, { year: 2027, policies: [...ALL_SEVEN, "cash_isa_limit_kept"] }));
       expect(yours().household).toMatchObject({ petrol_spending: 900, council_tax_band: "B", diesel_spending: DEFAULT_SPENDING.diesel });
     } finally {
       vi.unstubAllGlobals();
@@ -908,11 +916,11 @@ describe("the selected policies' questions", () => {
       fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
       const headline = () => bodies.filter((body) => body.household.savings_interest_income === 12000 && body.include.length === 0);
       await waitFor(() => expect(headline()).toHaveLength(1));
-      expect(headline()[0].policies).toEqual([...published, "savings_income_rates_up"]);
-      // Every example card's figures are asked with it too
+      expect(headline()[0].policies).toEqual([...published, "savings_income_rates_up", "cash_isa_limit_kept"]);
+      // Every example card's figures are asked with them too
       const cards = bodies.filter((body) => body.household.savings_interest_income !== 12000);
       expect(cards.length).toBeGreaterThan(0);
-      expect(cards.every((body) => body.policies.at(-1) === "savings_income_rates_up")).toBe(true);
+      expect(cards.every((body) => body.policies.slice(-2).join() === "savings_income_rates_up,cash_isa_limit_kept")).toBe(true);
     } finally {
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();

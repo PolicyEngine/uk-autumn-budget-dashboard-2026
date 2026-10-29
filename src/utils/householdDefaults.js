@@ -90,6 +90,8 @@ export const WIZARD_DEFAULTS = {
   electricity_spending_per_year: DEFAULT_SPENDING.electricity,
   dividends_per_year: 0,
   savings_interest_per_year: 0,
+  // New money paid into cash ISAs, £ a year; none until answered
+  cash_isa_payments_per_year: 0,
   property_income_per_year: 0,
   // Self-employment or side income: receipts (turnover) and allowable
   // expenses, £ a year; none until answered

@@ -25,6 +25,13 @@ export const POLICY_FIELDS = {
   fuel_duty_rise_deferral: { fields: ["petrol_spending_per_year", "diesel_spending_per_year"] },
   // Zero VAT on domestic electricity: its electricity bill
   domestic_electricity_zero_vat: { fields: ["electricity_spending_per_year"] },
+  // Cash ISA limit kept at £20,000: what you pay into cash ISAs, for
+  // savers under 65 (the planned £12,000 limit was theirs). Before
+  // property income, so it follows savings interest in its step
+  cash_isa_limit_kept: {
+    fields: ["cash_isa_payments_per_year"],
+    when: (inputs) => inputs.current_age < 65,
+  },
   // Property income tax rates: property income
   property_income_rates_up: { fields: ["property_income_per_year"] },
   // Savings income tax rates: savings interest

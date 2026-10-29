@@ -31,7 +31,7 @@ export { WIZARD_DEFAULTS };
 import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
 import LocalAuthorityField from "./personal/LocalAuthorityField";
 import { policyQuestions } from "../utils/householdPolicyFields";
-import { withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
+import { resultPolicies, withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
@@ -77,6 +77,7 @@ export const FORM_GROUPS = [
     hint: "Your own income from savings, investments, property and self-employment, before tax.",
     fields: [
       "savings_interest_per_year",
+      "cash_isa_payments_per_year",
       "dividends_per_year",
       "property_income_per_year",
       "self_employment_receipts_per_year",
@@ -224,6 +225,15 @@ const NUMBER_CONFIGS = {
   partner_salary: { label: "Partner's salary in 2026", min: 0, max: 500000, step: 1000, money: true, suffix: "a year" },
   monthly_rent: { label: "Rent", min: 0, max: 10000, step: 25, money: true, suffix: "a month" },
   savings_interest_per_year: { label: "Savings interest", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
+  cash_isa_payments_per_year: {
+    label: "Paid into cash ISAs",
+    min: 0,
+    max: 20000,
+    step: 100,
+    money: true,
+    suffix: "a year",
+    hint: "New money you pay into cash ISAs each year, up to the £20,000 ISA limit. If you are under 65, the planned £12,000 cash limit would have left the rest outside an ISA, where its interest is taxed.",
+  },
   dividends_per_year: { label: "Dividends", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
   property_income_per_year: { label: "Property income", min: 0, max: 100000, step: 100, money: true, suffix: "a year" },
   private_pension_per_year: {
@@ -537,6 +547,10 @@ function StepGroup({ group, number, last, open, onToggle, summary, children, opt
 
 // A phone's width, as HouseholdCalculator.css's phone layout
 const PHONE_QUERY = "(max-width: 640px)";
+
+/** Phrases as a list in words: "a", "a and b", "a, b and c". */
+const joinedPhrases = (phrases) =>
+  phrases.length > 1 ? `${phrases.slice(0, -1).join(", ")} and ${phrases[phrases.length - 1]}` : (phrases[0] ?? "");
 
 /** Whether the window matches a media query, following it as it changes. */
 function useNarrow(query) {
@@ -1149,7 +1163,7 @@ function HouseholdCalculator({
           placed.notModelled.length > 0
             ? `Your change leaves out ${placed.notModelled.length === 1 ? "one policy" : `${placed.notModelled.length} policies`} not modelled for one household; the dots include ${placed.notModelled.length === 1 ? "it" : "them"}.`
             : submitted.policies.length !== withoutCalculatorOnly(submitted.policies).length
-              ? "Your change includes the savings income tax rise, which the dots leave out."
+              ? `Your change includes ${joinedPhrases(resultPolicies(submitted.policies).named)}, which the dots leave out.`
               : null,
       }
     : null;

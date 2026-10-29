@@ -43,6 +43,7 @@ export const EXAMPLE_ANSWERS = Object.freeze({
   electricity_spending_per_year: 1040,
   dividends_per_year: 0,
   savings_interest_per_year: 0,
+  cash_isa_payments_per_year: 0,
   property_income_per_year: 0,
   // No self-employment (nothing sent)
   self_employment_receipts_per_year: 0,
