@@ -22,7 +22,7 @@ export const GLOSSARY = {
   equivalised: {
     term: "Equivalised income",
     meaning:
-      "Net income with an adjustment for household size and make-up (the modified OECD scale), which puts it in terms of a couple with no children.",
+      "Net income adjusted for household size and make-up (the modified OECD scale), in terms of a couple with no children.",
     // HBAI's methodology report explains the scale (its section 8)
     sources: { "modified OECD scale": "dwp_hbai_methodology" },
   },

@@ -352,7 +352,7 @@ function MethodologyTab({ onShowTab }) {
                   <>
                     <ViewLink tab="dashboard" onShowTab={onShowTab}>Population impact</ViewLink> and{" "}
                     <ViewLink tab="household" onShowTab={onShowTab}>Household calculator</ViewLink>{" "}figures
-                    are in <Term id="real">cash terms</Term>{" "}for the year on screen, with no adjustment for
+                    are in <Term id="real">cash terms</Term>{" "}for the year on screen, not adjusted for
                     inflation.
                   </>,
                 ],
@@ -548,7 +548,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Income deciles",
-                  "The app ranks households by household net income, without adjusting for household size, so its deciles differ.",
+                  "The app ranks households by household net income, not adjusted for household size, so its deciles differ.",
                 ],
                 [
                   "Winners and losers",
@@ -755,7 +755,7 @@ function MethodologyTab({ onShowTab }) {
                   "Income",
                   <>
                     Household net income after taxes (including fuel duty and any change in VAT) and
-                    with benefits, divided by your household&apos;s size on the HBAI scale. Unlike the
+                    with benefits, which we divide by your household&apos;s size on the HBAI scale. Unlike the
                     income under <AnchorLink id={METHOD_ANCHORS.poverty}>Inequality</AnchorLink>, it
                     leaves out public services in kind.
                   </>,
@@ -774,7 +774,7 @@ function MethodologyTab({ onShowTab }) {
                 ],
                 [
                   "Among all households",
-                  "The Population impact scatter: each household sits by its 2027-28 net income before the policies, with no adjustment for household size, in every year, and you by yours. Each dot is a group of households.",
+                  "The Population impact scatter: each household sits by its 2027-28 net income before the policies, not adjusted for household size, in every year, and you by yours. Each dot is a group of households.",
                 ],
               ]}
             />
