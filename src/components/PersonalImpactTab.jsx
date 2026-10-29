@@ -3,6 +3,7 @@ import UnavailableMeasures from "./publication/UnavailableMeasures";
 import UnavailableNotice, { RemoveUnavailable } from "./publication/UnavailableNotice";
 import { isCatalogueRowDisplayable, publishedDefinitions, publishedEngine, useMeasureCatalogue } from "../utils/measureCatalogue";
 import { usePublicationCheck } from "../utils/publication/check";
+import { publishedRequest } from "../utils/calculatorOnlyMeasures";
 import "./PersonalImpactTab.css";
 
 /**
@@ -24,9 +25,15 @@ function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemov
       </UnavailableNotice>
     );
   }
+  // What a household request carries that the publication names: the
+  // selection, and a calculator-only measure too once the manifest names
+  // it, selected or not. Each is checked against its receipt; one the
+  // manifest doesn't name has none (calculatorOnlyMeasures.js)
+  const published = (id) => catalogue.byId.has(id);
+  const checkedIds = publishedRequest(selectedPolicies, published);
   // The household API answers live; its package versions must be the ones
-  // the selected measures' receipts record (useHouseholdImpact)
-  const expectedEngine = publishedEngine(catalogue, selectedPolicies);
+  // those measures' receipts record (useHouseholdImpact)
+  const expectedEngine = publishedEngine(catalogue, checkedIds);
   if (selectedPolicies.length && !expectedEngine) {
     return (
       <UnavailableNotice reason="Household calculator is unavailable for the selected policies">
@@ -36,14 +43,16 @@ function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemov
   }
   // And it must compute each measure from the definition its receipt
   // approved: a measure with none to check is unavailable, never unchecked
-  const { definitions: expectedDefinitions, missing } = publishedDefinitions(catalogue, selectedPolicies);
+  const { definitions: expectedDefinitions, missing } = publishedDefinitions(catalogue, checkedIds);
   if (missing.length) {
     return (
       <UnavailableMeasures
         reason="Household calculator is unavailable for the selected measures"
         summary="The household calculator cannot be checked against these measures' published figures:"
         measures={missing.map(({ id, reason }) => ({ id, name: catalogue.byId.get(id)?.name ?? id, why: [reason] }))}
-        onRemove={onRemoveUnavailable}
+        // Removing them from the selection helps only when all are in it: a
+        // calculator-only measure goes in every request, selected or not
+        onRemove={missing.every(({ id }) => selectedPolicies.includes(id)) ? onRemoveUnavailable : undefined}
       />
     );
   }
@@ -52,7 +61,10 @@ function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemov
   // now (with none selected there is no expectedEngine at all): their
   // engine, and each one's definition, none unless every one has one to
   // check (#136: a file's answers are never shown unchecked either)
-  const presetIds = policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id);
+  const presetIds = publishedRequest(
+    policies.filter((policy) => policy.displayable !== false).map((policy) => policy.id),
+    published,
+  );
   const presetEngine = publishedEngine(catalogue, presetIds);
   const presetChecks = publishedDefinitions(catalogue, presetIds);
   const presetDefinitions = presetChecks.missing.length ? null : presetChecks.definitions;

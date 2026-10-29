@@ -63,14 +63,18 @@ def _definitions(data_root: Path, policies: list) -> dict:
     """
     from uk_budget_data import definitions, household_impact
 
-    approved = definitions.approved_definitions(data_root, policies)
+    # Not a calculator-only measure the publication does not name: every
+    # request carries it, and the page checks it only once it is published
+    # (``definitions.checked_measures``)
+    checked = definitions.checked_measures(data_root, policies)
+    approved = definitions.approved_definitions(data_root, checked)
     recorded = definitions.definitions_for(
         {key: definition["git_sha"] for key, definition in approved.items()},
         household_impact.measure_ids(),
     )
     problems = {
         key: ["no published receipt with a full commit to check it against"]
-        for key in policies
+        for key in checked
         if key not in approved
     }
     for key, definition in approved.items():
@@ -102,7 +106,8 @@ def main() -> None:
     )
     args = parser.parse_args()
     entries = json.loads(args.requests.read_text())
-    recorded = _definitions(args.data_root, entries[0]["request"]["policies"])
+    requested = entries[0]["request"]["policies"]
+    recorded = _definitions(args.data_root, requested)
     with ProcessPoolExecutor(max_workers=args.jobs) as pool:
         done = list(pool.map(_run, entries))
     engine = done[0]["response"]["engine"]
@@ -118,7 +123,10 @@ def main() -> None:
         ),
         "generated_on": date.today().isoformat(),
         "engine": engine,
-        "policies": done[0]["request"]["policies"],
+        # The published measures, whose definitions the page checks; not a
+        # calculator-only one the publication does not name, which every
+        # request still carries (its answers include it)
+        "policies": [key for key in requested if key in recorded],
         # Each measure's, as the API reports them beside a live answer
         "definitions": recorded,
         "years": sorted({entry["year"] for entry in done}),

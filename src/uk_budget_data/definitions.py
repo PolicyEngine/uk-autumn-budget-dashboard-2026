@@ -56,7 +56,7 @@ from uk_budget_data.publication.receipt import (
     ReceiptUnavailable,
     measure_identities,
 )
-from uk_budget_data.reforms import get_reform
+from uk_budget_data.reforms import SAVINGS_INCOME_RATES_ID, get_reform
 
 # The fields of an identity its digest depends on, the ones the receipt
 # gate compares (``receipt._IDENTITY_FIELDS``); ``name`` is a label.
@@ -68,6 +68,14 @@ SEPARATOR = ":"
 # A measure a request or receipt names that the running code doesn't
 # register: a measure added since this revision, or one it has dropped.
 UNREGISTERED = "not a measure the running code registers"
+# The measures the page's Household calculator adds to every household
+# request that the national results leave out (the page's
+# ``calculatorOnlyMeasures.js``, which names no measure anywhere else, so a
+# test reads its list from there and keeps the two equal). One the manifest
+# doesn't name has no
+# receipt to check its definition against, so the page leaves it unchecked;
+# once named, it is checked as any published measure (``checked_measures``).
+CALCULATOR_ONLY_MEASURES = (SAVINGS_INCOME_RATES_ID,)
 
 # The deploy and rollback pipelines' expectations snippets
 # (cloudbuild*.yaml) call ``definitions_for`` and ``FULL_COMMIT`` inside the
@@ -436,6 +444,26 @@ def manifest_report(
                 {**row, "problems": differences(approved, reported.get(key))}
             )
     return sorted(rows, key=lambda row: row["key"])
+
+
+def checked_measures(data_root: Path, ids: Iterable[str]) -> list[str]:
+    """The measures of a household request (``ids``, in order) whose
+    definitions the page checks: every one but a calculator-only measure
+    the publication's manifest does not name, or names as withdrawn (the
+    page's ``publishedRequest`` and ``definitionChecked``). Each of these
+    needs an approved definition, or the page answers nothing.
+    """
+    from uk_budget_data.publication import manifest as m
+
+    manifest = m.load_manifest(data_root)
+
+    def named(key):
+        entry = manifest.measures.get(key)
+        return entry is not None and entry.status != m.WITHDRAWN
+
+    return [
+        key for key in ids if key not in CALCULATOR_ONLY_MEASURES or named(key)
+    ]
 
 
 def approved_definitions(data_root: Path, ids: Iterable[str]) -> dict:

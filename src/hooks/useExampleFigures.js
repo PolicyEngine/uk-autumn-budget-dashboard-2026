@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { withCalculatorOnly } from "../utils/calculatorOnlyMeasures";
+import { definitionChecked, isCalculatorOnly, withCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { SELECTABLE_YEARS } from "../utils/displayYears";
 import {
   DefinitionMismatchError,
@@ -172,7 +172,9 @@ export const exampleKey = (inputs, { year, policies, publicationKey = "" }) =>
  * @param {string} [params.publicationKey]
  * @param {Object|null} [params.expectedEngine]
  * @param {Object<string, Object>|null} [params.expectedDefinitions] - Each
- *   selected measure's approved definition (`publishedDefinitions`)
+ *   selected measure's approved definition (`publishedDefinitions`), and a
+ *   calculator-only measure's once the publication names it
+ *   (`publishedRequest`): every measure with one is checked
  * @param {(snapshot: string) => Promise<boolean>} [params.confirmPublication]
  * @param {Function} [params.post] - The request (tests pass their own)
  * @returns {{ figures: Object, pending: Set<string>, failed: Set<string>, reduced: string[]|null }}
@@ -197,10 +199,13 @@ export default function useExampleFigures({
   yearRef.current = year;
   const selectionKey = policies.join(",");
   const engineKey = JSON.stringify(expectedEngine);
-  // The selected measures' approved definitions: each answer is checked
-  // against them, so a change of one starts again
+  // The approved definitions of the measures a request carries, the
+  // calculator-only ones with one among them (definitionChecked): each
+  // answer is checked against them, so a change of one starts again
   const approvedAll = policies.every((id) => Object.hasOwn(expectedDefinitions ?? {}, id));
-  const definitionsKey = approvedAll ? JSON.stringify(policies.map((id) => expectedDefinitions[id])) : "";
+  const definitionsKey = approvedAll
+    ? JSON.stringify(definitionChecked(withCalculatorOnly(policies), expectedDefinitions).map((id) => [id, expectedDefinitions[id]]))
+    : "";
   const runKey = `${publicationKey}|${selectionKey}|${engineKey}|${definitionsKey}`;
   const active = enabled && policies.length > 0 && approvedAll && householdApiUrl() !== null;
 
@@ -249,20 +254,21 @@ export default function useExampleFigures({
       for (const y of years) {
         for (const example of examples) {
           // With the calculator-only measures, as choosing it asks, but
-          // any the API refused. Only the selected measures have approved
-          // definitions to check: a calculator-only one has no published
-          // figures (calculatorOnlyMeasures.js)
+          // any the API refused. Each measure with an approved definition
+          // is checked: the selected ones, and a calculator-only one only
+          // once the publication names it (calculatorOnlyMeasures.js)
           const own = withCalculatorOnly(used).filter((id) => !refused.has(id));
+          const checks = definitionChecked(own, expectedDefinitions);
           const key = exampleKey(example.inputs, { year: y, policies: own, publicationKey });
-          const approved = approvedFor(used);
+          const approved = approvedFor(checks);
           const net =
-            peekHouseholdImpact(key, expectedEngine, approved, used)?.net ??
-            readStoredHeadline(key, expectedEngine, approved, used)?.net ??
+            peekHouseholdImpact(key, expectedEngine, approved, checks)?.net ??
+            readStoredHeadline(key, expectedEngine, approved, checks)?.net ??
             null;
           if (net) put(example.id, y, net);
           else {
             pending.add(`${example.id}:${y}`);
-            asks.push({ example, year: y, key, own });
+            asks.push({ example, year: y, key, own, checks });
           }
         }
       }
@@ -275,10 +281,10 @@ export default function useExampleFigures({
     // One cell: its headline, checked, cached and stored. A refusal of
     // measures the API does not know is thrown for the caller; any other
     // failure leaves the cell to "Calculated when chosen"
-    const ask = async ({ example, year: y, key, own }) => {
+    const ask = async ({ example, year: y, key, own, checks }) => {
       const cell = `${example.id}:${y}`;
       try {
-        const asked = used;
+        const asked = checks;
         const body = buildHouseholdRequest(example.inputs, { year: y, policies: own, include: HEADLINE_INCLUDE });
         // The detail URL's answer is taken only if it passes the checks;
         // otherwise the main API is asked, and its answer checked in turn
@@ -317,8 +323,18 @@ export default function useExampleFigures({
           probed = true;
         } catch (error) {
           if (!(error instanceof UnknownMeasuresError)) return;
+          // Only a calculator-only measure with no approved definition is
+          // dropped unnamed: one the publication names is checked as a
+          // selected one is, and never left out of a figure unsaid
+          const unnamed = (id) => isCalculatorOnly(id) && !Object.hasOwn(expectedDefinitions, id);
+          if (error.unknown.some((id) => isCalculatorOnly(id) && !unnamed(id))) {
+            for (const { example, year: y } of asks) failed.add(`${example.id}:${y}`);
+            pending.clear();
+            publish();
+            return;
+          }
           used = used.filter((id) => !error.unknown.includes(id));
-          for (const id of error.unknown) refused.add(id);
+          for (const id of error.unknown) if (unnamed(id)) refused.add(id);
           storeList(supportedKey, used);
           if (used.length === 0) {
             for (const { example, year: y } of asks) failed.add(`${example.id}:${y}`);

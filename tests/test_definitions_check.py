@@ -7,6 +7,9 @@ unavailable once the household API runs this code.
 
 import importlib.util
 import json
+import re
+import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -649,3 +652,163 @@ def test_no_examples_are_computed_for_a_file_the_page_would_not_use(
     err = capsys.readouterr().err
     assert f"{MEASURES[0]}:" in err and problem in err
     assert f"{MEASURES[1]}:" not in err
+
+
+# Review of bc51d6d2: every household request carries the calculator-only
+# savings rise, so the page checks it, and the examples' file records it,
+# only once the publication names it.
+SAVINGS = "savings_income_rates_up"
+OTHER = next(key for key in MEASURES if key != SAVINGS)
+
+
+CALCULATOR_ONLY_JS = (
+    Path(__file__).resolve().parents[1]
+    / "src"
+    / "utils"
+    / "calculatorOnlyMeasures.js"
+)
+
+
+def test_the_calculator_only_measures_are_the_pages():
+    # The page's list, which the examples' requests carry; the page names
+    # measure ids nowhere else (measureCatalogue.test.jsx), so this reads it
+    # from the module's source: string constants, then each entry's `id`
+    source = CALCULATOR_ONLY_JS.read_text()
+    constants = dict(
+        re.findall(r'^export const (\w+) = "([a-z_]+)";$', source, re.M)
+    )
+    block = re.search(
+        r"^export const CALCULATOR_ONLY_MEASURES = \{([\s\S]*?)\n\};$",
+        source,
+        re.M,
+    ).group(1)
+    ids = [
+        constants[value] if value in constants else json.loads(value)
+        for value in re.findall(r"^\s+id: (\w+|\"[a-z_]+\"),$", block, re.M)
+    ]
+    assert ids == [SAVINGS]
+    assert tuple(ids) == definitions.CALCULATOR_ONLY_MEASURES
+    assert set(ids) <= set(MEASURES)
+
+
+@settings(max_examples=60, deadline=None)
+@given(
+    requested=st.lists(st.sampled_from(MEASURES), unique=True),
+    statuses=st.dictionaries(
+        st.sampled_from(MEASURES),
+        st.sampled_from([m.APPROVED, m.PROVISIONAL, m.WITHDRAWN]),
+    ),
+)
+def test_a_request_checks_every_measure_but_an_unnamed_calculator_only_one(
+    requested, statuses
+):
+    with tempfile.TemporaryDirectory() as directory:
+        data_root = Path(directory)
+        manifest = m.Manifest()
+        for key, status in statuses.items():
+            manifest.measures[key] = _entry(key, status)
+        m.save_manifest(manifest, data_root)
+        checked = definitions.checked_measures(data_root, requested)
+    # The request's measures, in its order
+    assert checked == [key for key in requested if key in checked]
+    for key in requested:
+        named = statuses.get(key, m.WITHDRAWN) != m.WITHDRAWN
+        expected = key not in definitions.CALCULATOR_ONLY_MEASURES or named
+        assert (key in checked) == expected
+
+
+def test_the_examples_file_leaves_an_unpublished_savings_rise_unchecked(
+    tmp_path,
+):
+    # Sol's repro: the current requests carry the savings rise, which has no
+    # published receipt; the check stopped before any calculation
+    _publish(tmp_path, {OTHER: _receipt(OTHER)})
+    recorded = _precompute()._definitions(tmp_path, [OTHER, SAVINGS])
+    assert recorded == definitions.definitions_for({OTHER: COMMIT}, MEASURES)
+    assert SAVINGS not in recorded
+
+
+def test_the_examples_file_leaves_a_withdrawn_savings_rise_unchecked(tmp_path):
+    _publish(
+        tmp_path,
+        {OTHER: _receipt(OTHER), SAVINGS: _receipt(SAVINGS)},
+        statuses={SAVINGS: m.WITHDRAWN},
+    )
+    recorded = _precompute()._definitions(tmp_path, [OTHER, SAVINGS])
+    assert list(recorded) == [OTHER]
+
+
+def test_the_examples_file_records_a_published_savings_rise(tmp_path):
+    _publish(tmp_path, {OTHER: _receipt(OTHER), SAVINGS: _receipt(SAVINGS)})
+    recorded = _precompute()._definitions(tmp_path, [OTHER, SAVINGS])
+    assert sorted(recorded) == sorted([OTHER, SAVINGS])
+    assert (
+        definitions.differences(
+            definitions.receipt_definition(_receipt(SAVINGS)),
+            recorded[SAVINGS],
+        )
+        == []
+    )
+
+
+def test_no_examples_are_computed_when_a_published_savings_rise_has_no_receipt(
+    tmp_path, capsys
+):
+    _publish(tmp_path, {OTHER: _receipt(OTHER), SAVINGS: None})
+    with pytest.raises(SystemExit) as exited:
+        _precompute()._definitions(tmp_path, [OTHER, SAVINGS])
+    assert "would not use these answers" in str(exited.value.code)
+    err = capsys.readouterr().err
+    assert f"{SAVINGS}:" in err and "no published receipt" in err
+    assert f"{OTHER}:" not in err
+
+
+class _InProcessPool:
+    def __init__(self, max_workers):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def map(self, function, items):
+        return map(function, items)
+
+
+def test_the_examples_file_lists_the_measures_it_checks(tmp_path, monkeypatch):
+    # The page checks the file's `policies` (householdPresets.js): the
+    # published ones, while every entry's request still carries the rise
+    module = _precompute()
+    data_root = tmp_path / "data"
+    _publish(data_root, {OTHER: _receipt(OTHER)})
+    requests = tmp_path / "requests.json"
+    request = {"year": 2027, "policies": [OTHER, SAVINGS]}
+    requests.write_text(
+        json.dumps([{"preset_id": "p", "year": 2027, "request": request}])
+    )
+    out = tmp_path / "household_presets.json"
+    monkeypatch.setattr(module, "ProcessPoolExecutor", _InProcessPool)
+    monkeypatch.setattr(
+        module,
+        "_run",
+        lambda entry: {**entry, "response": {"engine": {"p": "1"}}},
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "precompute",
+            str(requests),
+            "--out",
+            str(out),
+            "--data-root",
+            str(data_root),
+        ],
+    )
+    module.main()
+    payload = json.loads(out.read_text())
+    assert payload["policies"] == [OTHER]
+    assert list(payload["definitions"]) == [OTHER]
+    assert payload["entries"][0]["request"]["policies"] == [OTHER, SAVINGS]

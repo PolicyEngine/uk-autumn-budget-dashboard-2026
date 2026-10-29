@@ -38,12 +38,25 @@ export const withCalculatorOnly = (policies) =>
 export const withoutCalculatorOnly = (policies) => policies.filter((id) => !isCalculatorOnly(id));
 
 /**
+ * The measures of a household request for `policies` (withCalculatorOnly)
+ * that must be checked against their published figures: every selected
+ * one, and each calculator-only measure the request adds once the
+ * publication names it (`isPublished`); until then it has no receipt to
+ * check it against. A named one's receipt's engine and definition are
+ * required as a selected measure's are; with none, the calculator is
+ * unavailable, never unchecked (PersonalImpactTab).
+ */
+export const publishedRequest = (policies, isPublished) =>
+  withCalculatorOnly(policies).filter((id) => policies.includes(id) || isPublished(id));
+
+/**
  * The measures among `policies` whose answers are checked against an
  * approved definition (`definitions`): every one but a calculator-only
- * measure with none, which publishes no figures, so the API's running code
- * computes it unchecked and the calculator says it is not in the national
- * results. Once one has an approved definition (back in the national
- * results), it is checked as any other.
+ * measure with none. The page approves every measure of `publishedRequest`
+ * or answers nothing, so the ones left unchecked are exactly the
+ * calculator-only measures the publication does not name: they publish no
+ * figures, the API's running code computes them, and the calculator says
+ * they are not in the national results.
  */
 export const definitionChecked = (policies, definitions) =>
   policies.filter((id) => !isCalculatorOnly(id) || Object.hasOwn(definitions ?? {}, id));

@@ -421,6 +421,79 @@ describe("the example cards' background figures, checked against the approved de
   });
 });
 
+// Review of bc51d6d2, finding 1: once the publication names the
+// calculator-only savings rise, the page approves its definition
+// (publishedRequest), and the cards check it as a selected measure's
+describe("the example cards' background figures, once the publication names the savings rise", () => {
+  const SAVINGS = "savings_income_rates_up";
+  const savingsDefinition = { ...approvedDefinition(), reform: { ...approvedDefinition().reform, reform_sha256: "e".repeat(64) } };
+  const WITH_SAVINGS = { ...DEFINITIONS, [SAVINGS]: savingsDefinition };
+
+  it("name its approved definition in every request, though it is not selected", async () => {
+    const api = deferredPost();
+    const { result } = render({ post: api.post, expectedDefinitions: WITH_SAVINGS });
+    await waitFor(() => expect(api.calls).toHaveLength(1));
+    await act(async () => api.answer(api.calls[0], 5));
+    await waitFor(() => expect(api.calls.length).toBeGreaterThan(1));
+    for (const call of api.calls) {
+      expect(call.body.policies).toEqual([...POLICIES, SAVINGS]);
+      expect(call.definitions).toEqual({ fuel_duty_rise_deferral: approvedDefinition(), [SAVINGS]: savingsDefinition });
+    }
+    expect(result.current.figures[EXAMPLES[0].id][YEAR].change).toBe(5);
+  });
+
+  it.each([
+    ["reports none for it", { fuel_duty_rise_deferral: approvedDefinition() }],
+    ["reports another reform for it", { fuel_duty_rise_deferral: approvedDefinition(), [SAVINGS]: { ...approvedDefinition(), git_sha: APPROVED_COMMIT } }],
+  ])("show no figure from an answer that %s", async (_why, reported) => {
+    const api = deferredPost();
+    const { result } = render({ post: api.post, expectedDefinitions: WITH_SAVINGS });
+    await waitFor(() => expect(api.calls).toHaveLength(1));
+    await act(async () => api.answer(api.calls[0], 88, reported));
+    await waitFor(() => expect(result.current.failed.has(`${EXAMPLES[0].id}:${YEAR}`)).toBe(true));
+    expect(result.current.figures[EXAMPLES[0].id]?.[YEAR]).toBeUndefined();
+    const cell = exampleKey(EXAMPLES[0].inputs, { year: YEAR, policies: [...POLICIES, SAVINGS] });
+    expect(sessionStorage.getItem(`ab2026:example-headline:v1:${cell}`)).toBeNull();
+  });
+
+  it("never leave it out of a figure unsaid when the API does not know it", async () => {
+    const api = deferredPost();
+    const { result } = render({ post: api.post, expectedDefinitions: WITH_SAVINGS });
+    await waitFor(() => expect(api.calls).toHaveLength(1));
+    await act(async () =>
+      api.calls[0].reject(
+        new HouseholdApiError("invalid", `Value error, Unknown measures: ${SAVINGS}`, {
+          status: 422,
+          fields: [{ field: "policies", label: "Policies", message: `Value error, Unknown measures: ${SAVINGS}` }],
+        }),
+      ),
+    );
+    await waitFor(() => expect(result.current.failed.size).toBe(CELLS));
+    expect(api.calls).toHaveLength(1);
+    expect(result.current.pending.size).toBe(0);
+    expect(result.current.figures).toEqual({});
+  });
+
+  it("while the publication does not name it, drop it when the API does not know it, as before", async () => {
+    const api = deferredPost();
+    const { result } = render({ post: api.post });
+    await waitFor(() => expect(api.calls).toHaveLength(1));
+    await act(async () =>
+      api.calls[0].reject(
+        new HouseholdApiError("invalid", `Value error, Unknown measures: ${SAVINGS}`, {
+          status: 422,
+          fields: [{ field: "policies", label: "Policies", message: `Value error, Unknown measures: ${SAVINGS}` }],
+        }),
+      ),
+    );
+    await waitFor(() => expect(api.calls).toHaveLength(2));
+    expect(api.calls[1].body.policies).toEqual(POLICIES);
+    await act(async () => api.answer(api.calls[1], 7));
+    await waitFor(() => expect(result.current.figures[EXAMPLES[0].id]?.[YEAR]?.change).toBe(7));
+    expect(result.current.reduced).toBeNull();
+  });
+});
+
 describe("the fill's helpers", () => {
   it("runLimited never has more than its limit out, and starts nothing once aborted", async () => {
     let out = 0;

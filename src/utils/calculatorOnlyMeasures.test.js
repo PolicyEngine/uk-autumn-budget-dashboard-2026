@@ -5,6 +5,7 @@ import {
   SAVINGS_INCOME_RATES_ID,
   definitionChecked,
   isCalculatorOnly,
+  publishedRequest,
   resultPolicies,
   withCalculatorOnly,
   withoutCalculatorOnly,
@@ -47,6 +48,31 @@ describe("calculator-only measures", () => {
       { numRuns: 300 },
     );
     expect(definitionChecked(["a", SAVINGS_INCOME_RATES_ID], null)).toEqual(["a"]);
+  });
+
+  it("are checked against the publication once it names them, selected or not", () => {
+    // Review of bc51d6d2, finding 1: a published savings rise, not selected,
+    // went in every request unchecked
+    const IDS = ["a", "b", "c", SAVINGS_INCOME_RATES_ID];
+    fc.assert(
+      fc.property(fc.uniqueArray(fc.constantFrom(...IDS)), fc.subarray(IDS), (selected, publishedIds) => {
+        const checked = publishedRequest(selected, (id) => publishedIds.includes(id));
+        const request = withCalculatorOnly(selected);
+        // The request's measures, in its order, each at most once
+        expect(checked).toEqual(request.filter((id) => checked.includes(id)));
+        // Every selected one; one the request adds exactly when published
+        for (const id of selected) expect(checked).toContain(id);
+        for (const id of request) expect(checked.includes(id)).toBe(selected.includes(id) || publishedIds.includes(id));
+        for (const id of request.filter((added) => !selected.includes(added))) expect(isCalculatorOnly(id)).toBe(true);
+        // With the published ones approved, the hooks check the same
+        // measures the page approved (definitionChecked)
+        const approvals = Object.fromEntries(checked.map((id) => [id, {}]));
+        expect(definitionChecked(request, approvals)).toEqual(checked);
+      }),
+      { numRuns: 300 },
+    );
+    // With nothing selected there is no request, and nothing to check
+    expect(publishedRequest([], () => true)).toEqual([]);
   });
 });
 

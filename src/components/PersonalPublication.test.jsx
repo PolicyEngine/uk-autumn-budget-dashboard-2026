@@ -5,10 +5,11 @@ import PersonalImpactTab from "./PersonalImpactTab";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
 import { fixtureJson } from "../test/publicationFixture";
 import { approvedDefinition } from "../test/definitionsFixture";
+import { SAVINGS_INCOME_RATES_ID } from "../utils/calculatorOnlyMeasures";
 
 vi.mock("./HouseholdCalculator", () => ({
-  default: ({ selectedPolicies, publicationKey, expectedEngine, expectedDefinitions }) => (
-    <div data-testid="live-calculator" data-policies={selectedPolicies.join(",")} data-snapshot={publicationKey} data-engine={JSON.stringify(expectedEngine)} data-definitions={JSON.stringify(expectedDefinitions)}>£123,456</div>
+  default: ({ selectedPolicies, publicationKey, expectedEngine, expectedDefinitions, presetEngine, presetDefinitions }) => (
+    <div data-testid="live-calculator" data-policies={selectedPolicies.join(",")} data-snapshot={publicationKey} data-engine={JSON.stringify(expectedEngine)} data-definitions={JSON.stringify(expectedDefinitions)} data-preset-engine={JSON.stringify(presetEngine)} data-preset-definitions={JSON.stringify(presetDefinitions)}>£123,456</div>
   ),
 }));
 afterEach(cleanup);
@@ -129,6 +130,74 @@ describe("Household calculator's publication gate", () => {
     expect(screen.queryByTestId("live-calculator")).not.toBeInTheDocument();
     expect(screen.getByText("Household calculator is unavailable for the selected policies")).toBeInTheDocument();
     expect(screen.getByText(/do not name one model version/)).toBeInTheDocument();
+  });
+
+  describe("the calculator-only savings rise, which every household request carries", () => {
+    // Review of bc51d6d2, finding 1: published but not selected, it went in
+    // every request unchecked. Once the manifest names it, its receipt's
+    // engine and definition are required as a selected measure's are
+    const SAVINGS = SAVINGS_INCOME_RATES_ID;
+    const savingsDefinition = { ...approvedDefinition(), reform: { ...approvedDefinition().reform, reform_sha256: "e".repeat(64) } };
+    function withSavings({ named = true, tables = { engine: ENGINE, definition: savingsDefinition } } = {}) {
+      return buildMeasureCatalogue({
+        manifest: {
+          ...base, snapshotSha256: "a".repeat(64),
+          measures: {
+            alpha: { ...base.measures.alpha, years: [year], unsupported_years: [] },
+            ...(named ? { [SAVINGS]: { ...base.measures.beta, years: [year], unsupported_years: [] } } : {}),
+          },
+          combined: {},
+        },
+        tablesByKey: { alpha: { engine: ENGINE, definition: approvedDefinition() }, ...(named && tables ? { [SAVINGS]: tables } : {}) },
+      });
+    }
+    function showAlpha(value, remove = vi.fn()) {
+      render(
+        <MeasureCatalogueProvider catalogue={value}>
+          <PersonalImpactTab selectedPolicies={["alpha"]} policies={value.measures} year={year} onRemoveUnavailable={remove} />
+        </MeasureCatalogueProvider>,
+      );
+      return remove;
+    }
+    const data = (name) => JSON.parse(screen.getByTestId("live-calculator").dataset[name]);
+
+    it("is checked against its receipt once the publication names it, selected or not", () => {
+      showAlpha(withSavings());
+      // The household's answers and the examples' both
+      expect(data("definitions")).toEqual({ alpha: approvedDefinition(), [SAVINGS]: savingsDefinition });
+      expect(data("presetDefinitions")).toEqual({ alpha: approvedDefinition(), [SAVINGS]: savingsDefinition });
+      expect(data("engine")).toEqual(ENGINE);
+      expect(data("presetEngine")).toEqual(ENGINE);
+    });
+
+    it.each([
+      ["a receipt with no definition", { engine: ENGINE }, /record no definition/],
+      ["a receipt with a short commit", { engine: ENGINE, definition: { ...savingsDefinition, git_sha: "abc1234" } }, /names no full commit/],
+    ])("leaves the calculator unavailable when the publication names it with %s", (_, tables, why) => {
+      const remove = showAlpha(withSavings({ tables }));
+      expect(screen.queryByTestId("live-calculator")).not.toBeInTheDocument();
+      const listed = screen.getAllByRole("listitem").map((item) => item.textContent);
+      expect(listed).toEqual([expect.stringMatching(new RegExp(`^${withSavings().byId.get(SAVINGS).name}: `))]);
+      expect(listed[0]).toMatch(why);
+      // Not selected, it can't be removed from the selection: no such button
+      expect(screen.queryByRole("button", { name: /from the selection$/ })).not.toBeInTheDocument();
+      expect(remove).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["no verified receipt", null],
+      ["a receipt that names other versions", { engine: { ...ENGINE, policyengine: "6.10.1" }, definition: savingsDefinition }],
+    ])("withholds the calculator when the publication names it with %s", (_, tables) => {
+      showAlpha(withSavings({ tables }));
+      expect(screen.queryByTestId("live-calculator")).not.toBeInTheDocument();
+      expect(screen.getByText(/do not name one model version/)).toBeInTheDocument();
+    });
+
+    it("is left unchecked while the publication does not name it, as it has no receipt", () => {
+      showAlpha(withSavings({ named: false }));
+      expect(data("definitions")).toEqual({ alpha: approvedDefinition() });
+      expect(data("presetDefinitions")).toEqual({ alpha: approvedDefinition() });
+    });
   });
 
   it("never renders held, unpublished, unverified or unsupported measures as numbers", () => {
