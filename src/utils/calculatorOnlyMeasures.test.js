@@ -6,6 +6,7 @@ import {
   definitionChecked,
   isCalculatorOnly,
   publishedRequest,
+  removableFromSelection,
   resultPolicies,
   withCalculatorOnly,
   withoutCalculatorOnly,
@@ -73,6 +74,26 @@ describe("calculator-only measures", () => {
     );
     // With nothing selected there is no request, and nothing to check
     expect(publishedRequest([], () => true)).toEqual([]);
+  });
+
+  it("are never offered for removal from the selection: a Remove would change nothing", () => {
+    // Re-reviews of 34133276 and edf98756 (P3s): the savings rise goes in
+    // every request, selected or not
+    const IDS = ["a", "b", "c", SAVINGS_INCOME_RATES_ID];
+    fc.assert(
+      fc.property(fc.uniqueArray(fc.constantFrom(...IDS)), fc.uniqueArray(fc.constantFrom(...IDS)), (selected, refused) => {
+        const removable = removableFromSelection(refused, selected);
+        expect(removable).toBe(refused.every((id) => selected.includes(id) && !isCalculatorOnly(id)));
+        // Offered, it lifts the refusal: the request without them names none
+        if (removable) {
+          const request = withCalculatorOnly(selected.filter((id) => !refused.includes(id)));
+          for (const id of refused) expect(request).not.toContain(id);
+        }
+      }),
+      { numRuns: 300 },
+    );
+    expect(removableFromSelection([SAVINGS_INCOME_RATES_ID], ["a", SAVINGS_INCOME_RATES_ID])).toBe(false);
+    expect(removableFromSelection(["a"], ["a", SAVINGS_INCOME_RATES_ID])).toBe(true);
   });
 });
 

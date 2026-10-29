@@ -3,7 +3,7 @@ import UnavailableMeasures from "./publication/UnavailableMeasures";
 import UnavailableNotice, { RemoveUnavailable } from "./publication/UnavailableNotice";
 import { isCatalogueRowDisplayable, publishedDefinitions, publishedEngine, useMeasureCatalogue } from "../utils/measureCatalogue";
 import { usePublicationCheck } from "../utils/publication/check";
-import { publishedRequest } from "../utils/calculatorOnlyMeasures";
+import { publishedRequest, removableFromSelection } from "../utils/calculatorOnlyMeasures";
 import "./PersonalImpactTab.css";
 
 /**
@@ -19,7 +19,7 @@ function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemov
     return (
       <UnavailableNotice reason="Household calculator is unavailable for the selected policies">
         <p>{names.join(", ") || "No verified Budget policies are published yet."}</p>
-        {catalogue.manifest && onRemoveUnavailable && (
+        {catalogue.manifest && onRemoveUnavailable && removableFromSelection(unavailable, selectedPolicies) && (
           <RemoveUnavailable names={names} onRemove={() => onRemoveUnavailable(unavailable)} />
         )}
       </UnavailableNotice>
@@ -50,9 +50,9 @@ function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemov
         reason="Household calculator is unavailable for the selected measures"
         summary="The household calculator cannot be checked against these measures' published figures:"
         measures={missing.map(({ id, reason }) => ({ id, name: catalogue.byId.get(id)?.name ?? id, why: [reason] }))}
-        // Removing them from the selection helps only when all are in it: a
-        // calculator-only measure goes in every request, selected or not
-        onRemove={missing.every(({ id }) => selectedPolicies.includes(id)) ? onRemoveUnavailable : undefined}
+        // Only when taking them out of the selection lifts this: not for a
+        // calculator-only one, in every request, selected or not
+        onRemove={removableFromSelection(missing.map(({ id }) => id), selectedPolicies) ? onRemoveUnavailable : undefined}
       />
     );
   }

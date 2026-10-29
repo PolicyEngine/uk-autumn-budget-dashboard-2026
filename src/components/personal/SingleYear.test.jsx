@@ -1461,6 +1461,25 @@ describe("a household calculation refused for the calculator-only savings rise",
     expect(yours()[0].policies).toContain(SAVINGS);
   });
 
+  it.each([
+    ["it alone", [SAVINGS]],
+    ["it and a selected measure", [SAVINGS, SUPPORTED_POLICY_IDS[0]]],
+  ])("offers no remove when %s is refused, though selected: every request carries it", async (_, refused) => {
+    // Re-review of edf98756, P3: removed from the selection, it goes back in
+    serve((body) => json(householdAnswerFor(body)), (id) => {
+      const definition = approvedDefinition(id);
+      return refused.includes(id) ? { ...definition, reform: { ...definition.reform, binding: "code_revision" } } : definition;
+    });
+    const remove = vi.fn();
+    renderWithSavings({ selectedPolicies: [...SUPPORTED_POLICY_IDS, SAVINGS], onRemoveUnavailable: remove });
+    toResults();
+    const region = await results();
+    expect(await within(region).findByText("Household calculator is unavailable for the selected measures")).toBeInTheDocument();
+    expect(within(region).getAllByRole("listitem")).toHaveLength(refused.length);
+    expect(within(region).queryByRole("button", { name: /from the selection$/ })).not.toBeInTheDocument();
+    expect(remove).not.toHaveBeenCalled();
+  });
+
   it("answers when the API computes it from its approved definition", async () => {
     serve((body) => json(householdAnswerFor(body)));
     renderWithSavings();

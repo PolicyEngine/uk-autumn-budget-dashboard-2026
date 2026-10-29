@@ -38,6 +38,15 @@ export const withCalculatorOnly = (policies) =>
 export const withoutCalculatorOnly = (policies) => policies.filter((id) => !isCalculatorOnly(id));
 
 /**
+ * Whether taking `ids` out of the selection (`selected`) can lift a refusal
+ * of them: only when each one is selected and none is calculator-only,
+ * which every household request carries, selected or not
+ * (withCalculatorOnly), so a Remove would change nothing.
+ */
+export const removableFromSelection = (ids, selected) =>
+  ids.every((id) => selected.includes(id) && !isCalculatorOnly(id));
+
+/**
  * The measures of a household request for `policies` (withCalculatorOnly)
  * that must be checked against their published figures: every selected
  * one, and each calculator-only measure the request adds once the

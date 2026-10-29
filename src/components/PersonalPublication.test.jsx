@@ -193,6 +193,39 @@ describe("Household calculator's publication gate", () => {
       expect(screen.getByText(/do not name one model version/)).toBeInTheDocument();
     });
 
+    // Re-review of edf98756, P3: selected, it still goes back in every
+    // request once removed, so no Remove is offered for it either
+    it.each([
+      ["records no definition", { engine: ENGINE }, /record no definition/],
+      ["names a short commit", { engine: ENGINE, definition: { ...savingsDefinition, git_sha: "abc1234" } }, /names no full commit/],
+    ])("offers no remove when it is selected and its receipt %s", (_, tables, why) => {
+      const value = withSavings({ tables });
+      const remove = vi.fn();
+      render(
+        <MeasureCatalogueProvider catalogue={value}>
+          <PersonalImpactTab selectedPolicies={["alpha", SAVINGS]} policies={value.measures} year={year} onRemoveUnavailable={remove} />
+        </MeasureCatalogueProvider>,
+      );
+      expect(screen.queryByTestId("live-calculator")).not.toBeInTheDocument();
+      expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual([expect.stringMatching(why)]);
+      expect(screen.queryByRole("button", { name: /from the selection$/ })).not.toBeInTheDocument();
+      expect(remove).not.toHaveBeenCalled();
+    });
+
+    it("offers no remove when it is selected but the publication holds it back", () => {
+      const value = withSavings();
+      value.byId.get(SAVINGS).displayable = false;
+      const remove = vi.fn();
+      render(
+        <MeasureCatalogueProvider catalogue={value}>
+          <PersonalImpactTab selectedPolicies={["alpha", SAVINGS]} policies={value.measures} year={year} onRemoveUnavailable={remove} />
+        </MeasureCatalogueProvider>,
+      );
+      expect(screen.queryByTestId("live-calculator")).not.toBeInTheDocument();
+      expect(screen.getByText("Household calculator is unavailable for the selected policies")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /from the selection$/ })).not.toBeInTheDocument();
+    });
+
     it("is left unchecked while the publication does not name it, as it has no receipt", () => {
       showAlpha(withSavings({ named: false }));
       expect(data("definitions")).toEqual({ alpha: approvedDefinition() });

@@ -32,7 +32,7 @@ export { WIZARD_DEFAULTS };
 import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
 import LocalAuthorityField from "./personal/LocalAuthorityField";
 import { policyQuestions } from "../utils/householdPolicyFields";
-import { withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
+import { removableFromSelection, withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
@@ -1321,10 +1321,12 @@ function HouseholdCalculator({
               reason="Household calculator is unavailable for the selected measures"
               summary="The household calculator does not compute these measures from the definitions their published figures were approved on:"
               measures={refusedDefinitions}
-              // Removing them from the selection helps only when all are in
-              // it: a calculator-only measure goes in every request, selected
-              // or not (PersonalImpactTab offers none then either)
-              onRemove={refusedDefinitions.every(({ id }) => selectedPolicies.includes(id)) ? onRemoveUnavailable : undefined}
+              // Only when taking them out of the selection lifts this: not
+              // for a calculator-only one, in every request, selected or not
+              // (PersonalImpactTab offers none then either)
+              onRemove={
+                removableFromSelection(refusedDefinitions.map(({ id }) => id), selectedPolicies) ? onRemoveUnavailable : undefined
+              }
             />
           ) : selectionUnavailable ? (
             <UnavailableNotice reason="Household calculator is unavailable for this selection">
