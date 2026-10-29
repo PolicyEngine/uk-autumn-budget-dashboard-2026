@@ -15,8 +15,10 @@
  * - parameters: a "What changes" entry ({ display, rows }) as
  *   policy_parameters.json shapes one: "table" for the before and after
  *   tiles only, "pairs" for each of two changes as its own tiles; never a
- *   plot. The cards show no timeline either:
- *   Starts and Ends say when.
+ *   plot. A card with a picture (utils/unmodelledVisuals.js; every card
+ *   now) shows the picture instead, and these values serve only as the
+ *   figures its test checks the picture against. The cards show no
+ *   timeline either: Starts and Ends say when.
  */
 
 const yearly = (from, to, before, after, beforeStart = before) =>

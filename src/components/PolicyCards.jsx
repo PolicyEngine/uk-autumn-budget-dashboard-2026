@@ -375,9 +375,11 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
       </div>
       )}
 
-      {(parameters || policy.example || policy.changesText) && (
+      {(parameters || policy.visual || policy.example || policy.changesText) && (
         <div className="policy-card-spec">
-          {parameters ? (
+          {/* A card's own picture of what changes, where it brings one
+              (the Budget policies we do not model) */}
+          {policy.visual ?? (parameters ? (
             <PolicyChange
               name={policy.label ?? policy.name}
               entry={parameters}
@@ -397,7 +399,7 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
                 <p className="pchg-lead">{policy.changesText}</p>
               </section>
             )
-          )}
+          ))}
           {policy.example && (
             <section className="policy-card-example" aria-label={`${policy.example.title}: ${policy.label ?? policy.name}`}>
               <p className="policy-card-example-title">
