@@ -118,7 +118,8 @@ export default function AgeSection({ selectedPolicies, selectedYear, policies })
           />
           <section className="report-section young-people-section" aria-label="Winners and losers, and which policies drive them">
             <div className="charts-grid">
-              <MeasuresCard {...props} height={narrow ? 460 : 400} />
+              {/* 16 to 24 (the default group) against 25 to 34 at first */}
+              <MeasuresCard {...props} defaultCompare="25-34" height={narrow ? 460 : 400} />
               {group === PENSIONERS ? (
                 <PensionerSharesCard {...props} height={narrow ? 260 : 400} />
               ) : (
@@ -137,7 +138,8 @@ export default function AgeSection({ selectedPolicies, selectedYear, policies })
           />
           <section className="report-section young-people-section" aria-label="Which policies drive the change">
             <div className="charts-grid">
-              <MeasuresCard {...props} height={narrow ? 460 : 400} />
+              {/* 16 to 24 (the default group) against 25 to 34 at first */}
+              <MeasuresCard {...props} defaultCompare="25-34" height={narrow ? 460 : 400} />
             </div>
           </section>
         </>

@@ -18,6 +18,7 @@ import {
   asksEducation,
   atStatePensionAge,
   buildHouseholdRequest,
+  inBusFareCapArea,
   isRenting,
   parseChildrenAges,
   requestKey,
@@ -36,6 +37,7 @@ import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
 import { STICKY_GAP, scrollBelowBars, stickyBottom } from "../utils/pageScroll";
+import { trackEvent } from "../utils/analytics";
 
 
 // The form's seven numbered steps, read top to bottom, and nothing after
@@ -68,7 +70,7 @@ export const FORM_GROUPS = [
     key: "spending",
     title: "Spending",
     hint: "Prefilled with the average household's spending (Source: ONS Family Spending, 2024-25).",
-    fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year", "monthly_childcare"],
+    fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year", "bus_fare_spending_per_year", "monthly_childcare"],
     quiet: ["petrol_spending_per_year", "diesel_spending_per_year"],
   },
   {
@@ -288,6 +290,15 @@ const NUMBER_CONFIGS = {
     suffix: "a year",
     hint: "Including VAT. Prefilled with the average household's spending, £20.00 a week (Source: ONS Family Spending, 2024-25).",
   },
+  bus_fare_spending_per_year: {
+    label: "Bus fares",
+    min: 0,
+    max: 20000,
+    step: 10,
+    money: true,
+    suffix: "a year",
+    hint: "What you pay. None with a free bus pass.",
+  },
   self_employment_receipts_per_year: {
     label: "Self-employment or side income",
     min: 0,
@@ -340,6 +351,8 @@ const FIELD_APPLIES = {
   partner_private_pension_per_year: (inputs) => inputs.has_partner,
   // Northern Ireland has domestic rates, not Council Tax
   council_tax_band: (inputs) => inputs.region !== "NORTHERN_IRELAND",
+  // The £2 bus fare cap applies in England outside London only
+  bus_fare_spending_per_year: (inputs) => inBusFareCapArea(inputs.region),
   state_pension_per_year: (inputs, childrenCount, year) => atStatePensionAge(inputs.current_age, year),
   partner_state_pension_per_year: (inputs, childrenCount, year) =>
     inputs.has_partner && atStatePensionAge(inputs.partner_age, year),
@@ -873,6 +886,7 @@ function HouseholdCalculator({
     // One calculation at a time; nothing to ask without a policy
     if (running || noneSelected) return;
     setSubmitted({ inputs, year, policies: requestPolicies, at: Date.now(), household: presetId ?? "yours" });
+    trackEvent("household_calculated", { household: presetId ?? "yours", year, policy_count: requestPolicies.length });
     // On a phone the results start screens below the button: bring the
     // waiting message into view, so pressing Calculate visibly does something
     requestAnimationFrame(() => {

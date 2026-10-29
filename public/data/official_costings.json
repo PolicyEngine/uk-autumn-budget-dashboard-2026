@@ -4,6 +4,40 @@
     "id": "uk-autumn-budget-2026"
   },
   "measures": {
+    "bus_fare_cap_2027": {
+      "years": {
+        "2026": {
+          "post_behavioural": -0.05,
+          "static_costing": null
+        },
+        "2027": {
+          "post_behavioural": -0.18,
+          "static_costing": null
+        },
+        "2028": {
+          "not_comparable": {
+            "reason": "The cap runs from 1 January to 31 December 2027 and is funded by reprioritising DESNZ budgets; the Treasury's 2028-29 and 2029-30 figures (+\u00a365m, +\u00a3170m) are that reprioritisation after the cap has ended, where the static model scores nothing. Our figure is the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London: 10.0% of spending at \u00a33 fares (\u00a3230m / 0.9 operator participation / \u00a32,557m), so it is above the official figure by about the participation adjustment. Table 6.1 row 4."
+          },
+          "post_behavioural": null,
+          "static_costing": null
+        },
+        "2029": {
+          "not_comparable": {
+            "reason": "The cap runs from 1 January to 31 December 2027 and is funded by reprioritising DESNZ budgets; the Treasury's 2028-29 and 2029-30 figures (+\u00a365m, +\u00a3170m) are that reprioritisation after the cap has ended, where the static model scores nothing. Our figure is the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London: 10.0% of spending at \u00a33 fares (\u00a3230m / 0.9 operator participation / \u00a32,557m), so it is above the official figure by about the participation adjustment. Table 6.1 row 4."
+          },
+          "post_behavioural": null,
+          "static_costing": null
+        },
+        "2030": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        },
+        "2031": {
+          "post_behavioural": 0.0,
+          "static_costing": null
+        }
+      }
+    },
     "carers_allowance_earnings_taper": {
       "years": {
         "2026": {

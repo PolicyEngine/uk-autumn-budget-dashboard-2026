@@ -19,6 +19,7 @@ from rich.markup import escape
 
 from uk_budget_data import data_limits, model_limits
 from uk_budget_data.calculators import (
+    OFFICIAL_BASES,
     AgeImpactCalculator,
     BudgetaryImpactCalculator,
     ConstituencyCalculator,
@@ -29,6 +30,7 @@ from uk_budget_data.calculators import (
     IncomeDistributionCalculator,
     IncomeMobilityCalculator,
     MetricsCalculator,
+    OfficialBasisCalculator,
     WinnersLosersCalculator,
 )
 from uk_budget_data.measure_templates import (
@@ -121,6 +123,11 @@ class ReformProcessor:
         self.budgetary_calc = BudgetaryImpactCalculator(
             years=self.config.years
         )
+        self.official_basis_calc = OfficialBasisCalculator(
+            years=self.config.years
+        )
+        # The variables its official costing covers, or none (#297)
+        self.official_basis = OFFICIAL_BASES.get(reform.id, ())
         self.distributional_calc = DistributionalImpactCalculator()
         self.winners_losers_calc = WinnersLosersCalculator()
         self.metrics_calc = MetricsCalculator()
@@ -162,6 +169,10 @@ class ReformProcessor:
         # Calculate budgetary impact
         budgetary = self.budgetary_calc.calculate(
             baseline, reformed, reform_id, reform_name
+        )
+        # The same, on the official costing's basis, where it is narrower
+        official_basis = self.official_basis_calc.calculate(
+            baseline, reformed, reform_id, reform_name, self.official_basis
         )
 
         # Calculate per-year metrics
@@ -241,6 +252,7 @@ class ReformProcessor:
             reform_id=reform_id,
             reform_name=reform_name,
             budgetary_impact=budgetary,
+            official_basis=official_basis,
             distributional_impact=all_distributional,
             winners_losers=all_winners_losers,
             metrics=all_metrics,

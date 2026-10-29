@@ -3,7 +3,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS } from "./MethodologyTab";
+import MethodologyTab, { METHOD_CONTENTS, METHOD_SECTIONS, REPORT_PDF } from "./MethodologyTab";
+import { EXPLAINERS } from "../utils/explainers";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import { unavailableMeasures } from "./methodology/measures";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
@@ -21,6 +22,21 @@ afterEach(() => {
 const renderTab = (onShowTab = vi.fn()) => render(<MeasureCatalogueProvider catalogue={catalogue}><MethodologyTab onShowTab={onShowTab} /></MeasureCatalogueProvider>);
 
 describe("MethodologyTab", () => {
+  it("offers our PDF report, a file in public/, and links each explainer", () => {
+    renderTab();
+    const download = screen.getByRole("link", { name: "Download the PDF" });
+    expect(download).toHaveAttribute("href", `/${REPORT_PDF.file}`);
+    expect(download).toHaveAttribute("download");
+    const pdf = readFileSync(join(fileURLToPath(import.meta.url), "..", "..", "..", "public", REPORT_PDF.file));
+    expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
+    for (const { slug, title } of EXPLAINERS) {
+      expect(screen.getByRole("link", { name: new RegExp(`^${title}`) })).toHaveAttribute(
+        "href",
+        `https://www.policyengine.org/uk/research/${slug}`,
+      );
+    }
+  });
+
   it("keeps the anchors other views link to", () => {
     // Other views (e.g. the map and Household calculator) link to these
     expect(METHOD_SECTIONS.geography).toBe("method-area");
@@ -94,8 +110,21 @@ describe("MethodologyTab", () => {
     expect(link).toHaveAttribute("href", "?tab=policies");
     fireEvent.click(link);
     expect(onShowTab).toHaveBeenLastCalledWith("policies");
-    for (const measure of catalogue.displayable) expect(container).not.toHaveTextContent(measure.name);
+    // The one exception: the calculator's own list of the policies it runs
+    const rest = container.cloneNode(true);
+    rest.querySelector("#method-household-policies")?.remove();
+    for (const measure of catalogue.displayable) expect(rest).not.toHaveTextContent(measure.name);
     expect(within(model).queryByRole("button", { name: /See the effect/ })).toBeNull();
+  });
+
+  it("lists every policy the household calculator runs, the calculator-only ones marked", () => {
+    const { container } = renderTab();
+    const topic = container.querySelector("#method-household-policies");
+    expect(topic).not.toBeNull();
+    const items = [...topic.querySelectorAll("li")].map((item) => item.textContent);
+    expect(items).toHaveLength(catalogue.measures.length + 1);
+    for (const measure of catalogue.measures) expect(items.some((item) => item.startsWith(measure.name))).toBe(true);
+    expect(items.at(-1)).toMatch(/^Savings income tax up \(calculator only/);
   });
 
   it("lists the unavailable measures only when there are any", () => {
@@ -168,7 +197,7 @@ describe("MethodologyTab", () => {
     // While the poverty figures are withheld (povertyFigures.js), one sentence says so in their place
     if (POVERTY_FIGURES_SHOWN) {
       expect(container.textContent).toContain(
-        "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate.",
+        "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate, and the £2 bus fare cap's fare savings.",
       );
     } else {
       expect(container.textContent).toContain(WITHHELD_SENTENCE);
@@ -235,14 +264,21 @@ describe("MethodologyTab", () => {
     expect(card.textContent).not.toMatch(/\d{1,3}(,\d{3})+/);
   });
 
-  it("says under Data, not the household scatter, that public files are signed off, and that a pending file can publish", () => {
+  it("says under Data, not the household scatter, what the checks on public files do, with no named reviewer while sign-off is off", () => {
     const { container } = renderTab();
     const data = container.querySelector(`#${METHOD_SECTIONS.data}`);
     const card = within(data).getByRole("button", { name: "Published files" }).closest(".method-topic");
-    expect(card).toHaveTextContent("Each public data file is listed with a named reviewer");
-    expect(card).toHaveTextContent("can be published as pending, for at most 14 days");
+    expect(card).toHaveTextContent("Automated checks run on every public data file before it is published");
+    expect(card).toHaveTextContent("no named reviewer signs each file off");
+    expect(card).toHaveTextContent("household, benefit unit or person ids or weights");
+    expect(card).toHaveTextContent("must match the digest its run's receipt records");
+    expect(card).toHaveTextContent("under the floor of survey households");
+    // #333: sign-off is off (sign_off.REQUIRED, #308), so no pending window
+    expect(card).not.toHaveTextContent("pending");
+    expect(card).not.toHaveTextContent("listed with a named reviewer");
     const scatter = document.getElementById(METHOD_ANCHORS.scatter);
     expect(scatter).not.toHaveTextContent("Sign-off");
+    expect(scatter).not.toHaveTextContent("Automated checks run");
     expect(container).not.toHaveTextContent("signs off every public data file before it is published");
   });
 

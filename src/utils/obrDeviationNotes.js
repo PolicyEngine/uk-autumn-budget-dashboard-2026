@@ -81,6 +81,11 @@ export const OBR_DIFFERENCE_POINTS = {
     { reason: "Coverage", text: "Our savings calibration included ISA interest, so too little is taxed" },
     { reason: null, text: "We are correcting the data" },
   ],
+  bus_fare_cap_2027: [
+    { reason: "Scope", text: "Ours is the official costing shared out by bus spending" },
+    { reason: "Behaviour", text: "Ours holds spending fixed: no extra travel" },
+    { reason: "Timing", text: "Later official gains are the funding reprioritised", years: [2028, 2029] },
+  ],
 };
 
 /** A policy's points for fiscal year `year` (start year): each with its text that year. */
@@ -100,6 +105,7 @@ export const NOT_COMPARABLE_SHORT = {
   savings_income_rates_up: "Self Assessment pays later.",
   trading_allowance_raise: "Self Assessment pays later.",
   state_pension_income_tax_protection: "The allowance has ended; official figures fall after it.",
+  bus_fare_cap_2027: "The cap has ended; official figures are its funding.",
 };
 
 /**
@@ -110,6 +116,8 @@ export const NOT_COMPARABLE_SHORT = {
  * Table 1.1 (#290, 6479807374).
  */
 export const OBR_DEVIATION_NOTES = {
+  bus_fare_cap_2027:
+    "The official costing is the grant that pays bus operators to keep single fares at £2 instead of £3 in England outside London from January to December 2027 (-£50 million in 2026-27, -£180 million in 2027-28). Ours is that costing shared out across households by their bus fare spending in England outside London: 10.0% of spending at £3 fares while the cap runs, which is the £230 million divided by 0.9 for operator participation and by £2,557 million of spending. So ours is above the official figure by about the participation adjustment, and moves with the model's bus fare spending in each year. The official +£65 million in 2028-29 and +£170 million in 2029-30 are the reprioritised Department for Energy Security and Net Zero budgets that fund the cap, after it has ended, so those years are not compared.",
   household_energy_payment_2026:
     "Our £1,969 million in 2026-27 is 25% below the official £2,625 million, because the official figure also covers two things we don't model: the devolved governments' share of the funding (about £425 million, our estimate using the Barnett formula) and £100 million for councils in England to target the households hit hardest. Without them, about £2,100 million remains for the £100 payments in England, and our estimate is 94% of that; the Budget doesn't itemise the remaining £130 million or so. Both estimates are zero in every later year.",
   domestic_electricity_zero_vat:
@@ -133,6 +141,8 @@ export const OBR_DEVIATION_NOTES = {
  * table's tip and the CSV.
  */
 export const OBR_COMPARISON_BASES = {
+  bus_fare_cap_2027:
+    "Official: grant to bus operators. Ours: that costing shared out by households' bus fare spending, static.",
   household_energy_payment_2026:
     "Official: the £100 payments in England, devolved funding and a £100m fund for councils. Ours: the £100 payments in England.",
   domestic_electricity_zero_vat:
@@ -164,6 +174,7 @@ export const OBR_PANEL_BASES = {
   property_income_rates_up: { official: "Income tax when paid, after incorporation", ours: "Income tax by tax year, static" },
   trading_allowance_raise: { official: "Income tax when paid, with expense switching", ours: "Income tax and Class 4 by tax year, static" },
   savings_income_rates_up: { official: "Income tax when paid, after moves into ISAs", ours: "Income tax by tax year, static" },
+  bus_fare_cap_2027: { official: "Grant to bus operators", ours: "That costing shared out by bus spending" },
 };
 
 /** A basis line's two sides: { official, ours }, or null. */

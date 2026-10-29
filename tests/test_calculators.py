@@ -52,6 +52,121 @@ class TestBudgetaryImpactCalculator:
         assert result[0]["value"] == pytest.approx(-2.0)
 
 
+class _Sim:
+    """A stand-in simulation: each variable's values by year."""
+
+    def __init__(self, values):
+        self.values = values
+
+    def calculate(self, name, period):
+        return np.asarray(self.values[name][period], dtype=float)
+
+
+class TestOfficialBasisCalculator:
+    """The change in just the taxes and benefits an official costing covers
+    (#297), with the Exchequer's sign."""
+
+    def test_signs_follow_gov_tax_and_gov_spending(self):
+        from uk_budget_data.calculators import exchequer_signs
+
+        assert exchequer_signs(
+            ["income_tax", "carers_allowance", "universal_credit"]
+        ) == {"income_tax": 1, "carers_allowance": -1, "universal_credit": -1}
+        with pytest.raises(ValueError, match="in neither"):
+            exchequer_signs(["household_net_income"])
+
+    def test_sums_each_change_with_its_sign_in_billions(self):
+        from uk_budget_data.calculators import OfficialBasisCalculator
+
+        baseline = _Sim(
+            {
+                "carers_allowance": {2030: [1e9, 2e9]},
+                "universal_credit": {2030: [5e9]},
+            }
+        )
+        reformed = _Sim(
+            {
+                "carers_allowance": {2030: [1.5e9, 2.5e9]},
+                "universal_credit": {2030: [4.5e9]},
+            }
+        )
+        (row,) = OfficialBasisCalculator(years=[2030]).calculate(
+            baseline,
+            reformed,
+            "m",
+            "M",
+            ("carers_allowance", "universal_credit"),
+        )
+        # £1bn more Carer's Allowance, £0.5bn less Universal Credit: a cost
+        # of £0.5bn to the Exchequer; the row names what it sums
+        assert row == {
+            "reform_id": "m",
+            "reform_name": "M",
+            "year": 2030,
+            "value": pytest.approx(-0.5),
+            "variables": "carers_allowance;universal_credit",
+        }
+
+    def test_more_universal_credit_is_a_cost(self):
+        """Spending's sign end to end, through policyengine-uk's own
+        lists: Universal Credit rising is a negative figure, a cost to the
+        Exchequer."""
+        from uk_budget_data.calculators import OfficialBasisCalculator
+
+        (row,) = OfficialBasisCalculator(years=[2030]).calculate(
+            _Sim({"universal_credit": {2030: [5e9]}}),
+            _Sim({"universal_credit": {2030: [5.2e9]}}),
+            "m",
+            "M",
+            ("universal_credit",),
+        )
+        assert row["value"] < 0
+        assert row["value"] == pytest.approx(-0.2)
+
+    def test_a_tax_cut_is_a_cost(self):
+        from uk_budget_data.calculators import OfficialBasisCalculator
+
+        (row,) = OfficialBasisCalculator(years=[2028]).calculate(
+            _Sim({"income_tax": {2028: [10e9]}}),
+            _Sim({"income_tax": {2028: [9.9e9]}}),
+            "m",
+            "M",
+            ("income_tax",),
+        )
+        assert row["value"] == pytest.approx(-0.1)
+
+    def test_no_rows_without_an_official_basis(self):
+        from uk_budget_data.calculators import OfficialBasisCalculator
+
+        assert (
+            OfficialBasisCalculator(years=[2030]).calculate(
+                _Sim({}), _Sim({}), "m", "M", ()
+            )
+            == []
+        )
+
+    def test_the_official_bases(self):
+        """The Carer's Allowance taper's costing is Carer's Allowance and
+        Universal Credit spending (policy costings p. 16), the Pension Tax
+        Allowance's income tax only (p. 63); no other measure has one. Each
+        names a registered measure and distinct variables with an Exchequer
+        sign."""
+        from uk_budget_data.calculators import OFFICIAL_BASES, exchequer_signs
+        from uk_budget_data.reforms import get_all_reforms
+
+        assert OFFICIAL_BASES == {
+            "carers_allowance_earnings_taper": (
+                "carers_allowance",
+                "universal_credit",
+            ),
+            "state_pension_income_tax_protection": ("income_tax",),
+        }
+        assert set(OFFICIAL_BASES) <= {r.id for r in get_all_reforms()}
+        for variables in OFFICIAL_BASES.values():
+            assert len(set(variables)) == len(variables)
+            assert set(exchequer_signs(variables)) == set(variables)
+
+
 class TestDistributionalImpactCalculator:
     """Tests for distributional impact calculation."""
 

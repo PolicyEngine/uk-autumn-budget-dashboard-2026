@@ -15,10 +15,12 @@ import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE } from "../utils/ageImpact"
 import { EARLY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
+import { CALCULATOR_ONLY_MEASURES } from "../utils/calculatorOnlyMeasures";
 import { OPEN_VIEW_EVENT } from "../utils/methodLink";
+import { EXPLAINERS, RESEARCH_URL } from "../utils/explainers";
 import { AnchorLink, ExternalLink, ReasonList, SourceLink, Tag, Topic } from "./methodology/MethodUi";
 import { glossaryAnchor } from "./methodology/glossary";
-import { Calculator, ChartColumn, Compass, Database, House, TrendingUp, Info } from "lucide-react";
+import { Calculator, ChartColumn, Compass, Database, FileDown, House, TrendingUp, Info } from "lucide-react";
 import "./methodology/Methodology.css";
 import { scrollBelowBars, smoothUnlessReduced } from "../utils/pageScroll";
 import { POVERTY_FIGURES_SHOWN, WITHHELD_SENTENCE } from "../utils/povertyFigures";
@@ -72,12 +74,53 @@ const yearRange = `${fiscalYearTick(EARLY_YEAR)} to ${fiscalYearTick(LAST_DISPLA
  * heading with its icon and a one-line summary, then its topics, each
  * folded until asked for.
  */
-function MethodSection({ id, title, summary, children }) {
+function MethodSection({ id, title, summary, lead, children }) {
   return (
     <section id={id} className="method-section" aria-label={title}>
       <SectionHeading id={`${id}-heading`} icon={SECTION_ICONS[id]} title={title} subtitle={summary} />
+      {lead}
       {children && <div className="card method-card method-topics">{children}</div>}
     </section>
+  );
+}
+
+/**
+ * Our written report on the Budget, served from public/reports: the reader
+ * version that went out on 29 October (sha256 0a13a780…1a6fc7), from
+ * PolicyEngine/uk-autumn-budget-2026-policies-explained, published/2026-10-29-reader.
+ */
+export const REPORT_PDF = {
+  file: "reports/policyengine-autumn-budget-2026-policies-explained.pdf",
+  title: "Autumn Budget 2026 policies explained",
+};
+
+/** A card with a button that downloads our PDF report, and links to our explainers. */
+function ReportDownload() {
+  const href = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/${REPORT_PDF.file}`;
+  return (
+    <div className="card method-card">
+      <div className="method-report">
+        <div className="method-report-text">
+          <p className="method-report-eyebrow">Our report</p>
+          <p className="method-report-title">{REPORT_PDF.title}</p>
+          <p className="method-report-note">
+            Each modelled measure, our estimates beside the official costings, and how we made them.
+          </p>
+        </div>
+        <a className="method-report-button" href={href} download>
+          <FileDown size={18} aria-hidden="true" />
+          Download the PDF
+        </a>
+      </div>
+      <p className="method-report-eyebrow method-explainers-title">Our explainers</p>
+      <ul className="method-explainers">
+        {EXPLAINERS.map(({ slug, title }) => (
+          <li key={slug}>
+            <ExternalLink href={`${RESEARCH_URL}/${slug}`}>{title}</ExternalLink>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -158,6 +201,15 @@ function useRevealLinkedAnchor() {
 function MethodologyTab({ onShowTab }) {
   const catalogue = useMeasureCatalogue();
   const UNAVAILABLE = unavailableMeasures(catalogue);
+  // Every published measure, then those the calculator alone adds
+  const calculatorPolicies = [
+    ...(catalogue.measures ?? []).map((measure) => ({ id: measure.id, name: measure.name })),
+    ...Object.values(CALCULATOR_ONLY_MEASURES).map((measure) => ({
+      id: measure.id,
+      name: measure.name,
+      note: "calculator only, held back from the national results",
+    })),
+  ];
   useRevealLinkedAnchor();
 
   return (
@@ -174,6 +226,7 @@ function MethodologyTab({ onShowTab }) {
               survey of UK households with and without each policy, {yearRange}, weighted to the UK.
             </>
           }
+          lead={<ReportDownload />}
         >
           <Topic
             id={METHOD_ANCHORS.glossary}
@@ -274,18 +327,20 @@ function MethodologyTab({ onShowTab }) {
               The page describes the current pipeline, which may be newer than this dashboard&apos;s data.
             </p>
           </Topic>
-          {/* Sign-off covers every public file, so it sits here rather than
-              under the household scatter (scripts/check_public_data.py) */}
-          <Topic title="Published files" preview="Sign-off">
+          {/* The checks cover every public file, so they sit here rather than
+              under the household scatter (scripts/check_public_data.py; with
+              sign_off.REQUIRED off, #308, no file needs a named reviewer) */}
+          <Topic title="Published files" preview="Checks">
             <FactList
               items={[
                 [
-                  "Sign-off",
+                  "Checks",
                   {
                     value:
-                      "Each public data file is listed with a named reviewer and a digest of the exact bytes they reviewed. A changed file fails the publication checks until it is reviewed again.",
+                      "Automated checks run on every public data file before it is published; no named reviewer signs each file off. A file that fails a check is not published.",
                     more: [
-                      "A file awaiting sign-off can be published as pending, for at most 14 days after its entry; after that it fails the checks until it is signed off.",
+                      "No file may carry household, benefit unit or person ids or weights, a figure for a group under the floor of survey households (Small groups, above), or more than 20 constituency, local-authority or small-area codes, except a validated table of results by area or a boundary file.",
+                      "Each results file must match the digest its run's receipt records; the run must be approved, use the certified data and pass the reconciliation against the Budget's costings.",
                     ],
                   },
                 ],
@@ -318,7 +373,7 @@ function MethodologyTab({ onShowTab }) {
                     through <SourceLink id="policyengine_py_release">policyengine.py</SourceLink>{" "}on
                     the <AnchorLink id={METHOD_SECTIONS.data}>data above</AnchorLink>. Measures are
                     written as parameter changes where possible, or built from tested measure
-                    templates. Three of the policies here are written by hand, and are published
+                    templates. Four of the policies here are written by hand, and are published
                     only after two reviewers have checked the exact run.
                   </>,
                 ],
@@ -511,7 +566,7 @@ function MethodologyTab({ onShowTab }) {
                         income, which is before indirect taxes, so the VAT and fuel duty policies do
                         not change it.
                       </>,
-                      "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate.",
+                      "The poverty figures leave out the £100 energy payment to households, as policyengine-uk treats the 2022 council tax rebate, and the £2 bus fare cap's fare savings.",
                       "People moved out of or into poverty are the change in the rate times that year's population in the current-law projection, to the nearest 1,000.",
                     ],
                   },
@@ -753,6 +808,20 @@ function MethodologyTab({ onShowTab }) {
           }
         >
           <Topic
+            id={METHOD_ANCHORS.householdPolicies}
+            title="Policies in the calculator"
+            preview={`${calculatorPolicies.length} policies`}
+          >
+            <ul className="method-list">
+              {calculatorPolicies.map((policy) => (
+                <li key={policy.id}>
+                  {policy.name}
+                  {policy.note && <> ({policy.note})</>}
+                </li>
+              ))}
+            </ul>
+          </Topic>
+          <Topic
             id={METHOD_ANCHORS.householdCalc}
             title="How the household calculation works"
             preview={SINGLE_YEAR_METHOD.map(([term]) => term).join(" · ")}
@@ -891,6 +960,24 @@ function MethodologyTab({ onShowTab }) {
               for vans, lorries and business use of cars, roughly half of fuel duty receipts, is
               not in the model, so a change in fuel duty moves revenue by less here than in a
               full costing.
+            </p>
+          </Topic>
+          <Topic id="method-bus-fare-income" title="Bus fare savings as income" preview="The £2 bus fare cap counted as income">
+            <p className="method-more">
+              The £2 bus fare cap is paid to bus operators, but passengers gain from it through lower
+              fares. We count that saving as household income, as for a price subsidy. The saving is
+              the Treasury&apos;s costing (Table 6.1) shared out across households by their bus fare
+              spending in England outside London, not our own estimate of the national cost: 10.0% of
+              each household&apos;s spending at £3 fares for the days the cap runs. That is £230m a
+              year, divided by 0.9 for the share of operators taking part (
+              <SourceLink id="dft_two_pound_cap_evaluation">DfT&apos;s evaluation of the first £2 cap</SourceLink>),
+              over £2,557m of bus fare spending at £3 fares. London residents get £0. This is a choice
+              of method: the household spends less on the same journeys, so its income buys more, but
+              no cash changes hands. Spending is held fixed.{" "}
+              {/* Withheld for now (povertyFigures.js): no word on the poverty figures */}
+              {POVERTY_FIGURES_SHOWN
+                ? "The saving counts in household net income, not in the HBAI income poverty is measured on."
+                : "The saving counts in household net income."}
             </p>
           </Topic>
           <Topic title="Survey coverage" preview="Where the survey data move a policy's figures">

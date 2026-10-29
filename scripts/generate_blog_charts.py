@@ -479,12 +479,25 @@ def main():
     if not args.reform_id and not args.all:
         parser.error("Either provide a reform_id or use --all")
 
-    # Read data
+    # Read data: each published measure's and package's approved artifact,
+    # as the manifest names them (the page reads the same files)
     data_dir = Path("public/data")
+    manifest = json.loads((data_dir / "manifest.json").read_text())
+    artifacts = [
+        data_dir / entry["artifact"]
+        for group in ("measures", "combined")
+        for entry in manifest[group].values()
+    ]
 
-    distributional_df = pd.read_csv(data_dir / "distributional_impact.csv")
-    winners_losers_df = pd.read_csv(data_dir / "winners_losers.csv")
-    budgetary_df = pd.read_csv(data_dir / "budgetary_impact.csv")
+    def published(name):
+        return pd.concat(
+            [pd.read_csv(artifact / name) for artifact in artifacts],
+            ignore_index=True,
+        )
+
+    distributional_df = published("distributional_impact.csv")
+    winners_losers_df = published("winners_losers.csv")
+    budgetary_df = published("budgetary_impact.csv")
 
     obr_path = Path("data_inputs/obr_estimates.csv")
     obr_df = pd.read_csv(obr_path) if obr_path.exists() else None

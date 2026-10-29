@@ -12,7 +12,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measureCatalogue";
-import { measureCatalogueFixture } from "./measureCatalogueFixture";
+import { ALPHA, BETA, COMBINED, YEAR, measureCatalogueFixture } from "./measureCatalogueFixture";
+import { parseTable } from "../utils/publication/csv";
 import { fixtureJson } from "./publicationFixture";
 import { downloadMenus } from "./downloadMenus";
 
@@ -20,7 +21,22 @@ import { downloadMenus } from "./downloadMenus";
 const POVERTY_TEXT = /poverty/i;
 const PEOPLE_AFFECTED_TEXT = /People affected|of people move|Winners and losers|better off|worse off/;
 
-export function describePovertyFigures(shown, { files, catalogueRef }) {
+/**
+ * The fixture's age rows with single years 0 to 90+ for ALPHA and BETA but
+ * none for their package: every single age withheld while the groups are
+ * published, so By age's cards fall back to the age groups (#321, 8db101aa).
+ */
+function packageWithoutSingleAges() {
+  const fixture = measureCatalogueFixture({ held: false });
+  const lines = [ALPHA, BETA].flatMap((id) =>
+    Array.from({ length: 91 }, (_, age) =>
+      [id, id, YEAR, age === 90 ? "90+" : String(age), 10_000, 500, id === ALPHA ? 100 : -50, 25, 20, 30, 50, 2_000].join(","),
+    ),
+  );
+  return { fixture, rows: parseTable("age_impact", [fixture.ageCsv, ...lines].join("\n")) };
+}
+
+export function describePovertyFigures(shown, { files, catalogueRef, ageRowsRef }) {
   const either = (on, off) => (shown ? on : off);
 
   afterEach(() => {
@@ -28,6 +44,7 @@ export function describePovertyFigures(shown, { files, catalogueRef }) {
     window.history.replaceState({}, "", "/");
     catalogueRef.current = null;
     files.current = {};
+    if (ageRowsRef) ageRowsRef.current = null;
   });
 
   describe(`the switch reads ${shown ? "on" : "off"}`, () => {
@@ -108,6 +125,43 @@ export function describePovertyFigures(shown, { files, catalogueRef }) {
       if (!shown) expect(container.textContent).not.toMatch(PEOPLE_AFFECTED_TEXT);
     });
 
+    it.each([
+      ["16-24", ".young-people-shares"],
+      ["all", ".young-people-shares"],
+      ["pensioners", ".pensioners-shares"],
+    ])(`By age (?age=%s) ${either("shows", "leaves out")} Winners and losers in its age-group fallback, and keeps Effect of each policy`, async (age, selector) => {
+      const { default: AgeSection } = await import("../components/AgeSection");
+      const { fixture, rows } = packageWithoutSingleAges();
+      const catalogue = buildMeasureCatalogue(fixture);
+      catalogueRef.current = catalogue;
+      ageRowsRef.current = { status: "ready", rows };
+      window.history.replaceState({}, "", `/?sub=age&age=${age}`);
+      const { container } = render(
+        <MeasureCatalogueProvider catalogue={catalogue}>
+          <AgeSection policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />
+        </MeasureCatalogueProvider>,
+      );
+      await screen.findByRole("heading", { name: /Average change by age/ });
+      const shares = container.querySelector(selector);
+      expect(shares !== null).toBe(shown);
+      if (shown && selector === ".young-people-shares") {
+        // The fallback itself: the groups, with By single year of age disabled
+        fireEvent.click(within(shares).getByRole("button", { name: /^Options:/ }));
+        expect(within(shares).getByRole("radio", { name: "By age group" })).toHaveAttribute("aria-checked", "true");
+        expect(within(shares).getByRole("radio", { name: "By single year of age" })).toBeDisabled();
+      }
+      // Effect of each policy draws its rows either way, with no people-affected figure
+      expect(screen.getByRole("heading", { level: 3, name: /Effect of each policy/ })).toBeInTheDocument();
+      expect(container.querySelectorAll(".measure-dumbbell-row, [class*='measure-dumbbell']").length).toBeGreaterThan(0);
+      const names = downloadMenus(container).map((menu) => menu.name ?? "");
+      expect(names.some((name) => /Winners and losers/.test(name))).toBe(shown);
+      if (!shown) {
+        expect(container.textContent).not.toMatch(PEOPLE_AFFECTED_TEXT);
+        expect(container.textContent).not.toMatch(POVERTY_TEXT);
+        expect(container.querySelector(".young-people-shares, .pensioners-shares")).toBeNull();
+      }
+    });
+
     it(`the Your place tip ${either("says", "does not say")} what share of people move`, async () => {
       const { ResultTiles } = await import("../components/personal/IncomePositionChart");
       const manifest = fixtureJson("manifest.json");
@@ -169,6 +223,25 @@ export function describePovertyFigures(shown, { files, catalogueRef }) {
     });
   });
 
+  describe("the £2 bus fare cap", () => {
+    it(`the inequality chart ${either("may give", "never gives")} it a poverty reason in a year it changes nothing`, async () => {
+      const { default: MeasureEffectsView } = await import("../components/MeasureEffectsView");
+      const { SUMMARY_METRICS } = await import("../components/SummaryMetricChart");
+      const { POLICY_DETAILS } = await import("../utils/policyDetails");
+      const id = "bus_fare_cap_2027";
+      const detail = POLICY_DETAILS.find((item) => item.id === id);
+      expect(detail.outsidePovertyIncome).toBe(true);
+      catalogueRef.current = { byId: new Map([[id, { id, name: id, description: detail.writtenFor }]]) };
+      const byMeasure = [{ id, name: "£2 bus fare cap", colour: "var(--c-reference)", points: [{ year: 2027, value: 0 }] }];
+      const { container } = render(
+        <MeasureEffectsView byMeasure={byMeasure} metric={SUMMARY_METRICS.inequality} selectedYear={2027} view="year" years={[2027]} />,
+      );
+      const reason = container.querySelector(".mev-reason").textContent;
+      if (shown) expect(reason).toBe("not counted in poverty income");
+      else expect(reason).not.toMatch(POVERTY_TEXT);
+    });
+  });
+
   describe("the words about them", () => {
     const catalogue = buildMeasureCatalogue(measureCatalogueFixture());
 
@@ -190,6 +263,9 @@ export function describePovertyFigures(shown, { files, catalogueRef }) {
         "Household net income rises or falls by more than 0.01%",
         "a person moves up when the whole percentile",
         "the headline poverty and inequality figures",
+        // #321: the bus fare cap's place in the poverty figures
+        "and the £2 bus fare cap's fare savings",
+        "not in the HBAI income poverty is measured on",
       ]) {
         expect(text.includes(described), described).toBe(shown);
       }

@@ -30,8 +30,8 @@ describe("PolicyVisual", () => {
     expect(container.querySelector(".pviz-cliff")).not.toBeNull();
     expect(container).toHaveTextContent("Cliff edge");
     expect(container).toHaveTextContent("£1 for £1");
-    // The row's note is the caption, once
-    expect(container.querySelectorAll(".pchg-note")).toHaveLength(1);
+    // No caption: the card's points say it in words (PR 359)
+    expect(container.querySelector(".pchg-note, figcaption")).toBeNull();
   });
 
   it("Household Energy Payment: bands A to D of eight, and the reach as bars", () => {
@@ -47,7 +47,8 @@ describe("PolicyVisual", () => {
     const { container } = show("trading_allowance_raise");
     expect(image()).toHaveAccessibleName(/from £1,000 to £3,000.*pays £400 less income tax/);
     expect(container).toHaveTextContent("£2,000 more tax-free");
-    expect(container.querySelector(".pviz-band-saving-value")).toHaveTextContent("£400");
+    expect(container.querySelector(".pviz-trading .pviz-fill-value")).toHaveTextContent("£400");
+    expect(container.querySelector(".pviz-trading .pviz-fill-when")).toHaveTextContent("2027-28");
   });
 
   it("zero VAT on electricity: a month strip for Great Britain and Northern Ireland", () => {
@@ -76,6 +77,14 @@ describe("PolicyVisual", () => {
     expect(container).toHaveTextContent("£13,186: £44");
   });
 
+  it("bus fare cap: £3 then £2 as columns, and the example's £13 and £40", () => {
+    const { container } = show("bus_fare_cap_2027");
+    expect(image()).toHaveAccessibleName(/capped at £2 instead of £3.*10% of bus fare spending.*£13 in 2026-27 and £40 in 2027-28/);
+    expect([...container.querySelectorAll(".pviz-bus-value")].map((v) => v.textContent)).toEqual(["£3", "£2"]);
+    expect([...container.querySelectorAll(".pviz-bus .pviz-fill-value")].map((v) => v.textContent)).toEqual(["£13", "£40"]);
+    expect([...container.querySelectorAll(".pviz-bus .pviz-fill-when")].map((v) => v.textContent)).toEqual(["2026-27", "2027-28"]);
+  });
+
   it("draws nothing without the measure's entry, or for a measure without a visual", () => {
     expect(policyVisual(policy("trading_allowance_raise"), null)).toBeNull();
     expect(policyVisual({ id: "x", name: "X" }, document.measures.trading_allowance_raise)).toBeNull();
@@ -90,7 +99,7 @@ describe("the visual on its card", () => {
     const change = screen.getByRole("region", { name: /What changes/ });
     expect(within(change).getByRole("img", { name: /Carer's Allowance against weekly earnings/ })).toBeInTheDocument();
     expect(container.querySelector(".pchg-svg")).toBeNull();
-    expect(container.querySelectorAll(".pchg-note")).toHaveLength(1);
+    expect(container.querySelector(".pchg-note")).toBeNull();
   });
 
   it("draws the example's figures in place of its words, keeping its source", () => {

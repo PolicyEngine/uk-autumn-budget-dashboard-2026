@@ -70,6 +70,24 @@ describe("By age's cards share one age group", async () => {
     render(<AgeSection selectedPolicies={[]} selectedYear={2027} policies={[]} />);
     const pills = screen.getAllByRole("button", { name: /^Options:/ });
     // Average change by age, Change by year, Effect of each policy, Winners and losers
-    expect(pills[2].getAttribute("aria-label")).toBe("Options: All ages");
+    // By age opens Compare with on 25 to 34; with All ages chosen there too,
+    // the pill reads All ages once
+    expect(pills[2].getAttribute("aria-label")).toMatch(/25 to 34/);
+    fireEvent.click(pills[2]);
+    const compare = within(screen.getByRole("dialog")).getAllByRole("radiogroup")[1];
+    fireEvent.click(within(compare).getByRole("radio", { name: "All ages" }));
+    expect(screen.getAllByRole("button", { name: /^Options:/ })[2].getAttribute("aria-label")).toBe("Options: All ages");
+  });
+
+  it("opens Effect of each policy on 16 to 24 compared with 25 to 34", async () => {
+    const { default: AgeSection } = await import("./AgeSection");
+    window.history.replaceState({}, "", "/?sub=age");
+    render(<AgeSection selectedPolicies={[]} selectedYear={2027} policies={[]} />);
+    const pill = screen.getAllByRole("button", { name: /^Options:/ })[2];
+    expect(pill.getAttribute("aria-label")).toBe("Options: 16 to 24 · 25 to 34");
+    fireEvent.click(pill);
+    const [group, compare] = within(screen.getByRole("dialog")).getAllByRole("radiogroup");
+    expect(within(group).getByRole("radio", { name: "16 to 24" })).toHaveAttribute("aria-checked", "true");
+    expect(within(compare).getByRole("radio", { name: "25 to 34" })).toHaveAttribute("aria-checked", "true");
   });
 });

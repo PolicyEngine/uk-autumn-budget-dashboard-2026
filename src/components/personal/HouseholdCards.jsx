@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Baby,
   BriefcaseBusiness,
+  Bus,
   Car,
   ChevronDown,
   Glasses,
@@ -43,6 +44,7 @@ export const EXAMPLE_ICONS = {
   glasses: Glasses,
   handHeart: HandHeart,
   piggyBank: PiggyBank,
+  bus: Bus,
 };
 
 /**

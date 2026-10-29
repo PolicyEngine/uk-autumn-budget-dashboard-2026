@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import fc from "fast-check";
-import { AGE_BANDS, COMBINATION_NOT_PUBLISHED, meanChangeByBand } from "../utils/ageImpact";
+import { AGE_BANDS, meanChangeByBand } from "../utils/ageImpact";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import BudgetaryImpactChart from "./BudgetaryImpactChart";
 import DistributionalChart from "./DistributionalChart";
@@ -8,8 +8,6 @@ import WaterfallChart from "./WaterfallChart";
 import YoungPeopleSection from "./YoungPeopleSection";
 import GroupedLegend from "./GroupedLegend";
 import ChartTooltip, { SegmentTooltip } from "./ChartTooltip";
-import WithheldDecileTick from "./WithheldDecileTick";
-import { WITHHELD_DECILE_MESSAGE } from "../utils/decileWithholding";
 import { decileCsv } from "../utils/chartCsv";
 import { decileMembership } from "../utils/legendMembership";
 import PolicySelector from "./PolicySelector";
@@ -188,7 +186,8 @@ describe("published measure catalogue in population views", () => {
     const { container } = render(withCatalogue(catalogue,
       <Chart rawData={rows} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
     ));
-    expect(screen.getByText(WITHHELD_DECILE_MESSAGE)).toBeVisible();
+    // No note, asterisk or mark: an empty slot (decileWithheld.test.jsx)
+    expect(container.textContent).not.toMatch(/Not published|confidential/i);
     expect(screen.queryByRole("status")).toBeNull();
     const points = chartRows(container);
     expect(points[0]).toMatchObject({ withheld: true, [`measure:${ALPHA}`]: null, netChange: null });
@@ -200,12 +199,6 @@ describe("published measure catalogue in population views", () => {
     expect(fields[alphaColumn]).toBe("");
     expect(fields.at(-1)).toBe("");
     expect(csv[4].split(",").at(-1)).not.toBe("");
-  });
-
-  it("marks the withheld decile at its axis position with its reason", () => {
-    render(<svg><WithheldDecileTick x={12} y={20} payload={{ value: "3rd" }} withheldDeciles={new Set(["3rd"])} /></svg>);
-    expect(screen.getByText("3 *")).toBeInTheDocument();
-    expect(screen.getByText(WITHHELD_DECILE_MESSAGE).tagName).toBe("title");
   });
 
   it("keeps a measure with only withheld changes active in the decile legend", () => {
@@ -310,10 +303,11 @@ describe("published measure catalogue in population views", () => {
     const { container } = render(withCatalogue(catalogue,
       <YoungPeopleSection policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
     ));
-    // Two policies, one with no figures this year: not published together,
-    // never half drawn
-    expect((await screen.findAllByText(COMBINATION_NOT_PUBLISHED)).length).toBeGreaterThan(0);
+    // Two policies, one with no figures this year: its parts and the net are
+    // null, the other's own parts still drawn
+    await screen.findAllByText(/no published results by age/);
     expect(chartRows(container).every((point) => point[`measure:${ALPHA}`] == null && point.netChange == null)).toBe(true);
+    expect(chartRows(container).some((point) => Number.isFinite(point[`measure:${BETA}`]))).toBe(true);
     // The combined run is refused: no package shares, only each measure's own
     expect(screen.getByText(/each selected policy on its own/)).toBeInTheDocument();
     const shares = container.querySelector(".young-people-shares");

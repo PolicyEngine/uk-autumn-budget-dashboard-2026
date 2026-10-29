@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CHART_LOGO } from "../../utils/chartLogo";
 import { buildChartCsv } from "../../utils/chartCsv";
-import { isWithheldDecileValue, WITHHELD_DECILE_MESSAGE } from "../../utils/decileWithholding";
+import { isWithheldDecileValue } from "../../utils/decileWithholding";
 import { CHART_COLOURS, GRID_PROPS, TICK_STYLE, AXIS_TITLE_STYLE, BEFORE_DASH, REFERENCE_DASH, UNSELECTED_OPACITY, useNarrowViewport } from "../../utils/chartTheme";
 import { formatPounds, formatPoundsShort } from "../../utils/exampleHouseholds";
 import {
@@ -395,15 +395,19 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
   // Hover, tap or the arrow keys: a tenth, its figures in the tooltip
   const [cursor, hover] = useCursor(10, (px) => Math.min(9, Math.max(0, Math.floor((px - left) / slot))));
   const tenthRange = (i) => (i === 1 ? "lowest 10%" : i === 10 ? "highest 10%" : `${ordinal((i - 1) * 10)}–${ordinal(i * 10)} percentile`);
+  // A withheld tenth (null) has no mark on its tick
+  const isWithheld = (i) => percents?.[i] === null || averages?.[i] === null;
+  // Its tooltip gives what is published (£ or %), and is left out only
+  // when both are withheld
   const tipText = (i) => {
+    if (percents?.[i] === null && averages?.[i] === null) return null;
     const pct = percents?.[i];
     const pounds = averages?.[i];
     const parts = [
       pct !== undefined && pct !== null ? `${signedPct(pct, 2)} of net income` : null,
       pounds !== undefined && pounds !== null ? `${signedPounds(pounds)} a year` : null,
     ].filter(Boolean);
-    const withheld = percents?.[i] === null || averages?.[i] === null;
-    return `Tenth ${i} (${tenthRange(i)}): ${parts.join(", ") || (withheld ? WITHHELD_DECILE_MESSAGE : "not published")}`;
+    return `Tenth ${i} (${tenthRange(i)}): ${parts.join(", ") || "not published"}`;
   };
 
   return (
@@ -424,6 +428,8 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
       {values.map((v, i) => {
         const cx = left + slot * (i + 0.5);
         const missing = v === null;
+        // Withheld: an empty slot, its tick plain, with no mark or note
+        const withheld = isWithheld(i + 1);
         const shown = missing ? null : v * grow;
         const y0 = missing ? null : Math.min(y(shown), zeroY);
         const h = missing ? null : Math.max(Math.abs(y(shown) - zeroY), 0.5);
@@ -439,8 +445,8 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
               <rect x={cx - barW / 2} y={y0} width={barW} height={h} rx={2} fill={v >= 0 ? GAIN : LOSS} fillOpacity={mine || hovered ? 1 : UNSELECTED_OPACITY} />
             )}
             <text x={cx} y={top + plotH + 16} textAnchor="middle" fontSize={11} fontWeight={mine ? 700 : 400} fill={mine ? CHART_COLOURS.highlight : CHART_COLOURS.tick}>
-              {i + 1}{missing ? " *" : ""}
-              {missing && <title>{tipText(i + 1)}</title>}
+              {i + 1}{missing && !withheld ? " *" : ""}
+              {missing && !withheld && <title>{tipText(i + 1)}</title>}
             </text>
           </g>
         );
@@ -477,7 +483,7 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
         </g>
       )}
     </svg>
-    {cursor !== null && (
+    {cursor !== null && tipText(cursor + 1) && (
       <PositionTip x={left + slot * (cursor + 0.5)} y={top + 4} width={width}>
         {tipText(cursor + 1)}
       </PositionTip>
@@ -496,7 +502,9 @@ const rowTip = (row) => {
     row.pct !== null && row.pct !== undefined ? `${signedPct(row.pct, 2)} of net income` : null,
     row.gbp !== null && row.gbp !== undefined ? `${signedPounds(row.gbp)} a year` : null,
   ].filter(Boolean);
-  return `${row.label}: ${parts.join(", ") || (row.withheld ? WITHHELD_DECILE_MESSAGE : "not published")}`;
+  // A withheld row has no tooltip
+  if (!parts.length && row.withheld) return null;
+  return `${row.label}: ${parts.join(", ") || "not published"}`;
 };
 
 function CompareView({ rows, unit, grow }) {
@@ -523,7 +531,7 @@ function CompareView({ rows, unit, grow }) {
               )}
             </span>
             <span className="position-compare-value">
-              <strong>{poundsOnly ? signedPounds(row.gbp) : missing ? (row.withheld ? WITHHELD_DECILE_MESSAGE : "Not published") : unit === "pct" ? signedPct(v, 2) : signedPounds(v)}</strong>
+              <strong>{poundsOnly ? signedPounds(row.gbp) : missing ? (row.withheld ? "" : "Not published") : unit === "pct" ? signedPct(v, 2) : signedPounds(v)}</strong>
               {poundsOnly && <span className="position-compare-other">no % published</span>}
               {!missing && (
                 <span className="position-compare-other">
@@ -881,8 +889,16 @@ export default function IncomePositionChart({ net, household, year, policies, ye
       : `The UK income distribution ${side === "after" ? "with the selected policies" : "under current law"}, on a log scale, with you at ${describePosition(youPlace)} and in the ${tenthName(decile).toLowerCase()}.`;
   const compareAlt =
     compareBy === "tenths"
-      ? `Average change by tenth of people by income, ${unit === "pct" ? "% of net income" : "£ a year"}: ${Array.from({ length: 10 }, (_, i) => `${i + 1}: ${unit === "pct" ? (percents?.[i + 1] != null ? signedPct(percents[i + 1], 2) : percents?.[i + 1] === null ? WITHHELD_DECILE_MESSAGE : "n/a") : averages?.[i + 1] != null ? signedPounds(averages[i + 1]) : averages?.[i + 1] === null ? WITHHELD_DECILE_MESSAGE : "n/a"}`).join(", ")}. You, in the ${tenthName(decile).toLowerCase()}: ${unit === "pct" ? signedPct(ownPct, 2) : signedPounds(ownChange)}.`
-      : compareRows.map((r) => `${r.label}: ${r.gbp !== null ? signedPounds(r.gbp) : r.withheld ? WITHHELD_DECILE_MESSAGE : "not published"}${r.pct !== null ? ` (${signedPct(r.pct, 2)})` : ""}`).join("; ");
+      ? `Average change by tenth of people by income, ${unit === "pct" ? "% of net income" : "£ a year"}: ${Array.from({ length: 10 }, (_, i) => i + 1)
+          // A withheld tenth is left out
+          .filter((t) => percents?.[t] !== null && averages?.[t] !== null)
+          .map((t) => `${t}: ${unit === "pct" ? (percents?.[t] != null ? signedPct(percents[t], 2) : "n/a") : averages?.[t] != null ? signedPounds(averages[t]) : "n/a"}`)
+          .join(", ")}. You, in the ${tenthName(decile).toLowerCase()}: ${unit === "pct" ? signedPct(ownPct, 2) : signedPounds(ownChange)}.`
+      : compareRows
+          // A withheld row is left out
+          .filter((r) => !(r.withheld && r.gbp === null && r.pct === null))
+          .map((r) => `${r.label}: ${r.gbp !== null ? signedPounds(r.gbp) : "not published"}${r.pct !== null ? ` (${signedPct(r.pct, 2)})` : ""}`)
+          .join("; ");
 
   // The Spread view's key: your tenth's band, the curve, you, the dashed
   // median lines (Rank draws no band and labels its own lines). Each is a
@@ -1173,7 +1189,7 @@ export function ResultTiles({ totals, changeValue, changeNote, household, year, 
         value={share === null ? "Not available" : signedPct(share, 2)}
         caption="of your household's net income"
         trend={{ rows: [] }}
-        meaning={tenthAverage !== undefined && tenthAverage !== null ? `Average for your income tenth: ${signedPct(tenthAverage, 2)}` : loading ? "\u00a0" : tenthAverage === null ? WITHHELD_DECILE_MESSAGE : "Your tenth's average is not published"}
+        meaning={tenthAverage !== undefined && tenthAverage !== null ? `Average for your income tenth: ${signedPct(tenthAverage, 2)}` : loading || tenthAverage === null ? "\u00a0" : "Your tenth's average is not published"}
         meaningKind="small"
       />
       <HeadlineTile
