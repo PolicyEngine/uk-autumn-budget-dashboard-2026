@@ -105,7 +105,7 @@ export const UNMODELLED_MEASURES = [
     household: "People with taxable savings interest pay 2 points more on it.",
     costings: [{ row: 62, values: [15, 125, 555, 520, 555, 590] }],
     notModelled:
-      "The model covers it, but we have held it back from this release: we calibrated savings interest to HMRC's figures on a different basis, so our taxable interest is too low.",
+      "The model covers it, but we held it back from this release: we calibrated savings interest to HMRC's figures on a different basis, so our taxable interest is too low.",
     heldBack:
       "Held back: we calibrated savings interest to HMRC's figures on a different basis, so our taxable interest is too low. We're correcting it for the next data update.",
     sources: [budget("paragraph 6.247")],
