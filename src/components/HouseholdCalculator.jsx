@@ -24,7 +24,14 @@ import {
   statePensionFor,
 } from "../utils/householdImpactApi";
 import useCollapse from "../hooks/useCollapse";
-import { DEFAULT_SPENDING, SALARY_SOURCE, WIZARD_DEFAULTS, regionalRent } from "../utils/householdDefaults";
+import {
+  DEFAULT_SPENDING,
+  MEAN_GAS_USE_KWH,
+  SALARY_SOURCE,
+  TYPICAL_GAS_USE_KWH,
+  WIZARD_DEFAULTS,
+  regionalRent,
+} from "../utils/householdDefaults";
 
 // The form's answers at their defaults (utils/householdDefaults.js)
 export { WIZARD_DEFAULTS };
@@ -68,7 +75,13 @@ export const FORM_GROUPS = [
     key: "spending",
     title: "Spending",
     hint: "Prefilled with the average household's spending (Source: ONS Family Spending, 2024-25).",
-    fields: ["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year", "monthly_childcare"],
+    fields: [
+      "petrol_spending_per_year",
+      "diesel_spending_per_year",
+      "electricity_spending_per_year",
+      "gas_use_kwh_per_year",
+      "monthly_childcare",
+    ],
     quiet: ["petrol_spending_per_year", "diesel_spending_per_year"],
   },
   {
@@ -288,6 +301,16 @@ const NUMBER_CONFIGS = {
     suffix: "a year",
     hint: "Including VAT. Prefilled with the average household's spending, £20.00 a week (Source: ONS Family Spending, 2024-25).",
   },
+  // Gas standing charges abolished (#355): its one answer. 0 is a home
+  // with no mains gas
+  gas_use_kwh_per_year: {
+    label: "Gas use",
+    min: 0,
+    max: 100000,
+    step: 100,
+    suffix: "kWh a year",
+    hint: `Your gas use in a year, from your bill or annual statement; 0 if your home has no mains gas. Prefilled with Ofgem's typical use, ${d3.format(",")(TYPICAL_GAS_USE_KWH)} kWh. For gas standing charges abolished: at the average, ${d3.format(",")(MEAN_GAS_USE_KWH)} kWh, your bill does not change, so £0 is the result, not a missing figure.`,
+  },
   self_employment_receipts_per_year: {
     label: "Self-employment or side income",
     min: 0,
@@ -340,6 +363,9 @@ const FIELD_APPLIES = {
   partner_private_pension_per_year: (inputs) => inputs.has_partner,
   // Northern Ireland has domestic rates, not Council Tax
   council_tax_band: (inputs) => inputs.region !== "NORTHERN_IRELAND",
+  // Ofgem's price cap, and the gas standing charge abolition, cover Great
+  // Britain only
+  gas_use_kwh_per_year: (inputs) => inputs.region !== "NORTHERN_IRELAND",
   state_pension_per_year: (inputs, childrenCount, year) => atStatePensionAge(inputs.current_age, year),
   partner_state_pension_per_year: (inputs, childrenCount, year) =>
     inputs.has_partner && atStatePensionAge(inputs.partner_age, year),

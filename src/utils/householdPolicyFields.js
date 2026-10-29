@@ -60,6 +60,12 @@ export const POLICY_FIELDS = {
   trading_allowance_raise: {
     fields: ["self_employment_receipts_per_year", "self_employment_expenses_per_year"],
   },
+  // Gas standing charges abolished (calculator-only, always in a household's
+  // request): the home's gas use, in Great Britain
+  gas_standing_charges_abolition: {
+    fields: ["gas_use_kwh_per_year"],
+    when: (inputs) => inputs.region !== "NORTHERN_IRELAND",
+  },
 };
 
 /**

@@ -127,13 +127,17 @@ describe("the personal impact form", () => {
     const spending = groupToggle("Spending");
     expect(spending).toHaveAttribute("aria-expanded", "true");
     expect(document.getElementById(spending.getAttribute("aria-controls"))).toBeVisible();
-    // No selected policy reads anything; the savings rise, always in the
-    // request, reads savings interest, so only that step splits its answers
+    // No selected policy reads anything; the savings rise and gas standing
+    // charges abolished, always in the request, read savings interest and
+    // gas use, so only those two steps split their answers, each asked
+    // first in its step
     expect([...document.querySelectorAll(".household-step-optional-toggle")].map((toggle) => toggle.getAttribute("aria-controls"))).toEqual([
+      "household-step-spending-panel-optional",
       "household-step-savings-panel-optional",
     ]);
     expect(fields()).toEqual([
       ...essentials,
+      "gas_use_kwh_per_year",
       "petrol_spending_per_year",
       "diesel_spending_per_year",
       "electricity_spending_per_year",
@@ -667,7 +671,12 @@ describe("the selected policies' questions", () => {
     expect(groups()).toEqual(SEVEN_STEPS);
     expect(asked("You")).toEqual(["current_age", "current_salary", "region"]);
     expect(asked("Household")).toEqual(["has_partner", "children_count", "tenure", "rent_from", "monthly_rent"]);
-    expect(asked("Spending")).toEqual(["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"]);
+    expect(asked("Spending")).toEqual([
+      "petrol_spending_per_year",
+      "diesel_spending_per_year",
+      "electricity_spending_per_year",
+      "gas_use_kwh_per_year",
+    ]);
     // Savings interest always first, then in the table's order: property,
     // then the trading allowance's
     expect(asked("Savings and other income")).toEqual([
@@ -793,6 +802,55 @@ describe("the selected policies' questions", () => {
     expect(summary()).toHaveTextContent(/^Carer, 50 hours a week$/);
     openMore();
     expect(document.querySelectorAll('[data-row="is_carer"]')).toHaveLength(1);
+  });
+
+  it("asks gas use first for gas standing charges abolished, in kWh, Ofgem's typical 9,500 until changed", () => {
+    // The calculator adds the measure to any selection
+    form(["fuel_duty_rise_deferral"]);
+    fireEvent.click(stepToggle("Spending"));
+    expect(asked("Spending")).toEqual(["petrol_spending_per_year", "diesel_spending_per_year", "gas_use_kwh_per_year"]);
+    expect(value("Gas use")).toBe(9500);
+    // Its note: where to find it, 0 for no mains gas, the default, and the
+    // calculated £0 at average use
+    const note = box("Gas use").getAttribute("aria-describedby");
+    expect(document.getElementById(note)).toHaveTextContent(
+      "Your gas use in a year, from your bill or annual statement; 0 if your home has no mains gas. Prefilled with Ofgem's typical use, 9,500 kWh. For gas standing charges abolished: at the average, 11,359 kWh, your bill does not change, so £0 is the result, not a missing figure.",
+    );
+    fireEvent.change(box("Gas use"), { target: { value: "14000" } });
+    fireEvent.blur(box("Gas use"));
+    fireEvent.click(stepToggle("Spending"));
+    expect(group("Spending").querySelector(".household-step-summary")).toHaveTextContent(/^Gas use 14,000 kWh a year$/);
+    // Not asked in Northern Ireland, which the abolition does not cover
+    fireEvent.click(stepToggle("Spending"));
+    pickCouncil("Belfast");
+    openMore();
+    expect(field("gas_use_kwh_per_year")).toBeNull();
+  });
+
+  it("sends the gas use entered, and 0 for a home with no mains gas", async () => {
+    const API = "https://api.test/api/household-impact";
+    const bodies = [];
+    vi.stubEnv("NEXT_PUBLIC_HOUSEHOLD_API_URL", API);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url, init = {}) => {
+        if (url === API) bodies.push(JSON.parse(init.body));
+        return new Response("{}", { status: 404 });
+      }),
+    );
+    try {
+      form(["fuel_duty_rise_deferral"], { year: 2028 });
+      fireEvent.click(stepToggle("Spending"));
+      fireEvent.change(box("Gas use"), { target: { value: "0" } });
+      fireEvent.blur(box("Gas use"));
+      fireEvent.click(screen.getByRole("button", { name: /^Calculate/ }));
+      const yours = () => bodies.find((body) => body.household.gas_use_kwh === 0 && body.include.length === 0);
+      await waitFor(() => expect(yours()).toBeDefined());
+      expect(yours().policies).toContain("gas_standing_charges_abolition");
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
   });
 
   it("asks self-employment receipts and expenses first for the trading allowance", () => {
