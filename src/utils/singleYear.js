@@ -610,23 +610,23 @@ export function areaName(brma) {
 export const SINGLE_YEAR_METHOD = [
   [
     "Engine and policies",
-    "The same engine (policyengine.py and policyengine-uk) and the same policies as the national figures, applied to one household's answers.",
+    "The calculator applies the same engine (policyengine.py and policyengine-uk) and the same policies as the national figures to one household's answers.",
   ],
   [
     "One year",
-    "The year chosen in the bar above. Net income is before housing costs (rent is not taken off; no selected policy changes it), under current law and with the selected policies.",
+    "The year you choose in the bar above. Net income is before housing costs (we do not take off rent; no selected policy changes it), under current law and with the selected policies.",
   ],
   [
     "Salary",
-    "Entered for 2026 and grown to the chosen year with the OBR's average earnings forecast, the index policyengine-uk uprates earnings with.",
+    "You enter your salary for 2026, and we grow it to the chosen year with the OBR's average earnings forecast, the index policyengine-uk uprates earnings with.",
   ],
   [
     "State Pension",
-    "Asked from State Pension age and prefilled with the full new State Pension for the chosen year, uprated on the OBR's October 2026 forecast; a figure you enter replaces it.",
+    "We ask for it from State Pension age and prefill it with the full new State Pension for the chosen year, which we uprate on the OBR's October 2026 forecast; a figure you enter replaces it.",
   ],
   [
     "Examples",
-    "Each example household fills every answer with fixed values, so its results are worked out in advance; every answer stays editable.",
+    "Each example household fills every answer with fixed values, so we work out its results in advance; every answer stays editable.",
   ],
   [
     "Change by policy",

@@ -395,7 +395,7 @@ export async function postHouseholdImpact(
   if (!url) {
     throw new HouseholdApiError(
       "config",
-      `${HOUSEHOLD_API_VAR} is not set, so this build cannot calculate a household.`,
+      `This build has no ${HOUSEHOLD_API_VAR}, so it cannot calculate a household.`,
     );
   }
   const doFetch = fetchImpl ?? globalThis.fetch;

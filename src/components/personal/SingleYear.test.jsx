@@ -963,7 +963,7 @@ describe("the household calculation's errors", () => {
     serve((body) => json(householdAnswerFor(body)));
     renderTab();
     toResults();
-    expect(await screen.findByRole("alert")).toHaveTextContent("NEXT_PUBLIC_HOUSEHOLD_API_URL is not set");
+    expect(await screen.findByRole("alert")).toHaveTextContent("This build has no NEXT_PUBLIC_HOUSEHOLD_API_URL");
     expect(household).toEqual([]);
   });
 

@@ -16,7 +16,7 @@ function PersonalImpactTab({ selectedPolicies = [], policies = [], year, onRemov
     const names = unavailable.map((id) => catalogue.byId.get(id)?.name ?? id);
     return (
       <UnavailableNotice reason="Household calculator is unavailable for the selected policies">
-        <p>{names.join(", ") || "No verified Budget policies are published yet."}</p>
+        <p>{names.join(", ") || "We have not yet published any verified Budget policies."}</p>
         {catalogue.manifest && onRemoveUnavailable && (
           <RemoveUnavailable names={names} onRemove={() => onRemoveUnavailable(unavailable)} />
         )}

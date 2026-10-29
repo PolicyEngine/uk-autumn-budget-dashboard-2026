@@ -29,7 +29,7 @@ export const CHANGE_BY_POLICY_NOTE = (
     icon="hbars"
     lead="Each bar is one policy on its own."
     points={[
-      "It is switched on alone, with every other selected policy at current law, against the same baseline.",
+      "We switch it on alone, with every other selected policy at current law, against the same baseline.",
       "Policies can interact, so their own effects need not add up to the combined change.",
       "A difference of £1 or more shows as “Interaction between policies”, so the bars add up to the headline change.",
     ]}
@@ -39,12 +39,12 @@ export const CHANGE_BY_POLICY_NOTE = (
 export const EVERY_POLICY_NOTE = (
   <Note
     icon="receipt"
-    lead="Your household is simulated in policyengine-uk with the selected policies applied, as in the national figures."
+    lead="We simulate your household in policyengine-uk under the selected policies, as in the national figures."
     // Lines true whatever is selected: a note about one measure would stay
     // on the page when that measure changes or isn't published (#104)
     points={[
       "Fuel duty acts on the petrol and diesel spending you enter, and VAT on that and the electricity spending.",
-      "Every couple is treated as married, as the calculator does not ask, so the Marriage Allowance can apply. An unmarried couple with one partner over State Pension age can see a different change in Universal Credit.",
+      "We treat every couple as married, as the calculator does not ask, so the Marriage Allowance can apply. An unmarried couple with one partner over State Pension age can see a different change in Universal Credit.",
       "A policy with no effect in the chosen year shows no change.",
     ]}
   />
@@ -65,17 +65,17 @@ export const WHO_IS_A_CHILD_NOTE = (
 export const COUNCIL_TAX_NOTE = (
   <Note
     icon="building"
-    lead="Estimated from your band and your council's Band D, and taken off net income."
+    lead="We estimate Council Tax from your band and your council's Band D, and take it off net income."
     points={[
       <>
         Each council's Band D is policyengine-uk's, from{" "}
         <SourceLink source="mhclg_council_tax">MHCLG</SourceLink>{" "}for England and the{" "}
         <SourceLink source="wales_council_tax">Welsh</SourceLink> and{" "}
         <SourceLink source="scotland_council_tax">Scottish</SourceLink>
-        {" governments. Until you pick your council, it is your region's average (England's tax-base weighted by region)."}
+        {" governments. Until you pick your council, it is your region's average, which in England weights each council by its tax base."}
       </>,
-      "Starts from 2026-27 levels, grown to the chosen year with policyengine-uk's OBR Council Tax forecast.",
-      "Northern Ireland has domestic rates, which are not modelled.",
+      "We start from 2026-27 levels and grow them to the chosen year with policyengine-uk's OBR Council Tax forecast.",
+      "Northern Ireland has domestic rates, which we do not model.",
     ]}
   />
 );
@@ -83,11 +83,11 @@ export const COUNCIL_TAX_NOTE = (
 export const MARGINAL_RATE_NOTE = (
   <Note
     icon="percent"
-    lead="The share of an extra pound of salary lost to taxes and withdrawn benefits, with everything else held as entered."
+    lead="The share of an extra pound of salary that taxes and benefit withdrawals take, with everything else as you entered it."
     points={[
-      "The rate stated for you is over the next £200 of your salary, the step the Child Benefit charge moves in; the chart's steps are between neighbouring points of the earnings sweep, so near a threshold they can average across it.",
-      "“Of your next £1,000” is that rate applied to £1,000. Where earning the next £200 lowers net income by more than £200 (a cliff, such as losing childcare support above £100,000), the sentence is about that £200 instead.",
-      "Known limits: Council Tax Reduction is counted only where the model has the local scheme, so rates are understated for people who get it elsewhere.",
+      "The rate we state for you is over the next £200 of your salary, the step the Child Benefit charge moves in; the chart's steps are between neighbouring points of the earnings sweep, so near a threshold they can average across it.",
+      "“Of your next £1,000” applies that rate to £1,000. Where earning the next £200 lowers net income by more than £200 (a cliff, such as losing childcare support above £100,000), the sentence is about that £200 instead.",
+      "Known limits: the model counts Council Tax Reduction only where it has the local scheme, so rates come out too low for people who get it elsewhere.",
     ]}
   />
 );

@@ -805,7 +805,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
   const placeValue = shortPlace(shownPlace);
   const upwards = (position.pointChange ?? 0) > 0;
   const placeMove = !placeMoved
-    ? "Unchanged by the selected policies"
+    ? "No change from the selected policies"
     : side === "before"
       ? `${upwards ? "Up" : "Down"} to ${shortPlace(position.after)} with the policies`
       : `${upwards ? "Up" : "Down"} from ${shortPlace(position.before)} under current law`;
@@ -842,7 +842,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
       rows: b.map((s, i) => ({ from: edges[i], to: edges[i + 1], before: s * 100, after: a[i] * 100 })),
       notes: [
         `Your household: ${formatPounds(position.incomeBefore)} before (${describePosition(position.before)}), ${formatPounds(position.incomeAfter)} after (${describePosition(position.after)}), adjusted for household size`,
-        `The lowest ${LOWEST_PERCENTILE}% and highest ${100 - HIGHEST_PERCENTILE}% are not published`,
+        `We do not publish the lowest ${LOWEST_PERCENTILE}% and highest ${100 - HIGHEST_PERCENTILE}%`,
       ],
     });
   };
@@ -948,8 +948,8 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               </h3>
               <p className="chart-description">
                 {showAs === "rank"
-                  ? "The share of people living in a household with a lower income than each point (adjusted for household size), with yours marked."
-                  : "How many people live at each household income (adjusted for household size), with yours marked."}
+                  ? "The share of people living in a household with a lower income than each point (adjusted for household size), and where yours falls."
+                  : "How many people live at each household income (adjusted for household size), and where yours falls."}
               </p>
             </div>
             <ChartDownloadMenu
@@ -994,14 +994,14 @@ export default function IncomePositionChart({ net, household, year, policies, ye
               year={year}
               info={{
                 how: [
-                  `Your household's net income is divided by ${position.factor.toFixed(2)} for its size, and everyone's is adjusted the same way (the modified OECD scale, before housing costs).`,
+                  `We divide your household's net income by ${position.factor.toFixed(2)} for its size, and adjust everyone's the same way (the modified OECD scale, before housing costs).`,
                   "Spread shows how many people have each household income; Rank shows how many have a lower one than each. Both are the same distribution, on the same axis.",
                   "Your percentile ranks your income against everyone's under the same policies: both under current law, or both with the policies.",
                 ],
                 caveats: [
                   "Where the changes are small next to incomes, the curve barely moves between Current law and With the policies.",
                 ],
-                method: { anchor: METHOD_ANCHORS.incomePosition, label: "How your income percentile is worked out" },
+                method: { anchor: METHOD_ANCHORS.incomePosition, label: "How we work out your income percentile" },
               }}
             />
           </div>
@@ -1068,7 +1068,7 @@ export default function IncomePositionChart({ net, household, year, policies, ye
                   "Tenths rank people by household income under current law, adjusted for household size. Each bar is the average change in that tenth.",
                 ],
                 caveats: ["The bars rank people by HBAI income, which leaves out fuel duty and VAT changes. Your tenth here counts them, so near a boundary the two can differ."],
-                method: { anchor: METHOD_ANCHORS.incomePosition, label: "How your income percentile is worked out" },
+                method: { anchor: METHOD_ANCHORS.incomePosition, label: "How we work out your income percentile" },
               }}
             />
           </div>
@@ -1144,7 +1144,7 @@ export function ResultTiles({ totals, changeValue, changeNote, household, year, 
       caption: text.headline,
       note: text.moved
         ? `${upwards ? "Up" : "Down"} from ${shortPlace(position.before)} under current law`
-        : "Unchanged by the selected policies",
+        : "No change from the selected policies",
       tip: [
         PERCENTILE_DEFINITION,
         moveWords,
@@ -1171,7 +1171,7 @@ export function ResultTiles({ totals, changeValue, changeNote, household, year, 
         value={share === null ? "Not available" : signedPct(share, 2)}
         caption="of your household's net income"
         trend={{ rows: [] }}
-        meaning={tenthAverage !== undefined && tenthAverage !== null ? `Average for your income tenth: ${signedPct(tenthAverage, 2)}` : loading ? "\u00a0" : tenthAverage === null ? WITHHELD_DECILE_MESSAGE : "Your tenth's average is not published"}
+        meaning={tenthAverage !== undefined && tenthAverage !== null ? `Average for your income tenth: ${signedPct(tenthAverage, 2)}` : loading ? "\u00a0" : tenthAverage === null ? WITHHELD_DECILE_MESSAGE : "We have not published your tenth's average"}
         meaningKind="small"
       />
       <HeadlineTile

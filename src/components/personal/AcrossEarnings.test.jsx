@@ -58,7 +58,7 @@ describe("the two Across earnings cards", () => {
     // Hovering a chip says what it is, and on which chart it has no effect
     fireEvent.mouseEnter(within(net).getByRole("button", { name: "Council Tax" }));
     expect(document.querySelector(".tip[role='tooltip']")).toHaveTextContent(
-      /^Council Tax: no effect on your marginal tax rate — shown on Household net income only\. The local tax on your home/,
+      /^Council Tax: no effect on your marginal tax rate — appears on Household net income only\. The local tax on your home/,
     );
     fireEvent.mouseLeave(within(net).getByRole("button", { name: "Council Tax" }));
     fireEvent.mouseEnter(within(rate).getByRole("button", { name: "National Insurance" }));

@@ -23,29 +23,29 @@ describe("the shared Across earnings key's no-effect tips", () => {
   it("says where a component has no effect, and which chart it is on", () => {
     expect(noEffectNote(component("income_tax"), { net: true, rate: true })).toBeNull();
     expect(noEffectNote(component("council_tax"), { net: true, rate: false })).toBe(
-      "Council Tax: no effect on your marginal tax rate — shown on Household net income only.",
+      "Council Tax: no effect on your marginal tax rate — appears on Household net income only.",
     );
     expect(noEffectNote(component("universal_credit"), { net: false, rate: true })).toBe(
-      "Universal Credit: no effect on your net income — shown on Marginal tax rate across earnings only.",
+      "Universal Credit: no effect on your net income — appears on Marginal tax rate across earnings only.",
     );
     expect(noEffectNote(component("universal_credit"), { net: false, rate: false })).toBe(
       "Universal Credit: no effect on either chart for you.",
     );
     // Never on a chart for anyone: why, not "no effect"
     expect(noEffectNote(component("pa_taper"), { net: false, rate: true })).toBe(
-      "Personal allowance taper: shown on Marginal tax rate across earnings only — on net income it is counted in income tax.",
+      "Personal allowance taper: appears on Marginal tax rate across earnings only — on net income it is part of income tax.",
     );
     expect(noEffectNote(component("earnings"), { net: true, rate: false })).toBe(
-      "Earnings and other income: shown on Household net income only — the marginal tax rate is taken from earnings, not made of them.",
+      "Earnings and other income: appears on Household net income only — the marginal tax rate applies to earnings, which are not part of it.",
     );
   });
 
   it("gives every chip a tip: what it is, after the no-effect note where there is one", () => {
     expect(tipOf(chips, "income_tax")).toBe("Tax on income above the personal allowance.");
     expect(tipOf(chips, "council_tax")).toBe(
-      "Council Tax: no effect on your marginal tax rate — shown on Household net income only. The local tax on your home, set by your council.",
+      "Council Tax: no effect on your marginal tax rate — appears on Household net income only. The local tax on your home, which your council sets.",
     );
-    expect(tipOf(chips, "fuel_duty")).toMatch(/^Fuel duty: no effect on your marginal tax rate — shown on Household net income only\. /);
+    expect(tipOf(chips, "fuel_duty")).toMatch(/^Fuel duty: no effect on your marginal tax rate — appears on Household net income only\. /);
     expect(tipOf(chips, "student_loan")).toMatch(/^Student loan: no effect on either chart for you\. /);
     expect(tipOf(chips, "total")).toBe(TOTAL_TIP);
     // Every component has a one-line description, and every chip a tip

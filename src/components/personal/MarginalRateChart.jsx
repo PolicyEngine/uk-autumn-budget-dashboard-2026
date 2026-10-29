@@ -52,12 +52,12 @@ const points = (value) => {
  */
 export function rateExportDescription(view, hasParts, yearLabel) {
   if (view === "both") {
-    return `Share of each extra pound of salary lost to taxes and withdrawn benefits in ${yearLabel}, under current law and with the policies.`;
+    return `Share of each extra pound of salary that taxes and benefit withdrawals take in ${yearLabel}, under current law and with the policies.`;
   }
   if (view === "change") {
-    return `The change the selected policies make to the share of each extra pound of salary lost to taxes and withdrawn benefits in ${yearLabel}, in percentage points.`;
+    return `The change the selected policies make to the share of each extra pound of salary that taxes and benefit withdrawals take in ${yearLabel}, in percentage points.`;
   }
-  return `Share of each extra pound of salary lost to taxes and withdrawn benefits in ${yearLabel} ${SIDE_NAME[view]}${hasParts ? ", by part" : ""}.`;
+  return `Share of each extra pound of salary that taxes and benefit withdrawals take in ${yearLabel} ${SIDE_NAME[view]}${hasParts ? ", by part" : ""}.`;
 }
 
 /**
@@ -608,10 +608,10 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
         <ChartMoreInfo
           info={{
             shows: yourParts
-              ? `${salary === 0 ? "With no earnings" : `At ${formatPounds(salary)}`}, your marginal rate with the policies is made up of ${yourParts}.`
-              : "Of each extra pound of salary, the share lost to taxes and withdrawn benefits.",
+              ? `${salary === 0 ? "With no earnings" : `At ${formatPounds(salary)}`}, your marginal rate with the policies consists of ${yourParts}.`
+              : "Of each extra pound of salary, the share that taxes and benefit withdrawals take.",
             how: [
-              "Worked out from the same salary sweep as the net income card: one minus the change in net income over the change in salary, from each salary to the next.",
+              "The rate comes from the same salary sweep as the net income card: one minus the change in net income over the change in salary, from each salary to the next.",
               isChange
                 ? "The line is the change in the total rate, in percentage points."
                 : isBoth
@@ -627,16 +627,16 @@ export default function MarginalRateChart({ sweep, salary, yearLabel, sync = nul
             method: { anchor: METHOD_ANCHORS.personal, label: "How the household calculation works" },
             caveats: [
               pensionAllowanceCliff &&
-                "For a pensioner, the selected policies give an income tax reduction that falls by £1 for every £3 of total income above the full new State Pension, so over that range each extra £1 of income costs about 53p in income tax: 20p at the basic rate (19p at the starter rate in Scotland) plus 33p of the reduction withdrawn.",
+                "For a pensioner, the selected policies give an income tax reduction that falls by £1 for every £3 of total income above the full new State Pension, so over that range each extra £1 of income costs about 53p in income tax: 20p at the basic rate (19p at the starter rate in Scotland) plus 33p as the reduction falls.",
               // Change draws no parts and no edge markers, on an axis that
               // covers every change
               !isChange &&
-                "A part that lowers the rate (a benefit rising with pay) is drawn below 0%. A rate beyond the axis is marked at its edge, and the tooltip gives it in full.",
+                "A part that lowers the rate (a benefit rising with pay) sits below 0%. A rate beyond the axis shows as a mark at its edge, and the tooltip gives it in full.",
               // Round 3: Other is floored at zero, so where it is negative
               // the layers pass the total line
               parts &&
                 rawRows.some((row) => row.otherUndrawn) &&
-                "Other, the part no named tax or benefit explains, is negative at some earnings for this household. The tooltip gives it, but it is not drawn below 0%, so there the layers reach above the total line.",
+                "Other, the part no named tax or benefit explains, is negative at some earnings for this household. The tooltip gives it, but the chart does not draw it below 0%, so there the layers reach above the total line.",
             ],
           }}
         />
