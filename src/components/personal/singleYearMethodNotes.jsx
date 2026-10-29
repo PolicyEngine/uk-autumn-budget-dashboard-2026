@@ -71,8 +71,8 @@ export const COUNCIL_TAX_NOTE = (
         Each council's Band D is policyengine-uk's, from{" "}
         <SourceLink source="mhclg_council_tax">MHCLG</SourceLink>{" "}for England and the{" "}
         <SourceLink source="wales_council_tax">Welsh</SourceLink> and{" "}
-        <SourceLink source="scotland_council_tax">Scottish</SourceLink> governments. Until you pick your council, it
-        is your region's average (England's tax-base weighted by region).
+        <SourceLink source="scotland_council_tax">Scottish</SourceLink>
+        {" governments. Until you pick your council, it is your region's average (England's tax-base weighted by region)."}
       </>,
       "Starts from 2026-27 levels, grown to the chosen year with policyengine-uk's OBR Council Tax forecast.",
       "Northern Ireland has domestic rates, which are not modelled.",
