@@ -31,9 +31,9 @@ export { WIZARD_DEFAULTS };
 import { CheckboxField, ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
 import LocalAuthorityField from "./personal/LocalAuthorityField";
 import MonthlyPayField from "./personal/MonthlyPayField";
-import { asksMonthlyPay, sendsMonthlyPay } from "../utils/surplusEarnings";
+import { SURPLUS_EARNINGS_PHRASE, asksMonthlyPay, sendsMonthlyPay, surplusIncluded } from "../utils/surplusEarnings";
 import { policyQuestions } from "../utils/householdPolicyFields";
-import { withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
+import { leftOutOfDots, withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
@@ -1187,9 +1187,9 @@ function HouseholdCalculator({
         note:
           placed.notModelled.length > 0
             ? `Your change leaves out ${placed.notModelled.length === 1 ? "one policy" : `${placed.notModelled.length} policies`} not modelled for one household; the dots include ${placed.notModelled.length === 1 ? "it" : "them"}.`
-            : submitted.policies.length !== withoutCalculatorOnly(submitted.policies).length
-              ? "Your change includes the savings income tax rise, which the dots leave out."
-              : null,
+            : // The calculator-only measures, and the surplus earnings
+              // threshold when the answer adds it
+              leftOutOfDots(submitted.policies, surplusIncluded(placed.surplusEarnings) ? [SURPLUS_EARNINGS_PHRASE] : []),
       }
     : null;
 

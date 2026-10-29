@@ -24,6 +24,8 @@ import "./SingleYear.css";
 import { scrollBelowBars } from "../../utils/pageScroll";
 import { policyDetailsFor } from "../../utils/policyDetails";
 import { resultPolicies } from "../../utils/calculatorOnlyMeasures";
+import { SURPLUS_EARNINGS_PHRASE, surplusIncluded } from "../../utils/surplusEarnings";
+import SurplusEarningsCard from "./SurplusEarningsCard";
 
 /** True once `active` has held for `delay` ms (no flash of a loading line). */
 function useDelayed(active, delay = 300) {
@@ -134,6 +136,18 @@ export function assumptionItems(data, yearLabel, { renting = false, policies = [
       detail: salarySource
         ? `${salarySource}; grown from ${data.salaryYear} with OBR earnings`
         : `grown from ${data.salaryYear} with OBR earnings`,
+    });
+  }
+  // Monthly pay, read only by the Universal Credit surplus earnings
+  // threshold measure
+  const months = data.surplusEarnings?.months;
+  if (months) {
+    const total = months.reduce((sum, month) => sum + month.pay + (month.partnerPay ?? 0), 0);
+    items.push({
+      id: "monthly-pay",
+      label: `Monthly pay in ${yearLabel}`,
+      value: `${money(total)} over 12 months`,
+      detail: "as entered, for the Universal Credit surplus earnings threshold only",
     });
   }
   if (renting && data.area?.brmaDefault && data.area.brma) {
@@ -484,7 +498,7 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
  * based on, each note behind an "i". The figure is one element, so it
  * reads (and copies) once.
  */
-function ResultCard({ totals, yearLabel, requestPolicies = [], items, caution = false, bars = null, splitFailed = false, requestHousehold = null, year, selected = [], catalogue = [] }) {
+function ResultCard({ totals, yearLabel, requestPolicies = [], alsoNamed = [], items, caution = false, bars = null, splitFailed = false, requestHousehold = null, year, selected = [], catalogue = [] }) {
   const shown = Math.round(useCountUp(totals.change, { fromZero: true }));
   const counting = shown !== totals.change;
   return (
@@ -503,7 +517,7 @@ function ResultCard({ totals, yearLabel, requestPolicies = [], items, caution = 
           <>
             {`In ${yearLabel}, with `}
             <a className="result-policies-link" href="#change-by-policy" onClick={(event) => scrollToSection(event, "change-by-policy")}>
-              {resultPolicies(requestPolicies).text}
+              {resultPolicies(requestPolicies, alsoNamed).text}
             </a>
           </>
         }
@@ -604,6 +618,9 @@ export function SingleYearHeadline({
             totals={totals}
             yearLabel={yearLabel}
             requestPolicies={requestPolicies}
+            // The answer adds the surplus earnings threshold for a household
+            // that sent its monthly pay: named after the others
+            alsoNamed={surplusIncluded(data.surplusEarnings) ? [SURPLUS_EARNINGS_PHRASE] : []}
             items={assumptionItems(data, yearLabel, { renting, policies, spending, salarySource, spendingSource })}
             caution={Boolean(spending?.assumed) && mostlyFromSpending(data.byPolicy, totals.change)}
             requestHousehold={requestHousehold}
@@ -716,6 +733,13 @@ export function SingleYearDetails({ result, year, policies, household = null, se
             <SingleYearError error={detailError} onRetry={retry} title="The split by policy is not available." />
           </div>
         )}
+        {/* With monthly pay: Universal Credit month by month, for the
+            surplus earnings threshold */}
+        <SurplusEarningsCard
+          surplus={data.surplusEarnings}
+          asked={Array.isArray(household?.monthly_employment_income)}
+          yearLabel={yearLabel}
+        />
       </section>
 
       <SectionHeading
@@ -724,6 +748,12 @@ export function SingleYearDetails({ result, year, policies, household = null, se
         subtitle="How your net income, its change and your marginal tax rate vary with earnings."
       />
       <section className="report-section">
+        {surplusIncluded(data.surplusEarnings) && (
+          <p className="single-year-quiet surplus-sweep-note">
+            The earnings charts leave out the Universal Credit surplus earnings threshold: they vary your yearly salary, spread
+            evenly over the months, so no award ends in one month.
+          </p>
+        )}
         {data.sweep ? (
           // Net income (with its Net income / Change switch) beside the
           // marginal rate, a pair of cards whose rows line up; stacked on a phone

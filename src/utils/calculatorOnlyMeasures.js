@@ -55,3 +55,16 @@ export function resultPolicies(policies, also = []) {
   const text = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
   return { count, named, text };
 }
+
+/**
+ * The position chart's note on the measures in a household's change that
+ * the national dots leave out: the calculator-only ones and those the
+ * answer adds (`also`, as resultPolicies takes them). Null when there are
+ * none.
+ */
+export function leftOutOfDots(policies, also = []) {
+  const { named } = resultPolicies(policies, also);
+  if (named.length === 0) return null;
+  const list = named.length === 1 ? named[0] : `${named.slice(0, -1).join(", ")} and ${named[named.length - 1]}`;
+  return `Your change includes ${list}, which the dots leave out.`;
+}

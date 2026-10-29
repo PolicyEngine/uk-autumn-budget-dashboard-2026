@@ -4,6 +4,7 @@ import {
   CALCULATOR_ONLY_MEASURES,
   SAVINGS_INCOME_RATES_ID,
   isCalculatorOnly,
+  leftOutOfDots,
   resultPolicies,
   withCalculatorOnly,
   withoutCalculatorOnly,
@@ -95,6 +96,21 @@ describe("the result card's measures (resultPolicies)", () => {
       "1 policy and the Universal Credit surplus earnings threshold",
     );
     expect(resultPolicies(withCalculatorOnly(seven), []).text).toBe("7 policies and the savings income tax rise");
+  });
+
+  it("says which measures in your change the national dots leave out", () => {
+    // As the position chart has said it since #306
+    expect(leftOutOfDots(withCalculatorOnly(["a"]))).toBe(
+      "Your change includes the savings income tax rise, which the dots leave out.",
+    );
+    expect(leftOutOfDots(withCalculatorOnly(["a"]), [SURPLUS_EARNINGS_PHRASE])).toBe(
+      "Your change includes the savings income tax rise and the Universal Credit surplus earnings threshold, which the dots leave out.",
+    );
+    expect(leftOutOfDots(["a"], [SURPLUS_EARNINGS_PHRASE])).toBe(
+      "Your change includes the Universal Credit surplus earnings threshold, which the dots leave out.",
+    );
+    // Nothing the dots leave out: no note
+    expect(leftOutOfDots(["a", "b"])).toBeNull();
   });
 
   it("gives every calculator-only measure a phrase to name it by", () => {

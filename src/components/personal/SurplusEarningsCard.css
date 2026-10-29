@@ -1,0 +1,76 @@
+/* Universal Credit month by month (the surplus earnings threshold): a
+   title, one sentence with the change, and a month a row at both
+   thresholds */
+.surplus-earnings {
+  margin-top: 24px;
+}
+
+.surplus-title {
+  margin: 0 0 8px;
+  font-size: var(--fs-card-title);
+  font-weight: 600;
+  color: var(--pe-gray-800);
+}
+
+.surplus-lead {
+  margin: 0 0 12px;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--pe-gray-700);
+}
+
+.surplus-lead .is-gain {
+  color: var(--pe-teal-700);
+}
+
+.surplus-lead .is-loss {
+  color: var(--c-loss-text);
+}
+
+/* The table scrolls inside the card on a phone, never the page */
+.surplus-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.surplus-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.surplus-table th,
+.surplus-table td {
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.surplus-table thead th {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--pe-gray-500);
+}
+
+.surplus-table tbody th {
+  font-weight: 500;
+  color: var(--pe-gray-700);
+}
+
+.surplus-table .num {
+  text-align: right;
+}
+
+.surplus-status {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--pe-gray-500);
+}
+
+.surplus-side.is-award_ended,
+.surplus-side.is-no_award {
+  color: var(--pe-gray-500);
+}

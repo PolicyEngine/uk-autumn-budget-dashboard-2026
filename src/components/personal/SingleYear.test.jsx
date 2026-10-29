@@ -12,6 +12,7 @@ import { clearHouseholdImpactCache, setHouseholdRetryPolicy } from "../../hooks/
 import { clearBasisIncomeCache } from "../../hooks/useBasisIncome";
 import { presetRequests, resetPresetResults } from "../../utils/householdPresets";
 import { HOUSEHOLD_FIXTURE, householdAnswerFor } from "../../test/householdFixture";
+import { SURPLUS_BLOCK } from "../../test/surplusEarningsFixture";
 import { POLICIES_FOR_TEST } from "../../test/personalPolicies";
 import { keepSentence, marginalRateSentence } from "../../utils/singleYear";
 
@@ -1449,5 +1450,51 @@ describe("the waterfall's one line", () => {
     const cardRules = [...css.matchAll(/\.result-card(?:\.is-(?:gain|loss))?\s*\{([^}]*)\}/g)].map((m) => m[1]);
     expect(cardRules.length).toBeGreaterThan(0);
     for (const rule of cardRules) expect(rule).not.toMatch(/border-left/);
+  });
+});
+
+describe("monthly pay, for the Universal Credit surplus earnings threshold", () => {
+  const withMonths = (body) => Array.isArray(body.household.monthly_employment_income);
+  const tickMonthlyPay = () => {
+    openForm();
+    fireEvent.click(screen.getByRole("button", { name: /^Step \d+: Benefits and loans$/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "My monthly pay varies" }));
+  };
+
+  it("names the measure in the result, shows its months, and says the earnings charts leave it out", async () => {
+    serve((body) =>
+      json(withMonths(body) ? { ...householdAnswerFor(body), surplus_earnings: SURPLUS_BLOCK } : householdAnswerFor(body)),
+    );
+    renderTab({ year: 2027 });
+    tickMonthlyPay();
+    fireEvent.click(calculateButton());
+    await waitFor(() => expect(headlineCard()).not.toBeNull());
+    expect(household.some((body) => body.include.length === 0 && withMonths(body))).toBe(true);
+    // Counted with the selection's measures, named after them
+    expect(headlineCard().querySelector(".result-policies-link")).toHaveTextContent(
+      /and the Universal Credit surplus earnings threshold$/,
+    );
+    // What the result is based on: the months' total (the fixture's £1,500
+    // a month with £6,000 in September)
+    fireEvent.click(within(headlineCard()).getByRole("button", { name: "About this result" }));
+    expect(headlineCard()).toHaveTextContent("Monthly pay in 2027-28");
+    expect(headlineCard()).toHaveTextContent("£22,500 over 12 months");
+    const months = await screen.findByRole("region", { name: "Universal Credit month by month, 2027-28" });
+    expect(within(months).getAllByRole("rowheader")).toHaveLength(12);
+    expect(
+      await screen.findByText(/The earnings charts leave out the Universal Credit surplus earnings threshold/),
+    ).toBeInTheDocument();
+  });
+
+  it("says the measure's figures are unavailable when the answer has none, and does not name it", async () => {
+    // An API from before the months: they are sent, but nothing comes back
+    serve((body) => json(householdAnswerFor(body)));
+    renderTab({ year: 2027 });
+    tickMonthlyPay();
+    fireEvent.click(calculateButton());
+    await waitFor(() => expect(headlineCard()).not.toBeNull());
+    const months = await screen.findByRole("region", { name: /^Universal Credit month by month/ });
+    expect(months).toHaveTextContent("unavailable");
+    expect(headlineCard().querySelector(".result-policies-link")).not.toHaveTextContent("surplus earnings");
   });
 });
