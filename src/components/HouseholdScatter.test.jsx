@@ -71,7 +71,6 @@ vi.mock("../utils/measureCatalogue", () => ({
 const { default: HouseholdScatter, LOGO_ROOM } = await import("./HouseholdScatter");
 const { chartMargin } = await import("../utils/chartTheme");
 const { CHART_LOGO } = await import("../utils/chartLogo");
-const { WITHHELD_DECILE_MESSAGE } = await import("../utils/decileWithholding");
 
 const POLICIES = [
   { id: "a", name: "Measure A" },
@@ -118,7 +117,7 @@ describe("HouseholdScatter when the groups that change are withheld", () => {
   });
 
   const NOTE =
-    "Households that gain or lose: not published, to protect survey respondents' confidentiality (too few survey households). The income decile chart shows the average change.";
+    "Not published, too few survey households.";
 
   it("draws the published no-change dots and labels the withheld groups when the deciles change (the Carer's Allowance taper, 2031-32)", () => {
     // Deciles 7 and 9 withheld, the rest non-zero, as the taper publishes
@@ -126,7 +125,6 @@ describe("HouseholdScatter when the groups that change are withheld", () => {
     const { container } = render(<HouseholdScatter selectedPolicies={["a"]} policies={POLICIES} selectedYear={2027} />);
     expect(screen.getByTestId("scatter-chart")).toBeTruthy();
     expect(screen.getByRole("note")).toHaveTextContent(NOTE);
-    expect(NOTE).toContain(WITHHELD_DECILE_MESSAGE.slice(1));
     expect(screen.queryByText(/None of the selected policies changes household incomes/)).toBeNull();
     // Dots are drawn, so the dot subtitle is back
     expect(container.querySelector(".chart-description").textContent).toMatch(/^Each dot is about/);

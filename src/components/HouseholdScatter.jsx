@@ -22,7 +22,6 @@ import {
   decilesShowChange,
   scatterView,
 } from "../utils/householdScatter";
-import { WITHHELD_DECILE_MESSAGE } from "../utils/decileWithholding";
 import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS, noHouseholdChange, chartMargin } from "../utils/chartTheme";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
@@ -133,13 +132,9 @@ function ScatterMoreInfo({ basisLabel }) {
   );
 }
 const DESCRIPTION_LOADING = "Change in net income by baseline income.";
-// Under the plot when the groups that gain or lose are left out: the
-// decile card's disclosure wording, as the map labels its blank seats;
-// the average change by decile is that card's, so it is pointed to, not
-// repeated
-export const HOUSEHOLDS_WITHHELD_NOTE =
-  `Households that gain or lose: ${WITHHELD_DECILE_MESSAGE.charAt(0).toLowerCase()}${WITHHELD_DECILE_MESSAGE.slice(1)} ` +
-  "(too few survey households). The income decile chart shows the average change.";
+// Under the plot when the groups that gain or lose are left out, as the
+// map labels its blank seats
+export const HOUSEHOLDS_WITHHELD_NOTE = "Not published, too few survey households.";
 
 // Dots move between years and selections as the other charts' bars do:
 // about 850ms, easing in and out, and not at all under reduced motion.
