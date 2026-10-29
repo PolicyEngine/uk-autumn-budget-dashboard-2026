@@ -1006,3 +1006,244 @@ def test_two_members_thin_at_the_same_age_stay_hidden_as_a_sum():
     assert "70" not in package and "65+" in package
     assert not their_sum_is_given_back(package)
     assert _recoverable(published, package, thin) == []
+
+
+# #358: withhold only the thin single ages, and further ages only while the
+# withheld ones, with the band's ages without a row, are under the floor.
+
+
+def _band(changed, other_households=1):
+    """Band 35-49 by survey household, ten single-person records each:
+    20 households aged 36 (0-19), 20 aged 38 (20-39) and 20 aged 40
+    (40-59), and ``other_households`` aged 45 (60 on) with five records
+    each, too few for a row of their own; and 20 households aged 70
+    (200-219). Those in ``changed`` gain £100."""
+    survey = np.concatenate(
+        [
+            np.repeat(np.arange(60), 10),
+            np.repeat(np.arange(60, 60 + other_households), 5),
+            np.repeat(np.arange(200, 220), 10),
+        ]
+    )
+    age = np.select(
+        [survey < 20, survey < 40, survey < 60, survey < 200],
+        [36, 38, 40, 45],
+        70,
+    )
+    household_id = np.arange(len(survey)) + 1_000
+    decile = survey % 10 + 1
+    base = np.full(len(survey), 20_000.0)
+    gain = np.where(np.isin(survey, list(changed)), 100.0, 0.0)
+    person = {
+        "household_id": household_id,
+        "age": age,
+        "household_income_decile": decile,
+    }
+
+    def simulation(net):
+        return _Simulation(
+            {
+                "household_id": household_id,
+                "household_net_income": net,
+                "household_income_decile": decile,
+            },
+            person,
+        )
+
+    return simulation(base), simulation(base + gain), survey
+
+
+BAND_LABELS = BANDS + ["all", "36", "38", "40", "70"]
+# Twelve households aged 36 change and five aged 38: neither is thin
+SAFE = set(range(12)) | set(range(20, 25))
+
+
+def _withheld_in_band(changed, inherited=None, other_households=1):
+    """The age rows left out of BAND_LABELS, and the extra ages chosen."""
+    baseline, reformed, survey = _band(changed, other_households)
+    found, extra = floor.thin_cells_and_extra_ages(
+        baseline, reformed, [YEAR], survey, inherited
+    )
+    rows = floor.withhold_thin_age_rows(
+        _age_rows_for(BAND_LABELS), found, inherited, extra
+    )
+    kept = {row["age_band"] for row in rows}
+    return set(BAND_LABELS) - kept, extra
+
+
+def test_one_thin_age_whose_group_clears_the_floor_is_withheld_alone():
+    """40 rests on two survey households; with the band's three changed
+    households aged 45, which have no row, the group the band less its
+    published ages gives back rests on five."""
+    withheld, extra = _withheld_in_band(
+        SAFE | {40, 41} | {60, 61, 62}, other_households=3
+    )
+    assert withheld == {"40"}
+    assert extra == {}
+
+
+def test_a_thin_age_whose_group_is_still_thin_takes_the_smallest_safe_age():
+    """40 rests on two households and no one aged 45 changes, so 40 with
+    the ages without a row is still thin: 38, with fewer households than 36,
+    joins it, and 36 stays."""
+    withheld, extra = _withheld_in_band(SAFE | {40, 41})
+    assert withheld == {"38", "40"}
+    assert extra == {YEAR: {"35-49": ["38"]}}
+    # The receipt names the extra age, never a count
+    record = floor.floor_record({}, extra_ages=extra)
+    assert record["age_extra_cells"] == [
+        {
+            "table": "age_impact",
+            "year": YEAR,
+            "band": "35-49",
+            "groups": ["38"],
+        }
+    ]
+    assert floor.recorded_extra_ages(record) == extra
+
+
+def test_extra_ages_tie_by_youngest():
+    # 36 and 38 each have five changed households
+    changed = set(range(5)) | set(range(20, 25)) | {40, 41}
+    withheld, extra = _withheld_in_band(changed)
+    assert withheld == {"36", "40"}
+    assert extra == {YEAR: {"35-49": ["36"]}}
+
+
+def test_two_thin_ages_that_together_clear_the_floor_take_no_other_age():
+    # 38 rests on one household, 40 on two: three together
+    withheld, extra = _withheld_in_band(set(range(12)) | {20} | {40, 41})
+    assert withheld == {"38", "40"}
+    assert extra == {}
+
+
+def test_thin_ages_without_a_row_take_the_smallest_safe_age():
+    """The one changed household aged 45 has no row, but the band less its
+    single ages would give it back: 38 is withheld with it."""
+    withheld, extra = _withheld_in_band(SAFE | {60})
+    assert withheld == {"38"}
+    assert extra == {YEAR: {"35-49": ["38"]}}
+
+
+def test_a_thin_band_still_leaves_only_all():
+    # 35-49 rests on two households; five aged 70 change too
+    withheld, extra = _withheld_in_band({40, 41} | set(range(200, 205)))
+    assert withheld == set(BAND_LABELS) - {"all"}
+    assert extra == {}
+
+
+def test_a_thin_all_still_leaves_no_row():
+    baseline, reformed, survey = _band({40})
+    found, extra = floor.thin_cells_and_extra_ages(
+        baseline, reformed, [YEAR], survey
+    )
+    assert "all" in found[("age_impact", YEAR)]
+    assert extra == {}
+    rows = floor.withhold_thin_age_rows(
+        _age_rows_for(BAND_LABELS), found, None, extra
+    )
+    assert rows == []
+
+
+def test_the_package_adds_ages_by_its_own_survey_households():
+    """A member left out 40 and 38 (its thin age and its extra one,
+    ``recorded_thin_age_groups``). In the package each rests on one
+    household, two together, so the package adds 36 to them; it inherits
+    both, so it never publishes an age the member left out."""
+    changed = set(range(12)) | {20} | {40}
+    withheld, extra = _withheld_in_band(changed, {YEAR: ["38", "40"]})
+    assert withheld == {"36", "38", "40"}
+    assert extra == {YEAR: {"35-49": ["36"]}}
+    # Where its own households clear the floor, it adds nothing
+    withheld, extra = _withheld_in_band(SAFE | {40, 41, 42}, {YEAR: ["40"]})
+    assert withheld == {"40"}
+    assert extra == {}
+
+
+def test_without_counted_households_a_band_is_withheld_whole():
+    """A run not held to the floor (no survey households) has no extra
+    ages to apply, so it keeps the rule from before #358."""
+    assert floor.withheld_age_labels(["40"], ROW_LABELS) == {"36", "40"}
+    assert floor.withheld_age_labels(["40"], ROW_LABELS, {}) == {"40"}
+    assert floor.withheld_age_labels(
+        ["40"], ROW_LABELS, {"35-49": ["36"]}
+    ) == {"36", "40"}
+
+
+def test_an_invalid_extra_age_record_is_refused():
+    with pytest.raises(ValueError):
+        floor.recorded_extra_ages(
+            {
+                "age_extra_cells": [
+                    {
+                        "table": "age_impact",
+                        "year": YEAR,
+                        "band": "35-49",
+                        "groups": ["all"],
+                    }
+                ]
+            }
+        )
+    assert floor.recorded_extra_ages({}) == {}
+
+
+def _abstract_extra(thin):
+    """``age_extra_ages`` without counts, conservatively: a group clears
+    the floor only if it holds an atom outside ``thin``, which rests on
+    enough households; the youngest such single age joins otherwise."""
+    if "all" in thin or floor.NO_BAND in thin or set(BANDS) & set(thin):
+        return {}
+    extra = {}
+    for band in BANDS:
+        singles = [s for s in SINGLES if floor._band_of_single_age(s) == band]
+        withheld = [s for s in singles if s in thin]
+        other = band + floor.OTHER_AGES
+        if (not withheld and other not in thin) or other not in thin:
+            continue
+        safe = [s for s in singles if s not in thin]
+        extra[band] = safe[:1] if safe else []
+    return extra
+
+
+def _published_under_358(labels, thin):
+    extra = _abstract_extra(thin)
+    dropped = floor.withheld_age_labels(thin, labels, extra) if thin else set()
+    return (
+        []
+        if dropped is None
+        else [label for label in labels if label not in dropped]
+    )
+
+
+@given(
+    st.lists(
+        st.lists(st.sampled_from(THIN_CHOICES), max_size=3, unique=True),
+        min_size=2,
+        max_size=4,
+    )
+)
+def test_under_358_the_package_gives_back_no_withheld_age(thin_lists):
+    """#340 under #358: each member leaves out only its thin single ages
+    and any extra ones; the package inherits every age a member left out.
+    No sum or difference of the members' and package's rows gives back a
+    member's thin group."""
+    thin = {f"m{i}": groups for i, groups in enumerate(thin_lists)}
+    published = {
+        m: _published_under_358(PROPERTY_LABELS, t) for m, t in thin.items()
+    }
+    # What the package inherits: members' thin groups and rows left out
+    inherited = set()
+    for m, groups in thin.items():
+        inherited |= set(groups)
+        inherited |= set(PROPERTY_LABELS) - set(published[m]) - {"all"}
+        if not published[m]:
+            inherited.add("all")
+    inherited = sorted(inherited)
+    rows = floor.withhold_thin_age_rows(
+        _age_rows_for(PROPERTY_LABELS),
+        {},
+        {YEAR: inherited},
+        {YEAR: _abstract_extra(inherited)},
+    )
+    package = [row["age_band"] for row in rows]
+    assert _recoverable(published, package, thin) == []

@@ -43,8 +43,11 @@ def test_package_inherits_withheld_cells_from_member_receipts(
     )
     monkeypatch.setattr(
         floor,
-        "thin_cells",
-        lambda baseline, reformed, years, survey: baseline.thin,
+        "thin_cells_and_extra_ages",
+        lambda baseline, reformed, years, survey, inherited=None: (
+            baseline.thin,
+            {},
+        ),
     )
     alpha = reform("alpha")
     beta = Reform(
@@ -170,9 +173,10 @@ def _age_rows(measure, year):
 def test_package_leaves_out_the_age_rows_its_members_leave_out(
     monkeypatch, from_manifest
 ):
-    """#340: a member's thin single age (70) takes its band's single ages
-    out of the member's table. The package must leave out the same rows,
-    or its row less the other members' gives the member's back."""
+    """#340: a member's thin single age (70) leaves the member's table,
+    with the single age its survey households add to clear the floor
+    (90+, #358). The package must leave out the same rows, or its row less
+    the other members' gives the member's back."""
     from uk_budget_data import pipeline
 
     world = World()
@@ -186,8 +190,11 @@ def test_package_leaves_out_the_age_rows_its_members_leave_out(
     )
     monkeypatch.setattr(
         floor,
-        "thin_cells",
-        lambda baseline, reformed, years, survey: baseline.thin,
+        "thin_cells_and_extra_ages",
+        lambda baseline, reformed, years, survey, inherited=None: (
+            baseline.thin,
+            baseline.extra,
+        ),
     )
     alpha = reform("alpha")
     beta = Reform(
@@ -203,10 +210,13 @@ def test_package_leaves_out_the_age_rows_its_members_leave_out(
     }
     # Only alpha has a thin cell, and only in the age table
     thin = {"alpha": {("age_impact", 2027): ["70"]}, "beta": {}, key: {}}
+    # 70 with 65+'s ages without a row is still thin, so 90+ joins it
+    extra = {"alpha": {2027: {"65+": ["90+"]}}, "beta": {}, key: {}}
     make_result = fake_process(values)
 
     def process(measure, config, baseline, reformed, baseline_scenario):
         baseline.thin = thin[measure.id]
+        baseline.extra = extra[measure.id]
         baseline.calculate = lambda *args, **kwargs: SimpleNamespace(
             values=np.arange(1, 11)
         )
@@ -279,6 +289,16 @@ def test_package_leaves_out_the_age_rows_its_members_leave_out(
                 "disclosure_floor"
             ]
             assert member_record["withheld_cells"] == [withheld_age]
+            assert member_record["age_extra_cells"] == [
+                {
+                    "table": "age_impact",
+                    "year": 2027,
+                    "band": "65+",
+                    "groups": ["90+"],
+                }
+            ]
+        # The package added no age of its own
+        assert "age_extra_cells" not in record
         assert file_problems(reference.path, document) == []
         assert document_problems(document) == []
         stage(manifest, reference.path, **arguments)
