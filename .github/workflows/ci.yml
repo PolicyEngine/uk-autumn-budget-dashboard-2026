@@ -21,19 +21,19 @@ jobs:
     # recorded on 28 October, up from 16,000 on 26 October. Five parts made of
     # hand-picked file lists took 10 to 22 minutes each (#217): "the rest"
     # alone carried about 5,100 worker-seconds. Now every runner collects
-    # the whole suite and keeps one shard of it, chosen by tests/ci_shards.py
-    # from each test's recorded CI time (tests/ci_durations.json), so the
-    # shards carry about equal work and a new test needs no change here.
+    # the whole suite and keeps one shard of it, which tests/ci_shards.py
+    # chooses from each test's recorded CI time (tests/ci_durations.json), so
+    # the shards carry about equal work and a new test needs no change here.
     # Every test runs in exactly one shard; tests/test_ci_parts.py checks
     # that. When the shards grow, add shards to the list; the run line takes
     # the count from the matrix (strategy.job-total).
     # The limit is 25 minutes. The shards took 12.6 to 16.8 minutes in
     # #311's run on 28 October, and the same tests took 1.45 times as long
     # on one runner as on another on 26 October: 16.8 minutes becomes 24.4.
-    # More shards help little. Replaying the plan on four workers, the
-    # slowest shard's tests take 14.2 minutes with 10 shards, 12.9 with 11
-    # and 12.5 with 14, because one 749-second test (tests/test_parallel.py)
-    # has to run on one worker.
+    # More shards help little. A replay through xdist's scheduler on four
+    # workers puts the slowest shard's tests at about 14.5 minutes with 10
+    # shards, 14.0 with 11 and 13.6 with 14, because one 749-second test
+    # (tests/test_parallel.py) has to run on one worker.
     timeout-minutes: 25
     strategy:
       fail-fast: false
