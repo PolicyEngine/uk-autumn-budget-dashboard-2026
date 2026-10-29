@@ -7,6 +7,7 @@ import { withPolicyDetails } from "../utils/policyDetails";
 import { policyCardAnchor } from "../utils/methodLink";
 import { parameterTableFor } from "../utils/policyParameters";
 import PolicyChange, { changeView, usePolicyParameters } from "./PolicyChange";
+import { policyVisual } from "./policies/PolicyVisual";
 import Disclosure from "./Disclosure";
 import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
 import { TABLE_6_1_URL } from "../utils/unmodelledMeasures";
@@ -307,6 +308,11 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
   // instead: policies/UnmodelledMeasures.jsx)
   const bare = !policy.summary && !policy.notModelled;
   const showModelling = hasInfo(modelling);
+  // The measure's own visual (policies/PolicyVisual.jsx), from the file's
+  // entry as published: in What changes, or as its example's body
+  const figure = bare ? null : policyVisual(policy, given ?? null);
+  const place = figure ? policy.visual.place : null;
+  const example = place === "change" && policy.visual.replacesExample ? null : policy.example;
   return (
     <li
       id={policy.anchorId ?? (policy.id ? policyCardAnchor(policy.id) : undefined)}
@@ -375,7 +381,7 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
       </div>
       )}
 
-      {(parameters || policy.example || policy.changesText) && (
+      {(parameters || example || policy.changesText) && (
         <div className="policy-card-spec">
           {parameters ? (
             <PolicyChange
@@ -384,6 +390,7 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
               direction={policy.direction}
               onHighlight={setHighlight}
               lead={policy.changesText}
+              figure={place === "change" ? figure : null}
             />
           ) : (
             policy.changesText && (
@@ -398,22 +405,29 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
               </section>
             )
           )}
-          {policy.example && (
-            <section className="policy-card-example" aria-label={`${policy.example.title}: ${policy.label ?? policy.name}`}>
+          {example && (
+            <section className="policy-card-example" aria-label={`${example.title}: ${policy.label ?? policy.name}`}>
               <p className="policy-card-example-title">
                 <Lightbulb size={14} aria-hidden="true" />
-                {policy.example.title}
+                {example.title}
               </p>
-              <p className="policy-card-example-text">{policy.example.text}</p>
-              {policy.example.items?.length > 0 && (
-                <ul className="policy-card-example-items">
-                  {policy.example.items.map((item) => <li key={item}>{item}</li>)}
-                </ul>
+              {/* The visual draws the example's figures, in their place */}
+              {place === "example" ? (
+                figure
+              ) : (
+                <>
+                  <p className="policy-card-example-text">{example.text}</p>
+                  {example.items?.length > 0 && (
+                    <ul className="policy-card-example-items">
+                      {example.items.map((item) => <li key={item}>{item}</li>)}
+                    </ul>
+                  )}
+                </>
               )}
-              {policy.example.source && (
+              {example.source && (
                 <p className="policy-card-example-source">
-                  <a href={policy.example.source.href} target="_blank" rel="noopener noreferrer">
-                    {policy.example.source.label}
+                  <a href={example.source.href} target="_blank" rel="noopener noreferrer">
+                    {example.source.label}
                     <span className="policy-sr-only"> (opens in a new tab)</span>
                   </a>
                 </p>
