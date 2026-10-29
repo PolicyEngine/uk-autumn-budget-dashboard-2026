@@ -132,20 +132,6 @@
   color: var(--pe-gray-400);
 }
 
-/* The change beside the new value, so both tiles keep one height */
-.pchg-tile-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  column-gap: 8px;
-  row-gap: 2px;
-}
-
-/* Several before-and-after pairs: a little air between them */
-.pchg-ba + .pchg-ba {
-  margin-top: 4px;
-}
-
 /* A card's footer disclosure (About this result, Treasury costing): the
    chevron at the row's right edge, the same on every card */
 .policy-card-modelling .disclosure-compact > .disclosure-toggle {

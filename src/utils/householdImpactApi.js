@@ -23,6 +23,7 @@
 
 import statePensionTable from "../uk_budget_data/state_pension.json";
 import { DEFAULT_SPENDING, regionalRent } from "./householdDefaults";
+import { localAuthorityKey } from "./localAuthorities";
 
 export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
 
@@ -270,6 +271,7 @@ export const isRenting = (tenure) => RENTING.has(tenure);
 export function buildHouseholdRequest(inputs, { year, policies, include = HEADLINE_INCLUDE }) {
   const children = childrenForRequest(inputs);
   const renting = isRenting(inputs.tenure);
+  const localAuthority = inputs.council ? localAuthorityKey(inputs.council) : null;
   return {
     year,
     policies: [...policies],
@@ -281,6 +283,11 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       partner_employment_income: inputs.has_partner ? inputs.partner_salary : 0,
       children,
       region: inputs.region,
+      // The council picked, as policyengine-uk's LocalAuthority key: the API
+      // estimates Council Tax from its own Band D. Only once picked, so a
+      // request without one (every example's) is as it was, and its key
+      // (and precomputed answer) still matches
+      ...(localAuthority ? { local_authority: localAuthority } : {}),
       claims_universal_credit: Boolean(inputs.claims_universal_credit),
       tenure: inputs.tenure,
       // Left as prefilled (null), the region's average private rent
@@ -295,8 +302,9 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       electricity_spending: inputs.electricity_spending_per_year ?? DEFAULT_SPENDING.electricity,
       salary_sacrifice_pension_contributions: inputs.salary_sacrifice_per_year,
       student_loan_plan: inputs.student_loan_plan,
-      // The API estimates Council Tax from the band and the region's average
-      // Band D (none in Northern Ireland, which has domestic rates)
+      // The API estimates Council Tax from the band and the council's own
+      // Band D, or the region's average until a council is picked (none in
+      // Northern Ireland, which has domestic rates)
       council_tax_band: inputs.council_tax_band,
       // Childcare only counts with children
       monthly_childcare: children.length ? inputs.monthly_childcare : 0,

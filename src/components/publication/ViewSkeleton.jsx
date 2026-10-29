@@ -139,28 +139,68 @@ function CardSkeleton({ kind, wide = false }) {
   );
 }
 
+// A view tab as the bar draws it
+const StaticTab = ({ item, tab }) => (
+  <span className="view-tab" aria-selected={item.value === tab ? "true" : "false"}>
+    <TitleIcon name={TAB_ICONS[item.value]} bare size={18} className="view-tab-icon" />
+    <span className="view-tab-label">{item.label}</span>
+  </span>
+);
+
 // The page's view tab bar as it will be, the linked view chosen: the real
-// one stays hidden until the page's code opens the view
+// one stays hidden until the page's code opens the view.
+// The tabs after the chosen one go in a tail, so a row too narrow for the
+// chosen tab is scrolled as the real one will be (publication.css
+// .skeleton-tab-tail; ViewTabs.jsx, scrollToShow)
 function StaticViewTabs({ tabs, tab }) {
+  const chosen = tabs.findIndex((item) => item.value === tab);
+  // The first tab chosen, or none: the real row never scrolls (scrollToShow
+  // leaves a tab less than 24px from the row's start at 0), so the copy
+  // starts at its left too, however little of it fits
+  const atStart = chosen <= 0;
+  const after = atStart ? [] : tabs.slice(chosen + 1);
   return (
     <div className={`view-tabs-bar boot-view-tabs${SUB_TABS[tab] ? " has-notch" : ""}`} aria-hidden="true">
-      <div className="view-tabs">
-        {tabs.map((item) => (
-          <span key={item.value} className="view-tab" aria-selected={item.value === tab ? "true" : "false"}>
-            <TitleIcon name={TAB_ICONS[item.value]} bare size={18} className="view-tab-icon" />
-            <span className="view-tab-label">{item.label}</span>
-          </span>
+      <div className={`view-tabs${atStart ? " is-at-start" : ""}`}>
+        {tabs.slice(0, tabs.length - after.length).map((item) => (
+          <StaticTab key={item.value} item={item} tab={tab} />
         ))}
+        {after.length > 0 && (
+          <span className="skeleton-tab-tail">
+            {after.map((item) => (
+              <StaticTab key={item.value} item={item} tab={tab} />
+            ))}
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
-function StaticSubTabs({ tab, sub }) {
+// With the copy of the bar above it (`viewTabs`), the row starts under the
+// chosen view tab before any code runs, where the real row's --view-tab-x
+// (ViewTabs.jsx) will put it: an unseen copy of the tabs before the
+// chosen one goes first (publication.css .skeleton-tab-lead), cut
+// short, as a scrolled bar is, to leave the room an unseen copy of the
+// chosen tab needs (.skeleton-tab-ghost)
+function StaticSubTabs({ tab, sub, viewTabs = null }) {
   const tabs = SUB_TABS[tab];
   if (!tabs) return null;
+  const chosen = viewTabs ? viewTabs.findIndex((item) => item.value === tab) : -1;
   return (
-    <div className="sub-tabs-band skeleton-sub-tabs" aria-hidden="true">
+    <div className={`sub-tabs-band skeleton-sub-tabs${chosen >= 0 ? " has-tab-lead" : ""}${chosen === 0 ? " is-at-start" : ""}`} aria-hidden="true">
+      {chosen >= 0 && (
+        <span className="skeleton-tab-lead">
+          {viewTabs.slice(0, chosen).map((item) => (
+            <StaticTab key={item.value} item={item} tab={tab} />
+          ))}
+        </span>
+      )}
+      {chosen >= 0 && (
+        <span className={`skeleton-tab-ghost${chosen === viewTabs.length - 1 ? " is-last" : ""}`}>
+          <StaticTab item={viewTabs[chosen]} tab={tab} />
+        </span>
+      )}
       <div className="sub-tabs">
         {tabs.map((item) => (
           <span key={item.value} className="sub-tab" aria-selected={item.value === sub ? "true" : "false"}>
@@ -184,7 +224,7 @@ export default function ViewSkeleton({ view, subTabs = true, caption = true, vie
   return (
     <div className="skeleton-view" data-view={view}>
       {viewTabs && <StaticViewTabs tabs={viewTabs} tab={tab} />}
-      {subTabs && <StaticSubTabs tab={tab} sub={sub} />}
+      {subTabs && <StaticSubTabs tab={tab} sub={sub} viewTabs={viewTabs} />}
       {caption && (
         <p className="skeleton-caption" role="status" aria-live="polite">
           <span className="skeleton-spinner" aria-hidden="true" />

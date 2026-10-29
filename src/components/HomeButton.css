@@ -1,5 +1,5 @@
 /* PolicyEngine's white mark left of the title (TitleMark), and the
-   overview's rail button (EdgeAboutTab), in HomeButton.jsx */
+   overview's side tab on the window's edge (EdgeAboutTab), in HomeButton.jsx */
 .title-head {
   grid-area: title;
   display: flex;
@@ -58,17 +58,8 @@
   }
 }
 
-/* "About" (EdgeAboutTab), a .view-tab like the rest (globals.css), the
-   row's height, sticky with the bar.
-
-   Where the page's margin has room for it, it sits in the margin, left of
-   the row, and the row is pulled a tab's padding into the margin so
-   the first tab's icon, and the first sub-tab's, line up with the page
-   content's left edge: in full from 1392px wide, as its icon alone (the
-   card names it) from 1268px. Narrower, it comes first in the row, with a
-   divider before the first tab, and the tabs start after it. Either way it
-   is two tab gaps from the first tab, the divider midway, so its tint and
-   the first tab's never touch the divider. */
+/* Anything leading the view tabs row (ViewTabs' `leading`; nothing at
+   present) sits before it */
 .view-tabs-bar.has-leading {
   display: flex;
   align-items: center;
@@ -79,52 +70,74 @@
   min-width: 0;
 }
 
-.view-tabs-bar.has-leading .edge-about {
-  height: var(--view-tabs-height);
-  margin-right: calc(2 * var(--tab-gap, 8px));
-}
-
-.view-tabs-bar.has-leading .edge-about::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  right: calc(-1 * var(--tab-gap, 8px) - 0.5px);
-  width: 1px;
-  height: 22px;
-  background: var(--c-grid);
+/* "About" (EdgeAboutTab): a side tab on the window's left edge, the edge
+   the overview drawer slides out from. The title band's teal with its
+   white ink, square on the window's edge and rounded on the other, the
+   panel icon over the label written upwards. It sits halfway down the
+   space under the sticky bars, above the page's content and below the
+   bars, their menus and dialogs, and slides out a little on hover. */
+.edge-about {
+  position: fixed;
+  left: 0;
+  top: calc(var(--sticky-offset) + (100dvh - var(--sticky-offset)) / 2);
+  z-index: 1080;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px 14px 7px;
+  font-family: var(--pe-font-family);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--band-ink);
+  background: var(--band-teal);
+  border: 0;
+  border-radius: 0 var(--pe-radius-md) var(--pe-radius-md) 0;
+  box-shadow: 0 2px 8px var(--shadow-strong);
+  cursor: pointer;
   transform: translateY(-50%);
+  transition:
+    background-color var(--motion-fast) ease,
+    padding-left var(--motion-fast) ease;
 }
 
-@media (min-width: 1268px) {
-  .view-tabs-bar.has-leading > .view-tabs {
-    margin-left: calc(-1 * var(--tab-pad-x, 12px));
-  }
-
-  /* In the margin: its right edge two tab gaps short of the row's start */
-  .view-tabs-bar.has-leading .edge-about {
-    position: absolute;
-    top: 0;
-    right: calc(100% - max(40px, calc((100vw - 1120px) / 2)) + var(--tab-pad-x, 12px) + 2 * var(--tab-gap, 8px));
-    margin-right: 0;
-  }
-
-  .view-tabs-bar.has-leading .edge-about .view-tab-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
+.edge-about:hover {
+  padding-left: 10px;
+  background: var(--pe-teal-700);
 }
 
-@media (min-width: 1392px) {
-  .view-tabs-bar.has-leading .edge-about .view-tab-label {
-    position: static;
-    width: auto;
-    height: auto;
-    overflow: visible;
-    clip-path: none;
+.edge-about:focus-visible {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 2px;
+}
+
+.edge-about-icon {
+  flex: none;
+}
+
+/* Read from the bottom up, as a tab on a left edge is */
+.edge-about-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+/* A phone: a slimmer tab, so it covers less of the page's margin */
+@media (max-width: 768px) {
+  .edge-about {
+    gap: 6px;
+    padding: 10px 5px 12px 4px;
+    font-size: 0.75rem;
+  }
+
+  .edge-about:hover {
+    padding-left: 4px;
+  }
+
+  .edge-about-icon {
+    width: 14px;
+    height: 14px;
   }
 }
 
@@ -134,7 +147,7 @@
   visibility: hidden;
 }
 
-/* Once a session: two soft pulses of tint, so it is seen */
+/* Once a session: two soft pulses of a ring, so it is seen */
 .edge-about.is-cue {
   animation: edge-about-cue 1.4s ease-in-out 0.8s 2;
 }
@@ -142,14 +155,18 @@
 @keyframes edge-about-cue {
   0%,
   100% {
-    background: transparent;
+    box-shadow: 0 2px 8px var(--shadow-strong), 0 0 0 0 var(--focus-ring);
   }
   50% {
-    background: var(--pe-teal-50);
+    box-shadow: 0 2px 8px var(--shadow-strong), 0 0 0 8px var(--focus-ring);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .edge-about {
+    transition: none;
+  }
+
   .edge-about.is-cue {
     animation: none;
   }
