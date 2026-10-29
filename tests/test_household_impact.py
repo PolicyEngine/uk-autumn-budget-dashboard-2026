@@ -1505,6 +1505,200 @@ def test_council_tax_is_estimated_from_the_band_and_region():
     ) == pytest.approx(nw * factor, abs=0.01)
 
 
+def _policyengine_uk_council_tax(local_authority, region, band, year):
+    """policyengine-uk's own gross Council Tax for one household:
+    ``simulated_council_tax``, the council's Band D
+    (``council_tax_band_d_amount``) times the band's statutory ratio."""
+    sim = Simulation(
+        situation={
+            "people": {"head": {"age": {str(year): 40}}},
+            "households": {
+                "household": {
+                    "members": ["head"],
+                    "local_authority": {str(year): local_authority},
+                    "region": {str(year): region},
+                    "council_tax_band": {str(year): band},
+                }
+            },
+        }
+    )
+    return float(sim.calculate("simulated_council_tax", year)[0])
+
+
+# The same band in three councils, in three nations' regions, plus an upper
+# Scottish band and a Welsh band I, so each band ratio table is read
+COUNCILS = [
+    ("GLASGOW_CITY", "SCOTLAND", "D"),
+    ("MANCHESTER", "NORTH_WEST", "D"),
+    ("WESTMINSTER", "LONDON", "D"),
+    ("GLASGOW_CITY", "SCOTLAND", "F"),
+    ("CARDIFF", "WALES", "I"),
+]
+
+
+@pytest.mark.parametrize("local_authority, region, band", COUNCILS)
+def test_council_tax_is_estimated_from_the_councils_own_band_d(
+    local_authority, region, band
+):
+    """With a local authority, 2026-27's Council Tax is policyengine-uk's
+    own for that council and band, and later years grow it with the same
+    OBR series as a region's average."""
+    own = household_impact.estimated_council_tax(
+        region, band, 2026, local_authority
+    )
+    assert own == pytest.approx(
+        _policyengine_uk_council_tax(local_authority, region, band, 2026),
+        abs=0.01,
+    )
+    assert household_impact.estimated_council_tax(
+        region, band, 2029, local_authority
+    ) == pytest.approx(
+        own * household_impact.council_tax_growth(region, 2029), abs=0.01
+    )
+    _, _, household = household_impact.household_entities(
+        Answers(
+            region=region,
+            local_authority=local_authority,
+            council_tax_band=band,
+        )
+    )
+    assert household["local_authority"] == local_authority
+    assert household["council_tax"] == (
+        household_impact.estimated_council_tax(
+            region, band, YEAR, local_authority
+        )
+    )
+
+
+def test_the_same_band_costs_different_amounts_in_different_councils():
+    """Band D in Glasgow, Manchester and Westminster: each council's own
+    figure, none of them its region's average."""
+    by_council = {
+        local_authority: household_impact.estimated_council_tax(
+            region, "D", 2026, local_authority
+        )
+        for local_authority, region, band in COUNCILS
+        if band == "D"
+    }
+    assert by_council == {
+        "GLASGOW_CITY": pytest.approx(1_706.00, abs=0.01),
+        "MANCHESTER": pytest.approx(2_312.04, abs=0.01),
+        "WESTMINSTER": pytest.approx(1_049.55, abs=0.01),
+    }
+    for local_authority, region, band in COUNCILS:
+        if band == "D":
+            assert by_council[local_authority] != pytest.approx(
+                household_impact.COUNCIL_TAX_BAND_D[region], abs=1
+            )
+
+
+def test_a_council_without_a_band_d_keeps_the_regions_average():
+    """policyengine-uk has no Band D for Northern Ireland's districts
+    (domestic rates: none estimated) or for English districts abolished in
+    2023 (the region's average, not zero)."""
+    assert household_impact.council_band_d("BELFAST") is None
+    assert (
+        household_impact.estimated_council_tax(
+            "NORTHERN_IRELAND", "D", YEAR, "BELFAST"
+        )
+        == 0
+    )
+    assert household_impact.council_band_d("ALLERDALE") is None
+    assert household_impact.estimated_council_tax(
+        "NORTH_WEST", "D", YEAR, "ALLERDALE"
+    ) == household_impact.estimated_council_tax("NORTH_WEST", "D", YEAR)
+
+
+@pytest.mark.parametrize("region", household_impact.REGIONS)
+def test_without_a_local_authority_council_tax_is_the_regions_as_before(
+    region,
+):
+    """No local authority: the region's average Band D, as before councils
+    were read, even though the household is placed in the region's default
+    local authority."""
+    _, _, household = household_impact.household_entities(
+        Answers(region=region)
+    )
+    assert household["council_tax"] == (
+        household_impact.estimated_council_tax(region, "D", YEAR)
+    )
+    band_d = household_impact.COUNCIL_TAX_BAND_D.get(region)
+    assert household["council_tax"] == (
+        0.0
+        if band_d is None
+        else round(
+            band_d * household_impact.council_tax_growth(region, YEAR), 2
+        )
+    )
+    assert household["local_authority"] == (
+        household_impact.DEFAULT_LOCAL_AUTHORITY[region]
+    )
+
+
+@pytest.mark.parametrize(
+    "values, says",
+    [
+        (
+            {"region": "SCOTLAND", "local_authority": "GLASGOW_CITY"},
+            "local authority's own Band D",
+        ),
+        ({"region": "SCOTLAND"}, "region's average Band D"),
+        ({"region": "NORTHERN_IRELAND"}, "No Council Tax in Northern Ireland"),
+        ({"region": "SCOTLAND", "council_tax": 1_500}, "As entered."),
+    ],
+)
+def test_the_council_tax_row_note_follows_its_basis(values, says):
+    """The breakdown's Council Tax note names what the estimate starts
+    from, as council_tax_used does: a council's own Band D when one is
+    given, never the region's average then."""
+    note = household_impact.council_tax_row_note(Answers(**values))
+    assert says in note
+
+
+def test_a_councils_council_tax_is_taken_off_net_income():
+    """Glasgow against Scotland's average: the council's own Council Tax
+    is the one counted, and the answer says where it came from."""
+    measures = ["threshold_freeze_2031_32"]
+    glasgow = calculate(
+        Answers(region="SCOTLAND", local_authority="GLASGOW_CITY"), measures
+    )
+    average = calculate(Answers(region="SCOTLAND"), measures)
+    own = household_impact.estimated_council_tax(
+        "SCOTLAND", "D", YEAR, "GLASGOW_CITY"
+    )
+    assert _programme(glasgow, "council_tax")["baseline"] == pytest.approx(own)
+    assert glasgow["council_tax_used"]["council_tax"] == pytest.approx(own)
+    assert glasgow["council_tax_used"]["source"] == "estimated"
+    assert "local authority's own Band D" in (
+        glasgow["council_tax_used"]["note"]
+    )
+    assert "region's average Band D" in average["council_tax_used"]["note"]
+    # The breakdown's Council Tax row says the same
+    assert "local authority's own Band D" in (
+        _programme(glasgow, "council_tax")["note"]
+    )
+    assert "region's average Band D" not in (
+        _programme(glasgow, "council_tax")["note"]
+    )
+    assert "region's average Band D" in (
+        _programme(average, "council_tax")["note"]
+    )
+    assert glasgow["area"]["local_authority"] == "GLASGOW_CITY"
+    assert glasgow["area"]["local_authority_source"] == "entered"
+    # The rental area is not derived from the council: policyengine-uk
+    # places it from the region
+    assert glasgow["area"]["brma"] == average["area"]["brma"]
+    assert glasgow["area"]["brma_source"] == "region default"
+    assert glasgow["net_income"]["baseline"] == pytest.approx(
+        average["net_income"]["baseline"]
+        - (
+            own - household_impact.estimated_council_tax("SCOTLAND", "D", YEAR)
+        ),
+        abs=0.01,
+    )
+    _rows_add_up(glasgow)
+
+
 def test_the_estimated_council_tax_is_taken_off_net_income():
     estimated = calculate(
         Answers(region="NORTH_WEST"), ["threshold_freeze_2031_32"]

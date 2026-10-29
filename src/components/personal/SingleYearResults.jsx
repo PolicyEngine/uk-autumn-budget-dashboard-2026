@@ -23,6 +23,7 @@ import MarginalRateChart from "./MarginalRateChart";
 import "./SingleYear.css";
 import { scrollBelowBars } from "../../utils/pageScroll";
 import { policyDetailsFor } from "../../utils/policyDetails";
+import { resultPolicies } from "../../utils/calculatorOnlyMeasures";
 
 /** True once `active` has held for `delay` ms (no flash of a loading line). */
 function useDelayed(active, delay = 300) {
@@ -304,8 +305,7 @@ const shortReason = (text) => {
 function AboutResult({ items, caution, bars, totals }) {
   const noEffect = bars?.noEffectItems ?? [];
   // Employer costs are said with their chip under "No effect on you"
-  // A calculator-only measure's note is under the waterfall, beside its bar
-  const notes = (bars?.notes ?? []).filter((note) => note.kind !== "employer_cost" && note.kind !== "calculator_only");
+  const notes = (bars?.notes ?? []).filter((note) => note.kind !== "employer_cost");
   const under = bars?.underAPound ?? [];
   // The waterfall's bars start above £0 (its axis tick shows where): why
   const scaleStart = totals ? waterfallScaleStart(totals, bars ? bars.rows : null) : 0;
@@ -484,7 +484,7 @@ export function AcrossEarnings({ sweep, salary, yearLabel }) {
  * based on, each note behind an "i". The figure is one element, so it
  * reads (and copies) once.
  */
-function ResultCard({ totals, yearLabel, policyCount, items, caution = false, bars = null, splitFailed = false, requestHousehold = null, year, selected = [], catalogue = [] }) {
+function ResultCard({ totals, yearLabel, requestPolicies = [], items, caution = false, bars = null, splitFailed = false, requestHousehold = null, year, selected = [], catalogue = [] }) {
   const shown = Math.round(useCountUp(totals.change, { fromZero: true }));
   const counting = shown !== totals.change;
   return (
@@ -503,7 +503,7 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
           <>
             {`In ${yearLabel}, with `}
             <a className="result-policies-link" href="#change-by-policy" onClick={(event) => scrollToSection(event, "change-by-policy")}>
-              {policyCount} {policyCount === 1 ? "policy" : "policies"}
+              {resultPolicies(requestPolicies).text}
             </a>
           </>
         }
@@ -523,16 +523,6 @@ function ResultCard({ totals, yearLabel, policyCount, items, caution = false, ba
           // showed (chart and table audit, 28 October)
           typeOf={(id) => policyDetailsFor(catalogue.find((policy) => policy.id === id))?.type ?? null}
         />
-        {/* A calculator-only measure (the savings rise): why it is in this
-            household's result but not the national ones, one line under
-            its bar */}
-        {(bars?.notes ?? [])
-          .filter((note) => note.kind === "calculator_only")
-          .map((note) => (
-            <p key={note.id} className="single-year-quiet result-card-calculator-only" data-note={note.kind}>
-              <strong>{note.name}</strong>: {note.text}
-            </p>
-          ))}
       </div>
       <AboutResult items={items} caution={caution} bars={bars} totals={totals} />
     </section>
@@ -555,7 +545,7 @@ export function SingleYearHeadline({
   spending = null,
   submitted = true,
   changed = false,
-  policyCount = 0,
+  requestPolicies = [],
   startedAt = null,
   salarySource = null,
   spendingSource = null,
@@ -613,7 +603,7 @@ export function SingleYearHeadline({
           <ResultCard
             totals={totals}
             yearLabel={yearLabel}
-            policyCount={policyCount}
+            requestPolicies={requestPolicies}
             items={assumptionItems(data, yearLabel, { renting, policies, spending, salarySource, spendingSource })}
             caution={Boolean(spending?.assumed) && mostlyFromSpending(data.byPolicy, totals.change)}
             requestHousehold={requestHousehold}

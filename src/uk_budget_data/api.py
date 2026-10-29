@@ -7,6 +7,7 @@ policies affect individual households.
 import copy
 import functools
 import json
+import math
 import os
 import time
 from contextlib import asynccontextmanager
@@ -15,9 +16,11 @@ from typing import Literal, Optional
 
 import anyio
 import numpy as np
-from fastapi import FastAPI, HTTPException, Query, Response
+from fastapi import FastAPI, HTTPException, Query, Request, Response
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from uk_budget_data import definitions, household_impact
@@ -54,6 +57,30 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def _json_safe(value):
+    """``value`` with every NaN or infinity written as text, so it can be
+    sent as JSON."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return str(value)
+    if isinstance(value, dict):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    return value
+
+
+@app.exception_handler(RequestValidationError)
+async def refused_request(request: Request, exc: RequestValidationError):
+    """FastAPI's 422, naming the field, with the refused input echoed as
+    JSON can carry it: a body with NaN or Infinity (which Python's JSON
+    reader accepts) is refused, but FastAPI's own handler cannot write the
+    input back, so the answer was a 500."""
+    return JSONResponse(
+        status_code=422,
+        content={"detail": _json_safe(jsonable_encoder(exc.errors()))},
+    )
 
 
 class APIHouseholdInput(BaseModel):
@@ -348,11 +375,15 @@ class HouseholdAnswersRequest(BaseModel):
         Field(
             default=None,
             description=(
-                "Local authority. policyengine-uk reads it only for the few "
-                "Council Tax Reduction schemes it models, so it matters only "
-                "with council_tax entered; it does not choose the BRMA. Left "
-                "out: a local authority in the region's default BRMA (none "
-                "with a modelled working-age scheme)."
+                "Local authority (policyengine-uk's LocalAuthority name). "
+                "With council_tax left out, Council Tax is estimated from "
+                "the band and this council's own Band D (policyengine-uk), "
+                "not the region's average. policyengine-uk also reads it for "
+                "the few Council Tax Reduction schemes it models. It does "
+                "not choose the BRMA (policyengine-uk places that from the "
+                "region). Left out: Council Tax from the region's average "
+                "Band D, and a local authority in the region's default BRMA "
+                "(none with a modelled working-age scheme)."
             ),
         )
     )
@@ -362,8 +393,9 @@ class HouseholdAnswersRequest(BaseModel):
         le=100_000,
         description=(
             "Council Tax a year, as billed. Left out: estimated from "
-            "council_tax_band and the region's average Band D for 2026-27, "
-            "grown to the year (none in Northern Ireland)."
+            "council_tax_band and local_authority's own Band D for 2026-27 "
+            "(the region's average without one), grown to the year (none "
+            "in Northern Ireland)."
         ),
     )
     council_tax_band: Literal[household_impact.COUNCIL_TAX_BANDS] = "D"

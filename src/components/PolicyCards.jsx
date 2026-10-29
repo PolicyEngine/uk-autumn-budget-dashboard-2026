@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { isValidElement, useState } from "react";
 import { ArrowRightLeft, CalendarCheck, CalendarX, ChartColumn, CircleSlash, ExternalLink, Flag, FlaskConical, Lightbulb, Users } from "lucide-react";
 import "./MeasureRowLabel.css";
 import "./PolicyCards.css";
@@ -7,9 +7,11 @@ import { withPolicyDetails } from "../utils/policyDetails";
 import { policyCardAnchor } from "../utils/methodLink";
 import { parameterTableFor } from "../utils/policyParameters";
 import PolicyChange, { changeView, usePolicyParameters } from "./PolicyChange";
+import { policyVisual } from "./policies/PolicyVisual";
 import Disclosure from "./Disclosure";
 import InfoSections, { hasInfo, infoPreview } from "./InfoSections";
 import { TABLE_6_1_URL } from "../utils/unmodelledMeasures";
+import { explainerFor } from "../utils/explainers";
 import { MODELLING_LIMITS, measureModellingFacts, sentences } from "../utils/measureModelling";
 
 /**
@@ -272,8 +274,7 @@ function PolicyTimeline({ policy, highlight }) {
  * One measure's card: the head (type on one line, then the name), the summary, what changes (the model's parameters,
  * current law beside the measure), when it is in force (Starts and Ends,
  * then the timeline), and the footer ("How it is modelled", then the
- * source, the costing, PolicyEngine's explainer post where its details
- * name one, and "See its effect").
+ * source and "See its effect").
  *
  * A measure without card details (no entry in policyDetails.js, or one
  * written for another description, as when a run publishes a changed
@@ -296,6 +297,7 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
       }
     : published;
   const temporary = Boolean(policy.inForce?.to);
+  const explainer = policy.id ? explainerFor(policy.id) : null;
   // Derived from the publication for any measure (utils/measureCategory.js),
   // in the same tinted tile as every per-measure row
   const category = measureCategoryOf(policy);
@@ -308,6 +310,13 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
   // instead: policies/UnmodelledMeasures.jsx)
   const bare = !policy.summary && !policy.notModelled;
   const showModelling = hasInfo(modelling);
+  // The measure's own visual (policies/PolicyVisual.jsx), from the file's
+  // entry as published: in What changes, or as its example's body
+  // A not-modelled card brings its own drawn visual (policies/UnmodelledVisual.jsx)
+  const drawn = isValidElement(policy.visual) ? policy.visual : null;
+  const figure = bare || drawn ? null : policyVisual(policy, given ?? null);
+  const place = figure ? policy.visual.place : null;
+  const example = place === "change" && policy.visual.replacesExample ? null : policy.example;
   return (
     <li
       id={policy.anchorId ?? (policy.id ? policyCardAnchor(policy.id) : undefined)}
@@ -376,15 +385,18 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
       </div>
       )}
 
-      {(parameters || policy.example || policy.changesText) && (
+      {(parameters || drawn || example || policy.changesText) && (
         <div className="policy-card-spec">
-          {parameters ? (
+          {/* A card's own picture of what changes, where it brings one
+              (the Budget policies we do not model) */}
+          {drawn ?? (parameters ? (
             <PolicyChange
               name={policy.label ?? policy.name}
               entry={parameters}
               direction={policy.direction}
               onHighlight={setHighlight}
               lead={policy.changesText}
+              figure={place === "change" ? figure : null}
             />
           ) : (
             policy.changesText && (
@@ -398,23 +410,30 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
                 <p className="pchg-lead">{policy.changesText}</p>
               </section>
             )
-          )}
-          {policy.example && (
-            <section className="policy-card-example" aria-label={`${policy.example.title}: ${policy.label ?? policy.name}`}>
+          ))}
+          {example && (
+            <section className="policy-card-example" aria-label={`${example.title}: ${policy.label ?? policy.name}`}>
               <p className="policy-card-example-title">
                 <Lightbulb size={14} aria-hidden="true" />
-                {policy.example.title}
+                {example.title}
               </p>
-              <p className="policy-card-example-text">{policy.example.text}</p>
-              {policy.example.items?.length > 0 && (
-                <ul className="policy-card-example-items">
-                  {policy.example.items.map((item) => <li key={item}>{item}</li>)}
-                </ul>
+              {/* The visual draws the example's figures, in their place */}
+              {place === "example" ? (
+                figure
+              ) : (
+                <>
+                  <p className="policy-card-example-text">{example.text}</p>
+                  {example.items?.length > 0 && (
+                    <ul className="policy-card-example-items">
+                      {example.items.map((item) => <li key={item}>{item}</li>)}
+                    </ul>
+                  )}
+                </>
               )}
-              {policy.example.source && (
+              {example.source && (
                 <p className="policy-card-example-source">
-                  <a href={policy.example.source.href} target="_blank" rel="noopener noreferrer">
-                    {policy.example.source.label}
+                  <a href={example.source.href} target="_blank" rel="noopener noreferrer">
+                    {example.source.label}
                     <span className="policy-sr-only"> (opens in a new tab)</span>
                   </a>
                 </p>
@@ -468,7 +487,7 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
             ))}
           </p>
         )}
-        {(policy.source || policy.budgetRows?.length > 0 || policy.explainer || onShowEffect) && (
+        {(policy.source || policy.budgetRows?.length > 0 || explainer || onShowEffect) && (
         <div className="policy-card-actions">
           {policy.source && (
             <Tip content={policy.source.label}>
@@ -500,20 +519,16 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
             </a>
             </Tip>
           )}
-          {/* PolicyEngine's post on the measure, a page of policyengine.org:
-              a link rather than embedded, which reads better on a phone.
-              "Our explainer", as a card's source can be another explainer
-              (gov.uk's, on the Pension Tax Allowance's) */}
-          {policy.explainer && (
-            <Tip content={policy.explainer.label}>
+          {explainer && (
+            <Tip content={`Our policy brief: ${explainer.title}`}>
             <a
               className="policy-card-explainer"
-              href={policy.explainer.href}
+              href={explainer.href}
               target="_blank"
               rel="noopener noreferrer"
             >
-              Our explainer
-              <span className="policy-sr-only">: {policy.explainer.label}</span>
+              Read policy brief
+              <span className="policy-sr-only">: {explainer.title}</span>
               <ExternalLink size={14} aria-hidden="true" />
               <span className="policy-sr-only"> (opens in a new tab)</span>
             </a>

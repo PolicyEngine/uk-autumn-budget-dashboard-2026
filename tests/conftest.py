@@ -56,6 +56,23 @@ def is_xdist_worker(config) -> bool:
     return hasattr(config, "workerinput")
 
 
+@pytest.fixture
+def sign_off_required(monkeypatch):
+    """Sign-off on (uk_budget_data.sign_off), for the tests of review rows
+    and attestations: the committed switch is off."""
+    from uk_budget_data import sign_off
+
+    monkeypatch.setattr(sign_off, "REQUIRED", True)
+
+
+@pytest.fixture
+def sign_off_not_required(monkeypatch):
+    """Sign-off off, whatever the committed switch says."""
+    from uk_budget_data import sign_off
+
+    monkeypatch.setattr(sign_off, "REQUIRED", False)
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--ci-shard",

@@ -44,8 +44,7 @@
   text-underline-offset: 3px;
 }
 
-/* The Budget's costing row and the explainer post, beside the source and
-   styled as it is */
+/* The Budget's costing row and our explainer, beside the source and styled as it is */
 .policy-card-actions .policy-card-costing,
 .policy-card-actions .policy-card-explainer {
   display: inline-flex;
@@ -65,19 +64,16 @@
   text-decoration-color: currentColor;
 }
 
-/* Source and Costing side by side on the left, the effect button right */
-.policy-card-actions .policy-card-effect {
-  margin-left: auto;
+/* Source, Costing and our explainer side by side on the left, the effect
+   button right; in a narrow card the button wraps to its own line, whole */
+.policy-card-actions {
+  flex-wrap: wrap;
+  row-gap: 4px;
 }
 
-/* With an explainer too, a narrow card wraps the effect button onto its
-   own line, still at the right, rather than overflowing; the links stay
-   together on the left rather than spread across the line */
-.policy-card-actions:has(.policy-card-explainer) {
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  column-gap: 12px;
-  row-gap: 0;
+.policy-card-actions .policy-card-effect {
+  margin-left: auto;
+  white-space: nowrap;
 }
 
 /* A lead line's points: real bullets, indented, tight */
@@ -143,20 +139,6 @@
 
 .policy-card-example-items li::marker {
   color: var(--pe-gray-400);
-}
-
-/* The change beside the new value, so both tiles keep one height */
-.pchg-tile-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  column-gap: 8px;
-  row-gap: 2px;
-}
-
-/* Several before-and-after pairs: a little air between them */
-.pchg-ba + .pchg-ba {
-  margin-top: 4px;
 }
 
 /* A card's footer disclosure (About this result, Treasury costing): the

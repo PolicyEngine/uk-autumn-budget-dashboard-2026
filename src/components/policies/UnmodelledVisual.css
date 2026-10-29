@@ -1,0 +1,545 @@
+/* "What changes" on the cards in "Budget policies we do not model"
+   (UnmodelledVisual.jsx): one small picture a card, every one the same
+   height on a wide screen so the two cards in a row stay level. Colours
+   are tokens only: grey (--c-before) for what stays as it was, teal
+   (--c-gain) for a gain, amber (--c-loss) for paying more. No motion. */
+.umv-section {
+  margin-bottom: 16px;
+}
+
+.umv {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 136px;
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--pe-gray-50);
+  border-radius: 10px;
+  font-size: var(--fs-micro);
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text);
+}
+
+.umv > :last-child {
+  flex: 1;
+  min-height: 0;
+}
+
+.umv-caption {
+  text-align: left;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+.umv-label {
+  color: var(--pe-gray-600);
+  line-height: 1.3;
+}
+
+/* Tones, for fills (background), lines (stroke) and text (color) */
+.umv .is-before { --umv-tone: var(--c-before); --umv-ink: var(--pe-gray-600); }
+.umv .is-gain { --umv-tone: var(--c-gain); --umv-ink: var(--c-gain-text); }
+.umv .is-loss { --umv-tone: var(--c-loss); --umv-ink: var(--c-loss-text); }
+.umv .is-deep { --umv-tone: var(--pe-teal-800); --umv-ink: var(--pe-teal-800); }
+.umv .is-ink { --umv-tone: var(--pe-gray-800); --umv-ink: var(--pe-gray-800); }
+.umv .is-whole { --umv-tone: var(--pe-gray-200); --umv-ink: var(--pe-gray-600); }
+
+.umv-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin: 0 5px 0 0;
+  vertical-align: -1px;
+  background: var(--umv-tone);
+  border-radius: 2px;
+}
+
+.umv-swatch.is-line {
+  height: 0;
+  border-top: 2px solid var(--umv-tone);
+  background: none;
+  vertical-align: 3px;
+}
+
+.umv-swatch.is-before.is-line {
+  border-top-style: dashed;
+}
+
+
+.umv-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+  margin: 0;
+  color: var(--pe-gray-600);
+}
+
+.umv-key-item {
+  white-space: nowrap;
+}
+
+/* Bars: label, track, value; the track from zero */
+.umv-bars,
+.umv-bands {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 7px;
+}
+
+.umv-bar-row {
+  display: grid;
+  grid-template-columns: minmax(7.5em, 30%) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.umv-bar-row.is-bill,
+.umv-bar-row.is-bands {
+  grid-template-columns: minmax(7.5em, 30%) minmax(0, 1fr);
+}
+
+.umv-track {
+  position: relative;
+  height: 14px;
+}
+
+.umv-track.is-whole {
+  height: 18px;
+  background: var(--pe-gray-200);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.umv-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--umv-tone);
+}
+
+.umv-fill:first-child {
+  border-radius: 3px 0 0 3px;
+}
+
+.umv-fill:last-of-type:not(:first-child) {
+  border-radius: 0 3px 3px 0;
+}
+
+.umv-fill:only-of-type {
+  border-radius: 3px;
+}
+
+.umv-fill.is-dashed {
+  background: repeating-linear-gradient(135deg, var(--umv-tone) 0 4px, transparent 4px 7px);
+  outline: 1px solid var(--umv-tone);
+  outline-offset: -1px;
+}
+
+/* What a planned change would have taken away, outlined, never filled */
+.umv-ghost {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--c-loss-text);
+  border: 1.5px dashed var(--c-loss);
+  border-radius: 3px;
+}
+
+.umv-ghost-text {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--c-loss-text);
+}
+
+.umv-value {
+  text-align: right;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--umv-ink);
+}
+
+.umv-in-bar {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  color: var(--pe-gray-700);
+}
+
+/* Columns from one baseline */
+.umv-columns {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+}
+
+.umv-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 9.5em;
+  min-height: 0;
+}
+
+.umv-column-area {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+  min-height: 0;
+  border-bottom: 1px solid var(--c-axis, var(--pe-gray-300));
+}
+
+.umv-column-bar {
+  width: 52px;
+  background: var(--umv-tone);
+  border-radius: 4px 4px 0 0;
+}
+
+.umv-column-value {
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--umv-ink);
+}
+
+.umv-column .umv-label {
+  text-align: center;
+}
+
+/* Highest of: the rules, an arrow, the result */
+.umv-highest {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.umv-inputs {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.umv-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  padding: 2px 8px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--pe-gray-800);
+  background: var(--c-surface);
+  border: 1px solid var(--pe-gray-200);
+  border-left: 3px solid var(--c-before);
+  border-radius: 4px;
+}
+
+.umv-input.is-loss {
+  border-left-color: var(--c-loss);
+}
+
+.umv-was {
+  font-weight: 400;
+  color: var(--pe-gray-500);
+  text-decoration: line-through;
+}
+
+.umv-arrow {
+  display: flex;
+  color: var(--pe-gray-400);
+}
+
+.umv-result {
+  flex: 0 0 7.5em;
+  margin: 0;
+  padding: 8px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--c-gain-text);
+  border: 1.5px solid var(--c-gain);
+  border-radius: 6px;
+}
+
+/* Who pays whom */
+.umv-flow {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+
+.umv-lane {
+  display: grid;
+  grid-template-columns: minmax(7.5em, 30%) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.umv-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.umv-step-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.umv-step {
+  padding: 3px 8px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--umv-ink);
+  background: var(--c-surface);
+  border: 1px solid var(--umv-tone);
+  border-radius: 999px;
+}
+
+.umv-flow-arrow {
+  flex: none;
+  color: var(--umv-tone);
+}
+
+/* One price in parts */
+.umv-stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+
+.umv-stack-bar {
+  display: flex;
+  height: 22px;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.umv-stack-bar.is-tall {
+  height: 40px;
+}
+
+.umv-part {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--umv-tone);
+}
+
+.umv-part.is-before {
+  background: var(--pe-gray-200);
+  color: var(--pe-gray-700);
+}
+
+.umv-part.is-gain {
+  color: var(--c-surface);
+}
+
+.umv-part + .umv-part {
+  border-left: 2px solid var(--pe-gray-50);
+}
+
+.umv-parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--pe-gray-700);
+}
+
+.umv-parts .umv-swatch.is-before {
+  background: var(--pe-gray-200);
+}
+
+/* Bands along one axis */
+.umv-band-track {
+  display: flex;
+  height: 20px;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.umv-band {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--umv-ink);
+  background: color-mix(in srgb, var(--umv-tone) 22%, transparent);
+  border-top: 2px solid var(--umv-tone);
+}
+
+.umv-band + .umv-band {
+  border-left: 2px solid var(--pe-gray-50);
+}
+
+.umv-ticks {
+  position: relative;
+  height: 1.3em;
+  color: var(--pe-gray-600);
+}
+
+.umv-ticks > span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.umv-ticks > span:last-child {
+  transform: translateX(-100%);
+}
+
+/* Weeks after a birth */
+.umv-weeks {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.umv-birth {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 8px;
+  color: var(--pe-gray-600);
+}
+
+.umv-week {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 10px;
+  color: var(--c-gain-text);
+  background: color-mix(in srgb, var(--c-gain) 14%, transparent);
+  border-top: 3px solid var(--c-gain);
+  border-radius: 4px;
+}
+
+.umv-week strong {
+  font-size: var(--fs-small);
+}
+
+.umv-week-name {
+  color: var(--pe-gray-600);
+}
+
+/* Lines, in SVG at the card's width */
+.umv-plot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.umv-plot svg {
+  display: block;
+  overflow: visible;
+}
+
+.umv-axis {
+  stroke: var(--c-axis, var(--pe-gray-300));
+}
+
+.umv-grid {
+  stroke: var(--c-grid);
+  stroke-dasharray: 2 3;
+}
+
+.umv-line {
+  fill: none;
+  stroke: var(--umv-tone);
+  stroke-width: 2.5;
+}
+
+.umv-line.is-before {
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+}
+
+.umv-area {
+  fill: color-mix(in srgb, var(--umv-tone) 18%, transparent);
+  stroke: none;
+}
+
+.umv-svg-value {
+  font-size: 11.5px;
+  font-weight: 600;
+  fill: var(--pe-gray-600);
+}
+
+.umv-svg-value.is-gain { fill: var(--c-gain-text); }
+.umv-svg-value.is-loss { fill: var(--c-loss-text); }
+
+.umv-svg-tick {
+  font-size: 11px;
+  fill: var(--c-tick);
+}
+
+/* The gas plot has its key under it, and no card beside it */
+.umv.is-kind-standing {
+  height: auto;
+}
+
+/* On a phone the cards are one to a row: each picture as tall as it needs */
+@media (max-width: 768px) {
+  .umv {
+    height: auto;
+    min-height: 120px;
+  }
+
+  .umv-bar-row,
+  .umv-lane {
+    grid-template-columns: 6.5em minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .umv-bar-row.is-bill,
+  .umv-bar-row.is-bands,
+  .umv-lane {
+    grid-template-columns: 6.5em minmax(0, 1fr);
+  }
+
+  .umv-highest {
+    flex-wrap: wrap;
+  }
+
+  .umv-result {
+    flex: 1 1 100%;
+  }
+
+  .umv-highest .umv-arrow {
+    display: none;
+  }
+}

@@ -1,21 +1,33 @@
 #!/usr/bin/env node
 // Fail the build if a file under public/ may not be published.
 //
-// Every file a deploy would serve must be listed in
+// While sign-off is on (uk_budget_data/sign_off.py, carried by the page's
+// contract), every file a deploy would serve must be listed in
 // data_inputs/public_data_review.csv with the sha256 of the bytes a person
 // reviewed, tables from the disclosure layer included; a pending entry
 // passes only until its expiry date. A file reviewed as a disclosure table
 // must carry the layer's public columns, and a CSV that carries them must be
-// reviewed as one. No public file may carry record-level identifiers, and no
-// artifact whose receipt records cells under the floor of survey households
-// left in its tables (a whole-measure-thin run written with a warning;
-// the gate never stages it). The
-// page's area routing status takes no review entry, and must be one of the
-// few texts uk_budget_data.area_routing writes.
+// reviewed as one. Sign-off is off from Budget day (28 October 2026). The
+// review list is then read only for the area-code guard's exemption, as in
+// scripts/check_public_data.py: a file may carry more than 20 constituency,
+// local-authority or small-area codes only as reference geography whose
+// exact bytes a reference_geography row (or a pending row, until its expiry
+// date) names, or as a disclosure-layer table the release index binds. The
+// build can't run the layer's validate_public, so that binding, to what the
+// area run wrote and validated, stands in for it. A CSV with the layer's
+// columns may carry no column the layer does not publish, and a file under
+// public/data/artifacts/ must be one the page lists: a listed manifest
+// entry's receipt, or a file that receipt binds. Either way, no public file may carry
+// record-level identifiers, and no artifact whose receipt records cells
+// under the floor of survey households left in its tables (a
+// whole-measure-thin run written with a warning; the gate never stages it).
+// The page's area routing status takes no review entry, and must be one of
+// the few texts uk_budget_data.area_routing writes; the area run's
+// provenance must keep to its closed schema.
 //
 // scripts/check_public_data.py runs the full check in CI, including the
 // layer's validate_public. This smaller check runs in the build, so a deploy
-// that skips CI cannot ship an unreviewed file. It walks the files on disk,
+// that skips CI cannot ship a file it refuses. It walks the files on disk,
 // which is what a deploy serves, and prints paths and rule names only.
 
 import { createHash } from "node:crypto";
@@ -27,6 +39,14 @@ import { AREA_PROVENANCE_FILE, assertAreaProvenance, assertAreaProvenanceDocumen
 import { withholdingProblems } from "../src/utils/publication/withholding.js";
 
 const RECORD_LEVEL = /\b(?:household|benunit|person)_(?:id|weight)\b/;
+// As scripts/check_public_data.py: GSS codes of Westminster constituencies,
+// local authorities, wards and small areas, and how many a file may carry.
+const AREA_CODE = /\b(?:E14|W07|S14|N05|E06|E07|E08|E09|W06|S12|N09|E05|W05|S13|N08|E02|W02|S02|E01|W01|S01|E00|W00|S00|N00|N20|N21)\d{6}\b/g;
+const MAX_AREA_CODES = 20;
+const MAX_PENDING_DAYS = 14;
+// As LISTED in uk_budget_data/publication/manifest.py: the statuses the page
+// lists (tests/test_check_public_files_build.py checks the two are equal).
+export const LISTED_STATUSES = ["approved", "provisional", "not_computable"];
 const CURRENT_RELEASE = "uk-autumn-budget-2026";
 const CURRENT_BUDGET = { id: CURRENT_RELEASE, date: "2026-10-28" };
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
@@ -265,12 +285,81 @@ function withheldFilesProblems(path, text) {
   return [...new Set(problems)];
 }
 
-export function checkPublicFiles(root, today = new Date()) {
+// The files under public/data/artifacts/ the page lists, as publish
+// review-rows writes rows for them: each listed manifest entry's receipt
+// and, for a displayed entry, each file that receipt binds. With no
+// readable manifest, nothing there is listed.
+export function listedArtifactFiles(root) {
+  const listed = new Set();
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(join(root, "public", "data", "manifest.json"), "utf8"));
+  } catch {
+    return listed;
+  }
+  const entries = ["measures", "combined"].flatMap((group) => (isMap(manifest?.[group]) ? Object.values(manifest[group]) : []));
+  for (const entry of entries) {
+    if (!LISTED_STATUSES.includes(entry?.status) || typeof entry.artifact !== "string") continue;
+    const artifact = `public/data/${entry.artifact}`;
+    listed.add(`${artifact}/receipt.json`);
+    if (entry.status === "not_computable") continue;
+    try {
+      const files = JSON.parse(readFileSync(join(root, artifact, "receipt.json"), "utf8")).dashboard.files;
+      if (isMap(files)) for (const name of Object.keys(files)) if (!name.includes("/")) listed.add(`${artifact}/${name}`);
+    } catch {
+      // An unreadable receipt lists no file.
+    }
+  }
+  return listed;
+}
+
+// The disclosure-layer tables the release index binds, by repository path
+// (checkReleaseIndex verifies each one's bytes and rows).
+function indexedFlatFiles(root) {
+  try {
+    const index = JSON.parse(readFileSync(join(root, "public", "data", "release-index.json"), "utf8"));
+    return new Set(Object.keys(isMap(index.files) ? index.files : {}).filter((name) => FLAT_VIEW_FILES.includes(name)).map((name) => `public/data/${name}`));
+  } catch {
+    return new Set();
+  }
+}
+
+const isDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value ?? "") && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
+const daysBetween = (from, to) => (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000;
+
+// Whether a review row lets these exact bytes carry area codes: one of kind
+// reference_geography, or pending until its expiry date, at most 14 days
+// after its review, as scripts/check_public_data.py accepts them.
+function areaCodesReviewed(entry, data, day) {
+  if (!entry || !entry.reviewer || !entry.basis || !isDate(entry.reviewed_on) || digest(data) !== entry.sha256) return false;
+  if (entry.kind === "reference_geography") return !entry.expires_on;
+  if (entry.kind !== "pending" || !isDate(entry.expires_on)) return false;
+  const span = daysBetween(entry.reviewed_on, entry.expires_on);
+  return span >= 0 && span <= MAX_PENDING_DAYS && day <= entry.expires_on;
+}
+
+// The sign-off switch, as the tree's contract carries it. A tree without
+// that contract is checked with sign-off on, the stricter reading.
+export function signOffRequired(root) {
+  const path = join(root, "src", "utils", "publication", "contract.json");
+  if (!existsSync(path)) return true;
+  return JSON.parse(readFileSync(path, "utf8")).sign_off_required !== false;
+}
+
+export function checkPublicFiles(root, today = new Date(), signOff = signOffRequired(root)) {
   const { required, optional } = JSON.parse(
     readFileSync(join(root, "scripts", "disclosure_public_columns.json"), "utf8"),
   );
   const allowed = new Set([...required, ...optional]);
-  const review = readReview(root);
+  const review = signOff ? readReview(root) : new Map();
+  // With sign-off off: the review list only for the area-code exemption,
+  // and the files the page lists under artifacts/.
+  let reviewed = new Map();
+  if (!signOff) {
+    try { reviewed = readReview(root); } catch { /* no review list, no exemption */ }
+  }
+  const listed = signOff ? new Set() : listedArtifactFiles(root);
+  const indexed = signOff ? new Set() : indexedFlatFiles(root);
   const day = today.toISOString().slice(0, 10);
   const problems = checkReleaseIndex(root);
   for (const [path, stat] of walk(join(root, "public"))) {
@@ -297,16 +386,33 @@ export function checkPublicFiles(root, today = new Date()) {
       if (review.has(name)) problems.push(`${name}: needs no review entry`);
       continue;
     }
-    const entry = review.get(name);
-    if (!entry) {
-      problems.push(`${name}: not reviewed`);
-      continue;
-    }
     const columns =
       text === null || !name.endsWith(".csv")
         ? []
         : (parseCsv(text.replace(/^\uFEFF/, ""))[0] ?? []);
     const layerShaped = required.every((column) => columns.includes(column));
+    if (!signOff) {
+      if (layerShaped && !columns.every((column) => allowed.has(column))) {
+        problems.push(`${name}: a disclosure table with columns the layer does not publish`);
+      }
+      if (name === `public/data/${AREA_PROVENANCE_FILE}`) {
+        try { assertAreaProvenanceDocument(JSON.parse(text)); }
+        catch { problems.push(`${name}: invalid publication provenance`); }
+      }
+      if (name.startsWith("public/data/artifacts/") && !listed.has(name)) {
+        problems.push(`${name}: no listed manifest entry names it`);
+      }
+      const exempt = (layerShaped && indexed.has(name)) || areaCodesReviewed(reviewed.get(name), data, day);
+      if (text !== null && !exempt && new Set(text.match(AREA_CODE) ?? []).size > MAX_AREA_CODES) {
+        problems.push(`${name}: carries more than ${MAX_AREA_CODES} area codes`);
+      }
+      continue;
+    }
+    const entry = review.get(name);
+    if (!entry) {
+      problems.push(`${name}: not reviewed`);
+      continue;
+    }
     if (entry.kind === "publication_provenance" && name !== `public/data/${AREA_PROVENANCE_FILE}`) {
       problems.push(`${name}: publication provenance is only allowed for the area run's record`);
     }

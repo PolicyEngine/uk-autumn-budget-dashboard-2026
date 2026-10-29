@@ -32,22 +32,24 @@
  *   (collapsed by default, under "About this result");
  * - caveats: further caveats, in sentences, where the details state none;
  * - source: a public page on the policy, where one exists;
- * - explainer: { label, href }: PolicyEngine's post on the measure, its
- *   title and its page under EXPLAINER_BASE, for the card's "Our
- *   explainer" link. Added only once the post is live (its page answers 200), so a
- *   card never links to a missing page;
  * - cardOrder: the card's place on the Policies tab (1 up), set so the two
  *   cards in a row are close in height (the charts together, the tiles
  *   together); cards without one follow, by budgetRows;
  * - budgetRows: the measure's rows in the Budget's Table 6.1 (as
  *   data_inputs/treasury/mapping.csv maps them), which link each card to
  *   the Budget's costing;
- * - example: { title, text, items?, source }: a worked example, or the reach the
+ * - example: { title, text, items?, source? }: a worked example, or the reach the
  *   Budget states, every figure from its source (a cited document or a
  *   verified household calculation), shown under "What changes": one short line, and any further points as
  *   a short list (`items`), never a long paragraph;
  * - changeLabel: { label, unitWords } a shorter name and units for the What
  *   changes block's main row, in place of policy_parameters.json's;
+ * - visual: { kind, place, ... } the card's visual (components/policies/
+ *   PolicyVisual.jsx): `place` "change" draws it in What changes, in place
+ *   of the plot and note (`replacesExample` folds the example into it),
+ *   "example" in place of the example's words. Its other fields are the
+ *   entry's own figures (writtenFor, example), checked against them by
+ *   policyVisuals.test.js; the rest come from policy_parameters.json.
  * - writtenFor: the measure's description in reforms.py, which the
  *   publication carries verbatim, when the entry was written. After
  *   changing a measure in reforms.py, check its entry still holds, then copy
@@ -85,12 +87,11 @@ export const POLICY_DETAILS = [
       label: "HMRC fuel duty rates 2026 to 2027",
       href: "https://www.gov.uk/government/publications/amended-fuel-duty-rates-for-2026-to-2027/amended-fuel-duty-rates-2026-to-2027",
     },
-    explainer: {
-      label: "The fuel duty cut extension in the Autumn Budget 2026",
-      href: "https://www.policyengine.org/uk/research/fuel-duty-cut-extension",
-    },
     changeLabel: { label: "Duty", unitWords: "pence a litre" },
     budgetRows: [3],
+    // The cut's months, either side of Budget day, and the duty saved on
+    // a fill of this many litres (a fill's size, not a figure of the measure)
+    visual: { kind: "fuel-duty", place: "change", window: { from: "2026-10", to: "2027-09" }, litres: 50 },
   },
   {
     id: "state_pension_income_tax_protection",
@@ -116,12 +117,23 @@ export const POLICY_DETAILS = [
       label: "Pension Tax Allowance explainer",
       href: "https://www.gov.uk/government/publications/pension-tax-allowance-explainer/pension-tax-allowance-explainer",
     },
-    explainer: {
-      label: "The Pension Tax Allowance in the Autumn Budget 2026",
-      href: "https://www.policyengine.org/uk/research/pension-tax-allowance",
-    },
     changeLabel: { label: "Largest tax cut", unitWords: "£ a year" },
     budgetRows: [52],
+    // The allowance against income in 2027-28, from writtenFor (the full
+    // new State Pension, £1 per £3, gone at about £13,319) and the example
+    visual: {
+      kind: "pension-tax-allowance",
+      place: "change",
+      replacesExample: true,
+      year: "2027-28",
+      fullPension: 13036.4,
+      goneAt: 13319,
+      taper: 3,
+      examples: [
+        { income: 13036.4, allowance: 94, label: "Full new State Pension: no income tax" },
+        { income: 13186, allowance: 44 },
+      ],
+    },
     example: {
       title: "Example",
       text: "2027-28: on the full new State Pension (£13,036), no income tax; at £13,186, the allowance is £44.",
@@ -178,11 +190,20 @@ export const POLICY_DETAILS = [
       label: "VAT on fuel and power (VAT Notice 701/19)",
       href: "https://www.gov.uk/guidance/vat-on-fuel-and-power-notice-70119",
     },
-    explainer: {
-      label: "Analysis of the Autumn Budget 2026 energy bill measures",
-      href: "https://www.policyengine.org/uk/research/budget-2026-energy-bills",
-    },
     budgetRows: [2],
+    // The months, from writtenFor and the row's note: Great Britain from
+    // October 2026, Northern Ireland (expected) from April 2027, both to
+    // June 2027; October to March already zero-rated in law (SI 2026/987)
+    visual: {
+      kind: "electricity-vat",
+      place: "change",
+      window: { from: "2026-09", to: "2027-08" },
+      regions: [
+        { name: "Great Britain", from: "2026-10", to: "2027-06" },
+        { name: "Northern Ireland", from: "2027-04", to: "2027-06", expected: true },
+      ],
+      law: { from: "2026-10", to: "2027-03", label: "Law before the Budget" },
+    },
   },
   {
     id: "employer_ni_relief_under_25s",
@@ -310,11 +331,8 @@ export const POLICY_DETAILS = [
       label: "Carer's Allowance",
       href: "https://www.gov.uk/carers-allowance",
     },
-    explainer: {
-      label: "The Carer's Allowance earnings taper in the Autumn Budget 2026",
-      href: "https://www.policyengine.org/uk/research/carers-allowance-taper",
-    },
     budgetRows: [7],
+    visual: { kind: "carers-taper", place: "change" },
   },
   {
     id: "lha_unfreeze_2027",
@@ -379,11 +397,8 @@ export const POLICY_DETAILS = [
       label: "HMRC: changes to tax rates for property, savings and dividend income",
       href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
     },
-    explainer: {
-      label: "Autumn Budget 2026: higher tax on property income",
-      href: "https://www.policyengine.org/uk/research/uk-autumn-budget-2026-property-income-tax",
-    },
     budgetRows: [61],
+    visual: { kind: "property-rates", place: "change", where: "England, Wales and Northern Ireland" },
   },
   {
     id: "savings_income_rates_up",
@@ -436,10 +451,6 @@ export const POLICY_DETAILS = [
       label: "Budget 2026",
       href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
     },
-    explainer: {
-      label: "Analysis of the Autumn Budget 2026 energy bill measures",
-      href: "https://www.policyengine.org/uk/research/budget-2026-energy-bills",
-    },
     budgetRows: [1],
     example: {
       title: "Who it reaches",
@@ -449,6 +460,22 @@ export const POLICY_DETAILS = [
         "88% of households in the bottom three income deciles",
       ],
       source: { label: "Budget 2026, paragraphs 3.5 and 3.6", href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html" },
+    },
+    // The example's reach, drawn: England's eight bands, and the shares
+    // the Budget states (the example's own figures, which the visual
+    // replaces; policyVisuals.test.js checks they agree)
+    visual: {
+      kind: "energy-reach",
+      place: "example",
+      bands: "ABCDEFGH",
+      reach: {
+        millions: 20,
+        share: 0.8,
+        groups: [
+          { label: "Spending over a tenth of their income on energy", share: 0.83 },
+          { label: "In the bottom three income deciles", share: 0.88 },
+        ],
+      },
     },
   },
   {
@@ -462,7 +489,7 @@ export const POLICY_DETAILS = [
     summary:
       "Raises the trading allowance, which lets people earn from trading without tax, from £1,000 to £3,000 from April 2027.",
     starts: "Apr 2027",
-    affects: "Sole traders with small incomes or expenses under £3,000",
+    affects: "Sole traders with trading income or expenses under £3,000",
     type: "Income tax",
     inForce: { from: "2027-04" },
     howCalculated:
@@ -473,21 +500,20 @@ export const POLICY_DETAILS = [
       label: "Budget 2026",
       href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html",
     },
-    explainer: {
-      label: "Autumn Budget 2026: raising the trading allowance",
-      href: "https://www.policyengine.org/uk/research/uk-autumn-budget-2026-trading-allowance",
-    },
     budgetRows: [15],
     example: {
       title: "Example",
       text: "An employee on £30,000 with £3,000 of side income and no expenses pays £400 less income tax in 2027-28.",
-      source: { label: "PolicyEngine household calculations, policyengine-uk 2.151.0 (review on PR 290)", href: "https://github.com/PolicyEngine/uk-autumn-budget-dashboard-2026/pull/290" },
+    },
+    // The example on the tax-free band (its figures; policyVisuals.test.js
+    // checks they agree with the text)
+    visual: {
+      kind: "trading-allowance",
+      place: "example",
+      example: { income: 30000, sideIncome: 3000, saving: 400 },
     },
   },
 ];
-
-/** Where every explainer post lives: PolicyEngine's UK research pages. */
-export const EXPLAINER_BASE = "https://www.policyengine.org/uk/research/";
 
 const DETAILS_BY_ID = Object.fromEntries(
   POLICY_DETAILS.map(({ id, name: _name, description: _description, writtenFor, ...fields }) => [id, { writtenFor, fields }]),

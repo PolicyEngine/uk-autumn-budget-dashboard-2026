@@ -280,6 +280,129 @@ describe("why our estimates differ from the official costings", () => {
   });
 });
 
+// #297's third mark
+describe("ours on the official costing's basis", () => {
+  // A real measure, so its catalogue entry fits; invented figures, on the
+  // chart's £5m steps: ours -£25m net, -£40m on the official basis,
+  // official -£45m
+  const ID = "carers_allowance_earnings_taper";
+  const ENTRY = POLICY_DETAILS.find((entry) => entry.id === ID);
+  // A second real measure, with no official basis; invented figures
+  const OTHER = "property_income_rates_up";
+  const OTHER_ENTRY = POLICY_DETAILS.find((entry) => entry.id === OTHER);
+  // Named by what it counts (Pavel, 29 Oct): the row's own words where one
+  // row is meant, the generic label where one serves every row
+  const OWN = "Ours, Carer's Allowance and Universal Credit only";
+  const GENERIC = "Ours, the official costing's taxes and benefits only";
+  const renderBasis = ({ basis = [`${ID},${ENTRY.name},2030,-0.04,carers_allowance;universal_credit`], other = false } = {}) => {
+    const impact = [
+      "reform_id,reform_name,year,value",
+      `${ID},${ENTRY.name},2030,-0.025`,
+      ...(other ? [`${OTHER},${OTHER_ENTRY.name},2030,0.45`] : []),
+    ].join("\n");
+    vi.stubGlobal(
+      "fetch",
+      geographyFetch({
+        "/data/official_costings.csv": [
+          "reform_id,reform_name,year,obr_static_value,obr_post_behavioural_value",
+          `${ID},${ENTRY.name},2030,-0.045,-0.045`,
+          ...(other ? [`${OTHER},${OTHER_ENTRY.name},2030,0.5,0.5`] : []),
+        ].join("\n"),
+        "/data/budgetary_impact.csv": impact,
+      }),
+    );
+    const rows = parseDashboardCsv(impact);
+    const own = (id) => rows.filter((row) => row.reform_id === id);
+    const officialBasis = basis.length ? parseDashboardCsv(["reform_id,reform_name,year,value,variables", ...basis].join("\n")) : undefined;
+    const entry = (detail) => ({ name: detail.name, description: detail.writtenFor, status: "approved", years: DISPLAY_YEARS, unsupported_years: [] });
+    const manifest = { measures: { [ID]: entry(ENTRY), ...(other ? { [OTHER]: entry(OTHER_ENTRY) } : {}) }, combined: {} };
+    const tablesByKey = {
+      [ID]: { budgetary_impact: own(ID), ...(officialBasis ? { official_basis: officialBasis } : {}) },
+      ...(other ? { [OTHER]: { budgetary_impact: own(OTHER) } } : {}),
+    };
+    const catalogue = buildMeasureCatalogue({ manifest, budgetary: rows, tablesByKey });
+    return renderReact(
+      <MeasureCatalogueProvider catalogue={catalogue}>
+        <OBRComparisonTable selectedPolicies={other ? [ID, OTHER] : [ID]} selectedYear={2030} notes={{}} bases={{}} points={{}} panelBases={{}} />
+      </MeasureCatalogueProvider>,
+    );
+  };
+  const csvDownload = async () => {
+    vi.mocked(downloadFile).mockClear();
+    fireEvent.click(document.querySelector(".chart-download-button:not([disabled])"));
+    fireEvent.click(screen.getByRole("button", { name: "CSV Data" }));
+    await waitFor(() => expect(downloadFile).toHaveBeenCalledTimes(1));
+    return vi.mocked(downloadFile).mock.calls[0][0];
+  };
+
+  it("draws it as a small teal ring on the row, named in the legend, beside our dot and the official ring", async () => {
+    const { container } = renderBasis();
+    await screen.findByRole("radio", { name: "Show as chart" });
+    const row = container.querySelector(`[data-policy="${ID}"]`);
+    expect(row.querySelectorAll(".obr-dumbbell-dot.pe, .obr-dumbbell-dot.basis, .obr-dumbbell-dot.obr")).toHaveLength(3);
+    expect(row.querySelector(".obr-dumbbell-dot.basis")).toHaveAttribute("fill", "none");
+    expect(within(screen.getByRole("list", { name: "Legend" })).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+      "Ours (static)",
+      `${GENERIC} (static)`,
+      "Official costing (static)",
+    ]);
+    expect(row.getAttribute("aria-label")).toContain("ours −£25m (Carer's Allowance and Universal Credit only: −£40m), official −£45m");
+  });
+
+  it("explains it in the panel: its figure, keyed with the ring and named by what it counts, under ours, the official costing and the difference", async () => {
+    renderBasis();
+    await screen.findByRole("radio", { name: "Show as chart" });
+    const panel = screen.getByRole("complementary", { name: `Why ours differs: ${ENTRY.shortName}` });
+    expect([...panel.querySelectorAll(".obr-panel-figures dd")].map((dd) => plain(dd.textContent))).toEqual(["−£25m", "−£45m", "+£20m", "−£40m"]);
+    const line = panel.querySelector(".obr-panel-figures > .is-basis");
+    expect(line.querySelector("dt")).toHaveTextContent(OWN);
+    expect(line.querySelector(".obr-panel-key.is-basis")).toBeTruthy();
+    expect(panel).not.toHaveTextContent(/PolicyEngine|official costing's basis/);
+  });
+
+  it("shows all three in the tooltip and the table, and adds it to the CSV", async () => {
+    const { container } = renderBasis();
+    await screen.findByRole("radio", { name: "Show as chart" });
+    fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
+    const tooltip = document.querySelector(".chart-tooltip");
+    expect(tooltip).toHaveTextContent("Ours (static)−£25m");
+    expect(tooltip).toHaveTextContent(`${OWN} (static)−£40m`);
+    expect(tooltip).toHaveTextContent("Official costing (static)−£45m");
+    show("Table");
+    expect(screen.getByRole("columnheader", { name: GENERIC })).toBeInTheDocument();
+    const cells = within(screen.getAllByRole("row")[1]).getAllByRole("cell").map((cell) => plain(cell.textContent));
+    expect(cells.slice(1, 3)).toEqual(["−£25m", "−£40m"]);
+    // Every row has the figure: no line on the column's "—"
+    expect(screen.queryByText(/where we give no such figure/)).toBeNull();
+    const content = await csvDownload();
+    expect(content).toContain(`${GENERIC}, static (£bn)`);
+    expect(content).toContain("-0.04");
+  });
+
+  it("says under the table what the column's \"—\" means for a policy with no such figure", async () => {
+    renderBasis({ other: true });
+    await screen.findByRole("radio", { name: "Show as chart" });
+    show("Table");
+    const otherRow = screen.getAllByRole("row").find((row) => row.textContent.includes(OTHER_ENTRY.shortName));
+    expect(plain(within(otherRow).getAllByRole("cell")[2].textContent)).toBe("—");
+    expect(screen.getByText(`— under “${GENERIC}” where we give no such figure for the policy.`)).toBeInTheDocument();
+  });
+
+  it("shows nothing of it, keeping two marks, for a measure with no official basis", async () => {
+    const { container } = renderBasis({ basis: [] });
+    await screen.findByRole("radio", { name: "Show as chart" });
+    expect(container.querySelector(".obr-dumbbell-dot.basis")).toBeNull();
+    expect(screen.getByRole("list", { name: "Legend" })).not.toHaveTextContent(GENERIC);
+    expect(screen.getByRole("complementary", { name: /^Why ours differs/ }).querySelector(".is-basis")).toBeNull();
+    fireEvent.mouseEnter(container.querySelector(`[data-policy="${ID}"]`));
+    expect(document.querySelector(".chart-tooltip")).not.toHaveTextContent(OWN);
+    show("Table");
+    expect(screen.queryByRole("columnheader", { name: GENERIC })).toBeNull();
+    expect(screen.queryByText(/where we give no such figure/)).toBeNull();
+    expect(await csvDownload()).not.toContain("taxes and benefits only");
+  });
+});
+
 describe("a policy not in force in the year shown", () => {
   const catalogue = { measures: [{ id: "a" }, { id: "b" }, { id: "c" }], byId: new Map() };
   const windows = { a: { first: 2030, last: 2031 }, b: { first: 2026, last: 2026 }, c: { first: 2027, last: 2029 } };
@@ -287,6 +410,13 @@ describe("a policy not in force in the year shown", () => {
     ["a", "b", "c"].map((id) => ({ reform_id: id, reform_name: id, year, policyengine_value: pe, obr_static: null, obr_behavioural: obr }));
   const statuses = (year, pe, obr) =>
     Object.fromEntries(comparisonRows(source(year, pe, obr), ["a", "b", "c"], year, true, catalogue, windows).map((row) => [row.id, row.status]));
+
+  it("keeps the figures where ours on the official costing's basis has an effect", () => {
+    const source = [{ reform_id: "a", reform_name: "a", year: 2026, policyengine_value: 0, policyengine_official_basis: -0.01, obr_static: null, obr_behavioural: null }];
+    const [row] = comparisonRows(source, ["a"], 2026, true, catalogue, windows);
+    expect(row.peOfficial).toBe(-0.01);
+    expect(row.status).toBeNull();
+  });
 
   it("says when it starts, ends or its one year, where neither side has an effect", () => {
     expect(statuses(2027, 0, null)).toEqual({ a: "Starts 2030-31", b: "2026-27 only", c: null });

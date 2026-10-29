@@ -4,6 +4,8 @@ import TitleIcon from "../TitleIcon";
 import Disclosure from "../Disclosure";
 import { PolicyCard } from "../PolicyCards";
 import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
+import { UNMODELLED_VISUALS } from "../../utils/unmodelledVisuals";
+import UnmodelledVisual from "./UnmodelledVisual";
 import { EXTERNAL } from "../../utils/sources";
 import {
   COSTING_YEARS,
@@ -98,19 +100,23 @@ function Costing({ measure }) {
  * One measure as a Policies card (PolicyCards.jsx's PolicyCard), in the
  * modelled cards' own style, kept compact: the category and name, What
  * changes as the summary line, At a glance (Starts, Ends, who it reaches;
- * no timeline), the values before and after in the What changes block
- * where the entry gives them (no chart), For a household, then in the
+ * no timeline), What changes as the card's picture
+ * (UnmodelledVisual.jsx), For a household, then in the
  * footer one disclosure, Treasury costing, styled as About this result:
  * the Treasury's six years as a strip, the sources and the Table 6.1 rows. The words are the entry's own
  * (utils/unmodelledMeasures.js).
  */
 export function unmodelledCard(measure) {
   const { parameters, ...layout } = UNMODELLED_CARDS[measure.id] ?? {};
+  // A card's picture says what changes, so the values' tiles are not shown
+  // as well (each fact once)
+  const visual = UNMODELLED_VISUALS[measure.id] ? <UnmodelledVisual measure={measure} /> : null;
   const total = measure.costings.reduce((sum, { values }) => sum + values.reduce((x, y) => x + y, 0), 0);
   return {
-    parameters: parameters ?? null,
+    parameters: visual ? null : parameters ?? null,
     policy: {
       ...layout,
+      visual,
       id: measure.id,
       anchorId: `unmodelled-${measure.id}`,
       name: measure.name,
@@ -122,8 +128,6 @@ export function unmodelledCard(measure) {
       timeline: false,
       direction: total < 0 ? "cost" : total > 0 ? "revenue" : "neutral",
       example: { title: "For a household", text: measure.household },
-      // PolicyEngine's post on it, in the footer as on the modelled cards
-      explainer: measure.explainer,
       // No "Why we don't model it": the section's title says so. The
       // reason stays in the data (measure.notModelled).
       footExtra: (
@@ -228,33 +232,18 @@ export default function UnmodelledMeasures({ measures = UNMODELLED_MEASURES }) {
         </div>
       </div>
       <div id={`${id}-cards`} className="report-section policy-details-content" hidden={!open}>
-        {/* A group per reason we do not model them: its title and why,
-            then its cards, two to a row */}
-        {open &&
-          groupsOf(measures).map(({ id: group, label, why, items }) => (
-            <div key={group} className="umm-group" data-reason={group}>
-              {label && (
-                <>
-                  <p className="umm-group-title" id={`${id}-${group}`}>
-                    {label}
-                  </p>
-                  <p className="umm-group-why" id={`${id}-${group}-why`}>
-                    {why}
-                  </p>
-                </>
-              )}
-              <ul
-                className="policy-cards umm-list"
-                aria-labelledby={label ? `${id}-${group}` : undefined}
-                aria-describedby={label ? `${id}-${group}-why` : undefined}
-              >
-                {items.map((measure) => {
-                  const { policy, parameters } = unmodelledCard(measure);
-                  return <PolicyCard key={measure.id} policy={policy} parameters={parameters} />;
-                })}
-              </ul>
-            </div>
-          ))}
+        {/* One list of cards, two to a row, with no group titles (Vahid,
+            29 Oct): the section's title and subtitle say why they are here */}
+        {open && (
+          <ul className="policy-cards umm-list">
+            {groupsOf(measures)
+              .flatMap(({ items }) => items)
+              .map((measure) => {
+                const { policy, parameters } = unmodelledCard(measure);
+                return <PolicyCard key={measure.id} policy={policy} parameters={parameters} />;
+              })}
+          </ul>
+        )}
       </div>
     </section>
   );

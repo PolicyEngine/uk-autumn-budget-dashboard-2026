@@ -13,7 +13,8 @@ import PolicyCards, {
   timelineSpan,
 } from "./PolicyCards";
 import { buildMeasureCatalogue } from "../utils/measureCatalogue";
-import { EXPLAINER_BASE, POLICY_DETAILS, withPolicyDetails } from "../utils/policyDetails";
+import { POLICY_DETAILS } from "../utils/policyDetails";
+import { explainerFor } from "../utils/explainers";
 import { ALPHA, BETA, HELD, measureCatalogueFixture } from "../test/measureCatalogueFixture";
 
 const catalogue = buildMeasureCatalogue(measureCatalogueFixture());
@@ -172,6 +173,33 @@ describe("PolicyCards", () => {
     render(<PolicyCards policies={catalogue.measures} selectedPolicies={[ALPHA]} onShowEffect={onShowEffect} />);
     fireEvent.click(screen.getByRole("button", { name: new RegExp(`effect: ${catalogue.byId.get(ALPHA).label},`) }));
     expect(onShowEffect).toHaveBeenCalledWith(ALPHA);
+  });
+});
+
+describe("our explainers (explainers.js)", () => {
+  it("links a measure's card to our explainer of it, and no other card", () => {
+    const policies = [published("trading_allowance_raise", "Trading allowance raised to £3,000"), { ...catalogue.byId.get(ALPHA) }];
+    render(<PolicyCards policies={policies} selectedPolicies={policies.map((policy) => policy.id)} onShowEffect={vi.fn()} />);
+    const links = screen.getAllByRole("link", { name: /^Read policy brief/ });
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute("href", "https://www.policyengine.org/uk/research/uk-autumn-budget-2026-trading-allowance");
+    expect(links[0]).toHaveAttribute("target", "_blank");
+    cleanup();
+  });
+
+  it("gives each of the seven published measures an explainer", () => {
+    for (const id of [
+      "carers_allowance_earnings_taper",
+      "domestic_electricity_zero_vat",
+      "fuel_duty_rise_deferral",
+      "household_energy_payment_2026",
+      "property_income_rates_up",
+      "state_pension_income_tax_protection",
+      "trading_allowance_raise",
+    ]) {
+      expect(explainerFor(id)?.href).toMatch(/^https:\/\/www\.policyengine\.org\/uk\/research\/[a-z0-9-]+$/);
+    }
+    expect(explainerFor("not_a_measure")).toBeNull();
   });
 });
 
@@ -394,7 +422,13 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       expect(item).not.toHaveTextContent(/Current law.*→|becomes/);
       const main = entry.rows.find((row) => row.primary) ?? entry.rows[0];
       const changes = new Set(main.points.filter((p) => p.before !== p.after).map((p) => `${p.before}|${p.after}`));
-      expect(Boolean(item.querySelector(".pchg-svg")), id).toBe(changes.size > 1);
+      // Every measure in the file has its own visual (policies/
+      // PolicyVisual.jsx), which takes the step plot's place
+      expect(item.querySelector(".pviz"), id).toBeTruthy();
+      expect(Boolean(item.querySelector(".pchg-svg")), id).toBe(false);
+      render(<PolicyCards policies={[{ ...published(id, id), visual: undefined }]} selectedPolicies={[id]} parameterTables={file} />);
+      const plain = document.querySelectorAll(".policy-card")[1];
+      expect(Boolean(plain.querySelector(".pchg-svg")), id).toBe(changes.size > 1);
       // Every table behind a button
       expect(item.querySelector(".pchg table"), id).toBeNull();
       cleanup();
@@ -530,9 +564,12 @@ describe("the card's frame", () => {
     const ids = ["household_energy_payment_2026", "fuel_duty_rise_deferral", "state_pension_income_tax_protection", "trading_allowance_raise"];
     const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
     const bare = { ...published("domestic_electricity_zero_vat", "Zero VAT"), description: "An older run's wording." };
+    // The Pension Tax Allowance without its visual (which folds its
+    // example in), so one card has both an example and What changes
+    const withoutVisual = (policy) => (policy.id === "state_pension_income_tax_protection" ? { ...policy, visual: undefined } : policy);
     render(
       <PolicyCards
-        policies={[...ids.map((id) => published(id, id)), bare]}
+        policies={[...ids.map((id) => withoutVisual(published(id, id))), bare]}
         selectedPolicies={[...ids, bare.id]}
         parameterTables={file}
         onShowEffect={() => {}}
@@ -635,10 +672,11 @@ describe("the card's frame", () => {
     const id = "carers_allowance_earnings_taper";
     render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
     const block = screen.getByRole("region", { name: /^What changes/ });
-    // No level tiles (Vahid, 28 Oct): the note, and the plot of the
-    // allowance £1 over the limit
+    // No level tiles (Vahid, 28 Oct): the note, under the allowance drawn
+    // against weekly earnings, the cliff in the loss colour (Anthony)
     expect(block.querySelector(".pchg-tile, .pchg-ba")).toBeNull();
-    expect(block.querySelector(".pchg-head.is-plot .pchg-caption")).toHaveTextContent("Carer's Allowance at £1 a week over the earnings limit, £ a week");
+    expect(within(block).getByRole("img", { name: /against weekly earnings/ })).toBeInTheDocument();
+    expect(block.querySelector(".pviz-cliff")).not.toBeNull();
     expect(block).not.toHaveTextContent(/£204|£323|£119/);
     expect(block.querySelector(".pchg-note")).toHaveTextContent("£228 a week in 2030-31 and £234 in 2031-32");
     expect(block.querySelector(".pchg-note")).toHaveTextContent("runs out at £324 a week in 2030-31 and £332 in 2031-32");
@@ -657,81 +695,5 @@ describe("the card's frame", () => {
       expect(policy.starts.length, policy.id).toBeLessThanOrEqual(20);
       if (policy.ends) expect(policy.ends.length, policy.id).toBeLessThanOrEqual(20);
     }
-  });
-});
-
-describe("the explainer link (policyDetails.js `explainer`)", () => {
-  const explainerLink = (container) => within(container).queryByRole("link", { name: /^Our explainer/ });
-
-  it("links a card with an explainer to its post, in a new tab, after the source and costing", () => {
-    const id = "fuel_duty_rise_deferral";
-    const post = { label: "The fuel duty cut extension", href: `${EXPLAINER_BASE}fuel-duty-cut-extension` };
-    render(<PolicyCards policies={[{ ...published(id, "Fuel duty cut extended"), explainer: post }]} selectedPolicies={[id]} onShowEffect={() => {}} />);
-    const card = screen.getByRole("listitem");
-    const link = explainerLink(card);
-    expect(link).toHaveAccessibleName(/^Our explainer: The fuel duty cut extension\s*\(opens in a new tab\)$/);
-    expect(link).toHaveAttribute("href", "https://www.policyengine.org/uk/research/fuel-duty-cut-extension");
-    expect(link).toHaveAttribute("target", "_blank");
-    expect(link).toHaveAttribute("rel", "noopener noreferrer");
-    // Source, Costing, Explainer, then the effect at the right
-    const actions = [...card.querySelector(".policy-card-actions").children].map((child) =>
-      (child.classList.contains("tip-anchor") ? child.firstElementChild : child).className);
-    expect(actions).toEqual(["policy-card-source", "policy-card-costing", "policy-card-explainer", "policy-card-effect"]);
-  });
-
-  it("keeps the footer for a card whose only action is its explainer", () => {
-    // No details entry, so no source or costing, and no effect button
-    const id = "a_measure_without_details";
-    const post = { label: "A post", href: `${EXPLAINER_BASE}a-post` };
-    render(<PolicyCards policies={[{ ...published(id, "A measure"), explainer: post }]} selectedPolicies={[id]} />);
-    const card = screen.getByRole("listitem");
-    expect(card.querySelector(".policy-card-source, .policy-card-costing, .policy-card-effect")).toBeNull();
-    expect(explainerLink(card)).toHaveAttribute("href", post.href);
-  });
-
-  it("shows no explainer link on a card without one", () => {
-    const entry = POLICY_DETAILS.find((policy) => !policy.explainer);
-    render(<PolicyCards policies={[published(entry.id, entry.name)]} selectedPolicies={[entry.id]} onShowEffect={() => {}} />);
-    const card = screen.getByRole("listitem");
-    expect(explainerLink(card)).toBeNull();
-    expect(card.querySelector(".policy-card-explainer")).toBeNull();
-  });
-
-  it("links every explainer in the card details to a post among PolicyEngine's UK research pages", () => {
-    expect(EXPLAINER_BASE).toBe("https://www.policyengine.org/uk/research/");
-    for (const policy of POLICY_DETAILS.filter((entry) => entry.explainer)) {
-      expect(policy.explainer.href.startsWith(EXPLAINER_BASE), policy.id).toBe(true);
-      expect(policy.explainer.href.slice(EXPLAINER_BASE.length), policy.id).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
-      expect(policy.explainer.label?.trim(), policy.id).toBeTruthy();
-    }
-  });
-
-  it("shows each entry's explainer while the publication describes the measure as written, and drops it with the other details once it doesn't", () => {
-    for (const policy of POLICY_DETAILS.filter((entry) => entry.explainer)) {
-      expect(withPolicyDetails(published(policy.id, policy.name)).explainer, policy.id).toEqual(policy.explainer);
-      const changed = { ...published(policy.id, policy.name), description: "A changed measure." };
-      render(<PolicyCards policies={[changed]} selectedPolicies={[policy.id]} onShowEffect={() => {}} />);
-      expect(explainerLink(screen.getByRole("listitem")), policy.id).toBeNull();
-      cleanup();
-    }
-  });
-
-  it("links each post only to the measure it explains, and none to savings until the release adds savings", () => {
-    // The live posts, each on its own measure. The property post is property
-    // only (Max's ruling); the savings post stays unlinked until savings is
-    // in the release.
-    const linked = Object.fromEntries(
-      POLICY_DETAILS.filter((entry) => entry.explainer).map((entry) => [entry.id, entry.explainer.href.slice(EXPLAINER_BASE.length)]),
-    );
-    expect(linked).toEqual({
-      fuel_duty_rise_deferral: "fuel-duty-cut-extension",
-      state_pension_income_tax_protection: "pension-tax-allowance",
-      domestic_electricity_zero_vat: "budget-2026-energy-bills",
-      carers_allowance_earnings_taper: "carers-allowance-taper",
-      property_income_rates_up: "uk-autumn-budget-2026-property-income-tax",
-      household_energy_payment_2026: "budget-2026-energy-bills",
-      trading_allowance_raise: "uk-autumn-budget-2026-trading-allowance",
-    });
-    expect(POLICY_DETAILS.find((entry) => entry.id === "savings_income_rates_up").explainer).toBeUndefined();
   });
 });

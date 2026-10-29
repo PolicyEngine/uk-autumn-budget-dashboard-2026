@@ -118,6 +118,10 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
         dataPoint[policy.seriesKey] = value;
         if (value !== null) netChange += value;
       });
+      // A withheld decile shows nothing: no other policy's bar and no net
+      // dot, as the bars beside a withheld member would give its figure
+      // back (#290 6480462886, as on the decile % chart)
+      if (withheld) POLICIES.forEach((policy) => { dataPoint[policy.seriesKey] = null; });
       dataPoint.netChange = incomplete ? null : netChange;
       dataPoint.incomplete = incomplete;
       dataPoint.unavailable = unavailable;
@@ -278,8 +282,6 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
     image: activePolicies.length > 0,
   };
 
-  // A note shown above the plot, inside it
-  const hasPlotNote = published && (hasUnavailableResults || withheldDeciles.size > 0);
   return (
     <div className="waterfall-chart">
       <div className="chart-header">
@@ -329,13 +331,14 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
             <p>{noHouseholdChange(formatYearRange(selectedYear))}</p>
           </div>
         ) : published ? (
-          // As tall as the plot rows in a pair (globals.css), else plotHeight.
-          // With a note above it in the plot (a withheld decile, results
-          // unavailable), its own fixed height: at 100% it would take the
-          // plot's height, note included, and grow by the note's height on
-          // every measure, without end (#290, Anthony, 6479887743: All
-          // households, 2030-31, where a decile is withheld)
-          <ResponsiveContainer width="100%" height={hasPlotNote ? plotHeight : "100%"} minHeight={plotHeight}>
+          // Its own fixed height, never 100%: the withheld-deciles note's
+          // line is always above it in the plot (hidden in a year with none
+          // withheld), so at 100% it would take the plot's height, note
+          // included, and grow by the note's height on every resize,
+          // without end, and the household scatter beside it with it
+          // (#290, 6479887743, in 2030-31; then every year once the line was
+          // always kept: 2,312px to 52,629px in 20s at 1440px, 28 Oct)
+          <ResponsiveContainer width="100%" height={plotHeight}>
             <ComposedChart
               data={data}
               margin={{ ...chartMargin(narrow), bottom: key.shared ? LOGO_ROOM : 0 }}
@@ -366,6 +369,19 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                 tickLine={false}
               />
               <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
+              {/* A withheld decile is marked where its bar would be, so the
+                  break in the net line reads as "not published", never as
+                  a value (Vahid, 29 Oct) */}
+              {[...withheldDeciles].map((decile) => (
+                <ReferenceLine
+                  key={`withheld-${decile}`}
+                  x={decile}
+                  stroke={CHART_COLOURS.noChange}
+                  strokeDasharray="2 4"
+                  className="decile-withheld-mark"
+                  label={{ value: "Not published", angle: -90, position: "center", fill: CHART_COLOURS.noChange, fontSize: 11 }}
+                />
+              ))}
 
               {/* One segment at a time, beside the cursor; the other measures dim */}
 

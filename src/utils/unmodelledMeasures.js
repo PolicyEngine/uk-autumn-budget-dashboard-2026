@@ -46,11 +46,7 @@ const obr = (part) => ({
  * `heldBack`, a short muted line, marks a measure the model covers but this
  * release holds back.
  * `seeAlso` links PolicyEngine's own published work that models the
- * measure, after the reason this dashboard does not. `explainer` is
- * PolicyEngine's post on the measure, a page of policyengine.org's UK
- * research, linked as "Our explainer" in the card's footer, as the
- * modelled cards link theirs (policyDetails.js); its label is the post's
- * title.
+ * measure, after the reason this dashboard does not.
  */
 /**
  * The groups the cards are shown in, by why the dashboard does not model a
@@ -76,7 +72,7 @@ export const UNMODELLED_MEASURES = [
     name: "Single bus fares capped at £2 outside London",
     starts: "1 Jan 2027",
     changes:
-      "Single fares on participating buses in England outside London are capped at £2; most are capped at £3 until then.",
+      "Single fares on participating buses in England outside London are capped at £2, down from £3.",
     reaches: "Bus passengers in England outside London, on participating services.",
     household:
       "The same journeys cost less; household income does not change.",
@@ -122,7 +118,7 @@ export const UNMODELLED_MEASURES = [
     starts: "1 Apr 2027",
     changes:
       "The duty on machine games with stakes over £1 or prizes over £100 rises from 20% to 25%.",
-    reaches: "Venues with higher-stake machines, commonly adult gaming centres (Budget).",
+    reaches: "Adult gaming centres and other venues with these machines (Budget).",
     household:
       "Charged on businesses running the machines; any effect reaches households through stakes and prizes, or as owners and staff.",
     costings: [{ row: 56, values: [0, 135, 150, 145, 145, 145] }],
@@ -162,7 +158,7 @@ export const UNMODELLED_MEASURES = [
       "The State Pension rises by the highest of 2.5%, inflation, or the rise keeping its April 2029 value against earnings.",
     reaches: "Current and future State Pension recipients, from April 2030.",
     household:
-      "The pension still rises by at least 2.5% or inflation; it can rise by less than earnings from 2030.",
+      "The pension rises by at least 2.5% or inflation; it can rise by less than earnings from 2030.",
     costings: [],
     noCosting:
       "Table 6.1 has no row for it. On the OBR's forecast the State Pension rises by 2.5% in both 2030-31 and 2031-32 under either rule, so the change does not affect spending in those years. The government estimates that State Pension spending would be £15 billion a year lower by the late 2030s than under the current Triple Lock; the OBR says the long-term effect depends heavily on how earnings, inflation and the 2.5% floor move relative to each other.",
@@ -173,10 +169,6 @@ export const UNMODELLED_MEASURES = [
       label: "The Burnham plan vs the triple lock",
       href: "https://www.policyengine.org/uk/triple-lock",
       after: '" (16 October 2026).',
-    },
-    explainer: {
-      label: "The adjusted Triple Lock in the Autumn Budget 2026",
-      href: "https://www.policyengine.org/uk/research/uk-triple-lock-budget-2026",
     },
     sources: [budget("paragraphs 1.29 and 5.23"), obr("paragraphs 3.49 and 3.50")],
   },
@@ -237,7 +229,7 @@ export const UNMODELLED_MEASURES = [
       "A £4.7 billion scheme gives first-time buyers in England equity loans of up to 20%, with a 2.5% deposit.",
     reaches: "Around 70,000 first-time buyers (government estimate).",
     household:
-      "A smaller deposit and a loan interest-free for five years; the Budget says the typical buyer saves hundreds a month.",
+      "A smaller deposit, five interest-free years; the Budget says this will save the typical buyer hundreds of pounds a month.",
     costings: [
       {
         row: 37,
@@ -274,7 +266,7 @@ export const UNMODELLED_MEASURES = [
     changes:
       "The Universal Credit surplus earnings threshold stays at £2,500 to March 2028, rather than falling to £300.",
     reaches:
-      "Universal Credit claimants who reclaim within six months of a high-pay month.",
+      "Universal Credit claimants reclaiming within six months of earnings ending their award.",
     household:
       "Earnings up to £2,500 above where an award stops, such as a bonus, are not carried into a new claim.",
     costings: [{ row: 8, values: [0, -140, 0, 0, 0, 0] }],
@@ -383,7 +375,7 @@ export const UNMODELLED_MEASURES = [
       "The government has asked Ofgem to abolish gas standing charges in Great Britain, £108 a year on average.",
     reaches: "Around 23 million homes (government estimate).",
     household:
-      "Before mitigation, bills fall for light users, rise for heavy ones; about 60% of households pay £45 less a year.",
+      "Before mitigation, bills fall for homes using less gas, rise for those using more; about 60% save £45 a year.",
     costings: [],
     noCosting:
       "Table 6.1 has no row for it. Suppliers are to recover the standing charge's costs through gas unit rates instead.",

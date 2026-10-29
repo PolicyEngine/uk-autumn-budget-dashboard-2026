@@ -45,6 +45,8 @@ def modules(monkeypatch):
     package.data_limits = SimpleNamespace(
         DATA_LIMITS=(object(),), REGISTRY_SHA256=DIGEST
     )
+    # The hold applies only while sign-off is on; the committed switch is off.
+    package.sign_off = SimpleNamespace(REQUIRED=True)
     package.model_limits = SimpleNamespace(REGISTRY_SHA256=DIGEST)
     builders = ModuleType("uk_budget_data.measure_templates")
     builders.TEMPLATES = ("template",)
@@ -135,6 +137,12 @@ def test_registered_proofs_and_parameters_do_not_need_attestation(modules):
 def test_no_active_limit_means_no_hold(modules):
     modules.package.data_limits.DATA_LIMITS = ()
     assert not modules.attestation.requires_attestation(document())
+
+
+@pytest.mark.parametrize("side", ["baseline", "reform"])
+def test_sign_off_off_means_no_hold(modules, side):
+    modules.package.sign_off.REQUIRED = False
+    assert not modules.attestation.requires_attestation(document(side))
 
 
 @pytest.mark.parametrize(

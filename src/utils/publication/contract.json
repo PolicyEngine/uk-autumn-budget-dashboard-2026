@@ -1685,6 +1685,11 @@
     "\ud83a\udd21": "\ud83a\udd43"
   },
   "name_whitespace": "\t\n\u000b\f\r\u001c\u001d\u001e\u001f \u0085\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000",
+  "official_basis_variables": [
+    "carers_allowance",
+    "income_tax",
+    "universal_credit"
+  ],
   "receipt_file": "receipt.json",
   "scatter_bins": {
     "change_edges": [
@@ -1729,6 +1734,7 @@
     "min_households": 10,
     "round_to": 1000
   },
+  "sign_off_required": false,
   "statuses": [
     "staged",
     "provisional",
@@ -2106,6 +2112,36 @@
         "year"
       ],
       "required": true
+    },
+    "official_basis": {
+      "columns": [
+        [
+          "reform_id",
+          "str"
+        ],
+        [
+          "reform_name",
+          "str"
+        ],
+        [
+          "year",
+          "int"
+        ],
+        [
+          "value",
+          "float"
+        ],
+        [
+          "variables",
+          "str"
+        ]
+      ],
+      "file": "official_basis.csv",
+      "key": [
+        "reform_id",
+        "year"
+      ],
+      "required": false
     },
     "poverty_inequality": {
       "columns": [
