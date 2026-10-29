@@ -3,7 +3,7 @@
  * measure's average change for a chosen age group beside its all-ages
  * figure, and the average change for every age group in every year shown.
  *
- * Both read only mean_change from public/data/age_impact.csv. A mean
+ * Both read only mean_change from each artifact's age_impact.csv. A mean
  * change is additive across policies (the other charts on the page add up
  * each policy's own effect), so the year-by-year series adds them up too.
  * Shares and counts are never added up here.

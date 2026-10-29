@@ -27,9 +27,12 @@ vi.mock("recharts", async () => {
 
 const EMPLOYER_NI = "employer_ni_relief_under_25s";
 
-/** A published CSV under public/data, as rows of strings. */
+/**
+ * A flat CSV from the pre-Budget candidate run (src/test/fixtures/
+ * candidate-run, moved out of public/data by #339), as rows of strings.
+ */
 function publishedRows(file) {
-  const [header, ...lines] = readFileSync(path.join(process.cwd(), "public", "data", file), "utf8")
+  const [header, ...lines] = readFileSync(path.join(process.cwd(), "src", "test", "fixtures", "candidate-run", file), "utf8")
     .trim()
     .split("\n");
   const keys = header.split(",");

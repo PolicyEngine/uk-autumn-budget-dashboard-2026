@@ -13,7 +13,9 @@ import { buildMeasureCatalogue, MeasureCatalogueProvider } from "../utils/measur
 import { parseDashboardCsv } from "../utils/loadDashboard";
 
 const PUBLIC = join(__dirname, "..", "..", "public");
-const published = (file) => parseDashboardCsv(readFileSync(join(PUBLIC, "data", file), "utf8"));
+// The pre-Budget candidate run's flat CSVs (moved out of public/data by #339)
+const CANDIDATE_RUN = join(__dirname, "..", "test", "fixtures", "candidate-run");
+const published = (file) => parseDashboardCsv(readFileSync(join(CANDIDATE_RUN, file), "utf8"));
 
 // A catalogue built from the flat files' own measures, as a manifest with
 // every one approved and every artifact verified (test only, as in
