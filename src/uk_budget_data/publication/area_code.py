@@ -128,6 +128,53 @@ AREA_CODE_SYMBOLS = {
     },
 }
 
+# Modules the area run's code imports that cannot change an area figure,
+# and why. Every uk_budget_data module the listed files import must be
+# listed, sliced or named here (test_area_code_revision.py checks it), so a
+# new import is a reviewed choice. These are not followed further.
+AREA_CODE_EXEMPT = {
+    "src/uk_budget_data/modal_runner.py": (
+        "The national generator's Modal runner. parallel.make_runner "
+        "imports it only for backend='modal', and the area run's one call "
+        "(geography._geography_runner) passes no backend, so it runs "
+        "locally; the constituency run's Modal backend is "
+        "modal_constituencies.py, which is listed. A test checks the call."
+    ),
+    "src/uk_budget_data/private_outputs.py": (
+        "Picks and creates the private audit directory (owner-only, never "
+        "inside a git repository). No figure passes through it: a unit's "
+        "reuse is decided by its key (constituencies._key, code_digest), "
+        "not by where it is kept."
+    ),
+    "src/uk_budget_data/sign_off.py": (
+        "REQUIRED only decides whether the run prints the tables' review "
+        "rows, and whether hand-written modifiers need attestations to be "
+        "staged nationally; neither changes a table."
+    ),
+    "src/uk_budget_data/publication/__init__.py": "Empty package marker.",
+    "src/uk_budget_data/publication/area_code.py": (
+        "This list: it decides when the area run must be rerun, not what "
+        "it computes."
+    ),
+    "src/uk_budget_data/publication/manifest.py": (
+        "Reads the publication manifest (which reforms are approved); the "
+        "approvals are checked by status and key, not through this code's "
+        "figures."
+    ),
+    "src/uk_budget_data/publication/receipt.py": (
+        "Binds scenario identities and checks the approved commit. A change "
+        "in how it hashes changes the recorded definitions, which publish "
+        "index recomputes and compares, so it refuses rather than passes."
+    ),
+    "src/uk_budget_data/publication/release_index.py": (
+        "Writes and checks area_provenance.json: the record, not the tables."
+    ),
+    "src/uk_budget_data/publication/artifacts.py": (
+        "Reads the approved artifacts' receipts for combine.py's checks; "
+        "the package is composed from the members' definitions."
+    ),
+}
+
 _FULL_COMMIT = re.compile(r"[0-9a-f]{40}\Z|[0-9a-f]{64}\Z")
 
 

@@ -1191,3 +1191,102 @@ def test_what_the_sliced_definitions_use_is_area_code():
                 area_code.is_area_path(c) or c in area_code.AREA_CODE_SYMBOLS
                 for c in existing
             ), module
+
+
+def _imported_modules(source: str, root: Path) -> set[str]:
+    """The repository paths of the uk_budget_data modules a source imports,
+    at module level or inside functions."""
+    import ast
+
+    def path_of(module):
+        base = "src/" + module.replace(".", "/")
+        for candidate in (base + ".py", base + "/__init__.py"):
+            if (root / candidate).exists():
+                return candidate
+        return None
+
+    found = set()
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.ImportFrom) and (node.module or "").startswith(
+            "uk_budget_data"
+        ):
+            found.add(path_of(node.module))
+            found |= {
+                path_of(f"{node.module}.{alias.name}") for alias in node.names
+            }
+        elif isinstance(node, ast.Import):
+            found |= {
+                path_of(alias.name)
+                for alias in node.names
+                if alias.name.startswith("uk_budget_data")
+            }
+    return found - {None}
+
+
+def test_every_module_the_area_code_imports_is_listed_or_exempt():
+    """From each listed Python file, follow its uk_budget_data imports: each
+    one must be listed, sliced (whose own test checks its slice) or exempt
+    with a reason. A new import into area code is then a reviewed choice."""
+    root = Path(__file__).resolve().parents[1]
+    listed = [
+        path
+        for path in area_code.AREA_CODE_PATHS
+        if path.startswith("src/") and path.endswith(".py")
+    ] + [
+        str(path.relative_to(root))
+        for directory in area_code.AREA_CODE_PATHS
+        if directory.endswith("/")
+        for path in sorted((root / directory).rglob("*.py"))
+    ]
+    seen, pending, unlisted = set(), list(listed), {}
+    while pending:
+        path = pending.pop()
+        if path in seen:
+            continue
+        seen.add(path)
+        for module in _imported_modules((root / path).read_text(), root):
+            if area_code.is_area_path(module):
+                pending.append(module)
+            elif not (
+                module in area_code.AREA_CODE_SYMBOLS
+                or module in area_code.AREA_CODE_EXEMPT
+            ):
+                unlisted.setdefault(module, []).append(path)
+    assert unlisted == {}
+
+
+def test_exempt_paths_exist_and_are_not_listed():
+    root = Path(__file__).resolve().parents[1]
+    for path in area_code.AREA_CODE_EXEMPT:
+        assert (root / path).exists(), path
+        assert not area_code.is_area_path(path), path
+        assert path not in area_code.AREA_CODE_SYMBOLS, path
+
+
+def test_the_area_run_never_uses_the_national_modal_runner():
+    """modal_runner.py is exempt because geography's one make_runner call
+    passes no backend, so it is always the local runner."""
+    import ast
+
+    root = Path(__file__).resolve().parents[1]
+    tree = ast.parse((root / "src/uk_budget_data/geography.py").read_text())
+    calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and getattr(node.func, "id", getattr(node.func, "attr", None))
+        in ("make_runner", "ModalRunner")
+    ]
+    assert calls
+    for call in calls:
+        assert getattr(call.func, "id", None) == "make_runner"
+        assert all(keyword.arg != "backend" for keyword in call.keywords)
+        assert len(call.args) <= 3  # jobs, units, years: backend is a keyword
+    for path in (
+        "src/uk_budget_data/constituencies.py",
+        "src/uk_budget_data/constituencies_remote.py",
+        "src/uk_budget_data/modal_constituencies.py",
+        "src/uk_budget_data/modal_constituencies_runner.py",
+    ):
+        source = (root / path).read_text()
+        assert "make_runner" not in source and "modal_runner" not in source
