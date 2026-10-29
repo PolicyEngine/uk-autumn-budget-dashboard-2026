@@ -12,10 +12,30 @@ both belong to the same snapshot. Only ``publish index`` writes these
 bindings.
 
 The area run records what it was made from (``area_provenance.json``): the
-manifest key each reform in its tables stands for, and that entry's approved
-outputs. ``publish index`` refuses the tables once any of those entries has
-changed, and passes the package alias the tables use (``PACKAGES`` in
-geography.py) to the page as the manifest key it stands for.
+manifest key each reform in its tables stands for, the approved entry it
+checked each reform against, and, since schema v2, each reform's definition
+(its baseline and reform digests without the commit), the commit, years and
+dataset of the run that wrote each table. ``publish index`` binds the tables
+to what their figures depend on, not to the national artifacts:
+
+- the same reforms, each still displayable under the same manifest key;
+- each reform's definition the current approved receipt's, and the one the
+  code at HEAD defines;
+- the same local-area dataset (only an area run writes the record, and the
+  table digests tie the tables to it);
+- no area-relevant code (``area_code.AREA_CODE_PATHS``) changed since the
+  area run's commit, or between it and the commit each approved receipt was
+  made at.
+
+So a national rerun that changes none of these, such as one that adds a
+table, keeps the map. A v1 record binds each national artifact itself, and
+is still accepted under that rule: any national rerun refuses it until the
+area run is rerun once. The package alias the tables use (``PACKAGES`` in
+geography.py) is passed to the page as the manifest key it stands for.
+
+The code checks need git and the measure registry, so only ``publish
+index`` makes them (``code_root``); ``publish check`` and the page check the
+rest, against the exact manifest bytes the index binds.
 """
 
 import csv
@@ -25,6 +45,7 @@ import os
 import re
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.tables import sha256_bytes
@@ -44,9 +65,14 @@ CSV_FILE = re.compile(r"[a-z][a-z0-9_]*\.csv\Z")
 FLAT_VIEW_FILES = ("constituency.csv", "regional.csv")
 AREA_FILES = ("constituency.csv", "regional.csv")
 AREA_PROVENANCE_FILE = "area_provenance.json"
-AREA_PROVENANCE_SCHEMA = "uk-budget-area-provenance/v1"
+# v2 binds the tables to definitions, dataset and area code; v1, written
+# before it, to the national artifacts (still accepted, under that rule).
+AREA_PROVENANCE_SCHEMA = "uk-budget-area-provenance/v2"
+AREA_PROVENANCE_SCHEMA_V1 = "uk-budget-area-provenance/v1"
+AREA_PROVENANCE_SCHEMAS = (AREA_PROVENANCE_SCHEMA_V1, AREA_PROVENANCE_SCHEMA)
 # The column naming each row's measure or combined run, by file
 ID_COLUMNS = ("reform_id", "reform")
+COMMIT = re.compile(r"[0-9a-f]{40}\Z|[0-9a-f]{64}\Z")
 
 
 # Identity fields covered by the released receipt digest; names are labels.
@@ -74,16 +100,20 @@ def area_provenance_document_problems(document) -> list[str]:
     This closed shape is also its reviewed public-data kind: adding any
     survey value or a new field requires changing this rule and its review.
     """
-    if not isinstance(document, dict) or set(document) != {
+    if not isinstance(document, dict):
+        return ["area provenance: unexpected fields"]
+    if document.get("schema") not in AREA_PROVENANCE_SCHEMAS:
+        return ["area provenance: unknown schema"]
+    v2 = document["schema"] == AREA_PROVENANCE_SCHEMA
+    fields = {
         "schema",
         "manifest_revision",
         "manifest_sha256",
         "reforms",
         "files",
-    }:
+    } | ({"runs"} if v2 else set())
+    if set(document) != fields:
         return ["area provenance: unexpected fields"]
-    if document.get("schema") != AREA_PROVENANCE_SCHEMA:
-        return ["area provenance: unknown schema"]
     if (
         type(document["manifest_revision"]) is not int
         or document["manifest_revision"] < 1
@@ -105,15 +135,24 @@ def area_provenance_document_problems(document) -> list[str]:
         )
     ):
         return ["area provenance: invalid table digests"]
+    if v2:
+        runs = document["runs"]
+        if (
+            not isinstance(runs, dict)
+            or set(runs) != set(files)
+            or not all(_valid_run(run) for run in runs.values())
+        ):
+            return ["area provenance: invalid area run records"]
     reforms = document["reforms"]
     if not isinstance(reforms, dict) or not reforms:
         return ["area provenance: no reform identities"]
+    record_fields = AREA_RECORD_FIELDS | ({"definition"} if v2 else set())
     for reform_id, record in reforms.items():
         if (
             not isinstance(reform_id, str)
             or not reform_id
             or not isinstance(record, dict)
-            or set(record) != AREA_RECORD_FIELDS
+            or set(record) != record_fields
         ):
             return ["area provenance: unexpected reform identity fields"]
         if (
@@ -157,7 +196,64 @@ def area_provenance_document_problems(document) -> list[str]:
                 or identity["binding"] not in ("content", "code_revision")
             ):
                 return ["area provenance: invalid reform identity"]
+        if v2 and not _valid_definition(record):
+            return ["area provenance: invalid reform definition"]
     return []
+
+
+def _valid_run(run) -> bool:
+    """One table's area run: its commit, years and dataset."""
+    if not isinstance(run, dict) or set(run) != {
+        "git_sha",
+        "years",
+        "dataset",
+    }:
+        return False
+    years, dataset = run["years"], run["dataset"]
+    return (
+        isinstance(run["git_sha"], str)
+        and COMMIT.fullmatch(run["git_sha"]) is not None
+        and isinstance(years, list)
+        and bool(years)
+        and all(type(year) is int for year in years)
+        and years == sorted(set(years))
+        and isinstance(dataset, dict)
+        and set(dataset) == {"kind", "name", "sha256"}
+        and all(
+            isinstance(dataset[field], str) and dataset[field]
+            for field in ("kind", "name")
+        )
+        and (
+            dataset["sha256"] is None
+            or (
+                isinstance(dataset["sha256"], str)
+                and DIGEST.fullmatch(dataset["sha256"]) is not None
+            )
+        )
+    )
+
+
+def _valid_definition(record: dict) -> bool:
+    """Each side's definition digest: null for current law, and for a
+    content-bound side its identity's own digest (which has no commit)."""
+    definition = record["definition"]
+    if not isinstance(definition, dict) or set(definition) != {
+        "baseline",
+        "reform",
+    }:
+        return False
+    for side in ("baseline", "reform"):
+        identity, value = record[side], definition[side]
+        if identity["kind"] == "current_law":
+            if value is not None:
+                return False
+        elif not isinstance(value, str) or not DIGEST.fullmatch(value):
+            return False
+        elif identity["binding"] == "content" and (
+            value != identity["reform_sha256"]
+        ):
+            return False
+    return True
 
 
 def identity_problems(manifest) -> list[str]:
@@ -198,17 +294,26 @@ def write_area_provenance(out_dir, provenance: dict, written) -> Path:
     """Write what an area run was made from beside its tables.
 
     ``provenance`` is geography.area_provenance's: the manifest revision and
-    SHA-256 read, and each reform's manifest key and approved outputs. The
-    SHA-256 of each table written is added here.
+    SHA-256 read, each reform's manifest key, approved outputs and
+    definition, and ``run``, this run's commit and years, with the dataset
+    its caller adds. ``carried_runs`` (constituencies.carried_provenance)
+    gives the run of each table another run wrote. The SHA-256 of each table
+    written is added here.
     """
     out_dir = Path(out_dir)
+    carried = provenance.get("carried_runs") or {}
+    files = {
+        Path(path).name: sha256_bytes(Path(path).read_bytes())
+        for path in written
+    }
     document = {
         "schema": AREA_PROVENANCE_SCHEMA,
-        **provenance,
-        "files": {
-            Path(path).name: sha256_bytes(Path(path).read_bytes())
-            for path in written
+        **{
+            field: provenance[field]
+            for field in ("manifest_revision", "manifest_sha256", "reforms")
         },
+        "files": files,
+        "runs": {name: carried.get(name, provenance["run"]) for name in files},
     }
     problems = area_provenance_document_problems(document)
     if problems:
@@ -237,9 +342,19 @@ def _reform_ids(content: bytes) -> set[str]:
 
 
 def area_problems(
-    manifest: m.Manifest, files: dict[str, bytes], data_root: Path
+    manifest: m.Manifest,
+    files: dict[str, bytes],
+    data_root: Path,
+    *,
+    code_root: Optional[Path] = None,
 ) -> tuple[list[str], dict[str, str]]:
-    """Refuse area tables made for other entries than those now approved.
+    """Refuse area tables whose figures may differ from what the approved
+    entries now define.
+
+    A v2 record is checked against each reform's definition, and, with
+    ``code_root`` (the repository, for ``publish index``), against the code
+    at HEAD and in git (the module docstring). A v1 record is checked
+    against the national artifacts it was made beside, as before v2.
 
     Returns the problems, and the aliases the tables use for manifest keys
     (a package alias for its combined run). Problems name files, ids and
@@ -257,12 +372,13 @@ def area_problems(
         ], {}
     if (
         not isinstance(document, dict)
-        or document.get("schema") != AREA_PROVENANCE_SCHEMA
+        or document.get("schema") not in AREA_PROVENANCE_SCHEMAS
     ):
         return [f"area results: {AREA_PROVENANCE_FILE} has another schema"], {}
     problems = area_provenance_document_problems(document)
     if problems:
         return problems, {}
+    v2 = document["schema"] == AREA_PROVENANCE_SCHEMA
     digests = {
         name: sha256_bytes(content) for name, content in present.items()
     }
@@ -270,17 +386,17 @@ def area_problems(
         problems.append(
             "area results: the tables are not the ones the area run wrote"
         )
-    reforms = document.get("reforms")
-    if not isinstance(reforms, dict):
-        return problems + ["area results: no reforms recorded"], {}
-    used = set()
+    reforms = document["reforms"]
+    used_by_file = {}
     for name, content in present.items():
         try:
-            used |= _reform_ids(content)
+            used_by_file[name] = _reform_ids(content)
         except (UnicodeError, ValueError, csv.Error):
             problems.append(f"{name}: not a readable CSV with a reform column")
+    used = set().union(*used_by_file.values()) if used_by_file else set()
     entries = manifest.entries()
     aliases = {}
+    receipts = {}
     identity = (
         "artifact",
         "artifact_sha256",
@@ -290,13 +406,7 @@ def area_problems(
     )
     for reform_id in sorted(used):
         record = reforms.get(reform_id)
-        if (
-            not isinstance(record, dict)
-            or not isinstance(record.get("key"), str)
-            or any(
-                not isinstance(record.get(field), str) for field in identity
-            )
-        ):
+        if record is None:
             problems.append(
                 f"area results: {reform_id} is not recorded by the area run"
             )
@@ -308,10 +418,14 @@ def area_problems(
             problems.append(
                 f"area results: {reform_id} stands for {key}, which is {status}"
             )
-        elif any(getattr(entry, field) != record[field] for field in identity):
+        elif not v2 and any(
+            getattr(entry, field) != record[field] for field in identity
+        ):
             problems.append(
                 f"area results for {reform_id} were made for an earlier "
-                f"{key}; rerun the area run"
+                f"{key}; rerun the area run (its {AREA_PROVENANCE_FILE} is "
+                "v1, bound to the national artifact; the rerun writes v2, "
+                "bound to the definition)"
             )
         if entry is not None:
             try:
@@ -327,20 +441,132 @@ def area_problems(
                 if (
                     document_problems(receipt)
                     or artifact_sha256(receipt) != entry.artifact_sha256
-                    or any(
-                        record[side]
-                        != identity_core(receipt["execution_receipt"][side])
+                    or (receipt.get("dashboard") or {}).get("key") != key
+                    or not all(
+                        _same_definition(
+                            record[side],
+                            identity_core(receipt["execution_receipt"][side]),
+                            exact=not v2,
+                        )
                         for side in ("baseline", "reform")
                     )
                 ):
                     raise ValueError
+                receipts[reform_id] = receipt
             except (OSError, ValueError, KeyError, TypeError):
                 problems.append(
                     f"area results: {reform_id} approved receipt identity differs"
+                    + ("" if not v2 else "; rerun the area run")
                 )
         if key != reform_id:
             aliases[reform_id] = key
+    if v2 and code_root is not None and not problems:
+        problems += _area_code_problems(
+            document, used_by_file, receipts, Path(code_root)
+        )
     return problems, aliases
+
+
+def _same_definition(recorded: dict, current: dict, *, exact: bool) -> bool:
+    """Whether an area run's identity of one side is the current receipt's.
+
+    ``exact`` (v1): equal, the code-bound digest's commit included. v2: the
+    same kind, representation and binding, and for a content-bound side the
+    same digest, which has no commit. A code-bound digest includes the
+    receipt's commit, so its definition is compared with the code
+    (``_area_code_problems``) instead.
+    """
+    if exact:
+        return recorded == current
+    return all(
+        recorded[field] == current[field]
+        for field in ("kind", "representation", "binding")
+    ) and (
+        current["binding"] != "content"
+        or recorded["reform_sha256"] == current["reform_sha256"]
+    )
+
+
+def _area_code_problems(
+    document: dict,
+    used_by_file: dict[str, set],
+    receipts: dict[str, dict],
+    code_root: Path,
+) -> list[str]:
+    """The v2 checks that need the repository (``publish index`` only).
+
+    For each table's area run: no area-relevant code changed since its
+    commit (committed, uncommitted or untracked); none differs between it
+    and the commit each reform's approved receipt was made at; and each
+    reform's definition, as the code at HEAD defines it, is the one the
+    area run recorded, under the same manifest key.
+    """
+    from uk_budget_data import geography
+    from uk_budget_data.publication import area_code
+    from uk_budget_data.publication.receipt import ReceiptUnavailable
+
+    problems = []
+    rerun = "rerun the area run"
+    definitions = {}
+    for name, used in sorted(used_by_file.items()):
+        run = document["runs"][name]
+        sha = run["git_sha"]
+        try:
+            changed = area_code.area_changes_since(sha, code_root)
+        except ValueError as error:
+            problems.append(f"area results: {name}: {error}; {rerun}")
+            continue
+        if changed:
+            problems.append(
+                f"area results: code that can change {name} changed since "
+                f"its area run's commit {sha[:12]} "
+                f"({', '.join(changed[:5])}); {rerun}"
+            )
+        for reform_id in sorted(used):
+            receipt = receipts.get(reform_id)
+            if receipt is None:
+                continue
+            approved = (receipt.get("dashboard") or {}).get("git_sha")
+            try:
+                between = area_code.area_changes_between(
+                    sha, approved, code_root
+                )
+            except ValueError as error:
+                problems.append(f"area results: {reform_id}: {error}")
+                continue
+            if between:
+                problems.append(
+                    f"area results: {reform_id}'s approved artifact was made "
+                    f"with other area code than {name} "
+                    f"({', '.join(between[:5])}); {rerun}"
+                )
+            record = document["reforms"][reform_id]
+            if geography.manifest_key(reform_id) != record["key"]:
+                problems.append(
+                    f"area results: {reform_id} now stands for other "
+                    f"members than {record['key']}; {rerun}"
+                )
+                continue
+            label = (reform_id, tuple(run["years"]))
+            if label not in definitions:
+                try:
+                    definitions[label] = geography.definition_digests(
+                        reform_id, run["years"]
+                    )
+                except (KeyError, ValueError, ReceiptUnavailable) as error:
+                    definitions[label] = error
+            current = definitions[label]
+            if isinstance(current, Exception):
+                problems.append(
+                    f"area results: {reform_id}'s definition cannot be "
+                    f"bound: {current}"
+                )
+            elif current != record["definition"]:
+                problems.append(
+                    f"area results: {reform_id}'s definition changed since "
+                    f"its area run; {rerun}"
+                )
+    return problems
 
 
 def release_index_problems(data_root: Path, manifest=None) -> list[str]:
@@ -557,13 +783,19 @@ def unbind_area_results(
 
 
 def write_release_index(
-    manifest: m.Manifest, *, data_root: Path, inputs: Path
+    manifest: m.Manifest,
+    *,
+    data_root: Path,
+    inputs: Path,
+    code_root: Optional[Path] = Path("."),
 ) -> m.Manifest:
     """Gate, bind and write a new manifest and index pair.
 
     Every publication gate runs first, on the manifest and on the file on
     disk; only the index being replaced is skipped. The flat view files
     present are bound as they are: regenerate them for this snapshot first.
+    ``code_root`` is the repository the area code is checked in (the
+    working directory); None skips those checks, for tests of the others.
     """
     from uk_budget_data.publication.publish import PublishError, check
 
@@ -583,7 +815,9 @@ def write_release_index(
         problems.append(
             "no flat view file to bind (" + ", ".join(FLAT_VIEW_FILES) + ")"
         )
-    found, aliases = area_problems(manifest, files, data_root)
+    found, aliases = area_problems(
+        manifest, files, data_root, code_root=code_root
+    )
     problems += found + _flat_problems(manifest, files, aliases)
     if problems:
         raise PublishError("release index", problems)
