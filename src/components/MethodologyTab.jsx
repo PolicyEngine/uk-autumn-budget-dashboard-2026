@@ -314,9 +314,9 @@ function MethodologyTab({ onShowTab }) {
                   <>
                     PolicyEngine UK (<SourceLink id="policyengine_uk">policyengine-uk</SourceLink>), which we run
                     through <SourceLink id="policyengine_py_release">policyengine.py</SourceLink>{" "}on
-                    the <AnchorLink id={METHOD_SECTIONS.data}>data above</AnchorLink>. We write measures
-                    as parameter changes where possible, or build them from tested measure
-                    templates. We write three of the policies here by hand, and publish them
+                    the <AnchorLink id={METHOD_SECTIONS.data}>data above</AnchorLink>. Measures are
+                    written as parameter changes where possible, or built from tested measure
+                    templates. Three of the policies here are written by hand, and are published
                     only after two reviewers have checked the exact run.
                   </>,
                 ],
