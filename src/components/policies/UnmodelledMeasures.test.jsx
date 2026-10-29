@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import UnmodelledMeasures, { COSTING_CAPTION, UNMODELLED_SUBTITLE, UNMODELLED_TITLE, formatMillions, groupsOf } from "./UnmodelledMeasures";
 import { WHY_NOT_MODELLED } from "../PolicyCards";
 import { UNMODELLED_CARDS } from "../../utils/unmodelledCards";
+import { explainerFor } from "../../utils/explainers";
 import {
   BUDGET_DOCUMENT,
   COSTING_YEARS,
@@ -231,6 +232,33 @@ describe("UnmodelledMeasures", () => {
       const link = within(card).getByRole("link", { name: new RegExp(`^${label}\\s*\\(opens in a new tab\\)$`) });
       expect(link).toHaveAttribute("href", seeAlso.href);
       expect(link).toHaveAttribute("target", "_blank");
+    }
+  });
+
+  it("links our policy brief in the footer of a card we have one for: the adjusted Triple Lock's", () => {
+    render(<UnmodelledMeasures />);
+    open();
+    // The cards explainers.js names, each with its post
+    const briefed = UNMODELLED_MEASURES.filter(({ id }) => explainerFor(id));
+    expect(Object.fromEntries(briefed.map(({ id }) => [id, explainerFor(id).href]))).toEqual({
+      "adjusted-triple-lock": "https://www.policyengine.org/uk/research/uk-triple-lock-budget-2026",
+    });
+    for (const { id } of UNMODELLED_MEASURES) {
+      const card = document.getElementById(`unmodelled-${id}`);
+      const links = within(card).queryAllByRole("link", { name: /^Read policy brief/ });
+      const explainer = explainerFor(id);
+      if (!explainer) {
+        expect(links, id).toHaveLength(0);
+        continue;
+      }
+      expect(links, id).toHaveLength(1);
+      const [link] = links;
+      expect(link).toHaveAttribute("href", explainer.href);
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      // In the footer, as on the modelled cards: seen without opening the
+      // Treasury costing
+      expect(link.closest(".policy-card-actions")).not.toBeNull();
     }
   });
 
