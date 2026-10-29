@@ -109,7 +109,7 @@ function expectNoHalfDrawn(container) {
   }
 }
 
-/** By age's "Average change by age" card, switched to its Age groups view (single years by default). */
+/** By age's "Average change by age" card in its Age groups view (the view it opens on). */
 function meanCard(container) {
   const shown = container.querySelector(".young-people-mean");
   if (shown) return shown;
@@ -117,6 +117,25 @@ function meanCard(container) {
   fireEvent.click(within(single).getByRole("button", { name: /^Options:/ }));
   fireEvent.click(within(single).getByRole("radio", { name: "Age groups" }));
   return container.querySelector(".young-people-mean");
+}
+
+/** The Average change by age card, whichever view it shows. */
+const ageCard = (container) => container.querySelector(".young-people-mean, .single-age-card");
+
+/** Clicks the radio `name` in the card's Options, opening the pill if it is shut. */
+function chooseOption(card, name) {
+  if (!within(card).queryByRole("radio", { name })) fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+  fireEvent.click(within(card).getByRole("radio", { name }));
+}
+
+/**
+ * The Average change by age card switched to Single year of age for `group`
+ * (it opens on All ages and Age groups): the group first, then the view.
+ */
+function singleYears(container, group = "16 to 24") {
+  chooseOption(ageCard(container), group);
+  chooseOption(ageCard(container), "Single year of age");
+  return container.querySelector(".single-age-card");
 }
 
 /** The fixture with single-year rows 0 to 90+ for each key, less `without`'s. */
@@ -255,11 +274,64 @@ describe("Average change by age with a package whose every member has rows by ag
   });
 });
 
-describe("Average change by age by single year of age (the default view)", () => {
-  const singleCard = (container) => container.querySelector(".single-age-card");
+describe("Average change by age's opening view", () => {
+  afterEach(() => window.history.replaceState(null, "", "/"));
+
+  /** The radio `name` in the card's Options, the pill opened. */
+  function optionRadio(card, name) {
+    if (!within(card).queryByRole("radio", { name })) fireEvent.click(within(card).getByRole("button", { name: /^Options:/ }));
+    return within(card).getByRole("radio", { name });
+  }
+
+  it("opens on All ages, Age groups and By policy (Vahid, 29 October)", async () => {
+    const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
+    expect(container.querySelector(".single-age-card")).toBeNull();
+    const card = container.querySelector(".young-people-mean");
+    expect(optionRadio(card, "All ages")).toHaveAttribute("aria-checked", "true");
+    expect(optionRadio(card, "Age groups")).toHaveAttribute("aria-checked", "true");
+    expect(optionRadio(card, "By policy")).toHaveAttribute("aria-checked", "true");
+    // The other cards keep the section's 16 to 24
+    expect(optionRadio(container.querySelector(".young-people-trend"), "16 to 24")).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("leaves Effect of each policy on 16 to 24 against 25 to 34", async () => {
+    const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
+    const measures = container.querySelector(".young-people-measures");
+    const legend = measures.querySelector(".measure-dumbbell-legend");
+    expect(legend).toHaveTextContent("16 to 24");
+    expect(legend).toHaveTextContent("25 to 34");
+    expect(optionRadio(measures, "16 to 24")).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("follows a group the reader picks in another card", async () => {
+    const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
+    fireEvent.click(optionRadio(container.querySelector(".young-people-trend"), "25 to 34"));
+    expect(optionRadio(ageCard(container), "25 to 34")).toHaveAttribute("aria-checked", "true");
+    expect(optionRadio(ageCard(container), "All ages")).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("follows the section's group when the reader picks one in this card, then in another", async () => {
+    const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
+    // 16 to 24, already the section's group: this card moves to it
+    fireEvent.click(optionRadio(ageCard(container), "16 to 24"));
+    expect(optionRadio(ageCard(container), "16 to 24")).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(optionRadio(container.querySelector(".young-people-trend"), "35 to 49"));
+    expect(optionRadio(ageCard(container), "35 to 49")).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("opens on the group in the address (?age=)", async () => {
+    window.history.replaceState(null, "", "/?age=25-34");
+    const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
+    expect(optionRadio(ageCard(container), "25 to 34")).toHaveAttribute("aria-checked", "true");
+    expect(optionRadio(ageCard(container), "Age groups")).toHaveAttribute("aria-checked", "true");
+  });
+});
+
+describe("Average change by age by single year of age, 16 to 24", () => {
+  const singleCard = (container) => singleYears(container);
   const ageRows = (card) => chartRows(card).find((rows) => rows.some((point) => point.label === "20"));
 
-  it("opens on single years, with each policy's part offered as By policy when every member has rows", async () => {
+  it("shows single years, with each policy's part offered as By policy when every member has rows", async () => {
     const { container } = await renderAge(withSingleAges(measureCatalogueFixture({ held: false })), [ALPHA, BETA]);
     const card = singleCard(container);
     expect(card).not.toBeNull();
@@ -352,6 +424,8 @@ describe("Average change by age when the package withholds every single age", ()
 
   it("falls back to the age bands, with no note, and Options shows Age groups chosen", async () => {
     const { container } = await renderAge(packageWithoutSingleAges(), [ALPHA, BETA]);
+    chooseOption(ageCard(container), "16 to 24");
+    chooseOption(ageCard(container), "Single year of age");
     expect(container.querySelector(".single-age-card")).toBeNull();
     const card = container.querySelector(".young-people-mean");
     expect(card).not.toBeNull();
@@ -364,7 +438,8 @@ describe("Average change by age when the package withholds every single age", ()
     expect(bands.map((point) => point.netChange)).toEqual(BANDS.map(() => 50));
     const pill = within(card).getByRole("button", { name: /^Options:/ });
     expect(pill.getAttribute("aria-label") ?? pill.textContent).toMatch(/Age groups/);
-    fireEvent.click(pill);
+    // Still open from the choices above
+    if (!within(card).queryByRole("radio", { name: "Age groups" })) fireEvent.click(pill);
     expect(within(card).getByRole("radio", { name: "Age groups" })).toHaveAttribute("aria-checked", "true");
     const single = within(card).getByRole("radio", { name: "Single year of age" });
     expect(single).toBeDisabled();
@@ -376,16 +451,16 @@ describe("Average change by age when the package withholds every single age", ()
     expect(container.querySelector(".young-people-mean").textContent).not.toMatch(/confidential|not published for this selection/i);
   });
 
-  it("keeps the single-age view for a policy alone that has its single ages", async () => {
+  it("offers the single-age view for a policy alone that has its single ages", async () => {
     const { container } = await renderAge(packageWithoutSingleAges(), [ALPHA]);
-    const card = container.querySelector(".single-age-card");
+    const card = singleYears(container);
     expect(card).not.toBeNull();
     expect(container.querySelector(".young-people-mean")).toBeNull();
   });
 
   it("draws each policy's own parts, with no net, where the package withholds its bands too", async () => {
     const { container } = await renderAge(packageWithoutSingleAges({ bands: false }), [ALPHA, BETA]);
-    const card = container.querySelector(".single-age-card");
+    const card = singleYears(container);
     expect(card).not.toBeNull();
     expect(container.querySelector(".young-people-mean")).toBeNull();
     // Net change: nothing to draw, a plain line with no reason given
