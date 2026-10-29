@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { parseScatterCsv } from "../utils/householdScatter";
 
@@ -58,13 +58,17 @@ const MANIFEST = {
     },
   },
 };
+// Each verified artifact's tables, as the page's catalogue holds them; a
+// test sets the income decile rows the card reads beside the scatter
+let tablesByKey = undefined;
 vi.mock("../utils/measureCatalogue", () => ({
-  useMeasureCatalogue: () => ({ combinedId: null, byId: new Map(), manifest: MANIFEST }),
+  useMeasureCatalogue: () => ({ combinedId: null, byId: new Map(), manifest: MANIFEST, tablesByKey }),
 }));
 
 const { default: HouseholdScatter, LOGO_ROOM } = await import("./HouseholdScatter");
 const { chartMargin } = await import("../utils/chartTheme");
 const { CHART_LOGO } = await import("../utils/chartLogo");
+const { WITHHELD_DECILE_MESSAGE } = await import("../utils/decileWithholding");
 
 const POLICIES = [
   { id: "a", name: "Measure A" },
@@ -88,6 +92,48 @@ describe("HouseholdScatter with no change in household incomes", () => {
     expect(description.textContent).toMatch(/right of the line they gain, left they lose\./);
     expect(description.querySelectorAll(".scatter-key-word .scatter-legend-dot")).toHaveLength(2);
     expect(screen.queryByLabelText("Key")).toBeNull();
+  });
+});
+
+// Measure a's income decile results in 2027, the year its published cells
+// are all in the zero band
+const decileRows = (values) => ({
+  a: {
+    distributional_impact: values.map((value, index) => ({
+      reform_id: "a",
+      reform_name: "Measure A",
+      year: 2027,
+      decile: `${index + 1}${["st", "nd", "rd"][index] ?? "th"}`,
+      value,
+    })),
+  },
+});
+
+describe("HouseholdScatter when the groups that change are withheld", () => {
+  afterEach(() => {
+    tablesByKey = undefined;
+  });
+
+  it("gives the disclosure note, not 'no change', when the deciles change but the scatter's changed cells are left out (the Carer's Allowance taper, 2031-32)", () => {
+    // Deciles 7 and 9 withheld, the rest non-zero, as the taper publishes
+    tablesByKey = decileRows([0.0036, 0.0067, 0.0007, 0.0099, 0.0059, -0.0008, "", 0.002, "", 0.00005]);
+    render(<HouseholdScatter selectedPolicies={["a"]} policies={POLICIES} selectedYear={2027} />);
+    expect(screen.getByRole("status")).toHaveTextContent(`${WITHHELD_DECILE_MESSAGE}.`);
+    expect(screen.queryByText(/None of the selected policies changes household incomes/)).toBeNull();
+    expect(screen.queryByTestId("scatter-chart")).toBeNull();
+  });
+
+  it("gives the disclosure note when every decile is withheld", () => {
+    tablesByKey = decileRows(Array(10).fill(""));
+    render(<HouseholdScatter selectedPolicies={["a"]} policies={POLICIES} selectedYear={2027} />);
+    expect(screen.getByRole("status")).toHaveTextContent(`${WITHHELD_DECILE_MESSAGE}.`);
+  });
+
+  it("keeps 'None of the selected policies…' for a true zero: every decile published at zero", () => {
+    tablesByKey = decileRows(Array(10).fill(0));
+    render(<HouseholdScatter selectedPolicies={["a"]} policies={POLICIES} selectedYear={2027} />);
+    expect(screen.getByRole("status")).toHaveTextContent("None of the selected policies changes household incomes in 2027-28.");
+    expect(screen.queryByText(new RegExp(WITHHELD_DECILE_MESSAGE))).toBeNull();
   });
 });
 

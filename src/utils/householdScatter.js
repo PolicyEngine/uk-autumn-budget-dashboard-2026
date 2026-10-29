@@ -23,6 +23,7 @@
 import { fiscalYearLabel } from "./publication/format";
 import { buildChartCsv } from "./chartCsv";
 import { chooseSelectionReform, selectionNotPublished } from "./geography/selection";
+import { isWithheldDecileValue } from "./decileWithholding";
 import {
   bandLabel,
   changeBandLabel as describeChangeBand,
@@ -122,6 +123,24 @@ const notice = (reason, detail = null) => ({ kind: "notice", reason, detail });
 
 /** The scatter's notice when the selection's combined run is not published. */
 export const SCATTER_SELECTION_NOT_PUBLISHED = selectionNotPublished("Household");
+
+/**
+ * Whether a reform's published income-decile results (its
+ * distributional_impact rows) say it changes household incomes in `year`:
+ * a decile with a non-zero change, or one withheld for disclosure. The
+ * scatter's own cells cannot tell: a cell with too few survey households is
+ * left out, so a measure that moves only a few survey households (the
+ * Carer's Allowance taper) can publish nothing but its no-change cells.
+ */
+export function decilesShowChange(rows, reform, year) {
+  return (rows ?? []).some(
+    (row) =>
+      row.reform_id === reform &&
+      Number(row.year) === Number(year) &&
+      row.decile !== "all" &&
+      (isWithheldDecileValue(row.value) || Math.abs(Number.parseFloat(row.value)) > 0),
+  );
+}
 
 /**
  * What the scatter can show for the header's selection.
