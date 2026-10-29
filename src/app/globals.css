@@ -139,6 +139,11 @@ code {
   --tab-row-height: 48px;
   /* The view tabs under the intro; they stick under the band */
   --view-tabs-height: var(--tab-row-height);
+  /* The title band's, the view tab bar's and the sub-tab band's side
+     padding, which puts their content in the page column: one value, so
+     the sub-tab row's --view-tab-x, measured in the bar, starts it under
+     the chosen view tab (ViewTabs.jsx, SubTabs.css) */
+  --bar-pad-x: max(40px, calc((100vw - 1120px) / 2));
   /* The two tab rows' one spacing (view tabs, sub-tabs and About): the gap
      between items, the padding inside each (chosen or not) and the gap
      from icon to label */
@@ -477,7 +482,7 @@ html[data-site-nav-shown] {
   /* Full-bleed with real edges: the band spans the window, and its padding
      lines its content up with the page column. */
   margin-inline: calc(50% - 50vw);
-  padding-inline: max(40px, calc((100vw - 1120px) / 2));
+  padding-inline: var(--bar-pad-x);
   /* The site header's gradient and rule, from the same tokens */
   background: var(--band-gradient);
   border-bottom: var(--band-rule);
@@ -610,7 +615,7 @@ html[data-site-nav-shown] {
   /* Under the band and its pill lists, above the charts */
   z-index: 1090;
   margin-inline: calc(50% - 50vw);
-  padding-inline: max(40px, calc((100vw - 1120px) / 2));
+  padding-inline: var(--bar-pad-x);
   /* A strip of its own: the page's main navigation */
   background: var(--pe-surface);
   border-top: 1px solid var(--card-border);
@@ -632,6 +637,14 @@ html[data-site-nav-shown] {
 
 .view-tabs::-webkit-scrollbar {
   display: none;
+}
+
+/* In the bar, the row is pulled a tab's padding into the margin, so the
+   first tab's icon starts on the left edge of PolicyEngine's mark in the
+   band above (.title-mark) and of the page content; the sub-tab row
+   follows it (--view-tab-x, ViewTabs.jsx) */
+.view-tabs-bar > .view-tabs {
+  margin-left: calc(-1 * var(--tab-pad-x, 12px));
 }
 
 /* Tabs out of sight at either end of a scrolling row fade out there */
@@ -1707,9 +1720,8 @@ html[data-site-nav-shown] {
     padding: 0 24px 48px;
   }
 
-  .title-row,
-  .view-tabs-bar {
-    padding-inline: 24px;
+  :root {
+    --bar-pad-x: 24px;
   }
 }
 
@@ -1752,15 +1764,11 @@ html[data-site-nav-shown] {
   :root {
     --card-padding: 16px;
     --title-row-height: 100px;
+    --bar-pad-x: 16px;
   }
 
   .main-content {
     padding: 0 16px 48px;
-  }
-
-  .title-row,
-  .view-tabs-bar {
-    padding-inline: 16px;
   }
 
   .title-row h1 {
@@ -2759,97 +2767,9 @@ html[data-site-nav-shown] {
   transform: translate(-50%, -2px);
 }
 
-/* A change, before and after: a label row with the parameter's icon, then
-   two tiles, current law muted and the measure in its colour */
-.pchg-ba {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.pchg-ba-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-size: var(--fs-small);
-  font-weight: 500;
-  color: var(--pe-gray-600);
-}
-
-/* Which year the tiles show, where the change varies by year */
-.pchg-ba-when {
-  font-weight: 400;
-  color: var(--pe-gray-500);
-}
-
-/* The plot's caption and key, under the tiles */
+/* The plot's caption and key, above the plot */
 .pchg-head.is-plot {
   margin-top: 6px;
-}
-
-.pchg-ba-label svg {
-  flex: none;
-  color: var(--pe-gray-500);
-}
-
-/* Both tiles one size: the row stretches them to the taller, and the
-   change sits in the last slot of the second, so the labels and values
-   line up across the two */
-.pchg-ba-tiles {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: stretch;
-  gap: 10px;
-}
-
-.pchg-tile {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  min-width: 0;
-  padding: 10px 14px 12px;
-  border-radius: 10px;
-  font-variant-numeric: tabular-nums;
-}
-
-.pchg-tile.is-before {
-  background: var(--pe-gray-50);
-  border: 1px solid var(--c-grid);
-}
-
-.pchg-tile.is-after {
-  background: color-mix(in srgb, var(--policy-accent, var(--c-after)) 10%, var(--c-surface));
-  border: 1px solid color-mix(in srgb, var(--policy-accent, var(--c-after)) 45%, var(--c-surface));
-}
-
-.pchg-tile-name {
-  font-size: var(--fs-micro);
-  font-weight: 500;
-  /* Grey 600: grey 500 on the tiles' tints is 4.2 to 4.5:1, under the
-     4.5 WCAG 1.4.3 needs; 600 is 6.5:1 or more */
-  color: var(--pe-gray-600);
-}
-
-.pchg-tile-value {
-  font-size: var(--fs-xl);
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--pe-gray-900);
-}
-
-.pchg-tile.is-before .pchg-tile-value {
-  font-weight: 500;
-  color: var(--pe-gray-500);
-  text-decoration: line-through;
-  text-decoration-color: var(--c-before);
-  text-decoration-thickness: 2px;
-}
-
-.pchg-ba-arrow {
-  align-self: center;
-  color: var(--pe-gray-400);
 }
 
 /* Several values side by side, only where the measure differs */
@@ -2974,17 +2894,6 @@ html[data-site-nav-shown] {
 .policy-timeline-labels > span.is-lit {
   font-weight: 700;
   color: var(--c-gain-text);
-}
-
-@media (max-width: 768px) {
-  .pchg-tile {
-    padding: 8px 10px 10px;
-  }
-
-  .pchg-tile-value {
-    font-size: var(--fs-section);
-  }
-
 }
 
 @media (max-width: 768px) {

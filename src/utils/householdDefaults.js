@@ -60,7 +60,8 @@ export const WIZARD_DEFAULTS = {
   current_salary: DEFAULT_SALARY,
   region: "NORTH_WEST",
   // The local authority (council) picked, by its ONS name, which sets the
-  // region; null until picked. Not sent: the API reads the region
+  // region; null until picked. Sent as its policyengine-uk key
+  // (local_authority), for its own Council Tax Band D
   council: null,
   tenure: "RENT_PRIVATELY",
   // null: the region's average private rent (ONS), until changed

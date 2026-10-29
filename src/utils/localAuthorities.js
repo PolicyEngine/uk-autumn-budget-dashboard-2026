@@ -4,10 +4,12 @@
  * the region each lies in, for the Household calculator form's local
  * authority picker.
  *
- * The household API takes a region: the picked council sets the region the
- * form sends, and nothing else, so a request is the same whichever council
- * in a region is picked. Council Tax stays estimated from the region's
- * average Band D. The table is localAuthorities.json, from ONS lookups (its
+ * The picked council sets the region the form sends, and the household
+ * request carries its policyengine-uk key as `local_authority`, from which
+ * the API estimates Council Tax with that council's own Band D. Nothing is
+ * sent until a council is picked, so the examples' requests (and their
+ * precomputed answers) are as they were. The table is localAuthorities.json,
+ * from ONS lookups (its
  * "source"); each entry is a name and policyengine-uk's LocalAuthority key.
  * It carries no ONS codes, so it stays clear of the area-code guard in
  * scripts/check_public_data.py.
@@ -23,6 +25,9 @@ const BY_NAME = new Map(LOCAL_AUTHORITIES.map((council) => [council.name, counci
 
 /** A local authority's region (the API's enum), or null for an unknown name. */
 export const localAuthorityRegion = (name) => BY_NAME.get(name)?.region ?? null;
+
+/** A local authority's policyengine-uk LocalAuthority key ("GLASGOW_CITY"), or null for an unknown name. */
+export const localAuthorityKey = (name) => BY_NAME.get(name)?.key ?? null;
 
 /** Lower case without accents or punctuation, so "rhondda cynon taf" finds "Rhondda Cynon Taf". */
 export const foldText = (text) =>
