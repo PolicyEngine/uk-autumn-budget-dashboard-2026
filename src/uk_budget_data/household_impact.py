@@ -74,6 +74,7 @@ from policyengine_uk.variables.household.demographic.locations import (
 )
 from policyengine_uk.variables.input.council_tax_band import CouncilTaxBand
 
+from uk_budget_data import uc_surplus_earnings as surplus_rule
 from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
     carers_allowance_earnings_taper,
 )
@@ -885,6 +886,38 @@ def salaries_in(answers: HouseholdAnswers, year: int) -> tuple[float, float]:
     )
 
 
+def month_salaries(
+    answers: HouseholdAnswers, year: int
+) -> Optional[list[list[float]]]:
+    """Each month's employment income for the head (and any partner), as
+    the yearly amount a policyengine-uk simulation of that month is run on:
+    twelve times the month's pay, so the year's income tax, National
+    Insurance and Universal Credit, divided by twelve, are the month's.
+    A partner without months of their own has their yearly salary, grown
+    to ``year``, in every month. None without the head's months."""
+    if answers.monthly_employment_income is None:
+        return None
+    if not answers.has_partner:
+        return [
+            [surplus_rule.MONTHS_IN_YEAR * pay]
+            for pay in answers.monthly_employment_income
+        ]
+    _, partner_salary = salaries_in(answers, year)
+    partner_months = answers.partner_monthly_employment_income or (
+        (partner_salary / surplus_rule.MONTHS_IN_YEAR,)
+        * surplus_rule.MONTHS_IN_YEAR
+    )
+    return [
+        [
+            surplus_rule.MONTHS_IN_YEAR * pay,
+            surplus_rule.MONTHS_IN_YEAR * partner_pay,
+        ]
+        for pay, partner_pay in zip(
+            answers.monthly_employment_income, partner_months
+        )
+    ]
+
+
 def full_new_state_pension(year: int) -> float:
     """The full new State Pension, £ a year, in ``year``, as a simulation
     on the October 2026 forecast pays it: the model's weekly rate
@@ -1494,6 +1527,97 @@ def _summed(values, axes_active: bool):
     return float(sum(values))
 
 
+def monthly_situation(
+    people: list,
+    benunit: dict,
+    household: dict,
+    year: int,
+    months: list,
+) -> dict:
+    """One policyengine-uk situation holding the household once per month:
+    each copy as entered, but for its adults' employment income, the
+    month's (``month_salaries``), each built and checked as
+    ``household_situation`` builds one household. Ids are prefixed by the
+    month, so the people come month by month, in the order entered."""
+    merged: dict = {"people": {}, "benunits": {}, "households": {}}
+    for index, salaries in enumerate(months):
+        month_people = [dict(person) for person in people]
+        for person, salary in zip(month_people, salaries):
+            person["employment_income"] = salary
+        situation = household_situation(month_people, benunit, household, year)
+        prefix = f"month_{index}_"
+        for person_id, values in situation["people"].items():
+            merged["people"][prefix + person_id] = values
+        for group in ("benunits", "households"):
+            for group_id, values in situation[group].items():
+                merged[group][prefix + group_id] = {
+                    **values,
+                    "members": [
+                        prefix + member for member in values["members"]
+                    ],
+                }
+    return merged
+
+
+# Each month's Universal Credit amounts (uc_surplus_earnings.MonthAmounts)
+# and the benefit-unit variable each is read from; total earned income is
+# summed over the claimants (_run_months)
+MONTH_VARIABLES = {
+    "universal_credit": "universal_credit",
+    "universal_credit_before_benefit_cap": "universal_credit_pre_benefit_cap",
+    "maximum_amount": "uc_maximum_amount",
+    "unearned_income": "uc_unearned_income",
+    "work_allowance": "uc_work_allowance",
+    "assessed_earned_income": "uc_earned_income_before_work_allowance",
+}
+
+
+def _run_months(
+    people: list,
+    benunit: dict,
+    household: dict,
+    year: int,
+    side: dict,
+    months: list,
+) -> dict:
+    """The household's Universal Credit amounts in each month with no
+    surplus earnings, from one simulation of one side holding a household
+    per month (``monthly_situation``): policyengine-uk's yearly figures, a
+    year of each month's pay, which ``uc_surplus_earnings`` divides by
+    twelve. Also the side's Universal Credit taper rate."""
+    from policyengine_uk import Simulation
+
+    from uk_budget_data.forecast import with_forecast
+
+    simulation = Simulation(
+        situation=monthly_situation(people, benunit, household, year, months),
+        scenario=with_forecast(side_scenario(side)),
+    )
+    values = {
+        field_name: [float(v) for v in simulation.calculate(variable, year)]
+        for field_name, variable in MONTH_VARIABLES.items()
+    }
+    # Reg. 54A(6)'s total earned income: the claimants' earned income,
+    # without the minimum income floor, each month's people in turn
+    earned = np.asarray(
+        simulation.calculate("uc_individual_earned_income_before_mif", year),
+        dtype=float,
+    ) * np.asarray(simulation.calculate("is_uc_assessed_claimant", year))
+    values["total_earned_income"] = [
+        float(month) for month in earned.reshape(len(months), -1).sum(axis=1)
+    ]
+    taper_rate = simulation.tax_benefit_system.parameters(
+        year
+    ).gov.dwp.universal_credit.means_test.reduction_rate
+    return {
+        "months": [
+            {name: values[name][index] for name in values}
+            for index in range(len(months))
+        ],
+        "taper_rate": float(taper_rate),
+    }
+
+
 def run_scenario(
     people: list,
     benunit: dict,
@@ -1503,6 +1627,7 @@ def run_scenario(
     axes: Optional[list] = None,
     net_income_only: bool = False,
     parts: bool = False,
+    months: Optional[list] = None,
 ) -> dict:
     """One household simulation of one side (``_side``), reduced to what
     the answer reads: net income, and unless ``net_income_only``, each
@@ -1510,11 +1635,16 @@ def run_scenario(
     status and the household's area. With ``axes``, net income is a list
     over the sweep. The sweep, a full run, and a run asked for ``parts``
     also read ``RATE_PART_VARIABLES`` summed over the household (lists over
-    the sweep), to split the marginal rate. Module level and plain data in
-    and out, so it can run in a worker process."""
+    the sweep), to split the marginal rate. With ``months``
+    (``month_salaries``), the household's Universal Credit amounts in each
+    month instead (``_run_months``). Module level and plain data in and
+    out, so it can run in a worker process or a Modal container."""
     from policyengine_uk import Simulation
 
     from uk_budget_data.forecast import with_forecast
+
+    if months is not None:
+        return _run_months(people, benunit, household, year, side, months)
 
     simulation = Simulation(
         situation=household_situation(people, benunit, household, year, axes),
@@ -2064,8 +2194,15 @@ def calculate_household_impact(
     pension, partner_pension = state_pensions(answers, year)
 
     def job(
-        reform, axes=None, net_income_only=False, members=None, parts=False
+        reform,
+        axes=None,
+        net_income_only=False,
+        members=None,
+        parts=False,
+        months=None,
     ):
+        # The optional arguments only when set, so every other run's key
+        # (and a run kept from before they were added) is unchanged
         return (
             members or people,
             benunit,
@@ -2074,10 +2211,39 @@ def calculate_household_impact(
             reform,
             axes,
             net_income_only,
-        ) + ((True,) if parts else ())
+        ) + (
+            (parts, months)
+            if months is not None
+            else ((True,) if parts else ())
+        )
 
-    jobs = [job(sides.before), job(sides.after)]
     by_policy = "by_policy" in include
+    # The Universal Credit surplus earnings threshold measure, with monthly
+    # pay: the months under the selected measures (for the net income) and,
+    # for the split by policy, under current law (its own change), unless
+    # the answers alone show it changes nothing
+    salaries_by_month = month_salaries(answers, year)
+    surplus_status, surplus_reason = (
+        surplus_rule.decided_without_running(
+            answers.region, answers.claims_universal_credit, year
+        )
+        if salaries_by_month is not None
+        else (None, None)
+    )
+    month_jobs = []
+    if salaries_by_month is not None and surplus_status is None:
+        month_jobs.append(
+            job(sides.after, net_income_only=True, months=salaries_by_month)
+        )
+        if by_policy:
+            month_jobs.append(
+                job(
+                    sides.before,
+                    net_income_only=True,
+                    months=salaries_by_month,
+                )
+            )
+    jobs = [job(sides.before), job(sides.after), *month_jobs]
     many = len(sides.included) > 1
     # The measures whose own run is needed (provably_unaffected: the rest
     # are exactly £0 for this household and year, so they are not run).
@@ -2104,8 +2270,23 @@ def calculate_household_impact(
         ]
     outputs = _run_all(jobs, workers)
     before, after = outputs[0], outputs[1]
+    # The measure's change under the selected measures, added to the net
+    # income after them (the sweep stays on policyengine-uk's own figures),
+    # and its own change, for the split by policy
+    surplus, surplus_change, surplus_own_change = (
+        (None, 0.0, None)
+        if salaries_by_month is None
+        else _surplus_earnings(
+            answers,
+            year,
+            surplus_status,
+            surplus_reason,
+            outputs[2 : 2 + len(month_jobs)],
+        )
+    )
     base_net = before["household_net_income"]
-    reform_net = after["household_net_income"]
+    engine_reform_net = after["household_net_income"]
+    reform_net = engine_reform_net + surplus_change
     combined = reform_net - base_net
 
     identity = runtime_identity()
@@ -2208,30 +2389,54 @@ def calculate_household_impact(
             ),
         },
         "sweep": None,
+        # The Universal Credit surplus earnings threshold measure, month by
+        # month; None without monthly pay
+        "surplus_earnings": surplus,
         "engine": identity["packages"],
         # The build's commit: the page uses a breakdown from a second
         # deployment (the Modal detail service) only when it reports the
         # same commit as the headline
         "git_sha": identity["git_sha"],
     }
+    if surplus is not None and surplus_change:
+        _add_surplus_to_universal_credit(result["programmes"], surplus_change)
     if by_policy:
         if many:
-            ran = dict(zip(to_run, outputs[2 : 2 + len(to_run)]))
+            first_single = 2 + len(month_jobs)
+            ran = dict(
+                zip(to_run, outputs[first_single : first_single + len(to_run)])
+            )
             unaffected = {"household_net_income": base_net}
             singles = [ran.get(id_, unaffected) for id_ in sides.included]
         else:
             singles = [after] if sides.included else []
         result["by_policy"] = _by_policy(
-            sides.included, singles, base_net, combined
+            sides.included,
+            singles,
+            base_net,
+            combined,
+            extra=(
+                []
+                if surplus is None
+                else [
+                    {
+                        "id": surplus_rule.MEASURE_ID,
+                        "name": surplus_rule.MEASURE_NAME,
+                        "change": surplus_own_change,
+                    }
+                ]
+            ),
         )
     if sweep:
+        # The sweep varies yearly pay, spread evenly over the months, so its
+        # own point is policyengine-uk's, on the sweep's curve
         result["sweep"] = _sweep(
             grid,
             outputs[-4]["household_net_income"],
             outputs[-3]["household_net_income"],
             salary,
             base_net,
-            reform_net,
+            engine_reform_net,
             (
                 own_rate(
                     base_net,
@@ -2239,7 +2444,7 @@ def calculate_household_impact(
                     OWN_RATE_STEP,
                 ),
                 own_rate(
-                    reform_net,
+                    engine_reform_net,
                     outputs[-1]["household_net_income"],
                     OWN_RATE_STEP,
                 ),
@@ -2272,9 +2477,152 @@ def _dependants(answers: HouseholdAnswers, before: dict) -> list:
     ]
 
 
+SURPLUS_METHOD = (
+    "Worked out month by month, April to March, from the monthly pay "
+    "entered: each month's Universal Credit from a policyengine-uk "
+    "simulation of a year of that month's pay (so income tax and National "
+    "Insurance as if that pay came every month), then the surplus earnings "
+    "rule (Universal Credit Regulations 2013 reg. 54A) at the current-law "
+    "threshold and at the Budget's. An award ends in a month whose earnings "
+    "take it to nil; the next five monthly claims count the earnings above "
+    "the nil UC threshold plus the threshold. Calendar months stand for "
+    "assessment periods; the household starts April on an award with "
+    "nothing carried in, and claims after March are not counted. "
+    "Self-employment profit and other income are spread evenly. Every "
+    "other figure comes from the yearly salary. Surplus earnings do not "
+    "apply to someone recently a victim of domestic violence, for whom "
+    "the measure changes nothing."
+)
+SURPLUS_UC_NOTE = (
+    "Includes the Universal Credit surplus earnings threshold measure's "
+    "change, worked out month by month from the monthly pay entered (an "
+    "amount paid, after any benefit cap)."
+)
+
+
+def _month_label(year: int, index: int) -> str:
+    """The ``index``-th month of the policy year from April: "2027-04"."""
+    month = (index + 3) % 12 + 1
+    return f"{year + (index + 3) // 12}-{month:02d}"
+
+
+def _surplus_side(result: "surplus_rule.MonthResult") -> dict:
+    return {
+        "universal_credit": _money(result.universal_credit),
+        "status": result.status,
+        "claim": result.claim,
+        "surplus_counted": _money(result.surplus_counted),
+        "surplus_carried": _money(result.surplus_carried),
+    }
+
+
+def _surplus_earnings(
+    answers: HouseholdAnswers,
+    year: int,
+    status: Optional[str],
+    reason: Optional[str],
+    month_outputs: list,
+) -> tuple[dict, float, Optional[float]]:
+    """The measure's block of the answer, its change under the selected
+    measures (the first of ``month_outputs``), and its own change with
+    every other measure at current law (the second, when the split by
+    policy asked for it; else None). ``status`` and ``reason`` are
+    ``decided_without_running``'s: a household it cannot reach has £0 and
+    its reason, and no months."""
+    block = {
+        "id": surplus_rule.MEASURE_ID,
+        "name": surplus_rule.MEASURE_NAME,
+        "status": status,
+        "reason": reason,
+        # Why it changes nothing, for a household it cannot reach
+        "note": surplus_rule.REASONS[reason] if reason else None,
+        "thresholds": {
+            "current_law": surplus_rule.surplus_threshold(year, budget=False),
+            "budget": surplus_rule.surplus_threshold(year, budget=True),
+        },
+        "change": 0.0,
+        "own_change": 0.0 if status else None,
+        "total": None,
+        "months": None,
+        "method": SURPLUS_METHOD,
+    }
+    if status is not None:
+        return block, 0.0, 0.0
+
+    def effect(output):
+        months = [
+            surplus_rule.month_amounts_from_yearly(month)
+            for month in output["months"]
+        ]
+        return months, surplus_rule.household_effect(
+            months, year, output["taper_rate"]
+        )
+
+    amounts, after = effect(month_outputs[0])
+    own_change = (
+        effect(month_outputs[1])[1]["change"]
+        if len(month_outputs) > 1
+        else None
+    )
+    salaries = month_salaries(answers, year)
+    block.update(
+        status="affected" if after["change"] != 0 else "not_affected",
+        change=_money(after["change"]),
+        own_change=None if own_change is None else _money(own_change),
+        total={side: _money(total) for side, total in after["total"].items()},
+        months=[
+            {
+                "month": _month_label(year, index),
+                "employment_income": _money(pay),
+                "partner_employment_income": (
+                    _money(salaries[index][1] / surplus_rule.MONTHS_IN_YEAR)
+                    if answers.has_partner
+                    else None
+                ),
+                "total_earned_income": _money(month.total_earned_income),
+                "nil_uc_threshold": current.nil_uc_threshold,
+                "universal_credit_without_surplus": _money(
+                    month.universal_credit
+                ),
+                "current_law": _surplus_side(current),
+                "budget": _surplus_side(budget),
+            }
+            for index, (pay, month, current, budget) in enumerate(
+                zip(
+                    answers.monthly_employment_income,
+                    amounts,
+                    after["current_law"],
+                    after["budget"],
+                )
+            )
+        ],
+    )
+    return block, after["change"], own_change
+
+
+def _add_surplus_to_universal_credit(programmes: list, change: float):
+    """The Universal Credit row after the measures, with the surplus
+    earnings measure's change, so the table adds up to net income."""
+    for row in programmes:
+        if row["id"] == "universal_credit":
+            row["reform"] = _money(row["reform"] + change)
+            row["change"] = _money(row["change"] + change)
+            row["note"] = " ".join(
+                note for note in (row.get("note"), SURPLUS_UC_NOTE) if note
+            )
+            return
+
+
 def _by_policy(
-    included: list[str], singles: list, base_net: float, combined: float
+    included: list[str],
+    singles: list,
+    base_net: float,
+    combined: float,
+    extra: list = (),
 ) -> dict:
+    """Each measure's own change and the residual. ``extra``: measures
+    worked out outside the simulations (the surplus earnings threshold),
+    each ``{"id", "name", "change"}``, after the selected ones."""
     measures = []
     total = 0.0
     for id_, single in zip(included, singles):
@@ -2293,6 +2641,18 @@ def _by_policy(
         if id_ in HOUSEHOLD_NOTES:
             measures[-1]["note"] = HOUSEHOLD_NOTES[id_]["text"]
             measures[-1]["note_kind"] = HOUSEHOLD_NOTES[id_]["kind"]
+    for measure in extra:
+        total += measure["change"]
+        measures.append(
+            {
+                "id": measure["id"],
+                "name": measure["name"],
+                "change": _money(measure["change"]),
+                "status": (
+                    "not_affected" if measure["change"] == 0 else "affected"
+                ),
+            }
+        )
     return {
         "measures": measures,
         "combined": _money(combined),
