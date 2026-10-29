@@ -393,10 +393,12 @@ function GainsView({ width, narrow, unit, percents, averages, decile, ownPct, ow
   // Hover, tap or the arrow keys: a tenth, its figures in the tooltip
   const [cursor, hover] = useCursor(10, (px) => Math.min(9, Math.max(0, Math.floor((px - left) / slot))));
   const tenthRange = (i) => (i === 1 ? "lowest 10%" : i === 10 ? "highest 10%" : `${ordinal((i - 1) * 10)}–${ordinal(i * 10)} percentile`);
-  // A withheld tenth (null) has no tooltip at all
+  // A withheld tenth (null) has no mark on its tick
   const isWithheld = (i) => percents?.[i] === null || averages?.[i] === null;
+  // Its tooltip gives what is published (£ or %), and is left out only
+  // when both are withheld
   const tipText = (i) => {
-    if (isWithheld(i)) return null;
+    if (percents?.[i] === null && averages?.[i] === null) return null;
     const pct = percents?.[i];
     const pounds = averages?.[i];
     const parts = [

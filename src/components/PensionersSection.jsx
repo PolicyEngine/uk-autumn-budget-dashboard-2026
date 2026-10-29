@@ -629,7 +629,6 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
           ),
         )
     : [];
-  const thin = shares ? shares.groups.filter((group) => group.suppressed) : [];
   const title = `Winners and losers, ${yearLabel}`;
   const description = perMeasure
     ? `Share of people who gain or lose (a change over 0.01%), ${groupLabel.toLowerCase()}, each selected policy on its own.`
@@ -659,9 +658,6 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
           ...OUTCOMES.map((outcome) => ({ key: outcome.key, label: `${outcome.label} (%)`, decimals: 2 })),
         ],
         rows: data.map((row) => ({ group: row.group, measure: row.measure, groupLabel: row.groupLabel, ...row.real })),
-        notes: thin.length
-          ? [`Not shown, too few survey records: ${thin.map((group) => ageLabel(group.label)).join(", ")}`]
-          : [],
       }),
     published: data.length > 0,
   };
@@ -790,10 +786,6 @@ export function PensionerSharesCard({ catalogue, rows, policies, selectedPolicie
                   "The rows' shares can't be added up across policies.",
                 ]
               : ["Shares come from one run of the whole selection, so they include how the policies interact."],
-            caveats: [
-              published && thin.length > 0 && `Not shown, as too few survey records: ${thin.map((group) => ageLabel(group.label)).join(", ")}.`,
-              perMeasure?.missing.length > 0 && `Not shown, too few survey records: ${perMeasure.missing.join(", ")}.`,
-            ],
             method: AGE_METHOD,
           }}
         />

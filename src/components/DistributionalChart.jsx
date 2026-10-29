@@ -10,7 +10,7 @@ import ChartUnitLabel from "../utils/ChartUnitLabel";
 import UnpublishedPlot from "./UnpublishedPlot";
 import NoBreakYear from "./NoBreakYear";
 import UnavailableNotice from "./publication/UnavailableNotice";
-import { isWithheldDecileValue } from "../utils/decileWithholding";
+import { NET_GAP_DASH, isWithheldDecileValue, netGapBridges } from "../utils/decileWithholding";
 import { isCatalogueRowDisplayable, useMeasureCatalogue } from "../utils/measureCatalogue";
 import {
   barShape,
@@ -136,11 +136,11 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
         dataPoint[policy.seriesKey] = value;
         if (value !== null) netChange += value;
       });
-      // A withheld decile shows nothing: no other policy's bar and no net
-      // dot, as the bars shown beside a withheld member, against a net
-      // published elsewhere, would give the withheld figure back (#290,
-      // 6480462886; decided by Vahid, 28 Oct)
-      if (withheld) POLICIES.forEach((policy) => { dataPoint[policy.seriesKey] = null; });
+      // A decile where a selected policy is withheld: every other policy's
+      // own bar is still drawn (each is published in its own results), the
+      // withheld policy's is not, and there is no net (null below), so no
+      // total of the bars shown is ever given as the selection's (Vahid,
+      // 29 Oct; the package withholds the deciles its members withhold)
       dataPoint.netChange = incomplete ? null : netChange;
       dataPoint.incomplete = incomplete;
       dataPoint.unavailable = unavailable;
@@ -148,6 +148,9 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
       return dataPoint;
     });
   }, [rawData, selectedPolicies, selectedYear, POLICIES, hasUnavailableSelection, catalogue]);
+  // The net line's dashed bridges across withheld deciles: from one
+  // published dot to the next, never off either end (netGapBridges)
+  const { data: plotted, keys: gapKeys } = useMemo(() => netGapBridges(data), [data]);
 
   // "Later years differ": the first later year whose lowest- or
   // highest-income tenth moves the other way (plainSentences.js), as the
@@ -228,8 +231,11 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
   const formatPercent = (value) => `${fixedNoNegativeZero(value, percentDecimals)}%`;
   const hasIncompleteResults = data.some((point) => point.incomplete);
   const hasUnavailableResults = data.some((point) => point.unavailable);
-  // Every decile withheld: a plain empty plot, never a row of zero slots
-  const allWithheld = data.length > 0 && data.every((point) => point.withheld);
+  // Nothing to draw in any decile (every selected policy withheld in every
+  // one): a plain empty plot, never a row of zero slots
+  const allWithheld =
+    data.length > 0 &&
+    data.every((point) => point.withheld && POLICIES.every((policy) => point[policy.seriesKey] === null));
 
   if (!rawData || rawData.length === 0) {
     return (
@@ -337,7 +343,7 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
         ) : published ? (
           <ResponsiveContainer width="100%" height={plotHeight}>
             <ComposedChart
-              data={data}
+              data={plotted}
               margin={{ ...chartMargin(narrow), bottom: key.shared ? LOGO_ROOM : 0 }}
               stackOffset="sign"
             >
@@ -427,6 +433,27 @@ function DistributionalChart({ rawData, selectedPolicies, selectedYear = DEFAULT
                 {...chartMotion()}
                 hide={activePolicies.length <= 1}
               />
+              {/* Dashed across a withheld decile, joining the two published
+                  dots either side; no dot or tooltip at the withheld decile */}
+              {gapKeys.map((gapKey) => (
+                <Line
+                  key={gapKey}
+                  type="linear"
+                  dataKey={gapKey}
+                  connectNulls
+                  stroke={CHART_COLOURS.net}
+                  strokeWidth={2}
+                  strokeDasharray={NET_GAP_DASH}
+                  strokeOpacity={netOpacity(key.highlight)}
+                  dot={false}
+                  activeDot={false}
+                  legendType="none"
+                  tooltipType="none"
+                  isAnimationActive={false}
+                  className="net-gap-bridge"
+                  hide={activePolicies.length <= 1}
+                />
+              ))}
               {/* The net dots as a Scatter: Recharts hides a Line's own dots while
                   it animates, so they would vanish and pop back on every year
                   change; a Scatter's points tween with the line instead */}

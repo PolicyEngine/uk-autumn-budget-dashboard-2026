@@ -149,9 +149,11 @@ describe("results by age", () => {
     const alone = meanChangeByBand(thin, POLICIES, ["two_child_limit"], 2029);
     expect(alone.find((point) => point.band === "65+")).toMatchObject({ suppressed: true, netChange: null });
     expect(alone.find((point) => point.band === "16-24").netChange).toBe(100);
-    // Both policies: the thin band makes the combination unpublished, never half drawn
+    // Both policies: the thin band alone is left out; the other bands keep
+    // their parts and net (Vahid, 29 Oct: never blank the rest)
     const both = meanChangeByBand(thin, POLICIES, ALL, 2029);
-    expect(both.every((point) => point.combinationUnavailable && point.netChange === null)).toBe(true);
+    expect(both.find((point) => point.band === "65+")).toMatchObject({ suppressed: true, netChange: null });
+    expect(both.find((point) => point.band === "16-24").netChange).toBe(40);
   });
 
   it("reads shares from one policy's run or the combined run only", () => {

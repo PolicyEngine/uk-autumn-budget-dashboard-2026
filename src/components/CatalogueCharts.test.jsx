@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import fc from "fast-check";
-import { AGE_BANDS, COMBINATION_NOT_PUBLISHED, meanChangeByBand } from "../utils/ageImpact";
+import { AGE_BANDS, meanChangeByBand } from "../utils/ageImpact";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import BudgetaryImpactChart from "./BudgetaryImpactChart";
 import DistributionalChart from "./DistributionalChart";
@@ -303,10 +303,11 @@ describe("published measure catalogue in population views", () => {
     const { container } = render(withCatalogue(catalogue,
       <YoungPeopleSection policies={catalogue.measures} selectedPolicies={[ALPHA, BETA]} selectedYear={YEAR} />,
     ));
-    // Two policies, one with no figures this year: not published together,
-    // never half drawn
-    expect((await screen.findAllByText(COMBINATION_NOT_PUBLISHED)).length).toBeGreaterThan(0);
+    // Two policies, one with no figures this year: its parts and the net are
+    // null, the other's own parts still drawn
+    await screen.findAllByText(/no published results by age/);
     expect(chartRows(container).every((point) => point[`measure:${ALPHA}`] == null && point.netChange == null)).toBe(true);
+    expect(chartRows(container).some((point) => Number.isFinite(point[`measure:${BETA}`]))).toBe(true);
     // The combined run is refused: no package shares, only each measure's own
     expect(screen.getByText(/each selected policy on its own/)).toBeInTheDocument();
     const shares = container.querySelector(".young-people-shares");
