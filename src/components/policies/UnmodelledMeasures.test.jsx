@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import UnmodelledMeasures, { COSTING_CAPTION, UNMODELLED_SUBTITLE, UNMODELLED_TITLE, formatMillions, groupsOf } from "./UnmodelledMeasures";
 import { WHY_NOT_MODELLED } from "../PolicyCards";
@@ -40,9 +43,12 @@ describe("the unmodelled measures (unmodelledMeasures.js)", () => {
     }
     const ids = UNMODELLED_MEASURES.map((measure) => measure.id);
     expect(new Set(ids).size).toBe(ids.length);
-    // Kebab-case with a hyphen, so no id is a registry id (snake_case):
-    // explainers.js looks both up in one list
-    for (const id of ids) expect(id).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)+$/);
+    // No id is a registry id (reforms.py's *_ID constants): explainers.js
+    // looks both up in one list
+    const registry = readFileSync(join(fileURLToPath(import.meta.url), "..", "..", "..", "uk_budget_data", "reforms.py"), "utf8");
+    const registered = new Set([...registry.matchAll(/^[A-Z0-9_]+_ID = "([^"]+)"$/gm)].map((match) => match[1]));
+    expect(registered.size).toBeGreaterThan(0);
+    expect(ids.filter((id) => registered.has(id))).toEqual([]);
   });
 
   it("give each Table 6.1 row its number and a figure for each of the table's six years", () => {

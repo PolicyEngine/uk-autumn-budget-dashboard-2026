@@ -261,7 +261,8 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   //   from Methodology and their measures linking each card to its post
   //   (an unmodelled card by its own id); a post stays whether or not its
   //   measure is published, and a card shows its link only while the card
-  //   shows, so the block decides nothing the page shows of a measure.
+  //   shows, so the block decides no measure's presence, name, order or
+  //   colour.
   // Before #185: MODELLING_NOTE, whose id test_reforms.py holds to a
   // registered measure, and singleYear.js's labels for the household API's
   // own programme line of the same name as the Warm Home Discount top-up.
