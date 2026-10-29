@@ -119,6 +119,22 @@ describe("scatterView", () => {
     );
   });
 
+  it("six of seven policies, with the full package published: one run at a time, offering all seven or the first alone", () => {
+    const seven = ["a", "b", "c", "d", "e", "f", "g"];
+    const result = scatterView({ data: ready, selectedIds: seven.slice(1).reverse(), policyIds: seven, year: 2029, fullPackageKey: "all_combined" });
+    expect(result).toEqual({
+      kind: "notice",
+      reason: "This chart shows one policy at a time, or all seven together.",
+      detail: null,
+      choices: { all: seven, alone: "b" },
+    });
+    // Every policy selected without the package's run: the old notice, not
+    // "one at a time, or all seven"
+    expect(scatterView({ data: ready, selectedIds: seven, policyIds: seven, year: 2029, fullPackageKey: "missing" }).reason).toBe(
+      SCATTER_SELECTION_NOT_PUBLISHED,
+    );
+  });
+
   it("never says nothing changes for a combined run of no change while a member's own run moves households", () => {
     const row = (reform_id, change_band, change_band_upper) => ({
       reform_id, reform_name: reform_id, year: 2031, income_band: 20000, change_band, change_band_upper, households: 1000, income_basis_year: 2027,

@@ -136,7 +136,10 @@ DEFAULT_BRMA = {
 # model reads the local authority only to choose the working-age Council
 # Tax Reduction schemes it simulates (Kingston upon Thames, Merton, Newham,
 # Oxford and Westminster), and none of these is one of them, so the
-# default changes no result.
+# default changes no result. Only a local authority given sets the
+# estimated Council Tax (its own Band D, ``estimated_council_tax``); the
+# default leaves it at the region's average. Neither sets the BRMA:
+# policyengine-uk places a household in a BRMA from its region alone.
 DEFAULT_LOCAL_AUTHORITY = {
     "NORTH_EAST": "NEWCASTLE_UPON_TYNE",  # Tyneside
     "NORTH_WEST": "MANCHESTER",  # Central Greater Manchester
@@ -770,7 +773,8 @@ class HouseholdAnswers:
     monthly_rent: float = 0
     brma: Optional[str] = None
     local_authority: Optional[str] = None
-    # None: estimated from the band and the region (estimated_council_tax)
+    # None: estimated from the band and the local authority's own Band D,
+    # or the region's average with no local authority (estimated_council_tax)
     council_tax: Optional[float] = None
     council_tax_band: str = "D"
     monthly_childcare: float = 0
@@ -1028,23 +1032,71 @@ def council_tax_growth(region: str, year: int) -> float:
     return factor
 
 
-def estimated_council_tax(region: str, band: str, year: int) -> float:
-    """A household's Council Tax, £ a year, in ``year``: its region's
-    average Band D for 2026-27 (``COUNCIL_TAX_BAND_D``) times its band's
-    ratio, grown to ``year`` (``council_tax_growth``). Before discounts or
-    Council Tax Reduction (which policyengine-uk works out). None in
-    Northern Ireland (domestic rates): 0."""
-    band_d = COUNCIL_TAX_BAND_D.get(region)
-    if band_d is None:
-        return 0.0
+def _band_ratio(region: str, band: str) -> float:
+    """A band's Council Tax as a share of Band D in ``region``'s nation.
+    Band I is Welsh only; elsewhere the top band is H."""
     ratios = (
         SCOTTISH_BAND_RATIO
         if region == "SCOTLAND"
         else (COUNCIL_TAX_BAND_RATIO)
     )
-    # Band I is Welsh only; elsewhere the top band is H
-    ratio = ratios.get(band if band != "I" or region == "WALES" else "H")
+    return ratios.get(band if band != "I" or region == "WALES" else "H")
+
+
+@lru_cache(maxsize=None)
+def council_band_d(local_authority: str) -> Optional[float]:
+    """A local authority's own Band D Council Tax for 2026-27, £ a year:
+    policyengine-uk's ``gov.local_authorities.council_tax.band_d.amounts``,
+    the table its ``council_tax_band_d_amount`` reads (the area figure with
+    every precept in England and Wales; in Scotland without water and
+    waste water). None where policyengine-uk has none: Northern Ireland's
+    districts (domestic rates) and English districts abolished in 2023.
+
+    policyengine-uk holds the 2026-27 amounts flat into later years, so
+    the estimate grows them with the OBR's Council Tax forecast, as it
+    does a region's average (``council_tax_growth``)."""
+    from policyengine_uk.system import system
+
+    amounts = system.parameters(
+        f"{COUNCIL_TAX_BASE_YEAR}-01-01"
+    ).gov.local_authorities.council_tax.band_d.amounts
+    amount = amounts._children.get(local_authority)
+    return float(amount) if amount else None
+
+
+def estimated_council_tax(
+    region: str,
+    band: str,
+    year: int,
+    local_authority: Optional[str] = None,
+) -> float:
+    """A household's Council Tax, £ a year, in ``year``: a Band D for
+    2026-27 times its band's ratio, grown to ``year``
+    (``council_tax_growth``). The Band D is the local authority's own
+    (``council_band_d``) when one is given and policyengine-uk has its
+    Band D, and otherwise the region's average (``COUNCIL_TAX_BAND_D``).
+    Before discounts or Council Tax Reduction (which policyengine-uk works
+    out). None in Northern Ireland (domestic rates): 0."""
+    band_d = COUNCIL_TAX_BAND_D.get(region)
+    if band_d is None:
+        return 0.0
+    if local_authority is not None:
+        band_d = council_band_d(local_authority) or band_d
+    ratio = _band_ratio(region, band)
     return round(band_d * ratio * council_tax_growth(region, year), 2)
+
+
+def council_tax_basis(answers: "HouseholdAnswers") -> str:
+    """What an estimated Council Tax starts from: "council" (the local
+    authority's own Band D), "region" (the region's average) or "none"
+    (Northern Ireland)."""
+    if answers.region not in COUNCIL_TAX_BAND_D:
+        return "none"
+    if answers.local_authority is not None and council_band_d(
+        answers.local_authority
+    ):
+        return "council"
+    return "region"
 
 
 def household_entities(
@@ -1148,6 +1200,7 @@ def household_entities(
                 answers.region,
                 answers.council_tax_band,
                 answers.salary_year if year is None else year,
+                answers.local_authority,
             )
         ),
         "council_tax_band": answers.council_tax_band,
@@ -2058,17 +2111,25 @@ def calculate_household_impact(
             "note": (
                 "As entered."
                 if answers.council_tax is not None
-                else (
-                    "No Council Tax in Northern Ireland (domestic rates are "
-                    "not modelled)."
-                    if answers.region not in COUNCIL_TAX_BAND_D
-                    else (
+                else {
+                    "none": (
+                        "No Council Tax in Northern Ireland (domestic rates "
+                        "are not modelled)."
+                    ),
+                    "council": (
+                        f"Band {answers.council_tax_band} at the local "
+                        "authority's own Band D for 2026-27 "
+                        "(policyengine-uk), grown to "
+                        f"{fiscal_year(year)} with the OBR's Council Tax "
+                        "forecast."
+                    ),
+                    "region": (
                         f"Band {answers.council_tax_band} at the region's "
                         "average Band D for 2026-27, grown to "
                         f"{fiscal_year(year)} with the OBR's Council Tax "
                         "forecast."
-                    )
-                )
+                    ),
+                }[council_tax_basis(answers)]
             ),
         },
         "state_pension_used": {

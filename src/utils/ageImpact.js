@@ -1,5 +1,5 @@
 /**
- * Results by age (public/data/age_impact.csv) for the "Young people"
+ * Results by age (each artifact's age_impact.csv) for the "Young people"
  * section: the rows the charts read, for the selected policies and year.
  * The file has a row per age band, one for all ages ("all"), and one per
  * single year of age ("0" to "89", then "90+").

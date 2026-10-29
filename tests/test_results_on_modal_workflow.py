@@ -7,6 +7,7 @@ is missing. Its shell steps run here against stand-ins, so no Modal call is
 made.
 """
 
+import json
 import os
 import shutil
 import subprocess
@@ -139,3 +140,68 @@ def test_a_bad_measure_id_is_refused_before_modal(tmp_path):
     assert done.returncode == 1
     assert "Not a measure id" in done.stdout
     assert not (tmp_path / "pwned").exists()
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+@pytest.mark.parametrize("required", [True, False])
+def test_the_summary_follows_the_sign_off_switch(tmp_path, required):
+    """Off, the summary asks for no review row; on, it says which rows
+    match and asks for them, as before Budget day."""
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "metrics.csv").write_text("reform_id,value\nx,1\n")
+    checkout = tmp_path / "checkout"
+    contract = checkout / "src" / "utils" / "publication" / "contract.json"
+    contract.parent.mkdir(parents=True)
+    contract.write_text(json.dumps({"sign_off_required": required}))
+    review = checkout / "data_inputs" / "public_data_review.csv"
+    review.parent.mkdir()
+    review.write_text(
+        "path,kind,sha256,reviewer,reviewed_on,expires_on,basis\n"
+    )
+    (checkout / "public" / "data").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q"], cwd=checkout, check=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=Workflow tests",
+            "-c",
+            "user.email=workflow@example.invalid",
+            "commit",
+            "-q",
+            "--allow-empty",
+            "-m",
+            "Stand-in",
+        ],
+        cwd=checkout,
+        check=True,
+    )
+    summary = tmp_path / "summary.md"
+    done = subprocess.run(
+        [
+            "bash",
+            "-e",
+            "-c",
+            step("Compare with the branch's public/data")["run"],
+        ],
+        env={
+            "PATH": os.environ["PATH"],
+            "OUT": str(out),
+            "SECONDS_ON_MODAL": "1",
+            "GITHUB_STEP_SUMMARY": str(summary),
+        },
+        cwd=checkout,
+        capture_output=True,
+        text=True,
+    )
+    assert done.returncode == 0, done.stderr
+    text = summary.read_text()
+    assert "`metrics.csv` | new file" in text
+    if required:
+        assert "needs a person's review" in text
+        assert "sign their rows" in text
+    else:
+        assert "not needed: sign-off is off" in text
+        assert "no signing step" in text
+        assert "sign their rows" not in text

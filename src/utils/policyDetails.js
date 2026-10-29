@@ -44,6 +44,12 @@
  *   a short list (`items`), never a long paragraph;
  * - changeLabel: { label, unitWords } a shorter name and units for the What
  *   changes block's main row, in place of policy_parameters.json's;
+ * - visual: { kind, place, ... } the card's visual (components/policies/
+ *   PolicyVisual.jsx): `place` "change" draws it in What changes, in place
+ *   of the plot and note (`replacesExample` folds the example into it),
+ *   "example" in place of the example's words. Its other fields are the
+ *   entry's own figures (writtenFor, example), checked against them by
+ *   policyVisuals.test.js; the rest come from policy_parameters.json.
  * - writtenFor: the measure's description in reforms.py, which the
  *   publication carries verbatim, when the entry was written. After
  *   changing a measure in reforms.py, check its entry still holds, then copy
@@ -83,6 +89,9 @@ export const POLICY_DETAILS = [
     },
     changeLabel: { label: "Duty", unitWords: "pence a litre" },
     budgetRows: [3],
+    // The cut's months, either side of Budget day, and the duty saved on
+    // a fill of this many litres (a fill's size, not a figure of the measure)
+    visual: { kind: "fuel-duty", place: "change", window: { from: "2026-10", to: "2027-09" }, litres: 50 },
   },
   {
     id: "state_pension_income_tax_protection",
@@ -110,6 +119,21 @@ export const POLICY_DETAILS = [
     },
     changeLabel: { label: "Largest tax cut", unitWords: "£ a year" },
     budgetRows: [52],
+    // The allowance against income in 2027-28, from writtenFor (the full
+    // new State Pension, £1 per £3, gone at about £13,319) and the example
+    visual: {
+      kind: "pension-tax-allowance",
+      place: "change",
+      replacesExample: true,
+      year: "2027-28",
+      fullPension: 13036.4,
+      goneAt: 13319,
+      taper: 3,
+      examples: [
+        { income: 13036.4, allowance: 94, label: "Full new State Pension: no income tax" },
+        { income: 13186, allowance: 44 },
+      ],
+    },
     example: {
       title: "Example",
       text: "2027-28: on the full new State Pension (£13,036), no income tax; at £13,186, the allowance is £44.",
@@ -167,6 +191,19 @@ export const POLICY_DETAILS = [
       href: "https://www.gov.uk/guidance/vat-on-fuel-and-power-notice-70119",
     },
     budgetRows: [2],
+    // The months, from writtenFor and the row's note: Great Britain from
+    // October 2026, Northern Ireland (expected) from April 2027, both to
+    // June 2027; October to March already zero-rated in law (SI 2026/987)
+    visual: {
+      kind: "electricity-vat",
+      place: "change",
+      window: { from: "2026-09", to: "2027-08" },
+      regions: [
+        { name: "Great Britain", from: "2026-10", to: "2027-06" },
+        { name: "Northern Ireland", from: "2027-04", to: "2027-06", expected: true },
+      ],
+      law: { from: "2026-10", to: "2027-03", label: "Law before the Budget" },
+    },
   },
   {
     id: "employer_ni_relief_under_25s",
@@ -295,6 +332,7 @@ export const POLICY_DETAILS = [
       href: "https://www.gov.uk/carers-allowance",
     },
     budgetRows: [7],
+    visual: { kind: "carers-taper", place: "change" },
   },
   {
     id: "lha_unfreeze_2027",
@@ -360,6 +398,7 @@ export const POLICY_DETAILS = [
       href: "https://www.gov.uk/government/publications/changes-to-tax-rates-for-property-savings-and-dividend-income",
     },
     budgetRows: [61],
+    visual: { kind: "property-rates", place: "change", where: "England, Wales and Northern Ireland" },
   },
   {
     id: "savings_income_rates_up",
@@ -422,6 +461,22 @@ export const POLICY_DETAILS = [
       ],
       source: { label: "Budget 2026, paragraphs 3.5 and 3.6", href: "https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html" },
     },
+    // The example's reach, drawn: England's eight bands, and the shares
+    // the Budget states (the example's own figures, which the visual
+    // replaces; policyVisuals.test.js checks they agree)
+    visual: {
+      kind: "energy-reach",
+      place: "example",
+      bands: "ABCDEFGH",
+      reach: {
+        millions: 20,
+        share: 0.8,
+        groups: [
+          { label: "Spending over a tenth of their income on energy", share: 0.83 },
+          { label: "In the bottom three income deciles", share: 0.88 },
+        ],
+      },
+    },
   },
   {
     id: "trading_allowance_raise",
@@ -434,7 +489,7 @@ export const POLICY_DETAILS = [
     summary:
       "Raises the trading allowance, which lets people earn from trading without tax, from £1,000 to £3,000 from April 2027.",
     starts: "Apr 2027",
-    affects: "Sole traders with small incomes or expenses under £3,000",
+    affects: "Sole traders with trading income or expenses under £3,000",
     type: "Income tax",
     inForce: { from: "2027-04" },
     howCalculated:
@@ -449,6 +504,13 @@ export const POLICY_DETAILS = [
     example: {
       title: "Example",
       text: "An employee on £30,000 with £3,000 of side income and no expenses pays £400 less income tax in 2027-28.",
+    },
+    // The example on the tax-free band (its figures; policyVisuals.test.js
+    // checks they agree with the text)
+    visual: {
+      kind: "trading-allowance",
+      place: "example",
+      example: { income: 30000, sideIncome: 3000, saving: 400 },
     },
   },
   {

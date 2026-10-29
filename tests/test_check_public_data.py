@@ -4,6 +4,7 @@ import csv
 import hashlib
 import importlib.util
 import json
+import shutil
 import subprocess
 from datetime import date
 from pathlib import Path
@@ -96,8 +97,30 @@ def disclosure_table(path: Path) -> None:
     release.to_public().to_csv(path)
 
 
-def run(root: Path, today: date = TODAY) -> "check_public_data.Report":
-    return check_public_data.check(root, today=today)
+def run(
+    root: Path, today: date = TODAY, sign_off: bool = True
+) -> "check_public_data.Report":
+    """The check with sign-off on, unless ``sign_off`` is False: most tests
+    here are of the review list, which only sign-off reads."""
+    return check_public_data.check(
+        root, today=today, sign_off_required=sign_off
+    )
+
+
+def listing(root: Path, artifact: str, files=()) -> dict:
+    """A manifest for this Budget listing one approved artifact, whose
+    receipt binds ``files``: the page lists them, so the check reaches
+    the rule under test. Returns the receipt's dashboard to fill in."""
+    from uk_budget_data.publication import manifest as m
+
+    manifest = {
+        "schema": m.SCHEMA,
+        "release": m.CURRENT_RELEASE,
+        "budget": m.CURRENT_BUDGET,
+        "measures": {"m": {"status": m.APPROVED, "artifact": artifact}},
+    }
+    write(root, "public/data/manifest.json", json.dumps(manifest))
+    return {"files": {name: "0" * 64 for name in files}}
 
 
 @pytest.fixture
@@ -463,18 +486,21 @@ def test_a_symbolic_link_fails(repo, tmp_path_factory):
 
 
 def test_this_repository_passes():
-    assert run(REPO, today=date.today()).problems == []
+    # With the sign-off switch as committed.
+    assert check_public_data.check(REPO, today=date.today()).problems == []
 
 
 # Budget week: the Budget is on 28 October and the briefing is due by 07:00
-# on the 29th. A pending row that lapses inside this window stops every
-# build, so the repository must pass on each day of it, not only today.
+# on the 29th. A rule that lapses inside this window stops every build (with
+# sign-off on, any pending row; with it off, as committed, a pending row that
+# lets a file carry area codes), so the repository must pass on each day of
+# it, not only today.
 BUDGET_WEEK = [date(2026, 10, day) for day in range(23, 31)]
 
 
 @pytest.mark.parametrize("day", BUDGET_WEEK, ids=lambda d: d.isoformat())
 def test_this_repository_passes_through_budget_week(day):
-    assert run(REPO, today=day).problems == []
+    assert check_public_data.check(REPO, today=day).problems == []
 
 
 def test_area_provenance_has_a_declared_review_kind(repo):
@@ -520,4 +546,299 @@ def test_area_provenance_has_a_declared_review_kind(repo):
     track(repo)
     assert any(
         "unexpected fields" in problem for problem in run(repo).problems
+    )
+
+
+# --- Sign-off off -------------------------------------------------------------
+
+
+@pytest.mark.parametrize("required", [True, False])
+def test_the_check_reads_the_sign_off_switch(repo, monkeypatch, required):
+    from uk_budget_data import sign_off
+
+    monkeypatch.setattr(sign_off, "REQUIRED", required)
+    write(repo, "public/data/new.csv", "x\n1\n")
+    track(repo)
+    assert check_public_data.check(repo, today=TODAY).problems == (
+        ["public/data/new.csv: not a disclosure table and not reviewed"]
+        if required
+        else []
+    )
+
+
+def test_with_sign_off_off_no_file_needs_a_current_review(repo):
+    """Unreviewed, changed, lapsed and mis-kinded files all pass."""
+    disclosure_table(repo / "public/data/regional.csv")
+    for name in ("new", "national", "old", "kind"):
+        write(
+            repo, f"public/data/{name}.csv", "reform_id,year,value\nx,2026,1\n"
+        )
+    write(repo, check_public_data.AREA_ROUTING_FILE, ROUTING)
+    write_review(
+        repo,
+        [
+            entry(repo, "public/data/national.csv"),
+            entry(
+                repo, "public/data/old.csv", "pending", expires_on="2026-10-14"
+            ),
+            entry(repo, "public/data/kind.csv", "disclosure_table"),
+            entry(repo, check_public_data.AREA_ROUTING_FILE, "static_asset"),
+        ],
+    )
+    write(repo, "public/data/national.csv", "reform_id,year,value\nx,2026,2\n")
+    track(repo)
+    report = run(repo, sign_off=False)
+    assert report.problems == []
+    assert report.pending == []
+    assert len(run(repo).problems) == 6
+
+
+@pytest.mark.parametrize(
+    "rows",
+    [
+        None,
+        [["public/data/a.csv", "other", "abc", "", "soon", "x", ""]],
+        [
+            [
+                "public/data/gone.csv",
+                "national_table",
+                "a" * 64,
+                "reviewer",
+                "2026-10-14",
+                "",
+                "B.",
+            ]
+        ],
+    ],
+    ids=["no review list", "a malformed row", "a row for no file"],
+)
+def test_with_sign_off_off_the_review_list_itself_fails_nothing(repo, rows):
+    write(repo, "public/data/a.csv", "x\n1\n")
+    if rows is None:
+        (repo / check_public_data.REVIEW_FILE).unlink()
+    else:
+        write_review(repo, rows)
+    track(repo)
+    assert run(repo, sign_off=False).problems == []
+    assert run(repo).problems != []
+
+
+def test_with_sign_off_off_no_rule_a_review_never_waived_is_waived(repo):
+    receipt = "public/data/artifacts/m/0123456789abcdef/receipt.json"
+    floor = {"thin_cells_in_tables": True, "thin_cells": []}
+    dashboard = listing(repo, "artifacts/m/0123456789abcdef")
+    dashboard["disclosure_floor"] = floor
+    write(repo, receipt, json.dumps({"dashboard": dashboard}))
+    write(repo, "public/data/sample.csv", "reform_id,household_id\nx,1\n")
+    page = "".join(f"<path id='{code}'/>" for code in SEAT_CODES)
+    write(repo, "public/briefing/map.html", page)
+    write(
+        repo,
+        check_public_data.AREA_ROUTING_FILE,
+        ROUTING.replace("null", '"national"'),
+    )
+    write_review(
+        repo,
+        [
+            entry(repo, name)
+            for name in (
+                receipt,
+                "public/data/sample.csv",
+                "public/briefing/map.html",
+            )
+        ],
+    )
+    track(repo)
+    assert run(repo, sign_off=False).problems == [
+        "public/briefing/map.html: carries more than 20 area codes",
+        f"{check_public_data.AREA_ROUTING_FILE}: not an area routing status",
+        f"{receipt}: its tables hold cells under the floor of survey "
+        "households",
+        "public/data/sample.csv: record-level identifiers",
+    ]
+
+
+def test_with_sign_off_off_a_disclosure_table_is_still_validated(repo):
+    name = "public/data/constituency.csv"
+    path = repo / name
+    disclosure_table(path)
+    lines = path.read_text().splitlines()
+    # A withheld row that still shows a value.
+    fields = lines[1].split(",")
+    fields[9] = "withheld"
+    fields[10] = "disclosure_control"
+    lines[1] = ",".join(fields)
+    path.write_text("\n".join(lines) + "\n")
+    track(repo)
+    problems = run(repo, sign_off=False).problems
+    assert problems
+    assert all(p.startswith(f"{name}: ") for p in problems)
+
+
+@pytest.mark.parametrize("published", [True, False])
+def test_with_sign_off_off_a_published_withheld_cell_still_fails(
+    repo, published
+):
+    from uk_budget_data.publication.tables import canonical_csv
+
+    base = "public/data/artifacts/m/0123456789abcdef"
+    floor = {
+        "thin_cells_in_tables": False,
+        "withheld_cells": [
+            {"table": "distributional_impact", "year": 2027, "groups": ["1"]},
+            {"table": "winners_losers", "year": 2027, "groups": ["1", "all"]},
+        ],
+    }
+    dashboard = listing(
+        repo,
+        "artifacts/m/0123456789abcdef",
+        ["distributional_impact.csv", "winners_losers.csv"],
+    )
+    dashboard["disclosure_floor"] = floor
+    write(repo, f"{base}/receipt.json", json.dumps({"dashboard": dashboard}))
+    for table, column, labels in (
+        ("distributional_impact", "value", ["1st"]),
+        ("winners_losers", "avg_change", ["1", "all"]),
+    ):
+        value = 0.0 if published and table == "distributional_impact" else None
+        rows = [
+            {
+                "reform_id": "m",
+                "reform_name": "M",
+                "year": 2027,
+                "decile": label,
+                column: value,
+            }
+            for label in labels
+        ]
+        write(repo, f"{base}/{table}.csv", canonical_csv(table, rows).decode())
+    track(repo)
+    assert run(repo, sign_off=False).problems == (
+        [
+            f"{base}/receipt.json: distributional_impact 2027 1 publishes a "
+            "value in a withheld cell"
+        ]
+        if published
+        else []
+    )
+
+
+def test_with_sign_off_off_area_codes_need_reviewed_reference_geography(repo):
+    """The one thing a review entry still does: it lets the exact bytes
+    reviewed as reference geography carry area codes, and a pending entry
+    those bytes until its expiry date."""
+    boundaries = "public/data/boundaries.geojson"
+    held = "public/data/old_seats.csv"
+    seats = "public/data/seats.csv"
+    write(
+        repo,
+        boundaries,
+        '{"features": [%s]}'
+        % ",".join(f'{{"GSScode": "{code}"}}' for code in SEAT_CODES),
+    )
+    write(repo, held, "code,value\n" + "\n".join(SEAT_CODES) + "\n")
+    write(repo, seats, "code\n" + "\n".join(SEAT_CODES) + "\n")
+    write_review(
+        repo,
+        [
+            entry(repo, boundaries, "reference_geography"),
+            entry(repo, held, "pending", expires_on="2026-10-26"),
+            entry(repo, seats),
+        ],
+    )
+    track(repo)
+    many = "carries more than 20 area codes"
+    assert run(repo, date(2026, 10, 26), sign_off=False).problems == [
+        f"{seats}: {many}"
+    ]
+    assert run(repo, date(2026, 10, 27), sign_off=False).problems == [
+        f"{held}: {many}",
+        f"{seats}: {many}",
+    ]
+    # Changed bytes are not the bytes reviewed.
+    text = (repo / boundaries).read_text()
+    write(repo, boundaries, text.replace("]}", ', {"value": 1.5}]}'))
+    assert run(repo, date(2026, 10, 26), sign_off=False).problems == [
+        f"{boundaries}: {many}",
+        f"{seats}: {many}",
+    ]
+
+
+def area_provenance_document() -> dict:
+    law = {
+        "kind": "current_law",
+        "representation": None,
+        "reform_sha256": None,
+        "binding": "content",
+    }
+    return {
+        "schema": "uk-budget-area-provenance/v1",
+        "manifest_revision": 1,
+        "manifest_sha256": "a" * 64,
+        "files": {"regional.csv": "b" * 64},
+        "reforms": {
+            "alpha": {
+                "key": "alpha",
+                "artifact": "artifacts/alpha/approved",
+                "artifact_sha256": "c" * 64,
+                "receipt_sha256": "d" * 64,
+                "outputs_sha256": "e" * 64,
+                "execution_identity_sha256": "f" * 64,
+                "baseline": law,
+                "reform": law,
+            }
+        },
+    }
+
+
+def test_with_sign_off_off_area_provenance_keeps_its_closed_schema(repo):
+    name = check_public_data.AREA_PROVENANCE_FILE
+    document = area_provenance_document()
+    write(repo, name, json.dumps(document))
+    track(repo)
+    assert run(repo, sign_off=False).problems == []
+    document["survey_value"] = 12
+    write(repo, name, json.dumps(document))
+    assert any(
+        "unexpected fields" in problem
+        for problem in run(repo, sign_off=False).problems
+    )
+
+
+PUBLICATION_FIXTURE = REPO / "src" / "test" / "fixtures" / "publication"
+
+
+def unlisted_in_fixture(root: Path, stray: str) -> list[str]:
+    """The artifact files the page does not list: every file of the staged
+    entry (delta) and of the stray generation, and each reconciliation.json,
+    which no receipt binds. publish review-rows writes no row for any of
+    them."""
+    return sorted(
+        path.relative_to(root).as_posix()
+        for path in (root / "public" / "data" / "artifacts").rglob("*")
+        if path.is_file()
+        and (
+            path.parts[-3] == "delta"
+            or path.parts[-2] == stray
+            or path.name == "reconciliation.json"
+        )
+    )
+
+
+def test_with_sign_off_off_only_the_files_the_page_lists_are_published(repo):
+    shutil.copytree(PUBLICATION_FIXTURE, repo / "public" / "data")
+    # A stray generation of a listed measure, as a re-run leaves.
+    stray = repo / "public/data/artifacts/alpha/aaaaaaaaaaaaaaaa"
+    shutil.copytree(stray.parent / "d68eb084c02699c1", stray)
+    track(repo)
+    unlisted = unlisted_in_fixture(repo, stray.name)
+    assert run(repo, sign_off=False).problems == [
+        f"{name}: no listed manifest entry names it" for name in unlisted
+    ]
+    # With no manifest, nothing under artifacts/ is listed.
+    (repo / "public/data/manifest.json").unlink()
+    track(repo)
+    problems = run(repo, sign_off=False).problems
+    assert len(problems) == len(
+        list((repo / "public/data/artifacts").rglob("*.*"))
     )

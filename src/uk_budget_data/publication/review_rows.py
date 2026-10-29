@@ -1,6 +1,11 @@
 """Public-file review rows for the gated publication.
 
-Every file under ``public/`` needs a row in
+The checks read these rows only while sign-off is on
+(``uk_budget_data.sign_off``, off from 28 October 2026). Off, the command
+still deletes the artifacts no entry names and writes rows, which nothing
+then requires.
+
+While sign-off is on, every file under ``public/`` needs a row in
 ``data_inputs/public_data_review.csv`` with the SHA-256 of the bytes a person
 reviewed (``scripts/check_public_data.py`` in CI, and
 ``scripts/check-public-files.mjs`` in the build). The one exception is the
@@ -122,10 +127,8 @@ NATIONAL_TABLE = "national_table"
 SYNTHETIC_HOUSEHOLD = "synthetic_household"
 STATIC_ASSET = "static_asset"
 # The kind each artifact table is reviewed as. Every table but one holds UK
-# totals or UK deciles, as the flat CSVs it replaces do, and the binned
-# scatter counts households by UK-wide income and change bands; the income
-# curve is one hypothetical household, as public/data/income_curve.csv is
-# reviewed. None carries the disclosure layer's public columns, so none may
+# totals or UK deciles, and the binned scatter counts households by UK-wide
+# income and change bands; the income curve is one hypothetical household. None carries the disclosure layer's public columns, so none may
 # be reviewed as a disclosure_table.
 TABLE_KINDS = {
     "budgetary_impact.csv": NATIONAL_TABLE,

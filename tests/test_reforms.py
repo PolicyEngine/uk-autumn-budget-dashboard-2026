@@ -64,26 +64,6 @@ CANDIDATES = (
 # Registered but held back from the package: its yield is about 60% of
 # Table 6.1 because the data miss ISA interest (Vahid and Max, 28 Oct).
 NOT_IN_PACKAGE = ("savings_income_rates_up",)
-# Registered on 27 October, before its first national generation: its rows
-# are checked once budgetary_impact.csv has them.
-NOT_YET_GENERATED = (
-    # Split from the savings and property measure on Budget day
-    "property_income_rates_up",
-    "savings_income_rates_up",
-    # Registered again on Budget day (HCWS421)
-    "carers_allowance_earnings_taper",
-    # Announced in the Budget speech
-    "household_energy_payment_2026",
-    "trading_allowance_raise",
-    # Left out on Budget day while runs were in flight (María, 29 October)
-    "bus_fare_cap_2027",
-)
-# Redefined on Budget day to the announced measure: budgetary_impact.csv
-# holds the candidate's figures until it is regenerated.
-REDEFINED_ON_BUDGET_DAY = (
-    "fuel_duty_rise_deferral",
-    "domestic_electricity_zero_vat",
-)
 # Withdrawn on 27 October 2026 (Vahid): out of the registry and the
 # package, so no default command runs or publishes them. Their factories
 # stay, unregistered, and are still tested here as code.
@@ -1159,26 +1139,28 @@ def test_each_measure_moves_from_its_first_year_and_not_before(measure_id):
 
 def test_the_published_revenue_starts_in_each_measures_first_year():
     """The national figures agree: zero before the first year, not zero
-    in it (budgetary_impact.csv)."""
+    in it (each published measure's approved budgetary_impact.csv, as the
+    manifest names it). A measure the manifest does not list, such as one
+    held back from the release, has no published figures to check."""
     import csv
+    import json
     from pathlib import Path
 
-    path = Path(__file__).resolve().parents[1] / (
-        "public/data/budgetary_impact.csv"
-    )
-    values = {
-        (row["reform_id"], int(row["year"])): float(row["value"])
-        for row in csv.DictReader(path.open())
-    }
+    data = Path(__file__).resolve().parents[1] / "public/data"
+    measures = json.loads((data / "manifest.json").read_text())["measures"]
+    checked = 0
     for measure_id, (first, *_) in FIRST_YEARS.items():
-        if measure_id in NOT_YET_GENERATED and (
-            (measure_id, first) not in values
-        ):
+        if measure_id not in measures:
             continue
-        if measure_id in REDEFINED_ON_BUDGET_DAY:
-            # Its published rows are the candidate's until it is regenerated
-            continue
-        assert abs(values[(measure_id, first)]) > 0.01, measure_id
+        path = data / measures[measure_id]["artifact"] / "budgetary_impact.csv"
+        values = {
+            int(row["year"]): float(row["value"])
+            for row in csv.DictReader(path.open())
+            if row["reform_id"] == measure_id
+        }
+        assert abs(values[first]) > 0.01, measure_id
         for year in POLICY_YEARS:
             if year < first:
-                assert values[(measure_id, year)] == 0, (measure_id, year)
+                assert values[year] == 0, (measure_id, year)
+        checked += 1
+    assert checked, "no published measure to check"

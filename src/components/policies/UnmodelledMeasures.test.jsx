@@ -253,48 +253,16 @@ describe("UnmodelledMeasures", () => {
   });
 
   // #297: by why we do not model each one, and whether we will
-  it("groups the cards by why we do not model them, each group titled with its reason in a line", () => {
-    expect(UNMODELLED_REASONS.map(({ label }) => label)).toEqual([
-      "Coming soon",
-      "Modelled separately",
-      "Outside a household model",
-      "Not in our data yet",
-    ]);
-    // Every measure names a reason the groups have
-    expect(UNMODELLED_MEASURES.filter((m) => !UNMODELLED_REASONS.some(({ id }) => id === m.reason)).map((m) => m.id)).toEqual([]);
-    for (const { id, why } of UNMODELLED_REASONS) {
-      expect(why, id).toMatch(/^[A-Z].*\.$/);
-      expect(why.split(/\s+/).length, id).toBeLessThanOrEqual(30);
-    }
+  it("shows the cards as one list, with no group titles (Vahid, 29 Oct)", () => {
     render(<UnmodelledMeasures />);
     open();
-    const shown = [...document.querySelectorAll(".umm-group")].map((group) => ({
-      title: group.querySelector(".umm-group-title").textContent,
-      cards: [...group.querySelectorAll(".policy-card")].map((card) => card.id.replace(/^unmodelled-/, "")),
-    }));
-    expect(shown).toEqual([
-      { title: "Coming soon", cards: ["savings-income-tax", "machine-games-duty", "cash-isa-limit"] },
-      { title: "Modelled separately", cards: ["adjusted-triple-lock"] },
-      { title: "Outside a household model", cards: ["bank-surcharge", "pubs-business-rates-relief", "online-marketplace-liability", "your-first-home"] },
-      {
-        title: "Not in our data yet",
-        cards: [
-          "national-living-wage",
-          "universal-credit-surplus-earnings",
-          "mileage-rates",
-          "company-car-tax",
-          "business-asset-disposal-relief",
-          "first-time-buyer-isa",
-          "parental-allowance",
-          "gas-standing-charges",
-        ],
-      },
-    ]);
-    // Each group's list is named by its title and described by its reason
-    for (const { label, why } of UNMODELLED_REASONS) {
-      const list = screen.getByRole("list", { name: label });
-      expect(list).toHaveAccessibleDescription(why);
-    }
+    expect(document.querySelectorAll(".umm-group-title")).toHaveLength(0);
+    expect(screen.queryByText("Coming soon")).toBeNull();
+    expect(screen.queryByText("Modelled separately")).toBeNull();
+    expect(document.querySelectorAll("ul.umm-list")).toHaveLength(1);
+    const cards = [...document.querySelectorAll(".umm-list .policy-card")].map((card) => card.id.replace(/^unmodelled-/, ""));
+    expect(cards).toHaveLength(UNMODELLED_MEASURES.length);
+    expect(new Set(cards).size).toBe(cards.length);
   });
 
   it("puts a measure with no known reason last, unlabelled, and leaves out an empty group", () => {
@@ -348,13 +316,15 @@ describe("UnmodelledMeasures", () => {
       expect(item.querySelector(".policy-card-end").textContent.length, item.id).toBeLessThanOrEqual(20);
       expect(item.querySelector(".policy-card-summary").textContent.trim(), item.id).not.toMatch(/\.\s+[A-Z]/);
     }
-    // Two changes: both in the table behind "Show every change", no tiles
-    for (const id of ["mileage-rates", "company-car-tax"]) {
-      const card = document.getElementById(`unmodelled-${id}`);
-      fireEvent.click(within(card).getByRole("button", { name: "Show every change" }));
-      expect(card.querySelectorAll(".pchg table tbody tr").length, id).toBeGreaterThanOrEqual(2);
+    // Two changes: both in the card's picture, and no table of the same values beside it
+    const mileage = document.getElementById("unmodelled-mileage-rates");
+    expect(within(mileage).getByRole("img").getAttribute("aria-label")).toMatch(/55p a mile for the first 10,000 business miles, made permanent; above 10,000 miles the rate rises from 25p to 35p/);
+    const car = document.getElementById("unmodelled-company-car-tax");
+    expect(within(car).getByRole("img").getAttribute("aria-label")).toMatch(/zero-emission cars 9% to 10%, cars emitting 1 to 50g CO2 a kilometre 19% to 20%/);
+    for (const card of [mileage, car]) {
+      expect(within(card).queryByRole("button", { name: "Show every change" })).toBeNull();
+      expect(card.querySelector(".pchg table")).toBeNull();
     }
-    expect(document.querySelectorAll("#unmodelled-mileage-rates .pchg table tr")[1]).toHaveTextContent(/^First 10,000 business miles.*45p55p\+10p$/);
   });
 
   it("shows nothing for an empty list", () => {

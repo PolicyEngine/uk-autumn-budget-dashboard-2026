@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { BAR_GAP, BAR_RADIUS, CHART_COLOURS, barShape, roundedRectPath } from "./chartTheme";
+import { BAR_GAP, BAR_RADIUS, CHART_COLOURS, barShape, emptyMeasuresNote, roundedRectPath } from "./chartTheme";
 
 const kebab = (name) => name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 const css = readFileSync(resolve(__dirname, "../app/globals.css"), "utf8");
@@ -273,5 +273,23 @@ describe("barShape: one bar style", () => {
 
   it("caps the radius at half the bar's thickness", () => {
     expect(roundedRectPath(0, 0, 100, 4, [BAR_RADIUS, BAR_RADIUS, BAR_RADIUS, BAR_RADIUS])).toContain("A2,2");
+  });
+});
+
+describe("emptyMeasuresNote", () => {
+  const yearLabel = "2031-32";
+  it("says no policy changes incomes only when every selected policy has no effect", () => {
+    expect(emptyMeasuresNote({ noEffect: [{ id: "a" }], selectedPolicies: ["a"], yearLabel })).toBe(
+      "None of the selected policies changes household incomes in 2031-32.",
+    );
+  });
+
+  it("says results are unavailable, never 'no change', when a selected policy is held back or has no row (an empty list is not no effect)", () => {
+    expect(emptyMeasuresNote({ noEffect: [], selectedPolicies: ["a"], yearLabel })).toBe(
+      "Results are unavailable for the selected policies in 2031-32.",
+    );
+    expect(emptyMeasuresNote({ noEffect: [{ id: "a" }], selectedPolicies: ["a", "b"], yearLabel })).toBe(
+      "Results are unavailable for the selected policies in 2031-32.",
+    );
   });
 });

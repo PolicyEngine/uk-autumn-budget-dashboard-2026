@@ -92,7 +92,8 @@ export default function PensionerTrendCard({ rows, policies, selectedPolicies, s
     () =>
       stepAnnotations(focusSeries).map((note) => ({
         ...note,
-        text: `${nameOf(note.measureId)}${narrow ? "" : `, ${fiscalYearTick(note.year)}`}`,
+        // A step from a measure ending is labelled by its absence (TrendCard)
+        text: `${note.ends ? `No ${inSentence(nameOf(note.measureId))}` : nameOf(note.measureId)}${narrow ? "" : `, ${fiscalYearTick(note.year)}`}`,
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [focusSeries, catalogue, narrow],

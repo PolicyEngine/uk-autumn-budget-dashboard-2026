@@ -1,0 +1,576 @@
+/* Each modelled measure's visual on its Policies card (PolicyVisual.jsx).
+   Tokens only (docs/COLOURS.md): the measure's colour (--policy-accent),
+   gain teal for what households keep, loss amber for what current law
+   takes, grey for current law. No motion. */
+
+.pviz {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+}
+
+.pviz-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.pviz-caption {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.45;
+  color: var(--pe-gray-600);
+}
+
+/* The key: a swatch before each item's words */
+.pviz-key {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+}
+
+.pviz-key-item::before {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+.pviz-key-item.is-before::before {
+  border-top: 2px dashed var(--c-before);
+}
+
+.pviz-key-item.is-after::before {
+  border-top: 2.5px solid var(--policy-accent, var(--c-after));
+}
+
+.pviz-key-item.is-cliff::before {
+  width: 3px;
+  height: 11px;
+  background: var(--c-loss);
+}
+
+.pviz-key-item.is-dot::before {
+  width: 8px;
+  height: 8px;
+  background: var(--c-surface);
+  border: 2px solid var(--c-ink);
+  border-radius: 50%;
+}
+
+.pviz-key-item.is-zero::before,
+.pviz-key-item.is-standard::before,
+.pviz-key-item.is-expected::before {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+}
+
+.pviz-key-item.is-zero::before {
+  background: var(--policy-accent, var(--c-after));
+}
+
+.pviz-key-item.is-standard::before {
+  background: var(--c-muted-fill);
+  box-shadow: inset 0 0 0 1px var(--c-axis);
+}
+
+.pviz-key-item.is-expected::before {
+  background: repeating-linear-gradient(135deg, var(--policy-accent, var(--c-after)) 0 3px, var(--c-surface) 3px 5px);
+  box-shadow: inset 0 0 0 1px var(--policy-accent, var(--c-after));
+}
+
+/* --- Plots (SVG) --------------------------------------------------------- */
+
+.pviz-plot {
+  position: relative;
+  min-width: 0;
+}
+
+.pviz-svg {
+  display: block;
+  max-width: 100%;
+  overflow: visible;
+  font-variant-numeric: tabular-nums;
+}
+
+.pviz-grid {
+  stroke: var(--c-grid);
+  stroke-width: 1;
+}
+
+.pviz-axis {
+  stroke: var(--c-axis);
+  stroke-width: 1;
+}
+
+.pviz-tick {
+  font-size: 11px;
+  fill: var(--c-tick);
+}
+
+.pviz-axis-title {
+  font-size: 11px;
+  fill: var(--c-axis-title);
+}
+
+.pviz-gap {
+  fill: var(--c-gain);
+  fill-opacity: 0.18;
+}
+
+.pviz-before {
+  fill: none;
+  stroke: var(--c-before);
+  stroke-width: 2;
+  stroke-dasharray: 5 3;
+}
+
+.pviz-after,
+.pviz-after-casing {
+  fill: none;
+  stroke-linejoin: round;
+}
+
+.pviz-after {
+  stroke: var(--policy-accent, var(--c-after));
+  stroke-width: 2.5;
+}
+
+/* A darker casing under the measure's colour, so a light one shows */
+.pviz-after-casing {
+  stroke: var(--c-ink);
+  stroke-opacity: 0.35;
+  stroke-width: 4.5;
+}
+
+.pviz-gap-label {
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--c-gain-text);
+  paint-order: stroke;
+  stroke: var(--c-surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.pviz-budget {
+  stroke: var(--c-reference);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+
+.pviz-budget-label {
+  font-size: 11px;
+  fill: var(--c-reference);
+}
+
+/* Carer's Allowance: current law's cliff edge, in the loss colour */
+.pviz-cliff {
+  stroke: var(--c-loss);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.pviz-cliff-label {
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--c-loss-text);
+  paint-order: stroke;
+  stroke: var(--c-surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.pviz-dot {
+  fill: var(--c-surface);
+  stroke: var(--c-ink);
+  stroke-width: 2;
+}
+
+.pviz-dot-label {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--c-ink);
+  paint-order: stroke;
+  stroke: var(--c-surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+/* --- Fuel duty: the duty saved on a fill, by period ---------------------- */
+
+.pviz-fills {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pviz-fills-title {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--pe-gray-600);
+}
+
+.pviz-fills-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: 6px;
+}
+
+.pviz-fill {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  background: color-mix(in srgb, var(--c-gain) 8%, var(--c-surface));
+  border: 1px solid color-mix(in srgb, var(--c-gain) 30%, var(--c-surface));
+  border-radius: 8px;
+}
+
+.pviz-fill-when {
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-600);
+}
+
+.pviz-fill-value {
+  font-size: var(--fs-body);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-gain-text);
+}
+
+/* --- Household Energy Payment: bands, then reach ------------------------- */
+
+.pviz-bands {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.pviz-bands-title {
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-600);
+}
+
+.pviz-bands-row {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.pviz-band {
+  padding: 3px 0;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  text-align: center;
+  color: var(--pe-gray-500);
+  background: var(--c-muted-fill);
+  border-radius: 4px;
+}
+
+.pviz-band.is-paid {
+  color: var(--c-ink);
+  background: color-mix(in srgb, var(--policy-accent, var(--c-after)) 45%, var(--c-surface));
+  box-shadow: inset 0 0 0 1px var(--policy-accent, var(--c-after));
+}
+
+/* "£100 each" under the bands it is paid in */
+.pviz-bands-paid {
+  grid-column: 2;
+  width: calc(var(--paid) / var(--bands) * 100%);
+  padding-top: 3px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  text-align: center;
+  color: var(--c-gain-text);
+  border-top: 2px solid var(--policy-accent, var(--c-after));
+}
+
+.pviz-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pviz-bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3.2em;
+  grid-template-areas:
+    "label label"
+    "track value";
+  align-items: center;
+  gap: 3px 8px;
+}
+
+.pviz-bar-label {
+  grid-area: label;
+  font-size: var(--fs-caption);
+  line-height: 1.35;
+  color: var(--pe-gray-700);
+}
+
+.pviz-bar-note {
+  color: var(--pe-gray-500);
+}
+
+.pviz-bar-track {
+  grid-area: track;
+  position: relative;
+  height: 10px;
+  overflow: hidden;
+  background: var(--c-muted-fill);
+  border-radius: 999px;
+}
+
+.pviz-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--policy-accent, var(--c-after));
+  border-radius: 999px;
+}
+
+.pviz-bar-value {
+  grid-area: value;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--c-ink);
+}
+
+/* --- Trading allowance: the tax-free band -------------------------------- */
+
+.pviz-band-bar {
+  position: relative;
+  display: flex;
+  height: 34px;
+  margin-top: 4px;
+}
+
+.pviz-band-old,
+.pviz-band-new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.pviz-band-old {
+  color: var(--pe-gray-700);
+  background: var(--c-muted-fill);
+  border: 1px solid var(--c-axis);
+  border-radius: 6px 0 0 6px;
+}
+
+.pviz-band-new {
+  color: var(--c-ink);
+  background: color-mix(in srgb, var(--policy-accent, var(--c-after)) 40%, var(--c-surface));
+  border: 1px solid var(--policy-accent, var(--c-after));
+  border-left: 0;
+  border-radius: 0 6px 6px 0;
+}
+
+.pviz-band-old > span,
+.pviz-band-new > span {
+  padding: 0 4px;
+}
+
+.pviz-band-ticks {
+  position: relative;
+  height: 16px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-tick);
+}
+
+.pviz-band-ticks > span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.pviz-band-ticks > span:first-child {
+  transform: none;
+}
+
+.pviz-band-ticks > span:last-child {
+  transform: translateX(-100%);
+}
+
+.pviz-band-saving {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--pe-gray-600);
+}
+
+.pviz-band-saving-value {
+  font-weight: 700;
+  color: var(--c-gain-text);
+}
+
+/* --- Zero VAT on electricity: a calendar strip --------------------------- */
+
+.pviz-cal {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  --name: 7.5em;
+}
+
+.pviz-cal-row {
+  display: grid;
+  grid-template-columns: var(--name) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.pviz-cal-name {
+  font-size: var(--fs-micro);
+  line-height: 1.2;
+  color: var(--pe-gray-700);
+}
+
+.pviz-cal-cells {
+  display: grid;
+  grid-template-columns: repeat(var(--months), minmax(0, 1fr));
+  gap: 2px;
+}
+
+.pviz-cal-cell {
+  height: 18px;
+  background: var(--c-muted-fill);
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px var(--c-axis);
+}
+
+.pviz-cal-cell.is-zero {
+  background: var(--policy-accent, var(--c-after));
+  box-shadow: none;
+}
+
+.pviz-cal-cell.is-expected {
+  background: repeating-linear-gradient(135deg, var(--policy-accent, var(--c-after)) 0 3px, var(--c-surface) 3px 6px);
+  box-shadow: inset 0 0 0 1px var(--policy-accent, var(--c-after));
+}
+
+/* The months already zero-rated in law: a bracket over them */
+.pviz-cal-law {
+  padding: 0 4px 3px;
+  font-size: var(--fs-micro);
+  line-height: 1.2;
+  text-align: center;
+  color: var(--pe-gray-600);
+  border: 1px solid var(--c-reference);
+  border-top: 0;
+  border-bottom-width: 2px;
+}
+
+.pviz-cal-row.is-months .pviz-cal-cells {
+  align-items: start;
+}
+
+.pviz-cal-month {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--c-tick);
+}
+
+.pviz-cal-year {
+  font-size: 10px;
+  color: var(--pe-gray-500);
+}
+
+/* --- Property income tax: the rate ladder -------------------------------- */
+
+.pviz-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pviz-rung {
+  display: grid;
+  grid-template-columns: 6.5em minmax(0, 1fr) 6.2em;
+  align-items: center;
+  gap: 10px;
+}
+
+.pviz-rung-label {
+  font-size: var(--fs-caption);
+  color: var(--pe-gray-700);
+}
+
+.pviz-rung-label::first-letter {
+  text-transform: uppercase;
+}
+
+.pviz-rung-track {
+  position: relative;
+  height: 14px;
+  background: var(--c-muted-fill);
+  border-radius: 3px;
+}
+
+.pviz-rung-before,
+.pviz-rung-after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.pviz-rung-before {
+  left: 0;
+  background: var(--c-before);
+  border-radius: 3px 0 0 3px;
+}
+
+.pviz-rung-after {
+  background: var(--policy-accent, var(--c-loss));
+  border-radius: 0 3px 3px 0;
+  box-shadow: 0 0 0 1px var(--c-ink);
+}
+
+.pviz-rung-value {
+  font-size: var(--fs-small);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--c-ink);
+}
+
+.pviz-rung-old {
+  font-weight: 400;
+  color: var(--pe-gray-500);
+}
+
+.pviz-where {
+  margin: 0;
+  font-size: var(--fs-micro);
+  color: var(--pe-gray-500);
+}

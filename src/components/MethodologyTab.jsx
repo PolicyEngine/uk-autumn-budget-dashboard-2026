@@ -18,7 +18,7 @@ import { useMeasureCatalogue } from "../utils/measureCatalogue";
 import { OPEN_VIEW_EVENT } from "../utils/methodLink";
 import { AnchorLink, ExternalLink, ReasonList, SourceLink, Tag, Topic } from "./methodology/MethodUi";
 import { glossaryAnchor } from "./methodology/glossary";
-import { Calculator, ChartColumn, Compass, Database, House, TrendingUp, TriangleAlert } from "lucide-react";
+import { Calculator, ChartColumn, Compass, Database, House, TrendingUp, Info } from "lucide-react";
 import "./methodology/Methodology.css";
 import { scrollBelowBars, smoothUnlessReduced } from "../utils/pageScroll";
 
@@ -52,7 +52,7 @@ export const METHOD_CONTENTS = [
   { id: METHOD_SECTIONS.population, title: "Population impact", icon: ChartColumn, titleIcon: "bars" },
   { id: METHOD_SECTIONS.personal, title: "Household calculator", icon: House, titleIcon: "house" },
   { id: METHOD_SECTIONS.living, title: "Pre-measures forecast", icon: TrendingUp, titleIcon: "trend" },
-  { id: METHOD_SECTIONS.limitations, title: "Limitations", icon: TriangleAlert, titleIcon: "alert" },
+  { id: METHOD_SECTIONS.limitations, title: "Limitations", icon: Info, titleIcon: "book" },
 ];
 
 const SECTION_ICONS = Object.fromEntries(METHOD_CONTENTS.map(({ id, titleIcon }) => [id, titleIcon]));
@@ -273,18 +273,20 @@ function MethodologyTab({ onShowTab }) {
               The page describes the current pipeline, which may be newer than this dashboard&apos;s data.
             </p>
           </Topic>
-          {/* Sign-off covers every public file, so it sits here rather than
-              under the household scatter (scripts/check_public_data.py) */}
-          <Topic title="Published files" preview="Sign-off">
+          {/* The checks cover every public file, so they sit here rather than
+              under the household scatter (scripts/check_public_data.py; with
+              sign_off.REQUIRED off, #308, no file needs a named reviewer) */}
+          <Topic title="Published files" preview="Checks">
             <FactList
               items={[
                 [
-                  "Sign-off",
+                  "Checks",
                   {
                     value:
-                      "Each public data file is listed with a named reviewer and a digest of the exact bytes they reviewed. A changed file fails the publication checks until it is reviewed again.",
+                      "Automated checks run on every public data file before it is published; no named reviewer signs each file off. A file that fails a check is not published.",
                     more: [
-                      "A file awaiting sign-off can be published as pending, for at most 14 days after its entry; after that it fails the checks until it is signed off.",
+                      "No file may carry household, benefit unit or person ids or weights, a figure for a group under the floor of survey households (Small groups, above), or more than 20 constituency, local-authority or small-area codes, except a validated table of results by area or a boundary file.",
+                      "Each results file must match the digest its run's receipt records; the run must be approved, use the certified data and pass the reconciliation against the Budget's costings.",
                     ],
                   },
                 ],

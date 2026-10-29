@@ -1,4 +1,8 @@
-"""Hand-written modifiers stay held until two people attest this receipt."""
+"""Hand-written modifiers stay held until two people attest this receipt.
+
+Only while sign-off is on (``uk_budget_data.sign_off``), so ``world`` turns
+it on; the tests at the end turn it off.
+"""
 
 import json
 
@@ -11,7 +15,7 @@ from tests.attestation_measures import template_helper_modifier
 from tests.fixed_shape_measures import module_level_modifier
 from tests.publication_support import World
 from tests.template_measures import property_modifier
-from uk_budget_data import data_limits, model_limits
+from uk_budget_data import data_limits, model_limits, sign_off
 from uk_budget_data.publication import attestations as a
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import read_receipt
@@ -28,7 +32,7 @@ VALUES = {2027: -1.0, 2028: -2.0}
 
 
 @pytest.fixture
-def world(monkeypatch):
+def world(monkeypatch, sign_off_required):
     instance = World()
     monkeypatch.setattr(a, "ATTESTATIONS_ROOT", instance.root / "attestations")
     monkeypatch.setattr(
@@ -413,3 +417,59 @@ def test_attestations_require_distinct_names_and_the_matching_digest(
     else:
         with pytest.raises(ValueError):
             a.validate_attestation(document, record)
+
+
+# --- Sign-off off -------------------------------------------------------------
+
+
+def test_with_sign_off_off_a_handwritten_modifier_is_not_held(
+    world, monkeypatch
+):
+    """No attestation is read or needed; every other gate still runs."""
+    monkeypatch.setattr(sign_off, "REQUIRED", False)
+    reference = modifier_artifact(world)
+    assert not a.requires_attestation(read_receipt(reference.path))
+    for level in (m.STAGED, m.PROVISIONAL, m.APPROVED):
+        problems, _ = gate_problems(
+            "alpha", reference.path, m.Manifest(), level=level, **args(world)
+        )
+        assert not any("held" in problem for problem in problems)
+    manifest = m.Manifest()
+    stage(manifest, reference.path, provisional=True, **args(world))
+    assert manifest.measures["alpha"].attestation is None
+    approve(manifest, "alpha", "Approver", **args(world))
+    assert manifest.measures["alpha"].status == m.APPROVED
+    assert check(manifest, **args(world)) == []
+
+
+def test_with_sign_off_off_a_recorded_attestation_is_kept_but_not_checked(
+    world, monkeypatch
+):
+    reference = modifier_artifact(world)
+    release = attest(reference)
+    manifest = m.Manifest()
+    stage(manifest, reference.path, provisional=True, **args(world))
+    (a.ATTESTATIONS_ROOT / "alpha.json").unlink()
+    manifest.measures["alpha"].attestation = release.model_copy(
+        update={"receipt_sha256": "f" * 64}
+    )
+    problems = check(manifest, **args(world))
+    assert any("held: a hand-written modifier" in p for p in problems)
+    assert any("the entry's attestation is invalid" in p for p in problems)
+    monkeypatch.setattr(sign_off, "REQUIRED", False)
+    assert check(manifest, **args(world)) == []
+
+
+def test_with_sign_off_off_a_combined_run_with_a_handwritten_member_stages(
+    world, monkeypatch
+):
+    monkeypatch.setattr(sign_off, "REQUIRED", False)
+    alpha = modifier_artifact(world)
+    beta = world.ready("beta", VALUES)
+    manifest = m.Manifest()
+    for reference in (alpha, beta):
+        stage(manifest, reference.path, provisional=True, **args(world))
+    combined = combined_artifact(world, manifest, (alpha, beta))
+    stage(manifest, combined.path, provisional=True, **args(world))
+    assert manifest.combined["combined--alpha+beta"].attestation is None
+    assert check(manifest, **args(world)) == []

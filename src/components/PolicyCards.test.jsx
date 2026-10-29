@@ -394,7 +394,13 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       expect(item).not.toHaveTextContent(/Current law.*→|becomes/);
       const main = entry.rows.find((row) => row.primary) ?? entry.rows[0];
       const changes = new Set(main.points.filter((p) => p.before !== p.after).map((p) => `${p.before}|${p.after}`));
-      expect(Boolean(item.querySelector(".pchg-svg")), id).toBe(changes.size > 1);
+      // Every measure in the file has its own visual (policies/
+      // PolicyVisual.jsx), which takes the step plot's place
+      expect(item.querySelector(".pviz"), id).toBeTruthy();
+      expect(Boolean(item.querySelector(".pchg-svg")), id).toBe(false);
+      render(<PolicyCards policies={[{ ...published(id, id), visual: undefined }]} selectedPolicies={[id]} parameterTables={file} />);
+      const plain = document.querySelectorAll(".policy-card")[1];
+      expect(Boolean(plain.querySelector(".pchg-svg")), id).toBe(changes.size > 1);
       // Every table behind a button
       expect(item.querySelector(".pchg table"), id).toBeNull();
       cleanup();
@@ -531,9 +537,12 @@ describe("the card's frame", () => {
     const ids = ["household_energy_payment_2026", "fuel_duty_rise_deferral", "state_pension_income_tax_protection", "trading_allowance_raise"];
     const file = JSON.parse(readFileSync(join(__dirname, "..", "..", "public", "data", "policy_parameters.json"), "utf8"));
     const bare = { ...published("domestic_electricity_zero_vat", "Zero VAT"), description: "An older run's wording." };
+    // The Pension Tax Allowance without its visual (which folds its
+    // example in), so one card has both an example and What changes
+    const withoutVisual = (policy) => (policy.id === "state_pension_income_tax_protection" ? { ...policy, visual: undefined } : policy);
     render(
       <PolicyCards
-        policies={[...ids.map((id) => published(id, id)), bare]}
+        policies={[...ids.map((id) => withoutVisual(published(id, id))), bare]}
         selectedPolicies={[...ids, bare.id]}
         parameterTables={file}
         onShowEffect={() => {}}
@@ -636,10 +645,11 @@ describe("the card's frame", () => {
     const id = "carers_allowance_earnings_taper";
     render(<PolicyCards policies={[published(id, id)]} selectedPolicies={[id]} parameterTables={file} />);
     const block = screen.getByRole("region", { name: /^What changes/ });
-    // No level tiles (Vahid, 28 Oct): the note, and the plot of the
-    // allowance £1 over the limit
+    // No level tiles (Vahid, 28 Oct): the note, under the allowance drawn
+    // against weekly earnings, the cliff in the loss colour (Anthony)
     expect(block.querySelector(".pchg-tile, .pchg-ba")).toBeNull();
-    expect(block.querySelector(".pchg-head.is-plot .pchg-caption")).toHaveTextContent("Carer's Allowance at £1 a week over the earnings limit, £ a week");
+    expect(within(block).getByRole("img", { name: /against weekly earnings/ })).toBeInTheDocument();
+    expect(block.querySelector(".pviz-cliff")).not.toBeNull();
     expect(block).not.toHaveTextContent(/£204|£323|£119/);
     expect(block.querySelector(".pchg-note")).toHaveTextContent("£228 a week in 2030-31 and £234 in 2031-32");
     expect(block.querySelector(".pchg-note")).toHaveTextContent("runs out at £324 a week in 2030-31 and £332 in 2031-32");
