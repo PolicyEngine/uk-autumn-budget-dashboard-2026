@@ -414,7 +414,7 @@ export default function useQuintileGrowthView(data, range = null, setRange = nul
 
   const block = data.income_growth_by_group?.groupings && Object.keys(data.income_growth_by_group.groupings).length ? data.income_growth_by_group : null;
   const statistic = (block?.statistic || data.income_by_decile.statistic).replace(/decile/, "group");
-  const popNote = population === "non_pensioners" ? ` ${block.populations.non_pensioners}; we rank them among themselves.` : "";
+  const popNote = population === "non_pensioners" ? ` ${block.populations.non_pensioners}. We rank them among themselves.` : "";
   const measuresAbout = !measures
     ? " Without the policies (current law): real growth of each group's median income before any Budget policy."
     : diff

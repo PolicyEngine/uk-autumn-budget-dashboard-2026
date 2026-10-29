@@ -51,7 +51,7 @@ function plainMetric(label) {
 function describeMetric(id, label) {
   const equivalised = /equivalised/i.test(id) || /equivalised/i.test(label);
   const concept = equivalised
-    ? "household net income after adjusting for household size and composition (equivalised)"
+    ? "household net income adjusted for household size and composition (equivalised)"
     : "household net income";
   if (/median/i.test(id)) return `${label} is the middle value of ${concept} across people.`;
   if (/mean/i.test(id)) return `${label} is the average of ${concept} across people.`;
@@ -117,7 +117,7 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
       const income = metric.startsWith("mean") ? "mean income" : "median income";
       // Real or cash said in the sentence, so a figure quoted alone is not
       // read as cash (W6 G1); the price base is in About this chart
-      const who = adjustment === "real" ? `real ${income} (after adjusting for household size)` : `${income} in cash terms (after adjusting for household size)`;
+      const who = adjustment === "real" ? `real ${income} (adjusted for household size)` : `${income} in cash terms (adjusted for household size)`;
       summary = verb ? (
         <>
           Under current law, {who} <strong>{verb}</strong>, from about {poundsFull(a)} a year in {fyDash(first.year)} to{" "}
@@ -163,7 +163,7 @@ export default function useHouseholdIncomeView(data, range = null, setRange = nu
     info: {
       how: [
         OFFICIAL_VS_PE,
-        units && "Equivalised: incomes after adjusting for household size, as for a couple with no children.",
+        units && "Equivalised: incomes adjusted for household size, as for a couple with no children.",
         adjustment === "real" ? `Real terms, in ${priceBase} prices.` : "Cash terms, with no adjustment for prices.",
       ],
       caveats: [
