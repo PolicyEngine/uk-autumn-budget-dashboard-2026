@@ -48,14 +48,15 @@ REASONS = {
         "tests/test_reforms.py."
     ),
     "bus_fare_cap_2027": (
-        "Checked budget_measures.bus_fare_cap_2027: it adds 12.5% of "
-        "bus_fare_spending (PolicyEngine/bus-fare-cap's "
-        "FARE_CAP_REDUCTION_CENTRAL, £3 to £2) to epg_subsidy for "
-        "households in England outside London, times 0.25 in 2026-27 "
-        "(January to March 2027) and 0.75 in 2027-28 (April to December "
-        "2027), leaving every other household and year at the native "
-        "amount. The receipt's outputs were compared with the "
-        "hand-computed households in tests/test_bus_fare_cap_2027.py."
+        "Checked budget_measures.bus_fare_cap_2027: in 2026-27 and "
+        "2027-28 it adds to epg_subsidy each household's "
+        "person_bus_fare_spending computed by the engine's own formula "
+        "with a copy of gov.dft.bus.fares whose cap is £3 from 1 January "
+        "to 31 December 2027, less person_bus_fare_spending under current "
+        "law (£2 then); the copy is never attached to the simulation's "
+        "parameters, and every other household and year keeps the native "
+        "amount. The receipt's outputs were compared with the engine's "
+        "own £3 against £2 difference in tests/test_bus_fare_cap_2027.py."
     ),
     "carers_allowance_earnings_taper": (
         "Checked budget_measures.carers_allowance_earnings_taper: from "

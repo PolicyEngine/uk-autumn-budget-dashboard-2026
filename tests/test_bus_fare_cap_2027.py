@@ -1,12 +1,10 @@
 """The £2 bus fare cap (``bus_fare_cap_2027``).
 
-Hand-computed single households. Each supplies its household
-``bus_fare_spending`` and no journeys, so policyengine-uk prices nothing
-itself: the household's fare spending is the supplied amount in every
-year. The credit is that spending x 12.5% (PolicyEngine/bus-fare-cap's
-``FARE_CAP_REDUCTION_CENTRAL``, £3 to £2) x the share of the fiscal year
-the cap runs: a quarter of 2026-27 (January to March 2027) and three
-quarters of 2027-28 (April to December 2027).
+The saving is policyengine-uk's own fare model run twice: bus fares with
+the single fare cap held at £3 from 1 January to 31 December 2027, less
+current law's (£2 then). Each case checks the credit to household net
+income against the engine's own difference in ``bus_fare_spending``
+between a simulation with that £3 cap set as a parameter and current law.
 """
 
 import inspect
@@ -24,39 +22,49 @@ from uk_budget_data.reforms import (
     get_reform,
 )
 
-SPENDING = 400.0
-YEARS = (2025, 2026, 2027, 2028)
+YEARS = ("2025", "2026", "2027", "2028")
 PENNY = 0.01
+THREE_POUNDS = {"gov.dft.bus.fares.cap": {"2027-01-01.2027-12-31": 3}}
 
 
-def _household(region, spending=SPENDING):
+def _household(region, other_trips=300, london_trips=0, pass_holder=False):
     return {
-        "people": {"adult": {"age": {2026: 35}}},
+        "people": {
+            "adult": {
+                "age": {"2026": 35},
+                "bus_pass_eligible": {y: pass_holder for y in YEARS},
+                "other_local_bus_trips": {y: other_trips for y in YEARS},
+                "bus_in_london_trips": {y: london_trips for y in YEARS},
+            }
+        },
         "benunits": {"b": {"members": ["adult"]}},
         "households": {
-            "h": {
-                "members": ["adult"],
-                "region": {year: region for year in YEARS},
-                "bus_fare_spending": {year: spending for year in YEARS},
-            }
+            "h": {"members": ["adult"], "region": {y: region for y in YEARS}}
         },
     }
 
 
-def _gain(region, year, spending=SPENDING):
-    situation = _household(region, spending)
+def _gain_and_engine(situation, year):
     baseline = Simulation(situation=situation)
     reformed = Simulation(
         situation=situation,
         scenario=Scenario(simulation_modifier=bus_fare_cap_2027),
     )
-    return float(
+    three = Simulation(
+        situation=situation, scenario=Scenario(parameter_changes=THREE_POUNDS)
+    )
+    gain = float(
         reformed.calculate("household_net_income", year)[0]
         - baseline.calculate("household_net_income", year)[0]
     )
+    engine = float(
+        three.calculate("bus_fare_spending", year)[0]
+        - baseline.calculate("bus_fare_spending", year)[0]
+    )
+    return gain, engine
 
 
-def test_the_defaults_are_the_sources_fraction_and_the_months():
+def test_the_defaults_are_the_counterfactual_cap_and_its_dates():
     defaults = {
         name: parameter.default
         for name, parameter in inspect.signature(
@@ -65,48 +73,45 @@ def test_the_defaults_are_the_sources_fraction_and_the_months():
         if name != "sim"
     }
     assert defaults == {
-        "reduction": 0.125,
-        "share_2026": 0.25,
-        "share_2027": 0.75,
-        "country": "ENGLAND",
-        "excluded_region": "LONDON",
+        "counterfactual_cap": 3,
+        "cap_from": "2027-01-01",
+        "cap_to": "2027-12-31",
     }
 
 
+@pytest.mark.parametrize("year", [2026, 2027])
+def test_in_the_north_west_the_credit_is_the_engines_three_against_two(year):
+    gain, engine = _gain_and_engine(_household("NORTH_WEST"), year)
+    assert engine > 1
+    assert gain == pytest.approx(engine, abs=PENNY)
+
+
+@pytest.mark.parametrize("year", [2025, 2028])
+def test_nothing_outside_calendar_2027(year):
+    gain, engine = _gain_and_engine(_household("NORTH_WEST"), year)
+    assert gain == pytest.approx(0, abs=PENNY)
+    assert engine == pytest.approx(0, abs=PENNY)
+
+
 @pytest.mark.parametrize(
-    "year, expected",
+    "region, situation",
     [
-        (2025, 0.0),
-        # January to March 2027: 400 x 0.125 x 3/12
-        (2026, 12.5),
-        # April to December 2027: 400 x 0.125 x 9/12
-        (2027, 37.5),
-        (2028, 0.0),
+        ("LONDON", _household("LONDON", other_trips=0, london_trips=300)),
+        ("WALES", _household("WALES")),
+        ("SCOTLAND", _household("SCOTLAND")),
     ],
 )
-def test_outside_london_the_credit_is_spending_times_the_fraction(
-    year, expected
-):
-    assert _gain("NORTH_WEST", year) == pytest.approx(expected, abs=PENNY)
-
-
-def test_the_credit_scales_with_spending():
-    assert _gain("SOUTH_WEST", 2027, spending=1_000) == pytest.approx(
-        1_000 * 0.125 * 0.75, abs=PENNY
-    )
-
-
-@pytest.mark.parametrize("region", ["LONDON", "WALES", "SCOTLAND"])
-def test_london_and_the_devolved_nations_get_nothing(region):
+def test_london_wales_and_scotland_get_nothing(region, situation):
     for year in (2026, 2027):
-        assert _gain(region, year) == pytest.approx(0, abs=PENNY), (
-            region,
-            year,
-        )
+        gain, _ = _gain_and_engine(situation, year)
+        assert gain == pytest.approx(0, abs=PENNY), (region, year)
 
 
-def test_no_fare_spending_no_credit():
-    assert _gain("NORTH_EAST", 2027, spending=0) == pytest.approx(0, abs=PENNY)
+def test_a_bus_pass_holder_saves_nothing():
+    gain, _ = _gain_and_engine(
+        _household("NORTH_WEST", pass_holder=True), 2027
+    )
+    assert gain == pytest.approx(0, abs=PENNY)
 
 
 def test_it_is_registered_in_the_package():

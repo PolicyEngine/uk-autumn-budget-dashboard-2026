@@ -322,10 +322,9 @@ def test_bus_fare_cap():
         3,
         2,
     )
-    (saving,) = rows["Fare saving"]["points"]
-    assert (saving["before"], saving["after"]) == (0, 0.125)
-    assert rows["Fare saving"]["source"]["after"]["where"] == (
-        "budget_measures/bus_fare_cap_2027.py bus_fare_cap_2027(reduction)"
+    assert rows["Single bus fare cap"]["source"]["before"]["where"] == (
+        "budget_measures/bus_fare_cap_2027.py "
+        "bus_fare_cap_2027(counterfactual_cap)"
     )
 
 

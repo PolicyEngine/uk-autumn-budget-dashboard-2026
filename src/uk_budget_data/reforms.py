@@ -1008,13 +1008,15 @@ def _create_trading_allowance_raise() -> Reform:
 # until then. Left out on Budget day only because runs were in flight
 # (María, 29 October 2026); registered and in the package since. The
 # official cost is a grant to bus operators; this measure scores the
-# households' fare savings, as PolicyEngine/bus-fare-cap does, counted as
-# income. Defaults of the hand-written modifier in
+# households' fare savings, counted as income, from policyengine-uk's own
+# fare model: bus fares with the cap at £3 through calendar 2027 less
+# current law's (which holds the £2 cap from 1 January 2027 to 1 January
+# 2028). Vahid, 29 October 2026: moved off PolicyEngine/bus-fare-cap's
+# fixed 12.5%, which applied the affected singles' fall to every single.
+# Defaults of the hand-written modifier in
 # budget_measures/bus_fare_cap_2027.py (changing one needs a fresh
-# attestation): reduction=0.125 (bus-fare-cap's
-# FARE_CAP_REDUCTION_CENTRAL, £3 to £2), share_2026=0.25 (January to
-# March 2027), share_2027=0.75 (April to December 2027), England outside
-# London.
+# attestation): counterfactual_cap=3, cap_from="2027-01-01",
+# cap_to="2027-12-31".
 
 
 def _create_bus_fare_cap_2027() -> Reform:
@@ -1024,11 +1026,12 @@ def _create_bus_fare_cap_2027() -> Reform:
         description=(
             "Single bus fares on participating services in England outside "
             "London are capped at £2 instead of £3 from 1 January to "
-            "31 December 2027. Each household there saves an estimated "
-            "12.5% of its bus fare spending while the cap runs (the "
-            "all-ticket fall in fares from a £3 to a £2 cap, derived from "
-            "DfT's evaluation of the first £2 cap): three months of "
-            "2026-27 and nine of 2027-28. The saving is counted as "
+            "31 December 2027. The saving is what households' bus fares "
+            "would cost with a £3 cap less what they cost with £2, from "
+            "the model's own fare model (single tickets priced in bands "
+            "fitted to DfT's evaluation of the first £2 cap), weighted by "
+            "days: 1 January to 5 April 2027 in 2026-27 and 6 April to "
+            "31 December 2027 in 2027-28. The saving is counted as "
             "household income, a methodological choice: the official cost "
             "is a grant to bus operators. Journeys are held fixed, with no "
             "extra travel."

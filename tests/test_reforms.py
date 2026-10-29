@@ -1119,13 +1119,18 @@ FIRST_YEARS = {
         {"employment_income": 20_000},
         {"country": "ENGLAND", "council_tax_band": "B"},
     ),
-    # £400 of bus fares in the North West: 12.5% for January to March 2027
-    # (a quarter of 2026-27), £12.50
+    # 300 bus trips a year in the North West: fares priced with a £3 cap
+    # less £2 from 1 January 2027
     "bus_fare_cap_2027": (
         2026,
         "household_net_income",
-        {"employment_income": 20_000},
-        {"region": "NORTH_WEST", "bus_fare_spending": 400},
+        {
+            "employment_income": 20_000,
+            "other_local_bus_trips": 300,
+            "bus_in_london_trips": 0,
+            "bus_pass_eligible": False,
+        },
+        {"region": "NORTH_WEST"},
     ),
 }
 

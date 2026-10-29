@@ -436,7 +436,7 @@ describe("what changes (the model's parameters, policy_parameters.json)", () => 
       expect(item.querySelector(".policy-card-start"), id).toHaveTextContent(starts);
       // What changes only where it has more than a single change of value
       // to show (no tiles; Vahid, 28 Oct)
-      const shown = ["fuel_duty_rise_deferral", "state_pension_income_tax_protection", "domestic_electricity_zero_vat", "carers_allowance_earnings_taper", "property_income_rates_up", "bus_fare_cap_2027"].includes(id);
+      const shown = ["fuel_duty_rise_deferral", "state_pension_income_tax_protection", "domestic_electricity_zero_vat", "carers_allowance_earnings_taper", "property_income_rates_up"].includes(id);
       expect(Boolean(within(item).queryByRole("region", { name: /^What changes/ })), id).toBe(shown);
       expect(item.querySelector(".policy-card-details"), id).toBeTruthy();
       cleanup();

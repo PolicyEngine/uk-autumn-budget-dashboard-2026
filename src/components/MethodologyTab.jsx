@@ -875,11 +875,10 @@ function MethodologyTab({ onShowTab }) {
           <Topic id="method-bus-fare-income" title="Bus fare savings as income" preview="The £2 bus fare cap counted as income">
             <p className="method-more">
               The £2 bus fare cap is paid to bus operators, but passengers gain from it through lower
-              fares. We count that saving as household income, as for a price subsidy: 12.5% of each
-              household&apos;s bus fare spending in England outside London while the cap runs, the
-              fall in all-ticket fares from a £3 to a £2 cap that{" "}
-              <SourceLink id="policyengine_bus_fare_cap">PolicyEngine&apos;s bus fare cap analysis</SourceLink>{" "}
-              derives from <SourceLink id="dft_two_pound_cap_evaluation">DfT&apos;s evaluation of the first £2 cap</SourceLink>. This is a choice of method: the
+              fares. We count that saving as household income, as for a price subsidy: each
+              household&apos;s bus fares priced with a £3 cap less with £2, from policyengine-uk&apos;s
+              fare model, whose single fare bands are fitted to{" "}
+              <SourceLink id="dft_two_pound_cap_evaluation">DfT&apos;s evaluation of the first £2 cap</SourceLink>. This is a choice of method: the
               household spends less on the same journeys, so its income buys more, but no cash
               changes hands. Journeys are held fixed. The saving counts in household net income, not
               in the HBAI income poverty is measured on.

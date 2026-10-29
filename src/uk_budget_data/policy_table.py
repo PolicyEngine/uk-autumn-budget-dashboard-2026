@@ -999,42 +999,38 @@ def _household_energy_payment(reform) -> list[dict]:
     ]
 
 
-# The £2 cap and the £3 it replaces, as announced (Budget 2026 Table 6.1
-# row 4; GOV.UK, 22 July 2026); the modifier holds only the fare saving.
-BUS_FARE_CAP_BEFORE = 3
+# The £2 cap, as announced (Budget 2026 Table 6.1 row 4; GOV.UK, 22 July
+# 2026) and in policyengine-uk's current law; the modifier holds the £3.
 BUS_FARE_CAP_AFTER = 2
 
 
 def _bus_fare_cap(reform) -> list[dict]:
     values = constants(bus_fare_cap_2027)
-    window = ("2027-01-01/2027-12-31", "January to December 2027", 2026)
+    window = (
+        f"{values['cap_from']}/{values['cap_to']}",
+        "January to December 2027",
+        2026,
+    )
     announced = {
         "kind": "documented",
-        "where": "Budget 2026 Table 6.1 row 4 and the GOV.UK release of "
-        "22 July 2026 (the modifier does not set the cap; it credits the "
-        "saving below)",
+        "where": "policyengine-uk gov.dft.bus.fares.cap (Budget 2026 Table "
+        "6.1 row 4)",
     }
     return [
         _row(
             "Single bus fare cap",
             POUNDS,
-            [_point(*window, BUS_FARE_CAP_BEFORE, BUS_FARE_CAP_AFTER)],
-            _source(announced, announced),
+            [
+                _point(
+                    *window, values["counterfactual_cap"], BUS_FARE_CAP_AFTER
+                )
+            ],
+            _source(
+                _modifier_source(bus_fare_cap_2027, "counterfactual_cap"),
+                announced,
+            ),
             unit_words="£ a single fare",
             note="Participating services in England outside London",
-        ),
-        _row(
-            "Fare saving",
-            PERCENT,
-            [_point(*window, 0, values["reduction"])],
-            _source(
-                {"kind": "documented", "where": "no saving at the £3 cap"},
-                _modifier_source(bus_fare_cap_2027, "reduction"),
-            ),
-            primary=False,
-            note="Of households' bus fare spending, counted as income; "
-            "derived in PolicyEngine/bus-fare-cap from DfT's evaluation of "
-            "the first £2 cap",
         ),
     ]
 
