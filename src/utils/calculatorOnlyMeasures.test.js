@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import {
+  CALCULATOR_ONLY_MEASURES,
   SAVINGS_INCOME_RATES_ID,
   definitionChecked,
   isCalculatorOnly,
+  resultPolicies,
   withCalculatorOnly,
   withoutCalculatorOnly,
 } from "./calculatorOnlyMeasures";
@@ -45,5 +47,61 @@ describe("calculator-only measures", () => {
       { numRuns: 300 },
     );
     expect(definitionChecked(["a", SAVINGS_INCOME_RATES_ID], null)).toEqual(["a"]);
+  });
+});
+
+describe("the result card's measures (resultPolicies)", () => {
+  const CALCULATOR_ONLY_IDS = Object.keys(CALCULATOR_ONLY_MEASURES);
+  // Header selections: distinct catalogue-like ids, never a calculator-only one
+  const selection = fc.uniqueArray(
+    fc.stringMatching(/^[a-z][a-z_]{0,20}$/).filter((id) => !isCalculatorOnly(id)),
+    { minLength: 1, maxLength: 12 },
+  );
+
+  it("counts the selection and names the savings rise, as production showed it", () => {
+    const seven = ["a", "b", "c", "d", "e", "f", "g"];
+    expect(resultPolicies(withCalculatorOnly(seven))).toEqual({
+      count: 7,
+      named: ["the savings income tax rise"],
+      text: "7 policies and the savings income tax rise",
+    });
+    expect(resultPolicies(withCalculatorOnly(["a"])).text).toBe("1 policy and the savings income tax rise");
+    // Without the calculator's own measures, just the count
+    expect(resultPolicies(["a", "b"]).text).toBe("2 policies");
+    expect(resultPolicies([]).text).toBe("0 policies");
+    // A repeated id counts once
+    expect(resultPolicies(["a", "a", SAVINGS_INCOME_RATES_ID]).text).toBe("1 policy and the savings income tax rise");
+  });
+
+  it("for any selection, counts exactly the selection and names every calculator-only measure", () => {
+    fc.assert(
+      fc.property(selection, (selected) => {
+        const { count, named, text } = resultPolicies(withCalculatorOnly(selected));
+        expect(count).toBe(selected.length);
+        expect(text.startsWith(`${selected.length} ${selected.length === 1 ? "policy" : "policies"}`)).toBe(true);
+        for (const id of CALCULATOR_ONLY_IDS) {
+          expect(named).toContain(CALCULATOR_ONLY_MEASURES[id].phrase);
+          expect(text).toContain(CALCULATOR_ONLY_MEASURES[id].phrase);
+        }
+      }),
+    );
+  });
+
+  it("for any request, the count plus the named measures is every distinct measure, in any order", () => {
+    const request = fc.uniqueArray(fc.oneof(fc.constantFrom(...CALCULATOR_ONLY_IDS), fc.stringMatching(/^[a-z][a-z_]{0,20}$/)), { maxLength: 12 });
+    fc.assert(
+      fc.property(request, (ids) => {
+        const { count, named } = resultPolicies(ids);
+        expect(count + named.length).toBe(ids.length);
+        expect(named).toHaveLength(ids.filter(isCalculatorOnly).length);
+        expect(resultPolicies([...ids].reverse()).count).toBe(count);
+      }),
+    );
+  });
+
+  it("gives every calculator-only measure a phrase to name it by", () => {
+    for (const measure of Object.values(CALCULATOR_ONLY_MEASURES)) {
+      expect(measure.phrase).toMatch(/^the [a-z]/);
+    }
   });
 });
