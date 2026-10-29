@@ -7,6 +7,7 @@ import {
   BUDGET_DOCUMENT,
   COSTING_YEARS,
   UNMODELLED_MEASURES,
+  UNMODELLED_POINT_LABELS,
   UNMODELLED_REASONS,
 } from "../../utils/unmodelledMeasures";
 
@@ -16,11 +17,9 @@ const entryText = (measure) =>
   [
     measure.name,
     measure.starts,
-    measure.changes,
-    measure.reaches,
-    measure.household,
+    measure.summary,
+    ...(measure.points ?? []).map((point) => point.text),
     measure.noCosting,
-    measure.notModelled,
     ...measure.costings.map((costing) => costing.note),
     ...measure.sources.map((source) => source.label),
   ]
@@ -30,9 +29,12 @@ const entryText = (measure) =>
 describe("the unmodelled measures (unmodelledMeasures.js)", () => {
   it("give every measure each part of an entry, under a unique id", () => {
     for (const measure of UNMODELLED_MEASURES) {
-      for (const field of ["id", "name", "starts", "changes", "reaches", "household", "notModelled"]) {
+      for (const field of ["id", "name", "starts", "summary"]) {
         expect(measure[field], `${measure.id} ${field}`).toBeTruthy();
       }
+      // What changes, who it reaches and why we leave it out, as three labelled points
+      expect(measure.points.map((point) => point.label), measure.id).toEqual(UNMODELLED_POINT_LABELS);
+      for (const point of measure.points) expect(point.text, `${measure.id} ${point.label}`).toBeTruthy();
       expect(measure.sources.length, measure.id).toBeGreaterThan(0);
       // A Table 6.1 row, or a line saying why there is none
       expect(measure.costings.length > 0 || Boolean(measure.noCosting), measure.id).toBe(true);
@@ -159,17 +161,19 @@ describe("UnmodelledMeasures", () => {
       const measure = UNMODELLED_MEASURES[index];
       expect(item.id).toBe(`unmodelled-${measure.id}`);
       expect(item.querySelector(".policy-card-type"), measure.id).toBeTruthy();
-      // What changes as the summary line
-      expect(item.querySelector(".policy-card-summary")).toHaveTextContent(measure.changes);
-      // At a glance: Starts, Ends, Affects
+      // The change as the summary line
+      expect(item.querySelector(".policy-card-summary")).toHaveTextContent(measure.summary);
+      // At a glance: Starts and Ends only; who it reaches is a point (each fact once)
       expect(item.querySelector(".policy-card-glance-title")).toHaveTextContent("At a glance");
       expect(item.querySelector(".policy-card-start")).toHaveTextContent(measure.starts);
-      expect(item.querySelector(".policy-card-affects")).toHaveTextContent(measure.reaches);
-      expect(within(item).getByText("For a household")).toBeInTheDocument();
-      expect(item).toHaveTextContent(measure.household);
-      // No "Why we don't model it": the section title says so
+      expect(item.querySelector(".policy-card-affects")).toBeNull();
+      // The three points, labelled, as a real list; no For a household box
+      const points = item.querySelector("ul.policy-card-points.is-labelled");
+      expect([...points.querySelectorAll(":scope > li > .policy-card-point-label")].map((label) => label.textContent)).toEqual(UNMODELLED_POINT_LABELS);
+      for (const point of measure.points) expect(points).toHaveTextContent(point.text);
+      expect(item.querySelector(".policy-card-example")).toBeNull();
+      // No "Why we don't model it" block: the reason is a point
       expect(within(item).queryByText(WHY_NOT_MODELLED)).toBeNull();
-      expect(item).not.toHaveTextContent(measure.notModelled);
       // Treasury costing: one disclosure, closed, last in the footer, holding the strip and the sources
       const costing = within(item).getByRole("button", { name: "Treasury costing" });
       expect(costing).toHaveAttribute("aria-expanded", "false");
@@ -179,8 +183,8 @@ describe("UnmodelledMeasures", () => {
       expect(within(item).getByRole("region", { name: `Treasury costing: ${measure.name}` })).toBeInTheDocument();
       for (const source of measure.sources) expect(item).toHaveTextContent(source.label);
       expect(item.querySelector("details")).toBeNull();
-      // Summary, At a glance, What changes, For a household, costing: in that order
-      const order = [".policy-card-summary", ".policy-card-when", ".pchg", ".policy-card-example", ".umm-costing-disclosure"]
+      // Summary, At a glance, What changes, the points, costing: in that order
+      const order = [".policy-card-summary", ".policy-card-when", ".pchg", ".policy-card-points", ".umm-costing-disclosure"]
         .map((selector) => item.querySelector(selector))
         .filter(Boolean);
       for (let i = 1; i < order.length; i += 1) {
@@ -303,14 +307,13 @@ describe("UnmodelledMeasures", () => {
     for (const measure of UNMODELLED_MEASURES) expect(measure.name.split(/\s+/).length, measure.id).toBeLessThanOrEqual(10);
   });
 
-  it("renders only short text on every card: summary and For a household in 20 words, who it affects in 12, nothing over 30", () => {
+  it("renders only short text on every card: a summary of 15 words, points of 12, nothing over 30", () => {
     render(<UnmodelledMeasures />);
     open();
     const words = (node) => node.textContent.trim().split(/\s+/).length;
     for (const item of cards()) {
-      expect(words(item.querySelector(".policy-card-summary")), item.id).toBeLessThanOrEqual(20);
-      expect(words(item.querySelector(".policy-card-affects dd")), item.id).toBeLessThanOrEqual(12);
-      expect(words(item.querySelector(".policy-card-example-text")), item.id).toBeLessThanOrEqual(20);
+      expect(words(item.querySelector(".policy-card-summary")), item.id).toBeLessThanOrEqual(15);
+      for (const point of item.querySelectorAll(".policy-card-point-text")) expect(words(point), `${item.id}: ${point.textContent}`).toBeLessThanOrEqual(12);
       // What changes is said once: the summary line, then only the values
       expect(item.querySelector(".pchg-lead")).toBeNull();
       for (const block of item.querySelectorAll("p, dd, li")) {
@@ -319,17 +322,16 @@ describe("UnmodelledMeasures", () => {
     }
   });
 
-  it("marks the savings measure held back from this release in one muted line", () => {
+  it("says the savings measure is held back from this release in its Why we leave it out point", () => {
     render(<UnmodelledMeasures />);
     open();
-    const held = UNMODELLED_MEASURES.filter(({ heldBack }) => heldBack);
+    const why = (measure) => measure.points.find((point) => point.label === "Why we leave it out").text;
+    const held = UNMODELLED_MEASURES.filter((measure) => /^Held back\b/.test(why(measure)));
     expect(held.map(({ id }) => id)).toEqual(["savings-income-tax"]);
     const card = document.getElementById("unmodelled-savings-income-tax");
     // Our interest included ISA interest: calibrated on a different basis, not missing it (#297)
-    expect(card.querySelector(".umm-held-back")).toHaveTextContent(/^Held back: calibrated to HMRC on a different basis, our savings interest is too low/);
-    // One short sentence (Vahid, 29 Oct)
-    expect(held[0].heldBack.split(/\s+/).length).toBeLessThanOrEqual(20);
-    for (const text of [held[0].heldBack, held[0].notModelled]) expect(text).not.toMatch(/miss(?:es)? ISA interest/);
+    expect(card.querySelector(".policy-card-points")).toHaveTextContent(/Held back: calibrated on another basis/);
+    expect(why(held[0])).not.toMatch(/miss(?:es)? ISA interest/);
     fireEvent.click(within(card).getByRole("button", { name: "Treasury costing" }));
     expect(within(card).getByRole("table", { name: COSTING_CAPTION })).toHaveTextContent("+590");
   });
@@ -367,14 +369,11 @@ describe("the section's text", () => {
     expect(section.querySelector(".umm-note")).toBeNull();
   });
 
-  it("keeps each card's What changes, For a household and Why we don't model it to 30 words, and who it affects to 15", () => {
+  it("keeps each card's summary to 15 words and each point to 12", () => {
     for (const measure of UNMODELLED_MEASURES) {
-      expect(measure.reaches.split(/\s+/).length, `${measure.id} reaches`).toBeLessThanOrEqual(12);
-      for (const field of ["changes", "household"]) {
-        expect(measure[field].split(/\s+/).length, `${measure.id} ${field}`).toBeLessThanOrEqual(20);
-      }
-      for (const field of ["notModelled"]) {
-        expect(measure[field].split(/\s+/).length, `${measure.id} ${field}`).toBeLessThanOrEqual(30);
+      expect(measure.summary.split(/\s+/).length, `${measure.id} summary`).toBeLessThanOrEqual(15);
+      for (const point of measure.points) {
+        expect(point.text.split(/\s+/).length, `${measure.id} ${point.label}`).toBeLessThanOrEqual(12);
       }
     }
   });

@@ -28,6 +28,7 @@ export const CARD_SECTIONS = [
   "policy-card-summary",
   "policy-card-when",
   "pchg",
+  "policy-card-points",
   "policy-card-example",
   "policy-card-why",
   "policy-card-details",
@@ -60,8 +61,9 @@ const isLimit = (sentence) => LIMIT_WORDS.test(sentence) || MODELLING_LIMITS.som
  * state it, else in the published description's.
  */
 export function modellingInfo(policy) {
-  const modelling = measureModellingFacts(policy, [policy.summary ?? policy.description, policy.howCalculated, policy.details].filter(Boolean).join(" "));
-  const details = sentences(policy.details);
+  const details = detailPoints(policy.details);
+  const shown = [policy.summary ?? policy.description, ...cardPoints(policy.points).map(pointText), ...details].filter(Boolean).join(" ");
+  const modelling = measureModellingFacts(policy, [shown, policy.howCalculated].filter(Boolean).join(" "));
   return {
     how: [
       policy.howCalculated,
@@ -75,6 +77,45 @@ export function modellingInfo(policy) {
       ...modelling.notePoints,
     ],
   };
+}
+
+/**
+ * A card's bullets (`points`), as a list: each a string, or `{ label, text }`
+ * with a short lead-in. A lone string, as while an entry still has a
+ * sentence there, is one bullet; nothing is no bullets.
+ */
+export function cardPoints(points) {
+  const list = Array.isArray(points) ? points : points ? [points] : [];
+  return list
+    .map((point) => (typeof point === "string" ? { label: null, text: point } : { label: point?.label ?? null, text: point?.text ?? "" }))
+    .filter((point) => point.text);
+}
+
+const pointText = (point) => (point.label ? `${point.label}: ${point.text}` : point.text);
+
+/** "About this result"'s points: the entry's list, or a paragraph split into its sentences. */
+export const detailPoints = (details) => (Array.isArray(details) ? details.filter(Boolean) : sentences(details));
+
+/**
+ * The bullets, as a real list. Where every point has a label the labels
+ * form a column of their own (on a phone, each over its text); otherwise a
+ * label is a bold lead-in.
+ */
+export function CardPoints({ points, name }) {
+  const items = cardPoints(points);
+  if (!items.length) return null;
+  const labelled = items.every((point) => point.label);
+  return (
+    <ul className={`policy-card-points${labelled ? " is-labelled" : ""}`} aria-label={name ? `Key points: ${name}` : "Key points"}>
+      {items.map((point) => (
+        <li key={pointText(point)}>
+          {point.label && <strong className="policy-card-point-label">{point.label}</strong>}
+          {point.label && !labelled && " "}
+          <span className="policy-card-point-text">{point.text}</span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 import Tip from "./Tip";
 import TitleIcon from "./TitleIcon";
@@ -283,9 +324,20 @@ function PolicyTimeline({ policy, highlight }) {
  * same order (CARD_SECTIONS) and the footer pinned to the bottom.
  */
 export function PolicyCard({ policy, onShowEffect, parameters: given }) {
+  // No summary means no card details apply: the published description, in full
+  // (a Budget measure the dashboard does not model has its own sections
+  // instead: policies/UnmodelledMeasures.jsx)
+  const bare = !policy.summary && !policy.notModelled;
+  // The measure's own visual (policies/PolicyVisual.jsx), from the file's
+  // entry as published: in What changes, or as its example's body
+  // A not-modelled card brings its own drawn visual (policies/UnmodelledVisual.jsx)
+  const drawn = isValidElement(policy.visual) ? policy.visual : null;
+  const figure = bare || drawn ? null : policyVisual(policy, given ?? null);
+  const place = figure ? policy.visual.place : null;
   // No What changes block where it would show nothing (no tiles: a single
-  // change of value is said in the card's words; Vahid, 28 Oct)
-  const published = given && changeView(given, policy.changesText) ? given : null;
+  // change of value is said in the card's words; Vahid, 28 Oct); a visual
+  // drawn there is something
+  const published = given && changeView(given, policy.changesText, place === "change") ? given : null;
   // The card's own shorter words for the main row, where it has them
   const parameters = published && policy.changeLabel
     ? {
@@ -303,18 +355,9 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
   const [highlight, setHighlight] = useState(null);
   // What the published wording says about how it is modelled
   const modelling = modellingInfo(policy);
-  // No summary means no card details apply: the published description, in full
-  // (a Budget measure the dashboard does not model has its own sections
-  // instead: policies/UnmodelledMeasures.jsx)
-  const bare = !policy.summary && !policy.notModelled;
   const showModelling = hasInfo(modelling);
-  // The measure's own visual (policies/PolicyVisual.jsx), from the file's
-  // entry as published: in What changes, or as its example's body
-  // A not-modelled card brings its own drawn visual (policies/UnmodelledVisual.jsx)
-  const drawn = isValidElement(policy.visual) ? policy.visual : null;
-  const figure = bare || drawn ? null : policyVisual(policy, given ?? null);
-  const place = figure ? policy.visual.place : null;
   const example = place === "change" && policy.visual.replacesExample ? null : policy.example;
+  const points = cardPoints(policy.points).length ? <CardPoints points={policy.points} name={policy.label ?? policy.name} /> : null;
   return (
     <li
       id={policy.anchorId ?? (policy.id ? policyCardAnchor(policy.id) : undefined)}
@@ -347,7 +390,7 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
       <div className="policy-card-when">
         {policy.starts && (
         <>
-        <p className="policy-card-glance-title">At a glance</p>
+        <p className="policy-card-glance-title policy-sr-only">At a glance</p>
         <dl className="policy-card-dates">
           <div>
             <dt>
@@ -383,7 +426,7 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
       </div>
       )}
 
-      {(parameters || drawn || example || policy.changesText) && (
+      {(parameters || drawn || example || policy.changesText || points) && (
         <div className="policy-card-spec">
           {/* A card's own picture of what changes, where it brings one
               (the Budget policies we do not model) */}
@@ -409,6 +452,8 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
               </section>
             )
           ))}
+          {/* The card's bullets, under its picture, which stays first */}
+          {points}
           {example && (
             <section className="policy-card-example" aria-label={`${example.title}: ${policy.label ?? policy.name}`}>
               <p className="policy-card-example-title">

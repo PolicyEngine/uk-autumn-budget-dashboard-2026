@@ -30,8 +30,8 @@ describe("PolicyVisual", () => {
     expect(container.querySelector(".pviz-cliff")).not.toBeNull();
     expect(container).toHaveTextContent("Cliff edge");
     expect(container).toHaveTextContent("£1 for £1");
-    // The row's note is the caption, once
-    expect(container.querySelectorAll(".pchg-note")).toHaveLength(1);
+    // No caption: the card's points say it in words (PR 359)
+    expect(container.querySelector(".pchg-note, figcaption")).toBeNull();
   });
 
   it("Household Energy Payment: bands A to D of eight, and the reach as bars", () => {
@@ -90,7 +90,7 @@ describe("the visual on its card", () => {
     const change = screen.getByRole("region", { name: /What changes/ });
     expect(within(change).getByRole("img", { name: /Carer's Allowance against weekly earnings/ })).toBeInTheDocument();
     expect(container.querySelector(".pchg-svg")).toBeNull();
-    expect(container.querySelectorAll(".pchg-note")).toHaveLength(1);
+    expect(container.querySelector(".pchg-note")).toBeNull();
   });
 
   it("draws the example's figures in place of its words, keeping its source", () => {

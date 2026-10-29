@@ -236,7 +236,7 @@ export function CarersTaperVisual({ entry, name }) {
           );
         }}
       </Plot>
-      <figcaption className="pchg-caption pchg-note">{note}</figcaption>
+      {note && <figcaption className="pchg-caption pchg-note">{note}</figcaption>}
     </figure>
   );
 }
