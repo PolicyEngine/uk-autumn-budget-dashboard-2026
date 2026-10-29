@@ -441,7 +441,6 @@ def area_problems(
                 if (
                     document_problems(receipt)
                     or artifact_sha256(receipt) != entry.artifact_sha256
-                    or (receipt.get("dashboard") or {}).get("key") != key
                     or not all(
                         _same_definition(
                             record[side],

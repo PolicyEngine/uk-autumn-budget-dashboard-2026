@@ -11,11 +11,11 @@ import { budgetChartData, loadDashboard } from "../loadDashboard";
 const file = "regional.csv";
 const csv = "level,area_code,reform,year,value\nregion,E12000001,alpha,2032,12\n";
 
-async function flatSnapshot({ aliases = {}, csvText = csv, provenanceIds = null } = {}) {
+async function flatSnapshot({ aliases = {}, csvText = csv, provenanceIds = null, v1 = false } = {}) {
   const manifest = fixtureJson("manifest.json");
   manifest.flat_files = { [file]: await sha256Hex(csvText) };
   manifest.flat_aliases = aliases;
-  const { document, receipts } = await areaProvenanceFixture(manifest, manifest.flat_files, aliases);
+  const { document, receipts } = await areaProvenanceFixture(manifest, manifest.flat_files, aliases, { v1 });
   if (provenanceIds) document.reforms = Object.fromEntries(Object.entries(document.reforms).filter(([id]) => provenanceIds.includes(id)));
   const provenance = JSON.stringify(document);
   manifest.flat_provenance_sha256 = await sha256Hex(provenance);
@@ -161,8 +161,12 @@ describe("area provenance binding through the production browser loader", () => 
     })).rejects.toThrow(/reform has no verified provenance/);
   });
 
-  it.each(["missing", "bytes", "artifact_sha256", "receipt_sha256", "execution_identity_sha256", "aliases"])("withholds area figures for changed provenance %s", async (change) => {
-    const original = await flatSnapshot({ aliases: { package_alias: "combined--alpha+beta" } });
+  it.each([
+    ...["missing", "bytes", "artifact_sha256", "receipt_sha256", "execution_identity_sha256", "aliases"].map((change) => [change, true]),
+    // v2 binds the definition, not the national artifact's digests
+    ...["missing", "bytes", "artifact_sha256", "aliases"].map((change) => [change, false]),
+  ])("withholds area figures for changed provenance %s (v1: %s)", async (change, v1) => {
+    const original = await flatSnapshot({ aliases: { package_alias: "combined--alpha+beta" }, v1 });
     const overrides = { ...original.overrides };
     if (change === "missing") overrides["area_provenance.json"] = 404;
     else if (change === "bytes") overrides["area_provenance.json"] += " ";
@@ -181,5 +185,41 @@ describe("area provenance binding through the production browser loader", () => 
     }
     const fetchImpl = fixtureFetch({ overrides });
     await expect(loadVerifiedFlatCsv(file, null, { basePath: BASE_PATH, fetchImpl })).rejects.toThrow(/provenance|approved calculation|aliases|manifest/i);
+  });
+
+  it("keeps v2 area figures through a national rerun that leaves the definition as it was", async () => {
+    const { manifest, overrides } = await flatSnapshot();
+    const raw = JSON.parse(overrides["manifest.json"]);
+    const index = JSON.parse(overrides["release-index.json"]);
+    // A rerun: a new receipt with new output digests, under a new artifact path
+    const entry = raw.measures.alpha;
+    const receipt = JSON.parse(overrides[`${entry.artifact}/receipt.json`]);
+    for (const field of ["receipt_sha256", "outputs_sha256"]) receipt.dashboard.digests[field] = entry[field] = "0".repeat(64);
+    entry.artifact = "artifacts/alpha/rerun";
+    const { artifactSha256 } = await import("./digest");
+    entry.artifact_sha256 = await artifactSha256(receipt);
+    overrides[`${entry.artifact}/receipt.json`] = JSON.stringify(receipt);
+    overrides["manifest.json"] = JSON.stringify(raw);
+    index.manifest_sha256 = await sha256Hex(overrides["manifest.json"]);
+    overrides["release-index.json"] = JSON.stringify(index);
+    const verified = await loadVerifiedFlat(file, null, { basePath: BASE_PATH, fetchImpl: fixtureFetch({ overrides }) });
+    expect(verified.text).toBe(csv);
+    expect(manifest).toBeTruthy();
+  });
+
+  it("withholds v2 area figures when the approved definition changed", async () => {
+    const { overrides } = await flatSnapshot();
+    const raw = JSON.parse(overrides["manifest.json"]);
+    const index = JSON.parse(overrides["release-index.json"]);
+    const entry = raw.measures.alpha;
+    const receipt = JSON.parse(overrides[`${entry.artifact}/receipt.json`]);
+    receipt.execution_receipt.reform.reform_sha256 = "0".repeat(64);
+    const { artifactSha256 } = await import("./digest");
+    entry.artifact_sha256 = await artifactSha256(receipt);
+    overrides[`${entry.artifact}/receipt.json`] = JSON.stringify(receipt);
+    overrides["manifest.json"] = JSON.stringify(raw);
+    index.manifest_sha256 = await sha256Hex(overrides["manifest.json"]);
+    overrides["release-index.json"] = JSON.stringify(index);
+    await expect(loadVerifiedFlatCsv(file, null, { basePath: BASE_PATH, fetchImpl: fixtureFetch({ overrides }) })).rejects.toThrow(/identity differs/);
   });
 });

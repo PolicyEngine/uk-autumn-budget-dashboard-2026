@@ -1,6 +1,7 @@
 """Public registry text follows the existing publication and review gates."""
 
 import csv
+import functools
 import json
 import os
 import re
@@ -20,6 +21,7 @@ from uk_budget_data.publication.publish import approve, check, stage
 from uk_budget_data.publication.release_index import (
     AREA_FILES,
     AREA_PROVENANCE_FILE,
+    AREA_PROVENANCE_SCHEMA_V1,
     FLAT_VIEW_FILES,
     INDEX_FILE,
     PROVENANCE_KIND,
@@ -29,13 +31,19 @@ from uk_budget_data.publication.release_index import (
     release_index_problems,
     unbind_area_results,
     write_area_provenance,
-    write_release_index,
+)
+from uk_budget_data.publication.release_index import (
+    write_release_index as _write_release_index,
 )
 from uk_budget_data.publication.review_rows import REVIEW_COLUMNS, review_rows
 from uk_budget_data.publication.tables import sha256_bytes
 from uk_budget_data.reforms import PUBLIC_PERSONAL_SERIES
 
 DESCRIPTION = 'A public explanation, including punctuation and "quotes".'
+
+# The area code checks need a git history and the measure registry: they
+# have their own tests (test_area_code_revision.py). These test the rest.
+write_release_index = functools.partial(_write_release_index, code_root=None)
 
 
 @pytest.fixture
@@ -357,11 +365,12 @@ def _area_rows(*reforms):
     )
 
 
-def _area_run(world, manifest, reforms):
+def _area_run(world, manifest, reforms, *, v1=False):
     """What the area run writes: regional.csv and its provenance.
 
     ``reforms`` maps each id the table uses to the manifest key it stands
-    for, as geography.area_provenance records it.
+    for, as geography.area_provenance records it. ``v1`` writes the record
+    an area run wrote before schema v2.
     """
     path = world.data_root / "regional.csv"
     path.write_text(_area_rows(*reforms))
@@ -391,10 +400,31 @@ def _area_run(world, manifest, reforms):
             for reform, key in reforms.items()
         },
     }
+    if v1:
+        document = {
+            "schema": AREA_PROVENANCE_SCHEMA_V1,
+            **provenance,
+            "files": {path.name: sha256_bytes(path.read_bytes())},
+        }
+        target = world.data_root / AREA_PROVENANCE_FILE
+        target.write_text(json.dumps(document, indent=2, sort_keys=True))
+        return target
+    for record in provenance["reforms"].values():
+        # The fixtures' scenarios are content-bound: the digest is the
+        # definition
+        record["definition"] = {
+            side: record[side]["reform_sha256"]
+            for side in ("baseline", "reform")
+        }
+    provenance["run"] = {
+        "git_sha": "a" * 40,
+        "years": [2027],
+        "dataset": {"kind": "synthetic", "name": "test.h5", "sha256": None},
+    }
     return write_area_provenance(world.data_root, provenance, [path])
 
 
-def _flat_snapshot(world):
+def _flat_snapshot(world, *, v1=False):
     """An approved measure, its saved manifest, and an area run to bind.
 
     The flat pipeline's files are copied to the root as well: no view reads
@@ -416,7 +446,7 @@ def _flat_snapshot(world):
         "obr_static_value,obr_post_behavioural_value\n"
         f"{KEY},Alpha,2027,-1.0,-1.1,-1.2\n"
     )
-    _area_run(world, manifest, {KEY: KEY})
+    _area_run(world, manifest, {KEY: KEY}, v1=v1)
     return manifest, args
 
 
@@ -789,12 +819,13 @@ def test_publish_index_without_area_runs_from_the_command_line(world):
     assert check(m.load_manifest(world.data_root), **args) == []
 
 
-def test_index_refuses_area_results_made_for_an_earlier_version(world):
+def test_index_refuses_v1_area_results_made_for_an_earlier_version(world):
     """Round-2 review: a correction restages and reapproves a measure; the
-    area run is not rerun; publish index must not bind the old tables."""
+    area run is not rerun; publish index must not bind the old tables. A v1
+    record is bound to the national artifact, so any new one refuses it."""
     from uk_budget_data.publication.publish import PublishError
 
-    manifest, args = _flat_snapshot(world)
+    manifest, args = _flat_snapshot(world, v1=True)
     corrected = world.ready(KEY, {2027: -3.0})
     stage(manifest, corrected.path, **args)
     approve(manifest, KEY, "Reviewer", **args)
@@ -911,8 +942,9 @@ def test_publish_check_recomputes_aliases_from_the_area_runs_record(world):
 def test_same_output_digests_do_not_authorise_changed_area_identities(
     world, field
 ):
-    """Review2 finding1: outputs alone never identify an approved run."""
-    manifest, args = _flat_snapshot(world)
+    """Review2 finding1: outputs alone never identify an approved run (v1,
+    which is bound to the national artifact)."""
+    manifest, args = _flat_snapshot(world, v1=True)
     entry = manifest.measures[KEY]
     entry.__dict__[field] = "f" * 64
     files = {"regional.csv": (world.data_root / "regional.csv").read_bytes()}
@@ -929,7 +961,9 @@ def test_index_checks_the_area_record_against_the_approved_receipt(
 ):
     from uk_budget_data.publication.publish import PublishError
 
-    manifest, args = _flat_snapshot(world)
+    # v2 keeps the artifact the area run read only as a record: it binds the
+    # definition instead
+    manifest, args = _flat_snapshot(world, v1=field == "artifact")
     path = world.data_root / AREA_PROVENANCE_FILE
     provenance = json.loads(path.read_bytes())
     record = provenance["reforms"][KEY]
@@ -965,17 +999,44 @@ def test_area_provenance_is_part_of_the_verified_flat_snapshot(world):
     )
 
 
+@pytest.mark.parametrize("v1", [True, False])
 def test_reapproval_with_identical_outputs_still_invalidates_area_provenance(
-    world,
+    world, v1
 ):
+    """A changed definition refuses the tables, even with the same figures:
+    under v1 as another artifact, under v2 as another definition."""
     from uk_budget_data.publication.publish import PublishError
 
-    manifest, args = _flat_snapshot(world)
+    manifest, args = _flat_snapshot(world, v1=v1)
     original_outputs = manifest.measures[KEY].outputs_sha256
     corrected = world.ready(KEY, {2027: -1.0}, rate=0.31)
     assert corrected.outputs_sha256 == original_outputs
     stage(manifest, corrected.path, **args)
     approve(manifest, KEY, "Reviewer", **args)
     m.save_manifest(manifest, world.data_root)
-    with pytest.raises(PublishError, match="made for an earlier"):
+    with pytest.raises(
+        PublishError, match="made for an earlier|receipt identity differs"
+    ):
         write_release_index(manifest, **args)
+
+
+def test_a_national_rerun_with_the_same_definition_keeps_v2_area_results(
+    world,
+):
+    """A national rerun that changes its artifact, receipt and outputs but
+    not the measure's definition (#320 added a table) leaves the area
+    figures as they were: a v2 record still binds, and publish check and
+    the build check agree."""
+    manifest, args = _flat_snapshot(world)
+    write_release_index(manifest, **args)
+    before = manifest.measures[KEY].model_copy()
+    rerun = world.ready(KEY, {2027: -3.0})
+    stage(manifest, rerun.path, **args)
+    approve(manifest, KEY, "Reviewer", **args)
+    m.save_manifest(manifest, world.data_root)
+    after = manifest.measures[KEY]
+    assert after.artifact_sha256 != before.artifact_sha256
+    assert after.outputs_sha256 != before.outputs_sha256
+    write_release_index(manifest, **args)
+    assert check(manifest, **args) == []
+    assert _build_index_problems(world) == []

@@ -2150,8 +2150,10 @@ def dataset_record(parsed: argparse.Namespace) -> dict:
             "name": local.name,
             "sha256": digest.hexdigest(),
         }
-    name, repository = _bundle_dataset(
-        None if parsed.dataset is None else str(parsed.dataset)
+    name, repository = (
+        _bundle_dataset()
+        if parsed.dataset is None
+        else _bundle_dataset(str(parsed.dataset))
     )
     entry = get_release_manifest("uk").datasets.get(name)
     sha256 = getattr(entry, "sha256", None)
