@@ -1,0 +1,169 @@
+{
+  "measure_id": "state_pension_income_tax_protection",
+  "outputs_sha256": "2d00d34b2f4b883194cd1c84c9467380e3049f53762b56ec6689369d5d832a51",
+  "policy": {
+    "absolute_floor_bn": 0.05,
+    "behavioural_absolute_floor_bn": 0.05,
+    "behavioural_relative_tolerance": 0.25,
+    "comparator_basis": "post_behavioural",
+    "includes_behaviour": [
+      "domestic_electricity_zero_vat",
+      "fuel_duty_rise_deferral",
+      "carers_allowance_earnings_taper",
+      "trading_allowance_raise",
+      "property_income_rates_up",
+      "savings_income_rates_up"
+    ],
+    "min_response_bn": 0.001,
+    "min_response_share": 0.05,
+    "relative_tolerance": 0.1,
+    "zero_tolerance_bn": 0.0025
+  },
+  "responsiveness": {
+    "rows": [
+      {
+        "expectation_from": "declared",
+        "expected_direction": "negative",
+        "minimum_bn": 0.00225,
+        "pe_bn": -0.02962987598970831,
+        "status": "responsive",
+        "year": 2027
+      },
+      {
+        "expectation_from": "declared",
+        "expected_direction": "negative",
+        "minimum_bn": 0.0045,
+        "pe_bn": -0.0825717060029112,
+        "status": "responsive",
+        "year": 2028
+      },
+      {
+        "expectation_from": "declared",
+        "expected_direction": "negative",
+        "minimum_bn": 0.0075,
+        "pe_bn": -0.14366170165635914,
+        "status": "responsive",
+        "year": 2029
+      }
+    ],
+    "status": "responsive"
+  },
+  "rows": [
+    {
+      "allowance_bn": 0.0025,
+      "comparator": {
+        "basis": "post_behavioural",
+        "rows": [
+          {
+            "fiscal_year": "2026-27",
+            "row_id": "52",
+            "scale": 1.0,
+            "source_id": "AB2026-T6.1",
+            "value_bn": 0.0,
+            "year_offset": 0
+          }
+        ],
+        "sha256": "ad1f5b2ba71b283804b198587f6241bfd1c5f0941a3eb76f2b0b82764b027ea7",
+        "value_bn": 0.0
+      },
+      "fiscal_year": "2026-27",
+      "pe_bn": 0.0,
+      "residual_bn": 0.0,
+      "status": "pass",
+      "year": 2026
+    },
+    {
+      "allowance_bn": 0.05,
+      "comparator": {
+        "basis": "post_behavioural",
+        "rows": [
+          {
+            "fiscal_year": "2027-28",
+            "row_id": "52",
+            "scale": 1.0,
+            "source_id": "AB2026-T6.1",
+            "value_bn": -0.045,
+            "year_offset": 0
+          }
+        ],
+        "sha256": "090db6ff694fa943a3f92654fb3855cd626a2b414df22e1967a15469c90953b0",
+        "value_bn": -0.045
+      },
+      "fiscal_year": "2027-28",
+      "pe_bn": -0.02962987598970831,
+      "residual_bn": 0.01537012401029169,
+      "status": "pass",
+      "year": 2027
+    },
+    {
+      "allowance_bn": 0.05,
+      "comparator": {
+        "basis": "post_behavioural",
+        "rows": [
+          {
+            "fiscal_year": "2028-29",
+            "row_id": "52",
+            "scale": 1.0,
+            "source_id": "AB2026-T6.1",
+            "value_bn": -0.09,
+            "year_offset": 0
+          }
+        ],
+        "sha256": "0e19c555600ba68b2a84dedc5d690b494946fb753836c7086f5125b8c1d4260a",
+        "value_bn": -0.09
+      },
+      "fiscal_year": "2028-29",
+      "pe_bn": -0.0825717060029112,
+      "residual_bn": 0.007428293997088803,
+      "status": "pass",
+      "year": 2028
+    },
+    {
+      "allowance_bn": 0.05,
+      "comparator": {
+        "basis": "post_behavioural",
+        "rows": [
+          {
+            "fiscal_year": "2029-30",
+            "row_id": "52",
+            "scale": 1.0,
+            "source_id": "AB2026-T6.1",
+            "value_bn": -0.15,
+            "year_offset": 0
+          }
+        ],
+        "sha256": "07d16c709c8622227aecbe0db53551691bc2de3b5e9d74ec9e7b8f1e6071de49",
+        "value_bn": -0.15
+      },
+      "fiscal_year": "2029-30",
+      "pe_bn": -0.14366170165635914,
+      "residual_bn": 0.006338298343640858,
+      "status": "pass",
+      "year": 2029
+    },
+    {
+      "fiscal_year": "2030-31",
+      "pe_bn": 0.0,
+      "reason": "Allowance ends 5 April 2030; the Treasury's 2030-31 and 2031-32 figures (+\u00a350m, -\u00a315m) fall after the end, where the static model scores nothing. The policy costings (p. 63) do not explain them and assume no behavioural response (Table 6.1 row 52).",
+      "reviewer": "vahid-ahmadi",
+      "status": "not_comparable",
+      "year": 2030
+    },
+    {
+      "fiscal_year": "2031-32",
+      "pe_bn": 0.0,
+      "reason": "Allowance ends 5 April 2030; the Treasury's 2030-31 and 2031-32 figures (+\u00a350m, -\u00a315m) fall after the end, where the static model scores nothing. The policy costings (p. 63) do not explain them and assume no behavioural response (Table 6.1 row 52).",
+      "reviewer": "vahid-ahmadi",
+      "status": "not_comparable",
+      "year": 2031
+    }
+  ],
+  "schema": "uk-budget-dashboard/reconciliation/v1",
+  "summary": {
+    "status": "pass",
+    "years": {
+      "not_comparable": 2,
+      "pass": 4
+    }
+  }
+}

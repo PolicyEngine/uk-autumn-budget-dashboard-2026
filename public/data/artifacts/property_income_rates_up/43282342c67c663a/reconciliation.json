@@ -1,0 +1,189 @@
+{
+  "measure_id": "property_income_rates_up",
+  "outputs_sha256": "bf7f8a799d545967674a2730dd5e836f9cca220e541ccc950a62fec298a268fd",
+  "policy": {
+    "absolute_floor_bn": 0.05,
+    "behavioural_absolute_floor_bn": 0.05,
+    "behavioural_relative_tolerance": 0.25,
+    "comparator_basis": "post_behavioural",
+    "includes_behaviour": [
+      "domestic_electricity_zero_vat",
+      "fuel_duty_rise_deferral",
+      "carers_allowance_earnings_taper",
+      "trading_allowance_raise",
+      "property_income_rates_up",
+      "savings_income_rates_up"
+    ],
+    "min_response_bn": 0.001,
+    "min_response_share": 0.05,
+    "relative_tolerance": 0.1,
+    "zero_tolerance_bn": 0.0025
+  },
+  "responsiveness": {
+    "rows": [
+      {
+        "expectation_from": "declared",
+        "expected_direction": "positive",
+        "minimum_bn": 0.001,
+        "pe_bn": 0.39904530993807763,
+        "status": "responsive",
+        "year": 2027
+      },
+      {
+        "expectation_from": "declared",
+        "expected_direction": "positive",
+        "minimum_bn": 0.001,
+        "pe_bn": 0.41197579165650017,
+        "status": "responsive",
+        "year": 2028
+      },
+      {
+        "expectation_from": "declared",
+        "expected_direction": "positive",
+        "minimum_bn": 0.021750000000000002,
+        "pe_bn": 0.4294018583620151,
+        "status": "responsive",
+        "year": 2029
+      },
+      {
+        "expectation_from": "declared",
+        "expected_direction": "positive",
+        "minimum_bn": 0.022250000000000002,
+        "pe_bn": 0.4455556472126524,
+        "status": "responsive",
+        "year": 2030
+      },
+      {
+        "expectation_from": "declared",
+        "expected_direction": "positive",
+        "minimum_bn": 0.022750000000000003,
+        "pe_bn": 0.4594904420641682,
+        "status": "responsive",
+        "year": 2031
+      }
+    ],
+    "status": "responsive"
+  },
+  "rows": [
+    {
+      "allowance_band": "includes_behaviour",
+      "allowance_bn": 0.0025,
+      "comparator": {
+        "basis": "post_behavioural",
+        "rows": [
+          {
+            "fiscal_year": "2026-27",
+            "row_id": "61",
+            "scale": 1.0,
+            "source_id": "AB2026-T6.1",
+            "value_bn": 0.0,
+            "year_offset": 0
+          }
+        ],
+        "sha256": "8f71ace4dc473e587f41276e7d6cfeed35f3d2921e158882cfc233b18baa854d",
+        "value_bn": 0.0
+      },
+      "fiscal_year": "2026-27",
+      "pe_bn": 0.0,
+      "residual_bn": 0.0,
+      "status": "pass",
+      "year": 2026
+    },
+    {
+      "fiscal_year": "2027-28",
+      "pe_bn": 0.39904530993807763,
+      "reason": "Self Assessment tax on 2027-28 property income is mostly paid from 31 January 2029, so the Treasury's costing (on a National Accounts basis) has \u00a335m in 2027-28 and about 1.5 years of liability in 2028-29 (\u00a3575m), while the model scores each tax year's liability. From 2029-30 the two agree within 1.5%. Table 6.1 row 61.",
+      "reviewer": "vahid-ahmadi",
+      "status": "not_comparable",
+      "year": 2027
+    },
+    {
+      "fiscal_year": "2028-29",
+      "pe_bn": 0.41197579165650017,
+      "reason": "Self Assessment tax on 2027-28 property income is mostly paid from 31 January 2029, so the Treasury's costing (on a National Accounts basis) has \u00a335m in 2027-28 and about 1.5 years of liability in 2028-29 (\u00a3575m), while the model scores each tax year's liability. From 2029-30 the two agree within 1.5%. Table 6.1 row 61.",
+      "reviewer": "vahid-ahmadi",
+      "status": "not_comparable",
+      "year": 2028
+    },
+    {
+      "allowance_band": "includes_behaviour",
+      "allowance_bn": 0.10875,
+      "comparator": {
+        "basis": "post_behavioural",
+        "rows": [
+          {
+            "fiscal_year": "2029-30",
+            "row_id": "61",
+            "scale": 1.0,
+            "source_id": "AB2026-T6.1",
+            "value_bn": 0.435,
+            "year_offset": 0
+          }
+        ],
+        "sha256": "b175482528aca941d9611e83fbe2ad4f30110c1f32b93d25be10835c62876a24",
+        "value_bn": 0.435
+      },
+      "fiscal_year": "2029-30",
+      "pe_bn": 0.4294018583620151,
+      "residual_bn": -0.005598141637984888,
+      "status": "pass",
+      "year": 2029
+    },
+    {
+      "allowance_band": "includes_behaviour",
+      "allowance_bn": 0.11125,
+      "comparator": {
+        "basis": "post_behavioural",
+        "rows": [
+          {
+            "fiscal_year": "2030-31",
+            "row_id": "61",
+            "scale": 1.0,
+            "source_id": "AB2026-T6.1",
+            "value_bn": 0.445,
+            "year_offset": 0
+          }
+        ],
+        "sha256": "106dd7bb6ca51836c7a07d69eefc3d90f3b55ebb0f98db102e0d9b90fadbb228",
+        "value_bn": 0.445
+      },
+      "fiscal_year": "2030-31",
+      "pe_bn": 0.4455556472126524,
+      "residual_bn": 0.0005556472126523881,
+      "status": "pass",
+      "year": 2030
+    },
+    {
+      "allowance_band": "includes_behaviour",
+      "allowance_bn": 0.11375,
+      "comparator": {
+        "basis": "post_behavioural",
+        "rows": [
+          {
+            "fiscal_year": "2031-32",
+            "row_id": "61",
+            "scale": 1.0,
+            "source_id": "AB2026-T6.1",
+            "value_bn": 0.455,
+            "year_offset": 0
+          }
+        ],
+        "sha256": "395db83b622c5e71c7bfede1ed37bc63019a16bf1f8b4d543be4254b4b3dd7e9",
+        "value_bn": 0.455
+      },
+      "fiscal_year": "2031-32",
+      "pe_bn": 0.4594904420641682,
+      "residual_bn": 0.00449044206416821,
+      "status": "pass",
+      "year": 2031
+    }
+  ],
+  "schema": "uk-budget-dashboard/reconciliation/v1",
+  "summary": {
+    "status": "pass",
+    "years": {
+      "not_comparable": 2,
+      "pass": 4
+    }
+  }
+}

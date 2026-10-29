@@ -1,0 +1,213 @@
+{
+  "measure_id": "fuel_duty_rise_deferral",
+  "outputs_sha256": "73eea8d5d3519830e4abab84e5ff77d58753050075b92dedb9e62296d282afa6",
+  "policy": {
+    "absolute_floor_bn": 0.05,
+    "behavioural_absolute_floor_bn": 0.05,
+    "behavioural_relative_tolerance": 0.25,
+    "comparator_basis": "post_behavioural",
+    "includes_behaviour": [
+      "domestic_electricity_zero_vat",
+      "fuel_duty_rise_deferral",
+      "carers_allowance_earnings_taper",
+      "trading_allowance_raise",
+      "property_income_rates_up",
+      "savings_income_rates_up"
+    ],
+    "min_response_bn": 0.001,
+    "min_response_share": 0.05,
+    "relative_tolerance": 0.1,
+    "zero_tolerance_bn": 0.0025
+  },
+  "responsiveness": {
+    "rows": [
+      {
+        "expectation_from": "declared",
+        "expected_direction": "negative",
+        "minimum_bn": 0.028749999999999998,
+        "pe_bn": -0.30139766292176845,
+        "status": "responsive",
+        "year": 2026
+      },
+      {
+        "expectation_from": "declared",
+        "expected_direction": "negative",
+        "minimum_bn": 0.03900000000000001,
+        "pe_bn": -0.5205739488272055,
+        "status": "responsive",
+        "year": 2027
+      }
+    ],
+    "status": "responsive"
+  },
+  "rows": [
+    {
+      "allowance_band": "includes_behaviour",
+      "allowance_bn": 0.14375,
+      "comparator": {
+        "basis": "post_behavioural",
+        "rows": [
+          {
+            "fiscal_year": "2026-27",
+            "row_id": "3",
+            "scale": 1.0,
+            "source_id": "AB2026-T6.1",
+            "value_bn": -0.575,
+            "year_offset": 0
+          }
+        ],
+        "sha256": "e85f7b72d99cc233d56f78ef07ce318e6dd090de377518d447cac3d6bcc83621",
+        "value_bn": -0.575
+      },
+      "exception": {
+        "accepted_at": "2026-10-28T17:59:25Z",
+        "comparator_sha256": "e85f7b72d99cc233d56f78ef07ce318e6dd090de377518d447cac3d6bcc83621",
+        "explanation": "We model households' own petrol and diesel (bound to ONS Consumer Trends household road fuel). Table 6.1 row 3's base is \"every litre of taxable fuel that is made available for use in the UK\" (policy costings, p. 13), so it also covers vans, lorries, HGVs and business use of cars: the model's household duty is \u00a313.4bn in 2026-27 against \u00a324bn of fuel duty receipts (EFO October 2026, para 4.29). Row 3 is also fuel duty receipts only (OBR Table 1.1, policy tables, -573.8), while ours includes the VAT on the duty (-\u00a350m of -\u00a3301m), so the comparison includes that VAT on our side only; duty alone is -\u00a3251m. Behaviour does not explain the gap: the costing's pump-price response lowers its cost. The costing's pre-measure path also appears to differ: a full 5p from 1 January 2027 on about 45bn litres is about \u00a3555m, matching row 3's -\u00a3575m, and EFO para 4.29 has rates \"unchanged until January 2027\"; we model the law, 3p from 1 January and 2p from 1 March 2027 (HMRC's amended rates, SI 2026/164 as amended by SI 2026/555), about \u00a3410m on the same litres. Decided by Vahid, 28 October 2026; Mar\u00eda to co-review.",
+        "explanation_class": "coverage_business",
+        "residual_bn": 0.274,
+        "reviewer": "vahid-ahmadi"
+      },
+      "fiscal_year": "2026-27",
+      "pe_bn": -0.30139766292176845,
+      "residual_bn": 0.2736023370782315,
+      "status": "accepted",
+      "year": 2026
+    },
+    {
+      "allowance_band": "includes_behaviour",
+      "allowance_bn": 0.195,
+      "comparator": {
+        "basis": "post_behavioural",
+        "rows": [
+          {
+            "fiscal_year": "2027-28",
+            "row_id": "3",
+            "scale": 1.0,
+            "source_id": "AB2026-T6.1",
+            "value_bn": -0.78,
+            "year_offset": 0
+          }
+        ],
+        "sha256": "4f1ab268e83315dd32a3e416d097603f9fb8d73b740744a92bd40e63d6ae34f1",
+        "value_bn": -0.78
+      },
+      "exception": {
+        "accepted_at": "2026-10-28T17:59:25Z",
+        "comparator_sha256": "4f1ab268e83315dd32a3e416d097603f9fb8d73b740744a92bd40e63d6ae34f1",
+        "explanation": "As 2026-27: households' own fuel only, against the Treasury's base of every litre of taxable fuel, business, van and HGV fuel included (policy costings, p. 13). Row 3 is fuel duty receipts only (OBR Table 1.1, -781.8), while ours includes the VAT on the duty (-\u00a387m of -\u00a3521m), so the comparison includes that VAT on our side only; duty alone is -\u00a3434m. Decided by Vahid, 28 October 2026; Mar\u00eda to co-review.",
+        "explanation_class": "coverage_business",
+        "residual_bn": 0.259,
+        "reviewer": "vahid-ahmadi"
+      },
+      "fiscal_year": "2027-28",
+      "pe_bn": -0.5205739488272055,
+      "residual_bn": 0.2594260511727945,
+      "status": "accepted",
+      "year": 2027
+    },
+    {
+      "allowance_band": "includes_behaviour",
+      "allowance_bn": 0.0025,
+      "comparator": {
+        "basis": "post_behavioural",
+        "rows": [
+          {
+            "fiscal_year": "2028-29",
+            "row_id": "3",
+            "scale": 1.0,
+            "source_id": "AB2026-T6.1",
+            "value_bn": 0.0,
+            "year_offset": 0
+          }
+        ],
+        "sha256": "3e3a36c92f7e686e3aec243ff7ca449377ea4d8400576b3bc2981755555e633f",
+        "value_bn": 0.0
+      },
+      "fiscal_year": "2028-29",
+      "pe_bn": 0.0,
+      "residual_bn": 0.0,
+      "status": "pass",
+      "year": 2028
+    },
+    {
+      "allowance_band": "includes_behaviour",
+      "allowance_bn": 0.0025,
+      "comparator": {
+        "basis": "post_behavioural",
+        "rows": [
+          {
+            "fiscal_year": "2029-30",
+            "row_id": "3",
+            "scale": 1.0,
+            "source_id": "AB2026-T6.1",
+            "value_bn": 0.0,
+            "year_offset": 0
+          }
+        ],
+        "sha256": "15ecfec64357e860867c2716a64629b804298141bc1ec41e8aab633348c999ae",
+        "value_bn": 0.0
+      },
+      "fiscal_year": "2029-30",
+      "pe_bn": 0.0,
+      "residual_bn": 0.0,
+      "status": "pass",
+      "year": 2029
+    },
+    {
+      "allowance_band": "includes_behaviour",
+      "allowance_bn": 0.0025,
+      "comparator": {
+        "basis": "post_behavioural",
+        "rows": [
+          {
+            "fiscal_year": "2030-31",
+            "row_id": "3",
+            "scale": 1.0,
+            "source_id": "AB2026-T6.1",
+            "value_bn": 0.0,
+            "year_offset": 0
+          }
+        ],
+        "sha256": "c631a0e1a986d7aa7b3b844c25e2595cc3f4233586e70393c6db2cdd8c7b8b9d",
+        "value_bn": 0.0
+      },
+      "fiscal_year": "2030-31",
+      "pe_bn": 0.0,
+      "residual_bn": 0.0,
+      "status": "pass",
+      "year": 2030
+    },
+    {
+      "allowance_band": "includes_behaviour",
+      "allowance_bn": 0.0025,
+      "comparator": {
+        "basis": "post_behavioural",
+        "rows": [
+          {
+            "fiscal_year": "2031-32",
+            "row_id": "3",
+            "scale": 1.0,
+            "source_id": "AB2026-T6.1",
+            "value_bn": 0.0,
+            "year_offset": 0
+          }
+        ],
+        "sha256": "4cfe2f69f56844eb31f8af7787ab58046272b60639d1315f92d4a110ed84cab2",
+        "value_bn": 0.0
+      },
+      "fiscal_year": "2031-32",
+      "pe_bn": 0.0,
+      "residual_bn": 0.0,
+      "status": "pass",
+      "year": 2031
+    }
+  ],
+  "schema": "uk-budget-dashboard/reconciliation/v1",
+  "summary": {
+    "status": "accepted",
+    "years": {
+      "accepted": 2,
+      "pass": 4
+    }
+  }
+}
