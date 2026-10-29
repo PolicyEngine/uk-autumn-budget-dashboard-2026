@@ -675,7 +675,7 @@
       ]
     },
     "bus_fare_cap_2027": {
-      "description": "Single bus fares on participating services in England outside London are capped at £2 instead of £3 from 1 January to 31 December 2027. The saving is what households' bus fares would cost with a £3 cap less what they cost with £2, from the model's own fare model (single tickets priced in bands fitted to DfT's evaluation of the first £2 cap), weighted by days: 1 January to 5 April 2027 in 2026-27 and 6 April to 31 December 2027 in 2027-28. The saving is counted as household income, a methodological choice: the official cost is a grant to bus operators. Journeys are held fixed, with no extra travel.",
+      "description": "Single bus fares on participating services in England outside London are capped at £2 instead of £3 from 1 January to 31 December 2027. The saving is the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London: 10.0% of what that spending would be at £3 fares (£230m, divided by 0.9 for operator participation, over £2,557m of spending), for the days the cap runs: 1 January to 5 April 2027 in 2026-27 and 6 April to 31 December 2027 in 2027-28. London residents get £0. The saving is counted as household income, a methodological choice: the official cost is a grant to bus operators. Spending is held fixed, with no extra travel.",
       "display": "switch",
       "rows": [
         {
@@ -694,15 +694,15 @@
           ],
           "source": {
             "before": {
-              "kind": "modifier_constant",
-              "where": "budget_measures/bus_fare_cap_2027.py bus_fare_cap_2027(counterfactual_cap)"
+              "kind": "documented",
+              "where": "Budget 2026 Table 6.1 row 4; GOV.UK, 22 July 2026"
             },
             "after": {
               "kind": "documented",
-              "where": "policyengine-uk gov.dft.bus.fares.cap (Budget 2026 Table 6.1 row 4)"
+              "where": "Budget 2026 Table 6.1 row 4; GOV.UK, 22 July 2026"
             }
           },
-          "note": "Participating services in England outside London"
+          "note": "Participating services in England outside London. Modelled as the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London: 10.0% of spending at £3 fares while the cap runs (budget_measures/bus_fare_cap_2027.py bus_fare_cap_2027(fall)); London residents get £0"
         }
       ]
     }

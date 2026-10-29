@@ -322,10 +322,13 @@ def test_bus_fare_cap():
         3,
         2,
     )
-    assert rows["Single bus fare cap"]["source"]["before"]["where"] == (
-        "budget_measures/bus_fare_cap_2027.py "
-        "bus_fare_cap_2027(counterfactual_cap)"
+    assert rows["Single bus fare cap"]["source"]["before"]["kind"] == (
+        "documented"
     )
+    note = rows["Single bus fare cap"]["note"]
+    assert "10.0% of spending at £3 fares" in note
+    assert "bus_fare_cap_2027(fall)" in note
+    assert "London residents get £0" in note
 
 
 def test_lha_unfreeze():

@@ -2,6 +2,7 @@ import { useRef } from "react";
 import "./PolicyVisual.css";
 import { useWidth } from "../../utils/useWidth";
 import {
+  busFareCapView,
   carersTaperView,
   electricityVatView,
   energyReachView,
@@ -528,6 +529,62 @@ export function PensionAllowanceVisual({ entry, visual, name }) {
   );
 }
 
+// --- Bus fare cap -------------------------------------------------------------
+
+const BUS_HEIGHT = 64;
+
+/**
+ * The single fare cap as two columns, £3 grey and £2 in the measure's
+ * colour, and under them the card's example with each year's saving
+ * picked out.
+ */
+export function BusFareCapVisual({ entry, visual, name, example: card }) {
+  const view = busFareCapView(entry, visual);
+  if (!view) return null;
+  const { before, after, window, share, example } = view;
+  const years = Object.entries(example.saved);
+  const description =
+    `${name}: single bus fares capped at ${wholePounds(after)} instead of ${wholePounds(before)}, ${window}. ` +
+    `Modelled as ${percent(share)} of bus fare spending at ${wholePounds(before)} fares while the cap runs. ` +
+    `Example: a household in England outside London with ${wholePounds(example.spending)} a year of bus fares gets ` +
+    years.map(([year, value]) => `${wholePounds(value)} in ${year}`).join(" and ") +
+    ".";
+  const columns = [
+    { label: "Without the cap", value: before, tone: "before" },
+    { label: window, value: after, tone: "after" },
+  ];
+  const saved = years.map(([, value]) => wholePounds(value));
+  return (
+    <div className="pviz pviz-bus" role="img" aria-label={description}>
+      <div className="pviz-bus-columns" aria-hidden="true">
+        {columns.map((column) => (
+          <div className="pviz-bus-column" key={column.label}>
+            <span className="pviz-bus-area">
+              <span className="pviz-bus-value">{wholePounds(column.value)}</span>
+              <span className={`pviz-bus-bar is-${column.tone}`} style={{ height: `${Math.round((BUS_HEIGHT * column.value) / before)}px` }} />
+            </span>
+            <span className="pviz-bus-label">{column.label}</span>
+          </div>
+        ))}
+      </div>
+      {/* The card's example, each year's saving picked out */}
+      {card?.text && (
+        <p className="pviz-band-saving" aria-hidden="true">
+          {card.text.split(new RegExp(`(${saved.join("|")})`)).map((part, i) =>
+            saved.includes(part) ? (
+              <strong key={i} className="pviz-band-saving-value">
+                {part}
+              </strong>
+            ) : (
+              part
+            ),
+          )}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // --- Dispatch ----------------------------------------------------------------
 
 const VISUALS = {
@@ -538,6 +595,7 @@ const VISUALS = {
   "electricity-vat": ElectricityVatVisual,
   "property-rates": PropertyRatesVisual,
   "pension-tax-allowance": PensionAllowanceVisual,
+  "bus-fare-cap": BusFareCapVisual,
 };
 
 /**
@@ -557,6 +615,7 @@ export function policyVisual(policy, entry) {
     "electricity-vat": () => electricityVatView(entry, policy.visual),
     "property-rates": () => propertyRatesView(entry),
     "pension-tax-allowance": () => pensionAllowanceView(entry, policy.visual),
+    "bus-fare-cap": () => busFareCapView(entry, policy.visual),
   }[policy.visual.kind]();
   return ok ? <Visual {...props} /> : null;
 }

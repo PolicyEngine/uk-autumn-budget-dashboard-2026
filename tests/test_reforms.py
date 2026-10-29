@@ -1099,8 +1099,8 @@ FIRST_YEARS = {
         {"employment_income": 20_000},
         {"country": "ENGLAND", "council_tax_band": "B"},
     ),
-    # 300 bus trips a year in the North West: fares priced with a £3 cap
-    # less £2 from 1 January 2027
+    # 300 bus trips a year in the North West: 10.0% of its bus fare
+    # spending, grossed up, for 1 January to 5 April 2027
     "bus_fare_cap_2027": (
         2026,
         "household_net_income",

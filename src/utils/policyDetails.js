@@ -520,7 +520,7 @@ export const POLICY_DETAILS = [
     sentence: "capping single bus fares at £2",
     name: "Single bus fares capped at £2",
     description: "Cap single bus fares at £2 outside London in 2027",
-    writtenFor: "Single bus fares on participating services in England outside London are capped at £2 instead of £3 from 1 January to 31 December 2027. The saving is what households' bus fares would cost with a £3 cap less what they cost with £2, from the model's own fare model (single tickets priced in bands fitted to DfT's evaluation of the first £2 cap), weighted by days: 1 January to 5 April 2027 in 2026-27 and 6 April to 31 December 2027 in 2027-28. The saving is counted as household income, a methodological choice: the official cost is a grant to bus operators. Journeys are held fixed, with no extra travel.",
+    writtenFor: "Single bus fares on participating services in England outside London are capped at £2 instead of £3 from 1 January to 31 December 2027. The saving is the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London: 10.0% of what that spending would be at £3 fares (£230m, divided by 0.9 for operator participation, over £2,557m of spending), for the days the cap runs: 1 January to 5 April 2027 in 2026-27 and 6 April to 31 December 2027 in 2027-28. London residents get £0. The saving is counted as household income, a methodological choice: the official cost is a grant to bus operators. Spending is held fixed, with no extra travel.",
     summary:
       "Caps single bus fares at £2, down from £3, in England outside London from January to December 2027.",
     starts: "Jan 2027",
@@ -532,14 +532,27 @@ export const POLICY_DETAILS = [
     outsidePovertyIncome: true,
     ends: "Jan 2028",
     howCalculated:
-      "Prices each household's bus fares with a £3 cap and with £2, and adds the difference to its income.",
+      "Shares the Treasury's costing (Table 6.1) out by bus fare spending in England outside London, and adds it to income.",
     details:
-      "The cap is paid to bus operators. We count passengers' saving as household income, as for a price subsidy. The model prices single tickets in fare bands fitted to DfT's evaluation of the first £2 cap. Only singles above £2 save, on buses in England outside London. Concessionary pass holders pay no fares, so save nothing. Journeys are held fixed.",
+      "The cap is paid to bus operators. We count passengers' saving as household income, as for a price subsidy. Ours is the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London. It is not our own estimate of the national cost. Each household gets 10.0% of its spending at £3 fares while the cap runs. That is £230m a year, divided by 0.9 for operator participation, over £2,557m of spending. London residents get £0, as do households in Wales, Scotland and Northern Ireland. Concessionary pass holders pay no fares, so save nothing. Spending is held fixed.",
     source: {
       label: "£2 bus fares from January 2027",
       href: "https://www.gov.uk/government/news/cheaper-travel-for-millions-with-a-third-off-fares",
     },
     budgetRows: [4],
+    example: {
+      title: "Example",
+      text: "A household in England outside London with £500 a year of bus fares gets £13 in 2026-27, £40 in 2027-28.",
+    },
+    // The cap as columns and the example's savings (its figures;
+    // policyVisuals.test.js checks they agree with the text and with the
+    // share in policy_parameters.json for the capped days)
+    visual: {
+      kind: "bus-fare-cap",
+      place: "example",
+      capped: { "2026-27": 95 / 365, "2027-28": 270 / 366 },
+      example: { spending: 500, saved: { "2026-27": 13, "2027-28": 40 } },
+    },
   },
 ];
 

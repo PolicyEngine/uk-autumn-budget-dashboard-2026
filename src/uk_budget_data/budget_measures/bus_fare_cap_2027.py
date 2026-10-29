@@ -5,50 +5,61 @@
 One modifier in a module of its own: see the package docstring.
 """
 
-from types import SimpleNamespace
-
-from policyengine_core.periods import instant
+import numpy as np
 
 from uk_budget_data.measure_templates import _call_formula, _replace_formula
+
+# The cap's dates (Budget 2026 Table 6.1 row 4; GOV.UK, 22 July 2026). The
+# modifier does not read them: its day shares below are worked out from
+# them. The policy table shows them.
+CAP_FROM = "2027-01-01"
+CAP_TO = "2027-12-31"
 
 
 def bus_fare_cap_2027(
     sim,
-    counterfactual_cap=3,
-    cap_from="2027-01-01",
-    cap_to="2027-12-31",
+    fall=0.10,
+    capped_2026=95 / 365,
+    capped_2027=270 / 366,
+    country="ENGLAND",
+    excluded_region="LONDON",
 ):
-    """Credit each household with what its bus fares would cost with the
-    single fare cap at ``counterfactual_cap`` from ``cap_from`` to
-    ``cap_to``, less what they cost under current law's £2 cap. Hand-written:
-    no template credits a difference in a spending variable as income.
+    """Credit each household in England outside London with the Treasury's
+    costing of the cap (Table 6.1), shared out across households by their
+    bus fare spending: ``fall`` (10.0%) of what that spending would be at
+    £3 fares, for the days the cap runs in each fiscal year. Hand-written:
+    no template credits a share of a spending variable as income.
 
-    The fare model is policyengine-uk 2.151.0's own
-    (``person_bus_fare_spending``): fare-paying journeys priced at DfT's
-    published yields and fares index, with a change in the national single
-    fare cap applied to single tickets in England outside London through
-    ``single_fare_cap_change``, over the uncapped single fare bands
-    (``gov.dft.bus.uncapped_single_fares``, fitted to DfT's evaluation of
-    the first £2 cap and the cap's funding) and each person's single-ticket
-    share. Current law already holds the £2 cap from 1 January 2027 to
-    1 January 2028 (``gov.dft.bus.fares.cap``), so the saving is that
-    formula run twice: once as the engine runs it, and once with the cap
-    schedule held at ``counterfactual_cap`` over ``cap_from`` to ``cap_to``
-    and every other date as current law (no cap from 2028). The engine
-    weights the cap by days within each fiscal year (6 April to 5 April),
-    so 2026-27 carries 1 January to 5 April 2027 and 2027-28 6 April to
-    31 December 2027; there is nothing before or after. Only England
-    outside London can move: elsewhere, and for people with a bus pass, the
-    formula does not read the cap. A household priced from reported
-    spending (no journey data) saves nothing, as the engine applies no cap
-    there; the national dataset supplies journeys, so only Wales and
-    unknown regions take that path.
+    Where 10.0% comes from: £230m, the Treasury's full-year cost of the
+    cap in 2027 (Budget 2026, Table 6.1 row 4: -£50m in 2026-27 and
+    -£180m in 2027-28), divided by 0.9 for operator participation (the
+    grant pays participating operators, about 90% of the market by
+    patronage in DfT's evaluation of the first £2 bus fare cap), divided by £2,557m, households'
+    bus fare spending in England outside London at £3 fares over the cap
+    period (policyengine-uk 2.151.0 on the certified data, run 29 October
+    2026; issue #329). It is the Treasury's figure shared out, not our own
+    estimate of the national cost.
 
-    Why a second run of the engine's formula, not a parameter change: the
-    saving must be income in the same simulation as current law, and a
-    parameter change moves both cap schedules in that simulation. The
-    counterfactual schedule is a copy, never attached to the simulation's
-    parameters, so nothing else reads it. Static: journeys are fixed.
+    Timing: the cap runs from 1 January to 31 December 2027. Fiscal year
+    2026-27 (6 April to 5 April) carries 1 January to 5 April 2027, 95 of
+    its 365 days; 2027-28 carries 6 April to 31 December 2027, 270 of its
+    366 days. These are the day counts policyengine-uk's own fare model
+    weights the cap by (``fiscal_year_segments``). No other year moves.
+
+    Why it is grossed up: current law in policyengine-uk already holds the
+    £2 cap through 2027, so its ``bus_fare_spending`` is spending at £2
+    fares. With ``step = fall × share`` of the year capped, spending at
+    £3 would be spending / (1 − step), and the saving is that times
+    ``step``: ``spending × step / (1 − step)``.
+
+    Who gets it: households whose ``country`` is England and whose
+    ``region`` is not London. London residents get £0, as do households in
+    Wales, Scotland and Northern Ireland. The modifier reads only
+    ``bus_fare_spending``, ``country`` and ``region``, and no
+    ``gov.dft.bus`` parameter, so it does not reach the data limit on
+    policyengine-uk's uncapped single fare bands
+    (``bus_uncapped_single_fares``). Static: spending and journeys are
+    fixed.
 
     Income-equivalent treatment, a methodological choice: the cap is a
     grant to bus operators, but its incidence is lower fares, so the saving
@@ -59,43 +70,30 @@ def bus_fare_cap_2027(
     HBAI income poverty is measured on, like the household energy payment).
     Bus fare spending itself is consumption, outside net income, so nothing
     is counted twice.
+
+    Sources: HM Treasury, Budget 2026, Table 6.1 row 4; DfT, Evaluation of
+    the £2 bus fare cap (operator participation); issue #329 (the method,
+    decided by Vahid on 29 October 2026).
     """
     system = sim.tax_benefit_system
     native = system.get_variable("epg_subsidy")
-    fares_formula = system.get_variable("person_bus_fare_spending")
-    root = system.parameters
-    counterfactual = root.gov.dft.bus.fares.clone()
-    counterfactual.children["cap"].update(
-        value=counterfactual_cap,
-        start=instant(cap_from),
-        stop=instant(cap_to),
-    )
-
-    def counterfactual_parameters(at):
-        return root(at)
-
-    counterfactual_parameters.gov = SimpleNamespace(
-        dft=SimpleNamespace(
-            bus=SimpleNamespace(
-                fares=counterfactual,
-                reference_fares=root.gov.dft.bus.reference_fares,
-            )
-        )
-    )
-    first, last = instant(cap_from).year, instant(cap_to).year
+    country_enum = system.get_variable("country").possible_values
+    region_enum = system.get_variable("region").possible_values
+    capped = {2026: capped_2026, 2027: capped_2027}
 
     def formula(household, period, parameters):
         current = _call_formula(native, household, period, parameters)
-        # Fiscal year Y runs 6 April Y to 5 April Y+1: those that overlap
-        # the counterfactual's dates
-        if not first - 1 <= period.start.year <= last:
+        share = capped.get(period.start.year, 0)
+        if share == 0:
             return current
-        people = household.members
-        without_cap = _call_formula(
-            fares_formula, people, period, counterfactual_parameters
+        eligible = (household("country", period) == country_enum[country]) & (
+            household("region", period) != region_enum[excluded_region]
         )
-        with_cap = people("person_bus_fare_spending", period)
-        return current + household.sum(without_cap - with_cap)
+        spending = np.maximum(household("bus_fare_spending", period), 0)
+        # Current law's spending is already at £2 for the capped days:
+        # gross the saving up from that base
+        step = fall * share
+        return current + eligible * spending * step / (1 - step)
 
     _replace_formula(sim, "epg_subsidy", formula)
     return sim

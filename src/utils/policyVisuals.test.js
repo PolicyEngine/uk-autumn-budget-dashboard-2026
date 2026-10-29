@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { POLICY_DETAILS } from "./policyDetails";
 import {
+  busFareCapView,
   carersTaperView,
   electricityVatView,
   energyReachView,
@@ -150,5 +151,23 @@ describe("pensionAllowanceView", () => {
   it("draws nothing for an example off the taper", () => {
     const off = { ...visual(id), examples: [{ income: 13186, allowance: 60 }] };
     expect(pensionAllowanceView(entry(id), off)).toBeNull();
+  });
+});
+
+describe("busFareCapView", () => {
+  const id = "bus_fare_cap_2027";
+
+  it("gives the cap before and after, the share and the example's savings as its text says them", () => {
+    const view = busFareCapView(entry(id), visual(id));
+    expect(view).toMatchObject({ before: 3, after: 2, share: 0.1 });
+    const { spending, saved } = view.example;
+    expect(details[id].example.text).toBe(
+      `A household in England outside London with ${wholePounds(spending)} a year of bus fares gets ${wholePounds(saved["2026-27"])} in 2026-27, ${wholePounds(saved["2027-28"])} in 2027-28.`,
+    );
+  });
+
+  it("draws nothing where the example's savings disagree with the share", () => {
+    const wrong = { ...visual(id), example: { spending: 500, saved: { "2026-27": 14, "2027-28": 40 } } };
+    expect(busFareCapView(entry(id), wrong)).toBeNull();
   });
 });

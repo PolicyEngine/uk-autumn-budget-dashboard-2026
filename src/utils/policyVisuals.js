@@ -188,6 +188,32 @@ export function tradingAllowanceView(entry, visual) {
   return { before: point.before, after: point.after, year: point.label, example: visual.example };
 }
 
+// --- Bus fare cap --------------------------------------------------------------
+
+/**
+ * The single fare cap before and after (the row's one point), and the
+ * card's example (`visual.example`): a household's bus fare spending and
+ * what it gets in each fiscal year. The saving is the share in the row's
+ * note ("10.0% of spending at £3 fares") for the year's capped days
+ * (`visual.capped`), grossed up from spending at £2:
+ * spending × step / (1 − step), step = share × days. The example's
+ * figures must be that, rounded to the pound.
+ */
+export function busFareCapView(entry, visual) {
+  const row = mainRow(entry);
+  const point = row?.points?.[0];
+  const share = /([0-9.]+)% of spending at £3 fares/.exec(row?.note ?? "")?.[1];
+  const example = visual?.example;
+  if (!point || !(point.before > point.after) || !share || !example || !visual?.capped) return null;
+  const years = Object.keys(example.saved);
+  const agrees = years.every((year) => {
+    const step = (Number(share) / 100) * visual.capped[year];
+    return Math.round((example.spending * step) / (1 - step)) === example.saved[year];
+  });
+  if (!years.length || !agrees) return null;
+  return { before: point.before, after: point.after, window: point.label, share: Number(share) / 100, example };
+}
+
 // --- Zero VAT on electricity ------------------------------------------------
 
 /**

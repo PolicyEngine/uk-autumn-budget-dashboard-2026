@@ -42,6 +42,12 @@ from uk_budget_data.budget_measures import (
     zero_vat_on_domestic_electricity as _electricity,
 )
 from uk_budget_data.budget_measures.bus_fare_cap_2027 import (
+    CAP_FROM as BUS_FARE_CAP_FROM,
+)
+from uk_budget_data.budget_measures.bus_fare_cap_2027 import (
+    CAP_TO as BUS_FARE_CAP_TO,
+)
+from uk_budget_data.budget_measures.bus_fare_cap_2027 import (
     bus_fare_cap_2027,
 )
 from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
@@ -999,38 +1005,38 @@ def _household_energy_payment(reform) -> list[dict]:
     ]
 
 
-# The £2 cap, as announced (Budget 2026 Table 6.1 row 4; GOV.UK, 22 July
-# 2026) and in policyengine-uk's current law; the modifier holds the £3.
+# The cap, as announced (Budget 2026 Table 6.1 row 4; GOV.UK, 22 July
+# 2026): £2 from 1 January to 31 December 2027, where it would be £3. The
+# modifier does not model the fare itself: it shares out the Treasury's
+# costing by bus fare spending (its ``fall``), which the row's note gives.
+BUS_FARE_CAP_BEFORE = 3
 BUS_FARE_CAP_AFTER = 2
 
 
 def _bus_fare_cap(reform) -> list[dict]:
-    values = constants(bus_fare_cap_2027)
+    fall = constants(bus_fare_cap_2027)["fall"]
     window = (
-        f"{values['cap_from']}/{values['cap_to']}",
+        f"{BUS_FARE_CAP_FROM}/{BUS_FARE_CAP_TO}",
         "January to December 2027",
         2026,
     )
     announced = {
         "kind": "documented",
-        "where": "policyengine-uk gov.dft.bus.fares.cap (Budget 2026 Table "
-        "6.1 row 4)",
+        "where": "Budget 2026 Table 6.1 row 4; GOV.UK, 22 July 2026",
     }
     return [
         _row(
             "Single bus fare cap",
             POUNDS,
-            [
-                _point(
-                    *window, values["counterfactual_cap"], BUS_FARE_CAP_AFTER
-                )
-            ],
-            _source(
-                _modifier_source(bus_fare_cap_2027, "counterfactual_cap"),
-                announced,
-            ),
+            [_point(*window, BUS_FARE_CAP_BEFORE, BUS_FARE_CAP_AFTER)],
+            _source(announced, announced),
             unit_words="£ a single fare",
-            note="Participating services in England outside London",
+            note="Participating services in England outside London. "
+            "Modelled as the Treasury's costing (Table 6.1) shared out "
+            "across households by their bus fare spending in England "
+            f"outside London: {fall:.1%} of spending at £3 fares while "
+            "the cap runs (budget_measures/bus_fare_cap_2027.py "
+            "bus_fare_cap_2027(fall)); London residents get £0",
         ),
     ]
 

@@ -877,13 +877,16 @@ function MethodologyTab({ onShowTab }) {
           <Topic id="method-bus-fare-income" title="Bus fare savings as income" preview="The £2 bus fare cap counted as income">
             <p className="method-more">
               The £2 bus fare cap is paid to bus operators, but passengers gain from it through lower
-              fares. We count that saving as household income, as for a price subsidy: each
-              household&apos;s bus fares priced with a £3 cap less with £2, from policyengine-uk&apos;s
-              fare model, whose single fare bands are fitted to{" "}
-              <SourceLink id="dft_two_pound_cap_evaluation">DfT&apos;s evaluation of the first £2 cap</SourceLink>. This is a choice of method: the
-              household spends less on the same journeys, so its income buys more, but no cash
-              changes hands. Journeys are held fixed. The saving counts in household net income, not
-              in the HBAI income poverty is measured on.
+              fares. We count that saving as household income, as for a price subsidy. The saving is
+              the Treasury&apos;s costing (Table 6.1) shared out across households by their bus fare
+              spending in England outside London, not our own estimate of the national cost: 10.0% of
+              each household&apos;s spending at £3 fares for the days the cap runs. That is £230m a
+              year, divided by 0.9 for the share of operators taking part (
+              <SourceLink id="dft_two_pound_cap_evaluation">DfT&apos;s evaluation of the first £2 cap</SourceLink>),
+              over £2,557m of bus fare spending at £3 fares. London residents get £0. This is a choice
+              of method: the household spends less on the same journeys, so its income buys more, but
+              no cash changes hands. Spending is held fixed. The saving counts in household net income,
+              not in the HBAI income poverty is measured on.
             </p>
           </Topic>
           <Topic title="Survey coverage" preview="Where the survey data move a policy's figures">

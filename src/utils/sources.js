@@ -130,8 +130,8 @@ export const SOURCES = {
     url: "https://www.policyengine.org/uk/model/data/calibration",
   },
   // Section 8, Equivalisation: HBAI's modified OECD scale (checked 26 October 2026)
-  // The evaluation policyengine-uk's single fare bands are fitted to, for
-  // the £2 bus fare cap (checked 29 October 2026)
+  // The evaluation that gives the operator participation (about 90%) the
+  // £2 bus fare cap's share is divided by (checked 29 October 2026)
   dft_two_pound_cap_evaluation: {
     label: "DfT, Evaluation of the £2 bus fare cap",
     url: "https://www.gov.uk/government/publications/evaluation-of-the-2-bus-fare-cap",
