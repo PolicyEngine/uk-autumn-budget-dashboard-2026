@@ -123,6 +123,17 @@ describe("HouseholdScatter when the groups that change are withheld", () => {
     expect(screen.queryByTestId("scatter-chart")).toBeNull();
   });
 
+  it("gives the plain subtitle, not 'Each dot is about…', when no dots are drawn (withheld or no change)", () => {
+    for (const values of [["", 0.0036, 0, 0, 0, 0, 0, 0, 0, 0], Array(10).fill(0)]) {
+      tablesByKey = decileRows(values);
+      const { container, unmount } = render(<HouseholdScatter selectedPolicies={["a"]} policies={POLICIES} selectedYear={2027} />);
+      const description = container.querySelector(".chart-description");
+      expect(description.textContent).toMatch(/^Change in net income by baseline income\./);
+      expect(description.textContent).not.toMatch(/Each dot/);
+      unmount();
+    }
+  });
+
   it("gives the disclosure note when every decile is withheld", () => {
     tablesByKey = decileRows(Array(10).fill(""));
     render(<HouseholdScatter selectedPolicies={["a"]} policies={POLICIES} selectedYear={2027} />);

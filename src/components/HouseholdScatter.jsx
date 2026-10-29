@@ -482,7 +482,16 @@ function HouseholdScatter({
   const incomeMatches = ready && you && (you.incomeYear ?? view.basisYear) === view.basisYear;
   const youShown =
     ready && you && Number.isFinite(you.change) && Number.isFinite(you.income) ? you : null;
-  const description = !ready
+  // Every published cell this year in the zero band (under £1), and the
+  // reader's household unchanged too: a note, not a column of dots at £0.
+  // Only for a published result (ready); a notice says why not
+  const zeroCells =
+    ready &&
+    view.points.every((point) => changeKind(point.changeBand, point.changeBandUpper) === "zero") &&
+    (!youShown || Math.round(youShown.change) === 0);
+  // No dots drawn (a note in their place): the plain subtitle, not "Each
+  // dot is about …"
+  const description = !ready || zeroCells
     ? DESCRIPTION_LOADING
     : youShown
       ? youSentence({
@@ -504,13 +513,6 @@ function HouseholdScatter({
         })
       : describe(householdsPerDot(view.basisPoints));
   const key = youShown ? [...KEY, YOU_KEY] : KEY;
-  // Every published cell this year in the zero band (under £1), and the
-  // reader's household unchanged too: a note, not a column of dots at £0.
-  // Only for a published result (ready); a notice says why not
-  const zeroCells =
-    ready &&
-    view.points.every((point) => changeKind(point.changeBand, point.changeBandUpper) === "zero") &&
-    (!youShown || Math.round(youShown.change) === 0);
   // Cells with too few survey households are left out, so zero cells alone
   // do not mean no household's income changes: when the reform's income
   // decile results show a change, or withhold one, the groups that change
