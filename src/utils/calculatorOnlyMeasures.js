@@ -42,13 +42,15 @@ export const withoutCalculatorOnly = (policies) => policies.filter((id) => !isCa
  * number, then each calculator-only one by name ("7 policies and the
  * savings income tax rise"). The number matches the header's selection
  * ("All 7"), and the measures the calculator adds are named, not counted
- * in it, since the result includes them (#306). `count` and `named` say
- * the same as `text`.
+ * in it, since the result includes them (#306). `also`: phrases for
+ * measures the answer itself adds, after those (the Universal Credit
+ * surplus earnings threshold, with monthly pay), each named once. `count`
+ * and `named` say the same as `text`.
  */
-export function resultPolicies(policies) {
+export function resultPolicies(policies, also = []) {
   const ids = [...new Set(policies)];
   const count = withoutCalculatorOnly(ids).length;
-  const named = ids.filter(isCalculatorOnly).map((id) => CALCULATOR_ONLY_MEASURES[id].phrase);
+  const named = [...new Set([...ids.filter(isCalculatorOnly).map((id) => CALCULATOR_ONLY_MEASURES[id].phrase), ...also])];
   const parts = [...(count > 0 || named.length === 0 ? [`${count} ${count === 1 ? "policy" : "policies"}`] : []), ...named];
   const text = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
   return { count, named, text };

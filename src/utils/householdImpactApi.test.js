@@ -28,6 +28,7 @@ import { headlineTotals } from "../components/personal/SingleYearResults";
 import { WIZARD_DEFAULTS } from "../components/HouseholdCalculator";
 import { DEFAULT_SALARY, REGIONAL_RENT } from "./householdDefaults";
 import { HOUSEHOLD_FIXTURE } from "../test/householdFixture";
+import { SURPLUS_BLOCK } from "../test/surplusEarningsFixture";
 import { POLICIES_FOR_TEST } from "../test/personalPolicies";
 
 describe("buildHouseholdRequest", () => {
@@ -91,6 +92,40 @@ describe("buildHouseholdRequest", () => {
     expect(side.household).toMatchObject({ employment_income: 30000, self_employment_receipts: 3000, self_employment_expenses: 0 });
     const expenses = buildHouseholdRequest({ ...WIZARD_DEFAULTS, self_employment_expenses_per_year: 400 }, options);
     expect(expenses.household).toMatchObject({ self_employment_receipts: 0, self_employment_expenses: 400 });
+  });
+
+  it("sends monthly pay only once ticked, for a household on Universal Credit in Great Britain", () => {
+    const options = { year: 2027, policies: ["fuel_duty_rise_deferral"] };
+    const none = buildHouseholdRequest(WIZARD_DEFAULTS, options);
+    expect(none.household).not.toHaveProperty("monthly_employment_income");
+    expect(none.household).not.toHaveProperty("partner_monthly_employment_income");
+    // Answers from before the question, and months entered but not ticked:
+    // the same request, so cached and precomputed answers still match
+    const { monthly_income_varies: _varies, monthly_salaries: _months, partner_monthly_salaries: _partner, ...older } = WIZARD_DEFAULTS;
+    expect(requestKey(buildHouseholdRequest(older, options))).toBe(requestKey(none));
+    const bonus = [1500, 1500, 1500, 1500, 1500, 6000, 1500, 1500, 1500, 1500, 1500, 1500];
+    expect(requestKey(buildHouseholdRequest({ ...WIZARD_DEFAULTS, monthly_salaries: bonus }, options))).toBe(requestKey(none));
+    // Ticked: the months entered, or the yearly salary spread evenly
+    const ticked = buildHouseholdRequest({ ...WIZARD_DEFAULTS, monthly_income_varies: true }, options);
+    expect(ticked.household.monthly_employment_income).toEqual(Array(12).fill(DEFAULT_SALARY / 12));
+    expect(ticked.household).not.toHaveProperty("partner_monthly_employment_income");
+    const entered = buildHouseholdRequest({ ...WIZARD_DEFAULTS, monthly_income_varies: true, monthly_salaries: bonus }, options);
+    expect(entered.household.monthly_employment_income).toEqual(bonus);
+    // The yearly salary is still sent as entered
+    expect(entered.household.employment_income).toBe(DEFAULT_SALARY);
+    // With a partner, the partner's months too
+    const couple = buildHouseholdRequest(
+      { ...WIZARD_DEFAULTS, monthly_income_varies: true, has_partner: true, partner_salary: 24000 },
+      options,
+    );
+    expect(couple.household.partner_monthly_employment_income).toEqual(Array(12).fill(2000));
+    // Not asked, so not sent: no Universal Credit, or Northern Ireland
+    for (const answers of [
+      { ...WIZARD_DEFAULTS, monthly_income_varies: true, claims_universal_credit: false },
+      { ...WIZARD_DEFAULTS, monthly_income_varies: true, region: "NORTHERN_IRELAND" },
+    ]) {
+      expect(buildHouseholdRequest(answers, options).household).not.toHaveProperty("monthly_employment_income");
+    }
   });
 
   it("sends rent only for renters and childcare only with children", () => {
@@ -217,6 +252,20 @@ describe("normaliseHouseholdImpact", () => {
     const headline = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, by_policy: null, sweep: null });
     expect(headline.byPolicy).toBeNull();
     expect(headline.sweep).toBeNull();
+    // No monthly pay asked: no month figures
+    expect(data.surplusEarnings).toBeNull();
+  });
+
+  it("reads the surplus earnings measure's month figures, and keeps the headline's when stages merge", () => {
+    const data = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, surplus_earnings: SURPLUS_BLOCK });
+    expect(data.surplusEarnings).toMatchObject({ status: "affected", change: 482.02 });
+    expect(data.surplusEarnings.months).toHaveLength(12);
+    const detail = normaliseHouseholdImpact({ ...HOUSEHOLD_FIXTURE, surplus_earnings: { ...SURPLUS_BLOCK, own_change: 482.02 } });
+    const merged = mergeStages(data, detail);
+    expect(merged.surplusEarnings).toBe(data.surplusEarnings);
+    // A headline without them (an API from before) takes the part's
+    const older = normaliseHouseholdImpact(HOUSEHOLD_FIXTURE);
+    expect(mergeStages(older, detail).surplusEarnings).toBe(detail.surplusEarnings);
   });
 
   it("reads the marginal rate's parts when the API sends them, and none when it does not", () => {

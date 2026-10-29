@@ -24,6 +24,7 @@
 import statePensionTable from "../uk_budget_data/state_pension.json";
 import { DEFAULT_SPENDING, regionalRent } from "./householdDefaults";
 import { localAuthorityKey } from "./localAuthorities";
+import { monthlyPay, normaliseSurplusEarnings, sendsMonthlyPay } from "./surplusEarnings";
 
 export const HOUSEHOLD_API_VAR = "NEXT_PUBLIC_HOUSEHOLD_API_URL";
 
@@ -109,6 +110,8 @@ export const FIELD_LABELS = {
   self_employment_expenses: "Its allowable expenses",
   is_carer: "Carer",
   care_hours_per_week: "Hours of care",
+  monthly_employment_income: "Your monthly pay",
+  partner_monthly_employment_income: "Your partner's monthly pay",
 };
 
 /**
@@ -327,6 +330,17 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
         ? {
             self_employment_receipts: inputs.self_employment_receipts_per_year || 0,
             self_employment_expenses: inputs.self_employment_expenses_per_year || 0,
+          }
+        : {}),
+      // Monthly pay only once ticked, for a household on Universal Credit
+      // in Great Britain (the surplus earnings threshold measure): every
+      // other request is as it was, so its key still matches
+      ...(sendsMonthlyPay(inputs)
+        ? {
+            monthly_employment_income: monthlyPay(inputs.monthly_salaries, inputs.current_salary),
+            ...(inputs.has_partner
+              ? { partner_monthly_employment_income: monthlyPay(inputs.partner_monthly_salaries, inputs.partner_salary) }
+              : {}),
           }
         : {}),
     },
@@ -635,6 +649,9 @@ export function normaliseHouseholdImpact(raw) {
     programmes: Array.isArray(raw.programmes) ? raw.programmes.map(normaliseProgramme) : null,
     byPolicy: normaliseByPolicy(raw.by_policy),
     sweep: normaliseSweep(raw.sweep),
+    // The Universal Credit surplus earnings threshold measure, month by
+    // month; null without monthly pay (surplusEarnings.js)
+    surplusEarnings: normaliseSurplusEarnings(raw.surplus_earnings),
     dependants: (raw.dependants ?? []).map((child) => ({
       age: num(child.age),
       countsForChildBenefit: Boolean(child.counts_for_child_benefit),
@@ -801,6 +818,7 @@ export function mergeStages(first, detail) {
     byPolicy: detail.byPolicy ?? first.byPolicy,
     sweep: detail.sweep ?? first.sweep,
     programmes: first.programmes ?? detail.programmes,
+    surplusEarnings: first.surplusEarnings ?? detail.surplusEarnings ?? null,
     // The check above leaves every seen commit equal to the part's
     builds: detail.build == null || seen.length ? seen : [detail.build],
   };

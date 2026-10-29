@@ -9,6 +9,7 @@ import {
   withoutCalculatorOnly,
 } from "./calculatorOnlyMeasures";
 import { policyRows } from "./singleYear";
+import { SURPLUS_EARNINGS_PHRASE } from "./surplusEarnings";
 
 describe("calculator-only measures", () => {
   it("always go after the selected measures, once, and come off for the national figures", () => {
@@ -80,6 +81,20 @@ describe("the result card's measures (resultPolicies)", () => {
         expect(resultPolicies([...ids].reverse()).count).toBe(count);
       }),
     );
+  });
+
+  it("names a measure the answer adds after the calculator-only ones (the surplus earnings threshold)", () => {
+    const seven = ["a", "b", "c", "d", "e", "f", "g"];
+    expect(resultPolicies(withCalculatorOnly(seven), [SURPLUS_EARNINGS_PHRASE])).toEqual({
+      count: 7,
+      named: ["the savings income tax rise", SURPLUS_EARNINGS_PHRASE],
+      text: "7 policies, the savings income tax rise and the Universal Credit surplus earnings threshold",
+    });
+    // Named once, and not counted
+    expect(resultPolicies(["a"], [SURPLUS_EARNINGS_PHRASE, SURPLUS_EARNINGS_PHRASE]).text).toBe(
+      "1 policy and the Universal Credit surplus earnings threshold",
+    );
+    expect(resultPolicies(withCalculatorOnly(seven), []).text).toBe("7 policies and the savings income tax rise");
   });
 
   it("gives every calculator-only measure a phrase to name it by", () => {

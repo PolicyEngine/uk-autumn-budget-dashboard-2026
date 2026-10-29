@@ -102,4 +102,12 @@ export const WIZARD_DEFAULTS = {
   // At State Pension age; null is the full new State Pension for the year
   state_pension_per_year: null,
   partner_state_pension_per_year: null,
+  // Whether pay changes from month to month, asked of a household on
+  // Universal Credit in Great Britain for the surplus earnings threshold
+  // measure; not ticked until answered. Each month's pay, £ a month, April
+  // to March of the year shown: null (or a null month) is the yearly
+  // salary spread evenly (surplusEarnings.js)
+  monthly_income_varies: false,
+  monthly_salaries: null,
+  partner_monthly_salaries: null,
 };
