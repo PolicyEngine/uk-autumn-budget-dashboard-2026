@@ -79,7 +79,9 @@
     align-self: end;
   }
 
-  /* The key takes the row of the map's colour scale, under the plot */
+  /* The key, or the withheld groups' note, takes the row of the map's
+     colour scale, under the plot */
+  .charts-grid > div.household-scatter-template:not(:only-child) > .household-scatter-withheld-note,
   .charts-grid > div.household-scatter-template:not(:only-child) > .scatter-legend {
     grid-row: 5;
     align-self: start;
@@ -105,6 +107,16 @@
 
 .household-scatter-tooltip p {
   margin: 2px 0;
+}
+
+/* Under the plot when the groups that gain or lose are withheld: a line,
+   as the map labels its blank seats */
+.household-scatter-withheld-note {
+  margin: 0;
+  padding: 12px 0 0;
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+  color: var(--pe-gray-600);
 }
 
 /* Key under the scatter, outside the plot so it never meets the axis
@@ -165,6 +177,14 @@
   max-width: 46ch;
   margin: 0 auto;
   color: var(--pe-gray-700);
+}
+
+.household-scatter-empty .household-scatter-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .household-scatter-empty .household-scatter-empty-detail {

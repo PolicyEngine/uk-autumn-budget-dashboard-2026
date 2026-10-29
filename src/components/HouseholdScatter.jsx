@@ -26,7 +26,7 @@ import { WITHHELD_DECILE_MESSAGE } from "../utils/decileWithholding";
 import { useNarrowViewport, Y_TITLE_GUTTER, CHART_COLOURS, noHouseholdChange, chartMargin } from "../utils/chartTheme";
 import { useHouseholdScatterData } from "../hooks/useHouseholdScatterData";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
-import { selectionPackageKey } from "../utils/geography/selection";
+import { selectionPackageKey, showAllLabel, showAloneLabel } from "../utils/geography/selection";
 import { colourFor } from "./publication/BinnedHouseholdScatter";
 import ChartDownloadMenu from "./ChartDownloadMenu";
 import ChartMoreInfo from "./ChartMoreInfo";
@@ -34,6 +34,7 @@ import { ViewportBox, pointIn } from "./ViewportTooltip";
 import { METHOD_ANCHORS } from "./methodology/anchors";
 import ChartUnitLabel from "../utils/ChartUnitLabel";
 import NoBreakYear from "./NoBreakYear";
+import "./PillSelect.css";
 import "./HouseholdScatterTemplate.css";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import TitleIcon from "./TitleIcon";
@@ -132,6 +133,13 @@ function ScatterMoreInfo({ basisLabel }) {
   );
 }
 const DESCRIPTION_LOADING = "Change in net income by baseline income.";
+// Under the plot when the groups that gain or lose are left out: the
+// decile card's disclosure wording, as the map labels its blank seats;
+// the average change by decile is that card's, so it is pointed to, not
+// repeated
+export const HOUSEHOLDS_WITHHELD_NOTE =
+  `Households that gain or lose: ${WITHHELD_DECILE_MESSAGE.charAt(0).toLowerCase()}${WITHHELD_DECILE_MESSAGE.slice(1)} ` +
+  "(too few survey households). The income decile chart shows the average change.";
 
 // Dots move between years and selections as the other charts' bars do:
 // about 850ms, easing in and out, and not at all under reduced motion.
@@ -428,6 +436,10 @@ function GroupTooltip({ hover, basisLabel, yearLabel }) {
  * `embedded` draws it as one view of another card (the Household calculator
  * position card): no title, download menu or logo of its own; the card's
  * menu takes this chart's download, handed up through `onDownload`.
+ *
+ * `onPoliciesSet` is the header picker's setter (Select all): given it, a
+ * selection of some policies gets buttons to show all of them or the first
+ * alone, the two runs the chart can draw.
  */
 function HouseholdScatter({
   selectedPolicies,
@@ -439,6 +451,7 @@ function HouseholdScatter({
   onDownload = null,
   // A link on the subtitle line, after the sentence
   descriptionLink = null,
+  onPoliciesSet = null,
 }) {
   const narrow = useNarrowViewport();
   const chartRef = useRef(null);
@@ -455,8 +468,9 @@ function HouseholdScatter({
       policyIds: (policies ?? []).filter((policy) => policy.displayable !== false).map((policy) => policy.id),
       year: selectedYear,
       packageKey,
+      fullPackageKey: catalogue.combinedId ?? null,
     }),
-    [data, selectedPolicies, policies, selectedYear, packageKey],
+    [data, selectedPolicies, policies, selectedYear, packageKey, catalogue.combinedId],
   );
   const yearLabel = fiscalYearLabel(selectedYear);
   const chartTitle = `${title}, ${yearLabel}`;
@@ -489,9 +503,20 @@ function HouseholdScatter({
     ready &&
     view.points.every((point) => changeKind(point.changeBand, point.changeBandUpper) === "zero") &&
     (!youShown || Math.round(youShown.change) === 0);
+  // Cells with too few survey households are left out, so zero cells alone
+  // do not mean no household's income changes: when the reform's income
+  // decile results show a change, or withhold one, the groups that change
+  // were withheld. The published no-change dots are drawn, and a line
+  // under the plot labels what is missing, as the map labels its blank
+  // seats. Only a selection whose deciles are all zero (an employer cost
+  // alone) gets "None of the selected policies changes…" in place of dots
+  const changesWithheld =
+    zeroCells &&
+    decilesShowChange(catalogue.tablesByKey?.[view.reform]?.distributional_impact, view.reform, selectedYear);
+  const nothingChanges = zeroCells && !changesWithheld;
   // No dots drawn (a note in their place): the plain subtitle, not "Each
   // dot is about …"
-  const description = !ready || zeroCells
+  const description = !ready || nothingChanges
     ? DESCRIPTION_LOADING
     : youShown
       ? youSentence({
@@ -513,16 +538,6 @@ function HouseholdScatter({
         })
       : describe(householdsPerDot(view.basisPoints));
   const key = youShown ? [...KEY, YOU_KEY] : KEY;
-  // Cells with too few survey households are left out, so zero cells alone
-  // do not mean no household's income changes: when the reform's income
-  // decile results show a change, or withhold one, the groups that change
-  // were withheld, and the note says so as the decile card does. Only a
-  // selection whose deciles are all zero (an employer cost alone) gets
-  // "None of the selected policies changes…"
-  const changesWithheld =
-    zeroCells &&
-    decilesShowChange(catalogue.tablesByKey?.[view.reform]?.distributional_impact, view.reform, selectedYear);
-  const plotNote = changesWithheld ? `${WITHHELD_DECILE_MESSAGE}.` : noHouseholdChange(yearLabel);
 
   // A hovered dot's group belongs to the year and selection it was
   // hovered in
@@ -562,9 +577,9 @@ function HouseholdScatter({
   // The key: in the sentence, with the logo in the SVG as on the decile
   // card; with the reader's household, a key row under the plot and the
   // logo below it. A note instead of a plot keeps the logo row.
-  const keyRow = ready && !zeroCells && Boolean(youShown);
+  const keyRow = ready && !nothingChanges && Boolean(youShown);
   const svgLogo = !embedded && !youShown;
-  const htmlLogo = !embedded && (Boolean(youShown) || zeroCells);
+  const htmlLogo = !embedded && (Boolean(youShown) || nothingChanges);
 
   // Beside a household's result, a selection the chart is not published
   // for gets the reason in a line, not an empty plot
@@ -619,6 +634,16 @@ function HouseholdScatter({
             <div>
               <p className="household-scatter-empty-reason">{view.reason}</p>
               {view.detail && <p className="household-scatter-empty-detail">{view.detail}</p>}
+              {view.choices && onPoliciesSet && (
+                <div className="household-scatter-empty-actions">
+                  <button type="button" className="light-pill-button" onClick={() => onPoliciesSet(view.choices.all)}>
+                    {showAllLabel(view.choices.all.length)}
+                  </button>
+                  <button type="button" className="light-pill-button" onClick={() => onPoliciesSet([view.choices.alone])}>
+                    {showAloneLabel((policies ?? []).find((policy) => policy.id === view.choices.alone)?.name ?? view.choices.alone)}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -640,7 +665,7 @@ function HouseholdScatter({
               </span>
             </h3>
             <p className="chart-description">
-              {ready && !youShown && !zeroCells ? describeWithKey(householdsPerDot(view.basisPoints)) : description}
+              {ready && !youShown && !nothingChanges ? describeWithKey(householdsPerDot(view.basisPoints)) : description}
               {descriptionLink && <> {descriptionLink}</>}
             </p>
           </div>
@@ -656,9 +681,9 @@ function HouseholdScatter({
           map and colour scale, so the two cards line up and fill alike */}
       <div className="chart-plot household-scatter-template-plot">
         <div className="household-scatter-template-canvas" ref={chartRef}>
-          {zeroCells ? (
+          {nothingChanges ? (
             <div className="plot-empty household-scatter-no-change" role="status">
-              <p>{plotNote}</p>
+              <p>{noHouseholdChange(yearLabel)}</p>
             </div>
           ) : (
           <ResponsiveContainer width="100%" height="100%" minHeight={STACKED_HEIGHT / 2}>
@@ -714,7 +739,7 @@ function HouseholdScatter({
           </ResponsiveContainer>
           )}
         </div>
-        {ready && !zeroCells && (
+        {ready && !nothingChanges && (
           <GroupTooltip
             hover={hover}
             basisLabel={basisLabel}
@@ -732,6 +757,12 @@ function HouseholdScatter({
           </div>
         )}
       </div>
+
+      {changesWithheld && (
+        <p className="household-scatter-withheld-note" role="note">
+          {HOUSEHOLDS_WITHHELD_NOTE}
+        </p>
+      )}
 
       {keyRow && (
         <ul className="scatter-legend chart-legend" aria-label="Key">

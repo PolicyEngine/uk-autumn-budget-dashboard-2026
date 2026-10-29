@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { parseScatterCsv } from "../utils/householdScatter";
 
 const HEADER =
@@ -15,6 +15,7 @@ const CSV = [
   "b,Measure B,2028,30000.0,100.0,150.0,50000.0,2027",
   "c,Measure C,2028,35000.0,100.0,150.0,40000.0,2027",
   "combined--ab,A and B,2028,40000.0,-150.0,-100.0,60000.0,2027",
+  "combined--abc,A B and C,2028,40000.0,-150.0,-100.0,70000.0,2027",
 ].join("\n");
 
 // One loaded file, the same object on every render, as the real hook keeps it
@@ -61,8 +62,10 @@ const MANIFEST = {
 // Each verified artifact's tables, as the page's catalogue holds them; a
 // test sets the income decile rows the card reads beside the scatter
 let tablesByKey = undefined;
+// The full package's run (the catalogue's combinedId), when a test sets it
+let combinedId = null;
 vi.mock("../utils/measureCatalogue", () => ({
-  useMeasureCatalogue: () => ({ combinedId: null, byId: new Map(), manifest: MANIFEST, tablesByKey }),
+  useMeasureCatalogue: () => ({ combinedId, byId: new Map(), manifest: MANIFEST, tablesByKey }),
 }));
 
 const { default: HouseholdScatter, LOGO_ROOM } = await import("./HouseholdScatter");
@@ -114,37 +117,37 @@ describe("HouseholdScatter when the groups that change are withheld", () => {
     tablesByKey = undefined;
   });
 
-  it("gives the disclosure note, not 'no change', when the deciles change but the scatter's changed cells are left out (the Carer's Allowance taper, 2031-32)", () => {
+  const NOTE =
+    "Households that gain or lose: not published, to protect survey respondents' confidentiality (too few survey households). The income decile chart shows the average change.";
+
+  it("draws the published no-change dots and labels the withheld groups when the deciles change (the Carer's Allowance taper, 2031-32)", () => {
     // Deciles 7 and 9 withheld, the rest non-zero, as the taper publishes
     tablesByKey = decileRows([0.0036, 0.0067, 0.0007, 0.0099, 0.0059, -0.0008, "", 0.002, "", 0.00005]);
-    render(<HouseholdScatter selectedPolicies={["a"]} policies={POLICIES} selectedYear={2027} />);
-    expect(screen.getByRole("status")).toHaveTextContent(`${WITHHELD_DECILE_MESSAGE}.`);
+    const { container } = render(<HouseholdScatter selectedPolicies={["a"]} policies={POLICIES} selectedYear={2027} />);
+    expect(screen.getByTestId("scatter-chart")).toBeTruthy();
+    expect(screen.getByRole("note")).toHaveTextContent(NOTE);
+    expect(NOTE).toContain(WITHHELD_DECILE_MESSAGE.slice(1));
     expect(screen.queryByText(/None of the selected policies changes household incomes/)).toBeNull();
-    expect(screen.queryByTestId("scatter-chart")).toBeNull();
+    // Dots are drawn, so the dot subtitle is back
+    expect(container.querySelector(".chart-description").textContent).toMatch(/^Each dot is about/);
   });
 
-  it("gives the plain subtitle, not 'Each dot is about…', when no dots are drawn (withheld or no change)", () => {
-    for (const values of [["", 0.0036, 0, 0, 0, 0, 0, 0, 0, 0], Array(10).fill(0)]) {
-      tablesByKey = decileRows(values);
-      const { container, unmount } = render(<HouseholdScatter selectedPolicies={["a"]} policies={POLICIES} selectedYear={2027} />);
-      const description = container.querySelector(".chart-description");
-      expect(description.textContent).toMatch(/^Change in net income by baseline income\./);
-      expect(description.textContent).not.toMatch(/Each dot/);
-      unmount();
-    }
-  });
-
-  it("gives the disclosure note when every decile is withheld", () => {
+  it("does the same when every decile is withheld", () => {
     tablesByKey = decileRows(Array(10).fill(""));
     render(<HouseholdScatter selectedPolicies={["a"]} policies={POLICIES} selectedYear={2027} />);
-    expect(screen.getByRole("status")).toHaveTextContent(`${WITHHELD_DECILE_MESSAGE}.`);
+    expect(screen.getByTestId("scatter-chart")).toBeTruthy();
+    expect(screen.getByRole("note")).toHaveTextContent(NOTE);
   });
 
-  it("keeps 'None of the selected policies…' for a true zero: every decile published at zero", () => {
+  it("keeps 'None of the selected policies…', with the plain subtitle and no dots, for a true zero: every decile published at zero", () => {
     tablesByKey = decileRows(Array(10).fill(0));
-    render(<HouseholdScatter selectedPolicies={["a"]} policies={POLICIES} selectedYear={2027} />);
+    const { container } = render(<HouseholdScatter selectedPolicies={["a"]} policies={POLICIES} selectedYear={2027} />);
     expect(screen.getByRole("status")).toHaveTextContent("None of the selected policies changes household incomes in 2027-28.");
-    expect(screen.queryByText(new RegExp(WITHHELD_DECILE_MESSAGE))).toBeNull();
+    expect(screen.queryByTestId("scatter-chart")).toBeNull();
+    expect(screen.queryByRole("note")).toBeNull();
+    const description = container.querySelector(".chart-description");
+    expect(description.textContent).toMatch(/^Change in net income by baseline income\./);
+    expect(description.textContent).not.toMatch(/Each dot/);
   });
 });
 
@@ -219,5 +222,34 @@ describe("HouseholdScatter shows the header's selection", () => {
     expect(screen.queryByTestId("scatter-chart")).toBeNull();
     expect(container.querySelector(".pill-select")).toBeNull();
     expect(titleOf(container)).not.toMatch(/Measure [AC]/);
+  });
+
+  describe("with the full package published", () => {
+    afterEach(() => {
+      combinedId = null;
+    });
+
+    it("some but not all policies: one run at a time, with buttons for all of them and the first alone", () => {
+      combinedId = "combined--abc";
+      const onPoliciesSet = vi.fn();
+      render(
+        <HouseholdScatter selectedPolicies={["c", "a"]} policies={POLICIES} selectedYear={2028} onPoliciesSet={onPoliciesSet} />,
+      );
+      expect(screen.getByText("This chart shows one policy at a time, or all three together.")).toBeTruthy();
+      expect(screen.queryByText(/not published yet/)).toBeNull();
+      expect(screen.queryByTestId("scatter-chart")).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Show all three" }));
+      expect(onPoliciesSet).toHaveBeenLastCalledWith(["a", "b", "c"]);
+      // The first selected in the page's order
+      fireEvent.click(screen.getByRole("button", { name: "Show Measure A alone" }));
+      expect(onPoliciesSet).toHaveBeenLastCalledWith(["a"]);
+    });
+
+    it("draws no buttons without the picker's setter (the Household calculator)", () => {
+      combinedId = "combined--abc";
+      render(<HouseholdScatter selectedPolicies={["a", "c"]} policies={POLICIES} selectedYear={2028} />);
+      expect(screen.getByText("This chart shows one policy at a time, or all three together.")).toBeTruthy();
+      expect(screen.queryByRole("button", { name: /^Show / })).toBeNull();
+    });
   });
 });

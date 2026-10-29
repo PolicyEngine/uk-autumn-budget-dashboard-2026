@@ -22,7 +22,7 @@
 
 import { fiscalYearLabel } from "./publication/format";
 import { buildChartCsv } from "./chartCsv";
-import { chooseSelectionReform, selectionNotPublished } from "./geography/selection";
+import { chooseSelectionReform, oneRunAtATime, selectionNotPublished } from "./geography/selection";
 import { isWithheldDecileValue } from "./decileWithholding";
 import {
   bandLabel,
@@ -152,6 +152,9 @@ export function decilesShowChange(rows, reform, year) {
  * @param {Array<string>} options.policyIds - Every measure the page offers.
  * @param {string|null} [options.packageKey] - The published combined run
  *   of exactly the selected policies (selectionPackageKey), or null.
+ * @param {string|null} [options.fullPackageKey] - The full package's run
+ *   (the catalogue's combinedId), or null: with it, a selection of some
+ *   policies gets the one-run-at-a-time notice and its `choices`.
  * @param {number} options.year
  * @returns {{kind: "loading"} | {kind: "notice", reason: string,
  *   detail: string|null} | {kind: "points", reform: string,
@@ -159,7 +162,7 @@ export function decilesShowChange(rows, reform, year) {
  *   `points` are the year's cells; `basisPoints` the basis year's, which
  *   set how many dots each income band gets in every year.
  */
-export function scatterView({ data, selectedIds, policyIds, year, packageKey = null }) {
+export function scatterView({ data, selectedIds, policyIds, year, packageKey = null, fullPackageKey = null }) {
   if (data.status === "loading") return { kind: "loading" };
   if (data.status !== "ready") {
     return notice("Household results are not yet published.");
@@ -176,6 +179,14 @@ export function scatterView({ data, selectedIds, policyIds, year, packageKey = n
     return notice("Select a policy to see household results.");
   }
   if (choice.kind === "no-package") {
+    // Some but not all policies, with the full package published: say the
+    // chart shows one run at a time, and offer both (`choices`)
+    if (!choice.all && fullPackageKey && reforms.includes(fullPackageKey)) {
+      return {
+        ...notice(oneRunAtATime(policyIds.length)),
+        choices: { all: [...policyIds], alone: choice.members[0] },
+      };
+    }
     return notice(choice.reason);
   }
   if (!reforms.includes(choice.reform)) {
