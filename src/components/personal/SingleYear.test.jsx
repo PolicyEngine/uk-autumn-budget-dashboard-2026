@@ -325,11 +325,14 @@ describe("the household calculation, from the fixture", () => {
     // names rather than counting (production showed "with 8 policies")
     await fc.assert(
       fc.asyncProperty(fc.subarray(SUPPORTED_POLICY_IDS, { minLength: 1 }), async (ids) => {
+        // Each run from nothing: no wizard, cached answers or stored example
+        // headlines (useExampleFigures) left from the run before
         cleanup();
         resetSavedWizard();
         clearHouseholdImpactCache();
         clearBasisIncomeCache();
         resetPresetResults();
+        window.sessionStorage.clear();
         serve((body) => json(householdAnswerFor(body)));
         renderTab({ selectedPolicies: ids });
         toResults();
