@@ -387,13 +387,25 @@ describe("the change-by-year helpers", () => {
     row("a", 2028, 60), row("b", 2028, -200),
   ];
 
+  it("marks a step that comes from a measure ending", async () => {
+    const { groupMeasureSeries, stepAnnotations } = await import("./youngPeopleData");
+    // a is in force in 2026-27 and 2027-28 only; b is small throughout
+    const ending = [
+      row("a", 2026, 100), row("b", 2026, -5),
+      row("a", 2027, 100), row("b", 2027, -5),
+      row("a", 2028, 0), row("b", 2028, -5),
+    ];
+    const series = groupMeasureSeries(ending, policies, ["a", "b"], [2026, 2027, 2028]);
+    expect(stepAnnotations(series)).toEqual([{ year: 2028, from: 2027, step: -100, value: -5, measureId: "a", ends: true }]);
+  });
+
   it("adds each measure's own change for the group, and names the measure behind the big step", async () => {
     const { groupMeasureSeries, stepAnnotations, topParts, cumulate } = await import("./youngPeopleData");
     const series = groupMeasureSeries(rows, policies, ["a", "b"], [2026, 2027, 2028, 2029]);
     expect(series.map((point) => point.net)).toEqual([60, 70, -140, null]);
     expect(series[2]["measure:b"]).toBe(-200);
     // 2027-28 to 2028-29 falls by 210, from b alone; the 10 rise is too small to name
-    expect(stepAnnotations(series)).toEqual([{ year: 2028, from: 2027, step: -210, value: -140, measureId: "b" }]);
+    expect(stepAnnotations(series)).toEqual([{ year: 2028, from: 2027, step: -210, value: -140, measureId: "b", ends: false }]);
     expect(topParts(series[2]).map((part) => part.id)).toEqual(["b", "a"]);
     // A running total stops at a gap, never reading it as zero
     expect(cumulate(series, ["net"]).map((point) => point.net)).toEqual([60, 130, -10, null]);

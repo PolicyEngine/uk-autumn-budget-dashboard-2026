@@ -433,7 +433,7 @@ export function stepSentence(notes, headline, nameIn) {
     (headline ?? "").includes(fiscalYearTick(note.year)) && (headline ?? "").includes(`the ${nameIn(note.measureId)}`);
   const missing = notes.filter((note) => !named(note));
   if (!missing.length) return null;
-  const parts = missing.map((note) => `in ${fiscalYearTick(note.year)} from the ${nameIn(note.measureId)}`);
+  const parts = missing.map((note) => `in ${fiscalYearTick(note.year)} from ${note.ends ? "the end of " : ""}the ${nameIn(note.measureId)}`);
   const list = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}` : parts[0];
   return `The ${missing.length > 1 ? "biggest steps come" : "biggest step comes"} ${list}.`;
 }
@@ -548,7 +548,9 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
     () =>
       stepAnnotations(focusSeries).map((note) => ({
         ...note,
-        text: `${nameOf(note.measureId)}${narrow ? "" : `, ${fiscalYearTick(note.year)}`}`,
+        // A step from a measure ending is labelled by its absence ("No energy
+        // payment, 2027-28"), never as the measure applying that year
+        text: `${note.ends ? `No ${inSentence(nameOf(note.measureId))}` : nameOf(note.measureId)}${narrow ? "" : `, ${fiscalYearTick(note.year)}`}`,
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [focusSeries, catalogue, narrow],
@@ -622,7 +624,7 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         : sameWay
           ? about(later.value)
           : `${later.value >= 0 ? "gain" : "lose"} ${about(later.value)}`;
-      text += ` and ${level} from ${fiscalYearTick(later.year)}, when the ${inSentence(nameOf(later.measureId))} applies`;
+      text += ` and ${level} from ${fiscalYearTick(later.year)}, when the ${inSentence(nameOf(later.measureId))} ${later.ends ? "has ended" : "applies"}`;
     }
     return `${text}.`;
   })();
