@@ -74,6 +74,7 @@ from policyengine_uk.variables.household.demographic.locations import (
 )
 from policyengine_uk.variables.input.council_tax_band import CouncilTaxBand
 
+from uk_budget_data import gas_standing_charges as gas
 from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
     carers_allowance_earnings_taper,
 )
@@ -693,7 +694,9 @@ NET_INCOME_LEVEL_VARIABLES = (
 # with its sign (taxes negative): the head's employment income, the rest of
 # market income, the benefits, then the taxes and deductions; named as the
 # programme table's rows, and besides the main programmes, each one a
-# measure moves (the Warm Home Discount, fuel duty and VAT). The
+# measure moves (the Warm Home Discount, fuel duty and VAT), and the gas
+# bill change of the gas standing charge abolition, which is no engine
+# variable (negative for a higher bill; £0 without the measure). The
 # "other" benefits are the rest of household_benefits, and "other_taxes"
 # the rest of net income, so the parts add up to it to the penny.
 NET_INCOME_PARTS = (
@@ -712,6 +715,7 @@ NET_INCOME_PARTS = (
     "vat_change",
     "child_benefit_charge",
     "pension_contributions",
+    "gas_bill_change",
     "other_taxes",
 )
 
@@ -724,6 +728,19 @@ def measure_ids() -> list[str]:
         for reform in get_autumn_budget_2026_reforms()
         if reform.id != AUTUMN_BUDGET_2026_COMBINED_ID
     ]
+
+
+# Measures the household calculation knows that are not registered
+# measures: no national figure, manifest entry or combined run has them.
+# Each is worked out from the household's answers after its policyengine-uk
+# runs, and counted in net income on the Budget side (#355).
+HOUSEHOLD_ONLY_MEASURES = {gas.GAS_STANDING_CHARGES_ID: gas.NAME}
+
+
+def accepted_measure_ids() -> list[str]:
+    """Every measure a household request may name: the registered ones
+    (``measure_ids``), then the household-only ones."""
+    return [*measure_ids(), *HOUSEHOLD_ONLY_MEASURES]
 
 
 # The average UK household's domestic electricity spending, £ a year
@@ -811,6 +828,11 @@ class HouseholdAnswers:
     # between the trading allowance and the actual expenses.
     self_employment_receipts: float = 0
     self_employment_expenses: float = 0
+    # The home's gas use, kWh a year, read only for the gas standing charge
+    # abolition (gas_standing_charges); 0 is a home with no mains gas. The
+    # default is Ofgem's typical use. No engine variable reads it, so it
+    # changes no policyengine-uk run.
+    gas_use_kwh: float = gas.TYPICAL_GAS_USE_KWH
 
     @property
     def self_employed(self) -> bool:
@@ -1702,12 +1724,19 @@ def sweep_rate_parts(
     ]
 
 
-def net_income_parts(employment_income: float, net: float, levels: dict):
+def net_income_parts(
+    employment_income: float,
+    net: float,
+    levels: dict,
+    gas_bill_change: float = 0.0,
+):
     """Net income at one sweep point split into ``NET_INCOME_PARTS``, in £
     with taxes negative, from the variables read there (``levels``), or
     None when a run did not read them (one kept from before they were
-    added). Rounded to the penny, with "other_taxes" taking the rest, so
-    the parts add up to net income as the answer reports it."""
+    added). ``net`` includes ``gas_bill_change`` (net income's change from
+    the gas bill, outside the engine), its own part. Rounded to the penny,
+    with "other_taxes" taking the rest, so the parts add up to net income
+    as the answer reports it."""
     needed = (*RATE_PART_VARIABLES, *NET_INCOME_LEVEL_VARIABLES)
     if any(name not in levels for name in needed):
         return None
@@ -1742,6 +1771,7 @@ def net_income_parts(employment_income: float, net: float, levels: dict):
         "vat_change": -levels["vat_change"],
         "child_benefit_charge": -charge,
         "pension_contributions": -levels["pension_contributions"],
+        "gas_bill_change": gas_bill_change,
         "other_taxes": -(levels["household_tax"] - taxes),
     }
     # (+ 0.0: no "-0.0" in the answer)
@@ -1751,13 +1781,20 @@ def net_income_parts(employment_income: float, net: float, levels: dict):
 
 
 def sweep_net_income_parts(
-    grid: list[float], net: list[float], components: dict
+    grid: list[float],
+    net: list[float],
+    components: dict,
+    gas_bill_change: float = 0.0,
 ) -> Optional[list]:
     """``net_income_parts`` at each sweep point, or None when the run did
-    not read the variables they need."""
+    not read the variables they need. ``net`` is the engine's; the gas
+    bill change is added to it at every point, as a part of its own."""
     steps = [
         net_income_parts(
-            x, n, {name: values[i] for name, values in components.items()}
+            x,
+            n + gas_bill_change,
+            {name: values[i] for name, values in components.items()},
+            gas_bill_change,
         )
         for i, (x, n) in enumerate(zip(grid, net))
     ]
@@ -2024,6 +2061,102 @@ def provably_unaffected(
     return False
 
 
+# The programme table's row for the gas bill change, in a group of its own:
+# an amount the household pays, as the tax rows are (positive: a higher
+# bill), so the table still adds up to net income
+GAS_BILL_ROW = {
+    "id": "gas_bill_change",
+    "label": "Gas bill change",
+    "group": "bills",
+    "note": (
+        "The change in the gas bill when the standing charge is recovered "
+        "through the unit rate instead. Not a tax: no money goes to or from "
+        "the government. Net income counts it as an equal and opposite "
+        "change, since it changes what the household has left to spend."
+    ),
+}
+
+
+# The split by policy's note on a change of £0 at average gas use: the
+# result of the calculation, not a figure left out
+GAS_AT_AVERAGE_NOTE = (
+    "£0, calculated: at the average gas use, "
+    f"{gas.MEAN_GAS_USE_KWH:,} kWh a year, the higher unit rate costs as "
+    "much as the standing charge saved, so the bill neither rises nor "
+    "falls."
+)
+
+
+def current_law_sides() -> MeasureSides:
+    """Both sides at current law, with no registered measure: the sides of
+    a request that names household-only measures alone."""
+    side = _side(None, [])
+    return MeasureSides(
+        before=side, after=copy.deepcopy(side), included=[], not_modelled=[]
+    )
+
+
+def gas_bill_change(answers: HouseholdAnswers, year: int):
+    """The household's gas bill change in ``year`` when gas standing
+    charges are abolished (``gas_standing_charges.bill_change``)."""
+    return gas.bill_change(
+        gas_use_kwh=answers.gas_use_kwh, region=answers.region, year=year
+    )
+
+
+def gas_bill_used(answers: HouseholdAnswers, year: int) -> dict:
+    """What the gas bill change was worked from, for the answer."""
+    worked = gas_bill_change(answers, year)
+    return {
+        "applies": worked.applies,
+        "reason": worked.reason,
+        "gas_use_kwh": answers.gas_use_kwh,
+        "standing_charge": _money(worked.standing_charge),
+        "unit_rate_rise_pence": round(worked.unit_rate_rise_pence, 4),
+        "mean_gas_use_kwh": gas.MEAN_GAS_USE_KWH,
+        "day_share": round(worked.day_share, 6),
+        "use_share": round(worked.use_share, 6),
+        "bill_change": _money(worked.change),
+        "abolished_from": gas.ABOLISHED_FROM.isoformat(),
+        "abolished_from_assumed": True,
+        "price_period": gas.PRICE_PERIOD,
+        "note": (
+            "Ofgem's Great Britain average Direct Debit standing charge "
+            f"({gas.PRICE_PERIOD}), the same for every home, is recovered "
+            "through the unit rate, which rises by it over DESNZ's mean use "
+            f"per domestic meter ({gas.MEAN_GAS_USE_KWH:,} kWh). 0 kWh is a "
+            "home with no mains gas. The start is assumed: "
+            f"{gas.ABOLISHED_FROM.day} January {gas.ABOLISHED_FROM.year}."
+        ),
+    }
+
+
+def household_only_rows(
+    answers: HouseholdAnswers, household_only: list[str], year: int
+) -> list[dict]:
+    """The split by policy's rows of the household-only measures named:
+    each one's change in net income (the gas bill change, with its sign
+    turned), and a note that says what it is, or why it is £0."""
+    rows = []
+    for measure_id in household_only:
+        worked = gas_bill_change(answers, year)
+        change = _money(-worked.change) + 0.0
+        rows.append(
+            {
+                "id": measure_id,
+                "name": HOUSEHOLD_ONLY_MEASURES[measure_id],
+                "change": change,
+                "status": "not_affected" if change == 0 else "affected",
+                "note": worked.reason
+                or (
+                    GAS_AT_AVERAGE_NOTE if change == 0 else gas.HOUSEHOLD_NOTE
+                ),
+                "note_kind": "bill_change",
+            }
+        )
+    return rows
+
+
 def calculate_household_impact(
     answers: HouseholdAnswers,
     reform_ids: list[str],
@@ -2050,7 +2183,24 @@ def calculate_household_impact(
     unknown = sorted(set(include) - set(PARTS))
     if unknown:
         raise ValueError(f"Not a part of the answer: {', '.join(unknown)}")
-    sides = measure_sides(reform_ids)
+    # Household-only measures change no engine run: they are worked out
+    # from the answers and added to the Budget side's net income
+    household_only = [
+        id_
+        for id_ in dict.fromkeys(reform_ids)
+        if id_ in HOUSEHOLD_ONLY_MEASURES
+    ]
+    registered = [
+        id_ for id_ in reform_ids if id_ not in HOUSEHOLD_ONLY_MEASURES
+    ]
+    sides = (
+        measure_sides(registered)
+        if registered or not household_only
+        else current_law_sides()
+    )
+    only_rows = household_only_rows(answers, household_only, year)
+    # Net income's change from the household-only measures (Budget side)
+    outside_engine = sum(row["change"] for row in only_rows)
     people, benunit, household = household_entities(answers, year)
     salary, partner_salary = salaries_in(answers, year)
     pension, partner_pension = state_pensions(answers, year)
@@ -2097,7 +2247,8 @@ def calculate_household_impact(
     outputs = _run_all(jobs, workers)
     before, after = outputs[0], outputs[1]
     base_net = before["household_net_income"]
-    reform_net = after["household_net_income"]
+    engine_reform_net = after["household_net_income"]
+    reform_net = engine_reform_net + outside_engine
     combined = reform_net - base_net
 
     identity = runtime_identity()
@@ -2166,7 +2317,7 @@ def calculate_household_impact(
             "reform": _money(reform_net),
             "change": _money(combined),
         },
-        "included": sides.included,
+        "included": [*sides.included, *household_only],
         "not_modelled": sides.not_modelled,
         "by_policy": None,
         "programmes": [
@@ -2182,7 +2333,19 @@ def calculate_household_impact(
             }
             for row in (*PROGRAMMES, *OTHER_ROWS)
             if row.id not in hidden
+        ]
+        + [
+            {
+                **GAS_BILL_ROW,
+                "baseline": 0.0,
+                "reform": -row["change"] + 0.0,
+                "change": -row["change"] + 0.0,
+            }
+            for row in only_rows
         ],
+        "gas_bill_used": (
+            gas_bill_used(answers, year) if household_only else None
+        ),
         "not_in_breakdown": list(NOT_IN_BREAKDOWN),
         "dependants": _dependants(answers, before),
         "dependants_note": DEPENDANTS_NOTE,
@@ -2214,7 +2377,11 @@ def calculate_household_impact(
         else:
             singles = [after] if sides.included else []
         result["by_policy"] = _by_policy(
-            sides.included, singles, base_net, combined
+            sides.included,
+            singles,
+            base_net,
+            engine_reform_net - base_net,
+            only_rows,
         )
     if sweep:
         result["sweep"] = _sweep(
@@ -2231,7 +2398,7 @@ def calculate_household_impact(
                     OWN_RATE_STEP,
                 ),
                 own_rate(
-                    reform_net,
+                    engine_reform_net,
                     outputs[-1]["household_net_income"],
                     OWN_RATE_STEP,
                 ),
@@ -2244,6 +2411,7 @@ def calculate_household_impact(
                 outputs[-2].get("components"),
                 outputs[-1].get("components"),
             ),
+            reform_offset=outside_engine,
         )
     return result
 
@@ -2265,8 +2433,16 @@ def _dependants(answers: HouseholdAnswers, before: dict) -> list:
 
 
 def _by_policy(
-    included: list[str], singles: list, base_net: float, combined: float
+    included: list[str],
+    singles: list,
+    base_net: float,
+    combined: float,
+    household_only: list = (),
 ) -> dict:
+    """Each measure's own change. ``combined`` is the registered measures'
+    together; the household-only measures' rows (``household_only_rows``)
+    follow theirs, and add to the combined change and the singles alike,
+    as no tax or benefit interacts with them."""
     measures = []
     total = 0.0
     for id_, single in zip(included, singles):
@@ -2285,6 +2461,10 @@ def _by_policy(
         if id_ in HOUSEHOLD_NOTES:
             measures[-1]["note"] = HOUSEHOLD_NOTES[id_]["text"]
             measures[-1]["note_kind"] = HOUSEHOLD_NOTES[id_]["kind"]
+    for row in household_only:
+        measures.append(dict(row))
+        total += row["change"]
+        combined += row["change"]
     return {
         "measures": measures,
         "combined": _money(combined),
@@ -2303,7 +2483,12 @@ def _sweep(
     reform_net,
     own_rates,
     components=(None,) * 6,
+    reform_offset=0.0,
 ):
+    """The sweep's answer. ``reform_line`` is the engine's; the
+    household-only measures' change in net income (``reform_offset``) is
+    the same at every point, so it moves each point and the parts of net
+    income but no marginal rate, which are worked from the engine's."""
     base_rates = marginal_rates(grid, base_line)
     reform_rates = marginal_rates(grid, reform_line)
     sweep = {
@@ -2313,8 +2498,8 @@ def _sweep(
             {
                 "employment_income": _money(x),
                 "baseline": _money(b),
-                "reform": _money(r),
-                "change": _money(r - b),
+                "reform": _money(r + reform_offset),
+                "change": _money(r + reform_offset - b),
             }
             for x, b, r in zip(grid, base_line, reform_line)
         ],
@@ -2348,7 +2533,9 @@ def _sweep(
     base_sweep, reform_sweep = components[0], components[1]
     if base_sweep and reform_sweep:
         base_parts = sweep_net_income_parts(grid, base_line, base_sweep)
-        reform_parts = sweep_net_income_parts(grid, reform_line, reform_sweep)
+        reform_parts = sweep_net_income_parts(
+            grid, reform_line, reform_sweep, reform_offset
+        )
         if base_parts and reform_parts:
             sweep["net_income_parts"] = {
                 "parts": list(NET_INCOME_PARTS),

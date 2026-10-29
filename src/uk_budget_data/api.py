@@ -24,6 +24,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from uk_budget_data import definitions, household_impact
+from uk_budget_data import gas_standing_charges as gas
 from uk_budget_data.budget_years import POLICY_YEARS
 from uk_budget_data.personal_impact import (
     HouseholdInput,
@@ -517,6 +518,20 @@ class HouseholdAnswersRequest(BaseModel):
             "receipts less expenses"
         ),
     )
+    gas_use_kwh: float = Field(
+        default=gas.TYPICAL_GAS_USE_KWH,
+        ge=0,
+        le=100_000,
+        description=(
+            "The home's gas use, kWh a year, as its bill or annual "
+            f"statement gives it, for {gas.GAS_STANDING_CHARGES_ID}, the "
+            "only answer that measure reads besides the region (it covers "
+            "Great Britain only). 0 is a home with no mains gas. Left out: "
+            "Ofgem's typical use from 1 July 2026, "
+            f"{gas.TYPICAL_GAS_USE_KWH:,} kWh. At the mean, "
+            f"{gas.MEAN_GAS_USE_KWH:,} kWh, the change is a calculated £0."
+        ),
+    )
 
     def answers(self) -> household_impact.HouseholdAnswers:
         values = self.model_dump()
@@ -527,8 +542,10 @@ class HouseholdAnswersRequest(BaseModel):
 
 
 class HouseholdImpactRequest(BaseModel):
-    """A household, a policy year, and the measures to compare it under
-    (every measure the calculation knows when none are named)."""
+    """A household, a policy year, and the measures to compare it under:
+    any registered measure, and the household-only ones
+    (``household_impact.HOUSEHOLD_ONLY_MEASURES``). With none named, every
+    registered measure."""
 
     model_config = {"extra": "forbid"}
 
@@ -580,7 +597,9 @@ class HouseholdImpactRequest(BaseModel):
     def _known_measures(cls, policies: Optional[list[str]]):
         if policies is None:
             return policies
-        unknown = sorted(set(policies) - set(household_impact.measure_ids()))
+        unknown = sorted(
+            set(policies) - set(household_impact.accepted_measure_ids())
+        )
         if unknown:
             raise ValueError(f"Unknown measures: {', '.join(unknown)}")
         return policies
