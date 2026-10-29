@@ -909,7 +909,7 @@ export function SharesCard({ rows, policies, selectedPolicies, selectedYear, nar
           />
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>We have not published shares for this selection in {yearLabel}.</p>
+            <p>We have not published {yearLabel} shares for this selection.</p>
           </div>
         )}
       </SwapTransition>
