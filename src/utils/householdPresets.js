@@ -27,12 +27,12 @@ export const PRESETS_FILE = "household_presets.json";
 const sameSet = (a, b) => a.length === b.length && a.every((id) => b.includes(id));
 
 /**
- * The measures an example's request is for: `policies`, then any
- * calculator-only measure the example turns on (the saver's savings rise,
- * calculatorOnlyMeasures.js). The file's `policies` stay the published
- * ones; such an example's entries are for these.
+ * The measures an example's request is for: `policies`, then the
+ * calculator-only measures every household request carries (the savings
+ * rise, calculatorOnlyMeasures.js). The file's `policies` stay the
+ * published ones; every entry is for these.
  */
-export const presetPolicies = (preset, policies) => withCalculatorOnly(policies, preset?.calculatorOnly ?? []);
+export const presetPolicies = (preset, policies) => withCalculatorOnly(policies);
 
 /** An example's answers, as choosing it fills the form. */
 export const presetInputs = (preset) => ({ ...WIZARD_DEFAULTS, ...preset.inputs });

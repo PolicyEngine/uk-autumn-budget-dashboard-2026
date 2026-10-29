@@ -118,6 +118,10 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
         dataPoint[policy.seriesKey] = value;
         if (value !== null) netChange += value;
       });
+      // A withheld decile shows nothing: no other policy's bar and no net
+      // dot, as the bars beside a withheld member would give its figure
+      // back (#290 6480462886, as on the decile % chart)
+      if (withheld) POLICIES.forEach((policy) => { dataPoint[policy.seriesKey] = null; });
       dataPoint.netChange = incomplete ? null : netChange;
       dataPoint.incomplete = incomplete;
       dataPoint.unavailable = unavailable;
