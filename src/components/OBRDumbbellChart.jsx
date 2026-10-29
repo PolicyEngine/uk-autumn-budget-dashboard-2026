@@ -5,6 +5,7 @@ import { FloatingTooltip, TooltipRows, useFloatingTooltip } from "./FloatingTool
 import useElementWidth from "../hooks/useElementWidth";
 import { SvgMeasureLabel, SVG_LABEL_INDENT } from "./MeasureRowLabel";
 import { formatBnOrM, formatSignedBnOrM, shownBn } from "../utils/moneyFormat";
+import { BASIS_LABEL, basisLabel, basisWords } from "../utils/officialBasis";
 import "./OBRDumbbellChart.css";
 
 /**
@@ -37,6 +38,9 @@ import "./OBRDumbbellChart.css";
  * benefits the official costing covers, where it covers fewer than our net
  * figure. It sits inside the official ring when the two agree. Only rows
  * whose measure has an official basis carry it; the others keep two marks.
+ * Its label names what it counts ("Ours, income tax only":
+ * utils/officialBasis.js), since an official figure can hold more than
+ * taxes and benefits, such as a block grant.
  */
 
 export const PE_COLOUR = CHART_COLOURS.gain;
@@ -55,7 +59,6 @@ export const OBR_RADIUS = 8;
 // The ring on the official costing's basis: small enough to sit inside the
 // official ring when the two agree
 export const BASIS_RADIUS = 4;
-export const BASIS_LABEL = "Ours, on the official costing's basis";
 // The row band's inset: the name and the difference sit this far in from its ends
 const BAND_PAD = 8;
 // Under this the official costing has no meaningful % (and none at zero)
@@ -111,10 +114,10 @@ export function pctOfOfficial(pe, obr) {
   return (pe / obr) * 100;
 }
 
-// A row's figure on the official costing's basis, for its spoken summary:
-// beside our own figure only
+// A row's figure on the official costing's basis, for its spoken summary,
+// named by what it counts: beside our own figure only
 const basisText = (row, decimals) =>
-  isValue(row.pe) && isValue(row.peOfficial) ? ` (on the official costing's basis ${formatBn(row.peOfficial, decimals)})` : "";
+  isValue(row.pe) && isValue(row.peOfficial) ? ` (${basisWords(row.id)} only: ${formatBn(row.peOfficial, decimals)})` : "";
 
 /**
  * Whether the chart draws a ring on the official costing's basis on any
@@ -165,12 +168,13 @@ const approxWidth = approxTextWidth;
 
 /**
  * The chart's legend entries, for the image downloads too: the ring on the
- * official costing's basis only where a row shows one (`withBasis`).
+ * official costing's basis only where a row shows one (`withBasis`), under
+ * the label that serves every row.
  */
 export function dumbbellLegendItems(obrKind, withBasis = false) {
   return [
     { color: PE_COLOUR, label: "Ours (static)", type: "dot" },
-    ...(withBasis ? [{ color: PE_COLOUR, label: BASIS_LABEL, type: "ring" }] : []),
+    ...(withBasis ? [{ color: PE_COLOUR, label: `${BASIS_LABEL} (static)`, type: "ring" }] : []),
     { color: OBR_COLOUR, label: `Official costing (${obrKind})`, type: "ring" },
   ];
 }
@@ -239,7 +243,8 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
         xPe: row.pe,
         xObr: row.obr,
         xBasis: isValue(row.peOfficial) ? row.peOfficial : null,
-        extent: [row.pe, row.obrStatic, row.obrBehavioural, row.peOfficial].filter(isValue),
+        // The ring only widens the axis where it is drawn, beside our dot
+        extent: [row.pe, row.obrStatic, row.obrBehavioural, isValue(row.pe) ? row.peOfficial : null].filter(isValue),
       };
     }
     const share = pctOfOfficial(row.pe, row.obr);
@@ -477,7 +482,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
         note={onSelect ? "Click for why they differ" : undefined}
         rows={[
           { key: "pe", name: "Ours (static)", text: isValue(row.pe) ? bn(row.pe) : "Not yet published", color: PE_COLOUR },
-          ...(isValue(row.pe) && isValue(row.peOfficial) ? [{ key: "basis", name: BASIS_LABEL, text: bn(row.peOfficial), color: PE_COLOUR }] : []),
+          ...(isValue(row.pe) && isValue(row.peOfficial) ? [{ key: "basis", name: `${basisLabel(row.id)} (static)`, text: bn(row.peOfficial), color: PE_COLOUR }] : []),
           { key: "obr", name: `Official costing (${obrKind})`, text: isValue(row.obr) ? bn(row.obr) : row.notComparable ? "Not comparable" : "Not in the official costings", color: OBR_COLOUR },
           ...(difference !== null
             ? [{ key: "difference", name: "Difference (ours − official)", text: formatDifference(difference, decimals), color: GAP_COLOUR }]
@@ -672,7 +677,7 @@ function OBRDumbbellChart({ rows, yearLabel, obrKind = "static", scale = "bn", c
             {withBasis && (
               <li>
                 <span className="obr-dumbbell-key-ring is-basis" style={{ borderColor: PE_COLOUR }} />
-                {BASIS_LABEL}
+                {BASIS_LABEL} (static)
               </li>
             )}
             <li>

@@ -11,7 +11,8 @@ import NoBreakYear from "./NoBreakYear";
 import Tip from "./Tip";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import UnavailableNotice from "./publication/UnavailableNotice";
-import OBRDumbbellChart, { BASIS_LABEL, drawsBasis, dumbbellLegendItems, formatBn, formatBn as formatFigure, formatDifference, obrValue, rowDecimals, shownDifference } from "./OBRDumbbellChart";
+import OBRDumbbellChart, { drawsBasis, dumbbellLegendItems, formatBn, formatBn as formatFigure, formatDifference, obrValue, rowDecimals, shownDifference } from "./OBRDumbbellChart";
+import { BASIS_LABEL } from "../utils/officialBasis";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { CHART_COLOURS } from "../utils/chartTheme";
 import { buildChartCsv, fiscalYear } from "../utils/chartCsv";
@@ -363,7 +364,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
       columns: [
         { key: "name", label: "Policy" },
         { key: "pe", label: "Ours, static (£bn)", decimals: 4 },
-        ...(withBasis ? [{ key: "peOfficial", label: "Ours on the official costing's basis, static (£bn)", decimals: 4 }] : []),
+        ...(withBasis ? [{ key: "peOfficial", label: `${BASIS_LABEL}, static (£bn)`, decimals: 4 }] : []),
         { key: "obrStatic", label: "Official, static (£bn)", decimals: 4 },
         { key: "obrBehavioural", label: "Official, post-behavioural (£bn)", decimals: 4 },
         { key: "difference", label: `Difference, ours minus official ${obrKind} (£bn)`, decimals: 4 },
@@ -437,12 +438,16 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   // has no figure, only where one is missing
   const officialMissing = rows.some((row) => row.notComparable === null && (row.obrStatic === null || row.obrBehavioural === null));
   const peMissing = rows.some((row) => row.pe === null);
+  // Most policies have no figure on the official costing's basis: their
+  // "—" in that column is said, never read as a missing estimate
+  const basisMissing = withBasis && rows.some((row) => !row.status && row.pe !== null && row.peOfficial === null);
   // A row with no figure on the chosen basis is differenced on the other
   const otherBasis = rows.some((row) => row.pe !== null && row.obr !== null && (shownBehavioural ? row.obrBehavioural === null : row.obrStatic === null));
   const tableNote = [
     `Difference: ours minus the official ${obrKind} costing${otherBasis ? ` (the ${shownBehavioural ? "static" : "post-behavioural"} one where the official costings give only that)` : ""}.`,
     officialMissing && `— where the official costings give no figure on that basis for the policy in ${yearLabel}.`,
     peMissing && `— under Ours where we publish no estimate for ${yearLabel}.`,
+    basisMissing && `— under “${BASIS_LABEL}” where we give no such figure for the policy.`,
     ...notComparableRows.map(notComparableNote),
   ].filter(Boolean);
 

@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { fireEvent, render } from "@testing-library/react";
 import { CHART_COLOURS } from "../utils/chartTheme";
 import OBRDumbbellChart, {
-  BASIS_LABEL,
   GAP_COLOUR,
   OBR_COLOUR,
   PE_COLOUR,
@@ -15,6 +14,7 @@ import OBRDumbbellChart, {
   pctOfOfficial,
   shownDifference,
 } from "./OBRDumbbellChart";
+import { BASIS_LABEL } from "../utils/officialBasis";
 
 // comparisonRows() output, largest official costing first
 const rows = [
@@ -185,8 +185,8 @@ describe("ours on the official costing's basis", () => {
     expect(ring).toHaveAttribute("stroke", PE_COLOUR);
     expect(Number(ring.getAttribute("r"))).toBeLessThan(Number(rowEl(container, "two_child_limit").querySelector(".obr-dumbbell-dot.obr").getAttribute("r")));
     expect(rowEl(container, "threshold_freeze").querySelector(".obr-dumbbell-dot.basis")).toBeNull();
-    expect(container.querySelector('[aria-label="Legend"]').textContent).toBe(`Ours (static)${BASIS_LABEL}Official costing (post-behavioural)`);
-    expect(rowEl(container, "two_child_limit").getAttribute("aria-label")).toContain("ours −£3.6bn (on the official costing's basis −£2.9bn), official −£3.0bn");
+    expect(container.querySelector('[aria-label="Legend"]').textContent).toBe(`Ours (static)${BASIS_LABEL} (static)Official costing (post-behavioural)`);
+    expect(rowEl(container, "two_child_limit").getAttribute("aria-label")).toContain("ours −£3.6bn (the official costing's taxes and benefits only: −£2.9bn), official −£3.0bn");
   });
 
   it("never draws it without our dot", () => {
@@ -194,6 +194,13 @@ describe("ours on the official costing's basis", () => {
     expect(container.querySelector(".obr-dumbbell-dot.obr")).not.toBeNull();
     expect(container.querySelector(".obr-dumbbell-dot.basis")).toBeNull();
     expect(container.querySelector('[aria-label="Legend"]')).not.toHaveTextContent(BASIS_LABEL);
+  });
+
+  it("never widens the axis for a ring it does not draw", () => {
+    const tick = (container) => [...container.querySelectorAll("svg text")].map((node) => node.textContent);
+    const { container } = chart({ rows: [{ ...rows[1], pe: null, peOfficial: -30 }] });
+    expect(tick(container)).not.toContain("−£30bn");
+    expect(container.querySelector(".obr-dumbbell-dot.basis")).toBeNull();
   });
 
   it("keeps two marks, and the legend, where no row has one", () => {
@@ -213,7 +220,7 @@ describe("ours on the official costing's basis", () => {
 
   it("is in the downloads' legend only where a row shows one, never on a row out of force", () => {
     expect(dumbbellLegendItems("static").map((item) => item.label)).toEqual(["Ours (static)", "Official costing (static)"]);
-    expect(dumbbellLegendItems("static", true).map((item) => item.label)).toEqual(["Ours (static)", BASIS_LABEL, "Official costing (static)"]);
+    expect(dumbbellLegendItems("static", true).map((item) => item.label)).toEqual(["Ours (static)", `${BASIS_LABEL} (static)`, "Official costing (static)"]);
     expect(drawsBasis([{ ...withBasis[0], status: "Starts 2030-31" }])).toBe(false);
     expect(drawsBasis([{ ...withBasis[0], pe: null }])).toBe(false);
   });

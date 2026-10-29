@@ -1,5 +1,6 @@
 import MeasureRowLabel from "./MeasureRowLabel";
-import { BASIS_LABEL, formatBn, formatDifference, rowDecimals, shownDifference } from "./OBRDumbbellChart";
+import { formatBn, formatDifference, rowDecimals, shownDifference } from "./OBRDumbbellChart";
+import { basisLabel } from "../utils/officialBasis";
 import { NOT_COMPARABLE_SHORT, basisSides, pointsForYear } from "../utils/obrDeviationNotes";
 import "./ObrDifferencePanel.css";
 
@@ -19,8 +20,8 @@ const line = (text) => text.charAt(0).toUpperCase() + text.slice(1);
  * `basis` (the "Official: …. Ours: …." line), and `points` (the policy's
  * OBR_DIFFERENCE_POINTS, shown for `year`). Where the row has ours on the
  * official costing's basis (`peOfficial`, #297), it shows across the panel
- * under the three figures, keyed with the chart's small ring, above what
- * each side counts.
+ * under the three figures, keyed with the chart's small ring and named by
+ * what it counts ("Ours, income tax only"), above what each side counts.
  */
 export default function ObrDifferencePanel({ row, year, yearLabel, obrKind }) {
   if (!row) return null;
@@ -64,7 +65,7 @@ export default function ObrDifferencePanel({ row, year, yearLabel, obrKind }) {
           </div>
           {isValue(row.peOfficial) && (
             <div className="is-basis">
-              <dt><span className="obr-panel-key is-basis" aria-hidden="true" />{BASIS_LABEL}</dt>
+              <dt><span className="obr-panel-key is-basis" aria-hidden="true" />{basisLabel(row.id)}</dt>
               <dd className="is-ours">{formatBn(row.peOfficial, decimals)}</dd>
             </div>
           )}

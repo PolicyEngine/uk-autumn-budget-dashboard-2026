@@ -16,6 +16,16 @@ def test_committed_contract_is_the_generated_one():
     assert COMMITTED.read_text() == contract_json()
 
 
+def test_contract_names_what_each_official_basis_counts():
+    """#297: the page names the ring by the variables the generator sums."""
+    from uk_budget_data.calculators import OFFICIAL_BASES
+
+    assert contract()["official_bases"] == {
+        measure: list(variables)
+        for measure, variables in OFFICIAL_BASES.items()
+    }
+
+
 def test_contract_covers_every_table_and_status():
     exported = contract()
     assert set(exported["tables"]) == set(TABLES)
