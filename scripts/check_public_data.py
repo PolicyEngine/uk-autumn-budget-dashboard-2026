@@ -5,16 +5,25 @@ This repository is public, and the dashboard serves public/, so every file
 there is a publication. The UK figures derive from UKDS-licensed survey
 microdata, and the licence binds every published number.
 
-Every file under public/ must be listed in data_inputs/public_data_review.csv
-with the sha256 of the exact bytes a person reviewed; any change fails until
-it is reviewed again. A table shaped as the disclosure layer's (a CSV with its
-public columns) must also pass ``validate_public``, and is reviewed as kind
-``disclosure_table``: neither check can tell a release the layer resolved from
-a file written any other way, so a person signs off the bytes too.
+While sign-off is on (uk_budget_data/sign_off.py), every file under public/
+must be listed in data_inputs/public_data_review.csv with the sha256 of the
+exact bytes a person reviewed; any change fails until it is reviewed again.
+A table shaped as the disclosure layer's (a CSV with its public columns) must
+also pass ``validate_public``, and is reviewed as kind ``disclosure_table``:
+neither check can tell a release the layer resolved from a file written any
+other way, so a person signs off the bytes too.
 
 A review entry of kind ``pending`` names who decides and by when. Until its
 expiry date, at most 14 days after it was added, it is reported without
 failing; from then on it fails.
+
+Sign-off is off from Budget day (28 October 2026): no file needs a review
+entry, and no entry fails, whether stale, past its pending date or
+malformed. An entry then does one thing: it lets reference geography carry
+area codes (below). In place of the entries, a file under
+public/data/artifacts/ must be one the page lists: a listed manifest
+entry's receipt, or a file that receipt binds (the files ``publish
+review-rows`` writes rows for). Every other rule here holds either way.
 
 One file takes no review entry: the page's area routing status
 (public/data/area-routing.json, from uk_budget_data.area_routing). It says
@@ -63,6 +72,8 @@ from policyengine.disclosure import validate_public  # noqa: E402
 from policyengine.disclosure.schema import PUBLIC_COLUMNS  # noqa: E402
 
 PUBLIC = "public/"
+DATA_ROOT = "public/data/"
+ARTIFACTS = DATA_ROOT + "artifacts/"
 REVIEW_FILE = "data_inputs/public_data_review.csv"
 REVIEW_COLUMNS = (
     "path",
@@ -86,6 +97,7 @@ KINDS = (
     PENDING,
 )
 MAX_PENDING_DAYS = 14
+AREA_PROVENANCE_FILE = "public/data/area_provenance.json"
 AREA_ROUTING_FILE = "public/data/area-routing.json"
 # Every text uk_budget_data.area_routing writes: whether the area views are
 # available, and the bundle's routing kind (tests/test_area_routing.py).
@@ -265,9 +277,114 @@ def thin_cells_in_tables(data: bytes) -> bool:
     return isinstance(floor, dict) and bool(floor.get("thin_cells_in_tables"))
 
 
-def check(root: Path, today: Optional[date] = None) -> Report:
-    """Run every check on the repository at ``root``."""
+def area_provenance_problems(name: str, data: bytes) -> list[str]:
+    """Ways the area run's provenance leaves its closed schema."""
+    from uk_budget_data.publication.release_index import (
+        area_provenance_document_problems,
+    )
+
+    try:
+        document = json.loads(data)
+    except (ValueError, UnicodeError):
+        document = None
+    return [
+        f"{name}: {problem}"
+        for problem in area_provenance_document_problems(document)
+    ]
+
+
+def unsigned_problems(name: str, data: bytes) -> list[str]:
+    """What the review chain checks in two files' contents, with sign-off
+    off: the area routing status must be one of its texts, and the area
+    run's provenance must keep to its closed schema."""
+    if name == AREA_ROUTING_FILE and data not in AREA_ROUTING_CONTENTS:
+        return [f"{name}: not an area routing status"]
+    if name == AREA_PROVENANCE_FILE:
+        return area_provenance_problems(name, data)
+    return []
+
+
+def listed_artifact_files(root: Path) -> set[str]:
+    """The files under public/data/artifacts/ that the page lists, as
+    ``publish review-rows`` writes rows for them: each listed manifest
+    entry's receipt and, for a displayed entry, each file that receipt
+    binds. A staged, stale, withdrawn or superseded generation is not
+    among them, nor is a file no receipt binds. With no readable manifest,
+    nothing there is listed."""
+    from uk_budget_data.publication import manifest as m
+
+    try:
+        document = json.loads(
+            (root / DATA_ROOT / m.MANIFEST_FILE).read_bytes()
+        )
+    except (OSError, ValueError, UnicodeError):
+        return set()
+    if not isinstance(document, dict):
+        return set()
+    entries = [
+        entry
+        for group in ("measures", "combined")
+        if isinstance(document.get(group), dict)
+        for entry in document[group].values()
+    ]
+    listed = set()
+    for entry in entries:
+        if (
+            not isinstance(entry, dict)
+            or entry.get("status") not in m.LISTED
+            or not isinstance(entry.get("artifact"), str)
+        ):
+            continue
+        artifact = DATA_ROOT + entry["artifact"]
+        listed.add(f"{artifact}/receipt.json")
+        if entry["status"] == m.NOT_COMPUTABLE:
+            continue
+        try:
+            receipt = json.loads(
+                (root / artifact / "receipt.json").read_bytes()
+            )
+            files = receipt["dashboard"]["files"]
+        except (OSError, ValueError, UnicodeError, KeyError, TypeError):
+            continue
+        if isinstance(files, dict):
+            listed.update(
+                f"{artifact}/{name}"
+                for name in files
+                if isinstance(name, str) and "/" not in name
+            )
+    return listed
+
+
+def area_codes_reviewed(
+    entry: Optional[ReviewEntry], data: bytes, today: date
+) -> bool:
+    """Whether a review entry lets these exact bytes carry area codes: one
+    of kind ``reference_geography``, or ``pending`` before its expiry date.
+    With sign-off off this is all an entry does."""
+    return (
+        entry is not None
+        and sha256_of(data) == entry.sha256
+        and (
+            entry.kind == REFERENCE_GEOGRAPHY
+            or (entry.kind == PENDING and today <= entry.expires_on)
+        )
+    )
+
+
+def check(
+    root: Path,
+    today: Optional[date] = None,
+    sign_off_required: Optional[bool] = None,
+) -> Report:
+    """Run every check on the repository at ``root``.
+
+    ``sign_off_required`` defaults to ``uk_budget_data.sign_off.REQUIRED``.
+    """
     today = today or datetime.now(timezone.utc).date()
+    if sign_off_required is None:
+        from uk_budget_data import sign_off
+
+        sign_off_required = sign_off.REQUIRED
     report = Report()
     from uk_budget_data.publication.release_index import (
         manifest_identity_problems,
@@ -281,9 +398,12 @@ def check(root: Path, today: Optional[date] = None) -> Report:
     report.problems.extend(release_index_problems(root / "public" / "data"))
     files = tracked_files(root)
     review, problems = read_review(root)
-    report.problems.extend(problems)
-    for name in sorted(set(review) - set(files)):
-        report.problems.append(f"{name}: reviewed, but not tracked")
+    if sign_off_required:
+        report.problems.extend(problems)
+        for name in sorted(set(review) - set(files)):
+            report.problems.append(f"{name}: reviewed, but not tracked")
+    else:
+        listed = listed_artifact_files(root)
 
     for name in files:
         path = root / name
@@ -325,7 +445,15 @@ def check(root: Path, today: Optional[date] = None) -> Report:
                 validate_layer_table(path, name, report)
                 area_codes_allowed = True
             entry = review.get(name)
-            if name == AREA_ROUTING_FILE:
+            if not sign_off_required:
+                report.problems.extend(unsigned_problems(name, data))
+                if name.startswith(ARTIFACTS) and name not in listed:
+                    report.problems.append(
+                        f"{name}: no listed manifest entry names it"
+                    )
+                if area_codes_reviewed(entry, data, today):
+                    area_codes_allowed = True
+            elif name == AREA_ROUTING_FILE:
                 if data not in AREA_ROUTING_CONTENTS:
                     report.problems.append(
                         f"{name}: not an area routing status"
@@ -345,7 +473,7 @@ def check(root: Path, today: Optional[date] = None) -> Report:
                     + " a disclosure table"
                 )
             elif (
-                name == "public/data/area_provenance.json"
+                name == AREA_PROVENANCE_FILE
                 and entry.kind != "publication_provenance"
             ):
                 report.problems.append(
@@ -367,22 +495,11 @@ def check(root: Path, today: Optional[date] = None) -> Report:
                     )
                     area_codes_allowed = True
             elif entry.kind == "publication_provenance":
-                from uk_budget_data.publication.release_index import (
-                    area_provenance_document_problems,
-                )
-
-                try:
-                    document = json.loads(data)
-                except (ValueError, UnicodeError):
-                    document = None
-                if name != "public/data/area_provenance.json":
+                if name != AREA_PROVENANCE_FILE:
                     report.problems.append(
                         f"{name}: not the area provenance path"
                     )
-                report.problems.extend(
-                    f"{name}: {problem}"
-                    for problem in area_provenance_document_problems(document)
-                )
+                report.problems.extend(area_provenance_problems(name, data))
             elif entry.kind == REFERENCE_GEOGRAPHY:
                 area_codes_allowed = True
 

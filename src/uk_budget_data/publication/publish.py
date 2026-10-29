@@ -25,10 +25,13 @@ The gates, in order:
    known fix lands (``uk_budget_data.model_limits``, recorded in its
    receipt) may be staged or provisional, with its figure, but is never
    approved.
-4c. **Hand-written modifiers.** While a data limit is active, an artifact
-   whose receipt binds a hand-written modifier on either side is held at
-   every figure level until two people attest its exact receipt
-   (``attestations``); a release never waives any other check.
+4c. **Hand-written modifiers.** While sign-off is on
+   (``uk_budget_data.sign_off``, off since 28 October 2026) and a data
+   limit is active, an artifact whose receipt binds a hand-written modifier
+   on either side is held at every figure level until two people attest
+   its exact receipt (``attestations``); a release never waives any other
+   check. With sign-off off nothing is held, and an attestation an entry
+   recorded earlier is kept but not checked.
 4d. **The floor of survey households** (``disclosure_floor``). A
    provisional or approved artifact with household tables must have been
    held to it: its receipt records the check, so one generated before the
@@ -58,6 +61,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
+from uk_budget_data import sign_off
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import (
     COMBINED_PREFIX,
@@ -205,7 +209,7 @@ def binding_problems(
             )
     elif entry.measures is not None or entry.member_outputs_sha256 is not None:
         problems.append("a measure's entry names combined-run members")
-    if entry.attestation is not None:
+    if entry.attestation is not None and sign_off.REQUIRED:
         try:
             validate_attestation(document, entry.attestation.model_dump())
         except (ValueError, TypeError) as error:

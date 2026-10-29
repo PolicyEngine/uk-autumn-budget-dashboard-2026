@@ -1,6 +1,11 @@
 """Public-file review rows for the gated publication.
 
-Every file under ``public/`` needs a row in
+The checks read these rows only while sign-off is on
+(``uk_budget_data.sign_off``, off from 28 October 2026). Off, the command
+still deletes the artifacts no entry names and writes rows, which nothing
+then requires.
+
+While sign-off is on, every file under ``public/`` needs a row in
 ``data_inputs/public_data_review.csv`` with the SHA-256 of the bytes a person
 reviewed (``scripts/check_public_data.py`` in CI, and
 ``scripts/check-public-files.mjs`` in the build). The one exception is the

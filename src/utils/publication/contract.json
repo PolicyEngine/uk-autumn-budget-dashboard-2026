@@ -1729,6 +1729,7 @@
     "min_households": 10,
     "round_to": 1000
   },
+  "sign_off_required": false,
   "statuses": [
     "staged",
     "provisional",
