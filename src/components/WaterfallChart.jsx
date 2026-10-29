@@ -370,6 +370,19 @@ function WaterfallChart({ rawData, selectedPolicies, selectedYear = DEFAULT_DISP
                 tickLine={false}
               />
               <ReferenceLine y={0} stroke={CHART_COLOURS.zeroLine} strokeWidth={1} />
+              {/* A withheld decile is marked where its bar would be, so the
+                  break in the net line reads as "not published", never as
+                  a value (Vahid, 29 Oct) */}
+              {[...withheldDeciles].map((decile) => (
+                <ReferenceLine
+                  key={`withheld-${decile}`}
+                  x={decile}
+                  stroke={CHART_COLOURS.noChange}
+                  strokeDasharray="2 4"
+                  className="decile-withheld-mark"
+                  label={{ value: "Not published", angle: -90, position: "center", fill: CHART_COLOURS.noChange, fontSize: 11 }}
+                />
+              ))}
 
               {/* One segment at a time, beside the cursor; the other measures dim */}
 
