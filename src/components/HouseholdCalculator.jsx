@@ -18,6 +18,7 @@ import {
   asksEducation,
   atStatePensionAge,
   buildHouseholdRequest,
+  businessMiles,
   isRenting,
   parseChildrenAges,
   requestKey,
@@ -31,7 +32,7 @@ export { WIZARD_DEFAULTS };
 import { ChoiceTiles, NumberField, SelectField } from "./personal/FormControls";
 import LocalAuthorityField from "./personal/LocalAuthorityField";
 import { policyQuestions } from "../utils/householdPolicyFields";
-import { withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
+import { listInWords, resultPolicies, withCalculatorOnly, withoutCalculatorOnly } from "../utils/calculatorOnlyMeasures";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import { prefersReducedMotion } from "../utils/chartMotion";
 import "./HouseholdCalculator.css";
@@ -53,9 +54,11 @@ export const FORM_GROUPS = [
   {
     key: "you",
     title: "You",
-    hint: "Your age, your pay before tax, and where you live.",
+    hint: "Your age, your pay before tax, where you live, and any miles you drive for work.",
     always: true,
-    fields: ["current_age", "current_salary", "region"],
+    // Business miles for the household-only mileage measure (#357); Driven
+    // as only once miles are entered
+    fields: ["current_age", "current_salary", "region", "business_miles_per_year", "business_miles_role"],
   },
   {
     key: "household",
@@ -206,6 +209,18 @@ const CHOICE_CONFIGS = {
     hint: "Yes counts the Universal Credit your answers entitle you to.",
     hintAs: "tooltip",
   },
+  // How the business miles are driven (#357): it decides which tax the
+  // mileage deduction comes off
+  business_miles_role: {
+    label: "Driven as",
+    layout: "segmented",
+    options: [
+      { value: "EMPLOYEE", label: "Employee" },
+      { value: "SELF_EMPLOYED", label: "Self-employed" },
+    ],
+    hint: "As an employee, the calculation counts Mileage Allowance Relief on what the higher rate adds, which comes off income tax, with what your employer pays per mile unchanged. Self-employed, the miles come off your self-employment profit for income tax and Class 4 National Insurance: enter your receipts in step 4, leaving your car or van out of its expenses.",
+    hintAs: "tooltip",
+  },
   is_carer: {
     label: "Carer",
     question: "Do you look after someone, unpaid?",
@@ -220,6 +235,21 @@ const CHOICE_CONFIGS = {
 const NUMBER_CONFIGS = {
   current_age: { label: "Age", min: 18, max: 80, step: 1 },
   current_salary: { label: "Salary in 2026", min: 0, max: 500000, step: 1000, money: true, suffix: "a year", hint: SALARY_SOURCE },
+  // Whole miles a year, typed or moved by 1,000; empty or 0 is none, and
+  // then neither the miles nor the mileage measure is sent (#357). 100,000
+  // is about 400 miles every working day: above any real business mileage
+  business_miles_per_year: {
+    label: "Business miles",
+    min: 0,
+    max: 100000,
+    step: 1000,
+    whole: true,
+    emptyValue: 0,
+    suffix: "miles a year",
+    outOfRangeMessage: "Whole miles, from 0 to 100,000 a year.",
+    hint: "Miles you drive for work in your own car or van in a year, not to and from your usual workplace. The tax-free rate is already 55p a mile for the first 10,000 (Taxation (Energy and Vehicles) Act 2026). The Budget raises the rate above 10,000 miles from 25p to 35p from April 2027, so only miles above 10,000 change your result. The Treasury's examples (£120 for 6,000 miles) compare with the old 45p.",
+    hintAs: "tooltip",
+  },
   partner_age: { label: "Partner's age", min: 18, max: 80, step: 1 },
   partner_salary: { label: "Partner's salary in 2026", min: 0, max: 500000, step: 1000, money: true, suffix: "a year" },
   monthly_rent: { label: "Rent", min: 0, max: 10000, step: 25, money: true, suffix: "a month" },
@@ -337,6 +367,7 @@ const FIELD_APPLIES = {
   children_ages: (inputs, childrenCount) => childrenCount > 0,
   monthly_childcare: (inputs, childrenCount) => childrenCount > 0,
   care_hours_per_week: (inputs) => Boolean(inputs.is_carer),
+  business_miles_role: (inputs) => businessMiles(inputs) > 0,
   partner_private_pension_per_year: (inputs) => inputs.has_partner,
   // Northern Ireland has domestic rates, not Council Tax
   council_tax_band: (inputs) => inputs.region !== "NORTHERN_IRELAND",
@@ -673,10 +704,14 @@ function HouseholdCalculator({
   );
   const noneSelected = householdPolicies.length === 0;
   // What the household's own request asks for: the selected measures, then
-  // any calculator-only one turned on. With none on it is the selection
-  // itself, so the examples' precomputed answers (keyed to exactly the
-  // published measures) still answer at once
-  const requestPolicies = useMemo(() => withCalculatorOnly(householdPolicies), [householdPolicies]);
+  // the calculator-only ones that apply to these answers (the mileage
+  // measure only with business miles, so the examples' precomputed
+  // answers still answer at once)
+  const milesDriven = businessMiles(inputs);
+  const requestPolicies = useMemo(
+    () => withCalculatorOnly(householdPolicies, { business_miles_per_year: milesDriven }),
+    [householdPolicies, milesDriven],
+  );
   const requestKeyPolicies = requestPolicies.join(",");
   // The cards' figures are for every measure: shown only while every
   // measure is selected
@@ -714,7 +749,9 @@ function HouseholdCalculator({
     if (householdPolicies.length > 0) {
       // Another household: its own result or a clean loading state, never
       // the previous card's (useHouseholdImpact's `household`)
-      setSubmitted({ inputs: next, year, policies: requestPolicies, at: Date.now(), household: preset.id });
+      // The example's own answers decide the calculator-only measures (it
+      // drives no business miles, so not the mileage measure)
+      setSubmitted({ inputs: next, year, policies: withCalculatorOnly(householdPolicies, next), at: Date.now(), household: preset.id });
     }
   };
   // The results for the answers sent with Calculate, never the ones being
@@ -1149,7 +1186,7 @@ function HouseholdCalculator({
           placed.notModelled.length > 0
             ? `Your change leaves out ${placed.notModelled.length === 1 ? "one policy" : `${placed.notModelled.length} policies`} not modelled for one household; the dots include ${placed.notModelled.length === 1 ? "it" : "them"}.`
             : submitted.policies.length !== withoutCalculatorOnly(submitted.policies).length
-              ? "Your change includes the savings income tax rise, which the dots leave out."
+              ? `Your change includes ${listInWords(resultPolicies(submitted.policies).named)}, which the dots leave out.`
               : null,
       }
     : null;

@@ -121,7 +121,18 @@ describe("the personal impact form", () => {
       expect(groupToggle(title)).toHaveAttribute("aria-expanded", "false");
       expect(stepLine(title)).toBe("");
     }
-    const essentials = ["current_age", "current_salary", "region", "has_partner", "children_count", "tenure", "rent_from", "monthly_rent"];
+    // Business miles in step 1 (#357); Driven as only once miles are entered
+    const essentials = [
+      "current_age",
+      "current_salary",
+      "region",
+      "business_miles_per_year",
+      "has_partner",
+      "children_count",
+      "tenure",
+      "rent_from",
+      "monthly_rent",
+    ];
     expect(fields()).toEqual(essentials);
     openMore();
     const spending = groupToggle("Spending");
@@ -665,7 +676,7 @@ describe("the selected policies' questions", () => {
     form(ALL_SEVEN);
     openSteps();
     expect(groups()).toEqual(SEVEN_STEPS);
-    expect(asked("You")).toEqual(["current_age", "current_salary", "region"]);
+    expect(asked("You")).toEqual(["current_age", "current_salary", "region", "business_miles_per_year"]);
     expect(asked("Household")).toEqual(["has_partner", "children_count", "tenure", "rent_from", "monthly_rent"]);
     expect(asked("Spending")).toEqual(["petrol_spending_per_year", "diesel_spending_per_year", "electricity_spending_per_year"]);
     // Savings interest always first, then in the table's order: property,

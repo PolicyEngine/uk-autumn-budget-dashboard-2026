@@ -226,8 +226,13 @@ const formatAmount = (value) => value.toLocaleString("en-GB", { maximumFractionD
  * @param {boolean} [props.hideLabel] - Keep the label for screen readers
  *   only (a row above already shows it)
  * @param {string} [props.outOfRangeMessage] - Said while the typed value is
- *   outside min to max, and after leaving the box moved it into range, so a
- *   value is never changed without a word
+ *   outside min to max (or, with `whole`, not a whole number), and after
+ *   leaving the box moved it into range, so a value is never changed
+ *   without a word
+ * @param {boolean} [props.whole] - Whole numbers only: a fraction is not
+ *   taken while typed, and leaving the box rounds it to the nearest one
+ * @param {number} [props.emptyValue] - What a box left empty means (0 for
+ *   "none"); without it, leaving the box empty keeps the last value
  */
 export function NumberField({
   id,
@@ -245,11 +250,17 @@ export function NumberField({
   inputLabel,
   outOfRangeMessage,
   hideLabel = false,
+  whole = false,
+  emptyValue,
 }) {
   const hintId = hint ? `hint-${id}` : undefined;
   const fieldId = `field-${id}`;
   const shown = Number.isFinite(value) ? value : min;
   const parse = money ? parseAmount : parseFloat;
+  // A typed number the box will not take as it is: outside min to max, or
+  // a fraction where only whole numbers are taken
+  const notTaken = (parsed) =>
+    outOfRange(parsed, min, max) || (whole && Number.isFinite(parsed) && !Number.isInteger(parsed));
   // The value typed before leaving the box moved it into range
   const [clampedFrom, setClampedFrom] = useState(null);
   // An amount shows its thousands separators except while it is edited
@@ -273,7 +284,7 @@ export function NumberField({
   const name = inputLabel ?? label;
   // The message under the box, tied to it (aria-describedby) and the box
   // marked invalid while the typed value is out of range (WCAG 3.3.1)
-  const invalid = Boolean(outOfRangeMessage) && outOfRange(parse(draft), min, max);
+  const invalid = Boolean(outOfRangeMessage) && notTaken(parse(draft));
   const errorShown = Boolean(outOfRangeMessage) && (invalid || clampedFrom !== null);
   const errorId = `error-${id}`;
   const describedBy = [hintId, errorShown ? errorId : null].filter(Boolean).join(" ") || undefined;
@@ -320,12 +331,18 @@ export function NumberField({
               setDraft(event.target.value);
               setClampedFrom(null);
               const parsed = parse(event.target.value);
-              if (Number.isFinite(parsed) && parsed >= min && parsed <= max) onChange(parsed);
+              if (Number.isFinite(parsed) && !notTaken(parsed)) onChange(parsed);
             }}
             onBlur={() => {
               setEditing(false);
+              if (emptyValue !== undefined && draft.trim() === "") {
+                // Left empty: the field's "none"
+                setDraft(String(emptyValue));
+                if (emptyValue !== shown) onChange(emptyValue);
+                return;
+              }
               const parsed = parse(draft);
-              const next = Number.isFinite(parsed) ? clamp(parsed, min, max) : shown;
+              const next = Number.isFinite(parsed) ? clamp(whole ? Math.round(parsed) : parsed, min, max) : shown;
               if (Number.isFinite(parsed) && next !== parsed) setClampedFrom(parsed);
               setDraft(String(next));
               if (next !== shown) onChange(next);
@@ -339,7 +356,7 @@ export function NumberField({
       {errorShown && (
         <p className="field-error" id={errorId} role="alert">
           {outOfRangeMessage}
-          {clampedFrom !== null && !outOfRange(parse(draft), min, max)
+          {clampedFrom !== null && !notTaken(parse(draft))
             ? ` ${clampedFrom.toLocaleString("en-GB")} was changed to ${shown.toLocaleString("en-GB")}.`
             : ""}
         </p>
