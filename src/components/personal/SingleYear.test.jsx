@@ -1415,6 +1415,60 @@ describe("a household calculation from other definitions", () => {
   });
 });
 
+// Review of 34133276, P3: once published, the savings rise goes in every
+// request, selected or not. Refused for its definition, it can't be removed
+// from the selection, so the calculator offers no Remove for it
+describe("a household calculation refused for the calculator-only savings rise", () => {
+  const SAVINGS = "savings_income_rates_up";
+  const SAVINGS_POLICY = { id: SAVINGS, name: "Savings income tax up" };
+  const withSavings = [...POLICIES_FOR_TEST, SAVINGS_POLICY];
+  const savingsCatalogue = buildMeasureCatalogue({
+    manifest: {
+      ...fixtureJson("manifest.json"),
+      measures: Object.fromEntries(withSavings.map((policy) => [policy.id, {
+        ...baseEntry, ...policy, years: [2026, 2027, 2028, 2029, 2030, 2031], unsupported_years: [],
+      }])),
+      combined: {},
+    },
+    tablesByKey: Object.fromEntries(withSavings.map((policy) => [policy.id, { engine: PUBLISHED_ENGINE, definition: approvedDefinition(policy.id) }])),
+  });
+  const otherSavings = (id) => {
+    const definition = approvedDefinition(id);
+    return id === SAVINGS ? { ...definition, reform: { ...definition.reform, binding: "code_revision" } } : definition;
+  };
+  function renderWithSavings(props) {
+    return render(
+      <PersonalImpactTab selectedPolicies={SUPPORTED_POLICY_IDS} policies={withSavings} year={2029} {...props} />,
+      { wrapper: ({ children }) => <MeasureCatalogueProvider catalogue={savingsCatalogue}>{children}</MeasureCatalogueProvider> },
+    );
+  }
+
+  it("lists it unavailable, with no figure, and offers no remove: it is not selected", async () => {
+    expect(SUPPORTED_POLICY_IDS).not.toContain(SAVINGS);
+    serve((body) => json(householdAnswerFor(body)), otherSavings);
+    const remove = vi.fn();
+    renderWithSavings({ onRemoveUnavailable: remove });
+    toResults();
+    const region = await results();
+    expect(await within(region).findByText("Household calculator is unavailable for the selected measures")).toBeInTheDocument();
+    expect(within(region).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      `${SAVINGS_POLICY.name}: its reform binding differs`,
+    ]);
+    expect(region.textContent).not.toMatch(/£\d/);
+    expect(within(region).queryByRole("button", { name: /from the selection$/ })).not.toBeInTheDocument();
+    expect(remove).not.toHaveBeenCalled();
+    // It was asked with the rise, naming its approved definition
+    expect(yours()[0].policies).toContain(SAVINGS);
+  });
+
+  it("answers when the API computes it from its approved definition", async () => {
+    serve((body) => json(householdAnswerFor(body)));
+    renderWithSavings();
+    toResults();
+    expect(await within(await results()).findByText(HEADLINE)).toBeInTheDocument();
+  });
+});
+
 describe("keepSentence: the marginal rate as money", () => {
   it("keeps of the next £1,000, before and after, once when they round the same", () => {
     expect(keepSentence(0.62, 0.62)).toBe("Of your next £1,000 you keep £380.");

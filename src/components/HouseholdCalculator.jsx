@@ -1321,7 +1321,10 @@ function HouseholdCalculator({
               reason="Household calculator is unavailable for the selected measures"
               summary="The household calculator does not compute these measures from the definitions their published figures were approved on:"
               measures={refusedDefinitions}
-              onRemove={onRemoveUnavailable}
+              // Removing them from the selection helps only when all are in
+              // it: a calculator-only measure goes in every request, selected
+              // or not (PersonalImpactTab offers none then either)
+              onRemove={refusedDefinitions.every(({ id }) => selectedPolicies.includes(id)) ? onRemoveUnavailable : undefined}
             />
           ) : selectionUnavailable ? (
             <UnavailableNotice reason="Household calculator is unavailable for this selection">
