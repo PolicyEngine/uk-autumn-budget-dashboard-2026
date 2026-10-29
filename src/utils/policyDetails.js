@@ -79,13 +79,14 @@ export const POLICY_DETAILS = [
     points: [
       { label: "Rises skipped", text: "January, March and April 2027's rises do not happen." },
       { label: "From July 2027", text: "Current law's 60.59p a litre, with April 2027's RPI rise." },
-      { label: "From 2028", text: "RPI rises resume each April; after that it costs nothing." },
+      { label: "From 2028", text: "RPI rises resume each April." },
     ],
     details: [
       "Applies each day's duty rate to households' petrol and diesel spending, day-weighted to fiscal years.",
       "Includes the VAT on the lower pump price.",
       "Fuel spending is held fixed.",
       "The end date is the Budget document's.",
+      "From 1 July 2027, back at current law's rate, the measure costs nothing.",
       "Fuel for vans, lorries and business use of cars is not modelled: the figure is households' own fuel.",
       "The Treasury's figure also covers business fuel, but counts duty only, without VAT.",
     ],
@@ -199,7 +200,7 @@ export const POLICY_DETAILS = [
     writtenFor: "VAT on domestic electricity is 0% instead of 5% from 1 October 2026 to 30 June 2027. It applies in Great Britain from October 2026 and across the UK from April 2027. It covers electricity only, not gas. Each year counts its share of a year's electricity use: about 57% in 2026-27 (October to March) and 22% in 2027-28 (April to June).",
     summary: "Charges no VAT on household electricity bills, instead of 5%.",
     points: [
-      { label: "Northern Ireland", text: "Expected from April 2027; HMRC's VAT notice keeps 5% there." },
+      { label: "Northern Ireland", text: "Expected from April 2027; HMRC's VAT notice still keeps 5% there." },
       { label: "Electricity only", text: "Gas is not covered." },
     ],
     details: [
@@ -460,7 +461,7 @@ export const POLICY_DETAILS = [
     points: [
       { label: "On top of", text: "The rises Budget 2025 legislated." },
       { label: "Scotland", text: "Scottish rates apply to property income, so they don't change." },
-      { label: "Scottish landlords", text: "Finance cost relief rises to 24%: slightly less tax." },
+      { label: "Scottish landlords", text: "Finance cost relief rises to 24%, so slightly less tax." },
     ],
     details: [
       "Adds 2 points to each property income rate from 2027-28: 24%, 44% and 49% at basic, higher and additional.",
@@ -515,9 +516,9 @@ export const POLICY_DETAILS = [
     name: "Household Energy Payment",
     description: "Pay £100 to households in council tax bands A to D in England this winter",
     writtenFor: "A one-off £100 payment from January 2027 to each household in England in property valuation bands A to D (the lowest four of England's eight), up to 20 million households, paid into bank accounts and counted as household income in 2026-27. Scotland, Wales and Northern Ireland receive a share of the funding instead, which is not modelled.",
-    summary: "A one-off £100 payment to each household it reaches.",
+    summary: "Pays £100 once into each eligible household's bank account.",
     points: [
-      { label: "Paid", text: "Into bank accounts; counted as income in 2026-27." },
+      { label: "Counted as", text: "Household income in 2026-27." },
       { label: "Elsewhere", text: "Scotland, Wales and Northern Ireland get a share of the funding." },
     ],
     details: [
