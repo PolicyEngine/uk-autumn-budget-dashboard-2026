@@ -15,6 +15,7 @@ import { AGE_BANDS, AGE_BAND_SOURCE, MIN_SAMPLE_SIZE } from "../utils/ageImpact"
 import { EARLY_YEAR, LAST_DISPLAY_YEAR } from "../utils/displayYears";
 import { fiscalYearTick } from "../utils/chartTheme";
 import { useMeasureCatalogue } from "../utils/measureCatalogue";
+import { CALCULATOR_ONLY_MEASURES } from "../utils/calculatorOnlyMeasures";
 import { OPEN_VIEW_EVENT } from "../utils/methodLink";
 import { EXPLAINERS, RESEARCH_URL } from "../utils/explainers";
 import { AnchorLink, ExternalLink, ReasonList, SourceLink, Tag, Topic } from "./methodology/MethodUi";
@@ -199,6 +200,15 @@ function useRevealLinkedAnchor() {
 function MethodologyTab({ onShowTab }) {
   const catalogue = useMeasureCatalogue();
   const UNAVAILABLE = unavailableMeasures(catalogue);
+  // Every published measure, then those the calculator alone adds
+  const calculatorPolicies = [
+    ...(catalogue.measures ?? []).map((measure) => ({ id: measure.id, name: measure.name })),
+    ...Object.values(CALCULATOR_ONLY_MEASURES).map((measure) => ({
+      id: measure.id,
+      name: measure.name,
+      note: "calculator only, held back from the national results",
+    })),
+  ];
   useRevealLinkedAnchor();
 
   return (
@@ -783,6 +793,20 @@ function MethodologyTab({ onShowTab }) {
             </span>
           }
         >
+          <Topic
+            id={METHOD_ANCHORS.householdPolicies}
+            title="Policies in the calculator"
+            preview={`${calculatorPolicies.length} policies`}
+          >
+            <ul className="method-list">
+              {calculatorPolicies.map((policy) => (
+                <li key={policy.id}>
+                  {policy.name}
+                  {policy.note && <> ({policy.note})</>}
+                </li>
+              ))}
+            </ul>
+          </Topic>
           <Topic
             id={METHOD_ANCHORS.householdCalc}
             title="How the household calculation works"

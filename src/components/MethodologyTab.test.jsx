@@ -109,8 +109,21 @@ describe("MethodologyTab", () => {
     expect(link).toHaveAttribute("href", "?tab=policies");
     fireEvent.click(link);
     expect(onShowTab).toHaveBeenLastCalledWith("policies");
-    for (const measure of catalogue.displayable) expect(container).not.toHaveTextContent(measure.name);
+    // The one exception: the calculator's own list of the policies it runs
+    const rest = container.cloneNode(true);
+    rest.querySelector("#method-household-policies")?.remove();
+    for (const measure of catalogue.displayable) expect(rest).not.toHaveTextContent(measure.name);
     expect(within(model).queryByRole("button", { name: /See the effect/ })).toBeNull();
+  });
+
+  it("lists every policy the household calculator runs, the calculator-only ones marked", () => {
+    const { container } = renderTab();
+    const topic = container.querySelector("#method-household-policies");
+    expect(topic).not.toBeNull();
+    const items = [...topic.querySelectorAll("li")].map((item) => item.textContent);
+    expect(items).toHaveLength(catalogue.measures.length + 1);
+    for (const measure of catalogue.measures) expect(items.some((item) => item.startsWith(measure.name))).toBe(true);
+    expect(items.at(-1)).toMatch(/^Savings income tax up \(calculator only/);
   });
 
   it("lists the unavailable measures only when there are any", () => {
