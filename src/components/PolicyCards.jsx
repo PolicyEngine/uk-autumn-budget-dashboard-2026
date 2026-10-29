@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { isValidElement, useState } from "react";
 import { ArrowRightLeft, CalendarCheck, CalendarX, ChartColumn, CircleSlash, ExternalLink, Flag, FlaskConical, Lightbulb, Users } from "lucide-react";
 import "./MeasureRowLabel.css";
 import "./PolicyCards.css";
@@ -310,7 +310,9 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
   const showModelling = hasInfo(modelling);
   // The measure's own visual (policies/PolicyVisual.jsx), from the file's
   // entry as published: in What changes, or as its example's body
-  const figure = bare ? null : policyVisual(policy, given ?? null);
+  // A not-modelled card brings its own drawn visual (policies/UnmodelledVisual.jsx)
+  const drawn = isValidElement(policy.visual) ? policy.visual : null;
+  const figure = bare || drawn ? null : policyVisual(policy, given ?? null);
   const place = figure ? policy.visual.place : null;
   const example = place === "change" && policy.visual.replacesExample ? null : policy.example;
   return (
@@ -381,9 +383,11 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
       </div>
       )}
 
-      {(parameters || example || policy.changesText) && (
+      {(parameters || drawn || example || policy.changesText) && (
         <div className="policy-card-spec">
-          {parameters ? (
+          {/* A card's own picture of what changes, where it brings one
+              (the Budget policies we do not model) */}
+          {drawn ?? (parameters ? (
             <PolicyChange
               name={policy.label ?? policy.name}
               entry={parameters}
@@ -404,7 +408,7 @@ export function PolicyCard({ policy, onShowEffect, parameters: given }) {
                 <p className="pchg-lead">{policy.changesText}</p>
               </section>
             )
-          )}
+          ))}
           {example && (
             <section className="policy-card-example" aria-label={`${example.title}: ${policy.label ?? policy.name}`}>
               <p className="policy-card-example-title">
