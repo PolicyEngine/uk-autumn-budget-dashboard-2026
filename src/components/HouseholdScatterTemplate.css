@@ -167,6 +167,14 @@
   color: var(--pe-gray-700);
 }
 
+.household-scatter-empty .household-scatter-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .household-scatter-empty .household-scatter-empty-detail {
   max-width: 60ch;
   margin: 6px auto 0;

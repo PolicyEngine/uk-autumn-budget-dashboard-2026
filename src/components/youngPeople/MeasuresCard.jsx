@@ -7,7 +7,7 @@ import ChartDownloadMenu from "../ChartDownloadMenu";
 import UnpublishedPlot from "../UnpublishedPlot";
 import NoBreakYear from "../NoBreakYear";
 import Note from "../Note";
-import { fiscalYearTick, CHART_COLOURS, fitTicks, magnitudeColours, noHouseholdChange } from "../../utils/chartTheme";
+import { fiscalYearTick, CHART_COLOURS, fitTicks, magnitudeColours, emptyMeasuresNote } from "../../utils/chartTheme";
 import useElementWidth from "../../hooks/useElementWidth";
 import ControlBar from "../ControlBar";
 import { AGE_BANDS, ALL_BAND, YOUNG_BAND, isPublished } from "../../utils/ageImpact";
@@ -311,9 +311,7 @@ function MeasuresCard({ rows, policies, selectedPolicies, selectedYear, narrow, 
           />
         ) : (
           <div className="plot-empty" style={{ minHeight: height }} role="status">
-            <p>{noEffect.length === selectedPolicies.length && selectedPolicies.length > 0
-              ? noHouseholdChange(yearLabel)
-              : `Results are unavailable for the selected policies in ${yearLabel}.`}</p>
+            <p>{emptyMeasuresNote({ noEffect, selectedPolicies, yearLabel })}</p>
           </div>
         )}
       </div>

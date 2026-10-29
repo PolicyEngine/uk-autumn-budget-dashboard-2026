@@ -1198,6 +1198,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
                 selectedPolicies={selectedPolicies}
                 policies={POLICIES}
                 selectedYear={distributionalYear}
+                onPoliciesSet={handlePoliciesSet}
                 descriptionLink={
                   <>
                     Where would yours be?{" "}
