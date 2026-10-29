@@ -22,6 +22,7 @@ from uk_budget_data import (
     model_limits,
     sign_off,
 )
+from uk_budget_data.calculators import OFFICIAL_BASES
 from uk_budget_data.example_households import EXAMPLE_HOUSEHOLDS
 from uk_budget_data.publication import manifest as m
 from uk_budget_data.publication.artifacts import RECEIPT_FILE
@@ -135,6 +136,12 @@ def contract() -> dict:
         ],
         "deciles": _in_decile_order(DECILES),
         "winners_groups": _in_decile_order(WINNERS_GROUPS),
+        # Every engine variable an official_basis table can sum (#297), with
+        # no measure named: the page has words for each, and a table's own
+        # ``variables`` column says which its figure counts
+        "official_basis_variables": sorted(
+            {name for names in OFFICIAL_BASES.values() for name in names}
+        ),
         "tables": {
             name: {
                 "file": spec.filename,

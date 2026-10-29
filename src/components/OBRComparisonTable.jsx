@@ -11,7 +11,8 @@ import NoBreakYear from "./NoBreakYear";
 import Tip from "./Tip";
 import { DEFAULT_DISPLAY_YEAR } from "../utils/displayYears";
 import UnavailableNotice from "./publication/UnavailableNotice";
-import OBRDumbbellChart, { dumbbellLegendItems, formatBn, formatBn as formatFigure, formatDifference, obrValue, rowDecimals, shownDifference } from "./OBRDumbbellChart";
+import OBRDumbbellChart, { drawsBasis, dumbbellLegendItems, formatBn, formatBn as formatFigure, formatDifference, obrValue, rowDecimals, shownDifference } from "./OBRDumbbellChart";
+import { BASIS_LABEL, basisVariables } from "../utils/officialBasis";
 import { CHART_LOGO } from "../utils/chartLogo";
 import { CHART_COLOURS } from "../utils/chartTheme";
 import { buildChartCsv, fiscalYear } from "../utils/chartCsv";
@@ -64,7 +65,9 @@ function useMeasureWindows() {
  * (HM Treasury's costings, certified by the OBR, as the reconciliation gate
  * compares them) once it names this manifest's Budget and only its measures
  * (utils/publication/officialCostings.js), PolicyEngine's from the
- * catalogue's verified budgetary tables. Null while loading;
+ * catalogue's verified budgetary tables, with each measure's figure on the
+ * official costing's basis from its verified official_basis table where it
+ * has one (#297). Null while loading;
  * `{ pending: true }` while the file is not published; `{ unavailable: true }`
  * when it is published but does not check.
  */
@@ -91,6 +94,16 @@ export function useObrComparisonData(enabled = true) {
             obr_behavioural: null,
           };
           obrData[key].policyengine_value = numeric(row.value);
+        }
+        // Beside a published figure only: the same run, on the official
+        // costing's basis
+        for (const row of Object.values(catalogue.tablesByKey ?? {}).flatMap((tables) => tables.official_basis ?? [])) {
+          const key = `${row.reform_id}_${row.year}`;
+          if (obrData[key] && "policyengine_value" in obrData[key]) {
+            obrData[key].policyengine_official_basis = numeric(row.value);
+            // What the figure counts, as the table names it
+            obrData[key].policyengine_official_basis_variables = basisVariables(row.variables);
+          }
         }
         const data = Object.values(obrData);
         if (live) setLoaded({
@@ -119,15 +132,18 @@ export function hasObrFigures(rows, selectedPolicies) {
 /**
  * One row per selected measure for a year, largest official costing first
  * (by size, either sign), measures with no official figure last:
- * { id, name, pe, obr, obrStatic, obrBehavioural, notComparable, status },
- * null for a missing figure; `notComparable` is the reviewer's reason where
- * the official costing for the year is not comparable with ours. `name` is
- * the measure's short name, as elsewhere on the page. `status` ("Starts
- * 2030-31", "Ended 2029-30", "2026-27 only") is set where the measure is
- * not in force that year (its scored years in `windows`, from
- * policy_parameters.json: measureWindows) and neither side has an effect,
- * so the row says why in place of "£0, same"; a measure in force with a
- * genuine zero keeps its £0.
+ * { id, name, pe, obr, obrStatic, obrBehavioural, peOfficial,
+ * peOfficialVariables, notComparable, status }, null for a missing figure;
+ * `peOfficial` is ours on the official costing's basis, where the measure
+ * has one (#297), and `peOfficialVariables` what it counts, as its table
+ * names them ([] for none); `notComparable` is the
+ * reviewer's reason where the official costing for the year is not
+ * comparable with ours. `name` is the measure's short name, as elsewhere
+ * on the page. `status` ("Starts 2030-31", "Ended 2029-30", "2026-27
+ * only") is set where the measure is not in force that year (its scored
+ * years in `windows`, from policy_parameters.json: measureWindows) and
+ * neither side has an effect, so the row says why in place of "£0, same";
+ * a measure in force with a genuine zero keeps its £0.
  */
 export function comparisonRows(sourceRows, selectedPolicies, year, showBehavioural, catalogue, windows = {}) {
   const byMeasure = new Map();
@@ -146,6 +162,8 @@ export function comparisonRows(sourceRows, selectedPolicies, year, showBehaviour
       // The catalogue's measure, for its row label (icon, colour, category)
       measure: catalogue.byId?.get(id) ?? { id, name: row.reform_name },
       pe: isValue(row.policyengine_value) ? row.policyengine_value : null,
+      peOfficial: isValue(row.policyengine_official_basis) ? row.policyengine_official_basis : null,
+      peOfficialVariables: Array.isArray(row.policyengine_official_basis_variables) ? row.policyengine_official_basis_variables : [],
       obr: obrValue(yearData, showBehavioural),
       obrStatic: isValue(row.obr_static) ? row.obr_static : null,
       obrBehavioural: isValue(row.obr_behavioural) ? row.obr_behavioural : null,
@@ -153,7 +171,7 @@ export function comparisonRows(sourceRows, selectedPolicies, year, showBehaviour
     };
   }).map((row) => {
     const none = (value) => value === null || value === 0;
-    const quiet = none(row.pe) && none(row.obrStatic) && none(row.obrBehavioural);
+    const quiet = none(row.pe) && none(row.peOfficial) && none(row.obrStatic) && none(row.obrBehavioural);
     return { ...row, status: quiet ? outOfForceText(windows[row.id], Number(year), fiscalYear) : null };
   });
   const size = (row) => (row.obr === null ? -1 : Math.abs(row.obr));
@@ -339,6 +357,9 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
     : `${yearLabel} is not in the official costings${lastOfficial !== null && lastOfficial < selectedYear ? `, which run to ${fiscalYear(lastOfficial)}` : ""}.`;
 
   const title = `How our estimates compare with the official costings, ${yearLabel}`;
+  // Ours on the official costing's basis: a column in the table and the
+  // CSV, and a third mark, only where a row shown has one (#297)
+  const withBasis = drawsBasis(rows);
   const sentence = yearCovered ? comparisonSentence(rows, obrKind) : notCovered;
 
   // One CSV for both views: the table's columns
@@ -350,6 +371,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
       columns: [
         { key: "name", label: "Policy" },
         { key: "pe", label: "Ours, static (£bn)", decimals: 4 },
+        ...(withBasis ? [{ key: "peOfficial", label: `${BASIS_LABEL}, static (£bn)`, decimals: 4 }] : []),
         { key: "obrStatic", label: "Official, static (£bn)", decimals: 4 },
         { key: "obrBehavioural", label: "Official, post-behavioural (£bn)", decimals: 4 },
         { key: "difference", label: `Difference, ours minus official ${obrKind} (£bn)`, decimals: 4 },
@@ -359,6 +381,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
       rows: rows.map((row) => ({
         name: row.name,
         pe: row.pe ?? undefined,
+        peOfficial: row.pe === null ? undefined : row.peOfficial ?? undefined,
         obrStatic: row.obrStatic ?? undefined,
         obrBehavioural: row.obrBehavioural ?? undefined,
         difference: row.pe !== null && row.obr !== null ? row.pe - row.obr : undefined,
@@ -376,7 +399,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
     exportOptions: {
       title,
       description: `Each row shows a policy's budgetary impact in ${yearLabel}, in £m under £1bn and £bn above: our static estimate and the official ${obrKind} costing, with the difference (ours minus official) at the right. Positive values raise revenue or reduce spending.`,
-      legendItems: dumbbellLegendItems(obrKind),
+      legendItems: dumbbellLegendItems(obrKind, drawsBasis(rows, showTable ? "bn" : scale)),
       logo: CHART_LOGO,
       svgSelector: showTable ? undefined : "svg",
       reservedLegendHeight: 0,
@@ -422,12 +445,16 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
   // has no figure, only where one is missing
   const officialMissing = rows.some((row) => row.notComparable === null && (row.obrStatic === null || row.obrBehavioural === null));
   const peMissing = rows.some((row) => row.pe === null);
+  // Most policies have no figure on the official costing's basis: their
+  // "—" in that column is said, never read as a missing estimate
+  const basisMissing = withBasis && rows.some((row) => !row.status && row.pe !== null && row.peOfficial === null);
   // A row with no figure on the chosen basis is differenced on the other
   const otherBasis = rows.some((row) => row.pe !== null && row.obr !== null && (shownBehavioural ? row.obrBehavioural === null : row.obrStatic === null));
   const tableNote = [
     `Difference: ours minus the official ${obrKind} costing${otherBasis ? ` (the ${shownBehavioural ? "static" : "post-behavioural"} one where the official costings give only that)` : ""}.`,
     officialMissing && `— where the official costings give no figure on that basis for the policy in ${yearLabel}.`,
     peMissing && `— under Ours where we publish no estimate for ${yearLabel}.`,
+    basisMissing && `— under “${BASIS_LABEL}” where we give no such figure for the policy.`,
     ...notComparableRows.map(notComparableNote),
   ].filter(Boolean);
 
@@ -486,6 +513,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
                 <tr>
                   <th scope="col">Policy</th>
                   <th scope="col" className="num">Ours</th>
+                  {withBasis && <th scope="col" className="num">{BASIS_LABEL}</th>}
                   <th scope="col" className="num">Official static</th>
                   <th scope="col" className="num">Official post-behavioural</th>
                   <th scope="col" className="num">Difference</th>
@@ -501,7 +529,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
                     return (
                       <tr key={row.id} className={`row-band${index % 2 === 0 ? " is-banded" : ""}${row.id === selectedRow?.id ? " is-selected" : ""}`} onClick={() => setPicked(row.id)}>
                         <td className="policy-name-cell"><MeasureRowLabel measure={row.measure} name={row.name} /></td>
-                        <td className="value-cell status-cell is-zero" colSpan={4}>{row.status}</td>
+                        <td className="value-cell status-cell is-zero" colSpan={withBasis ? 5 : 4}>{row.status}</td>
                       </tr>
                     );
                   }
@@ -510,6 +538,7 @@ function OBRComparisonTable({ selectedPolicies, selectedYear = DEFAULT_DISPLAY_Y
                     <tr key={row.id} className={`row-band${index % 2 === 0 ? " is-banded" : ""}${row.id === selectedRow?.id ? " is-selected" : ""}`} onClick={() => setPicked(row.id)}>
                       <td className="policy-name-cell"><MeasureRowLabel measure={row.measure} name={row.name} /></td>
                       {cell(row.pe, decimals, "pe")}
+                      {withBasis && cell(row.pe === null ? null : row.peOfficial, decimals, "pe basis")}
                       {cell(row.obrStatic, decimals, "obr", row.notComparable)}
                       {cell(row.obrBehavioural, decimals, "obr", row.notComparable)}
                       {/* No effect on either side: the zero difference muted too */}

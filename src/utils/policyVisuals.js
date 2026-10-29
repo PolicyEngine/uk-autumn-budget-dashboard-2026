@@ -119,30 +119,25 @@ export function fuelDutyView(entry, visual) {
 
 // --- Carer's Allowance -----------------------------------------------------
 
-const LIMIT = /earnings limit is[^£]*£([\d,]+) a week in (\d{4}-\d{2})/;
-const RUNS_OUT = /runs out at £([\d,]+) a week in (\d{4}-\d{2})/;
-const number = (text) => Number(text.replace(/,/g, ""));
-
 /**
  * The allowance against weekly earnings in the first year of the taper:
  * the earnings limit and where the tapered allowance runs out (the row's
- * card_note, which the generator writes from the model's parameters), and
+ * `figures`, which the generator writes from the model's parameters), and
  * the full weekly rate (the row gives the allowance at £1 over the limit,
  * the rate less £1). Null unless the three agree: limit + rate is where it
- * runs out, to the pound the note rounds to.
+ * runs out, to the pound the figures round to.
  */
 export function carersTaperView(entry) {
   const row = mainRow(entry);
-  const note = row?.card_note;
-  if (!row || !note) return null;
-  const limit = LIMIT.exec(note);
-  const runs = RUNS_OUT.exec(note);
-  if (!limit || !runs || limit[2] !== runs[2]) return null;
-  const year = limit[2];
+  const limits = row?.figures?.earnings_limit;
+  const ends = row?.figures?.runs_out;
+  if (!row || !limits || !ends) return null;
+  const year = Object.keys(limits).sort()[0];
   const point = row.points.find((p) => p.label === year);
   if (!point || !(point.after > 0) || point.before !== 0) return null;
+  if (!Number.isFinite(limits[year]) || !Number.isFinite(ends[year])) return null;
   const rate = Math.round((point.after + 1) * 100) / 100;
-  const view = { year, limit: number(limit[1]), runsOut: number(runs[1]), rate, note };
+  const view = { year, limit: limits[year], runsOut: ends[year], rate, note: row.card_note ?? null };
   if (Math.abs(view.limit + view.rate - view.runsOut) > 1) return null;
   return view;
 }
@@ -186,6 +181,32 @@ export function tradingAllowanceView(entry, visual) {
   const point = row?.points?.find(differs);
   if (!point || !(point.after > point.before) || !visual?.example) return null;
   return { before: point.before, after: point.after, year: point.label, example: visual.example };
+}
+
+// --- Bus fare cap --------------------------------------------------------------
+
+/**
+ * The single fare cap before and after (the row's one point), and the
+ * card's example (`visual.example`): a household's bus fare spending and
+ * what it gets in each fiscal year. The saving is the share in the row's
+ * note ("10.0% of spending at £3 fares") for the year's capped days
+ * (`visual.capped`), grossed up from spending at £2:
+ * spending × step / (1 − step), step = share × days. The example's
+ * figures must be that, rounded to the pound.
+ */
+export function busFareCapView(entry, visual) {
+  const row = mainRow(entry);
+  const point = row?.points?.[0];
+  const share = /([0-9.]+)% of spending at £3 fares/.exec(row?.note ?? "")?.[1];
+  const example = visual?.example;
+  if (!point || !(point.before > point.after) || !share || !example || !visual?.capped) return null;
+  const years = Object.keys(example.saved);
+  const agrees = years.every((year) => {
+    const step = (Number(share) / 100) * visual.capped[year];
+    return Math.round((example.spending * step) / (1 - step)) === example.saved[year];
+  });
+  if (!years.length || !agrees) return null;
+  return { before: point.before, after: point.after, window: point.label, share: Number(share) / 100, example };
 }
 
 // --- Zero VAT on electricity ------------------------------------------------

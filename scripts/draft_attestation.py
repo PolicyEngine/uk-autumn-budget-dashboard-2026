@@ -47,6 +47,16 @@ REASONS = {
         "outputs were compared with the hand-computed households in "
         "tests/test_reforms.py."
     ),
+    "bus_fare_cap_2027": (
+        "Checked budget_measures.bus_fare_cap_2027: in 2026-27 and "
+        "2027-28 it adds to epg_subsidy, for households in England outside "
+        "London, bus_fare_spending x step / (1 - step), with step = 0.10 "
+        "times the share of the fiscal year capped (95/365, 270/366): the "
+        "Treasury's costing (Table 6.1) shared out by bus fare spending. "
+        "It reads no gov.dft.bus parameter; every other household and year "
+        "keeps the native amount. The receipt's outputs were compared with "
+        "that formula in tests/test_bus_fare_cap_2027.py."
+    ),
     "carers_allowance_earnings_taper": (
         "Checked budget_measures.carers_allowance_earnings_taper: from "
         "2030-31 it replaces carers_allowance_pre_overlap for carers whose "

@@ -58,6 +58,7 @@ CANDIDATES = (
     "carers_allowance_earnings_taper",
     "household_energy_payment_2026",
     "trading_allowance_raise",
+    "bus_fare_cap_2027",
 )
 # Individual candidates that are not components of the combined package.
 # Registered but held back from the package: its yield is about 60% of
@@ -133,20 +134,21 @@ def test_the_registry_is_the_combined_package_then_the_ten_candidates():
     )
 
 
-def test_the_package_is_the_seven_announced_measures():
+def test_the_package_is_the_eight_announced_measures():
     from uk_budget_data.geography import manifest_key
     from uk_budget_data.publication.combine import combined_key
 
     # Seven on Budget day: the announced measures with savings rates held
-    # back (Table 6.1 row 62); property rates are row 61
-    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 7
-    assert len(reforms._MEASURE_FACTORIES) == 8
+    # back (Table 6.1 row 62); property rates are row 61. Eight from
+    # 29 October 2026 with the £2 bus fare cap.
+    assert len(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS) == 8
+    assert len(reforms._MEASURE_FACTORIES) == 9
     key = combined_key(sorted(AUTUMN_BUDGET_2026_COMBINED_COMPONENTS))
-    assert key == "combined--f91fe847275730cb"
+    assert key == "combined--7baf4e89377bcc9c"
     # The area run's package alias stands for that key
     assert manifest_key(AUTUMN_BUDGET_2026_COMBINED_ID) == key
     description = get_reform(AUTUMN_BUDGET_2026_COMBINED_ID).description
-    assert description.startswith("All seven announced measures")
+    assert description.startswith("All eight announced measures")
 
 
 def test_the_withdrawn_measures_are_not_registered():
@@ -174,6 +176,7 @@ ANNOUNCED = (
     "property_income_rates_up",
     "savings_income_rates_up",
     "trading_allowance_raise",
+    "bus_fare_cap_2027",
 )
 
 
@@ -1098,6 +1101,19 @@ FIRST_YEARS = {
         "household_net_income",
         {"employment_income": 20_000},
         {"country": "ENGLAND", "council_tax_band": "B"},
+    ),
+    # 300 bus trips a year in the North West: 10.0% of its bus fare
+    # spending, grossed up, for 1 January to 5 April 2027
+    "bus_fare_cap_2027": (
+        2026,
+        "household_net_income",
+        {
+            "employment_income": 20_000,
+            "other_local_bus_trips": 300,
+            "bus_in_london_trips": 0,
+            "bus_pass_eligible": False,
+        },
+        {"region": "NORTH_WEST"},
     ),
 }
 

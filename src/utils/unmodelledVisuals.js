@@ -15,16 +15,6 @@
  */
 
 export const UNMODELLED_VISUALS = {
-  // "capped at £2, down from £3", from 1 Jan 2027 to Dec 2027
-  "bus-fare-cap": {
-    kind: "columns",
-    caption: "Single bus fare cap",
-    columns: [
-      { label: "Until 1 Jan 2027", value: 3, text: "£3" },
-      { label: "1 Jan to Dec 2027", value: 2, text: "£2", tone: "gain" },
-    ],
-    alt: "Single bus fare cap: £3 until 1 January 2027, then £2 from 1 January to December 2027.",
-  },
   // "rise by 2 points across the UK, to 24%, 44% and 49%"
   "savings-income-tax": {
     kind: "bars",

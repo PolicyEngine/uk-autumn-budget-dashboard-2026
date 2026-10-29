@@ -125,21 +125,26 @@ describe("Where you sit, for the published package (issue 228)", () => {
     expect(alt).not.toMatch(/2\.00%/);
   });
 
-  it("leaves a withheld tenth unbarred and labels the withheld UK average", async () => {
+  it("leaves a withheld tenth an empty slot, with a plain tick and no note, and the withheld UK average blank", async () => {
     served = { "income_distribution.csv": distribution(KEY), "income_mobility.csv": "" };
     const { container } = await renderChart({ withheld: true });
     await screen.findByText(/Where your income sits, \d/);
-    const reason = "Not published, to protect survey respondents' confidentiality";
     const alt = container.querySelector('[role="img"][aria-label^="Average change by tenth"]').getAttribute("aria-label");
-    expect(alt).toContain(`1: ${reason}`);
+    // The withheld tenth is left out of the description, never given a value
+    expect(alt).not.toMatch(/(^|[:,] )1: /);
     expect(alt).toContain("2: +0.50%");
-    const firstTick = [...container.querySelectorAll(".position-gains text")].find((text) => text.textContent.startsWith("1 *"));
+    expect(container.textContent).not.toMatch(/Not published|confidential|survey respondents/i);
+    const firstTick = [...container.querySelectorAll(".position-gains text")].find((text) => text.textContent === "1");
     expect(firstTick).toBeTruthy();
+    expect(firstTick.querySelector("title")).toBeNull();
     expect(firstTick.parentElement.querySelectorAll("rect")).toHaveLength(0);
-    expect(firstTick.querySelector("title")).toHaveTextContent(reason);
+    expect([...container.querySelectorAll(".position-gains text")].some((text) => text.textContent.includes("*"))).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: /Options: By income tenth/ }));
     fireEvent.click(screen.getByRole("radio", { name: "You, your tenth and the UK average" }));
-    expect(screen.getByText("Average UK household").closest(".position-compare-row")).toHaveTextContent(reason);
+    const ukRow = screen.getByText("Average UK household").closest(".position-compare-row");
+    expect(ukRow.querySelector(".position-compare-value strong").textContent).toBe("");
+    expect(ukRow.querySelector(".position-compare-bar")).toBeNull();
+    expect(ukRow.textContent).not.toMatch(/Not published|confidential/i);
   });
 
   it("keys the Spread view under the plot: your tenth's band, the curve, you and the median lines", async () => {
