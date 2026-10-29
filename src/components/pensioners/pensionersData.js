@@ -1,6 +1,6 @@
 /**
  * Data for the Pensioners sub-tab: people at or over State Pension age,
- * from the single years of age in public/data/age_impact.csv.
+ * from the single years of age in each artifact's age_impact.csv.
  *
  * State Pension age rises from 66 to 67 between April 2026 and March 2028
  * (Pensions Act 2014, s.26). The file has whole years of age, so a

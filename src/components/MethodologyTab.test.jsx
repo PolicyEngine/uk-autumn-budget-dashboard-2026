@@ -228,14 +228,21 @@ describe("MethodologyTab", () => {
     expect(card.textContent).not.toMatch(/\d{1,3}(,\d{3})+/);
   });
 
-  it("says under Data, not the household scatter, that public files are signed off, and that a pending file can publish", () => {
+  it("says under Data, not the household scatter, what the checks on public files do, with no named reviewer while sign-off is off", () => {
     const { container } = renderTab();
     const data = container.querySelector(`#${METHOD_SECTIONS.data}`);
     const card = within(data).getByRole("button", { name: "Published files" }).closest(".method-topic");
-    expect(card).toHaveTextContent("Each public data file is listed with a named reviewer");
-    expect(card).toHaveTextContent("can be published as pending, for at most 14 days");
+    expect(card).toHaveTextContent("Automated checks run on every public data file before it is published");
+    expect(card).toHaveTextContent("no named reviewer signs each file off");
+    expect(card).toHaveTextContent("household, benefit unit or person ids or weights");
+    expect(card).toHaveTextContent("must match the digest its run's receipt records");
+    expect(card).toHaveTextContent("under the floor of survey households");
+    // #333: sign-off is off (sign_off.REQUIRED, #308), so no pending window
+    expect(card).not.toHaveTextContent("pending");
+    expect(card).not.toHaveTextContent("listed with a named reviewer");
     const scatter = document.getElementById(METHOD_ANCHORS.scatter);
     expect(scatter).not.toHaveTextContent("Sign-off");
+    expect(scatter).not.toHaveTextContent("Automated checks run");
     expect(container).not.toHaveTextContent("signs off every public data file before it is published");
   });
 
