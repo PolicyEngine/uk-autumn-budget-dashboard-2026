@@ -271,7 +271,7 @@ export const UNMODELLED_MEASURES = [
       "Earnings up to £2,500 above where an award stops, such as a bonus, are not carried into a new claim.",
     costings: [{ row: 8, values: [0, -140, 0, 0, 0, 0] }],
     notModelled:
-      "The model works out Universal Credit over a whole year rather than month by month, so it has no surplus earnings rule.",
+      "The model works out Universal Credit over a whole year, with no surplus earnings rule. The Household calculator applies the rule month by month, from monthly pay.",
     sources: [budget("paragraph 6.11"), obr("Box 5.1")],
   },
   {
