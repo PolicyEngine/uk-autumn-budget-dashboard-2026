@@ -1,0 +1,3722 @@
+{
+ "manifest_revision": 5,
+ "manifest_sha256": "6a03977c906ffd257cfcf2fff23d70fead6f9a85c303ecaab466dc5af92ef0ec",
+ "year": 2027,
+ "provisional": true,
+ "figures": [
+  {
+   "section": "revenue",
+   "text": "−£1.99bn",
+   "value": -1.994285898151088,
+   "format": "bn2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2026
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue",
+   "text": "−£2.88bn",
+   "value": -2.881968892550134,
+   "format": "bn2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue",
+   "text": "−£0.62bn",
+   "value": -0.6159311093266439,
+   "format": "bn2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2028
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue",
+   "text": "−£0.68bn",
+   "value": -0.6848254448800236,
+   "format": "bn2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2029
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue",
+   "text": "−£0.76bn",
+   "value": -0.7604536064663695,
+   "format": "bn2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2030
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue",
+   "text": "£3.27bn",
+   "value": 3.2735627814246078,
+   "format": "bn2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2031
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue",
+   "text": "£0.00bn",
+   "value": 0.0,
+   "format": "bn2",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue",
+   "text": "−£1.19bn",
+   "value": -1.187783454697637,
+   "format": "bn2",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue",
+   "text": "−£1.38bn",
+   "value": -1.3805990774989416,
+   "format": "bn2",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue",
+   "text": "−£0.06bn",
+   "value": -0.06497117184095579,
+   "format": "bn2",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue",
+   "text": "−£0.25bn",
+   "value": -0.24861428345172984,
+   "format": "bn2",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue",
+   "text": "£0.00bn",
+   "value": 0.0,
+   "format": "bn2",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2026
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2028
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2029
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2030
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "4.16",
+   "value": 4.157274821677502,
+   "format": "bn2_plain",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2031
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "4.16",
+   "value": 4.157274821677502,
+   "format": "bn2_plain",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": [
+     2026,
+     2027,
+     2028,
+     2029,
+     2030,
+     2031
+    ]
+   },
+   "transform": "sum"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.28",
+   "value": -0.28254192559381475,
+   "format": "bn2_plain",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2026
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−1.19",
+   "value": -1.187783454697637,
+   "format": "bn2_plain",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.50",
+   "value": -0.49517165152285597,
+   "format": "bn2_plain",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2028
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.49",
+   "value": -0.49211349523096415,
+   "format": "bn2_plain",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2029
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.48",
+   "value": -0.4786072504102358,
+   "format": "bn2_plain",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2030
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.49",
+   "value": -0.490776579189537,
+   "format": "bn2_plain",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2031
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−3.43",
+   "value": -3.4269943566450447,
+   "format": "bn2_plain",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": [
+     2026,
+     2027,
+     2028,
+     2029,
+     2030,
+     2031
+    ]
+   },
+   "transform": "sum"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.69",
+   "value": -0.6858718251353957,
+   "format": "bn2_plain",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2026
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−1.38",
+   "value": -1.3805990774989416,
+   "format": "bn2_plain",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2028
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2029
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2030
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2031
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−2.07",
+   "value": -2.0664709026343373,
+   "format": "bn2_plain",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": [
+     2026,
+     2027,
+     2028,
+     2029,
+     2030,
+     2031
+    ]
+   },
+   "transform": "sum"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2026
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.06",
+   "value": -0.06497117184095579,
+   "format": "bn2_plain",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.12",
+   "value": -0.1207594549508923,
+   "format": "bn2_plain",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2028
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.19",
+   "value": -0.19271200229313176,
+   "format": "bn2_plain",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2029
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.28",
+   "value": -0.28184630760512164,
+   "format": "bn2_plain",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2030
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.31",
+   "value": -0.3129366676151599,
+   "format": "bn2_plain",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2031
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.97",
+   "value": -0.9732256043052614,
+   "format": "bn2_plain",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": [
+     2026,
+     2027,
+     2028,
+     2029,
+     2030,
+     2031
+    ]
+   },
+   "transform": "sum"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.51",
+   "value": -0.5067516077936846,
+   "format": "bn2_plain",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2026
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.25",
+   "value": -0.24861428345172984,
+   "format": "bn2_plain",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2028
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2029
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2030
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2031
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.76",
+   "value": -0.7553658912454144,
+   "format": "bn2_plain",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": [
+     2026,
+     2027,
+     2028,
+     2029,
+     2030,
+     2031
+    ]
+   },
+   "transform": "sum"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.52",
+   "value": -0.5191219913741401,
+   "format": "bn2_plain",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2026
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2028
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2029
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2030
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "0.00",
+   "value": 0.0,
+   "format": "bn2_plain",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2031
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.52",
+   "value": -0.5191219913741401,
+   "format": "bn2_plain",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": [
+     2026,
+     2027,
+     2028,
+     2029,
+     2030,
+     2031
+    ]
+   },
+   "transform": "sum"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−1.99",
+   "value": -1.994285898151088,
+   "format": "bn2_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2026
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−2.88",
+   "value": -2.881968892550134,
+   "format": "bn2_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.62",
+   "value": -0.6159311093266439,
+   "format": "bn2_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2028
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.68",
+   "value": -0.6848254448800236,
+   "format": "bn2_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2029
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−0.76",
+   "value": -0.7604536064663695,
+   "format": "bn2_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2030
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "3.27",
+   "value": 3.2735627814246078,
+   "format": "bn2_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2031
+   },
+   "transform": "value"
+  },
+  {
+   "section": "revenue-table",
+   "text": "−3.66",
+   "value": -3.663902169949651,
+   "format": "bn2_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": [
+     2026,
+     2027,
+     2028,
+     2029,
+     2030,
+     2031
+    ]
+   },
+   "transform": "sum"
+  },
+  {
+   "section": "deciles-years",
+   "text": "+£68",
+   "value": 68.31290062507419,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2026,
+    "decile": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-years",
+   "text": "+£98",
+   "value": 98.35594443202642,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-years",
+   "text": "+£21",
+   "value": 20.936661412203673,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2028,
+    "decile": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-years",
+   "text": "+£23",
+   "value": 23.176669863496496,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2029,
+    "decile": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-years",
+   "text": "+£26",
+   "value": 25.620819099382555,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2030,
+    "decile": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-years",
+   "text": "−£110",
+   "value": -109.81919685100779,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2031,
+    "decile": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+£74",
+   "value": 74.07852064631554,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "1"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+0.29%",
+   "value": 0.2920063471242443,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/distributional_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "1st"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+£81",
+   "value": 80.88761177602902,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "2"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+0.20%",
+   "value": 0.19983872880673273,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/distributional_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "2nd"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+£88",
+   "value": 88.0921010110585,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "3"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+0.19%",
+   "value": 0.19437584451572415,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/distributional_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "3rd"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+£87",
+   "value": 86.93772213696387,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "4"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+0.18%",
+   "value": 0.1771962087628301,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/distributional_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "4th"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+£98",
+   "value": 98.47910851467608,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "5"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+0.18%",
+   "value": 0.1773699905010121,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/distributional_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "5th"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+£97",
+   "value": 96.83510017516424,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "6"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+0.16%",
+   "value": 0.15703566951113176,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/distributional_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "6th"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+£103",
+   "value": 102.52097930866218,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "7"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+0.15%",
+   "value": 0.15048109069973808,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/distributional_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "7th"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+£112",
+   "value": 112.32330749258546,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "8"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+0.15%",
+   "value": 0.1525753519990136,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/distributional_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "8th"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+£123",
+   "value": 123.35005059085654,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "9"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+0.14%",
+   "value": 0.1403980525306773,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/distributional_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "9th"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+£126",
+   "value": 125.58846762836002,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "10"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles",
+   "text": "+0.08%",
+   "value": 0.076820875471528,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/distributional_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "10th"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027,
+    "decile": "1"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027,
+    "decile": "2"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027,
+    "decile": "3"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027,
+    "decile": "4"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027,
+    "decile": "5"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027,
+    "decile": "6"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027,
+    "decile": "7"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027,
+    "decile": "8"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027,
+    "decile": "9"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027,
+    "decile": "10"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£26",
+   "value": 26.070858616677906,
+   "format": "gbp",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027,
+    "decile": "1"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£29",
+   "value": 29.149267861838684,
+   "format": "gbp",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027,
+    "decile": "2"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£33",
+   "value": 32.96847039590165,
+   "format": "gbp",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027,
+    "decile": "3"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£34",
+   "value": 34.137306401891465,
+   "format": "gbp",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027,
+    "decile": "4"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£42",
+   "value": 41.64433739267695,
+   "format": "gbp",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027,
+    "decile": "5"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£41",
+   "value": 41.29735713788742,
+   "format": "gbp",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027,
+    "decile": "6"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£44",
+   "value": 43.581131148531604,
+   "format": "gbp",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027,
+    "decile": "7"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£53",
+   "value": 52.99719149872281,
+   "format": "gbp",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027,
+    "decile": "8"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£56",
+   "value": 55.88206854490612,
+   "format": "gbp",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027,
+    "decile": "9"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£51",
+   "value": 51.35367541957978,
+   "format": "gbp",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027,
+    "decile": "10"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£41",
+   "value": 41.31586504309543,
+   "format": "gbp",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027,
+    "decile": "1"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£42",
+   "value": 42.16661346471511,
+   "format": "gbp",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027,
+    "decile": "2"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£45",
+   "value": 45.22946227641801,
+   "format": "gbp",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027,
+    "decile": "3"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£42",
+   "value": 42.25498098071785,
+   "format": "gbp",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027,
+    "decile": "4"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£46",
+   "value": 46.23126493082224,
+   "format": "gbp",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027,
+    "decile": "5"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£45",
+   "value": 45.331879105465084,
+   "format": "gbp",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027,
+    "decile": "6"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£49",
+   "value": 48.55492810395848,
+   "format": "gbp",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027,
+    "decile": "7"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£48",
+   "value": 47.65569118009756,
+   "format": "gbp",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027,
+    "decile": "8"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£55",
+   "value": 55.45301805357198,
+   "format": "gbp",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027,
+    "decile": "9"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£58",
+   "value": 58.19175704443495,
+   "format": "gbp",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027,
+    "decile": "10"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£1",
+   "value": 1.218885436789745,
+   "format": "gbp",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027,
+    "decile": "1"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£3",
+   "value": 3.430157024270444,
+   "format": "gbp",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027,
+    "decile": "2"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£3",
+   "value": 2.9534683632050536,
+   "format": "gbp",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027,
+    "decile": "3"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£3",
+   "value": 3.3405179793073865,
+   "format": "gbp",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027,
+    "decile": "4"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£2",
+   "value": 1.8858399958945808,
+   "format": "gbp",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027,
+    "decile": "5"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£2",
+   "value": 1.5322337660562138,
+   "format": "gbp",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027,
+    "decile": "6"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£1",
+   "value": 1.266746852488782,
+   "format": "gbp",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027,
+    "decile": "7"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£1",
+   "value": 0.6194527377845775,
+   "format": "gbp",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027,
+    "decile": "8"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.3901957008231728,
+   "format": "gbp",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027,
+    "decile": "9"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£5",
+   "value": 5.369059064860121,
+   "format": "gbp",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027,
+    "decile": "10"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£5",
+   "value": 5.4728363414626475,
+   "format": "gbp",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027,
+    "decile": "1"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£6",
+   "value": 6.14148051229205,
+   "format": "gbp",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027,
+    "decile": "2"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£7",
+   "value": 6.940651488442527,
+   "format": "gbp",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027,
+    "decile": "3"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£7",
+   "value": 7.20507999794573,
+   "format": "gbp",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027,
+    "decile": "4"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£9",
+   "value": 8.717769715913985,
+   "format": "gbp",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027,
+    "decile": "5"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£9",
+   "value": 8.67362790487813,
+   "format": "gbp",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027,
+    "decile": "6"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£9",
+   "value": 9.117750252448857,
+   "format": "gbp",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027,
+    "decile": "7"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£11",
+   "value": 11.050621953504422,
+   "format": "gbp",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027,
+    "decile": "8"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£12",
+   "value": 11.624541767192785,
+   "format": "gbp",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027,
+    "decile": "9"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "+£11",
+   "value": 10.674380862003908,
+   "format": "gbp",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027,
+    "decile": "10"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027,
+    "decile": "1"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027,
+    "decile": "2"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027,
+    "decile": "3"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027,
+    "decile": "4"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027,
+    "decile": "5"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027,
+    "decile": "6"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027,
+    "decile": "7"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027,
+    "decile": "8"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027,
+    "decile": "9"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "deciles-table",
+   "text": "£0",
+   "value": 0.0,
+   "format": "gbp",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027,
+    "decile": "10"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "98.7%",
+   "value": 98.73422051563786,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_better_off",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "1.3%",
+   "value": 1.2657794843620955,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_unchanged",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "0.0%",
+   "value": 0.0,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_worse_off",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "0.0%",
+   "value": 0.0,
+   "format": "pct1_plain",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/age_impact.csv",
+   "column": "pct_better_off",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "100.0%",
+   "value": 100.0,
+   "format": "pct1_plain",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/age_impact.csv",
+   "column": "pct_unchanged",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "0.0%",
+   "value": 0.0,
+   "format": "pct1_plain",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/age_impact.csv",
+   "column": "pct_worse_off",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "77.9%",
+   "value": 77.93098556866775,
+   "format": "pct1_plain",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/age_impact.csv",
+   "column": "pct_better_off",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "22.1%",
+   "value": 22.069014431332228,
+   "format": "pct1_plain",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/age_impact.csv",
+   "column": "pct_unchanged",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "0.0%",
+   "value": 0.0,
+   "format": "pct1_plain",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/age_impact.csv",
+   "column": "pct_worse_off",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "95.8%",
+   "value": 95.81289731346305,
+   "format": "pct1_plain",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/age_impact.csv",
+   "column": "pct_better_off",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "4.2%",
+   "value": 4.187102686536947,
+   "format": "pct1_plain",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/age_impact.csv",
+   "column": "pct_unchanged",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "0.0%",
+   "value": 0.0,
+   "format": "pct1_plain",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/age_impact.csv",
+   "column": "pct_worse_off",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "2.2%",
+   "value": 2.22276589782984,
+   "format": "pct1_plain",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/age_impact.csv",
+   "column": "pct_better_off",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "97.8%",
+   "value": 97.77723410217011,
+   "format": "pct1_plain",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/age_impact.csv",
+   "column": "pct_unchanged",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "0.0%",
+   "value": 0.0,
+   "format": "pct1_plain",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/age_impact.csv",
+   "column": "pct_worse_off",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "55.6%",
+   "value": 55.557184616914945,
+   "format": "pct1_plain",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/age_impact.csv",
+   "column": "pct_better_off",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "44.4%",
+   "value": 44.44281538308504,
+   "format": "pct1_plain",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/age_impact.csv",
+   "column": "pct_unchanged",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "0.0%",
+   "value": 0.0,
+   "format": "pct1_plain",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/age_impact.csv",
+   "column": "pct_worse_off",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "0.0%",
+   "value": 0.0,
+   "format": "pct1_plain",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/age_impact.csv",
+   "column": "pct_better_off",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "100.0%",
+   "value": 100.0,
+   "format": "pct1_plain",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/age_impact.csv",
+   "column": "pct_unchanged",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "winners",
+   "text": "0.0%",
+   "value": 0.0,
+   "format": "pct1_plain",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/age_impact.csv",
+   "column": "pct_worse_off",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty",
+   "text": "−0.02pp",
+   "value": -0.02187487446880798,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2026
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty",
+   "text": "−0.02pp",
+   "value": -0.01711423052251082,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "child_poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2026
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty",
+   "text": "0.00pp",
+   "value": -0.002050725619139049,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "child_poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty",
+   "text": "0.00pp",
+   "value": -0.0040271831437940775,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2028
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "child_poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2028
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty",
+   "text": "−0.01pp",
+   "value": -0.005548513406511413,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2029
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "child_poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2029
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty",
+   "text": "−0.01pp",
+   "value": -0.010619685682519697,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2030
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "child_poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2030
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty",
+   "text": "+0.04pp",
+   "value": 0.04402305903226933,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2031
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty",
+   "text": "+0.05pp",
+   "value": 0.04737226333621225,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "child_poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2031
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-table",
+   "text": "0.00pp",
+   "value": -0.0036514553246991266,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "poverty_abs_ahc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-table",
+   "text": "−0.02%",
+   "value": -0.023868773702503045,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "poverty_abs_ahc_change_pct",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-table",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "child_poverty_abs_ahc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-table",
+   "text": "0.00%",
+   "value": 0.0,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "child_poverty_abs_ahc_change_pct",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-table",
+   "text": "0.00pp",
+   "value": -0.0018286795364169661,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "poverty_rel_bhc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-table",
+   "text": "−0.01%",
+   "value": -0.012798301118705557,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "poverty_rel_bhc_change_pct",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-table",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "child_poverty_rel_bhc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-table",
+   "text": "0.00%",
+   "value": 0.0,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "child_poverty_rel_bhc_change_pct",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-table",
+   "text": "−0.01pp",
+   "value": -0.005246772547770617,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "poverty_rel_ahc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-table",
+   "text": "−0.03%",
+   "value": -0.0292620305129185,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "poverty_rel_ahc_change_pct",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-table",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "child_poverty_rel_ahc_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-table",
+   "text": "0.00%",
+   "value": 0.0,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "child_poverty_rel_ahc_change_pct",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-table",
+   "text": "−0.11%",
+   "value": -0.11198620600011788,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/metrics.csv",
+   "column": "gini_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "x100"
+  },
+  {
+   "section": "poverty-table",
+   "text": "−0.02pp",
+   "value": -0.0191569812013348,
+   "format": "pp2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "top_10_share_change_pp",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-table",
+   "text": "0.00%",
+   "value": -0.004154804585363525,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/poverty_inequality.csv",
+   "column": "p90_p10_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "x100"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/poverty_inequality.csv",
+   "column": "poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/poverty_inequality.csv",
+   "column": "child_poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/poverty_inequality.csv",
+   "column": "poverty_rel_ahc_change_pp",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00%",
+   "value": 0.0,
+   "format": "pct2",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/metrics.csv",
+   "column": "gini_change",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": 2027
+   },
+   "transform": "x100"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/poverty_inequality.csv",
+   "column": "poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/poverty_inequality.csv",
+   "column": "child_poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/poverty_inequality.csv",
+   "column": "poverty_rel_ahc_change_pp",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "−0.04%",
+   "value": -0.04185462185083554,
+   "format": "pct2",
+   "file": "artifacts/fuel_duty_rise_deferral/d38147e5151f4424/metrics.csv",
+   "column": "gini_change",
+   "where": {
+    "reform_id": "fuel_duty_rise_deferral",
+    "year": 2027
+   },
+   "transform": "x100"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/poverty_inequality.csv",
+   "column": "poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/poverty_inequality.csv",
+   "column": "child_poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/poverty_inequality.csv",
+   "column": "poverty_rel_ahc_change_pp",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "−0.06%",
+   "value": -0.05729774617522766,
+   "format": "pct2",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/metrics.csv",
+   "column": "gini_change",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027
+   },
+   "transform": "x100"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": -0.002050725619139049,
+   "format": "pp2",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/poverty_inequality.csv",
+   "column": "poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/poverty_inequality.csv",
+   "column": "child_poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "−0.01pp",
+   "value": -0.005246772547770617,
+   "format": "pp2",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/poverty_inequality.csv",
+   "column": "poverty_rel_ahc_change_pp",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00%",
+   "value": -0.004079990401189623,
+   "format": "pct2",
+   "file": "artifacts/state_pension_income_tax_protection/d4df42a20f05cb9a/metrics.csv",
+   "column": "gini_change",
+   "where": {
+    "reform_id": "state_pension_income_tax_protection",
+    "year": 2027
+   },
+   "transform": "x100"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/poverty_inequality.csv",
+   "column": "poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/poverty_inequality.csv",
+   "column": "child_poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/poverty_inequality.csv",
+   "column": "poverty_rel_ahc_change_pp",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "−0.01%",
+   "value": -0.008896996298699247,
+   "format": "pct2",
+   "file": "artifacts/road_fuel_vat_cut/9c1f812b8c5de638/metrics.csv",
+   "column": "gini_change",
+   "where": {
+    "reform_id": "road_fuel_vat_cut",
+    "year": 2027
+   },
+   "transform": "x100"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/poverty_inequality.csv",
+   "column": "poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/poverty_inequality.csv",
+   "column": "child_poverty_abs_bhc_change_pp",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00pp",
+   "value": 0.0,
+   "format": "pp2",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/poverty_inequality.csv",
+   "column": "poverty_rel_ahc_change_pp",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "poverty-measures",
+   "text": "0.00%",
+   "value": 0.0,
+   "format": "pct2",
+   "file": "artifacts/warm_home_discount_top_up/71662c9073c5e984/metrics.csv",
+   "column": "gini_change",
+   "where": {
+    "reform_id": "warm_home_discount_top_up",
+    "year": 2027
+   },
+   "transform": "x100"
+  },
+  {
+   "section": "age",
+   "text": "+£119",
+   "value": 118.71675622397517,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "mean_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "0-15"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "99.4%",
+   "value": 99.36587522394848,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_better_off",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "0-15"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "0.6%",
+   "value": 0.6341247760515204,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_unchanged",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "0-15"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "0.0%",
+   "value": 0.0,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_worse_off",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "0-15"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "+£123",
+   "value": 122.7755698377663,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "mean_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "16-24"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "99.4%",
+   "value": 99.39344260310163,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_better_off",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "16-24"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "0.6%",
+   "value": 0.606557396898371,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_unchanged",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "16-24"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "0.0%",
+   "value": 0.0,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_worse_off",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "16-24"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "+£105",
+   "value": 104.84102470531865,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "mean_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "25-34"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "96.3%",
+   "value": 96.32536536810576,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_better_off",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "25-34"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "3.7%",
+   "value": 3.6746346318942282,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_unchanged",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "25-34"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "0.0%",
+   "value": 0.0,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_worse_off",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "25-34"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "+£115",
+   "value": 115.37753087928117,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "mean_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "35-49"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "99.1%",
+   "value": 99.085630034062,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_better_off",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "35-49"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "0.9%",
+   "value": 0.9143699659379951,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_unchanged",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "35-49"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "0.0%",
+   "value": 0.0,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_worse_off",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "35-49"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "+£114",
+   "value": 114.30179053710911,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "mean_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "50-64"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "99.0%",
+   "value": 98.97663042138865,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_better_off",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "50-64"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "1.0%",
+   "value": 1.0233695786113686,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_unchanged",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "50-64"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "0.0%",
+   "value": 0.0,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_worse_off",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "50-64"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "+£98",
+   "value": 97.91445445444023,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "mean_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "65+"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "98.9%",
+   "value": 98.85099587395105,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_better_off",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "65+"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "1.1%",
+   "value": 1.149004126048945,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_unchanged",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "65+"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "age",
+   "text": "0.0%",
+   "value": 0.0,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_worse_off",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "65+"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "households",
+   "text": "+£50",
+   "value": 49.529999999998836,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/income_curve.csv",
+   "column": "reform_net_income-baseline_net_income",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "household": "single_renter",
+    "income": "20000.0"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "households",
+   "text": "+£50",
+   "value": 49.529999999998836,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/income_curve.csv",
+   "column": "reform_net_income-baseline_net_income",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "household": "single_renter",
+    "income": "40000.0"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "households",
+   "text": "+£50",
+   "value": 49.529999999998836,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/income_curve.csv",
+   "column": "reform_net_income-baseline_net_income",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "household": "single_renter",
+    "income": "80000.0"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "households",
+   "text": "+£89",
+   "value": 89.06999999999971,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/income_curve.csv",
+   "column": "reform_net_income-baseline_net_income",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "household": "couple_three_children",
+    "income": "20000.0"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "households",
+   "text": "+£89",
+   "value": 89.06999999999971,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/income_curve.csv",
+   "column": "reform_net_income-baseline_net_income",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "household": "couple_three_children",
+    "income": "40000.0"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "households",
+   "text": "+£89",
+   "value": 89.05999999999767,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/income_curve.csv",
+   "column": "reform_net_income-baseline_net_income",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "household": "couple_three_children",
+    "income": "80000.0"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "households",
+   "text": "+£50",
+   "value": 49.5199999999968,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/income_curve.csv",
+   "column": "reform_net_income-baseline_net_income",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "household": "lone_parent",
+    "income": "20000.0"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "households",
+   "text": "+£50",
+   "value": 49.5199999999968,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/income_curve.csv",
+   "column": "reform_net_income-baseline_net_income",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "household": "lone_parent",
+    "income": "40000.0"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "households",
+   "text": "+£50",
+   "value": 49.529999999998836,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/income_curve.csv",
+   "column": "reform_net_income-baseline_net_income",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "household": "lone_parent",
+    "income": "80000.0"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "households",
+   "text": "+£145",
+   "value": 144.91999999999825,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/income_curve.csv",
+   "column": "reform_net_income-baseline_net_income",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "household": "pensioner_couple",
+    "income": "12000.0"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "households",
+   "text": "+£145",
+   "value": 144.91999999999825,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/income_curve.csv",
+   "column": "reform_net_income-baseline_net_income",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "household": "pensioner_couple",
+    "income": "24000.0"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "households",
+   "text": "+£143",
+   "value": 142.90999999999622,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/income_curve.csv",
+   "column": "reform_net_income-baseline_net_income",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "household": "pensioner_couple",
+    "income": "48000.0"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "households",
+   "text": "+£50",
+   "value": 49.530000000002474,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/income_curve.csv",
+   "column": "reform_net_income-baseline_net_income",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "household": "higher_income_saver",
+    "income": "30000.0"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "households",
+   "text": "+£50",
+   "value": 49.529999999998836,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/income_curve.csv",
+   "column": "reform_net_income-baseline_net_income",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "household": "higher_income_saver",
+    "income": "60000.0"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "households",
+   "text": "+£50",
+   "value": 49.529999999998836,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/income_curve.csv",
+   "column": "reform_net_income-baseline_net_income",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "household": "higher_income_saver",
+    "income": "120000.0"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "summary",
+   "text": "£2.9 billion",
+   "value": -2.881968892550134,
+   "format": "bn_words",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "summary",
+   "text": "£3.7 billion",
+   "value": -3.663902169949651,
+   "format": "bn_words",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": [
+     2026,
+     2027,
+     2028,
+     2029,
+     2030,
+     2031
+    ]
+   },
+   "transform": "sum"
+  },
+  {
+   "section": "summary",
+   "text": "£1.4 billion",
+   "value": -1.3805990774989416,
+   "format": "bn_words",
+   "file": "artifacts/domestic_electricity_zero_vat/55ed8eb44ff8f18d/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "domestic_electricity_zero_vat",
+    "year": 2027
+   },
+   "transform": "value"
+  },
+  {
+   "section": "summary",
+   "text": "£4.2 billion",
+   "value": 4.157274821677502,
+   "format": "bn_words",
+   "file": "artifacts/threshold_freeze_2031_32/ab46d0e4c20a5fb6/budgetary_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "threshold_freeze_2031_32",
+    "year": [
+     2026,
+     2027,
+     2028,
+     2029,
+     2030,
+     2031
+    ]
+   },
+   "transform": "sum"
+  },
+  {
+   "section": "summary",
+   "text": "+£98",
+   "value": 98.35594443202642,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "summary",
+   "text": "−£110",
+   "value": -109.81919685100779,
+   "format": "gbp",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/winners_losers.csv",
+   "column": "avg_change",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2031,
+    "decile": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "summary",
+   "text": "+0.29%",
+   "value": 0.2920063471242443,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/distributional_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "1st"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "summary",
+   "text": "+0.08%",
+   "value": 0.076820875471528,
+   "format": "pct2",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/distributional_impact.csv",
+   "column": "value",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "decile": "10th"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "summary",
+   "text": "98.7%",
+   "value": 98.73422051563786,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_better_off",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  },
+  {
+   "section": "summary",
+   "text": "0.0%",
+   "value": 0.0,
+   "format": "pct1_plain",
+   "file": "artifacts/combined--a3e0b4a238c38c09/af7e266bcb4c4bdd/age_impact.csv",
+   "column": "pct_worse_off",
+   "where": {
+    "reform_id": "combined--a3e0b4a238c38c09",
+    "year": 2027,
+    "age_band": "all"
+   },
+   "transform": "value"
+  }
+ ]
+}
