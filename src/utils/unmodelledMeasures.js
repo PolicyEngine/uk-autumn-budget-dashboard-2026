@@ -307,7 +307,7 @@ export const UNMODELLED_MEASURES = [
     reason: "data",
     name: "Business Asset Disposal Relief limit cut to £500,000",
     starts: "6 Apr 2027",
-    summary: "Halves the lifetime limit on gains taxed at the relief's 18%, from £1 million to £500,000.",
+    summary: "Halves the lifetime limit on gains taxed at 18%, from £1 million to £500,000.",
     points: [
       { label: "What changes", text: "Gains above £500,000 are taxed at up to 24% rather than 18%." },
       { label: "Who it reaches", text: "Sellers of qualifying businesses; three-quarters keep relief on their whole gain." },
