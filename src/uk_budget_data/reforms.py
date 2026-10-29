@@ -43,6 +43,9 @@ from uk_budget_data.budget_measures.household_energy_payment_2026 import (
 from uk_budget_data.budget_measures.pension_tax_allowance import (
     pension_tax_allowance,
 )
+from uk_budget_data.budget_measures.planned_cash_isa_limit import (
+    planned_cash_isa_limit,
+)
 from uk_budget_data.budget_measures.pump_vat_on_fuel_duty_deferral import (
     pump_vat_on_fuel_duty_deferral,
 )
@@ -130,6 +133,7 @@ CARERS_ALLOWANCE_TAPER_ID = "carers_allowance_earnings_taper"
 STATE_PENSION_DOUBLE_LOCK_ID = "state_pension_double_lock_2030"
 HOUSEHOLD_ENERGY_PAYMENT_ID = "household_energy_payment_2026"
 TRADING_ALLOWANCE_ID = "trading_allowance_raise"
+CASH_ISA_LIMIT_ID = "cash_isa_limit_kept"
 TRADING_ALLOWANCE = "gov.hmrc.income_tax.allowances.trading_allowance"
 
 
@@ -995,6 +999,40 @@ def _create_trading_allowance_raise() -> Reform:
 
 
 # =============================================================================
+# CASH ISA LIMIT KEPT AT £20,000 (Household calculator only)
+# =============================================================================
+
+
+# Budget 2026 (2.52, 6.248; Table 6.1 row 11): the cut in the cash ISA limit
+# to £12,000 a year for under-65s from 6 April 2027 (SI 2026/1018 reg 6)
+# does not go ahead. policyengine-uk 2.151.0 has no ISA limits, so current
+# law is the Budget's and the pre-Budget side carries the cut
+# (budget_measures/planned_cash_isa_limit.py; its numbers are default
+# arguments there). Its effect rests on what a household pays into cash
+# ISAs, which the survey data do not hold (PolicyEngine/microcosm#1415), so
+# it is registered for the Household calculator only: listed, not in the
+# package, and never in the national results (calculatorOnlyMeasures.js).
+def _create_cash_isa_limit_kept() -> Reform:
+    return Reform(
+        id=CASH_ISA_LIMIT_ID,
+        name="Cash ISA limit kept at £20,000 for under-65s",
+        description=(
+            "The cut in the cash ISA limit to £12,000 a year for savers "
+            "under 65, planned from 6 April 2027, does not go ahead: they "
+            "can still pay up to £20,000 a year into cash ISAs. The "
+            "household's gain is the income tax it would have paid on the "
+            "interest from what the planned limit left out: the same "
+            "payments each year from April 2027, the excess held in a "
+            "taxable account earning Bank Rate as the OBR forecasts it, the "
+            "interest paid out each year. For one household at a time: the "
+            "survey data hold no payments into ISAs, so there is no "
+            "national figure."
+        ),
+        baseline_simulation_modifier=planned_cash_isa_limit,
+    )
+
+
+# =============================================================================
 # STATE PENSION DOUBLE LOCK FROM APRIL 2030 (not registered)
 # =============================================================================
 
@@ -1107,7 +1145,9 @@ AUTUMN_BUDGET_2026_COMBINED_COMPONENTS = (
 # secondary threshold (stays £5,000). Their factories stay, unregistered.
 # Also withdrawn that day: the savings and property income tax rates as one
 # measure (``UNEARNED_INCOME_RATES_ID``), split into the property and the
-# savings measures, Table 6.1 rows 61 and 62. Package of eight.
+# savings measures, Table 6.1 rows 61 and 62. Package of eight. The cash
+# ISA limit kept at £20,000 (Table 6.1 row 11) joined on 29 October, for
+# the Household calculator only: nine registered.
 _MEASURE_FACTORIES = (
     _create_fuel_duty_rise_deferral,
     _create_state_pension_income_tax_protection,
@@ -1117,6 +1157,7 @@ _MEASURE_FACTORIES = (
     _create_carers_allowance_earnings_taper,
     _create_household_energy_payment_2026,
     _create_trading_allowance_raise,
+    _create_cash_isa_limit_kept,
 )
 
 

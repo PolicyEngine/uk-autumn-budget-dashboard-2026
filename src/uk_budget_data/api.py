@@ -414,6 +414,17 @@ class HouseholdAnswersRequest(BaseModel):
     )
     dividend_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
     savings_interest_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
+    cash_isa_subscriptions: float = Field(
+        default=0,
+        ge=0,
+        le=20_000,
+        description=(
+            "New money the head pays into cash ISAs, £ a year, up to the "
+            "£20,000 ISA limit: for the cash ISA limit kept at £20,000, "
+            "which the planned £12,000 limit for under-65s would have cut. "
+            "Left out: none."
+        ),
+    )
     property_income: float = Field(default=0, ge=0, le=MAX_AMOUNT)
     private_pension_income: float = Field(
         default=0,

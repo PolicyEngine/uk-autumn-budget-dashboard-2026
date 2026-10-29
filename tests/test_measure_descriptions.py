@@ -163,6 +163,8 @@ DECLARED = {
     "trading_allowance_raise": {"income tax", "National Insurance"},
     "property_income_rates_up": {"income tax"},
     "savings_income_rates_up": {"income tax"},
+    # The tax on the interest the planned limit's excess would have earned
+    "cash_isa_limit_kept": {"income tax"},
 }
 # The combined measure moves what its members move.
 DECLARED[AUTUMN_BUDGET_2026_COMBINED_ID] = set().union(
