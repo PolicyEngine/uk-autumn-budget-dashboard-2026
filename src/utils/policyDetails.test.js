@@ -162,3 +162,19 @@ it("repeats no At a glance fact in a card's points", () => {
     }
   }
 });
+
+describe("nounOf: a measure as a noun after 'the'", () => {
+  it("reads as a noun for every measure with a card, never a short name such as 'Fuel duty cut extended'", async () => {
+    const { POLICY_DETAILS, nounOf } = await import("./policyDetails");
+    const fuel = POLICY_DETAILS.find((entry) => entry.id === "fuel_duty_rise_deferral");
+    expect(nounOf({ id: fuel.id, description: fuel.writtenFor })).toBe("fuel duty cut");
+    const pta = POLICY_DETAILS.find((entry) => entry.id === "state_pension_income_tax_protection");
+    // A proper name keeps its capitals ("the Pension Tax Allowance", not "the pension Tax Allowance")
+    expect(nounOf({ id: pta.id, description: pta.writtenFor })).toBe("Pension Tax Allowance");
+  });
+  it("falls back to the short name with its first capital lowered", async () => {
+    const { nounOf } = await import("./policyDetails");
+    expect(nounOf({ id: "x", name: "Threshold freeze" })).toBe("threshold freeze");
+    expect(nounOf({ id: "y", name: "BADR cut" })).toBe("BADR cut");
+  });
+});

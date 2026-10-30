@@ -58,6 +58,10 @@
  *   the new description here (or delete the entry).
  * - sentence: the measure as the subject of a sentence, a verb phrase
  *   ("unfreezing the student loan threshold"), for the charts' headlines;
+ * - noun: the measure as a noun after "the" in a sentence or label ("when
+ *   the fuel duty cut has ended", "No fuel duty cut"), where the short name
+ *   does not read as one ("Fuel duty cut extended"); nounOf falls back to
+ *   the short name, lower-cased.
  * - shortName: a short name for the measure keys' chips, the household
  *   waterfall and other tight labels (the full published name stays in
  *   their tooltips and accessible names).
@@ -71,6 +75,7 @@ export const POLICY_DETAILS = [
     id: "fuel_duty_rise_deferral",
     cardOrder: 1,
     shortName: "Fuel duty cut extended",
+    noun: "fuel duty cut",
     sentence: "extending the 5p fuel duty cut to 1 July 2027",
     name: "Fuel duty cut extended",
     description: "Keep the 5p fuel duty cut to July 2027",
@@ -108,6 +113,7 @@ export const POLICY_DETAILS = [
     id: "state_pension_income_tax_protection",
     cardOrder: 7,
     shortName: "Pension Tax Allowance",
+    noun: "Pension Tax Allowance",
     sentence: "introducing the Pension Tax Allowance",
     name: "Pension Tax Allowance",
     description:
@@ -194,6 +200,7 @@ export const POLICY_DETAILS = [
     id: "domestic_electricity_zero_vat",
     cardOrder: 5,
     shortName: "Zero VAT on electricity",
+    noun: "electricity VAT cut",
     sentence: "taking VAT off household electricity",
     name: "Zero VAT on domestic electricity",
     description: "Zero-rate VAT on domestic electricity to July 2027",
@@ -366,6 +373,7 @@ export const POLICY_DETAILS = [
     id: "carers_allowance_earnings_taper",
     cardOrder: 2,
     shortName: "Carer's Allowance taper",
+    noun: "Carer's Allowance taper",
     sentence: "tapering Carer's Allowance above the earnings limit",
     name: "Carer's Allowance earnings taper",
     description: "Withdraw Carer's Allowance £1 for £1 above the earnings limit",
@@ -453,6 +461,7 @@ export const POLICY_DETAILS = [
     id: "property_income_rates_up",
     cardOrder: 6,
     shortName: "Property income tax up",
+    noun: "property income tax rise",
     sentence: "raising tax on property income",
     name: "Property income tax rates up",
     description: "Raise income tax on property income by 2 points",
@@ -512,6 +521,7 @@ export const POLICY_DETAILS = [
     id: "household_energy_payment_2026",
     cardOrder: 3,
     shortName: "Energy payment",
+    noun: "energy payment",
     sentence: "paying £100 towards energy bills",
     name: "Household Energy Payment",
     description: "Pay £100 to households in council tax bands A to D in England this winter",
@@ -570,6 +580,7 @@ export const POLICY_DETAILS = [
     id: "trading_allowance_raise",
     cardOrder: 4,
     shortName: "Trading allowance",
+    noun: "trading allowance rise",
     sentence: "raising the trading allowance",
     name: "Trading allowance raised to £3,000",
     description: "Raise the trading allowance from £1,000 to £3,000",
@@ -608,6 +619,7 @@ export const POLICY_DETAILS = [
     id: "bus_fare_cap_2027",
     cardOrder: 9,
     shortName: "Bus fare cap",
+    noun: "bus fare cap",
     sentence: "capping single bus fares at £2",
     name: "Single bus fares capped at £2",
     description: "Cap single bus fares at £2 outside London in 2027",
@@ -698,4 +710,16 @@ export function withPolicyDetails(measure) {
  */
 export function shortNameOf(measure) {
   return policyDetailsFor(measure)?.shortName ?? measure?.label ?? measure?.name ?? measure?.id;
+}
+
+/**
+ * A catalogue measure as a noun after "the" in a sentence: its entry's
+ * noun, else its short name with a leading capital lowered ("Threshold
+ * freeze" to "threshold freeze"; "BADR cut" keeps its capitals).
+ */
+export function nounOf(measure) {
+  const noun = policyDetailsFor(measure)?.noun;
+  if (noun) return noun;
+  const name = String(shortNameOf(measure) ?? "");
+  return /^[A-Z][a-z]/.test(name) ? name[0].toLowerCase() + name.slice(1) : name;
 }

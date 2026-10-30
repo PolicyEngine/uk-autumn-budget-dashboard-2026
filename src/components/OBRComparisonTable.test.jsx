@@ -443,6 +443,33 @@ describe("the comparison sentence", () => {
     );
     expect(comparisonSentence([row("A", 1, null)], "static")).toBeNull();
   });
+  // A policy not in force shows its status, not figures: its £0 against £0
+  // is not counted as within £200m (2029-30 said "7 of the 8" with four of
+  // them ended or not started)
+  const off = (name, status) => ({ id: name, name, pe: 0, obr: 0, status });
+  it("counts only the policies in force that year", () => {
+    expect(
+      plain(
+        comparisonSentence(
+          [row("Property income tax up", 0.43, 0.435), row("Trading allowance", -0.12, -0.165), row("Pension Tax Allowance", -0.145, -0.15), off("Energy payment", "2026-27 only"), off("Bus fare cap", "Ended 2027-28"), off("Carer's Allowance taper", "Starts 2030-31")],
+          "post-behavioural",
+        ),
+      ),
+    ).toBe(
+      "For all 3 policies in force this year our static estimate is within £200m of the official post-behavioural costing; the largest gap is Trading allowance (−£120m vs −£165m).",
+    );
+    expect(
+      plain(
+        comparisonSentence([row("Trading allowance", -0.12, -0.225), row("Pension Tax Allowance", -0.085, -0.09), { ...row("Property income tax up", 0.41, null) }, off("Bus fare cap", "Ended 2027-28"), off("Energy payment", "2026-27 only")], "post-behavioural"),
+      ),
+    ).toBe(
+      "For 2 of the 3 policies in force this year our static estimate is within £200m of the official post-behavioural costing; the largest gap is Trading allowance (−£120m vs −£225m); 1 has no comparable official figure this year.",
+    );
+  });
+  it("says when no selected policy is in force, rather than comparing £0 with £0", () => {
+    expect(comparisonSentence([off("Carer's Allowance taper", "Starts 2030-31")], "post-behavioural")).toBe("Carer's Allowance taper is not in force this year.");
+    expect(comparisonSentence([off("A", "Starts 2030-31"), off("B", "2026-27 only")], "static")).toBe("None of the selected policies is in force this year.");
+  });
 });
 
 describe("the OBR comparison's chart and table switch", () => {

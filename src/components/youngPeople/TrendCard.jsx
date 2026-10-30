@@ -40,7 +40,7 @@ import { PENSIONERS, groupLabel, groupSeries, groupSubject } from "../../utils/a
 import { legendMembership } from "../../utils/legendMembership";
 import { selectionPackageKey } from "../../utils/geography/selection";
 import { useMeasureCatalogue } from "../../utils/measureCatalogue";
-import { shortNameOf } from "../../utils/policyDetails";
+import { nounOf, shortNameOf } from "../../utils/policyDetails";
 import TitleIcon from "../TitleIcon";
 import ChartMoreInfo from "../ChartMoreInfo";
 import { BY_YEAR_METHOD } from "../methodology/anchors";
@@ -517,15 +517,15 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
 
   const measure = (id) => catalogue.byId.get(id);
   const nameOf = (id) => (measure(id) ? shortNameOf(measure(id)) : id);
-  // In a sentence: "the threshold freeze", but "the BADR cut" keeps its capitals
-  const inSentence = (name) => (/^[A-Z][a-z]/.test(name) ? name[0].toLowerCase() + name.slice(1) : name);
+  // In a sentence or a step's label, after "the" or "No": "the fuel duty cut"
+  const nounFor = (id) => (measure(id) ? nounOf(measure(id)) : id);
   const notes = useMemo(
     () =>
       stepAnnotations(focusSeries).map((note) => ({
         ...note,
         // A step from a measure ending is labelled by its absence ("No energy
         // payment, 2027-28"), never as the measure applying that year
-        text: `${note.ends ? `No ${inSentence(nameOf(note.measureId))}` : nameOf(note.measureId)}${narrow ? "" : `, ${fiscalYearTick(note.year)}`}`,
+        text: `${note.ends ? `No ${nounFor(note.measureId)}` : nameOf(note.measureId)}${narrow ? "" : `, ${fiscalYearTick(note.year)}`}`,
       })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [focusSeries, catalogue, narrow],
@@ -593,12 +593,12 @@ function TrendCard({ rows, policies, selectedPolicies, selectedYear, narrow, hei
         : sameWay
           ? about(later.value)
           : `${later.value >= 0 ? "gain" : "lose"} ${about(later.value)}`;
-      text += ` and ${level} from ${fiscalYearTick(later.year)}, when the ${inSentence(nameOf(later.measureId))} ${later.ends ? "has ended" : "applies"}`;
+      text += ` and ${level} from ${fiscalYearTick(later.year)}, when the ${nounFor(later.measureId)} ${later.ends ? "has ended" : "applies"}`;
     }
     return `${text}.`;
   })();
   // On a phone, the steps the plot cannot label, unless the headline names them
-  const stepsLine = phone && !cumulative ? stepSentence(notes, headline, (id) => inSentence(nameOf(id))) : null;
+  const stepsLine = phone && !cumulative ? stepSentence(notes, headline, nounFor) : null;
 
   // A line's colour: the focus in the brand colour; 16 to 24, whose own
   // colour that is, in a darker teal when another group is the focus
