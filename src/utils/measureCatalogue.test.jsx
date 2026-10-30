@@ -257,9 +257,12 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   //   income tax rise, held back from the release and so never in the
   //   manifest, which the Household calculator always adds to a
   //   household's request (Vahid and María, 28 October).
-  // - EXPLAINERS: the titles of our published posts on this Budget, linked
-  //   from Methodology; a post stays whether or not its measure is
-  //   published, so a title decides nothing the page shows of a measure.
+  // - EXPLAINERS: our published posts on this Budget, their titles linked
+  //   from Methodology and their measures linking each card to its post
+  //   (an unmodelled card by its own id); a post stays whether or not its
+  //   measure is published, and a card shows its link only while the card
+  //   shows, so the block decides no measure's presence, name, order or
+  //   colour.
   // Before #185: MODELLING_NOTE, whose id test_reforms.py holds to a
   // registered measure, and singleYear.js's labels for the household API's
   // own programme line of the same name as the Warm Home Discount top-up.
