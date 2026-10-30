@@ -32,11 +32,12 @@
 Our figures are static; Table 6.1 and the policy costings document are post-behavioural. `behavioural_adjustments.csv` records, per measure and fiscal year:
 
 - `official_behaviour`: the response the costing describes, and `direction`: whether it raises or lowers the cost (or the yield).
-- `explains_residual`: whether that direction runs from the official figure towards ours. Where it does not (electricity VAT, fuel duty, Carer's Allowance), adding behaviour to ours widens the gap, and the gap has another cause.
+- `official_bn`: Table 6.1's figure. `ours_bn`: our static figure on the basis named in `ours_basis`: `net` is the published `budgetary_impact.csv`; the Carer's Allowance rows use Carer's Allowance + Universal Credit, the basis #320's ring shows, which no published file carries (a snapshot).
+- `explains_residual`: "yes" when the adjustment's sign matches official minus ours, so adding it to ours moves ours towards the official figure. Where the official behaviour instead moves the official figure towards ours (electricity VAT, fuel duty, property income), adding it to ours widens the gap, and the gap has another cause. A residual within Table 6.1's £5m rounding (Carer's Allowance), or in a year that is not comparable (its residual is timing), is "no". Only the trading allowance is "yes".
 - `central_bn`, `low_bn`, `high_bn`: the adjustment to our static figure, Exchequer sign: the smaller and the larger end of the range, and a central value. Blank where no published source sizes it.
 - `method` and `source`.
 
-Only property income has a published size of its own (OBR, Economic and fiscal outlook, October 2026, para 3.17). Fuel duty applies HMRC's fuel price elasticities (HM Treasury and HMRC, *Analysis of the dynamic effects of fuel duty reductions*, 2014, Table 3.1) to our own base. The values and the arithmetic are in the file's `method` column. The file feeds no calculation and no page.
+Only property income has a published size of its own (OBR, Economic and fiscal outlook, October 2026, para 3.17). Fuel duty applies HMRC's fuel price elasticities (HM Treasury and HMRC, *Analysis of the dynamic effects of fuel duty reductions*, 2014, Table 3.1) to our own base. The values and the arithmetic are in the file's `method` column. The file feeds no calculation and no page. `tests/test_behavioural_adjustments.py` checks `official_bn` against Table 6.1, `ours_bn` (net basis) against the published artifacts, the sizes derived from it, and `explains_residual` against the rule, so a rerun that moves our figures fails there until the file is refreshed.
 
 ## The rule
 
