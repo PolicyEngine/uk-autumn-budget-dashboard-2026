@@ -10,13 +10,27 @@ import {
 } from "./calculatorOnlyMeasures";
 import { policyRows } from "./singleYear";
 
+const CASH_ISA_LIMIT_ID = "cash_isa_limit_kept";
+
 describe("calculator-only measures", () => {
   it("always go after the selected measures, once, and come off for the national figures", () => {
-    expect(withCalculatorOnly(["a", "b"])).toEqual(["a", "b", SAVINGS_INCOME_RATES_ID]);
-    expect(withCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID])).toEqual(["a", SAVINGS_INCOME_RATES_ID]);
+    expect(withCalculatorOnly(["a", "b"])).toEqual(["a", "b", SAVINGS_INCOME_RATES_ID, CASH_ISA_LIMIT_ID]);
+    expect(withCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID])).toEqual(["a", SAVINGS_INCOME_RATES_ID, CASH_ISA_LIMIT_ID]);
     // Nothing selected: no request, so nothing added
     expect(withCalculatorOnly([])).toEqual([]);
-    expect(withoutCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID])).toEqual(["a"]);
+    expect(withoutCalculatorOnly(["a", SAVINGS_INCOME_RATES_ID, CASH_ISA_LIMIT_ID])).toEqual(["a"]);
+  });
+
+  it("show an assumption's note where the household's figure rests on it", () => {
+    const note = "Assumes that under the planned £12,000 limit …";
+    const byPolicy = (change) => ({
+      measures: [{ id: CASH_ISA_LIMIT_ID, name: "Cash ISA limit", change, status: change ? "affected" : "not_affected", note, noteKind: "assumption" }],
+      residual: 0,
+    });
+    const moved = policyRows(byPolicy(185), 185, [], 2029);
+    expect(moved.rows).toEqual([expect.objectContaining({ id: CASH_ISA_LIMIT_ID, name: "Cash ISA limit kept at £20,000", rounded: 185 })]);
+    expect(moved.notes).toEqual([{ id: CASH_ISA_LIMIT_ID, name: "Cash ISA limit kept at £20,000", kind: "assumption", text: note }]);
+    expect(policyRows(byPolicy(0), 0, [], 2029).notes).toEqual([]);
   });
 
   it("show in the split by policy with their short name, and no note", () => {
@@ -41,14 +55,16 @@ describe("the result card's measures (resultPolicies)", () => {
     { minLength: 1, maxLength: 12 },
   );
 
-  it("counts the selection and names the savings rise, as production showed it", () => {
+  it("counts the selection and names the savings rise and the cash ISA limit", () => {
     const seven = ["a", "b", "c", "d", "e", "f", "g"];
     expect(resultPolicies(withCalculatorOnly(seven))).toEqual({
       count: 7,
-      named: ["the savings income tax rise"],
-      text: "7 policies and the savings income tax rise",
+      named: ["the savings income tax rise", "the cash ISA limit kept at £20,000"],
+      text: "7 policies, the savings income tax rise and the cash ISA limit kept at £20,000",
     });
-    expect(resultPolicies(withCalculatorOnly(["a"])).text).toBe("1 policy and the savings income tax rise");
+    expect(resultPolicies(withCalculatorOnly(["a"])).text).toBe(
+      "1 policy, the savings income tax rise and the cash ISA limit kept at £20,000",
+    );
     // Without the calculator's own measures, just the count
     expect(resultPolicies(["a", "b"]).text).toBe("2 policies");
     expect(resultPolicies([]).text).toBe("0 policies");

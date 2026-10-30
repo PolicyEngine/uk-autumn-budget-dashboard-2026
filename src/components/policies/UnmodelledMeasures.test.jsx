@@ -336,6 +336,18 @@ describe("UnmodelledMeasures", () => {
     expect(within(card).getByRole("table", { name: COSTING_CAPTION })).toHaveTextContent("+590");
   });
 
+  it("says the cash ISA limit is in the Household calculator only, not the national results", () => {
+    render(<UnmodelledMeasures />);
+    open();
+    const measure = UNMODELLED_MEASURES.find(({ id }) => id === "cash-isa-limit");
+    // Not in our data yet (#368): the survey data hold no payments into ISAs
+    expect(measure.reason).toBe("data");
+    const card = document.getElementById("unmodelled-cash-isa-limit");
+    expect(card.querySelector(".policy-card-points")).toHaveTextContent(
+      /Household calculator only, not the national results: our data lack ISA payments\./,
+    );
+  });
+
   it("keeps At a glance short and the summary one sentence, and shows every change a card names", () => {
     render(<UnmodelledMeasures />);
     open();

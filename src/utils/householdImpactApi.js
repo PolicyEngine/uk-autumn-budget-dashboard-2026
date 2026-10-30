@@ -337,6 +337,8 @@ export function buildHouseholdRequest(inputs, { year, policies, include = HEADLI
       // Bus fares only when answered, where the £2 cap reaches (England
       // outside London), likewise
       ...(busFares(inputs) ? { bus_fare_spending: busFares(inputs) } : {}),
+      // Cash ISA payments only when answered, likewise
+      ...(inputs.cash_isa_payments_per_year > 0 ? { cash_isa_subscriptions: inputs.cash_isa_payments_per_year } : {}),
       // Self-employment only when answered, likewise
       ...(selfEmployed(inputs)
         ? {
@@ -550,7 +552,8 @@ function normaliseByPolicy(raw) {
       change: num(row.change),
       status: row.status === "not_affected" ? "not_affected" : "affected",
       // A note where the number alone would mislead: "employer_cost" (£0 by
-      // construction) or "if_received" (the eligible amount)
+      // construction), "if_received" (the eligible amount) or "assumption"
+      // (an amount that rests on what the household would have done)
       note: row.note ?? null,
       noteKind: row.note_kind ?? null,
     })),

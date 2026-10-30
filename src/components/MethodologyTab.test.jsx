@@ -121,9 +121,15 @@ describe("MethodologyTab", () => {
     const topic = container.querySelector("#method-household-policies");
     expect(topic).not.toBeNull();
     const items = [...topic.querySelectorAll("li")].map((item) => item.textContent);
-    expect(items).toHaveLength(catalogue.measures.length + 1);
+    // The published measures, then the two the calculator alone adds (on
+    // the page: the eight published and these two, ten in all)
+    expect(items).toHaveLength(catalogue.measures.length + 2);
+    expect(topic).toHaveTextContent(`${catalogue.measures.length + 2} policies`);
     for (const measure of catalogue.measures) expect(items.some((item) => item.startsWith(measure.name))).toBe(true);
-    expect(items.at(-1)).toMatch(/^Savings income tax up \(calculator only/);
+    expect(items.slice(-2)).toEqual([
+      "Savings income tax up (calculator only, held back from the national results)",
+      "Cash ISA limit kept at £20,000 (calculator only, held back from the national results)",
+    ]);
   });
 
   it("lists the unavailable measures only when there are any", () => {

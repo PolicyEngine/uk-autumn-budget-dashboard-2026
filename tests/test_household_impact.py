@@ -2051,6 +2051,63 @@ def test_runs_that_cannot_change_the_household_are_not_asked_for(monkeypatch):
             2027,
             True,
         ),
+        # Its own run holds the cash ISA limit at pre-Budget law, where what
+        # the planned limit leaves out earns taxable interest
+        (
+            "savings_income_rates_up",
+            {"cash_isa_subscriptions": 20_000},
+            2027,
+            False,
+        ),
+        (
+            "savings_income_rates_up",
+            {"cash_isa_subscriptions": 20_000, "age": 65},
+            2027,
+            True,
+        ),
+        (
+            "savings_income_rates_up",
+            {"cash_isa_subscriptions": 12_000},
+            2027,
+            True,
+        ),
+        ("cash_isa_limit_kept", {}, 2027, True),
+        (
+            "cash_isa_limit_kept",
+            {"cash_isa_subscriptions": 20_000},
+            2026,
+            True,
+        ),
+        (
+            "cash_isa_limit_kept",
+            {"cash_isa_subscriptions": 20_000},
+            2027,
+            False,
+        ),
+        (
+            "cash_isa_limit_kept",
+            {"cash_isa_subscriptions": 12_000},
+            2031,
+            True,
+        ),
+        (
+            "cash_isa_limit_kept",
+            {"cash_isa_subscriptions": 12_001},
+            2031,
+            False,
+        ),
+        (
+            "cash_isa_limit_kept",
+            {"cash_isa_subscriptions": 20_000, "age": 64},
+            2027,
+            False,
+        ),
+        (
+            "cash_isa_limit_kept",
+            {"cash_isa_subscriptions": 20_000, "age": 65},
+            2027,
+            True,
+        ),
         # The bus fare cap: bus fares, in England outside London, in
         # 2026-27 or 2027-28
         ("bus_fare_cap_2027", {"region": "NORTH_WEST"}, 2027, True),
@@ -2213,6 +2270,14 @@ SKIP_PARITY_HOUSEHOLDS = {
         partner_age=67,
         diesel_spending=400,
     ),
+    # Pays £20,000 a year into cash ISAs and has no other savings interest:
+    # the cash ISA limit and the savings income tax rise both run
+    "cash_isa_saver": dict(
+        salary_year=2026,
+        age=45,
+        employment_income=70_000,
+        cash_isa_subscriptions=20_000,
+    ),
 }
 
 
@@ -2233,6 +2298,79 @@ def test_skips_give_the_same_answer_as_running_every_measure(household, year):
     fast = calculate(answers, measures, year, ("by_policy",))
     assert fast == full
     household_impact.clear_runs()
+
+
+def test_cash_isa_payments_reach_the_pre_budget_side_and_its_note():
+    """The head's cash ISA payments, which the engine has no input for, are
+    set on the built simulation of the side whose modifier reads them: a
+    higher-rate taxpayer paying £20,000 a year gains the tax on the interest
+    of what the planned £12,000 limit leaves out (worked out by hand in
+    test_reforms.py), and the answer carries the assumption's note."""
+    from uk_budget_data.reforms import CASH_ISA_LIMIT_ID
+
+    answers = Answers(
+        salary_year=2026,
+        employment_income=70_000,
+        cash_isa_subscriptions=20_000,
+    )
+    result = calculate(answers, [CASH_ISA_LIMIT_ID], 2029, ("by_policy",))
+    assert result["net_income"]["change"] == pytest.approx(184.80, abs=0.01)
+    (row,) = result["by_policy"]["measures"]
+    assert row["note_kind"] == "assumption"
+    assert "Bank Rate" in row["note"]
+    # Without the answer, nothing moves
+    plain = calculate(
+        dataclasses.replace(answers, cash_isa_subscriptions=0),
+        [CASH_ISA_LIMIT_ID],
+        2029,
+        skip_unaffected=False,
+    )
+    assert plain["net_income"]["change"] == pytest.approx(0, abs=0.01)
+
+
+def test_calculator_inputs_stay_out_of_the_household_the_engine_checks():
+    """policyengine-uk 2.151.0 has no cash ISA payments input, so the
+    people passed on carry none, and each value keeps its person's place."""
+    people = [
+        {"age": 40, "cash_isa_subscriptions": 15_000},
+        {"age": 38},
+    ]
+    stripped, inputs = household_impact.split_calculator_inputs(people)
+    assert stripped == [{"age": 40}, {"age": 38}]
+    assert inputs == {"cash_isa_subscriptions": [15_000.0, 0.0]}
+    assert people[0]["cash_isa_subscriptions"] == 15_000
+    assert household_impact.split_calculator_inputs([{"age": 40}]) == (
+        [{"age": 40}],
+        {},
+    )
+
+
+def test_the_sweep_sets_the_cash_isa_answer_at_every_point():
+    """With the sweep's axes the household repeats: every point's
+    pre-Budget side pays the tax on the same diverted interest, so it is
+    never above the Budget side, and is below it once the interest is
+    taxed."""
+    from uk_budget_data.reforms import CASH_ISA_LIMIT_ID
+
+    answers = Answers(
+        salary_year=2026,
+        employment_income=70_000,
+        cash_isa_subscriptions=20_000,
+    )
+    sides = household_impact.measure_sides([CASH_ISA_LIMIT_ID])
+    people, benunit, household = household_impact.household_entities(
+        answers, 2031
+    )
+    axes, _ = household_impact.sweep_axes(70_000)
+    before, after = (
+        household_impact.run_scenario(
+            people, benunit, household, 2031, side, axes, True
+        )["household_net_income"]
+        for side in (sides.before, sides.after)
+    )
+    gaps = [b - a for b, a in zip(after, before)]
+    assert min(gaps) >= -0.01
+    assert max(gaps) > 100
 
 
 def test_programme_notes_name_what_the_model_does():

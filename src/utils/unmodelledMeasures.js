@@ -215,7 +215,7 @@ export const UNMODELLED_MEASURES = [
     points: [
       { label: "For a household", text: "Interest stays tax-free on up to £20,000 a year of new savings." },
       { label: "Who it reaches", text: "Under-65 cash ISA savers; 22% paid in over £12,000 in 2022-23." },
-      { label: "Why we leave it out", text: "The model has no ISA payments, so never had the cut." },
+      { label: "Why we leave it out", text: "Household calculator only, not the national results: our data lack ISA payments." },
     ],
     costings: [{ row: 11, values: [0, -5, -20, -35, -50, -70] }],
     sources: [
