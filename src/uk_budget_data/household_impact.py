@@ -74,6 +74,9 @@ from policyengine_uk.variables.household.demographic.locations import (
 )
 from policyengine_uk.variables.input.council_tax_band import CouncilTaxBand
 
+from uk_budget_data.budget_measures.bus_fare_cap_2027 import (
+    bus_fare_cap_2027,
+)
 from uk_budget_data.budget_measures.carers_allowance_earnings_taper import (
     carers_allowance_earnings_taper,
 )
@@ -136,7 +139,10 @@ DEFAULT_BRMA = {
 # model reads the local authority only to choose the working-age Council
 # Tax Reduction schemes it simulates (Kingston upon Thames, Merton, Newham,
 # Oxford and Westminster), and none of these is one of them, so the
-# default changes no result.
+# default changes no result. Only a local authority given sets the
+# estimated Council Tax (its own Band D, ``estimated_council_tax``); the
+# default leaves it at the region's average. Neither sets the BRMA:
+# policyengine-uk places a household in a BRMA from its region alone.
 DEFAULT_LOCAL_AUTHORITY = {
     "NORTH_EAST": "NEWCASTLE_UPON_TYNE",  # Tyneside
     "NORTH_WEST": "MANCHESTER",  # Central Greater Manchester
@@ -770,7 +776,8 @@ class HouseholdAnswers:
     monthly_rent: float = 0
     brma: Optional[str] = None
     local_authority: Optional[str] = None
-    # None: estimated from the band and the region (estimated_council_tax)
+    # None: estimated from the band and the local authority's own Band D,
+    # or the region's average with no local authority (estimated_council_tax)
     council_tax: Optional[float] = None
     council_tax_band: str = "D"
     monthly_childcare: float = 0
@@ -788,6 +795,10 @@ class HouseholdAnswers:
     # Domestic mains gas, £ a year including VAT (GAS_SPENDING). The form
     # does not ask for it yet, so every calculator household has the average.
     gas_spending: float = GAS_SPENDING
+    # Bus and coach fares paid, £ a year (policyengine-uk's
+    # bus_fare_spending), for the £2 bus fare cap. 0 (not asked) sets
+    # nothing, so every other household is exactly as before.
+    bus_fare_spending: float = 0
     salary_sacrifice_pension_contributions: float = 0
     # State Pension, £ a year in the year calculated, for an adult at State
     # Pension age; None is the full new State Pension (``state_pensions``)
@@ -1028,23 +1039,93 @@ def council_tax_growth(region: str, year: int) -> float:
     return factor
 
 
-def estimated_council_tax(region: str, band: str, year: int) -> float:
-    """A household's Council Tax, £ a year, in ``year``: its region's
-    average Band D for 2026-27 (``COUNCIL_TAX_BAND_D``) times its band's
-    ratio, grown to ``year`` (``council_tax_growth``). Before discounts or
-    Council Tax Reduction (which policyengine-uk works out). None in
-    Northern Ireland (domestic rates): 0."""
-    band_d = COUNCIL_TAX_BAND_D.get(region)
-    if band_d is None:
-        return 0.0
+def _band_ratio(region: str, band: str) -> float:
+    """A band's Council Tax as a share of Band D in ``region``'s nation.
+    Band I is Welsh only; elsewhere the top band is H."""
     ratios = (
         SCOTTISH_BAND_RATIO
         if region == "SCOTLAND"
         else (COUNCIL_TAX_BAND_RATIO)
     )
-    # Band I is Welsh only; elsewhere the top band is H
-    ratio = ratios.get(band if band != "I" or region == "WALES" else "H")
+    return ratios.get(band if band != "I" or region == "WALES" else "H")
+
+
+@lru_cache(maxsize=None)
+def council_band_d(local_authority: str) -> Optional[float]:
+    """A local authority's own Band D Council Tax for 2026-27, £ a year:
+    policyengine-uk's ``gov.local_authorities.council_tax.band_d.amounts``,
+    the table its ``council_tax_band_d_amount`` reads (the area figure with
+    every precept in England and Wales; in Scotland without water and
+    waste water). None where policyengine-uk has none: Northern Ireland's
+    districts (domestic rates) and English districts abolished in 2023.
+
+    policyengine-uk holds the 2026-27 amounts flat into later years, so
+    the estimate grows them with the OBR's Council Tax forecast, as it
+    does a region's average (``council_tax_growth``)."""
+    from policyengine_uk.system import system
+
+    amounts = system.parameters(
+        f"{COUNCIL_TAX_BASE_YEAR}-01-01"
+    ).gov.local_authorities.council_tax.band_d.amounts
+    amount = amounts._children.get(local_authority)
+    return float(amount) if amount else None
+
+
+def estimated_council_tax(
+    region: str,
+    band: str,
+    year: int,
+    local_authority: Optional[str] = None,
+) -> float:
+    """A household's Council Tax, £ a year, in ``year``: a Band D for
+    2026-27 times its band's ratio, grown to ``year``
+    (``council_tax_growth``). The Band D is the local authority's own
+    (``council_band_d``) when one is given and policyengine-uk has its
+    Band D, and otherwise the region's average (``COUNCIL_TAX_BAND_D``).
+    Before discounts or Council Tax Reduction (which policyengine-uk works
+    out). None in Northern Ireland (domestic rates): 0."""
+    band_d = COUNCIL_TAX_BAND_D.get(region)
+    if band_d is None:
+        return 0.0
+    if local_authority is not None:
+        band_d = council_band_d(local_authority) or band_d
+    ratio = _band_ratio(region, band)
     return round(band_d * ratio * council_tax_growth(region, year), 2)
+
+
+def council_tax_basis(answers: "HouseholdAnswers") -> str:
+    """What an estimated Council Tax starts from: "council" (the local
+    authority's own Band D), "region" (the region's average) or "none"
+    (Northern Ireland)."""
+    if answers.region not in COUNCIL_TAX_BAND_D:
+        return "none"
+    if answers.local_authority is not None and council_band_d(
+        answers.local_authority
+    ):
+        return "council"
+    return "region"
+
+
+def council_tax_row_note(answers: "HouseholdAnswers") -> str:
+    """The Council Tax row's note in the breakdown, from the same basis as
+    ``council_tax_used``: entered, the local authority's own Band D, the
+    region's average or none (Northern Ireland)."""
+    if answers.council_tax is not None:
+        return "As entered. No measure changes it."
+    return {
+        "none": (
+            "No Council Tax in Northern Ireland (domestic rates are not "
+            "modelled)."
+        ),
+        "council": (
+            "Estimated from the band and the local authority's own Band D, "
+            "unless entered. No measure changes it."
+        ),
+        "region": (
+            "Estimated from the band and the region's average Band D "
+            "(COUNCIL_TAX_BAND_D), unless entered. No measure changes it."
+        ),
+    }[council_tax_basis(answers)]
 
 
 def household_entities(
@@ -1148,6 +1229,7 @@ def household_entities(
                 answers.region,
                 answers.council_tax_band,
                 answers.salary_year if year is None else year,
+                answers.local_authority,
             )
         ),
         "council_tax_band": answers.council_tax_band,
@@ -1156,6 +1238,12 @@ def household_entities(
         "electricity_consumption": answers.electricity_spending,
         "gas_consumption": answers.gas_spending,
     }
+    if answers.bus_fare_spending:
+        # Only with bus fares, so every other household's inputs (and its
+        # run's key) are exactly as before. policyengine-uk moves a
+        # household total to bus_fare_spending_reported on loading and
+        # gives it back unchanged without journeys
+        household["bus_fare_spending"] = answers.bus_fare_spending
     if answers.brma is not None:
         household["brma"] = answers.brma
     household["local_authority"] = (
@@ -1855,6 +1943,26 @@ CARERS_ALLOWANCE_TAPER_START = (
     .default
 )
 
+# The fiscal years the £2 bus fare cap credits anything in: its modifier's
+# own capped shares (``capped_2026``, ``capped_2027``), read from its
+# signature as the registered measure runs it
+BUS_FARE_CAP_YEARS = frozenset(
+    int(name.removeprefix("capped_"))
+    for name, parameter in inspect.signature(
+        bus_fare_cap_2027
+    ).parameters.items()
+    if name.startswith("capped_") and parameter.default
+)
+# Where the cap credits anything: England (policyengine-uk's ``country``,
+# from the region) outside London, as the modifier reads it. The region is
+# the calculator's answer, set from the council picked.
+BUS_FARE_CAP_REGIONS = frozenset(REGIONS) - {
+    "LONDON",
+    "WALES",
+    "SCOTLAND",
+    "NORTHERN_IRELAND",
+}
+
 # Measures that cannot move this household's net income in this year,
 # from the household's answers alone, so the split by policy need not run
 # them: each shows as "not affected", exactly as its run would. Every rule is
@@ -1882,6 +1990,10 @@ SKIP_REASONS = {
     "savings_income_rates_up": "no savings interest, or before 2027-28",
     "trading_allowance_raise": (
         "no self-employment receipts, or before 2027-28"
+    ),
+    "bus_fare_cap_2027": (
+        "no bus fares, not in England outside London, or outside 2026-27 "
+        "to 2027-28"
     ),
 }
 
@@ -1946,6 +2058,14 @@ def provably_unaffected(
         # The allowance reads trading receipts (and profit), which only
         # the head's self-employment answers give.
         return year < TRADING_ALLOWANCE_FROM or not answers.self_employed
+    if measure_id == "bus_fare_cap_2027":
+        # The credit is a share of bus_fare_spending, in England outside
+        # London, in the years the cap runs.
+        return (
+            not answers.bus_fare_spending
+            or answers.region not in BUS_FARE_CAP_REGIONS
+            or year not in BUS_FARE_CAP_YEARS
+        )
     return False
 
 
@@ -2053,17 +2173,25 @@ def calculate_household_impact(
             "note": (
                 "As entered."
                 if answers.council_tax is not None
-                else (
-                    "No Council Tax in Northern Ireland (domestic rates are "
-                    "not modelled)."
-                    if answers.region not in COUNCIL_TAX_BAND_D
-                    else (
+                else {
+                    "none": (
+                        "No Council Tax in Northern Ireland (domestic rates "
+                        "are not modelled)."
+                    ),
+                    "council": (
+                        f"Band {answers.council_tax_band} at the local "
+                        "authority's own Band D for 2026-27 "
+                        "(policyengine-uk), grown to "
+                        f"{fiscal_year(year)} with the OBR's Council Tax "
+                        "forecast."
+                    ),
+                    "region": (
                         f"Band {answers.council_tax_band} at the region's "
                         "average Band D for 2026-27, grown to "
                         f"{fiscal_year(year)} with the OBR's Council Tax "
                         "forecast."
-                    )
-                )
+                    ),
+                }[council_tax_basis(answers)]
             ),
         },
         "state_pension_used": {
@@ -2087,7 +2215,16 @@ def calculate_household_impact(
         "not_modelled": sides.not_modelled,
         "by_policy": None,
         "programmes": [
-            _programme_entry(row, before, after, hidden)
+            {
+                **_programme_entry(row, before, after, hidden),
+                # The note says what this household's Council Tax starts
+                # from, as council_tax_used does
+                **(
+                    {"note": council_tax_row_note(answers)}
+                    if row.id == "council_tax"
+                    else {}
+                ),
+            }
             for row in (*PROGRAMMES, *OTHER_ROWS)
             if row.id not in hidden
         ],

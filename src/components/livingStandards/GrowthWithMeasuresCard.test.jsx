@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import GrowthWithMeasuresCard, { WITH_MEASURES_TITLE, clearGrowthWithMeasuresCache } from "./GrowthWithMeasuresCard";
 import { clearOutlookCache } from "../../utils/livingStandards/outlook";
 import { MeasureCatalogueProvider } from "../../utils/measureCatalogue";
@@ -33,6 +33,13 @@ const catalogue = {
 };
 const notPublished = selectionNotPublished("Growth");
 const withCatalogue = ({ children }) => <MeasureCatalogueProvider catalogue={catalogue}>{children}</MeasureCatalogueProvider>;
+// The title is in the loading skeleton too (the card holds its place at
+// once), so finding it does not mean the chart is drawn: wait for the
+// skeleton to go before reading the loaded card
+async function findLoadedCard() {
+  await waitFor(() => expect(screen.queryByText("Loading growth with the selected policies")).toBeNull());
+  return screen.findByText(WITH_MEASURES_TITLE);
+}
 
 beforeEach(() => {
   GROWTH = FILE;
@@ -56,7 +63,7 @@ afterEach(() => {
 describe("Growth across the distribution, with the selected measures", () => {
   it("opens on growth with the policies; its effect in pp is labelled with the measures, with a link to its twin", async () => {
     render(<GrowthWithMeasuresCard selectedPolicies={["threshold_freeze_2031_32"]} twinLink={<a href="?tab=outlook&sub=living">twin</a>} />);
-    expect(await screen.findByText(WITH_MEASURES_TITLE)).toBeTruthy();
+    expect(await findLoadedCard()).toBeTruthy();
     expect(screen.getByRole("button", { name: /^Options:.*Growth with the policies \(%\)/ })).toBeTruthy();
     expect(document.querySelector(".chart-description").textContent).toMatch(/^With the selected policies, real incomes/);
     fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
@@ -76,7 +83,7 @@ describe("Growth across the distribution, with the selected measures", () => {
 
   it("names the two views by what they plot, and starts the growth view's sentence with the policies (LS1, LS3)", async () => {
     render(<GrowthWithMeasuresCard selectedPolicies={["threshold_freeze_2031_32"]} twinLink={null} />);
-    expect(await screen.findByText(WITH_MEASURES_TITLE)).toBeTruthy();
+    expect(await findLoadedCard()).toBeTruthy();
     expect(document.querySelector(".chart-description").textContent).toMatch(/^With the selected policies, real incomes .+ \(second tenth: \S+% a year; top tenth: \S+%\)\.$/);
     expect(document.body.textContent).not.toMatch(/lowest tenth:/);
     expect(document.querySelector(".chart-description").textContent).not.toMatch(/^Under current law/);
@@ -86,7 +93,7 @@ describe("Growth across the distribution, with the selected measures", () => {
 
   it("explains the two Show options behind an info icon, on hover, keyboard focus and a tap", async () => {
     render(<GrowthWithMeasuresCard selectedPolicies={["threshold_freeze_2031_32"]} twinLink={null} />);
-    expect(await screen.findByText(WITH_MEASURES_TITLE)).toBeTruthy();
+    expect(await findLoadedCard()).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /^Options:/ }));
     const info = screen.getByRole("button", { name: "What the Show options mean" });
     const effect = /^Effect \(pp\): How much the selected policies change each group's real income growth, in percentage points\.$/;
@@ -123,7 +130,7 @@ describe("Growth across the distribution, with the selected measures", () => {
     // --only income_growth --published-package writes them
     GROWTH = FILE.replaceAll("autumn_budget_2026_combined,", `${KEY},`);
     render(<GrowthWithMeasuresCard selectedPolicies={[...PAIR].reverse()} twinLink={null} />, { wrapper: withCatalogue });
-    expect(await screen.findByText(WITH_MEASURES_TITLE)).toBeTruthy();
+    expect(await findLoadedCard()).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "About this chart" }));
     expect(screen.queryByText(/whole package/)).toBeNull();
     expect(screen.queryByText(notPublished)).toBeNull();

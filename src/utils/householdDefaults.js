@@ -60,7 +60,8 @@ export const WIZARD_DEFAULTS = {
   current_salary: DEFAULT_SALARY,
   region: "NORTH_WEST",
   // The local authority (council) picked, by its ONS name, which sets the
-  // region; null until picked. Not sent: the API reads the region
+  // region; null until picked. Sent as its policyengine-uk key
+  // (local_authority), for its own Council Tax Band D
   council: null,
   tenure: "RENT_PRIVATELY",
   // null: the region's average private rent (ONS), until changed
@@ -87,6 +88,9 @@ export const WIZARD_DEFAULTS = {
   petrol_spending_per_year: DEFAULT_SPENDING.petrol,
   diesel_spending_per_year: DEFAULT_SPENDING.diesel,
   electricity_spending_per_year: DEFAULT_SPENDING.electricity,
+  // Bus fares, £ a year: none until answered (not sent), for the £2 bus
+  // fare cap in England outside London
+  bus_fare_spending_per_year: 0,
   dividends_per_year: 0,
   savings_interest_per_year: 0,
   property_income_per_year: 0,

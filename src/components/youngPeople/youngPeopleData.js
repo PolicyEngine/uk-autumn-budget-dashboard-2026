@@ -3,7 +3,7 @@
  * measure's average change for a chosen age group beside its all-ages
  * figure, and the average change for every age group in every year shown.
  *
- * Both read only mean_change from public/data/age_impact.csv. A mean
+ * Both read only mean_change from each artifact's age_impact.csv. A mean
  * change is additive across policies (the other charts on the page add up
  * each policy's own effect), so the year-by-year series adds them up too.
  * Shares and counts are never added up here.
@@ -47,10 +47,11 @@ const findRow = (rows, id, year, band) =>
 
 /**
  * One entry per selected policy with rows in the year: its mean change for
- * the chosen age group (`group`) and for all people (`all`), sorted by the
- * size of the group's figure, largest first. Policies with no effect on
- * either are listed in `noEffect`; policies whose group row has too few
- * survey records in `suppressed`.
+ * the chosen age group (`group`) and for the group compared (`all`), sorted
+ * by the size of the group's figure, largest first. Where one of the two is
+ * withheld or too thin, that one is null and the other is still shown (the
+ * policy is also listed in `suppressed`); a policy with neither is left
+ * out. Policies with no effect on what is shown are listed in `noEffect`.
  *
  * @param {Array<Object>} rows - Typed age_impact rows
  * @param {Array<{id: string, name: string}>} policies - Every policy
@@ -59,29 +60,40 @@ const findRow = (rows, id, year, band) =>
  * @param {string} [band] - The age group's key (default 16 to 24)
  */
 export function measureComparison(rows, policies, selected, year, band = YOUNG_BAND, compareBand = ALL_BAND) {
+  const entries = [];
+  for (const policy of policies) {
+    if (!selected.includes(policy.id) || policy.displayable === false) continue;
+    entries.push({ policy, group: findRow(rows, policy.id, year, band), all: findRow(rows, policy.id, year, compareBand) });
+  }
+  return splitComparison(entries);
+}
+
+const usableMean = (row) =>
+  row && row.sample_size >= MIN_SAMPLE_SIZE && Number.isFinite(row.mean_change) ? row.mean_change : null;
+
+/**
+ * Each policy's `{ policy, group, all }` rows as `{ shown, noEffect,
+ * suppressed }` (measureComparison): a withheld or thin figure is null and
+ * the other is kept; a policy with no row at all is left out.
+ */
+export function splitComparison(entries) {
   const shown = [];
   const noEffect = [];
   const suppressed = [];
-  for (const policy of policies) {
-    if (!selected.includes(policy.id) || policy.displayable === false) continue;
-    const group = findRow(rows, policy.id, year, band);
-    const all = findRow(rows, policy.id, year, compareBand);
-    // No rows at all this year: nothing to say. All ages but no row for the
-    // group: its bands withheld (too few survey records), said, never dropped
-    if (!group && !all) continue;
-    if (!group || !all || !Number.isFinite(group.mean_change) || !Number.isFinite(all.mean_change)) {
-      if (all && !group) suppressed.push(policy.name);
-      continue;
-    }
-    if (group.sample_size < MIN_SAMPLE_SIZE || all.sample_size < MIN_SAMPLE_SIZE) {
-      suppressed.push(policy.name);
-    } else if (Math.abs(group.mean_change) < NO_EFFECT && Math.abs(all.mean_change) < NO_EFFECT) {
+  for (const { policy, group: groupRow, all: allRow } of entries) {
+    // No rows at all this year: nothing to say
+    if (!groupRow && !allRow) continue;
+    const group = usableMean(groupRow);
+    const all = usableMean(allRow);
+    if (group === null || all === null) suppressed.push(policy.name);
+    if (group === null && all === null) continue;
+    if ([group, all].every((value) => value === null || Math.abs(value) < NO_EFFECT)) {
       noEffect.push({ id: policy.id, name: policy.name });
     } else {
-      shown.push({ id: policy.id, name: policy.name, group: group.mean_change, all: all.mean_change });
+      shown.push({ id: policy.id, name: policy.name, group, all });
     }
   }
-  shown.sort((a, b) => Math.abs(b.group) - Math.abs(a.group) || Math.abs(b.all) - Math.abs(a.all));
+  shown.sort((a, b) => Math.abs(b.group ?? 0) - Math.abs(a.group ?? 0) || Math.abs(b.all ?? 0) - Math.abs(a.all ?? 0));
   return { shown, noEffect, suppressed };
 }
 
@@ -92,9 +104,7 @@ export function measureComparison(rows, policies, selected, year, band = YOUNG_B
  * the year is too thin is null and listed in `suppressed`; a group with no
  * row for a selected policy in a year it publishes (the generator withholds
  * a policy's age bands when some are too thin to publish, keeping all ages)
- * is null and listed in `missing`, so the card can say so. With several
- * policies and no package, such a year is null in every group and
- * `combinationUnavailable` (never half drawn).
+ * is null and listed in `missing`; the other groups keep their figures.
  *
  * @param {Array<Object>} rows
  * @param {Array<{id: string, name: string}>} policies
@@ -142,11 +152,8 @@ export function changeByYear(rows, policies, selected, years, packageRun = null)
       else if (incomplete) point.missing.push(group.key);
       if (!thin && !incomplete) point[group.key] = total;
     }
-    // Several policies with no package: a year drawn whole or not at all
-    if (new Set(selected).size > 1 && (point.suppressed.length || point.missing.length)) {
-      for (const group of AGE_GROUPS) point[group.key] = null;
-      return { ...point, suppressed: [], missing: [], combinationUnavailable: true };
-    }
+    // A group with a withheld policy has no net that year; the other groups
+    // keep theirs (Vahid, 29 Oct: never blank the rest)
     return point;
   });
 }
@@ -190,9 +197,10 @@ export const SINGLE_AGE_LAST = 40;
 /**
  * One bar per single year of age, `first` to `last` (SINGLE_AGE_FIRST to
  * SINGLE_AGE_LAST unless given; the Pensioners sub-tab asks for older
- * ages): the selected policies' mean changes added up (`netChange`). A bar
- * is null where any selected policy has no row for the age (the generator
- * leaves out an age with too few survey records) or a thin one.
+ * ages): the selected policies' mean changes added up (`netChange`). The
+ * net is null where any selected policy has no row for the age (the
+ * generator leaves out an age with too few survey records) or a thin one;
+ * the other policies' own parts at that age are kept (`parts`).
  *
  * @param {Array<Object>} rows - Typed age_impact rows
  * @param {Array<{id: string}>} policies - Every policy
@@ -216,7 +224,7 @@ export function singleAgeBars(rows, policies, selected, year, first = SINGLE_AGE
       const row = byKey.get(`${policy.id}|${singleAgeKey(age)}`);
       if (!row || row.sample_size < MIN_SAMPLE_SIZE || !Number.isFinite(row.mean_change)) {
         complete = false;
-        break;
+        continue;
       }
       net += row.mean_change;
       parts.push({
@@ -229,8 +237,8 @@ export function singleAgeBars(rows, policies, selected, year, first = SINGLE_AGE
     // Each policy's own change, for the tooltip, largest first
     parts.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
     // Each policy's own change under its series key too, for the stacked bars
-    const bySeries = complete ? Object.fromEntries(parts.map((part) => [part.key, part.value])) : {};
-    bars.push({ age, label: singleAgeKey(age), netChange: complete ? net : null, parts: complete ? parts : [], ...bySeries });
+    const bySeries = Object.fromEntries(parts.map((part) => [part.key, part.value]));
+    bars.push({ age, label: singleAgeKey(age), netChange: complete ? net : null, parts, ...bySeries });
   }
   return bars;
 }
@@ -296,16 +304,17 @@ export function groupMeasureSeries(rows, policies, selected, years, band = YOUNG
       const row = findRow(rows, policy.id, year, band);
       if (!row || row.sample_size < MIN_SAMPLE_SIZE || !Number.isFinite(row.mean_change)) {
         complete = false;
-        break;
+        continue;
       }
       parts.push({ id: policy.id, key: policy.seriesKey ?? `measure:${policy.id}`, value: row.mean_change });
     }
-    const bySeries = complete ? Object.fromEntries(parts.map((part) => [part.key, part.value])) : {};
+    // A year with a withheld policy: no net, the others' own parts kept
+    const bySeries = Object.fromEntries(parts.map((part) => [part.key, part.value]));
     return {
       year,
       published: complete,
       net: complete ? parts.reduce((sum, part) => sum + part.value, 0) : null,
-      parts: complete ? parts : [],
+      parts,
       ...bySeries,
     };
   });
@@ -343,7 +352,7 @@ export function cumulate(points, keys) {
  * Computed from the per-measure rows, so a new or changed measure is named
  * by the data, never by a list here.
  *
- * @returns {Array<{year: number, from: number, step: number, value: number, measureId: string}>}
+ * @returns {Array<{year: number, from: number, step: number, value: number, measureId: string, ends: boolean}>}
  */
 export function stepAnnotations(series, { limit = 2, share = 0.3 } = {}) {
   const values = series.map((point) => point.net).filter((value) => value !== null);
@@ -368,7 +377,12 @@ export function stepAnnotations(series, { limit = 2, share = 0.3 } = {}) {
         measureId = id;
       }
     }
-    if (measureId) steps.push({ year: after.year, from: before.year, step, value: after.net, measureId });
+    if (measureId) {
+      // The step comes from the measure ending (it is in force the year
+      // before and not after), so the headline and label never say it applies
+      const ends = Math.abs(partOf(before, measureId)) >= 0.5 && Math.abs(partOf(after, measureId)) < 0.5;
+      steps.push({ year: after.year, from: before.year, step, value: after.net, measureId, ends });
+    }
   }
   return steps.sort((a, b) => Math.abs(b.step) - Math.abs(a.step)).slice(0, limit).sort((a, b) => a.year - b.year);
 }

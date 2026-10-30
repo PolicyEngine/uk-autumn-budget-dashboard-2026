@@ -103,6 +103,10 @@ def _with(change):
             ["body", "household", "gas_spending"],
         ),
         (
+            {"household": {"bus_fare_spending": -1}},
+            ["body", "household", "bus_fare_spending"],
+        ),
+        (
             {"household": {"state_pension": -1}},
             ["body", "household", "state_pension"],
         ),
@@ -122,6 +126,39 @@ def test_answers_out_of_range_are_refused_naming_the_field(
 
     monkeypatch.setattr(household_impact, "calculate_household_impact", never)
     response = client.post(ROUTE, json=_with(change))
+    assert response.status_code == 422, response.text
+    assert field in [error["loc"] for error in response.json()["detail"]]
+
+
+@pytest.mark.parametrize(
+    "body, field",
+    [
+        (
+            '{"year": 2027, "household": {"employment_income": NaN}}',
+            ["body", "household", "employment_income"],
+        ),
+        (
+            '{"year": 2027, "household": {"savings_interest_income": '
+            "Infinity}}",
+            ["body", "household", "savings_interest_income"],
+        ),
+        (
+            '{"year": 2027, "household": {"age": NaN}}',
+            ["body", "household", "age"],
+        ),
+        ('{"year": -Infinity}', ["body", "year"]),
+    ],
+)
+def test_non_finite_numbers_are_refused_with_a_422_not_a_500(
+    body, field, monkeypatch
+):
+    def never(*args, **kwargs):
+        raise AssertionError("a refused request reached the calculation")
+
+    monkeypatch.setattr(household_impact, "calculate_household_impact", never)
+    response = client.post(
+        ROUTE, content=body, headers={"content-type": "application/json"}
+    )
     assert response.status_code == 422, response.text
     assert field in [error["loc"] for error in response.json()["detail"]]
 
@@ -269,6 +306,21 @@ def test_gas_spending_defaults_to_the_ons_average():
     answers = HouseholdAnswersRequest(gas_spending=1_050).answers()
     assert answers.gas_spending == 1_050
     assert HouseholdAnswersRequest(gas_spending=0).answers().gas_spending == 0
+
+
+def test_bus_fare_spending_is_optional_and_bounded():
+    """Left out, none (a request from before the form asked is as it
+    was); entered, as entered; negative or above £100,000 refused."""
+    import pydantic
+
+    from uk_budget_data.api import HouseholdAnswersRequest
+
+    assert HouseholdAnswersRequest().answers().bus_fare_spending == 0
+    answers = HouseholdAnswersRequest(bus_fare_spending=500).answers()
+    assert answers.bus_fare_spending == 500
+    for bad in (-1, 100_001):
+        with pytest.raises(pydantic.ValidationError):
+            HouseholdAnswersRequest(bus_fare_spending=bad)
 
 
 def test_electricity_spending_defaults_to_the_ons_average():

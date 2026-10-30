@@ -820,3 +820,19 @@ export function fixedNoNegativeZero(value, decimals) {
  */
 export const noHouseholdChange = (yearText) =>
   `None of the selected policies changes household incomes in ${yearText}.`;
+
+/** In place of a plot whose every cell is withheld: no wording on why. */
+export const noFigures = (yearText) => `No figures for this selection in ${yearText}.`;
+
+/**
+ * In place of an empty "Effect of each policy" dumbbell (young people,
+ * pensioners): "None of the selected policies changes…" only when every
+ * selected policy has no effect. A policy with no published row, or whose
+ * group is held back for too few survey records (named in the card's About
+ * this chart), is unavailable, never "no change".
+ */
+export function emptyMeasuresNote({ noEffect, selectedPolicies, yearLabel }) {
+  return selectedPolicies.length > 0 && noEffect.length === selectedPolicies.length
+    ? noHouseholdChange(yearLabel)
+    : `Results are unavailable for the selected policies in ${yearLabel}.`;
+}

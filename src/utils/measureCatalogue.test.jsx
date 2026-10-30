@@ -257,6 +257,9 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
   //   income tax rise, held back from the release and so never in the
   //   manifest, which the Household calculator always adds to a
   //   household's request (Vahid and María, 28 October).
+  // - EXPLAINERS: the titles of our published posts on this Budget, linked
+  //   from Methodology; a post stays whether or not its measure is
+  //   published, so a title decides nothing the page shows of a measure.
   // - IMPROVEMENTS_NOTE: "What we're improving", the next update's plans in
   //   the words Max approved (28 October), word for word
   //   (ImprovementsNote.test.jsx); prose only, it decides nothing about any
@@ -274,6 +277,7 @@ it("frontend source contains no embedded Budget measure names or ids", () => {
     "utils/singleYear.js": [/^\s*warm_home_discount_top_up: "[^"]*",$/gm],
     "utils/householdPolicyFields.js": [/export const POLICY_FIELDS = \{[\s\S]*?\n\};/],
     "utils/calculatorOnlyMeasures.js": [/export const SAVINGS_INCOME_RATES_ID = "[a-z_]+";/, /export const CALCULATOR_ONLY_MEASURES = \{[\s\S]*?\n\};/],
+    "utils/explainers.js": [/export const EXPLAINERS = \[[\s\S]*?\n\];/],
     "components/methodology/improvementsText.js": [/export const IMPROVEMENTS_NOTE = \{[\s\S]*?\n\};/],
     "utils/obrDeviationNotes.js": [/export const OBR_DEVIATION_NOTES = \{[\s\S]*?\n\};/, /export const OBR_COMPARISON_BASES = \{[\s\S]*?\n\};/, /export const OBR_DIFFERENCE_POINTS = \{[\s\S]*?\n\};/, /export const OBR_PANEL_BASES = \{[\s\S]*?\n\};/, /export const NOT_COMPARABLE_SHORT = \{[\s\S]*?\n\};/],
   };

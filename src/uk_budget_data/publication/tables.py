@@ -130,6 +130,25 @@ TABLES: dict[str, TableSpec] = {
             ("reform_id", "year"),
             required=False,
         ),
+        # A measure's figure on its official costing's basis (#297): the
+        # change in just the taxes and benefits calculators.OFFICIAL_BASES
+        # names, as budgetary_impact's columns, and ``variables``, the
+        # engine variables summed (";"-separated), by which the page names
+        # the figure. A table of its own, and not required, so only the
+        # measures with an official basis carry it and every other artifact
+        # keeps its bytes.
+        TableSpec(
+            "official_basis",
+            (
+                ("reform_id", STR),
+                ("reform_name", STR),
+                ("year", INT),
+                ("value", FLOAT),
+                ("variables", STR),
+            ),
+            ("reform_id", "year"),
+            required=False,
+        ),
         # The example households' net income across one income each
         # (uk_budget_data.example_households): ``household`` names the
         # household, ``x_variable`` the income on its x-axis, ``income``

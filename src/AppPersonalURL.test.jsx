@@ -229,11 +229,19 @@ describe("a later snapshot keeps the reader's selection", () => {
 });
 
 describe("the header's year in the address", () => {
+  // The page renders once while the publication loads, then remounts the
+  // views on the loaded snapshot (App.jsx, key={snapshot}), so an element
+  // found during loading can be gone a moment later: wait for the
+  // published policies' cards first
+  const published = () =>
+    waitFor(() => expect(document.querySelectorAll(".policy-details-content [aria-label^='See its effect']").length).toBeGreaterThan(0));
+
   it("opens a shared link on its ?year= and keeps it there", async () => {
     // (the default year stays out of the address, so a kept 2030 was read)
     vi.stubGlobal("fetch", dashboardFixtureFetch());
     window.history.replaceState({}, "", "/?tab=policies&year=2030");
     render(<App />);
+    await published();
     expect(await screen.findByRole("button", { name: /^Year 2030-31/ })).toBeInTheDocument();
     await waitFor(() => expect(new URLSearchParams(window.location.search).get("year")).toBe("2030"));
   });
@@ -242,6 +250,7 @@ describe("the header's year in the address", () => {
     vi.stubGlobal("fetch", dashboardFixtureFetch());
     window.history.replaceState({}, "", "/?tab=policies&year=2026");
     render(<App />);
+    await published();
     expect(await screen.findByRole("tab", { name: /Policies/ })).toBeInTheDocument();
     await waitFor(() => expect(new URLSearchParams(window.location.search).get("year")).toBeNull());
   });

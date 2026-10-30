@@ -139,6 +139,11 @@ code {
   --tab-row-height: 48px;
   /* The view tabs under the intro; they stick under the band */
   --view-tabs-height: var(--tab-row-height);
+  /* The title band's, the view tab bar's and the sub-tab band's side
+     padding, which puts their content in the page column: one value, so
+     the sub-tab row's --view-tab-x, measured in the bar, starts it under
+     the chosen view tab (ViewTabs.jsx, SubTabs.css) */
+  --bar-pad-x: max(40px, calc((100vw - 1120px) / 2));
   /* The two tab rows' one spacing (view tabs, sub-tabs and About): the gap
      between items, the padding inside each (chosen or not) and the gap
      from icon to label */
@@ -343,17 +348,25 @@ body {
 }
 
 /* The two bars: the ui-kit site nav (PolicyEngineShell renders it with an
-   inline position:sticky; top:0) and the title band. The site nav is out
-   of the page's flow and hidden above the window by default, so the band
-   sits at the very top of the page with the tab rows under it, from the
-   first paint. App.jsx shows it (data-site-nav-shown on <html>) when the pointer
-   rests at the window's top edge (SITE_NAV_EDGE_PX for SITE_NAV_DWELL_MS, utils/pageScroll), or the reader tabs into it (never on a scroll up; on a touch-only
-   device, only at the page's very top), keeps it 1.5s and while it is in
-   use, and hides it on any scroll down by the reader or once the pointer
-   or focus has left; it measures the nav into
-   --site-nav-height. Shown, it sits above the band: --nav-offset becomes
-   its height, so the band and tab rows move down under it and the Year and
-   Policies pills stay in view.
+   inline position:sticky; top:0) and the title band. The site nav sits in
+   the page's flow, at its top, from the first paint: on load it is in view
+   above the band, as on every policyengine.org page (app-v2's app-zone
+   shell audit looks for its Research, Model, API and Donate links in the
+   window's top 140px). A scroll down takes it away with the page, and the
+   band then sticks at the window's top. Once scrolled away it waits just
+   above the window: sticky at minus its own height (--site-nav-height,
+   which App.jsx measures; until then the ui-kit's --spacing-header, the
+   height it gives the nav). App.jsx brings it back
+   (data-site-nav-shown on <html>) when the pointer rests at the window's
+   top edge (SITE_NAV_EDGE_PX for SITE_NAV_DWELL_MS, utils/pageScroll), or
+   the reader tabs into it (never on a scroll up; on a touch-only device,
+   only at the page's very top), keeps it 1.5s and while it is in use, and
+   lets it go on any scroll down by the reader or once the pointer or focus
+   has left. Shown, it sticks at the window's top (top: 0, sliding down from
+   above) and sits above the band: --nav-offset becomes its height, so the
+   band and tab rows move down under it and the Year and Policies pills
+   stay in view. Within its own height of the page's top it is never laid
+   over the page: there it is back in its place in the flow.
    --motion-slide is 0 under reduced motion.
    Written against @policyengine/ui-kit 0.12.0, whose shell is
    <div class="min-h-screen flex flex-col"> with the nav as its first
@@ -372,27 +385,26 @@ html[data-site-nav-shown] {
 }
 
 :root[data-site-nav-shown] .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
+  top: 0 !important;
   box-shadow: 0 2px 8px var(--shadow-faint) !important;
 }
 
 .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0;
-  right: 0;
+  position: sticky !important;
+  top: calc(0px - var(--site-nav-height, var(--spacing-header, 58px))) !important;
   /* Above the title band (1100), so its About menu opens over it */
   z-index: 1110 !important;
-  transition: transform var(--motion-slide) var(--ease-out);
+  transition: top var(--motion-slide) var(--ease-out);
 }
 
 :root:not([data-site-nav-shown]) .min-h-screen.flex.flex-col > div:first-child[style*="sticky"] {
-  transform: translateY(-100%);
   box-shadow: none !important;
 }
 
 /* A touch-only device (a phone or tablet): the site nav is part of the
    page, at its top, and scrolls away with it; it is never laid over the
-   page. Fixed and pushing the bars down by its height (above), it hid the
+   page, not even when focus is in it. Laid over the page and pushing the
+   bars down by its height, it hid the
    first 58px of every view under the tab rows on load: the bars moved
    down, the content did not (team review, Budget day). In the flow, the
    band, the tab rows and the content all start below it, and once it has
@@ -409,6 +421,7 @@ html[data-site-nav-shown] {
     /* Relative, not static: it keeps its z-index, so its menus still
        open over the band */
     position: relative !important;
+    top: 0 !important;
     transform: none;
     box-shadow: none !important;
     transition: none;
@@ -477,7 +490,7 @@ html[data-site-nav-shown] {
   /* Full-bleed with real edges: the band spans the window, and its padding
      lines its content up with the page column. */
   margin-inline: calc(50% - 50vw);
-  padding-inline: max(40px, calc((100vw - 1120px) / 2));
+  padding-inline: var(--bar-pad-x);
   /* The site header's gradient and rule, from the same tokens */
   background: var(--band-gradient);
   border-bottom: var(--band-rule);
@@ -610,7 +623,7 @@ html[data-site-nav-shown] {
   /* Under the band and its pill lists, above the charts */
   z-index: 1090;
   margin-inline: calc(50% - 50vw);
-  padding-inline: max(40px, calc((100vw - 1120px) / 2));
+  padding-inline: var(--bar-pad-x);
   /* A strip of its own: the page's main navigation */
   background: var(--pe-surface);
   border-top: 1px solid var(--card-border);
@@ -632,6 +645,14 @@ html[data-site-nav-shown] {
 
 .view-tabs::-webkit-scrollbar {
   display: none;
+}
+
+/* In the bar, the row is pulled a tab's padding into the margin, so the
+   first tab's icon starts on the left edge of PolicyEngine's mark in the
+   band above (.title-mark) and of the page content; the sub-tab row
+   follows it (--view-tab-x, ViewTabs.jsx) */
+.view-tabs-bar > .view-tabs {
+  margin-left: calc(-1 * var(--tab-pad-x, 12px));
 }
 
 /* Tabs out of sight at either end of a scrolling row fade out there */
@@ -1707,9 +1728,8 @@ html[data-site-nav-shown] {
     padding: 0 24px 48px;
   }
 
-  .title-row,
-  .view-tabs-bar {
-    padding-inline: 24px;
+  :root {
+    --bar-pad-x: 24px;
   }
 }
 
@@ -1752,15 +1772,11 @@ html[data-site-nav-shown] {
   :root {
     --card-padding: 16px;
     --title-row-height: 100px;
+    --bar-pad-x: 16px;
   }
 
   .main-content {
     padding: 0 16px 48px;
-  }
-
-  .title-row,
-  .view-tabs-bar {
-    padding-inline: 16px;
   }
 
   .title-row h1 {
@@ -2759,97 +2775,9 @@ html[data-site-nav-shown] {
   transform: translate(-50%, -2px);
 }
 
-/* A change, before and after: a label row with the parameter's icon, then
-   two tiles, current law muted and the measure in its colour */
-.pchg-ba {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.pchg-ba-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-size: var(--fs-small);
-  font-weight: 500;
-  color: var(--pe-gray-600);
-}
-
-/* Which year the tiles show, where the change varies by year */
-.pchg-ba-when {
-  font-weight: 400;
-  color: var(--pe-gray-500);
-}
-
-/* The plot's caption and key, under the tiles */
+/* The plot's caption and key, above the plot */
 .pchg-head.is-plot {
   margin-top: 6px;
-}
-
-.pchg-ba-label svg {
-  flex: none;
-  color: var(--pe-gray-500);
-}
-
-/* Both tiles one size: the row stretches them to the taller, and the
-   change sits in the last slot of the second, so the labels and values
-   line up across the two */
-.pchg-ba-tiles {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: stretch;
-  gap: 10px;
-}
-
-.pchg-tile {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  min-width: 0;
-  padding: 10px 14px 12px;
-  border-radius: 10px;
-  font-variant-numeric: tabular-nums;
-}
-
-.pchg-tile.is-before {
-  background: var(--pe-gray-50);
-  border: 1px solid var(--c-grid);
-}
-
-.pchg-tile.is-after {
-  background: color-mix(in srgb, var(--policy-accent, var(--c-after)) 10%, var(--c-surface));
-  border: 1px solid color-mix(in srgb, var(--policy-accent, var(--c-after)) 45%, var(--c-surface));
-}
-
-.pchg-tile-name {
-  font-size: var(--fs-micro);
-  font-weight: 500;
-  /* Grey 600: grey 500 on the tiles' tints is 4.2 to 4.5:1, under the
-     4.5 WCAG 1.4.3 needs; 600 is 6.5:1 or more */
-  color: var(--pe-gray-600);
-}
-
-.pchg-tile-value {
-  font-size: var(--fs-xl);
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--pe-gray-900);
-}
-
-.pchg-tile.is-before .pchg-tile-value {
-  font-weight: 500;
-  color: var(--pe-gray-500);
-  text-decoration: line-through;
-  text-decoration-color: var(--c-before);
-  text-decoration-thickness: 2px;
-}
-
-.pchg-ba-arrow {
-  align-self: center;
-  color: var(--pe-gray-400);
 }
 
 /* Several values side by side, only where the measure differs */
@@ -2974,17 +2902,6 @@ html[data-site-nav-shown] {
 .policy-timeline-labels > span.is-lit {
   font-weight: 700;
   color: var(--c-gain-text);
-}
-
-@media (max-width: 768px) {
-  .pchg-tile {
-    padding: 8px 10px 10px;
-  }
-
-  .pchg-tile-value {
-    font-size: var(--fs-section);
-  }
-
 }
 
 @media (max-width: 768px) {

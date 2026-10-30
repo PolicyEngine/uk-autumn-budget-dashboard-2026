@@ -256,8 +256,7 @@
               "kind": "modifier_constant",
               "where": "budget_measures/zero_vat_on_domestic_electricity.py zero_vat_on_domestic_electricity(rate_change_2026, rate_change_2027), rate_change_2026 divided by that module's WINTER_SHARE (the October to March share of a year's electricity use) and rate_change_2027 by its SPRING_SHARE (the April to June share), October 2026 to June 2027 (the dates in the measure's description)"
             }
-          },
-          "card_note": "0% instead of 5% in Great Britain from 1 October 2026. The Budget expects the zero rate to apply in Northern Ireland too from April 2027, and the model counts it there from then. The October to March zero rate was already law (SI 2026/987); like the Treasury's costing, the model scores the whole period against 5%."
+          }
         },
         {
           "label": "VAT on domestic electricity, averaged over the year",
@@ -571,7 +570,16 @@
               "where": "the weekly rate (gov.dwp.carers_allowance.rate) less taper_rate x £1; budget_measures/carers_allowance_earnings_taper.py carers_allowance_earnings_taper(start_year, taper_rate, limit_hours, national_living_wage_by_april)"
             }
           },
-          "card_note": "The earnings limit is 16 hours at the National Living Wage, rounded up to the pound: £228 a week in 2030-31 and £234 in 2031-32. Current law stops the allowance at £1 over it. With the measure it falls by £1 for each £1 above the limit, and runs out at £324 a week in 2030-31 and £332 in 2031-32."
+          "figures": {
+            "earnings_limit": {
+              "2030-31": 228,
+              "2031-32": 234
+            },
+            "runs_out": {
+              "2030-31": 324,
+              "2031-32": 332
+            }
+          }
         }
       ]
     },
@@ -671,6 +679,38 @@
             }
           },
           "note": "Relieves trading receipts in place of actual expenses"
+        }
+      ]
+    },
+    "bus_fare_cap_2027": {
+      "description": "Single bus fares on participating services in England outside London are capped at £2 instead of £3 from 1 January to 31 December 2027. The saving is the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London: 10.0% of what that spending would be at £3 fares (£230m, divided by 0.9 for operator participation, over £2,557m of spending), for the days the cap runs: 1 January to 5 April 2027 in 2026-27 and 6 April to 31 December 2027 in 2027-28. London residents get £0. The saving is counted as household income, a methodological choice: the official cost is a grant to bus operators. Spending is held fixed, with no extra travel.",
+      "display": "switch",
+      "rows": [
+        {
+          "label": "Single bus fare cap",
+          "unit": "gbp",
+          "unit_words": "£ a single fare",
+          "primary": true,
+          "points": [
+            {
+              "key": "2027-01-01/2027-12-31",
+              "label": "January to December 2027",
+              "year": 2026,
+              "before": 3.0,
+              "after": 2.0
+            }
+          ],
+          "source": {
+            "before": {
+              "kind": "documented",
+              "where": "Budget 2026 Table 6.1 row 4; GOV.UK, 22 July 2026"
+            },
+            "after": {
+              "kind": "documented",
+              "where": "Budget 2026 Table 6.1 row 4; GOV.UK, 22 July 2026"
+            }
+          },
+          "note": "Participating services in England outside London. Modelled as the Treasury's costing (Table 6.1) shared out across households by their bus fare spending in England outside London: 10.0% of spending at £3 fares while the cap runs (budget_measures/bus_fare_cap_2027.py bus_fare_cap_2027(fall)); London residents get £0"
         }
       ]
     }

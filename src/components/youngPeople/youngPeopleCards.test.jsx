@@ -4,7 +4,7 @@ import fc from "fast-check";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import MeasuresCard from "./MeasuresCard";
 import { expectStandardDownloads } from "../../test/downloadMenus";
-import TrendCard, { missingGroupsNote, yearList } from "./TrendCard";
+import TrendCard, { yearList } from "./TrendCard";
 import {
   SINGLE_AGE_FIRST,
   SINGLE_AGE_LAST,
@@ -98,15 +98,21 @@ describe("young people data", () => {
     expect(shown[0]).toMatchObject({ group: 700, all: 260 });
   });
 
-  it("lists policies with no effect and hides thin rows", () => {
+  it("lists policies with no effect, and keeps the published half of a thin or withheld row", () => {
     const thin = [...ROWS.filter((r) => !(r.reform_id === "two_child_limit" && r.age_band === "16-24" && r.year === 2028)), row("two_child_limit", 2028, "16-24", 190, MIN_SAMPLE_SIZE - 1)];
     const { shown, noEffect, suppressed } = measureComparison(thin, POLICIES, ALL, 2028);
-    expect(shown.map((point) => point.name)).toEqual(["Threshold freeze extension"]);
+    // The thin group figure is left out; the policy's all ages figure stays
+    expect(shown.map((point) => point.name)).toEqual(["Threshold freeze extension", "2 child limit repeal"]);
+    expect(shown[1]).toMatchObject({ group: null });
+    expect(Number.isFinite(shown[1].all)).toBe(true);
     expect(noEffect.map((policy) => policy.name)).toEqual(["Salary sacrifice cap"]);
     expect(suppressed).toEqual(["2 child limit repeal"]);
-    // A policy that withholds the group's row but keeps all ages: said, never dropped
+    // A policy that withholds the group's row but keeps all ages: its all
+    // ages figure is still shown
     const withheld = ROWS.filter((r) => !(r.reform_id === "salary_sacrifice_cap" && r.age_band === "16-24"));
-    expect(measureComparison(withheld, POLICIES, ALL, 2029).suppressed).toEqual(["Salary sacrifice cap"]);
+    const result = measureComparison(withheld, POLICIES, ALL, 2029);
+    expect(result.suppressed).toEqual(["Salary sacrifice cap"]);
+    expect([...result.shown, ...result.noEffect].some((point) => point.name === "Salary sacrifice cap")).toBe(true);
   });
 
   it("adds up mean changes by year and never reads a missing year as zero", () => {
@@ -138,17 +144,14 @@ describe("young people data", () => {
     ];
     const [complete, withheld] = changeByYear(rows, POLICIES, ["two_child_limit", "threshold_freeze_extension"], [2028, 2029]);
     expect(complete).toMatchObject({ published: true, "16-24": 60, all: 60, missing: [], suppressed: [] });
-    // Several policies and no package: the year is not drawn at all, never
-    // all ages alone
-    expect(withheld).toMatchObject({ published: true, all: null, missing: [], suppressed: [], combinationUnavailable: true });
+    // Several policies and no package: all ages, where both publish, is
+    // drawn; the groups a policy withholds are not (never blank the rest)
+    expect(withheld).toMatchObject({ published: true, all: 50, missing: bands, suppressed: [] });
+    expect(withheld.combinationUnavailable).toBeUndefined();
     for (const band of bands) expect(withheld[band]).toBeNull();
-    expect(missingGroupsNote([complete, withheld], (key) => key)).toBeNull();
-    // One policy that withholds its own bands: all ages drawn, the gap said
+    // One policy that withholds its own bands: all ages drawn
     const [alone] = changeByYear(rows, POLICIES, ["threshold_freeze_extension"], [2029]);
     expect(alone).toMatchObject({ published: true, all: -50, missing: bands });
-    expect(missingGroupsNote([alone], (key) => key)).toBe(
-      "Not drawn in 2029-30, as a selected policy has too few survey records by age: every age group except all ages.",
-    );
 
     // The selection is a published combined package: its own rows, every
     // band drawn, though a single withholds them
@@ -161,15 +164,16 @@ describe("young people data", () => {
     expect(fromPackage[1]).toMatchObject({ published: true, "16-24": 45, all: 45, missing: [], suppressed: [] });
     expect(fromPackage[0]["0-15"]).toBe(55);
     expect(fromPackage[2]).toMatchObject({ published: false, all: null });
-    expect(missingGroupsNote(fromPackage, (key) => key)).toBeNull();
-    // A package run with no rows loaded: the combination rule, never half drawn
-    expect(changeByYear(rows, POLICIES, ["two_child_limit", "threshold_freeze_extension"], [2029], pkg)[0]).toMatchObject({ combinationUnavailable: true, all: null });
+    // A package run with no rows loaded: each group's sum where every policy publishes
+    expect(changeByYear(rows, POLICIES, ["two_child_limit", "threshold_freeze_extension"], [2029], pkg)[0]).toMatchObject({ all: 50, "16-24": null });
     // The focus group's series (headline, bars' net) reads the package too
     const series = groupSeries(packaged, POLICIES, ["two_child_limit", "threshold_freeze_extension"], [2028, 2029], "16-24", pkg);
     expect(series[0]).toMatchObject({ published: true, net: 55 });
-    // A policy withholds the band in 2029: no year has parts, the net alone
-    expect(series[0]).toMatchObject({ parts: [], partsShown: false });
-    expect(series[1]).toMatchObject({ published: true, net: 45, parts: [] });
+    // A policy withholds the band in 2029 while the package's net is
+    // published: that year has no parts beside it; 2028 keeps them
+    expect(series[0]).toMatchObject({ partsShown: true });
+    expect(series[0].parts).toHaveLength(2);
+    expect(series[1]).toMatchObject({ published: true, net: 45, parts: [], partsShown: false });
   });
 
   it("says a run of years as a range, else lists them", () => {
@@ -231,12 +235,17 @@ describe("young people cards", () => {
     expect(screen.getByText("Average change in household income from each policy, for people aged 65 and over and people of all ages.")).toBeInTheDocument();
   });
 
-  it("describes missing age-group rows as unavailable", () => {
+  it("keeps each policy's all ages figure when the chosen group has no rows", () => {
     render(<MeasuresCard {...props} rows={ROWS} selectedYear={2028} />);
     // The age group is the card's one Options pill
     fireEvent.click(screen.getByRole("button", { name: /^Options: 16 to 24/ }));
     fireEvent.click(within(screen.getByRole("radiogroup", { name: "Compare" })).getByRole("radio", { name: /65 and over/ }));
-    expect(screen.getByText("Results are unavailable for the selected policies in 2028-29.")).toBeInTheDocument();
+    // The all ages figures are drawn alone (the ring), with no gap or note
+    const rowNode = screen.getByRole("row", { name: /^Threshold freeze extension:/ });
+    expect(rowNode.getAttribute("aria-label")).toBe("Threshold freeze extension: all ages -£150 a year");
+    expect(rowNode.querySelector(".measure-dumbbell-dot")).toBeNull();
+    expect(rowNode.querySelector(".measure-dumbbell-ring")).not.toBeNull();
+    expect(screen.queryByText(/unavailable|too few survey records/)).not.toBeInTheDocument();
     expect(screen.queryByText(/None of the selected policies changes/)).not.toBeInTheDocument();
   });
 
@@ -279,7 +288,7 @@ describe("young people cards", () => {
     expect(description).not.toHaveTextContent(/£ a year/);
   });
 
-  it("says which years a selected policy's age bands are withheld, in About this chart (no note under the plot)", () => {
+  it("says nothing about a selected policy's withheld age bands (no disclosure text)", () => {
     const bands = ["0-15", "16-24", "25-34", "35-49", "50-64", "65+"];
     const rows = [
       ...DISPLAY_YEARS.flatMap((year) => [...bands, "all"].map((band) => row("two_child_limit", year, band, 100))),
@@ -290,9 +299,7 @@ describe("young people cards", () => {
     const card = document.querySelector(".young-people-trend");
     expect(card.querySelector(".chart-footer .note")).toBeNull();
     fireEvent.click(within(card).getByRole("button", { name: /About this chart/ }));
-    expect(card.querySelector(".chart-footer")).toHaveTextContent(
-      `Not drawn in ${yearList(DISPLAY_YEARS)}, as a selected policy has too few survey records by age: every age group except all ages.`,
-    );
+    expect(card.textContent).not.toMatch(/Not drawn in|too few survey records/);
   });
 
   it("offers no Compare with all ages chosen, so nothing reads 'All ages vs all ages' (AGE6)", () => {
@@ -387,13 +394,25 @@ describe("the change-by-year helpers", () => {
     row("a", 2028, 60), row("b", 2028, -200),
   ];
 
+  it("marks a step that comes from a measure ending", async () => {
+    const { groupMeasureSeries, stepAnnotations } = await import("./youngPeopleData");
+    // a is in force in 2026-27 and 2027-28 only; b is small throughout
+    const ending = [
+      row("a", 2026, 100), row("b", 2026, -5),
+      row("a", 2027, 100), row("b", 2027, -5),
+      row("a", 2028, 0), row("b", 2028, -5),
+    ];
+    const series = groupMeasureSeries(ending, policies, ["a", "b"], [2026, 2027, 2028]);
+    expect(stepAnnotations(series)).toEqual([{ year: 2028, from: 2027, step: -100, value: -5, measureId: "a", ends: true }]);
+  });
+
   it("adds each measure's own change for the group, and names the measure behind the big step", async () => {
     const { groupMeasureSeries, stepAnnotations, topParts, cumulate } = await import("./youngPeopleData");
     const series = groupMeasureSeries(rows, policies, ["a", "b"], [2026, 2027, 2028, 2029]);
     expect(series.map((point) => point.net)).toEqual([60, 70, -140, null]);
     expect(series[2]["measure:b"]).toBe(-200);
     // 2027-28 to 2028-29 falls by 210, from b alone; the 10 rise is too small to name
-    expect(stepAnnotations(series)).toEqual([{ year: 2028, from: 2027, step: -210, value: -140, measureId: "b" }]);
+    expect(stepAnnotations(series)).toEqual([{ year: 2028, from: 2027, step: -210, value: -140, measureId: "b", ends: false }]);
     expect(topParts(series[2]).map((part) => part.id)).toEqual(["b", "a"]);
     // A running total stops at a gap, never reading it as zero
     expect(cumulate(series, ["net"]).map((point) => point.net)).toEqual([60, 130, -10, null]);

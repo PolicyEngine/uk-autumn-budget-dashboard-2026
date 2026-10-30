@@ -338,6 +338,143 @@
   box-shadow: inset 0 -2px 0 var(--band-teal);
 }
 
+/* The copy of the bar's row, scrolled as the real one will be
+   (ViewTabs.jsx, scrollToShow), with no code: where the chosen tab would
+   end less than 24px before the row's end, the row ends 24px after it (or
+   at it, the last tab), the tabs before it out of sight on the left. The tabs after the chosen
+   one take up those 24px with the gap before them and spill over
+   (.skeleton-tab-tail); a spacer takes any room left over, so a row with
+   room starts at its left. */
+.boot-view-tabs .view-tabs {
+  justify-content: flex-end;
+  overflow: clip;
+}
+
+.boot-view-tabs .view-tabs::after {
+  content: "";
+  flex: 1 0 0;
+  margin-left: calc(-1 * var(--tab-gap, 8px));
+}
+
+/* The first tab chosen, or none (ViewSkeleton.jsx): the real row stays at
+   its start (scrollToShow), so the copy does too, cut off on the right
+   where it doesn't fit */
+.boot-view-tabs .view-tabs.is-at-start {
+  justify-content: flex-start;
+}
+
+.skeleton-tab-tail {
+  display: flex;
+  flex: none;
+  gap: var(--tab-gap, 8px);
+  width: calc(24px - var(--tab-gap, 8px));
+}
+
+/* Under the copy of the bar, the row starts under the chosen view tab, as
+   --view-tab-x puts the real one (ViewTabs.jsx), with no code: first an
+   unseen copy of the tabs before the chosen one, laid out as the bar lays
+   them out (a tab gap between tabs and one after the last; none when the
+   first tab is the chosen one). Wider than a phone, About is a side tab,
+   so the ghost and the row step back a tab's padding, as the bar's row is
+   pulled into the margin (globals.css), and the step holds when no tab
+   comes before the chosen one too. On a phone About leads the bar and the
+   lead (HomeButton.css, below). It gives way, as the scrolled bar's tabs do, to an unseen copy of the
+   chosen tab and the 24px after it (none after the last tab), in the
+   row's own column; the band and the bar have one padding (globals.css
+   --bar-pad-x), so both rows end together. The row takes no --view-tab-x,
+   which the real bar sets once it is on the page. */
+.skeleton-sub-tabs.has-tab-lead {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(max-content, 1fr);
+}
+
+/* The first tab chosen: the real bar never scrolls, so the lead keeps its
+   whole width and the row starts under that tab however little room the
+   band has */
+.skeleton-sub-tabs.has-tab-lead.is-at-start {
+  grid-template-columns: max-content minmax(0, 1fr);
+}
+
+.skeleton-tab-lead {
+  grid-area: 1 / 1;
+  display: flex;
+  gap: var(--tab-gap, 8px);
+  height: 0;
+  margin: 0 var(--tab-gap, 8px) 0 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+
+.skeleton-tab-ghost {
+  grid-area: 1 / 2;
+  display: flex;
+  height: 0;
+  margin-left: calc(-1 * var(--tab-pad-x, 12px));
+  padding-right: 24px;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+.skeleton-tab-ghost.is-last {
+  padding-right: 0;
+}
+
+/* The row fills its column and sizes it by nothing of its own */
+.skeleton-sub-tabs.has-tab-lead .sub-tabs {
+  grid-area: 1 / 2;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  margin-left: calc(-1 * var(--tab-pad-x, 12px));
+  contain: inline-size;
+}
+
+/* Wider than a phone, About is a side tab: the copies of the bar and the
+   lead drop their About, and a lead of About alone (the first tab
+   chosen) takes no room */
+@media (min-width: 769px) {
+  .boot-view-tabs > .edge-about,
+  .skeleton-tab-lead > .edge-about {
+    display: none;
+  }
+
+  .skeleton-tab-lead:not(:has(> :not(.edge-about))) {
+    margin-right: 0;
+  }
+}
+
+/* A phone (601 to 768px; narrower, there is no lead): About leads the bar,
+   pulled a tab's padding into the margin, and the row is not pulled
+   (HomeButton.css), so the lead starts in the margin, About's three tab
+   gaps follow it, and the ghost and the row take no step back */
+@media (max-width: 768px) {
+  .skeleton-tab-lead {
+    margin-left: calc(-1 * var(--tab-pad-x, 12px));
+  }
+
+  .skeleton-tab-lead > .edge-about {
+    margin-right: calc(2 * var(--tab-gap, 8px));
+  }
+
+  .skeleton-tab-ghost,
+  .skeleton-sub-tabs.has-tab-lead .sub-tabs {
+    margin-left: 0;
+  }
+}
+
+/* A phone's row starts at the left, as the real one (SubTabs.css) */
+@media (max-width: 600px) {
+  .skeleton-tab-lead,
+  .skeleton-tab-ghost {
+    display: none;
+  }
+
+  .skeleton-sub-tabs.has-tab-lead .sub-tabs {
+    margin-left: 0;
+  }
+}
+
 @keyframes skeleton-shimmer {
   from {
     background-position: 100% 0;

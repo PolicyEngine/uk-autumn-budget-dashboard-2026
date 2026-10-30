@@ -1,4 +1,4 @@
-import { atStatePensionAge } from "./householdImpactApi";
+import { atStatePensionAge, inBusFareCapArea } from "./householdImpactApi";
 
 /**
  * Which of the Household calculator's answers each policy reads, by
@@ -25,6 +25,12 @@ export const POLICY_FIELDS = {
   fuel_duty_rise_deferral: { fields: ["petrol_spending_per_year", "diesel_spending_per_year"] },
   // Zero VAT on domestic electricity: its electricity bill
   domestic_electricity_zero_vat: { fields: ["electricity_spending_per_year"] },
+  // £2 bus fare cap: bus fares, asked up front in England outside London
+  // whatever the year shown (Vahid, 29 Oct), not under "Other questions"
+  bus_fare_cap_2027: {
+    fields: ["bus_fare_spending_per_year"],
+    when: (inputs) => inBusFareCapArea(inputs.region),
+  },
   // Property income tax rates: property income
   property_income_rates_up: { fields: ["property_income_per_year"] },
   // Savings income tax rates: savings interest

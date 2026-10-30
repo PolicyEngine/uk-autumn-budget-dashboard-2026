@@ -1,13 +1,33 @@
 {
   "files": {
-    "constituency.csv": "793cb52b5f01cffd12b74b61bfd4d528c0a84cddbe1e7695f66587f92be9a05d"
+    "constituency.csv": "56b55f1460ff9f56ac1b89be08da910fc9f28c5eeb3e958be72b8dd754e81b40"
   },
-  "manifest_revision": 8,
-  "manifest_sha256": "1083c2ac400c947636ad39442bddba1bf002898e95bd9aa83e58008b4c0f653d",
+  "manifest_revision": 59,
+  "manifest_sha256": "f70a4ae8a474d6b4fbba5463b31ba54d65c7a03240749eb0f181982389a8d444",
   "reforms": {
+    "bus_fare_cap_2027": {
+      "artifact": "artifacts/bus_fare_cap_2027/f2a6a66839d4331c",
+      "artifact_sha256": "f2a6a66839d4331c48ed383588a35d44d2f632fc61bee58051644feaadb4eb20",
+      "baseline": {
+        "binding": "content",
+        "kind": "current_law",
+        "reform_sha256": null,
+        "representation": null
+      },
+      "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
+      "key": "bus_fare_cap_2027",
+      "outputs_sha256": "47d07c7736d46eacaded835254e789df44fbc31e457af4e2cf2efc9953e58220",
+      "receipt_sha256": "368483a62fd281af002442214ab492107cde412b792dbb46be72e7b45f9bddf0",
+      "reform": {
+        "binding": "code_revision",
+        "kind": "reform",
+        "reform_sha256": "9e2abed0c853b7892953b195c2ac08ca0a50979ad116835facaff4af30603ca9",
+        "representation": "policyengine-uk.scenario/v1"
+      }
+    },
     "carers_allowance_earnings_taper": {
-      "artifact": "artifacts/carers_allowance_earnings_taper/9458905cefca3e88",
-      "artifact_sha256": "9458905cefca3e88fa6aed96196d6d621b3d577fd0759e081e79dab4fd6abf54",
+      "artifact": "artifacts/carers_allowance_earnings_taper/302ddb4d9fccbdf1",
+      "artifact_sha256": "302ddb4d9fccbdf18ec2e910daa8edcc8a46e3f83e8efc620b82935765535da2",
       "baseline": {
         "binding": "content",
         "kind": "current_law",
@@ -16,18 +36,18 @@
       },
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
       "key": "carers_allowance_earnings_taper",
-      "outputs_sha256": "161037a4ca464ce6cafdd41f1a0901455c010d88b8ae2ed646f05a2ec36312bc",
-      "receipt_sha256": "792fb4c051af0402aa02d5bd4055d8497c742fbdfb6795643a79ab44f6d9ba3e",
+      "outputs_sha256": "51d582bd4f867fa6701a20a36bf3bcacc450081e5cbe1f8614232125d57d9083",
+      "receipt_sha256": "6fa24117eeff0f24c347d07821a1ff431a53688a6ee53732c22f0933b66208dd",
       "reform": {
         "binding": "code_revision",
         "kind": "reform",
-        "reform_sha256": "f45943c11aed787c570af3cc82d11af9cf181ce0877b5cb9350a9bc1e2f84dc8",
+        "reform_sha256": "d1ab76effcf31e3341c8175d88bbd540ba8793b6b397b80a9c9892c4fe9522ba",
         "representation": "policyengine-uk.scenario/v1"
       }
     },
     "domestic_electricity_zero_vat": {
-      "artifact": "artifacts/domestic_electricity_zero_vat/2d9c65726915303e",
-      "artifact_sha256": "2d9c65726915303e22758fe87e8d66e9b20049b4433f0bbc47d3754aeb56c081",
+      "artifact": "artifacts/domestic_electricity_zero_vat/d03dc51164c1bb2a",
+      "artifact_sha256": "d03dc51164c1bb2ad2e82e96d40284b320bc835a7e8987d69ba4e77612048971",
       "baseline": {
         "binding": "content",
         "kind": "current_law",
@@ -36,18 +56,18 @@
       },
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
       "key": "domestic_electricity_zero_vat",
-      "outputs_sha256": "86bbb52bc9100cd479e56d7baaf785aeee74027e2e59d50bb0ade667977ee0a2",
-      "receipt_sha256": "5b09acd80d3adad51228cb8d74933dd4a658a21cf4de2df456945666304ba258",
+      "outputs_sha256": "d3f98c42345216cd32b61d73da718f16a156dd6cca277e803006afb366ff28fe",
+      "receipt_sha256": "c7640d10c3c165e08e08858d50917c7d5d772efde67fa279960ee45f9c27eceb",
       "reform": {
         "binding": "code_revision",
         "kind": "reform",
-        "reform_sha256": "5ee4d8844432367d5557df38ee89e23b206e2c1236bce2451b0336ada02b58b6",
+        "reform_sha256": "44eceb4b1d103f99fd3b8d7b8fa317402dc31af4c25884cc86d031cc948fe0dc",
         "representation": "policyengine-uk.scenario/v1"
       }
     },
     "fuel_duty_rise_deferral": {
-      "artifact": "artifacts/fuel_duty_rise_deferral/e077f8d4b70440c8",
-      "artifact_sha256": "e077f8d4b70440c8286cf2ebe85853cbc2e98fbf44e24ea688ebc9e559e8c79a",
+      "artifact": "artifacts/fuel_duty_rise_deferral/984f32607d94695d",
+      "artifact_sha256": "984f32607d94695dbadf3175937afdca36e607a5db07c2d70791934c29d000ad",
       "baseline": {
         "binding": "content",
         "kind": "current_law",
@@ -56,18 +76,18 @@
       },
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
       "key": "fuel_duty_rise_deferral",
-      "outputs_sha256": "4e624ac4047411f2c5abd2e4282465e415cf892309f9aa364ffee5d842b3f079",
-      "receipt_sha256": "02762ce13b98a5c3930f8864607725dda04cb569aa583743a6c1c99027d99035",
+      "outputs_sha256": "73eea8d5d3519830e4abab84e5ff77d58753050075b92dedb9e62296d282afa6",
+      "receipt_sha256": "1da86a4e8233faa91854d0c8934c0cf7d1e8ed5bd7a69efe60814068f7be7697",
       "reform": {
         "binding": "code_revision",
         "kind": "reform",
-        "reform_sha256": "1dae41af83e4402f6b3af756d7dcdcc1dd525883dd32c3c8b9050456f52310f1",
+        "reform_sha256": "d4c645acb2306773e19afc6a8f4ce2c496884bb0aa93f42ea9ca73b9de4693aa",
         "representation": "policyengine-uk.scenario/v1"
       }
     },
     "household_energy_payment_2026": {
-      "artifact": "artifacts/household_energy_payment_2026/101a07dc7238a10e",
-      "artifact_sha256": "101a07dc7238a10e5811cfc0e8e7938ef213d483d2019d05871671c4b889eba3",
+      "artifact": "artifacts/household_energy_payment_2026/220d79f0f70e2679",
+      "artifact_sha256": "220d79f0f70e26792e219ea62c1c5d34da7312a4bd4430928141ebdccfd7585f",
       "baseline": {
         "binding": "content",
         "kind": "current_law",
@@ -76,18 +96,18 @@
       },
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
       "key": "household_energy_payment_2026",
-      "outputs_sha256": "18fb3a856326d708284266c5dd240b81e9e9ab4c427c493a062cfe6ae0997215",
-      "receipt_sha256": "50a581145fbd0abf3fcb9a0870c2a624ba6cb3427701ca0f61daf474590e8256",
+      "outputs_sha256": "f1c12b0b2dff9cdc9e340f2ad59e90ffad2eebb9aa5ac13762127747ac3f2bba",
+      "receipt_sha256": "a1af6e4022f0653f7692d70085bae5e561c167dc8e7432feac8e18e530b9032b",
       "reform": {
         "binding": "code_revision",
         "kind": "reform",
-        "reform_sha256": "ceede8365a9462ac389dc5210882ea23850babfed6e5bff8cf264e774cd616ad",
+        "reform_sha256": "db5d8ffda91e63d3bb693013dd556bf82014540160a381a5e7938c5ddff24b04",
         "representation": "policyengine-uk.scenario/v1"
       }
     },
     "property_income_rates_up": {
-      "artifact": "artifacts/property_income_rates_up/7bf77b35e33233e0",
-      "artifact_sha256": "7bf77b35e33233e0f8174f4be78c7bd6e4eca46f95f1f72b100a68f19280dcfd",
+      "artifact": "artifacts/property_income_rates_up/02718faa790c7f77",
+      "artifact_sha256": "02718faa790c7f771c1ff8d8c3eb05657e052407325b34d58b49caff5ac54127",
       "baseline": {
         "binding": "content",
         "kind": "current_law",
@@ -96,8 +116,8 @@
       },
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
       "key": "property_income_rates_up",
-      "outputs_sha256": "6748d5ee971f1b8428186ca778b4bd01ee1320c4e9f7cc67f34b5fc398330d47",
-      "receipt_sha256": "777e8839f0f7c541229eb281de5fd497819c34c07ebad865456bbb639d4806e6",
+      "outputs_sha256": "bf7f8a799d545967674a2730dd5e836f9cca220e541ccc950a62fec298a268fd",
+      "receipt_sha256": "0dad9121342537de582feaff91550f11545c9e430d2b9ba016e9f9d31e9b5ddc",
       "reform": {
         "binding": "content",
         "kind": "reform",
@@ -106,8 +126,8 @@
       }
     },
     "state_pension_income_tax_protection": {
-      "artifact": "artifacts/state_pension_income_tax_protection/1bfeed3c27a3c9b9",
-      "artifact_sha256": "1bfeed3c27a3c9b9e433b9fa7ce1de4d30bce2b237d78c349d4540747997e12e",
+      "artifact": "artifacts/state_pension_income_tax_protection/c4654db081855054",
+      "artifact_sha256": "c4654db0818550540d4f280c4b0af4dae78f5cd088c11fb6797d44103b125a04",
       "baseline": {
         "binding": "content",
         "kind": "current_law",
@@ -116,18 +136,18 @@
       },
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
       "key": "state_pension_income_tax_protection",
-      "outputs_sha256": "bc98a27c3d80a54f3b56ef1ebffe5ca3085077be0d3626b887eab822042776e5",
-      "receipt_sha256": "639abc7f6560dab736da0d59e4c1bb272312e5500d1c94f33fc208145d039e65",
+      "outputs_sha256": "fd6fea536a7ef66adfc7e4236dc7365ebd966d606e513d57cddb08c022f123d5",
+      "receipt_sha256": "8d0d477f5d3852a241edcc2fbd1b9de133eb5a4bc77afb370faf6aed90f8af33",
       "reform": {
         "binding": "code_revision",
         "kind": "reform",
-        "reform_sha256": "65a95c811e5d6c6dd0b54255dd20ab1439c542994f1918778b93769c14199524",
+        "reform_sha256": "37ea047ac5d0fb7da81a21de88a474c021f8819ba74f4075955416045387864d",
         "representation": "policyengine-uk.scenario/v1"
       }
     },
     "trading_allowance_raise": {
-      "artifact": "artifacts/trading_allowance_raise/eddde823a65b7be4",
-      "artifact_sha256": "eddde823a65b7be434b88e127a4bfde6203df9a0b47d5046a6eb1ebf1a36b3e7",
+      "artifact": "artifacts/trading_allowance_raise/411e68c2da8830e7",
+      "artifact_sha256": "411e68c2da8830e779053f1bf0088c2fb50ac63b5bdb001b15f0eafe1012926b",
       "baseline": {
         "binding": "content",
         "kind": "current_law",
@@ -136,8 +156,8 @@
       },
       "execution_identity_sha256": "3db871d8c1fcebfefdfd938e39512408196621a4f5d7374ad3abd5b586dc0d03",
       "key": "trading_allowance_raise",
-      "outputs_sha256": "1192055fc58d352149cc8bad067655a7d03fb1cfaa6e5eb5ef9ac88d2a856ccc",
-      "receipt_sha256": "6bcce622b86c3da3f36df52a1ef30a4ec4fbc2d050531f716bb679bb2039962f",
+      "outputs_sha256": "01be7471631868f3e4c73c9e82b15be1c07e391a973c9c025d99521e9f47cd3a",
+      "receipt_sha256": "65b2d75d12831487d4743c928b9f274604e9bae0b5af5f6aa73b5f18299d69c3",
       "reform": {
         "binding": "content",
         "kind": "reform",

@@ -755,3 +755,89 @@
     row-gap: 2px;
   }
 }
+
+/* Our PDF report and explainers, above At a glance's topics ---------- */
+
+.method-report {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  flex-wrap: wrap;
+}
+
+.method-report-text {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.method-report-eyebrow {
+  margin: 0 0 4px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pe-teal-700);
+}
+
+.method-report-title {
+  margin: 0 0 4px;
+  font-size: var(--fs-body-lg);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--pe-gray-900);
+}
+
+.method-report-note {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--pe-gray-700);
+}
+
+.method-card .method-report-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--pe-surface);
+  text-decoration: none;
+  white-space: nowrap;
+  /* Teal 700, as the calculator's button: white on it is 5.5:1 */
+  background: var(--pe-teal-700);
+  border-radius: var(--pe-radius-md);
+  transition: background 0.15s ease;
+}
+
+.method-card .method-report-button:hover {
+  color: var(--pe-surface);
+  background: var(--pe-teal-800);
+}
+
+.method-card .method-report-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--pe-teal-200);
+}
+
+.method-card .method-explainers-title {
+  margin: 24px 0 0;
+  padding-top: 24px;
+  border-top: 1px solid var(--pe-gray-200);
+}
+
+.method-card .method-explainers {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  columns: 2 260px;
+  column-gap: 32px;
+}
+
+.method-card .method-explainers li {
+  margin: 0 0 8px;
+  break-inside: avoid;
+}

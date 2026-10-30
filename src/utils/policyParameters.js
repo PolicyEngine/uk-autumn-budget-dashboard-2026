@@ -246,6 +246,12 @@ export function resetPolicyParameters() {
   cached = undefined;
 }
 
+/** The fiscal year (its start year) a date falls in: from 6 April. */
+function fiscalYearOf(date) {
+  const [y, m, d] = date.split("-").map(Number);
+  return m > 4 || (m === 4 && d >= 6) ? y : y - 1;
+}
+
 /**
  * Each measure's scored years, from the file: { id: { first, last } }, the
  * first and last fiscal year (its start) in which any of its parameters
@@ -257,7 +263,13 @@ export function measureWindows(document) {
     const years = (entry?.rows ?? [])
       .flatMap((row) => row?.points ?? [])
       .filter((point) => differs(point))
-      .map((point) => (Number.isFinite(point.year) ? point.year : Number(String(point.key ?? "").slice(0, 4))))
+      .flatMap((point) => {
+        // A dated span ("2027-01-01/2027-12-31") counts in every fiscal
+        // year it touches: the bus fare cap runs in 2026-27 and 2027-28
+        const span = /^(\d{4}-\d{2}-\d{2})\/(\d{4}-\d{2}-\d{2})$/.exec(String(point.key ?? ""));
+        if (span) return [fiscalYearOf(span[1]), fiscalYearOf(span[2])];
+        return [Number.isFinite(point.year) ? point.year : Number(String(point.key ?? "").slice(0, 4))];
+      })
       .filter(Number.isFinite);
     if (years.length) windows[id] = { first: Math.min(...years), last: Math.max(...years) };
   }

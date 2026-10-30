@@ -14,6 +14,7 @@ import { GROWTH_CURRENT_LAW_ANCHOR, YOUNG_PEOPLE_ANCHOR } from "./utils/viewAnch
 import PopulationImpactView from "./components/PopulationImpactView";
 import { DEFAULT_DISPLAY_YEAR, DisplayYearsContext, EARLY_YEAR, SELECTABLE_YEARS, selectableYearOr, yearsForSelection } from "./utils/displayYears";
 import { opensLanding } from "./utils/landing";
+import { useNarrowViewport } from "./utils/chartTheme";
 import TitleMark, { EdgeAboutTab } from "./components/HomeButton";
 import OverviewDrawer from "./components/OverviewDrawer";
 import { buildMeasureCatalogue, catalogueProvisional, MeasureCatalogueProvider, useMeasureCatalogue } from "./utils/measureCatalogue";
@@ -42,6 +43,7 @@ import { provisionalNotice } from "./utils/publication/manifest";
 import { DownloadContext, policiesLabel } from "./utils/downloadContext";
 import { OPEN_VIEW_EVENT } from "./utils/methodLink";
 import { lazyView, preloadViewCode } from "./utils/lazyView";
+import { trackEvent, trackLinkClicks } from "./utils/analytics";
 import { createBandIntent, createSiteNavIntent, isProgrammaticScroll, LANDSCAPE_PHONE_QUERY, isTouchOnly, pointerWantsSiteNav, SITE_NAV_DWELL_MS, landAt, scrollBelowBars, scrollTopFor, settleHeadings } from "./utils/pageScroll";
 
 // Each view's code (the chart library, the map's and the household
@@ -389,9 +391,12 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   // default view (Public finances), which stays mounted behind it, faded
   // and inert. Choosing any view leaves it.
   const [landing, setLanding] = useState(true);
-  // The overview drawer, opened by the "About" tab on the window's edge
+  // The overview drawer, opened by the "About" tab on the window's edge,
+  // or first in the view tabs row on a phone, whose margin has no room for
+  // a side tab (HomeButton.jsx)
   const [overviewOpen, setOverviewOpen] = useState(false);
   const aboutTabRef = useRef(null);
+  const aboutInRow = useNarrowViewport();
   const closeOverview = useCallback(() => setOverviewOpen(false), []);
   const PRESETS = [{ id: "autumn-budget", name: "All policies" }];
   // Cards fade and rise in as they scroll into view
@@ -531,19 +536,21 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     return () => observer.disconnect();
   }, []);
 
-  // The site nav is hidden above the window by default, so the title band
-  // sits at the top of the page. Scrolling never brings it in: it slides in
-  // above the band when the pointer rests at the top edge of the window
-  // (SITE_NAV_EDGE_PX for SITE_NAV_DWELL_MS: utils/pageScroll pointerWantsSiteNav), or when the reader tabs into it
+  // The site nav is in the page's flow at its top (globals.css), so it is
+  // in view on load above the title band and a scroll down takes it away
+  // with the page. Scrolling never brings it back: once it has scrolled
+  // away it slides in above the band when the pointer rests at the top
+  // edge of the window (SITE_NAV_EDGE_PX for SITE_NAV_DWELL_MS:
+  // utils/pageScroll pointerWantsSiteNav), or when the reader tabs into it
   // (globals.css: data-site-nav-shown on <html>, --site-nav-height; the
   // band and tab rows move down under it, so it never covers the Year and
   // Policies pills; the slide is instant under reduced motion). Once in, it stays
   // SITE_NAV_MIN_MS, and while the pointer or focus is in it or one of its
   // menus is open, then hides SITE_NAV_LEAVE_MS after they leave. Any
   // scroll down by the reader hides it at once (unless it is in use), and
-  // within its own height of the page's top it is hidden. A touch-only
-  // device has no pointer to bring it in with: there it shows only while
-  // the page is at its very top (createSiteNavIntent).
+  // within its own height of the page's top it goes back to its place in
+  // the flow. A touch-only device has no pointer to bring it in with: there
+  // it shows only while the page is at its very top (createSiteNavIntent).
   useEffect(() => {
     const root = document.documentElement;
     const nav = document.querySelector(SHELL_STICKY_NAV_SELECTOR);
@@ -880,6 +887,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
     }
     setLanding(false);
     setActiveTab(tab);
+    if (changing) trackEvent("view_opened", { view: tab, sub: sub ?? undefined });
     // A hash that belongs to the Young people sub-tab goes when another view
     // is chosen, so the address never opens a different view from this one
     if (tab !== DEFAULT_VIEW && window.location.hash === `#${YOUNG_PEOPLE_ANCHOR}`) {
@@ -895,6 +903,8 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
   useEffect(() => {
     openViewRef.current = handleTabChange;
   });
+  // Clicks on the report's download and on our posts (utils/analytics.js)
+  useEffect(() => trackLinkClicks(), []);
   useEffect(() => {
     const onOpenView = (event) => {
       const { tab, anchor } = event.detail || {};
@@ -1198,6 +1208,7 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
                 selectedPolicies={selectedPolicies}
                 policies={POLICIES}
                 selectedYear={distributionalYear}
+                onPoliciesSet={handlePoliciesSet}
                 descriptionLink={
                   <>
                     Where would yours be?{" "}
@@ -1277,10 +1288,15 @@ function Dashboard({ published, unavailable = null, updated = false, fromBuild =
         <UpdateToast show={updated} />
 
         <div ref={tabsSentinelRef} className="view-tabs-sentinel" aria-hidden="true" />
+        {/* "About": a tab on the window's left edge that opens the
+            overview drawer (below) from the same edge; on a phone, first
+            in the view tabs row */}
+        {!landing && !aboutInRow && (
+          <EdgeAboutTab open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
+        )}
         <ViewTabs
-          leading={!landing && (
-            // "About": opens the overview drawer (below)
-            <EdgeAboutTab open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
+          leading={!landing && aboutInRow && (
+            <EdgeAboutTab placement="row" open={overviewOpen} onToggle={() => setOverviewOpen((was) => !was)} buttonRef={aboutTabRef} />
           )}
           tabs={VIEWS}
           value={landing ? null : activeTab}
